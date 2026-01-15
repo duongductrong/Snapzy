@@ -18,6 +18,8 @@ final class AreaSelectionController: NSObject {
   private var overlayWindows: [AreaSelectionWindow] = []
   private var completion: AreaSelectionCompletion?
   private var activeWindow: AreaSelectionWindow?
+  private var localEscapeMonitor: Any?
+  private var globalEscapeMonitor: Any?
 
   /// Start area selection mode
   /// - Parameter completion: Called with the selected rect, or nil if cancelled
@@ -32,13 +34,22 @@ final class AreaSelectionController: NSObject {
       window.orderFrontRegardless()
     }
 
-    // Set up escape key monitoring
-    NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+    // Set up escape key monitoring (local for when app is active)
+    localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
       if event.keyCode == 53 {  // Escape key
         self?.cancelSelection()
         return nil
       }
       return event
+    }
+
+    // Global monitor for when app may not be fully active
+    globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      if event.keyCode == 53 {  // Escape key
+        DispatchQueue.main.async {
+          self?.cancelSelection()
+        }
+      }
     }
   }
 
@@ -57,6 +68,16 @@ final class AreaSelectionController: NSObject {
   }
 
   private func closeAllWindows() {
+    // Remove escape key monitors
+    if let monitor = localEscapeMonitor {
+      NSEvent.removeMonitor(monitor)
+      localEscapeMonitor = nil
+    }
+    if let monitor = globalEscapeMonitor {
+      NSEvent.removeMonitor(monitor)
+      globalEscapeMonitor = nil
+    }
+
     for window in overlayWindows {
       window.close()
     }

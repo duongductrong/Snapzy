@@ -104,7 +104,20 @@ struct AnnotateSidebarView: View {
 
   private var slidersSection: some View {
     VStack(alignment: .leading, spacing: 10) {
-      CompactSliderRow(label: "Padding", value: $state.padding, range: 0...100)
+      CompactSliderRow(
+        label: "Padding",
+        value: Binding(
+          get: { state.padding },
+          set: { newValue in
+            state.padding = newValue
+            // Auto-apply white background when padding increases from 0
+            if newValue > 0 && state.backgroundStyle == .none {
+              state.backgroundStyle = .solidColor(.white)
+            }
+          }
+        ),
+        range: 0...100
+      )
       CompactSliderRow(label: "Shadow", value: $state.shadowIntensity, range: 0...1)
       CompactSliderRow(label: "Corners", value: $state.cornerRadius, range: 0...32)
     }

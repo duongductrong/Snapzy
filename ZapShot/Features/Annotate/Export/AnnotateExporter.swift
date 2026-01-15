@@ -110,13 +110,40 @@ final class AnnotateExporter {
     let renderer = AnnotationRenderer(context: context)
     for annotation in state.annotations {
       // Offset annotations by padding
-      var offsetAnnotation = annotation
-      offsetAnnotation.bounds = annotation.bounds.offsetBy(dx: padding, dy: padding)
+      let offsetAnnotation = offsetAnnotation(annotation, by: padding)
       renderer.draw(offsetAnnotation)
     }
 
     image.unlockFocus()
     return image
+  }
+
+  /// Offset an annotation by padding, including internal points for lines/arrows
+  private static func offsetAnnotation(_ annotation: AnnotationItem, by padding: CGFloat) -> AnnotationItem {
+    var result = annotation
+    result.bounds = annotation.bounds.offsetBy(dx: padding, dy: padding)
+
+    // Also offset internal points for types that store coordinates
+    switch annotation.type {
+    case .arrow(let start, let end):
+      result.type = .arrow(
+        start: CGPoint(x: start.x + padding, y: start.y + padding),
+        end: CGPoint(x: end.x + padding, y: end.y + padding)
+      )
+    case .line(let start, let end):
+      result.type = .line(
+        start: CGPoint(x: start.x + padding, y: start.y + padding),
+        end: CGPoint(x: end.x + padding, y: end.y + padding)
+      )
+    case .path(let points):
+      result.type = .path(points.map { CGPoint(x: $0.x + padding, y: $0.y + padding) })
+    case .highlight(let points):
+      result.type = .highlight(points.map { CGPoint(x: $0.x + padding, y: $0.y + padding) })
+    default:
+      break
+    }
+
+    return result
   }
 
   private static func drawBackground(state: AnnotateState, in context: CGContext, size: NSSize) {

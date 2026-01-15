@@ -17,8 +17,8 @@ struct FloatingCardView: View {
   @State private var isHovering = false
   @State private var appeared = false
 
-  private let cardWidth: CGFloat = 200
-  private let cardHeight: CGFloat = 112
+  private let cardWidth: CGFloat = 160
+  private let cardHeight: CGFloat = 100
   private let cornerRadius: CGFloat = 10
 
   var body: some View {
@@ -38,8 +38,11 @@ struct FloatingCardView: View {
           .transition(.opacity.combined(with: .scale(scale: 0.95)))
       }
 
-      // Dismiss button (always visible, top-right)
-      dismissButton
+      // Dismiss button (top-right, only visible on hover)
+      if isHovering {
+        dismissButton
+          .transition(.opacity)
+      }
     }
     .frame(width: cardWidth, height: cardHeight)
     .background(
@@ -109,7 +112,6 @@ struct FloatingCardView: View {
             )
         }
         .buttonStyle(.plain)
-        .opacity(isHovering ? 1 : 0.6)
         .padding(6)
       }
       Spacer()

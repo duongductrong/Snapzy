@@ -33,7 +33,7 @@ final class AnnotateState: ObservableObject {
   // MARK: - Background Settings
 
   @Published var backgroundStyle: BackgroundStyle = .none
-  @Published var padding: CGFloat = 40
+  @Published var padding: CGFloat = 0
   @Published var inset: CGFloat = 0
   @Published var autoBalance: Bool = true
   @Published var shadowIntensity: CGFloat = 0.3
@@ -41,10 +41,83 @@ final class AnnotateState: ObservableObject {
   @Published var imageAlignment: ImageAlignment = .center
   @Published var aspectRatio: AspectRatioOption = .auto
 
+  // MARK: - Display Metrics (for inset padding layout)
+
+  /// Original image dimensions (points, not pixels)
+  var imageWidth: CGFloat { sourceImage.size.width }
+  var imageHeight: CGFloat { sourceImage.size.height }
+  var imageAspectRatio: CGFloat { imageWidth / imageHeight }
+
+  /// Calculate display scale for given container size
+  /// Image shrinks to fit within (container - padding*2)
+  func displayScale(for containerSize: CGSize, margin: CGFloat = 40) -> CGFloat {
+    let availableWidth = containerSize.width - margin * 2
+    let availableHeight = containerSize.height - margin * 2
+
+    // Available space for image after padding
+    let imageAreaWidth = max(availableWidth - padding * 2, 1)
+    let imageAreaHeight = max(availableHeight - padding * 2, 1)
+
+    let scaleX = imageAreaWidth / imageWidth
+    let scaleY = imageAreaHeight / imageHeight
+
+    return min(scaleX, scaleY, 1.0) // Don't scale up
+  }
+
+  /// Calculate image offset within container based on alignment
+  /// Note: ZStack centers children, so offset is relative to center (not top-left)
+  /// - containerSize: The background size (already scaled)
+  /// - imageDisplaySize: The image size (already scaled)
+  /// - displayPadding: The padding in display coordinates (already scaled)
+  func imageOffset(for containerSize: CGSize, imageDisplaySize: CGSize, displayPadding: CGFloat) -> CGPoint {
+    // Extra space after accounting for scaled padding and image
+    let extraWidth = containerSize.width - displayPadding * 2 - imageDisplaySize.width
+    let extraHeight = containerSize.height - displayPadding * 2 - imageDisplaySize.height
+
+    // In ZStack, children are centered. Offset is relative to center.
+    // For center: offset = 0
+    // For edges: offset = +/- extraSpace/2
+    let xOffset: CGFloat
+    let yOffset: CGFloat
+
+    switch imageAlignment {
+    case .center:
+      xOffset = 0
+      yOffset = 0
+    case .topLeft:
+      xOffset = -extraWidth / 2
+      yOffset = extraHeight / 2  // SwiftUI Y is inverted (positive = down)
+    case .top:
+      xOffset = 0
+      yOffset = extraHeight / 2
+    case .topRight:
+      xOffset = extraWidth / 2
+      yOffset = extraHeight / 2
+    case .left:
+      xOffset = -extraWidth / 2
+      yOffset = 0
+    case .right:
+      xOffset = extraWidth / 2
+      yOffset = 0
+    case .bottomLeft:
+      xOffset = -extraWidth / 2
+      yOffset = -extraHeight / 2
+    case .bottom:
+      xOffset = 0
+      yOffset = -extraHeight / 2
+    case .bottomRight:
+      xOffset = extraWidth / 2
+      yOffset = -extraHeight / 2
+    }
+
+    return CGPoint(x: xOffset, y: yOffset)
+  }
+
   // MARK: - Annotations
 
   @Published var annotations: [AnnotationItem] = []
   @Published var selectedAnnotationId: UUID?
+  @Published var editingTextAnnotationId: UUID?
 
   // MARK: - Counter Tool State
 
@@ -98,5 +171,38 @@ final class AnnotateState: ObservableObject {
 
   func resetCounter() {
     counterValue = 1
+  }
+
+  // MARK: - Annotation Selection
+
+  func selectAnnotation(at point: CGPoint) -> AnnotationItem? {
+    // Find annotation at point (in reverse order to select topmost)
+    for annotation in annotations.reversed() {
+      if annotation.bounds.contains(point) {
+        selectedAnnotationId = annotation.id
+        return annotation
+      }
+    }
+    selectedAnnotationId = nil
+    return nil
+  }
+
+  func updateAnnotationBounds(id: UUID, bounds: CGRect) {
+    if let index = annotations.firstIndex(where: { $0.id == id }) {
+      annotations[index].bounds = bounds
+    }
+  }
+
+  func updateAnnotationText(id: UUID, text: String) {
+    if let index = annotations.firstIndex(where: { $0.id == id }) {
+      annotations[index].type = .text(text)
+    }
+  }
+
+  func deleteSelectedAnnotation() {
+    guard let selectedId = selectedAnnotationId else { return }
+    saveState()
+    annotations.removeAll { $0.id == selectedId }
+    selectedAnnotationId = nil
   }
 }

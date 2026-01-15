@@ -47,8 +47,8 @@ struct AnnotationRenderer {
     case .blur:
       break
 
-    case .text:
-      break
+    case .text(let content):
+      drawText(content, in: annotation.bounds, properties: annotation.properties)
     }
   }
 
@@ -160,6 +160,16 @@ struct AnnotationRenderer {
       x: point.x - textSize.width/2,
       y: point.y - textSize.height/2
     )
+    text.draw(at: textPoint, withAttributes: attributes)
+  }
+
+  private func drawText(_ content: String, in bounds: CGRect, properties: AnnotationProperties) {
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: NSFont.systemFont(ofSize: properties.fontSize, weight: .regular),
+      .foregroundColor: NSColor(properties.strokeColor)
+    ]
+    let text = content as NSString
+    let textPoint = CGPoint(x: bounds.origin.x, y: bounds.origin.y)
     text.draw(at: textPoint, withAttributes: attributes)
   }
 
