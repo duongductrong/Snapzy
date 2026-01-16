@@ -43,6 +43,21 @@ final class FloatingScreenshotManager: ObservableObject {
       UserDefaults.standard.set(autoDismissDelay, forKey: Keys.autoDismissDelay)
     }
   }
+  @Published var overlayScale: Double = 1.0 {
+    didSet {
+      UserDefaults.standard.set(overlayScale, forKey: Keys.overlayScale)
+    }
+  }
+  @Published var dragDropEnabled: Bool = true {
+    didSet {
+      UserDefaults.standard.set(dragDropEnabled, forKey: Keys.dragDropEnabled)
+    }
+  }
+  @Published var showCloudUpload: Bool = true {
+    didSet {
+      UserDefaults.standard.set(showCloudUpload, forKey: Keys.showCloudUpload)
+    }
+  }
 
   // MARK: - Configuration
 
@@ -65,6 +80,9 @@ final class FloatingScreenshotManager: ObservableObject {
     static let position = "floatingScreenshot.position"
     static let autoDismissEnabled = "floatingScreenshot.autoDismissEnabled"
     static let autoDismissDelay = "floatingScreenshot.autoDismissDelay"
+    static let overlayScale = "floatingScreenshot.overlayScale"
+    static let dragDropEnabled = "floatingScreenshot.dragDropEnabled"
+    static let showCloudUpload = "floatingScreenshot.showCloudUpload"
   }
 
   // MARK: - Init
@@ -87,6 +105,12 @@ final class FloatingScreenshotManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.autoDismissEnabled) as? Bool ?? true
     autoDismissDelay =
       UserDefaults.standard.object(forKey: Keys.autoDismissDelay) as? Double ?? 10
+    overlayScale =
+      UserDefaults.standard.object(forKey: Keys.overlayScale) as? Double ?? 1.0
+    dragDropEnabled =
+      UserDefaults.standard.object(forKey: Keys.dragDropEnabled) as? Bool ?? true
+    showCloudUpload =
+      UserDefaults.standard.object(forKey: Keys.showCloudUpload) as? Bool ?? true
   }
 
   private func setupBindings() {
@@ -132,7 +156,7 @@ final class FloatingScreenshotManager: ObservableObject {
   /// Remove a screenshot from the stack
   func removeScreenshot(id: UUID) {
     cancelDismissTimer(for: id)
-    withAnimation(.easeOut(duration: 0.2)) {
+    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
       items.removeAll { $0.id == id }
     }
 
@@ -152,22 +176,42 @@ final class FloatingScreenshotManager: ObservableObject {
 
   /// Copy screenshot to clipboard
   func copyToClipboard(id: UUID) {
-    guard let item = items.first(where: { $0.id == id }),
-      let image = NSImage(contentsOf: item.url)
-    else { return }
+    guard let item = items.first(where: { $0.id == id }) else { return }
 
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    pasteboard.writeObjects([image])
+    // Capture URL before removal
+    let url = item.url
 
-    // Play feedback sound
-    NSSound(named: "Pop")?.play()
+    // Remove immediately - animation starts now
+    removeScreenshot(id: id)
+
+    // Async copy operation
+    Task.detached(priority: .userInitiated) {
+      guard let image = NSImage(contentsOf: url) else { return }
+      await MainActor.run {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([image])
+        NSSound(named: "Pop")?.play()
+      }
+    }
   }
 
   /// Open screenshot in Finder
   func openInFinder(id: UUID) {
     guard let item = items.first(where: { $0.id == id }) else { return }
-    NSWorkspace.shared.selectFile(item.url.path, inFileViewerRootedAtPath: "")
+
+    // Capture URL before removal
+    let url = item.url
+
+    // Remove immediately - animation starts now
+    removeScreenshot(id: id)
+
+    // Async Finder reveal
+    Task.detached(priority: .userInitiated) {
+      await MainActor.run {
+        NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+      }
+    }
   }
 
   /// Update position setting

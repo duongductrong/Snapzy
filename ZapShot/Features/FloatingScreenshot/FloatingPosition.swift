@@ -40,4 +40,18 @@ enum FloatingPosition: String, CaseIterable, Codable {
     case .bottomRight: return "Bottom Right"
     }
   }
+
+  /// Check if position is on left side of screen
+  var isLeftSide: Bool {
+    self == .topLeft || self == .bottomLeft
+  }
+
+  /// Create position from side preference
+  static func fromSide(_ isLeft: Bool, preferTop: Bool = false) -> FloatingPosition {
+    if isLeft {
+      return preferTop ? .topLeft : .bottomLeft
+    } else {
+      return preferTop ? .topRight : .bottomRight
+    }
+  }
 }

@@ -51,7 +51,7 @@ final class FloatingPanelController {
     guard let panel = panel else { return }
     let screen = NSScreen.main ?? NSScreen.screens.first!
     let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
-    panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: true)
+    panel.setFrame(NSRect(origin: origin, size: size), display: true, animate: false)
   }
 
   /// Hide and release panel

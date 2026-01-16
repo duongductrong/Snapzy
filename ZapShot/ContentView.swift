@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  ZapShot
 //
-//  Test interface for core screenshot functions
+//  Main window with capture controls
 //
 
 import Combine
@@ -18,7 +18,7 @@ struct ContentView: View {
         .font(.largeTitle)
         .fontWeight(.bold)
 
-      Text("Screenshot Tool - Core Functions Test")
+      Text("Screenshot Tool")
         .font(.subheadline)
         .foregroundColor(.secondary)
 
@@ -32,18 +32,19 @@ struct ContentView: View {
       // Capture Actions
       captureSection
 
-      Divider()
-
-      // Settings
-      settingsSection
-
       Spacer()
 
       // Status / Result
       statusSection
+
+      // Open Preferences
+      SettingsLink {
+        Text("Open Preferences...")
+      }
+      .keyboardShortcut(",", modifiers: .command)
     }
     .padding(24)
-    .frame(minWidth: 400, minHeight: 500)
+    .frame(minWidth: 350, minHeight: 350)
   }
 
   // MARK: - Permission Section
@@ -126,136 +127,6 @@ struct ContentView: View {
     }
   }
 
-  // MARK: - Settings Section
-
-  private var settingsSection: some View {
-    VStack(alignment: .leading, spacing: 12) {
-      Text("Settings")
-        .font(.headline)
-
-      // Save Directory
-      HStack {
-        Text("Save to:")
-          .font(.body)
-
-        Text(viewModel.saveDirectory.path)
-          .font(.caption)
-          .foregroundColor(.secondary)
-          .lineLimit(1)
-          .truncationMode(.middle)
-
-        Spacer()
-
-        Button("Choose...") {
-          viewModel.chooseSaveDirectory()
-        }
-      }
-
-      // Image Format
-      HStack {
-        Text("Format:")
-          .font(.body)
-
-        Picker("", selection: $viewModel.selectedFormat) {
-          Text("PNG").tag(ImageFormatOption.png)
-          Text("JPEG").tag(ImageFormatOption.jpeg)
-          Text("TIFF").tag(ImageFormatOption.tiff)
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 200)
-      }
-
-      // Options
-      Toggle("Show cursor in capture", isOn: $viewModel.showCursor)
-
-      Toggle("Play sound after capture", isOn: $viewModel.playSound)
-
-      Divider()
-
-      // Keyboard Shortcuts
-      Text("Keyboard Shortcuts")
-        .font(.headline)
-
-      Toggle("Enable global shortcuts", isOn: $viewModel.shortcutsEnabled)
-
-      if viewModel.shortcutsEnabled {
-        VStack(alignment: .leading, spacing: 8) {
-          ShortcutRecorderView(
-            label: "Fullscreen:",
-            shortcut: $viewModel.fullscreenShortcut,
-            onShortcutChanged: { viewModel.updateFullscreenShortcut($0) }
-          )
-
-          ShortcutRecorderView(
-            label: "Area:",
-            shortcut: $viewModel.areaShortcut,
-            onShortcutChanged: { viewModel.updateAreaShortcut($0) }
-          )
-
-          Text("Click to record new shortcut. Press Esc to cancel.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
-        .padding(.leading, 4)
-      }
-
-      Divider()
-
-      // Floating Preview
-      Text("Floating Preview")
-        .font(.headline)
-
-      Toggle("Show floating preview after capture", isOn: Binding(
-        get: { viewModel.floatingEnabled },
-        set: { viewModel.floatingEnabled = $0 }
-      ))
-
-      if viewModel.floatingEnabled {
-        VStack(alignment: .leading, spacing: 8) {
-          HStack {
-            Text("Position:")
-              .font(.body)
-
-            Picker("", selection: Binding(
-              get: { viewModel.floatingPosition },
-              set: { viewModel.floatingPosition = $0 }
-            )) {
-              Text("Top Left").tag(FloatingPosition.topLeft)
-              Text("Top Right").tag(FloatingPosition.topRight)
-              Text("Bottom Left").tag(FloatingPosition.bottomLeft)
-              Text("Bottom Right").tag(FloatingPosition.bottomRight)
-            }
-            .pickerStyle(.menu)
-            .frame(width: 140)
-          }
-
-          Toggle("Auto-dismiss cards", isOn: Binding(
-            get: { viewModel.floatingAutoDismiss },
-            set: { viewModel.floatingAutoDismiss = $0 }
-          ))
-
-          if viewModel.floatingAutoDismiss {
-            HStack {
-              Text("Dismiss after:")
-              Slider(
-                value: Binding(
-                  get: { viewModel.floatingAutoDismissDelay },
-                  set: { viewModel.floatingAutoDismissDelay = $0 }
-                ),
-                in: 3...30,
-                step: 1
-              )
-              .frame(width: 120)
-              Text("\(Int(viewModel.floatingAutoDismissDelay))s")
-                .frame(width: 30)
-            }
-          }
-        }
-        .padding(.leading, 4)
-      }
-    }
-  }
-
   // MARK: - Status Section
 
   private var statusSection: some View {
@@ -292,235 +163,6 @@ struct ContentView: View {
     .padding()
     .background(Color.gray.opacity(0.1))
     .cornerRadius(8)
-  }
-}
-
-// MARK: - Image Format Option
-
-enum ImageFormatOption: String, CaseIterable {
-  case png
-  case jpeg
-  case tiff
-
-  var format: ImageFormat {
-    switch self {
-    case .png: return .png
-    case .jpeg: return .jpeg(quality: 0.9)
-    case .tiff: return .tiff
-    }
-  }
-}
-
-// MARK: - ViewModel
-
-@MainActor
-final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
-  @Published var hasPermission: Bool = false
-  @Published var isCapturing: Bool = false
-  @Published var saveDirectory: URL
-  @Published var selectedFormat: ImageFormatOption = .png
-  @Published var showCursor: Bool = true
-  @Published var playSound: Bool = true
-  @Published var lastCaptureResult: CaptureResult?
-  @Published var shortcutsEnabled: Bool = false {
-    didSet {
-      if shortcutsEnabled {
-        shortcutManager.enable()
-      } else {
-        shortcutManager.disable()
-      }
-    }
-  }
-
-  private let captureManager = ScreenCaptureManager.shared
-  private let shortcutManager = KeyboardShortcutManager.shared
-  private let floatingManager = FloatingScreenshotManager.shared
-  private var areaSelectionController: AreaSelectionController?
-  private var cancellables = Set<AnyCancellable>()
-
-  // Shortcut bindings for UI
-  @Published var fullscreenShortcut: ShortcutConfig
-  @Published var areaShortcut: ShortcutConfig
-
-  init() {
-    // Default save directory: Desktop/ZapShot
-    let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first!
-    saveDirectory = desktop.appendingPathComponent("ZapShot")
-
-    // Initialize shortcuts from manager
-    fullscreenShortcut = KeyboardShortcutManager.shared.fullscreenShortcut
-    areaShortcut = KeyboardShortcutManager.shared.areaShortcut
-
-    // Set up shortcut delegate
-    shortcutManager.delegate = self
-
-    // Subscribe to capture completions for floating preview
-    captureManager.captureCompletedPublisher
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] url in
-        guard self?.floatingManager.isEnabled == true else { return }
-        Task {
-          await self?.floatingManager.addScreenshot(url: url)
-        }
-      }
-      .store(in: &cancellables)
-
-    // Sync permission state
-    Task {
-      await updatePermissionState()
-    }
-  }
-
-  // MARK: - Floating Screenshot Settings
-
-  var floatingEnabled: Bool {
-    get { floatingManager.isEnabled }
-    set { floatingManager.isEnabled = newValue }
-  }
-
-  var floatingPosition: FloatingPosition {
-    get { floatingManager.position }
-    set { floatingManager.setPosition(newValue) }
-  }
-
-  var floatingAutoDismiss: Bool {
-    get { floatingManager.autoDismissEnabled }
-    set { floatingManager.autoDismissEnabled = newValue }
-  }
-
-  var floatingAutoDismissDelay: TimeInterval {
-    get { floatingManager.autoDismissDelay }
-    set { floatingManager.autoDismissDelay = newValue }
-  }
-
-  // MARK: - Shortcut Management
-
-  func updateFullscreenShortcut(_ config: ShortcutConfig) {
-    shortcutManager.setFullscreenShortcut(config)
-    fullscreenShortcut = config
-  }
-
-  func updateAreaShortcut(_ config: ShortcutConfig) {
-    shortcutManager.setAreaShortcut(config)
-    areaShortcut = config
-  }
-
-  // MARK: - KeyboardShortcutDelegate
-
-  func shortcutTriggered(_ action: ShortcutAction) {
-    switch action {
-    case .captureFullscreen:
-      captureFullscreen()
-    case .captureArea:
-      captureArea()
-    }
-  }
-
-  func updatePermissionState() async {
-    await captureManager.checkPermission()
-    hasPermission = captureManager.hasPermission
-  }
-
-  func requestPermission() {
-    Task {
-      _ = await captureManager.requestPermission()
-      await updatePermissionState()
-    }
-  }
-
-  func openSettings() {
-    captureManager.openScreenRecordingPreferences()
-  }
-
-  func captureFullscreen() {
-    Task {
-      isCapturing = true
-
-      // Small delay to hide our window before capture
-      try? await Task.sleep(nanoseconds: 200_000_000)  // 200ms
-
-      let result = await captureManager.captureFullscreen(
-        saveDirectory: saveDirectory,
-        format: selectedFormat.format
-      )
-
-      isCapturing = false
-      lastCaptureResult = result
-
-      if case .success = result, playSound {
-        playScreenshotSound()
-      }
-    }
-  }
-
-  func captureArea() {
-    // Prevent multiple area captures - only one at a time
-    if areaSelectionController != nil {
-      return
-    }
-
-    // Hide main window
-    NSApp.hide(nil)
-
-    // Small delay to ensure window is hidden
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-      guard let self = self else { return }
-
-      // Double-check to prevent race condition
-      guard self.areaSelectionController == nil else { return }
-
-      self.areaSelectionController = AreaSelectionController()
-      self.areaSelectionController?.startSelection { [weak self] rect in
-        guard let self = self else { return }
-
-        // Show main window again
-        NSApp.unhide(nil)
-        NSApp.activate(ignoringOtherApps: true)
-
-        guard let selectedRect = rect else {
-          // Cancelled - clear controller so user can start new selection
-          self.areaSelectionController = nil
-          self.lastCaptureResult = .failure(.cancelled)
-          return
-        }
-
-        Task { @MainActor in
-          self.isCapturing = true
-
-          let result = await self.captureManager.captureArea(
-            rect: selectedRect,
-            saveDirectory: self.saveDirectory,
-            format: self.selectedFormat.format
-          )
-
-          self.isCapturing = false
-          self.lastCaptureResult = result
-
-          if case .success = result, self.playSound {
-            self.playScreenshotSound()
-          }
-        }
-
-        self.areaSelectionController = nil
-      }
-    }
-  }
-
-  func chooseSaveDirectory() {
-    let panel = NSOpenPanel()
-    panel.canChooseDirectories = true
-    panel.canChooseFiles = false
-    panel.canCreateDirectories = true
-    panel.allowsMultipleSelection = false
-    panel.message = "Choose where to save screenshots"
-
-    if panel.runModal() == .OK, let url = panel.url {
-      saveDirectory = url
-    }
-  }
-
-  private func playScreenshotSound() {
-    NSSound(named: "Glass")?.play()
   }
 }
 

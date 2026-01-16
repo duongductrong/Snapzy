@@ -163,12 +163,18 @@ final class KeyboardShortcutManager {
   // UserDefaults keys
   private let fullscreenShortcutKey = "fullscreenShortcut"
   private let areaShortcutKey = "areaShortcut"
+  private let shortcutsEnabledKey = "shortcutsEnabled"
 
   private init() {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
     loadShortcuts()
     setupEventHandler()
+
+    // Auto-enable if previously enabled
+    if UserDefaults.standard.bool(forKey: shortcutsEnabledKey) {
+      enable()
+    }
   }
 
   // MARK: - Public API
@@ -178,6 +184,7 @@ final class KeyboardShortcutManager {
     guard !isEnabled else { return }
     registerShortcuts()
     isEnabled = true
+    UserDefaults.standard.set(true, forKey: shortcutsEnabledKey)
   }
 
   /// Disable global shortcuts
@@ -185,6 +192,7 @@ final class KeyboardShortcutManager {
     guard isEnabled else { return }
     unregisterAllShortcuts()
     isEnabled = false
+    UserDefaults.standard.set(false, forKey: shortcutsEnabledKey)
   }
 
   /// Update fullscreen shortcut

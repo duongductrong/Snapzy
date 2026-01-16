@@ -31,6 +31,9 @@ struct ShortcutRecorderView: View {
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
     }
+    .onDisappear {
+      stopRecording()
+    }
   }
 
   private func startRecording() {

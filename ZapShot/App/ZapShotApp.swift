@@ -10,11 +10,15 @@ import SwiftUI
 @main
 struct ZapShotApp: App {
 
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-        }
-        .windowStyle(.hiddenTitleBar)
-        .windowResizability(.contentSize)
+  var body: some Scene {
+    WindowGroup {
+      ContentView()
     }
+    .windowStyle(.hiddenTitleBar)
+    .windowResizability(.contentSize)
+
+    Settings {
+      PreferencesView()
+    }
+  }
 }

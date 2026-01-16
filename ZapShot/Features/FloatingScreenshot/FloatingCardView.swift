@@ -10,12 +10,9 @@ import SwiftUI
 /// Displays a single screenshot preview with hover-activated actions
 struct FloatingCardView: View {
   let item: ScreenshotItem
-  let onCopy: () -> Void
-  let onOpenFinder: () -> Void
-  let onDismiss: () -> Void
+  let manager: FloatingScreenshotManager
 
   @State private var isHovering = false
-  @State private var appeared = false
 
   private let cardWidth: CGFloat = 180
   private let cardHeight: CGFloat = 112.5
@@ -62,14 +59,6 @@ struct FloatingCardView: View {
     .onTapGesture(count: 2) {
       openAnnotation()
     }
-    .opacity(appeared ? 1 : 0)
-    .scaleEffect(appeared ? 1 : 0.8)
-    .offset(y: appeared ? 0 : 20)
-    .onAppear {
-      withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-        appeared = true
-      }
-    }
   }
 
   private func openAnnotation() {
@@ -87,11 +76,11 @@ struct FloatingCardView: View {
       // Action buttons (vertical, centered) - Copy and Save only
       VStack(spacing: 8) {
         CardTextButton(label: "Copy") {
-          onCopy()
+          manager.copyToClipboard(id: item.id)
         }
 
         CardTextButton(label: "Save") {
-          onOpenFinder()
+          manager.openInFinder(id: item.id)
         }
       }
     }
@@ -101,7 +90,7 @@ struct FloatingCardView: View {
     VStack {
       HStack {
         Spacer()
-        Button(action: onDismiss) {
+        Button(action: { manager.removeScreenshot(id: item.id) }) {
           Image(systemName: "xmark")
             .font(.system(size: 10, weight: .bold))
             .foregroundColor(.white)
