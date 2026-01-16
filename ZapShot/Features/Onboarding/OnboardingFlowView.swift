@@ -68,6 +68,10 @@ struct OnboardingFlowView: View {
   static var hasCompletedOnboarding: Bool {
     UserDefaults.standard.bool(forKey: onboardingCompletedKey)
   }
+
+  static func resetOnboarding() {
+    UserDefaults.standard.set(false, forKey: onboardingCompletedKey)
+  }
 }
 
 #Preview {

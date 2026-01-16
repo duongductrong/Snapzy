@@ -7,6 +7,12 @@
 
 import SwiftUI
 
+// MARK: - Notification Names
+
+extension Notification.Name {
+  static let showOnboarding = Notification.Name("showOnboarding")
+}
+
 @main
 struct ZapShotApp: App {
   @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -51,6 +57,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.showOnboardingWindow()
       }
     }
+
+    // Listen for restart onboarding notification
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleShowOnboarding),
+      name: .showOnboarding,
+      object: nil
+    )
+  }
+
+  @objc private func handleShowOnboarding() {
+    showOnboardingWindow()
   }
 
   private func showOnboardingWindow() {
@@ -62,6 +80,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return
       }
     }
+    // If onboarding window not found, open it via OpenWindow environment
+//    if let url = URL(string: "zapshot://onboarding") {
+//      NSWorkspace.shared.open(url)
+//    }
   }
 }
 

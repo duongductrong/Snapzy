@@ -32,6 +32,15 @@ struct PreferencesView: View {
         .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
     }
     .frame(width: 700, height: 550)
+    .onAppear {
+      // Bring preferences window to front
+      NSApp.activate(ignoringOtherApps: true)
+      DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+        NSApp.windows
+          .filter { $0.title.contains("Settings") || $0.title.contains("Preferences") }
+          .forEach { $0.makeKeyAndOrderFront(nil) }
+      }
+    }
   }
 }
 

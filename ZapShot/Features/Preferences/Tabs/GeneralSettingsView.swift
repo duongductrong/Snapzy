@@ -11,6 +11,7 @@ struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
   @AppStorage(PreferencesKeys.showMenuBarIcon) private var showMenuBarIcon = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
+  @Environment(\.openWindow) private var openWindow
 
   @State private var startAtLogin = LoginItemManager.isEnabled
 
@@ -43,6 +44,13 @@ struct GeneralSettingsView: View {
 
       Section("After Capture") {
         AfterCaptureMatrixView()
+      }
+
+      Section("Help") {
+        Button("Restart Onboarding...") {
+          restartOnboarding()
+        }
+        .foregroundColor(.accentColor)
       }
     }
     .formStyle(.grouped)
@@ -81,6 +89,17 @@ struct GeneralSettingsView: View {
 
     if panel.runModal() == .OK, let url = panel.url {
       exportLocation = url.path
+    }
+  }
+
+  private func restartOnboarding() {
+    OnboardingFlowView.resetOnboarding()
+    // Close settings window
+    NSApp.keyWindow?.close()
+    // Open onboarding window using SwiftUI environment
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+      NSApp.activate(ignoringOtherApps: true)
+      openWindow(id: "onboarding")
     }
   }
 }
