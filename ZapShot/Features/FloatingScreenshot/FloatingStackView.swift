@@ -21,9 +21,15 @@ struct FloatingStackView: View {
           item: item,
           onCopy: {
             manager.copyToClipboard(id: item.id)
+            withAnimation(.easeOut(duration: 0.2)) {
+              manager.removeScreenshot(id: item.id)
+            }
           },
           onOpenFinder: {
             manager.openInFinder(id: item.id)
+            withAnimation(.easeOut(duration: 0.2)) {
+              manager.removeScreenshot(id: item.id)
+            }
           },
           onDismiss: {
             withAnimation(.easeOut(duration: 0.2)) {

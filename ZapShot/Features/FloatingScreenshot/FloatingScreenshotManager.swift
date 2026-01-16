@@ -108,15 +108,15 @@ final class FloatingScreenshotManager: ObservableObject {
 
     let item = ScreenshotItem(url: url, thumbnail: thumbnail)
 
-    // Remove oldest if at max capacity
+    // Remove oldest if at max capacity (oldest is now at the end)
     if items.count >= maxVisibleItems {
-      if let oldestId = items.first?.id {
+      if let oldestId = items.last?.id {
         removeScreenshot(id: oldestId)
       }
     }
 
     let wasEmpty = items.isEmpty
-    items.append(item)
+    items.insert(item, at: 0)
 
     // Show panel if this is first item
     if wasEmpty {
