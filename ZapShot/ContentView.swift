@@ -10,33 +10,35 @@ import SwiftUI
 
 struct ContentView: View {
   @StateObject private var viewModel = ScreenCaptureViewModel()
-
+  
   var body: some View {
     VStack(spacing: 24) {
       // Header
       Text("ZapShot")
         .font(.largeTitle)
         .fontWeight(.bold)
-
+      
       Text("Screenshot Tool")
         .font(.subheadline)
         .foregroundColor(.secondary)
-
+      
       Divider()
-
-      // Permission Status
-      permissionSection
-
-      Divider()
-
-      // Capture Actions
-      captureSection
-
-      Spacer()
-
-      // Status / Result
-      statusSection
-
+      
+      ScrollView {
+        // Permission Status
+        permissionSection
+        
+        Divider()
+        
+        // Capture Actions
+        captureSection
+        
+        Spacer()
+        
+        // Status / Result
+        statusSection
+      }
+      
       // Open Preferences
       SettingsLink {
         Text("Open Preferences...")
@@ -46,45 +48,45 @@ struct ContentView: View {
     .padding(24)
     .frame(minWidth: 350, minHeight: 350)
   }
-
+  
   // MARK: - Permission Section
-
+  
   private var permissionSection: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Permissions")
         .font(.headline)
-
+      
       HStack {
         Circle()
           .fill(viewModel.hasPermission ? Color.green : Color.red)
           .frame(width: 12, height: 12)
-
+        
         Text(
           viewModel.hasPermission ? "Screen Recording: Granted" : "Screen Recording: Not Granted"
         )
         .font(.body)
-
+        
         Spacer()
-
+        
         Button("Request Permission") {
           viewModel.requestPermission()
         }
         .disabled(viewModel.hasPermission)
-
+        
         Button("Open Settings") {
           viewModel.openSettings()
         }
       }
     }
   }
-
+  
   // MARK: - Capture Section
-
+  
   private var captureSection: some View {
     VStack(alignment: .leading, spacing: 12) {
       Text("Capture Actions")
         .font(.headline)
-
+      
       HStack(spacing: 16) {
         Button {
           viewModel.captureFullscreen()
@@ -99,7 +101,7 @@ struct ContentView: View {
         }
         .buttonStyle(.bordered)
         .disabled(!viewModel.hasPermission || viewModel.isCapturing)
-
+        
         Button {
           viewModel.captureArea()
         } label: {
@@ -114,7 +116,7 @@ struct ContentView: View {
         .buttonStyle(.bordered)
         .disabled(!viewModel.hasPermission || viewModel.isCapturing)
       }
-
+      
       if viewModel.isCapturing {
         HStack {
           ProgressView()
@@ -126,9 +128,9 @@ struct ContentView: View {
       }
     }
   }
-
+  
   // MARK: - Status Section
-
+  
   private var statusSection: some View {
     VStack(spacing: 8) {
       if let lastResult = viewModel.lastCaptureResult {
@@ -140,12 +142,12 @@ struct ContentView: View {
             Text("Saved: \(url.lastPathComponent)")
               .font(.caption)
           }
-
+          
           Button("Show in Finder") {
             NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
           }
           .font(.caption)
-
+          
         case .failure(let error):
           HStack {
             Image(systemName: "exclamationmark.circle.fill")

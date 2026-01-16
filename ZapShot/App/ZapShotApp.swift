@@ -9,10 +9,18 @@ import SwiftUI
 
 @main
 struct ZapShotApp: App {
+  @State private var showOnboarding = !OnboardingFlowView.hasCompletedOnboarding
 
   var body: some Scene {
     WindowGroup {
-      ContentView()
+      if showOnboarding {
+        OnboardingFlowView(onComplete: {
+          showOnboarding = false
+        })
+        .frame(width: 500, height: 450)
+      } else {
+        ContentView()
+      }
     }
     .windowStyle(.hiddenTitleBar)
     .windowResizability(.contentSize)
