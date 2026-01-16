@@ -11,7 +11,6 @@ import SwiftUI
 struct TextEditOverlay: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
-  let imageOffset: CGPoint
   let imageSize: CGSize
 
   @State private var editingText: String = ""
@@ -19,76 +18,87 @@ struct TextEditOverlay: View {
 
   // MARK: - Constants
 
-  private let minTextFieldWidth: CGFloat = 80 // Minimum comfortable typing width
+  private let minTextFieldWidth: CGFloat = 60
+  private let textPadding: CGFloat = 4
 
   var body: some View {
-    if let editingId = state.editingTextAnnotationId,
-       let annotation = state.annotations.first(where: { $0.id == editingId }),
-       case .text(let currentText) = annotation.type {
+    GeometryReader { geometry in
+      if let editingId = state.editingTextAnnotationId,
+         let annotation = state.annotations.first(where: { $0.id == editingId }),
+         case .text(let currentText) = annotation.type {
 
-      let displayBounds = calculateDisplayBounds(annotation.bounds)
-      let fontSize = annotation.properties.fontSize * scale
+        let displayBounds = calculateDisplayBounds(annotation.bounds, in: geometry.size)
+        let fontSize = max(annotation.properties.fontSize * scale, 10)
 
-      TextField("Type here...", text: $editingText)
-        .textFieldStyle(.plain)
-        .font(.system(size: max(fontSize, 12)))
-        .foregroundColor(Color(annotation.properties.strokeColor))
-        .padding(.horizontal, 4)
-        .frame(minWidth: max(displayBounds.width, minTextFieldWidth))
-        .background(
-          RoundedRectangle(cornerRadius: 2)
-            .fill(Color.white.opacity(0.9))
-            .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
-        )
-        .focused($isFocused)
-        .position(
-          x: displayBounds.midX,
-          y: displayBounds.midY
-        )
-        .onAppear {
-          editingText = currentText
-          isFocused = true
-        }
-        .onSubmit {
-          commitEdit(id: editingId)
-        }
-        .onExitCommand {
-          cancelEdit()
-        }
-        .onChange(of: isFocused) { _, newValue in
-          // Commit when focus is lost
-          if !newValue && state.editingTextAnnotationId == editingId {
+        // Text input field positioned exactly at annotation bounds
+        TextField("", text: $editingText)
+          .textFieldStyle(.plain)
+          .font(.system(size: fontSize))
+          .foregroundColor(Color(annotation.properties.strokeColor))
+          .multilineTextAlignment(.leading)
+          .frame(
+            width: max(displayBounds.width, minTextFieldWidth),
+            height: displayBounds.height,
+            alignment: .leading
+          )
+          .padding(.horizontal, textPadding)
+          .background(
+            // Subtle editing indicator - transparent with light border
+            RoundedRectangle(cornerRadius: 2)
+              .stroke(Color.accentColor.opacity(0.6), lineWidth: 1)
+              .background(
+                RoundedRectangle(cornerRadius: 2)
+                  .fill(Color.white.opacity(0.1))
+              )
+          )
+          .focused($isFocused)
+          .position(
+            x: displayBounds.minX + max(displayBounds.width, minTextFieldWidth) / 2,
+            y: displayBounds.minY + displayBounds.height / 2
+          )
+          .onAppear {
+            editingText = currentText
+            // Delay focus to ensure view is ready
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+              isFocused = true
+            }
+          }
+          .onSubmit {
             commitEdit(id: editingId)
           }
-        }
+          .onExitCommand {
+            cancelEdit()
+          }
+          .onChange(of: isFocused) { _, newValue in
+            if !newValue && state.editingTextAnnotationId == editingId {
+              commitEdit(id: editingId)
+            }
+          }
+      }
     }
   }
 
-  /// Convert image bounds to display coordinates within the canvas
-  /// - Parameter imageBounds: Bounds in image coordinate space (bottom-left origin, AppKit)
-  /// - Returns: Bounds in display coordinate space (top-left origin, SwiftUI)
-  private func calculateDisplayBounds(_ imageBounds: CGRect) -> CGRect {
-    // Coordinate system transformation:
-    // - Image coordinates: bottom-left origin (AppKit)
-    // - Display coordinates: top-left origin (SwiftUI)
+  /// Convert image bounds to display coordinates
+  /// The overlay frame matches the image frame, so we just need to:
+  /// 1. Scale the bounds
+  /// 2. Flip Y axis (AppKit bottom-left origin → SwiftUI top-left origin)
+  private func calculateDisplayBounds(_ imageBounds: CGRect, in containerSize: CGSize) -> CGRect {
+    // Scale the bounds
+    let scaledX = imageBounds.origin.x * scale
+    let scaledWidth = imageBounds.width * scale
+    let scaledHeight = imageBounds.height * scale
 
-    let displayX = imageBounds.origin.x * scale + imageOffset.x + imageSize.width / 2
+    // Flip Y axis: AppKit uses bottom-left origin, SwiftUI uses top-left
+    // In AppKit: y=0 is bottom, y increases upward
+    // In SwiftUI: y=0 is top, y increases downward
+    let flippedY = (imageSize.height - imageBounds.origin.y - imageBounds.height) * scale
 
-    // Flip Y: convert from bottom-left to top-left origin
-    let flippedY = imageSize.height - imageBounds.origin.y - imageBounds.height
-    let displayY = flippedY * scale + imageOffset.y + imageSize.height / 2
-
-    let rect = CGRect(
-      x: displayX,
-      y: displayY,
-      width: imageBounds.width * scale,
-      height: imageBounds.height * scale
+    return CGRect(
+      x: scaledX,
+      y: flippedY,
+      width: scaledWidth,
+      height: scaledHeight
     )
-
-    // Validate bounds to catch coordinate transformation bugs early
-    assert(rect.width > 0 && rect.height > 0, "Invalid display bounds calculated: \(rect)")
-
-    return rect
   }
 
   private func commitEdit(id: UUID) {

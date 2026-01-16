@@ -76,8 +76,7 @@ struct AnnotateCanvasView: View {
         TextEditOverlay(
           state: state,
           scale: scale,
-          imageOffset: offset,
-          imageSize: CGSize(width: imgWidth, height: imgHeight)
+          imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
         )
         .frame(width: imgWidth, height: imgHeight)
         .offset(x: offset.x, y: offset.y)
