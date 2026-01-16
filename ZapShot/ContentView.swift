@@ -519,7 +519,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   }
 
   private func playScreenshotSound() {
-    NSSound(named: "Tink")?.play()
+    NSSound(named: "Glass")?.play()
   }
 }
 
