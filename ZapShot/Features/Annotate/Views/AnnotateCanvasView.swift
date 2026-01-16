@@ -70,6 +70,18 @@ struct AnnotateCanvasView: View {
       CanvasDrawingView(state: state, displayScale: scale)
         .frame(width: imgWidth, height: imgHeight)
         .offset(x: offset.x, y: offset.y)
+
+      // Text editing overlay (when editing a text annotation)
+      if state.editingTextAnnotationId != nil {
+        TextEditOverlay(
+          state: state,
+          scale: scale,
+          imageOffset: offset,
+          imageSize: CGSize(width: imgWidth, height: imgHeight)
+        )
+        .frame(width: imgWidth, height: imgHeight)
+        .offset(x: offset.x, y: offset.y)
+      }
     }
     .scaleEffect(state.zoomLevel)
   }

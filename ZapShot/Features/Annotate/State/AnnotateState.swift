@@ -178,7 +178,12 @@ final class AnnotateState: ObservableObject {
   func selectAnnotation(at point: CGPoint) -> AnnotationItem? {
     // Find annotation at point (in reverse order to select topmost)
     for annotation in annotations.reversed() {
-      if annotation.bounds.contains(point) {
+      // Quick bounds check first (optimization)
+      let expandedBounds = annotation.bounds.insetBy(dx: -10, dy: -10)
+      guard expandedBounds.contains(point) else { continue }
+
+      // Precise hit test
+      if annotation.containsPoint(point) {
         selectedAnnotationId = annotation.id
         return annotation
       }
@@ -188,15 +193,123 @@ final class AnnotateState: ObservableObject {
   }
 
   func updateAnnotationBounds(id: UUID, bounds: CGRect) {
-    if let index = annotations.firstIndex(where: { $0.id == id }) {
-      annotations[index].bounds = bounds
+    guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+
+    let oldBounds = annotations[index].bounds
+    let dx = bounds.origin.x - oldBounds.origin.x
+    let dy = bounds.origin.y - oldBounds.origin.y
+
+    annotations[index].bounds = bounds
+
+    // Also update embedded coordinates for arrows/lines/paths
+    switch annotations[index].type {
+    case .arrow(let start, let end):
+      annotations[index].type = .arrow(
+        start: CGPoint(x: start.x + dx, y: start.y + dy),
+        end: CGPoint(x: end.x + dx, y: end.y + dy)
+      )
+    case .line(let start, let end):
+      annotations[index].type = .line(
+        start: CGPoint(x: start.x + dx, y: start.y + dy),
+        end: CGPoint(x: end.x + dx, y: end.y + dy)
+      )
+    case .path(let points):
+      annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    case .highlight(let points):
+      annotations[index].type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    default:
+      break
     }
   }
 
   func updateAnnotationText(id: UUID, text: String) {
     if let index = annotations.firstIndex(where: { $0.id == id }) {
       annotations[index].type = .text(text)
+      // Auto-size bounds based on text content
+      let newBounds = calculateTextBounds(
+        text: text,
+        fontSize: annotations[index].properties.fontSize,
+        origin: annotations[index].bounds.origin
+      )
+      annotations[index].bounds = newBounds
     }
+  }
+
+  /// Update annotation properties (strokeWidth, fontSize, colors)
+  func updateAnnotationProperties(
+    id: UUID,
+    strokeWidth: CGFloat? = nil,
+    fontSize: CGFloat? = nil,
+    strokeColor: Color? = nil,
+    fillColor: Color? = nil
+  ) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+
+    if let strokeWidth = strokeWidth {
+      annotations[index].properties.strokeWidth = strokeWidth
+    }
+    if let fontSize = fontSize {
+      annotations[index].properties.fontSize = fontSize
+      // Recalculate bounds for new font size
+      if case .text(let content) = annotations[index].type {
+        annotations[index].bounds = calculateTextBounds(
+          text: content,
+          fontSize: fontSize,
+          origin: annotations[index].bounds.origin
+        )
+      }
+    }
+    if let strokeColor = strokeColor {
+      annotations[index].properties.strokeColor = strokeColor
+    }
+    if let fillColor = fillColor {
+      annotations[index].properties.fillColor = fillColor
+    }
+  }
+
+  /// Calculate text bounds based on content and font size
+  /// - Parameters:
+  ///   - text: The text content
+  ///   - fontSize: Desired font size (will be clamped to 8-144pt range)
+  ///   - origin: Origin point for the text bounds
+  /// - Returns: Bounded CGRect with enforced maximum dimensions
+  private func calculateTextBounds(text: String, fontSize: CGFloat, origin: CGPoint) -> CGRect {
+    // Clamp font size to reasonable range (prevent extreme values)
+    let clampedFontSize = min(max(fontSize, 8), 144)
+
+    let attributes: [NSAttributedString.Key: Any] = [
+      .font: NSFont.systemFont(ofSize: clampedFontSize)
+    ]
+    let displayText = text.isEmpty ? "Text" : text
+    let size = (displayText as NSString).size(withAttributes: attributes)
+    let padding: CGFloat = 4
+
+    // Enforce maximum bounds to prevent performance issues
+    let maxWidth: CGFloat = 2000  // ~reasonable for 4K displays
+    let maxHeight: CGFloat = 500  // ~15 lines of large text
+
+    return CGRect(
+      x: origin.x,
+      y: origin.y,
+      width: min(size.width + padding * 2, maxWidth),
+      height: min(size.height + padding * 2, maxHeight)
+    )
+  }
+
+  /// Get selected annotation if it's a text type
+  var selectedTextAnnotation: AnnotationItem? {
+    guard let id = selectedAnnotationId,
+          let annotation = annotations.first(where: { $0.id == id }),
+          case .text = annotation.type else {
+      return nil
+    }
+    return annotation
+  }
+
+  /// Get selected annotation (any type)
+  var selectedAnnotation: AnnotationItem? {
+    guard let id = selectedAnnotationId else { return nil }
+    return annotations.first { $0.id == id }
   }
 
   func deleteSelectedAnnotation() {
@@ -204,5 +317,41 @@ final class AnnotateState: ObservableObject {
     saveState()
     annotations.removeAll { $0.id == selectedId }
     selectedAnnotationId = nil
+  }
+
+  /// Deselect current annotation
+  func deselectAnnotation() {
+    selectedAnnotationId = nil
+    editingTextAnnotationId = nil
+  }
+
+  /// Nudge selected annotation by delta
+  func nudgeSelectedAnnotation(dx: CGFloat, dy: CGFloat) {
+    guard let selectedId = selectedAnnotationId,
+          let index = annotations.firstIndex(where: { $0.id == selectedId }) else { return }
+
+    saveState()
+    annotations[index].bounds.origin.x += dx
+    annotations[index].bounds.origin.y += dy
+
+    // Also update embedded points for arrows/lines/paths
+    switch annotations[index].type {
+    case .arrow(let start, let end):
+      annotations[index].type = .arrow(
+        start: CGPoint(x: start.x + dx, y: start.y + dy),
+        end: CGPoint(x: end.x + dx, y: end.y + dy)
+      )
+    case .line(let start, let end):
+      annotations[index].type = .line(
+        start: CGPoint(x: start.x + dx, y: start.y + dy),
+        end: CGPoint(x: end.x + dx, y: end.y + dy)
+      )
+    case .path(let points):
+      annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    case .highlight(let points):
+      annotations[index].type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    default:
+      break
+    }
   }
 }

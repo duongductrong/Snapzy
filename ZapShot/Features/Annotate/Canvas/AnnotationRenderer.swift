@@ -12,8 +12,19 @@ import SwiftUI
 /// Renders annotations to a CGContext
 struct AnnotationRenderer {
   let context: CGContext
+  var editingTextId: UUID?
+
+  init(context: CGContext, editingTextId: UUID? = nil) {
+    self.context = context
+    self.editingTextId = editingTextId
+  }
 
   func draw(_ annotation: AnnotationItem) {
+    // Skip rendering text that is being edited (overlay handles display)
+    if case .text = annotation.type, annotation.id == editingTextId {
+      return
+    }
+
     let strokeColor = NSColor(annotation.properties.strokeColor).cgColor
     let fillColor = NSColor(annotation.properties.fillColor).cgColor
 
@@ -164,11 +175,27 @@ struct AnnotationRenderer {
   }
 
   private func drawText(_ content: String, in bounds: CGRect, properties: AnnotationProperties) {
+    let padding: CGFloat = 4
+    let displayText = content.isEmpty ? "" : content
+
+    // Draw background if fillColor is not clear
+    if properties.fillColor != .clear {
+      context.setFillColor(NSColor(properties.fillColor).cgColor)
+      let bgRect = CGRect(
+        x: bounds.origin.x - padding,
+        y: bounds.origin.y - padding,
+        width: bounds.width + padding * 2,
+        height: bounds.height + padding * 2
+      )
+      context.fill(bgRect)
+    }
+
+    // Draw text
     let attributes: [NSAttributedString.Key: Any] = [
       .font: NSFont.systemFont(ofSize: properties.fontSize, weight: .regular),
       .foregroundColor: NSColor(properties.strokeColor)
     ]
-    let text = content as NSString
+    let text = displayText as NSString
     let textPoint = CGPoint(x: bounds.origin.x, y: bounds.origin.y)
     text.draw(at: textPoint, withAttributes: attributes)
   }

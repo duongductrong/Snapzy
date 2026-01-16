@@ -10,28 +10,39 @@ import SwiftUI
 /// Left sidebar with background customization options
 struct AnnotateSidebarView: View {
   @ObservedObject var state: AnnotateState
-
+  
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
       VStack(alignment: .leading, spacing: 12) {
         noneButton
-
+        
         // Compact gradient section
         gradientSection
-
+        
         // Compact color section
         colorSection
-
+        
         Divider().background(Color.white.opacity(0.1))
-
+        
         // Sliders section
         slidersSection
-
+        
         // Alignment section
         alignmentSection
-
+        
         // Ratio section
         ratioSection
+
+        // Text styling section (shown when text annotation is selected)
+        if state.selectedTextAnnotation != nil {
+          Divider().background(Color.white.opacity(0.1))
+          TextStylingSection(state: state)
+        }
+        // General annotation properties (non-text selected)
+        else if state.selectedAnnotation != nil {
+          Divider().background(Color.white.opacity(0.1))
+          AnnotationPropertiesSection(state: state)
+        }
 
         Spacer(minLength: 20)
       }
@@ -40,12 +51,14 @@ struct AnnotateSidebarView: View {
     .frame(maxHeight: .infinity)
     .background(Color(white: 0.1))
   }
-
+  
   // MARK: - None Button
-
+  
   private var noneButton: some View {
     Button {
       state.backgroundStyle = .none
+      state.padding = 0
+      
     } label: {
       Text("None")
         .font(.system(size: 11, weight: .medium))
@@ -59,33 +72,38 @@ struct AnnotateSidebarView: View {
     }
     .buttonStyle(.plain)
   }
-
+  
   // MARK: - Sections
-
+  
   private var gradientSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       SidebarSectionHeader(title: "Gradients")
-
+      
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
         ForEach(GradientPreset.allCases) { preset in
           GradientPresetButton(
             preset: preset,
             isSelected: state.backgroundStyle == .gradient(preset)
           ) {
+            
+            if (state.padding <= 0) {
+              state.padding = 24
+            }
+            
             state.backgroundStyle = .gradient(preset)
           }
         }
       }
     }
   }
-
+  
   private var colorSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       SidebarSectionHeader(title: "Colors")
       CompactColorSwatchGrid(selectedColor: colorBinding)
     }
   }
-
+  
   private var colorBinding: Binding<Color?> {
     Binding(
       get: {
@@ -101,7 +119,7 @@ struct AnnotateSidebarView: View {
       }
     )
   }
-
+  
   private var slidersSection: some View {
     VStack(alignment: .leading, spacing: 10) {
       CompactSliderRow(
@@ -122,14 +140,14 @@ struct AnnotateSidebarView: View {
       CompactSliderRow(label: "Corners", value: $state.cornerRadius, range: 0...32)
     }
   }
-
+  
   private var alignmentSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       SidebarSectionHeader(title: "Alignment")
       AlignmentGrid(selected: $state.imageAlignment)
     }
   }
-
+  
   private var ratioSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       SidebarSectionHeader(title: "Ratio")
@@ -149,11 +167,11 @@ struct AnnotateSidebarView: View {
 
 struct CompactColorSwatchGrid: View {
   @Binding var selectedColor: Color?
-
+  
   private let colors: [Color] = [
     .red, .orange, .yellow, .green, .blue, .purple, .pink, .gray, .white, .black
   ]
-
+  
   var body: some View {
     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5), spacing: 4) {
       ForEach(colors, id: \.self) { color in
@@ -178,7 +196,7 @@ struct CompactSliderRow: View {
   let label: String
   @Binding var value: CGFloat
   let range: ClosedRange<CGFloat>
-
+  
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
       HStack {
