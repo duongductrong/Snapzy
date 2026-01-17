@@ -423,7 +423,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         self?.updateElapsedTime()
       }
     }
-  }
+    }
 
   private func updateElapsedTime() {
     guard let start = startTime, state == .recording else { return }

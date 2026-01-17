@@ -282,4 +282,12 @@ extension RecordingCoordinator: RecordingRegionOverlayDelegate {
     // Update the selected rect in-place without closing windows
     updateSelectedRect(rect)
   }
+
+  func overlay(_ overlay: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect) {
+    updateSelectedRect(rect)
+  }
+
+  func overlayDidFinishResizing(_ overlay: RecordingRegionOverlayWindow) {
+    // No additional action needed - rect is already updated
+  }
 }

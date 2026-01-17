@@ -7,6 +7,15 @@
 
 import AppKit
 
+// MARK: - RecordingResizeHandle
+
+/// Resize handle positions for edge and corner resizing
+enum RecordingResizeHandle {
+  case topLeft, top, topRight
+  case left, right
+  case bottomLeft, bottom, bottomRight
+}
+
 // MARK: - RecordingRegionOverlayDelegate
 
 /// Delegate protocol for overlay interaction events
@@ -16,6 +25,8 @@ protocol RecordingRegionOverlayDelegate: AnyObject {
   func overlay(_ overlay: RecordingRegionOverlayWindow, didMoveRegionTo rect: CGRect)
   func overlayDidFinishMoving(_ overlay: RecordingRegionOverlayWindow)
   func overlay(_ overlay: RecordingRegionOverlayWindow, didReselectWithRect rect: CGRect)
+  func overlay(_ overlay: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect)
+  func overlayDidFinishResizing(_ overlay: RecordingRegionOverlayWindow)
 }
 
 // MARK: - RecordingRegionOverlayWindow
@@ -98,14 +109,24 @@ final class RecordingRegionOverlayView: NSView {
   private var isDragging = false
   private var dragOffset: CGPoint = .zero
 
+  // Resize state
+  private var isResizing = false
+  private var activeHandle: RecordingResizeHandle?
+  private var resizeStartRect: CGRect = .zero
+  private var resizeStartPoint: CGPoint = .zero
+
   // New selection state (for immediate reselection on click outside)
   private var isNewSelecting = false
   private var newSelectionStart: CGPoint = .zero
   private var newSelectionEnd: CGPoint = .zero
 
+  // Constants
   private let dimColor = NSColor.black.withAlphaComponent(0.4)
   private let borderColor = NSColor.white
   private let borderWidth: CGFloat = 2.0
+  private let handleHitSize: CGFloat = 10.0
+  private let handleVisualSize: CGFloat = 8.0
+  private let minimumSelectionSize: CGFloat = 50.0
 
   init(frame: CGRect, highlightRect: CGRect) {
     self.highlightRect = highlightRect
@@ -161,6 +182,106 @@ final class RecordingRegionOverlayView: NSView {
     )
   }
 
+  // MARK: - Resize Handle Detection
+
+  private func handleAt(point: CGPoint) -> RecordingResizeHandle? {
+    let rect = localHighlightRect()
+    let hs = handleHitSize
+
+    // Corner handles (check first, higher priority)
+    if CGRect(x: rect.minX - hs, y: rect.maxY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .topLeft
+    }
+    if CGRect(x: rect.maxX - hs, y: rect.maxY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .topRight
+    }
+    if CGRect(x: rect.minX - hs, y: rect.minY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .bottomLeft
+    }
+    if CGRect(x: rect.maxX - hs, y: rect.minY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .bottomRight
+    }
+
+    // Edge handles
+    if CGRect(x: rect.midX - hs, y: rect.maxY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .top
+    }
+    if CGRect(x: rect.midX - hs, y: rect.minY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .bottom
+    }
+    if CGRect(x: rect.minX - hs, y: rect.midY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .left
+    }
+    if CGRect(x: rect.maxX - hs, y: rect.midY - hs, width: hs * 2, height: hs * 2).contains(point) {
+      return .right
+    }
+
+    return nil
+  }
+
+  private func cursorFor(handle: RecordingResizeHandle) -> NSCursor {
+    switch handle {
+    case .topLeft, .bottomRight:
+      return NSCursor.crosshair  // macOS lacks diagonal resize cursors
+    case .topRight, .bottomLeft:
+      return NSCursor.crosshair
+    case .top, .bottom:
+      return NSCursor.resizeUpDown
+    case .left, .right:
+      return NSCursor.resizeLeftRight
+    }
+  }
+
+  private func calculateResizedRect(handle: RecordingResizeHandle, delta: CGPoint) -> CGRect {
+    var rect = resizeStartRect
+    let minSize = minimumSelectionSize
+
+    switch handle {
+    case .topLeft:
+      rect.origin.x += delta.x
+      rect.size.width -= delta.x
+      rect.size.height += delta.y
+    case .top:
+      rect.size.height += delta.y
+    case .topRight:
+      rect.size.width += delta.x
+      rect.size.height += delta.y
+    case .left:
+      rect.origin.x += delta.x
+      rect.size.width -= delta.x
+    case .right:
+      rect.size.width += delta.x
+    case .bottomLeft:
+      rect.origin.x += delta.x
+      rect.origin.y += delta.y
+      rect.size.width -= delta.x
+      rect.size.height -= delta.y
+    case .bottom:
+      rect.origin.y += delta.y
+      rect.size.height -= delta.y
+    case .bottomRight:
+      rect.origin.y += delta.y
+      rect.size.width += delta.x
+      rect.size.height -= delta.y
+    }
+
+    // Enforce minimum size with origin adjustment
+    if rect.width < minSize {
+      if handle == .left || handle == .topLeft || handle == .bottomLeft {
+        rect.origin.x = resizeStartRect.maxX - minSize
+      }
+      rect.size.width = minSize
+    }
+    if rect.height < minSize {
+      if handle == .bottom || handle == .bottomLeft || handle == .bottomRight {
+        rect.origin.y = resizeStartRect.maxY - minSize
+      }
+      rect.size.height = minSize
+    }
+
+    return rect
+  }
+
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
@@ -168,6 +289,16 @@ final class RecordingRegionOverlayView: NSView {
 
     let point = convert(event.locationInWindow, from: nil)
     let localRect = localHighlightRect()
+
+    // Check for resize handle first
+    if let handle = handleAt(point: point) {
+      isResizing = true
+      activeHandle = handle
+      resizeStartRect = highlightRect
+      resizeStartPoint = point
+      cursorFor(handle: handle).set()
+      return
+    }
 
     if localRect.contains(point) {
       // Start dragging existing selection
@@ -190,6 +321,14 @@ final class RecordingRegionOverlayView: NSView {
     guard isInteractionEnabled, let overlayWindow = overlayWindow else { return }
 
     let point = convert(event.locationInWindow, from: nil)
+
+    if isResizing, let handle = activeHandle {
+      // Calculate resize delta and new rect
+      let delta = CGPoint(x: point.x - resizeStartPoint.x, y: point.y - resizeStartPoint.y)
+      let newRect = calculateResizedRect(handle: handle, delta: delta)
+      overlayWindow.interactionDelegate?.overlay(overlayWindow, didResizeRegionTo: newRect)
+      return
+    }
 
     if isNewSelecting {
       // Update new selection rect
@@ -217,6 +356,16 @@ final class RecordingRegionOverlayView: NSView {
 
   override func mouseUp(with event: NSEvent) {
     guard let overlayWindow = overlayWindow else { return }
+
+    if isResizing {
+      isResizing = false
+      activeHandle = nil
+      overlayWindow.interactionDelegate?.overlayDidFinishResizing(overlayWindow)
+      // Update cursor based on current position
+      let point = convert(event.locationInWindow, from: nil)
+      updateCursorFor(point: point)
+      return
+    }
 
     if isNewSelecting {
       // Complete new selection
@@ -250,10 +399,18 @@ final class RecordingRegionOverlayView: NSView {
 
   override func mouseMoved(with event: NSEvent) {
     guard isInteractionEnabled else { return }
-
     let point = convert(event.locationInWindow, from: nil)
-    let localRect = localHighlightRect()
+    updateCursorFor(point: point)
+  }
 
+  private func updateCursorFor(point: CGPoint) {
+    // Check for resize handle first
+    if let handle = handleAt(point: point) {
+      cursorFor(handle: handle).set()
+      return
+    }
+
+    let localRect = localHighlightRect()
     if localRect.contains(point) {
       NSCursor.openHand.set()
     } else {
@@ -302,6 +459,41 @@ final class RecordingRegionOverlayView: NSView {
       borderPath.lineWidth = borderWidth
       borderColor.setStroke()
       borderPath.stroke()
+
+      // Draw resize handles
+      drawRecordingResizeHandles(for: clampedRect)
+    }
+  }
+
+  private func drawRecordingResizeHandles(for rect: CGRect) {
+    let size = handleVisualSize
+    let halfSize = size / 2
+
+    let handlePositions: [CGPoint] = [
+      CGPoint(x: rect.minX, y: rect.maxY),  // topLeft
+      CGPoint(x: rect.midX, y: rect.maxY),  // top
+      CGPoint(x: rect.maxX, y: rect.maxY),  // topRight
+      CGPoint(x: rect.minX, y: rect.midY),  // left
+      CGPoint(x: rect.maxX, y: rect.midY),  // right
+      CGPoint(x: rect.minX, y: rect.minY),  // bottomLeft
+      CGPoint(x: rect.midX, y: rect.minY),  // bottom
+      CGPoint(x: rect.maxX, y: rect.minY),  // bottomRight
+    ]
+
+    for pos in handlePositions {
+      let handleRect = CGRect(
+        x: pos.x - halfSize,
+        y: pos.y - halfSize,
+        width: size,
+        height: size
+      )
+      // Draw white fill with dark border for visibility
+      NSColor.white.setFill()
+      let path = NSBezierPath(roundedRect: handleRect, xRadius: 2, yRadius: 2)
+      path.fill()
+      NSColor.black.withAlphaComponent(0.3).setStroke()
+      path.lineWidth = 1
+      path.stroke()
     }
   }
 
