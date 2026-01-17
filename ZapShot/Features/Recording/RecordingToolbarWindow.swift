@@ -53,7 +53,8 @@ final class RecordingToolbarWindow: NSWindow {
   private func configureWindow() {
     isOpaque = false
     backgroundColor = .clear
-    level = .floating
+    // Use popUpMenu level to ensure toolbar is above the region overlay (.floating)
+    level = .popUpMenu
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     hasShadow = false
     isReleasedWhenClosed = false

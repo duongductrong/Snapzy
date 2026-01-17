@@ -26,7 +26,7 @@ struct GeneralSettingsView: View {
         Toggle("Play sounds", isOn: $playSounds)
         Toggle("Show icon in menu bar", isOn: $showMenuBarIcon)
       }
-
+      
       Section("Export") {
         HStack {
           Text("Save screenshots to:")
