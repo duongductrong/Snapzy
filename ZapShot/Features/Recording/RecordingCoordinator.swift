@@ -20,6 +20,7 @@ final class RecordingCoordinator: ObservableObject {
   private var regionOverlayWindows: [RecordingRegionOverlayWindow] = []
   private var selectedRect: CGRect?
   private let recorder = ScreenRecordingManager.shared
+  private var areaSelectionController: AreaSelectionController?
 
   private init() {}
 
@@ -65,6 +66,8 @@ final class RecordingCoordinator: ObservableObject {
   private func showRegionOverlay(for rect: CGRect) {
     for screen in NSScreen.screens {
       let overlay = RecordingRegionOverlayWindow(screen: screen, highlightRect: rect)
+      overlay.interactionDelegate = self
+      overlay.setInteractionEnabled(true)
       overlay.orderFrontRegardless()
       regionOverlayWindows.append(overlay)
     }
@@ -120,8 +123,10 @@ final class RecordingCoordinator: ObservableObject {
         try await recorder.startRecording()
 
         // Hide border on overlay (would appear in video)
+        // Disable interaction during recording
         for overlay in regionOverlayWindows {
           overlay.hideBorder()
+          overlay.setInteractionEnabled(false)
         }
 
         // Switch to status bar
@@ -172,6 +177,67 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow?.close()
     toolbarWindow = nil
     selectedRect = nil
+    areaSelectionController = nil
     isActive = false
+  }
+
+  /// Update the selected rect and sync all overlays + toolbar
+  private func updateSelectedRect(_ rect: CGRect) {
+    selectedRect = rect
+    for overlay in regionOverlayWindows {
+      overlay.updateHighlightRect(rect)
+    }
+    toolbarWindow?.updateAnchorRect(rect)
+  }
+
+  /// Restart area selection (preserves format)
+  private func restartAreaSelection() {
+    let savedFormat = toolbarWindow?.selectedFormat ?? .mov
+
+    // Close current overlays and toolbar
+    for overlay in regionOverlayWindows {
+      overlay.close()
+    }
+    regionOverlayWindows.removeAll()
+
+    toolbarWindow?.close()
+    toolbarWindow = nil
+    selectedRect = nil
+
+    // Start new selection
+    areaSelectionController = AreaSelectionController()
+    areaSelectionController?.startSelection(mode: .recording) { [weak self] rect, _ in
+      guard let self = self else { return }
+      self.areaSelectionController = nil
+
+      if let rect = rect {
+        self.selectedRect = rect
+        self.toolbarWindow = RecordingToolbarWindow(anchorRect: rect)
+        self.toolbarWindow?.selectedFormat = savedFormat
+        self.toolbarWindow?.onRecord = { [weak self] in self?.startRecording() }
+        self.toolbarWindow?.onCancel = { [weak self] in self?.cancel() }
+        self.toolbarWindow?.onStop = { [weak self] in self?.stopRecording() }
+        self.showRegionOverlay(for: rect)
+      } else {
+        // User cancelled
+        self.cleanup()
+      }
+    }
+  }
+}
+
+// MARK: - RecordingRegionOverlayDelegate
+
+extension RecordingCoordinator: RecordingRegionOverlayDelegate {
+  func overlayDidRequestReselection(_ overlay: RecordingRegionOverlayWindow) {
+    restartAreaSelection()
+  }
+
+  func overlay(_ overlay: RecordingRegionOverlayWindow, didMoveRegionTo rect: CGRect) {
+    updateSelectedRect(rect)
+  }
+
+  func overlayDidFinishMoving(_ overlay: RecordingRegionOverlayWindow) {
+    // No additional action needed - rect is already updated
   }
 }
