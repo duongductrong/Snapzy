@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Sparkle
 
 struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
@@ -14,6 +15,17 @@ struct GeneralSettingsView: View {
   @Environment(\.openWindow) private var openWindow
 
   @State private var startAtLogin = LoginItemManager.isEnabled
+
+  // Sparkle updater for settings
+  private let updater: SPUUpdater
+
+  init() {
+    updater = SPUStandardUpdaterController(
+      startingUpdater: false,
+      updaterDelegate: nil,
+      userDriverDelegate: nil
+    ).updater
+  }
 
   var body: some View {
     Form {
@@ -26,7 +38,31 @@ struct GeneralSettingsView: View {
         Toggle("Play sounds", isOn: $playSounds)
         Toggle("Show icon in menu bar", isOn: $showMenuBarIcon)
       }
-      
+
+      Section("Updates") {
+        Toggle("Automatically check for updates", isOn: Binding(
+          get: { updater.automaticallyChecksForUpdates },
+          set: { updater.automaticallyChecksForUpdates = $0 }
+        ))
+
+        Toggle("Automatically download updates", isOn: Binding(
+          get: { updater.automaticallyDownloadsUpdates },
+          set: { updater.automaticallyDownloadsUpdates = $0 }
+        ))
+
+        HStack {
+          Text("Last checked:")
+          Spacer()
+          if let lastCheck = updater.lastUpdateCheckDate {
+            Text(lastCheck, style: .relative)
+              .foregroundColor(.secondary)
+          } else {
+            Text("Never")
+              .foregroundColor(.secondary)
+          }
+        }
+      }
+
       Section("Export") {
         HStack {
           Text("Save screenshots to:")

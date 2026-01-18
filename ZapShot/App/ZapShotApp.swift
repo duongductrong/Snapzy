@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Sparkle
 
 // MARK: - Notification Names
 
@@ -19,10 +20,21 @@ struct ZapShotApp: App {
   @StateObject private var viewModel = ScreenCaptureViewModel()
   @State private var showOnboarding = !OnboardingFlowView.hasCompletedOnboarding
 
+  // Sparkle updater controller
+  private let updaterController: SPUStandardUpdaterController
+
+  init() {
+    updaterController = SPUStandardUpdaterController(
+      startingUpdater: true,
+      updaterDelegate: nil,
+      userDriverDelegate: nil
+    )
+  }
+
   var body: some Scene {
     // Menu Bar
     MenuBarExtra("ZapShot", systemImage: "camera.aperture") {
-      MenuBarContentView(viewModel: viewModel)
+      MenuBarContentView(viewModel: viewModel, updater: updaterController.updater)
     }
 
     // Onboarding Window (shown only when needed)
@@ -91,6 +103,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
 struct MenuBarContentView: View {
   @ObservedObject var viewModel: ScreenCaptureViewModel
+  let updater: SPUUpdater
 
   var body: some View {
     Group {
@@ -144,6 +157,9 @@ struct MenuBarContentView: View {
 
         Divider()
       }
+
+      // Check for Updates
+      CheckForUpdatesView(updater: updater)
 
       // Preferences
       SettingsLink {

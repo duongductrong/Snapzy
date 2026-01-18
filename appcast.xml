@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/">
+  <channel>
+    <title>ZapShot Updates</title>
+    <link>https://github.com/duongductrong/ZapShot/releases</link>
+    <description>ZapShot application updates</description>
+    <language>en</language>
+    <!--
+      TEMPLATE: Copy this <item> block for each new release.
+      Run generate_appcast tool to auto-generate signatures.
+    -->
+    <item>
+      <title>Version 1.0.0</title>
+      <sparkle:version>1</sparkle:version>
+      <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 19 Jan 2026 00:00:00 +0000</pubDate>
+      <sparkle:releaseNotesLink>
+        https://github.com/duongductrong/ZapShot/releases/download/v1.0.0/release-notes.html
+      </sparkle:releaseNotesLink>
+      <enclosure
+        url="https://github.com/duongductrong/ZapShot/releases/download/v1.0.0/ZapShot-1.0.0.zip"
+        sparkle:edSignature="SIGNATURE_PLACEHOLDER"
+        length="0"
+        type="application/octet-stream"/>
+    </item>
+  </channel>
+</rss>
