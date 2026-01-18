@@ -127,7 +127,7 @@ final class AnnotateExporter {
     context.resetClip()
 
     // Draw annotations (offset by crop origin and padding)
-    let renderer = AnnotationRenderer(context: context)
+    let renderer = AnnotationRenderer(context: context, sourceImage: sourceImage)
     for annotation in state.annotations {
       // Only include annotations that intersect with crop bounds
       if let cropRect = state.cropRect {

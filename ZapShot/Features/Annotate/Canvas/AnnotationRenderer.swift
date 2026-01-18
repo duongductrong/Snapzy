@@ -13,10 +13,12 @@ import SwiftUI
 struct AnnotationRenderer {
   let context: CGContext
   var editingTextId: UUID?
+  var sourceImage: NSImage?
 
-  init(context: CGContext, editingTextId: UUID? = nil) {
+  init(context: CGContext, editingTextId: UUID? = nil, sourceImage: NSImage? = nil) {
     self.context = context
     self.editingTextId = editingTextId
+    self.sourceImage = sourceImage
   }
 
   func draw(_ annotation: AnnotationItem) {
@@ -56,7 +58,7 @@ struct AnnotationRenderer {
       drawCounter(value: value, at: annotation.bounds.origin, color: annotation.properties.strokeColor)
 
     case .blur:
-      break
+      drawBlur(bounds: annotation.bounds)
 
     case .text(let content):
       drawText(content, in: annotation.bounds, properties: annotation.properties)
@@ -206,6 +208,47 @@ struct AnnotationRenderer {
       y: min(start.y, end.y),
       width: abs(end.x - start.x),
       height: abs(end.y - start.y)
+    )
+  }
+
+  private func drawBlur(bounds: CGRect) {
+    guard let sourceImage = sourceImage else {
+      // Fallback when no source image available
+      BlurEffectRenderer.drawBlurPreview(
+        in: context,
+        region: bounds,
+        strokeColor: NSColor.gray.cgColor
+      )
+      return
+    }
+
+    BlurEffectRenderer.drawPixelatedRegion(
+      in: context,
+      sourceImage: sourceImage,
+      region: bounds
+    )
+  }
+
+  /// Draw blur preview during drag operation
+  func drawBlurPreview(start: CGPoint, currentPoint: CGPoint, strokeColor: Color) {
+    let rect = makeRect(from: start, to: currentPoint)
+    guard rect.width > 0, rect.height > 0 else { return }
+
+    if let sourceImage = sourceImage {
+      // Show actual pixelated preview
+      BlurEffectRenderer.drawPixelatedRegion(
+        in: context,
+        sourceImage: sourceImage,
+        region: rect,
+        pixelSize: BlurEffectRenderer.defaultPixelSize
+      )
+    }
+
+    // Draw border indicator
+    BlurEffectRenderer.drawBlurPreview(
+      in: context,
+      region: rect,
+      strokeColor: NSColor(strokeColor).cgColor
     )
   }
 }

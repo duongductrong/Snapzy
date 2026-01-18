@@ -524,7 +524,11 @@ final class DrawingCanvasNSView: NSView {
     context.scaleBy(x: displayScale, y: displayScale)
 
     // Draw existing annotations (at image coordinates - transform handles scaling)
-    let renderer = AnnotationRenderer(context: context, editingTextId: state.editingTextAnnotationId)
+    let renderer = AnnotationRenderer(
+      context: context,
+      editingTextId: state.editingTextAnnotationId,
+      sourceImage: state.sourceImage
+    )
     for annotation in state.annotations {
       renderer.draw(annotation)
 
@@ -536,13 +540,22 @@ final class DrawingCanvasNSView: NSView {
 
     // Draw current stroke if drawing
     if isDrawing, let start = dragStart {
-      renderer.drawCurrentStroke(
-        tool: state.selectedTool,
-        start: start,
-        currentPath: currentPath,
-        strokeColor: state.strokeColor,
-        strokeWidth: state.strokeWidth
-      )
+      // Special handling for blur tool preview
+      if state.selectedTool == .blur, let lastPoint = currentPath.last {
+        renderer.drawBlurPreview(
+          start: start,
+          currentPoint: lastPoint,
+          strokeColor: state.strokeColor
+        )
+      } else {
+        renderer.drawCurrentStroke(
+          tool: state.selectedTool,
+          start: start,
+          currentPath: currentPath,
+          strokeColor: state.strokeColor,
+          strokeWidth: state.strokeWidth
+        )
+      }
     }
 
     context.restoreGState()
