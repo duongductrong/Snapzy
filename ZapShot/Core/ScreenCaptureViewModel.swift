@@ -161,8 +161,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     Task {
       isCapturing = true
 
-      // Small delay to hide our window before capture
-      try? await Task.sleep(nanoseconds: 200_000_000)  // 200ms
+      // Minimal delay to ensure UI state updates before capture
+      try? await Task.sleep(nanoseconds: 50_000_000)  // 50ms
 
       let result = await captureManager.captureFullscreen(
         saveDirectory: saveDirectory,
@@ -187,8 +187,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Hide main window
     NSApp.hide(nil)
 
-    // Small delay to ensure window is hidden
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+    // Minimal delay to ensure window is hidden
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
       guard let self = self else { return }
 
       // Double-check to prevent race condition
