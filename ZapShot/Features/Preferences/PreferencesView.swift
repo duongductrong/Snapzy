@@ -30,6 +30,9 @@ struct PreferencesView: View {
 
       PlaceholderSettingsView.advanced
         .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
+
+      AboutSettingsView()
+        .tabItem { Label("About", systemImage: "info.circle") }
     }
     .frame(width: 700, height: 550)
     .onAppear {
