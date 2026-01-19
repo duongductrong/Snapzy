@@ -10,7 +10,6 @@ import Sparkle
 
 struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
-  @AppStorage(PreferencesKeys.showMenuBarIcon) private var showMenuBarIcon = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
   @Environment(\.openWindow) private var openWindow
 
@@ -36,12 +35,11 @@ struct GeneralSettingsView: View {
           }
 
         Toggle("Play sounds", isOn: $playSounds)
-        Toggle("Show icon in menu bar", isOn: $showMenuBarIcon)
       }
 
-      Section("Export") {
+      Section("Storage") {
         HStack {
-          Text("Save screenshots to:")
+          Text("Save screenshots & recordings to:")
           Spacer()
           Text(exportLocationDisplay)
             .foregroundColor(.secondary)
@@ -54,7 +52,7 @@ struct GeneralSettingsView: View {
         }
       }
 
-      Section("After Capture") {
+      Section("Post-Capture Actions") {
         AfterCaptureMatrixView()
       }
 
