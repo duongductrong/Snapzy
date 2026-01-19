@@ -55,6 +55,9 @@ final class DrawingCanvasNSView: NSView {
 
   private let handleSize: CGFloat = 8
 
+  // Blur cache manager for performance optimization
+  private let blurCacheManager = BlurCacheManager()
+
   init(state: AnnotateState) {
     self.state = state
     super.init(frame: .zero)
@@ -405,6 +408,12 @@ final class DrawingCanvasNSView: NSView {
 
     // Finish resizing
     if isResizingAnnotation {
+      // Invalidate blur cache if resizing a blur annotation
+      if let selectedId = state.selectedAnnotationId,
+         let annotation = state.annotations.first(where: { $0.id == selectedId }),
+         case .blur = annotation.type {
+        blurCacheManager.invalidate(id: selectedId)
+      }
       Task { @MainActor in
         state.saveState()
       }
@@ -527,7 +536,8 @@ final class DrawingCanvasNSView: NSView {
     let renderer = AnnotationRenderer(
       context: context,
       editingTextId: state.editingTextAnnotationId,
-      sourceImage: state.sourceImage
+      sourceImage: state.sourceImage,
+      blurCacheManager: blurCacheManager
     )
     for annotation in state.annotations {
       renderer.draw(annotation)

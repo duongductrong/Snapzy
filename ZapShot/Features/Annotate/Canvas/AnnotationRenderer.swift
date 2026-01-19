@@ -14,11 +14,18 @@ struct AnnotationRenderer {
   let context: CGContext
   var editingTextId: UUID?
   var sourceImage: NSImage?
+  var blurCacheManager: BlurCacheManager?
 
-  init(context: CGContext, editingTextId: UUID? = nil, sourceImage: NSImage? = nil) {
+  init(
+    context: CGContext,
+    editingTextId: UUID? = nil,
+    sourceImage: NSImage? = nil,
+    blurCacheManager: BlurCacheManager? = nil
+  ) {
     self.context = context
     self.editingTextId = editingTextId
     self.sourceImage = sourceImage
+    self.blurCacheManager = blurCacheManager
   }
 
   func draw(_ annotation: AnnotationItem) {
@@ -58,7 +65,7 @@ struct AnnotationRenderer {
       drawCounter(value: value, at: annotation.bounds.origin, color: annotation.properties.strokeColor)
 
     case .blur:
-      drawBlur(bounds: annotation.bounds)
+      drawBlur(bounds: annotation.bounds, annotationId: annotation.id)
 
     case .text(let content):
       drawText(content, in: annotation.bounds, properties: annotation.properties)
@@ -211,7 +218,7 @@ struct AnnotationRenderer {
     )
   }
 
-  private func drawBlur(bounds: CGRect) {
+  private func drawBlur(bounds: CGRect, annotationId: UUID) {
     guard let sourceImage = sourceImage else {
       // Fallback when no source image available
       BlurEffectRenderer.drawBlurPreview(
@@ -222,6 +229,18 @@ struct AnnotationRenderer {
       return
     }
 
+    // Try cached version first for performance
+    if let cacheManager = blurCacheManager,
+       let cachedImage = cacheManager.getCachedBlur(
+         for: annotationId,
+         bounds: bounds,
+         sourceImage: sourceImage
+       ) {
+      context.draw(cachedImage, in: bounds)
+      return
+    }
+
+    // Fallback to direct render (slower)
     BlurEffectRenderer.drawPixelatedRegion(
       in: context,
       sourceImage: sourceImage,

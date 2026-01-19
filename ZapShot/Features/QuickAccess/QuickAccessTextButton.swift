@@ -22,7 +22,7 @@ struct QuickAccessTextButton: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: 6)
+          RoundedRectangle(cornerRadius: 24)
             .fill(isHovering ? Color.white.opacity(0.35) : Color.black.opacity(0.6))
         )
     }
