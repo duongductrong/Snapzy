@@ -46,6 +46,18 @@ struct QuickAccessCardView: View {
         dismissButton
           .transition(.opacity)
       }
+
+      // Edit button (bottom-left, only visible on hover)
+      if isHovering {
+        editButton
+          .transition(.opacity)
+      }
+
+      // Delete button (top-left, only visible on hover)
+      if isHovering {
+        deleteButton
+          .transition(.opacity)
+      }
     }
     .frame(width: cardWidth, height: cardHeight)
     .background(
@@ -148,6 +160,50 @@ struct QuickAccessCardView: View {
         }
         .buttonStyle(.plain)
         .padding(6)
+      }
+      Spacer()
+    }
+  }
+
+  private var editButton: some View {
+    VStack {
+      Spacer()
+      HStack {
+        Button(action: handleDoubleClick) {
+          Image(systemName: "pencil")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .frame(width: 20, height: 20)
+            .background(
+              Circle()
+                .fill(Color.black.opacity(0.6))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(6)
+        .help(item.isVideo ? "Edit Video" : "Annotate")
+        Spacer()
+      }
+    }
+  }
+
+  private var deleteButton: some View {
+    VStack {
+      HStack {
+        Button(action: { manager.deleteItem(id: item.id) }) {
+          Image(systemName: "trash")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .frame(width: 20, height: 20)
+            .background(
+              Circle()
+                .fill(Color.black.opacity(0.6))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(6)
+        .help("Delete")
+        Spacer()
       }
       Spacer()
     }

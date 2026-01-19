@@ -233,6 +233,22 @@ final class QuickAccessManager: ObservableObject {
     }
   }
 
+  /// Delete item from disk and remove from stack
+  func deleteItem(id: UUID) {
+    guard let item = items.first(where: { $0.id == id }) else { return }
+
+    let url = item.url
+    removeItem(id: id)
+
+    Task.detached(priority: .userInitiated) {
+      do {
+        try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+      } catch {
+        print("Failed to delete item: \(error.localizedDescription)")
+      }
+    }
+  }
+
   /// Open screenshot in Finder
   func openInFinder(id: UUID) {
     guard let item = items.first(where: { $0.id == id }) else { return }
