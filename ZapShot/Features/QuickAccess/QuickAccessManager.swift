@@ -62,10 +62,6 @@ final class QuickAccessManager: ObservableObject {
   // MARK: - Configuration
 
   let maxVisibleItems = 5
-  private let cardWidth: CGFloat = 200
-  private let cardHeight: CGFloat = 112
-  private let cardSpacing: CGFloat = 8
-  private let containerPadding: CGFloat = 10
 
   // MARK: - Private
 
@@ -289,9 +285,10 @@ final class QuickAccessManager: ObservableObject {
   private func calculatePanelSize() -> CGSize {
     let itemCount = max(1, items.count)
     let height =
-      CGFloat(itemCount) * cardHeight + CGFloat(itemCount - 1) * cardSpacing
-      + containerPadding * 2
-    let width = cardWidth + containerPadding * 2
+      CGFloat(itemCount) * QuickAccessLayout.cardHeight
+      + CGFloat(itemCount - 1) * QuickAccessLayout.cardSpacing
+      + QuickAccessLayout.containerPadding * 2
+    let width = QuickAccessLayout.cardWidth + QuickAccessLayout.containerPadding * 2
     return CGSize(width: width, height: height)
   }
 

@@ -11,11 +11,8 @@ import SwiftUI
 struct QuickAccessStackView: View {
   @ObservedObject var manager: QuickAccessManager
 
-  private let spacing: CGFloat = 8
-  private let padding: CGFloat = 10
-
   var body: some View {
-    VStack(spacing: spacing) {
+    VStack(spacing: QuickAccessLayout.cardSpacing) {
       ForEach(manager.items) { item in
         QuickAccessCardView(item: item, manager: manager)
           .id(item.id)
@@ -27,7 +24,7 @@ struct QuickAccessStackView: View {
           )
       }
     }
-    .padding(padding)
+    .padding(QuickAccessLayout.containerPadding)
     .animation(.spring(response: 0.3, dampingFraction: 0.75, blendDuration: 0), value: manager.items.map(\.id))
   }
 }
