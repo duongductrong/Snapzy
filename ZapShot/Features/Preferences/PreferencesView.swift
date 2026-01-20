@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct PreferencesView: View {
+  @ObservedObject private var themeManager = ThemeManager.shared
+
   var body: some View {
     TabView {
       GeneralSettingsView()
