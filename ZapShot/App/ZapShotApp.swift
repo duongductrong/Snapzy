@@ -36,7 +36,7 @@ struct ZapShotApp: App {
     // Menu Bar
     MenuBarExtra("ZapShot", systemImage: "camera.aperture") {
       MenuBarContentView(viewModel: viewModel, updater: updaterController.updater)
-        .preferredColorScheme(themeManager.effectiveColorScheme)
+        .preferredColorScheme(themeManager.systemAppearance)
     }
 
     // Onboarding Window (shown only when needed)
@@ -49,7 +49,7 @@ struct ZapShotApp: App {
           .forEach { $0.close() }
       })
       .frame(width: 500, height: 450)
-      .preferredColorScheme(themeManager.effectiveColorScheme)
+      .preferredColorScheme(themeManager.systemAppearance)
     }
     .windowStyle(.hiddenTitleBar)
     .windowResizability(.contentSize)
@@ -58,7 +58,7 @@ struct ZapShotApp: App {
     // Settings Window
     Settings {
       PreferencesView()
-        .preferredColorScheme(themeManager.effectiveColorScheme)
+        .preferredColorScheme(themeManager.systemAppearance)
     }
   }
 }

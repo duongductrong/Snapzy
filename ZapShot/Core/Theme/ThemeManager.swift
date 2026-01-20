@@ -19,13 +19,14 @@ final class ThemeManager: ObservableObject {
   @AppStorage(PreferencesKeys.appearanceMode)
   var preferredAppearance: AppearanceMode = .system {
     didSet {
-      updateEffectiveColorScheme()
+      updateSystemAppearance()
     }
   }
 
-  /// Effective color scheme - always returns concrete value, never nil.
-  /// Use this to avoid SwiftUI's async propagation delay when preferredColorScheme(nil) is used.
-  @Published private(set) var effectiveColorScheme: ColorScheme = .light
+  /// Resolved color scheme for SwiftUI's .preferredColorScheme() modifier.
+  /// Always returns concrete value (.light or .dark), never nil.
+  /// Automatically tracks system appearance changes when in .system mode.
+  @Published private(set) var systemAppearance: ColorScheme = .light
 
   private var appearanceObserver: NSObjectProtocol?
   private var appLaunchObserver: NSObjectProtocol?
@@ -38,7 +39,7 @@ final class ThemeManager: ObservableObject {
       queue: .main
     ) { [weak self] _ in
       Task { @MainActor in
-        self?.updateEffectiveColorScheme()
+        self?.updateSystemAppearance()
       }
     }
 
@@ -49,12 +50,12 @@ final class ThemeManager: ObservableObject {
       queue: .main
     ) { [weak self] _ in
       Task { @MainActor in
-        self?.updateEffectiveColorScheme()
+        self?.updateSystemAppearance()
       }
     }
 
     // Try to initialize now if NSApp is already available
-    updateEffectiveColorScheme()
+    updateSystemAppearance()
   }
 
   deinit {
@@ -68,36 +69,22 @@ final class ThemeManager: ObservableObject {
 
   // MARK: - Private
 
-  private func updateEffectiveColorScheme() {
+  private func updateSystemAppearance() {
     let newScheme: ColorScheme = switch preferredAppearance {
     case .system: currentSystemColorScheme
     case .light: .light
     case .dark: .dark
     }
-    if effectiveColorScheme != newScheme {
-      effectiveColorScheme = newScheme
+    if systemAppearance != newScheme {
+      systemAppearance = newScheme
     }
   }
 
   /// Returns current system color scheme by checking NSApp.effectiveAppearance
   private var currentSystemColorScheme: ColorScheme {
-    // Guard against NSApp not being initialized yet (during early app launch)
-    guard let app = NSApp else { return .light }
-    let appearance = app.effectiveAppearance
+    // Try NSApp first, fall back to NSAppearance.current if not ready
+    let appearance = NSApp?.effectiveAppearance ?? NSAppearance.currentDrawing()
     return appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua ? .dark : .light
-  }
-
-  // MARK: - SwiftUI (Deprecated)
-
-  /// ColorScheme for SwiftUI's .preferredColorScheme() modifier
-  /// Returns nil to follow system appearance
-  /// - Note: Deprecated - use `effectiveColorScheme` instead to avoid async propagation issues
-  var systemAppearance: ColorScheme? {
-    switch preferredAppearance {
-    case .system: return nil
-    case .light: return .light
-    case .dark: return .dark
-    }
   }
 
   // MARK: - AppKit
