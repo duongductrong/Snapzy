@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleIconFile</key>
+	<string>ClaudeShotIcon</string>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/user/ClaudeShot/master/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>zcoJ90nh+SEFg6ZEkb9fwQCEK51vSIRwyn6tOsQisL0=</string>
+</dict>
+</plist>

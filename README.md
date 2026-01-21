@@ -1,6 +1,6 @@
-# ZapShot
+# ClaudeShot
 
-A modern macOS screenshot application designed for efficiency and productivity. ZapShot enables quick screen captures with advanced annotation tools and floating screenshot management.
+A modern macOS screenshot application designed for efficiency and productivity. ClaudeShot enables quick screen captures with advanced annotation tools and floating screenshot management.
 
 ## Features
 
@@ -12,7 +12,7 @@ A modern macOS screenshot application designed for efficiency and productivity. 
 
 ## Architecture
 
-ZapShot follows a modular SwiftUI architecture organized into core functionality and feature modules:
+ClaudeShot follows a modular SwiftUI architecture organized into core functionality and feature modules:
 
 ```
 Core/
@@ -35,12 +35,12 @@ Features/
 ## Building
 
 1. Clone the repository
-2. Open `ZapShot.xcodeproj` in Xcode
+2. Open `ClaudeShot.xcodeproj` in Xcode
 3. Build and run (⌘R)
 
 ## Permissions
 
-ZapShot requires Screen Recording permission to capture screenshots. The app will prompt you on first launch or when requesting permission via System Preferences > Privacy & Security > Screen Recording.
+ClaudeShot requires Screen Recording permission to capture screenshots. The app will prompt you on first launch or when requesting permission via System Preferences > Privacy & Security > Screen Recording.
 
 ## License
 
