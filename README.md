@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./banner.png" alt="tiptap banner" />
+  <img src="./banner.png" width="200px" height="200px" alt="tiptap banner" />
   
   <h1>ClaudeShot</h1>
   <p><strong>A screenshot & recording app for macOS.</strong></p>
