@@ -14,9 +14,9 @@ struct QuickAccessCardView: View {
   let manager: QuickAccessManager
 
   @State private var isHovering = false
+  @State private var isDragging = false
+  @State private var dragRemovalTask: Task<Void, Never>?
 
-  private let cardWidth: CGFloat = 180
-  private let cardHeight: CGFloat = 112.5
   private let cornerRadius: CGFloat = 10
 
   var body: some View {
@@ -25,7 +25,7 @@ struct QuickAccessCardView: View {
       Image(nsImage: item.thumbnail)
         .resizable()
         .aspectRatio(contentMode: .fill)
-        .frame(width: cardWidth, height: cardHeight)
+        .frame(width: QuickAccessLayout.cardWidth, height: QuickAccessLayout.cardHeight)
         .clipped()
         .blur(radius: isHovering ? 2 : 0)
         .cornerRadius(cornerRadius)
@@ -59,7 +59,7 @@ struct QuickAccessCardView: View {
           .transition(.opacity)
       }
     }
-    .frame(width: cardWidth, height: cardHeight)
+    .frame(width: QuickAccessLayout.cardWidth, height: QuickAccessLayout.cardHeight)
     .background(
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(Color.black.opacity(0.1))
@@ -69,6 +69,7 @@ struct QuickAccessCardView: View {
         .stroke(Color.white.opacity(0.2), lineWidth: 1)
     )
     .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
+    .opacity(isDragging ? 0.6 : 1.0)
     .onHover { hovering in
       withAnimation(.easeInOut(duration: 0.2)) {
         isHovering = hovering
@@ -79,10 +80,20 @@ struct QuickAccessCardView: View {
     }
     .if(manager.dragDropEnabled) { view in
       view.onDrag {
-        item.dragItemProvider()
+        isDragging = true
+        dragRemovalTask?.cancel()
+        dragRemovalTask = Task { @MainActor in
+          try? await Task.sleep(nanoseconds: 500_000_000)
+          guard !Task.isCancelled else { return }
+          manager.removeScreenshot(id: item.id)
+        }
+        return item.dragItemProvider()
       } preview: {
         dragPreview
       }
+    }
+    .onDisappear {
+      dragRemovalTask?.cancel()
     }
   }
 
@@ -148,17 +159,9 @@ struct QuickAccessCardView: View {
     VStack {
       HStack {
         Spacer()
-        Button(action: { manager.removeScreenshot(id: item.id) }) {
-          Image(systemName: "xmark")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundColor(.white)
-            .frame(width: 20, height: 20)
-            .background(
-              Circle()
-                .fill(Color.black.opacity(0.6))
-            )
+        QuickAccessIconButton(icon: "xmark") {
+          manager.removeScreenshot(id: item.id)
         }
-        .buttonStyle(.plain)
         .padding(6)
       }
       Spacer()
@@ -169,19 +172,12 @@ struct QuickAccessCardView: View {
     VStack {
       Spacer()
       HStack {
-        Button(action: handleDoubleClick) {
-          Image(systemName: "pencil")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundColor(.white)
-            .frame(width: 20, height: 20)
-            .background(
-              Circle()
-                .fill(Color.black.opacity(0.6))
-            )
-        }
-        .buttonStyle(.plain)
+        QuickAccessIconButton(
+          icon: "pencil",
+          action: handleDoubleClick,
+          helpText: item.isVideo ? "Edit Video" : "Annotate"
+        )
         .padding(6)
-        .help(item.isVideo ? "Edit Video" : "Annotate")
         Spacer()
       }
     }
@@ -190,19 +186,12 @@ struct QuickAccessCardView: View {
   private var deleteButton: some View {
     VStack {
       HStack {
-        Button(action: { manager.deleteItem(id: item.id) }) {
-          Image(systemName: "trash")
-            .font(.system(size: 10, weight: .bold))
-            .foregroundColor(.white)
-            .frame(width: 20, height: 20)
-            .background(
-              Circle()
-                .fill(Color.black.opacity(0.6))
-            )
-        }
-        .buttonStyle(.plain)
+        QuickAccessIconButton(
+          icon: "trash",
+          action: { manager.deleteItem(id: item.id) },
+          helpText: "Delete"
+        )
         .padding(6)
-        .help("Delete")
         Spacer()
       }
       Spacer()
@@ -214,7 +203,7 @@ struct QuickAccessCardView: View {
     Image(nsImage: item.thumbnail)
       .resizable()
       .aspectRatio(contentMode: .fill)
-      .frame(width: cardWidth * 0.8, height: cardHeight * 0.8)
+      .frame(width: QuickAccessLayout.cardWidth * 0.8, height: QuickAccessLayout.cardHeight * 0.8)
       .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
       .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
   }
