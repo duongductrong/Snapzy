@@ -26,16 +26,21 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     self.state = AnnotateState(image: image, url: item.url)
 
-    // Calculate window size based on image
+    // Fixed window size for consistent experience
     let screen = NSScreen.main ?? NSScreen.screens.first!
-    let maxWidth = screen.frame.width * 0.8
-    let maxHeight = screen.frame.height * 0.8
-    let imageSize = image.size
+    let windowWidth: CGFloat = 1200
+    let windowHeight: CGFloat = 768
 
-    // Scale to fit screen while maintaining aspect ratio
-    let scale = min(maxWidth / imageSize.width, maxHeight / imageSize.height, 1.0)
-    let windowWidth = max(800, imageSize.width * scale + 280) // 280 for sidebar + padding
-    let windowHeight = max(600, imageSize.height * scale + 120) // 120 for toolbar + bottom
+    // Keep this for future use
+    // let maxWidth = screen.frame.width * 0.8
+    // let maxHeight = screen.frame.height * 0.8
+    // let imageSize = image.size
+
+    // // Scale to fit screen while maintaining aspect ratio
+    // let scale = min(maxWidth / imageSize.width, maxHeight / imageSize.height, 1.0)
+    // let windowWidth = max(800, imageSize.width * scale + 280) // 280 for sidebar + padding
+    // let windowHeight = max(600, imageSize.height * scale + 120) // 120 for toolbar + bottom
+    // Keep this for future use
 
     let origin = NSPoint(
       x: (screen.frame.width - windowWidth) / 2,
@@ -60,8 +65,8 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     // Default window size for empty canvas
     let screen = NSScreen.main ?? NSScreen.screens.first!
-    let defaultWidth: CGFloat = 900
-    let defaultHeight: CGFloat = 700
+    let defaultWidth: CGFloat = 1200
+    let defaultHeight: CGFloat = 768
 
     let origin = NSPoint(
       x: (screen.frame.width - defaultWidth) / 2,
@@ -76,7 +81,6 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     window.delegate = self
     setupContent()
-    setupImageObserver()
     setupKeyboardShortcutObservers()
   }
 
@@ -95,42 +99,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     window?.contentView = NSHostingView(rootView: mainView)
   }
 
-  /// Observe image changes to resize window when image is loaded
-  private func setupImageObserver() {
-    state.$sourceImage
-      .dropFirst()
-      .compactMap { $0 }
-      .first()
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.resizeToFitImage()
-      }
-      .store(in: &cancellables)
-  }
 
-  /// Resize window to fit loaded image
-  private func resizeToFitImage() {
-    guard let image = state.sourceImage,
-          let window = window,
-          let screen = window.screen ?? NSScreen.main else { return }
-
-    let maxWidth = screen.frame.width * 0.8
-    let maxHeight = screen.frame.height * 0.8
-    let imageSize = image.size
-
-    let scale = min(maxWidth / imageSize.width, maxHeight / imageSize.height, 1.0)
-    let windowWidth = max(800, imageSize.width * scale + 280)
-    let windowHeight = max(600, imageSize.height * scale + 120)
-
-    let newFrame = NSRect(
-      x: window.frame.midX - windowWidth / 2,
-      y: window.frame.midY - windowHeight / 2,
-      width: windowWidth,
-      height: windowHeight
-    )
-
-    window.setFrame(newFrame, display: true, animate: true)
-  }
 
   func showWindow() {
     window?.makeKeyAndOrderFront(nil)

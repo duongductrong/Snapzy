@@ -15,6 +15,7 @@ struct AnnotateMainView: View {
   var body: some View {
     VStack(spacing: 0) {
       AnnotateToolbarView(state: state)
+        .padding(.top, 0) // Add top padding for traffic lights
 
       Divider()
         .background(Color(nsColor: .separatorColor))
@@ -40,5 +41,6 @@ struct AnnotateMainView: View {
     }
     .background(Color(nsColor: .windowBackgroundColor))
     .preferredColorScheme(themeManager.systemAppearance)
+    .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar
   }
 }

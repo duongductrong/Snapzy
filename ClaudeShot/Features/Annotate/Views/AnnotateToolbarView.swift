@@ -13,6 +13,9 @@ struct AnnotateToolbarView: View {
 
   var body: some View {
     HStack(spacing: 8) {
+      // Add spacer for traffic lights (macOS standard width ~78px)
+      Spacer().frame(width: 78)
+
       // Left group: Capture tools
       captureToolsGroup
 

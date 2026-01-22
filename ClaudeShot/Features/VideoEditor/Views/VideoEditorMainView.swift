@@ -16,6 +16,10 @@ struct VideoEditorMainView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      // Add safe area spacer for traffic lights
+      Color.clear
+        .frame(height: 28) // Standard macOS title bar height
+
       // Video player
       VideoPlayerSection(player: state.player)
         .frame(minHeight: 200)
@@ -50,6 +54,7 @@ struct VideoEditorMainView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(Color(NSColor.windowBackgroundColor))
+    .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar
     .task {
       await state.loadMetadata()
       await state.extractFrames()

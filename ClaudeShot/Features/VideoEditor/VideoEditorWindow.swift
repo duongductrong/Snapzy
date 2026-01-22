@@ -22,6 +22,10 @@ final class VideoEditorWindow: NSWindow {
 
   private func configure() {
     applyTheme()
+
+    // Enable full-size content view
+    styleMask.insert(.fullSizeContentView)
+
     titlebarAppearsTransparent = true
     titleVisibility = .hidden
     minSize = NSSize(width: 400, height: 300)

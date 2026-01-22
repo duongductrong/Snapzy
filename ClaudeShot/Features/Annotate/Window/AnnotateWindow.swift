@@ -29,6 +29,10 @@ final class AnnotateWindow: NSWindow {
 
   private func configure() {
     applyTheme()
+
+    // Enable full-size content view
+    styleMask.insert(.fullSizeContentView)
+
     titlebarAppearsTransparent = true
     titleVisibility = .hidden
     minSize = NSSize(width: 800, height: 600)
@@ -54,6 +58,39 @@ final class AnnotateWindow: NSWindow {
 
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { true }
+
+  override func layoutIfNeeded() {
+    super.layoutIfNeeded()
+
+    // Get traffic light buttons
+    guard let closeButton = standardWindowButton(.closeButton),
+          let miniaturizeButton = standardWindowButton(.miniaturizeButton),
+          let zoomButton = standardWindowButton(.zoomButton),
+          let contentView = contentView else {
+      return
+    }
+
+    // Calculate position to center traffic lights with toolbar items
+    // Toolbar has: 8px top padding + 28px button height + 8px bottom padding = 44px total
+    // Traffic light button height is typically 16px
+    let toolbarGap: CGFloat = 4
+    let toolbarTopPadding: CGFloat = 0
+    let toolbarItemHeight: CGFloat = 28
+    let trafficLightHeight = closeButton.frame.height
+
+    // Center traffic lights vertically with the 28px toolbar items
+    let yPosition = toolbarTopPadding - toolbarGap + (toolbarItemHeight - trafficLightHeight) / 2
+
+    // Position buttons vertically centered with toolbar items
+    closeButton.frame.origin.y = yPosition
+    miniaturizeButton.frame.origin.y = yPosition
+    zoomButton.frame.origin.y = yPosition
+
+    // Keep original horizontal spacing (standard macOS position)
+    closeButton.frame.origin.x = 12
+    miniaturizeButton.frame.origin.x = closeButton.frame.maxX + 8
+    zoomButton.frame.origin.x = miniaturizeButton.frame.maxX + 8
+  }
 
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     guard event.type == .keyDown else {
