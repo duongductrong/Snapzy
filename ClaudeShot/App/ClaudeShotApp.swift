@@ -149,6 +149,13 @@ struct MenuBarContentView: View {
       }
       .keyboardShortcut("a", modifiers: [.command, .shift])
 
+      Button {
+        VideoEditorManager.shared.openEmptyEditor()
+      } label: {
+        Label("Edit Video...", systemImage: "film")
+      }
+      .keyboardShortcut("e", modifiers: [.command, .shift])
+
       Divider()
 
       // Permission Status (if not granted)

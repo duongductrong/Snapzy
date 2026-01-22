@@ -43,6 +43,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Cmd + Shift + E
+  static let defaultVideoEditor = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_E),
+    modifiers: UInt32(cmdKey | shiftKey)
+  )
+
   var displayString: String {
     var parts: [String] = []
 
@@ -146,6 +152,7 @@ enum ShortcutAction {
   case captureArea
   case recordVideo
   case openAnnotate
+  case openVideoEditor
 }
 
 /// Protocol for handling shortcut events
@@ -165,18 +172,21 @@ final class KeyboardShortcutManager {
   private(set) var areaShortcut: ShortcutConfig
   private(set) var recordingShortcut: ShortcutConfig
   private(set) var annotateShortcut: ShortcutConfig
+  private(set) var videoEditorShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
   private var areaHotkeyRef: EventHotKeyRef?
   private var recordingHotkeyRef: EventHotKeyRef?
   private var annotateHotkeyRef: EventHotKeyRef?
+  private var videoEditorHotkeyRef: EventHotKeyRef?
 
   // Hotkey IDs
   private let fullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4631), id: 1)  // "ZSF1"
   private let areaHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4632), id: 2)  // "ZSF2"
   private let recordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4633), id: 3)  // "ZSF3"
   private let annotateHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4634), id: 4)  // "ZSF4"
+  private let videoEditorHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4635), id: 5)  // "ZSF5"
 
   private var eventHandler: EventHandlerRef?
 
@@ -185,6 +195,7 @@ final class KeyboardShortcutManager {
   private let areaShortcutKey = "areaShortcut"
   private let recordingShortcutKey = "recordingShortcut"
   private let annotateShortcutKey = "annotateShortcut"
+  private let videoEditorShortcutKey = "videoEditorShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
 
   private init() {
@@ -192,6 +203,7 @@ final class KeyboardShortcutManager {
     areaShortcut = .defaultArea
     recordingShortcut = .defaultRecording
     annotateShortcut = .defaultAnnotate
+    videoEditorShortcut = .defaultVideoEditor
     loadShortcuts()
     setupEventHandler()
 
@@ -262,6 +274,9 @@ final class KeyboardShortcutManager {
     if let annotateData = try? encoder.encode(annotateShortcut) {
       UserDefaults.standard.set(annotateData, forKey: annotateShortcutKey)
     }
+    if let videoEditorData = try? encoder.encode(videoEditorShortcut) {
+      UserDefaults.standard.set(videoEditorData, forKey: videoEditorShortcutKey)
+    }
   }
 
   private func loadShortcuts() {
@@ -285,6 +300,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: annotateData)
     {
       annotateShortcut = config
+    }
+    if let videoEditorData = UserDefaults.standard.data(forKey: videoEditorShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: videoEditorData)
+    {
+      videoEditorShortcut = config
     }
   }
 
@@ -337,6 +357,8 @@ final class KeyboardShortcutManager {
       delegate?.shortcutTriggered(.recordVideo)
     case annotateHotkeyID.id:
       delegate?.shortcutTriggered(.openAnnotate)
+    case videoEditorHotkeyID.id:
+      delegate?.shortcutTriggered(.openVideoEditor)
     default:
       break
     }
@@ -386,6 +408,17 @@ final class KeyboardShortcutManager {
       0,
       &annotateHotkeyRef
     )
+
+    // Register video editor shortcut
+    let videoEditorID = videoEditorHotkeyID
+    RegisterEventHotKey(
+      videoEditorShortcut.keyCode,
+      videoEditorShortcut.modifiers,
+      videoEditorID,
+      GetApplicationEventTarget(),
+      0,
+      &videoEditorHotkeyRef
+    )
   }
 
   private func unregisterAllShortcuts() {
@@ -404,6 +437,10 @@ final class KeyboardShortcutManager {
     if let ref = annotateHotkeyRef {
       UnregisterEventHotKey(ref)
       annotateHotkeyRef = nil
+    }
+    if let ref = videoEditorHotkeyRef {
+      UnregisterEventHotKey(ref)
+      videoEditorHotkeyRef = nil
     }
   }
 }

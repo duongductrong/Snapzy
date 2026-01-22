@@ -7,6 +7,7 @@
 
 import AppKit
 import Foundation
+import UniformTypeIdentifiers
 
 /// Manages video editor window instances
 @MainActor
@@ -15,7 +16,10 @@ final class VideoEditorManager {
   static let shared = VideoEditorManager()
 
   private var windowControllers: [UUID: VideoEditorWindowController] = [:]
+  private var urlWindowControllers: [URL: VideoEditorWindowController] = [:]
+  private var emptyWindowController: VideoEditorWindowController?
   private var observers: [UUID: NSObjectProtocol] = [:]
+  private var urlObservers: [URL: NSObjectProtocol] = [:]
 
   private init() {}
 
@@ -48,6 +52,90 @@ final class VideoEditorManager {
     }
 
     controller.showWindow()
+  }
+
+  /// Open video editor for a video URL directly
+  func openEditor(for url: URL) {
+    // Validate it's a video file
+    guard isVideoFile(url) else { return }
+
+    // Reuse existing window if open
+    if let existing = urlWindowControllers[url] {
+      existing.showWindow()
+      return
+    }
+
+    let controller = VideoEditorWindowController(url: url)
+    urlWindowControllers[url] = controller
+
+    // Remove from tracking when window closes
+    if let window = controller.window {
+      let observer = NotificationCenter.default.addObserver(
+        forName: NSWindow.willCloseNotification,
+        object: window,
+        queue: .main
+      ) { [weak self] _ in
+        Task { @MainActor in
+          self?.cleanupURLWindow(for: url)
+        }
+      }
+      urlObservers[url] = observer
+    }
+
+    controller.showWindow()
+  }
+
+  /// Open video editor with empty state for drag & drop
+  func openEmptyEditor() {
+    // Reuse existing empty window if open
+    if let existing = emptyWindowController {
+      existing.showWindow()
+      return
+    }
+
+    let controller = VideoEditorWindowController()
+    controller.onVideoLoaded = { [weak self] url in
+      self?.handleVideoLoaded(url: url, from: controller)
+    }
+    emptyWindowController = controller
+
+    if let window = controller.window {
+      NotificationCenter.default.addObserver(
+        forName: NSWindow.willCloseNotification,
+        object: window,
+        queue: .main
+      ) { [weak self] _ in
+        Task { @MainActor in
+          self?.emptyWindowController = nil
+        }
+      }
+    }
+
+    controller.showWindow()
+  }
+
+  /// Validate if URL is a video file
+  private func isVideoFile(_ url: URL) -> Bool {
+    guard let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType else {
+      return false
+    }
+    return type.conforms(to: .movie) || type.conforms(to: .video)
+  }
+
+  /// Handle video loaded in empty editor
+  private func handleVideoLoaded(url: URL, from controller: VideoEditorWindowController) {
+    // Close empty window and open proper editor
+    emptyWindowController = nil
+    controller.window?.close()
+    openEditor(for: url)
+  }
+
+  private func cleanupURLWindow(for url: URL) {
+    if let observer = urlObservers[url] {
+      NotificationCenter.default.removeObserver(observer)
+      urlObservers.removeValue(forKey: url)
+    }
+    urlWindowControllers.removeValue(forKey: url)
   }
 
   /// Close all video editor windows

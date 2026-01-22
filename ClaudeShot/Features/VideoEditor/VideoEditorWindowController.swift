@@ -12,15 +12,54 @@ import SwiftUI
 @MainActor
 final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
-  private let item: QuickAccessItem
-  private let state: VideoEditorState
+  private var sourceURL: URL?
+  private var state: VideoEditorState?
   private var isExporting: Bool = false
   private var exportProgress: Float = 0
+  private var isEmptyState: Bool = false
 
+  /// Callback when video is loaded in empty state
+  var onVideoLoaded: ((URL) -> Void)?
+
+  /// Initialize with QuickAccessItem (existing behavior)
   init(item: QuickAccessItem) {
-    self.item = item
+    self.sourceURL = item.url
     self.state = VideoEditorState(url: item.url)
+    self.isEmptyState = false
 
+    super.init(window: Self.createWindow())
+    window?.delegate = self
+    setupContent()
+  }
+
+  /// Initialize with URL directly (for drag & drop from external sources)
+  init(url: URL) {
+    self.sourceURL = url
+    self.state = VideoEditorState(url: url)
+    self.isEmptyState = false
+
+    super.init(window: Self.createWindow())
+    window?.delegate = self
+    setupContent()
+  }
+
+  /// Initialize with empty state (for drag & drop workflow)
+  override init(window: NSWindow?) {
+    self.sourceURL = nil
+    self.state = nil
+    self.isEmptyState = true
+
+    super.init(window: Self.createWindow())
+    self.window?.delegate = self
+    setupEmptyContent()
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  private static func createWindow() -> VideoEditorWindow {
     let screen = NSScreen.main ?? NSScreen.screens.first!
     let windowWidth: CGFloat = 800
     let windowHeight: CGFloat = 600
@@ -30,22 +69,17 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       y: (screen.frame.height - windowHeight) / 2
     )
 
-    let window = VideoEditorWindow(
+    return VideoEditorWindow(
       contentRect: NSRect(origin: origin, size: NSSize(width: windowWidth, height: windowHeight))
     )
-
-    super.init(window: window)
-
-    window.delegate = self
-    setupContent()
-  }
-
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
   }
 
   private func setupContent() {
+    guard let state = state else {
+      setupEmptyContent()
+      return
+    }
+
     let mainView = VideoEditorMainView(
       state: state,
       onSave: { [weak self] in self?.showSaveConfirmation() },
@@ -53,6 +87,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       onCancel: { [weak self] in self?.handleCancel() }
     )
     window?.contentView = NSHostingView(rootView: mainView)
+  }
+
+  private func setupEmptyContent() {
+    let emptyView = VideoEditorEmptyStateView { [weak self] url in
+      self?.onVideoLoaded?(url)
+    }
+    window?.contentView = NSHostingView(rootView: emptyView)
   }
 
   func showWindow() {
@@ -63,6 +104,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - NSWindowDelegate
 
   func windowShouldClose(_ sender: NSWindow) -> Bool {
+    // Empty state can always close
+    guard let state = state else { return true }
+
     guard state.hasUnsavedChanges else {
       state.pause()
       return true
@@ -103,7 +147,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Save Confirmation
 
   private func showSaveConfirmation() {
-    guard let window = self.window else { return }
+    guard let window = self.window, let state = state else { return }
 
     let alert = NSAlert()
     alert.messageText = "Save Trimmed Video"
@@ -133,6 +177,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Export Actions
 
   private func performReplaceOriginal() {
+    guard let state = state else { return }
+
     isExporting = true
     exportProgress = 0
 
@@ -153,6 +199,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func performSaveAsCopy() {
+    guard let state = state else { return }
+
     isExporting = true
     exportProgress = 0
 
@@ -184,8 +232,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func forceClose() {
-    state.pause()
-    state.hasUnsavedChanges = false
+    state?.pause()
+    state?.hasUnsavedChanges = false
     window?.close()
   }
 
@@ -194,7 +242,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func handleCancel() {
     guard let window = self.window else { return }
 
-    if state.hasUnsavedChanges {
+    if let state = state, state.hasUnsavedChanges {
       showUnsavedChangesAlert(for: window)
     } else {
       forceClose()

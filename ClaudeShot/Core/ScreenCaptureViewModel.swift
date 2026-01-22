@@ -138,6 +138,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       startRecordingFlow()
     case .openAnnotate:
       AnnotateManager.shared.openEmptyAnnotation()
+    case .openVideoEditor:
+      VideoEditorManager.shared.openEmptyEditor()
     }
   }
 
