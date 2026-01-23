@@ -2,41 +2,58 @@
 //  VideoTimelineView.swift
 //  ClaudeShot
 //
-//  Timeline container with frame strip, playhead, and trim handles
+//  Timeline container with frame strip, playhead, trim handles, and zoom track
 //
 
 import AVFoundation
 import SwiftUI
 
-/// Timeline view with frame previews, playhead indicator, and trim handles
+/// Timeline view with frame previews, playhead indicator, trim handles, and zoom track
 struct VideoTimelineView: View {
   @ObservedObject var state: VideoEditorState
+
+  private let frameStripHeight: CGFloat = 64
+  private let zoomTrackHeight: CGFloat = 32
+  private let spacing: CGFloat = 6
+
+  private var totalHeight: CGFloat {
+    state.isZoomTrackVisible ? frameStripHeight + spacing + zoomTrackHeight : frameStripHeight
+  }
 
   var body: some View {
     GeometryReader { geometry in
       let timelineWidth = geometry.size.width
 
-      ZStack(alignment: .leading) {
-        // Frame thumbnail strip
-        VideoTimelineFrameStrip(
-          thumbnails: state.frameThumbnails,
-          isLoading: state.isExtractingFrames
-        )
+      VStack(spacing: spacing) {
+        // Frame strip with trim handles and playhead
+        ZStack(alignment: .leading) {
+          // Frame thumbnail strip
+          VideoTimelineFrameStrip(
+            thumbnails: state.frameThumbnails,
+            isLoading: state.isExtractingFrames
+          )
 
-        // Trim handles overlay
-        VideoTrimHandlesView(state: state, timelineWidth: timelineWidth)
+          // Trim handles overlay
+          VideoTrimHandlesView(state: state, timelineWidth: timelineWidth)
 
-        // Playhead indicator
-        Rectangle()
-          .fill(Color.red)
-          .frame(width: 2, height: 64)
-          .offset(x: playheadOffset(in: timelineWidth) - 1)
-          .allowsHitTesting(false)
+          // Playhead indicator (extends across both tracks)
+          Rectangle()
+            .fill(Color.red)
+            .frame(width: 2, height: totalHeight)
+            .offset(x: playheadOffset(in: timelineWidth) - 1)
+            .allowsHitTesting(false)
+        }
+        .frame(height: frameStripHeight)
+        .contentShape(Rectangle())
+        .gesture(scrubGesture(timelineWidth: timelineWidth))
+
+        // Zoom timeline track
+        if state.isZoomTrackVisible {
+          ZoomTimelineTrack(state: state, timelineWidth: timelineWidth)
+        }
       }
-      .contentShape(Rectangle())
-      .gesture(scrubGesture(timelineWidth: timelineWidth))
     }
-    .frame(height: 64)
+    .frame(height: totalHeight)
     .background(Color.black.opacity(0.2))
     .cornerRadius(6)
   }

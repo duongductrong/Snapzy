@@ -46,11 +46,24 @@ final class VideoEditorState: ObservableObject {
   @Published private(set) var frameThumbnails: [NSImage] = []
   @Published private(set) var isExtractingFrames: Bool = false
 
+  // MARK: - Zoom Segments
+
+  @Published var zoomSegments: [ZoomSegment] = []
+  @Published var selectedZoomId: UUID? = nil
+  @Published var isZoomTrackVisible: Bool = true
+
+  // MARK: - Export State
+
+  @Published var isExporting: Bool = false
+  @Published var exportProgress: Float = 0
+  @Published var exportStatusMessage: String = "Preparing..."
+
   // MARK: - Unsaved Changes
 
   @Published var hasUnsavedChanges: Bool = false
   private var initialTrimStart: CMTime = .zero
   private var initialTrimEnd: CMTime = .zero
+  private var initialZoomSegments: [ZoomSegment] = []
 
   // MARK: - Private
 
@@ -250,6 +263,97 @@ final class VideoEditorState: ObservableObject {
     initialTrimStart = trimStart
     initialTrimEnd = trimEnd
     initialIsMuted = isMuted
+    initialZoomSegments = zoomSegments
+  }
+
+  // MARK: - Zoom Management
+
+  /// Add a new zoom segment at the specified time
+  @discardableResult
+  func addZoom(at time: TimeInterval) -> UUID {
+    let videoDuration = CMTimeGetSeconds(duration)
+    let segment = ZoomSegment(
+      startTime: max(0, time - ZoomSegment.defaultDuration / 2),
+      duration: ZoomSegment.defaultDuration,
+      zoomLevel: ZoomSegment.defaultZoomLevel,
+      zoomCenter: CGPoint(x: 0.5, y: 0.5),
+      zoomType: .manual
+    ).clamped(to: videoDuration)
+
+    zoomSegments.append(segment)
+    selectedZoomId = segment.id
+    return segment.id
+  }
+
+  /// Remove a zoom segment by ID
+  func removeZoom(id: UUID) {
+    zoomSegments.removeAll { $0.id == id }
+    if selectedZoomId == id {
+      selectedZoomId = nil
+    }
+  }
+
+  /// Update zoom segment properties
+  func updateZoom(
+    id: UUID,
+    startTime: TimeInterval? = nil,
+    duration: TimeInterval? = nil,
+    zoomLevel: CGFloat? = nil,
+    zoomCenter: CGPoint? = nil,
+    isEnabled: Bool? = nil
+  ) {
+    guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
+
+    var segment = zoomSegments[index]
+    let videoDuration = CMTimeGetSeconds(self.duration)
+
+    if let startTime = startTime {
+      segment.startTime = max(0, min(startTime, videoDuration - ZoomSegment.minDuration))
+    }
+    if let duration = duration {
+      segment.duration = max(ZoomSegment.minDuration, min(duration, videoDuration - segment.startTime))
+    }
+    if let zoomLevel = zoomLevel {
+      segment.zoomLevel = max(ZoomSegment.minZoomLevel, min(zoomLevel, ZoomSegment.maxZoomLevel))
+    }
+    if let zoomCenter = zoomCenter {
+      segment.zoomCenter = CGPoint(
+        x: max(0, min(zoomCenter.x, 1)),
+        y: max(0, min(zoomCenter.y, 1))
+      )
+    }
+    if let isEnabled = isEnabled {
+      segment.isEnabled = isEnabled
+    }
+
+    zoomSegments[index] = segment
+  }
+
+  /// Select a zoom segment
+  func selectZoom(id: UUID?) {
+    selectedZoomId = id
+  }
+
+  /// Toggle zoom enabled state
+  func toggleZoomEnabled(id: UUID) {
+    guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
+    zoomSegments[index].isEnabled.toggle()
+  }
+
+  /// Get the active zoom segment at a given time
+  func activeZoomSegment(at time: TimeInterval) -> ZoomSegment? {
+    ZoomCalculator.activeSegment(at: time, in: zoomSegments)
+  }
+
+  /// Get the currently selected zoom segment
+  var selectedZoomSegment: ZoomSegment? {
+    guard let id = selectedZoomId else { return nil }
+    return zoomSegments.first { $0.id == id }
+  }
+
+  /// Toggle zoom track visibility
+  func toggleZoomTrackVisibility() {
+    isZoomTrackVisible.toggle()
   }
 
   // MARK: - Private Methods
@@ -287,16 +391,29 @@ final class VideoEditorState: ObservableObject {
   }
 
   private func setupChangeTracking() {
+    // Track trim and mute changes
     Publishers.CombineLatest3($trimStart, $trimEnd, $isMuted)
       .dropFirst()
       .sink { [weak self] start, end, muted in
-        guard let self = self else { return }
-        let startChanged = CMTimeCompare(start, self.initialTrimStart) != 0
-        let endChanged = CMTimeCompare(end, self.initialTrimEnd) != 0
-        let muteChanged = muted != self.initialIsMuted
-        self.hasUnsavedChanges = startChanged || endChanged || muteChanged
+        self?.updateHasUnsavedChanges()
       }
       .store(in: &cancellables)
+
+    // Track zoom changes
+    $zoomSegments
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.updateHasUnsavedChanges()
+      }
+      .store(in: &cancellables)
+  }
+
+  private func updateHasUnsavedChanges() {
+    let startChanged = CMTimeCompare(trimStart, initialTrimStart) != 0
+    let endChanged = CMTimeCompare(trimEnd, initialTrimEnd) != 0
+    let muteChanged = isMuted != initialIsMuted
+    let zoomsChanged = zoomSegments != initialZoomSegments
+    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged
   }
 
   private func clampTime(_ time: CMTime) -> CMTime {

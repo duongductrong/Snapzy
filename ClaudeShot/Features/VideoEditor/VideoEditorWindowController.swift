@@ -14,8 +14,6 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private var sourceURL: URL?
   private var state: VideoEditorState?
-  private var isExporting: Bool = false
-  private var exportProgress: Float = 0
   private var isEmptyState: Bool = false
 
   /// Callback when video is loaded in empty state
@@ -179,44 +177,67 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func performReplaceOriginal() {
     guard let state = state else { return }
 
-    isExporting = true
-    exportProgress = 0
+    state.isExporting = true
+    state.exportProgress = 0
+    state.exportStatusMessage = "Preparing export..."
 
     Task {
       do {
         try await VideoEditorExporter.replaceOriginal(state: state) { [weak self] progress in
           Task { @MainActor in
-            self?.exportProgress = progress
+            self?.state?.exportProgress = progress
+            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
           }
         }
+        state.isExporting = false
         state.markAsSaved()
         forceClose()
       } catch {
+        state.isExporting = false
         showExportError(error)
       }
-      isExporting = false
     }
   }
 
   private func performSaveAsCopy() {
     guard let state = state else { return }
 
-    isExporting = true
-    exportProgress = 0
+    state.isExporting = true
+    state.exportProgress = 0
+    state.exportStatusMessage = "Preparing export..."
 
     Task {
       do {
         _ = try await VideoEditorExporter.saveAsCopy(state: state) { [weak self] progress in
           Task { @MainActor in
-            self?.exportProgress = progress
+            self?.state?.exportProgress = progress
+            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
           }
         }
+        state.isExporting = false
         state.markAsSaved()
         forceClose()
       } catch {
+        state.isExporting = false
         showExportError(error)
       }
-      isExporting = false
+    }
+  }
+
+  private func progressMessage(for progress: Float) -> String {
+    switch progress {
+    case 0..<0.1:
+      return "Preparing export..."
+    case 0.1..<0.3:
+      return "Processing video..."
+    case 0.3..<0.7:
+      return "Applying effects..."
+    case 0.7..<0.9:
+      return "Encoding frames..."
+    case 0.9..<1.0:
+      return "Finalizing..."
+    default:
+      return "Completing..."
     }
   }
 
