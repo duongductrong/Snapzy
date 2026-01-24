@@ -30,7 +30,7 @@ struct PreferencesView: View {
 //      PlaceholderSettingsView.cloud
 //        .tabItem { Label("Cloud", systemImage: "cloud") }
 
-      PlaceholderSettingsView.advanced
+      AdvancedSettingsView()
         .tabItem { Label("Advanced", systemImage: "slider.horizontal.3") }
 
       AboutSettingsView()
