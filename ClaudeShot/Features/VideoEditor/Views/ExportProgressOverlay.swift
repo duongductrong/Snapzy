@@ -22,7 +22,7 @@ struct ExportProgressOverlay: View {
         // Icon
         Image(systemName: "film")
           .font(.system(size: 32))
-          .foregroundColor(.purple)
+          .foregroundColor(ZoomColors.primary)
           .symbolEffect(.pulse, options: .repeating)
 
         // Title
@@ -43,7 +43,7 @@ struct ExportProgressOverlay: View {
               RoundedRectangle(cornerRadius: 4)
                 .fill(
                   LinearGradient(
-                    colors: [.purple, .blue],
+                    colors: [ZoomColors.primary, ZoomColors.primaryDark],
                     startPoint: .leading,
                     endPoint: .trailing
                   )

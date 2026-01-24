@@ -34,8 +34,17 @@ struct VideoEditorMainView: View {
 
       Divider()
 
-      // Content area with optional sidebar
+      // Content area with optional sidebars
       HStack(spacing: 0) {
+        // Video details sidebar (left side)
+        if state.isVideoInfoSidebarVisible {
+          VideoDetailsSidebarView(state: state)
+            .frame(width: 280)
+            .frame(maxHeight: .infinity, alignment: .top)
+
+          Divider()
+        }
+
         // Main editor content
         VStack(spacing: 0) {
           // Video player with zoom preview
@@ -51,16 +60,9 @@ struct VideoEditorMainView: View {
           VideoTimelineView(state: state)
             .padding(.horizontal, 16)
             .padding(.top, 12)
-
-          // Info panel
-          VideoInfoPanel(state: state)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
             .padding(.bottom, 12)
 
           Spacer(minLength: 0)
-
-          // REMOVED: VideoEditorActionsView (moved to toolbar)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -77,6 +79,7 @@ struct VideoEditorMainView: View {
           .background(Color(NSColor.controlBackgroundColor))
         }
       }
+      .animation(.easeInOut(duration: 0.2), value: state.isVideoInfoSidebarVisible)
     }
     .background(Color(NSColor.windowBackgroundColor))
     .overlay {

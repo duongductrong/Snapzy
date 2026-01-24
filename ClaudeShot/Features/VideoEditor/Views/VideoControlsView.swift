@@ -17,9 +17,9 @@ struct VideoControlsView: View {
       // Play/Pause button
       Button(action: { state.togglePlayback() }) {
         Image(systemName: state.isPlaying ? "pause.fill" : "play.fill")
-          .font(.system(size: 20))
+          .font(.system(size: 16))
           .foregroundColor(.primary)
-          .frame(width: 40, height: 40)
+          .frame(width: 32, height: 32)
           .background(Color.white.opacity(0.1))
           .clipShape(Circle())
       }
@@ -67,15 +67,15 @@ struct VideoControlsView: View {
         HStack(spacing: 4) {
           Image(systemName: "plus.magnifyingglass")
             .font(.system(size: 11))
-            .foregroundColor(.purple)
+            .foregroundColor(ZoomColors.primary)
 
           Text("\(state.zoomSegments.count)")
             .font(.system(size: 11, weight: .medium))
-            .foregroundColor(.purple)
+            .foregroundColor(ZoomColors.primary)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
-        .background(Color.purple.opacity(0.15))
+        .background(ZoomColors.primary.opacity(0.15))
         .cornerRadius(4)
       }
 
@@ -105,7 +105,7 @@ struct VideoControlsView: View {
           .font(.system(size: 14))
           .foregroundColor(.primary)
           .frame(width: 28, height: 28)
-          .background(Color.purple.opacity(0.2))
+          .background(ZoomColors.primary.opacity(0.2))
           .clipShape(RoundedRectangle(cornerRadius: 6))
       }
       .buttonStyle(.plain)

@@ -65,6 +65,7 @@ final class VideoEditorState: ObservableObject {
   @Published var zoomSegments: [ZoomSegment] = []
   @Published var selectedZoomId: UUID? = nil
   @Published var isZoomTrackVisible: Bool = true
+  @Published var isVideoInfoSidebarVisible: Bool = false
 
   // MARK: - Export State
 
@@ -127,6 +128,32 @@ final class VideoEditorState: ObservableObject {
   var resolutionString: String {
     guard naturalSize.width > 0 && naturalSize.height > 0 else { return "—" }
     return "\(Int(naturalSize.width)) × \(Int(naturalSize.height))"
+  }
+
+  var aspectRatioString: String {
+    guard naturalSize.width > 0 && naturalSize.height > 0 else { return "—" }
+    let gcdValue = gcd(Int(naturalSize.width), Int(naturalSize.height))
+    let w = Int(naturalSize.width) / gcdValue
+    let h = Int(naturalSize.height) / gcdValue
+    return "\(w):\(h)"
+  }
+
+  var fileSizeString: String {
+    guard let attrs = try? FileManager.default.attributesOfItem(atPath: sourceURL.path),
+          let size = attrs[.size] as? Int64 else { return "—" }
+    return ByteCountFormatter.string(fromByteCount: size, countStyle: .file)
+  }
+
+  var fileCreationDate: Date? {
+    try? FileManager.default.attributesOfItem(atPath: sourceURL.path)[.creationDate] as? Date
+  }
+
+  var fileModificationDate: Date? {
+    try? FileManager.default.attributesOfItem(atPath: sourceURL.path)[.modificationDate] as? Date
+  }
+
+  private func gcd(_ a: Int, _ b: Int) -> Int {
+    b == 0 ? a : gcd(b, a % b)
   }
 
   // MARK: - Initialization
@@ -535,6 +562,11 @@ final class VideoEditorState: ObservableObject {
   /// Toggle zoom track visibility
   func toggleZoomTrackVisibility() {
     isZoomTrackVisible.toggle()
+  }
+
+  /// Toggle video info sidebar visibility
+  func toggleVideoInfoSidebar() {
+    isVideoInfoSidebarVisible.toggle()
   }
 
   // MARK: - Private Methods

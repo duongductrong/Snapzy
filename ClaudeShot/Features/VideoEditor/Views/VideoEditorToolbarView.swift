@@ -80,6 +80,19 @@ struct VideoEditorToolbarView: View {
       }
       .buttonStyle(.plain)
       .help("Open in Finder")
+
+      // Video Info button
+      Button(action: { state.toggleVideoInfoSidebar() }) {
+        Image(systemName: state.isVideoInfoSidebarVisible ? "info.circle.fill" : "info.circle")
+          .font(.system(size: 14))
+          .foregroundColor(state.isVideoInfoSidebarVisible ? ZoomColors.primary : .primary)
+          .frame(width: 28, height: 28)
+          .background(state.isVideoInfoSidebarVisible ? ZoomColors.primary.opacity(0.15) : Color.white.opacity(0.1))
+          .clipShape(RoundedRectangle(cornerRadius: 6))
+      }
+      .buttonStyle(.plain)
+      .keyboardShortcut("i", modifiers: [])
+      .help(state.isVideoInfoSidebarVisible ? "Hide Video Info (I)" : "Show Video Info (I)")
     }
   }
 
