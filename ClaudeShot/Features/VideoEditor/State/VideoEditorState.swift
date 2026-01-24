@@ -574,26 +574,31 @@ final class VideoEditorState: ObservableObject {
   private func setupChangeTracking() {
     // Track trim and mute changes
     Publishers.CombineLatest3($trimStart, $trimEnd, $isMuted)
-      .dropFirst()
-      .sink { [weak self] start, end, muted in
+      .dropFirst(3)
+      .sink { [weak self] _, _, _ in
         self?.updateHasUnsavedChanges()
       }
       .store(in: &cancellables)
 
-    // Track zoom changes
+    // Track zoom changes - pass segments directly to avoid stale state reads
     $zoomSegments
-      .dropFirst()
-      .sink { [weak self] _ in
-        self?.updateHasUnsavedChanges()
+      .removeDuplicates()
+      .sink { [weak self] segments in
+        guard let self = self else { return }
+        // Pass segments directly from publisher to avoid timing issues
+        self.updateHasUnsavedChanges(currentZoomSegments: segments)
       }
       .store(in: &cancellables)
   }
 
-  private func updateHasUnsavedChanges() {
+  private func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
     let startChanged = CMTimeCompare(trimStart, initialTrimStart) != 0
     let endChanged = CMTimeCompare(trimEnd, initialTrimEnd) != 0
     let muteChanged = isMuted != initialIsMuted
-    let zoomsChanged = zoomSegments != initialZoomSegments
+    // Use passed segments if available, otherwise read from self
+    let segments = currentZoomSegments ?? zoomSegments
+    let zoomsChanged = segments != initialZoomSegments
+
     hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged
   }
 
