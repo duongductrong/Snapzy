@@ -141,7 +141,7 @@ final class StatusBarController: ObservableObject {
     if useTemplate {
       // Use AppIcon for idle state, resized for menu bar
       if let appIcon = NSImage(named: "AppIcon") {
-        let size = NSSize(width: 18, height: 18)
+        let size = NSSize(width: 24, height: 24)
         let resizedIcon = NSImage(size: size)
         resizedIcon.lockFocus()
         appIcon.draw(
