@@ -1,62 +1,68 @@
 {
-    "images" : [
-        {
-            "idiom" : "mac",
-            "scale" : "1x",
-            "size" : "16x16"
-        },
-        {
-            "idiom" : "mac",
-            "scale" : "2x",
-            "size" : "16x16"
-        },
-        {
-            "idiom" : "mac",
-            "scale" : "1x",
-            "size" : "32x32"
-        },
-        {
-            "idiom" : "mac",
-            "scale" : "2x",
-            "size" : "32x32"
-        },
-        {
-            "idiom" : "mac",
-            "scale" : "1x",
-            "size" : "128x128"
-        },
-        {
-            "idiom" : "mac",
-            "scale" : "2x",
-            "size" : "128x128"
-        },
-        {
-            "filename" : "ClaudeShotIcon-macOS-Default-128x128@2x.png",
-            "idiom" : "mac",
-            "scale" : "1x",
-            "size" : "256x256"
-        },
-        {
-            "filename" : "ClaudeShotIcon-macOS-Default-256x256@2x.png",
-            "idiom" : "mac",
-            "scale" : "2x",
-            "size" : "256x256"
-        },
-        {
-            "filename" : "ClaudeShotIcon-macOS-Default-512x512@1x.png",
-            "idiom" : "mac",
-            "scale" : "1x",
-            "size" : "512x512"
-        },
-        {
-            "filename" : "ClaudeShotIcon-macOS-Default-1024x1024@1x.png",
-            "idiom" : "mac",
-            "scale" : "2x",
-            "size" : "512x512"
-        }
-    ],
-    "info" : {
-        "author" : "xcode",
-        "version" : 1
+  "images" : [
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-16x16@1x.png",
+      "idiom" : "mac",
+      "scale" : "1x",
+      "size" : "16x16"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-32x32@1x 1.png",
+      "idiom" : "mac",
+      "scale" : "2x",
+      "size" : "16x16"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-32x32@1x.png",
+      "idiom" : "mac",
+      "scale" : "1x",
+      "size" : "32x32"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-32x32@2x.png",
+      "idiom" : "mac",
+      "scale" : "2x",
+      "size" : "32x32"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-128x128@1x.png",
+      "idiom" : "mac",
+      "scale" : "1x",
+      "size" : "128x128"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-256x256@1x.png",
+      "idiom" : "mac",
+      "scale" : "2x",
+      "size" : "128x128"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-128x128@2x.png",
+      "idiom" : "mac",
+      "scale" : "1x",
+      "size" : "256x256"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-256x256@2x.png",
+      "idiom" : "mac",
+      "scale" : "2x",
+      "size" : "256x256"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-512x512@1x.png",
+      "idiom" : "mac",
+      "scale" : "1x",
+      "size" : "512x512"
+    },
+    {
+      "filename" : "ClaudeShotIcon-macOS-Default-1024x1024@1x.png",
+      "idiom" : "mac",
+      "scale" : "2x",
+      "size" : "512x512"
     }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
 }
