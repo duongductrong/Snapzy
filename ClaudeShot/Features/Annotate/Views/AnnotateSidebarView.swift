@@ -49,7 +49,7 @@ struct AnnotateSidebarView: View {
       .padding(12)
     }
     .frame(maxHeight: .infinity)
-    .background(Color(nsColor: .controlBackgroundColor))
+//    .background(Color(nsColor: .scrubberTexturedBackground))
   }
   
   // MARK: - None Button

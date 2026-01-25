@@ -28,7 +28,6 @@ struct AnnotateBottomBarView: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 10)
-    .background(Color(nsColor: .controlBackgroundColor))
   }
 
   // MARK: - Zoom Picker

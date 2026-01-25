@@ -39,7 +39,6 @@ struct AnnotateMainView: View {
 
       AnnotateBottomBarView(state: state)
     }
-    .background(Color(nsColor: .windowBackgroundColor))
     .preferredColorScheme(themeManager.systemAppearance)
     .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar
   }

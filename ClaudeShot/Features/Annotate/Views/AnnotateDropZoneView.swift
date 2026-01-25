@@ -45,7 +45,6 @@ struct AnnotateDropZoneView: View {
         .foregroundColor(isDragOver ? .accentColor : .secondary.opacity(0.5))
         .padding(40)
     )
-    .background(Color(nsColor: .textBackgroundColor))
     .animation(.easeInOut(duration: 0.2), value: isDragOver)
   }
 }
