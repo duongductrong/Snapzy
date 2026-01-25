@@ -11,7 +11,7 @@ import Foundation
 /// Single source of truth for dimensions used by Manager and StackView
 enum QuickAccessLayout {
   /// Width of panel content area (matches card container width)
-  static let cardWidth: CGFloat = 200
+  static let cardWidth: CGFloat = 180
 
   /// Height of each card slot in the panel
   static let cardHeight: CGFloat = 112

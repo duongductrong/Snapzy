@@ -17,7 +17,7 @@ struct QuickAccessCardView: View {
   @State private var isDragging = false
   @State private var dragRemovalTask: Task<Void, Never>?
 
-  private let cornerRadius: CGFloat = 10
+  private let cornerRadius: CGFloat = 16
 
   var body: some View {
     ZStack(alignment: .center) {
