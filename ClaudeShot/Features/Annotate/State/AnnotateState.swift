@@ -75,15 +75,16 @@ final class AnnotateState: ObservableObject {
   /// Note: ZStack centers children, so offset is relative to center (not top-left)
   /// - containerSize: The background size (already scaled)
   /// - imageDisplaySize: The image size (already scaled)
-  /// - displayPadding: The padding in display coordinates (already scaled)
+  /// - displayPadding: The padding in display coordinates (already scaled) - unused for seamless alignment
   func imageOffset(for containerSize: CGSize, imageDisplaySize: CGSize, displayPadding: CGFloat) -> CGPoint {
-    // Extra space after accounting for scaled padding and image
-    let extraWidth = containerSize.width - displayPadding * 2 - imageDisplaySize.width
-    let extraHeight = containerSize.height - displayPadding * 2 - imageDisplaySize.height
+    // For SEAMLESS edge alignment: use total extra space (container - image)
+    // This moves image to touch the background edge with NO gap
+    let totalExtraWidth = containerSize.width - imageDisplaySize.width
+    let totalExtraHeight = containerSize.height - imageDisplaySize.height
 
     // In ZStack, children are centered. Offset is relative to center.
     // For center: offset = 0
-    // For edges: offset = +/- extraSpace/2
+    // For edges: offset = +/- totalExtraSpace/2 (moves image to touch edge)
     let xOffset: CGFloat
     let yOffset: CGFloat
 
@@ -92,29 +93,29 @@ final class AnnotateState: ObservableObject {
       xOffset = 0
       yOffset = 0
     case .topLeft:
-      xOffset = -extraWidth / 2
-      yOffset = extraHeight / 2  // SwiftUI Y is inverted (positive = down)
+      xOffset = -totalExtraWidth / 2
+      yOffset = -totalExtraHeight / 2  // Negative Y = move up toward top
     case .top:
       xOffset = 0
-      yOffset = extraHeight / 2
+      yOffset = -totalExtraHeight / 2
     case .topRight:
-      xOffset = extraWidth / 2
-      yOffset = extraHeight / 2
+      xOffset = totalExtraWidth / 2
+      yOffset = -totalExtraHeight / 2
     case .left:
-      xOffset = -extraWidth / 2
+      xOffset = -totalExtraWidth / 2
       yOffset = 0
     case .right:
-      xOffset = extraWidth / 2
+      xOffset = totalExtraWidth / 2
       yOffset = 0
     case .bottomLeft:
-      xOffset = -extraWidth / 2
-      yOffset = -extraHeight / 2
+      xOffset = -totalExtraWidth / 2
+      yOffset = totalExtraHeight / 2  // Positive Y = move down toward bottom
     case .bottom:
       xOffset = 0
-      yOffset = -extraHeight / 2
+      yOffset = totalExtraHeight / 2
     case .bottomRight:
-      xOffset = extraWidth / 2
-      yOffset = -extraHeight / 2
+      xOffset = totalExtraWidth / 2
+      yOffset = totalExtraHeight / 2
     }
 
     return CGPoint(x: xOffset, y: yOffset)

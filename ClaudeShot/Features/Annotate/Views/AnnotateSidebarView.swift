@@ -144,7 +144,23 @@ struct AnnotateSidebarView: View {
   private var alignmentSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       SidebarSectionHeader(title: "Alignment")
-      AlignmentGrid(selected: $state.imageAlignment)
+      AlignmentGrid(selected: $state.imageAlignment, onAlignmentChange: { newAlignment in
+        print("DEBUG [Alignment]: Callback fired with newAlignment = \(newAlignment)")
+        print("DEBUG [Alignment]: Current padding = \(state.padding), backgroundStyle = \(state.backgroundStyle)")
+
+        // Auto-apply padding when alignment changes from center
+        if state.padding < 24 && newAlignment != .center {
+          state.padding = 24
+          print("DEBUG [Alignment]: Set padding to 24")
+          // Also apply background if none
+          if state.backgroundStyle == .none {
+            state.backgroundStyle = .solidColor(.white)
+            print("DEBUG [Alignment]: Set background to white")
+          }
+        }
+
+        print("DEBUG [Alignment]: After - padding = \(state.padding), alignment = \(state.imageAlignment)")
+      })
     }
   }
   

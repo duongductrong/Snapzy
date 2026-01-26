@@ -130,6 +130,7 @@ struct SliderRow: View {
 
 struct AlignmentGrid: View {
   @Binding var selected: ImageAlignment
+  var onAlignmentChange: ((ImageAlignment) -> Void)? = nil
 
   private let alignments: [[ImageAlignment]] = [
     [.topLeft, .top, .topRight],
@@ -146,7 +147,9 @@ struct AlignmentGrid: View {
               alignment: alignments[row][col],
               isSelected: selected == alignments[row][col]
             ) {
-              selected = alignments[row][col]
+              let newAlignment = alignments[row][col]
+              selected = newAlignment
+              onAlignmentChange?(newAlignment)
             }
           }
         }

@@ -101,9 +101,13 @@ final class AnnotateExporter {
     }
 
     let padding = state.backgroundStyle != .none ? state.padding : 0
+
+    // Add alignment space for non-center alignments (matches preview)
+    let alignmentSpace: CGFloat = state.imageAlignment != .center ? 40 : 0
+
     let totalSize = NSSize(
-      width: effectiveBounds.width + padding * 2,
-      height: effectiveBounds.height + padding * 2
+      width: effectiveBounds.width + padding * 2 + alignmentSpace,
+      height: effectiveBounds.height + padding * 2 + alignmentSpace
     )
 
     let image = NSImage(size: totalSize)
@@ -117,10 +121,51 @@ final class AnnotateExporter {
     // Draw background
     drawBackground(state: state, in: context, size: totalSize)
 
+    // Calculate image position based on alignment
+    let imageWidth = effectiveBounds.width
+    let imageHeight = effectiveBounds.height
+    let totalExtraWidth = totalSize.width - imageWidth
+    let totalExtraHeight = totalSize.height - imageHeight
+
+    // Calculate destRect origin based on alignment
+    // Note: CoreGraphics Y=0 is at bottom, so top alignment needs higher Y value
+    let destX: CGFloat
+    let destY: CGFloat
+
+    switch state.imageAlignment {
+    case .center:
+      destX = totalExtraWidth / 2
+      destY = totalExtraHeight / 2
+    case .topLeft:
+      destX = 0
+      destY = totalExtraHeight  // Top in CG = max Y
+    case .top:
+      destX = totalExtraWidth / 2
+      destY = totalExtraHeight
+    case .topRight:
+      destX = totalExtraWidth
+      destY = totalExtraHeight
+    case .left:
+      destX = 0
+      destY = totalExtraHeight / 2
+    case .right:
+      destX = totalExtraWidth
+      destY = totalExtraHeight / 2
+    case .bottomLeft:
+      destX = 0
+      destY = 0  // Bottom in CG = Y=0
+    case .bottom:
+      destX = totalExtraWidth / 2
+      destY = 0
+    case .bottomRight:
+      destX = totalExtraWidth
+      destY = 0
+    }
+
     // Draw cropped portion of source image
     let destRect = NSRect(
-      x: padding,
-      y: padding,
+      x: destX,
+      y: destY,
       width: effectiveBounds.width,
       height: effectiveBounds.height
     )
@@ -143,23 +188,66 @@ final class AnnotateExporter {
     // Reset clip
     context.resetClip()
 
-    // Draw annotations (offset by crop origin and padding)
+    // Draw annotations (offset by crop origin and image position based on alignment)
     let renderer = AnnotationRenderer(context: context, sourceImage: sourceImage)
     for annotation in state.annotations {
       // Only include annotations that intersect with crop bounds
       if let cropRect = state.cropRect {
         guard annotation.bounds.intersects(cropRect) else { continue }
       }
-      let offsetAnnotation = offsetAnnotationForCrop(
+      let offsetAnnotation = offsetAnnotationForExport(
         annotation,
         cropOrigin: effectiveBounds.origin,
-        padding: padding
+        imageX: destX,
+        imageY: destY
       )
       renderer.draw(offsetAnnotation)
     }
 
     image.unlockFocus()
     return image
+  }
+
+  /// Offset annotation for export, accounting for crop origin and alignment-based image position
+  private static func offsetAnnotationForExport(
+    _ annotation: AnnotationItem,
+    cropOrigin: CGPoint,
+    imageX: CGFloat,
+    imageY: CGFloat
+  ) -> AnnotationItem {
+    var result = annotation
+    result.bounds = CGRect(
+      x: annotation.bounds.origin.x - cropOrigin.x + imageX,
+      y: annotation.bounds.origin.y - cropOrigin.y + imageY,
+      width: annotation.bounds.width,
+      height: annotation.bounds.height
+    )
+
+    // Offset internal points for types that store coordinates
+    switch annotation.type {
+    case .arrow(let start, let end):
+      result.type = .arrow(
+        start: CGPoint(x: start.x - cropOrigin.x + imageX, y: start.y - cropOrigin.y + imageY),
+        end: CGPoint(x: end.x - cropOrigin.x + imageX, y: end.y - cropOrigin.y + imageY)
+      )
+    case .line(let start, let end):
+      result.type = .line(
+        start: CGPoint(x: start.x - cropOrigin.x + imageX, y: start.y - cropOrigin.y + imageY),
+        end: CGPoint(x: end.x - cropOrigin.x + imageX, y: end.y - cropOrigin.y + imageY)
+      )
+    case .path(let points):
+      result.type = .path(points.map {
+        CGPoint(x: $0.x - cropOrigin.x + imageX, y: $0.y - cropOrigin.y + imageY)
+      })
+    case .highlight(let points):
+      result.type = .highlight(points.map {
+        CGPoint(x: $0.x - cropOrigin.x + imageX, y: $0.y - cropOrigin.y + imageY)
+      })
+    default:
+      break
+    }
+
+    return result
   }
 
   /// Offset annotation for crop, accounting for crop origin and padding

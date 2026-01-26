@@ -84,20 +84,24 @@ struct AnnotateCanvasView: View {
     let availableWidth = containerSize.width - margin * 2
     let availableHeight = containerSize.height - margin * 2
 
-    // Logical canvas = image + padding (this is what we export)
-    let logicalCanvasWidth = state.imageWidth + state.padding * 2
-    let logicalCanvasHeight = state.imageHeight + state.padding * 2
+    // Calculate alignment space needed for non-center alignments
+    // This expands the background to allow image movement
+    let alignmentSpace: CGFloat = state.imageAlignment != .center ? 40 : 0
+
+    // Logical canvas = image + padding + alignment space (this is what we export)
+    let logicalCanvasWidth = state.imageWidth + state.padding * 2 + alignmentSpace
+    let logicalCanvasHeight = state.imageHeight + state.padding * 2 + alignmentSpace
 
     // Scale entire canvas to fit in available space (unified scaling)
     let scaleX = availableWidth / logicalCanvasWidth
     let scaleY = availableHeight / logicalCanvasHeight
     let scale = min(scaleX, scaleY, 1.0)
 
-    // Background = logical canvas * scale (includes padding)
+    // Background = logical canvas * scale (includes padding + alignment space)
     let bgWidth = logicalCanvasWidth * scale
     let bgHeight = logicalCanvasHeight * scale
 
-    // Image = image size * scale
+    // Image stays at ORIGINAL size (no shrinking!)
     let imgWidth = state.imageWidth * scale
     let imgHeight = state.imageHeight * scale
 
