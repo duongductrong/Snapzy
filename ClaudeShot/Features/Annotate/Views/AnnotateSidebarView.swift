@@ -134,10 +134,10 @@ struct AnnotateSidebarView: View {
             }
           }
         ),
-        range: 0...100
+        range: 0...300
       )
       CompactSliderRow(label: "Shadow", value: $state.shadowIntensity, range: 0...1)
-      CompactSliderRow(label: "Corners", value: $state.cornerRadius, range: 0...32)
+      CompactSliderRow(label: "Corners", value: $state.cornerRadius, range: 0...60)
     }
   }
   
@@ -212,7 +212,10 @@ struct CompactSliderRow: View {
   let label: String
   @Binding var value: CGFloat
   let range: ClosedRange<CGFloat>
-  
+
+  @State private var textValue: String = ""
+  @FocusState private var isTextFieldFocused: Bool
+
   var body: some View {
     VStack(alignment: .leading, spacing: 2) {
       HStack {
@@ -220,12 +223,49 @@ struct CompactSliderRow: View {
           .font(.system(size: 10))
           .foregroundColor(.secondary)
         Spacer()
-        Text(String(format: "%.0f", value))
+        TextField("", text: $textValue)
           .font(.system(size: 10))
-          .foregroundColor(.secondary.opacity(0.7))
+          .foregroundColor(.secondary.opacity(0.9))
+          .multilineTextAlignment(.trailing)
+          .textFieldStyle(.plain)
+          .frame(width: 36)
+          .padding(.horizontal, 4)
+          .padding(.vertical, 2)
+          .background(
+            RoundedRectangle(cornerRadius: 4)
+              .fill(Color.primary.opacity(0.05))
+          )
+          .focused($isTextFieldFocused)
+          .onAppear {
+            textValue = String(format: "%.0f", value)
+          }
+          .onChange(of: value) { _, newValue in
+            if !isTextFieldFocused {
+              textValue = String(format: "%.0f", newValue)
+            }
+          }
+          .onChange(of: isTextFieldFocused) { _, focused in
+            if !focused {
+              applyTextValue()
+            }
+          }
+          .onSubmit {
+            applyTextValue()
+            isTextFieldFocused = false
+          }
       }
       Slider(value: $value, in: range)
         .controlSize(.small)
+    }
+  }
+
+  private func applyTextValue() {
+    if let newValue = Double(textValue) {
+      let clampedValue = min(max(CGFloat(newValue), range.lowerBound), range.upperBound)
+      value = clampedValue
+      textValue = String(format: "%.0f", clampedValue)
+    } else {
+      textValue = String(format: "%.0f", value)
     }
   }
 }

@@ -31,11 +31,6 @@ struct AnnotateToolbarView: View {
 
       ToolbarDivider()
 
-      // Placeholder for video recording
-      ToolbarButton(icon: "video", isSelected: false) {}
-        .disabled(true)
-        .opacity(0.5)
-
       Spacer()
 
       // Right group: Stroke size and actions
