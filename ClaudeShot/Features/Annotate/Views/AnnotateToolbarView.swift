@@ -12,9 +12,9 @@ struct AnnotateToolbarView: View {
   @ObservedObject var state: AnnotateState
 
   var body: some View {
-    HStack(spacing: 8) {
-      // Add spacer for traffic lights (macOS standard width ~78px)
-      Spacer().frame(width: 78)
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
+      // Add spacer for traffic lights
+      Spacer().frame(width: 0)
 
       // Left group: Capture tools
       captureToolsGroup
@@ -45,8 +45,8 @@ struct AnnotateToolbarView: View {
 
       actionButtons
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 8)
+    .windowTrafficLightsInset()
+    .windowToolbarPadding()
   }
 
   // MARK: - Tool Groups

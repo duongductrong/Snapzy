@@ -30,14 +30,14 @@ struct VideoEditorToolbarView: View {
       // RIGHT: Save actions
       rightSection
     }
-    .frame(height: 44)
-    .padding(.horizontal, 12)
+    .windowToolbarHeight()
+    .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
   }
 
   // MARK: - Left Section
 
   private var leftSection: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
       // Undo button
       Button(action: { state.undo() }) {
         Image(systemName: "arrow.uturn.backward")
@@ -142,7 +142,7 @@ struct VideoEditorToolbarView: View {
   // MARK: - Right Section
 
   private var rightSection: some View {
-    HStack(spacing: 8) {
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
       // Unsaved changes indicator
       if state.hasUnsavedChanges {
         HStack(spacing: 4) {

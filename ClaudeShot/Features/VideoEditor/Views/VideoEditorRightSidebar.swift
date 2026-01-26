@@ -3,6 +3,7 @@
 //  ClaudeShot
 //
 //  Tabbed right sidebar for video editor with Zoom and Background settings
+//  Uses vertical tab bar on right edge for better scalability
 //
 
 import SwiftUI
@@ -21,6 +22,7 @@ enum VideoEditorSidebarTab: String, CaseIterable {
 }
 
 /// Tabbed right sidebar combining Zoom and Background settings
+/// Layout: [Content Area] | [Vertical Tab Bar]
 struct VideoEditorRightSidebar: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
@@ -28,17 +30,23 @@ struct VideoEditorRightSidebar: View {
   @State private var selectedTab: VideoEditorSidebarTab = .background
 
   var body: some View {
-    VStack(spacing: 0) {
-      // Header with segmented tab control
-      sidebarHeader
+    HStack(spacing: 0) {
+      // Content area (left side)
+      tabContent
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       Divider()
 
-      // Tab content
-      tabContent
+      // Vertical tab bar (right side)
+      VerticalTabBar(
+        selection: $selectedTab,
+        tabs: VideoEditorSidebarTab.allCases
+      ) { tab in
+        (icon: tab.icon, title: tab.rawValue)
+      }
     }
     .frame(width: 320)
-    .frame(maxHeight: .infinity, alignment: .top)
+    .frame(maxHeight: .infinity)
     .onChange(of: state.selectedZoomId) { _, newValue in
       // Auto-switch to zoom tab when a zoom is selected
       if newValue != nil {
@@ -47,47 +55,6 @@ struct VideoEditorRightSidebar: View {
         }
       }
     }
-  }
-
-  // MARK: - Sidebar Header
-
-  private var sidebarHeader: some View {
-    VStack(spacing: 12) {
-      // Title
-      HStack {
-        Text("Inspector")
-          .font(.system(size: 13, weight: .semibold))
-          .foregroundColor(.primary)
-        Spacer()
-      }
-
-      // Segmented Tab Control
-      segmentedTabControl
-    }
-    .padding(.horizontal, 12)
-    .padding(.top, 12)
-    .padding(.bottom, 8)
-  }
-
-  // MARK: - Segmented Tab Control
-
-  private var segmentedTabControl: some View {
-    HStack(spacing: 1) {
-      ForEach(VideoEditorSidebarTab.allCases, id: \.self) { tab in
-        SegmentedTabButton(
-          tab: tab,
-          isSelected: selectedTab == tab,
-          isFirst: tab == VideoEditorSidebarTab.allCases.first,
-          isLast: tab == VideoEditorSidebarTab.allCases.last
-        ) {
-          withAnimation(.easeInOut(duration: 0.15)) {
-            selectedTab = tab
-          }
-        }
-      }
-    }
-    .background(Color(NSColor.separatorColor).opacity(0.5))
-    .clipShape(RoundedRectangle(cornerRadius: 6))
   }
 
   // MARK: - Tab Content
@@ -100,59 +67,6 @@ struct VideoEditorRightSidebar: View {
     case .background:
       VideoBackgroundSidebarView(state: state)
     }
-  }
-}
-
-// MARK: - Segmented Tab Button
-
-private struct SegmentedTabButton: View {
-  let tab: VideoEditorSidebarTab
-  let isSelected: Bool
-  let isFirst: Bool
-  let isLast: Bool
-  let action: () -> Void
-
-  @State private var isHovered = false
-
-  var body: some View {
-    Button(action: action) {
-      HStack(spacing: 5) {
-        Image(systemName: tab.icon)
-          .font(.system(size: 10, weight: .medium))
-
-        Text(tab.rawValue)
-          .font(.system(size: 11, weight: .medium))
-      }
-      .foregroundColor(isSelected ? .white : .primary)
-      .frame(maxWidth: .infinity)
-      .padding(.vertical, 6)
-      .padding(.horizontal, 8)
-      .background(
-        Group {
-          if isSelected {
-            Color.accentColor
-          } else if isHovered {
-            Color(NSColor.controlBackgroundColor).opacity(0.8)
-          } else {
-            Color(NSColor.controlBackgroundColor)
-          }
-        }
-      )
-      .clipShape(segmentShape)
-    }
-    .buttonStyle(.plain)
-    .onHover { hovering in
-      isHovered = hovering
-    }
-  }
-
-  private var segmentShape: some Shape {
-    UnevenRoundedRectangle(
-      topLeadingRadius: isFirst ? 5 : 0,
-      bottomLeadingRadius: isFirst ? 5 : 0,
-      bottomTrailingRadius: isLast ? 5 : 0,
-      topTrailingRadius: isLast ? 5 : 0
-    )
   }
 }
 

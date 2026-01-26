@@ -53,14 +53,14 @@ struct VideoEditorMainView: View {
 
           // MOVED UP: Playback controls now under video
           VideoControlsView(state: state)
-            .padding(.horizontal, 16)
+            .windowContentHPadding()
             .padding(.top, 8)
 
           // Timeline with frame previews and trim handles
           VideoTimelineView(state: state)
-            .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
+            .windowContentHPadding()
+            .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
+            .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
 
           Spacer(minLength: 0)
         }

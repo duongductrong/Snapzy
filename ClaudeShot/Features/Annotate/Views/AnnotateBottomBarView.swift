@@ -12,7 +12,7 @@ struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
 
   var body: some View {
-    HStack(spacing: 16) {
+    HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
       // Zoom picker
       zoomPicker
 
@@ -26,8 +26,7 @@ struct AnnotateBottomBarView: View {
       // Action buttons
       actionButtons
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 10)
+    .windowBottomBarPadding()
   }
 
   // MARK: - Zoom Picker
