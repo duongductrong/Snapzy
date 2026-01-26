@@ -158,8 +158,6 @@ struct VideoEditorToolbarView: View {
       // Save button (primary)
       Button(action: onSave) {
         Text("Save")
-          .font(.system(size: 13, weight: .medium))
-          .frame(minWidth: 60)
       }
       .buttonStyle(.borderedProminent)
       .keyboardShortcut("s", modifiers: [.command])
