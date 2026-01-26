@@ -12,21 +12,29 @@ struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
 
   var body: some View {
-    HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
-      // Zoom picker
-      zoomPicker
+    VStack(spacing: 0) {
+      // Mockup preset bar (shown when mockup tool is active)
+      if state.selectedTool == .mockup {
+        MockupPresetBarInline(state: state)
+        Divider()
+      }
 
-      Spacer()
+      HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
+        // Zoom picker
+        zoomPicker
 
-      // Drag handle
+        Spacer()
+
+        // Drag handle
 //      dragHandle
 
 //      Spacer()
 
-      // Action buttons
-      actionButtons
+        // Action buttons
+        actionButtons
+      }
+      .windowBottomBarPadding()
     }
-    .windowBottomBarPadding()
   }
 
   // MARK: - Zoom Picker

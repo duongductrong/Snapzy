@@ -50,6 +50,12 @@ struct AnnotateSidebarView: View {
           BlurTypeSection(state: state)
         }
 
+        // Mockup section (shown when mockup tool is active)
+        if state.selectedTool == .mockup {
+          Divider().background(Color(nsColor: .separatorColor))
+          MockupControlsSection(state: state)
+        }
+
         Spacer(minLength: 20)
       }
       .padding(12)

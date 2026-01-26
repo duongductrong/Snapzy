@@ -92,6 +92,11 @@ final class AnnotateExporter {
   private static func renderFinalImage(state: AnnotateState) -> NSImage? {
     guard let sourceImage = state.sourceImage else { return nil }
 
+    // If mockup mode is active, use mockup rendering path with 3D transforms
+    if state.selectedTool == .mockup {
+      return renderMockupImage(state: state)
+    }
+
     // Determine effective bounds (crop or full image)
     let effectiveBounds: CGRect
     if let cropRect = state.cropRect {
@@ -352,6 +357,119 @@ final class AnnotateExporter {
         if case .blurred = state.backgroundStyle {
           // Apply blur effect would require CIFilter
         }
+      }
+    }
+  }
+
+  // MARK: - Mockup Rendering
+
+  /// Render mockup image with 3D transforms using ImageRenderer
+  private static func renderMockupImage(state: AnnotateState) -> NSImage? {
+    guard state.sourceImage != nil else { return nil }
+
+    let mockupView = MockupExportViewForAnnotate(state: state)
+    let renderer = ImageRenderer(content: mockupView)
+    renderer.scale = 2.0
+
+    return renderer.nsImage
+  }
+}
+
+// MARK: - Mockup Export View for Annotate
+
+/// SwiftUI view for exporting mockup with 3D transforms
+struct MockupExportViewForAnnotate: View {
+  let state: AnnotateState
+
+  var body: some View {
+    ZStack {
+      backgroundLayer
+        .frame(width: canvasSize.width, height: canvasSize.height)
+
+      if let image = state.sourceImage {
+        Image(nsImage: image)
+          .resizable()
+          .aspectRatio(contentMode: .fit)
+          .frame(maxWidth: imageSize.width, maxHeight: imageSize.height)
+          .clipShape(RoundedRectangle(cornerRadius: state.cornerRadius, style: .continuous))
+          .rotation3DEffect(
+            .degrees(state.mockupRotationY),
+            axis: (x: 0, y: 1, z: 0),
+            anchor: .center,
+            anchorZ: 0,
+            perspective: state.mockupPerspective
+          )
+          .rotation3DEffect(
+            .degrees(state.mockupRotationX),
+            axis: (x: 1, y: 0, z: 0),
+            anchor: .center,
+            anchorZ: 0,
+            perspective: state.mockupPerspective
+          )
+          .rotation3DEffect(
+            .degrees(state.mockupRotationZ),
+            axis: (x: 0, y: 0, z: 1),
+            anchor: .center
+          )
+          .shadow(
+            color: .black.opacity(state.shadowIntensity),
+            radius: state.mockupShadowRadius,
+            x: state.mockupShadowOffsetX,
+            y: state.mockupShadowOffsetY
+          )
+      }
+    }
+  }
+
+  // MARK: - Size Calculations
+
+  private var imageSize: CGSize {
+    guard let image = state.sourceImage else {
+      return CGSize(width: 800, height: 600)
+    }
+    return image.size
+  }
+
+  private var canvasSize: CGSize {
+    let padding = state.backgroundStyle != .none ? state.padding : 0
+    let extraSpace = padding * 2 + 100 // Extra for shadow and rotation
+    return CGSize(
+      width: imageSize.width + extraSpace,
+      height: imageSize.height + extraSpace
+    )
+  }
+
+  // MARK: - Background
+
+  @ViewBuilder
+  private var backgroundLayer: some View {
+    switch state.backgroundStyle {
+    case .none:
+      Color.clear
+    case .gradient(let preset):
+      LinearGradient(
+        colors: preset.colors,
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+      )
+    case .solidColor(let color):
+      color
+    case .wallpaper(let url):
+      if let image = NSImage(contentsOf: url) {
+        Image(nsImage: image)
+          .resizable()
+          .aspectRatio(contentMode: .fill)
+      } else {
+        Color.gray.opacity(0.3)
+      }
+    case .blurred(let url):
+      if let image = NSImage(contentsOf: url) {
+        Image(nsImage: image)
+          .resizable()
+          .aspectRatio(contentMode: .fill)
+          .blur(radius: 30)
+      } else {
+        Color.gray.opacity(0.3)
       }
     }
   }

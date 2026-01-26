@@ -120,6 +120,7 @@ struct AnnotateCanvasView: View {
       // Image positioned within scaled padding area
       imageLayer(width: imgWidth, height: imgHeight)
         .offset(x: offset.x, y: offset.y)
+        .modifier(MockupTransformModifier(state: state, isEnabled: state.selectedTool == .mockup))
 
       // Drawing canvas matches image position
       CanvasDrawingView(state: state, displayScale: scale)

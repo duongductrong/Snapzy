@@ -139,6 +139,45 @@ final class AnnotateState: ObservableObject {
   /// Whether crop mode is actively being edited
   @Published var isCropActive: Bool = false
 
+  // MARK: - Mockup State
+
+  @Published var mockupRotationX: Double = 0
+  @Published var mockupRotationY: Double = 0
+  @Published var mockupRotationZ: Double = 0
+  @Published var mockupPerspective: Double = 0.5
+  @Published var mockupShadowIntensity: Double = 0.3
+  @Published var mockupCornerRadius: Double = 12
+  @Published var mockupPadding: CGFloat = 40
+  @Published var selectedMockupPresetId: UUID?
+
+  /// Computed shadow properties for mockup
+  var mockupShadowOffsetX: CGFloat { CGFloat(mockupRotationY) * 0.8 }
+  var mockupShadowOffsetY: CGFloat { CGFloat(mockupRotationX) * 0.5 + 8 }
+  var mockupShadowRadius: CGFloat { CGFloat(20 * (1.1 - mockupPerspective) * mockupShadowIntensity * 2) }
+
+  /// Apply mockup preset
+  func applyMockupPreset(_ preset: MockupPreset) {
+    mockupRotationX = preset.rotationX
+    mockupRotationY = preset.rotationY
+    mockupRotationZ = preset.rotationZ
+    mockupPerspective = preset.perspective
+    mockupPadding = preset.padding
+    selectedMockupPresetId = preset.id
+    hasUnsavedChanges = true
+  }
+
+  /// Reset mockup to defaults
+  func resetMockup() {
+    mockupRotationX = 0
+    mockupRotationY = 0
+    mockupRotationZ = 0
+    mockupPerspective = 0.5
+    mockupShadowIntensity = 0.3
+    mockupCornerRadius = 12
+    mockupPadding = 40
+    selectedMockupPresetId = nil
+  }
+
   // MARK: - Unsaved Changes Tracking
 
   /// Whether canvas has modifications not yet saved to disk

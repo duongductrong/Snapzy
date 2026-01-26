@@ -61,7 +61,7 @@ enum AnnotationFactory {
     case .counter:
       type = .counter(state.nextCounterValue())
 
-    case .selection, .crop, .text:
+    case .selection, .crop, .text, .mockup:
       return nil
     }
 

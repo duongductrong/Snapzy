@@ -20,6 +20,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
   case blur
   case counter
   case pencil
+  case mockup
 
   var id: String { rawValue }
 
@@ -36,6 +37,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .blur: return "aqi.medium"
     case .counter: return "number"
     case .pencil: return "pencil"
+    case .mockup: return "cube.transparent"
     }
   }
 
@@ -52,6 +54,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .blur: return "b"
     case .counter: return "n"
     case .pencil: return "p"
+    case .mockup: return "m"
     }
   }
 }
