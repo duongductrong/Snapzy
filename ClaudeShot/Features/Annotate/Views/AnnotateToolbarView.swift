@@ -84,12 +84,14 @@ struct AnnotateToolbarView: View {
         ) {
           state.selectedTool = tool
         }
+        .disabled(state.editorMode == .mockup && tool != .selection)
+        .opacity(state.editorMode == .mockup && tool != .selection ? 0.4 : 1)
       }
     }
   }
 
   private var drawingTools: [AnnotationToolType] {
-    [.selection, .rectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil, .mockup]
+    [.selection, .rectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil]
   }
 
   private var undoRedoGroup: some View {

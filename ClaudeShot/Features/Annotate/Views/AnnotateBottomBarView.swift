@@ -13,25 +13,37 @@ struct AnnotateBottomBarView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // Mockup preset bar (shown when mockup tool is active)
-      if state.selectedTool == .mockup {
+      // Mockup preset bar (shown when mockup mode is active)
+      if state.editorMode == .mockup {
         MockupPresetBarInline(state: state)
         Divider()
       }
 
       HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
-        // Zoom picker
-        zoomPicker
+        // Preview mode: show exit button only
+        if state.editorMode == .preview {
+          Spacer()
+          exitPreviewButton
+          Spacer()
+        } else {
+          // Zoom picker
+          zoomPicker
 
-        Spacer()
+          Spacer()
 
-        // Drag handle
-//      dragHandle
+          // Mode toggle (Annotate / Mockup)
+          modeToggle
 
-//      Spacer()
+          // Preview button (only show if mockup transforms exist)
+          if hasMockupTransforms {
+            previewButton
+          }
 
-        // Action buttons
-        actionButtons
+          Spacer()
+
+          // Action buttons
+          actionButtons
+        }
       }
       .windowBottomBarPadding()
     }
@@ -61,6 +73,60 @@ struct AnnotateBottomBarView: View {
       .cornerRadius(6)
     }
     .menuStyle(.borderlessButton)
+  }
+
+  // MARK: - Mode Toggle
+
+  /// Check if any mockup transforms have been applied
+  private var hasMockupTransforms: Bool {
+    state.mockupRotationX != 0 ||
+    state.mockupRotationY != 0 ||
+    state.mockupRotationZ != 0
+  }
+
+  private var modeToggle: some View {
+    Picker("", selection: $state.editorMode) {
+      Label("Annotate", systemImage: "pencil.and.outline")
+        .tag(AnnotateState.EditorMode.annotate)
+      Label("Mockup", systemImage: "cube.transparent")
+        .tag(AnnotateState.EditorMode.mockup)
+    }
+    .pickerStyle(.segmented)
+    .frame(width: 220)
+  }
+
+  private var previewButton: some View {
+    Button {
+      state.editorMode = .preview
+    } label: {
+      Image(systemName: "eye")
+        .font(.system(size: 14))
+        .foregroundColor(.primary)
+        .frame(width: 28, height: 28)
+        .background(Color.primary.opacity(0.1))
+        .cornerRadius(6)
+    }
+    .buttonStyle(.plain)
+    .help("Preview combined result")
+  }
+
+  private var exitPreviewButton: some View {
+    Button {
+      state.editorMode = .annotate
+    } label: {
+      HStack(spacing: 6) {
+        Image(systemName: "xmark")
+          .font(.system(size: 12, weight: .medium))
+        Text("Exit Preview")
+          .font(.system(size: 12, weight: .medium))
+      }
+      .foregroundColor(.primary)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 6)
+      .background(Color.primary.opacity(0.1))
+      .cornerRadius(6)
+    }
+    .buttonStyle(.plain)
   }
 
   // MARK: - Drag Handle

@@ -93,7 +93,7 @@ final class AnnotateExporter {
     guard let sourceImage = state.sourceImage else { return nil }
 
     // If mockup mode is active, use mockup rendering path with 3D transforms
-    if state.selectedTool == .mockup {
+    if state.editorMode == .mockup {
       return renderMockupImage(state: state)
     }
 
@@ -364,14 +364,74 @@ final class AnnotateExporter {
   // MARK: - Mockup Rendering
 
   /// Render mockup image with 3D transforms using ImageRenderer
+  /// First flattens image + annotations, then applies 3D transforms
   private static func renderMockupImage(state: AnnotateState) -> NSImage? {
     guard state.sourceImage != nil else { return nil }
 
-    let mockupView = MockupExportViewForAnnotate(state: state)
+    // Step 1: Render flat image with annotations (temporarily disable mockup mode)
+    let savedMode = state.editorMode
+    state.editorMode = .annotate
+    guard let flatImage = renderFlatImageWithAnnotations(state: state) else {
+      state.editorMode = savedMode
+      return nil
+    }
+    state.editorMode = savedMode
+
+    // Step 2: Apply mockup transforms to the flattened image
+    let mockupView = MockupExportViewForAnnotate(flatImage: flatImage, state: state)
     let renderer = ImageRenderer(content: mockupView)
     renderer.scale = 2.0
 
     return renderer.nsImage
+  }
+
+  /// Render flat image with annotations (no mockup transforms)
+  private static func renderFlatImageWithAnnotations(state: AnnotateState) -> NSImage? {
+    guard let sourceImage = state.sourceImage else { return nil }
+
+    // Determine effective bounds (crop or full image)
+    let effectiveBounds: CGRect
+    if let cropRect = state.cropRect {
+      effectiveBounds = cropRect
+    } else {
+      effectiveBounds = CGRect(origin: .zero, size: sourceImage.size)
+    }
+
+    let image = NSImage(size: effectiveBounds.size)
+    image.lockFocus()
+
+    guard let context = NSGraphicsContext.current?.cgContext else {
+      image.unlockFocus()
+      return nil
+    }
+
+    // Draw cropped portion of source image
+    let destRect = NSRect(origin: .zero, size: effectiveBounds.size)
+    let sourceRect = NSRect(
+      x: effectiveBounds.origin.x,
+      y: sourceImage.size.height - effectiveBounds.origin.y - effectiveBounds.height,
+      width: effectiveBounds.width,
+      height: effectiveBounds.height
+    )
+
+    sourceImage.draw(in: destRect, from: sourceRect, operation: .sourceOver, fraction: 1.0)
+
+    // Draw annotations offset by crop origin
+    let renderer = AnnotationRenderer(context: context, sourceImage: sourceImage)
+    for annotation in state.annotations {
+      if let cropRect = state.cropRect {
+        guard annotation.bounds.intersects(cropRect) else { continue }
+      }
+      let offsetAnnotation = offsetAnnotationForCrop(
+        annotation,
+        cropOrigin: effectiveBounds.origin,
+        padding: 0
+      )
+      renderer.draw(offsetAnnotation)
+    }
+
+    image.unlockFocus()
+    return image
   }
 }
 
@@ -379,6 +439,7 @@ final class AnnotateExporter {
 
 /// SwiftUI view for exporting mockup with 3D transforms
 struct MockupExportViewForAnnotate: View {
+  let flatImage: NSImage  // Pre-rendered image with annotations
   let state: AnnotateState
 
   var body: some View {
@@ -386,48 +447,43 @@ struct MockupExportViewForAnnotate: View {
       backgroundLayer
         .frame(width: canvasSize.width, height: canvasSize.height)
 
-      if let image = state.sourceImage {
-        Image(nsImage: image)
-          .resizable()
-          .aspectRatio(contentMode: .fit)
-          .frame(maxWidth: imageSize.width, maxHeight: imageSize.height)
-          .clipShape(RoundedRectangle(cornerRadius: state.cornerRadius, style: .continuous))
-          .rotation3DEffect(
-            .degrees(state.mockupRotationY),
-            axis: (x: 0, y: 1, z: 0),
-            anchor: .center,
-            anchorZ: 0,
-            perspective: state.mockupPerspective
-          )
-          .rotation3DEffect(
-            .degrees(state.mockupRotationX),
-            axis: (x: 1, y: 0, z: 0),
-            anchor: .center,
-            anchorZ: 0,
-            perspective: state.mockupPerspective
-          )
-          .rotation3DEffect(
-            .degrees(state.mockupRotationZ),
-            axis: (x: 0, y: 0, z: 1),
-            anchor: .center
-          )
-          .shadow(
-            color: .black.opacity(state.shadowIntensity),
-            radius: state.mockupShadowRadius,
-            x: state.mockupShadowOffsetX,
-            y: state.mockupShadowOffsetY
-          )
-      }
+      Image(nsImage: flatImage)
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(maxWidth: imageSize.width, maxHeight: imageSize.height)
+        .clipShape(RoundedRectangle(cornerRadius: state.cornerRadius, style: .continuous))
+        .rotation3DEffect(
+          .degrees(state.mockupRotationY),
+          axis: (x: 0, y: 1, z: 0),
+          anchor: .center,
+          anchorZ: 0,
+          perspective: state.mockupPerspective
+        )
+        .rotation3DEffect(
+          .degrees(state.mockupRotationX),
+          axis: (x: 1, y: 0, z: 0),
+          anchor: .center,
+          anchorZ: 0,
+          perspective: state.mockupPerspective
+        )
+        .rotation3DEffect(
+          .degrees(state.mockupRotationZ),
+          axis: (x: 0, y: 0, z: 1),
+          anchor: .center
+        )
+        .shadow(
+          color: .black.opacity(state.shadowIntensity),
+          radius: state.mockupShadowRadius,
+          x: state.mockupShadowOffsetX,
+          y: state.mockupShadowOffsetY
+        )
     }
   }
 
   // MARK: - Size Calculations
 
   private var imageSize: CGSize {
-    guard let image = state.sourceImage else {
-      return CGSize(width: 800, height: 600)
-    }
-    return image.size
+    flatImage.size
   }
 
   private var canvasSize: CGSize {

@@ -20,6 +20,18 @@ struct AnnotateCanvasView: View {
     .png, .jpeg, .gif, .tiff, .bmp, .heic
   ]
 
+  /// Check if any mockup transforms have been applied
+  private var hasMockupTransforms: Bool {
+    state.mockupRotationX != 0 ||
+    state.mockupRotationY != 0 ||
+    state.mockupRotationZ != 0
+  }
+
+  /// Whether to show mockup transforms (only in mockup or preview mode)
+  private var shouldShowMockupTransforms: Bool {
+    (state.editorMode == .mockup || state.editorMode == .preview) && hasMockupTransforms
+  }
+
   var body: some View {
     GeometryReader { geometry in
       ZStack {
@@ -114,31 +126,32 @@ struct AnnotateCanvasView: View {
     )
 
     return ZStack {
-      // Background layer (scaled canvas with padding)
+      // Background layer (scaled canvas with padding) - NOT transformed
       backgroundLayer(width: bgWidth, height: bgHeight)
 
-      // Image positioned within scaled padding area
-      imageLayer(width: imgWidth, height: imgHeight)
-        .offset(x: offset.x, y: offset.y)
-        .modifier(MockupTransformModifier(state: state, isEnabled: state.selectedTool == .mockup))
+      // GROUP: Image + Annotations (transformed together in mockup mode)
+      Group {
+        // Image positioned within scaled padding area
+        imageLayer(width: imgWidth, height: imgHeight)
 
-      // Drawing canvas matches image position
-      CanvasDrawingView(state: state, displayScale: scale)
-        .frame(width: imgWidth, height: imgHeight)
-        .offset(x: offset.x, y: offset.y)
+        // Drawing canvas matches image position
+        CanvasDrawingView(state: state, displayScale: scale)
+          .frame(width: imgWidth, height: imgHeight)
 
-      // Text editing overlay (when editing a text annotation)
-      if state.editingTextAnnotationId != nil {
-        TextEditOverlay(
-          state: state,
-          scale: scale,
-          imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
-        )
-        .frame(width: imgWidth, height: imgHeight)
-        .offset(x: offset.x, y: offset.y)
+        // Text editing overlay (when editing a text annotation)
+        if state.editingTextAnnotationId != nil {
+          TextEditOverlay(
+            state: state,
+            scale: scale,
+            imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
+          )
+          .frame(width: imgWidth, height: imgHeight)
+        }
       }
+      .offset(x: offset.x, y: offset.y)
+      .modifier(MockupTransformModifier(state: state, isEnabled: shouldShowMockupTransforms))
 
-      // Crop overlay (when crop tool is selected or crop is active)
+      // Crop overlay (NOT transformed - editing UI stays flat)
       if state.selectedTool == .crop || state.cropRect != nil {
         CropOverlayView(
           state: state,

@@ -14,14 +14,18 @@ struct AnnotateMainView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      AnnotateToolbarView(state: state)
-        .padding(.top, 0) // Add top padding for traffic lights
+      // Hide toolbar in preview mode
+      if state.editorMode != .preview {
+        AnnotateToolbarView(state: state)
+          .padding(.top, 0) // Add top padding for traffic lights
 
-      Divider()
-        .background(Color(nsColor: .separatorColor))
+        Divider()
+          .background(Color(nsColor: .separatorColor))
+      }
 
       HStack(spacing: 0) {
-        if state.showSidebar {
+        // Hide sidebar in preview mode
+        if state.showSidebar && state.editorMode != .preview {
           AnnotateSidebarView(state: state)
             .frame(width: 240)
             .transition(.move(edge: .leading))

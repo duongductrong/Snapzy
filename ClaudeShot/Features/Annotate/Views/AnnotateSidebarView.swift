@@ -50,8 +50,8 @@ struct AnnotateSidebarView: View {
           BlurTypeSection(state: state)
         }
 
-        // Mockup section (shown when mockup tool is active)
-        if state.selectedTool == .mockup {
+        // Mockup section (shown when mockup mode is active)
+        if state.editorMode == .mockup {
           Divider().background(Color(nsColor: .separatorColor))
           MockupControlsSection(state: state)
         }

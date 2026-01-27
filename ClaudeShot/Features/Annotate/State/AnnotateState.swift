@@ -29,6 +29,17 @@ final class AnnotateState: ObservableObject {
   @Published var fillColor: Color = .clear
   @Published var blurType: BlurType = .pixelated
 
+  // MARK: - Editor Mode
+
+  /// Editor mode determines whether user is annotating or applying mockup transforms
+  enum EditorMode: String, CaseIterable {
+    case annotate  // Normal annotation editing (flat image)
+    case mockup    // 3D perspective transforms with controls
+    case preview   // Preview combined result (hides all editing UI)
+  }
+
+  @Published var editorMode: EditorMode = .annotate
+
   // MARK: - UI State
 
   @Published var showSidebar: Bool = true
@@ -219,6 +230,7 @@ final class AnnotateState: ObservableObject {
     // Reset crop for new image
     cropRect = nil
     isCropActive = false
+    editorMode = .annotate  // Reset to annotate mode
     hasUnsavedChanges = false
   }
 
@@ -236,6 +248,7 @@ final class AnnotateState: ObservableObject {
     // Reset crop for new image
     cropRect = nil
     isCropActive = false
+    editorMode = .annotate  // Reset to annotate mode
     hasUnsavedChanges = false
   }
 
