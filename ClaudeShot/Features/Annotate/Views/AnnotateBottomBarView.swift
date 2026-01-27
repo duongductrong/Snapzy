@@ -20,28 +20,18 @@ struct AnnotateBottomBarView: View {
       }
 
       HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
-        // Preview mode: show exit button only
-        if state.editorMode == .preview {
-          Spacer()
-          exitPreviewButton
-          Spacer()
-        } else {
-          // Zoom picker
-          zoomPicker
+        // Zoom picker
+        zoomPicker
 
-          Spacer()
+        Spacer()
 
-          // Mode toggle (Annotate / Mockup)
-          modeToggle
+        // Mode toggle (Annotate / Mockup / Preview)
+        modeToggle
 
-          // Preview button (only show if mockup transforms exist)
-          if hasMockupTransforms {
-            previewButton
-          }
+        Spacer()
 
-          Spacer()
-
-          // Action buttons
+        // Action buttons (hide in preview mode for cleaner view)
+        if state.editorMode != .preview {
           actionButtons
         }
       }
@@ -90,43 +80,10 @@ struct AnnotateBottomBarView: View {
         .tag(AnnotateState.EditorMode.annotate)
       Label("Mockup", systemImage: "cube.transparent")
         .tag(AnnotateState.EditorMode.mockup)
+      Label("Preview", systemImage: "eye")
+        .tag(AnnotateState.EditorMode.preview)
     }
     .pickerStyle(.segmented)
-    .frame(width: 220)
-  }
-
-  private var previewButton: some View {
-    Button {
-      state.editorMode = .preview
-    } label: {
-      Image(systemName: "eye")
-        .font(.system(size: 14))
-        .foregroundColor(.primary)
-        .frame(width: 28, height: 28)
-        .background(Color.primary.opacity(0.1))
-        .cornerRadius(6)
-    }
-    .buttonStyle(.plain)
-    .help("Preview combined result")
-  }
-
-  private var exitPreviewButton: some View {
-    Button {
-      state.editorMode = .annotate
-    } label: {
-      HStack(spacing: 6) {
-        Image(systemName: "xmark")
-          .font(.system(size: 12, weight: .medium))
-        Text("Exit Preview")
-          .font(.system(size: 12, weight: .medium))
-      }
-      .foregroundColor(.primary)
-      .padding(.horizontal, 12)
-      .padding(.vertical, 6)
-      .background(Color.primary.opacity(0.1))
-      .cornerRadius(6)
-    }
-    .buttonStyle(.plain)
   }
 
   // MARK: - Drag Handle
