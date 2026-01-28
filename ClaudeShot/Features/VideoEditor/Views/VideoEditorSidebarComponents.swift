@@ -84,3 +84,125 @@ struct VideoSliderRow: View {
     }
   }
 }
+
+// MARK: - System Wallpaper Button (Cached)
+
+struct VideoSystemWallpaperButton: View {
+  let item: SystemWallpaperManager.WallpaperItem
+  let isSelected: Bool
+  let action: () -> Void
+
+  @State private var thumbnail: NSImage?
+
+  var body: some View {
+    Button(action: action) {
+      Group {
+        if let thumbnail = thumbnail {
+          Image(nsImage: thumbnail)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        } else {
+          Rectangle()
+            .fill(Color.gray.opacity(0.15))
+            .overlay(
+              ProgressView()
+                .scaleEffect(0.5)
+            )
+        }
+      }
+      .frame(height: Size.gridItem)
+      .clipped()
+      .cornerRadius(Size.radiusMd)
+      .sidebarItemStyle(isSelected: isSelected)
+    }
+    .buttonStyle(.plain)
+    .onAppear {
+      loadThumbnail()
+    }
+  }
+
+  private func loadThumbnail() {
+    // Check cache first (sync)
+    if let cached = SystemWallpaperManager.shared.cachedThumbnail(for: item.thumbnailURL ?? item.fullImageURL) {
+      thumbnail = cached
+      return
+    }
+    // Load async with caching
+    SystemWallpaperManager.shared.loadThumbnail(for: item) { image in
+      thumbnail = image
+    }
+  }
+}
+
+// MARK: - Custom Wallpaper Button (Cached)
+
+struct VideoCustomWallpaperButton: View {
+  let url: URL
+  let isSelected: Bool
+  let action: () -> Void
+
+  @State private var thumbnail: NSImage?
+
+  var body: some View {
+    Button(action: action) {
+      Group {
+        if let thumbnail = thumbnail {
+          Image(nsImage: thumbnail)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        } else {
+          Rectangle()
+            .fill(Color.gray.opacity(0.15))
+            .overlay(
+              ProgressView()
+                .scaleEffect(0.5)
+            )
+        }
+      }
+      .frame(height: Size.gridItem)
+      .clipped()
+      .cornerRadius(Size.radiusMd)
+      .sidebarItemStyle(isSelected: isSelected)
+    }
+    .buttonStyle(.plain)
+    .onAppear {
+      loadThumbnail()
+    }
+  }
+
+  private func loadThumbnail() {
+    // Create a temporary WallpaperItem for custom URLs
+    let item = SystemWallpaperManager.WallpaperItem(
+      fullImageURL: url,
+      thumbnailURL: nil,
+      name: url.lastPathComponent
+    )
+    SystemWallpaperManager.shared.loadThumbnail(for: item) { image in
+      thumbnail = image
+    }
+  }
+}
+
+// MARK: - Add Wallpaper Button
+
+struct VideoAddWallpaperButton: View {
+  let action: () -> Void
+
+  var body: some View {
+    Button(action: action) {
+      RoundedRectangle(cornerRadius: Size.radiusMd)
+        .fill(SidebarColors.itemDefault)
+        .frame(height: Size.gridItem)
+        .overlay(
+          Image(systemName: "plus")
+            .font(.system(size: 16, weight: .medium))
+            .foregroundColor(SidebarColors.labelSecondary)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: Size.radiusMd)
+            .stroke(SidebarColors.borderDefault, lineWidth: Size.strokeDefault)
+        )
+    }
+    .buttonStyle(.plain)
+  }
+}

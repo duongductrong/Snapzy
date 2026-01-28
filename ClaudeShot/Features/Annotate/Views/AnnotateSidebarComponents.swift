@@ -72,11 +72,13 @@ struct CustomWallpaperButton: View {
   let isSelected: Bool
   let action: () -> Void
 
+  @State private var thumbnail: NSImage?
+
   var body: some View {
     Button(action: action) {
       Group {
-        if let image = NSImage(contentsOf: url) {
-          Image(nsImage: image)
+        if let thumbnail = thumbnail {
+          Image(nsImage: thumbnail)
             .resizable()
             .aspectRatio(contentMode: .fill)
         } else {
@@ -87,6 +89,21 @@ struct CustomWallpaperButton: View {
       .sidebarItemStyle(isSelected: isSelected)
     }
     .buttonStyle(.plain)
+    .onAppear {
+      loadThumbnail()
+    }
+  }
+
+  private func loadThumbnail() {
+    // Use SystemWallpaperManager's downsampling for custom URLs too
+    let item = SystemWallpaperManager.WallpaperItem(
+      fullImageURL: url,
+      thumbnailURL: nil,
+      name: url.lastPathComponent
+    )
+    SystemWallpaperManager.shared.loadThumbnail(for: item) { image in
+      thumbnail = image
+    }
   }
 }
 
@@ -113,17 +130,13 @@ struct SystemWallpaperButton: View {
   let isSelected: Bool
   let action: () -> Void
 
+  @State private var thumbnail: NSImage?
+
   var body: some View {
     Button(action: action) {
       Group {
-        if let thumbnailURL = item.thumbnailURL,
-          let image = NSImage(contentsOf: thumbnailURL)
-        {
-          Image(nsImage: image)
-            .resizable()
-            .aspectRatio(1, contentMode: .fill)
-        } else if let image = NSImage(contentsOf: item.fullImageURL) {
-          Image(nsImage: image)
+        if let thumbnail = thumbnail {
+          Image(nsImage: thumbnail)
             .resizable()
             .aspectRatio(1, contentMode: .fill)
         } else {
@@ -134,6 +147,23 @@ struct SystemWallpaperButton: View {
       .sidebarItemStyle(isSelected: isSelected)
     }
     .buttonStyle(.plain)
+    .onAppear {
+      loadCachedThumbnail()
+    }
+  }
+
+  private func loadCachedThumbnail() {
+    // Check cache first (sync)
+    let cacheKey = item.thumbnailURL ?? item.fullImageURL
+    if let cached = SystemWallpaperManager.shared.cachedThumbnail(for: cacheKey) {
+      thumbnail = cached
+      return
+    }
+
+    // Load async with downsampling (callback-based, no continuation)
+    SystemWallpaperManager.shared.loadThumbnail(for: item) { image in
+      thumbnail = image
+    }
   }
 }
 

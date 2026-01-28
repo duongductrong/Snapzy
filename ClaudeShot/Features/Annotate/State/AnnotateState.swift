@@ -60,15 +60,68 @@ final class AnnotateState: ObservableObject {
   }
 
   /// Cached background image for performance (avoids disk reads during slider drag)
-  private(set) var cachedBackgroundImage: NSImage?
+  /// IMPORTANT: @Published to trigger SwiftUI re-render when async load completes
+  @Published private(set) var cachedBackgroundImage: NSImage?
+
+  /// Cached pre-computed blurred image (avoids real-time blur on every frame)
+  @Published private(set) var cachedBlurredImage: NSImage?
+
+  /// Track the URL being loaded to prevent race conditions
+  private var loadingBackgroundURL: URL?
 
   private func loadBackgroundImage(from url: URL) {
     // Skip preset URLs (handled via gradient)
     guard url.scheme != "preset" else {
       cachedBackgroundImage = nil
+      cachedBlurredImage = nil
+      loadingBackgroundURL = nil
       return
     }
-    cachedBackgroundImage = NSImage(contentsOf: url)
+
+    // Track which URL we're loading to prevent race conditions
+    loadingBackgroundURL = url
+
+    // Use preview cache (2048px) instead of full resolution for performance
+    SystemWallpaperManager.shared.loadPreviewImage(for: url) { [weak self] image in
+      Task { @MainActor in
+        // Race condition guard: only apply if this is still the intended URL
+        guard self?.loadingBackgroundURL == url else { return }
+
+        self?.cachedBackgroundImage = image
+        self?.loadingBackgroundURL = nil
+
+        // Pre-compute blurred variant if .blurred style is active
+        if case .blurred = self?.backgroundStyle {
+          self?.cachedBlurredImage = self?.applyGaussianBlur(
+            to: image,
+            radius: WallpaperQualityConfig.blurRadius
+          )
+        } else {
+          self?.cachedBlurredImage = nil
+        }
+      }
+    }
+  }
+
+  /// Apply CIGaussianBlur to NSImage (one-time computation, GPU-accelerated)
+  private func applyGaussianBlur(to image: NSImage?, radius: CGFloat) -> NSImage? {
+    guard let image = image,
+          let tiffData = image.tiffRepresentation,
+          let ciImage = CIImage(data: tiffData) else { return nil }
+
+    let filter = CIFilter(name: "CIGaussianBlur")
+    filter?.setValue(ciImage, forKey: kCIInputImageKey)
+    filter?.setValue(radius, forKey: kCIInputRadiusKey)
+
+    guard let output = filter?.outputImage else { return nil }
+
+    // Crop to original bounds (blur extends edges)
+    let croppedOutput = output.cropped(to: ciImage.extent)
+
+    let rep = NSCIImageRep(ciImage: croppedOutput)
+    let blurred = NSImage(size: rep.size)
+    blurred.addRepresentation(rep)
+    return blurred
   }
 
   @Published var padding: CGFloat = 0

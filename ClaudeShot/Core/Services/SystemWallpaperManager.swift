@@ -16,6 +16,20 @@ class SystemWallpaperManager: ObservableObject {
   @Published var isLoading = false
   @Published var accessDenied = false
 
+  // MARK: - Thumbnail Cache (Performance Optimization)
+
+  private let thumbnailCache = NSCache<NSURL, NSImage>()
+  private let thumbnailSize: CGFloat = 128  // Optimal for grid display
+  private var loadingURLs = Set<URL>()
+  private let cacheQueue = DispatchQueue(label: "wallpaper.thumbnail.cache", qos: .userInitiated)
+
+  // MARK: - Preview Cache (Canvas Display Optimization)
+
+  private let previewCache = NSCache<NSURL, NSImage>()
+
+  /// Preview size from config (default 2048px for retina 1024pt)
+  private var previewSize: CGFloat { WallpaperQualityConfig.maxResolution }
+
   private let systemWallpaperPaths = [
     "/System/Library/Desktop Pictures",
     "/Library/Desktop Pictures",
@@ -38,11 +52,142 @@ class SystemWallpaperManager: ObservableObject {
     }
   }
 
-  private init() {}
+  private init() {
+    // Configure cache limits
+    thumbnailCache.countLimit = 100
+    thumbnailCache.totalCostLimit = 50 * 1024 * 1024  // 50MB max
+
+    // Preview cache: fewer items but larger (2048px images ~4MB each)
+    previewCache.countLimit = 20
+    previewCache.totalCostLimit = 100 * 1024 * 1024  // 100MB max
+  }
+
+  // MARK: - Cached Thumbnail Access
+
+  /// Get cached thumbnail or nil if not yet loaded
+  func cachedThumbnail(for url: URL) -> NSImage? {
+    thumbnailCache.object(forKey: url as NSURL)
+  }
+
+  /// Load and cache thumbnail with downsampling (async, non-blocking)
+  func loadThumbnail(for item: WallpaperItem, completion: @escaping (NSImage?) -> Void) {
+    let url = item.thumbnailURL ?? item.fullImageURL
+
+    // Check cache first
+    if let cached = thumbnailCache.object(forKey: url as NSURL) {
+      completion(cached)
+      return
+    }
+
+    // Prevent duplicate loads
+    cacheQueue.sync {
+      guard !loadingURLs.contains(url) else {
+        completion(nil)
+        return
+      }
+      loadingURLs.insert(url)
+    }
+
+    // Load and downsample on background thread
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      guard let self = self else { return }
+
+      let thumbnail = self.createDownsampledThumbnail(from: url)
+
+      if let thumbnail = thumbnail {
+        self.thumbnailCache.setObject(thumbnail, forKey: url as NSURL)
+      }
+
+      self.cacheQueue.sync {
+        self.loadingURLs.remove(url)
+      }
+
+      DispatchQueue.main.async {
+        completion(thumbnail)
+      }
+    }
+  }
+
+  /// Create downsampled thumbnail using ImageIO (memory efficient)
+  private func createDownsampledThumbnail(from url: URL) -> NSImage? {
+    createDownsampledImage(from: url, maxSize: thumbnailSize * 2)
+  }
+
+  /// Create downsampled image using ImageIO (memory efficient)
+  /// - Parameters:
+  ///   - url: Source image URL
+  ///   - maxSize: Maximum pixel dimension for the output
+  private func createDownsampledImage(from url: URL, maxSize: CGFloat) -> NSImage? {
+    let options: [CFString: Any] = [
+      kCGImageSourceShouldCache: false
+    ]
+
+    guard let imageSource = CGImageSourceCreateWithURL(url as CFURL, options as CFDictionary) else {
+      return nil
+    }
+
+    // Get source image dimensions to avoid requesting thumbnail larger than source
+    // This prevents "kCGImageSourceThumbnailMaxPixelSize is larger than image-dimension" warnings
+    var effectiveMaxSize = maxSize
+    if let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any],
+       let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+       let height = properties[kCGImagePropertyPixelHeight] as? CGFloat {
+      let sourceMaxDimension = max(width, height)
+      effectiveMaxSize = min(maxSize, sourceMaxDimension)
+    }
+
+    let downsampleOptions: [CFString: Any] = [
+      kCGImageSourceCreateThumbnailFromImageAlways: true,
+      kCGImageSourceShouldCacheImmediately: true,
+      kCGImageSourceCreateThumbnailWithTransform: true,
+      kCGImageSourceThumbnailMaxPixelSize: effectiveMaxSize
+    ]
+
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(imageSource, 0, downsampleOptions as CFDictionary) else {
+      return nil
+    }
+
+    return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
+  }
+
+  // MARK: - Preview Image Loading (Canvas Display)
+
+  /// Load preview-sized image for canvas display (2048px max dimension)
+  /// Uses ImageIO downsampling for memory efficiency (~4MB vs 50MB+ full-res)
+  func loadPreviewImage(for url: URL, completion: @escaping (NSImage?) -> Void) {
+    // Check cache first
+    if let cached = previewCache.object(forKey: url as NSURL) {
+      completion(cached)
+      return
+    }
+
+    // Load and downsample on background thread
+    DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+      guard let self = self else { return }
+
+      let preview = self.createDownsampledImage(from: url, maxSize: self.previewSize)
+
+      if let preview = preview {
+        self.previewCache.setObject(preview, forKey: url as NSURL)
+      }
+
+      DispatchQueue.main.async {
+        completion(preview)
+      }
+    }
+  }
+
+  /// Preload visible thumbnails (call when view appears)
+  func preloadThumbnails(for items: [WallpaperItem]) {
+    for item in items.prefix(12) {  // Preload first 12 (visible in grid)
+      loadThumbnail(for: item) { _ in }
+    }
+  }
 
   @MainActor
   func loadSystemWallpapers() async {
     guard !isLoading else { return }
+    guard systemWallpapers.isEmpty else { return }  // Only load once
     isLoading = true
     accessDenied = false
 
@@ -56,6 +201,9 @@ class SystemWallpaperManager: ObservableObject {
 
     systemWallpapers = wallpapers
     isLoading = false
+
+    // Preload first batch of thumbnails
+    preloadThumbnails(for: wallpapers)
   }
 
   private func hasAccessibleDirectory() -> Bool {

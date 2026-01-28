@@ -157,10 +157,27 @@ struct AnnotateSidebarView: View {
             }
           }
         ),
-        range: 0...300
+        range: 0...300,
+        onDragging: { isDragging, value in
+          state.previewPadding = isDragging ? value : nil
+        }
       )
-      CompactSliderRow(label: "Shadow", value: $state.shadowIntensity, range: 0...1)
-      CompactSliderRow(label: "Corners", value: $state.cornerRadius, range: 0...60)
+      CompactSliderRow(
+        label: "Shadow",
+        value: $state.shadowIntensity,
+        range: 0...1,
+        onDragging: { isDragging, value in
+          state.previewShadowIntensity = isDragging ? value : nil
+        }
+      )
+      CompactSliderRow(
+        label: "Corners",
+        value: $state.cornerRadius,
+        range: 0...60,
+        onDragging: { isDragging, value in
+          state.previewCornerRadius = isDragging ? value : nil
+        }
+      )
     }
   }
   
@@ -231,7 +248,10 @@ struct CompactSliderRow: View {
   let label: String
   @Binding var value: CGFloat
   let range: ClosedRange<CGFloat>
+  var onDragging: ((Bool, CGFloat) -> Void)? = nil
 
+  @State private var localValue: CGFloat = 0
+  @State private var isDragging: Bool = false
   @State private var textValue: String = ""
   @FocusState private var isTextFieldFocused: Bool
 
@@ -258,7 +278,7 @@ struct CompactSliderRow: View {
           .onAppear {
             textValue = String(format: "%.0f", value)
           }
-          .onChange(of: value) { _, newValue in
+          .onChange(of: localValue) { _, newValue in
             if !isTextFieldFocused {
               textValue = String(format: "%.0f", newValue)
             }
@@ -273,18 +293,44 @@ struct CompactSliderRow: View {
             isTextFieldFocused = false
           }
       }
-      Slider(value: $value, in: range)
-        .controlSize(.small)
+      Slider(
+        value: $localValue,
+        in: range,
+        onEditingChanged: { editing in
+          isDragging = editing
+          if !editing {
+            // Sync to binding only when drag ends
+            value = localValue
+            onDragging?(false, localValue)
+          } else {
+            // Drag started
+            onDragging?(true, localValue)
+          }
+        }
+      )
+      .controlSize(.small)
+    }
+    .onAppear { localValue = value }
+    .onChange(of: localValue) { _, newValue in
+      // Update preview in real-time during drag
+      if isDragging {
+        onDragging?(true, newValue)
+      }
+    }
+    .onChange(of: value) { _, newValue in
+      // External changes sync to local (e.g., preset selection)
+      if !isDragging { localValue = newValue }
     }
   }
 
   private func applyTextValue() {
     if let newValue = Double(textValue) {
       let clampedValue = min(max(CGFloat(newValue), range.lowerBound), range.upperBound)
+      localValue = clampedValue
       value = clampedValue
       textValue = String(format: "%.0f", clampedValue)
     } else {
-      textValue = String(format: "%.0f", value)
+      textValue = String(format: "%.0f", localValue)
     }
   }
 }

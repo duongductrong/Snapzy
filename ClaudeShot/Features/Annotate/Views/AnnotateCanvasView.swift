@@ -222,13 +222,20 @@ struct AnnotateCanvasView: View {
       case .blurred(let url):
         if url.scheme == "preset" {
           EmptyView()
-        } else if let nsImage = state.cachedBackgroundImage {
-          // Use CACHED image instead of loading from disk every render
+        } else if let nsImage = state.cachedBlurredImage {
+          // Use PRE-COMPUTED blur (no real-time processing)
           Image(nsImage: nsImage)
             .resizable()
             .aspectRatio(contentMode: .fill)
             .frame(width: width, height: height)
-            .blur(radius: 20)
+            .clipped()
+            .cornerRadius(currentCornerRadius)
+        } else if let nsImage = state.cachedBackgroundImage {
+          // Fallback: show non-blurred while computing
+          Image(nsImage: nsImage)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .frame(width: width, height: height)
             .clipped()
             .cornerRadius(currentCornerRadius)
         }
