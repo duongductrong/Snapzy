@@ -72,6 +72,7 @@ final class VideoEditorState: ObservableObject {
   @Published var selectedZoomId: UUID? = nil
   @Published var isZoomTrackVisible: Bool = true
   @Published var isVideoInfoSidebarVisible: Bool = false
+  @Published var isRightSidebarVisible: Bool = false
 
   // MARK: - Background Settings
 
@@ -620,6 +621,11 @@ final class VideoEditorState: ObservableObject {
   /// Toggle video info sidebar visibility
   func toggleVideoInfoSidebar() {
     isVideoInfoSidebarVisible.toggle()
+  }
+
+  /// Toggle right sidebar visibility
+  func toggleRightSidebar() {
+    isRightSidebarVisible.toggle()
   }
 
   /// Toggle background sidebar visibility

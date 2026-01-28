@@ -42,7 +42,7 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - UI State
 
-  @Published var showSidebar: Bool = true
+  @Published var showSidebar: Bool = false
   @Published var zoomLevel: CGFloat = 1.0
 
   // MARK: - Background Settings

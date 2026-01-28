@@ -143,6 +143,22 @@ struct VideoEditorToolbarView: View {
 
   private var rightSection: some View {
     HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
+      // Right sidebar toggle
+      Button(action: { state.toggleRightSidebar() }) {
+        Image(systemName: "sidebar.right")
+          .font(.system(size: 14))
+          .foregroundColor(state.isRightSidebarVisible ? ZoomColors.primary : .primary)
+          .frame(width: 28, height: 28)
+          .background(state.isRightSidebarVisible ? ZoomColors.primary.opacity(0.15) : Color.white.opacity(0.1))
+          .clipShape(RoundedRectangle(cornerRadius: 6))
+      }
+      .buttonStyle(.plain)
+      .keyboardShortcut(".", modifiers: [.command])
+      .help(state.isRightSidebarVisible ? "Hide Sidebar (⌘.)" : "Show Sidebar (⌘.)")
+
+      Divider()
+        .frame(height: 20)
+
       // Unsaved changes indicator
       if state.hasUnsavedChanges {
         HStack(spacing: 4) {

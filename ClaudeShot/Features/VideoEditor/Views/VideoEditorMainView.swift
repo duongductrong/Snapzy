@@ -67,12 +67,14 @@ struct VideoEditorMainView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
         // Right sidebar with tabs (Zoom + Background)
-        Divider()
+        if state.isRightSidebarVisible {
+          Divider()
 
-        VideoEditorRightSidebar(
-          state: state,
-          previewImage: currentFrameImage
-        )
+          VideoEditorRightSidebar(
+            state: state,
+            previewImage: currentFrameImage
+          )
+        }
       }
       .animation(.easeInOut(duration: 0.2), value: state.isVideoInfoSidebarVisible)
     }
