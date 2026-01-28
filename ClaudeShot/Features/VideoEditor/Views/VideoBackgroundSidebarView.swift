@@ -13,7 +13,7 @@ struct VideoBackgroundSidebarView: View {
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 12) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         noneButton
         gradientSection
         colorSection
@@ -22,9 +22,9 @@ struct VideoBackgroundSidebarView: View {
 
         slidersSection
 
-        Spacer(minLength: 20)
+        Spacer(minLength: Spacing.lg)
       }
-      .padding(12)
+      .padding(Spacing.md)
     }
     .frame(maxHeight: .infinity)
   }
@@ -37,13 +37,17 @@ struct VideoBackgroundSidebarView: View {
       state.backgroundPadding = 0
     } label: {
       Text("None")
-        .font(.system(size: 11, weight: .medium))
-        .foregroundColor(.primary)
+        .font(Typography.labelMedium)
+        .foregroundColor(SidebarColors.labelPrimary)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .padding(.vertical, Spacing.sm)
         .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(state.backgroundStyle == .none ? Color.blue.opacity(0.3) : Color.primary.opacity(0.1))
+          RoundedRectangle(cornerRadius: Size.radiusSm)
+            .fill(state.backgroundStyle == .none ? Color.accentColor.opacity(0.3) : SidebarColors.itemDefault)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: Size.radiusSm)
+            .stroke(state.backgroundStyle == .none ? Color.accentColor : Color.clear, lineWidth: Size.strokeSelected)
         )
     }
     .buttonStyle(.plain)
@@ -52,10 +56,10 @@ struct VideoBackgroundSidebarView: View {
   // MARK: - Gradient Section
 
   private var gradientSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       VideoSidebarSectionHeader(title: "Gradients")
 
-      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 5), spacing: 4) {
+      LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         ForEach(GradientPreset.allCases) { preset in
           VideoGradientPresetButton(
             preset: preset,
@@ -74,7 +78,7 @@ struct VideoBackgroundSidebarView: View {
   // MARK: - Color Section
 
   private var colorSection: some View {
-    VStack(alignment: .leading, spacing: 6) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       VideoSidebarSectionHeader(title: "Colors")
       VideoColorSwatchGrid(selectedColor: colorBinding)
     }
@@ -102,7 +106,7 @@ struct VideoBackgroundSidebarView: View {
   // MARK: - Sliders Section
 
   private var slidersSection: some View {
-    VStack(alignment: .leading, spacing: 10) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       VideoSliderRow(
         label: "Padding",
         value: Binding(

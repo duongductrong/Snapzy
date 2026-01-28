@@ -19,16 +19,17 @@ struct VideoDetailsSidebarView: View {
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 16) {
+      VStack(alignment: .leading, spacing: Spacing.md) {
         // Header
         HStack {
           Image(systemName: "info.circle.fill")
             .foregroundColor(ZoomColors.primary)
           Text("Video Details")
-            .font(.system(size: 13, weight: .semibold))
+            .font(Typography.sectionHeader)
+            .foregroundColor(SidebarColors.labelPrimary)
         }
 
-        Divider()
+        Divider().background(Color(nsColor: .separatorColor))
 
         // File Info Section
         SidebarSection(title: "File") {
@@ -63,9 +64,9 @@ struct VideoDetailsSidebarView: View {
           }
         }
 
-        Spacer(minLength: 20)
+        Spacer(minLength: Spacing.lg)
       }
-      .padding(12)
+      .padding(Spacing.md)
     }
     .frame(maxHeight: .infinity)
   }
@@ -78,10 +79,10 @@ private struct SidebarSection<Content: View>: View {
   @ViewBuilder let content: Content
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: Spacing.sm) {
       Text(title)
-        .font(.system(size: 10, weight: .medium))
-        .foregroundColor(.secondary)
+        .font(Typography.labelSmall)
+        .foregroundColor(SidebarColors.labelSecondary)
         .textCase(.uppercase)
       content
     }
@@ -95,12 +96,12 @@ private struct DetailRow: View {
   var body: some View {
     HStack {
       Text(label)
-        .font(.system(size: 11))
-        .foregroundColor(.secondary)
+        .font(Typography.labelMedium)
+        .foregroundColor(SidebarColors.labelSecondary)
       Spacer()
       Text(value)
-        .font(.system(size: 11))
-        .foregroundColor(.primary)
+        .font(Typography.labelMedium)
+        .foregroundColor(SidebarColors.labelPrimary)
         .lineLimit(1)
         .truncationMode(.middle)
     }

@@ -111,7 +111,7 @@ struct VideoEditorToolbarView: View {
           .onAppear {
             editingFilename = filenameWithoutExtension
           }
-          .onExitCommand {  
+          .onExitCommand {
             state.isRenamingFile = false
             renameError = nil
           }
