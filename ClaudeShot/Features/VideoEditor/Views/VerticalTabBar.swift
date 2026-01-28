@@ -19,32 +19,27 @@ struct VerticalTabItem: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 4) {
-        Image(systemName: icon)
-          .font(.system(size: 16, weight: .medium))
-
-        Text(title)
-          .font(.system(size: 10, weight: .medium))
-          .lineLimit(1)
-      }
-      .foregroundColor(isSelected ? .white : .primary)
-      .frame(width: 56, height: 52)
-      .background(
-        Group {
-          if isSelected {
-            RoundedRectangle(cornerRadius: 8)
-              .fill(Color.accentColor)
-          } else if isHovered {
-            RoundedRectangle(cornerRadius: 8)
-              .fill(Color(NSColor.controlBackgroundColor).opacity(0.8))
-          } else {
-            Color.clear
+      Image(systemName: icon)
+        .font(.system(size: 18, weight: .medium))
+        .foregroundColor(isSelected ? .white : .primary)
+        .frame(width: 36, height: 36)
+        .background(
+          Group {
+            if isSelected {
+              RoundedRectangle(cornerRadius: 8)
+                .fill(Color.accentColor)
+            } else if isHovered {
+              RoundedRectangle(cornerRadius: 8)
+                .fill(Color(NSColor.controlBackgroundColor).opacity(0.8))
+            } else {
+              Color.clear
+            }
           }
-        }
-      )
-      .contentShape(Rectangle())
+        )
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+    .help(title)
     .onHover { hovering in
       withAnimation(.easeInOut(duration: 0.1)) {
         isHovered = hovering
@@ -78,8 +73,8 @@ struct VerticalTabBar<Tab: Hashable>: View {
       Spacer()
     }
     .padding(.vertical, 8)
-    .padding(.horizontal, 4)
-    .frame(width: 64)
+    .padding(.horizontal, 6)
+    .frame(width: 48)
   }
 }
 
