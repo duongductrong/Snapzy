@@ -100,7 +100,7 @@ struct VideoSystemWallpaperButton: View {
         if let thumbnail = thumbnail {
           Image(nsImage: thumbnail)
             .resizable()
-            .aspectRatio(contentMode: .fill)
+            .aspectRatio(1, contentMode: .fill)
         } else {
           Rectangle()
             .fill(Color.gray.opacity(0.15))
@@ -110,7 +110,6 @@ struct VideoSystemWallpaperButton: View {
             )
         }
       }
-      .frame(height: Size.gridItem)
       .clipped()
       .cornerRadius(Size.radiusMd)
       .sidebarItemStyle(isSelected: isSelected)
@@ -149,7 +148,7 @@ struct VideoCustomWallpaperButton: View {
         if let thumbnail = thumbnail {
           Image(nsImage: thumbnail)
             .resizable()
-            .aspectRatio(contentMode: .fill)
+            .aspectRatio(1, contentMode: .fill)
         } else {
           Rectangle()
             .fill(Color.gray.opacity(0.15))
@@ -192,7 +191,6 @@ struct VideoAddWallpaperButton: View {
     Button(action: action) {
       RoundedRectangle(cornerRadius: Size.radiusMd)
         .fill(SidebarColors.itemDefault)
-        .frame(height: Size.gridItem)
         .overlay(
           Image(systemName: "plus")
             .font(.system(size: 16, weight: .medium))

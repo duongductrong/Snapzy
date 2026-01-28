@@ -75,8 +75,23 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Background Settings
 
-  @Published var backgroundStyle: BackgroundStyle = .none
+  @Published var backgroundStyle: BackgroundStyle = .none {
+    didSet {
+      handleBackgroundStyleChange()
+    }
+  }
   @Published var backgroundPadding: CGFloat = 0
+
+  // MARK: - Cached Background Images (Performance Optimization)
+
+  /// Cached background image for performance (avoids disk reads during render)
+  @Published private(set) var cachedBackgroundImage: NSImage?
+
+  /// Cached pre-computed blurred image (avoids real-time blur)
+  @Published private(set) var cachedBlurredImage: NSImage?
+
+  /// Track URL being loaded to prevent race conditions
+  private var loadingBackgroundURL: URL?
   @Published var backgroundShadowIntensity: CGFloat = 0
   @Published var backgroundCornerRadius: CGFloat = 0
   @Published var backgroundAlignment: ImageAlignment = .center
@@ -706,5 +721,64 @@ final class VideoEditorState: ObservableObject {
     } else {
       return String(format: "%02d:%02d", minutes, seconds)
     }
+  }
+
+  // MARK: - Background Image Caching (Performance)
+
+  /// Handle background style changes - load and cache images
+  private func handleBackgroundStyleChange() {
+    switch backgroundStyle {
+    case .wallpaper(let url), .blurred(let url):
+      loadBackgroundImage(from: url)
+    default:
+      cachedBackgroundImage = nil
+      cachedBlurredImage = nil
+      loadingBackgroundURL = nil
+    }
+  }
+
+  /// Load and cache background image using SystemWallpaperManager
+  private func loadBackgroundImage(from url: URL) {
+    loadingBackgroundURL = url
+
+    SystemWallpaperManager.shared.loadPreviewImage(for: url) { [weak self] image in
+      Task { @MainActor in
+        guard let self = self else { return }
+        // Race condition guard: only apply if still loading this URL
+        guard self.loadingBackgroundURL == url else { return }
+
+        self.cachedBackgroundImage = image
+        self.loadingBackgroundURL = nil
+
+        // Pre-compute blur if needed
+        if case .blurred = self.backgroundStyle {
+          self.cachedBlurredImage = self.applyGaussianBlur(
+            to: image,
+            radius: WallpaperQualityConfig.blurRadius
+          )
+        } else {
+          self.cachedBlurredImage = nil
+        }
+      }
+    }
+  }
+
+  /// Apply Gaussian blur to image (computed once, reused during render)
+  private func applyGaussianBlur(to image: NSImage?, radius: CGFloat) -> NSImage? {
+    guard let image = image,
+          let tiffData = image.tiffRepresentation,
+          let ciImage = CIImage(data: tiffData) else { return nil }
+
+    let filter = CIFilter(name: "CIGaussianBlur")
+    filter?.setValue(ciImage, forKey: kCIInputImageKey)
+    filter?.setValue(radius, forKey: kCIInputRadiusKey)
+
+    guard let output = filter?.outputImage else { return nil }
+    let croppedOutput = output.cropped(to: ciImage.extent)
+
+    let rep = NSCIImageRep(ciImage: croppedOutput)
+    let blurred = NSImage(size: rep.size)
+    blurred.addRepresentation(rep)
+    return blurred
   }
 }

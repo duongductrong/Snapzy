@@ -62,35 +62,44 @@ struct ZoomableVideoPlayerSection: View {
 
   @ViewBuilder
   private var backgroundView: some View {
-    switch state.backgroundStyle {
-    case .none:
-      Color.clear
-    case .gradient(let preset):
-      LinearGradient(
-        colors: preset.colors,
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-      )
-    case .solidColor(let color):
-      color
-    case .wallpaper(let url):
-      if let nsImage = NSImage(contentsOf: url) {
-        Image(nsImage: nsImage)
-          .resizable()
-          .aspectRatio(contentMode: .fill)
-      } else {
-        Color.gray
-      }
-    case .blurred(let url):
-      if let nsImage = NSImage(contentsOf: url) {
-        Image(nsImage: nsImage)
-          .resizable()
-          .aspectRatio(contentMode: .fill)
-          .blur(radius: 20)
-      } else {
-        Color.gray
+    Group {
+      switch state.backgroundStyle {
+      case .none:
+        Color.clear
+      case .gradient(let preset):
+        LinearGradient(
+          colors: preset.colors,
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      case .solidColor(let color):
+        color
+      case .wallpaper:
+        // Use cached image for 60fps performance (no disk I/O during render)
+        if let nsImage = state.cachedBackgroundImage {
+          Image(nsImage: nsImage)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        } else {
+          Color.gray // Placeholder while loading
+        }
+      case .blurred:
+        // Use pre-computed blur for 60fps performance (no real-time blur)
+        if let nsImage = state.cachedBlurredImage {
+          Image(nsImage: nsImage)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        } else if let nsImage = state.cachedBackgroundImage {
+          // Fallback to non-blurred while computing blur
+          Image(nsImage: nsImage)
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        } else {
+          Color.gray
+        }
       }
     }
+    .drawingGroup() // Metal rasterization for 60fps
   }
 
   // MARK: - Video Player Content
