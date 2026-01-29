@@ -180,7 +180,8 @@ final class QuickAccessManager: ObservableObject {
   /// Remove an item (screenshot or video) from the stack
   func removeItem(id: UUID) {
     cancelDismissTimer(for: id)
-    withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+    // Fast animation (0.15s) for immediate perceived response
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
     }
 

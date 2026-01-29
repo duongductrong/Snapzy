@@ -17,32 +17,45 @@ enum QuickAccessSound {
   case complete
   case failed
 
-  /// Play the sound effect
+  // MARK: - Pre-cached sounds for instant playback (avoid disk loading on each play)
+  private static let cachedSounds: [String: NSSound] = {
+    var sounds: [String: NSSound] = [:]
+    let soundNames = ["Pop", "Blow", "Funk", "Glass", "Basso"]
+    for name in soundNames {
+      if let sound = NSSound(named: name) {
+        sounds[name] = sound
+      }
+    }
+    return sounds
+  }()
+
+  /// Play the sound effect asynchronously (non-blocking)
   /// - Parameter reduceMotion: When true, sounds are disabled for accessibility
   func play(reduceMotion: Bool = false) {
     guard !reduceMotion else { return }
-    guard let sound = sound else { return }
-    sound.volume = volume
-    sound.play()
+    let soundName = self.soundName
+    let vol = self.volume
+    // Fire-and-forget async playback - never blocks UI
+    DispatchQueue.global(qos: .userInteractive).async {
+      guard let sound = Self.cachedSounds[soundName]?.copy() as? NSSound else { return }
+      sound.volume = vol
+      sound.play()
+    }
   }
 
-  /// System sound for this action
-  private var sound: NSSound? {
+  /// Sound name for cache lookup
+  private var soundName: String {
     switch self {
-    case .appear:
-      return NSSound(named: "Pop")
+    case .appear, .copy, .save:
+      return "Pop"
     case .dismiss:
-      return NSSound(named: "Blow")
-    case .copy:
-      return NSSound(named: "Pop")
-    case .save:
-      return NSSound(named: "Pop")
+      return "Blow"
     case .delete:
-      return NSSound(named: "Funk")
+      return "Funk"
     case .complete:
-      return NSSound(named: "Glass")
+      return "Glass"
     case .failed:
-      return NSSound(named: "Basso")
+      return "Basso"
     }
   }
 

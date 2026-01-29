@@ -83,6 +83,8 @@ struct QuickAccessCardView: View {
       RoundedRectangle(cornerRadius: cornerRadius)
         .stroke(Color.white.opacity(0.2), lineWidth: 1)
     )
+    .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
+    .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
     .opacity(cardOpacity)
     .offset(x: reduceMotion ? 0 : swipeOffset)
     .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.03))
