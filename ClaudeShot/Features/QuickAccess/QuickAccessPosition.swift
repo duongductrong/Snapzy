@@ -54,4 +54,41 @@ enum QuickAccessPosition: String, CaseIterable, Codable {
       return preferTop ? .topRight : .bottomRight
     }
   }
+
+  // MARK: - Animation Support
+
+  /// Calculate off-screen origin for slide-in animation
+  /// Panel starts off-screen and slides into view from the edge
+  func offscreenOrigin(for size: CGSize, on screen: NSScreen, padding: CGFloat = 20) -> CGPoint {
+    let frame = screen.visibleFrame
+    let offscreenMargin: CGFloat = 50  // Extra margin to ensure fully off-screen
+
+    switch self {
+    case .topLeft:
+      return CGPoint(
+        x: frame.minX - size.width - offscreenMargin,
+        y: frame.maxY - size.height - padding
+      )
+    case .topRight:
+      return CGPoint(
+        x: frame.maxX + offscreenMargin,
+        y: frame.maxY - size.height - padding
+      )
+    case .bottomLeft:
+      return CGPoint(
+        x: frame.minX - size.width - offscreenMargin,
+        y: frame.minY + padding
+      )
+    case .bottomRight:
+      return CGPoint(
+        x: frame.maxX + offscreenMargin,
+        y: frame.minY + padding
+      )
+    }
+  }
+
+  /// Swipe dismiss direction based on position (toward nearest edge)
+  var dismissDirection: CGFloat {
+    isLeftSide ? -1 : 1
+  }
 }

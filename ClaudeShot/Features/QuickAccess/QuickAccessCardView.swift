@@ -2,20 +2,25 @@
 //  QuickAccessCardView.swift
 //  ClaudeShot
 //
-//  Single quick access card (screenshot or video) with hover interactions
+//  Single quick access card with swipe-to-dismiss and staggered button reveals
+//  CleanShot X inspired animations
 //
 
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Displays a single item preview with hover-activated actions
+/// Displays a single item preview with hover-activated actions and swipe gestures
 struct QuickAccessCardView: View {
   let item: QuickAccessItem
   let manager: QuickAccessManager
+  var onHover: ((Bool) -> Void)? = nil
 
   @State private var isHovering = false
   @State private var isDragging = false
+  @State private var isDismissing = false
   @State private var dragRemovalTask: Task<Void, Never>?
+  @GestureState private var swipeOffset: CGFloat = 0
+  @Environment(\.accessibilityReduceMotion) var reduceMotion
 
   private let cornerRadius: CGFloat = 16
 
@@ -35,28 +40,21 @@ struct QuickAccessCardView: View {
         durationBadge(duration)
       }
 
-      // Hover overlay with buttons
-      if isHovering {
+      // Processing progress overlay
+      if item.processingState != .idle {
+        QuickAccessProgressView(state: item.processingState)
+          .transition(.opacity)
+      }
+
+      // Hover overlay with staggered buttons
+      if isHovering && item.processingState == .idle {
         hoverOverlay
-          .transition(.opacity.combined(with: .scale(scale: 0.95)))
+          .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
       }
 
-      // Dismiss button (top-right, only visible on hover)
-      if isHovering {
-        dismissButton
-          .transition(.opacity)
-      }
-
-      // Edit button (bottom-left, only visible on hover)
-      if isHovering {
-        editButton
-          .transition(.opacity)
-      }
-
-      // Delete button (top-left, only visible on hover)
-      if isHovering {
-        deleteButton
-          .transition(.opacity)
+      // Corner buttons (only visible on hover)
+      if isHovering && item.processingState == .idle {
+        cornerButtons
       }
     }
     .frame(width: QuickAccessLayout.cardWidth, height: QuickAccessLayout.cardHeight)
@@ -68,16 +66,19 @@ struct QuickAccessCardView: View {
       RoundedRectangle(cornerRadius: cornerRadius)
         .stroke(Color.white.opacity(0.2), lineWidth: 1)
     )
-    .shadow(color: Color.black.opacity(0.25), radius: 8, x: 0, y: 4)
-    .opacity(isDragging ? 0.6 : 1.0)
+    .opacity(cardOpacity)
+    .offset(x: reduceMotion ? 0 : swipeOffset)
+    .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.03))
     .onHover { hovering in
-      withAnimation(.easeInOut(duration: 0.2)) {
+      withAnimation(QuickAccessAnimations.hoverOverlay) {
         isHovering = hovering
       }
+      onHover?(hovering)
     }
     .onTapGesture(count: 2) {
       handleDoubleClick()
     }
+    .gesture(swipeGesture)
     .if(manager.dragDropEnabled) { view in
       view.onDrag {
         isDragging = true
@@ -95,7 +96,42 @@ struct QuickAccessCardView: View {
     .onDisappear {
       dragRemovalTask?.cancel()
     }
+    .animation(QuickAccessAnimations.hoverOverlay, value: isHovering)
   }
+
+  // MARK: - Computed Properties
+
+  private var cardOpacity: Double {
+    if isDragging { return 0.6 }
+    if isDismissing { return 0 }
+    if reduceMotion { return 1.0 }
+    return 1.0 - Double(abs(swipeOffset)) / 200.0
+  }
+
+  // MARK: - Gestures
+
+  private var swipeGesture: some Gesture {
+    DragGesture()
+      .updating($swipeOffset) { value, state, _ in
+        guard !isDragging, !reduceMotion else { return }
+        state = value.translation.width
+      }
+      .onEnded { value in
+        guard !isDragging else { return }
+        let threshold: CGFloat = 80
+        let velocityThreshold: CGFloat = 300
+
+        if abs(value.translation.width) > threshold || abs(value.velocity.width) > velocityThreshold {
+          isDismissing = true
+          QuickAccessSound.dismiss.play(reduceMotion: reduceMotion)
+          withAnimation(QuickAccessAnimations.cardSwipeDismiss) {
+            manager.removeScreenshot(id: item.id)
+          }
+        }
+      }
+  }
+
+  // MARK: - Actions
 
   private func handleDoubleClick() {
     if item.isVideo {
@@ -116,6 +152,8 @@ struct QuickAccessCardView: View {
       VideoEditorManager.shared.openEditor(for: item)
     }
   }
+
+  // MARK: - Subviews
 
   private func durationBadge(_ duration: String) -> some View {
     VStack {
@@ -142,60 +180,95 @@ struct QuickAccessCardView: View {
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(Color.black.opacity(0.4))
 
-      // Action buttons (vertical, centered) - Copy and Save only
+      // Action buttons with stagger effect
       VStack(spacing: 8) {
-        QuickAccessTextButton(label: "Copy") {
+        staggeredButton(label: "Copy", delay: 0) {
+          QuickAccessSound.copy.play(reduceMotion: reduceMotion)
           manager.copyToClipboard(id: item.id)
         }
 
-        QuickAccessTextButton(label: "Save") {
+        staggeredButton(label: "Save", delay: 1) {
+          QuickAccessSound.save.play(reduceMotion: reduceMotion)
           manager.openInFinder(id: item.id)
         }
       }
     }
   }
 
-  private var dismissButton: some View {
-    VStack {
-      HStack {
-        Spacer()
-        QuickAccessIconButton(icon: "xmark") {
-          manager.removeScreenshot(id: item.id)
+  @ViewBuilder
+  private func staggeredButton(label: String, delay: Int, action: @escaping () -> Void) -> some View {
+    QuickAccessTextButton(label: label, action: action)
+      .transition(buttonTransition(delay: delay))
+  }
+
+  private func buttonTransition(delay: Int) -> AnyTransition {
+    if reduceMotion {
+      return .opacity
+    }
+    let stagger = Double(delay) * QuickAccessAnimations.buttonStaggerDelay
+    return .scale(scale: 0.6)
+      .combined(with: .opacity)
+      .animation(QuickAccessAnimations.buttonReveal.delay(stagger))
+  }
+
+  private var cornerButtons: some View {
+    ZStack {
+      // Dismiss button (top-right)
+      VStack {
+        HStack {
+          Spacer()
+          QuickAccessIconButton(icon: "xmark") {
+            manager.removeScreenshot(id: item.id)
+          }
+          .transition(cornerButtonTransition(delay: 2))
+          .padding(6)
         }
-        .padding(6)
+        Spacer()
       }
-      Spacer()
+
+      // Delete button (top-left)
+      VStack {
+        HStack {
+          QuickAccessIconButton(
+            icon: "trash",
+            action: {
+              QuickAccessSound.delete.play(reduceMotion: reduceMotion)
+              manager.deleteItem(id: item.id)
+            },
+            helpText: "Delete"
+          )
+          .transition(cornerButtonTransition(delay: 3))
+          .padding(6)
+          Spacer()
+        }
+        Spacer()
+      }
+
+      // Edit button (bottom-left)
+      VStack {
+        Spacer()
+        HStack {
+          QuickAccessIconButton(
+            icon: "pencil",
+            action: handleDoubleClick,
+            helpText: item.isVideo ? "Edit Video" : "Annotate"
+          )
+          .transition(cornerButtonTransition(delay: 4))
+          .padding(6)
+          Spacer()
+        }
+      }
     }
   }
 
-  private var editButton: some View {
-    VStack {
-      Spacer()
-      HStack {
-        QuickAccessIconButton(
-          icon: "pencil",
-          action: handleDoubleClick,
-          helpText: item.isVideo ? "Edit Video" : "Annotate"
-        )
-        .padding(6)
-        Spacer()
-      }
+  private func cornerButtonTransition(delay: Int) -> AnyTransition {
+    if reduceMotion {
+      return .opacity
     }
-  }
-
-  private var deleteButton: some View {
-    VStack {
-      HStack {
-        QuickAccessIconButton(
-          icon: "trash",
-          action: { manager.deleteItem(id: item.id) },
-          helpText: "Delete"
-        )
-        .padding(6)
-        Spacer()
-      }
-      Spacer()
-    }
+    let stagger = Double(delay) * QuickAccessAnimations.buttonStaggerDelay
+    return .scale(scale: 0.5)
+      .combined(with: .opacity)
+      .animation(QuickAccessAnimations.buttonReveal.delay(stagger))
   }
 
   /// Creates drag preview for the card
@@ -214,15 +287,9 @@ struct QuickAccessCardView: View {
 extension QuickAccessItem {
   /// Creates NSItemProvider for drag & drop to external apps
   func dragItemProvider() -> NSItemProvider {
-    // Capture URL value before creating provider to ensure thread safety
     let fileURL = self.url
-
-    // Use NSItemProvider with the file URL directly - simplest and most reliable approach
     let provider = NSItemProvider(contentsOf: fileURL) ?? NSItemProvider()
-
-    // Set suggested name for the dragged file
     provider.suggestedName = fileURL.lastPathComponent
-
     return provider
   }
 }

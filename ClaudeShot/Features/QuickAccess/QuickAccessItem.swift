@@ -14,6 +14,19 @@ enum QuickAccessItemType: Equatable {
   case video
 }
 
+/// Processing state for quick access item (annotation, conversion, etc.)
+enum QuickAccessProcessingState: Equatable {
+  case idle
+  case processing(progress: Double?)  // nil = indeterminate
+  case complete
+  case failed
+
+  var isProcessing: Bool {
+    if case .processing = self { return true }
+    return false
+  }
+}
+
 /// Represents a single item (screenshot or video) in the quick access preview stack
 struct QuickAccessItem: Identifiable, Equatable {
   let id: UUID
@@ -22,6 +35,7 @@ struct QuickAccessItem: Identifiable, Equatable {
   let capturedAt: Date
   let itemType: QuickAccessItemType
   let duration: TimeInterval?
+  var processingState: QuickAccessProcessingState = .idle
 
   /// Initializer for screenshots (backward compatible)
   init(url: URL, thumbnail: NSImage) {
@@ -44,7 +58,7 @@ struct QuickAccessItem: Identifiable, Equatable {
   }
 
   static func == (lhs: QuickAccessItem, rhs: QuickAccessItem) -> Bool {
-    lhs.id == rhs.id
+    lhs.id == rhs.id && lhs.processingState == rhs.processingState
   }
 
   /// Whether this item is a video
