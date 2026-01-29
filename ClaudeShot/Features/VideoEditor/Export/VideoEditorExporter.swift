@@ -65,6 +65,46 @@ enum VideoEditorExporter {
     exportSession.outputFileType = outputFileType(for: state.fileExtension)
     exportSession.timeRange = timeRange
 
+    // Apply custom dimensions if not using original size
+    if state.exportSettings.dimensionPreset != .original {
+      let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+
+      // Get video track for composition
+      if let videoTrack = try await state.asset.loadTracks(withMediaType: .video).first {
+        let videoComposition = AVMutableVideoComposition()
+        videoComposition.renderSize = targetSize
+        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+
+        // Create layer instruction for scaling
+        let instruction = AVMutableVideoCompositionInstruction()
+        instruction.timeRange = timeRange
+
+        let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: videoTrack)
+
+        // Calculate uniform aspect-fit scale to preserve entire frame without cropping
+        let naturalSize = state.naturalSize
+        let scale = min(targetSize.width / naturalSize.width, targetSize.height / naturalSize.height)
+        let scaleTransform = CGAffineTransform(scaleX: scale, y: scale)
+
+        // Center the scaled content within target size
+        let scaledWidth = naturalSize.width * scale
+        let scaledHeight = naturalSize.height * scale
+        let translateX = (targetSize.width - scaledWidth) / 2
+        let translateY = (targetSize.height - scaledHeight) / 2
+        let centerTransform = CGAffineTransform(translationX: translateX, y: translateY)
+
+        // Apply preferred transform first, then scale, then center
+        let preferredTransform = try await videoTrack.load(.preferredTransform)
+        layerInstruction.setTransform(preferredTransform.concatenating(scaleTransform).concatenating(centerTransform), at: .zero)
+
+        instruction.layerInstructions = [layerInstruction]
+        videoComposition.instructions = [instruction]
+
+        exportSession.videoComposition = videoComposition
+        print("📹 [Export] Applied custom dimensions: \(targetSize)")
+      }
+    }
+
     // Start progress monitoring
     let progressTask = Task {
       while !Task.isCancelled && exportSession.status == .exporting {
@@ -319,6 +359,42 @@ enum VideoEditorExporter {
     let transform = try await videoTrack.load(.preferredTransform)
     compositionVideoTrack.preferredTransform = transform
 
+    // Create video composition for custom dimensions
+    var videoComposition: AVMutableVideoComposition?
+    if state.exportSettings.dimensionPreset != .original {
+      let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+
+      let composition = AVMutableVideoComposition()
+      composition.renderSize = targetSize
+      composition.frameDuration = CMTime(value: 1, timescale: 30)
+
+      // Create layer instruction for scaling
+      let instruction = AVMutableVideoCompositionInstruction()
+      instruction.timeRange = CMTimeRange(start: .zero, duration: compositionVideoTrack.timeRange.duration)
+
+      let layerInstruction = AVMutableVideoCompositionLayerInstruction(assetTrack: compositionVideoTrack)
+
+      // Calculate uniform aspect-fit scale to preserve entire frame without cropping
+      let naturalSize = state.naturalSize
+      let scale = min(targetSize.width / naturalSize.width, targetSize.height / naturalSize.height)
+      let scaleTransform = CGAffineTransform(scaleX: scale, y: scale)
+
+      // Center the scaled content within target size
+      let scaledWidth = naturalSize.width * scale
+      let scaledHeight = naturalSize.height * scale
+      let translateX = (targetSize.width - scaledWidth) / 2
+      let translateY = (targetSize.height - scaledHeight) / 2
+      let centerTransform = CGAffineTransform(translationX: translateX, y: translateY)
+
+      layerInstruction.setTransform(transform.concatenating(scaleTransform).concatenating(centerTransform), at: .zero)
+
+      instruction.layerInstructions = [layerInstruction]
+      composition.instructions = [instruction]
+
+      videoComposition = composition
+      print("📹 [Export] Video-only: Applied custom dimensions: \(targetSize)")
+    }
+
     // Export composition
     guard let exportSession = AVAssetExportSession(
       asset: composition,
@@ -330,6 +406,9 @@ enum VideoEditorExporter {
     try? FileManager.default.removeItem(at: outputURL)
     exportSession.outputURL = outputURL
     exportSession.outputFileType = outputFileType(for: state.fileExtension)
+    if let videoComposition = videoComposition {
+      exportSession.videoComposition = videoComposition
+    }
 
     let progressTask = Task {
       while !Task.isCancelled && exportSession.status == .exporting {

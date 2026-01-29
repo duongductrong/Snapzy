@@ -241,6 +241,8 @@ final class VideoEditorState: ObservableObject {
           height: abs(transformedSize.height)
         )
       }
+      // Calculate initial file size estimate after metadata loads
+      recalculateEstimatedFileSize()
     } catch {
       print("Failed to load video metadata: \(error)")
     }
@@ -666,11 +668,22 @@ final class VideoEditorState: ObservableObject {
     let trimmedDurationSec = CMTimeGetSeconds(trimmedDuration)
     let trimRatio = trimmedDurationSec / sourceDuration
 
-    // Calculate dimension ratio
+    // Calculate dimension ratio (including background padding)
     let exportSize = exportSettings.exportSize(from: naturalSize)
     let originalPixels = naturalSize.width * naturalSize.height
-    let exportPixels = exportSize.width * exportSize.height
-    let dimensionRatio = originalPixels > 0 ? exportPixels / originalPixels : 1.0
+
+    // Include background padding in canvas size calculation
+    let canvasWidth: CGFloat
+    let canvasHeight: CGFloat
+    if backgroundStyle != .none && backgroundPadding > 0 {
+      canvasWidth = exportSize.width + (backgroundPadding * 2)
+      canvasHeight = exportSize.height + (backgroundPadding * 2)
+    } else {
+      canvasWidth = exportSize.width
+      canvasHeight = exportSize.height
+    }
+    let canvasPixels = canvasWidth * canvasHeight
+    let dimensionRatio = originalPixels > 0 ? canvasPixels / originalPixels : 1.0
 
     // Apply quality multiplier
     let qualityMultiplier = Double(exportSettings.quality.bitrateMultiplier)
@@ -728,6 +741,7 @@ final class VideoEditorState: ObservableObject {
       .dropFirst(3)
       .sink { [weak self] _, _, _ in
         self?.updateHasUnsavedChanges()
+        self?.recalculateEstimatedFileSize()
       }
       .store(in: &cancellables)
 
@@ -746,6 +760,7 @@ final class VideoEditorState: ObservableObject {
       .dropFirst(4)
       .sink { [weak self] _, _, _, _ in
         self?.updateHasUnsavedChanges()
+        self?.recalculateEstimatedFileSize()
       }
       .store(in: &cancellables)
 

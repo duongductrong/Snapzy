@@ -87,25 +87,38 @@ struct VideoExportSettingsPanel: View {
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
-      // Preset picker
+      // Preset picker with dimension labels
       Picker("", selection: dimensionPresetBinding) {
         ForEach(ExportDimensionPreset.allCases) { preset in
-          Text(preset.rawValue).tag(preset)
+          Text(preset.displayLabel(for: state.naturalSize))
+            .tag(preset)
         }
       }
       .pickerStyle(.menu)
-      .frame(width: 100)
+      .frame(minWidth: 160)
       .controlSize(.small)
 
-      // Custom dimension fields or computed dimensions display
+      // Custom dimension fields or file size reduction hint
       if state.exportSettings.dimensionPreset == .custom {
         customDimensionFields
-      } else {
-        // Show computed dimensions
-        Text(dimensionDisplayText)
+      } else if state.exportSettings.dimensionPreset != .original {
+        // Show file size impact hint
+        fileSizeReductionHint
+      }
+    }
+  }
+
+  private var fileSizeReductionHint: some View {
+    let size = state.exportSettings.exportSize(from: state.naturalSize)
+    let originalPixels = state.naturalSize.width * state.naturalSize.height
+    let newPixels = size.width * size.height
+    let reduction = originalPixels > 0 ? Int((1.0 - newPixels / originalPixels) * 100) : 0
+
+    return Group {
+      if reduction > 0 {
+        Text("~\(reduction)% smaller file size")
           .font(.system(size: 9))
-          .foregroundColor(.secondary)
-          .monospacedDigit()
+          .foregroundColor(.green.opacity(0.8))
       }
     }
   }
