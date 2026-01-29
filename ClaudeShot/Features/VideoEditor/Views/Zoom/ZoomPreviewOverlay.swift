@@ -195,13 +195,10 @@ struct ZoomableVideoPlayerSection: View {
       return containerSize
     }
 
-    // Scale background padding proportionally to export dimensions
-    let paddingScale = state.naturalSize.width > 0 ? effectiveSize.width / state.naturalSize.width : 1.0
-    let scaledBackgroundPadding = state.backgroundPadding * paddingScale
-
-    // Calculate the composite aspect ratio (video + scaled padding on all sides)
-    let compositeWidth = effectiveSize.width + (scaledBackgroundPadding * 2)
-    let compositeHeight = effectiveSize.height + (scaledBackgroundPadding * 2)
+    // Use raw padding (absolute pixels) to match export behavior exactly
+    // Export adds padding in absolute pixels to the scaled video dimensions
+    let compositeWidth = effectiveSize.width + (state.backgroundPadding * 2)
+    let compositeHeight = effectiveSize.height + (state.backgroundPadding * 2)
     let compositeAspect = compositeWidth / compositeHeight
 
     // Fit composite into container maintaining aspect ratio
