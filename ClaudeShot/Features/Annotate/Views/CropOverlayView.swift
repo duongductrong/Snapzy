@@ -2,7 +2,7 @@
 //  CropOverlayView.swift
 //  ClaudeShot
 //
-//  Crop overlay with dimming, border, and resize handles
+//  Crop overlay with dimming, border, grid, dimensions, and resize handles
 //
 
 import SwiftUI
@@ -13,8 +13,8 @@ struct CropOverlayView: View {
   let scale: CGFloat
   let imageSize: CGSize
 
-  private let handleSize: CGFloat = 10
-  private let handleHitArea: CGFloat = 20
+  private let handleSize: CGFloat = 12
+  private let cornerHandleLength: CGFloat = 20
 
   var body: some View {
     GeometryReader { geometry in
@@ -31,30 +31,40 @@ struct CropOverlayView: View {
 
           // Crop border
           Rectangle()
-            .stroke(Color.primary, lineWidth: 2)
+            .stroke(Color.white, lineWidth: 1.5)
             .frame(width: scaledCrop.width, height: scaledCrop.height)
             .position(x: scaledCrop.midX, y: scaledCrop.midY)
+            .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 0)
             .allowsHitTesting(false)
 
-          // Dashed inner border
-          Rectangle()
-            .stroke(Color.secondary.opacity(0.8), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
-            .frame(width: scaledCrop.width, height: scaledCrop.height)
-            .position(x: scaledCrop.midX, y: scaledCrop.midY)
-            .allowsHitTesting(false)
+          // Rule of thirds grid
+          if state.showCropGrid {
+            CropGridOverlay(cropRect: scaledCrop)
+              .allowsHitTesting(false)
+          }
 
-          // Corner handles
+          // Corner L-shaped handles (CleanShot X style)
           ForEach(CropHandle.corners, id: \.self) { handle in
-            CropHandleView(handle: handle)
+            CropCornerHandle(handle: handle, length: cornerHandleLength)
               .position(handlePosition(for: handle, in: scaledCrop))
               .allowsHitTesting(false)
           }
 
-          // Edge handles
+          // Edge handles (subtle lines)
           ForEach(CropHandle.edges, id: \.self) { handle in
-            CropHandleView(handle: handle)
+            CropEdgeHandle(handle: handle, cropRect: scaledCrop)
               .position(handlePosition(for: handle, in: scaledCrop))
               .allowsHitTesting(false)
+          }
+
+          // Dimension display (when resizing)
+          if state.isCropResizing || state.isCropActive {
+            CropDimensionLabel(
+              width: Int(cropRect.width),
+              height: Int(cropRect.height)
+            )
+            .position(x: scaledCrop.midX, y: scaledCrop.maxY + 24)
+            .allowsHitTesting(false)
           }
         }
       }
@@ -109,7 +119,7 @@ enum CropHandle: String, CaseIterable {
 struct CropDimOverlay: View {
   let cropRect: CGRect
   let containerSize: CGSize
-  private let dimColor = Color.black.opacity(0.5)
+  private let dimColor = Color.black.opacity(0.6)
 
   var body: some View {
     ZStack {
@@ -136,24 +146,137 @@ struct CropDimOverlay: View {
   }
 }
 
-// MARK: - Crop Handle View
+// MARK: - Rule of Thirds Grid
 
-struct CropHandleView: View {
-  let handle: CropHandle
-  private let size: CGFloat = 10
+struct CropGridOverlay: View {
+  let cropRect: CGRect
 
   var body: some View {
     ZStack {
-      // White fill
-      RoundedRectangle(cornerRadius: 2)
-        .fill(Color(nsColor: .controlBackgroundColor))
-        .frame(width: size, height: size)
+      // Vertical lines (2 lines dividing into thirds)
+      ForEach(1..<3, id: \.self) { i in
+        let x = cropRect.minX + cropRect.width * CGFloat(i) / 3
+        Rectangle()
+          .fill(Color.white.opacity(0.4))
+          .frame(width: 0.5, height: cropRect.height)
+          .position(x: x, y: cropRect.midY)
+      }
 
-      // Blue border
-      RoundedRectangle(cornerRadius: 2)
-        .stroke(Color.blue, lineWidth: 1.5)
-        .frame(width: size, height: size)
+      // Horizontal lines (2 lines dividing into thirds)
+      ForEach(1..<3, id: \.self) { i in
+        let y = cropRect.minY + cropRect.height * CGFloat(i) / 3
+        Rectangle()
+          .fill(Color.white.opacity(0.4))
+          .frame(width: cropRect.width, height: 0.5)
+          .position(x: cropRect.midX, y: y)
+      }
     }
-    .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+  }
+}
+
+// MARK: - Corner Handle (L-shaped, CleanShot X style)
+
+struct CropCornerHandle: View {
+  let handle: CropHandle
+  let length: CGFloat
+  private let thickness: CGFloat = 3
+
+  var body: some View {
+    ZStack {
+      // Horizontal bar
+      Rectangle()
+        .fill(Color.white)
+        .frame(width: length, height: thickness)
+        .offset(x: horizontalOffset, y: verticalBarOffset)
+        .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 0)
+
+      // Vertical bar
+      Rectangle()
+        .fill(Color.white)
+        .frame(width: thickness, height: length)
+        .offset(x: horizontalBarOffset, y: verticalOffset)
+        .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 0)
+    }
+  }
+
+  private var horizontalOffset: CGFloat {
+    switch handle {
+    case .topLeft, .bottomLeft: return length / 2
+    case .topRight, .bottomRight: return -length / 2
+    default: return 0
+    }
+  }
+
+  private var verticalOffset: CGFloat {
+    switch handle {
+    case .topLeft, .topRight: return length / 2
+    case .bottomLeft, .bottomRight: return -length / 2
+    default: return 0
+    }
+  }
+
+  private var horizontalBarOffset: CGFloat {
+    switch handle {
+    case .topLeft, .bottomLeft: return 0
+    case .topRight, .bottomRight: return 0
+    default: return 0
+    }
+  }
+
+  private var verticalBarOffset: CGFloat {
+    switch handle {
+    case .topLeft, .topRight: return 0
+    case .bottomLeft, .bottomRight: return 0
+    default: return 0
+    }
+  }
+}
+
+// MARK: - Edge Handle (subtle line)
+
+struct CropEdgeHandle: View {
+  let handle: CropHandle
+  let cropRect: CGRect
+  private let handleLength: CGFloat = 24
+  private let thickness: CGFloat = 3
+
+  var body: some View {
+    Rectangle()
+      .fill(Color.white)
+      .frame(
+        width: isHorizontal ? handleLength : thickness,
+        height: isHorizontal ? thickness : handleLength
+      )
+      .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 0)
+  }
+
+  private var isHorizontal: Bool {
+    handle == .top || handle == .bottom
+  }
+}
+
+// MARK: - Dimension Label
+
+struct CropDimensionLabel: View {
+  let width: Int
+  let height: Int
+
+  var body: some View {
+    HStack(spacing: 4) {
+      Text("\(width)")
+        .fontWeight(.medium)
+      Text("×")
+        .foregroundColor(.secondary)
+      Text("\(height)")
+        .fontWeight(.medium)
+    }
+    .font(.system(size: 11, weight: .regular, design: .monospaced))
+    .foregroundColor(.white)
+    .padding(.horizontal, 8)
+    .padding(.vertical, 4)
+    .background(
+      Capsule()
+        .fill(Color.black.opacity(0.75))
+    )
   }
 }

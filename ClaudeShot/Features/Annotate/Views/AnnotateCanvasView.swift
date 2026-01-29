@@ -164,6 +164,15 @@ struct AnnotateCanvasView: View {
         .frame(width: imgWidth, height: imgHeight)
         .offset(x: offset.x, y: offset.y)
       }
+
+      // Crop toolbar (floating at bottom)
+      if state.selectedTool == .crop && state.isCropActive {
+        VStack {
+          Spacer()
+          CropToolbarView(state: state)
+            .padding(.bottom, 20)
+        }
+      }
     }
     .scaleEffect(state.zoomLevel)
   }

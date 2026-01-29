@@ -262,11 +262,20 @@ final class DrawingCanvasNSView: NSView {
     )
   }
 
+  /// Clamp point to image bounds
+  private func clampToImageBounds(_ point: CGPoint) -> CGPoint {
+    CGPoint(
+      x: max(0, min(point.x, state.imageWidth)),
+      y: max(0, min(point.y, state.imageHeight))
+    )
+  }
+
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let imagePoint = displayToImage(displayPoint)
+    let rawImagePoint = displayToImage(displayPoint)
+    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
     dragStart = imagePoint  // Store in image coords
 
     // Handle double-click on text annotations to enter edit mode
@@ -348,7 +357,8 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseDragged(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let imagePoint = displayToImage(displayPoint)
+    let rawImagePoint = displayToImage(displayPoint)
+    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
 
     // Handle resizing (in image coordinates)
     if isResizingAnnotation, let handle = activeResizeHandle,
@@ -363,7 +373,12 @@ final class DrawingCanvasNSView: NSView {
 
     // Handle crop resizing
     if isCropResizing, let handle = activeCropHandle {
-      handleCropResize(handle: handle, currentPoint: imagePoint)
+      let shiftHeld = event.modifierFlags.contains(.shift)
+      handleCropResize(handle: handle, currentPoint: imagePoint, shiftHeld: shiftHeld)
+      Task { @MainActor in
+        state.isCropResizing = true
+        state.isCropShiftLocked = shiftHeld
+      }
       needsDisplay = true
       return
     }
@@ -404,7 +419,8 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseUp(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let imagePoint = displayToImage(displayPoint)
+    let rawImagePoint = displayToImage(displayPoint)
+    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
 
     // Finish resizing
     if isResizingAnnotation {
@@ -428,6 +444,10 @@ final class DrawingCanvasNSView: NSView {
       isCropResizing = false
       isCropDragging = false
       activeCropHandle = nil
+      Task { @MainActor in
+        state.isCropResizing = false
+        state.isCropShiftLocked = false
+      }
       needsDisplay = true
       return
     }
@@ -664,13 +684,16 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func setCursorForCropHandle(_ handle: CropHandle) {
+    // Note: In image coordinates, Y increases upward (bottom-left origin)
+    // But visually on screen, Y increases downward (top-left origin)
+    // So topLeft visually appears at top-left of screen
     switch handle {
     case .topLeft, .bottomRight:
-      // Diagonal resize NW-SE
-      NSCursor.crosshair.set()
+      // NW-SE diagonal resize (↖↘)
+      NSCursor(image: diagonalResizeCursorImage(nwse: true), hotSpot: NSPoint(x: 8, y: 8)).set()
     case .topRight, .bottomLeft:
-      // Diagonal resize NE-SW
-      NSCursor.crosshair.set()
+      // NE-SW diagonal resize (↗↙)
+      NSCursor(image: diagonalResizeCursorImage(nwse: false), hotSpot: NSPoint(x: 8, y: 8)).set()
     case .top, .bottom:
       NSCursor.resizeUpDown.set()
     case .left, .right:
@@ -678,6 +701,62 @@ final class DrawingCanvasNSView: NSView {
     case .body:
       NSCursor.openHand.set()
     }
+  }
+
+  /// Generate diagonal resize cursor image
+  private func diagonalResizeCursorImage(nwse: Bool) -> NSImage {
+    let size = NSSize(width: 16, height: 16)
+    let image = NSImage(size: size)
+    image.lockFocus()
+
+    let path = NSBezierPath()
+    path.lineWidth = 1.5
+    path.lineCapStyle = .round
+
+    if nwse {
+      // NW-SE diagonal (↖↘)
+      // Arrow pointing to top-left
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 3, y: 8))
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 8, y: 13))
+      // Main diagonal line
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 13, y: 3))
+      // Arrow pointing to bottom-right
+      path.move(to: NSPoint(x: 13, y: 3))
+      path.line(to: NSPoint(x: 13, y: 8))
+      path.move(to: NSPoint(x: 13, y: 3))
+      path.line(to: NSPoint(x: 8, y: 3))
+    } else {
+      // NE-SW diagonal (↗↙)
+      // Arrow pointing to top-right
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 13, y: 8))
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 8, y: 13))
+      // Main diagonal line
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 3, y: 3))
+      // Arrow pointing to bottom-left
+      path.move(to: NSPoint(x: 3, y: 3))
+      path.line(to: NSPoint(x: 3, y: 8))
+      path.move(to: NSPoint(x: 3, y: 3))
+      path.line(to: NSPoint(x: 8, y: 3))
+    }
+
+    // Draw white outline for visibility
+    NSColor.white.setStroke()
+    path.lineWidth = 3
+    path.stroke()
+
+    // Draw black line
+    NSColor.black.setStroke()
+    path.lineWidth = 1.5
+    path.stroke()
+
+    image.unlockFocus()
+    return image
   }
 
   // MARK: - Crop Handling
@@ -743,7 +822,7 @@ final class DrawingCanvasNSView: NSView {
     return nil
   }
 
-  private func handleCropResize(handle: CropHandle, currentPoint: CGPoint) {
+  private func handleCropResize(handle: CropHandle, currentPoint: CGPoint, shiftHeld: Bool = false) {
     var newRect = originalCropRect
 
     // Clamp current point to image boundaries
@@ -755,6 +834,17 @@ final class DrawingCanvasNSView: NSView {
     )
 
     let minSize: CGFloat = 20
+
+    // Determine target aspect ratio
+    let aspectRatio: CGFloat?
+    if shiftHeld {
+      // Lock to current aspect ratio when Shift is held
+      aspectRatio = originalCropRect.width / originalCropRect.height
+    } else if state.cropAspectRatio != .free {
+      aspectRatio = state.cropAspectRatio.ratio
+    } else {
+      aspectRatio = nil
+    }
 
     switch handle {
     case .topLeft:
@@ -799,9 +889,59 @@ final class DrawingCanvasNSView: NSView {
       break
     }
 
+    // Apply aspect ratio constraint if needed
+    if let ratio = aspectRatio, handle != .body {
+      newRect = applyAspectRatio(ratio, to: newRect, handle: handle, original: originalCropRect)
+    }
+
     Task { @MainActor in
       state.updateCropRect(newRect)
     }
+  }
+
+  /// Apply aspect ratio constraint to crop rect based on resize handle
+  private func applyAspectRatio(_ ratio: CGFloat, to rect: CGRect, handle: CropHandle, original: CGRect) -> CGRect {
+    var result = rect
+    let currentRatio = rect.width / rect.height
+
+    // For corner handles, adjust based on which dimension changed more
+    if currentRatio > ratio {
+      // Too wide, adjust width to match height
+      let newWidth = rect.height * ratio
+      switch handle {
+      case .topLeft, .bottomLeft:
+        result.origin.x = original.maxX - newWidth
+        result.size.width = newWidth
+      case .topRight, .bottomRight:
+        result.size.width = newWidth
+      case .left:
+        result.origin.x = original.maxX - newWidth
+        result.size.width = newWidth
+      case .right:
+        result.size.width = newWidth
+      default:
+        break
+      }
+    } else {
+      // Too tall, adjust height to match width
+      let newHeight = rect.width / ratio
+      switch handle {
+      case .topLeft, .topRight:
+        result.size.height = newHeight
+      case .bottomLeft, .bottomRight:
+        result.origin.y = original.maxY - newHeight
+        result.size.height = newHeight
+      case .top:
+        result.size.height = newHeight
+      case .bottom:
+        result.origin.y = original.maxY - newHeight
+        result.size.height = newHeight
+      default:
+        break
+      }
+    }
+
+    return result
   }
 
   private func handleCropDrag(to point: CGPoint) {

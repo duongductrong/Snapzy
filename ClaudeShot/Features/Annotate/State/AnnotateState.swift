@@ -237,8 +237,18 @@ final class AnnotateState: ObservableObject {
 
   /// Current crop rectangle in image coordinates (nil = no crop, full image)
   @Published var cropRect: CGRect?
+  /// Original crop rect when crop mode started (used as base for aspect ratio calculations)
+  private var originalCropRect: CGRect?
   /// Whether crop mode is actively being edited
   @Published var isCropActive: Bool = false
+  /// Selected aspect ratio for crop
+  @Published var cropAspectRatio: CropAspectRatio = .free
+  /// Whether to show rule of thirds grid
+  @Published var showCropGrid: Bool = true
+  /// Whether currently resizing (for dimension display)
+  @Published var isCropResizing: Bool = false
+  /// Whether Shift is held (for aspect ratio lock)
+  @Published var isCropShiftLocked: Bool = false
 
   // MARK: - Mockup State
 
@@ -421,7 +431,9 @@ final class AnnotateState: ObservableObject {
 
   /// Initialize crop to full image bounds
   func initializeCrop() {
-    cropRect = CGRect(origin: .zero, size: CGSize(width: imageWidth, height: imageHeight))
+    let fullImageRect = CGRect(origin: .zero, size: CGSize(width: imageWidth, height: imageHeight))
+    cropRect = fullImageRect
+    originalCropRect = fullImageRect  // Save original for aspect ratio calculations
     isCropActive = true
   }
 
@@ -447,6 +459,34 @@ final class AnnotateState: ObservableObject {
   func resetCrop() {
     cropRect = nil
     isCropActive = false
+    cropAspectRatio = .free
+    isCropResizing = false
+    isCropShiftLocked = false
+  }
+
+  /// Apply aspect ratio to current crop rect
+  func applyCropAspectRatio(_ ratio: CropAspectRatio) {
+    cropAspectRatio = ratio
+
+    // Use original crop rect as base to prevent shrinking
+    guard var rect = originalCropRect ?? cropRect, ratio != .free else { return }
+
+    let targetRatio = ratio.ratio
+    let currentRatio = rect.width / rect.height
+
+    if currentRatio > targetRatio {
+      // Too wide, reduce width
+      let newWidth = rect.height * targetRatio
+      rect.origin.x += (rect.width - newWidth) / 2
+      rect.size.width = newWidth
+    } else {
+      // Too tall, reduce height
+      let newHeight = rect.width / targetRatio
+      rect.origin.y += (rect.height - newHeight) / 2
+      rect.size.height = newHeight
+    }
+
+    cropRect = constrainCropToImageBounds(rect)
   }
 
   /// Update crop rect with bounds constraint
