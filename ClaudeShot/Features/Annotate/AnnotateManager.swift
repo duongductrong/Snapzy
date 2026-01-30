@@ -17,7 +17,32 @@ final class AnnotateManager {
   private var windowControllers: [UUID: AnnotateWindowController] = [:]
   private var emptyWindowController: AnnotateWindowController?
 
+  /// Track if we switched to regular app mode
+  private var isRegularAppMode = false
+
   private init() {}
+
+  // MARK: - Activation Policy Management
+
+  /// Switch to regular app mode (visible in Dock + Cmd+Tab)
+  private func becomeRegularApp() {
+    guard !isRegularAppMode else { return }
+    isRegularAppMode = true
+    NSApp.setActivationPolicy(.regular)
+  }
+
+  /// Switch back to accessory mode (menu bar only) if no windows open
+  private func becomeAccessoryAppIfNeeded() {
+    guard isRegularAppMode else { return }
+    guard windowControllers.isEmpty && emptyWindowController == nil else { return }
+    isRegularAppMode = false
+    NSApp.setActivationPolicy(.accessory)
+  }
+
+  /// Check if any annotate windows are open
+  var hasOpenWindows: Bool {
+    !windowControllers.isEmpty || emptyWindowController != nil
+  }
 
   /// Open annotation window for a quick access item
   func openAnnotation(for item: QuickAccessItem) {
@@ -26,6 +51,9 @@ final class AnnotateManager {
       existing.showWindow()
       return
     }
+
+    // Switch to regular app mode for Cmd+Tab visibility
+    becomeRegularApp()
 
     let controller = AnnotateWindowController(item: item)
     windowControllers[item.id] = controller
@@ -40,6 +68,7 @@ final class AnnotateManager {
       ) { [weak self] _ in
         Task { @MainActor in
           self?.windowControllers.removeValue(forKey: itemId)
+          self?.becomeAccessoryAppIfNeeded()
         }
       }
     }
@@ -56,6 +85,8 @@ final class AnnotateManager {
 
     emptyWindowController?.window?.close()
     emptyWindowController = nil
+
+    becomeAccessoryAppIfNeeded()
   }
 
   /// Check if annotation window is open for item
@@ -71,6 +102,9 @@ final class AnnotateManager {
       return
     }
 
+    // Switch to regular app mode for Cmd+Tab visibility
+    becomeRegularApp()
+
     let controller = AnnotateWindowController()
     emptyWindowController = controller
 
@@ -83,6 +117,7 @@ final class AnnotateManager {
       ) { [weak self] _ in
         Task { @MainActor in
           self?.emptyWindowController = nil
+          self?.becomeAccessoryAppIfNeeded()
         }
       }
     }

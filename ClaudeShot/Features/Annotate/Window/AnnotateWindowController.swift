@@ -103,6 +103,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
   func showWindow() {
     window?.makeKeyAndOrderFront(nil)
+    window?.makeMain()
     NSApp.activate(ignoringOtherApps: true)
   }
 

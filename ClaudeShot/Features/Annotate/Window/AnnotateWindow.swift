@@ -39,6 +39,12 @@ final class AnnotateWindow: NSWindow {
     isReleasedWhenClosed = false
     center()
 
+    // Explicit normal level for proper Cmd+Tab behavior
+    level = .normal
+
+    // Register as managed window for normal Cmd+` cycling
+    collectionBehavior = [.managed, .participatesInCycle]
+
     // Increase window corner radius
     configureCornerRadius()
   }
