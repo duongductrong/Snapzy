@@ -1,14 +1,14 @@
 <div align="center">
-  <img src="./banner.png" width="200px" height="200px" alt="tiptap banner" />
-  
-  <h1>ClaudeShot</h1>
+  <img src="./banner.png" width="200px" height="200px" alt="Snapzy banner" />
+
+  <h1>Snapzy</h1>
   <p><strong>A screenshot & recording app for macOS.</strong></p>
-  
+
   <p>
-    An private source screenshot & recording app for macOS.<br/>
+    A private source screenshot & recording app for macOS.<br/>
       Built with <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>, powered by <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>.
       </p>
-  
+
   <p>
     <a href="#">Get Started</a> •
     <a href="#">Installation</a> •
@@ -24,9 +24,9 @@
 ## Contribution
 
 ```bash
-git clone https://github.com/duongductrong/ClaudeShot.git
-cd ClaudeShot
-open ClaudeShot.xcodeproj
+git clone https://github.com/duongductrong/Snapzy.git
+cd Snapzy
+open Snapzy.xcodeproj
 ```
 
 Build and run with ⌘R.
