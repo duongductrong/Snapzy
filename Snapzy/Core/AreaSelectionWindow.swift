@@ -524,7 +524,9 @@ final class AreaSelectionOverlayView: NSView {
     isSelecting = false
     selectionStartPoint = nil
     selectionEndPoint = nil
-    currentMousePosition = .zero
+
+    // Initialize crosshair at current mouse position immediately
+    initializeCrosshairAtCurrentMousePosition()
 
     CATransaction.begin()
     CATransaction.setDisableActions(true)
@@ -539,7 +541,28 @@ final class AreaSelectionOverlayView: NSView {
 
     CATransaction.commit()
 
+    // Update crosshair position immediately
+    updateCrosshairLayers()
+
     needsDisplay = true
+  }
+
+  /// Initialize crosshair at current mouse position (called on activation)
+  private func initializeCrosshairAtCurrentMousePosition() {
+    // Get the current mouse location in screen coordinates
+    let mouseLocationInScreen = NSEvent.mouseLocation
+
+    // Convert to window coordinates, then to view coordinates
+    if let window = self.window {
+      let mouseLocationInWindow = window.convertPoint(fromScreen: mouseLocationInScreen)
+      currentMousePosition = convert(mouseLocationInWindow, from: nil)
+    } else {
+      // Fallback: use screen coordinates relative to view frame
+      currentMousePosition = CGPoint(
+        x: mouseLocationInScreen.x - frame.origin.x,
+        y: mouseLocationInScreen.y - frame.origin.y
+      )
+    }
   }
 
   /// Update bounds when screen configuration changes
