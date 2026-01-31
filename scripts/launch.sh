@@ -4,8 +4,8 @@
 set -e
 
 # --- Configuration ---
-SCHEME="ClaudeShot"
-PROJECT="ClaudeShot.xcodeproj"
+SCHEME="Snapzy"
+PROJECT="Snapzy.xcodeproj"
 
 # Colors
 BLUE='\033[0;34m'
