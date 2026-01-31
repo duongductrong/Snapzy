@@ -21,6 +21,8 @@ error() { echo -e "${RED}${BOLD}error:${NC} $1"; }
 
 cleanup() {
     echo -e "\n${BOLD}--- Stream Stopped ---${NC}"
+    info "Stopping $SCHEME..."
+    pkill -x "$SCHEME" 2>/dev/null && success "App stopped." || info "App was not running."
     exit 0
 }
 trap cleanup SIGINT
