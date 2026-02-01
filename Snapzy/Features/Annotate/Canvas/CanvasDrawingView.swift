@@ -919,43 +919,79 @@ final class DrawingCanvasNSView: NSView {
   /// Apply aspect ratio constraint to crop rect based on resize handle
   private func applyAspectRatio(_ ratio: CGFloat, to rect: CGRect, handle: CropHandle, original: CGRect) -> CGRect {
     var result = rect
-    let currentRatio = rect.width / rect.height
 
+    // For edge handles, calculate the constrained dimension based on the handle direction
     // For corner handles, adjust based on which dimension changed more
-    if currentRatio > ratio {
-      // Too wide, adjust width to match height
-      let newWidth = rect.height * ratio
-      switch handle {
-      case .topLeft, .bottomLeft:
-        result.origin.x = original.maxX - newWidth
-        result.size.width = newWidth
-      case .topRight, .bottomRight:
-        result.size.width = newWidth
-      case .left:
-        result.origin.x = original.maxX - newWidth
-        result.size.width = newWidth
-      case .right:
-        result.size.width = newWidth
-      default:
-        break
-      }
-    } else {
-      // Too tall, adjust height to match width
+    switch handle {
+    case .left, .right:
+      // Width is the primary dimension, calculate height from width
       let newHeight = rect.width / ratio
-      switch handle {
-      case .topLeft, .topRight:
-        result.size.height = newHeight
-      case .bottomLeft, .bottomRight:
-        result.origin.y = original.maxY - newHeight
-        result.size.height = newHeight
-      case .top:
-        result.size.height = newHeight
-      case .bottom:
-        result.origin.y = original.maxY - newHeight
-        result.size.height = newHeight
-      default:
-        break
+      let heightDiff = newHeight - rect.height
+      // Center the height adjustment
+      result.origin.y = rect.origin.y - heightDiff / 2
+      result.size.height = newHeight
+      // Clamp to image bounds
+      if result.origin.y < 0 {
+        result.origin.y = 0
       }
+      if result.maxY > state.imageHeight {
+        result.size.height = state.imageHeight - result.origin.y
+        result.size.width = result.size.height * ratio
+        if handle == .left {
+          result.origin.x = original.maxX - result.size.width
+        }
+      }
+
+    case .top, .bottom:
+      // Height is the primary dimension, calculate width from height
+      let newWidth = rect.height * ratio
+      let widthDiff = newWidth - rect.width
+      // Center the width adjustment
+      result.origin.x = rect.origin.x - widthDiff / 2
+      result.size.width = newWidth
+      // Clamp to image bounds
+      if result.origin.x < 0 {
+        result.origin.x = 0
+      }
+      if result.maxX > state.imageWidth {
+        result.size.width = state.imageWidth - result.origin.x
+        result.size.height = result.size.width / ratio
+        if handle == .bottom {
+          result.origin.y = original.maxY - result.size.height
+        }
+      }
+
+    case .topLeft, .topRight, .bottomLeft, .bottomRight:
+      // For corners, adjust based on which dimension changed more
+      let currentRatio = rect.width / rect.height
+      if currentRatio > ratio {
+        // Too wide, adjust width to match height
+        let newWidth = rect.height * ratio
+        switch handle {
+        case .topLeft, .bottomLeft:
+          result.origin.x = original.maxX - newWidth
+          result.size.width = newWidth
+        case .topRight, .bottomRight:
+          result.size.width = newWidth
+        default:
+          break
+        }
+      } else {
+        // Too tall, adjust height to match width
+        let newHeight = rect.width / ratio
+        switch handle {
+        case .topLeft, .topRight:
+          result.size.height = newHeight
+        case .bottomLeft, .bottomRight:
+          result.origin.y = original.maxY - newHeight
+          result.size.height = newHeight
+        default:
+          break
+        }
+      }
+
+    case .body:
+      break
     }
 
     return result

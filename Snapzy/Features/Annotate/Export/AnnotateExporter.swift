@@ -175,10 +175,10 @@ final class AnnotateExporter {
       height: effectiveBounds.height
     )
 
-    // Source rect in image coordinates (flip Y for NSImage drawing)
+    // Source rect in image coordinates (no Y-flip needed - cropRect already uses bottom-left origin like NSImage)
     let sourceRect = NSRect(
       x: effectiveBounds.origin.x,
-      y: sourceImage.size.height - effectiveBounds.origin.y - effectiveBounds.height,
+      y: effectiveBounds.origin.y,
       width: effectiveBounds.width,
       height: effectiveBounds.height
     )
@@ -409,7 +409,7 @@ final class AnnotateExporter {
     let destRect = NSRect(origin: .zero, size: effectiveBounds.size)
     let sourceRect = NSRect(
       x: effectiveBounds.origin.x,
-      y: sourceImage.size.height - effectiveBounds.origin.y - effectiveBounds.height,
+      y: effectiveBounds.origin.y,
       width: effectiveBounds.width,
       height: effectiveBounds.height
     )
