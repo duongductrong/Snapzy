@@ -32,6 +32,10 @@ final class RecordingToolbarWindow: NSWindow {
   var selectedQuality: VideoQuality
   var captureAudio: Bool
   var captureMicrophone: Bool
+  var captureMode: RecordingCaptureMode
+
+  // Callback for capture mode changes
+  var onCaptureModeChanged: ((RecordingCaptureMode) -> Void)?
 
   init(anchorRect: CGRect) {
     self.anchorRect = anchorRect
@@ -57,6 +61,9 @@ final class RecordingToolbarWindow: NSWindow {
 
     // Load microphone preference (default to false)
     self.captureMicrophone = UserDefaults.standard.object(forKey: PreferencesKeys.recordingCaptureMicrophone) as? Bool ?? false
+
+    // Default capture mode is area (as per user request)
+    self.captureMode = .area
 
     super.init(
       contentRect: .zero,
@@ -98,12 +105,20 @@ final class RecordingToolbarWindow: NSWindow {
       get: { [weak self] in self?.captureMicrophone ?? false },
       set: { [weak self] in self?.captureMicrophone = $0 }
     )
+    let captureModeBinding = Binding<RecordingCaptureMode>(
+      get: { [weak self] in self?.captureMode ?? .area },
+      set: { [weak self] newMode in
+        self?.captureMode = newMode
+        self?.onCaptureModeChanged?(newMode)
+      }
+    )
 
     let view = RecordingToolbarView(
       selectedFormat: formatBinding,
       selectedQuality: qualityBinding,
       captureAudio: audioBinding,
       captureMicrophone: micBinding,
+      captureMode: captureModeBinding,
       onRecord: { [weak self] in self?.onRecord?() },
       onCancel: { [weak self] in self?.onCancel?() }
     )

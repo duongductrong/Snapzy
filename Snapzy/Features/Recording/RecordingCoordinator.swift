@@ -50,6 +50,9 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow?.onStop = { [weak self] in
       self?.stopRecording()
     }
+    toolbarWindow?.onCaptureModeChanged = { [weak self] mode in
+      self?.handleCaptureModeChange(mode)
+    }
 
     // Load format from preferences
     if let formatString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingFormat),
@@ -164,6 +167,21 @@ final class RecordingCoordinator: ObservableObject {
     Task {
       await recorder.cancelRecording()
       cleanup()
+    }
+  }
+
+  /// Handle capture mode toggle between area and fullscreen
+  private func handleCaptureModeChange(_ mode: RecordingCaptureMode) {
+    guard let screen = NSScreen.main else { return }
+
+    switch mode {
+    case .fullscreen:
+      // Switch to fullscreen - use entire screen frame
+      let fullscreenRect = screen.frame
+      updateSelectedRect(fullscreenRect)
+    case .area:
+      // Switch back to area selection - restart area selection flow
+      restartAreaSelection()
     }
   }
 
@@ -474,6 +492,9 @@ final class RecordingCoordinator: ObservableObject {
         self.toolbarWindow?.onDelete = { [weak self] in self?.deleteRecording() }
         self.toolbarWindow?.onRestart = { [weak self] in self?.restartRecording() }
         self.toolbarWindow?.onStop = { [weak self] in self?.stopRecording() }
+        self.toolbarWindow?.onCaptureModeChanged = { [weak self] mode in
+          self?.handleCaptureModeChange(mode)
+        }
         self.showRegionOverlay(for: rect)
       } else {
         // User cancelled
