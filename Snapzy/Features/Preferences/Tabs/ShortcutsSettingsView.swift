@@ -15,6 +15,8 @@ struct ShortcutsSettingsView: View {
   @State private var annotateShortcut: ShortcutConfig
   @State private var videoEditorShortcut: ShortcutConfig
   @State private var shortcutsEnabled: Bool
+  @State private var showDisableConfirmation: Bool = false
+  @State private var isConfirmedDisable: Bool = false
 
   private let manager = KeyboardShortcutManager.shared
 
@@ -42,9 +44,26 @@ struct ShortcutsSettingsView: View {
               if newValue {
                 manager.enable()
               } else {
-                manager.disable()
+                if isConfirmedDisable {
+                  // User confirmed disable, proceed
+                  isConfirmedDisable = false
+                  manager.disable()
+                } else {
+                  // Revert toggle and show confirmation
+                  shortcutsEnabled = true
+                  showDisableConfirmation = true
+                }
               }
             }
+        }
+        .alert("Disable Keyboard Shortcuts?", isPresented: $showDisableConfirmation) {
+          Button("Cancel", role: .cancel) {}
+          Button("Disable", role: .destructive) {
+            isConfirmedDisable = true
+            shortcutsEnabled = false
+          }
+        } message: {
+          Text("You won't be able to capture screenshots or recordings using keyboard shortcuts from any app. You'll need to open Snapzy manually to use capture features.")
         }
       }
 
