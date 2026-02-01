@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Build & Launch macOS App", // A descriptive name for your task
+      "label": "Build & Launch", // A descriptive name for your task
       "type": "shell", // Specifies it's a shell command
       "command": "./scripts/launch.sh", // The command to execute the script
       "group": {
