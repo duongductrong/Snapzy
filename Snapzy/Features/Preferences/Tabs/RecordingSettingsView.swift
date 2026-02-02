@@ -14,6 +14,7 @@ struct RecordingSettingsView: View {
   @AppStorage(PreferencesKeys.recordingQuality) private var quality = "high"
   @AppStorage(PreferencesKeys.recordingCaptureAudio) private var captureAudio = true
   @AppStorage(PreferencesKeys.recordingCaptureMicrophone) private var captureMicrophone = false
+  @AppStorage(PreferencesKeys.recordingRememberLastArea) private var rememberLastArea = true
 
   @State private var showPermissionDeniedAlert = false
 
@@ -58,6 +59,13 @@ struct RecordingSettingsView: View {
           .labelsHidden()
           .pickerStyle(.segmented)
           .frame(width: 180)
+        }
+      }
+
+      Section("Behavior") {
+        settingRow(icon: "rectangle.dashed", title: "Remember Last Area", description: "Restore previous recording area on next capture") {
+          Toggle("", isOn: $rememberLastArea)
+            .labelsHidden()
         }
       }
 
