@@ -57,6 +57,7 @@ struct AnnotateCanvasView: View {
         handleDrop(providers: providers)
       }
       .focusable()
+      .focusEffectDisabled()
       .focused($isCanvasFocused)
       .onKeyPress { keyPress in
         handleToolShortcut(keyPress)
