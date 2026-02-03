@@ -225,14 +225,72 @@ final class RecordingRegionOverlayView: NSView {
   private func cursorFor(handle: RecordingResizeHandle) -> NSCursor {
     switch handle {
     case .topLeft, .bottomRight:
-      return NSCursor.crosshair  // macOS lacks diagonal resize cursors
+      // NW-SE diagonal resize (↖↘)
+      return NSCursor(image: diagonalResizeCursorImage(nwse: true), hotSpot: NSPoint(x: 8, y: 8))
     case .topRight, .bottomLeft:
-      return NSCursor.crosshair
+      // NE-SW diagonal resize (↗↙)
+      return NSCursor(image: diagonalResizeCursorImage(nwse: false), hotSpot: NSPoint(x: 8, y: 8))
     case .top, .bottom:
       return NSCursor.resizeUpDown
     case .left, .right:
       return NSCursor.resizeLeftRight
     }
+  }
+
+  /// Generate diagonal resize cursor image (matches Annotate crop cursors)
+  private func diagonalResizeCursorImage(nwse: Bool) -> NSImage {
+    let size = NSSize(width: 16, height: 16)
+    let image = NSImage(size: size)
+    image.lockFocus()
+
+    let path = NSBezierPath()
+    path.lineWidth = 1.5
+    path.lineCapStyle = .round
+
+    if nwse {
+      // NW-SE diagonal (↖↘)
+      // Arrow pointing to top-left
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 3, y: 8))
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 8, y: 13))
+      // Main diagonal line
+      path.move(to: NSPoint(x: 3, y: 13))
+      path.line(to: NSPoint(x: 13, y: 3))
+      // Arrow pointing to bottom-right
+      path.move(to: NSPoint(x: 13, y: 3))
+      path.line(to: NSPoint(x: 13, y: 8))
+      path.move(to: NSPoint(x: 13, y: 3))
+      path.line(to: NSPoint(x: 8, y: 3))
+    } else {
+      // NE-SW diagonal (↗↙)
+      // Arrow pointing to top-right
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 13, y: 8))
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 8, y: 13))
+      // Main diagonal line
+      path.move(to: NSPoint(x: 13, y: 13))
+      path.line(to: NSPoint(x: 3, y: 3))
+      // Arrow pointing to bottom-left
+      path.move(to: NSPoint(x: 3, y: 3))
+      path.line(to: NSPoint(x: 3, y: 8))
+      path.move(to: NSPoint(x: 3, y: 3))
+      path.line(to: NSPoint(x: 8, y: 3))
+    }
+
+    // Draw white outline for visibility on dark backgrounds
+    NSColor.white.withAlphaComponent(0.5).setStroke()
+    path.lineWidth = 2.5
+    path.stroke()
+
+    // Draw black arrow
+    NSColor.black.setStroke()
+    path.lineWidth = 1.5
+    path.stroke()
+
+    image.unlockFocus()
+    return image
   }
 
   private func calculateResizedRect(handle: RecordingResizeHandle, delta: CGPoint) -> CGRect {
