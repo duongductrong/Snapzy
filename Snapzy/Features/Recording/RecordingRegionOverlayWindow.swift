@@ -124,9 +124,11 @@ final class RecordingRegionOverlayView: NSView {
   // Constants
   private let dimColor = NSColor.black.withAlphaComponent(0.4)
   private let borderColor = NSColor.white
-  private let borderWidth: CGFloat = 2.0
+  private let borderWidth: CGFloat = 1.5
   private let handleHitSize: CGFloat = 10.0
-  private let handleVisualSize: CGFloat = 8.0
+  private let cornerHandleLength: CGFloat = 20.0
+  private let edgeHandleLength: CGFloat = 24.0
+  private let handleThickness: CGFloat = 3.0
   private let minimumSelectionSize: CGFloat = 50.0
 
   init(frame: CGRect, highlightRect: CGRect) {
@@ -467,35 +469,137 @@ final class RecordingRegionOverlayView: NSView {
   }
 
   private func drawRecordingResizeHandles(for rect: CGRect) {
-    let size = handleVisualSize
-    let halfSize = size / 2
+    // Draw L-shaped corner handles (CleanShot X style)
+    drawCornerHandle(at: CGPoint(x: rect.minX, y: rect.maxY), corner: .topLeft)
+    drawCornerHandle(at: CGPoint(x: rect.maxX, y: rect.maxY), corner: .topRight)
+    drawCornerHandle(at: CGPoint(x: rect.minX, y: rect.minY), corner: .bottomLeft)
+    drawCornerHandle(at: CGPoint(x: rect.maxX, y: rect.minY), corner: .bottomRight)
 
-    let handlePositions: [CGPoint] = [
-      CGPoint(x: rect.minX, y: rect.maxY),  // topLeft
-      CGPoint(x: rect.midX, y: rect.maxY),  // top
-      CGPoint(x: rect.maxX, y: rect.maxY),  // topRight
-      CGPoint(x: rect.minX, y: rect.midY),  // left
-      CGPoint(x: rect.maxX, y: rect.midY),  // right
-      CGPoint(x: rect.minX, y: rect.minY),  // bottomLeft
-      CGPoint(x: rect.midX, y: rect.minY),  // bottom
-      CGPoint(x: rect.maxX, y: rect.minY),  // bottomRight
-    ]
+    // Draw edge handles (subtle lines)
+    drawEdgeHandle(at: CGPoint(x: rect.midX, y: rect.maxY), edge: .top)
+    drawEdgeHandle(at: CGPoint(x: rect.midX, y: rect.minY), edge: .bottom)
+    drawEdgeHandle(at: CGPoint(x: rect.minX, y: rect.midY), edge: .left)
+    drawEdgeHandle(at: CGPoint(x: rect.maxX, y: rect.midY), edge: .right)
+  }
 
-    for pos in handlePositions {
-      let handleRect = CGRect(
-        x: pos.x - halfSize,
-        y: pos.y - halfSize,
-        width: size,
-        height: size
+  private func drawCornerHandle(at point: CGPoint, corner: RecordingResizeHandle) {
+    let length = cornerHandleLength
+    let thickness = handleThickness
+    let halfThickness = thickness / 2
+
+    // Calculate offsets to center handles on the outline
+    // Horizontal bar: centered vertically on the horizontal edge
+    // Vertical bar: centered horizontally on the vertical edge
+    let hRect: CGRect
+    let vRect: CGRect
+
+    switch corner {
+    case .topLeft:
+      // Horizontal bar extends right from corner, centered on top edge
+      hRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - halfThickness,
+        width: length,
+        height: thickness
       )
-      // Draw white fill with dark border for visibility
-      NSColor.white.setFill()
-      let path = NSBezierPath(roundedRect: handleRect, xRadius: 2, yRadius: 2)
-      path.fill()
-      NSColor.black.withAlphaComponent(0.3).setStroke()
-      path.lineWidth = 1
-      path.stroke()
+      // Vertical bar extends down from corner, centered on left edge
+      vRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - length + halfThickness,
+        width: thickness,
+        height: length
+      )
+    case .topRight:
+      // Horizontal bar extends left from corner, centered on top edge
+      hRect = CGRect(
+        x: point.x - length + halfThickness,
+        y: point.y - halfThickness,
+        width: length,
+        height: thickness
+      )
+      // Vertical bar extends down from corner, centered on right edge
+      vRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - length + halfThickness,
+        width: thickness,
+        height: length
+      )
+    case .bottomLeft:
+      // Horizontal bar extends right from corner, centered on bottom edge
+      hRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - halfThickness,
+        width: length,
+        height: thickness
+      )
+      // Vertical bar extends up from corner, centered on left edge
+      vRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - halfThickness,
+        width: thickness,
+        height: length
+      )
+    case .bottomRight:
+      // Horizontal bar extends left from corner, centered on bottom edge
+      hRect = CGRect(
+        x: point.x - length + halfThickness,
+        y: point.y - halfThickness,
+        width: length,
+        height: thickness
+      )
+      // Vertical bar extends up from corner, centered on right edge
+      vRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - halfThickness,
+        width: thickness,
+        height: length
+      )
+    default:
+      return
     }
+
+    drawHandleBar(hRect)
+    drawHandleBar(vRect)
+  }
+
+  private func drawEdgeHandle(at point: CGPoint, edge: RecordingResizeHandle) {
+    let length = edgeHandleLength
+    let thickness = handleThickness
+    let halfLength = length / 2
+    let halfThickness = thickness / 2
+
+    let handleRect: CGRect
+    switch edge {
+    case .top, .bottom:
+      handleRect = CGRect(
+        x: point.x - halfLength,
+        y: point.y - halfThickness,
+        width: length,
+        height: thickness
+      )
+    case .left, .right:
+      handleRect = CGRect(
+        x: point.x - halfThickness,
+        y: point.y - halfLength,
+        width: thickness,
+        height: length
+      )
+    default:
+      return
+    }
+    drawHandleBar(handleRect)
+  }
+
+  private func drawHandleBar(_ rect: CGRect) {
+    // Draw shadow
+    let shadowPath = NSBezierPath(rect: rect.offsetBy(dx: 0, dy: -1))
+    NSColor.black.withAlphaComponent(0.5).setFill()
+    shadowPath.fill()
+
+    // Draw white bar
+    let path = NSBezierPath(rect: rect)
+    NSColor.white.setFill()
+    path.fill()
   }
 
   private func drawNewSelection() {
