@@ -16,6 +16,7 @@ enum PreferencesKeys {
   static let playSounds = "playSounds"
   static let showMenuBarIcon = "showMenuBarIcon"
   static let exportLocation = "exportLocation"
+  static let hideDesktopIcons = "hideDesktopIcons"
 
   // Appearance
   static let appearanceMode = "appearanceMode"

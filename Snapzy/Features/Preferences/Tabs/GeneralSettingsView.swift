@@ -11,6 +11,7 @@ import Sparkle
 struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
+  @AppStorage(PreferencesKeys.hideDesktopIcons) private var hideDesktopIcons = false
   @Environment(\.openWindow) private var openWindow
   @ObservedObject private var themeManager = ThemeManager.shared
 
@@ -50,6 +51,13 @@ struct GeneralSettingsView: View {
           }
           .buttonStyle(.bordered)
           .controlSize(.small)
+        }
+      }
+
+      Section("Capture") {
+        settingRow(icon: "eye.slash", title: "Hide desktop icons", description: "Temporarily hide icons during capture") {
+          Toggle("", isOn: $hideDesktopIcons)
+            .labelsHidden()
         }
       }
 

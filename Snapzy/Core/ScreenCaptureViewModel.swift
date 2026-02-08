@@ -52,6 +52,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   private let postCaptureHandler = PostCaptureActionHandler.shared
   private var isAreaSelectionActive = false
   private var cancellables = Set<AnyCancellable>()
+  private let desktopIconManager = DesktopIconManager.shared
+
+  private var shouldHideDesktopIcons: Bool {
+    UserDefaults.standard.bool(forKey: PreferencesKeys.hideDesktopIcons)
+  }
 
   // Shortcut bindings for UI
   @Published var fullscreenShortcut: ShortcutConfig
@@ -166,6 +171,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     Task {
       isCapturing = true
 
+      // Hide desktop icons if enabled
+      await hideDesktopIconsIfNeeded()
+
       // Minimal delay to ensure UI state updates before capture
       try? await Task.sleep(nanoseconds: 50_000_000)  // 50ms
 
@@ -173,6 +181,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         saveDirectory: saveDirectory,
         format: selectedFormat.format
       )
+
+      // Always restore icons
+      restoreDesktopIconsIfNeeded()
 
       isCapturing = false
       lastCaptureResult = result
@@ -216,6 +227,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         Task { @MainActor in
           self.isCapturing = true
 
+          // Hide desktop icons after area selection, before capture
+          await self.hideDesktopIconsIfNeeded()
+
           // Delay to ensure overlay windows are fully hidden from screen buffer
           // This prevents the dim layer/crosshair shadow from bleeding into the capture
           try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
@@ -225,6 +239,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             saveDirectory: self.saveDirectory,
             format: self.selectedFormat.format
           )
+
+          // Always restore icons
+          self.restoreDesktopIconsIfNeeded()
 
           self.isCapturing = false
           self.lastCaptureResult = result
@@ -307,6 +324,17 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     NSSound(named: "Glass")?.play()
   }
 
+  // MARK: - Desktop Icon Hiding
+
+  private func hideDesktopIconsIfNeeded() async {
+    guard shouldHideDesktopIcons else { return }
+    await desktopIconManager.hideIcons()
+  }
+
+  private func restoreDesktopIconsIfNeeded() {
+    Task { await desktopIconManager.restoreIcons() }
+  }
+
   // MARK: - OCR Capture
 
   func captureOCR() {
@@ -334,6 +362,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         }
 
         Task { @MainActor in
+          // Hide desktop icons after area selection, before capture
+          await self.hideDesktopIconsIfNeeded()
+
           // Delay to ensure overlay windows are fully hidden
           try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
 
@@ -341,6 +372,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             // Capture the screen region
             guard let image = try await self.captureManager.captureAreaAsImage(rect: selectedRect) else {
               QuickAccessSound.failed.play()
+              self.restoreDesktopIconsIfNeeded()
               self.isAreaSelectionActive = false
               return
             }
@@ -361,6 +393,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             QuickAccessSound.failed.play()
           }
 
+          // Always restore icons
+          self.restoreDesktopIconsIfNeeded()
           self.isAreaSelectionActive = false
         }
       }
