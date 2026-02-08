@@ -3,6 +3,7 @@
 //  Snapzy
 //
 //  Toggle button for switching between area selection and fullscreen capture
+//  Styled to match Apple's native macOS recording toolbar
 //
 
 import SwiftUI
@@ -14,60 +15,73 @@ enum RecordingCaptureMode: String {
 
 struct ToolbarCaptureAreaToggle: View {
   @ObservedObject var state: RecordingToolbarState
-  @State private var isHovered = false
+  @State private var isAreaHovered = false
+  @State private var isFullscreenHovered = false
 
   private var isFullscreen: Bool {
     state.captureMode == .fullscreen
   }
 
-  private var systemName: String {
-    isFullscreen ? "rectangle.inset.filled" : "rectangle.dashed"
-  }
-
-  private var accessibilityLabel: String {
-    isFullscreen ? "Switch to area selection" : "Switch to fullscreen capture"
-  }
-
-  private var tooltipText: String {
-    isFullscreen ? "Fullscreen" : "Area selection"
-  }
-
   var body: some View {
-    Button {
-      let newMode: RecordingCaptureMode = isFullscreen ? .area : .fullscreen
-      state.captureMode = newMode
-      state.onCaptureModeChanged?(newMode)
-    } label: {
-      Image(systemName: systemName)
-        .font(.system(size: ToolbarConstants.iconSize, weight: .medium))
-        .foregroundColor(foregroundColor)
-        .frame(
-          width: ToolbarConstants.iconButtonSize,
-          height: ToolbarConstants.iconButtonSize
-        )
-        .background(
-          RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-            .fill(Color.primary.opacity(isHovered ? 0.1 : 0))
-        )
-        .animation(ToolbarConstants.hoverAnimation, value: isHovered)
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovered = $0 }
-    .help(tooltipText)
-    .accessibilityLabel(accessibilityLabel)
-    .accessibilityHint("Double-tap to toggle")
-  }
+    HStack(spacing: ToolbarConstants.groupSpacing) {
+      // Fullscreen capture button
+      Button {
+        state.captureMode = .fullscreen
+        state.onCaptureModeChanged?(.fullscreen)
+      } label: {
+        Image(systemName: "rectangle.inset.filled")
+          .font(.system(size: ToolbarConstants.iconSize, weight: .medium))
+          .foregroundColor(.primary.opacity(isFullscreen ? 1.0 : 0.5))
+          .frame(
+            width: ToolbarConstants.iconButtonSize,
+            height: ToolbarConstants.iconButtonSize
+          )
+          .background(
+            RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
+              .fill(Color.primary.opacity(isFullscreenHovered ? 0.1 : 0))
+          )
+          .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
+          .animation(ToolbarConstants.hoverAnimation, value: isFullscreenHovered)
+      }
+      .buttonStyle(.plain)
+      .onHover { isFullscreenHovered = $0 }
+      .help("Fullscreen capture")
+      .accessibilityLabel("Fullscreen capture")
+      .accessibilityAddTraits(isFullscreen ? .isSelected : [])
 
-  private var foregroundColor: Color {
-    isFullscreen ? .primary : .secondary
+      // Area selection button
+      Button {
+        state.captureMode = .area
+        state.onCaptureModeChanged?(.area)
+      } label: {
+        Image(systemName: "rectangle.dashed")
+          .font(.system(size: ToolbarConstants.iconSize, weight: .medium))
+          .foregroundColor(.primary.opacity(!isFullscreen ? 1.0 : 0.5))
+          .frame(
+            width: ToolbarConstants.iconButtonSize,
+            height: ToolbarConstants.iconButtonSize
+          )
+          .background(
+            RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
+              .fill(Color.primary.opacity(isAreaHovered ? 0.1 : 0))
+          )
+          .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
+          .animation(ToolbarConstants.hoverAnimation, value: isAreaHovered)
+      }
+      .buttonStyle(.plain)
+      .onHover { isAreaHovered = $0 }
+      .help("Area selection")
+      .accessibilityLabel("Area selection capture")
+      .accessibilityAddTraits(!isFullscreen ? .isSelected : [])
+    }
   }
 }
 
 #Preview {
-  HStack(spacing: 16) {
+  HStack(spacing: 4) {
     ToolbarCaptureAreaToggle(state: RecordingToolbarState())
   }
-  .padding()
+  .padding(10)
   .background(.ultraThinMaterial)
   .clipShape(RoundedRectangle(cornerRadius: 14))
 }

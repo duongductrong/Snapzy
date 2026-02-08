@@ -3,6 +3,7 @@
 //  Snapzy
 //
 //  Toggle button for microphone mute/unmute in recording toolbar
+//  Styled to match Apple's native macOS recording toolbar
 //
 
 import AVFoundation
@@ -59,6 +60,7 @@ struct ToolbarMicToggleButton: View {
           RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
             .fill(Color.primary.opacity(isHovered && isAvailable ? 0.1 : 0))
         )
+        .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
         .animation(ToolbarConstants.hoverAnimation, value: isHovered)
     }
     .buttonStyle(.plain)
@@ -79,25 +81,22 @@ struct ToolbarMicToggleButton: View {
 
   private var foregroundColor: Color {
     if !isAvailable {
-      return .secondary.opacity(0.5)
+      return .primary.opacity(0.3)
     }
-    return state.captureMicrophone ? .primary : .secondary
+    return .primary.opacity(state.captureMicrophone ? 1.0 : 0.5)
   }
 
   /// Request microphone permission when user enables toggle
   private func handleMicToggle() {
     if state.captureMicrophone {
-      // Turning off - no permission needed
       state.captureMicrophone = false
       return
     }
 
-    // Turning on - check/request permission first
     let status = AVCaptureDevice.authorizationStatus(for: .audio)
 
     switch status {
     case .notDetermined:
-      // First time - request permission (this adds app to System Settings list)
       Task {
         let granted = await AVCaptureDevice.requestAccess(for: .audio)
         await MainActor.run {
@@ -125,10 +124,10 @@ struct ToolbarMicToggleButton: View {
 }
 
 #Preview {
-  HStack(spacing: 16) {
+  HStack(spacing: 4) {
     ToolbarMicToggleButton(state: RecordingToolbarState())
   }
-  .padding()
+  .padding(10)
   .background(.ultraThinMaterial)
   .clipShape(RoundedRectangle(cornerRadius: 14))
 }

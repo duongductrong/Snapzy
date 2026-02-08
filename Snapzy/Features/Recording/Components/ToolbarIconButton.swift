@@ -3,6 +3,7 @@
 //  Snapzy
 //
 //  Reusable icon button for the recording toolbar with hover state
+//  Styled to match Apple's native macOS recording toolbar
 //
 
 import SwiftUI
@@ -18,7 +19,7 @@ struct ToolbarIconButton: View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: ToolbarConstants.iconSize, weight: .medium))
-        .foregroundColor(.primary)
+        .foregroundColor(.primary.opacity(isHovered ? 1.0 : 0.85))
         .frame(
           width: ToolbarConstants.iconButtonSize,
           height: ToolbarConstants.iconButtonSize
@@ -27,6 +28,7 @@ struct ToolbarIconButton: View {
           RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
             .fill(Color.primary.opacity(isHovered ? 0.1 : 0))
         )
+        .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
         .animation(ToolbarConstants.hoverAnimation, value: isHovered)
     }
     .buttonStyle(.plain)
@@ -37,7 +39,7 @@ struct ToolbarIconButton: View {
 }
 
 #Preview {
-  HStack(spacing: 16) {
+  HStack(spacing: 4) {
     ToolbarIconButton(
       systemName: "xmark",
       action: {},
@@ -49,7 +51,7 @@ struct ToolbarIconButton: View {
       accessibilityLabel: "Settings"
     )
   }
-  .padding()
+  .padding(10)
   .background(.ultraThinMaterial)
   .clipShape(RoundedRectangle(cornerRadius: 14))
 }

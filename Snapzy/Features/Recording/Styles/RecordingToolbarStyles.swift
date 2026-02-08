@@ -3,6 +3,7 @@
 //  Snapzy
 //
 //  Design constants and button styles for the recording toolbar
+//  Styled to match Apple's native macOS recording toolbar aesthetic
 //
 
 import SwiftUI
@@ -10,32 +11,65 @@ import SwiftUI
 // MARK: - Toolbar Constants
 
 enum ToolbarConstants {
-  static let iconButtonSize: CGFloat = 28
-  static let iconSize: CGFloat = 14
+  static let iconButtonSize: CGFloat = 32
+  static let iconSize: CGFloat = 15
   static let buttonCornerRadius: CGFloat = 6
-  static let toolbarCornerRadius: CGFloat = 10
-  static let dividerHeight: CGFloat = 16
-  static let itemSpacing: CGFloat = 8
-  static let horizontalPadding: CGFloat = 12
-  static let verticalPadding: CGFloat = 8
+  static let toolbarCornerRadius: CGFloat = 14
+  static let dividerHeight: CGFloat = 20
+  static let itemSpacing: CGFloat = 4
+  static let groupSpacing: CGFloat = 2
+  static let horizontalPadding: CGFloat = 10
+  static let verticalPadding: CGFloat = 6
   static let hoverAnimation: Animation = .easeInOut(duration: 0.15)
   static let pressAnimation: Animation = .easeInOut(duration: 0.1)
 }
 
-// MARK: - Record Button Style
+// MARK: - Native Toolbar Button Style (for icon buttons)
 
-struct RecordButtonStyle: ButtonStyle {
+struct NativeToolbarButtonStyle: ButtonStyle {
+  var isActive: Bool = false
+
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.system(size: 14, weight: .semibold))
-      .foregroundColor(.white)
-      .padding(.horizontal, 16)
-      .padding(.vertical, 8)
+      .opacity(configuration.isPressed ? 0.6 : 1.0)
+      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+  }
+}
+
+// MARK: - Record Button Style (native text style, no colored background)
+
+struct RecordButtonStyle: ButtonStyle {
+  @State private var isHovered = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 13, weight: .regular))
+      .foregroundColor(.primary)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 6)
       .background(
         RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.blue)
+          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
       )
-      .opacity(configuration.isPressed ? 0.85 : 1.0)
+      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
+      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+  }
+}
+
+// MARK: - Options Button Style (text with chevron, native look)
+
+struct OptionsButtonStyle: ButtonStyle {
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.system(size: 13, weight: .regular))
+      .foregroundColor(.primary)
+      .padding(.horizontal, 12)
+      .padding(.vertical, 6)
+      .background(
+        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
+          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      )
+      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
       .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
   }
 }
@@ -44,8 +78,10 @@ struct RecordButtonStyle: ButtonStyle {
 
 struct RecordingToolbarDivider: View {
   var body: some View {
-    Divider()
-      .frame(height: ToolbarConstants.dividerHeight)
+    Rectangle()
+      .fill(Color.primary.opacity(0.15))
+      .frame(width: 1, height: ToolbarConstants.dividerHeight)
+      .padding(.horizontal, 4)
   }
 }
 
@@ -70,15 +106,21 @@ struct StopButtonStyle: ButtonStyle {
 // MARK: - Previews
 
 #Preview("Record Button") {
-  Button("Record") {}
-    .buttonStyle(RecordButtonStyle())
-    .padding()
+  HStack {
+    Button("Options") {}
+      .buttonStyle(OptionsButtonStyle())
+    Button("Record") {}
+      .buttonStyle(RecordButtonStyle())
+  }
+  .padding()
+  .background(.ultraThinMaterial)
+  .clipShape(RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius))
 }
 
 #Preview("Toolbar Divider") {
   HStack {
     Text("Left")
-    ToolbarDivider()
+    RecordingToolbarDivider()
     Text("Right")
   }
   .padding()

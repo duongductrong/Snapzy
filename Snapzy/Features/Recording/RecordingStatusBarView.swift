@@ -75,7 +75,7 @@ struct RecordingStatusBarView: View {
     .padding(.vertical, ToolbarConstants.verticalPadding)
     .background(.ultraThinMaterial)
     .clipShape(RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius))
-    .shadow(color: .black.opacity(0.2), radius: 8, y: 4)
+    .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("Recording status bar")
   }

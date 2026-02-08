@@ -2,7 +2,8 @@
 //  ToolbarOptionsMenu.swift
 //  Snapzy
 //
-//  Options icon button with popover for recording toolbar settings
+//  Options text button with popover for recording toolbar settings
+//  Styled to match Apple's native macOS recording toolbar ("Options▾")
 //
 
 import SwiftUI
@@ -17,18 +18,21 @@ struct ToolbarOptionsMenu: View {
     Button {
       showPopover.toggle()
     } label: {
-      Image(systemName: "gearshape")
-        .font(.system(size: ToolbarConstants.iconSize, weight: .medium))
-        .foregroundColor(.primary)
-        .frame(
-          width: ToolbarConstants.iconButtonSize,
-          height: ToolbarConstants.iconButtonSize
-        )
-        .background(
-          RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-            .fill(Color.primary.opacity(isHovered || showPopover ? 0.1 : 0))
-        )
-        .animation(ToolbarConstants.hoverAnimation, value: isHovered)
+      HStack(spacing: 2) {
+        Text("Options")
+          .font(.system(size: 13, weight: .regular))
+        Image(systemName: "chevron.down")
+          .font(.system(size: 8, weight: .semibold))
+      }
+      .foregroundColor(.primary)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 6)
+      .background(
+        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
+          .fill(Color.primary.opacity(isHovered || showPopover ? 0.1 : 0))
+      )
+      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
+      .animation(ToolbarConstants.hoverAnimation, value: isHovered)
     }
     .buttonStyle(.plain)
     .onHover { isHovered = $0 }
