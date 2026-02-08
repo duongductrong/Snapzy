@@ -155,7 +155,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     captureSystemAudio: Bool = true,
     captureMicrophone: Bool = false,
     saveDirectory: URL,
-    excludeDesktopIcons: Bool = false
+    excludeDesktopIcons: Bool = false,
+    excludeDesktopWidgets: Bool = false
   ) async throws {
     guard state == .idle else { return }
     state = .preparing
@@ -185,13 +186,18 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       excludedApps = content.applications.filter { $0.bundleIdentifier == bundleID }
     }
 
-    // Also exclude Finder (desktop icons) if user preference is enabled
+    // Also exclude Finder (desktop icons) and/or widgets if user preference is enabled
     // Keep open Finder windows visible via exceptingWindows
     var exceptedWindows: [SCWindow] = []
     if excludeDesktopIcons {
       let iconManager = DesktopIconManager.shared
       excludedApps += iconManager.getFinderApps(from: content)
       exceptedWindows = iconManager.getVisibleFinderWindows(from: content)
+    }
+
+    if excludeDesktopWidgets {
+      let iconManager = DesktopIconManager.shared
+      excludedApps += iconManager.getWidgetApps(from: content)
     }
 
     // Find the display containing the rect using NSScreen (same coordinate system as input rect)

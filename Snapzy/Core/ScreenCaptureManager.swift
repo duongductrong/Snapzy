@@ -112,7 +112,8 @@ final class ScreenCaptureManager: ObservableObject {
     fileName: String? = nil,
     displayID: CGDirectDisplayID? = nil,
     format: ImageFormat = .png,
-    excludeDesktopIcons: Bool = false
+    excludeDesktopIcons: Bool = false,
+    excludeDesktopWidgets: Bool = false
   ) async -> CaptureResult {
 
     if !hasPermission {
@@ -137,8 +138,8 @@ final class ScreenCaptureManager: ObservableObject {
         return .failure(.noDisplayFound)
       }
 
-      // Configure capture — exclude Finder (desktop icons) if requested
-      let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons)
+      // Configure capture — exclude desktop icons/widgets if requested
+      let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons, excludeDesktopWidgets: excludeDesktopWidgets)
       let config = SCStreamConfiguration()
       config.width = display.width * 2  // Retina resolution
       config.height = display.height * 2
@@ -173,7 +174,8 @@ final class ScreenCaptureManager: ObservableObject {
     saveDirectory: URL,
     fileName: String? = nil,
     format: ImageFormat = .png,
-    excludeDesktopIcons: Bool = false
+    excludeDesktopIcons: Bool = false,
+    excludeDesktopWidgets: Bool = false
   ) async -> CaptureResult {
 
     if !hasPermission {
@@ -227,8 +229,8 @@ final class ScreenCaptureManager: ObservableObject {
         return .failure(.noDisplayFound)
       }
 
-      // Configure capture — exclude Finder (desktop icons) if requested
-      let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons)
+      // Configure capture — exclude desktop icons/widgets if requested
+      let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons, excludeDesktopWidgets: excludeDesktopWidgets)
       let config = SCStreamConfiguration()
       config.pixelFormat = kCVPixelFormatType_32BGRA
       config.showsCursor = false
@@ -366,7 +368,7 @@ final class ScreenCaptureManager: ObservableObject {
   }
 
   /// Capture a specific area and return as CGImage (for OCR)
-  func captureAreaAsImage(rect: CGRect, excludeDesktopIcons: Bool = false) async throws -> CGImage? {
+  func captureAreaAsImage(rect: CGRect, excludeDesktopIcons: Bool = false, excludeDesktopWidgets: Bool = false) async throws -> CGImage? {
     if !hasPermission {
       let granted = await requestPermission()
       if !granted {
@@ -399,7 +401,7 @@ final class ScreenCaptureManager: ObservableObject {
       throw CaptureError.noDisplayFound
     }
 
-    let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons)
+    let filter = buildFilter(display: display, content: content, excludeDesktopIcons: excludeDesktopIcons, excludeDesktopWidgets: excludeDesktopWidgets)
     let config = SCStreamConfiguration()
     config.pixelFormat = kCVPixelFormatType_32BGRA
     config.showsCursor = false
@@ -453,19 +455,30 @@ final class ScreenCaptureManager: ObservableObject {
 
   // MARK: - Filter Builder
 
-  /// Build SCContentFilter, optionally excluding Finder (desktop icons).
+  /// Build SCContentFilter, optionally excluding Finder (desktop icons) and/or widgets.
   /// Open Finder windows are preserved via exceptingWindows.
   /// Wallpaper is preserved because it's rendered by Dock/WallpaperAgent, not Finder.
   private func buildFilter(
     display: SCDisplay,
     content: SCShareableContent,
-    excludeDesktopIcons: Bool
+    excludeDesktopIcons: Bool,
+    excludeDesktopWidgets: Bool
   ) -> SCContentFilter {
+    let iconManager = DesktopIconManager.shared
+    var excludedApps: [SCRunningApplication] = []
+    var exceptedWindows: [SCWindow] = []
+
     if excludeDesktopIcons {
-      let iconManager = DesktopIconManager.shared
-      let finderApps = iconManager.getFinderApps(from: content)
-      let visibleFinderWindows = iconManager.getVisibleFinderWindows(from: content)
-      return SCContentFilter(display: display, excludingApplications: finderApps, exceptingWindows: visibleFinderWindows)
+      excludedApps += iconManager.getFinderApps(from: content)
+      exceptedWindows += iconManager.getVisibleFinderWindows(from: content)
+    }
+
+    if excludeDesktopWidgets {
+      excludedApps += iconManager.getWidgetApps(from: content)
+    }
+
+    if !excludedApps.isEmpty {
+      return SCContentFilter(display: display, excludingApplications: excludedApps, exceptingWindows: exceptedWindows)
     }
     return SCContentFilter(display: display, excludingWindows: [])
   }

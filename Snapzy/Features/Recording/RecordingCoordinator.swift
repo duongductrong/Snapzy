@@ -280,7 +280,8 @@ final class RecordingCoordinator: ObservableObject {
           captureSystemAudio: savedCaptureAudio,
           captureMicrophone: savedCaptureMicrophone,
           saveDirectory: saveDirectory,
-          excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+          excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+          excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
         )
 
         try await recorder.startRecording()
@@ -359,7 +360,8 @@ final class RecordingCoordinator: ObservableObject {
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: captureMicrophone,
           saveDirectory: saveDirectory,
-          excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+          excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+          excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
         )
 
         try await recorder.startRecording()
@@ -454,7 +456,8 @@ final class RecordingCoordinator: ObservableObject {
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: false,
           saveDirectory: saveDirectory,
-          excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+          excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+          excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
         )
         try await recorder.startRecording()
 

@@ -172,7 +172,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       let result = await captureManager.captureFullscreen(
         saveDirectory: saveDirectory,
         format: selectedFormat.format,
-        excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+        excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+        excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
       )
 
       isCapturing = false
@@ -225,7 +226,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             rect: selectedRect,
             saveDirectory: self.saveDirectory,
             format: self.selectedFormat.format,
-            excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+            excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+            excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
           )
 
           self.isCapturing = false
@@ -343,7 +345,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             // Capture the screen region
             guard let image = try await self.captureManager.captureAreaAsImage(
               rect: selectedRect,
-              excludeDesktopIcons: DesktopIconManager.shared.isEnabled
+              excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+              excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
             ) else {
               QuickAccessSound.failed.play()
               self.isAreaSelectionActive = false

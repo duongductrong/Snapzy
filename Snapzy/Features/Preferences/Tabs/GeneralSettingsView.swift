@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
   @AppStorage(PreferencesKeys.hideDesktopIcons) private var hideDesktopIcons = false
+  @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @Environment(\.openWindow) private var openWindow
   @ObservedObject private var themeManager = ThemeManager.shared
 
@@ -57,6 +58,11 @@ struct GeneralSettingsView: View {
       Section("Capture") {
         settingRow(icon: "eye.slash", title: "Hide desktop icons", description: "Temporarily hide icons during capture") {
           Toggle("", isOn: $hideDesktopIcons)
+            .labelsHidden()
+        }
+
+        settingRow(icon: "widget.small", title: "Hide desktop widgets", description: "Temporarily hide widgets during capture") {
+          Toggle("", isOn: $hideDesktopWidgets)
             .labelsHidden()
         }
       }
