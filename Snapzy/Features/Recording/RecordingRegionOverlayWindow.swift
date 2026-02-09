@@ -31,9 +31,10 @@ protocol RecordingRegionOverlayDelegate: AnyObject {
 
 // MARK: - RecordingRegionOverlayWindow
 
-/// Overlay window showing the recording region highlight during recording
+/// Overlay panel showing the recording region highlight during recording
+/// Uses NSPanel with .nonactivatingPanel to prevent background windows from deactivating
 @MainActor
-final class RecordingRegionOverlayWindow: NSWindow {
+final class RecordingRegionOverlayWindow: NSPanel {
 
   weak var interactionDelegate: RecordingRegionOverlayDelegate?
 
@@ -47,7 +48,7 @@ final class RecordingRegionOverlayWindow: NSWindow {
 
     super.init(
       contentRect: screen.frame,
-      styleMask: .borderless,
+      styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: false
     )
@@ -57,11 +58,13 @@ final class RecordingRegionOverlayWindow: NSWindow {
   }
 
   private func configureWindow() {
+    isFloatingPanel = true
     isOpaque = false
     backgroundColor = .clear
     level = .floating
     ignoresMouseEvents = true
     hasShadow = false
+    hidesOnDeactivate = false
     isReleasedWhenClosed = false
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     animationBehavior = .none  // Disable window animations for instant appearance
@@ -93,7 +96,9 @@ final class RecordingRegionOverlayWindow: NSWindow {
     }
   }
 
-  override var canBecomeKey: Bool { true }
+  // Non-activating: prevent stealing focus from other apps
+  override var canBecomeKey: Bool { false }
+  override var canBecomeMain: Bool { false }
 }
 
 // MARK: - RecordingRegionOverlayView

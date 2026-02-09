@@ -132,11 +132,10 @@ final class AreaSelectionController: NSObject {
       guard let displayID = screen.displayID else { continue }
 
       if let window = windowPool[displayID] {
-        // Reset and show existing pooled window
+        // Reset and show existing pooled window without stealing focus
         window.overlayView.resetSelection()
         window.selectionDelegate = self
         window.orderFrontRegardless()
-        window.makeKey()
       } else {
         // Fallback: create window if not pooled
         let window = AreaSelectionWindow(screen: screen, pooled: false)
@@ -265,9 +264,10 @@ protocol AreaSelectionWindowDelegate: AnyObject {
 
 // MARK: - AreaSelectionWindow
 
-/// Full-screen overlay window for area selection
+/// Full-screen overlay panel for area selection
+/// Uses NSPanel with .nonactivatingPanel to prevent background windows from deactivating/blurring
 /// Supports pooled mode for instant activation
-final class AreaSelectionWindow: NSWindow {
+final class AreaSelectionWindow: NSPanel {
 
   weak var selectionDelegate: AreaSelectionWindowDelegate?
 
@@ -284,12 +284,13 @@ final class AreaSelectionWindow: NSWindow {
 
     super.init(
       contentRect: screen.frame,
-      styleMask: .borderless,
+      styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: false
     )
 
-    // Configure window for performance
+    // Configure as non-activating panel to prevent background windows from blurring
+    self.isFloatingPanel = true
     self.isOpaque = false
     self.backgroundColor = .clear
     self.level = .screenSaver
@@ -297,6 +298,7 @@ final class AreaSelectionWindow: NSWindow {
     self.acceptsMouseMovedEvents = true
     self.isReleasedWhenClosed = false
     self.hasShadow = false
+    self.hidesOnDeactivate = false
     self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     self.animationBehavior = .none  // Disable window animations for instant appearance
 
@@ -308,10 +310,8 @@ final class AreaSelectionWindow: NSWindow {
       // Pooled windows start hidden
       self.orderOut(nil)
     } else {
-      // Non-pooled windows show immediately (legacy behavior)
-      self.makeKeyAndOrderFront(nil)
-      self.makeMain()
-      self.makeFirstResponder(overlayView)
+      // Non-pooled windows show immediately without stealing focus
+      self.orderFrontRegardless()
     }
   }
 
@@ -319,14 +319,9 @@ final class AreaSelectionWindow: NSWindow {
     fatalError("init(coder:) has not been implemented")
   }
 
-  override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { true }
-
-  /// Called when window becomes key to ensure first responder
-  override func becomeKey() {
-    super.becomeKey()
-    makeFirstResponder(overlayView)
-  }
+  // Non-activating: prevent stealing focus from other apps
+  override var canBecomeKey: Bool { false }
+  override var canBecomeMain: Bool { false }
 }
 
 // MARK: - AreaSelectionOverlayViewDelegate
