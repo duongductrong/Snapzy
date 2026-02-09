@@ -4,12 +4,19 @@
 //
 //  Floating NSWindow for annotation tools during recording
 //  Draggable with auto-snap to corners, auto horizontal/vertical layout
-//  Uses native NSWindow drag (isMovableByWindowBackground) for smooth performance
+//  Uses manual drag tracking loop for full control over placeholder + snap
 //
 
 import AppKit
 import Combine
 import SwiftUI
+
+// MARK: - First-click content view
+
+/// Accepts first mouse so the toolbar is draggable without needing a focus click first.
+private class FirstMouseVisualEffectView: NSVisualEffectView {
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
 
 @MainActor
 final class RecordingAnnotationToolbarWindow: NSWindow {
@@ -19,7 +26,7 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
   private var effectView: NSVisualEffectView?
   private var direction: AnnotationToolbarDirection = .horizontal
   private var enabledCancellable: AnyCancellable?
-  private var isDragging = false
+  private let snapHelper = AnnotationToolbarSnapHelper()
 
   init(annotationState: RecordingAnnotationState) {
     self.annotationState = annotationState
@@ -47,8 +54,16 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
     hasShadow = false
     isReleasedWhenClosed = false
     appearance = ThemeManager.shared.nsAppearance
-    // Enable native window dragging — smooth, hardware-accelerated
-    isMovableByWindowBackground = true
+    isMovableByWindowBackground = false
+    acceptsMouseMovedEvents = true
+  }
+
+  // Force-accept first click without requiring focus — ensures drag works immediately
+  override func sendEvent(_ event: NSEvent) {
+    if event.type == .leftMouseDown && !isKeyWindow {
+      makeKeyAndOrderFront(nil)
+    }
+    super.sendEvent(event)
   }
 
   private func observeToggle() {
@@ -75,7 +90,7 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
     let hosting = NSHostingView(rootView: AnyView(themed))
     hosting.translatesAutoresizingMaskIntoConstraints = false
 
-    let effect = NSVisualEffectView()
+    let effect = FirstMouseVisualEffectView()
     effect.material = .hudWindow
     effect.state = .active
     effect.blendingMode = .behindWindow
@@ -112,71 +127,69 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
     setFrameOrigin(CGPoint(x: x, y: y))
   }
 
-  // MARK: - Native Drag Detection (for snap-on-release)
+  // MARK: - Manual Drag + Snap
 
   override func mouseDown(with event: NSEvent) {
-    isDragging = true
-    super.mouseDown(with: event)
+    // Use screen coordinates — locationInWindow shifts as window moves, causing jitter
+    let startMouse = NSEvent.mouseLocation
+    let startOrigin = frame.origin
+
+    // Show placeholder at initial snap position
+    var lastSnap = currentSnap()
+    snapHelper.showPlaceholder(snap: lastSnap, size: sizeForDirection(lastSnap.direction))
+
+    var dragged = false
+    while true {
+      guard let nextEvent = self.nextEvent(matching: [.leftMouseDragged, .leftMouseUp]) else { break }
+
+      if nextEvent.type == .leftMouseUp {
+        break
+      }
+
+      // Move window by screen-space delta
+      let currentMouse = NSEvent.mouseLocation
+      let newOrigin = CGPoint(
+        x: startOrigin.x + (currentMouse.x - startMouse.x),
+        y: startOrigin.y + (currentMouse.y - startMouse.y)
+      )
+      setFrameOrigin(newOrigin)
+      dragged = true
+
+      // Update placeholder to match new snap target
+      lastSnap = currentSnap()
+      snapHelper.updatePlaceholder(snap: lastSnap, size: sizeForDirection(lastSnap.direction))
+    }
+
+    snapHelper.hidePlaceholder()
+
+    if dragged {
+      snapToPosition(lastSnap)
+    }
   }
 
-  override func mouseUp(with event: NSEvent) {
-    if isDragging {
-      isDragging = false
-      snapToNearestZone()
+  // MARK: - Snap
+
+  private func currentSnap() -> AnnotationToolbarSnapResult {
+    snapHelper.computeSnap(for: frame, currentDirection: direction) { [self] dir in
+      sizeForDirection(dir)
     }
-    super.mouseUp(with: event)
   }
 
-  // MARK: - Snap + Direction
+  private func sizeForDirection(_ dir: AnnotationToolbarDirection) -> CGSize {
+    if dir == direction { return frame.size }
+    return CGSize(width: frame.size.height, height: frame.size.width)
+  }
 
-  private func snapToNearestZone() {
-    guard let screen = NSScreen.main else { return }
-    let sf = screen.visibleFrame
-    let center = CGPoint(x: frame.midX, y: frame.midY)
-
-    let relX = (center.x - sf.minX) / sf.width
-    let relY = (center.y - sf.minY) / sf.height
-
-    let newDirection: AnnotationToolbarDirection
-    if relX < 0.15 && relY > 0.3 && relY < 0.7 {
-      newDirection = .vertical
-    } else if relX > 0.85 && relY > 0.3 && relY < 0.7 {
-      newDirection = .vertical
-    } else {
-      newDirection = .horizontal
-    }
-
-    if newDirection != direction {
-      direction = newDirection
+  private func snapToPosition(_ snap: AnnotationToolbarSnapResult) {
+    if snap.direction != direction {
+      direction = snap.direction
       rebuildContent()
     }
-
-    let margin: CGFloat = 20
-    let size = frame.size
-    var snapX: CGFloat
-    var snapY: CGFloat
-
-    if relX < 0.5 {
-      snapX = sf.minX + margin
-    } else {
-      snapX = sf.maxX - size.width - margin
-    }
-
-    if relY < 0.35 {
-      snapY = sf.minY + margin
-    } else if relY > 0.65 {
-      snapY = sf.maxY - size.height - margin
-    } else {
-      snapY = center.y - size.height / 2
-    }
-
-    snapX = max(sf.minX + margin, min(snapX, sf.maxX - size.width - margin))
-    snapY = max(sf.minY + margin, min(snapY, sf.maxY - size.height - margin))
 
     NSAnimationContext.runAnimationGroup { ctx in
       ctx.duration = 0.25
       ctx.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-      self.animator().setFrameOrigin(CGPoint(x: snapX, y: snapY))
+      self.animator().setFrameOrigin(snap.origin)
     }
   }
 
