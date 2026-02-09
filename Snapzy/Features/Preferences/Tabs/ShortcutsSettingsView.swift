@@ -138,7 +138,8 @@ struct ShortcutsSettingsView: View {
               tool: tool,
               shortcut: bindingForTool(tool),
               onChanged: { annotateManager.setShortcut($0, for: tool) },
-              conflictingTool: conflictForTool(tool)
+              conflictingTool: conflictForTool(tool),
+              context: toolContext(for: tool)
             )
           }
 
@@ -227,6 +228,25 @@ struct ShortcutsSettingsView: View {
   private func conflictForTool(_ tool: AnnotationToolType) -> AnnotationToolType? {
     guard let key = annotateManager.shortcut(for: tool) else { return nil }
     return annotateManager.conflictingTool(for: key, excluding: tool)
+  }
+
+  /// Recording annotation supports a subset of tools
+  private static let recordingTools: Set<AnnotationToolType> = [
+    .selection, .rectangle, .oval, .arrow, .line, .pencil, .highlighter,
+  ]
+
+  /// Screenshot annotation tools (all configurable except crop handled separately)
+  private static let screenshotTools: Set<AnnotationToolType> = [
+    .selection, .rectangle, .oval, .arrow, .line, .text,
+    .highlighter, .blur, .counter, .pencil,
+  ]
+
+  private func toolContext(for tool: AnnotationToolType) -> AnnotationToolContext {
+    let inScreenshot = Self.screenshotTools.contains(tool)
+    let inRecording = Self.recordingTools.contains(tool)
+    if inScreenshot && inRecording { return .both }
+    if inRecording { return .recordingOnly }
+    return .screenshotOnly
   }
 }
 

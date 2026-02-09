@@ -13,6 +13,7 @@ import SwiftUI
 final class RecordingAnnotationCanvasView: NSView {
 
   let state: RecordingAnnotationState
+  private let shortcutManager = AnnotateShortcutManager.shared
 
   private var isDrawing = false
   private var drawStart: CGPoint = .zero
@@ -29,6 +30,7 @@ final class RecordingAnnotationCanvasView: NSView {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError() }
 
+  override var acceptsFirstResponder: Bool { true }
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
   override func updateTrackingAreas() {
@@ -128,10 +130,11 @@ final class RecordingAnnotationCanvasView: NSView {
   }
 
   override func keyDown(with event: NSEvent) {
-    // Tool shortcuts
+    // Tool shortcuts — use configured shortcuts from AnnotateShortcutManager
     if let char = event.characters?.lowercased().first {
       let tools = RecordingAnnotationState.availableTools
-      if let matchedTool = tools.first(where: { $0.defaultShortcut == char }) {
+      if let matchedTool = shortcutManager.tool(for: char),
+         tools.contains(matchedTool) {
         state.selectedTool = matchedTool
         needsDisplay = true
         return

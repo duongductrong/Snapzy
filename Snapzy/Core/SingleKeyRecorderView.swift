@@ -8,12 +8,36 @@
 import AppKit
 import SwiftUI
 
+/// Context where an annotation tool is available
+enum AnnotationToolContext {
+  case screenshotOnly
+  case recordingOnly
+  case both
+
+  var label: String {
+    switch self {
+    case .screenshotOnly: return "Screenshot"
+    case .recordingOnly: return "Recording"
+    case .both: return "Screenshot & Recording"
+    }
+  }
+
+  var color: Color {
+    switch self {
+    case .screenshotOnly: return .blue
+    case .recordingOnly: return .orange
+    case .both: return .green
+    }
+  }
+}
+
 /// View for recording single-key shortcuts
 struct SingleKeyRecorderView: View {
   let tool: AnnotationToolType
   @Binding var shortcut: Character?
   let onChanged: (Character?) -> Void
   let conflictingTool: AnnotationToolType?
+  var context: AnnotationToolContext = .both
 
   @State private var isRecording = false
   @State private var eventMonitor: Any?
@@ -25,8 +49,18 @@ struct SingleKeyRecorderView: View {
         .foregroundColor(.secondary)
         .frame(width: 24)
 
-      Text(tool.displayName)
-        .frame(width: 80, alignment: .leading)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(tool.displayName)
+        Text(context.label)
+          .font(.system(size: 9, weight: .medium))
+          .foregroundColor(context.color)
+          .padding(.horizontal, 5)
+          .padding(.vertical, 1)
+          .background(
+            Capsule().fill(context.color.opacity(0.15))
+          )
+      }
+      .frame(width: 100, alignment: .leading)
 
       Spacer()
 

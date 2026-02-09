@@ -62,7 +62,10 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
         guard let self else { return }
         let isSelection = (tool == .selection)
         self.ignoresMouseEvents = isSelection
-        if !isSelection { self.makeKeyAndOrderFront(nil) }
+        if !isSelection {
+          self.makeKeyAndOrderFront(nil)
+          self.makeFirstResponder(self.canvasView)
+        }
       }
 
     // Refresh canvas when annotations change

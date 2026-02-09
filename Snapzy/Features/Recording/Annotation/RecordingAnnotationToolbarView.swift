@@ -20,6 +20,7 @@ enum AnnotationToolbarDirection {
 
 struct RecordingAnnotationToolbarView: View {
   @ObservedObject var state: RecordingAnnotationState
+  @ObservedObject private var shortcutManager = AnnotateShortcutManager.shared
   let direction: AnnotationToolbarDirection
 
   private let colorPresets: [Color] = [.red, .blue, .green, .yellow, .white]
@@ -65,7 +66,7 @@ struct RecordingAnnotationToolbarView: View {
         isSelected: state.selectedTool == tool,
         action: { state.selectedTool = tool }
       )
-      .help("\(tool.displayName) (\(String(tool.defaultShortcut).uppercased()))")
+      .help("\(tool.displayName) (\(shortcutLabel(for: tool)))")
     }
   }
 
@@ -161,6 +162,15 @@ struct RecordingAnnotationToolbarView: View {
         }
       }
     }
+  }
+
+  // MARK: - Helpers
+
+  private func shortcutLabel(for tool: AnnotationToolType) -> String {
+    if let key = shortcutManager.shortcut(for: tool) {
+      return String(key).uppercased()
+    }
+    return String(tool.defaultShortcut).uppercased()
   }
 
   // MARK: - Divider

@@ -36,6 +36,7 @@ enum ResizeHandle: Equatable {
 final class DrawingCanvasNSView: NSView {
   var state: AnnotateState
   var displayScale: CGFloat = 1.0
+  private let shortcutManager = AnnotateShortcutManager.shared
   private var currentPath: [CGPoint] = []
   private var isDrawing = false
   private var dragStart: CGPoint?
@@ -156,11 +157,6 @@ final class DrawingCanvasNSView: NSView {
         needsDisplay = true
       }
 
-    case 9: // V key
-      Task { @MainActor in
-        state.selectedTool = .selection
-      }
-
     case 6: // Z key - Undo/Redo
       if event.modifierFlags.contains(.command) {
         Task { @MainActor in
@@ -174,7 +170,18 @@ final class DrawingCanvasNSView: NSView {
       }
 
     default:
-      super.keyDown(with: event)
+      // Tool shortcuts — use configured shortcuts from AnnotateShortcutManager
+      if state.editingTextAnnotationId == nil,
+         !event.modifierFlags.contains(.command),
+         let char = event.characters?.lowercased().first,
+         let matchedTool = shortcutManager.tool(for: char) {
+        Task { @MainActor in
+          state.selectedTool = matchedTool
+        }
+        needsDisplay = true
+      } else {
+        super.keyDown(with: event)
+      }
     }
   }
 
