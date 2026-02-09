@@ -62,6 +62,7 @@ final class RecordingToolbarWindow: NSWindow {
   private var anchorRect: CGRect
   private var mode: RecordingToolbarMode = .preRecord
   private var hostingView: NSHostingView<AnyView>?
+  private var effectView: NSVisualEffectView?
 
   // Callbacks
   var onRecord: (() -> Void)?
@@ -123,6 +124,9 @@ final class RecordingToolbarWindow: NSWindow {
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     hasShadow = false
     isReleasedWhenClosed = false
+
+    // Apply theme appearance at window level (mirrors AnnotateWindow.applyTheme)
+    appearance = ThemeManager.shared.nsAppearance
   }
 
   func showPreRecordToolbar() {
@@ -155,11 +159,38 @@ final class RecordingToolbarWindow: NSWindow {
   private func setContent(_ view: AnyView) {
     let themedView = view.preferredColorScheme(ThemeManager.shared.systemAppearance)
     let hosting = NSHostingView(rootView: AnyView(themedView))
-    hosting.frame = CGRect(origin: .zero, size: hosting.fittingSize)
-    contentView = hosting
-    hostingView = hosting
+    hosting.translatesAutoresizingMaskIntoConstraints = false
 
-    setContentSize(hosting.fittingSize)
+    // NSVisualEffectView provides native wallpaper-tinted material backing,
+    // matching AnnotateWindow's adaptive background behavior.
+    let effect = NSVisualEffectView()
+    effect.material = .hudWindow
+    effect.state = .active
+    effect.blendingMode = .behindWindow
+    effect.wantsLayer = true
+    effect.layer?.cornerRadius = ToolbarConstants.toolbarCornerRadius
+    effect.layer?.masksToBounds = true
+
+    // Make hosting view transparent so material shows through
+    hosting.layer?.backgroundColor = .clear
+
+    effect.addSubview(hosting)
+    NSLayoutConstraint.activate([
+      hosting.topAnchor.constraint(equalTo: effect.topAnchor),
+      hosting.bottomAnchor.constraint(equalTo: effect.bottomAnchor),
+      hosting.leadingAnchor.constraint(equalTo: effect.leadingAnchor),
+      hosting.trailingAnchor.constraint(equalTo: effect.trailingAnchor),
+    ])
+
+    // Size the effect view to match hosting content
+    let fittingSize = hosting.fittingSize
+    effect.frame = CGRect(origin: .zero, size: fittingSize)
+
+    contentView = effect
+    hostingView = hosting
+    effectView = effect
+
+    setContentSize(fittingSize)
   }
 
   private func positionBelowRect(_ rect: CGRect) {

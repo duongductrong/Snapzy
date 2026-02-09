@@ -53,13 +53,6 @@ struct RecordingToolbarView: View {
     }
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
-    .background {
-      RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius)
-        .fill(Color(NSColor.windowBackgroundColor))
-      RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius)
-        .fill(.ultraThinMaterial)
-    }
-    .clipShape(RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius))
     .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("Recording toolbar")
