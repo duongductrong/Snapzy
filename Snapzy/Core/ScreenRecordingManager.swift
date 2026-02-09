@@ -568,6 +568,55 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     state = .idle
     elapsedSeconds = 0
   }
+
+  /// Add a window to the capture filter's exceptingWindows list
+  /// Used to include annotation overlay in recording despite app being excluded
+  func addExceptedWindow(windowID: CGWindowID) async {
+    guard let activeStream = stream else { return }
+
+    do {
+      let content = try await SCShareableContent.current
+      guard let scWindow = content.windows.first(where: { $0.windowID == windowID }) else { return }
+
+      // Find current display
+      let targetDisplayID: CGDirectDisplayID
+      if let screen = NSScreen.screens.first(where: { $0.frame.intersects(recordingRect) }),
+         let displayID = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID {
+        targetDisplayID = displayID
+      } else {
+        targetDisplayID = CGMainDisplayID()
+      }
+
+      guard let display = content.displays.first(where: { $0.displayID == Int(targetDisplayID) })
+              ?? content.displays.first else { return }
+
+      // Rebuild excluded apps list
+      var excludedApps: [SCRunningApplication] = []
+      if let bundleID = Bundle.main.bundleIdentifier {
+        excludedApps = content.applications.filter { $0.bundleIdentifier == bundleID }
+      }
+
+      // Collect excepted windows (Finder windows + annotation overlay)
+      var exceptedWindows: [SCWindow] = [scWindow]
+      if DesktopIconManager.shared.isIconHidingEnabled {
+        excludedApps += DesktopIconManager.shared.getFinderApps(from: content)
+        exceptedWindows += DesktopIconManager.shared.getVisibleFinderWindows(from: content)
+      }
+      if DesktopIconManager.shared.isWidgetHidingEnabled {
+        excludedApps += DesktopIconManager.shared.getWidgetApps(from: content)
+      }
+
+      let filter = SCContentFilter(
+        display: display,
+        excludingApplications: excludedApps,
+        exceptingWindows: exceptedWindows
+      )
+      try await activeStream.updateContentFilter(filter)
+    } catch {
+      // Non-fatal: overlay just won't appear in video
+      print("Failed to add excepted window: \(error.localizedDescription)")
+    }
+  }
 }
 
 // MARK: - SCStreamOutput

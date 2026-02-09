@@ -5,13 +5,14 @@
 //  Status bar shown during active recording with timer and controls
 //  Styled to match Apple's native macOS recording toolbar aesthetic
 //
-//  Layout: [● 00:00:00] | [⏸] | [↺] | [🗑] | [Stop]
+//  Layout: [● 00:00:00] | [⏸] [✏️] | [↺] | [🗑] | [Stop]
 //
 
 import SwiftUI
 
 struct RecordingStatusBarView: View {
   @ObservedObject var recorder: ScreenRecordingManager
+  @ObservedObject var annotationState: RecordingAnnotationState
   let onDelete: () -> Void
   let onRestart: () -> Void
   let onStop: () -> Void
@@ -46,6 +47,16 @@ struct RecordingStatusBarView: View {
         systemName: recorder.isPaused ? "play.fill" : "pause.fill",
         action: { recorder.togglePause() },
         accessibilityLabel: recorder.isPaused ? "Resume recording" : "Pause recording"
+      )
+
+      // Annotate toggle button
+      ToolbarIconButton(
+        systemName: annotationState.isAnnotationEnabled
+          ? "pencil.tip.crop.circle.fill"
+          : "pencil.tip.crop.circle",
+        action: { annotationState.isAnnotationEnabled.toggle() },
+        accessibilityLabel: annotationState.isAnnotationEnabled
+          ? "Disable annotations" : "Enable annotations"
       )
 
       RecordingToolbarDivider()
@@ -86,6 +97,7 @@ struct RecordingStatusBarView: View {
 #Preview {
   RecordingStatusBarView(
     recorder: ScreenRecordingManager.shared,
+    annotationState: RecordingAnnotationState(),
     onDelete: {},
     onRestart: {},
     onStop: {}

@@ -24,6 +24,10 @@ final class RecordingCoordinator: ObservableObject {
   private var globalEscapeMonitor: Any?
   private var isShowingConfirmationDialog = false
 
+  // Annotation overlay
+  private var annotationToolbarWindow: RecordingAnnotationToolbarWindow?
+  private var annotationOverlayWindow: RecordingAnnotationOverlayWindow?
+
   private init() {}
 
   // MARK: - Recording Area Persistence
@@ -373,6 +377,9 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setInteractionEnabled(false)
         }
 
+        // Setup annotation overlay (must be after recording starts so window exists)
+        setupAnnotationOverlay(for: rect)
+
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder)
 
@@ -496,6 +503,9 @@ final class RecordingCoordinator: ObservableObject {
     // Remove escape monitors
     removeEscapeMonitors()
 
+    // Close annotation windows
+    cleanupAnnotationOverlay()
+
     // Close region overlay windows
     for overlay in regionOverlayWindows {
       overlay.close()
@@ -506,6 +516,45 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow = nil
     selectedRect = nil
     isActive = false
+  }
+
+  // MARK: - Annotation Overlay
+
+  private func setupAnnotationOverlay(for rect: CGRect) {
+    guard let window = toolbarWindow else { return }
+    let annotationState = window.annotationState
+
+    // Create overlay window covering recording rect
+    let overlayWindow = RecordingAnnotationOverlayWindow(
+      recordingRect: rect,
+      annotationState: annotationState
+    )
+    overlayWindow.orderFrontRegardless()
+    annotationOverlayWindow = overlayWindow
+
+    // Create floating annotation toolbar
+    let toolbarWin = RecordingAnnotationToolbarWindow(annotationState: annotationState)
+    annotationToolbarWindow = toolbarWin
+
+    // Start auto-clear timer
+    annotationState.startCleanupTimer()
+
+    // Add overlay window to ScreenCaptureKit's exceptingWindows
+    // so annotations appear in the recorded video
+    Task {
+      await recorder.addExceptedWindow(windowID: overlayWindow.overlayWindowID)
+    }
+  }
+
+  private func cleanupAnnotationOverlay() {
+    toolbarWindow?.annotationState.stopCleanupTimer()
+    toolbarWindow?.annotationState.isAnnotationEnabled = false
+
+    annotationToolbarWindow?.close()
+    annotationToolbarWindow = nil
+
+    annotationOverlayWindow?.close()
+    annotationOverlayWindow = nil
   }
 
   /// Update the selected rect and sync all overlays + toolbar

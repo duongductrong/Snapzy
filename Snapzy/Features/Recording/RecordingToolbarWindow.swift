@@ -73,6 +73,7 @@ final class RecordingToolbarWindow: NSWindow {
 
   // Observable state for SwiftUI
   let state = RecordingToolbarState()
+  let annotationState = RecordingAnnotationState()
 
   // Expose state properties for external access (read/write)
   var selectedFormat: VideoFormat {
@@ -147,6 +148,7 @@ final class RecordingToolbarWindow: NSWindow {
 
     let view = RecordingStatusBarView(
       recorder: recorder,
+      annotationState: annotationState,
       onDelete: { [weak self] in self?.onDelete?() },
       onRestart: { [weak self] in self?.onRestart?() },
       onStop: { [weak self] in self?.onStop?() }
