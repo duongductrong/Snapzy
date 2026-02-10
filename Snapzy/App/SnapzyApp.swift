@@ -59,11 +59,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       updater: UpdaterManager.shared.updater
     )
 
-    // Show onboarding on first launch
-    if !OnboardingFlowView.hasCompletedOnboarding {
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-        self.showOnboardingWindow()
-      }
+    // Show splash on every launch
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      SplashWindowController.shared.show(onContinue: { [weak self] in
+        // After splash dismisses, show onboarding if not completed
+        if !OnboardingFlowView.hasCompletedOnboarding {
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self?.showOnboardingWindow()
+          }
+        }
+      })
     }
 
     // Listen for restart onboarding notification
@@ -88,10 +93,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         return
       }
     }
-    // If onboarding window not found, open it via OpenWindow environment
-//    if let url = URL(string: "zapshot://onboarding") {
-//      NSWorkspace.shared.open(url)
-//    }
   }
 }
 
