@@ -34,7 +34,6 @@ enum PreferencesKeys {
   static let floatingAutoDismissDelay = "floatingScreenshot.autoDismissDelay"
   static let floatingOverlayScale = "floatingScreenshot.overlayScale"
   static let floatingDragDropEnabled = "floatingScreenshot.dragDropEnabled"
-  static let floatingShowCloudUpload = "floatingScreenshot.showCloudUpload"
 
   // Recording
   static let recordingFormat = "recording.format"

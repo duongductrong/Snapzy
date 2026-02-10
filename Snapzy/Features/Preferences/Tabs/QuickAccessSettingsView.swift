@@ -83,10 +83,7 @@ struct QuickAccessSettingsView: View {
             .labelsHidden()
         }
 
-        SettingRow(icon: "cloud.fill", title: "Cloud Upload", description: "Show upload button on overlay") {
-          Toggle("", isOn: $manager.showCloudUpload)
-            .labelsHidden()
-        }
+
       }
     }
     .formStyle(.grouped)

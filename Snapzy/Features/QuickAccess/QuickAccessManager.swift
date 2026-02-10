@@ -56,12 +56,6 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.set(dragDropEnabled, forKey: Keys.dragDropEnabled)
     }
   }
-  @Published var showCloudUpload: Bool = true {
-    didSet {
-      UserDefaults.standard.set(showCloudUpload, forKey: Keys.showCloudUpload)
-    }
-  }
-
   // MARK: - Configuration
 
   let maxVisibleItems = 5
@@ -80,7 +74,6 @@ final class QuickAccessManager: ObservableObject {
     static let autoDismissDelay = "floatingScreenshot.autoDismissDelay"
     static let overlayScale = "floatingScreenshot.overlayScale"
     static let dragDropEnabled = "floatingScreenshot.dragDropEnabled"
-    static let showCloudUpload = "floatingScreenshot.showCloudUpload"
   }
 
   // MARK: - Init
@@ -106,8 +99,6 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.overlayScale) as? Double ?? 1.0
     dragDropEnabled =
       UserDefaults.standard.object(forKey: Keys.dragDropEnabled) as? Bool ?? true
-    showCloudUpload =
-      UserDefaults.standard.object(forKey: Keys.showCloudUpload) as? Bool ?? true
   }
 
   // MARK: - Public Methods
