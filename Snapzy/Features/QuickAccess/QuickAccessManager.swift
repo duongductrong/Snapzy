@@ -117,14 +117,15 @@ final class QuickAccessManager: ObservableObject {
 
     let item = QuickAccessItem(url: url, thumbnail: thumbnail)
 
-    // Batch eviction + insertion in a single mutation to avoid competing animations
-    if items.count >= maxVisibleItems, let oldestId = items.last?.id {
-      cancelDismissTimer(for: oldestId)
-      items.removeLast()
-    }
-
+    // Animate insertion explicitly — no implicit .animation on the stack
     let wasEmpty = items.isEmpty
-    items.insert(item, at: 0)
+    withAnimation(QuickAccessAnimations.cardInsert) {
+      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
+        cancelDismissTimer(for: oldestId)
+        items.removeLast()
+      }
+      items.insert(item, at: 0)
+    }
 
     // Show panel if this is first item
     if wasEmpty {
@@ -146,14 +147,15 @@ final class QuickAccessManager: ObservableObject {
     // Use actual duration or nil (will show no badge if duration unavailable)
     let item = QuickAccessItem(url: url, thumbnail: thumbnail, duration: result.duration ?? 0)
 
-    // Batch eviction + insertion in a single mutation to avoid competing animations
-    if items.count >= maxVisibleItems, let oldestId = items.last?.id {
-      cancelDismissTimer(for: oldestId)
-      items.removeLast()
-    }
-
+    // Animate insertion explicitly — no implicit .animation on the stack
     let wasEmpty = items.isEmpty
-    items.insert(item, at: 0)
+    withAnimation(QuickAccessAnimations.cardInsert) {
+      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
+        cancelDismissTimer(for: oldestId)
+        items.removeLast()
+      }
+      items.insert(item, at: 0)
+    }
 
     if wasEmpty {
       showPanel()

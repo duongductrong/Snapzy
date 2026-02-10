@@ -359,8 +359,11 @@ struct QuickAccessCardView: View {
           QuickAccessIconButton(
             icon: "trash",
             action: {
+              isDismissing = true
               QuickAccessSound.delete.play(reduceMotion: reduceMotion)
-              manager.deleteItem(id: item.id)
+              withAnimation(QuickAccessAnimations.cardSwipeDismiss) {
+                manager.deleteItem(id: item.id)
+              }
             },
             helpText: "Delete"
           )

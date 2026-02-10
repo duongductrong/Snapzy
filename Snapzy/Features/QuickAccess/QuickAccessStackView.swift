@@ -26,10 +26,6 @@ struct QuickAccessStackView: View {
       }
     }
     .padding(QuickAccessLayout.containerPadding)
-    .animation(
-      reduceMotion ? nil : QuickAccessAnimations.cardInsert,
-      value: manager.items.map(\.id)
-    )
   }
 
   private var cardTransition: AnyTransition {
