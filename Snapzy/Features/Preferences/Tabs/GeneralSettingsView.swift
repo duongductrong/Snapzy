@@ -135,8 +135,8 @@ struct GeneralSettingsView: View {
   private func restartOnboarding() {
     OnboardingFlowView.resetOnboarding()
     NSApp.keyWindow?.close()
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-      NSApp.activate(ignoringOtherApps: true)
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      NotificationCenter.default.post(name: .showOnboarding, object: nil)
     }
   }
 }
