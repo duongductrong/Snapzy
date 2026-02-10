@@ -17,28 +17,9 @@ extension Notification.Name {
 @main
 struct SnapzyApp: App {
   @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-  @AppStorage(PreferencesKeys.onboardingCompleted) private var onboardingCompleted = false
   @ObservedObject private var themeManager = ThemeManager.shared
 
   var body: some Scene {
-    // Onboarding Window (shown only when needed)
-    WindowGroup(id: "onboarding") {
-      if onboardingCompleted == false {
-        OnboardingFlowView(onComplete: {
-          onboardingCompleted = true
-          // Close onboarding window
-          NSApp.windows
-            .filter { $0.identifier?.rawValue.contains("onboarding") == true }
-            .forEach { $0.close() }
-        })
-        .frame(width: 700, height: 600)
-        .preferredColorScheme(themeManager.systemAppearance)
-      }
-    }
-    .windowStyle(.hiddenTitleBar)
-    .windowResizability(.contentSize)
-    .defaultSize(width: 500, height: 450)
-
     // Settings Window
     Settings {
       PreferencesView()
@@ -59,16 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       updater: UpdaterManager.shared.updater
     )
 
-    // Show splash on every launch
+    // Show splash (handles onboarding internally if needed)
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-      SplashWindowController.shared.show(onContinue: { [weak self] in
-        // After splash dismisses, show onboarding if not completed
-        if !OnboardingFlowView.hasCompletedOnboarding {
-          DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            self?.showOnboardingWindow()
-          }
-        }
-      })
+      SplashWindowController.shared.show()
     }
 
     // Listen for restart onboarding notification
@@ -81,18 +55,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   }
 
   @objc private func handleShowOnboarding() {
-    showOnboardingWindow()
-  }
-
-  private func showOnboardingWindow() {
-    NSApp.activate(ignoringOtherApps: true)
-    for window in NSApp.windows {
-      if window.identifier?.rawValue.contains("onboarding") == true {
-        window.makeKeyAndOrderFront(nil)
-        window.center()
-        return
-      }
-    }
+    SplashWindowController.shared.show(forceOnboarding: true)
   }
 }
-

@@ -2,7 +2,7 @@
 //  VSDesignSystem.swift
 //  Snapzy
 //
-//  Design system for onboarding views
+//  Design system for onboarding views — dark/frosted theme for splash overlay
 //
 
 import SwiftUI
@@ -14,7 +14,7 @@ struct VSDesignSystem {
   struct Typography {
     static let heading = Font.system(size: 24, weight: .bold)
     static let body = Font.system(size: 13)
-    static let bodyColor = Color.secondary
+    static let bodyColor = Color.white.opacity(0.7)
   }
 
   // MARK: - Primary Button Style
@@ -29,11 +29,11 @@ struct VSDesignSystem {
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          RoundedRectangle(cornerRadius: 10)
-            .fill(isDisabled ? Color.blue.opacity(0.5) : Color.blue)
+          Capsule()
+            .fill(isDisabled ? Color.white.opacity(0.1) : Color.white.opacity(0.2))
         )
+        .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 1))
         .opacity(configuration.isPressed ? 0.8 : 1.0)
-        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
     }
   }
 
@@ -43,13 +43,14 @@ struct VSDesignSystem {
     func makeBody(configuration: Configuration) -> some View {
       configuration.label
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(.primary)
+        .foregroundColor(.white.opacity(0.8))
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          RoundedRectangle(cornerRadius: 10)
-            .fill(Color.gray.opacity(0.2))
+          Capsule()
+            .fill(Color.white.opacity(0.1))
         )
+        .overlay(Capsule().stroke(.white.opacity(0.2), lineWidth: 1))
         .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
   }
@@ -64,11 +65,11 @@ struct VSDesignSystem {
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          RoundedRectangle(cornerRadius: 10)
-            .fill(Color.green)
+          Capsule()
+            .fill(Color.green.opacity(0.3))
         )
+        .overlay(Capsule().stroke(.green.opacity(0.5), lineWidth: 1))
         .opacity(configuration.isPressed ? 0.8 : 1.0)
-        .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
     }
   }
 }
@@ -77,7 +78,9 @@ struct VSDesignSystem {
 
 extension View {
   func vsHeading() -> some View {
-    self.font(VSDesignSystem.Typography.heading)
+    self
+      .font(VSDesignSystem.Typography.heading)
+      .foregroundColor(.white)
   }
 
   func vsBody() -> some View {

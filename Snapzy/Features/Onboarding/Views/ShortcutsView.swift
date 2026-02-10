@@ -2,7 +2,7 @@
 //  ShortcutsView.swift
 //  Snapzy
 //
-//  Shortcuts setup screen for onboarding flow
+//  Shortcuts setup screen for onboarding flow — dark/frosted theme
 //
 
 import SwiftUI
@@ -19,6 +19,8 @@ struct ShortcutsView: View {
       Image(nsImage: NSApp.applicationIconImage)
         .resizable()
         .frame(width: 80, height: 80)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.3), radius: 12, x: 0, y: 4)
 
       // Title
       Text("Set as default screenshot tool?")
@@ -71,16 +73,21 @@ private struct ShortcutBadge: View {
     HStack(spacing: 12) {
       Text(keys)
         .font(.system(size: 13, weight: .medium, design: .monospaced))
+        .foregroundColor(.white)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
           RoundedRectangle(cornerRadius: 6)
-            .fill(Color.gray.opacity(0.15))
+            .fill(Color.white.opacity(0.1))
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 6)
+            .stroke(.white.opacity(0.2), lineWidth: 1)
         )
 
       Text(action)
         .font(.system(size: 13))
-        .foregroundColor(.secondary)
+        .foregroundColor(.white.opacity(0.6))
     }
   }
 }
@@ -88,4 +95,5 @@ private struct ShortcutBadge: View {
 #Preview {
   ShortcutsView(onDecline: {}, onAccept: {})
     .frame(width: 500, height: 400)
+    .background(.black.opacity(0.5))
 }

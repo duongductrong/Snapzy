@@ -2,7 +2,7 @@
 //  PermissionRow.swift
 //  Snapzy
 //
-//  Reusable permission row component for onboarding
+//  Reusable permission row component for onboarding — dark/frosted theme
 //
 
 import SwiftUI
@@ -20,11 +20,11 @@ struct PermissionRow: View {
       // Icon
       Image(systemName: icon)
         .font(.system(size: 24))
-        .foregroundColor(.blue)
+        .foregroundColor(.white)
         .frame(width: 44, height: 44)
         .background(
           RoundedRectangle(cornerRadius: 10)
-            .fill(Color.blue.opacity(0.1))
+            .fill(Color.white.opacity(0.1))
         )
 
       // Title and Description
@@ -32,13 +32,14 @@ struct PermissionRow: View {
         HStack(spacing: 6) {
           Text(title)
             .font(.system(size: 14, weight: .semibold))
+            .foregroundColor(.white)
 
           if isRequired {
             Text("Required")
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(Color.orange.opacity(0.2))
+              .background(Color.orange.opacity(0.3))
               .foregroundColor(.orange)
               .cornerRadius(4)
           } else {
@@ -46,15 +47,15 @@ struct PermissionRow: View {
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(Color.gray.opacity(0.2))
-              .foregroundColor(.secondary)
+              .background(Color.white.opacity(0.1))
+              .foregroundColor(.white.opacity(0.5))
               .cornerRadius(4)
           }
         }
 
         Text(description)
           .font(.system(size: 12))
-          .foregroundColor(.secondary)
+          .foregroundColor(.white.opacity(0.5))
       }
 
       Spacer()
@@ -71,7 +72,7 @@ struct PermissionRow: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.green.opacity(0.1))
+        .background(Color.green.opacity(0.15))
         .cornerRadius(6)
       } else {
         Button("Grant Access") {
@@ -84,7 +85,11 @@ struct PermissionRow: View {
     .padding(16)
     .background(
       RoundedRectangle(cornerRadius: 12)
-        .fill(Color.gray.opacity(0.05))
+        .fill(Color.white.opacity(0.08))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 12)
+        .stroke(.white.opacity(0.1), lineWidth: 1)
     )
   }
 }
@@ -110,4 +115,5 @@ struct PermissionRow: View {
   }
   .padding()
   .frame(width: 450)
+  .background(.black.opacity(0.5))
 }

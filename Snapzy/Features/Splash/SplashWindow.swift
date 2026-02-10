@@ -71,7 +71,7 @@ final class SplashWindow: NSPanel {
 
 // MARK: - SplashWindowController
 
-/// Manages splash window lifecycle — show on launch, dismiss on continue
+/// Manages splash window lifecycle — hosts the unified splash + onboarding flow
 @MainActor
 final class SplashWindowController {
   static let shared = SplashWindowController()
@@ -80,19 +80,23 @@ final class SplashWindowController {
 
   private init() {}
 
-  /// Show splash on main screen. Calls onContinue after user taps Continue.
-  func show(onContinue: @escaping () -> Void) {
+  /// Show splash with integrated onboarding flow.
+  /// - Parameter forceOnboarding: When true, always show onboarding steps (used by "Restart Onboarding")
+  func show(forceOnboarding: Bool = false) {
     guard let screen = NSScreen.main else { return }
 
     let window = SplashWindow(screen: screen)
     self.splashWindow = window
 
-    let contentView = SplashContentView(
-      onContinue: { [weak self] in
-        self?.dismiss(completion: onContinue)
+    let needsOnboarding = forceOnboarding || !OnboardingFlowView.hasCompletedOnboarding
+
+    let rootView = SplashOnboardingRootView(
+      needsOnboarding: needsOnboarding,
+      onDismiss: { [weak self] in
+        self?.dismiss()
       }
     )
-    window.attachContent(contentView)
+    window.attachContent(rootView)
 
     // Show window
     window.makeKeyAndOrderFront(nil)
@@ -114,11 +118,8 @@ final class SplashWindowController {
   }
 
   /// Fade out splash window and clean up
-  func dismiss(completion: @escaping () -> Void) {
-    guard let window = splashWindow else {
-      completion()
-      return
-    }
+  func dismiss() {
+    guard let window = splashWindow else { return }
 
     NSAnimationContext.runAnimationGroup({ context in
       context.duration = 0.4
@@ -128,7 +129,6 @@ final class SplashWindowController {
       window.orderOut(nil)
       window.close()
       self?.splashWindow = nil
-      completion()
     })
   }
 }

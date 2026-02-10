@@ -2,7 +2,7 @@
 //  CompletionView.swift
 //  Snapzy
 //
-//  Completion screen for onboarding flow - "Ready to go!"
+//  Completion screen for onboarding flow — dark/frosted theme
 //
 
 import SwiftUI
@@ -39,17 +39,21 @@ struct CompletionView: View {
       HStack(spacing: 8) {
         Image(systemName: "menubar.arrow.up.rectangle")
           .font(.system(size: 16))
-          .foregroundColor(.blue)
+          .foregroundColor(.white.opacity(0.7))
 
         Text("Look for the camera icon in your menu bar")
           .font(.system(size: 13))
-          .foregroundColor(.secondary)
+          .foregroundColor(.white.opacity(0.6))
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
       .background(
         RoundedRectangle(cornerRadius: 8)
-          .fill(Color.blue.opacity(0.08))
+          .fill(Color.white.opacity(0.08))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 8)
+          .stroke(.white.opacity(0.15), lineWidth: 1)
       )
 
       Spacer()
@@ -63,10 +67,10 @@ struct CompletionView: View {
             .padding(.vertical, 8)
             .padding(.horizontal, 20)
             .background(
-              RoundedRectangle(cornerRadius: 10)
-                .fill(Color.blue)
+              Capsule()
+                .fill(Color.white.opacity(0.2))
             )
-            .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+            .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 1))
         }
         .buttonStyle(.plain)
         .simultaneousGesture(TapGesture().onEnded {
@@ -92,4 +96,5 @@ struct CompletionView: View {
     onComplete: {}
   )
   .frame(width: 500, height: 450)
+  .background(.black.opacity(0.5))
 }

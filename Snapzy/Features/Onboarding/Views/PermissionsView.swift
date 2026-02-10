@@ -2,7 +2,7 @@
 //  PermissionsView.swift
 //  Snapzy
 //
-//  Permissions grant screen for onboarding flow
+//  Permissions grant screen for onboarding flow — dark/frosted theme
 //
 
 import AVFoundation
@@ -34,7 +34,7 @@ struct PermissionsView: View {
       // Header
       Image(systemName: "lock.shield")
         .font(.system(size: 48))
-        .foregroundColor(.blue)
+        .foregroundColor(.white.opacity(0.8))
 
       Text("Grant Permissions")
         .vsHeading()
@@ -154,4 +154,5 @@ struct PermissionsView: View {
     onNext: {}
   )
   .frame(width: 500, height: 500)
+  .background(.black.opacity(0.5))
 }
