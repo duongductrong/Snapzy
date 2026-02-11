@@ -32,14 +32,14 @@ struct VideoTrimHandlesView: View {
         .frame(width: timelineWidth - endHandleOffset)
         .offset(x: endHandleOffset)
 
-      // Start handle
+      // Start handle — clamped so it stays fully visible within timeline
       TrimHandle(isStart: true, isDragging: isDraggingStart)
-        .offset(x: startHandleOffset - handleWidth / 2)
+        .offset(x: max(0, min(startHandleOffset - handleWidth / 2, timelineWidth - handleWidth)))
         .gesture(startHandleGesture)
 
-      // End handle
+      // End handle — clamped so it stays fully visible within timeline
       TrimHandle(isStart: false, isDragging: isDraggingEnd)
-        .offset(x: endHandleOffset - handleWidth / 2)
+        .offset(x: max(0, min(endHandleOffset - handleWidth / 2, timelineWidth - handleWidth)))
         .gesture(endHandleGesture)
     }
     .frame(height: handleHeight)
@@ -107,6 +107,11 @@ private struct TrimHandle: View {
     RoundedRectangle(cornerRadius: 3)
       .fill(isDragging ? Color.white : Color.yellow)
       .frame(width: 14, height: 60)
+      .overlay(
+        Image(systemName: isStart ? "chevron.compact.left" : "chevron.compact.right")
+          .font(.system(size: 16, weight: .bold))
+          .foregroundColor(.black.opacity(0.5))
+      )
       .overlay(
         RoundedRectangle(cornerRadius: 3)
           .strokeBorder(Color.black.opacity(0.3), lineWidth: 1)
