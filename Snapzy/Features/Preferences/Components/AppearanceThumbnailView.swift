@@ -27,7 +27,7 @@ struct AppearanceThumbnailView: View {
 
   var body: some View {
     Button(action: action) {
-      VStack(spacing: 8) {
+      VStack(spacing: 6) {
         thumbnailPreview
           .overlay(
             RoundedRectangle(cornerRadius: 8)
@@ -36,7 +36,7 @@ struct AppearanceThumbnailView: View {
           .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
 
         Text(mode.displayName)
-          .font(.system(size: 12))
+          .font(.system(size: 10))
           .foregroundColor(isSelected ? .accentColor : .primary)
       }
     }
@@ -82,7 +82,7 @@ struct AppearanceThumbnailView: View {
           )
       }
     }
-    .frame(width: 90, height: 64)
+    .frame(width: 72, height: 52)
     .clipShape(RoundedRectangle(cornerRadius: 8))
   }
 
@@ -90,7 +90,7 @@ struct AppearanceThumbnailView: View {
 
   private func singleThumbnail(isDark: Bool) -> some View {
     windowPreview(isDark: isDark)
-      .frame(width: 90, height: 64)
+      .frame(width: 72, height: 52)
       .clipShape(RoundedRectangle(cornerRadius: 8))
   }
 
@@ -156,7 +156,7 @@ struct AppearanceModePicker: View {
   @Binding var selection: AppearanceMode
 
   var body: some View {
-    HStack(spacing: 20) {
+    HStack(spacing: 14) {
       ForEach(AppearanceMode.allCases) { mode in
         AppearanceThumbnailView(
           mode: mode,
@@ -168,7 +168,7 @@ struct AppearanceModePicker: View {
         }
       }
     }
-    .padding(.vertical, 8)
+    .padding(.vertical, 4)
   }
 }
 

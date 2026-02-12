@@ -38,8 +38,9 @@ struct GeneralSettingsView: View {
       }
 
       Section("Appearance") {
-        AppearanceModePicker(selection: $themeManager.preferredAppearance)
-          .frame(maxWidth: .infinity, alignment: .center)
+        SettingRow(icon: "circle.lefthalf.filled", title: "Theme", description: "Choose your preferred appearance") {
+          AppearanceModePicker(selection: $themeManager.preferredAppearance)
+        }
       }
 
       Section("Storage") {
