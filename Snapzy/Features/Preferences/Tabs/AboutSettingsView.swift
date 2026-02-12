@@ -20,14 +20,10 @@ struct AboutSettingsView: View {
   }
 
   var body: some View {
-    ScrollView {
-      VStack(spacing: Spacing.lg) {
-        heroSection
-        // featureHighlightsSection
-        linksSection
-        // creditsSection
-      }
-      .padding(Spacing.lg)
+    VStack {
+      Spacer()
+      heroSection
+      Spacer()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
