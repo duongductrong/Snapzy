@@ -2,7 +2,7 @@
 //  SplashWindow.swift
 //  Snapzy
 //
-//  Fullscreen splash overlay with transparent background and blur effect
+//  Maximized window for splash & onboarding with traffic lights, no toolbar
 //
 
 import AppKit
@@ -10,87 +10,95 @@ import SwiftUI
 
 // MARK: - SplashWindow
 
-/// Fullscreen transparent NSPanel with blur background for splash overlay
-final class SplashWindow: NSPanel {
-  let blurView: NSVisualEffectView
+/// Maximized NSWindow with transparent titlebar and traffic lights for splash/onboarding
+final class SplashWindow: NSWindow {
 
   init(screen: NSScreen) {
-    self.blurView = NSVisualEffectView()
-
     super.init(
-      contentRect: screen.frame,
-      styleMask: [.borderless, .nonactivatingPanel],
+      contentRect: screen.visibleFrame,
+      styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
-
     configureWindow()
-    setupViews(screen: screen)
+    setupBlurBackground()
   }
 
   private func configureWindow() {
-    isFloatingPanel = true
-    isOpaque = false
+    titlebarAppearsTransparent = true
+    titleVisibility = .hidden
     backgroundColor = .clear
-    level = .floating
-    hasShadow = false
-    hidesOnDeactivate = false
+    isOpaque = false
+    level = .normal
+    hasShadow = true
     isReleasedWhenClosed = false
-    collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+    collectionBehavior = [.managed, .participatesInCycle]
     animationBehavior = .none
+
+    // Start invisible for fade-in animation
+    alphaValue = 0
   }
 
-  private func setupViews(screen: NSScreen) {
-    let container = NSView(frame: NSRect(origin: .zero, size: screen.frame.size))
+  private func setupBlurBackground() {
+    let container = NSView()
+    container.wantsLayer = true
 
-    // Blur background — starts invisible, animated in later
-    blurView.frame = container.bounds
-    blurView.autoresizingMask = [.width, .height]
+    // Blur effect behind the window
+    let blurView = NSVisualEffectView()
     blurView.blendingMode = .behindWindow
-    blurView.material = .fullScreenUI
+    blurView.material = .dark
     blurView.state = .active
-    blurView.alphaValue = 0
+    blurView.autoresizingMask = [.width, .height]
     container.addSubview(blurView)
 
     self.contentView = container
   }
 
-  /// Attach SwiftUI content on top of blur layer
+  /// Attach SwiftUI content on top of blur background
   func attachContent(_ view: some View) {
     guard let container = contentView else { return }
     let hostingView = NSHostingView(rootView: view)
-    hostingView.frame = container.bounds
     hostingView.autoresizingMask = [.width, .height]
+    hostingView.frame = container.bounds
     hostingView.layer?.backgroundColor = .clear
     container.addSubview(hostingView)
   }
 
   override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { false }
+  override var canBecomeMain: Bool { true }
+
+  override func layoutIfNeeded() {
+    super.layoutIfNeeded()
+    layoutTrafficLights()
+  }
 }
 
 // MARK: - SplashWindowController
 
 /// Manages splash window lifecycle — hosts the unified splash + onboarding flow
 @MainActor
-final class SplashWindowController {
+final class SplashWindowController: NSObject, NSWindowDelegate {
   static let shared = SplashWindowController()
 
   private var splashWindow: SplashWindow?
 
-  private init() {}
+  private override init() {}
 
   /// Show splash with integrated onboarding flow.
   /// - Parameter forceOnboarding: When true, always show onboarding steps (used by "Restart Onboarding")
   func show(forceOnboarding: Bool = false) {
     guard let screen = NSScreen.main else { return }
 
+    // Show app in Cmd+Tab switcher
+    NSApp.setActivationPolicy(.regular)
+
     let window = SplashWindow(screen: screen)
+    window.delegate = self
     self.splashWindow = window
 
     let needsOnboarding = forceOnboarding || !OnboardingFlowView.hasCompletedOnboarding
 
-    let rootView = SplashOnboardingRootView(
+    let rootView = LicenseOnboardingRootView(
       needsOnboarding: needsOnboarding,
       onDismiss: { [weak self] in
         self?.dismiss()
@@ -98,23 +106,23 @@ final class SplashWindowController {
     )
     window.attachContent(rootView)
 
-    // Show window
+    // Show window and activate
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
 
-    // Animate blur in after brief delay
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-      self?.animateBlurIn()
+    // Fade in
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+      self?.animateIn()
     }
   }
 
-  private func animateBlurIn() {
+  private func animateIn() {
     guard let window = splashWindow else { return }
-    NSAnimationContext.runAnimationGroup({ context in
-      context.duration = 0.6
+    NSAnimationContext.runAnimationGroup { context in
+      context.duration = 0.5
       context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-      window.blurView.animator().alphaValue = 1.0
-    })
+      window.animator().alphaValue = 1.0
+    }
   }
 
   /// Fade out splash window and clean up
@@ -129,6 +137,19 @@ final class SplashWindowController {
       window.orderOut(nil)
       window.close()
       self?.splashWindow = nil
+
+      // Revert to menu-bar-only mode (hide from Cmd+Tab switcher)
+      NSApp.setActivationPolicy(.accessory)
     })
   }
+
+  // MARK: - NSWindowDelegate
+
+  nonisolated func windowWillClose(_ notification: Notification) {
+    Task { @MainActor in
+      self.splashWindow = nil
+      NSApp.setActivationPolicy(.accessory)
+    }
+  }
 }
+
