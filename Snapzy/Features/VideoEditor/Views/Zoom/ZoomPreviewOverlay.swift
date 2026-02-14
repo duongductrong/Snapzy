@@ -53,7 +53,7 @@ struct ZoomableVideoPlayerSection: View {
     .onReceive(state.$currentTime) { time in
       updateZoomState(at: CMTimeGetSeconds(time))
     }
-    .onChange(of: state.zoomSegments) { _, _ in
+    .onChange(of: state.zoomSegments) { _ in
       updateZoomState(at: CMTimeGetSeconds(state.currentTime))
     }
   }

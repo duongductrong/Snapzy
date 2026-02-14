@@ -23,7 +23,7 @@ struct ExportProgressOverlay: View {
         Image(systemName: "film")
           .font(.system(size: 32))
           .foregroundColor(ZoomColors.primary)
-          .symbolEffect(.pulse, options: .repeating)
+          .modifier(PulseEffectModifier())
 
         // Title
         Text("Exporting Video")
@@ -74,6 +74,24 @@ struct ExportProgressOverlay: View {
       )
     }
     .transition(.opacity)
+  }
+}
+
+// MARK: - Pulse Effect Modifier (macOS 13 compat)
+
+/// Uses `.symbolEffect(.pulse)` on macOS 14+, simple opacity animation on macOS 13
+private struct PulseEffectModifier: ViewModifier {
+  @State private var isAnimating = false
+
+  func body(content: Content) -> some View {
+    if #available(macOS 14.0, *) {
+      content.symbolEffect(.pulse, options: .repeating)
+    } else {
+      content
+        .opacity(isAnimating ? 0.4 : 1.0)
+        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isAnimating)
+        .onAppear { isAnimating = true }
+    }
   }
 }
 

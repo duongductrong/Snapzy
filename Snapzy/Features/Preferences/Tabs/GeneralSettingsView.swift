@@ -26,7 +26,7 @@ struct GeneralSettingsView: View {
         SettingRow(icon: "power.circle", title: "Start at login", description: "Launch Snapzy when you log in") {
           Toggle("", isOn: $startAtLogin)
             .labelsHidden()
-            .onChange(of: startAtLogin) { _, newValue in
+            .onChange(of: startAtLogin) { newValue in
               LoginItemManager.setEnabled(newValue)
             }
         }

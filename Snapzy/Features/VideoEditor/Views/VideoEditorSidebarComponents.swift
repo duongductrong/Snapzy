@@ -97,12 +97,12 @@ struct VideoSliderRow: View {
           .onAppear {
             textValue = String(format: "%.0f", value)
           }
-          .onChange(of: localValue) { _, newValue in
+          .onChange(of: localValue) { newValue in
             if !isTextFieldFocused {
               textValue = String(format: "%.0f", newValue)
             }
           }
-          .onChange(of: isTextFieldFocused) { _, focused in
+          .onChange(of: isTextFieldFocused) { focused in
             if !focused {
               applyTextValue()
             }
@@ -130,13 +130,13 @@ struct VideoSliderRow: View {
       .controlSize(.small)
     }
     .onAppear { localValue = value }
-    .onChange(of: localValue) { _, newValue in
+    .onChange(of: localValue) { newValue in
       // Update preview in real-time during drag
       if isDragging {
         onDragging?(true, newValue)
       }
     }
-    .onChange(of: value) { _, newValue in
+    .onChange(of: value) { newValue in
       // External changes sync to local (e.g., preset selection)
       if !isDragging { localValue = newValue }
     }

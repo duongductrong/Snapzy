@@ -39,9 +39,12 @@ struct ContentView: View {
         statusSection
       }
       
-      // Open Preferences
-      SettingsLink {
-        Text("Open Preferences...")
+      // Open Preferences (macOS 13 compat)
+      Button("Open Preferences...") {
+        if #available(macOS 14.0, *) {
+          // SettingsLink handles this on 14+, but Button works too
+        }
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
       }
       .keyboardShortcut(",", modifiers: .command)
     }

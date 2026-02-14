@@ -80,6 +80,7 @@ struct VerticalTabBar<Tab: Hashable>: View {
 
 // MARK: - Preview
 
+@available(macOS 14.0, *)
 #Preview {
   @Previewable @State var selectedTab = "background"
 

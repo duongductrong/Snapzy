@@ -8,6 +8,8 @@
 import AppKit
 import Combine
 import CoreGraphics
+import CoreImage
+import CoreMedia
 import Foundation
 import os.log
 import ScreenCaptureKit
@@ -149,8 +151,8 @@ final class ScreenCaptureManager: ObservableObject {
       config.pixelFormat = kCVPixelFormatType_32BGRA
       config.showsCursor = true
 
-      // Capture the image
-      let image = try await SCScreenshotManager.captureImage(
+      // Capture the image (compat: SCScreenshotManager requires macOS 14+)
+      let image = try await captureImageCompat(
         contentFilter: filter,
         configuration: config
       )
@@ -293,8 +295,8 @@ final class ScreenCaptureManager: ObservableObject {
       config.width = Int(ceil(clampedRect.width * scaleFactor))
       config.height = Int(ceil(clampedRect.height * scaleFactor))
 
-      // Capture the image
-      let image = try await SCScreenshotManager.captureImage(
+      // Capture the image (compat: SCScreenshotManager requires macOS 14+)
+      let image = try await captureImageCompat(
         contentFilter: filter,
         configuration: config
       )
@@ -492,13 +494,46 @@ final class ScreenCaptureManager: ObservableObject {
     config.width = Int(ceil(clampedRect.width * scaleFactor))
     config.height = Int(ceil(clampedRect.height * scaleFactor))
 
-    return try await SCScreenshotManager.captureImage(
+    return try await captureImageCompat(
       contentFilter: filter,
       configuration: config
     )
   }
 
   // MARK: - Filter Builder
+
+  /// Compatibility wrapper: uses SCScreenshotManager on macOS 14+, falls back to SCStream single-frame capture on macOS 13.
+  private func captureImageCompat(
+    contentFilter: SCContentFilter,
+    configuration: SCStreamConfiguration
+  ) async throws -> CGImage {
+    if #available(macOS 14.0, *) {
+      return try await SCScreenshotManager.captureImage(
+        contentFilter: contentFilter,
+        configuration: configuration
+      )
+    } else {
+      // Fallback: use SCStream to capture a single frame
+      return try await withCheckedThrowingContinuation { continuation in
+        let handler = SingleFrameStreamOutput(continuation: continuation)
+        let stream = SCStream(filter: contentFilter, configuration: configuration, delegate: nil)
+        do {
+          try stream.addStreamOutput(handler, type: .screen, sampleHandlerQueue: DispatchQueue(label: "com.snapzy.screenshot"))
+        } catch {
+          continuation.resume(throwing: error)
+          return
+        }
+        handler.stream = stream
+        Task {
+          do {
+            try await stream.startCapture()
+          } catch {
+            continuation.resume(throwing: error)
+          }
+        }
+      }
+    }
+  }
 
   /// Build SCContentFilter, optionally excluding Finder (desktop icons) and/or widgets.
   /// Open Finder windows are preserved via exceptingWindows.
@@ -549,6 +584,60 @@ enum ImageFormat {
     case .png: return "public.png" as CFString
     case .jpeg: return "public.jpeg" as CFString
     case .tiff: return "public.tiff" as CFString
+    }
+  }
+}
+
+// MARK: - Single Frame Stream Output (macOS 13 fallback)
+
+/// Helper class for capturing a single frame via SCStream (used on macOS 13 where SCScreenshotManager is unavailable)
+private final class SingleFrameStreamOutput: NSObject, SCStreamOutput {
+  private let continuation: CheckedContinuation<CGImage, Error>
+  private var hasResumed = false
+  var stream: SCStream?
+
+  init(continuation: CheckedContinuation<CGImage, Error>) {
+    self.continuation = continuation
+  }
+
+  func stream(
+    _ stream: SCStream,
+    didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
+    of type: SCStreamOutputType
+  ) {
+    guard type == .screen, !hasResumed else { return }
+
+    // Check that the sample buffer contains a valid image
+    guard let imageBuffer = sampleBuffer.imageBuffer else { return }
+
+    // Check for valid frame status via attachments
+    if let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+       let statusRaw = attachments.first?[.status] as? Int,
+       let status = SCFrameStatus(rawValue: statusRaw),
+       status != .complete {
+      return
+    }
+
+    hasResumed = true
+
+    // Convert CVPixelBuffer to CGImage
+    let ciImage = CIImage(cvPixelBuffer: imageBuffer)
+    let context = CIContext()
+    let rect = CGRect(x: 0, y: 0, width: CVPixelBufferGetWidth(imageBuffer), height: CVPixelBufferGetHeight(imageBuffer))
+
+    guard let cgImage = context.createCGImage(ciImage, from: rect) else {
+      continuation.resume(throwing: CaptureError.captureFailed("Failed to create CGImage from stream frame"))
+      stopStream()
+      return
+    }
+
+    continuation.resume(returning: cgImage)
+    stopStream()
+  }
+
+  private func stopStream() {
+    Task {
+      try? await stream?.stopCapture()
     }
   }
 }

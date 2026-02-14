@@ -57,11 +57,13 @@ struct AnnotateCanvasView: View {
         handleDrop(providers: providers)
       }
       .focusable()
-      .focusEffectDisabled()
+      .modifier(FocusEffectDisabledModifier())
       .focused($isCanvasFocused)
-      .onKeyPress { keyPress in
-        handleToolShortcut(keyPress)
-      }
+      .background(
+        KeyEventHandlerView { char in
+          handleToolShortcutChar(char)
+        }
+      )
       .onAppear {
         isCanvasFocused = true
       }
@@ -350,27 +352,17 @@ struct AnnotateCanvasView: View {
 
   // MARK: - Keyboard Shortcuts
 
-  /// Handle tool switching keyboard shortcuts
-  private func handleToolShortcut(_ keyPress: KeyPress) -> KeyPress.Result {
+  /// Handle tool switching keyboard shortcuts (macOS 13+ compatible)
+  private func handleToolShortcutChar(_ char: Character) {
     // Skip if editing text annotation
-    guard state.editingTextAnnotationId == nil else {
-      return .ignored
-    }
-
+    guard state.editingTextAnnotationId == nil else { return }
     // Skip if no image loaded
-    guard state.hasImage else {
-      return .ignored
-    }
+    guard state.hasImage else { return }
 
-    // Get lowercase character for case-insensitive matching
-    guard let char = keyPress.characters.lowercased().first else {
-      return .ignored
-    }
+    let lowered = Character(String(char).lowercased())
 
     // Look up tool for this key
-    guard let tool = AnnotateShortcutManager.shared.tool(for: char) else {
-      return .ignored
-    }
+    guard let tool = AnnotateShortcutManager.shared.tool(for: lowered) else { return }
 
     // Special handling for crop tool
     if tool == .crop {
@@ -383,8 +375,6 @@ struct AnnotateCanvasView: View {
     } else {
       state.selectedTool = tool
     }
-
-    return .handled
   }
 
   /// Handle dropped image files
@@ -502,6 +492,58 @@ final class ScrollWheelZoomNSView: NSView {
 extension View {
   func onScrollWheelZoom(_ action: @escaping (CGFloat) -> Void) -> some View {
     modifier(ScrollWheelZoomModifier(onZoom: action))
+  }
+}
+
+// MARK: - Focus Effect Disabled Modifier (macOS 13 compat)
+
+/// Wraps `.focusEffectDisabled()` which is only available on macOS 14+
+private struct FocusEffectDisabledModifier: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(macOS 14.0, *) {
+      content.focusEffectDisabled()
+    } else {
+      content
+    }
+  }
+}
+
+// MARK: - Key Event Handler (macOS 13 compat, replaces .onKeyPress)
+
+/// NSViewRepresentable that intercepts keyboard events via AppKit for macOS 13 compatibility
+struct KeyEventHandlerView: NSViewRepresentable {
+  let onKey: (Character) -> Void
+
+  func makeNSView(context: Context) -> KeyEventNSView {
+    KeyEventNSView(onKey: onKey)
+  }
+
+  func updateNSView(_ nsView: KeyEventNSView, context: Context) {
+    nsView.onKey = onKey
+  }
+}
+
+final class KeyEventNSView: NSView {
+  var onKey: (Character) -> Void
+
+  init(onKey: @escaping (Character) -> Void) {
+    self.onKey = onKey
+    super.init(frame: .zero)
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) {
+    fatalError("init(coder:) has not been implemented")
+  }
+
+  override var acceptsFirstResponder: Bool { true }
+
+  override func keyDown(with event: NSEvent) {
+    guard let chars = event.charactersIgnoringModifiers, let char = chars.first else {
+      super.keyDown(with: event)
+      return
+    }
+    onKey(char)
   }
 }
 

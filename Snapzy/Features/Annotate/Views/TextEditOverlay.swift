@@ -34,7 +34,7 @@ struct TextEditOverlay: View {
         TextField("", text: $editingText)
           .textFieldStyle(.plain)
           .font(.system(size: fontSize))
-          .foregroundColor(Color(annotation.properties.strokeColor))
+          .foregroundColor(annotation.properties.strokeColor)
           .multilineTextAlignment(.leading)
           .frame(
             width: max(displayBounds.width, minTextFieldWidth),
@@ -69,7 +69,7 @@ struct TextEditOverlay: View {
           .onExitCommand {
             cancelEdit()
           }
-          .onChange(of: isFocused) { _, newValue in
+          .onChange(of: isFocused) { newValue in
             if !newValue && state.editingTextAnnotationId == editingId {
               commitEdit(id: editingId)
             }

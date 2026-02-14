@@ -41,7 +41,7 @@ struct ShortcutsSettingsView: View {
         SettingRow(icon: "keyboard", title: "Enable Shortcuts", description: "Capture from any app") {
           Toggle("", isOn: $shortcutsEnabled)
             .labelsHidden()
-            .onChange(of: shortcutsEnabled) { _, newValue in
+            .onChange(of: shortcutsEnabled) { newValue in
               if newValue {
                 manager.enable()
               } else {

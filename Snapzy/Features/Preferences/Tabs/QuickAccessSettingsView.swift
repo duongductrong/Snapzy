@@ -23,7 +23,7 @@ struct QuickAccessSettingsView: View {
           .labelsHidden()
           .pickerStyle(.segmented)
           .frame(width: 120)
-          .onChange(of: positionIsLeft) { _, newValue in
+          .onChange(of: positionIsLeft) { newValue in
             manager.setPosition(newValue ? .bottomLeft : .bottomRight)
           }
         }

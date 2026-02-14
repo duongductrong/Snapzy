@@ -45,7 +45,7 @@ struct ZoomSettingsPopover: View {
     .onAppear {
       syncLocalState()
     }
-    .onChange(of: state.selectedZoomId) { _, _ in
+    .onChange(of: state.selectedZoomId) { _ in
       syncLocalState()
     }
   }
@@ -141,7 +141,7 @@ struct ZoomSettingsPopover: View {
         center: $localCenter,
         previewImage: previewImage
       )
-      .onChange(of: localCenter) { _, newValue in
+      .onChange(of: localCenter) { newValue in
         applyCenter(newValue)
       }
 

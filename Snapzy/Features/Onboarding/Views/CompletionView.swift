@@ -58,15 +58,15 @@ struct CompletionView: View {
         // Actions
         VStack(spacing: 10) {
           HStack(spacing: 12) {
-            SettingsLink {
+            Button {
+              NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+              onComplete()
+            } label: {
               Text("Open Preferences")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundColor(.white.opacity(0.55))
             }
             .buttonStyle(.plain)
-            .simultaneousGesture(TapGesture().onEnded {
-              onComplete()
-            })
 
             Button("Get Started") {
               onComplete()

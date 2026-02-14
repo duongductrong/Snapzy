@@ -47,7 +47,7 @@ struct VideoEditorRightSidebar: View {
     }
     .frame(width: 320)
     .frame(maxHeight: .infinity)
-    .onChange(of: state.selectedZoomId) { _, newValue in
+    .onChange(of: state.selectedZoomId) { newValue in
       // Auto-switch to zoom tab when a zoom is selected
       if newValue != nil {
         withAnimation(.easeInOut(duration: 0.15)) {
@@ -109,7 +109,7 @@ struct ZoomSettingsContent: View {
     .onAppear {
       syncLocalState()
     }
-    .onChange(of: state.selectedZoomId) { _, _ in
+    .onChange(of: state.selectedZoomId) { _ in
       syncLocalState()
     }
   }
@@ -205,7 +205,7 @@ struct ZoomSettingsContent: View {
         center: $localCenter,
         previewImage: previewImage
       )
-      .onChange(of: localCenter) { _, newValue in
+      .onChange(of: localCenter) { newValue in
         applyCenter(newValue)
       }
 
