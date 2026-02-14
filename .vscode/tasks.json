@@ -4,7 +4,7 @@
     {
       "label": "Build & Launch", // A descriptive name for your task
       "type": "shell", // Specifies it's a shell command
-      "command": "./scripts/launch.sh", // The command to execute the script
+      "command": "./scripts/launch.sh --log-level debug", // The command to execute the script
       "group": {
         "kind": "build",
         "isDefault": true // Optional: Makes it the default build task (run with Ctrl+Shift+B)
