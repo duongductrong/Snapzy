@@ -23,3 +23,7 @@ To ensure consistency and reuse existing logic within the project, the Agent mus
 ## 3. Contribution Loop
 
 - If a new complex logic or a reusable command is developed that isn't in `skills/` or `commands/`, suggest documenting it for future use.
+
+## 4. Compatibility
+
+- IMPORTANT: ALWAYS ENSURE YOU GENERATE CODE COMPATIBLE WITH MACOS >= 13
