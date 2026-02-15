@@ -144,24 +144,29 @@ struct AnnotateCanvasView: View {
     let bgWidth = logicalCanvasWidth * scale
     let bgHeight = logicalCanvasHeight * scale
 
-    // Image stays at ORIGINAL size (no shrinking!)
-    let imgWidth = state.imageWidth * scale
-    let imgHeight = state.imageHeight * scale
+    // When crop is applied, use CROP dimensions for image display frame
+    // This ensures the image frame fits within the background+padding area
+    let imgWidth: CGFloat
+    let imgHeight: CGFloat
+    if isCropApplied, let cropRect = state.cropRect {
+      imgWidth = cropRect.width * scale
+      imgHeight = cropRect.height * scale
+    } else {
+      imgWidth = state.imageWidth * scale
+      imgHeight = state.imageHeight * scale
+    }
 
     // Image offset for alignment (relative to ZStack center)
     let imageDisplaySize = CGSize(width: imgWidth, height: imgHeight)
 
     // Calculate offset based on crop state
     let offset: CGPoint
-    if isCropApplied, let cropRect = state.cropRect {
-      // When crop is applied, offset image so crop area is centered
-      let cropCenterX = cropRect.midX * scale
-      let cropCenterY = (state.imageHeight - cropRect.midY) * scale // Flip Y for SwiftUI
-      let imageCenterX = imgWidth / 2
-      let imageCenterY = imgHeight / 2
-      offset = CGPoint(
-        x: imageCenterX - cropCenterX,
-        y: imageCenterY - cropCenterY
+    if isCropApplied {
+      // When crop is applied, image frame is already crop-sized, use normal alignment
+      offset = state.imageOffset(
+        for: CGSize(width: bgWidth, height: bgHeight),
+        imageDisplaySize: imageDisplaySize,
+        displayPadding: currentPadding * scale
       )
     } else {
       // Normal alignment offset
@@ -172,8 +177,11 @@ struct AnnotateCanvasView: View {
       )
     }
 
-    // Calculate clipping rect for applied crop (in display coordinates)
-    let clipRect: CGRect? = isCropApplied ? state.cropRect.map { cropRect in
+    // Calculate clipping rect for applied crop (in display coordinates, relative to full image frame)
+    // Used during crop EDITING to clip the drawing canvas
+    let fullImgWidth = state.imageWidth * scale
+    let fullImgHeight = state.imageHeight * scale
+    let clipRect: CGRect? = (state.isCropActive && state.cropRect != nil) ? state.cropRect.map { cropRect in
       CGRect(
         x: cropRect.origin.x * scale,
         y: (state.imageHeight - cropRect.origin.y - cropRect.height) * scale,
@@ -191,14 +199,38 @@ struct AnnotateCanvasView: View {
         // GROUP: Image + Annotations (transformed together in mockup mode)
         Group {
           // Image positioned within scaled padding area
-          imageLayer(width: imgWidth, height: imgHeight)
-
-          // Drawing canvas matches image position - clip to crop when applied
-          CanvasDrawingView(state: state, displayScale: scale)
-            .frame(width: imgWidth, height: imgHeight)
-            .clipShape(
-              CropClipShape(clipRect: clipRect, containerSize: CGSize(width: imgWidth, height: imgHeight))
+          // When crop is applied, render only the cropped portion
+          if isCropApplied, let cropRect = state.cropRect {
+            croppedImageLayer(
+              cropWidth: imgWidth,
+              cropHeight: imgHeight,
+              cropRect: cropRect,
+              fullImageWidth: fullImgWidth,
+              fullImageHeight: fullImgHeight,
+              scale: scale
             )
+          } else {
+            imageLayer(width: imgWidth, height: imgHeight)
+          }
+
+          // Drawing canvas matches image position
+          if isCropApplied, let cropRect = state.cropRect {
+            // When crop is applied, clip drawing to crop dimensions
+            CanvasDrawingView(state: state, displayScale: scale)
+              .frame(width: fullImgWidth, height: fullImgHeight)
+              .offset(
+                x: (fullImgWidth - imgWidth) / 2 - (cropRect.origin.x * scale),
+                y: (fullImgHeight - imgHeight) / 2 - ((state.imageHeight - cropRect.origin.y - cropRect.height) * scale)
+              )
+              .frame(width: imgWidth, height: imgHeight)
+              .clipped()
+          } else {
+            CanvasDrawingView(state: state, displayScale: scale)
+              .frame(width: imgWidth, height: imgHeight)
+              .clipShape(
+                CropClipShape(clipRect: clipRect, containerSize: CGSize(width: imgWidth, height: imgHeight))
+              )
+          }
 
           // Text editing overlay (when editing a text annotation)
           if state.editingTextAnnotationId != nil {
@@ -213,14 +245,15 @@ struct AnnotateCanvasView: View {
         .offset(x: offset.x, y: offset.y)
         .modifier(MockupTransformModifier(state: state, isEnabled: shouldShowMockupTransforms))
 
-        // Crop overlay (NOT transformed - editing UI stays flat)
-        if state.selectedTool == .crop || state.cropRect != nil {
+        // Crop overlay - ONLY shown during active crop editing (NOT when crop is just applied)
+        // This prevents CropSolidMask from covering the gradient/wallpaper background
+        if state.selectedTool == .crop && state.isCropActive {
           CropOverlayView(
             state: state,
             scale: scale,
             imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
           )
-          .frame(width: imgWidth, height: imgHeight)
+          .frame(width: fullImgWidth, height: fullImgHeight)
           .offset(x: offset.x, y: offset.y)
         }
       }
@@ -339,6 +372,47 @@ struct AnnotateCanvasView: View {
         .frame(width: width, height: height)
         .cornerRadius(currentCornerRadius)
         .drawingGroup() // Rasterize image with corners for performance
+        .shadow(
+          color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
+          radius: 15,
+          x: 0,
+          y: 8
+        )
+    }
+  }
+
+  // MARK: - Cropped Image Layer
+
+  /// Renders only the cropped portion of the source image.
+  /// Uses offset + frame + clipped pattern to display just the crop region.
+  @ViewBuilder
+  private func croppedImageLayer(
+    cropWidth: CGFloat,
+    cropHeight: CGFloat,
+    cropRect: CGRect,
+    fullImageWidth: CGFloat,
+    fullImageHeight: CGFloat,
+    scale: CGFloat
+  ) -> some View {
+    let currentCornerRadius = state.effectiveCornerRadius
+    let currentShadowIntensity = state.effectiveShadowIntensity
+
+    if let sourceImage = state.sourceImage {
+      // Render full image, offset so crop region is at top-left, then clip
+      Image(nsImage: sourceImage)
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(width: fullImageWidth, height: fullImageHeight)
+        .offset(
+          // Shift image so crop region center aligns with clip frame center
+          // clip frame is centered on the full image center in the ZStack
+          x: (fullImageWidth - cropWidth) / 2 - (cropRect.origin.x * scale),
+          y: (fullImageHeight - cropHeight) / 2 - ((state.imageHeight - cropRect.origin.y - cropRect.height) * scale)
+        )
+        .frame(width: cropWidth, height: cropHeight)
+        .clipped()
+        .cornerRadius(currentCornerRadius)
+        .drawingGroup()
         .shadow(
           color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
           radius: 15,
