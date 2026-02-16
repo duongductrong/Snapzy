@@ -278,7 +278,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       guard let self = self else { return }
 
       // Check for saved recording area - restore if enabled and available
-      let rememberLastArea = UserDefaults.standard.bool(forKey: PreferencesKeys.recordingRememberLastArea)
+      let rememberLastArea = UserDefaults.standard.object(forKey: PreferencesKeys.recordingRememberLastArea) as? Bool ?? true
       if rememberLastArea, let savedRect = RecordingCoordinator.shared.loadLastAreaRect() {
         Task { @MainActor in
           RecordingCoordinator.shared.showToolbar(for: savedRect)
