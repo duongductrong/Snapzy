@@ -160,6 +160,11 @@ final class VideoEditorState: ObservableObject {
     sourceURL.pathExtension.lowercased()
   }
 
+  /// Whether the source file is an animated GIF
+  var isGIF: Bool {
+    fileExtension == "gif"
+  }
+
   var formattedDuration: String {
     formatTime(duration)
   }
@@ -229,6 +234,17 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Metadata Loading
 
   func loadMetadata() async {
+    // GIF files can't be loaded by AVAsset — use NSImage for dimensions
+    if isGIF {
+      if let image = NSImage(contentsOf: sourceURL) {
+        naturalSize = CGSize(
+          width: image.representations.first?.pixelsWide ?? Int(image.size.width),
+          height: image.representations.first?.pixelsHigh ?? Int(image.size.height)
+        )
+      }
+      return
+    }
+
     do {
       let loadedDuration = try await asset.load(.duration)
       duration = loadedDuration
@@ -346,6 +362,8 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Frame Extraction
 
   func extractFrames() async {
+    // GIF files don't use AVAsset — skip frame extraction
+    guard !isGIF else { return }
     guard CMTimeGetSeconds(duration) > 0 else { return }
 
     isExtractingFrames = true

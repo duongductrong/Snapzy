@@ -493,6 +493,9 @@ final class RecordingCoordinator: ObservableObject {
     Task {
       let url = await recorder.stopRecording()
 
+      // Dismiss recording UI immediately (status bar, area overlay, etc.)
+      cleanup()
+
       if let url = url {
         // Play sound
         NSSound(named: "Glass")?.play()
@@ -505,8 +508,6 @@ final class RecordingCoordinator: ObservableObject {
           await PostCaptureActionHandler.shared.handleVideoCapture(url: url)
         }
       }
-
-      cleanup()
     }
   }
 

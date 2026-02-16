@@ -114,12 +114,13 @@ final class VideoEditorManager {
     controller.showWindow()
   }
 
-  /// Validate if URL is a video file
+  /// Validate if URL is a video or GIF file
   private func isVideoFile(_ url: URL) -> Bool {
     guard let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType else {
-      return false
+      // Fallback: check extension directly for GIF
+      return url.pathExtension.lowercased() == "gif"
     }
-    return type.conforms(to: .movie) || type.conforms(to: .video)
+    return type.conforms(to: .movie) || type.conforms(to: .video) || type.conforms(to: .gif)
   }
 
   /// Handle video loaded in empty editor

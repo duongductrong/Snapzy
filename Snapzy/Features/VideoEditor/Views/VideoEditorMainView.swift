@@ -45,32 +45,38 @@ struct VideoEditorMainView: View {
 
         // Main editor content
         VStack(spacing: 0) {
-          // Video player with zoom preview
-          ZoomableVideoPlayerSection(state: state)
-            .frame(minHeight: 200)
+          if state.isGIF {
+            // GIF preview — uses NSImageView with animation
+            AnimatedGIFView(url: state.sourceURL)
+              .frame(minHeight: 200)
+          } else {
+            // Video player with zoom preview
+            ZoomableVideoPlayerSection(state: state)
+              .frame(minHeight: 200)
 
-          // MOVED UP: Playback controls now under video
-          VideoControlsView(state: state)
-            .windowContentHPadding()
-            .padding(.top, 8)
+            // Playback controls (video only)
+            VideoControlsView(state: state)
+              .windowContentHPadding()
+              .padding(.top, 8)
 
-          // Timeline with frame previews and trim handles
-          VideoTimelineView(state: state)
-            .windowContentHPadding()
-            .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
+            // Timeline with frame previews and trim handles (video only)
+            VideoTimelineView(state: state)
+              .windowContentHPadding()
+              .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
 
-          // Export settings panel (collapsible)
-          VideoExportSettingsPanel(state: state)
-            .windowContentHPadding()
-            .padding(.top, 8)
-            .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
+            // Export settings panel (video only)
+            VideoExportSettingsPanel(state: state)
+              .windowContentHPadding()
+              .padding(.top, 8)
+              .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
+          }
 
           Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-        // Right sidebar with tabs (Zoom + Background)
-        if state.isRightSidebarVisible {
+        // Right sidebar with tabs (Zoom + Background) — video only
+        if !state.isGIF && state.isRightSidebarVisible {
           Divider()
 
           VideoEditorRightSidebar(
@@ -81,33 +87,37 @@ struct VideoEditorMainView: View {
       }
       .animation(.easeInOut(duration: 0.2), value: state.isVideoInfoSidebarVisible)
 
-      // Bottom bar with Cancel/Convert
-      VideoEditorBottomBar(
-        onCancel: { onCancel?() },
-        onConvert: { onSave?() }
-      )
+      // Bottom bar with Cancel/Convert (video only — GIF is preview-only)
+      if !state.isGIF {
+        VideoEditorBottomBar(
+          onCancel: { onCancel?() },
+          onConvert: { onSave?() }
+        )
+      }
     }
-    // Keyboard shortcuts for zoom operations
+    // Keyboard shortcuts for zoom operations (video only)
     .background {
-      // Add zoom at playhead (Z key)
-      Button("") {
-        let currentTime = CMTimeGetSeconds(state.currentTime)
-        state.addZoom(at: currentTime)
-      }
-      .keyboardShortcut("z", modifiers: [])
-      .opacity(0)
-      .frame(width: 0, height: 0)
-
-      // Delete selected zoom (Delete key)
-      Button("") {
-        if let id = state.selectedZoomId {
-          state.removeZoom(id: id)
+      if !state.isGIF {
+        // Add zoom at playhead (Z key)
+        Button("") {
+          let currentTime = CMTimeGetSeconds(state.currentTime)
+          state.addZoom(at: currentTime)
         }
+        .keyboardShortcut("z", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Delete selected zoom (Delete key)
+        Button("") {
+          if let id = state.selectedZoomId {
+            state.removeZoom(id: id)
+          }
+        }
+        .keyboardShortcut(.delete, modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .disabled(state.selectedZoomId == nil)
       }
-      .keyboardShortcut(.delete, modifiers: [])
-      .opacity(0)
-      .frame(width: 0, height: 0)
-      .disabled(state.selectedZoomId == nil)
     }
     .overlay {
       // Export progress overlay

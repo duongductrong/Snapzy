@@ -88,6 +88,11 @@ struct QuickAccessProgressView: View {
         .frame(width: ringSize, height: ringSize)
         .rotationEffect(.degrees(-90))
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: progress)
+
+      // Percentage text centered
+      Text("\(Int(min(max(progress, 0), 1) * 100))%")
+        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+        .foregroundColor(.white)
     }
   }
 

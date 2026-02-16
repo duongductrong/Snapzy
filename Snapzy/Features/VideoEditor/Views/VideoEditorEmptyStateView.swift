@@ -17,7 +17,7 @@ struct VideoEditorEmptyStateView: View {
   @State private var showError = false
   @State private var errorMessage = ""
 
-  private let supportedTypes: [UTType] = [.movie, .video, .quickTimeMovie, .mpeg4Movie]
+  private let supportedTypes: [UTType] = [.movie, .video, .quickTimeMovie, .mpeg4Movie, .gif]
 
   var body: some View {
     VStack(spacing: 0) {
