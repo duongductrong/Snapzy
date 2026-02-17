@@ -1,15 +1,16 @@
-# Project Architecture & Guidelines (Flattened Structure)
+# Project Architecture & Guidelines (Pragmatic Flattened)
 
 **Context:** macOS Application (SwiftUI + AppKit)
-**Style:** Feature-Based, Flattened, Colocated
+**Style:** Feature-Based, Pragmatic Flattened
+**Version:** 2.0 (Nested Support)
 
 ## 1. Directory Philosophy
 
-We adopt a **Flattened Structure** to minimize folder clicking depth.
+We adopt a **Pragmatic Flattened Structure**. Simplicity is priority, but organization is key when complexity grows.
 
-- **Rule 1: No Folder Nesting inside Features.** All files related to a feature (View, VM, Logic) sit in the same folder.
-- **Rule 2: Strict Naming.** Files must be prefixed with the Feature name to ensure alphabetical sorting keeps them visually grouped.
-- **Rule 3: Root Visibility.** Services and Shared components exist at the root level, not hidden inside a `Core` or `UI` folder.
+- **Rule 1: Feature Root Visibility.** Main Views and ViewModels must reside at the root of the Feature folder for instant access.
+- **Rule 2: Limited Nesting.** Inside a Feature, you may create **one level** of subfolders only for `Components`, `Managers`, or `Services` if necessary.
+- **Rule 3: Service Expansion.** Global Services are single files by default. If a Service grows complex, convert it into a folder containing the main service and its helpers.
 
 ---
 
@@ -22,17 +23,25 @@ App/
   AppEnvironment.swift            // DI Container
 
 Features/
-  [FeatureName]/                  // e.g., "Capture", "Annotate"
-    [Feature]View.swift           // MAIN VIEW
-    [Feature]ViewModel.swift      // STATE
-    [Feature]Logic.swift          // DOMAIN LOGIC (Pipeline, Algorithms)
-    [Feature]Components.swift     // SUB-VIEWS specific to this feature
+  [FeatureName]/                  // e.g., "Capture"
+    CaptureView.swift             // MAIN Entry View (Keep at Root)
+    CaptureViewModel.swift        // MAIN State (Keep at Root)
+
+    Components/                   // [Optional] Sub-views specific to this feature
+      CaptureButton.swift
+      SelectionOverlay.swift
+    Managers/                     // [Optional] Logic controllers
+      SelectionManager.swift
+    Services/                     // [Optional] Local services
+      OCRService.swift
 
 Services/                         // Global System Services
-  ScreenCaptureService.swift      // SCKit / CGWindowList
-  PermissionService.swift         // TCC / Accessibility
-  HotkeyService.swift             // Keyboard events
-  StorageService.swift            // Persistence
+  PermissionService.swift         // Simple Service (Single File)
+
+  Windowing/                      // Complex Service (Folder)
+    WindowService.swift           // Main Interface
+    WindowLayoutStrategy.swift    // Helper Logic
+    WindowOverlayConfig.swift     // Configuration models
 
 Shared/
   Components/                     // Reusable UI (Buttons, Tooltips)
@@ -45,35 +54,33 @@ Resources/
   Info.plist
 ```
 
-## 3. Implementation Rules (Flattened)
+## 3. Implementation Rules (Pragmatic Flattened)
 
-### A. Feature Colocation (Critical)
+### A. Feature Organization (1-Level Nesting)
 
-Inside `Features/[FeatureName]/`, **DO NOT** create `Views/`, `ViewModels/`, or `Models/` subfolders.
+Inside `Features/[FeatureName]/`:
 
-- **Goal:** Keep all related files flat within the feature directory to minimize navigation depth.
-- **Good:**
-  - `Features/Capture/CaptureView.swift`
-  - `Features/Capture/CaptureViewModel.swift`
-  - `Features/Capture/CaptureSelectionLogic.swift`
-- **Bad:**
-  - `Features/Capture/Views/MainView.swift` (Avoid generic names & nesting)
+- **Root Level (Mandatory):** MUST contain the primary `[Feature]View.swift` and `[Feature]ViewModel.swift`. Do not hide the entry points inside subfolders.
+- **Nested Level (Allowed):** You are explicitly allowed to create specific folders **only** for:
+  - `Components/`: Smaller sub-views used only in this feature.
+  - `Managers/`: Logic classes (e.g., `CaptureSessionManager`).
+  - `Services/`: Services scoped strictly to this feature.
+  - `Models/`: Data structures (if numerous).
 
-### B. Strict Naming Convention
+### B. Service Scalability (Adaptive)
 
-Because files are flattened, naming is the primary organizational tool.
+- **Default (Simple):** Create a service as a single file in the root `Services/` folder (e.g., `Services/HapticService.swift`).
+- **Expansion (Complex):** If a Service logic becomes complex (e.g., > 300 lines or requires multiple helpers):
+  1. Create a folder named after the domain (e.g., `Services/Windowing/`).
+  2. Place the main service file inside (`Windowing/WindowService.swift`).
+  3. Place helper files side-by-side (`Windowing/WindowLayoutStrategy.swift`).
 
-- **Prefixing:** All files in a feature folder MUST start with the feature name.
-  - `[Feature]View.swift`
-  - `[Feature]ViewModel.swift`
-  - `[Feature]Service.swift` (if specific to that feature)
-- **Sorting:** This ensures that `CaptureView` sits right next to `CaptureViewModel` in the file explorer, making context switching instant.
+### C. Naming & Colocation
 
-### C. AppKit Bridging & Shared Logic
-
-- **Shared/Bridging:** Place generic, reusable AppKit wrappers here (e.g., `VisualEffectView.swift`, `KeyEventHandler.swift`).
-- **Feature-Specific AppKit:** Place feature-specific AppKit code directly in the feature folder (e.g., `Features/Capture/CaptureWindowController.swift`).
-- **Services:** Global services (ScreenCapture, Permissions) reside at the root `Services/` folder, not hidden in `Core`.
+- **Strict Prefixes:** Even inside nested folders, maintain strict naming to ensure clarity.
+  - `Features/Capture/Components/CaptureToolbar.swift` (Clear context)
+  - `Features/Capture/Managers/CaptureLogic.swift`
+- **Visibility:** Main components must remain visible at the top level of the feature folder.
 
 ### D. The Coordinator Pattern
 
@@ -89,8 +96,14 @@ The `App/AppCoordinator.swift` remains the single source of truth for:
 
 When generating code or refactoring:
 
-1.  **Identify Context:** Determine which **Feature** the code belongs to.
-2.  **Locate Folder:** Navigate to `Features/[FeatureName]/`.
-3.  **Apply Flat Structure:** Place new files directly in the root of that feature folder. **Do not create subdirectories.**
-4.  **Enforce Naming:** Name the file starting with the Feature name (e.g., `SettingsAdvancedView.swift`, not `AdvancedView.swift`).
-5.  **Refactor Check:** If a feature folder exceeds 15 files, consult before creating a sub-folder or splitting the feature.
+1.  **Identify Context:** Determine if the code is a primary feature entry point or a supporting component.
+2.  **Placement Logic:**
+    - **Main View/VM:** Place directly in `Features/[Name]/` (Root).
+    - **Helper/Sub-component:** Place in `Features/[Name]/Components/`.
+    - **Logic/Manager:** Place in `Features/[Name]/Managers/`.
+3.  **Service Handling:**
+    - **Simple:** Generate as a single file in `Services/`.
+    - **Complex:** Generate a folder in `Services/` and split files for readability.
+4.  **Refactor Trigger:**
+    - If a Feature Root exceeds ~7 files, propose moving helpers into `Components` or `Managers`.
+    - If a Service file exceeds ~300 lines, propose splitting it into a Service Folder.

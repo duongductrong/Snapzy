@@ -274,7 +274,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Snapzy/Info.plist;
+				INFOPLIST_FILE = Snapzy/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Snapzy;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -313,7 +313,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Snapzy/Info.plist;
+				INFOPLIST_FILE = Snapzy/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Snapzy;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
