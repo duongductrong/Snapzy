@@ -27,13 +27,7 @@ We keep all important docs in `./docs` folder and keep updating them, structure 
 
 ```
 ./docs
-├── project-overview-pdr.md
-├── code-standards.md
-├── codebase-summary.md
-├── design-guidelines.md
-├── deployment-guide.md
-├── system-architecture.md
-└── project-roadmap.md
+├── project-structure.md
 ```
 
 **IMPORTANT:** _MUST READ_ and _MUST COMPLY_ all _INSTRUCTIONS_ in project `./CLAUDE.md`, especially _WORKFLOWS_ section is _CRITICALLY IMPORTANT_, this rule is _MANDATORY. NON-NEGOTIABLE. NO EXCEPTIONS. MUST REMEMBER AT ALL TIMES!!!_
