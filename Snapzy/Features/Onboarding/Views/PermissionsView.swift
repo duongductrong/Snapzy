@@ -28,8 +28,7 @@ struct PermissionsView: View {
   }
 
   var body: some View {
-    VStack(spacing: 24) {
-      Spacer()
+    OnboardingStepContainer {
 
       // Header
       Image(systemName: "lock.shield")
@@ -38,11 +37,13 @@ struct PermissionsView: View {
 
       Text("Grant Permissions")
         .vsHeading()
+        .padding(.top, 24)
 
       Text("Snapzy needs certain permissions to capture your screen and audio.")
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
+        .padding(.top, 4)
 
       // Permission Rows
       VStack(spacing: 12) {
@@ -85,8 +86,7 @@ struct PermissionsView: View {
         )
       }
       .frame(maxWidth: 420)
-
-      Spacer()
+      .padding(.top, 24)
 
       // Bottom Navigation
       HStack(spacing: 16) {
@@ -101,12 +101,8 @@ struct PermissionsView: View {
         .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
         .keyboardShortcut(.return, modifiers: [])
       }
-
-      Spacer()
-        .frame(height: 40)
+      .padding(.top, 32)
     }
-    .padding(40)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .task {
       await screenCaptureManager.checkPermission()
       checkMicrophonePermission()

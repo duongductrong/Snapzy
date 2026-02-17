@@ -12,8 +12,7 @@ struct SkipConfirmationView: View {
   let onConfirmSkip: () -> Void
 
   var body: some View {
-    VStack(spacing: 24) {
-      Spacer()
+    OnboardingStepContainer {
 
       // Icon
       Image(systemName: "forward.fill")
@@ -23,12 +22,14 @@ struct SkipConfirmationView: View {
       // Title
       Text("Skip remaining setup?")
         .vsHeading()
+        .padding(.top, 24)
 
       // Description
       Text("All remaining settings will use their defaults. You can always change them later in Preferences.")
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
+        .padding(.top, 4)
 
       // What will be skipped
       VStack(alignment: .leading, spacing: 8) {
@@ -52,8 +53,7 @@ struct SkipConfirmationView: View {
         RoundedRectangle(cornerRadius: 10)
           .stroke(Color.white.opacity(0.12), lineWidth: 1)
       )
-
-      Spacer()
+      .padding(.top, 24)
 
       // Actions
       HStack(spacing: 16) {
@@ -68,12 +68,8 @@ struct SkipConfirmationView: View {
         .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
         .keyboardShortcut(.return, modifiers: [])
       }
-
-      Spacer()
-        .frame(height: 40)
+      .padding(.top, 32)
     }
-    .padding(40)
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 

@@ -8,102 +8,77 @@
 import SwiftUI
 
 struct CompletionView: View {
-  var onBack: (() -> Void)? = nil
   let onComplete: () -> Void
 
   var body: some View {
-    ZStack {
-      VStack(spacing: 20) {
-        Spacer()
+    OnboardingStepContainer {
 
-        // Success Icon — refined, smaller, consistent with other screens
-        Image(systemName: "checkmark.circle")
-          .font(.system(size: 48, weight: .light))
-          .foregroundColor(.green.opacity(0.85))
+      // Success Icon
+      Image(systemName: "checkmark.circle")
+        .font(.system(size: 48, weight: .light))
+        .foregroundColor(.green.opacity(0.85))
 
-        // Title
-        Text("You're all set!")
-          .vsHeading()
+      // Title
+      Text("You're all set!")
+        .vsHeading()
+        .padding(.top, 20)
 
-        // Subtitle
-        Text("Snapzy is ready. Access it from the menu bar or use your keyboard shortcuts.")
-          .vsBody()
-          .multilineTextAlignment(.center)
-          .frame(maxWidth: 340)
+      // Subtitle
+      Text("Snapzy is ready. Access it from the menu bar or use your keyboard shortcuts.")
+        .vsBody()
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 340)
+        .padding(.top, 4)
 
-        // Quick reference cards
-        VStack(spacing: 10) {
-          CompletionHintRow(
-            icon: "menubar.arrow.up.rectangle",
-            title: "Menu Bar",
-            description: "Look for the camera icon in your menu bar"
-          )
+      // Quick reference cards
+      VStack(spacing: 10) {
+        CompletionHintRow(
+          icon: "menubar.arrow.up.rectangle",
+          title: "Menu Bar",
+          description: "Look for the camera icon in your menu bar"
+        )
 
-          CompletionHintRow(
-            icon: "keyboard",
-            title: "Shortcuts",
-            description: "Use ⇧⌘3, ⇧⌘4, ⇧⌘5 to capture anytime"
-          )
+        CompletionHintRow(
+          icon: "keyboard",
+          title: "Shortcuts",
+          description: "Use ⇧⌘3, ⇧⌘4, ⇧⌘5 to capture anytime"
+        )
 
-          CompletionHintRow(
-            icon: "gearshape",
-            title: "Preferences",
-            description: "Customize shortcuts, output format, and more"
-          )
-        }
-        .frame(maxWidth: 380)
-
-        Spacer()
-
-        // Actions
-        VStack(spacing: 10) {
-          HStack(spacing: 12) {
-            Button {
-              NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-              onComplete()
-            } label: {
-              Text("Open Preferences")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundColor(.white.opacity(0.55))
-            }
-            .buttonStyle(.plain)
-
-            Button("Get Started") {
-              onComplete()
-            }
-            .buttonStyle(VSDesignSystem.SuccessButtonStyle())
-            .keyboardShortcut(.return, modifiers: [])
-          }
-
-          Text("Press Enter ↵")
-            .font(.system(size: 11))
-            .foregroundStyle(.white.opacity(0.3))
-        }
-
-        Spacer()
-          .frame(height: 40)
+        CompletionHintRow(
+          icon: "gearshape",
+          title: "Preferences",
+          description: "Customize shortcuts, output format, and more"
+        )
       }
-      .padding(40)
+      .frame(maxWidth: 380)
+      .padding(.top, 20)
 
-      // Back arrow — center-left
-      if let onBack {
-        HStack {
+      // Actions
+      VStack(spacing: 10) {
+        HStack(spacing: 12) {
           Button {
-            onBack()
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+            onComplete()
           } label: {
-            Image(systemName: "arrow.left")
-              .font(.system(size: 16, weight: .medium))
-              .foregroundColor(.white.opacity(0.5))
+            Text("Open Preferences")
+              .font(.system(size: 13, weight: .medium))
+              .foregroundColor(.white.opacity(0.55))
           }
           .buttonStyle(.plain)
-          .contentShape(Rectangle())
-          .padding(.leading, 24)
 
-          Spacer()
+          Button("Get Started") {
+            onComplete()
+          }
+          .buttonStyle(VSDesignSystem.SuccessButtonStyle())
+          .keyboardShortcut(.return, modifiers: [])
         }
+
+        Text("Press Enter ↵")
+          .font(.system(size: 11))
+          .foregroundStyle(.white.opacity(0.3))
       }
+      .padding(.top, 32)
     }
-    .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 }
 

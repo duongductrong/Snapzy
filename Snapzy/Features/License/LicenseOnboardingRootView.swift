@@ -15,7 +15,6 @@ enum OnboardingScreen: Equatable {
     case permissions
     case diagnostics
     case shortcuts
-    case skipConfirmation
     case completion
 }
 
@@ -49,9 +48,6 @@ struct LicenseOnboardingRootView: View {
         Self.onboardingSteps.firstIndex(of: currentScreen) ?? 0
     }
 
-    private var showSkipButton: Bool {
-        currentScreen == .shortcuts
-    }
 
     var body: some View {
         ZStack {
@@ -84,7 +80,6 @@ struct LicenseOnboardingRootView: View {
 
                 case .shortcuts:
                     ShortcutsView(
-                        onBack: { navigateBack(to: .permissions) },
                         onDecline: { navigateForward(to: .diagnostics) },
                         onAccept: {
                             KeyboardShortcutManager.shared.enable()
@@ -95,21 +90,12 @@ struct LicenseOnboardingRootView: View {
 
                 case .diagnostics:
                     DiagnosticsOptInView(
-                        onBack: { navigateBack(to: .shortcuts) },
                         onNext: { navigateForward(to: .completion) }
-                    )
-                    .transition(stepTransition)
-
-                case .skipConfirmation:
-                    SkipConfirmationView(
-                        onGoBack: { navigateBack(to: .shortcuts) },
-                        onConfirmSkip: { handleComplete() }
                     )
                     .transition(stepTransition)
 
                 case .completion:
                     CompletionView(
-                        onBack: { navigateBack(to: .diagnostics) },
                         onComplete: handleComplete
                     )
                     .transition(stepTransition)
@@ -117,44 +103,9 @@ struct LicenseOnboardingRootView: View {
             }
             .opacity(contentOpacity)
 
-            // Skip button — top-right, only on shortcuts step
-            if showSkipButton {
-                VStack {
-                    HStack {
-                        Spacer()
-                        Button("Skip") {
-                            navigateForward(to: .skipConfirmation)
-                        }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white.opacity(0.6))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(
-                            Capsule().fill(Color.white.opacity(0.1))
-                        )
-                        .overlay(
-                            Capsule().stroke(Color.white.opacity(0.15), lineWidth: 1)
-                        )
-                        .contentShape(Capsule())
-                        .onHover { hovering in
-                            if hovering {
-                                NSCursor.pointingHand.push()
-                            } else {
-                                NSCursor.pop()
-                            }
-                        }
-                    }
-                    .padding(.top, 20)
-                    .padding(.trailing, 32)
-                    Spacer()
-                }
-                .opacity(contentOpacity)
-                .transition(.opacity)
-            }
 
             // Page dots — bottom center, only during onboarding steps
-            if isOnboardingStep && currentScreen != .skipConfirmation {
+            if isOnboardingStep {
                 VStack {
                     Spacer()
                     HStack(spacing: 8) {
@@ -173,6 +124,7 @@ struct LicenseOnboardingRootView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.top, 28)
+        .padding(.bottom, 28)
         .onAppear {
             currentScreen = startScreen
         }
