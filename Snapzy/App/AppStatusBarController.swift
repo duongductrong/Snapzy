@@ -1,5 +1,5 @@
 //
-//  StatusBarController.swift
+//  AppStatusBarController.swift
 //  Snapzy
 //
 //  Manages the NSStatusItem for dynamic recording status and click-to-stop functionality
@@ -11,9 +11,9 @@ import Sparkle
 import SwiftUI
 
 @MainActor
-final class StatusBarController: ObservableObject {
+final class AppStatusBarController: ObservableObject {
 
-  static let shared = StatusBarController()
+  static let shared = AppStatusBarController()
 
   // MARK: - Properties
 

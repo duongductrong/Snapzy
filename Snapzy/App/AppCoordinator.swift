@@ -24,7 +24,7 @@ final class AppCoordinator {
     DiagnosticLogger.shared.startSession()
     LogCleanupScheduler.shared.start()
 
-    StatusBarController.shared.setup(
+    AppStatusBarController.shared.setup(
       viewModel: environment.screenCaptureViewModel,
       updater: UpdaterManager.shared.updater,
       didCrash: didCrash && DiagnosticLogger.shared.isEnabled
