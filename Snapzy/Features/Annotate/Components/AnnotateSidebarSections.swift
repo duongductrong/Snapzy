@@ -68,13 +68,16 @@ struct SidebarWallpaperSection: View {
         ForEach(customWallpapers, id: \.self) { url in
           CustomWallpaperButton(
             url: url,
-            isSelected: isUrlSelected(url)
-          ) {
-            if state.padding <= 0 {
-              state.padding = 24
-            }
-            state.backgroundStyle = .wallpaper(url)
-          }
+            isSelected: isUrlSelected(url),
+            action: {
+              if state.padding <= 0 {
+                state.padding = 24
+              }
+              state.backgroundStyle = .wallpaper(url)
+            },
+            onRemove: {
+              removeCustomWallpaper(url)
+            })
         }
 
         // Add button
@@ -88,7 +91,7 @@ struct SidebarWallpaperSection: View {
         HStack {
           ProgressView()
             .scaleEffect(0.6)
-          Text("Loading system wallpapers...")
+          Text("Loading wallpapers...")
             .font(Typography.labelSmall)
             .foregroundColor(SidebarColors.labelSecondary)
         }
@@ -140,11 +143,22 @@ struct SidebarWallpaperSection: View {
     panel.allowsMultipleSelection = false
 
     if panel.runModal() == .OK, let url = panel.url {
-      customWallpapers.append(url)
+      if !customWallpapers.contains(url) {
+        customWallpapers.append(url)
+      }
       if state.padding <= 0 {
         state.padding = 24
       }
       state.backgroundStyle = .wallpaper(url)
+    }
+  }
+
+  private func removeCustomWallpaper(_ url: URL) {
+    customWallpapers.removeAll { $0 == url }
+
+    if case .wallpaper(let selectedUrl) = state.backgroundStyle, selectedUrl == url {
+      state.backgroundStyle = .none
+      state.padding = 0
     }
   }
 }

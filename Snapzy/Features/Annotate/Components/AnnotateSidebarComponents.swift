@@ -71,24 +71,44 @@ struct CustomWallpaperButton: View {
   let url: URL
   let isSelected: Bool
   let action: () -> Void
+  let onRemove: () -> Void
 
   @State private var thumbnail: NSImage?
+  @State private var isHovering = false
 
   var body: some View {
-    Button(action: action) {
-      Group {
-        if let thumbnail = thumbnail {
-          Image(nsImage: thumbnail)
-            .resizable()
-            .aspectRatio(contentMode: .fill)
-        } else {
-          Color.gray.opacity(0.3)
+    ZStack(alignment: .topLeading) {
+      Button(action: action) {
+        Group {
+          if let thumbnail = thumbnail {
+            Image(nsImage: thumbnail)
+              .resizable()
+              .aspectRatio(1, contentMode: .fill)
+          } else {
+            Color.gray.opacity(0.3)
+          }
         }
+        .clipped()
+        .sidebarItemStyle(isSelected: isSelected)
       }
-      .clipped()
-      .sidebarItemStyle(isSelected: isSelected)
+      .buttonStyle(.plain)
+
+      if isHovering {
+        Button(action: onRemove) {
+          Image(systemName: "xmark.circle.fill")
+            .font(.system(size: 14, weight: .semibold))
+            .symbolRenderingMode(.palette)
+            .foregroundStyle(.white, .black.opacity(0.65))
+            .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
+        }
+        .buttonStyle(.plain)
+        .help("Remove custom wallpaper")
+        .offset(x: -4, y: -4)
+        .transition(.opacity.combined(with: .scale(scale: 0.8)))
+      }
     }
-    .buttonStyle(.plain)
+    .animation(.easeInOut(duration: 0.15), value: isHovering)
+    .onHover { isHovering = $0 }
     .onAppear {
       loadThumbnail()
     }

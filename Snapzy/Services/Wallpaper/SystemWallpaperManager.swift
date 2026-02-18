@@ -206,6 +206,30 @@ class SystemWallpaperManager: ObservableObject {
     preloadThumbnails(for: wallpapers)
   }
 
+  /// Load currently active desktop wallpaper(s) from display settings.
+  /// By default this returns the wallpaper for the preferred/active screen only.
+  /// Set includeAllScreens to true to return unique wallpapers across all screens.
+  @MainActor
+  func loadCurrentDesktopWallpapers(
+    preferredDisplayID: CGDirectDisplayID? = nil,
+    includeAllScreens: Bool = false
+  ) async -> [WallpaperItem] {
+    guard !isLoading else { return [] }
+    isLoading = true
+    accessDenied = false
+    defer { isLoading = false }
+
+    let wallpapers = enumerateCurrentDesktopWallpapers(
+      preferredDisplayID: preferredDisplayID,
+      includeAllScreens: includeAllScreens
+    )
+    accessDenied = wallpapers.isEmpty
+
+    // Preload visible thumbnails for fast first paint in the sidebar.
+    preloadThumbnails(for: wallpapers)
+    return wallpapers
+  }
+
   private func hasAccessibleDirectory() -> Bool {
     systemWallpaperPaths.contains { canAccessDirectory($0) }
   }
@@ -247,6 +271,51 @@ class SystemWallpaperManager: ObservableObject {
     }
 
     return items.sorted { $0.name < $1.name }
+  }
+
+  private func enumerateCurrentDesktopWallpapers(
+    preferredDisplayID: CGDirectDisplayID?,
+    includeAllScreens: Bool
+  ) -> [WallpaperItem] {
+    var items: [WallpaperItem] = []
+    var seenURLs = Set<URL>()
+
+    let resolvedPreferredScreen =
+      preferredDisplayID.flatMap(findScreen(by:))
+      ?? NSApp.keyWindow?.screen
+      ?? NSApp.mainWindow?.screen
+      ?? NSScreen.main
+      ?? NSScreen.screens.first
+
+    let screens: [NSScreen]
+    if includeAllScreens {
+      screens = NSScreen.screens.isEmpty ? [resolvedPreferredScreen].compactMap { $0 } : NSScreen.screens
+    } else {
+      screens = [resolvedPreferredScreen].compactMap { $0 }
+    }
+
+    for screen in screens {
+      guard let wallpaperURL = NSWorkspace.shared.desktopImageURL(for: screen) else { continue }
+      let resolvedURL = wallpaperURL.standardizedFileURL
+      guard seenURLs.insert(resolvedURL).inserted else { continue }
+
+      items.append(
+        WallpaperItem(
+          fullImageURL: resolvedURL,
+          thumbnailURL: nil,
+          name: resolvedURL.deletingPathExtension().lastPathComponent
+        ))
+    }
+
+    return items.sorted { $0.name < $1.name }
+  }
+
+  private func findScreen(by displayID: CGDirectDisplayID) -> NSScreen? {
+    NSScreen.screens.first { screen in
+      guard let screenNumber = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
+      else { return false }
+      return CGDirectDisplayID(screenNumber.uint32Value) == displayID
+    }
   }
 
   private func thumbnailURL(for wallpaper: URL, basePath: String) -> URL? {
