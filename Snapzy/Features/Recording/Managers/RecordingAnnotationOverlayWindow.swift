@@ -49,6 +49,15 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
     holdTimer?.invalidate()
   }
 
+  override func close() {
+    stopModifierMonitor()
+    toolCancellable?.cancel()
+    toolCancellable = nil
+    refreshCancellable?.cancel()
+    refreshCancellable = nil
+    super.close()
+  }
+
   // MARK: - Configuration
 
   private func configureWindow() {

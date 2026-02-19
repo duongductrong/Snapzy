@@ -137,9 +137,21 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var captureMicrophone: Bool = false
   private var outputURL: URL?
   private var exportDirectoryAccess: SandboxFileAccessManager.ScopedAccess?
+  private var registeredOutputTypes: Set<SCStreamOutputType> = []
 
-  // Queue for frame processing
-  private let processingQueue = DispatchQueue(label: "com.zapshot.recording", qos: .userInitiated)
+  // Dedicated queues to avoid audio starvation behind video processing work.
+  private let videoProcessingQueue = DispatchQueue(
+    label: "com.zapshot.recording.video",
+    qos: .userInitiated
+  )
+  private let audioProcessingQueue = DispatchQueue(
+    label: "com.zapshot.recording.audio",
+    qos: .userInteractive
+  )
+  private let microphoneProcessingQueue = DispatchQueue(
+    label: "com.zapshot.recording.microphone",
+    qos: .userInteractive
+  )
 
   private override init() {
     super.init()
@@ -347,13 +359,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     timer = nil
 
     if let activeStream = stream {
-      do {
-        try await activeStream.stopCapture()
-      } catch {
-        // Ignore error if stream already stopped
-      }
+      await teardownStream(activeStream)
     }
-    stream = nil
 
     session.finishInputs()
 
@@ -378,13 +385,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     timer = nil
 
     if let activeStream = stream {
-      do {
-        try await activeStream.stopCapture()
-      } catch {
-        // Ignore error if stream already stopped
-      }
+      await teardownStream(activeStream)
     }
-    stream = nil
 
     session.cancelWriting()
     DiagnosticLogger.shared.log(.info, .recording, "Recording cancelled")
@@ -472,6 +474,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     let filter = SCContentFilter(display: display, excludingApplications: excludedApps, exceptingWindows: exceptedWindows)
 
     let config = SCStreamConfiguration()
+    config.queueDepth = 3
     config.width = Int(ceil(rect.width * scaleFactor))
     config.height = Int(ceil(rect.height * scaleFactor))
     config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
@@ -553,15 +556,23 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     stream = SCStream(filter: filter, configuration: config, delegate: nil)
-    try stream?.addStreamOutput(self, type: .screen, sampleHandlerQueue: processingQueue)
+    registeredOutputTypes.removeAll()
+    try stream?.addStreamOutput(self, type: .screen, sampleHandlerQueue: videoProcessingQueue)
+    registeredOutputTypes.insert(.screen)
 
     if captureSystemAudio {
-      try stream?.addStreamOutput(self, type: .audio, sampleHandlerQueue: processingQueue)
+      try stream?.addStreamOutput(self, type: .audio, sampleHandlerQueue: audioProcessingQueue)
+      registeredOutputTypes.insert(.audio)
     }
 
     if captureMicrophone {
       if #available(macOS 15.0, *) {
-        try stream?.addStreamOutput(self, type: .microphone, sampleHandlerQueue: processingQueue)
+        try stream?.addStreamOutput(
+          self,
+          type: .microphone,
+          sampleHandlerQueue: microphoneProcessingQueue
+        )
+        registeredOutputTypes.insert(.microphone)
       }
     }
   }
@@ -586,12 +597,38 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   }
 
   private func cleanup() {
+    timer?.invalidate()
+    timer = nil
+    startTime = nil
+    pauseStartTime = nil
+    pausedDuration = 0
     exportDirectoryAccess?.stop()
     exportDirectoryAccess = nil
+    registeredOutputTypes.removeAll()
     session.reset()
     outputURL = nil
     state = .idle
     elapsedSeconds = 0
+  }
+
+  private func teardownStream(_ activeStream: SCStream) async {
+    // Remove outputs first so SCStream can release pipeline buffers immediately.
+    for outputType in registeredOutputTypes {
+      do {
+        try activeStream.removeStreamOutput(self, type: outputType)
+      } catch {
+        // Non-fatal: continue best-effort teardown.
+      }
+    }
+    registeredOutputTypes.removeAll()
+
+    do {
+      try await activeStream.stopCapture()
+    } catch {
+      // Ignore error if stream already stopped.
+    }
+
+    stream = nil
   }
 
   /// Add a window to the capture filter's exceptingWindows list
@@ -652,18 +689,20 @@ extension ScreenRecordingManager: SCStreamOutput {
     didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
     of type: SCStreamOutputType
   ) {
-    guard sampleBuffer.isValid else { return }
+    autoreleasepool {
+      guard sampleBuffer.isValid else { return }
 
-    // Write frames using the thread-safe session (no @MainActor crossing)
-    switch type {
-    case .screen:
-      session.appendVideoSample(sampleBuffer)
-    case .audio:
-      session.appendAudioSample(sampleBuffer)
-    case .microphone:
-      session.appendMicrophoneSample(sampleBuffer)
-    @unknown default:
-      break
+      // Write frames using the thread-safe session (no @MainActor crossing)
+      switch type {
+      case .screen:
+        session.appendVideoSample(sampleBuffer)
+      case .audio:
+        session.appendAudioSample(sampleBuffer)
+      case .microphone:
+        session.appendMicrophoneSample(sampleBuffer)
+      @unknown default:
+        break
+      }
     }
   }
 }

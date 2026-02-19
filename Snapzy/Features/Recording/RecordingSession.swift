@@ -24,7 +24,7 @@ final class RecordingSession: @unchecked Sendable {
   private var _microphoneInput: AVAssetWriterInput?
   private var _sessionStarted = false
   private var _isCapturing = false
-  private var _firstTimestamp: CMTime?  // Track first timestamp for relative timing
+  private var _firstTimestamp: CMTime?  // Track first video timestamp for timeline alignment
 
   init() {}
   
@@ -70,32 +70,9 @@ final class RecordingSession: @unchecked Sendable {
     }
   }
 
-  /// Lazy start session with first sample buffer's timestamp
-  /// AVAssetWriter will automatically offset all timestamps relative to this start time
-  private func lazyStartSessionIfNeeded(with sampleBuffer: CMSampleBuffer) -> Bool {
-    let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-    guard timestamp.isValid else { return false }
-
-    // First sample: start session at this timestamp
-    if !_sessionStarted {
-      _assetWriter?.startSession(atSourceTime: timestamp)
-      _sessionStarted = true
-      _firstTimestamp = timestamp
-      print("[RecordingSession] Session started at timestamp: \(timestamp.seconds)s")
-    }
-
-    return true
-  }
-
   /// Thread-safe video frame write with lazy session start
   /// Uses pixel buffer adaptor for BGRA format from ScreenCaptureKit
   func appendVideoSample(_ sampleBuffer: CMSampleBuffer) {
-    lock.lock()
-    defer { lock.unlock() }
-
-    guard _isCapturing else { return }
-    guard _assetWriter?.status == .writing else { return }
-
     // Check if this is a valid frame from ScreenCaptureKit
     // SCStream sends status updates as sample buffers without image data
     guard let attachments = CMSampleBufferGetSampleAttachmentsArray(sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
@@ -116,24 +93,40 @@ final class RecordingSession: @unchecked Sendable {
     let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
     guard timestamp.isValid else { return }
 
-    // Lazy start session at time zero - we'll use relative timestamps
-    if !_sessionStarted {
-      _assetWriter?.startSession(atSourceTime: .zero)
-      _sessionStarted = true
-      _firstTimestamp = timestamp
+    let (writer, videoInput, adaptor, shouldStartSession): (
+      AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool
+    ) = lock.withLock {
+      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
+        return (nil, nil, nil, false)
+      }
+
+      var needsSessionStart = false
+      if !_sessionStarted {
+        _sessionStarted = true
+        _firstTimestamp = timestamp
+        needsSessionStart = true
+      }
+
+      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart)
+    }
+
+    guard let writer = writer,
+          let videoInput = videoInput,
+          let adaptor = adaptor else { return }
+
+    // Lazy start session at first video timestamp.
+    // This avoids rewriting every audio sample (large per-buffer allocations).
+    if shouldStartSession {
+      writer.startSession(atSourceTime: timestamp)
       print("[RecordingSession] Session started, first frame timestamp: \(timestamp.seconds)s")
     }
 
-    // Calculate presentation time relative to first frame (starts at 0)
-    guard let firstTs = _firstTimestamp else { return }
-    let presentationTime = CMTimeSubtract(timestamp, firstTs)
-
     // Append pixel buffer with calculated presentation time
-    if _videoInput?.isReadyForMoreMediaData == true {
-      let success = _pixelBufferAdaptor?.append(pixelBuffer, withPresentationTime: presentationTime) ?? false
+    if videoInput.isReadyForMoreMediaData {
+      let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
       if !success {
-        print("[RecordingSession] Failed to append pixel buffer at \(presentationTime.seconds)s")
-        if let error = _assetWriter?.error {
+        print("[RecordingSession] Failed to append pixel buffer at \(timestamp.seconds)s")
+        if let error = writer.error {
           print("[RecordingSession] Writer error: \(error.localizedDescription)")
         }
       }
@@ -142,103 +135,66 @@ final class RecordingSession: @unchecked Sendable {
 
   /// Thread-safe audio sample write
   func appendAudioSample(_ sampleBuffer: CMSampleBuffer) {
-    lock.lock()
-    defer { lock.unlock() }
-
-    guard _isCapturing else { return }
-    guard _assetWriter?.status == .writing else { return }
-
-    // Skip audio until video has started the session
-    guard _sessionStarted, let firstTs = _firstTimestamp else { return }
-
     // Get audio timestamp
     let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
     guard timestamp.isValid else { return }
 
+    let (writer, audioInput, firstTs): (AVAssetWriter?, AVAssetWriterInput?, CMTime?) = lock.withLock {
+      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
+        return (nil, nil, nil)
+      }
+      return (writer, _audioInput, _firstTimestamp)
+    }
+
+    guard let writer = writer, writer.status == .writing else { return }
+    guard let audioInput = audioInput else { return }
+    // Skip audio until video has started the session
+    guard let firstTs = firstTs else { return }
+
     // Skip audio samples that arrived before video start
     guard CMTimeCompare(timestamp, firstTs) >= 0 else { return }
 
-    // Calculate relative timestamp (same as video)
-    let relativeTime = CMTimeSubtract(timestamp, firstTs)
-
-    // Create audio sample buffer with adjusted timestamp
-    var timingInfo = CMSampleTimingInfo(
-      duration: CMSampleBufferGetDuration(sampleBuffer),
-      presentationTimeStamp: relativeTime,
-      decodeTimeStamp: .invalid
-    )
-
-    var adjustedBuffer: CMSampleBuffer?
-    let status = CMSampleBufferCreateCopyWithNewTiming(
-      allocator: kCFAllocatorDefault,
-      sampleBuffer: sampleBuffer,
-      sampleTimingEntryCount: 1,
-      sampleTimingArray: &timingInfo,
-      sampleBufferOut: &adjustedBuffer
-    )
-
-    guard status == noErr, let buffer = adjustedBuffer else {
-      print("[RecordingSession] Failed to adjust audio timestamp")
-      return
-    }
-
-    // Append adjusted audio sample
-    if _audioInput?.isReadyForMoreMediaData == true {
-      let success = _audioInput?.append(buffer) ?? false
+    // Session starts at first video timestamp, so original timestamps are valid.
+    if audioInput.isReadyForMoreMediaData {
+      let success = audioInput.append(sampleBuffer)
       if !success {
         print("[RecordingSession] Failed to append audio sample")
+        if let error = writer.error {
+          print("[RecordingSession] Writer error: \(error.localizedDescription)")
+        }
       }
     }
   }
 
   /// Thread-safe microphone sample write
   func appendMicrophoneSample(_ sampleBuffer: CMSampleBuffer) {
-    lock.lock()
-    defer { lock.unlock() }
-
-    guard _isCapturing else { return }
-    guard _assetWriter?.status == .writing else { return }
-    guard _microphoneInput != nil else { return }
-
-    // Skip mic audio until video has started the session
-    guard _sessionStarted, let firstTs = _firstTimestamp else { return }
-
     // Get mic timestamp
     let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
     guard timestamp.isValid else { return }
 
+    let (writer, microphoneInput, firstTs): (AVAssetWriter?, AVAssetWriterInput?, CMTime?) = lock.withLock {
+      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
+        return (nil, nil, nil)
+      }
+      return (writer, _microphoneInput, _firstTimestamp)
+    }
+
+    guard let writer = writer, writer.status == .writing else { return }
+    guard let microphoneInput = microphoneInput else { return }
+    // Skip mic audio until video has started the session
+    guard let firstTs = firstTs else { return }
+
     // Skip mic samples that arrived before video start
     guard CMTimeCompare(timestamp, firstTs) >= 0 else { return }
 
-    // Calculate relative timestamp (same as video)
-    let relativeTime = CMTimeSubtract(timestamp, firstTs)
-
-    // Create mic sample buffer with adjusted timestamp
-    var timingInfo = CMSampleTimingInfo(
-      duration: CMSampleBufferGetDuration(sampleBuffer),
-      presentationTimeStamp: relativeTime,
-      decodeTimeStamp: .invalid
-    )
-
-    var adjustedBuffer: CMSampleBuffer?
-    let status = CMSampleBufferCreateCopyWithNewTiming(
-      allocator: kCFAllocatorDefault,
-      sampleBuffer: sampleBuffer,
-      sampleTimingEntryCount: 1,
-      sampleTimingArray: &timingInfo,
-      sampleBufferOut: &adjustedBuffer
-    )
-
-    guard status == noErr, let buffer = adjustedBuffer else {
-      print("[RecordingSession] Failed to adjust microphone timestamp")
-      return
-    }
-
-    // Append adjusted microphone sample
-    if _microphoneInput?.isReadyForMoreMediaData == true {
-      let success = _microphoneInput?.append(buffer) ?? false
+    // Session starts at first video timestamp, so original timestamps are valid.
+    if microphoneInput.isReadyForMoreMediaData {
+      let success = microphoneInput.append(sampleBuffer)
       if !success {
         print("[RecordingSession] Failed to append microphone sample")
+        if let error = writer.error {
+          print("[RecordingSession] Writer error: \(error.localizedDescription)")
+        }
       }
     }
   }

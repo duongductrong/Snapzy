@@ -110,6 +110,10 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
     observeToggle()
   }
 
+  deinit {
+    enabledCancellable?.cancel()
+  }
+
   // MARK: - Configuration
 
   private func configureWindow() {
@@ -268,4 +272,11 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
   }
 
   override var canBecomeKey: Bool { true }
+
+  override func close() {
+    enabledCancellable?.cancel()
+    enabledCancellable = nil
+    detachFromAnchor()
+    super.close()
+  }
 }

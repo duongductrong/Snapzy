@@ -611,6 +611,14 @@ final class RecordingCoordinator: ObservableObject {
     }
     regionOverlayWindows.removeAll()
 
+    toolbarWindow?.onRecord = nil
+    toolbarWindow?.onCapture = nil
+    toolbarWindow?.onCancel = nil
+    toolbarWindow?.onDelete = nil
+    toolbarWindow?.onRestart = nil
+    toolbarWindow?.onStop = nil
+    toolbarWindow?.onCaptureModeChanged = nil
+    toolbarWindow?.onAnnotateButtonOffsetChanged = nil
     toolbarWindow?.close()
     toolbarWindow = nil
     selectedRect = nil
