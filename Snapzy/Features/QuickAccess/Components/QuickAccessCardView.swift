@@ -6,8 +6,8 @@
 //  Direction-based gesture handling: swipe toward edge = dismiss, drag away = external app
 //
 
+import AppKit
 import SwiftUI
-import UniformTypeIdentifiers
 
 /// Gesture mode for direction-based handling
 private enum GestureMode {
@@ -194,8 +194,22 @@ struct QuickAccessCardView: View {
       return
     }
 
-    // Create drag item with file URL
-    let dragItem = NSDraggingItem(pasteboardWriter: item.url as NSURL)
+    let sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(item.url)
+
+    let dragSource = DragSource(
+      dragID: UUID(),
+      sourceAccess: sourceAccess,
+      onEnded: { [weak manager, itemId = item.id] success in
+        Task { @MainActor in
+          if success {
+            manager?.removeScreenshot(id: itemId)
+          }
+        }
+      }
+    )
+    QuickAccessDragRegistry.retain(dragSource, for: dragSource.dragID)
+    // Use concrete file URL payload so browser chat drop zones receive a real file.
+    let fileURLDragItem = NSDraggingItem(pasteboardWriter: item.url as NSURL)
 
     // Create drag image from thumbnail
     let imageSize = NSSize(width: 100, height: 62)
@@ -211,7 +225,7 @@ struct QuickAccessCardView: View {
 
     // Set drag frame centered on mouse
     let mouseLocation = currentEvent.locationInWindow
-    dragItem.setDraggingFrame(
+    fileURLDragItem.setDraggingFrame(
       NSRect(
         x: mouseLocation.x - imageSize.width / 2,
         y: mouseLocation.y - imageSize.height / 2,
@@ -220,21 +234,13 @@ struct QuickAccessCardView: View {
       ),
       contents: dragImage
     )
-
     // Start the drag session
     let dragSession = contentView.beginDraggingSession(
-      with: [dragItem],
+      with: [fileURLDragItem],
       event: currentEvent,
-      source: DragSource(
-        onEnded: { [weak manager, itemId = item.id] success in
-          Task { @MainActor in
-            if success {
-              manager?.removeScreenshot(id: itemId)
-            }
-          }
-        }
-      )
+      source: dragSource
     )
+    print("[QuickAccessDrag] Started drag for \(item.url.lastPathComponent)")
     dragSession.animatesToStartingPositionsOnCancelOrFail = true
 
     // Reset dragging state after a delay
@@ -408,11 +414,19 @@ struct QuickAccessCardView: View {
 
 // MARK: - NSDraggingSource for Drag-to-App
 
-/// Drag source handler for NSDraggingSession
+/// Drag source handler for NSDraggingSession.
 private final class DragSource: NSObject, NSDraggingSource {
+  let dragID: UUID
+  private var sourceAccess: SandboxFileAccessManager.ScopedAccess?
   private let onEnded: (Bool) -> Void
 
-  init(onEnded: @escaping (Bool) -> Void) {
+  init(
+    dragID: UUID,
+    sourceAccess: SandboxFileAccessManager.ScopedAccess,
+    onEnded: @escaping (Bool) -> Void
+  ) {
+    self.dragID = dragID
+    self.sourceAccess = sourceAccess
     self.onEnded = onEnded
     super.init()
   }
@@ -429,7 +443,33 @@ private final class DragSource: NSObject, NSDraggingSource {
     endedAt screenPoint: NSPoint,
     operation: NSDragOperation
   ) {
+    sourceAccess?.stop()
+    sourceAccess = nil
+    QuickAccessDragRegistry.release(for: dragID)
+    print("[QuickAccessDrag] Drag ended with operation rawValue=\(operation.rawValue)")
     onEnded(operation != [])
+  }
+
+  deinit {
+    sourceAccess?.stop()
+    sourceAccess = nil
+  }
+}
+
+private enum QuickAccessDragRegistry {
+  private static let lock = NSLock()
+  private static var activeSources: [UUID: DragSource] = [:]
+
+  static func retain(_ source: DragSource, for id: UUID) {
+    lock.lock()
+    activeSources[id] = source
+    lock.unlock()
+  }
+
+  static func release(for id: UUID) {
+    lock.lock()
+    activeSources[id] = nil
+    lock.unlock()
   }
 }
 
