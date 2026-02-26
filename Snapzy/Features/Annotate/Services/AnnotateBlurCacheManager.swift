@@ -129,18 +129,44 @@ final class BlurCacheManager {
       return
     }
 
+    // Clamp source region to image bounds
+    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
+    let clampedSourceRegion = sourceRegion.intersection(imageBounds)
+    guard !clampedSourceRegion.isEmpty, clampedSourceRegion.width > 0, clampedSourceRegion.height > 0 else {
+      drawFallbackBlur(in: context, region: destRegion)
+      return
+    }
+
+    // Adjust destination region proportionally to match clamped source
+    let clampedDestRegion: CGRect
+    if clampedSourceRegion == sourceRegion {
+      clampedDestRegion = destRegion
+    } else {
+      // Map the clamped portion to destination space
+      let offsetX = clampedSourceRegion.origin.x - sourceRegion.origin.x
+      let offsetY = clampedSourceRegion.origin.y - sourceRegion.origin.y
+      let scaleX = destRegion.width / sourceRegion.width
+      let scaleY = destRegion.height / sourceRegion.height
+      clampedDestRegion = CGRect(
+        x: destRegion.origin.x + offsetX * scaleX,
+        y: destRegion.origin.y + offsetY * scaleY,
+        width: clampedSourceRegion.width * scaleX,
+        height: clampedSourceRegion.height * scaleY
+      )
+    }
+
     // Calculate image scale (NSImage size vs CGImage pixels)
     let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
 
-    // Convert region to pixel coordinates (flip Y for CGImage)
+    // Convert clamped region to pixel coordinates (flip Y for CGImage)
     let pixelRegion = CGRect(
-      x: sourceRegion.origin.x * imageScale,
-      y: (sourceImage.size.height - sourceRegion.origin.y - sourceRegion.height) * imageScale,
-      width: sourceRegion.width * imageScale,
-      height: sourceRegion.height * imageScale
+      x: clampedSourceRegion.origin.x * imageScale,
+      y: (sourceImage.size.height - clampedSourceRegion.origin.y - clampedSourceRegion.height) * imageScale,
+      width: clampedSourceRegion.width * imageScale,
+      height: clampedSourceRegion.height * imageScale
     )
 
-    // Clamp to image bounds
+    // Clamp to pixel bounds (safety check for rounding)
     let clampedPixelRegion = pixelRegion.intersection(
       CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
     )
@@ -155,11 +181,11 @@ final class BlurCacheManager {
       return
     }
 
-    // Draw pixelated version
+    // Draw pixelated version with matched destination
     drawPixelated(
       croppedImage: croppedImage,
       in: context,
-      destRect: destRegion,
+      destRect: clampedDestRegion,
       pixelSize: pixelSize
     )
   }
@@ -192,6 +218,10 @@ final class BlurCacheManager {
     let bytesPerPixel = croppedImage.bitsPerPixel / 8
     let bytesPerRow = croppedImage.bytesPerRow
 
+    // Clip to destRect to prevent any pixel blocks from overflowing
+    context.saveGState()
+    context.clip(to: destRect)
+
     // Draw each pixel block
     for row in 0..<rows {
       for col in 0..<cols {
@@ -213,16 +243,16 @@ final class BlurCacheManager {
         // Calculate block rect (flip Y for Core Graphics)
         let blockX = destRect.origin.x + CGFloat(col) * pixelSize
         let blockY = destRect.origin.y + destRect.height - CGFloat(row + 1) * pixelSize
-        let blockWidth = min(pixelSize, destRect.maxX - blockX)
-        let blockHeight = min(pixelSize, blockY + pixelSize - destRect.origin.y)
 
-        let blockRect = CGRect(x: blockX, y: blockY, width: blockWidth, height: blockHeight)
+        let blockRect = CGRect(x: blockX, y: blockY, width: pixelSize, height: pixelSize)
 
-        // Fill block with sampled color
+        // Fill block with sampled color (clipping prevents overflow)
         context.setFillColor(red: r, green: g, blue: b, alpha: a)
         context.fill(blockRect)
       }
     }
+
+    context.restoreGState()
   }
 
   /// Fallback blur when image sampling fails
@@ -245,18 +275,43 @@ final class BlurCacheManager {
       return
     }
 
+    // Clamp source region to image bounds
+    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
+    let clampedSourceRegion = sourceRegion.intersection(imageBounds)
+    guard !clampedSourceRegion.isEmpty, clampedSourceRegion.width > 0, clampedSourceRegion.height > 0 else {
+      drawFallbackBlur(in: context, region: destRegion)
+      return
+    }
+
+    // Adjust destination region proportionally to match clamped source
+    let clampedDestRegion: CGRect
+    if clampedSourceRegion == sourceRegion {
+      clampedDestRegion = destRegion
+    } else {
+      let offsetX = clampedSourceRegion.origin.x - sourceRegion.origin.x
+      let offsetY = clampedSourceRegion.origin.y - sourceRegion.origin.y
+      let scaleX = destRegion.width / sourceRegion.width
+      let scaleY = destRegion.height / sourceRegion.height
+      clampedDestRegion = CGRect(
+        x: destRegion.origin.x + offsetX * scaleX,
+        y: destRegion.origin.y + offsetY * scaleY,
+        width: clampedSourceRegion.width * scaleX,
+        height: clampedSourceRegion.height * scaleY
+      )
+    }
+
     // Calculate image scale
     let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
 
-    // Convert region to pixel coordinates (flip Y for CGImage)
+    // Convert clamped region to pixel coordinates (flip Y for CGImage)
     let pixelRegion = CGRect(
-      x: sourceRegion.origin.x * imageScale,
-      y: (sourceImage.size.height - sourceRegion.origin.y - sourceRegion.height) * imageScale,
-      width: sourceRegion.width * imageScale,
-      height: sourceRegion.height * imageScale
+      x: clampedSourceRegion.origin.x * imageScale,
+      y: (sourceImage.size.height - clampedSourceRegion.origin.y - clampedSourceRegion.height) * imageScale,
+      width: clampedSourceRegion.width * imageScale,
+      height: clampedSourceRegion.height * imageScale
     )
 
-    // Clamp to image bounds
+    // Clamp to pixel bounds (safety check for rounding)
     let clampedPixelRegion = pixelRegion.intersection(
       CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
     )
@@ -293,6 +348,7 @@ final class BlurCacheManager {
       return
     }
 
-    context.draw(blurredCGImage, in: destRegion)
+    // Draw using the clamped destination rect to match the clamped source
+    context.draw(blurredCGImage, in: clampedDestRegion)
   }
 }

@@ -50,18 +50,26 @@ struct BlurEffectRenderer {
       return
     }
 
+    // Clamp region to image bounds first (in image coordinate space)
+    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
+    let clampedRegion = region.intersection(imageBounds)
+    guard !clampedRegion.isEmpty, clampedRegion.width > 0, clampedRegion.height > 0 else {
+      drawFallbackBlur(in: context, region: region)
+      return
+    }
+
     // Calculate image scale (NSImage size vs CGImage pixels)
     let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
 
-    // Convert region to pixel coordinates
+    // Convert clamped region to pixel coordinates (flip Y for CGImage)
     let pixelRegion = CGRect(
-      x: region.origin.x * imageScale,
-      y: (sourceImage.size.height - region.origin.y - region.height) * imageScale,
-      width: region.width * imageScale,
-      height: region.height * imageScale
+      x: clampedRegion.origin.x * imageScale,
+      y: (sourceImage.size.height - clampedRegion.origin.y - clampedRegion.height) * imageScale,
+      width: clampedRegion.width * imageScale,
+      height: clampedRegion.height * imageScale
     )
 
-    // Clamp to image bounds
+    // Clamp to pixel bounds (safety check for rounding)
     let clampedPixelRegion = pixelRegion.intersection(
       CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
     )
@@ -76,11 +84,12 @@ struct BlurEffectRenderer {
       return
     }
 
-    // Draw pixelated version
+    // Draw pixelated version using the clamped destination rect
+    // This ensures source sampling and destination drawing are aligned
     drawPixelated(
       croppedImage: croppedImage,
       in: context,
-      destRect: region,
+      destRect: clampedRegion,
       pixelSize: pixelSize
     )
   }
@@ -113,6 +122,10 @@ struct BlurEffectRenderer {
     let bytesPerPixel = croppedImage.bitsPerPixel / 8
     let bytesPerRow = croppedImage.bytesPerRow
 
+    // Clip to destRect to prevent any pixel blocks from overflowing
+    context.saveGState()
+    context.clip(to: destRect)
+
     // Draw each pixel block
     for row in 0..<rows {
       for col in 0..<cols {
@@ -132,18 +145,19 @@ struct BlurEffectRenderer {
         let a = bytesPerPixel >= 4 ? CGFloat(bytes[offset + 3]) / 255.0 : 1.0
 
         // Calculate block rect (flip Y for Core Graphics)
+        // Use ceil rounding so blocks start from top; clipping handles overflow
         let blockX = destRect.origin.x + CGFloat(col) * pixelSize
         let blockY = destRect.origin.y + destRect.height - CGFloat(row + 1) * pixelSize
-        let blockWidth = min(pixelSize, destRect.maxX - blockX)
-        let blockHeight = min(pixelSize, blockY + pixelSize - destRect.origin.y)
 
-        let blockRect = CGRect(x: blockX, y: blockY, width: blockWidth, height: blockHeight)
+        let blockRect = CGRect(x: blockX, y: blockY, width: pixelSize, height: pixelSize)
 
-        // Fill block with sampled color
+        // Fill block with sampled color (clipping prevents overflow)
         context.setFillColor(red: r, green: g, blue: b, alpha: a)
         context.fill(blockRect)
       }
     }
+
+    context.restoreGState()
   }
 
   /// Fallback blur when image sampling fails - draws semi-transparent overlay
@@ -184,18 +198,26 @@ struct BlurEffectRenderer {
       return
     }
 
+    // Clamp region to image bounds first (in image coordinate space)
+    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
+    let clampedRegion = region.intersection(imageBounds)
+    guard !clampedRegion.isEmpty, clampedRegion.width > 0, clampedRegion.height > 0 else {
+      drawFallbackBlur(in: context, region: region)
+      return
+    }
+
     // Calculate image scale
     let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
 
-    // Convert region to pixel coordinates (flip Y for CGImage)
+    // Convert clamped region to pixel coordinates (flip Y for CGImage)
     let pixelRegion = CGRect(
-      x: region.origin.x * imageScale,
-      y: (sourceImage.size.height - region.origin.y - region.height) * imageScale,
-      width: region.width * imageScale,
-      height: region.height * imageScale
+      x: clampedRegion.origin.x * imageScale,
+      y: (sourceImage.size.height - clampedRegion.origin.y - clampedRegion.height) * imageScale,
+      width: clampedRegion.width * imageScale,
+      height: clampedRegion.height * imageScale
     )
 
-    // Clamp to image bounds
+    // Clamp to pixel bounds (safety check for rounding)
     let clampedPixelRegion = pixelRegion.intersection(
       CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
     )
@@ -229,6 +251,7 @@ struct BlurEffectRenderer {
       return
     }
 
-    context.draw(blurredCGImage, in: region)
+    // Draw using the clamped destination rect to match the clamped source
+    context.draw(blurredCGImage, in: clampedRegion)
   }
 }
