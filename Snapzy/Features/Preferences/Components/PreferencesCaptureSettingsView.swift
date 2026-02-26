@@ -55,8 +55,7 @@ struct CaptureSettingsView: View {
             Text("MP4").tag("mp4")
           }
           .labelsHidden()
-          .pickerStyle(.segmented)
-          .frame(width: 120)
+          .pickerStyle(.menu)
         }
       }
 
@@ -67,8 +66,7 @@ struct CaptureSettingsView: View {
             Text("60 FPS").tag(60)
           }
           .labelsHidden()
-          .pickerStyle(.segmented)
-          .frame(width: 140)
+          .pickerStyle(.menu)
         }
 
         SettingRow(icon: "sparkles", title: "Quality", description: "Higher quality = larger file size") {
@@ -78,8 +76,7 @@ struct CaptureSettingsView: View {
             Text("Low").tag("low")
           }
           .labelsHidden()
-          .pickerStyle(.segmented)
-          .frame(width: 180)
+          .pickerStyle(.menu)
         }
       }
 

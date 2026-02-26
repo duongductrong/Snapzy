@@ -21,8 +21,7 @@ struct QuickAccessSettingsView: View {
             Text("Right").tag(false)
           }
           .labelsHidden()
-          .pickerStyle(.segmented)
-          .frame(width: 120)
+          .pickerStyle(.menu)
           .onChange(of: positionIsLeft) { newValue in
             manager.setPosition(newValue ? .bottomLeft : .bottomRight)
           }

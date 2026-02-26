@@ -13,22 +13,22 @@ struct PreferencesView: View {
   var body: some View {
     TabView {
       GeneralSettingsView()
-        .tabItem { Label("General", systemImage: "gear") }
+        .tabItem { Label("General", systemImage: "gearshape.fill") }
 
       CaptureSettingsView()
-        .tabItem { Label("Capture", systemImage: "camera.viewfinder") }
+        .tabItem { Label("Capture", systemImage: "camera.fill") }
 
       QuickAccessSettingsView()
-        .tabItem { Label("Quick Access", systemImage: "square.stack") }
+        .tabItem { Label("Quick Access", systemImage: "square.stack.fill") }
 
       ShortcutsSettingsView()
-        .tabItem { Label("Shortcuts", systemImage: "keyboard") }
+        .tabItem { Label("Shortcuts", systemImage: "keyboard.fill") }
 
       PermissionsSettingsView()
-        .tabItem { Label("Permissions", systemImage: "lock.shield") }
+        .tabItem { Label("Permissions", systemImage: "lock.shield.fill") }
 
       AboutSettingsView()
-        .tabItem { Label("About", systemImage: "info.circle") }
+        .tabItem { Label("About", systemImage: "info.circle.fill") }
 
       #if DEBUG
       LicenseDebugSettingsView()

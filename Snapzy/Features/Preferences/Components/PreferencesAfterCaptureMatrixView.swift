@@ -12,6 +12,24 @@ struct AfterCaptureMatrixView: View {
 
   var body: some View {
     VStack(spacing: 0) {
+      // Column headers
+      HStack(spacing: 12) {
+        Spacer()
+          .frame(width: 28)
+        Spacer()
+        HStack(spacing: 16) {
+          Text("Screenshot")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .frame(width: 70)
+          Text("Recording")
+            .font(.caption2)
+            .foregroundColor(.secondary)
+            .frame(width: 70)
+        }
+      }
+      .padding(.bottom, 4)
+
       ForEach(AfterCaptureAction.allCases, id: \.self) { action in
         actionRow(for: action)
       }
@@ -46,14 +64,10 @@ struct AfterCaptureMatrixView: View {
 
   @ViewBuilder
   private func toggleColumn(label: String, action: AfterCaptureAction, type: CaptureType) -> some View {
-    VStack(spacing: 2) {
-      Text(label)
-        .font(.caption2)
-        .foregroundColor(.secondary)
-      Toggle("", isOn: binding(for: action, type: type))
-        .labelsHidden()
-        .accessibilityLabel("\(action.displayName) for \(label.lowercased())")
-    }
+    Toggle("", isOn: binding(for: action, type: type))
+      .labelsHidden()
+      .accessibilityLabel("\(action.displayName) for \(label.lowercased())")
+      .frame(width: 70)
   }
 
   private func iconName(for action: AfterCaptureAction) -> String {
