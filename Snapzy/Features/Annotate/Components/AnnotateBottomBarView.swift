@@ -100,11 +100,11 @@ struct AnnotateBottomBarView: View {
         copyToClipboard()
       }
 
-      BottomBarButton(icon: "icloud.and.arrow.up", tooltip: "Upload") {
-        upload()
+      BottomBarButton(icon: "trash", tooltip: "Delete") {
+        confirmAndDeleteImage()
       }
-      .disabled(true)
-      .opacity(0.5)
+      .disabled(state.sourceURL == nil)
+      .opacity(state.sourceURL == nil ? 0.5 : 1)
     }
   }
 
@@ -125,8 +125,40 @@ struct AnnotateBottomBarView: View {
     AnnotateExporter.copyToClipboard(state: state)
   }
 
-  private func upload() {
-    // Placeholder for future implementation
+  private func confirmAndDeleteImage() {
+    guard let sourceURL = state.sourceURL,
+          let window = NSApp.keyWindow else { return }
+
+    let alert = NSAlert()
+    alert.messageText = "Delete Screenshot"
+    alert.informativeText = "This will move \"\(sourceURL.lastPathComponent)\" to Trash."
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: "Delete")
+    alert.addButton(withTitle: "Cancel")
+
+    alert.beginSheetModal(for: window) { [state] response in
+      guard response == .alertFirstButtonReturn else { return }
+
+      // Remove QuickAccess card if it exists
+      if let itemId = state.quickAccessItemId {
+        QuickAccessManager.shared.removeItem(id: itemId)
+      }
+
+      // Trash the file
+      let fileAccessManager = SandboxFileAccessManager.shared
+      let fileAccess = fileAccessManager.beginAccessingURL(sourceURL)
+      let directoryAccess = fileAccessManager.beginAccessingURL(sourceURL.deletingLastPathComponent())
+      defer {
+        fileAccess.stop()
+        directoryAccess.stop()
+      }
+
+      try? FileManager.default.trashItem(at: sourceURL, resultingItemURL: nil)
+
+      // Close the annotate window (captured before alert)
+      state.hasUnsavedChanges = false
+      window.close()
+    }
   }
 }
 

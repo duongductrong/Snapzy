@@ -18,6 +18,9 @@ final class AnnotateState: ObservableObject {
   @Published var sourceImage: NSImage?
   @Published var sourceURL: URL?
 
+  /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
+  let quickAccessItemId: UUID?
+
   /// Whether an image is loaded
   var hasImage: Bool { sourceImage != nil }
 
@@ -300,15 +303,17 @@ final class AnnotateState: ObservableObject {
   private var undoStack: [[AnnotationItem]] = []
   private var redoStack: [[AnnotationItem]] = []
 
-  init(image: NSImage, url: URL) {
+  init(image: NSImage, url: URL, quickAccessItemId: UUID? = nil) {
     self.sourceImage = image
     self.sourceURL = url
+    self.quickAccessItemId = quickAccessItemId
   }
 
   /// Empty initializer for drag-drop workflow
   init() {
     self.sourceImage = nil
     self.sourceURL = nil
+    self.quickAccessItemId = nil
   }
 
   // MARK: - Image Loading

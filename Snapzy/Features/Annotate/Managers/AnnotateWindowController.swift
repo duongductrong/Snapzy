@@ -27,7 +27,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     // Load full image from URL and adjust for Retina scaling
     let image = Self.loadImageWithCorrectScale(from: item.url) ?? item.thumbnail
 
-    self.state = AnnotateState(image: image, url: item.url)
+    self.state = AnnotateState(image: image, url: item.url, quickAccessItemId: item.id)
 
     // Fixed window size for consistent experience
     let screen = NSScreen.main ?? NSScreen.screens.first!
