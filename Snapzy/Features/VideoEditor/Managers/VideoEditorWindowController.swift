@@ -173,6 +173,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func showSaveConfirmation() {
     guard let window = self.window, let state = state else { return }
 
+    // GIF mode: resize export
+    if state.isGIF {
+      showGIFSaveConfirmation()
+      return
+    }
+
     let alert = NSAlert()
     alert.messageText = "Save Trimmed Video"
     alert.informativeText = "How would you like to save the trimmed video \"\(state.filename)\"?"
@@ -194,6 +200,143 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
       default:
         break
+      }
+    }
+  }
+
+  // MARK: - GIF Export
+
+  private func showGIFSaveConfirmation() {
+    guard let window = self.window, let state = state else { return }
+
+    let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+    let isResizing = Int(targetSize.width) != Int(state.naturalSize.width)
+      || Int(targetSize.height) != Int(state.naturalSize.height)
+
+    guard isResizing else {
+      let alert = NSAlert()
+      alert.messageText = "No Changes"
+      alert.informativeText = "The GIF dimensions haven't changed. Select a different size preset to resize."
+      alert.alertStyle = .informational
+      alert.addButton(withTitle: "OK")
+      alert.beginSheetModal(for: window)
+      return
+    }
+
+    let alert = NSAlert()
+    alert.messageText = "Save Resized GIF"
+    alert.informativeText = "Resize \"\(state.filename)\" from \(Int(state.naturalSize.width))×\(Int(state.naturalSize.height)) to \(Int(targetSize.width))×\(Int(targetSize.height))?"
+    alert.alertStyle = .informational
+
+    alert.addButton(withTitle: "Replace Original")
+    alert.addButton(withTitle: "Save as Copy")
+    alert.addButton(withTitle: "Cancel")
+
+    alert.beginSheetModal(for: window) { [weak self] response in
+      guard let self = self else { return }
+      switch response {
+      case .alertFirstButtonReturn:
+        self.performGIFReplaceOriginal()
+      case .alertSecondButtonReturn:
+        self.performGIFSaveAsCopy()
+      default:
+        break
+      }
+    }
+  }
+
+  private func performGIFReplaceOriginal() {
+    guard let state = state else { return }
+
+    let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+    let tempURL = FileManager.default.temporaryDirectory
+      .appendingPathComponent("GIFResize_\(UUID().uuidString)")
+      .appendingPathComponent(state.sourceURL.lastPathComponent)
+
+    state.isExporting = true
+    state.exportProgress = 0
+    state.exportStatusMessage = "Resizing GIF..."
+
+    Task {
+      do {
+        try GIFResizer.resize(
+          sourceURL: state.sourceURL,
+          targetSize: targetSize,
+          outputURL: tempURL
+        ) { progress in
+          Task { @MainActor in
+            state.exportProgress = Float(progress)
+            state.exportStatusMessage = progress < 0.95 ? "Resizing frames..." : "Finalizing..."
+          }
+        }
+
+        // Replace original
+        let originalURL = state.originalURL
+        let originalAccess = SandboxFileAccessManager.shared.beginAccessingURL(originalURL)
+        defer { originalAccess.stop() }
+
+        try FileManager.default.removeItem(at: originalAccess.url)
+        try FileManager.default.copyItem(at: tempURL, to: originalAccess.url)
+        try? FileManager.default.removeItem(at: tempURL.deletingLastPathComponent())
+
+        state.isExporting = false
+        state.markAsSaved()
+        forceClose()
+      } catch {
+        state.isExporting = false
+        showExportError(error)
+        try? FileManager.default.removeItem(at: tempURL.deletingLastPathComponent())
+      }
+    }
+  }
+
+  private func performGIFSaveAsCopy() {
+    guard let state = state, let window = self.window else { return }
+
+    let savePanel = NSSavePanel()
+    savePanel.title = "Save Resized GIF"
+    savePanel.message = "Choose where to save the resized GIF"
+    savePanel.nameFieldLabel = "File Name:"
+
+    let baseName = state.sourceURL.deletingPathExtension().lastPathComponent
+    savePanel.nameFieldStringValue = "\(baseName)_resized.gif"
+    savePanel.allowedContentTypes = [.gif]
+    savePanel.canCreateDirectories = true
+
+    savePanel.beginSheetModal(for: window) { [weak self] response in
+      guard response == .OK, let outputURL = savePanel.url else { return }
+      self?.exportGIFToCopy(outputURL: outputURL)
+    }
+  }
+
+  private func exportGIFToCopy(outputURL: URL) {
+    guard let state = state else { return }
+
+    let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+
+    state.isExporting = true
+    state.exportProgress = 0
+    state.exportStatusMessage = "Resizing GIF..."
+
+    Task {
+      do {
+        try GIFResizer.resize(
+          sourceURL: state.sourceURL,
+          targetSize: targetSize,
+          outputURL: outputURL
+        ) { progress in
+          Task { @MainActor in
+            state.exportProgress = Float(progress)
+            state.exportStatusMessage = progress < 0.95 ? "Resizing frames..." : "Finalizing..."
+          }
+        }
+
+        state.isExporting = false
+        state.markAsSaved()
+        NSWorkspace.shared.activateFileViewerSelecting([outputURL])
+      } catch {
+        state.isExporting = false
+        showExportError(error)
       }
     }
   }

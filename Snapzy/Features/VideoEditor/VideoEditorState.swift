@@ -80,6 +80,11 @@ final class VideoEditorState: ObservableObject {
   @Published var isVideoInfoSidebarVisible: Bool = false
   @Published var isRightSidebarVisible: Bool = false
 
+  // MARK: - GIF Metadata
+
+  @Published private(set) var gifFrameCount: Int = 0
+  @Published private(set) var gifDuration: Double = 0
+
   // MARK: - Background Settings
 
   @Published var backgroundStyle: BackgroundStyle = .none {
@@ -126,6 +131,7 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundPadding: CGFloat = 0
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
+  private var initialDimensionPreset: ExportDimensionPreset = .original
 
   // MARK: - Undo/Redo
 
@@ -249,9 +255,13 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Metadata Loading
 
   func loadMetadata() async {
-    // GIF files can't be loaded by AVAsset — use NSImage for dimensions
+    // GIF files can't be loaded by AVAsset — use GIFResizer metadata
     if isGIF {
-      if let image = SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL, {
+      if let metadata = GIFResizer.metadata(for: sourceURL) {
+        naturalSize = metadata.size
+        gifFrameCount = metadata.frameCount
+        gifDuration = metadata.duration
+      } else if let image = SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL, {
         NSImage(contentsOf: sourceURL)
       }) {
         naturalSize = CGSize(
@@ -720,6 +730,16 @@ final class VideoEditorState: ObservableObject {
     }
     guard let sourceSize else { return 0 }
 
+    // GIF mode: estimate based on pixel ratio
+    if isGIF {
+      let exportSize = exportSettings.exportSize(from: naturalSize)
+      let originalPixels = naturalSize.width * naturalSize.height
+      let newPixels = exportSize.width * exportSize.height
+      let pixelRatio = originalPixels > 0 ? newPixels / originalPixels : 1.0
+      let estimated = Double(sourceSize) * pixelRatio
+      return Int64(max(estimated, 1024))
+    }
+
     let sourceDuration = CMTimeGetSeconds(duration)
     guard sourceDuration > 0 else { return 0 }
 
@@ -833,6 +853,13 @@ final class VideoEditorState: ObservableObject {
   }
 
   private func updateHasUnsavedChanges(currentZoomSegments: [ZoomSegment]? = nil) {
+    // GIF mode: only track dimension changes
+    if isGIF {
+      let dimensionChanged = exportSettings.dimensionPreset != initialDimensionPreset
+      hasUnsavedChanges = dimensionChanged
+      return
+    }
+
     let startChanged = CMTimeCompare(trimStart, initialTrimStart) != 0
     let endChanged = CMTimeCompare(trimEnd, initialTrimEnd) != 0
     let muteChanged = isMuted != initialIsMuted

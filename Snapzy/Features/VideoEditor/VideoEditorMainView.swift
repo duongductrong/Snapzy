@@ -49,6 +49,12 @@ struct VideoEditorMainView: View {
             // GIF preview — uses NSImageView with animation
             AnimatedGIFView(url: state.sourceURL)
               .frame(minHeight: 200)
+
+            // GIF export settings (dimension presets)
+            VideoEditorGIFSettingsPanel(state: state)
+              .windowContentHPadding()
+              .padding(.top, 8)
+              .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
           } else {
             // Video player with zoom preview
             ZoomableVideoPlayerSection(state: state)
@@ -87,13 +93,11 @@ struct VideoEditorMainView: View {
       }
       .animation(.easeInOut(duration: 0.2), value: state.isVideoInfoSidebarVisible)
 
-      // Bottom bar with Cancel/Convert (video only — GIF is preview-only)
-      if !state.isGIF {
-        VideoEditorBottomBar(
-          onCancel: { onCancel?() },
-          onConvert: { onSave?() }
-        )
-      }
+      // Bottom bar with Cancel/Save
+      VideoEditorBottomBar(
+        onCancel: { onCancel?() },
+        onConvert: { onSave?() }
+      )
     }
     // Keyboard shortcuts for zoom operations (video only)
     .background {

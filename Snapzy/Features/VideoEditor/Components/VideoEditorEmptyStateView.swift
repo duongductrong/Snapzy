@@ -58,7 +58,7 @@ struct VideoEditorEmptyStateView: View {
           .font(.headline)
           .foregroundColor(.primary)
 
-        Text("Supports MOV, MP4, and other video formats")
+        Text("Supports MOV, MP4, GIF, and other video formats")
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
@@ -205,10 +205,10 @@ struct VideoEditorEmptyStateView: View {
       return
     }
 
-    // Validate it's a video file
+    // Validate it's a video or GIF file
     guard let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType,
-          type.conforms(to: .movie) || type.conforms(to: .video) else {
-      showError(message: "Please select a valid video file")
+          type.conforms(to: .movie) || type.conforms(to: .video) || type.conforms(to: .gif) else {
+      showError(message: "Please select a valid video or GIF file")
       return
     }
 
