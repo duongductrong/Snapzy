@@ -66,7 +66,7 @@ struct ShortcutConfig: Equatable, Codable {
     let keyChar = Self.keyCodeToString(keyCode)
 
     parts.append(keyChar)
-    return parts.joined()
+    return parts.joined(separator: " ")
   }
 
   /// Initialize from NSEvent for shortcut recording
