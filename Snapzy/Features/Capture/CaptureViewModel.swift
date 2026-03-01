@@ -197,6 +197,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   func captureArea() {
     // Prevent multiple area captures - only one at a time
     if isAreaSelectionActive {
+      print("[Snapzy:CaptureVM] captureArea() blocked — isAreaSelectionActive=true")
       return
     }
 
@@ -209,35 +210,44 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
     saveDirectory = resolvedSaveDirectory
 
+    // Set flag BEFORE delay to close the race window
+    isAreaSelectionActive = true
+    print("[Snapzy:CaptureVM] captureArea() — flag set to true")
+
     // Hide main window
     NSApp.hide(nil)
 
     // Minimal delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-      guard let self = self else { return }
+      guard let self = self else {
+        print("[Snapzy:CaptureVM] captureArea() asyncAfter — self is nil, flag stuck!")
+        return
+      }
 
-      // Double-check to prevent race condition
-      guard !self.isAreaSelectionActive else { return }
-      self.isAreaSelectionActive = true
-
+      print("[Snapzy:CaptureVM] captureArea() — starting selection")
       AreaSelectionController.shared.startSelection { [weak self] rect in
-        guard let self = self else { return }
-
-        // Note: Do NOT call NSApp.unhide/activate here - it steals focus from user's current app
-        // Screenshot capture doesn't need app activation
+        guard let self = self else {
+          print("[Snapzy:CaptureVM] captureArea() completion — self is nil, flag stuck!")
+          return
+        }
+        // Always reset flag regardless of outcome
+        defer {
+          self.isAreaSelectionActive = false
+          print("[Snapzy:CaptureVM] captureArea() — flag reset to false (defer)")
+        }
 
         guard let selectedRect = rect else {
-          // Cancelled - clear flag so user can start new selection
-          self.isAreaSelectionActive = false
+          // Cancelled
+          print("[Snapzy:CaptureVM] captureArea() — cancelled by user")
           self.lastCaptureResult = .failure(.cancelled)
           return
         }
 
+        print("[Snapzy:CaptureVM] captureArea() — rect selected: \(selectedRect)")
         Task { @MainActor in
           self.isCapturing = true
 
           // Delay to ensure overlay windows are fully hidden from screen buffer
-          // This prevents the dim layer/crosshair shadow from bleeding into the capture
           try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
 
           let result = await self.captureManager.captureArea(
@@ -250,13 +260,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
           self.isCapturing = false
           self.lastCaptureResult = result
+          print("[Snapzy:CaptureVM] captureArea() — capture result: \(result)")
 
           if case .success = result, self.playSound {
             self.playScreenshotSound()
           }
         }
-
-        self.isAreaSelectionActive = false
       }
     }
   }
@@ -283,18 +292,30 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     guard !RecordingCoordinator.shared.isActive else { return }
 
     // Prevent multiple area selections
-    guard !isAreaSelectionActive else { return }
+    guard !isAreaSelectionActive else {
+      print("[Snapzy:CaptureVM] startRecordingFlow() blocked — isAreaSelectionActive=true")
+      return
+    }
+
+    // Set flag BEFORE delay to close race window
+    isAreaSelectionActive = true
+    print("[Snapzy:CaptureVM] startRecordingFlow() — flag set to true")
 
     // Hide main window
     NSApp.hide(nil)
 
     // Small delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-      guard let self = self else { return }
+      guard let self = self else {
+        print("[Snapzy:CaptureVM] startRecordingFlow() asyncAfter — self is nil, flag stuck!")
+        return
+      }
 
       // Check for saved recording area - restore if enabled and available
       let rememberLastArea = UserDefaults.standard.object(forKey: PreferencesKeys.recordingRememberLastArea) as? Bool ?? true
       if rememberLastArea, let savedRect = RecordingCoordinator.shared.loadLastAreaRect() {
+        self.isAreaSelectionActive = false
+        print("[Snapzy:CaptureVM] startRecordingFlow() — using saved rect, flag reset")
         Task { @MainActor in
           RecordingCoordinator.shared.showToolbar(for: savedRect)
         }
@@ -302,16 +323,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       }
 
       // No saved rect or disabled - start area selection
-      self.isAreaSelectionActive = true
-
+      print("[Snapzy:CaptureVM] startRecordingFlow() — starting selection")
       AreaSelectionController.shared.startSelection(mode: .recording) { [weak self] rect, mode in
-        guard let self = self else { return }
+        guard let self = self else {
+          print("[Snapzy:CaptureVM] startRecordingFlow() completion — self is nil, flag stuck!")
+          return
+        }
 
         // Cleanup flag
         self.isAreaSelectionActive = false
-
-        // Note: Do NOT call NSApp.unhide/activate here - it steals focus from user's current app
-        // The recording toolbar uses orderFrontRegardless() which doesn't require app activation
+        print("[Snapzy:CaptureVM] startRecordingFlow() — flag reset to false")
 
         guard let rect = rect else { return }
 
@@ -331,28 +352,44 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   func captureOCR() {
     // Prevent multiple area captures
     if isAreaSelectionActive {
+      print("[Snapzy:CaptureVM] captureOCR() blocked — isAreaSelectionActive=true")
       return
     }
+
+    // Set flag BEFORE delay to close the race window
+    isAreaSelectionActive = true
+    print("[Snapzy:CaptureVM] captureOCR() — flag set to true")
 
     // Hide main window
     NSApp.hide(nil)
 
     // Minimal delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-      guard let self = self else { return }
+      guard let self = self else {
+        print("[Snapzy:CaptureVM] captureOCR() asyncAfter — self is nil, flag stuck!")
+        return
+      }
 
-      guard !self.isAreaSelectionActive else { return }
-      self.isAreaSelectionActive = true
-
+      print("[Snapzy:CaptureVM] captureOCR() — starting selection")
       AreaSelectionController.shared.startSelection { [weak self] rect in
-        guard let self = self else { return }
-
-        guard let selectedRect = rect else {
-          self.isAreaSelectionActive = false
+        guard let self = self else {
+          print("[Snapzy:CaptureVM] captureOCR() completion — self is nil, flag stuck!")
           return
         }
 
+        guard let selectedRect = rect else {
+          self.isAreaSelectionActive = false
+          print("[Snapzy:CaptureVM] captureOCR() — cancelled, flag reset")
+          return
+        }
+
+        print("[Snapzy:CaptureVM] captureOCR() — rect selected: \(selectedRect)")
         Task { @MainActor in
+          defer {
+            self.isAreaSelectionActive = false
+            print("[Snapzy:CaptureVM] captureOCR() — flag reset to false (defer)")
+          }
+
           // Delay to ensure overlay windows are fully hidden
           try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
 
@@ -364,7 +401,6 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled
             ) else {
               QuickAccessSound.failed.play()
-              self.isAreaSelectionActive = false
               return
             }
 
@@ -383,8 +419,6 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             // Error feedback
             QuickAccessSound.failed.play()
           }
-
-          self.isAreaSelectionActive = false
         }
       }
     }

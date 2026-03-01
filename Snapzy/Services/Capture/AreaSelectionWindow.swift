@@ -121,7 +121,7 @@ final class AreaSelectionController: NSObject {
     for screen in NSScreen.screens {
       guard let displayID = screen.displayID,
             let window = windowPool[displayID] else { continue }
-      window.setFrame(screen.frame, display: false)
+      window.setFrame(screen.frame, display: true)
       window.overlayView.updateBounds(screen.frame)
     }
   }
@@ -132,6 +132,12 @@ final class AreaSelectionController: NSObject {
       guard let displayID = screen.displayID else { continue }
 
       if let window = windowPool[displayID] {
+        // Sync frame to current screen position before showing
+        if window.frame != screen.frame {
+          window.setFrame(screen.frame, display: true)
+          window.overlayView.updateBounds(screen.frame)
+          print("[Snapzy:AreaSelection] activatePooledWindows() — resynced stale frame for display \(displayID)")
+        }
         // Reset and show existing pooled window without stealing focus
         window.overlayView.resetSelection()
         window.selectionDelegate = self
@@ -170,6 +176,10 @@ final class AreaSelectionController: NSObject {
   ///   - mode: The selection mode (screenshot or recording)
   ///   - completion: Called with the selected rect and mode, or nil if cancelled
   func startSelection(mode: SelectionMode, completion: @escaping AreaSelectionCompletionWithMode) {
+    // Always clean up prior session's monitors to prevent orphaned leaks
+    removeEscapeMonitors()
+    print("[Snapzy:AreaSelection] startSelection(mode: \(mode)) — monitors cleaned, starting")
+
     self.selectionMode = mode
     self.completionWithMode = completion
 
@@ -202,6 +212,7 @@ final class AreaSelectionController: NSObject {
 
   /// Cancel the current selection
   func cancelSelection() {
+    print("[Snapzy:AreaSelection] cancelSelection() called")
     removeEscapeMonitors()
     deactivatePooledWindows()
     completion?(nil)
@@ -212,6 +223,7 @@ final class AreaSelectionController: NSObject {
 
   /// Complete selection with the given rect
   func completeSelection(rect: CGRect, from window: AreaSelectionWindow) {
+    print("[Snapzy:AreaSelection] completeSelection(rect: \(rect))")
     removeEscapeMonitors()
     deactivatePooledWindows()
     completion?(rect)
@@ -524,6 +536,9 @@ final class AreaSelectionOverlayView: NSView {
     // Initialize crosshair at current mouse position immediately
     initializeCrosshairAtCurrentMousePosition()
 
+    // Rebuild tracking areas for current bounds (prevents stale hit-testing)
+    updateTrackingAreas()
+
     CATransaction.begin()
     CATransaction.setDisableActions(true)
 
@@ -569,6 +584,9 @@ final class AreaSelectionOverlayView: NSView {
     CATransaction.setDisableActions(true)
     dimLayer.frame = bounds
     CATransaction.commit()
+
+    // Rebuild tracking areas for new bounds
+    updateTrackingAreas()
   }
 
   // MARK: - First Mouse
