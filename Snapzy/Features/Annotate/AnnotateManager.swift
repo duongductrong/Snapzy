@@ -49,6 +49,12 @@ final class AnnotateManager {
     // Check if already open for this item
     if let existing = windowControllers[item.id] {
       existing.showWindow()
+      DiagnosticLogger.shared.log(.info, .action, "Annotate window reused for item \(item.id)")
+      return
+    }
+
+    guard NSScreen.screens.isEmpty == false else {
+      DiagnosticLogger.shared.log(.error, .action, "Annotate open failed: no screens available")
       return
     }
 
@@ -57,6 +63,7 @@ final class AnnotateManager {
 
     let controller = AnnotateWindowController(item: item)
     windowControllers[item.id] = controller
+    DiagnosticLogger.shared.log(.info, .action, "Annotate window opened for item \(item.id)")
 
     // Remove from tracking when window closes
     let itemId = item.id
@@ -99,6 +106,12 @@ final class AnnotateManager {
     // Reuse existing empty window if open
     if let existing = emptyWindowController {
       existing.showWindow()
+      DiagnosticLogger.shared.log(.info, .action, "Annotate empty window reused")
+      return
+    }
+
+    guard NSScreen.screens.isEmpty == false else {
+      DiagnosticLogger.shared.log(.error, .action, "Annotate open failed: no screens available")
       return
     }
 
@@ -107,6 +120,7 @@ final class AnnotateManager {
 
     let controller = AnnotateWindowController()
     emptyWindowController = controller
+    DiagnosticLogger.shared.log(.info, .action, "Annotate empty window opened")
 
     // Clear reference when window closes
     if let window = controller.window {

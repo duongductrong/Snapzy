@@ -396,32 +396,45 @@ final class KeyboardShortcutManager {
 
   private func handleHotkey(id: UInt32) {
     // Block all hotkeys when the app is not licensed
-    guard LicenseManager.shared.isLicensed else { return }
+    guard LicenseManager.shared.isLicensed else {
+      DiagnosticLogger.shared.log(.warning, .action, "Shortcut blocked: app not licensed")
+      return
+    }
 
     let actionName: String
+    let action: ShortcutAction
+
     switch id {
     case fullscreenHotkeyID.id:
       actionName = "fullscreen"
-      delegate?.shortcutTriggered(.captureFullscreen)
+      action = .captureFullscreen
     case areaHotkeyID.id:
       actionName = "area"
-      delegate?.shortcutTriggered(.captureArea)
+      action = .captureArea
     case recordingHotkeyID.id:
       actionName = "recording"
-      delegate?.shortcutTriggered(.recordVideo)
+      action = .recordVideo
     case annotateHotkeyID.id:
       actionName = "annotate"
-      delegate?.shortcutTriggered(.openAnnotate)
+      action = .openAnnotate
     case videoEditorHotkeyID.id:
       actionName = "video-editor"
-      delegate?.shortcutTriggered(.openVideoEditor)
+      action = .openVideoEditor
     case ocrHotkeyID.id:
       actionName = "ocr"
-      delegate?.shortcutTriggered(.captureOCR)
+      action = .captureOCR
     default:
       return
     }
+
     DiagnosticLogger.shared.log(.info, .action, "Shortcut triggered: \(actionName)")
+
+    guard let delegate = delegate else {
+      DiagnosticLogger.shared.log(.warning, .action, "Shortcut \(actionName) ignored: delegate is nil")
+      return
+    }
+
+    delegate.shortcutTriggered(action)
   }
 
   private func registerShortcuts() {

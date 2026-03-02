@@ -30,24 +30,14 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     self.state = AnnotateState(image: image, url: item.url, quickAccessItemId: item.id)
 
     // Fixed window size for consistent experience
-    let screen = NSScreen.main ?? NSScreen.screens.first!
     let windowWidth: CGFloat = 1200
     let windowHeight: CGFloat = 768
 
-    // Keep this for future use
-    // let maxWidth = screen.frame.width * 0.8
-    // let maxHeight = screen.frame.height * 0.8
-    // let imageSize = image.size
-
-    // // Scale to fit screen while maintaining aspect ratio
-    // let scale = min(maxWidth / imageSize.width, maxHeight / imageSize.height, 1.0)
-    // let windowWidth = max(800, imageSize.width * scale + 280) // 280 for sidebar + padding
-    // let windowHeight = max(600, imageSize.height * scale + 120) // 120 for toolbar + bottom
-    // Keep this for future use
+    let screenFrame = NSScreen.main?.frame ?? NSScreen.screens.first?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
 
     let origin = NSPoint(
-      x: (screen.frame.width - windowWidth) / 2,
-      y: (screen.frame.height - windowHeight) / 2
+      x: (screenFrame.width - windowWidth) / 2,
+      y: (screenFrame.height - windowHeight) / 2
     )
 
     let window = AnnotateWindow(
@@ -68,13 +58,14 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     self.state = AnnotateState()
 
     // Default window size for empty canvas
-    let screen = NSScreen.main ?? NSScreen.screens.first!
     let defaultWidth: CGFloat = 1200
     let defaultHeight: CGFloat = 768
 
+    let screenFrame = NSScreen.main?.frame ?? NSScreen.screens.first?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+
     let origin = NSPoint(
-      x: (screen.frame.width - defaultWidth) / 2,
-      y: (screen.frame.height - defaultHeight) / 2
+      x: (screenFrame.width - defaultWidth) / 2,
+      y: (screenFrame.height - defaultHeight) / 2
     )
 
     let window = AnnotateWindow(

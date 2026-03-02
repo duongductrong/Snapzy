@@ -435,7 +435,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Trigger Settings scene - equivalent to SettingsLink behavior
     if #available(macOS 14.0, *) {
-      NSApp.mainMenu?.performKeyEquivalent(with: NSEvent.keyEvent(
+      if let keyEvent = NSEvent.keyEvent(
         with: .keyDown,
         location: .zero,
         modifierFlags: .command,
@@ -446,7 +446,9 @@ final class AppStatusBarController: ObservableObject {
         charactersIgnoringModifiers: ",",
         isARepeat: false,
         keyCode: 43
-      )!)
+      ) {
+        NSApp.mainMenu?.performKeyEquivalent(with: keyEvent)
+      }
     } else {
       NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
