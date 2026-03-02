@@ -214,13 +214,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     isAreaSelectionActive = true
     print("[Snapzy:CaptureVM] captureArea() — flag set to true")
 
-    // Hide main window
-    NSApp.hide(nil)
+    // Hide only normal-level app windows (not overlay panels) to avoid hiding pooled overlay windows
+    NSApp.windows.filter { $0.isVisible && $0.level == .normal }.forEach { $0.orderOut(nil) }
 
     // Minimal delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
       guard let self = self else {
-        print("[Snapzy:CaptureVM] captureArea() asyncAfter — self is nil, flag stuck!")
+        print("[Snapzy:CaptureVM] captureArea() asyncAfter — self is nil, resetting flag")
+        AreaSelectionController.shared.cancelSelection()
         return
       }
 
@@ -301,13 +302,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     isAreaSelectionActive = true
     print("[Snapzy:CaptureVM] startRecordingFlow() — flag set to true")
 
-    // Hide main window
-    NSApp.hide(nil)
+    // Hide only normal-level app windows (not overlay panels)
+    NSApp.windows.filter { $0.isVisible && $0.level == .normal }.forEach { $0.orderOut(nil) }
 
     // Small delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
       guard let self = self else {
-        print("[Snapzy:CaptureVM] startRecordingFlow() asyncAfter — self is nil, flag stuck!")
+        print("[Snapzy:CaptureVM] startRecordingFlow() asyncAfter — self is nil, resetting flag")
+        AreaSelectionController.shared.cancelSelection()
         return
       }
 
@@ -360,13 +362,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     isAreaSelectionActive = true
     print("[Snapzy:CaptureVM] captureOCR() — flag set to true")
 
-    // Hide main window
-    NSApp.hide(nil)
+    // Hide only normal-level app windows (not overlay panels)
+    NSApp.windows.filter { $0.isVisible && $0.level == .normal }.forEach { $0.orderOut(nil) }
 
     // Minimal delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
       guard let self = self else {
-        print("[Snapzy:CaptureVM] captureOCR() asyncAfter — self is nil, flag stuck!")
+        print("[Snapzy:CaptureVM] captureOCR() asyncAfter — self is nil, resetting flag")
+        AreaSelectionController.shared.cancelSelection()
         return
       }
 

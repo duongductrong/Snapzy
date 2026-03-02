@@ -311,7 +311,7 @@ final class AreaSelectionWindow: NSPanel {
     self.isReleasedWhenClosed = false
     self.hasShadow = false
     self.hidesOnDeactivate = false
-    self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+    self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     self.animationBehavior = .none  // Disable window animations for instant appearance
 
     // Set up content view
