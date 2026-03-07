@@ -33,44 +33,65 @@ struct AnnotateCanvasView: View {
     (state.editorMode == .mockup || state.editorMode == .preview) && hasMockupTransforms
   }
 
-  var body: some View {
-    GeometryReader { geometry in
-      ZStack {
-        // Background
-//        Color(nsColor: .textBackgroundColor)
+  /// Crop toolbar is only visible while the crop rect is actively editable.
+  private var isCropToolbarVisible: Bool {
+    state.selectedTool == .crop && state.isCropActive
+  }
 
-        if state.hasImage {
-          // Centered, scaled canvas
-          canvasContent(in: geometry.size)
-            .frame(width: geometry.size.width, height: geometry.size.height)
-        } else {
-          // Drop zone when no image loaded
-          AnnotateDropZoneView(isDragOver: $isDragOver)
+  var body: some View {
+    VStack(spacing: 0) {
+      GeometryReader { geometry in
+        ZStack {
+          // Background
+//          Color(nsColor: .textBackgroundColor)
+
+          if state.hasImage {
+            // Centered, scaled canvas
+            canvasContent(in: geometry.size)
+              .frame(width: geometry.size.width, height: geometry.size.height)
+          } else {
+            // Drop zone when no image loaded
+            AnnotateDropZoneView(isDragOver: $isDragOver)
+          }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-      .onScrollWheelZoom { delta in
-        guard state.hasImage else { return }
-        let newZoom = state.zoomLevel + delta * 0.1
-        state.zoomLevel = min(max(newZoom, 0.25), 3.0)
-      }
-      .onDrop(of: [.fileURL, .image], isTargeted: $isDragOver) { providers in
-        handleDrop(providers: providers)
-      }
-      .focusable()
-      .modifier(FocusEffectDisabledModifier())
-      .focused($isCanvasFocused)
-      .background(
-        KeyEventHandlerView { char in
-          handleToolShortcutChar(char)
+
+      if isCropToolbarVisible {
+        HStack {
+          Spacer(minLength: 0)
+          CropToolbarView(state: state)
+          Spacer(minLength: 0)
         }
-      )
-      .onAppear {
-        isCanvasFocused = true
+        .padding(.horizontal, 24)
+        .padding(.top, 12)
+        .padding(.bottom, 20)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
       }
-      .overlay(alignment: .bottom) {
-        if showDropError {
-          dropErrorBanner
-        }
+    }
+    .animation(.easeInOut(duration: 0.2), value: isCropToolbarVisible)
+    .onScrollWheelZoom { delta in
+      guard state.hasImage else { return }
+      let newZoom = state.zoomLevel + delta * 0.1
+      state.zoomLevel = min(max(newZoom, 0.25), 3.0)
+    }
+    .onDrop(of: [.fileURL, .image], isTargeted: $isDragOver) { providers in
+      handleDrop(providers: providers)
+    }
+    .focusable()
+    .modifier(FocusEffectDisabledModifier())
+    .focused($isCanvasFocused)
+    .background(
+      KeyEventHandlerView { char in
+        handleToolShortcutChar(char)
+      }
+    )
+    .onAppear {
+      isCanvasFocused = true
+    }
+    .overlay(alignment: .bottom) {
+      if showDropError {
+        dropErrorBanner
       }
     }
   }
@@ -84,7 +105,7 @@ struct AnnotateCanvasView: View {
       .padding(.vertical, 10)
       .background(Color.red.opacity(0.9))
       .cornerRadius(8)
-      .padding(.bottom, 20)
+      .padding(.bottom, isCropToolbarVisible ? 96 : 20)
       .transition(.move(edge: .bottom).combined(with: .opacity))
       .animation(.easeInOut(duration: 0.3), value: showDropError)
   }
@@ -259,14 +280,6 @@ struct AnnotateCanvasView: View {
       }
       .scaleEffect(state.zoomLevel)
 
-      // Crop toolbar (floating at bottom) - OUTSIDE scaleEffect so it doesn't zoom
-      if state.selectedTool == .crop && state.isCropActive {
-        VStack {
-          Spacer()
-          CropToolbarView(state: state)
-            .padding(.bottom, 20)
-        }
-      }
     }
   }
 
