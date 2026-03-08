@@ -56,6 +56,12 @@ struct ZoomableVideoPlayerSection: View {
     .onChange(of: state.zoomSegments) { _ in
       updateZoomState(at: CMTimeGetSeconds(state.currentTime))
     }
+    .onChange(of: state.autoFocusSettings) { _ in
+      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
+    }
+    .onChange(of: state.autoFocusPath) { _ in
+      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
+    }
   }
 
   // MARK: - Background View
@@ -245,25 +251,13 @@ struct ZoomableVideoPlayerSection: View {
   // MARK: - State Updates
 
   private func updateZoomState(at time: TimeInterval) {
-    // Find active zoom segment
-    guard let segment = state.activeZoomSegment(at: time) else {
-      // No active zoom - reset to default
-      if currentZoomLevel != 1.0 {
-        currentZoomLevel = 1.0
-        currentZoomCenter = CGPoint(x: 0.5, y: 0.5)
-      }
-      return
-    }
-
-    // Calculate interpolated zoom values
-    let interpolated = ZoomCalculator.interpolateZoom(
-      segment: segment,
-      currentTime: time,
+    let cameraState = state.cameraState(
+      at: time,
       transitionDuration: animationDuration
     )
 
-    currentZoomLevel = interpolated.level
-    currentZoomCenter = interpolated.center
+    currentZoomLevel = cameraState.zoomLevel
+    currentZoomCenter = cameraState.center
   }
 }
 

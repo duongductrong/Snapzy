@@ -15,6 +15,8 @@ class ZoomCompositor {
   // MARK: - Properties
 
   private let zooms: [ZoomSegment]
+  private let autoFocusSettings: AutoFocusSettings
+  private let autoFocusPath: [AutoFocusCameraSample]
   private let renderSize: CGSize
   private let transitionDuration: TimeInterval
 
@@ -28,6 +30,8 @@ class ZoomCompositor {
 
   init(
     zooms: [ZoomSegment],
+    autoFocusSettings: AutoFocusSettings = AutoFocusSettings(),
+    autoFocusPath: [AutoFocusCameraSample] = [],
     renderSize: CGSize,
     transitionDuration: TimeInterval = 0.3,
     backgroundStyle: BackgroundStyle = .none,
@@ -35,6 +39,8 @@ class ZoomCompositor {
     cornerRadius: CGFloat = 0
   ) {
     self.zooms = zooms.filter { $0.isEnabled }
+    self.autoFocusSettings = autoFocusSettings
+    self.autoFocusPath = autoFocusPath
     self.renderSize = renderSize
     self.transitionDuration = transitionDuration
     self.backgroundStyle = backgroundStyle
@@ -79,6 +85,8 @@ class ZoomCompositor {
     let instruction = ZoomVideoCompositionInstruction(
       timeRange: timeRange,
       zooms: zooms,
+      autoFocusSettings: autoFocusSettings,
+      autoFocusPath: autoFocusPath,
       trackID: videoTrack.trackID,
       renderSize: renderSize,
       transitionDuration: transitionDuration,
@@ -121,10 +129,13 @@ class ZoomCompositor {
 class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol {
   let timeRange: CMTimeRange
   let zooms: [ZoomSegment]
+  let autoFocusSettings: AutoFocusSettings
+  let autoFocusPath: [AutoFocusCameraSample]
   let trackID: CMPersistentTrackID
   let renderSize: CGSize
   let transitionDuration: TimeInterval
   let backgroundStyle: BackgroundStyle
+  let hasBackground: Bool
   let backgroundPadding: CGFloat
   let cornerRadius: CGFloat
   let paddedRenderSize: CGSize
@@ -141,6 +152,8 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   init(
     timeRange: CMTimeRange,
     zooms: [ZoomSegment],
+    autoFocusSettings: AutoFocusSettings,
+    autoFocusPath: [AutoFocusCameraSample],
     trackID: CMPersistentTrackID,
     renderSize: CGSize,
     transitionDuration: TimeInterval,
@@ -151,10 +164,18 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   ) {
     self.timeRange = timeRange
     self.zooms = zooms
+    self.autoFocusSettings = autoFocusSettings
+    self.autoFocusPath = autoFocusPath
     self.trackID = trackID
     self.renderSize = renderSize
     self.transitionDuration = transitionDuration
     self.backgroundStyle = backgroundStyle
+    switch backgroundStyle {
+    case .none:
+      self.hasBackground = false
+    default:
+      self.hasBackground = backgroundPadding > 0
+    }
     self.backgroundPadding = backgroundPadding
     self.cornerRadius = cornerRadius
     self.paddedRenderSize = paddedRenderSize ?? renderSize
@@ -238,7 +259,7 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
 
     guard let sourceBuffer = request.sourceFrame(byTrackID: instruction.trackID) else {
       // Try to find any available source frame as fallback
-      let availableTrackIDs = request.sourceTrackIDs.compactMap { ($0 as? NSNumber)?.int32Value }
+      let availableTrackIDs = request.sourceTrackIDs.map(\.int32Value)
       print("❌ [Compositor] Frame \(frameCount): No source frame for trackID \(instruction.trackID)")
       print("❌ [Compositor] Available track IDs: \(availableTrackIDs)")
 
@@ -261,25 +282,18 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
       print("🎥 [Compositor] Processing frame \(frameCount) at time \(String(format: "%.2f", currentTime))s")
     }
 
-    // Find active zoom at current time
-    let activeZoom = instruction.zooms.first { $0.contains(time: currentTime) }
-    let hasBackground = instruction.backgroundStyle != .none && instruction.backgroundPadding > 0
-
-    // Calculate zoom parameters if zoom is active
-    var zoomLevel: CGFloat = 1.0
-    var zoomCenter = CGPoint(x: 0.5, y: 0.5)
-    if let zoom = activeZoom {
-      let interpolated = ZoomCalculator.interpolateZoom(
-        segment: zoom,
-        currentTime: currentTime,
-        transitionDuration: instruction.transitionDuration
-      )
-      zoomLevel = interpolated.level
-      zoomCenter = interpolated.center
-    }
+    let cameraState = VideoEditorAutoFocusEngine.resolvedCameraState(
+      at: currentTime,
+      manualSegments: instruction.zooms,
+      autoFocusSettings: instruction.autoFocusSettings,
+      autoFocusPath: instruction.autoFocusPath,
+      transitionDuration: instruction.transitionDuration
+    )
+    let zoomLevel = cameraState.zoomLevel
+    let zoomCenter = cameraState.center
 
     // If no zoom and no background, pass through original frame
-    if zoomLevel < 1.01 && !hasBackground {
+    if zoomLevel < 1.01 && !instruction.hasBackground {
       request.finish(withComposedVideoFrame: sourceBuffer)
       return
     }
@@ -325,8 +339,7 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
     }
 
     // Apply background if needed
-    let hasBackground = instruction.backgroundStyle != .none && instruction.backgroundPadding > 0
-    if hasBackground {
+    if instruction.hasBackground {
       // Apply corner radius to video frame if specified
       if instruction.cornerRadius > 0 {
         processedImage = applyCornerRadius(

@@ -84,22 +84,12 @@ struct ZoomSettingsContent: View {
 
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 12) {
-        if selectedSegment != nil {
-          // Zoom level slider
-          zoomLevelSection
+      VStack(alignment: .leading, spacing: 16) {
+        autoFocusSection
 
-          // Center picker
-          centerPickerSection
+        Divider()
 
-          Divider()
-
-          // Actions
-          actionsSection
-        } else {
-          // Empty state
-          emptyState
-        }
+        manualZoomSection
 
         Spacer(minLength: 20)
       }
@@ -111,6 +101,190 @@ struct ZoomSettingsContent: View {
     }
     .onChange(of: state.selectedZoomId) { _ in
       syncLocalState()
+    }
+  }
+
+  // MARK: - Auto Focus
+
+  private var autoFocusSection: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Label("Auto Zoom", systemImage: "camera.metering.center.weighted")
+          .font(.system(size: 12, weight: .semibold))
+
+        Spacer()
+
+        if state.hasMouseTrackingData {
+          Text(state.hasEnabledAutoFocus ? "Live" : "Ready")
+            .font(.system(size: 9, weight: .semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background((state.hasEnabledAutoFocus ? Color.green : ZoomColors.primary).opacity(0.2))
+            .foregroundColor(state.hasEnabledAutoFocus ? .green : ZoomColors.primary)
+            .cornerRadius(4)
+        }
+      }
+
+      if state.hasMouseTrackingData {
+        Toggle(isOn: autoFocusEnabledBinding) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Follow Mouse")
+              .font(.system(size: 12, weight: .medium))
+
+            Text("Keeps the active cursor region near the center of the frame.")
+              .font(.system(size: 10))
+              .foregroundColor(.secondary)
+          }
+        }
+        .toggleStyle(.switch)
+
+        if state.autoFocusSettings.isEnabled {
+          autoFocusZoomSection
+          autoFocusFollowSpeedSection
+          autoFocusMarginSection
+        }
+      } else {
+        VStack(alignment: .leading, spacing: 6) {
+          Label("Mouse tracking data unavailable", systemImage: "cursorarrow.slash")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.secondary)
+
+          Text("Open a recording created by Snapzy after this update to use Follow Mouse.")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary.opacity(0.8))
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(8)
+      }
+    }
+  }
+
+  private var autoFocusZoomSection: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("Zoom Level")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.secondary)
+
+        Spacer()
+
+        Text(state.autoFocusSettings.zoomDisplayValue)
+          .font(.system(size: 11, weight: .semibold))
+          .monospacedDigit()
+      }
+
+      HStack(spacing: 8) {
+        Text("1x")
+          .font(.system(size: 9))
+          .foregroundColor(.secondary)
+
+        Slider(value: autoFocusZoomBinding, in: AutoFocusSettings.zoomRange, step: 0.1)
+
+        Text("4x")
+          .font(.system(size: 9))
+          .foregroundColor(.secondary)
+      }
+
+      HStack(spacing: 4) {
+        ForEach([1.5, 2.0, 2.5, 3.0], id: \.self) { level in
+          Button {
+            state.updateAutoFocus(zoomLevel: level)
+          } label: {
+            Text("\(String(format: "%.1f", level))x")
+              .font(.system(size: 9, weight: .medium))
+              .padding(.horizontal, 6)
+              .padding(.vertical, 3)
+              .background(
+                abs(state.autoFocusSettings.zoomLevel - level) < 0.05
+                  ? ZoomColors.primary.opacity(0.3)
+                  : Color.white.opacity(0.1)
+              )
+              .cornerRadius(4)
+          }
+          .buttonStyle(.plain)
+        }
+      }
+    }
+  }
+
+  private var autoFocusFollowSpeedSection: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("Follow Speed")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.secondary)
+
+        Spacer()
+
+        Text(state.autoFocusSettings.followSpeedDisplayValue)
+          .font(.system(size: 11, weight: .semibold))
+          .monospacedDigit()
+      }
+
+      Slider(value: autoFocusFollowSpeedBinding, in: AutoFocusSettings.followSpeedRange, step: 0.05)
+
+      Text("Lower values feel calmer. Higher values react faster to cursor direction changes.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var autoFocusMarginSection: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("Focus Margin")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.secondary)
+
+        Spacer()
+
+        Text(state.autoFocusSettings.focusMarginDisplayValue)
+          .font(.system(size: 11, weight: .semibold))
+          .monospacedDigit()
+      }
+
+      Slider(value: autoFocusMarginBinding, in: AutoFocusSettings.focusMarginRange, step: 0.05)
+
+      Text("Adds a stability zone around the cursor so tiny movements do not keep nudging the camera.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  // MARK: - Manual Zoom
+
+  private var manualZoomSection: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Label("Manual Zooms", systemImage: "plus.magnifyingglass")
+          .font(.system(size: 12, weight: .semibold))
+
+        Spacer()
+
+        if !state.zoomSegments.isEmpty {
+          Text("\(state.zoomSegments.count)")
+            .font(.system(size: 10, weight: .semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(ZoomColors.primary.opacity(0.18))
+            .foregroundColor(ZoomColors.primary)
+            .cornerRadius(4)
+        }
+      }
+
+      if selectedSegment != nil {
+        zoomLevelSection
+        centerPickerSection
+        Divider()
+        actionsSection
+      } else {
+        emptyState
+      }
     }
   }
 
@@ -311,5 +485,33 @@ struct ZoomSettingsContent: View {
   private func applyCenter(_ center: CGPoint) {
     guard let id = state.selectedZoomId else { return }
     state.updateZoom(id: id, zoomCenter: center)
+  }
+
+  private var autoFocusEnabledBinding: Binding<Bool> {
+    Binding(
+      get: { state.autoFocusSettings.isEnabled },
+      set: { state.updateAutoFocus(isEnabled: $0) }
+    )
+  }
+
+  private var autoFocusZoomBinding: Binding<CGFloat> {
+    Binding(
+      get: { state.autoFocusSettings.zoomLevel },
+      set: { state.updateAutoFocus(zoomLevel: $0) }
+    )
+  }
+
+  private var autoFocusFollowSpeedBinding: Binding<Double> {
+    Binding(
+      get: { state.autoFocusSettings.followSpeed },
+      set: { state.updateAutoFocus(followSpeed: $0) }
+    )
+  }
+
+  private var autoFocusMarginBinding: Binding<CGFloat> {
+    Binding(
+      get: { state.autoFocusSettings.focusMargin },
+      set: { state.updateAutoFocus(focusMargin: $0) }
+    )
   }
 }

@@ -511,6 +511,7 @@ final class RecordingCoordinator: ObservableObject {
       // Delete the original video file
       SandboxFileAccessManager.shared.withScopedAccess(to: videoURL.deletingLastPathComponent()) {
         try? FileManager.default.removeItem(at: videoURL)
+        try? RecordingMetadataStore.delete(for: videoURL)
       }
 
     } catch {

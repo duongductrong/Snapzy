@@ -80,6 +80,12 @@ final class VideoEditorState: ObservableObject {
   @Published var isVideoInfoSidebarVisible: Bool = false
   @Published var isRightSidebarVisible: Bool = false
 
+  // MARK: - Auto Focus
+
+  @Published private(set) var recordingMetadata: RecordingMetadata?
+  @Published private(set) var autoFocusPath: [AutoFocusCameraSample] = []
+  @Published var autoFocusSettings: AutoFocusSettings = AutoFocusSettings()
+
   // MARK: - GIF Metadata
 
   @Published private(set) var gifFrameCount: Int = 0
@@ -132,6 +138,7 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
   private var initialDimensionPreset: ExportDimensionPreset = .original
+  private var initialAutoFocusSettings: AutoFocusSettings = AutoFocusSettings()
 
   // MARK: - Undo/Redo
 
@@ -156,6 +163,14 @@ final class VideoEditorState: ObservableObject {
 
   var trimmedDuration: CMTime {
     CMTimeSubtract(trimEnd, trimStart)
+  }
+
+  var hasMouseTrackingData: Bool {
+    !(recordingMetadata?.mouseSamples.isEmpty ?? true)
+  }
+
+  var hasEnabledAutoFocus: Bool {
+    autoFocusSettings.isEnabled && !autoFocusPath.isEmpty
   }
 
   var filename: String {
@@ -255,6 +270,8 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Metadata Loading
 
   func loadMetadata() async {
+    loadRecordingMetadata()
+
     // GIF files can't be loaded by AVAsset — use GIFResizer metadata
     if isGIF {
       if let metadata = GIFResizer.metadata(for: sourceURL) {
@@ -429,6 +446,7 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundPadding = backgroundPadding
     initialBackgroundShadowIntensity = backgroundShadowIntensity
     initialBackgroundCornerRadius = backgroundCornerRadius
+    initialAutoFocusSettings = autoFocusSettings
     clearUndoHistory()
   }
 
@@ -584,6 +602,13 @@ final class VideoEditorState: ObservableObject {
     }
 
     try FileManager.default.moveItem(at: sourceAccess.url, to: newURL)
+
+    let oldSidecarURL = RecordingMetadataStore.sidecarURL(for: oldSourceURL)
+    let newSidecarURL = RecordingMetadataStore.sidecarURL(for: newURL)
+    if FileManager.default.fileExists(atPath: oldSidecarURL.path) {
+      try FileManager.default.moveItem(at: oldSidecarURL, to: newSidecarURL)
+    }
+
     sourceURL = newURL
     if originalURL == oldSourceURL {
       originalURL = newURL
@@ -654,6 +679,58 @@ final class VideoEditorState: ObservableObject {
     }
 
     zoomSegments[index] = segment
+  }
+
+  // MARK: - Auto Focus Management
+
+  func updateAutoFocus(
+    isEnabled: Bool? = nil,
+    zoomLevel: CGFloat? = nil,
+    followSpeed: Double? = nil,
+    focusMargin: CGFloat? = nil
+  ) {
+    var settings = autoFocusSettings
+
+    if let isEnabled = isEnabled {
+      settings.isEnabled = isEnabled && hasMouseTrackingData
+    }
+    if let zoomLevel = zoomLevel {
+      settings.zoomLevel = max(
+        AutoFocusSettings.zoomRange.lowerBound,
+        min(zoomLevel, AutoFocusSettings.zoomRange.upperBound)
+      )
+    }
+    if let followSpeed = followSpeed {
+      settings.followSpeed = max(
+        AutoFocusSettings.followSpeedRange.lowerBound,
+        min(followSpeed, AutoFocusSettings.followSpeedRange.upperBound)
+      )
+    }
+    if let focusMargin = focusMargin {
+      settings.focusMargin = max(
+        AutoFocusSettings.focusMarginRange.lowerBound,
+        min(focusMargin, AutoFocusSettings.focusMarginRange.upperBound)
+      )
+    }
+
+    if !hasMouseTrackingData {
+      settings.isEnabled = false
+    }
+
+    autoFocusSettings = settings
+  }
+
+  func cameraState(
+    at time: TimeInterval,
+    transitionDuration: TimeInterval = 0.3
+  ) -> VideoEditorCameraState {
+    VideoEditorAutoFocusEngine.resolvedCameraState(
+      at: time,
+      manualSegments: zoomSegments,
+      autoFocusSettings: autoFocusSettings,
+      autoFocusPath: autoFocusPath,
+      transitionDuration: transitionDuration
+    )
   }
 
   /// Select a zoom segment
@@ -834,6 +911,14 @@ final class VideoEditorState: ObservableObject {
       }
       .store(in: &cancellables)
 
+    $autoFocusSettings
+      .removeDuplicates()
+      .sink { [weak self] _ in
+        self?.rebuildAutoFocusPath()
+        self?.updateHasUnsavedChanges()
+      }
+      .store(in: &cancellables)
+
     // Track background changes
     Publishers.CombineLatest4($backgroundStyle, $backgroundPadding, $backgroundShadowIntensity, $backgroundCornerRadius)
       .dropFirst(4)
@@ -866,6 +951,7 @@ final class VideoEditorState: ObservableObject {
     // Use passed segments if available, otherwise read from self
     let segments = currentZoomSegments ?? zoomSegments
     let zoomsChanged = segments != initialZoomSegments
+    let autoFocusChanged = autoFocusSettings != initialAutoFocusSettings
     // Background changes
     let bgStyleChanged = backgroundStyle != initialBackgroundStyle
     let bgPaddingChanged = backgroundPadding != initialBackgroundPadding
@@ -873,7 +959,7 @@ final class VideoEditorState: ObservableObject {
     let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
 
-    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged || backgroundChanged
+    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged || autoFocusChanged || backgroundChanged
   }
 
   private func clampTime(_ time: CMTime) -> CMTime {
@@ -931,6 +1017,43 @@ final class VideoEditorState: ObservableObject {
         }
       }
     }
+  }
+
+  private func loadRecordingMetadata() {
+    guard !isGIF else {
+      recordingMetadata = nil
+      autoFocusPath = []
+      if autoFocusSettings.isEnabled {
+        autoFocusSettings.isEnabled = false
+      }
+      return
+    }
+
+    let candidateURLs = [sourceURL, originalURL]
+      .reduce(into: [URL]()) { urls, url in
+        guard !urls.contains(url) else { return }
+        urls.append(url)
+      }
+
+    recordingMetadata = candidateURLs.lazy.compactMap { RecordingMetadataStore.load(for: $0) }.first
+
+    if !hasMouseTrackingData, autoFocusSettings.isEnabled {
+      autoFocusSettings.isEnabled = false
+    }
+
+    rebuildAutoFocusPath()
+  }
+
+  private func rebuildAutoFocusPath() {
+    guard let recordingMetadata, hasMouseTrackingData else {
+      autoFocusPath = []
+      return
+    }
+
+    autoFocusPath = VideoEditorAutoFocusEngine.buildPath(
+      from: recordingMetadata,
+      settings: autoFocusSettings
+    )
   }
 
   /// Apply Gaussian blur to image (computed once, reused during render)
