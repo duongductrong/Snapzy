@@ -15,8 +15,7 @@ class ZoomCompositor {
   // MARK: - Properties
 
   private let zooms: [ZoomSegment]
-  private let autoFocusSettings: AutoFocusSettings
-  private let autoFocusPath: [AutoFocusCameraSample]
+  private let autoFocusPaths: [UUID: [AutoFocusCameraSample]]
   private let renderSize: CGSize
   private let transitionDuration: TimeInterval
 
@@ -30,8 +29,7 @@ class ZoomCompositor {
 
   init(
     zooms: [ZoomSegment],
-    autoFocusSettings: AutoFocusSettings = AutoFocusSettings(),
-    autoFocusPath: [AutoFocusCameraSample] = [],
+    autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:],
     renderSize: CGSize,
     transitionDuration: TimeInterval = 0.3,
     backgroundStyle: BackgroundStyle = .none,
@@ -39,8 +37,7 @@ class ZoomCompositor {
     cornerRadius: CGFloat = 0
   ) {
     self.zooms = zooms.filter { $0.isEnabled }
-    self.autoFocusSettings = autoFocusSettings
-    self.autoFocusPath = autoFocusPath
+    self.autoFocusPaths = autoFocusPaths
     self.renderSize = renderSize
     self.transitionDuration = transitionDuration
     self.backgroundStyle = backgroundStyle
@@ -85,8 +82,7 @@ class ZoomCompositor {
     let instruction = ZoomVideoCompositionInstruction(
       timeRange: timeRange,
       zooms: zooms,
-      autoFocusSettings: autoFocusSettings,
-      autoFocusPath: autoFocusPath,
+      autoFocusPaths: autoFocusPaths,
       trackID: videoTrack.trackID,
       renderSize: renderSize,
       transitionDuration: transitionDuration,
@@ -129,8 +125,7 @@ class ZoomCompositor {
 class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionProtocol {
   let timeRange: CMTimeRange
   let zooms: [ZoomSegment]
-  let autoFocusSettings: AutoFocusSettings
-  let autoFocusPath: [AutoFocusCameraSample]
+  let autoFocusPaths: [UUID: [AutoFocusCameraSample]]
   let trackID: CMPersistentTrackID
   let renderSize: CGSize
   let transitionDuration: TimeInterval
@@ -152,8 +147,7 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   init(
     timeRange: CMTimeRange,
     zooms: [ZoomSegment],
-    autoFocusSettings: AutoFocusSettings,
-    autoFocusPath: [AutoFocusCameraSample],
+    autoFocusPaths: [UUID: [AutoFocusCameraSample]],
     trackID: CMPersistentTrackID,
     renderSize: CGSize,
     transitionDuration: TimeInterval,
@@ -164,8 +158,7 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
   ) {
     self.timeRange = timeRange
     self.zooms = zooms
-    self.autoFocusSettings = autoFocusSettings
-    self.autoFocusPath = autoFocusPath
+    self.autoFocusPaths = autoFocusPaths
     self.trackID = trackID
     self.renderSize = renderSize
     self.transitionDuration = transitionDuration
@@ -284,9 +277,8 @@ class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
 
     let cameraState = VideoEditorAutoFocusEngine.resolvedCameraState(
       at: currentTime,
-      manualSegments: instruction.zooms,
-      autoFocusSettings: instruction.autoFocusSettings,
-      autoFocusPath: instruction.autoFocusPath,
+      segments: instruction.zooms,
+      autoFocusPaths: instruction.autoFocusPaths,
       transitionDuration: instruction.transitionDuration
     )
     let zoomLevel = cameraState.zoomLevel

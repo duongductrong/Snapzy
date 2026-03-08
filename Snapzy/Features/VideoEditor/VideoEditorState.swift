@@ -31,6 +31,20 @@ enum EditorAction: Equatable {
 @MainActor
 final class VideoEditorState: ObservableObject {
 
+  private struct AutoFocusPathInput: Equatable {
+    let zoomType: ZoomType
+    let zoomLevel: CGFloat
+    let followSpeed: Double
+    let focusMargin: CGFloat
+
+    init(segment: ZoomSegment) {
+      zoomType = segment.zoomType
+      zoomLevel = segment.zoomLevel
+      followSpeed = segment.followSpeed
+      focusMargin = segment.focusMargin
+    }
+  }
+
   // MARK: - Video Source
 
   private(set) var sourceURL: URL
@@ -83,8 +97,7 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Auto Focus
 
   @Published private(set) var recordingMetadata: RecordingMetadata?
-  @Published private(set) var autoFocusPath: [AutoFocusCameraSample] = []
-  @Published var autoFocusSettings: AutoFocusSettings = AutoFocusSettings()
+  @Published private(set) var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
 
   // MARK: - GIF Metadata
 
@@ -138,7 +151,6 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
   private var initialDimensionPreset: ExportDimensionPreset = .original
-  private var initialAutoFocusSettings: AutoFocusSettings = AutoFocusSettings()
 
   // MARK: - Undo/Redo
 
@@ -158,6 +170,7 @@ final class VideoEditorState: ObservableObject {
   private var timeObserver: Any?
   private var endObserver: NSObjectProtocol?
   private var cancellables = Set<AnyCancellable>()
+  private var autoFocusPathInputs: [UUID: AutoFocusPathInput] = [:]
 
   // MARK: - Computed Properties
 
@@ -169,8 +182,16 @@ final class VideoEditorState: ObservableObject {
     !(recordingMetadata?.mouseSamples.isEmpty ?? true)
   }
 
-  var hasEnabledAutoFocus: Bool {
-    autoFocusSettings.isEnabled && !autoFocusPath.isEmpty
+  var autoZoomSegmentCount: Int {
+    zoomSegments.filter(\.isAutoMode).count
+  }
+
+  var hasAutoZoomSegments: Bool {
+    autoZoomSegmentCount > 0
+  }
+
+  var isAutoZoomActiveAtCurrentTime: Bool {
+    activeZoomSegment(at: CMTimeGetSeconds(currentTime))?.isAutoMode == true
   }
 
   var filename: String {
@@ -446,7 +467,6 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundPadding = backgroundPadding
     initialBackgroundShadowIntensity = backgroundShadowIntensity
     initialBackgroundCornerRadius = backgroundCornerRadius
-    initialAutoFocusSettings = autoFocusSettings
     clearUndoHistory()
   }
 
@@ -621,12 +641,13 @@ final class VideoEditorState: ObservableObject {
   @discardableResult
   func addZoom(at time: TimeInterval) -> UUID {
     let videoDuration = CMTimeGetSeconds(duration)
+    let defaultZoomType: ZoomType = hasMouseTrackingData ? .auto : .manual
     let segment = ZoomSegment(
       startTime: max(0, time - ZoomSegment.defaultDuration / 2),
       duration: ZoomSegment.defaultDuration,
       zoomLevel: ZoomSegment.defaultZoomLevel,
       zoomCenter: CGPoint(x: 0.5, y: 0.5),
-      zoomType: .manual
+      zoomType: defaultZoomType
     ).clamped(to: videoDuration)
 
     zoomSegments.append(segment)
@@ -652,6 +673,9 @@ final class VideoEditorState: ObservableObject {
     duration: TimeInterval? = nil,
     zoomLevel: CGFloat? = nil,
     zoomCenter: CGPoint? = nil,
+    zoomType: ZoomType? = nil,
+    followSpeed: Double? = nil,
+    focusMargin: CGFloat? = nil,
     isEnabled: Bool? = nil
   ) {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
@@ -674,6 +698,15 @@ final class VideoEditorState: ObservableObject {
         y: max(0, min(zoomCenter.y, 1))
       )
     }
+    if let zoomType = zoomType {
+      segment.zoomType = zoomType
+    }
+    if let followSpeed = followSpeed {
+      segment.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
+    }
+    if let focusMargin = focusMargin {
+      segment.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
+    }
     if let isEnabled = isEnabled {
       segment.isEnabled = isEnabled
     }
@@ -681,43 +714,9 @@ final class VideoEditorState: ObservableObject {
     zoomSegments[index] = segment
   }
 
-  // MARK: - Auto Focus Management
-
-  func updateAutoFocus(
-    isEnabled: Bool? = nil,
-    zoomLevel: CGFloat? = nil,
-    followSpeed: Double? = nil,
-    focusMargin: CGFloat? = nil
-  ) {
-    var settings = autoFocusSettings
-
-    if let isEnabled = isEnabled {
-      settings.isEnabled = isEnabled && hasMouseTrackingData
-    }
-    if let zoomLevel = zoomLevel {
-      settings.zoomLevel = max(
-        AutoFocusSettings.zoomRange.lowerBound,
-        min(zoomLevel, AutoFocusSettings.zoomRange.upperBound)
-      )
-    }
-    if let followSpeed = followSpeed {
-      settings.followSpeed = max(
-        AutoFocusSettings.followSpeedRange.lowerBound,
-        min(followSpeed, AutoFocusSettings.followSpeedRange.upperBound)
-      )
-    }
-    if let focusMargin = focusMargin {
-      settings.focusMargin = max(
-        AutoFocusSettings.focusMarginRange.lowerBound,
-        min(focusMargin, AutoFocusSettings.focusMarginRange.upperBound)
-      )
-    }
-
-    if !hasMouseTrackingData {
-      settings.isEnabled = false
-    }
-
-    autoFocusSettings = settings
+  func setZoomMode(id: UUID, zoomType: ZoomType) {
+    guard zoomType != .auto || hasMouseTrackingData else { return }
+    updateZoom(id: id, zoomType: zoomType)
   }
 
   func cameraState(
@@ -726,11 +725,14 @@ final class VideoEditorState: ObservableObject {
   ) -> VideoEditorCameraState {
     VideoEditorAutoFocusEngine.resolvedCameraState(
       at: time,
-      manualSegments: zoomSegments,
-      autoFocusSettings: autoFocusSettings,
-      autoFocusPath: autoFocusPath,
+      segments: zoomSegments,
+      autoFocusPaths: autoFocusPaths,
       transitionDuration: transitionDuration
     )
+  }
+
+  func autoFocusPath(for segment: ZoomSegment) -> [AutoFocusCameraSample] {
+    autoFocusPaths[segment.id] ?? []
   }
 
   /// Select a zoom segment
@@ -906,16 +908,9 @@ final class VideoEditorState: ObservableObject {
       .removeDuplicates()
       .sink { [weak self] segments in
         guard let self = self else { return }
+        self.rebuildAutoFocusPaths(for: segments)
         // Pass segments directly from publisher to avoid timing issues
         self.updateHasUnsavedChanges(currentZoomSegments: segments)
-      }
-      .store(in: &cancellables)
-
-    $autoFocusSettings
-      .removeDuplicates()
-      .sink { [weak self] _ in
-        self?.rebuildAutoFocusPath()
-        self?.updateHasUnsavedChanges()
       }
       .store(in: &cancellables)
 
@@ -951,7 +946,6 @@ final class VideoEditorState: ObservableObject {
     // Use passed segments if available, otherwise read from self
     let segments = currentZoomSegments ?? zoomSegments
     let zoomsChanged = segments != initialZoomSegments
-    let autoFocusChanged = autoFocusSettings != initialAutoFocusSettings
     // Background changes
     let bgStyleChanged = backgroundStyle != initialBackgroundStyle
     let bgPaddingChanged = backgroundPadding != initialBackgroundPadding
@@ -959,7 +953,7 @@ final class VideoEditorState: ObservableObject {
     let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
 
-    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged || autoFocusChanged || backgroundChanged
+    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged || backgroundChanged
   }
 
   private func clampTime(_ time: CMTime) -> CMTime {
@@ -1022,10 +1016,8 @@ final class VideoEditorState: ObservableObject {
   private func loadRecordingMetadata() {
     guard !isGIF else {
       recordingMetadata = nil
-      autoFocusPath = []
-      if autoFocusSettings.isEnabled {
-        autoFocusSettings.isEnabled = false
-      }
+      autoFocusPaths = [:]
+      autoFocusPathInputs = [:]
       return
     }
 
@@ -1037,23 +1029,37 @@ final class VideoEditorState: ObservableObject {
 
     recordingMetadata = candidateURLs.lazy.compactMap { RecordingMetadataStore.load(for: $0) }.first
 
-    if !hasMouseTrackingData, autoFocusSettings.isEnabled {
-      autoFocusSettings.isEnabled = false
-    }
-
-    rebuildAutoFocusPath()
+    rebuildAutoFocusPaths(for: zoomSegments)
   }
 
-  private func rebuildAutoFocusPath() {
+  private func rebuildAutoFocusPaths(for segments: [ZoomSegment]) {
     guard let recordingMetadata, hasMouseTrackingData else {
-      autoFocusPath = []
+      autoFocusPaths = [:]
+      autoFocusPathInputs = [:]
       return
     }
 
-    autoFocusPath = VideoEditorAutoFocusEngine.buildPath(
-      from: recordingMetadata,
-      settings: autoFocusSettings
-    )
+    var rebuiltPaths: [UUID: [AutoFocusCameraSample]] = [:]
+    var rebuiltInputs: [UUID: AutoFocusPathInput] = [:]
+
+    for segment in segments where segment.isAutoMode {
+      let input = AutoFocusPathInput(segment: segment)
+      rebuiltInputs[segment.id] = input
+
+      if autoFocusPathInputs[segment.id] == input,
+         let cachedPath = autoFocusPaths[segment.id] {
+        rebuiltPaths[segment.id] = cachedPath
+        continue
+      }
+
+      rebuiltPaths[segment.id] = VideoEditorAutoFocusEngine.buildPath(
+        from: recordingMetadata,
+        segment: segment
+      )
+    }
+
+    autoFocusPathInputs = rebuiltInputs
+    autoFocusPaths = rebuiltPaths
   }
 
   /// Apply Gaussian blur to image (computed once, reused during render)

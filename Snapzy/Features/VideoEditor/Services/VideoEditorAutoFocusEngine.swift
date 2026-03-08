@@ -11,8 +11,11 @@ import Foundation
 enum VideoEditorAutoFocusEngine {
   static func buildPath(
     from metadata: RecordingMetadata,
-    settings: AutoFocusSettings
+    segment: ZoomSegment
   ) -> [AutoFocusCameraSample] {
+    guard segment.isAutoMode else { return [] }
+
+    let settings = segment.autoFocusSettings
     let samples = metadata.mouseSamples.sorted { $0.time < $1.time }
     guard samples.count >= 2 else { return [] }
 
@@ -78,26 +81,36 @@ enum VideoEditorAutoFocusEngine {
 
   static func cameraState(
     at time: TimeInterval,
-    settings: AutoFocusSettings,
-    path: [AutoFocusCameraSample]
-  ) -> VideoEditorCameraState? {
-    guard settings.isEnabled, !path.isEmpty else { return nil }
-
-    let center = center(at: time, in: path)
-    return VideoEditorCameraState(
-      zoomLevel: settings.zoomLevel.clamped(to: AutoFocusSettings.zoomRange),
-      center: center
+    segment: ZoomSegment,
+    path: [AutoFocusCameraSample],
+    transitionDuration: TimeInterval
+  ) -> VideoEditorCameraState {
+    let interpolated = ZoomCalculator.interpolateZoom(
+      segment: segment,
+      currentTime: time,
+      transitionDuration: transitionDuration
     )
+
+    guard interpolated.level > 1.0 else {
+      return .identity
+    }
+
+    let center = path.isEmpty ? segment.zoomCenter : center(at: time, in: path)
+    return VideoEditorCameraState(zoomLevel: interpolated.level, center: center)
   }
 
   static func resolvedCameraState(
     at time: TimeInterval,
-    manualSegments: [ZoomSegment],
-    autoFocusSettings: AutoFocusSettings,
-    autoFocusPath: [AutoFocusCameraSample],
+    segments: [ZoomSegment],
+    autoFocusPaths: [UUID: [AutoFocusCameraSample]],
     transitionDuration: TimeInterval
   ) -> VideoEditorCameraState {
-    if let activeSegment = ZoomCalculator.activeSegment(at: time, in: manualSegments) {
+    guard let activeSegment = ZoomCalculator.activeSegment(at: time, in: segments) else {
+      return .identity
+    }
+
+    switch activeSegment.zoomType {
+    case .manual:
       let interpolated = ZoomCalculator.interpolateZoom(
         segment: activeSegment,
         currentTime: time,
@@ -107,10 +120,14 @@ enum VideoEditorAutoFocusEngine {
         zoomLevel: interpolated.level,
         center: interpolated.center
       )
+    case .auto:
+      return cameraState(
+        at: time,
+        segment: activeSegment,
+        path: autoFocusPaths[activeSegment.id] ?? [],
+        transitionDuration: transitionDuration
+      )
     }
-
-    return cameraState(at: time, settings: autoFocusSettings, path: autoFocusPath)
-      ?? .identity
   }
 
   static func trimmedPath(

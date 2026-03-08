@@ -56,10 +56,7 @@ struct ZoomableVideoPlayerSection: View {
     .onChange(of: state.zoomSegments) { _ in
       updateZoomState(at: CMTimeGetSeconds(state.currentTime))
     }
-    .onChange(of: state.autoFocusSettings) { _ in
-      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
-    }
-    .onChange(of: state.autoFocusPath) { _ in
+    .onChange(of: state.autoFocusPaths) { _ in
       updateZoomState(at: CMTimeGetSeconds(state.currentTime))
     }
   }

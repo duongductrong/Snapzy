@@ -12,11 +12,26 @@ struct AutoFocusSettings: Equatable {
   static let zoomRange: ClosedRange<CGFloat> = 1.0...4.0
   static let followSpeedRange: ClosedRange<Double> = 0.2...1.0
   static let focusMarginRange: ClosedRange<CGFloat> = 0.2...0.9
+  static let defaultZoomLevel: CGFloat = 2.0
+  static let defaultFollowSpeed: Double = 0.55
+  static let defaultFocusMargin: CGFloat = 0.45
 
   var isEnabled: Bool = false
-  var zoomLevel: CGFloat = 2.0
-  var followSpeed: Double = 0.55
-  var focusMargin: CGFloat = 0.45
+  var zoomLevel: CGFloat = Self.defaultZoomLevel
+  var followSpeed: Double = Self.defaultFollowSpeed
+  var focusMargin: CGFloat = Self.defaultFocusMargin
+
+  init(
+    isEnabled: Bool = false,
+    zoomLevel: CGFloat = Self.defaultZoomLevel,
+    followSpeed: Double = Self.defaultFollowSpeed,
+    focusMargin: CGFloat = Self.defaultFocusMargin
+  ) {
+    self.isEnabled = isEnabled
+    self.zoomLevel = Self.clampZoomLevel(zoomLevel)
+    self.followSpeed = Self.clampFollowSpeed(followSpeed)
+    self.focusMargin = Self.clampFocusMargin(focusMargin)
+  }
 
   var zoomDisplayValue: String {
     if zoomLevel == floor(zoomLevel) {
@@ -31,6 +46,18 @@ struct AutoFocusSettings: Equatable {
 
   var focusMarginDisplayValue: String {
     "\(Int((focusMargin * 100).rounded()))%"
+  }
+
+  static func clampZoomLevel(_ value: CGFloat) -> CGFloat {
+    Swift.min(Swift.max(value, zoomRange.lowerBound), zoomRange.upperBound)
+  }
+
+  static func clampFollowSpeed(_ value: Double) -> Double {
+    Swift.min(Swift.max(value, followSpeedRange.lowerBound), followSpeedRange.upperBound)
+  }
+
+  static func clampFocusMargin(_ value: CGFloat) -> CGFloat {
+    Swift.min(Swift.max(value, focusMarginRange.lowerBound), focusMarginRange.upperBound)
   }
 }
 

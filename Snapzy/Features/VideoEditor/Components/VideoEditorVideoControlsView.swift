@@ -63,7 +63,7 @@ struct VideoControlsView: View {
         .cornerRadius(4)
       }
 
-      if state.hasEnabledAutoFocus {
+      if state.isAutoZoomActiveAtCurrentTime {
         HStack(spacing: 4) {
           Image(systemName: "camera.metering.center.weighted")
             .font(.system(size: 11))

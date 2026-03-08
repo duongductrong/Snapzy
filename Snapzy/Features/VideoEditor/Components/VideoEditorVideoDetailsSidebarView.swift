@@ -67,10 +67,8 @@ struct VideoDetailsSidebarView: View {
         if state.hasMouseTrackingData {
           SidebarSection(title: "Smart Camera") {
             DetailRow(label: "Mouse Samples", value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)")
-            DetailRow(label: "Follow Mouse", value: state.hasEnabledAutoFocus ? "Enabled" : "Available")
-            if state.hasEnabledAutoFocus {
-              DetailRow(label: "Auto Zoom", value: state.autoFocusSettings.zoomDisplayValue)
-            }
+            DetailRow(label: "Auto Segments", value: "\(state.autoZoomSegmentCount)")
+            DetailRow(label: "Status", value: state.isAutoZoomActiveAtCurrentTime ? "Active" : "Ready")
           }
         }
 
