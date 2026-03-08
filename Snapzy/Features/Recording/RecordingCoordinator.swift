@@ -601,17 +601,18 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow?.orderOut(nil)
 
     let captureManager = ScreenCaptureManager.shared
+    let prefetchedContentTask = captureManager.prefetchShareableContent()
 
     Task {
-      // Brief delay to ensure windows are fully hidden before capture
-      try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
+      await Task.yield()
 
       let result = await captureManager.captureArea(
         rect: rect,
         saveDirectory: saveDirectory,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
-        excludeOwnApplication: !includeOwnAppInScreenshots
+        excludeOwnApplication: !includeOwnAppInScreenshots,
+        prefetchedContentTask: prefetchedContentTask
       )
 
       switch result {

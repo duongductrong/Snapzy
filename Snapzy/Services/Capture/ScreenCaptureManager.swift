@@ -15,6 +15,7 @@ import os.log
 import ScreenCaptureKit
 
 private let logger = Logger(subsystem: "Snapzy", category: "ScreenCaptureManager")
+typealias ShareableContentPrefetchTask = Task<SCShareableContent, Error>
 
 /// Result type for capture operations
 enum CaptureResult {
@@ -103,6 +104,16 @@ final class ScreenCaptureManager: ObservableObject {
     NSWorkspace.shared.open(url)
   }
 
+  /// Start loading shareable content before the user finishes a selection so
+  /// the actual screenshot can happen immediately on completion.
+  func prefetchShareableContent() -> ShareableContentPrefetchTask? {
+    guard hasPermission else { return nil }
+
+    return Task(priority: .userInitiated) {
+      try await SCShareableContent.current
+    }
+  }
+
   // MARK: - Capture Fullscreen
 
   /// Capture the entire screen and save to specified directory
@@ -119,7 +130,8 @@ final class ScreenCaptureManager: ObservableObject {
     format: ImageFormat = .png,
     excludeDesktopIcons: Bool = false,
     excludeDesktopWidgets: Bool = false,
-    excludeOwnApplication: Bool = false
+    excludeOwnApplication: Bool = false,
+    prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async -> CaptureResult {
 
     if !hasPermission {
@@ -134,7 +146,7 @@ final class ScreenCaptureManager: ObservableObject {
     DiagnosticLogger.shared.log(.info, .capture, "Fullscreen capture started")
 
     do {
-      let content = try await SCShareableContent.current
+      let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
 
       // Get the target display
       let targetDisplayID = displayID ?? CGMainDisplayID()
@@ -190,7 +202,8 @@ final class ScreenCaptureManager: ObservableObject {
     format: ImageFormat = .png,
     excludeDesktopIcons: Bool = false,
     excludeDesktopWidgets: Bool = false,
-    excludeOwnApplication: Bool = false
+    excludeOwnApplication: Bool = false,
+    prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async -> CaptureResult {
 
     if !hasPermission {
@@ -205,7 +218,7 @@ final class ScreenCaptureManager: ObservableObject {
     DiagnosticLogger.shared.log(.info, .capture, "Area capture started \(Int(rect.width))x\(Int(rect.height))")
 
     do {
-      let content = try await SCShareableContent.current
+      let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
 
       // Get total screen height for coordinate conversion (Cocoa uses bottom-left, CG uses top-left)
       let totalScreenHeight = NSScreen.screens.map { $0.frame.maxY }.max() ?? 0
@@ -442,7 +455,8 @@ final class ScreenCaptureManager: ObservableObject {
     rect: CGRect,
     excludeDesktopIcons: Bool = false,
     excludeDesktopWidgets: Bool = false,
-    excludeOwnApplication: Bool = false
+    excludeOwnApplication: Bool = false,
+    prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async throws -> CGImage? {
     if !hasPermission {
       let granted = await requestPermission()
@@ -451,7 +465,7 @@ final class ScreenCaptureManager: ObservableObject {
       }
     }
 
-    let content = try await SCShareableContent.current
+    let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
 
     // Find the display containing the rect
     var targetScreen: NSScreen?
@@ -535,6 +549,20 @@ final class ScreenCaptureManager: ObservableObject {
   }
 
   // MARK: - Filter Builder
+
+  private func loadShareableContent(
+    prefetchedContentTask: ShareableContentPrefetchTask?
+  ) async throws -> SCShareableContent {
+    if let prefetchedContentTask {
+      do {
+        return try await prefetchedContentTask.value
+      } catch {
+        logger.debug("Prefetched shareable content failed; refetching current content")
+      }
+    }
+
+    return try await SCShareableContent.current
+  }
 
   /// Compatibility wrapper: uses SCScreenshotManager on macOS 14+, falls back to SCStream single-frame capture on macOS 13.
   private func captureImageCompat(

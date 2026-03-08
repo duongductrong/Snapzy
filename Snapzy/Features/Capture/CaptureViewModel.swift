@@ -193,16 +193,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       saveDirectory = resolvedSaveDirectory
 
       isCapturing = true
-
-      // Minimal delay to ensure UI state updates before capture
-      try? await Task.sleep(nanoseconds: 50_000_000)  // 50ms
+      let prefetchedContentTask = captureManager.prefetchShareableContent()
+      await Task.yield()
 
       let result = await captureManager.captureFullscreen(
         saveDirectory: resolvedSaveDirectory,
         format: selectedFormat.format,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
-        excludeOwnApplication: !includesOwnAppInScreenshots
+        excludeOwnApplication: !includesOwnAppInScreenshots,
+        prefetchedContentTask: prefetchedContentTask
       )
 
       isCapturing = false
@@ -233,6 +233,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Set flag BEFORE delay to close the race window
     isAreaSelectionActive = true
     print("[Snapzy:CaptureVM] captureArea() — flag set to true")
+    let prefetchedContentTask = captureManager.prefetchShareableContent()
 
     // Hide only normal-level app windows (not overlay panels) to avoid hiding pooled overlay windows
     hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
@@ -267,9 +268,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         print("[Snapzy:CaptureVM] captureArea() — rect selected: \(selectedRect)")
         Task { @MainActor in
           self.isCapturing = true
-
-          // Delay to ensure overlay windows are fully hidden from screen buffer
-          try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+          await Task.yield()
 
           let result = await self.captureManager.captureArea(
             rect: selectedRect,
@@ -277,7 +276,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             format: self.selectedFormat.format,
             excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
             excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
-            excludeOwnApplication: !self.includesOwnAppInScreenshots
+            excludeOwnApplication: !self.includesOwnAppInScreenshots,
+            prefetchedContentTask: prefetchedContentTask
           )
 
           self.isCapturing = false
@@ -382,6 +382,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Set flag BEFORE delay to close the race window
     isAreaSelectionActive = true
     print("[Snapzy:CaptureVM] captureOCR() — flag set to true")
+    let prefetchedContentTask = captureManager.prefetchShareableContent()
 
     // Hide only normal-level app windows (not overlay panels)
     hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
@@ -413,9 +414,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             self.isAreaSelectionActive = false
             print("[Snapzy:CaptureVM] captureOCR() — flag reset to false (defer)")
           }
-
-          // Delay to ensure overlay windows are fully hidden
-          try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
+          await Task.yield()
 
           do {
             // Capture the screen region
@@ -423,7 +422,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               rect: selectedRect,
               excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
               excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
-              excludeOwnApplication: !self.includesOwnAppInScreenshots
+              excludeOwnApplication: !self.includesOwnAppInScreenshots,
+              prefetchedContentTask: prefetchedContentTask
             ) else {
               QuickAccessSound.failed.play()
               return
