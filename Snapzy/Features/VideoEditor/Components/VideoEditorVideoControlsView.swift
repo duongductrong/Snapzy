@@ -63,6 +63,22 @@ struct VideoControlsView: View {
         .cornerRadius(4)
       }
 
+      if state.isAutoZoomActiveAtCurrentTime {
+        HStack(spacing: 4) {
+          Image(systemName: "camera.metering.center.weighted")
+            .font(.system(size: 11))
+            .foregroundColor(.green)
+
+          Text("Auto")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(.green)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(Color.green.opacity(0.12))
+        .cornerRadius(4)
+      }
+
       // Trimmed duration indicator
       if state.hasUnsavedChanges {
         HStack(spacing: 4) {

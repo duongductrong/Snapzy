@@ -15,6 +15,8 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
   var zoomLevel: CGFloat           // 1.0 (100%) to 4.0 (400%)
   var zoomCenter: CGPoint          // normalized 0-1 for x,y position
   var zoomType: ZoomType
+  var followSpeed: Double
+  var focusMargin: CGFloat
   var isEnabled: Bool
 
   // MARK: - Computed Properties
@@ -41,6 +43,8 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
     zoomLevel: CGFloat = ZoomSegment.defaultZoomLevel,
     zoomCenter: CGPoint = CGPoint(x: 0.5, y: 0.5),
     zoomType: ZoomType = .manual,
+    followSpeed: Double = AutoFocusSettings.defaultFollowSpeed,
+    focusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin,
     isEnabled: Bool = true
   ) {
     self.id = id
@@ -52,6 +56,8 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
       y: max(0, min(zoomCenter.y, 1))
     )
     self.zoomType = zoomType
+    self.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
+    self.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
     self.isEnabled = isEnabled
   }
 
@@ -79,8 +85,8 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
 // MARK: - Zoom Type
 
 enum ZoomType: String, Codable, CaseIterable {
-  case auto    // generated from click detection during recording
-  case manual  // user-defined zoom
+  case auto    // follow recorded mouse path within the zoom item's range
+  case manual  // user-defined camera framing
 
   var displayName: String {
     switch self {
@@ -100,6 +106,19 @@ enum ZoomType: String, Codable, CaseIterable {
 // MARK: - Zoom Segment Extensions
 
 extension ZoomSegment {
+  var autoFocusSettings: AutoFocusSettings {
+    AutoFocusSettings(
+      isEnabled: zoomType == .auto,
+      zoomLevel: zoomLevel,
+      followSpeed: followSpeed,
+      focusMargin: focusMargin
+    )
+  }
+
+  var isAutoMode: Bool {
+    zoomType == .auto
+  }
+
   /// Create a zoom segment centered at a specific time
   static func centered(
     at time: TimeInterval,

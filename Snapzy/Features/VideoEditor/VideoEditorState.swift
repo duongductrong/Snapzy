@@ -31,6 +31,20 @@ enum EditorAction: Equatable {
 @MainActor
 final class VideoEditorState: ObservableObject {
 
+  private struct AutoFocusPathInput: Equatable {
+    let zoomType: ZoomType
+    let zoomLevel: CGFloat
+    let followSpeed: Double
+    let focusMargin: CGFloat
+
+    init(segment: ZoomSegment) {
+      zoomType = segment.zoomType
+      zoomLevel = segment.zoomLevel
+      followSpeed = segment.followSpeed
+      focusMargin = segment.focusMargin
+    }
+  }
+
   // MARK: - Video Source
 
   private(set) var sourceURL: URL
@@ -79,6 +93,11 @@ final class VideoEditorState: ObservableObject {
   @Published var isZoomTrackVisible: Bool = true
   @Published var isVideoInfoSidebarVisible: Bool = false
   @Published var isRightSidebarVisible: Bool = false
+
+  // MARK: - Auto Focus
+
+  @Published private(set) var recordingMetadata: RecordingMetadata?
+  @Published private(set) var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
 
   // MARK: - GIF Metadata
 
@@ -151,11 +170,28 @@ final class VideoEditorState: ObservableObject {
   private var timeObserver: Any?
   private var endObserver: NSObjectProtocol?
   private var cancellables = Set<AnyCancellable>()
+  private var autoFocusPathInputs: [UUID: AutoFocusPathInput] = [:]
 
   // MARK: - Computed Properties
 
   var trimmedDuration: CMTime {
     CMTimeSubtract(trimEnd, trimStart)
+  }
+
+  var hasMouseTrackingData: Bool {
+    !(recordingMetadata?.mouseSamples.isEmpty ?? true)
+  }
+
+  var autoZoomSegmentCount: Int {
+    zoomSegments.filter(\.isAutoMode).count
+  }
+
+  var hasAutoZoomSegments: Bool {
+    autoZoomSegmentCount > 0
+  }
+
+  var isAutoZoomActiveAtCurrentTime: Bool {
+    activeZoomSegment(at: CMTimeGetSeconds(currentTime))?.isAutoMode == true
   }
 
   var filename: String {
@@ -255,6 +291,8 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Metadata Loading
 
   func loadMetadata() async {
+    loadRecordingMetadata()
+
     // GIF files can't be loaded by AVAsset — use GIFResizer metadata
     if isGIF {
       if let metadata = GIFResizer.metadata(for: sourceURL) {
@@ -584,6 +622,13 @@ final class VideoEditorState: ObservableObject {
     }
 
     try FileManager.default.moveItem(at: sourceAccess.url, to: newURL)
+
+    do {
+      try RecordingMetadataStore.moveAssociation(from: oldSourceURL, to: newURL)
+    } catch {
+      print("[RecordingMetadata] Failed to move metadata association during rename: \(error.localizedDescription)")
+    }
+
     sourceURL = newURL
     if originalURL == oldSourceURL {
       originalURL = newURL
@@ -596,12 +641,13 @@ final class VideoEditorState: ObservableObject {
   @discardableResult
   func addZoom(at time: TimeInterval) -> UUID {
     let videoDuration = CMTimeGetSeconds(duration)
+    let defaultZoomType: ZoomType = hasMouseTrackingData ? .auto : .manual
     let segment = ZoomSegment(
       startTime: max(0, time - ZoomSegment.defaultDuration / 2),
       duration: ZoomSegment.defaultDuration,
       zoomLevel: ZoomSegment.defaultZoomLevel,
       zoomCenter: CGPoint(x: 0.5, y: 0.5),
-      zoomType: .manual
+      zoomType: defaultZoomType
     ).clamped(to: videoDuration)
 
     zoomSegments.append(segment)
@@ -627,6 +673,9 @@ final class VideoEditorState: ObservableObject {
     duration: TimeInterval? = nil,
     zoomLevel: CGFloat? = nil,
     zoomCenter: CGPoint? = nil,
+    zoomType: ZoomType? = nil,
+    followSpeed: Double? = nil,
+    focusMargin: CGFloat? = nil,
     isEnabled: Bool? = nil
   ) {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
@@ -649,11 +698,41 @@ final class VideoEditorState: ObservableObject {
         y: max(0, min(zoomCenter.y, 1))
       )
     }
+    if let zoomType = zoomType {
+      segment.zoomType = zoomType
+    }
+    if let followSpeed = followSpeed {
+      segment.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
+    }
+    if let focusMargin = focusMargin {
+      segment.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
+    }
     if let isEnabled = isEnabled {
       segment.isEnabled = isEnabled
     }
 
     zoomSegments[index] = segment
+  }
+
+  func setZoomMode(id: UUID, zoomType: ZoomType) {
+    guard zoomType != .auto || hasMouseTrackingData else { return }
+    updateZoom(id: id, zoomType: zoomType)
+  }
+
+  func cameraState(
+    at time: TimeInterval,
+    transitionDuration: TimeInterval = 0.3
+  ) -> VideoEditorCameraState {
+    VideoEditorAutoFocusEngine.resolvedCameraState(
+      at: time,
+      segments: zoomSegments,
+      autoFocusPaths: autoFocusPaths,
+      transitionDuration: transitionDuration
+    )
+  }
+
+  func autoFocusPath(for segment: ZoomSegment) -> [AutoFocusCameraSample] {
+    autoFocusPaths[segment.id] ?? []
   }
 
   /// Select a zoom segment
@@ -829,6 +908,7 @@ final class VideoEditorState: ObservableObject {
       .removeDuplicates()
       .sink { [weak self] segments in
         guard let self = self else { return }
+        self.rebuildAutoFocusPaths(for: segments)
         // Pass segments directly from publisher to avoid timing issues
         self.updateHasUnsavedChanges(currentZoomSegments: segments)
       }
@@ -931,6 +1011,55 @@ final class VideoEditorState: ObservableObject {
         }
       }
     }
+  }
+
+  private func loadRecordingMetadata() {
+    guard !isGIF else {
+      recordingMetadata = nil
+      autoFocusPaths = [:]
+      autoFocusPathInputs = [:]
+      return
+    }
+
+    let candidateURLs = [sourceURL, originalURL]
+      .reduce(into: [URL]()) { urls, url in
+        guard !urls.contains(url) else { return }
+        urls.append(url)
+      }
+
+    recordingMetadata = candidateURLs.lazy.compactMap { RecordingMetadataStore.load(for: $0) }.first
+
+    rebuildAutoFocusPaths(for: zoomSegments)
+  }
+
+  private func rebuildAutoFocusPaths(for segments: [ZoomSegment]) {
+    guard let recordingMetadata, hasMouseTrackingData else {
+      autoFocusPaths = [:]
+      autoFocusPathInputs = [:]
+      return
+    }
+
+    var rebuiltPaths: [UUID: [AutoFocusCameraSample]] = [:]
+    var rebuiltInputs: [UUID: AutoFocusPathInput] = [:]
+
+    for segment in segments where segment.isAutoMode {
+      let input = AutoFocusPathInput(segment: segment)
+      rebuiltInputs[segment.id] = input
+
+      if autoFocusPathInputs[segment.id] == input,
+         let cachedPath = autoFocusPaths[segment.id] {
+        rebuiltPaths[segment.id] = cachedPath
+        continue
+      }
+
+      rebuiltPaths[segment.id] = VideoEditorAutoFocusEngine.buildPath(
+        from: recordingMetadata,
+        segment: segment
+      )
+    }
+
+    autoFocusPathInputs = rebuiltInputs
+    autoFocusPaths = rebuiltPaths
   }
 
   /// Apply Gaussian blur to image (computed once, reused during render)

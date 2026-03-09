@@ -141,6 +141,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var excludedWindowIDs = Set<CGWindowID>()
   private var exceptedWindowIDs = Set<CGWindowID>()
   private var outputURL: URL?
+  private var mouseTracker: RecordingMouseTracker?
   private var exportDirectoryAccess: SandboxFileAccessManager.ScopedAccess?
   private var registeredOutputTypes: Set<SCStreamOutputType> = []
 
@@ -280,6 +281,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       captureMicrophone: captureMicrophone,
       content: content
     )
+
+    mouseTracker = RecordingMouseTracker(recordingRect: rect, fps: fps)
   }
 
   /// Start the recording
@@ -308,6 +311,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     session.isCapturing = true
+    mouseTracker?.start()
 
     state = .recording
     DiagnosticLogger.shared.log(.info, .recording, "Recording started \(Int(recordingRect.width))x\(Int(recordingRect.height)) \(fps)fps \(videoFormat.rawValue)")
@@ -321,6 +325,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   func pauseRecording() {
     guard state == .recording else { return }
     session.isCapturing = false
+    mouseTracker?.pause()
     pauseStartTime = Date()
     state = .paused
     DiagnosticLogger.shared.log(.info, .recording, "Recording paused")
@@ -332,6 +337,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     pausedDuration += Date().timeIntervalSince(pauseStart)
     pauseStartTime = nil
     session.isCapturing = true
+    mouseTracker?.resume()
     state = .recording
     DiagnosticLogger.shared.log(.info, .recording, "Recording resumed")
   }
@@ -364,8 +370,21 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
     await session.finishWriting()
 
+    let mouseSamples = mouseTracker?.stop() ?? []
     let url = outputURL
     if let url = url {
+      if mouseSamples.count >= 2 {
+        do {
+          let metadata = RecordingMetadata(
+            captureSize: recordingRect.size,
+            samplesPerSecond: mouseTracker?.samplesPerSecond ?? fps,
+            mouseSamples: mouseSamples
+          )
+          try RecordingMetadataStore.save(metadata, for: url)
+        } catch {
+          print("[RecordingMetadata] Failed to save mouse tracking data: \(error.localizedDescription)")
+        }
+      }
       DiagnosticLogger.shared.log(.info, .recording, "Recording stopped: \(url.lastPathComponent) (\(elapsedSeconds)s)")
     }
 
@@ -387,6 +406,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     session.cancelWriting()
+    mouseTracker?.reset()
     DiagnosticLogger.shared.log(.info, .recording, "Recording cancelled")
     if let url = outputURL {
       try? FileManager.default.removeItem(at: url)
@@ -687,6 +707,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     excludeOwnApplicationFromCapture = true
     excludeDesktopIconsFromCapture = false
     excludeDesktopWidgetsFromCapture = false
+    mouseTracker = nil
     session.reset()
     outputURL = nil
     state = .idle

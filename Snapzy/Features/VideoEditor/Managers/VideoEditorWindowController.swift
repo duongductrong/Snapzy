@@ -145,7 +145,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func showUnsavedChangesAlert(for window: NSWindow) {
     let alert = NSAlert()
     alert.messageText = "Unsaved Changes"
-    alert.informativeText = "You have unsaved trim changes. Do you want to save before closing?"
+    alert.informativeText = "You have unsaved video edits. Do you want to save before closing?"
     alert.alertStyle = .warning
 
     alert.addButton(withTitle: "Save")
@@ -180,8 +180,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     }
 
     let alert = NSAlert()
-    alert.messageText = "Save Trimmed Video"
-    alert.informativeText = "How would you like to save the trimmed video \"\(state.filename)\"?"
+    alert.messageText = "Save Edited Video"
+    alert.informativeText = "How would you like to save the edited video \"\(state.filename)\"?"
     alert.alertStyle = .informational
 
     alert.addButton(withTitle: "Replace Original")
@@ -378,7 +378,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     // Show save panel to let user choose destination
     let savePanel = NSSavePanel()
     savePanel.title = "Save Video Copy"
-    savePanel.message = "Choose where to save the trimmed video"
+    savePanel.message = "Choose where to save the edited video"
     savePanel.nameFieldLabel = "File Name:"
     savePanel.nameFieldStringValue = VideoEditorExporter.generateCopyFilename(from: state.sourceURL)
     savePanel.allowedContentTypes = [.movie, .mpeg4Movie, .quickTimeMovie]

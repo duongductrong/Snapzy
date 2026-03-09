@@ -289,6 +289,9 @@ final class QuickAccessManager: ObservableObject {
 
       do {
         try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+        if item.isVideo {
+          try? RecordingMetadataStore.delete(for: url)
+        }
       } catch {
         logger.error("Failed to delete item \(url.lastPathComponent): \(error.localizedDescription)")
       }
