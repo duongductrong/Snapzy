@@ -24,11 +24,11 @@ enum VideoEditorExporter {
     defer { outputAccess.stop() }
     let scopedOutputURL = outputAccess.url.appendingPathComponent(outputURL.lastPathComponent)
 
-    let hasZooms = state.zoomSegments.contains { $0.isEnabled }
+    let hasCameraEffects = state.zoomSegments.contains { $0.isEnabled }
     let hasBackground = state.backgroundStyle != .none && state.backgroundPadding > 0
 
     // If has zooms or background, use composition-based export
-    if hasZooms || hasBackground {
+    if hasCameraEffects || hasBackground {
       try await exportWithZooms(state: state, to: scopedOutputURL, progress: progress)
       return
     }
@@ -166,6 +166,21 @@ enum VideoEditorExporter {
       return adjusted
     }.filter { $0.startTime + $0.duration > 0 && $0.startTime < CMTimeGetSeconds(state.trimmedDuration) }
 
+    let adjustedAutoFocusPaths = Dictionary(
+      uniqueKeysWithValues: adjustedZooms
+        .filter { $0.isAutoMode }
+        .map { segment in
+          (
+            segment.id,
+            VideoEditorAutoFocusEngine.trimmedPath(
+              state.autoFocusPath(for: segment),
+              trimStart: trimStartSeconds,
+              trimEnd: trimEndSeconds
+            )
+          )
+        }
+    )
+
     print("🔍 [ZoomExport] Adjusted zooms count: \(adjustedZooms.count)")
     for (index, zoom) in adjustedZooms.enumerated() {
       print("🔍 [ZoomExport] Zoom[\(index)]: start=\(zoom.startTime)s, duration=\(zoom.duration)s, level=\(zoom.zoomLevel)x, enabled=\(zoom.isEnabled)")
@@ -257,6 +272,7 @@ enum VideoEditorExporter {
     print("🔍 [ZoomExport] Creating ZoomCompositor with renderSize: \(baseRenderSize)")
     let zoomCompositor = ZoomCompositor(
       zooms: adjustedZooms,
+      autoFocusPaths: adjustedAutoFocusPaths,
       renderSize: baseRenderSize,
       backgroundStyle: state.backgroundStyle,
       backgroundPadding: state.backgroundPadding,
@@ -474,6 +490,8 @@ enum VideoEditorExporter {
       // Move temp to original location
       try FileManager.default.moveItem(at: tempURL, to: targetURL)
       print("📹 [ReplaceOriginal] Moved temp to original location")
+
+      try? RecordingMetadataStore.delete(for: targetURL)
 
       // Remove backup
       try? FileManager.default.removeItem(at: backupURL)

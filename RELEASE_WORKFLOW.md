@@ -1,4 +1,4 @@
-# ClaudeShot Release Workflow
+# Snapzy Release Workflow
 
 ## Prerequisites
 
@@ -23,10 +23,10 @@
 cd /path/to/exported
 
 # Create ZIP archive (preserves code signature)
-zip -r ~/ClaudeShot-Updates/ClaudeShot-X.Y.Z.zip ClaudeShot.app
+zip -r ~/Snapzy-Updates/Snapzy-X.Y.Z.zip Snapzy.app
 
 # Optional: Create release notes HTML
-cat > ~/ClaudeShot-Updates/ClaudeShot-X.Y.Z.html << 'EOF'
+cat > ~/Snapzy-Updates/Snapzy-X.Y.Z.html << 'EOF'
 <html>
 <body>
 <h2>What's New in X.Y.Z</h2>
@@ -43,10 +43,10 @@ EOF
 
 ```bash
 # Locate Sparkle tools
-SPARKLE_BIN=~/Library/Developer/Xcode/DerivedData/ClaudeShot-*/SourcePackages/artifacts/sparkle/Sparkle/bin
+SPARKLE_BIN=~/Library/Developer/Xcode/DerivedData/Snapzy-*/SourcePackages/artifacts/sparkle/Sparkle/bin
 
 # Generate appcast (auto-signs and creates deltas)
-$SPARKLE_BIN/generate_appcast ~/ClaudeShot-Updates
+$SPARKLE_BIN/generate_appcast ~/Snapzy-Updates
 
 # Output:
 # - appcast.xml (updated)
@@ -62,13 +62,13 @@ git push origin vX.Y.Z
 
 # Create release with assets
 gh release create vX.Y.Z \
-  ~/ClaudeShot-Updates/ClaudeShot-X.Y.Z.zip \
-  ~/ClaudeShot-Updates/ClaudeShot-X.Y.Z.html \
-  --title "ClaudeShot X.Y.Z" \
+  ~/Snapzy-Updates/Snapzy-X.Y.Z.zip \
+  ~/Snapzy-Updates/Snapzy-X.Y.Z.html \
+  --title "Snapzy X.Y.Z" \
   --notes "See release notes for details"
 
 # Upload appcast.xml to repo root or GitHub Pages
-cp ~/ClaudeShot-Updates/appcast.xml ./appcast.xml
+cp ~/Snapzy-Updates/appcast.xml ./appcast.xml
 git add appcast.xml
 git commit -m "chore: update appcast for vX.Y.Z"
 git push
@@ -97,16 +97,16 @@ $SPARKLE_BIN/generate_keys -p
 
 Current URL in Info.plist:
 ```
-https://raw.githubusercontent.com/user/ClaudeShot/main/appcast.xml
+https://raw.githubusercontent.com/user/Snapzy/main/appcast.xml
 ```
 
-Update to your actual repository URL in `ClaudeShot/ClaudeShot.plist`.
+Update to your actual repository URL in `Snapzy/Snapzy.plist`.
 
 ## Testing Updates
 
 ```bash
 # Clear last check time to force update check
-defaults delete com.duongductrong.claudeshot SULastCheckTime
+defaults delete com.duongductrong.snapzy SULastCheckTime
 
 # Run app and click "Check for Updates..."
 ```

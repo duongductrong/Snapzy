@@ -31,13 +31,11 @@ struct VideoEditorRightSidebar: View {
 
   var body: some View {
     HStack(spacing: 0) {
-      // Content area (left side)
       tabContent
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       Divider()
 
-      // Vertical tab bar (right side)
       VerticalTabBar(
         selection: $selectedTab,
         tabs: VideoEditorSidebarTab.allCases
@@ -48,7 +46,6 @@ struct VideoEditorRightSidebar: View {
     .frame(width: 320)
     .frame(maxHeight: .infinity)
     .onChange(of: state.selectedZoomId) { newValue in
-      // Auto-switch to zoom tab when a zoom is selected
       if newValue != nil {
         withAnimation(.easeInOut(duration: 0.15)) {
           selectedTab = .zoom
@@ -56,8 +53,6 @@ struct VideoEditorRightSidebar: View {
       }
     }
   }
-
-  // MARK: - Tab Content
 
   @ViewBuilder
   private var tabContent: some View {
@@ -70,34 +65,44 @@ struct VideoEditorRightSidebar: View {
   }
 }
 
-/// Zoom settings content (extracted from ZoomSettingsPopover for tab use)
 struct ZoomSettingsContent: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
-  @State private var localZoomLevel: CGFloat = 2.0
+  @State private var localZoomLevel: CGFloat = ZoomSegment.defaultZoomLevel
   @State private var localCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
+  @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
 
   private var selectedSegment: ZoomSegment? {
     state.selectedZoomSegment
   }
 
+  private var canSwitchSelectedSegmentToAuto: Bool {
+    state.hasMouseTrackingData || selectedSegment?.isAutoMode == true
+  }
+
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
-      VStack(alignment: .leading, spacing: 12) {
-        if selectedSegment != nil {
-          // Zoom level slider
-          zoomLevelSection
-
-          // Center picker
-          centerPickerSection
+      VStack(alignment: .leading, spacing: 16) {
+        if let segment = selectedSegment {
+          modeSection(for: segment)
 
           Divider()
 
-          // Actions
+          zoomLevelSection
+
+          if segment.isAutoMode {
+            followSpeedSection
+            focusMarginSection
+          } else {
+            centerPickerSection
+          }
+
+          Divider()
+
           actionsSection
         } else {
-          // Empty state
           emptyState
         }
 
@@ -112,9 +117,118 @@ struct ZoomSettingsContent: View {
     .onChange(of: state.selectedZoomId) { _ in
       syncLocalState()
     }
+    .onChange(of: state.zoomSegments) { _ in
+      syncLocalState()
+    }
   }
 
-  // MARK: - Empty State
+  private func modeSection(for segment: ZoomSegment) -> some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack {
+        Label("Zoom Item", systemImage: "plus.magnifyingglass")
+          .font(.system(size: 12, weight: .semibold))
+
+        Spacer()
+
+        Text(segment.isAutoMode ? "Follow Mouse" : "Manual")
+          .font(.system(size: 9, weight: .semibold))
+          .padding(.horizontal, 6)
+          .padding(.vertical, 3)
+          .background((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18))
+          .foregroundColor(segment.isAutoMode ? .green : ZoomColors.primary)
+          .cornerRadius(4)
+      }
+
+      HStack(spacing: 8) {
+        modeButton(
+          title: "Manual",
+          icon: "hand.tap",
+          isSelected: !segment.isAutoMode,
+          isDisabled: false
+        ) {
+          applyZoomMode(.manual)
+        }
+
+        modeButton(
+          title: "Auto",
+          icon: "camera.metering.center.weighted",
+          isSelected: segment.isAutoMode,
+          isDisabled: !canSwitchSelectedSegmentToAuto
+        ) {
+          applyZoomMode(.auto)
+        }
+      }
+
+      if segment.isAutoMode {
+        if state.hasMouseTrackingData {
+          Text("Camera position follows the recorded mouse path only while this zoom item is active.")
+            .font(.system(size: 10))
+            .foregroundColor(.secondary.opacity(0.8))
+            .fixedSize(horizontal: false, vertical: true)
+        } else {
+          availabilityWarning
+        }
+      } else if state.hasMouseTrackingData {
+        Text("Manual mode keeps camera framing fixed. Switch to Auto when this zoom item should follow the mouse.")
+          .font(.system(size: 10))
+          .foregroundColor(.secondary.opacity(0.8))
+          .fixedSize(horizontal: false, vertical: true)
+      } else {
+        availabilityWarning
+      }
+    }
+  }
+
+  private func modeButton(
+    title: String,
+    icon: String,
+    isSelected: Bool,
+    isDisabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      HStack(spacing: 6) {
+        Image(systemName: icon)
+          .font(.system(size: 10, weight: .semibold))
+
+        Text(title)
+          .font(.system(size: 11, weight: .medium))
+      }
+      .frame(maxWidth: .infinity)
+      .padding(.vertical, 7)
+      .background(
+        isSelected
+          ? ZoomColors.primary.opacity(0.22)
+          : Color.white.opacity(0.08)
+      )
+      .foregroundColor(isDisabled ? .secondary : .primary)
+      .cornerRadius(8)
+      .overlay(
+        RoundedRectangle(cornerRadius: 8)
+          .strokeBorder(isSelected ? ZoomColors.primary.opacity(0.45) : Color.clear, lineWidth: 1)
+      )
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+    .opacity(isDisabled ? 0.45 : 1.0)
+  }
+
+  private var availabilityWarning: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Label("Mouse tracking data unavailable", systemImage: "cursorarrow.slash")
+        .font(.system(size: 11, weight: .medium))
+        .foregroundColor(.secondary)
+
+      Text("Follow Mouse only works with videos recorded by Snapzy after mouse tracking was added.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+    .padding(10)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .background(Color.white.opacity(0.06))
+    .cornerRadius(8)
+  }
 
   private var emptyState: some View {
     VStack(spacing: 12) {
@@ -126,7 +240,7 @@ struct ZoomSettingsContent: View {
         .font(.system(size: 13, weight: .medium))
         .foregroundColor(.secondary)
 
-      Text("Press Z to add a zoom at the playhead, or click on a zoom segment in the timeline.")
+      Text("Press Z to add a zoom at the playhead, or click a zoom item in the timeline.")
         .font(.system(size: 11))
         .foregroundColor(.secondary.opacity(0.7))
         .multilineTextAlignment(.center)
@@ -134,8 +248,6 @@ struct ZoomSettingsContent: View {
     .frame(maxWidth: .infinity)
     .padding(.vertical, 40)
   }
-
-  // MARK: - Sections
 
   private var zoomLevelSection: some View {
     VStack(alignment: .leading, spacing: 6) {
@@ -146,7 +258,7 @@ struct ZoomSettingsContent: View {
 
         Spacer()
 
-        Text(String(format: "%.0f%%", localZoomLevel * 100))
+        Text(zoomDisplayValue(for: localZoomLevel))
           .font(.system(size: 11, weight: .semibold))
           .monospacedDigit()
       }
@@ -171,7 +283,6 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
       }
 
-      // Quick presets
       HStack(spacing: 4) {
         ForEach([1.5, 2.0, 2.5, 3.0], id: \.self) { level in
           Button {
@@ -183,7 +294,7 @@ struct ZoomSettingsContent: View {
               .padding(.horizontal, 6)
               .padding(.vertical, 3)
               .background(
-                localZoomLevel == level
+                abs(localZoomLevel - level) < 0.05
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
@@ -192,6 +303,60 @@ struct ZoomSettingsContent: View {
           .buttonStyle(.plain)
         }
       }
+    }
+  }
+
+  private var followSpeedSection: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("Follow Speed")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.secondary)
+
+        Spacer()
+
+        Text("\(Int((localFollowSpeed * 100).rounded()))%")
+          .font(.system(size: 11, weight: .semibold))
+          .monospacedDigit()
+      }
+
+      Slider(value: $localFollowSpeed, in: AutoFocusSettings.followSpeedRange, step: 0.05) { isEditing in
+        if !isEditing {
+          applyFollowSpeed()
+        }
+      }
+
+      Text("Lower values feel calmer. Higher values react faster when the cursor changes direction.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var focusMarginSection: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      HStack {
+        Text("Focus Margin")
+          .font(.system(size: 11, weight: .medium))
+          .foregroundColor(.secondary)
+
+        Spacer()
+
+        Text("\(Int((localFocusMargin * 100).rounded()))%")
+          .font(.system(size: 11, weight: .semibold))
+          .monospacedDigit()
+      }
+
+      Slider(value: $localFocusMargin, in: AutoFocusSettings.focusMarginRange, step: 0.05) { isEditing in
+        if !isEditing {
+          applyFocusMargin()
+        }
+      }
+
+      Text("Adds a stability zone so tiny cursor motion does not keep nudging the camera.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 
@@ -209,7 +374,6 @@ struct ZoomSettingsContent: View {
         applyCenter(newValue)
       }
 
-      // Quick position presets
       HStack(spacing: 4) {
         ForEach(centerPresets, id: \.name) { preset in
           Button {
@@ -230,12 +394,15 @@ struct ZoomSettingsContent: View {
           .help(preset.name)
         }
       }
+
+      Text("Manual camera control is available only in Manual mode.")
+        .font(.system(size: 10))
+        .foregroundColor(.secondary.opacity(0.8))
     }
   }
 
   private var actionsSection: some View {
     HStack(spacing: 8) {
-      // Enable/Disable toggle
       Button {
         if let id = state.selectedZoomId {
           state.toggleZoomEnabled(id: id)
@@ -255,7 +422,6 @@ struct ZoomSettingsContent: View {
 
       Spacer()
 
-      // Delete button
       Button(role: .destructive) {
         if let id = state.selectedZoomId {
           state.removeZoom(id: id)
@@ -271,8 +437,6 @@ struct ZoomSettingsContent: View {
       .buttonStyle(.plain)
     }
   }
-
-  // MARK: - Center Presets
 
   private struct CenterPreset {
     let name: String
@@ -294,13 +458,17 @@ struct ZoomSettingsContent: View {
     abs(point.x - preset.x) < 0.1 && abs(point.y - preset.y) < 0.1
   }
 
-  // MARK: - Actions
-
   private func syncLocalState() {
-    if let segment = selectedSegment {
-      localZoomLevel = segment.zoomLevel
-      localCenter = segment.zoomCenter
-    }
+    guard let segment = selectedSegment else { return }
+    localZoomLevel = segment.zoomLevel
+    localCenter = segment.zoomCenter
+    localFollowSpeed = segment.followSpeed
+    localFocusMargin = segment.focusMargin
+  }
+
+  private func applyZoomMode(_ zoomType: ZoomType) {
+    guard let id = state.selectedZoomId else { return }
+    state.setZoomMode(id: id, zoomType: zoomType)
   }
 
   private func applyZoomLevel() {
@@ -308,8 +476,25 @@ struct ZoomSettingsContent: View {
     state.updateZoom(id: id, zoomLevel: localZoomLevel)
   }
 
+  private func applyFollowSpeed() {
+    guard let id = state.selectedZoomId else { return }
+    state.updateZoom(id: id, followSpeed: localFollowSpeed)
+  }
+
+  private func applyFocusMargin() {
+    guard let id = state.selectedZoomId else { return }
+    state.updateZoom(id: id, focusMargin: localFocusMargin)
+  }
+
   private func applyCenter(_ center: CGPoint) {
     guard let id = state.selectedZoomId else { return }
     state.updateZoom(id: id, zoomCenter: center)
+  }
+
+  private func zoomDisplayValue(for level: CGFloat) -> String {
+    if level == floor(level) {
+      return String(format: "%.0fx", level)
+    }
+    return String(format: "%.1fx", level)
   }
 }
