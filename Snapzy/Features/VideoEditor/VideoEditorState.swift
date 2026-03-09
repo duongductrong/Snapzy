@@ -623,10 +623,10 @@ final class VideoEditorState: ObservableObject {
 
     try FileManager.default.moveItem(at: sourceAccess.url, to: newURL)
 
-    let oldSidecarURL = RecordingMetadataStore.sidecarURL(for: oldSourceURL)
-    let newSidecarURL = RecordingMetadataStore.sidecarURL(for: newURL)
-    if FileManager.default.fileExists(atPath: oldSidecarURL.path) {
-      try FileManager.default.moveItem(at: oldSidecarURL, to: newSidecarURL)
+    do {
+      try RecordingMetadataStore.moveAssociation(from: oldSourceURL, to: newURL)
+    } catch {
+      print("[RecordingMetadata] Failed to move metadata association during rename: \(error.localizedDescription)")
     }
 
     sourceURL = newURL

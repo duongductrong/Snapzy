@@ -23,6 +23,7 @@ final class AppCoordinator {
     let didCrash = CrashSentinel.shared.checkAndReset()
     DiagnosticLogger.shared.startSession()
     LogCleanupScheduler.shared.start()
+    RecordingMetadataCleanupScheduler.shared.start()
 
     AppStatusBarController.shared.setup(
       viewModel: environment.screenCaptureViewModel,
@@ -42,6 +43,7 @@ final class AppCoordinator {
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")
     CrashSentinel.shared.markTerminated()
     LogCleanupScheduler.shared.stop()
+    RecordingMetadataCleanupScheduler.shared.stop()
 
     for observer in observers {
       NotificationCenter.default.removeObserver(observer)
