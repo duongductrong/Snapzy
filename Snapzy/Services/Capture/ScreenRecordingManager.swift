@@ -147,15 +147,15 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
   // Dedicated queues to avoid audio starvation behind video processing work.
   private let videoProcessingQueue = DispatchQueue(
-    label: "com.zapshot.recording.video",
+    label: "com.snapzy.recording.video",
     qos: .userInitiated
   )
   private let audioProcessingQueue = DispatchQueue(
-    label: "com.zapshot.recording.audio",
+    label: "com.snapzy.recording.audio",
     qos: .userInteractive
   )
   private let microphoneProcessingQueue = DispatchQueue(
-    label: "com.zapshot.recording.microphone",
+    label: "com.snapzy.recording.microphone",
     qos: .userInteractive
   )
 
