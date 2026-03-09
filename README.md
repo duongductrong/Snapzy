@@ -2,12 +2,11 @@
   <img src="./banner.png" width="200px" height="200px" alt="Snapzy banner" />
 
   <h1>Snapzy</h1>
-  <p><strong>A screenshot & recording app for macOS.</strong></p>
+  <p><strong>An open-source native macOS screenshot and screen recording app.</strong></p>
 
   <p>
-    A private source screenshot & recording app for macOS.<br/>
-      Built with <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>, powered by <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>.
-      </p>
+    Built with <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>, powered by <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>.
+  </p>
 
   <p>
     <a href="#">Get Started</a> •
