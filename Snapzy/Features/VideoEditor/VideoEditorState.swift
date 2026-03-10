@@ -867,7 +867,7 @@ final class VideoEditorState: ObservableObject {
       forInterval: interval,
       queue: .main
     ) { [weak self] time in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         guard let self = self, !self.isScrubbing else { return }
         self.currentTime = time
 
@@ -886,7 +886,7 @@ final class VideoEditorState: ObservableObject {
       object: player.currentItem,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.pause()
         self?.seek(to: self?.trimStart ?? .zero)
       }

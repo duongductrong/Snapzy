@@ -93,7 +93,9 @@ final class AreaSelectionController: NSObject {
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      self?.refreshWindowPool()
+      MainActor.assumeIsolated {
+        self?.refreshWindowPool()
+      }
     }
   }
 

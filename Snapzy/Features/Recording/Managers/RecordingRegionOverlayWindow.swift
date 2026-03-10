@@ -351,7 +351,7 @@ final class RecordingRegionOverlayView: NSView {
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
-    guard isInteractionEnabled, let overlayWindow = overlayWindow else { return }
+    guard isInteractionEnabled, overlayWindow != nil else { return }
 
     let point = convert(event.locationInWindow, from: nil)
     let localRect = localHighlightRect()

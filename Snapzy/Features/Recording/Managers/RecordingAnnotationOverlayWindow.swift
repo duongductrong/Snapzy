@@ -116,11 +116,15 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
   private func startModifierMonitor() {
     // Global monitor — works when overlay is NOT key window
     globalFlagsMonitor = NSEvent.addGlobalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-      Task { @MainActor in self?.handleFlagsChanged(event) }
+      MainActor.assumeIsolated {
+        self?.handleFlagsChanged(event)
+      }
     }
     // Local monitor — works when overlay IS key window
     localFlagsMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
-      Task { @MainActor in self?.handleFlagsChanged(event) }
+      MainActor.assumeIsolated {
+        self?.handleFlagsChanged(event)
+      }
       return event
     }
   }
@@ -145,7 +149,7 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
       let duration = shortcutConfig.holdDuration
       holdTimer?.invalidate()
       holdTimer = Timer.scheduledTimer(withTimeInterval: duration, repeats: false) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.annotationState.isShortcutModeActive = true
         }
       }

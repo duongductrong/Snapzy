@@ -260,7 +260,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       object: window,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.performSave()
       }
     }
@@ -270,7 +270,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       object: window,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.performSaveAs()
       }
     }

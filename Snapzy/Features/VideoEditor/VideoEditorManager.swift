@@ -44,7 +44,7 @@ final class VideoEditorManager {
         object: window,
         queue: .main
       ) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.cleanupWindow(for: itemId)
         }
       }
@@ -75,7 +75,7 @@ final class VideoEditorManager {
         object: window,
         queue: .main
       ) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.cleanupURLWindow(for: url)
         }
       }
@@ -105,7 +105,7 @@ final class VideoEditorManager {
         object: window,
         queue: .main
       ) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.emptyWindowController = nil
         }
       }

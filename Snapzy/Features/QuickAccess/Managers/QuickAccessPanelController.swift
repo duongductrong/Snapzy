@@ -63,7 +63,9 @@ final class QuickAccessPanelController {
         )
         panel.animator().setFrame(targetFrame, display: true)
       }, completionHandler: { [weak self] in
-        self?.isAnimating = false
+        MainActor.assumeIsolated {
+          self?.isAnimating = false
+        }
       })
     }
 
@@ -105,7 +107,9 @@ final class QuickAccessPanelController {
         panel.animator().alphaValue = 0
       }, completionHandler: { [weak self] in
         panel.close()
-        self?.panel = nil
+        MainActor.assumeIsolated {
+          self?.panel = nil
+        }
       })
     } else {
       // Slide-out to off-screen
@@ -122,8 +126,10 @@ final class QuickAccessPanelController {
         panel.animator().alphaValue = 0.5
       }, completionHandler: { [weak self] in
         panel.close()
-        self?.panel = nil
-        self?.isAnimating = false
+        MainActor.assumeIsolated {
+          self?.panel = nil
+          self?.isAnimating = false
+        }
       })
     }
   }
