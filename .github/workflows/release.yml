@@ -72,14 +72,6 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Setup Secrets.xcconfig
-        run: |
-          cat > Snapzy/Config/Secrets.xcconfig << 'EOF'
-          POLAR_ORG_ID = ${{ secrets.POLAR_ORG_ID }}
-          POLAR_API_BASE_URL = https:/$()/api.polar.sh/v1/customer-portal
-          POLAR_SANDBOX_API_BASE_URL = https:/$()/sandbox-api.polar.sh/v1/customer-portal
-          EOF
-
       - name: Bump version
         id: version
         run: |
