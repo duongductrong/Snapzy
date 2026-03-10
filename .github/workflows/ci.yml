@@ -34,7 +34,10 @@ jobs:
 
       - name: Build
         run: |
-          xcodebuild \
+          set -euo pipefail
+          mkdir -p build
+
+          if ! xcodebuild \
             -project Snapzy.xcodeproj \
             -scheme Snapzy \
             -configuration Release \
@@ -43,7 +46,12 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             ONLY_ACTIVE_ARCH=NO \
-            build | tail -20
+            build > build/ci-build.log 2>&1; then
+            tail -100 build/ci-build.log
+            exit 1
+          fi
+
+          tail -20 build/ci-build.log
 
       - name: Verify app bundle
         run: |

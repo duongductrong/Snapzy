@@ -56,6 +56,9 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: write
+    env:
+      HAS_DEVELOPER_ID_CERT: ${{ secrets.DEVELOPER_ID_P12 != '' && secrets.DEVELOPER_ID_PASSWORD != '' && 'true' || 'false' }}
+      HAS_NOTARIZATION_CREDENTIALS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_ID_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && 'true' || 'false' }}
 
     steps:
       - name: Checkout
@@ -100,7 +103,10 @@ jobs:
 
       - name: Build archive
         run: |
-          xcodebuild archive \
+          set -euo pipefail
+          mkdir -p build
+
+          if ! xcodebuild archive \
             -project Snapzy.xcodeproj \
             -scheme Snapzy \
             -configuration Release \
@@ -108,11 +114,22 @@ jobs:
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO | tail -20
+            ONLY_ACTIVE_ARCH=NO \
+            > build/archive.log 2>&1; then
+            tail -100 build/archive.log
+            exit 1
+          fi
+
+          tail -20 build/archive.log
+
+          if [ ! -d "build/Snapzy.xcarchive" ]; then
+            echo "::error::Archive not found at build/Snapzy.xcarchive"
+            exit 1
+          fi
 
       # --- Code Signing (conditional, for when Apple Developer account is available) ---
       - name: Import signing certificate
-        if: env.DEVELOPER_ID_P12 != ''
+        if: env.HAS_DEVELOPER_ID_CERT == 'true'
         env:
           DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
           DEVELOPER_ID_PASSWORD: ${{ secrets.DEVELOPER_ID_PASSWORD }}
@@ -130,7 +147,16 @@ jobs:
 
       - name: Export app
         run: |
-          if [ -n "${{ secrets.DEVELOPER_ID_P12 }}" ]; then
+          set -euo pipefail
+          mkdir -p build build/export
+          ARCHIVE_PATH="build/Snapzy.xcarchive"
+
+          if [ ! -d "$ARCHIVE_PATH" ]; then
+            echo "::error::Archive not found at $ARCHIVE_PATH. Check the Build archive step output."
+            exit 1
+          fi
+
+          if [ "${HAS_DEVELOPER_ID_CERT}" = "true" ]; then
             # Signed export
             cat > build/ExportOptions.plist << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -145,26 +171,32 @@ jobs:
           </plist>
           PLIST
             xcodebuild -exportArchive \
-              -archivePath build/Snapzy.xcarchive \
+              -archivePath "$ARCHIVE_PATH" \
               -exportPath build/export \
               -exportOptionsPlist build/ExportOptions.plist
           else
             # Unsigned export - copy from archive directly
-            cp -R "build/Snapzy.xcarchive/Products/Applications/Snapzy.app" build/
+            ditto "$ARCHIVE_PATH/Products/Applications/Snapzy.app" build/Snapzy.app
           fi
 
       - name: Create DMG
         run: |
+          set -euo pipefail
           APP_PATH="build/Snapzy.app"
           if [ -d "build/export/Snapzy.app" ]; then
             APP_PATH="build/export/Snapzy.app"
+          fi
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "::error::Snapzy.app not found at expected path: $APP_PATH"
+            exit 1
           fi
 
           DMG_NAME="Snapzy-v${{ steps.version.outputs.version }}.dmg"
           DMG_TEMP="build/dmg-temp"
 
           mkdir -p "$DMG_TEMP"
-          cp -R "$APP_PATH" "$DMG_TEMP/"
+          ditto "$APP_PATH" "$DMG_TEMP/Snapzy.app"
           ln -s /Applications "$DMG_TEMP/Applications"
 
           hdiutil create \
@@ -179,7 +211,7 @@ jobs:
 
       # --- Notarization (conditional, for when Apple Developer account is available) ---
       - name: Notarize DMG
-        if: env.APPLE_ID != ''
+        if: env.HAS_NOTARIZATION_CREDENTIALS == 'true'
         env:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
