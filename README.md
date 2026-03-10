@@ -91,23 +91,14 @@ For release packaging details, see [docs/project-build.md](docs/project-build.md
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
-## Star history
+## Star History
 
-<a href="https://www.star-history.com/#duongductrong/Snapzy&Date">
-  <picture>
-    <source
-      media="(prefers-color-scheme: dark)"
-      srcset="https://api.star-history.com/svg?repos=duongductrong/Snapzy&type=Date&theme=dark"
-    />
-    <source
-      media="(prefers-color-scheme: light)"
-      srcset="https://api.star-history.com/svg?repos=duongductrong/Snapzy&type=Date"
-    />
-    <img
-      alt="Star History Chart"
-      src="https://api.star-history.com/svg?repos=duongductrong/Snapzy&type=Date"
-    />
-  </picture>
+<a href="https://www.star-history.com/?repos=duongductrong%2FSnapzy&type=date&logscale=&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+ </picture>
 </a>
 
 ## License
