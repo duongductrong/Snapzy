@@ -34,7 +34,7 @@ struct OnboardingStepContainer<Content: View>: View {
             } label: {
               Image(systemName: "arrow.left")
                 .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.white.opacity(0.5))
+                .foregroundColor(VSDesignSystem.Colors.tertiary)
             }
             .buttonStyle(.plain)
             .contentShape(Rectangle())

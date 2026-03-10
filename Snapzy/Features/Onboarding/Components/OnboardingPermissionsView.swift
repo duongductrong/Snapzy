@@ -36,7 +36,7 @@ struct PermissionsView: View {
       // Header
       Image(systemName: "lock.shield")
         .font(.system(size: 48))
-        .foregroundColor(.white.opacity(0.8))
+        .foregroundColor(VSDesignSystem.Colors.secondary)
 
       Text("Grant Permissions")
         .vsHeading()

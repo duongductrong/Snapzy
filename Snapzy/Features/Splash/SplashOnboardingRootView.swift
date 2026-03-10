@@ -95,7 +95,7 @@ struct SplashOnboardingRootView: View {
           HStack(spacing: 8) {
             ForEach(0..<Self.onboardingSteps.count, id: \.self) { index in
               Circle()
-                .fill(index == currentStepIndex ? Color.white : Color.white.opacity(0.3))
+                .fill(index == currentStepIndex ? VSDesignSystem.Colors.primary : VSDesignSystem.Colors.quaternary)
                 .frame(width: 7, height: 7)
                 .animation(.easeInOut(duration: 0.3), value: currentStepIndex)
             }

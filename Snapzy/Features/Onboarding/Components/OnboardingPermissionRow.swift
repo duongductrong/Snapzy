@@ -2,7 +2,7 @@
 //  PermissionRow.swift
 //  Snapzy
 //
-//  Reusable permission row component for onboarding — dark/frosted theme
+//  Reusable permission row component for onboarding — adaptive dark/light theme
 //
 
 import SwiftUI
@@ -20,11 +20,11 @@ struct PermissionRow: View {
       // Icon
       Image(systemName: icon)
         .font(.system(size: 24))
-        .foregroundColor(.white)
+        .foregroundColor(VSDesignSystem.Colors.primary)
         .frame(width: 44, height: 44)
         .background(
           RoundedRectangle(cornerRadius: 10)
-            .fill(Color.white.opacity(0.1))
+            .fill(VSDesignSystem.Colors.secondaryButtonFill)
         )
 
       // Title and Description
@@ -32,7 +32,7 @@ struct PermissionRow: View {
         HStack(spacing: 6) {
           Text(title)
             .font(.system(size: 14, weight: .semibold))
-            .foregroundColor(.white)
+            .foregroundColor(VSDesignSystem.Colors.primary)
 
           if isRequired {
             Text("Required")
@@ -47,15 +47,15 @@ struct PermissionRow: View {
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(Color.white.opacity(0.1))
-              .foregroundColor(.white.opacity(0.5))
+              .background(VSDesignSystem.Colors.secondaryButtonFill)
+              .foregroundColor(VSDesignSystem.Colors.tertiary)
               .cornerRadius(4)
           }
         }
 
         Text(description)
           .font(.system(size: 12))
-          .foregroundColor(.white.opacity(0.5))
+          .foregroundColor(VSDesignSystem.Colors.tertiary)
       }
 
       Spacer()
@@ -85,11 +85,11 @@ struct PermissionRow: View {
     .padding(16)
     .background(
       RoundedRectangle(cornerRadius: 12)
-        .fill(Color.white.opacity(0.08))
+        .fill(VSDesignSystem.Colors.cardFill)
     )
     .overlay(
       RoundedRectangle(cornerRadius: 12)
-        .stroke(.white.opacity(0.1), lineWidth: 1)
+        .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
     )
   }
 }

@@ -2,7 +2,7 @@
 //  DiagnosticsOptInView.swift
 //  Snapzy
 //
-//  Onboarding step for crash logging opt-in — dark/frosted theme
+//  Onboarding step for crash logging opt-in — adaptive dark/light theme
 //
 
 import SwiftUI
@@ -18,7 +18,7 @@ struct DiagnosticsOptInView: View {
       // Icon
       Image(systemName: "doc.text.magnifyingglass")
         .font(.system(size: 48))
-        .foregroundColor(.white.opacity(0.8))
+        .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
       Text("Help Us Improve")
@@ -39,17 +39,17 @@ struct DiagnosticsOptInView: View {
         HStack(spacing: 12) {
           Image(systemName: "ant.fill")
             .font(.system(size: 14))
-            .foregroundColor(.white.opacity(0.6))
+            .foregroundColor(VSDesignSystem.Colors.tertiary)
             .frame(width: 24, alignment: .center)
 
           VStack(alignment: .leading, spacing: 2) {
             Text("Enable Crash Logging")
               .font(.system(size: 13, weight: .medium))
-              .foregroundColor(.white.opacity(0.85))
+              .foregroundColor(VSDesignSystem.Colors.primary)
 
             Text("Logs are stored locally on your device")
               .font(.system(size: 12))
-              .foregroundColor(.white.opacity(0.5))
+              .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
 
           Spacer()
@@ -62,11 +62,11 @@ struct DiagnosticsOptInView: View {
         .padding(.vertical, 10)
         .background(
           RoundedRectangle(cornerRadius: 8)
-            .fill(Color.white.opacity(0.06))
+            .fill(VSDesignSystem.Colors.cardFill)
         )
         .overlay(
           RoundedRectangle(cornerRadius: 8)
-            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
         )
       }
       .frame(maxWidth: 380)
@@ -75,7 +75,7 @@ struct DiagnosticsOptInView: View {
       // Privacy note
       Text("No personal data is collected. Nothing is sent without your action.")
         .font(.system(size: 11))
-        .foregroundColor(.white.opacity(0.35))
+        .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
         .padding(.top, 8)

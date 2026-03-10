@@ -81,10 +81,10 @@ private extension SplashContentView {
     VStack(spacing: 8) {
       Text("Welcome to Snapzy")
         .font(.system(size: 28, weight: .bold))
-        .foregroundStyle(.white)
+        .foregroundStyle(VSDesignSystem.Colors.primary)
       Text("Screenshot & recording, simplified.")
         .font(.system(size: 16))
-        .foregroundStyle(.white.opacity(0.7))
+        .foregroundStyle(VSDesignSystem.Colors.secondary)
     }
   }
 
@@ -93,20 +93,20 @@ private extension SplashContentView {
       Button(action: onContinue) {
         Text("Continue")
           .font(.system(size: 15, weight: .semibold))
-          .foregroundStyle(.white)
+          .foregroundStyle(VSDesignSystem.Colors.primary)
           .padding(.horizontal, 32)
           .padding(.vertical, 10)
           .background(
-            Capsule().fill(.white.opacity(0.2))
+            Capsule().fill(VSDesignSystem.Colors.buttonFill)
           )
-          .overlay(Capsule().stroke(.white.opacity(0.3), lineWidth: 1))
+          .overlay(Capsule().stroke(VSDesignSystem.Colors.buttonStroke, lineWidth: 1))
       }
       .buttonStyle(.plain)
       .keyboardShortcut(.return, modifiers: [])
 
       Text("Press Enter ↵")
         .font(.system(size: 11))
-        .foregroundStyle(.white.opacity(0.35))
+        .foregroundStyle(VSDesignSystem.Colors.quaternary)
     }
     .padding(.top, 8)
   }

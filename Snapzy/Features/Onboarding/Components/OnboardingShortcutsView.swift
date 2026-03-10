@@ -2,7 +2,7 @@
 //  ShortcutsView.swift
 //  Snapzy
 //
-//  Shortcuts setup screen for onboarding flow — dark/frosted theme
+//  Shortcuts setup screen for onboarding flow — adaptive dark/light theme
 //
 
 import SwiftUI
@@ -17,7 +17,7 @@ struct ShortcutsView: View {
       // Header icon
       Image(systemName: "keyboard")
         .font(.system(size: 44))
-        .foregroundColor(.white.opacity(0.8))
+        .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
       Text("Set as default screenshot tool?")
@@ -55,11 +55,11 @@ struct ShortcutsView: View {
       HStack(spacing: 8) {
         Image(systemName: "gearshape")
           .font(.system(size: 12))
-          .foregroundColor(.white.opacity(0.45))
+          .foregroundColor(VSDesignSystem.Colors.quaternary)
 
         Text("You can customize shortcuts anytime in Preferences → Shortcuts.")
           .font(.system(size: 12))
-          .foregroundColor(.white.opacity(0.45))
+          .foregroundColor(VSDesignSystem.Colors.quaternary)
       }
       .padding(.top, 4)
 
@@ -99,7 +99,7 @@ private struct ShortcutGroup: View {
       // Category label
       Text(title.uppercased())
         .font(.system(size: 10, weight: .semibold))
-        .foregroundColor(.white.opacity(0.35))
+        .foregroundColor(VSDesignSystem.Colors.quaternary)
         .tracking(1.2)
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
@@ -111,18 +111,18 @@ private struct ShortcutGroup: View {
 
           if index < shortcuts.count - 1 {
             Divider()
-              .background(Color.white.opacity(0.08))
+              .background(VSDesignSystem.Colors.divider)
               .padding(.horizontal, 14)
           }
         }
       }
       .background(
         RoundedRectangle(cornerRadius: 10)
-          .fill(Color.white.opacity(0.06))
+          .fill(VSDesignSystem.Colors.cardFill)
       )
       .overlay(
         RoundedRectangle(cornerRadius: 10)
-          .stroke(Color.white.opacity(0.12), lineWidth: 1)
+          .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
       )
     }
   }
@@ -139,23 +139,23 @@ private struct ShortcutRow: View {
       // Fixed-width key badge
       Text(keys)
         .font(.system(size: 13, weight: .medium, design: .monospaced))
-        .foregroundColor(.white.opacity(0.9))
+        .foregroundColor(VSDesignSystem.Colors.primary)
         .frame(width: 56, alignment: .center)
         .padding(.vertical, 5)
         .padding(.horizontal, 6)
         .background(
           RoundedRectangle(cornerRadius: 6)
-            .fill(Color.white.opacity(0.1))
+            .fill(VSDesignSystem.Colors.secondaryButtonFill)
         )
         .overlay(
           RoundedRectangle(cornerRadius: 6)
-            .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
         )
 
       // Action label
       Text(action)
         .font(.system(size: 13))
-        .foregroundColor(.white.opacity(0.75))
+        .foregroundColor(VSDesignSystem.Colors.secondary)
 
       Spacer()
     }

@@ -2,7 +2,7 @@
 //  CompletionView.swift
 //  Snapzy
 //
-//  Completion screen for onboarding flow — dark/frosted theme
+//  Completion screen for onboarding flow — adaptive dark/light theme
 //
 
 import SwiftUI
@@ -62,7 +62,7 @@ struct CompletionView: View {
           } label: {
             Text("Open Preferences")
               .font(.system(size: 13, weight: .medium))
-              .foregroundColor(.white.opacity(0.55))
+              .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
           .buttonStyle(.plain)
 
@@ -75,7 +75,7 @@ struct CompletionView: View {
 
         Text("Press Enter ↵")
           .font(.system(size: 11))
-          .foregroundStyle(.white.opacity(0.3))
+          .foregroundStyle(VSDesignSystem.Colors.quaternary)
       }
       .padding(.top, 32)
     }
@@ -93,17 +93,17 @@ private struct CompletionHintRow: View {
     HStack(spacing: 12) {
       Image(systemName: icon)
         .font(.system(size: 14))
-        .foregroundColor(.white.opacity(0.6))
+        .foregroundColor(VSDesignSystem.Colors.tertiary)
         .frame(width: 24, alignment: .center)
 
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(.system(size: 13, weight: .medium))
-          .foregroundColor(.white.opacity(0.85))
+          .foregroundColor(VSDesignSystem.Colors.primary)
 
         Text(description)
           .font(.system(size: 12))
-          .foregroundColor(.white.opacity(0.5))
+          .foregroundColor(VSDesignSystem.Colors.tertiary)
       }
 
       Spacer()
@@ -112,11 +112,11 @@ private struct CompletionHintRow: View {
     .padding(.vertical, 10)
     .background(
       RoundedRectangle(cornerRadius: 8)
-        .fill(Color.white.opacity(0.06))
+        .fill(VSDesignSystem.Colors.cardFill)
     )
     .overlay(
       RoundedRectangle(cornerRadius: 8)
-        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+        .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
     )
   }
 }

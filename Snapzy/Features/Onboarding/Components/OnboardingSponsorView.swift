@@ -37,34 +37,34 @@ struct SponsorView: View {
             HStack(spacing: 12) {
               Image(systemName: link.systemImage)
                 .font(.system(size: 15))
-                .foregroundColor(.white.opacity(0.8))
+                .foregroundColor(VSDesignSystem.Colors.secondary)
                 .frame(width: 24, alignment: .center)
 
               VStack(alignment: .leading, spacing: 2) {
                 Text(link.title)
                   .font(.system(size: 13, weight: .medium))
-                  .foregroundColor(.white.opacity(0.88))
+                  .foregroundColor(VSDesignSystem.Colors.primary)
 
                 Text(link.subtitle)
                   .font(.system(size: 12))
-                  .foregroundColor(.white.opacity(0.5))
+                  .foregroundColor(VSDesignSystem.Colors.tertiary)
               }
 
               Spacer()
 
               Image(systemName: "arrow.up.right")
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white.opacity(0.45))
+                .foregroundColor(VSDesignSystem.Colors.quaternary)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(
               RoundedRectangle(cornerRadius: 10)
-                .fill(Color.white.opacity(0.06))
+                .fill(VSDesignSystem.Colors.cardFill)
             )
             .overlay(
               RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+                .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
             )
           }
           .buttonStyle(.plain)
@@ -75,7 +75,7 @@ struct SponsorView: View {
 
       Text("Support is optional. Snapzy remains fully usable without sponsoring.")
         .font(.system(size: 11))
-        .foregroundColor(.white.opacity(0.35))
+        .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 360)
         .padding(.top, 10)
