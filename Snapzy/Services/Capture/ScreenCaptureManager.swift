@@ -220,18 +220,6 @@ final class ScreenCaptureManager: ObservableObject {
     do {
       let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
 
-      // Get total screen height for coordinate conversion (Cocoa uses bottom-left, CG uses top-left)
-      let totalScreenHeight = NSScreen.screens.map { $0.frame.maxY }.max() ?? 0
-      let totalScreenMinY = NSScreen.screens.map { $0.frame.minY }.min() ?? 0
-
-      // Convert input rect from Cocoa coordinates (bottom-left origin) to CG coordinates (top-left origin)
-      let cgRect = CGRect(
-        x: rect.origin.x,
-        y: totalScreenHeight - rect.origin.y - rect.height,
-        width: rect.width,
-        height: rect.height
-      )
-
       // Find the display containing the rect using NSScreen frames (same coordinate system as input)
       // Then get the matching SCDisplay
       var targetScreen: NSScreen?
@@ -414,6 +402,7 @@ final class ScreenCaptureManager: ObservableObject {
   /// Verify file exists on disk with non-zero size, retrying up to maxAttempts.
   /// Runs on caller's thread (designed for background execution).
   private nonisolated static func verifyFileWritten(at url: URL, maxAttempts: Int = 3, delayMs: UInt64 = 50) async -> Bool {
+    let logger = Logger(subsystem: "Snapzy", category: "ScreenCaptureManager")
     for attempt in 1...maxAttempts {
       if FileManager.default.fileExists(atPath: url.path) {
         let attrs = try? FileManager.default.attributesOfItem(atPath: url.path)
