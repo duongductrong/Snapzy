@@ -17,7 +17,7 @@
 
 ## Requirements
 
-- macOS 14.0+
+- macOS 13.0+
 - Xcode 15.0+
 
 ## Contribution
