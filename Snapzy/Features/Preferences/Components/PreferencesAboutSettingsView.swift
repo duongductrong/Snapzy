@@ -118,20 +118,15 @@ struct AboutSettingsView: View {
   }
 
   private var sponsorSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.md) {
-      HStack(spacing: Spacing.sm) {
-        Image(systemName: "heart.circle.fill")
-          .font(.system(size: 24))
-          .foregroundStyle(.pink)
+    VStack(alignment: .center, spacing: Spacing.sm) {
+      VStack(spacing: 6) {
+        Text("Support Snapzy")
+          .font(.system(size: 14, weight: .semibold))
 
-        VStack(alignment: .leading, spacing: 2) {
-          Text("Support Snapzy")
-            .font(.system(size: 14, weight: .semibold))
-
-          Text("Snapzy is open-source. Sponsor ongoing development if it helps your workflow.")
-            .font(.system(size: 12))
-            .foregroundColor(.secondary)
-        }
+        Text("Snapzy is open-source. Sponsor ongoing development if it helps your workflow.")
+          .font(.system(size: 12))
+          .foregroundColor(.secondary)
+          .multilineTextAlignment(.center)
       }
 
       HStack(spacing: Spacing.sm) {
@@ -139,17 +134,15 @@ struct AboutSettingsView: View {
           Button {
             NSWorkspace.shared.open(link.url)
           } label: {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
               Image(systemName: link.systemImage)
-                .font(.system(size: 16))
+                .font(.system(size: 13))
+                .foregroundStyle(link.color)
               Text(link.title)
-                .font(.system(size: 12, weight: .medium))
-              Text(link.subtitle)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+                .font(.system(size: 11, weight: .medium))
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, Spacing.md)
+            .padding(.vertical, Spacing.sm)
             .background(Color.primary.opacity(0.04))
             .clipShape(RoundedRectangle(cornerRadius: Size.radiusLg))
             .overlay(

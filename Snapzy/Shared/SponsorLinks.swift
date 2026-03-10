@@ -6,13 +6,18 @@
 //
 
 import Foundation
+import SwiftUI
 
 struct SponsorLink: Identifiable, Hashable {
   let id: String
   let title: String
   let subtitle: String
   let systemImage: String
+  let color: Color
   let url: URL
+
+  func hash(into hasher: inout Hasher) { hasher.combine(id) }
+  static func == (lhs: SponsorLink, rhs: SponsorLink) -> Bool { lhs.id == rhs.id }
 }
 
 enum SponsorLinks {
@@ -22,6 +27,7 @@ enum SponsorLinks {
       title: "GitHub Sponsors",
       subtitle: "Recurring support",
       systemImage: "heart.fill",
+      color: .pink,
       url: URL(string: "https://github.com/sponsors/duongductrong")!
     ),
     SponsorLink(
@@ -29,6 +35,7 @@ enum SponsorLinks {
       title: "Ko-fi",
       subtitle: "One-time tip",
       systemImage: "cup.and.saucer.fill",
+      color: .orange,
       url: URL(string: "https://ko-fi.com/duongductrong")!
     ),
     SponsorLink(
@@ -36,6 +43,7 @@ enum SponsorLinks {
       title: "PayPal",
       subtitle: "Direct support",
       systemImage: "creditcard.fill",
+      color: .blue,
       url: URL(string: "https://www.paypal.com/paypalme/duongductrong")!
     ),
   ]
