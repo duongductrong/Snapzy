@@ -32,7 +32,7 @@ final class GIFConverter {
     var loopCount: Int = 0
 
     /// Balanced defaults: 15fps @ up to 960px wide
-    static let `default` = Options()
+    nonisolated static let `default` = Options()
   }
 
   /// Convert a video file to animated GIF

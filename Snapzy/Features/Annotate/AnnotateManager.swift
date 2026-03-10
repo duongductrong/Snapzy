@@ -73,7 +73,7 @@ final class AnnotateManager {
         object: window,
         queue: .main
       ) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.windowControllers.removeValue(forKey: itemId)
           self?.becomeAccessoryAppIfNeeded()
         }
@@ -129,7 +129,7 @@ final class AnnotateManager {
         object: window,
         queue: .main
       ) { [weak self] _ in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.emptyWindowController = nil
           self?.becomeAccessoryAppIfNeeded()
         }

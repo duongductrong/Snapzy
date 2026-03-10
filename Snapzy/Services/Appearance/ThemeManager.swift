@@ -38,7 +38,7 @@ final class ThemeManager: ObservableObject {
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.updateSystemAppearance()
       }
     }
@@ -49,7 +49,7 @@ final class ThemeManager: ObservableObject {
       object: nil,
       queue: .main
     ) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.updateSystemAppearance()
       }
     }

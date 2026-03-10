@@ -56,7 +56,7 @@ final class SplashWindow: NSWindow {
     // Blur effect behind the window
     let blurView = NSVisualEffectView()
     blurView.blendingMode = .behindWindow
-    blurView.material = .dark
+    blurView.material = .hudWindow
     blurView.state = .active
     blurView.autoresizingMask = [.width, .height]
     container.addSubview(blurView)
@@ -148,17 +148,19 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
     }, completionHandler: { [weak self] in
       window.orderOut(nil)
       window.close()
-      self?.splashWindow = nil
+      MainActor.assumeIsolated {
+        self?.splashWindow = nil
 
-      // Revert to menu-bar-only mode (hide from Cmd+Tab switcher)
-      NSApp.setActivationPolicy(.accessory)
+        // Revert to menu-bar-only mode (hide from Cmd+Tab switcher)
+        NSApp.setActivationPolicy(.accessory)
+      }
     })
   }
 
   // MARK: - NSWindowDelegate
 
   nonisolated func windowWillClose(_ notification: Notification) {
-    Task { @MainActor in
+    MainActor.assumeIsolated {
       self.splashWindow = nil
       NSApp.setActivationPolicy(.accessory)
     }

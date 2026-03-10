@@ -7,6 +7,7 @@
 
 import AVFoundation
 import CoreImage
+import CoreVideo
 import SwiftUI
 
 /// Compositor that applies zoom effects during video export
@@ -181,14 +182,14 @@ class ZoomVideoCompositionInstruction: NSObject, AVVideoCompositionInstructionPr
 class ZoomVideoCompositorClass: NSObject, AVVideoCompositing {
 
   // Required properties
-  var sourcePixelBufferAttributes: [String: Any]? {
+  var sourcePixelBufferAttributes: [String: any Sendable]? {
     [
       kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
       kCVPixelBufferMetalCompatibilityKey as String: true
     ]
   }
 
-  var requiredPixelBufferAttributesForRenderContext: [String: Any] {
+  var requiredPixelBufferAttributesForRenderContext: [String: any Sendable] {
     [
       kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_32BGRA,
       kCVPixelBufferMetalCompatibilityKey as String: true
