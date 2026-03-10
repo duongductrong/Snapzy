@@ -25,7 +25,6 @@ enum DiagnosticLogCategory: String {
   case editor = "EDITOR"
   case action = "ACTION"
   case ui = "UI"
-  case license = "LICENSE"
   case lifecycle = "LIFECYCLE"
 }
 

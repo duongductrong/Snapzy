@@ -11,6 +11,8 @@ import Foundation
 enum PreferencesKeys {
   // Onboarding
   static let onboardingCompleted = "onboardingCompleted"
+  static let sponsorPromptSeen = "sponsorPromptSeen"
+  static let legacyLicenseCleanupCompleted = "legacyLicenseCleanupCompleted"
 
   // General
   static let playSounds = "playSounds"

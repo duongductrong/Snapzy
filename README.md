@@ -58,20 +58,13 @@ git clone https://github.com/duongductrong/Snapzy.git
 cd Snapzy
 ```
 
-2. Create the local Xcode config expected by the project:
-
-```bash
-cp Snapzy/Config/Secrets.xcconfig.example Snapzy/Config/Secrets.xcconfig
-```
-
-3. The example file satisfies Xcode, but the built-in licensing flow expects real Polar values. Add valid credentials in `Snapzy/Config/Secrets.xcconfig`, or adapt the licensing flow for your local build
-4. Open the project:
+2. Open the project:
 
 ```bash
 open Snapzy.xcodeproj
 ```
 
-5. Build and run with `Cmd+R`
+3. Build and run with `Cmd+R`
 
 You can also build from the terminal:
 

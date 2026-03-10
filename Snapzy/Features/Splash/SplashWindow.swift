@@ -108,46 +108,13 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
 
     let needsOnboarding = forceOnboarding || !OnboardingFlowView.hasCompletedOnboarding
 
-    let rootView = LicenseOnboardingRootView(
+    let rootView = SplashOnboardingRootView(
       needsOnboarding: needsOnboarding,
+      showSponsorPrompt: forceOnboarding
+        || !UserDefaults.standard.bool(forKey: PreferencesKeys.sponsorPromptSeen),
       onDismiss: { [weak self] in
         self?.dismiss()
       }
-    )
-    window.attachContent(rootView)
-
-    // Show window and activate
-    window.makeKeyAndOrderFront(nil)
-    NSApp.activate(ignoringOtherApps: true)
-
-    // Fade in
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-      self?.animateIn()
-    }
-  }
-
-  /// Show the license activation screen directly (no splash, no skip).
-  /// The window is non-closable to prevent bypassing license activation.
-  func showLicenseActivation() {
-    // Prevent opening multiple license windows
-    if let existing = splashWindow, existing.isVisible { return }
-
-    guard let screen = NSScreen.main else { return }
-
-    // Show app in Cmd+Tab switcher
-    NSApp.setActivationPolicy(.regular)
-
-    let window = SplashWindow(screen: screen)
-    window.delegate = self
-    self.splashWindow = window
-
-    let rootView = LicenseOnboardingRootView(
-      needsOnboarding: false,
-      onDismiss: { [weak self] in
-        self?.dismiss()
-      },
-      startScreen: .license,
-      licenseOnly: true
     )
     window.attachContent(rootView)
 
@@ -197,4 +164,3 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
     }
   }
 }
-

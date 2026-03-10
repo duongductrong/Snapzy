@@ -12,11 +12,5 @@
 	<string>https://raw.githubusercontent.com/duongductrong/Snapzy/master/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>zcoJ90nh+SEFg6ZEkb9fwQCEK51vSIRwyn6tOsQisL0=</string>
-	<key>PolarOrganizationId</key>
-	<string>$(POLAR_ORG_ID)</string>
-	<key>PolarApiBaseUrl</key>
-	<string>$(POLAR_API_BASE_URL)</string>
-	<key>PolarSandboxApiBaseUrl</key>
-	<string>$(POLAR_SANDBOX_API_BASE_URL)</string>
 </dict>
 </plist>
