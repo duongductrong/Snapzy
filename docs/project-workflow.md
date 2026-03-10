@@ -97,10 +97,10 @@ $SPARKLE_BIN/generate_keys -p
 
 Current URL in Info.plist:
 ```
-https://raw.githubusercontent.com/user/Snapzy/main/appcast.xml
+https://raw.githubusercontent.com/duongductrong/Snapzy/master/appcast.xml
 ```
 
-Update to your actual repository URL in `Snapzy/Snapzy.plist`.
+Update this value in `Snapzy/Resources/Info.plist` if your release repository changes.
 
 ## Testing Updates
 

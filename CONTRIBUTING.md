@@ -31,10 +31,13 @@ Snapzy is an open-source native macOS screenshot and screen recording app built 
 ```bash
 git clone https://github.com/duongductrong/Snapzy.git
 cd Snapzy
+cp Snapzy/Config/Secrets.xcconfig.example Snapzy/Config/Secrets.xcconfig
 open Snapzy.xcodeproj
 ```
 
 Build and run with `Cmd+R`.
+
+The example config is enough for Xcode to resolve the expected build settings. If you want the built-in licensing flow to work, replace the placeholder Polar values in `Snapzy/Config/Secrets.xcconfig`.
 
 ### Command-line build
 

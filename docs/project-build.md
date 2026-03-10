@@ -11,10 +11,13 @@ Build Snapzy from source on your local machine.
 ## Quick Build (Xcode)
 
 ```bash
+cp Snapzy/Config/Secrets.xcconfig.example Snapzy/Config/Secrets.xcconfig
 open Snapzy.xcodeproj
 ```
 
 Press ⌘R to build and run.
+
+The example config is enough for Xcode to resolve the expected build settings. If you want the built-in licensing flow to work, replace the placeholder Polar values in `Snapzy/Config/Secrets.xcconfig`.
 
 ## Command Line Build
 
