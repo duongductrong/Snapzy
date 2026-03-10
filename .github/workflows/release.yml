@@ -85,11 +85,34 @@ jobs:
           echo "build_number=$BUILD" >> "$GITHUB_OUTPUT"
           echo "Bumped: v${PREV_VERSION} -> v${VERSION} (build ${BUILD})"
 
-      - name: Commit version bump
+      - name: Generate changelog
+        id: changelog
+        run: |
+          chmod +x scripts/generate-changelog.sh
+          mkdir -p build
+          PREV_TAG="v${{ steps.version.outputs.previous_version }}"
+          # Check if previous tag exists
+          if git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
+            CHANGELOG=$(./scripts/generate-changelog.sh "$PREV_TAG")
+          else
+            CHANGELOG=$(./scripts/generate-changelog.sh)
+          fi
+          # Write to file for multiline handling
+          echo "$CHANGELOG" > build/changelog.md
+          echo "changelog_path=build/changelog.md" >> "$GITHUB_OUTPUT"
+
+      - name: Update CHANGELOG.md
+        run: |
+          chmod +x scripts/update-changelog.sh
+          ./scripts/update-changelog.sh \
+            "${{ steps.version.outputs.version }}" \
+            "${{ steps.changelog.outputs.changelog_path }}"
+
+      - name: Commit version bump and changelog
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Snapzy.xcodeproj/project.pbxproj
+          git add Snapzy.xcodeproj/project.pbxproj CHANGELOG.md
           git commit -m "chore: bump version to v${{ steps.version.outputs.version }}"
           git push
 
@@ -216,20 +239,6 @@ jobs:
             --wait
           xcrun stapler staple "${{ env.dmg_path }}"
 
-      - name: Generate changelog
-        id: changelog
-        run: |
-          chmod +x scripts/generate-changelog.sh
-          PREV_TAG="v${{ steps.version.outputs.previous_version }}"
-          # Check if previous tag exists
-          if git rev-parse "$PREV_TAG" >/dev/null 2>&1; then
-            CHANGELOG=$(./scripts/generate-changelog.sh "$PREV_TAG")
-          else
-            CHANGELOG=$(./scripts/generate-changelog.sh)
-          fi
-          # Write to file for multiline handling
-          echo "$CHANGELOG" > build/changelog.md
-          echo "changelog_path=build/changelog.md" >> "$GITHUB_OUTPUT"
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
