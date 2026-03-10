@@ -112,4 +112,4 @@ Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before openin
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+BSD 3-Clause License. See [LICENSE](LICENSE).
