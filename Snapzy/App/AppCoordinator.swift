@@ -6,13 +6,11 @@
 //
 
 import AppKit
-import Combine
 import Foundation
 
 @MainActor
 final class AppCoordinator {
   private let environment: AppEnvironment
-  private var cancellables = Set<AnyCancellable>()
   private var observers: [NSObjectProtocol] = []
 
   init(environment: AppEnvironment) {
@@ -22,6 +20,7 @@ final class AppCoordinator {
   func applicationDidFinishLaunching() {
     let didCrash = CrashSentinel.shared.checkAndReset()
     DiagnosticLogger.shared.startSession()
+    LegacyLicenseCleanupService.shared.runIfNeeded()
     LogCleanupScheduler.shared.start()
     RecordingMetadataCleanupScheduler.shared.start()
 
@@ -36,7 +35,6 @@ final class AppCoordinator {
     }
 
     observeNotifications()
-    observeInvalidLicenseAlert()
   }
 
   func applicationWillTerminate() {
@@ -62,49 +60,6 @@ final class AppCoordinator {
       }
     }
 
-    let invalidatedObserver = NotificationCenter.default.addObserver(
-      forName: .licenseInvalidated,
-      object: nil,
-      queue: .main
-    ) { _ in
-      Task { @MainActor in
-        SplashWindowController.shared.showLicenseActivation()
-      }
-    }
-
     observers.append(onboardingObserver)
-    observers.append(invalidatedObserver)
-  }
-
-  private func observeInvalidLicenseAlert() {
-    LicenseManager.shared.$showInvalidLicenseAlert
-      .removeDuplicates()
-      .filter { $0 }
-      .receive(on: DispatchQueue.main)
-      .sink { [weak self] _ in
-        self?.showInvalidLicenseConfirmation()
-      }
-      .store(in: &cancellables)
-  }
-
-  private func showInvalidLicenseConfirmation() {
-    let licenseManager = LicenseManager.shared
-
-    let alert = NSAlert()
-    alert.messageText = "License Invalid"
-    alert.informativeText =
-      "\(licenseManager.invalidLicenseMessage)\n\nYou can clear the license and activate a new one, or quit the app."
-    alert.alertStyle = .critical
-    alert.addButton(withTitle: "Reactivate License")
-    alert.addButton(withTitle: "Quit App")
-
-    switch alert.runModal() {
-    case .alertFirstButtonReturn:
-      licenseManager.confirmClearInvalidLicense()
-    case .alertSecondButtonReturn:
-      licenseManager.confirmQuitApp()
-    default:
-      break
-    }
   }
 }

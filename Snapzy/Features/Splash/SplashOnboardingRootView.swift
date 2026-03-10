@@ -2,31 +2,27 @@
 //  SplashOnboardingRootView.swift
 //  Snapzy
 //
-//  Unified coordinator managing splash intro → onboarding flow within the same window
+//  Unified coordinator managing splash intro, sponsor prompt, and onboarding.
 //
 
 import SwiftUI
 
-// MARK: - Screen Enum
-
 enum SplashScreen: Equatable {
   case splash
+  case sponsor
   case permissions
-  case diagnostics
   case shortcuts
+  case diagnostics
   case completion
 }
 
-// MARK: - Navigation Direction
-
 private enum NavigationDirection {
-  case forward, backward
+  case forward
 }
-
-// MARK: - SplashOnboardingRootView
 
 struct SplashOnboardingRootView: View {
   let needsOnboarding: Bool
+  let showSponsorPrompt: Bool
   let onDismiss: () -> Void
 
   @State private var currentScreen: SplashScreen = .splash
@@ -34,17 +30,17 @@ struct SplashOnboardingRootView: View {
   @State private var navigationDirection: NavigationDirection = .forward
   @ObservedObject private var screenCaptureManager = ScreenCaptureManager.shared
 
-  // Onboarding steps (excluding splash)
-  private static let onboardingSteps: [SplashScreen] = [.permissions, .diagnostics, .shortcuts, .completion]
+  private static let onboardingSteps: [SplashScreen] = [
+    .permissions, .shortcuts, .diagnostics, .completion,
+  ]
 
   private var isOnboardingStep: Bool {
-    currentScreen != .splash
+    Self.onboardingSteps.contains(currentScreen)
   }
 
   private var currentStepIndex: Int {
     Self.onboardingSteps.firstIndex(of: currentScreen) ?? 0
   }
-
 
   var body: some View {
     ZStack {
@@ -56,27 +52,31 @@ struct SplashOnboardingRootView: View {
           SplashContentView(onContinue: handleSplashContinue)
             .transition(.opacity)
 
+        case .sponsor:
+          SponsorView(onContinue: handleSponsorContinue)
+            .transition(.opacity)
+
         case .permissions:
           PermissionsView(
             screenCaptureManager: screenCaptureManager,
             onQuit: { NSApplication.shared.terminate(nil) },
-            onNext: { navigateForward(to: .diagnostics) }
-          )
-          .transition(stepTransition)
-
-        case .diagnostics:
-          DiagnosticsOptInView(
             onNext: { navigateForward(to: .shortcuts) }
           )
           .transition(stepTransition)
 
         case .shortcuts:
           ShortcutsView(
-            onDecline: { navigateForward(to: .completion) },
+            onDecline: { navigateForward(to: .diagnostics) },
             onAccept: {
               KeyboardShortcutManager.shared.enable()
-              navigateForward(to: .completion)
+              navigateForward(to: .diagnostics)
             }
+          )
+          .transition(stepTransition)
+
+        case .diagnostics:
+          DiagnosticsOptInView(
+            onNext: { navigateForward(to: .completion) }
           )
           .transition(stepTransition)
 
@@ -89,8 +89,6 @@ struct SplashOnboardingRootView: View {
       }
       .opacity(contentOpacity)
 
-
-      // Page dots — bottom center, only during onboarding steps
       if isOnboardingStep {
         VStack {
           Spacer()
@@ -111,8 +109,6 @@ struct SplashOnboardingRootView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
-  // MARK: - Transitions
-
   private var stepTransition: AnyTransition {
     switch navigationDirection {
     case .forward:
@@ -120,27 +116,26 @@ struct SplashOnboardingRootView: View {
         insertion: .move(edge: .trailing).combined(with: .opacity),
         removal: .move(edge: .leading).combined(with: .opacity)
       )
-    case .backward:
-      return .asymmetric(
-        insertion: .move(edge: .leading).combined(with: .opacity),
-        removal: .move(edge: .trailing).combined(with: .opacity)
-      )
     }
   }
 
-  // MARK: - Navigation
-
   private func handleSplashContinue() {
+    if showSponsorPrompt {
+      navigateForward(to: .sponsor)
+    } else if needsOnboarding {
+      navigateForward(to: .permissions)
+    } else {
+      dismiss()
+    }
+  }
+
+  private func handleSponsorContinue() {
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
+
     if needsOnboarding {
       navigateForward(to: .permissions)
     } else {
-      // No onboarding needed — fade out and dismiss
-      withAnimation(.easeIn(duration: 0.3)) {
-        contentOpacity = 0
-      }
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-        onDismiss()
-      }
+      dismiss()
     }
   }
 
@@ -151,18 +146,13 @@ struct SplashOnboardingRootView: View {
     }
   }
 
-  private func navigateBack(to screen: SplashScreen) {
-    navigationDirection = .backward
-    withAnimation(.easeInOut(duration: 0.4)) {
-      currentScreen = screen
-    }
+  private func handleComplete() {
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
+    dismiss()
   }
 
-  private func handleComplete() {
-    // Mark onboarding as completed
-    UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
-
-    // Fade out content, then dismiss window
+  private func dismiss() {
     withAnimation(.easeIn(duration: 0.3)) {
       contentOpacity = 0
     }
@@ -173,7 +163,11 @@ struct SplashOnboardingRootView: View {
 }
 
 #Preview {
-  SplashOnboardingRootView(needsOnboarding: true, onDismiss: {})
-    .frame(width: 800, height: 600)
-    .background(.black.opacity(0.5))
+  SplashOnboardingRootView(
+    needsOnboarding: true,
+    showSponsorPrompt: true,
+    onDismiss: {}
+  )
+  .frame(width: 800, height: 600)
+  .background(.black.opacity(0.5))
 }

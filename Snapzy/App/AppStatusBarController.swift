@@ -185,20 +185,6 @@ final class AppStatusBarController: ObservableObject {
 
     guard let viewModel = viewModel else { return }
 
-    let isLicensed = LicenseManager.shared.isLicensed
-
-    // License status indicator (when not licensed)
-    if !isLicensed {
-      let statusItem = NSMenuItem(
-        title: "⚠️ License Required",
-        action: nil,
-        keyEquivalent: ""
-      )
-      statusItem.isEnabled = false
-      menu?.addItem(statusItem)
-      menu?.addItem(NSMenuItem.separator())
-    }
-
     // Recording status indicator (when recording)
     if recorder.isActive {
       let stopItem = NSMenuItem(
@@ -222,7 +208,7 @@ final class AppStatusBarController: ObservableObject {
     captureAreaItem.keyEquivalentModifierMask = [.command, .shift]
     captureAreaItem.target = self
     captureAreaItem.image = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
-    captureAreaItem.isEnabled = isLicensed && viewModel.hasPermission
+    captureAreaItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureAreaItem)
 
     let captureFullscreenItem = NSMenuItem(
@@ -234,7 +220,7 @@ final class AppStatusBarController: ObservableObject {
     captureFullscreenItem.target = self
     captureFullscreenItem.image = NSImage(
       systemSymbolName: "rectangle.dashed", accessibilityDescription: nil)
-    captureFullscreenItem.isEnabled = isLicensed && viewModel.hasPermission
+    captureFullscreenItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureFullscreenItem)
 
     let captureOCRItem = NSMenuItem(
@@ -245,7 +231,7 @@ final class AppStatusBarController: ObservableObject {
     captureOCRItem.keyEquivalentModifierMask = [.command, .shift]
     captureOCRItem.target = self
     captureOCRItem.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
-    captureOCRItem.isEnabled = isLicensed && viewModel.hasPermission
+    captureOCRItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureOCRItem)
 
     menu?.addItem(NSMenuItem.separator())
@@ -259,7 +245,7 @@ final class AppStatusBarController: ObservableObject {
     recordItem.keyEquivalentModifierMask = [.command, .shift]
     recordItem.target = self
     recordItem.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: nil)
-    recordItem.isEnabled = isLicensed && viewModel.hasPermission && !recorder.isActive
+    recordItem.isEnabled = viewModel.hasPermission && !recorder.isActive
     menu?.addItem(recordItem)
 
     menu?.addItem(NSMenuItem.separator())
@@ -274,7 +260,7 @@ final class AppStatusBarController: ObservableObject {
     annotateItem.target = self
     annotateItem.image = NSImage(
       systemSymbolName: "pencil.and.outline", accessibilityDescription: nil)
-    annotateItem.isEnabled = isLicensed
+    annotateItem.isEnabled = true
     menu?.addItem(annotateItem)
 
     let editVideoItem = NSMenuItem(
@@ -285,7 +271,7 @@ final class AppStatusBarController: ObservableObject {
     editVideoItem.keyEquivalentModifierMask = [.command, .shift]
     editVideoItem.target = self
     editVideoItem.image = NSImage(systemSymbolName: "film", accessibilityDescription: nil)
-    editVideoItem.isEnabled = isLicensed
+    editVideoItem.isEnabled = true
     menu?.addItem(editVideoItem)
 
     menu?.addItem(NSMenuItem.separator())
@@ -300,22 +286,8 @@ final class AppStatusBarController: ObservableObject {
       permissionItem.target = self
       permissionItem.image = NSImage(
         systemSymbolName: "lock.shield", accessibilityDescription: nil)
-      permissionItem.isEnabled = isLicensed
+      permissionItem.isEnabled = true
       menu?.addItem(permissionItem)
-      menu?.addItem(NSMenuItem.separator())
-    }
-
-    // Activate License (when not licensed)
-    if !isLicensed {
-      let activateItem = NSMenuItem(
-        title: "Activate License...",
-        action: #selector(activateLicenseAction),
-        keyEquivalent: ""
-      )
-      activateItem.target = self
-      activateItem.image = NSImage(systemSymbolName: "key.fill", accessibilityDescription: nil)
-      activateItem.isEnabled = true
-      menu?.addItem(activateItem)
       menu?.addItem(NSMenuItem.separator())
     }
 
@@ -326,7 +298,7 @@ final class AppStatusBarController: ObservableObject {
       keyEquivalent: ""
     )
     updateItem.target = self
-    updateItem.isEnabled = isLicensed
+    updateItem.isEnabled = true
     menu?.addItem(updateItem)
 
     // Preferences
@@ -338,7 +310,7 @@ final class AppStatusBarController: ObservableObject {
     prefsItem.keyEquivalentModifierMask = .command
     prefsItem.target = self
     prefsItem.image = NSImage(systemSymbolName: "gear", accessibilityDescription: nil)
-    prefsItem.isEnabled = isLicensed
+    prefsItem.isEnabled = true
     menu?.addItem(prefsItem)
 
     menu?.addItem(NSMenuItem.separator())
@@ -401,10 +373,6 @@ final class AppStatusBarController: ObservableObject {
 
   @objc private func grantPermissionAction() {
     viewModel?.requestPermission()
-  }
-
-  @objc private func activateLicenseAction() {
-    SplashWindowController.shared.showLicenseActivation()
   }
 
   @objc private func checkForUpdatesAction() {

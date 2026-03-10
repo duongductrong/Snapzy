@@ -12,7 +12,6 @@
 
 /* Begin PBXFileReference section */
 		A36462A32F18EEDA0003453D /* Snapzy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snapzy.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		B10000012F3E000000000001 /* Snapzy/Config/Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Snapzy/Config/Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -38,7 +37,6 @@
 		A364629A2F18EEDA0003453D = {
 			isa = PBXGroup;
 			children = (
-				B10000012F3E000000000001 /* Snapzy/Config/Secrets.xcconfig */,
 				A36462A52F18EEDA0003453D /* Snapzy */,
 				A36462A42F18EEDA0003453D /* Products */,
 			);
@@ -138,7 +136,6 @@
 /* Begin XCBuildConfiguration section */
 		A36462AE2F18EEDB0003453D /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B10000012F3E000000000001 /* Snapzy/Config/Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
@@ -203,7 +200,6 @@
 		};
 		A36462AF2F18EEDB0003453D /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = B10000012F3E000000000001 /* Snapzy/Config/Secrets.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;

@@ -395,12 +395,6 @@ final class KeyboardShortcutManager {
   }
 
   private func handleHotkey(id: UInt32) {
-    // Block all hotkeys when the app is not licensed
-    guard LicenseManager.shared.isLicensed else {
-      DiagnosticLogger.shared.log(.warning, .action, "Shortcut blocked: app not licensed")
-      return
-    }
-
     let actionName: String
     let action: ShortcutAction
 
