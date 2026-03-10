@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+
+## [1.0.3] - 2026-03-10
+
+### Features
+-  Add installation script and update README with version-specific install instructions (21b6020)
+-  Add Homebrew installation instructions and compute SHA256 for DMG in release workflow (1f5aedb)
+-  Enhance release workflow with build number extraction, DMG signing, and appcast update automation (e21be0e)
+
+### Bug Fixes
+-  Update Sparkle key condition for DMG signing in release workflow (ed2b4a5)
+
+### Contributors
+- @duongductrong
+
 ## [1.0.2] - 2026-03-10
 
 ### Features
