@@ -22,7 +22,7 @@ Snapzy is an open-source native macOS screenshot and screen recording app built 
 
 ### Requirements
 
-- macOS 14.0+
+- macOS 13.0+
 - Xcode 15.0+
 - Command Line Tools: `xcode-select --install`
 
