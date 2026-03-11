@@ -18,6 +18,7 @@ final class AppCoordinator {
   }
 
   func applicationDidFinishLaunching() {
+    AppIdentityManager.shared.refresh()
     let didCrash = CrashSentinel.shared.checkAndReset()
     DiagnosticLogger.shared.startSession()
     LegacyLicenseCleanupService.shared.runIfNeeded()

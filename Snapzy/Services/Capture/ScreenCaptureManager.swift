@@ -26,6 +26,7 @@ enum CaptureResult {
 /// Errors that can occur during capture
 enum CaptureError: Error, LocalizedError {
   case permissionDenied
+  case unavailable(String)
   case noDisplayFound
   case captureFailed(String)
   case saveFailed(String)
@@ -35,6 +36,8 @@ enum CaptureError: Error, LocalizedError {
     switch self {
     case .permissionDenied:
       return "Screen capture permission denied"
+    case .unavailable(let reason):
+      return reason
     case .noDisplayFound:
       return "No display found to capture"
     case .captureFailed(let reason):
@@ -47,12 +50,19 @@ enum CaptureError: Error, LocalizedError {
   }
 }
 
+enum ScreenRecordingPermissionStatus: Equatable {
+  case notGranted
+  case granted
+  case grantedButUnavailableDueToAppIdentity(String)
+}
+
 /// Manager class handling all screen capture operations
 @MainActor
 final class ScreenCaptureManager: ObservableObject {
 
   static let shared = ScreenCaptureManager()
 
+  @Published private(set) var permissionStatus: ScreenRecordingPermissionStatus = .notGranted
   @Published private(set) var hasPermission: Bool = false
   @Published private(set) var isCapturing: Bool = false
 
@@ -72,29 +82,27 @@ final class ScreenCaptureManager: ObservableObject {
 
   /// Check if screen recording permission is granted
   func checkPermission() async {
-    do {
-      // Try to get shareable content - this will fail if permission not granted
-      _ = try await SCShareableContent.current
-      hasPermission = true
-    } catch {
-      hasPermission = false
-    }
+    AppIdentityManager.shared.refresh()
+    updatePermissionStatus(systemGranted: CGPreflightScreenCaptureAccess())
   }
 
   /// Request screen recording permission by triggering the system prompt
   func requestPermission() async -> Bool {
-    // On macOS, we need to try to capture to trigger the permission dialog
-    // The system will show a dialog asking for permission
-    do {
-      _ = try await SCShareableContent.current
-      hasPermission = true
-      return true
-    } catch {
-      hasPermission = false
-      // Open System Preferences to the Screen Recording section
-      openScreenRecordingPreferences()
-      return false
+    AppIdentityManager.shared.refresh()
+
+    if CGPreflightScreenCaptureAccess() {
+      updatePermissionStatus(systemGranted: true)
+      return hasPermission
     }
+
+    let granted = CGRequestScreenCaptureAccess()
+    await checkPermission()
+
+    if !granted {
+      openScreenRecordingPreferences()
+    }
+
+    return hasPermission
   }
 
   /// Open System Preferences to Screen Recording section
@@ -133,12 +141,8 @@ final class ScreenCaptureManager: ObservableObject {
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async -> CaptureResult {
-
-    if !hasPermission {
-      let granted = await requestPermission()
-      if !granted {
-        return .failure(.permissionDenied)
-      }
+    if let unavailableError = await ensureCaptureAvailability() {
+      return .failure(unavailableError)
     }
 
     isCapturing = true
@@ -205,12 +209,8 @@ final class ScreenCaptureManager: ObservableObject {
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async -> CaptureResult {
-
-    if !hasPermission {
-      let granted = await requestPermission()
-      if !granted {
-        return .failure(.permissionDenied)
-      }
+    if let unavailableError = await ensureCaptureAvailability() {
+      return .failure(unavailableError)
     }
 
     isCapturing = true
@@ -447,11 +447,8 @@ final class ScreenCaptureManager: ObservableObject {
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil
   ) async throws -> CGImage? {
-    if !hasPermission {
-      let granted = await requestPermission()
-      if !granted {
-        throw CaptureError.permissionDenied
-      }
+    if let unavailableError = await ensureCaptureAvailability() {
+      throw unavailableError
     }
 
     let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
@@ -551,6 +548,41 @@ final class ScreenCaptureManager: ObservableObject {
     }
 
     return try await SCShareableContent.current
+  }
+
+  private func ensureCaptureAvailability() async -> CaptureError? {
+    await checkPermission()
+
+    switch permissionStatus {
+    case .granted:
+      return nil
+    case .notGranted:
+      let granted = await requestPermission()
+      if granted {
+        return nil
+      }
+      return .permissionDenied
+    case .grantedButUnavailableDueToAppIdentity(let reason):
+      return .unavailable(reason)
+    }
+  }
+
+  private func updatePermissionStatus(systemGranted: Bool) {
+    if !systemGranted {
+      permissionStatus = .notGranted
+      hasPermission = false
+      return
+    }
+
+    let identityHealth = AppIdentityManager.shared.health
+    if !identityHealth.isHealthy {
+      permissionStatus = .grantedButUnavailableDueToAppIdentity(identityHealth.summary)
+      hasPermission = false
+      return
+    }
+
+    permissionStatus = .granted
+    hasPermission = true
   }
 
   /// Compatibility wrapper: uses SCScreenshotManager on macOS 14+, falls back to SCStream single-frame capture on macOS 13.

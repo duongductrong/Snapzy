@@ -7,11 +7,11 @@
 
 import AppKit
 import AVFoundation
-import ScreenCaptureKit
 import SwiftUI
 
 struct PermissionsSettingsView: View {
-  @State private var screenRecordingGranted = false
+  @ObservedObject private var screenCaptureManager = ScreenCaptureManager.shared
+  @ObservedObject private var identityManager = AppIdentityManager.shared
   @State private var microphoneGranted = false
   @State private var accessibilityGranted = false
   @State private var saveFolderGranted = false
@@ -39,8 +39,10 @@ struct PermissionsSettingsView: View {
         permissionRow(
           icon: "rectangle.inset.filled.and.person.filled",
           name: "Screen Recording",
-          description: "Required for screenshots and recordings",
-          isGranted: screenRecordingGranted,
+          description: screenRecordingDescription,
+          statusLabel: screenRecordingStatusLabel,
+          statusIcon: screenRecordingStatusIcon,
+          statusColor: screenRecordingStatusColor,
           isRequired: true,
           settingsURL: screenRecordingURL
         )
@@ -49,7 +51,9 @@ struct PermissionsSettingsView: View {
           icon: "folder.fill",
           name: "Save Folder",
           description: "Required to save screenshots and recordings",
-          isGranted: saveFolderGranted,
+          statusLabel: saveFolderGranted ? "Granted" : "Not Granted",
+          statusIcon: saveFolderGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
+          statusColor: saveFolderGranted ? .green : .orange,
           isRequired: true,
           settingsURL: filesAndFoldersURL
         )
@@ -58,7 +62,9 @@ struct PermissionsSettingsView: View {
           icon: "mic.fill",
           name: "Microphone",
           description: "Optional for voice recording",
-          isGranted: microphoneGranted,
+          statusLabel: microphoneGranted ? "Granted" : "Not Granted",
+          statusIcon: microphoneGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
+          statusColor: microphoneGranted ? .green : .orange,
           isRequired: false,
           settingsURL: microphoneURL
         )
@@ -67,10 +73,28 @@ struct PermissionsSettingsView: View {
           icon: "hand.raised.fill",
           name: "Accessibility",
           description: "Optional for global shortcuts",
-          isGranted: accessibilityGranted,
+          statusLabel: accessibilityGranted ? "Granted" : "Not Granted",
+          statusIcon: accessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
+          statusColor: accessibilityGranted ? .green : .orange,
           isRequired: false,
           settingsURL: accessibilityURL
         )
+
+        if !identityManager.health.isHealthy {
+          VStack(alignment: .leading, spacing: 6) {
+            Text("Build Identity Needs Attention")
+              .font(.caption)
+              .fontWeight(.semibold)
+              .foregroundColor(.orange)
+
+            ForEach(identityManager.health.issues, id: \.self) { issue in
+              Text("• \(issue.description)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+          }
+          .padding(.vertical, 4)
+        }
 
         HStack {
           Spacer()
@@ -96,6 +120,9 @@ struct PermissionsSettingsView: View {
     .onAppear {
       checkAllPermissions()
     }
+    .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+      checkAllPermissions()
+    }
   }
 
   // MARK: - Permission Row Component
@@ -105,7 +132,9 @@ struct PermissionsSettingsView: View {
     icon: String,
     name: String,
     description: String,
-    isGranted: Bool,
+    statusLabel: String,
+    statusIcon: String,
+    statusColor: Color,
     isRequired: Bool,
     settingsURL: String
   ) -> some View {
@@ -137,15 +166,15 @@ struct PermissionsSettingsView: View {
       Spacer()
 
       HStack(spacing: 4) {
-        Image(systemName: isGranted ? "checkmark.circle.fill" : "xmark.circle.fill")
-          .foregroundColor(isGranted ? .green : .orange)
-        Text(isGranted ? "Granted" : "Not Granted")
+        Image(systemName: statusIcon)
+          .foregroundColor(statusColor)
+        Text(statusLabel)
           .font(.caption)
-          .foregroundColor(isGranted ? .green : .orange)
+          .foregroundColor(statusColor)
       }
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
-      .background(isGranted ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+      .background(statusColor.opacity(0.1))
       .cornerRadius(6)
 
       Button("Open Settings") {
@@ -175,16 +204,8 @@ struct PermissionsSettingsView: View {
   }
 
   private func checkScreenRecordingPermission() async {
-    do {
-      _ = try await SCShareableContent.current
-      await MainActor.run {
-        screenRecordingGranted = true
-      }
-    } catch {
-      await MainActor.run {
-        screenRecordingGranted = false
-      }
-    }
+    AppIdentityManager.shared.refresh()
+    await screenCaptureManager.checkPermission()
   }
 
   private func checkMicrophonePermission() {
@@ -199,6 +220,48 @@ struct PermissionsSettingsView: View {
   private func checkSaveFolderPermission() {
     fileAccessManager.ensureExportLocationInitialized()
     saveFolderGranted = fileAccessManager.hasPersistedExportPermission
+  }
+
+  private var screenRecordingDescription: String {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return "Required for screenshots and recordings"
+    case .notGranted:
+      return "Required for screenshots and recordings"
+    case .grantedButUnavailableDueToAppIdentity:
+      return "macOS granted the permission, but this build identity is still blocking capture."
+    }
+  }
+
+  private var screenRecordingStatusLabel: String {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return "Granted"
+    case .notGranted:
+      return "Not Granted"
+    case .grantedButUnavailableDueToAppIdentity:
+      return "Unavailable"
+    }
+  }
+
+  private var screenRecordingStatusIcon: String {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return "checkmark.circle.fill"
+    case .notGranted:
+      return "xmark.circle.fill"
+    case .grantedButUnavailableDueToAppIdentity:
+      return "exclamationmark.triangle.fill"
+    }
+  }
+
+  private var screenRecordingStatusColor: Color {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return .green
+    case .notGranted, .grantedButUnavailableDueToAppIdentity:
+      return .orange
+    }
   }
 
   // MARK: - System Settings Navigation

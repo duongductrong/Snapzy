@@ -7,11 +7,17 @@
 
 import SwiftUI
 
+enum PermissionRowStatus {
+  case granted
+  case needsAction(buttonTitle: String)
+  case blocked(label: String, buttonTitle: String)
+}
+
 struct PermissionRow: View {
   let icon: String
   let title: String
   let description: String
-  let isGranted: Bool
+  let status: PermissionRowStatus
   var isRequired: Bool = true
   let onGrant: () -> Void
 
@@ -60,26 +66,29 @@ struct PermissionRow: View {
 
       Spacer()
 
-      // Status
-      if isGranted {
-        HStack(spacing: 4) {
-          Image(systemName: "checkmark.circle.fill")
-            .font(.system(size: 16))
-            .foregroundColor(.green)
-          Text("Granted")
-            .font(.caption)
-            .foregroundColor(.green)
+      VStack(alignment: .trailing, spacing: 8) {
+        if let badge = badge {
+          HStack(spacing: 4) {
+            Image(systemName: badge.icon)
+              .font(.system(size: 16))
+              .foregroundColor(badge.color)
+            Text(badge.label)
+              .font(.caption)
+              .foregroundColor(badge.color)
+          }
+          .padding(.horizontal, 8)
+          .padding(.vertical, 4)
+          .background(badge.color.opacity(0.15))
+          .cornerRadius(6)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(Color.green.opacity(0.15))
-        .cornerRadius(6)
-      } else {
-        Button("Grant Access") {
-          onGrant()
+
+        if let buttonTitle = actionTitle {
+          Button(buttonTitle) {
+            onGrant()
+          }
+          .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
+          .controlSize(.small)
         }
-        .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
-        .controlSize(.small)
       }
     }
     .padding(16)
@@ -92,6 +101,26 @@ struct PermissionRow: View {
         .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
     )
   }
+
+  private var badge: (label: String, color: Color, icon: String)? {
+    switch status {
+    case .granted:
+      return ("Granted", .green, "checkmark.circle.fill")
+    case .needsAction:
+      return nil
+    case .blocked(let label, _):
+      return (label, .orange, "exclamationmark.triangle.fill")
+    }
+  }
+
+  private var actionTitle: String? {
+    switch status {
+    case .granted:
+      return nil
+    case .needsAction(let buttonTitle), .blocked(_, let buttonTitle):
+      return buttonTitle
+    }
+  }
 }
 
 #Preview {
@@ -100,7 +129,7 @@ struct PermissionRow: View {
       icon: "rectangle.dashed.badge.record",
       title: "Screen Recording",
       description: "Required for screenshots",
-      isGranted: false,
+      status: .needsAction(buttonTitle: "Grant Access"),
       isRequired: true,
       onGrant: {}
     )
@@ -108,7 +137,7 @@ struct PermissionRow: View {
       icon: "mic.fill",
       title: "Microphone",
       description: "Optional for voice recording",
-      isGranted: true,
+      status: .granted,
       isRequired: false,
       onGrant: {}
     )

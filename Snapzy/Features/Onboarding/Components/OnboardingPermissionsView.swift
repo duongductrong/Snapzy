@@ -7,11 +7,11 @@
 
 import AVFoundation
 import ApplicationServices
-import ScreenCaptureKit
 import SwiftUI
 
 struct PermissionsView: View {
   @ObservedObject var screenCaptureManager: ScreenCaptureManager
+  @ObservedObject private var identityManager = AppIdentityManager.shared
   let onQuit: () -> Void
   let onNext: () -> Void
 
@@ -54,12 +54,16 @@ struct PermissionsView: View {
         PermissionRow(
           icon: "rectangle.dashed.badge.record",
           title: "Screen Recording",
-          description: "Required for screenshots and recordings",
-          isGranted: screenCaptureManager.hasPermission,
+          description: screenRecordingDescription,
+          status: screenRecordingStatus,
           isRequired: true,
           onGrant: {
             Task {
-              await screenCaptureManager.requestPermission()
+              if case .grantedButUnavailableDueToAppIdentity = screenCaptureManager.permissionStatus {
+                await refreshPermissions()
+              } else {
+                _ = await screenCaptureManager.requestPermission()
+              }
             }
           }
         )
@@ -69,7 +73,7 @@ struct PermissionsView: View {
           icon: "folder.fill",
           title: "Save Folder",
           description: "Required to save screenshots and recordings",
-          isGranted: exportFolderGranted,
+          status: exportFolderGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
           isRequired: true,
           onGrant: {
             requestExportFolderPermission()
@@ -81,7 +85,7 @@ struct PermissionsView: View {
           icon: "mic.fill",
           title: "Microphone",
           description: "Optional for voice recording",
-          isGranted: microphoneGranted,
+          status: microphoneGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
           isRequired: false,
           onGrant: {
             requestMicrophonePermission()
@@ -93,7 +97,7 @@ struct PermissionsView: View {
           icon: "hand.raised.fill",
           title: "Accessibility",
           description: "Optional for global shortcuts",
-          isGranted: accessibilityGranted,
+          status: accessibilityGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
           isRequired: false,
           onGrant: {
             requestAccessibilityPermission()
@@ -102,6 +106,31 @@ struct PermissionsView: View {
       }
       .frame(maxWidth: 420)
       .padding(.top, 24)
+
+      if !identityManager.health.isHealthy {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("Build Identity Needs Attention")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundColor(.orange)
+
+          ForEach(identityManager.health.issues, id: \.self) { issue in
+            Text("• \(issue.description)")
+              .font(.caption)
+              .foregroundColor(VSDesignSystem.Colors.tertiary)
+          }
+        }
+        .frame(maxWidth: 420, alignment: .leading)
+        .padding(14)
+        .background(
+          RoundedRectangle(cornerRadius: 12)
+            .fill(Color.orange.opacity(0.12))
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 12)
+            .stroke(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+        .padding(.top, 16)
+      }
 
       // Bottom Navigation
       HStack(spacing: 16) {
@@ -120,20 +149,12 @@ struct PermissionsView: View {
       .padding(.top, 32)
     }
     .task {
-      fileAccessManager.ensureExportLocationInitialized()
-      await screenCaptureManager.checkPermission()
-      checkMicrophonePermission()
-      checkAccessibilityPermission()
-      checkExportFolderPermission()
+      await refreshPermissions()
     }
     .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-      // Refresh permissions when app becomes active (user returns from System Settings)
       Task {
-        await screenCaptureManager.checkPermission()
+        await refreshPermissions()
       }
-      checkMicrophonePermission()
-      checkAccessibilityPermission()
-      checkExportFolderPermission()
     }
   }
 
@@ -151,6 +172,37 @@ struct PermissionsView: View {
   private func checkExportFolderPermission() {
     fileAccessManager.ensureExportLocationInitialized()
     exportFolderGranted = fileAccessManager.hasPersistedExportPermission
+  }
+
+  private var screenRecordingDescription: String {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return "Required for screenshots and recordings"
+    case .notGranted:
+      return "Required for screenshots and recordings"
+    case .grantedButUnavailableDueToAppIdentity:
+      return "Granted in System Settings, but this build cannot use the permission until the identity issues below are fixed."
+    }
+  }
+
+  private var screenRecordingStatus: PermissionRowStatus {
+    switch screenCaptureManager.permissionStatus {
+    case .granted:
+      return .granted
+    case .notGranted:
+      return .needsAction(buttonTitle: "Grant Access")
+    case .grantedButUnavailableDueToAppIdentity:
+      return .blocked(label: "Unavailable", buttonTitle: "Refresh Status")
+    }
+  }
+
+  private func refreshPermissions() async {
+    fileAccessManager.ensureExportLocationInitialized()
+    AppIdentityManager.shared.refresh()
+    await screenCaptureManager.checkPermission()
+    checkMicrophonePermission()
+    checkAccessibilityPermission()
+    checkExportFolderPermission()
   }
 
   private func requestExportFolderPermission() {

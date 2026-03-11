@@ -82,6 +82,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       }
       .store(in: &cancellables)
 
+    captureManager.$hasPermission
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] hasPermission in
+        self?.hasPermission = hasPermission
+      }
+      .store(in: &cancellables)
+
     // Sync permission state
     Task {
       await updatePermissionState()

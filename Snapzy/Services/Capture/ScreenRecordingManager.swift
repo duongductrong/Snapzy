@@ -196,14 +196,35 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     self.excludedWindowIDs = Set(excludedWindowIDs)
     self.exceptedWindowIDs.removeAll()
 
-    // Check permission and get shareable content
+    let captureManager = ScreenCaptureManager.shared
+    await captureManager.checkPermission()
+
+    if case .notGranted = captureManager.permissionStatus {
+      _ = await captureManager.requestPermission()
+    }
+
+    switch captureManager.permissionStatus {
+    case .notGranted:
+      state = .idle
+      self.error = .permissionDenied
+      throw RecordingError.permissionDenied
+    case .grantedButUnavailableDueToAppIdentity(let reason):
+      state = .idle
+      self.error = .setupFailed(reason)
+      throw RecordingError.setupFailed(reason)
+    case .granted:
+      break
+    }
+
+    // Permission is available; now load shareable content for actual setup.
     let content: SCShareableContent
     do {
       content = try await SCShareableContent.current
     } catch {
       state = .idle
-      self.error = .permissionDenied
-      throw RecordingError.permissionDenied
+      let message = "ScreenCaptureKit could not load shareable content: \(error.localizedDescription)"
+      self.error = .setupFailed(message)
+      throw RecordingError.setupFailed(message)
     }
 
     // Find the display containing the rect using NSScreen (same coordinate system as input rect)
