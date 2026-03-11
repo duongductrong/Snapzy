@@ -11,10 +11,6 @@ import Security
 
 enum AppBundleIdentity {
   static let expected = "com.trongduong.snapzy"
-  static let legacyDomains = [
-    "Snapzy",
-    "com.duongductrong.snapzy",
-  ]
 }
 
 enum AppIdentityIssue: Equatable, Hashable {

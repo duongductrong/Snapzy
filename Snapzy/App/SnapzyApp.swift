@@ -15,15 +15,11 @@ extension Notification.Name {
 
 @main
 struct SnapzyApp: App {
-  private let bootstrap: Void = {
-    DefaultsDomainMigrationService.shared.runIfNeeded()
-    AppIdentityManager.shared.refresh()
-  }()
   @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
   @ObservedObject private var themeManager = ThemeManager.shared
 
   init() {
-    _ = bootstrap
+    AppIdentityManager.shared.refresh()
   }
 
   var body: some Scene {
@@ -42,7 +38,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   private var coordinator: AppCoordinator?
 
   func applicationDidFinishLaunching(_ notification: Notification) {
-    DefaultsDomainMigrationService.shared.runIfNeeded()
     AppIdentityManager.shared.refresh()
 
     let coordinator = AppCoordinator(environment: AppEnvironment.live())
