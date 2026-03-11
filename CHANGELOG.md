@@ -7,6 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.6] - 2026-03-11
+
+### Bug Fixes
+-  remove the `--options runtime` flag from release codesigning. (f80c523)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.5 (946582e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.5] - 2026-03-11
 
 ### Features
