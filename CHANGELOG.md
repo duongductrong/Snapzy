@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.5] - 2026-03-11
+
+### Features
+-  introduce agent guidance documents, update gitignore, and enhance Sparkle DMG signing reliability in release workflow. (8db5280)
+
+### Contributors
+- @duongductrong
+
 ## [1.0.4] - 2026-03-11
 
 ### Features
