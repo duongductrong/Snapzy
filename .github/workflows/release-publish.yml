@@ -154,7 +154,6 @@ jobs:
               --force \
               --sign - \
               --entitlements Snapzy/Snapzy.entitlements \
-              --options runtime \
               --timestamp=none \
               "$APP_PATH"
           fi
