@@ -63,10 +63,12 @@ After exporting, create distributable DMG:
 # Using create-dmg (brew install create-dmg)
 create-dmg \
   --volname "Snapzy" \
-  --window-size 600 400 \
-  --icon-size 100 \
-  --app-drop-link 450 200 \
-  --icon "Snapzy.app" 150 200 \
+  --background "assets/dmg-background.png" \
+  --window-size 660 400 \
+  --icon-size 120 \
+  --icon "Snapzy.app" 180 170 \
+  --app-drop-link 480 170 \
+  --no-internet-enable \
   "Snapzy.dmg" \
   "./exported_app/Snapzy.app"
 ```

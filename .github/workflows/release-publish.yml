@@ -134,6 +134,9 @@ jobs:
             ditto "$ARCHIVE_PATH/Products/Applications/Snapzy.app" build/Snapzy.app
           fi
 
+      - name: Install create-dmg
+        run: HOMEBREW_NO_AUTO_UPDATE=1 brew install create-dmg
+
       - name: Create DMG
         run: |
           set -euo pipefail
@@ -148,18 +151,17 @@ jobs:
           fi
 
           DMG_NAME="Snapzy-v${{ steps.version.outputs.version }}.dmg"
-          DMG_TEMP="build/dmg-temp"
 
-          mkdir -p "$DMG_TEMP"
-          ditto "$APP_PATH" "$DMG_TEMP/Snapzy.app"
-          ln -s /Applications "$DMG_TEMP/Applications"
-
-          hdiutil create \
-            -volname "Snapzy" \
-            -srcfolder "$DMG_TEMP" \
-            -ov \
-            -format UDZO \
-            "build/${DMG_NAME}"
+          create-dmg \
+            --volname "Snapzy" \
+            --background "assets/dmg-background.png" \
+            --window-size 660 400 \
+            --icon-size 120 \
+            --icon "Snapzy.app" 180 170 \
+            --app-drop-link 480 170 \
+            --no-internet-enable \
+            "build/${DMG_NAME}" \
+            "$APP_PATH"
 
           echo "dmg_path=build/${DMG_NAME}" >> "$GITHUB_ENV"
           echo "dmg_name=${DMG_NAME}" >> "$GITHUB_ENV"
