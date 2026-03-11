@@ -5,6 +5,28 @@ All notable changes to Snapzy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+
+## [1.0.4] - 2026-03-11
+
+### Features
+-  enhance release workflow with ad-hoc signing and verification for fallback distribution (4f42ad1)
+-  Implement AppIdentityManager and DefaultsDomainMigrationService for bundle identity management and migration (151dbe0)
+-  Update DMG background image (cfdeac6)
+-  Update DMG creation process with create-dmg and add background image (17f7a65)
+-  Add derived data path for Xcode build process (74d94b6)
+
+### Bug Fixes
+-  Update bundle identifiers and dispatch queue labels to use the correct namespace (f96151d)
+-  Update dispatch queue labels to use the correct Snapzy prefix (8377024)
+
+### Chore
+- refactor: Remove DefaultsDomainMigrationService and streamline app initialization (5e4515d)
+- chore: update appcast, cask, and readme for v1.0.3 (b26e4b5)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.3] - 2026-03-10
 
 ### Features
