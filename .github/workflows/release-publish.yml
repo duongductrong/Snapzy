@@ -278,31 +278,65 @@ jobs:
         env:
           SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
         run: |
+          set +e  # Disable exit-on-error; we handle failures manually
+
           # Write private key to temp file
           PRIVATE_KEY_FILE="$RUNNER_TEMP/sparkle_private_key.pem"
           echo "$SPARKLE_PRIVATE_KEY" > "$PRIVATE_KEY_FILE"
 
-          # Build sign_update from Sparkle SPM checkout
+          SIGN_UPDATE=""
+          SIGNATURE=""
+
+          # Diagnostic: show what Sparkle checkout contains
           SPARKLE_SRC="build/DerivedData/SourcePackages/checkouts/Sparkle"
+          echo "--- Sparkle checkout contents ---"
+          ls -la "$SPARKLE_SRC/" 2>/dev/null || echo "Sparkle checkout dir not found"
+
+          # Strategy 1: Build sign_update from Sparkle SPM checkout
           if [ -d "$SPARKLE_SRC/sign_update" ]; then
-            swift build --package-path "$SPARKLE_SRC/sign_update" -c release 2>/dev/null
-            SIGN_UPDATE=$(swift build --package-path "$SPARKLE_SRC/sign_update" -c release --show-bin-path 2>/dev/null)/sign_update
+            echo "Found sign_update source, building..."
+            if swift build --package-path "$SPARKLE_SRC/sign_update" -c release; then
+              BIN_PATH=$(swift build --package-path "$SPARKLE_SRC/sign_update" -c release --show-bin-path 2>/dev/null)
+              SIGN_UPDATE="$BIN_PATH/sign_update"
+              echo "Built sign_update at: $SIGN_UPDATE"
+            else
+              echo "::warning::swift build for sign_update failed"
+            fi
           else
-            echo "::warning::Sparkle sign_update source not found, trying generate_appcast binary"
-            SIGN_UPDATE=""
+            echo "::notice::sign_update source dir not found at $SPARKLE_SRC/sign_update"
           fi
 
-          if [ -n "$SIGN_UPDATE" ] && [ -x "$SIGN_UPDATE" ]; then
-            SIGNATURE=$("$SIGN_UPDATE" "${{ env.dmg_path }}" --ed-key-file "$PRIVATE_KEY_FILE" 2>/dev/null | grep "sparkle:edSignature=" | cut -d'"' -f2)
-          else
-            # Fallback: try the sign_update from artifacts if available
+          # Strategy 2: Find pre-built sign_update in SPM artifacts
+          if [ -z "$SIGN_UPDATE" ] || [ ! -x "$SIGN_UPDATE" ]; then
+            echo "Searching for pre-built sign_update in artifacts..."
             SIGN_UPDATE_ALT=$(find build/DerivedData/SourcePackages/artifacts -name "sign_update" -type f 2>/dev/null | head -1)
-            if [ -n "$SIGN_UPDATE_ALT" ] && [ -x "$SIGN_UPDATE_ALT" ]; then
-              SIGNATURE=$("$SIGN_UPDATE_ALT" "${{ env.dmg_path }}" --ed-key-file "$PRIVATE_KEY_FILE" 2>/dev/null | grep "sparkle:edSignature=" | cut -d'"' -f2)
-            else
-              echo "::warning::Could not find sign_update binary, skipping signature"
-              SIGNATURE=""
+            if [ -n "$SIGN_UPDATE_ALT" ]; then
+              chmod +x "$SIGN_UPDATE_ALT" 2>/dev/null || true
+              if [ -x "$SIGN_UPDATE_ALT" ]; then
+                SIGN_UPDATE="$SIGN_UPDATE_ALT"
+                echo "Found pre-built sign_update at: $SIGN_UPDATE"
+              fi
             fi
+          fi
+
+          # Strategy 3: Find generate_appcast which can also sign
+          if [ -z "$SIGN_UPDATE" ] || [ ! -x "$SIGN_UPDATE" ]; then
+            echo "Searching for generate_appcast binary..."
+            GEN_APPCAST=$(find build/DerivedData/SourcePackages/artifacts -name "generate_appcast" -type f 2>/dev/null | head -1)
+            if [ -n "$GEN_APPCAST" ] && [ -x "$GEN_APPCAST" ]; then
+              echo "Found generate_appcast at: $GEN_APPCAST"
+              # generate_appcast doesn't sign individual files the same way; skip
+            fi
+          fi
+
+          # Sign the DMG
+          if [ -n "$SIGN_UPDATE" ] && [ -x "$SIGN_UPDATE" ]; then
+            echo "Signing DMG with: $SIGN_UPDATE"
+            SIGN_OUTPUT=$("$SIGN_UPDATE" "${{ env.dmg_path }}" --ed-key-file "$PRIVATE_KEY_FILE" 2>&1) || true
+            echo "sign_update output: $SIGN_OUTPUT"
+            SIGNATURE=$(echo "$SIGN_OUTPUT" | grep "sparkle:edSignature=" | cut -d'"' -f2)
+          else
+            echo "::warning::Could not find or build sign_update binary, skipping signature"
           fi
 
           echo "signature=$SIGNATURE" >> "$GITHUB_OUTPUT"
@@ -310,8 +344,9 @@ jobs:
 
           if [ -n "$SIGNATURE" ]; then
             echo "DMG signed successfully"
+            echo "Signature: $SIGNATURE"
           else
-            echo "::warning::DMG signature is empty"
+            echo "::warning::DMG signature is empty — appcast will have no EdDSA signature"
           fi
 
       - name: Update appcast.xml
