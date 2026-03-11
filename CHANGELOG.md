@@ -8,6 +8,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.7] - 2026-03-11
+
+### Bug Fixes
+-  improve screen capture permission handling, and skip strict bundle signature validation in debug builds. (b92fbf6)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.6 (913a0e3)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.6] - 2026-03-11
 
 ### Bug Fixes
