@@ -65,6 +65,7 @@ jobs:
             -scheme Snapzy \
             -configuration Release \
             -archivePath build/Snapzy.xcarchive \
+            -derivedDataPath build/DerivedData \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
