@@ -40,6 +40,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationDidFinishLaunching(_ notification: Notification) {
     AppIdentityManager.shared.refresh()
 
+    // Cleanup orphaned temp capture files from previous sessions
+    TempCaptureManager.shared.cleanupOrphanedFiles()
+
     let coordinator = AppCoordinator(environment: AppEnvironment.live())
     self.coordinator = coordinator
     coordinator.applicationDidFinishLaunching()

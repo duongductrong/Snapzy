@@ -296,7 +296,10 @@ struct QuickAccessCardView: View {
   private var hoverOverlay: some View {
     let captureType: CaptureType = item.isVideo ? .recording : .screenshot
     let showCopy = preferencesManager.isActionEnabled(.copyFile, for: captureType)
-    let showSave = preferencesManager.isActionEnabled(.save, for: captureType)
+    let showSaveToggle = preferencesManager.isActionEnabled(.save, for: captureType)
+    let isTempFile = TempCaptureManager.shared.isTempFile(item.url)
+    // Always show save button for temp files (it's the only way to persist them)
+    let showSave = showSaveToggle || isTempFile
 
     return ZStack {
       // Dimming overlay
@@ -313,9 +316,16 @@ struct QuickAccessCardView: View {
         }
 
         if showSave {
-          staggeredButton(label: "Save", delay: showCopy ? 1 : 0) {
+          staggeredButton(
+            label: isTempFile ? "Save" : "Open",
+            delay: showCopy ? 1 : 0
+          ) {
             QuickAccessSound.save.play(reduceMotion: reduceMotion)
-            manager.openInFinder(id: item.id)
+            if isTempFile {
+              manager.saveItem(id: item.id)
+            } else {
+              manager.openInFinder(id: item.id)
+            }
           }
         }
       }

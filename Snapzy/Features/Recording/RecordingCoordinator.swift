@@ -29,6 +29,8 @@ final class RecordingCoordinator: ObservableObject {
 
   private init() {}
 
+  private let tempCaptureManager = TempCaptureManager.shared
+
   private var includeOwnAppInScreenshots: Bool {
     UserDefaults.standard.bool(forKey: PreferencesKeys.screenshotIncludeOwnApp)
   }
@@ -234,6 +236,12 @@ final class RecordingCoordinator: ObservableObject {
 
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
+        // Resolve save directory based on auto-save toggle
+        let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+          for: .recording,
+          exportDirectory: saveDirectory
+        )
+
         try await recorder.prepareRecording(
           rect: rect,
           format: savedFormat,
@@ -241,7 +249,7 @@ final class RecordingCoordinator: ObservableObject {
           fps: fps,
           captureSystemAudio: savedCaptureAudio,
           captureMicrophone: savedCaptureMicrophone,
-          saveDirectory: saveDirectory,
+          saveDirectory: actualSaveDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
@@ -312,6 +320,12 @@ final class RecordingCoordinator: ObservableObject {
       do {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
+        // Resolve save directory based on auto-save toggle
+        let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+          for: .recording,
+          exportDirectory: saveDirectory
+        )
+
         try await recorder.prepareRecording(
           rect: rect,
           format: format,
@@ -319,7 +333,7 @@ final class RecordingCoordinator: ObservableObject {
           fps: fps,
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: captureMicrophone,
-          saveDirectory: saveDirectory,
+          saveDirectory: actualSaveDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
@@ -413,6 +427,12 @@ final class RecordingCoordinator: ObservableObject {
       do {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
+        // Resolve save directory based on auto-save toggle
+        let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+          for: .recording,
+          exportDirectory: saveDirectory
+        )
+
         try await recorder.prepareRecording(
           rect: rect,
           format: format,
@@ -420,7 +440,7 @@ final class RecordingCoordinator: ObservableObject {
           fps: fps,
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: false,
-          saveDirectory: saveDirectory,
+          saveDirectory: actualSaveDirectory,
           excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
@@ -545,12 +565,18 @@ final class RecordingCoordinator: ObservableObject {
     let captureManager = ScreenCaptureManager.shared
     let prefetchedContentTask = captureManager.prefetchShareableContent()
 
+    // Resolve save directory based on auto-save toggle
+    let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+      for: .screenshot,
+      exportDirectory: saveDirectory
+    )
+
     Task {
       await Task.yield()
 
       let result = await captureManager.captureArea(
         rect: rect,
-        saveDirectory: saveDirectory,
+        saveDirectory: actualSaveDirectory,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
         excludeOwnApplication: !includeOwnAppInScreenshots,

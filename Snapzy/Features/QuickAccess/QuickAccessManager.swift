@@ -64,6 +64,7 @@ final class QuickAccessManager: ObservableObject {
 
   private let panelController = QuickAccessPanelController()
   private let fileAccessManager = SandboxFileAccessManager.shared
+  private let tempCaptureManager = TempCaptureManager.shared
   private var dismissTimers: [UUID: Task<Void, Never>] = [:]
 
   // MARK: - UserDefaults Keys (preserved for backward compatibility)
@@ -199,6 +200,24 @@ final class QuickAccessManager: ObservableObject {
 
   /// Remove an item (screenshot or video) from the stack
   func removeItem(id: UUID) {
+    guard let item = items.first(where: { $0.id == id }) else {
+      cancelDismissTimer(for: id)
+      return
+    }
+
+    // Auto-delete temp files on dismiss (unsaved captures)
+    if tempCaptureManager.isTempFile(item.url) {
+      let url = item.url
+      DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
+      print("[Snapzy:QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
+      Task { @MainActor in
+        tempCaptureManager.deleteTempFile(at: url)
+      }
+    } else {
+      DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss saved file: \(item.url.lastPathComponent)")
+      print("[Snapzy:QuickAccess] Dismiss saved file: \(item.url.lastPathComponent)")
+    }
+
     cancelDismissTimer(for: id)
     // Fast animation (0.15s) for immediate perceived response
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
@@ -279,21 +298,28 @@ final class QuickAccessManager: ObservableObject {
     guard let item = items.first(where: { $0.id == id }) else { return }
 
     let url = item.url
+    let isTempFile = tempCaptureManager.isTempFile(url)
+    DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Delete item (temp=\(isTempFile)): \(url.lastPathComponent)")
+    print("[Snapzy:QuickAccess] Delete item (temp=\(isTempFile)): \(url.lastPathComponent)")
     removeItem(id: id)
 
-    Task { @MainActor in
-      let fileAccess = fileAccessManager.beginAccessingURL(url)
-      let directoryAccess = fileAccessManager.beginAccessingURL(url.deletingLastPathComponent())
-      defer { fileAccess.stop() }
-      defer { directoryAccess.stop() }
+    // removeItem already handles temp file deletion,
+    // for non-temp files we need to trash them
+    if !isTempFile {
+      Task { @MainActor in
+        let fileAccess = fileAccessManager.beginAccessingURL(url)
+        let directoryAccess = fileAccessManager.beginAccessingURL(url.deletingLastPathComponent())
+        defer { fileAccess.stop() }
+        defer { directoryAccess.stop() }
 
-      do {
-        try FileManager.default.trashItem(at: url, resultingItemURL: nil)
-        if item.isVideo {
-          try? RecordingMetadataStore.delete(for: url)
+        do {
+          try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+          if item.isVideo {
+            try? RecordingMetadataStore.delete(for: url)
+          }
+        } catch {
+          logger.error("Failed to delete item \(url.lastPathComponent): \(error.localizedDescription)")
         }
-      } catch {
-        logger.error("Failed to delete item \(url.lastPathComponent): \(error.localizedDescription)")
       }
     }
   }
@@ -309,10 +335,38 @@ final class QuickAccessManager: ObservableObject {
     removeScreenshot(id: id)
 
     // Async Finder reveal
+    DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Open in Finder: \(url.lastPathComponent)")
+    print("[Snapzy:QuickAccess] Open in Finder: \(url.lastPathComponent)")
     Task { @MainActor in
       let fileAccess = fileAccessManager.beginAccessingURL(url)
       defer { fileAccess.stop() }
       NSWorkspace.shared.selectFile(url.path, inFileViewerRootedAtPath: "")
+    }
+  }
+
+  /// Save a temp capture file to the permanent export location, then reveal in Finder
+  func saveItem(id: UUID) {
+    guard let item = items.first(where: { $0.id == id }) else { return }
+    let tempURL = item.url
+    DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Manual save triggered: \(tempURL.lastPathComponent)")
+    print("[Snapzy:QuickAccess] Manual save triggered: \(tempURL.lastPathComponent)")
+
+    // Remove card immediately (don't trigger temp file deletion since we're saving)
+    cancelDismissTimer(for: id)
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
+      items.removeAll { $0.id == id }
+    }
+    if items.isEmpty {
+      panelController.hide()
+    }
+
+    // Move file from temp to export location
+    Task { @MainActor in
+      if let savedURL = tempCaptureManager.saveToExportLocation(tempURL: tempURL) {
+        let fileAccess = fileAccessManager.beginAccessingURL(savedURL)
+        defer { fileAccess.stop() }
+        NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
+      }
     }
   }
 

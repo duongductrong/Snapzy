@@ -48,7 +48,11 @@ final class PostCaptureActionHandler {
     }
 
     logger.info("Executing post-capture actions for \(captureType == .screenshot ? "screenshot" : "recording"): \(url.lastPathComponent)")
-    DiagnosticLogger.shared.log(.info, .action, "Post-capture: \(captureType == .screenshot ? "screenshot" : "recording") \(url.lastPathComponent)")
+    let isTempCapture = TempCaptureManager.shared.isTempFile(url)
+    let locationLabel = isTempCapture ? "temp" : "export"
+    let typeLabel = captureType == .screenshot ? "screenshot" : "recording"
+    print("[Snapzy:PostCapture] \(typeLabel) \(url.lastPathComponent) [location=\(locationLabel)]")
+    DiagnosticLogger.shared.log(.info, .action, "Post-capture: \(typeLabel) \(url.lastPathComponent) [location=\(locationLabel)]")
 
     // Show Quick Access Overlay
     if preferencesManager.isActionEnabled(.showQuickAccess, for: captureType) {

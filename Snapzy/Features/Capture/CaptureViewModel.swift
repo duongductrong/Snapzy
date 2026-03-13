@@ -51,6 +51,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   private let quickAccessManager = QuickAccessManager.shared
   private let postCaptureHandler = PostCaptureActionHandler.shared
   private let fileAccessManager = SandboxFileAccessManager.shared
+  private let tempCaptureManager = TempCaptureManager.shared
   private var isAreaSelectionActive = false
   private var cancellables = Set<AnyCancellable>()
 
@@ -203,8 +204,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       let prefetchedContentTask = captureManager.prefetchShareableContent()
       await Task.yield()
 
+      // Resolve save directory based on auto-save toggle
+      let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+        for: .screenshot,
+        exportDirectory: resolvedSaveDirectory
+      )
+
       let result = await captureManager.captureFullscreen(
-        saveDirectory: resolvedSaveDirectory,
+        saveDirectory: actualSaveDirectory,
         format: selectedFormat.format,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
@@ -277,9 +284,15 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           self.isCapturing = true
           await Task.yield()
 
+          // Resolve save directory based on auto-save toggle
+          let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+            for: .screenshot,
+            exportDirectory: resolvedSaveDirectory
+          )
+
           let result = await self.captureManager.captureArea(
             rect: selectedRect,
-            saveDirectory: resolvedSaveDirectory,
+            saveDirectory: actualSaveDirectory,
             format: self.selectedFormat.format,
             excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
             excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,

@@ -88,7 +88,7 @@ struct AfterCaptureMatrixView: View {
     case .copyFile:
       return "Copy to clipboard automatically"
     case .save:
-      return "Save to export location"
+      return "Automatically save to export location"
     }
   }
 

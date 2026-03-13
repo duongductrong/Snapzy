@@ -18,7 +18,7 @@ enum AfterCaptureAction: String, CaseIterable, Codable {
     switch self {
     case .showQuickAccess: return "Show Quick Access Overlay"
     case .copyFile: return "Copy file"
-    case .save: return "Save"
+    case .save: return "Auto-save"
     }
   }
 }
