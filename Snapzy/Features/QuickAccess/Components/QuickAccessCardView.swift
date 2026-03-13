@@ -352,7 +352,10 @@ struct QuickAccessCardView: View {
   }
 
   private var cornerButtons: some View {
-    ZStack {
+    let captureType: CaptureType = item.isVideo ? .recording : .screenshot
+    let isSaveEnabled = preferencesManager.isActionEnabled(.save, for: captureType)
+
+    return ZStack {
       // Dismiss button (top-right)
       VStack {
         HStack {
@@ -368,22 +371,24 @@ struct QuickAccessCardView: View {
         Spacer()
       }
 
-      // Delete button (top-left)
-      VStack {
-        HStack {
-          QuickAccessIconButton(
-            icon: "trash",
-            action: {
-              isDismissing = true
-              manager.deleteItem(id: item.id)
-            },
-            helpText: "Delete"
-          )
-          .transition(cornerButtonTransition(delay: 3))
-          .padding(6)
+      // Delete button (top-left) — hidden when "Save" after-capture action is disabled
+      if isSaveEnabled {
+        VStack {
+          HStack {
+            QuickAccessIconButton(
+              icon: "trash",
+              action: {
+                isDismissing = true
+                manager.deleteItem(id: item.id)
+              },
+              helpText: "Delete"
+            )
+            .transition(cornerButtonTransition(delay: 3))
+            .padding(6)
+            Spacer()
+          }
           Spacer()
         }
-        Spacer()
       }
 
       // Edit button (bottom-left)
