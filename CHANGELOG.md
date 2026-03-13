@@ -9,6 +9,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.8] - 2026-03-13
+
+### Features
+-  Implement system screenshot shortcut conflict detection and user guidance in onboarding and preferences views (67cb711)
+-  Introduce agent guidance documentation for Antigravity and Claude, update funding options, and add an archive file. (f0b78af)
+-  add GitHub issue templates, agent guidance files, and an archive file. (98c1aaa)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.7 (61a4ba3)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.7] - 2026-03-11
 
 ### Bug Fixes
