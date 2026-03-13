@@ -11,6 +11,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.10] - 2026-03-13
+
+### Features
+-  Add cache management functionality with size calculation and clearing options (a9413da)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.9 (3a7c507)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.9] - 2026-03-13
 
 ### Bug Fixes
