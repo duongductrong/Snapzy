@@ -10,6 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.9] - 2026-03-13
+
+### Bug Fixes
+- : Enhance code signing process and update entitlements for improved security and functionality (b9ff8f2)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.8 (f291044)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.8] - 2026-03-13
 
 ### Features
