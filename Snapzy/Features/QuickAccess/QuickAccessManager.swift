@@ -234,6 +234,19 @@ final class QuickAccessManager: ObservableObject {
     removeItem(id: id)
   }
 
+  /// Remove card from UI only — does NOT delete the underlying file.
+  /// Used after drag-to-app so the receiving app can still read the file.
+  /// Orphaned temp files get cleaned up on next launch via cleanupOrphanedFiles().
+  func dismissCard(id: UUID) {
+    cancelDismissTimer(for: id)
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
+      items.removeAll { $0.id == id }
+    }
+    if items.isEmpty {
+      panelController.hide()
+    }
+  }
+
   /// Update processing state for an item (used during GIF conversion)
   func updateProcessingState(id: UUID, state: QuickAccessProcessingState) {
     guard let index = items.firstIndex(where: { $0.id == id }) else { return }

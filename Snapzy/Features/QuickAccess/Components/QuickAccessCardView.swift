@@ -202,7 +202,10 @@ struct QuickAccessCardView: View {
       onEnded: { [weak manager, itemId = item.id] success in
         Task { @MainActor in
           if success {
-            manager?.removeScreenshot(id: itemId)
+            // Only remove card from UI — don't delete the file.
+            // Temp files stay on disk for the receiving app to read
+            // and get cleaned up on next launch via cleanupOrphanedFiles().
+            manager?.dismissCard(id: itemId)
           }
         }
       }
