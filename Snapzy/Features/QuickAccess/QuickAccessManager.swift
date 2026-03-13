@@ -298,26 +298,37 @@ final class QuickAccessManager: ObservableObject {
     let url = item.url
     let isVideo = item.isVideo
 
-    removeScreenshot(id: id)
+    // Load data and write to clipboard BEFORE removing the card.
+    // removeItem/removeScreenshot deletes temp files, which would cause
+    // NSImage(contentsOf:) to fail if done after removal.
+    let fileAccess = fileAccessManager.beginAccessingURL(url)
 
-    Task { @MainActor in
-      let fileAccess = fileAccessManager.beginAccessingURL(url)
-      defer { fileAccess.stop() }
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
 
-      let pasteboard = NSPasteboard.general
-      pasteboard.clearContents()
-
-      if isVideo {
-        pasteboard.writeObjects([url as NSURL])
+    if isVideo {
+      pasteboard.writeObjects([url as NSURL])
+    } else {
+      if let image = NSImage(contentsOf: url) {
+        pasteboard.writeObjects([image])
       } else {
-        if let image = NSImage(contentsOf: url) {
-          pasteboard.writeObjects([image])
-        } else {
-          logger.error("Failed to load image for clipboard: \(url.lastPathComponent)")
-        }
+        logger.error("Failed to load image for clipboard: \(url.lastPathComponent)")
       }
-      NSSound(named: "Pop")?.play()
     }
+
+    fileAccess.stop()
+
+    // Remove card from UI without deleting the temp file (same as drag-to-app).
+    dismissCard(id: id)
+
+    // For images, clipboard holds pixel data in memory — safe to delete temp file.
+    // For videos, clipboard holds a file URL reference — file must stay on disk
+    // so the receiving app can read it. Orphaned temp files are cleaned on next launch.
+    if !isVideo, tempCaptureManager.isTempFile(url) {
+      tempCaptureManager.deleteTempFile(at: url)
+    }
+
+    NSSound(named: "Pop")?.play()
   }
 
   /// Delete item from disk and remove from stack
