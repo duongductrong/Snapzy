@@ -36,6 +36,9 @@ final class VideoEditorManager {
     let controller = VideoEditorWindowController(item: item)
     windowControllers[item.id] = controller
 
+    // Pause Quick Access countdown for this item + newer items
+    QuickAccessManager.shared.pauseCountdownForEditingItem(item.id)
+
     // Remove from tracking when window closes
     let itemId = item.id
     if let window = controller.window {
@@ -46,6 +49,9 @@ final class VideoEditorManager {
       ) { [weak self] _ in
         MainActor.assumeIsolated {
           self?.cleanupWindow(for: itemId)
+
+          // Resume Quick Access countdown
+          QuickAccessManager.shared.resumeCountdownForEditingItem(itemId)
         }
       }
       observers[itemId] = observer

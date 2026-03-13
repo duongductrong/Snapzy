@@ -56,6 +56,11 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.set(dragDropEnabled, forKey: Keys.dragDropEnabled)
     }
   }
+  @Published var pauseCountdownOnHover: Bool = true {
+    didSet {
+      UserDefaults.standard.set(pauseCountdownOnHover, forKey: Keys.pauseCountdownOnHover)
+    }
+  }
   // MARK: - Configuration
 
   let maxVisibleItems = 5
@@ -65,7 +70,9 @@ final class QuickAccessManager: ObservableObject {
   private let panelController = QuickAccessPanelController()
   private let fileAccessManager = SandboxFileAccessManager.shared
   private let tempCaptureManager = TempCaptureManager.shared
-  private var dismissTimers: [UUID: Task<Void, Never>] = [:]
+  private var dismissTimers: [UUID: QuickAccessCountdownTimer] = [:]
+  /// Tracks which item IDs are currently being edited (paused by editor)
+  private var editingItemIds: Set<UUID> = []
 
   // MARK: - UserDefaults Keys (preserved for backward compatibility)
 
@@ -76,6 +83,7 @@ final class QuickAccessManager: ObservableObject {
     static let autoDismissDelay = "floatingScreenshot.autoDismissDelay"
     static let overlayScale = "floatingScreenshot.overlayScale"
     static let dragDropEnabled = "floatingScreenshot.dragDropEnabled"
+    static let pauseCountdownOnHover = "floatingScreenshot.pauseCountdownOnHover"
   }
 
   // MARK: - Init
@@ -101,6 +109,8 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.overlayScale) as? Double ?? 1.0
     dragDropEnabled =
       UserDefaults.standard.object(forKey: Keys.dragDropEnabled) as? Bool ?? true
+    pauseCountdownOnHover =
+      UserDefaults.standard.object(forKey: Keys.pauseCountdownOnHover) as? Bool ?? true
   }
 
   // MARK: - Public Methods
@@ -202,6 +212,7 @@ final class QuickAccessManager: ObservableObject {
   func removeItem(id: UUID) {
     guard let item = items.first(where: { $0.id == id }) else {
       cancelDismissTimer(for: id)
+      editingItemIds.remove(id)
       return
     }
 
@@ -219,6 +230,7 @@ final class QuickAccessManager: ObservableObject {
     }
 
     cancelDismissTimer(for: id)
+    editingItemIds.remove(id)
     // Fast animation (0.15s) for immediate perceived response
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
@@ -239,6 +251,7 @@ final class QuickAccessManager: ObservableObject {
   /// Orphaned temp files get cleaned up on next launch via cleanupOrphanedFiles().
   func dismissCard(id: UUID) {
     cancelDismissTimer(for: id)
+    editingItemIds.remove(id)
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
     }
@@ -274,6 +287,7 @@ final class QuickAccessManager: ObservableObject {
       cancelDismissTimer(for: item.id)
     }
     items.removeAll()
+    editingItemIds.removeAll()
     panelController.hide()
   }
 
@@ -366,6 +380,7 @@ final class QuickAccessManager: ObservableObject {
 
     // Remove card immediately (don't trigger temp file deletion since we're saving)
     cancelDismissTimer(for: id)
+    editingItemIds.remove(id)
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
     }
@@ -409,19 +424,86 @@ final class QuickAccessManager: ObservableObject {
 
   private func startDismissTimer(for id: UUID) {
     let delay = autoDismissDelay
-    let task = Task { [weak self] in
-      try? await Task.sleep(nanoseconds: UInt64(delay) * 1_000_000_000)
-      guard !Task.isCancelled else { return }
-      await MainActor.run {
-        self?.removeScreenshot(id: id)
+    let timer = QuickAccessCountdownTimer(duration: delay) { [weak self] in
+      self?.removeScreenshot(id: id)
+    }
+    dismissTimers[id] = timer
+    timer.start()
+
+    // If an edit session is active, pause this new card if it's newer than an edited item
+    if !editingItemIds.isEmpty, let newIndex = items.firstIndex(where: { $0.id == id }) {
+      for editId in editingItemIds {
+        if let editIndex = items.firstIndex(where: { $0.id == editId }), newIndex < editIndex {
+          timer.pause()
+          break
+        }
       }
     }
-    dismissTimers[id] = task
   }
 
   private func cancelDismissTimer(for id: UUID) {
     dismissTimers[id]?.cancel()
     dismissTimers.removeValue(forKey: id)
+  }
+
+  // MARK: - Pause / Resume Countdown
+
+  /// Pause countdown for a single item (used by hover)
+  func pauseCountdown(for id: UUID) {
+    dismissTimers[id]?.pause()
+  }
+
+  /// Resume countdown for a single item (used by hover un-hover)
+  func resumeCountdown(for id: UUID) {
+    // Don't resume if the item should stay paused due to an active editing session
+    guard !isItemPausedByEditing(id) else { return }
+    dismissTimers[id]?.resume()
+  }
+
+  /// Check if an item should remain paused because of an active editing session.
+  /// True if the item itself is being edited, OR if it's newer (above) than any edited item.
+  private func isItemPausedByEditing(_ id: UUID) -> Bool {
+    guard !editingItemIds.isEmpty else { return false }
+    if editingItemIds.contains(id) { return true }
+    guard let itemIndex = items.firstIndex(where: { $0.id == id }) else { return false }
+    for editId in editingItemIds {
+      if let editIndex = items.firstIndex(where: { $0.id == editId }), itemIndex < editIndex {
+        return true
+      }
+    }
+    return false
+  }
+
+  /// Pause countdown for an item being edited + all items captured after it (newer/above)
+  func pauseCountdownForEditingItem(_ id: UUID) {
+    editingItemIds.insert(id)
+    guard let editIndex = items.firstIndex(where: { $0.id == id }) else { return }
+
+    // Pause the edited item + items at lower indices (captured after, newer)
+    for i in 0...editIndex {
+      dismissTimers[items[i].id]?.pause()
+    }
+  }
+
+  /// Resume countdown for an item done editing + all items captured after it (newer/above)
+  func resumeCountdownForEditingItem(_ id: UUID) {
+    editingItemIds.remove(id)
+
+    if let editIndex = items.firstIndex(where: { $0.id == id }) {
+      // Item still exists — resume it + items at lower indices (newer)
+      for i in 0...editIndex {
+        let itemId = items[i].id
+        guard !editingItemIds.contains(itemId) else { continue }
+        dismissTimers[itemId]?.resume()
+      }
+    } else {
+      // Edited item was already removed (swiped/dismissed during editing).
+      // Resume all remaining items that aren't held by another editor.
+      for item in items {
+        guard !editingItemIds.contains(item.id) else { continue }
+        dismissTimers[item.id]?.resume()
+      }
+    }
   }
 
   /// Retry thumbnail generation in background and update item if successful

@@ -65,6 +65,9 @@ final class AnnotateManager {
     windowControllers[item.id] = controller
     DiagnosticLogger.shared.log(.info, .action, "Annotate window opened for item \(item.id)")
 
+    // Pause Quick Access countdown for this item + newer items
+    QuickAccessManager.shared.pauseCountdownForEditingItem(item.id)
+
     // Remove from tracking when window closes
     let itemId = item.id
     if let window = controller.window {
@@ -76,6 +79,9 @@ final class AnnotateManager {
         MainActor.assumeIsolated {
           self?.windowControllers.removeValue(forKey: itemId)
           self?.becomeAccessoryAppIfNeeded()
+
+          // Resume Quick Access countdown
+          QuickAccessManager.shared.resumeCountdownForEditingItem(itemId)
         }
       }
     }

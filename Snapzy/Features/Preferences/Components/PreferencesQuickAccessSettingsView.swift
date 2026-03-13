@@ -77,12 +77,17 @@ struct QuickAccessSettingsView: View {
           .padding(.vertical, 4)
         }
 
+        if manager.autoDismissEnabled {
+          SettingRow(icon: "cursorarrow.motionlines", title: "Pause on Hover", description: "Pause countdown when hovering over the card") {
+            Toggle("", isOn: $manager.pauseCountdownOnHover)
+              .labelsHidden()
+          }
+        }
+
         SettingRow(icon: "hand.draw", title: "Drag & Drop", description: "Drag captures to other apps") {
           Toggle("", isOn: $manager.dragDropEnabled)
             .labelsHidden()
         }
-
-
       }
     }
     .formStyle(.grouped)

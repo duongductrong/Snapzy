@@ -94,6 +94,15 @@ struct QuickAccessCardView: View {
         isHovering = hovering
       }
       onHover?(hovering)
+
+      // Pause/resume countdown on hover if enabled
+      if manager.pauseCountdownOnHover {
+        if hovering {
+          manager.pauseCountdown(for: item.id)
+        } else {
+          manager.resumeCountdown(for: item.id)
+        }
+      }
     }
     .onTapGesture(count: 2) {
       handleDoubleClick()
