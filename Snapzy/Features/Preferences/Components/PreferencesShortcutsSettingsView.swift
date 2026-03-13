@@ -17,6 +17,8 @@ struct ShortcutsSettingsView: View {
   @State private var shortcutsEnabled: Bool
   @State private var showDisableConfirmation: Bool = false
   @State private var isConfirmedDisable: Bool = false
+  @State private var hasSystemConflict: Bool = false
+  @State private var isRefreshingConflict: Bool = false
 
   private let manager = KeyboardShortcutManager.shared
   @ObservedObject private var annotateManager = AnnotateShortcutManager.shared
@@ -29,10 +31,147 @@ struct ShortcutsSettingsView: View {
     _annotateShortcut = State(initialValue: KeyboardShortcutManager.shared.annotateShortcut)
     _videoEditorShortcut = State(initialValue: KeyboardShortcutManager.shared.videoEditorShortcut)
     _shortcutsEnabled = State(initialValue: KeyboardShortcutManager.shared.isEnabled)
+    _hasSystemConflict = State(
+      initialValue: SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+    )
   }
 
   var body: some View {
     Form {
+      // System shortcut conflict status
+      if shortcutsEnabled {
+        if hasSystemConflict {
+          Section {
+            VStack(alignment: .leading, spacing: 12) {
+              // Header
+              HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                  .font(.system(size: 18))
+                  .foregroundColor(.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                  Text("macOS screenshot shortcuts are still active")
+                    .font(.system(size: 13, weight: .semibold))
+                  Text("Snapzy shortcuts will not work until you disable the macOS defaults.")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                }
+              }
+
+              // Step-by-step guide
+              VStack(alignment: .leading, spacing: 6) {
+                Text("HOW TO DISABLE")
+                  .font(.system(size: 10, weight: .semibold))
+                  .foregroundColor(.secondary)
+                  .tracking(0.8)
+
+                PreferencesGuideStep(
+                  step: "1",
+                  text: "Open **System Settings → Keyboard → Keyboard Shortcuts**"
+                )
+                PreferencesGuideStep(
+                  step: "2",
+                  text: "Select **Screenshots** from the sidebar"
+                )
+                PreferencesGuideStep(
+                  step: "3",
+                  text: "Uncheck **⌘⇧3**, **⌘⇧4**, and **⌘⇧5**"
+                )
+              }
+              .padding(10)
+              .background(
+                RoundedRectangle(cornerRadius: 8)
+                  .fill(Color.orange.opacity(0.06))
+              )
+
+              // Action buttons
+              HStack(spacing: 8) {
+                Button {
+                  SystemScreenshotShortcutManager.shared.openSystemScreenshotSettings()
+                } label: {
+                  HStack {
+                    Image(systemName: "gear")
+                      .font(.system(size: 12))
+                    Text("Open Keyboard Shortcuts Settings")
+                      .font(.system(size: 12, weight: .medium))
+                  }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+
+                Button {
+                  refreshSystemConflict()
+                } label: {
+                  HStack(spacing: 4) {
+                    Image(
+                      systemName: isRefreshingConflict
+                        ? "arrow.triangle.2.circlepath" : "arrow.clockwise"
+                    )
+                    .font(.system(size: 12))
+                    .rotationEffect(.degrees(isRefreshingConflict ? 360 : 0))
+                    .animation(
+                      isRefreshingConflict
+                        ? .linear(duration: 0.8).repeatForever(autoreverses: false)
+                        : .default,
+                      value: isRefreshingConflict
+                    )
+                    Text("Refresh")
+                      .font(.system(size: 12, weight: .medium))
+                  }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+              }
+            }
+            .padding(.vertical, 4)
+          } header: {
+            Label("Action Required", systemImage: "exclamationmark.circle.fill")
+              .foregroundColor(.orange)
+          }
+        } else {
+          // Success badge — no conflicts
+          Section {
+            HStack(spacing: 10) {
+              Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 18))
+                .foregroundColor(.green)
+
+              VStack(alignment: .leading, spacing: 2) {
+                Text("No conflicts detected")
+                  .font(.system(size: 13, weight: .semibold))
+                Text("macOS default screenshot shortcuts are disabled. Snapzy shortcuts will work correctly.")
+                  .font(.system(size: 11))
+                  .foregroundColor(.secondary)
+              }
+
+              Spacer()
+
+              Button {
+                refreshSystemConflict()
+              } label: {
+                Image(
+                  systemName: isRefreshingConflict
+                    ? "arrow.triangle.2.circlepath" : "arrow.clockwise"
+                )
+                .font(.system(size: 12))
+                .rotationEffect(.degrees(isRefreshingConflict ? 360 : 0))
+                .animation(
+                  isRefreshingConflict
+                    ? .linear(duration: 0.8).repeatForever(autoreverses: false)
+                    : .default,
+                  value: isRefreshingConflict
+                )
+              }
+              .buttonStyle(.borderless)
+            }
+            .padding(.vertical, 4)
+          } header: {
+            Label("System Shortcuts", systemImage: "checkmark.seal.fill")
+              .foregroundColor(.green)
+          }
+        }
+      }
+
       Section("Global Shortcuts") {
         Text("Use keyboard shortcuts to capture from anywhere.")
           .font(.caption)
@@ -44,6 +183,9 @@ struct ShortcutsSettingsView: View {
             .onChange(of: shortcutsEnabled) { newValue in
               if newValue {
                 manager.enable()
+                // Re-check system conflicts when enabling
+                hasSystemConflict =
+                  SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
               } else {
                 if isConfirmedDisable {
                   // User confirmed disable, proceed
@@ -185,6 +327,17 @@ struct ShortcutsSettingsView: View {
     annotateManager.resetToDefaults()
   }
 
+  /// Re-check system shortcut conflict status with spinner animation
+  private func refreshSystemConflict() {
+    isRefreshingConflict = true
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      withAnimation(.easeInOut(duration: 0.3)) {
+        hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+      }
+      isRefreshingConflict = false
+    }
+  }
+
   // MARK: - Annotation Tool Helpers
 
   private func bindingForTool(_ tool: AnnotationToolType) -> Binding<Character?> {
@@ -216,6 +369,30 @@ struct ShortcutsSettingsView: View {
     if inScreenshot && inRecording { return .both }
     if inRecording { return .recordingOnly }
     return .screenshotOnly
+  }
+}
+
+// MARK: - Guide Step Component
+
+private struct PreferencesGuideStep: View {
+  let step: String
+  let text: String
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Text(step)
+        .font(.system(size: 10, weight: .bold, design: .monospaced))
+        .foregroundColor(.orange)
+        .frame(width: 18, height: 18)
+        .background(
+          Circle()
+            .fill(Color.orange.opacity(0.15))
+        )
+
+      Text(.init(text))  // Supports **bold** markdown
+        .font(.system(size: 12))
+        .foregroundColor(.primary)
+    }
   }
 }
 

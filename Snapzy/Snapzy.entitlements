@@ -10,5 +10,9 @@
 	    <true/>
 	    <key>com.apple.security.device.audio-input</key>
 	    <true/>
+	    <key>com.apple.security.temporary-exception.shared-preference.read-only</key>
+	    <array>
+	        <string>com.apple.symbolichotkeys</string>
+	    </array>
 	</dict>
 </plist>
