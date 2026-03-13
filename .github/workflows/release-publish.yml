@@ -136,18 +136,22 @@ jobs:
             APP_PATH="build/Snapzy.app"
             SPARKLE_FRAMEWORK="$APP_PATH/Contents/Frameworks/Sparkle.framework"
 
-            if [ -d "$SPARKLE_FRAMEWORK/XPCServices" ]; then
-              find "$SPARKLE_FRAMEWORK/XPCServices" -mindepth 1 -maxdepth 1 -type d | sort | while read -r nested; do
-                codesign --force --sign - --timestamp=none "$nested"
-              done
+            # Sign Sparkle components inside-out per official docs
+            # See: https://sparkle-project.org/documentation/sandboxing/#code-signing
+            if [ -d "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc" ]; then
+              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
             fi
-
-            if [ -d "$SPARKLE_FRAMEWORK/Updater.app" ]; then
-              codesign --force --sign - --timestamp=none "$SPARKLE_FRAMEWORK/Updater.app"
+            if [ -d "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc" ]; then
+              codesign --force --sign - -o runtime --preserve-metadata=entitlements --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
             fi
-
+            if [ -f "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate" ]; then
+              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
+            fi
+            if [ -d "$SPARKLE_FRAMEWORK/Versions/B/Updater.app" ]; then
+              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
+            fi
             if [ -d "$SPARKLE_FRAMEWORK" ]; then
-              codesign --force --sign - --timestamp=none "$SPARKLE_FRAMEWORK"
+              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK"
             fi
 
             codesign \

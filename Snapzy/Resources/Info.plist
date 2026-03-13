@@ -12,5 +12,7 @@
 	<string>https://raw.githubusercontent.com/duongductrong/Snapzy/master/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>zcoJ90nh+SEFg6ZEkb9fwQCEK51vSIRwyn6tOsQisL0=</string>
+	<key>SUEnableInstallerLauncherService</key>
+	<true/>
 </dict>
 </plist>
