@@ -13,6 +13,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.12] - 2026-03-14
+
+### Features
+-  improve self-signed certificate trust for code signing. (15a5c4f)
+-  Implement detailed update manager lifecycle logging (18d07f7)
+
+### Bug Fixes
+-  remove interactive trust setting for self-signed certificate in CI (b8c515a)
+-  Add self-signed certificate generation and TCC permission testing scripts (47ffa93)
+
+### Chore
+- chore: bump version to v1.0.11 (#22) (07eebc6)
+- chore: update appcast, cask, and readme for v1.0.10 (d23f684)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.0.11] - 2026-03-14
 
 ### Features
