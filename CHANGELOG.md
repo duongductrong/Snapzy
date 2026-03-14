@@ -17,6 +17,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.1.0] - 2026-03-14
+
+### Features
+-  improve quick access + capture + consume flow (#18) (2c8d08b)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.15 (4b5d26c)
+
+### Contributors
+- @Trong Duong
+- @github-actions[bot]
+
 ## [1.0.15] - 2026-03-14
 
 ### Chore
