@@ -315,19 +315,6 @@ final class AppStatusBarController: ObservableObject {
 
     menu?.addItem(NSMenuItem.separator())
 
-    // Crash report
-    let crashItem = NSMenuItem(
-      title: "Submit Crash Report...",
-      action: #selector(submitCrashReportAction),
-      keyEquivalent: ""
-    )
-    crashItem.target = self
-    crashItem.image = NSImage(
-      systemSymbolName: "exclamationmark.triangle", accessibilityDescription: nil)
-    crashItem.isEnabled = true
-    menu?.addItem(crashItem)
-    menu?.addItem(NSMenuItem.separator())
-
     // Quit
     let quitItem = NSMenuItem(
       title: "Quit Snapzy",
