@@ -75,6 +75,29 @@ final class AnnotateExporter {
     picker.show(relativeTo: view.bounds, of: view, preferredEdge: .minY)
   }
 
+  /// Render the final annotated image to a temporary PNG file for drag-and-drop.
+  /// Returns the file URL on success, nil on failure.
+  static func renderToTempFile(state: AnnotateState) -> URL? {
+    guard let image = renderFinalImage(state: state) else { return nil }
+
+    guard let tiffData = image.tiffRepresentation,
+          let bitmap = NSBitmapImageRep(data: tiffData),
+          let pngData = bitmap.representation(using: .png, properties: [:])
+    else { return nil }
+
+    let tempDir = TempCaptureManager.shared.tempCaptureDirectory
+    let fileName = "annotated_drag_\(UUID().uuidString.prefix(8)).png"
+    let fileURL = tempDir.appendingPathComponent(fileName)
+
+    do {
+      try pngData.write(to: fileURL, options: .atomic)
+      return fileURL
+    } catch {
+      print("[AnnotateExporter] Failed to write drag temp file: \(error.localizedDescription)")
+      return nil
+    }
+  }
+
   // MARK: - Private
 
   private static func generateFileName(from url: URL?) -> String {

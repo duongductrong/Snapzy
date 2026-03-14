@@ -13,6 +13,8 @@ extension Notification.Name {
   static let annotateSave = Notification.Name("annotateSave")
   static let annotateSaveAs = Notification.Name("annotateSaveAs")
   static let annotateCopyAndClose = Notification.Name("annotateCopyAndClose")
+  static let annotateDragStarted = Notification.Name("annotateDragStarted")
+  static let annotateDragEnded = Notification.Name("annotateDragEnded")
 }
 
 /// Custom NSWindow for annotation editing with dark mode appearance

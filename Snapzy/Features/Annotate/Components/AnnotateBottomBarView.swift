@@ -19,21 +19,34 @@ struct AnnotateBottomBarView: View {
         Divider()
       }
 
-      HStack(spacing: WindowSpacingConfiguration.default.bottomBarItemSpacing) {
-        // Zoom picker
-        zoomPicker
+      // Balanced left — center — right layout
+      ZStack {
+        // Center: Drag handle (absolute center)
+        if state.hasImage {
+          dragHandle
+        }
 
-        Spacer()
+        // Left + Right: overlay on top of center
+        HStack(spacing: 0) {
+          // Left section: zoom + mode toggle
+          leftSection
 
-        // Mode toggle (Annotate / Mockup / Preview)
-        modeToggle
+          Spacer()
 
-        Spacer()
-
-        // Action buttons (hide in preview mode for cleaner view)
-        actionButtons
+          // Right section: action buttons
+          actionButtons
+        }
       }
       .windowBottomBarPadding()
+    }
+  }
+
+  // MARK: - Left Section
+
+  private var leftSection: some View {
+    HStack(spacing: 10) {
+      zoomPicker
+      modeToggle
     }
   }
 
@@ -82,6 +95,39 @@ struct AnnotateBottomBarView: View {
         .tag(AnnotateState.EditorMode.preview)
     }
     .pickerStyle(.segmented)
+    .frame(width: 220)
+  }
+
+  // MARK: - Drag Handle (CleanShot-style)
+
+  @State private var isDragHovering = false
+
+  private var dragHandle: some View {
+    AnnotateDragHandleView(state: state)
+      .frame(width: 160, height: 32)
+      .overlay(
+        HStack(spacing: 6) {
+          Image(systemName: "hand.draw")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundColor(isDragHovering ? .primary : .secondary)
+
+          Text("Drag to app")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(isDragHovering ? .primary : .secondary)
+        }
+        .allowsHitTesting(false)
+      )
+      .background(
+        Capsule()
+          .fill(isDragHovering ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06))
+      )
+      .overlay(
+        Capsule()
+          .strokeBorder(Color.primary.opacity(isDragHovering ? 0.2 : 0.1), lineWidth: 1)
+      )
+      .onHover { isDragHovering = $0 }
+      .animation(.easeInOut(duration: 0.15), value: isDragHovering)
+      .help("Drag this to another app to share the annotated image")
   }
 
   // MARK: - Action Buttons

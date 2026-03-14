@@ -316,6 +316,59 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         self?.performCopyAndClose()
       }
     }
+
+    // Drag-to-app: hide window when drag starts
+    NotificationCenter.default.addObserver(
+      forName: .annotateDragStarted,
+      object: nil,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.handleDragStarted()
+      }
+    }
+
+    // Drag-to-app: restore or close window when drag ends
+    NotificationCenter.default.addObserver(
+      forName: .annotateDragEnded,
+      object: nil,
+      queue: .main
+    ) { [weak self] notification in
+      MainActor.assumeIsolated {
+        let success = (notification.userInfo?["success"] as? Bool) ?? false
+        self?.handleDragEnded(success: success)
+      }
+    }
+  }
+
+  // MARK: - Drag-to-App Window Management
+
+  private var savedWindowFrame: NSRect?
+
+  private func handleDragStarted() {
+    guard let window = self.window else { return }
+    savedWindowFrame = window.frame
+    window.orderOut(nil) // Hide without closing
+    print("[AnnotateDrag] Window hidden for drag session")
+  }
+
+  private func handleDragEnded(success: Bool) {
+    if success {
+      // Successful drop — close the window
+      state.hasUnsavedChanges = false
+      window?.close()
+      print("[AnnotateDrag] Drag succeeded — window closed")
+    } else {
+      // Cancelled/failed — restore window
+      guard let window = self.window else { return }
+      if let frame = savedWindowFrame {
+        window.setFrame(frame, display: true)
+      }
+      window.makeKeyAndOrderFront(nil)
+      NSApp.activate(ignoringOtherApps: true)
+      print("[AnnotateDrag] Drag cancelled — window restored")
+    }
+    savedWindowFrame = nil
   }
 
   private func performSave() {
