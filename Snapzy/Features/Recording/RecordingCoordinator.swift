@@ -528,6 +528,10 @@ final class RecordingCoordinator: ObservableObject {
       quickAccess.updateItemURL(id: itemId, newURL: gifURL, newThumbnail: thumbnail)
       quickAccess.updateProcessingState(id: itemId, state: .idle)
 
+      // Run remaining post-capture actions (clipboard copy, etc.) on the final GIF
+      // skipQuickAccess: item is already in QuickAccess from addVideo() above
+      await PostCaptureActionHandler.shared.handleVideoCapture(url: gifURL, skipQuickAccess: true)
+
       // Delete the original video file
       SandboxFileAccessManager.shared.withScopedAccess(to: videoURL.deletingLastPathComponent()) {
         try? FileManager.default.removeItem(at: videoURL)

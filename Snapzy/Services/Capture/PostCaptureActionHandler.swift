@@ -31,13 +31,14 @@ final class PostCaptureActionHandler {
   }
 
   /// Execute all enabled post-capture actions for a video recording
-  func handleVideoCapture(url: URL) async {
-    await executeActions(for: .recording, url: url)
+  /// - Parameter skipQuickAccess: When true, skip adding to QuickAccess (e.g. GIF flow already added it)
+  func handleVideoCapture(url: URL, skipQuickAccess: Bool = false) async {
+    await executeActions(for: .recording, url: url, skipQuickAccess: skipQuickAccess)
   }
 
   // MARK: - Private
 
-  private func executeActions(for captureType: CaptureType, url: URL) async {
+  private func executeActions(for captureType: CaptureType, url: URL, skipQuickAccess: Bool = false) async {
     let fileAccess = fileAccessManager.beginAccessingURL(url)
     defer { fileAccess.stop() }
 
@@ -55,7 +56,7 @@ final class PostCaptureActionHandler {
     DiagnosticLogger.shared.log(.info, .action, "Post-capture: \(typeLabel) \(url.lastPathComponent) [location=\(locationLabel)]")
 
     // Show Quick Access Overlay
-    if preferencesManager.isActionEnabled(.showQuickAccess, for: captureType) {
+    if !skipQuickAccess && preferencesManager.isActionEnabled(.showQuickAccess, for: captureType) {
       switch captureType {
       case .screenshot:
         await quickAccessManager.addScreenshot(url: url)
@@ -68,7 +69,9 @@ final class PostCaptureActionHandler {
     // Copy file to clipboard
     if preferencesManager.isActionEnabled(.copyFile, for: captureType) {
       copyToClipboard(url: url, isVideo: captureType == .recording)
+      let label = captureType == .screenshot ? "screenshot" : "recording"
       logger.debug("Clipboard copy executed for \(url.lastPathComponent)")
+      DiagnosticLogger.shared.log(.info, .action, "Clipboard copy: \(label) \(url.lastPathComponent)")
     }
   }
 
@@ -89,8 +92,5 @@ final class PostCaptureActionHandler {
         logger.error("Failed to load image for clipboard: \(url.lastPathComponent)")
       }
     }
-
-    // Play feedback sound
-    NSSound(named: "Pop")?.play()
   }
 }
