@@ -110,7 +110,16 @@ jobs:
             echo "Importing self-signed certificate (TCC-preserving fallback)..."
             echo "$SELF_SIGNED_CERT_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
             security import $RUNNER_TEMP/certificate.p12 -P "$SELF_SIGNED_CERT_PASSWORD" \
-              -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+              -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH" -T /usr/bin/codesign
+
+            # Extract the cert from P12 and trust it for code signing
+            openssl pkcs12 -in $RUNNER_TEMP/certificate.p12 -passin "pass:$SELF_SIGNED_CERT_PASSWORD" \
+              -clcerts -nokeys -out $RUNNER_TEMP/cert.pem 2>/dev/null || true
+            if [ -f "$RUNNER_TEMP/cert.pem" ]; then
+              security add-trusted-cert -d -r trustRoot -p codeSign -k "$KEYCHAIN_PATH" "$RUNNER_TEMP/cert.pem" || {
+                echo "::warning::Could not set trust for self-signed cert. codesign may still work with -A flag."
+              }
+            fi
           fi
 
           security list-keychain -d user -s "$KEYCHAIN_PATH"

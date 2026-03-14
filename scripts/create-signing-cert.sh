@@ -92,13 +92,23 @@ openssl pkcs12 -export \
 # 4. Import into the login keychain (persists for local builds & testing)
 echo "→ Importing certificate into login keychain..."
 security import "$P12_PATH" -P "$P12_PASSWORD" \
-  -A -t cert -f pkcs12 -k "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null \
+  -A -t cert -f pkcs12 -T /usr/bin/codesign \
+  -k "$HOME/Library/Keychains/login.keychain-db" 2>/dev/null \
   || security import "$P12_PATH" -P "$P12_PASSWORD" \
-    -A -t cert -f pkcs12 -k "$HOME/Library/Keychains/login.keychain" 2>/dev/null \
+    -A -t cert -f pkcs12 -T /usr/bin/codesign \
+    -k "$HOME/Library/Keychains/login.keychain" 2>/dev/null \
   || {
     echo "⚠️  Could not auto-import into login keychain. Import manually:"
     echo "   security import /path/to/signing-cert.p12 -P <password> -k ~/Library/Keychains/login.keychain-db"
   }
+
+# Trust the certificate for code signing (avoids manual Keychain Access step)
+echo "→ Trusting certificate for code signing..."
+security add-trusted-cert -d -r trustRoot -p codeSign \
+  -k "$HOME/Library/Keychains/login.keychain-db" "$TEMP_DIR/cert.pem" 2>/dev/null \
+  || security add-trusted-cert -d -r trustRoot -p codeSign \
+    -k "$HOME/Library/Keychains/login.keychain" "$TEMP_DIR/cert.pem" 2>/dev/null \
+  || echo "⚠️  Could not auto-trust. Trust manually in Keychain Access."
 
 # Verify the identity is available for code signing
 echo ""
