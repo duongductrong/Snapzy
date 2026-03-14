@@ -69,7 +69,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.1.0/install
 To completely remove Snapzy, reset all permissions, and clean up app data:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninstall.sh | bash
 ```
 
 Or if you cloned the repo:
