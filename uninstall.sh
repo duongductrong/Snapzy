@@ -74,7 +74,7 @@ if [[ "${1:-}" != "--force" ]]; then
   echo -e "${RED}║  • Remove login items & caches                      ║${NC}"
   echo -e "${RED}╚══════════════════════════════════════════════════════╝${NC}"
   echo ""
-  read -rp "Are you sure? Type 'yes' to proceed: " confirm
+  read -rp "Are you sure? Type 'yes' to proceed: " confirm < /dev/tty
   if [[ "$confirm" != "yes" ]]; then
     echo "Aborted."
     exit 0
@@ -107,7 +107,7 @@ if [ -d "$app_support" ]; then
   warn "Folder contains temporary captures/recordings:"
   echo "     $app_support"
   if [[ "${1:-}" != "--force" ]]; then
-    read -rp "  Delete this folder? (y/n): " del_app_support
+    read -rp "  Delete this folder? (y/n): " del_app_support < /dev/tty
     if [[ "$del_app_support" == "y" || "$del_app_support" == "Y" ]]; then
       rm -rf "$app_support"
       success "Removed $app_support"
