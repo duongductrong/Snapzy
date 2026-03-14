@@ -18,6 +18,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.1.1] - 2026-03-14
+
+### Features
+-  implement dynamic scaling for QuickAccess card dimensions (5cfaf95)
+-  Add uninstallation instructions and update README.md (dce3e9b)
+
+### Bug Fixes
+-  read from /dev/tty for curl pipe compatibility (417a9fb)
+
+### Chore
+- chore: update default branch on uninstall script (0ef19c3)
+- chore: update CHANGELOG.md (c45c565)
+- chore: update appcast, cask, and readme for v1.1.0 (2244d1b)
+
+### Contributors
+- @Trong Duong
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.1.0] - 2026-03-14
 
 ### Features
