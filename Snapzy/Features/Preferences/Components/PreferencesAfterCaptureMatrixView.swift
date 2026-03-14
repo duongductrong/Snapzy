@@ -64,10 +64,13 @@ struct AfterCaptureMatrixView: View {
 
   @ViewBuilder
   private func toggleColumn(label: String, action: AfterCaptureAction, type: CaptureType) -> some View {
+    let isDisabled = action == .openAnnotate && type == .recording
     Toggle("", isOn: binding(for: action, type: type))
       .labelsHidden()
       .accessibilityLabel("\(action.displayName) for \(label.lowercased())")
       .frame(width: 70)
+      .disabled(isDisabled)
+      .opacity(isDisabled ? 0.3 : 1)
   }
 
   private func iconName(for action: AfterCaptureAction) -> String {
@@ -78,6 +81,8 @@ struct AfterCaptureMatrixView: View {
       return "doc.on.clipboard"
     case .save:
       return "square.and.arrow.down"
+    case .openAnnotate:
+      return "pencil.and.outline"
     }
   }
 
@@ -89,6 +94,8 @@ struct AfterCaptureMatrixView: View {
       return "Copy to clipboard automatically"
     case .save:
       return "Save to export location"
+    case .openAnnotate:
+      return "Open annotate editor after capture"
     }
   }
 

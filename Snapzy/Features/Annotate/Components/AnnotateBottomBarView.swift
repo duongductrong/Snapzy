@@ -96,8 +96,8 @@ struct AnnotateBottomBarView: View {
         pin()
       }
 
-      BottomBarButton(icon: "doc.on.doc", tooltip: "Copy to clipboard") {
-        copyToClipboard()
+      BottomBarButton(icon: "doc.on.doc", tooltip: "Copy to clipboard & close (⇧⌘C)") {
+        copyToClipboardAndClose()
       }
 
       BottomBarButton(icon: "trash", tooltip: "Delete") {
@@ -121,8 +121,10 @@ struct AnnotateBottomBarView: View {
     }
   }
 
-  private func copyToClipboard() {
+  private func copyToClipboardAndClose() {
     AnnotateExporter.copyToClipboard(state: state)
+    state.hasUnsavedChanges = false
+    NSApp.keyWindow?.close()
   }
 
   private func confirmAndDeleteImage() {

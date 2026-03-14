@@ -12,6 +12,7 @@ import AppKit
 extension Notification.Name {
   static let annotateSave = Notification.Name("annotateSave")
   static let annotateSaveAs = Notification.Name("annotateSaveAs")
+  static let annotateCopyAndClose = Notification.Name("annotateCopyAndClose")
 }
 
 /// Custom NSWindow for annotation editing with dark mode appearance
@@ -94,6 +95,12 @@ final class AnnotateWindow: NSWindow {
     // Cmd+Shift+S - Save As
     if event.keyCode == 1 && flags == [.command, .shift] {
       NotificationCenter.default.post(name: .annotateSaveAs, object: self)
+      return true
+    }
+
+    // Cmd+Shift+C - Copy to clipboard and close
+    if event.keyCode == 8 && flags == [.command, .shift] {
+      NotificationCenter.default.post(name: .annotateCopyAndClose, object: self)
       return true
     }
 

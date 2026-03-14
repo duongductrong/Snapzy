@@ -73,6 +73,13 @@ final class PostCaptureActionHandler {
       logger.debug("Clipboard copy executed for \(url.lastPathComponent)")
       DiagnosticLogger.shared.log(.info, .action, "Clipboard copy: \(label) \(url.lastPathComponent)")
     }
+
+    // Open Annotate Editor (screenshots only)
+    if captureType == .screenshot && preferencesManager.isActionEnabled(.openAnnotate, for: captureType) {
+      AnnotateManager.shared.openAnnotation(url: url)
+      logger.debug("Annotate editor opened for \(url.lastPathComponent)")
+      DiagnosticLogger.shared.log(.info, .action, "Annotate editor: \(url.lastPathComponent)")
+    }
   }
 
   /// Copy file to clipboard (image data for screenshots, file URL for videos)

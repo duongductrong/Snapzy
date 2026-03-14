@@ -107,6 +107,44 @@ final class AnnotateManager {
     windowControllers[itemId] != nil
   }
 
+  /// Open annotation window directly from a file URL (used by post-capture auto-open)
+  func openAnnotation(url: URL) {
+    guard NSScreen.screens.isEmpty == false else {
+      DiagnosticLogger.shared.log(.error, .action, "Annotate open failed: no screens available")
+      return
+    }
+
+    // If Quick Access has this item, reuse it to link the annotation window
+    if let existingItem = QuickAccessManager.shared.items.first(where: { $0.url == url }) {
+      openAnnotation(for: existingItem)
+      return
+    }
+
+    // Switch to regular app mode for Cmd+Tab visibility
+    becomeRegularApp()
+
+    let controller = AnnotateWindowController(url: url)
+    let controllerId = UUID()
+    windowControllers[controllerId] = controller
+    DiagnosticLogger.shared.log(.info, .action, "Annotate window opened for URL \(url.lastPathComponent)")
+
+    // Remove from tracking when window closes
+    if let window = controller.window {
+      NotificationCenter.default.addObserver(
+        forName: NSWindow.willCloseNotification,
+        object: window,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          self?.windowControllers.removeValue(forKey: controllerId)
+          self?.becomeAccessoryAppIfNeeded()
+        }
+      }
+    }
+
+    controller.showWindow()
+  }
+
   /// Open empty annotation window for drag-drop workflow
   func openEmptyAnnotation() {
     // Reuse existing empty window if open
