@@ -14,6 +14,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.0.13] - 2026-03-14
+
+### Chore
+- chore: update appcast, cask, and readme for v1.0.12 (2b57c97)
+
+### Contributors
+- @github-actions[bot]
+
 ## [1.0.12] - 2026-03-14
 
 ### Features
