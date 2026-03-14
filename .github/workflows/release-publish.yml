@@ -21,6 +21,7 @@ jobs:
       contents: write
     env:
       HAS_DEVELOPER_ID_CERT: ${{ secrets.DEVELOPER_ID_P12 != '' && secrets.DEVELOPER_ID_PASSWORD != '' && 'true' || 'false' }}
+      HAS_SELF_SIGNED_CERT: ${{ secrets.SELF_SIGNED_CERT_P12 != '' && secrets.SELF_SIGNED_CERT_PASSWORD != '' && 'true' || 'false' }}
       HAS_NOTARIZATION_CREDENTIALS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_ID_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && 'true' || 'false' }}
       HAS_SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY != '' && 'true' || 'false' }}
 
@@ -82,23 +83,42 @@ jobs:
             exit 1
           fi
 
-      # --- Code Signing (conditional, for when Apple Developer account is available) ---
+      # --- Code Signing (conditional) ---
+      # Priority: Developer ID > Self-signed cert > Ad-hoc
+      # Self-signed cert preserves TCC permissions across Sparkle updates
+      # without requiring Apple Developer Program enrollment.
       - name: Import signing certificate
-        if: env.HAS_DEVELOPER_ID_CERT == 'true'
+        if: env.HAS_DEVELOPER_ID_CERT == 'true' || env.HAS_SELF_SIGNED_CERT == 'true'
         env:
           DEVELOPER_ID_P12: ${{ secrets.DEVELOPER_ID_P12 }}
           DEVELOPER_ID_PASSWORD: ${{ secrets.DEVELOPER_ID_PASSWORD }}
+          SELF_SIGNED_CERT_P12: ${{ secrets.SELF_SIGNED_CERT_P12 }}
+          SELF_SIGNED_CERT_PASSWORD: ${{ secrets.SELF_SIGNED_CERT_PASSWORD }}
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
           KEYCHAIN_PASSWORD=$(uuidgen)
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
           security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          echo "$DEVELOPER_ID_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
-          security import $RUNNER_TEMP/certificate.p12 -P "$DEVELOPER_ID_PASSWORD" \
-            -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+
+          if [ "${HAS_DEVELOPER_ID_CERT}" = "true" ]; then
+            echo "Importing Developer ID certificate..."
+            echo "$DEVELOPER_ID_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+            security import $RUNNER_TEMP/certificate.p12 -P "$DEVELOPER_ID_PASSWORD" \
+              -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          elif [ "${HAS_SELF_SIGNED_CERT}" = "true" ]; then
+            echo "Importing self-signed certificate (TCC-preserving fallback)..."
+            echo "$SELF_SIGNED_CERT_P12" | base64 --decode > $RUNNER_TEMP/certificate.p12
+            security import $RUNNER_TEMP/certificate.p12 -P "$SELF_SIGNED_CERT_PASSWORD" \
+              -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          fi
+
           security list-keychain -d user -s "$KEYCHAIN_PATH"
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Log the signing identity that will be used
+          echo "Available signing identities:"
+          security find-identity -v -p codesigning "$KEYCHAIN_PATH"
 
       - name: Export app
         run: |
@@ -112,7 +132,7 @@ jobs:
           fi
 
           if [ "${HAS_DEVELOPER_ID_CERT}" = "true" ]; then
-            # Signed export
+            # Signed export via Xcode (Developer ID)
             cat > build/ExportOptions.plist << 'PLIST'
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -130,33 +150,44 @@ jobs:
               -exportPath build/export \
               -exportOptionsPlist build/ExportOptions.plist
           else
-            # Fallback export - copy from archive and ad-hoc sign the full bundle
+            # Manual export - copy from archive and sign the full bundle
             ditto "$ARCHIVE_PATH/Products/Applications/Snapzy.app" build/Snapzy.app
 
             APP_PATH="build/Snapzy.app"
             SPARKLE_FRAMEWORK="$APP_PATH/Contents/Frameworks/Sparkle.framework"
 
+            # Determine signing identity:
+            #   Self-signed cert → stable identity → TCC permissions persist across updates
+            #   Ad-hoc (--sign -) → unique per build → TCC revoked every update
+            if [ "${HAS_SELF_SIGNED_CERT}" = "true" ]; then
+              SIGN_IDENTITY="Snapzy Self-Signed"
+              echo "Signing with self-signed certificate: $SIGN_IDENTITY"
+            else
+              SIGN_IDENTITY="-"
+              echo "::warning::Signing ad-hoc — TCC permissions will be lost after each update"
+            fi
+
             # Sign Sparkle components inside-out per official docs
             # See: https://sparkle-project.org/documentation/sandboxing/#code-signing
             if [ -d "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc" ]; then
-              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
+              codesign --force --sign "$SIGN_IDENTITY" -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Installer.xpc"
             fi
             if [ -d "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc" ]; then
-              codesign --force --sign - -o runtime --preserve-metadata=entitlements --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
+              codesign --force --sign "$SIGN_IDENTITY" -o runtime --preserve-metadata=entitlements --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/XPCServices/Downloader.xpc"
             fi
             if [ -f "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate" ]; then
-              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
+              codesign --force --sign "$SIGN_IDENTITY" -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Autoupdate"
             fi
             if [ -d "$SPARKLE_FRAMEWORK/Versions/B/Updater.app" ]; then
-              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
+              codesign --force --sign "$SIGN_IDENTITY" -o runtime --timestamp=none "$SPARKLE_FRAMEWORK/Versions/B/Updater.app"
             fi
             if [ -d "$SPARKLE_FRAMEWORK" ]; then
-              codesign --force --sign - -o runtime --timestamp=none "$SPARKLE_FRAMEWORK"
+              codesign --force --sign "$SIGN_IDENTITY" -o runtime --timestamp=none "$SPARKLE_FRAMEWORK"
             fi
 
             codesign \
               --force \
-              --sign - \
+              --sign "$SIGN_IDENTITY" \
               --entitlements Snapzy/Snapzy.entitlements \
               --timestamp=none \
               "$APP_PATH"
@@ -239,6 +270,8 @@ jobs:
             NOTE="- Release artifact: Developer ID signed and notarized."
           elif [ "${HAS_DEVELOPER_ID_CERT}" = "true" ]; then
             NOTE="- Release artifact: Developer ID signed, not notarized."
+          elif [ "${HAS_SELF_SIGNED_CERT}" = "true" ]; then
+            NOTE="- Release artifact: self-signed certificate, not notarized. Permissions persist across updates. Install to /Applications before first launch."
           else
             NOTE="- Release artifact: ad-hoc signed fallback, not notarized. Install to /Applications before first launch."
           fi
