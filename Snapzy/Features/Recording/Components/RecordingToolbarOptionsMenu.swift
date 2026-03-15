@@ -104,8 +104,8 @@ private struct ToolbarOptionsPopoverContent: View {
 
       Divider()
 
-      // Cursor Section
-      SettingsSection(title: "Cursor", icon: "cursorarrow.click.2") {
+      // Overlays Section
+      SettingsSection(title: "Overlays", icon: "square.stack.3d.up") {
         Toggle(isOn: Binding(
           get: { state.highlightClicks },
           set: { newValue in
@@ -114,6 +114,19 @@ private struct ToolbarOptionsPopoverContent: View {
           }
         )) {
           Text("Highlight Clicks")
+            .font(.system(size: 11))
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+
+        Toggle(isOn: Binding(
+          get: { state.showKeystrokes },
+          set: { newValue in
+            state.showKeystrokes = newValue
+            UserDefaults.standard.set(newValue, forKey: PreferencesKeys.recordingShowKeystrokes)
+          }
+        )) {
+          Text("Show Keystrokes")
             .font(.system(size: 11))
         }
         .toggleStyle(.switch)

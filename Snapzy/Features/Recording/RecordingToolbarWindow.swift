@@ -46,6 +46,7 @@ final class RecordingToolbarState: ObservableObject {
   @Published var captureMode: RecordingCaptureMode
   @Published var outputMode: RecordingOutputMode
   @Published var highlightClicks: Bool
+  @Published var showKeystrokes: Bool
 
   var onCaptureModeChanged: ((RecordingCaptureMode) -> Void)?
 
@@ -85,6 +86,9 @@ final class RecordingToolbarState: ObservableObject {
 
     // Load highlight clicks preference (default to true)
     self.highlightClicks = UserDefaults.standard.object(forKey: PreferencesKeys.recordingHighlightClicks) as? Bool ?? false
+
+    // Load show keystrokes preference (default to false)
+    self.showKeystrokes = UserDefaults.standard.object(forKey: PreferencesKeys.recordingShowKeystrokes) as? Bool ?? false
   }
 }
 

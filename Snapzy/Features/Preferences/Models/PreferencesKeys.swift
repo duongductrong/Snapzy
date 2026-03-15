@@ -54,6 +54,7 @@ enum PreferencesKeys {
   static let recordingOutputMode = "recording.outputMode"
   static let recordingIncludeOwnApp = "recording.includeOwnApp"
   static let recordingHighlightClicks = "recording.highlightClicks"
+  static let recordingShowKeystrokes = "recording.showKeystrokes"
 
   // Recording Annotation Shortcuts
   static let annotationShortcutModifier = "recording.annotation.shortcutModifier"

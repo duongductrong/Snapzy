@@ -31,6 +31,10 @@ final class RecordingCoordinator: ObservableObject {
   private var clickHighlightWindow: MouseClickHighlightWindow?
   private var clickHighlightService: MouseClickHighlightService?
 
+  // Keystroke overlay
+  private var keystrokeOverlayWindow: KeystrokeOverlayWindow?
+  private var keystrokeMonitorService: KeystrokeMonitorService?
+
   private init() {}
 
   private let tempCaptureManager = TempCaptureManager.shared
@@ -360,6 +364,9 @@ final class RecordingCoordinator: ObservableObject {
         // Setup click highlight overlay (must be after recording starts)
         setupClickHighlightOverlay(for: rect)
 
+        // Setup keystroke overlay (must be after recording starts)
+        setupKeystrokeOverlay(for: rect)
+
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder)
 
@@ -619,6 +626,9 @@ final class RecordingCoordinator: ObservableObject {
     // Close click highlight overlay
     cleanupClickHighlightOverlay()
 
+    // Close keystroke overlay
+    cleanupKeystrokeOverlay()
+
     // Close annotation windows
     cleanupAnnotationOverlay()
 
@@ -739,6 +749,36 @@ final class RecordingCoordinator: ObservableObject {
     clickHighlightService = nil
     clickHighlightWindow?.close()
     clickHighlightWindow = nil
+  }
+
+  // MARK: - Keystroke Overlay
+
+  private func setupKeystrokeOverlay(for rect: CGRect) {
+    let isEnabled = UserDefaults.standard.object(forKey: PreferencesKeys.recordingShowKeystrokes) as? Bool ?? false
+    guard isEnabled else { return }
+
+    let overlayWindow = KeystrokeOverlayWindow(recordingRect: rect)
+    overlayWindow.orderFrontRegardless()
+    keystrokeOverlayWindow = overlayWindow
+
+    let service = KeystrokeMonitorService()
+    service.onKeystroke = { [weak overlayWindow] text in
+      overlayWindow?.showKeystroke(text)
+    }
+    service.start()
+    keystrokeMonitorService = service
+
+    // Add to ScreenCaptureKit's exceptingWindows so keystrokes are captured
+    Task {
+      await recorder.addExceptedWindow(windowID: overlayWindow.overlayWindowID)
+    }
+  }
+
+  private func cleanupKeystrokeOverlay() {
+    keystrokeMonitorService?.stop()
+    keystrokeMonitorService = nil
+    keystrokeOverlayWindow?.close()
+    keystrokeOverlayWindow = nil
   }
 
   /// Update the selected rect and sync all overlays + toolbar
