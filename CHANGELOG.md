@@ -18,6 +18,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.0] - 2026-03-15
+
+### Features
+-  improve mouse event handling with caching, throttling, and animation control. (bee9b8b)
+-  Add configurable mouse click highlights and keystroke overlays with preferences persistence. (cbac32c)
+-  Add option to display keystrokes as an overlay during recording. (bfbeb25)
+-  Enhance mouse click highlighting to track mouse down, up, and drag events with updated visual effects. (26ec799)
+-  Implement mouse click highlighting during screen recording with a new toolbar option and dedicated services. (4c30bf0)
+-  implement dynamic scaling for QuickAccess card dimensions (5cfaf95)
+-  Add uninstallation instructions and update README.md (dce3e9b)
+
+### Bug Fixes
+-  read from /dev/tty for curl pipe compatibility (417a9fb)
+
+### Chore
+- chore: update default branch on uninstall script (0ef19c3)
+- chore: update CHANGELOG.md (c45c565)
+- chore: update appcast, cask, and readme for v1.1.0 (2244d1b)
+
+### Contributors
+- @Trong Duong
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.1.0] - 2026-03-14
 
 ### Features
