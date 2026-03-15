@@ -39,7 +39,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - chore: update appcast, cask, and readme for v1.1.0 (2244d1b)
 
 ### Contributors
-- @Trong Duong
 - @duongductrong
 - @github-actions[bot]
 
