@@ -21,6 +21,10 @@ final class MouseClickHighlightService {
   private var recordingRect: CGRect = .zero
   private var isRunning = false
   private var isMouseDown = false
+  private var lastDragTime: CFTimeInterval = 0
+
+  /// Minimum interval between drag callbacks (~120 Hz cap)
+  private static let dragThrottleInterval: CFTimeInterval = 0.008
 
   /// Called on mouse-down with screen-space position
   var onMouseDown: ((NSPoint) -> Void)?
@@ -132,6 +136,12 @@ final class MouseClickHighlightService {
 
   private func handleMouseDragged() {
     guard isMouseDown else { return }
+
+    // Throttle drag callbacks to avoid flooding the main thread
+    let now = CACurrentMediaTime()
+    guard now - lastDragTime >= Self.dragThrottleInterval else { return }
+    lastDragTime = now
+
     let location = NSEvent.mouseLocation
     onMouseDragged?(location)
   }

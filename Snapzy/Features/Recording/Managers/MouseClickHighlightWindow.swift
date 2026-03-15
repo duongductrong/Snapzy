@@ -240,6 +240,10 @@ private final class HoldCircleView: NSView {
   }
 
   func updateCenter(_ point: NSPoint) {
+    // Disable implicit animations during rapid drag updates
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+
     let size = circleDiameter
     frame = CGRect(
       x: point.x - size / 2,
@@ -247,6 +251,8 @@ private final class HoldCircleView: NSView {
       width: size,
       height: size
     )
+
+    CATransaction.commit()
   }
 
   func animateIn() {

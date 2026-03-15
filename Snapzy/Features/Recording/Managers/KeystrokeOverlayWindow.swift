@@ -174,8 +174,16 @@ private final class KeystrokeBadgeView: NSView {
   private let verticalPadding: CGFloat = 8
   private let badgeCornerRadius: CGFloat = 8
 
+  /// Cached font to avoid repeated allocation
+  private let cachedFont: NSFont
+
+  /// Stored size constraints to avoid filtering all constraints on update
+  private var widthConstraint: NSLayoutConstraint?
+  private var heightConstraint: NSLayoutConstraint?
+
   init(fontSize: CGFloat = 16) {
     self.badgeFontSize = fontSize
+    self.cachedFont = NSFont.systemFont(ofSize: fontSize, weight: .medium)
     super.init(frame: .zero)
     wantsLayer = true
     layer?.masksToBounds = false
@@ -194,7 +202,7 @@ private final class KeystrokeBadgeView: NSView {
     layer?.addSublayer(bgLayer)
 
     // Text layer
-    textLayer.font = NSFont.systemFont(ofSize: badgeFontSize, weight: .medium) as CTFont
+    textLayer.font = cachedFont as CTFont
     textLayer.fontSize = badgeFontSize
     textLayer.foregroundColor = NSColor.white.cgColor
     textLayer.alignmentMode = .center
@@ -204,30 +212,33 @@ private final class KeystrokeBadgeView: NSView {
   }
 
   func updateText(_ text: String) {
+    // Disable implicit layer animations during resize
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+
     textLayer.string = text
 
-    // Measure text size
-    let font = NSFont.systemFont(ofSize: badgeFontSize, weight: .medium)
-    let attrs: [NSAttributedString.Key: Any] = [.font: font]
+    // Measure text size using cached font
+    let attrs: [NSAttributedString.Key: Any] = [.font: cachedFont]
     let textSize = (text as NSString).size(withAttributes: attrs)
 
     let badgeWidth = textSize.width + horizontalPadding * 2
     let badgeHeight = textSize.height + verticalPadding * 2
 
-    // Update own frame (centered via constraints, only size matters)
-    let newSize = CGSize(width: badgeWidth, height: badgeHeight)
-
-    // Remove existing width/height constraints
-    constraints.filter { $0.firstAttribute == .width || $0.firstAttribute == .height }
-      .forEach { removeConstraint($0) }
-
-    NSLayoutConstraint.activate([
-      widthAnchor.constraint(equalToConstant: newSize.width),
-      heightAnchor.constraint(equalToConstant: newSize.height),
-    ])
+    // Update stored constraints (or create if first time)
+    if let wc = widthConstraint, let hc = heightConstraint {
+      wc.constant = badgeWidth
+      hc.constant = badgeHeight
+    } else {
+      let wc = widthAnchor.constraint(equalToConstant: badgeWidth)
+      let hc = heightAnchor.constraint(equalToConstant: badgeHeight)
+      NSLayoutConstraint.activate([wc, hc])
+      widthConstraint = wc
+      heightConstraint = hc
+    }
 
     // Position layers
-    let bounds = CGRect(origin: .zero, size: newSize)
+    let bounds = CGRect(origin: .zero, size: CGSize(width: badgeWidth, height: badgeHeight))
     bgLayer.frame = bounds
     bgLayer.path = CGPath(
       roundedRect: bounds,
@@ -242,6 +253,8 @@ private final class KeystrokeBadgeView: NSView {
       width: textSize.width,
       height: textSize.height
     )
+
+    CATransaction.commit()
   }
 
   override func layout() {
