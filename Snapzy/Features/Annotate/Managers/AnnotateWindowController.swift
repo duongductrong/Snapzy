@@ -372,10 +372,15 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
   private func handleDragEnded(success: Bool) {
     if success {
-      // Successful drop — close the window
+      // Successful drop — close the Annotate Window
       state.hasUnsavedChanges = false
       window?.close()
-      print("[AnnotateDrag] Drag succeeded — window closed")
+      // Also dismiss the Quick Access card (without deleting the file)
+      if let itemId = quickAccessItemId {
+        QuickAccessManager.shared.dismissCard(id: itemId)
+      }
+      print("[AnnotateDrag] Drag succeeded — window + QA card dismissed")
+
     } else {
       // Cancelled/failed — restore window
       guard let window = self.window else { return }

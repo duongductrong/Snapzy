@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// Background style types
-enum BackgroundStyle: Equatable {
+enum BackgroundStyle: Equatable, Sendable {
   case none
   case gradient(GradientPreset)
   case wallpaper(URL)
@@ -17,7 +17,7 @@ enum BackgroundStyle: Equatable {
 }
 
 /// Predefined gradient presets
-enum GradientPreset: String, CaseIterable, Identifiable {
+enum GradientPreset: String, CaseIterable, Identifiable, Sendable {
   case pinkOrange
   case bluePurple
   case greenBlue
@@ -44,11 +44,12 @@ enum GradientPreset: String, CaseIterable, Identifiable {
 }
 
 /// Image alignment within background
-enum ImageAlignment: String, CaseIterable {
+enum ImageAlignment: String, CaseIterable, Sendable {
   case topLeft, top, topRight
   case left, center, right
   case bottomLeft, bottom, bottomRight
 }
+
 
 /// Predefined wallpaper presets (abstract gradient patterns)
 enum WallpaperPreset: String, CaseIterable, Identifiable {
