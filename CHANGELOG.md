@@ -19,6 +19,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.1] - 2026-03-16
+
+### Features
+-  Implement window pinning for the Annotate feature with UI, state, and keyboard shortcut (c80faf8)
+-  Improve annotation save responsiveness with instant UI updates and background saving, refactor session data to use raw image data (98ae09b)
+-  implement annotation session caching and update clipboard actions (df26432)
+
+### Chore
+- refactor: Embed HTML release notes generated from changelog directly into appcast.xml for Sparkle updates. (b6e0c2c)
+- chore: add unikorn to README (939cc1c)
+- docs: Add Product Hunt badge to README (c44cdfe)
+- chore: remove duplicate contributor entry from CHANGELOG.md (498bb23)
+- chore: update appcast, cask, and readme for v1.2.0 (72c655d)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.0] - 2026-03-15
 
 ### Features
