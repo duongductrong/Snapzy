@@ -11,9 +11,26 @@
       <sparkle:shortVersionString>1.2.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sun, 15 Mar 2026 09:34:58 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.2.0
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Mouse click highlight overlays during screen recording</li>
+          <li>Keystroke overlay display during recording</li>
+          <li>Configurable mouse &amp; keystroke preferences with persistence</li>
+          <li>Dynamic scaling for Quick Access card dimensions</li>
+          <li>Improved mouse event handling with caching, throttling, and animation control</li>
+        </ul>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Fixed curl pipe compatibility for install script</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.2.0/Snapzy-v1.2.0.dmg"
         sparkle:edSignature="N3LHhTYEA9Qd+0+YtEQ/Cfy0oEPhw9HPYb0qtTt2096yTzlIh8Rh5V6/Re7ZE6rrSqieL99tKso6TCdyRSrpCQ=="
@@ -26,9 +43,18 @@
       <sparkle:shortVersionString>1.1.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sat, 14 Mar 2026 06:08:50 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.1.0
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Improved Quick Access, capture, and consume flow</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.1.0/Snapzy-v1.1.0.dmg"
         sparkle:edSignature="jIzfo27XJKMCQKcMAa5XE6ubbupbWd09EghN5K46V0jAMHr6t+hNs/i1+TIASmVp5Y49XeIuz0wuKQSC2wIRBg=="
@@ -41,9 +67,18 @@
       <sparkle:shortVersionString>1.0.15</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sat, 14 Mar 2026 03:52:15 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.15
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Enhanced local update testing with detailed signing process and entitlements handling</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.15/Snapzy-v1.0.15.dmg"
         sparkle:edSignature="fz1kuBSig2SnZmzsXN9YBb2s0ls0WFHjGe0D3J7Nu5ppTaf/r1G2jM1hCeyuKkoDxHIHKNXRikzt1CMeMlg8DA=="
@@ -56,9 +91,18 @@
       <sparkle:shortVersionString>1.0.14</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sat, 14 Mar 2026 03:43:32 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.14
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>🔧 Maintenance</h3>
+        <ul>
+          <li>Internal build and release pipeline improvements</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.14/Snapzy-v1.0.14.dmg"
         sparkle:edSignature="jk9AZCSPp5cdQmC6EytvbOMmCoFcSF/5tKkGlYtT4LQAsk1C45QfO78gPy4yGer+g/NishuMDI+Jl7epqu9sBQ=="
@@ -71,9 +115,18 @@
       <sparkle:shortVersionString>1.0.13</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sat, 14 Mar 2026 02:55:45 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.13
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>🔧 Maintenance</h3>
+        <ul>
+          <li>Internal build and release pipeline improvements</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.13/Snapzy-v1.0.13.dmg"
         sparkle:edSignature="AC0eNQY8amz/h5NV49Zd6zjipsXguVM2fMK8s4s8wqVOqn/sfid9z5WK1e80aAD1D3PHBwhZH4GAaYuVWhvIDA=="
@@ -86,9 +139,24 @@
       <sparkle:shortVersionString>1.0.12</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sat, 14 Mar 2026 02:26:03 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.12
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Improved self-signed certificate trust for code signing</li>
+          <li>Detailed update manager lifecycle logging</li>
+        </ul>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Fixed interactive trust setting for self-signed certificate in CI</li>
+          <li>Added self-signed certificate generation and TCC permission testing scripts</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.12/Snapzy-v1.0.12.dmg"
         sparkle:edSignature="D+zh3q01eiyCfkjpbzu92CLZ/3K7w6dEYvECj4Ract/GGNB+inFcPBf/NhoXFoCu/+xNeglKk156DC0U6upjAg=="
@@ -101,9 +169,18 @@
       <sparkle:shortVersionString>1.0.10</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Fri, 13 Mar 2026 19:54:56 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.10
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Cache management with size calculation and clearing options</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.10/Snapzy-v1.0.10.dmg"
         sparkle:edSignature="edn9hMEZ/W8IRdsBjWPshTDjLvDK8HrNfeZQkcpHs2nWDCgK8jrLtJLr3ATgIh/ekhmwhwOGmgy4iQHBAR3ECw=="
@@ -116,9 +193,18 @@
       <sparkle:shortVersionString>1.0.9</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Fri, 13 Mar 2026 19:25:52 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.9
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Enhanced code signing process and updated entitlements for improved security</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.9/Snapzy-v1.0.9.dmg"
         sparkle:edSignature="TMQgjl/R/TJYzIf4XntvAD+qcZwgnHMM6Aj7oj0PKtuWMd5VeGmZpU9KvKVQdexHriSUcaYKnjV28MNMAXBGAA=="
@@ -131,9 +217,18 @@
       <sparkle:shortVersionString>1.0.8</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Fri, 13 Mar 2026 17:41:25 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.8
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>System screenshot shortcut conflict detection and user guidance in onboarding</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.8/Snapzy-v1.0.8.dmg"
         sparkle:edSignature="1cIDtbNh+5QQM2bHYDoAX12bEo1U5l8o5XDqB4ZtsSDEZL35y55hVcG2Jozb7ZPTSqCiYL5SVIp5725yKaC0Cw=="
@@ -146,9 +241,19 @@
       <sparkle:shortVersionString>1.0.7</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Wed, 11 Mar 2026 18:33:22 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.7
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Improved screen capture permission handling</li>
+          <li>Skip strict bundle signature validation in debug builds</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.7/Snapzy-v1.0.7.dmg"
         sparkle:edSignature="ECkogbNJsefKjSfUUplMTtd0zcvrPVm0GndafRr5AfxdXmcKZJFMAchVt7Ec0SIUtdjdilErK99sPjg+6mnmAw=="
@@ -161,9 +266,18 @@
       <sparkle:shortVersionString>1.0.6</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Wed, 11 Mar 2026 18:07:55 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.6
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Enhanced Sparkle DMG signing reliability in release workflow</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.6/Snapzy-v1.0.6.dmg"
         sparkle:edSignature="Fcxz0oJaIFOwYZYcW4+iCwHC/GWGYuWfFpnOsDoq+jO2HXBE/YoyldTwC7RC+PZ8qEIuxxdRxiPosaGIww4DBA=="
@@ -176,9 +290,24 @@
       <sparkle:shortVersionString>1.0.5</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Wed, 11 Mar 2026 17:43:00 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.5
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Ad-hoc signing and verification for fallback distribution</li>
+          <li>Bundle identity management with AppIdentityManager</li>
+          <li>Updated DMG background image and creation process</li>
+        </ul>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Fixed bundle identifiers and dispatch queue labels</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.5/Snapzy-v1.0.5.dmg"
         sparkle:edSignature="5gNiDtun31o7oMqdiBsB3Islcd3z3B7Mbgh9rTbphgSMjH9Wn8Kt5S547z2QVLBkzXFCAfFs18+qNFr98wtCAQ=="
@@ -191,9 +320,24 @@
       <sparkle:shortVersionString>1.0.3</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Tue, 10 Mar 2026 19:42:59 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/tag/v1.0.3
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Installation script with version-specific install instructions</li>
+          <li>Homebrew installation support with SHA256 verification</li>
+          <li>Release workflow automation with DMG signing and appcast updates</li>
+        </ul>
+        <h3>🐛 Bug Fixes</h3>
+        <ul>
+          <li>Fixed Sparkle key condition for DMG signing in release workflow</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.3/Snapzy-v1.0.3.dmg"
         sparkle:edSignature=""
@@ -210,9 +354,23 @@
       <sparkle:shortVersionString>1.0.0</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Sun, 19 Jan 2026 00:00:00 +0000</pubDate>
-      <sparkle:releaseNotesLink>
-        https://github.com/duongductrong/Snapzy/releases/download/v1.0.0/release-notes.html
-      </sparkle:releaseNotesLink>
+      <description><![CDATA[
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>🎉 Initial Release</h3>
+        <ul>
+          <li>Capture fullscreen or selected-area screenshots</li>
+          <li>Extract on-screen text with OCR capture</li>
+          <li>Record screen as video or GIF</li>
+          <li>Annotate images with shapes, text, blur, crop, and more</li>
+          <li>Launch from menu bar with global shortcuts</li>
+          <li>In-app updates via Sparkle</li>
+        </ul>
+      ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.0.0/Snapzy-1.0.0.zip"
         sparkle:edSignature="SIGNATURE_PLACEHOLDER"
