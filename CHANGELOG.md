@@ -20,6 +20,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.2] - 2026-03-16
+
+### Bug Fixes
+-  replace AnnotateDragSource with NSFilePromiseProvider for improved drag performance and compatibility (a5db39e)
+
+### Chore
+- chore: Update appcast styling to support dark mode. (cc6f159)
+- chore: update appcast, cask, and readme for v1.2.1 (c9d5535)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.1] - 2026-03-16
 
 ### Features
