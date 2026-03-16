@@ -46,7 +46,7 @@ if [ -z "$RELEASE_NOTES_HTML" ]; then
 fi
 
 # Common style block for release notes
-STYLE_BLOCK='<style>body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>'
+STYLE_BLOCK='<style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>'
 
 # Build the new <item> block into a temp file
 ITEM_FILE="${APPCAST_FILE}.item.tmp"

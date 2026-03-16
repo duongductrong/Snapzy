@@ -12,8 +12,19 @@
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
       <pubDate>Mon, 16 Mar 2026 12:51:01 +0000</pubDate>
       <description><![CDATA[
-        <style>body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
-        <h3>✨ Features</h3><ul><li>Implement window pinning for the Annotate feature with UI, state, and keyboard shortcut</li><li>Improve annotation save responsiveness with instant UI updates and background saving, refactor session data to use raw image data</li><li>implement annotation session caching and update clipboard actions</li></ul>
+        <style>
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
+          ul { padding-left: 20px; margin: 4px 0; }
+          li { margin: 3px 0; }
+        </style>
+        <h3>✨ Features</h3>
+        <ul>
+          <li>Implement window pinning for the Annotate feature with UI, state, and keyboard shortcut</li>
+          <li>Improve annotation save responsiveness with instant UI updates and background saving, refactor session data to use raw image data</li>
+          <li>implement annotation session caching and update clipboard actions</li>
+        </ul>
       ]]></description>
       <enclosure
         url="https://github.com/duongductrong/Snapzy/releases/download/v1.2.1/Snapzy-v1.2.1.dmg"
@@ -29,8 +40,9 @@
       <pubDate>Sun, 15 Mar 2026 09:34:58 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -61,8 +73,9 @@
       <pubDate>Sat, 14 Mar 2026 06:08:50 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -85,8 +98,9 @@
       <pubDate>Sat, 14 Mar 2026 03:52:15 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -109,8 +123,9 @@
       <pubDate>Sat, 14 Mar 2026 03:43:32 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -133,8 +148,9 @@
       <pubDate>Sat, 14 Mar 2026 02:55:45 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -157,8 +173,9 @@
       <pubDate>Sat, 14 Mar 2026 02:26:03 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -187,8 +204,9 @@
       <pubDate>Fri, 13 Mar 2026 19:54:56 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -211,8 +229,9 @@
       <pubDate>Fri, 13 Mar 2026 19:25:52 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
@@ -235,8 +254,9 @@
       <pubDate>Fri, 13 Mar 2026 17:41:25 +0000</pubDate>
       <description><![CDATA[
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; color: #1d1d1f; padding: 8px 16px; }
-          h3 { font-size: 14px; margin: 12px 0 6px; color: #1d1d1f; }
+          :root { color-scheme: light dark; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; }
+          h3 { font-size: 14px; margin: 12px 0 6px; }
           ul { padding-left: 20px; margin: 4px 0; }
           li { margin: 3px 0; }
         </style>
