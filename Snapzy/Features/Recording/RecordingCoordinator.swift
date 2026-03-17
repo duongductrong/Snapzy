@@ -211,7 +211,7 @@ final class RecordingCoordinator: ObservableObject {
   private func deleteRecording() {
     Task {
       await recorder.cancelRecording()
-      NSSound(named: "Funk")?.play()
+      SoundManager.play("Funk")
       cleanup()
     }
   }
@@ -268,7 +268,7 @@ final class RecordingCoordinator: ObservableObject {
         removeEscapeMonitors()
 
         // Play sound to indicate restart
-        NSSound(named: "Purr")?.play()
+        SoundManager.play("Purr")
 
       } catch let error as RecordingError {
         showErrorAlert(error)
@@ -490,7 +490,7 @@ final class RecordingCoordinator: ObservableObject {
 
       if let url = url {
         // Play sound
-        NSSound(named: "Glass")?.play()
+        SoundManager.play("Glass")
 
         if outputMode == .gif {
           // GIF mode: add to QuickAccess immediately with processing state
@@ -603,7 +603,7 @@ final class RecordingCoordinator: ObservableObject {
 
       switch result {
       case .success:
-        NSSound(named: "Glass")?.play()
+        SoundManager.play("Glass")
         // PostCaptureActionHandler is triggered automatically via
         // ScreenCaptureManager.captureCompletedPublisher → ScreenCaptureViewModel
       case .failure(let error):

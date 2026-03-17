@@ -412,7 +412,7 @@ final class QuickAccessManager: ObservableObject {
       tempCaptureManager.deleteTempFile(at: url)
     }
 
-    NSSound(named: "Pop")?.play()
+    SoundManager.play("Pop")
   }
 
   /// Delete item from disk and remove from stack

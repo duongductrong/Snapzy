@@ -478,7 +478,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
       pasteboard.writeObjects([renderedImage])
-      NSSound(named: "Pop")?.play()
+      SoundManager.play("Pop")
     }
 
     // Update QA thumbnail instantly + cache

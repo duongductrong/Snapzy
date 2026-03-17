@@ -34,7 +34,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   @Published var saveDirectory: URL
   @Published var selectedFormat: ImageFormatOption = .png
   @Published var showCursor: Bool = true
-  @Published var playSound: Bool = true
+
   @Published var lastCaptureResult: CaptureResult?
   @Published var shortcutsEnabled: Bool = false {
     didSet {
@@ -222,8 +222,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       isCapturing = false
       lastCaptureResult = result
 
-      if case .success = result, playSound {
-        playScreenshotSound()
+      if case .success = result {
+        SoundManager.play("Glass")
       }
     }
   }
@@ -304,8 +304,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           self.lastCaptureResult = result
           print("[Snapzy:CaptureVM] captureArea() — capture result: \(result)")
 
-          if case .success = result, self.playSound {
-            self.playScreenshotSound()
+          if case .success = result {
+            SoundManager.play("Glass")
           }
         }
       }
@@ -386,9 +386,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  private func playScreenshotSound() {
-    NSSound(named: "Glass")?.play()
-  }
+
 
   // MARK: - OCR Capture
 

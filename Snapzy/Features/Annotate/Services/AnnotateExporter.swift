@@ -50,10 +50,10 @@ final class AnnotateExporter {
       try SandboxFileAccessManager.shared.withScopedAccess(to: url.deletingLastPathComponent()) {
         try data.write(to: url, options: .atomic)
       }
-      NSSound(named: "Pop")?.play()
+      SoundManager.play("Pop")
       return true
     } catch {
-      NSSound(named: "Basso")?.play()
+      SoundManager.play("Basso")
       print("Annotate save failed: \(error.localizedDescription)")
       return false
     }
@@ -89,7 +89,7 @@ final class AnnotateExporter {
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
     pasteboard.writeObjects([image])
-    NSSound(named: "Pop")?.play()
+    SoundManager.play("Pop")
   }
 
   static func share(state: AnnotateState, from view: NSView) {

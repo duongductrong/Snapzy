@@ -54,7 +54,7 @@ final class AppStatusBarController: ObservableObject {
       // Properly stop recording (saves video and shows QuickAccess)
       let url = await ScreenRecordingManager.shared.stopRecording()
       if let url = url {
-        NSSound(named: "Glass")?.play()
+        SoundManager.play("Glass")
         await QuickAccessManager.shared.addVideo(url: url)
       }
       // Cleanup coordinator UI (toolbar, overlays) - cancel() now guards against double cleanup
