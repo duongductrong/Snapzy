@@ -311,11 +311,14 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
-    // Commit text editing when clicking elsewhere
+    // Commit text editing when clicking elsewhere — just blur, don't create new
     if state.editingTextAnnotationId != nil {
       Task { @MainActor in
         state.commitTextEditing()
+        state.selectedAnnotationId = nil
       }
+      needsDisplay = true
+      return
     }
 
     // Check if clicking on a selected annotation's handle (use display coords for handles)
