@@ -171,11 +171,14 @@ final class DrawingCanvasNSView: NSView {
 
     default:
       // Tool shortcuts — use configured shortcuts from AnnotateShortcutManager
-      if state.editingTextAnnotationId == nil,
-         !event.modifierFlags.contains(.command),
+      if !event.modifierFlags.contains(.command),
          let char = event.characters?.lowercased().first,
          let matchedTool = shortcutManager.tool(for: char) {
         Task { @MainActor in
+          // Commit any active text edit before switching
+          if state.editingTextAnnotationId != nil {
+            state.commitTextEditing()
+          }
           state.selectedTool = matchedTool
         }
         needsDisplay = true
@@ -308,10 +311,10 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
-    // Clear editing mode when clicking elsewhere
+    // Commit text editing when clicking elsewhere
     if state.editingTextAnnotationId != nil {
       Task { @MainActor in
-        state.editingTextAnnotationId = nil
+        state.commitTextEditing()
       }
     }
 
@@ -355,13 +358,31 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
+    // Allow move/resize of existing annotations when clicking on them
+    // even in non-selection tool modes (acts like selection for that item)
+    if state.selectedTool != .crop, let annotation = hitTestAnnotation(at: imagePoint) {
+      Task { @MainActor in
+        state.selectedAnnotationId = annotation.id
+      }
+      isDraggingAnnotation = true
+      dragOffset = CGPoint(
+        x: imagePoint.x - annotation.bounds.origin.x,
+        y: imagePoint.y - annotation.bounds.origin.y
+      )
+      originalBounds = annotation.bounds
+      NSCursor.closedHand.set()
+      needsDisplay = true
+      return
+    }
+
     // Start drawing for other tools (in image coordinates)
     isDrawing = true
     switch state.selectedTool {
     case .pencil, .highlighter:
       currentPath = [imagePoint]
     case .text:
-      // Create text annotation immediately and enter edit mode
+      // Only create new text annotation when not already editing one
+      // (if we were editing, commitTextEditing() above already handled it)
       Task { @MainActor in
         state.saveState()
         createTextAnnotation(at: imagePoint)
@@ -679,12 +700,10 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
-    // Check if over any annotation in selection mode
-    if state.selectedTool == .selection {
-      if hitTestAnnotation(at: imagePoint) != nil {
-        NSCursor.pointingHand.set()
-        return
-      }
+    // Show hand cursor when hovering over any annotation (for move/resize in any tool mode)
+    if hitTestAnnotation(at: imagePoint) != nil {
+      NSCursor.pointingHand.set()
+      return
     }
 
     // Check crop handles when crop tool is active

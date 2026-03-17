@@ -459,8 +459,6 @@ struct AnnotateCanvasView: View {
 
   /// Handle tool switching keyboard shortcuts (macOS 13+ compatible)
   private func handleToolShortcutChar(_ char: Character) {
-    // Skip if editing text annotation
-    guard state.editingTextAnnotationId == nil else { return }
     // Skip if no image loaded
     guard state.hasImage else { return }
 
@@ -468,6 +466,11 @@ struct AnnotateCanvasView: View {
 
     // Look up tool for this key
     guard let tool = AnnotateShortcutManager.shared.tool(for: lowered) else { return }
+
+    // Commit any active text edit before switching
+    if state.editingTextAnnotationId != nil {
+      state.commitTextEditing()
+    }
 
     // Special handling for crop tool
     if tool == .crop {

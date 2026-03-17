@@ -674,6 +674,25 @@ final class AnnotateState: ObservableObject {
     selectedAnnotationId = nil
   }
 
+  /// Commit the current text editing and exit edit mode
+  func commitTextEditing() {
+    guard let editingId = editingTextAnnotationId else { return }
+
+    if let annotation = annotations.first(where: { $0.id == editingId }),
+       case .text(let text) = annotation.type {
+      let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+      if trimmed.isEmpty {
+        saveState()
+        annotations.removeAll { $0.id == editingId }
+        selectedAnnotationId = nil
+      } else {
+        saveState()
+        updateAnnotationText(id: editingId, text: trimmed)
+      }
+    }
+    editingTextAnnotationId = nil
+  }
+
   /// Deselect current annotation
   func deselectAnnotation() {
     selectedAnnotationId = nil

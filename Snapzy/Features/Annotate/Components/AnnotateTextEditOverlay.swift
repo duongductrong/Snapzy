@@ -20,6 +20,12 @@ struct TextEditOverlay: View {
   // MARK: - Constants
 
   private let minTextFieldWidth: CGFloat = AnnotateTextLayout.minWidth
+  /// TextEditor has internal horizontal insets (~5pt each side) that reduce
+  /// the actual text rendering width compared to the frame width.
+  /// We must subtract these when measuring to predict wrap points correctly.
+  private let textEditorHorizontalInsets: CGFloat = 10
+  /// Extra vertical padding for TextEditor's internal chrome (top/bottom insets)
+  private let textEditorVerticalPadding: CGFloat = 4
 
   var body: some View {
     GeometryReader { _ in
@@ -30,7 +36,9 @@ struct TextEditOverlay: View {
         let displayBounds = calculateDisplayBounds(annotation.bounds)
         let fontSize = max(annotation.properties.fontSize * scale, 10)
         let fieldWidth = max(displayBounds.width, minTextFieldWidth)
-        let fieldHeight = max(textHeight, displayBounds.height)
+        // Use measured textHeight which accounts for TextEditor's narrower
+        // rendering width, plus vertical padding for TextEditor's chrome
+        let fieldHeight = max(textHeight + textEditorVerticalPadding, displayBounds.height)
 
         // Multiline text editor positioned at annotation bounds (top-left anchored)
         TextEditor(text: $editingText)
@@ -76,12 +84,15 @@ struct TextEditOverlay: View {
     }
   }
 
-  /// Recalculate editor height based on wrapped text content
+  /// Recalculate editor height based on wrapped text content.
+  /// We subtract TextEditor's internal horizontal insets from the measurement
+  /// width so that wrap predictions match the actual narrower rendering area.
   private func recalculateHeight(text: String, fontSize: CGFloat, width: CGFloat) {
+    let effectiveWidth = max(width - textEditorHorizontalInsets, minTextFieldWidth)
     textHeight = AnnotateTextLayout.measuredHeight(
       text: text,
       font: AnnotateTextLayout.font(size: fontSize),
-      constrainedWidth: max(width, minTextFieldWidth)
+      constrainedWidth: effectiveWidth
     )
   }
 
