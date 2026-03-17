@@ -22,6 +22,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.4] - 2026-03-17
+
+### Bug Fixes
+- : centralize sound playback management and solve issue sound playback calls across the application (4c04381)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.2.3 (24f5771)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.3] - 2026-03-17
 
 ### Features
