@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.2.3</title>
+      <sparkle:version>21</sparkle:version>
+      <sparkle:shortVersionString>1.2.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 17 Mar 2026 13:52:55 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enhance text annotation editing with automatic commit on tool switch or click away, improve text editor sizing, and enable annotation movement in all tool modes.</li><li>Implement multiline text editing for annotations with dynamic height and word wrapping</li></ul><h3>🐛 Bug Fixes</h3><ul><li>resolve annotation drag/resize state management and updating the active tool upon selection.</li><li>Enhance annotation selection and tool switching UX, improve keyboard shortcut reliability</li><li>fix select & deselect textbox</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.2.3/Snapzy-v1.2.3.dmg"
+        sparkle:edSignature="7jCGv2hxVwgaERuFCDdM09qTKHCyx2Dq0zcPrHgdDpFb7uMTy1mq05VUO486tKkYaGmgtdcBKeITXsBAi/VJDQ=="
+        length="8068853"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.2.2</title>
       <sparkle:version>20</sparkle:version>
       <sparkle:shortVersionString>1.2.2</sparkle:shortVersionString>
