@@ -21,6 +21,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.3] - 2026-03-17
+
+### Features
+-  Enhance text annotation editing with automatic commit on tool switch or click away, improve text editor sizing, and enable annotation movement in all tool modes. (a07568f)
+-  Implement multiline text editing for annotations with dynamic height and word wrapping (edc0dcd)
+
+### Bug Fixes
+-  resolve annotation drag/resize state management and updating the active tool upon selection. (07ee6b9)
+-  Enhance annotation selection and tool switching UX, improve keyboard shortcut reliability (94d5aef)
+-  fix select & deselect textbox (f7d6366)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.2.2 (6f4e07d)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.2] - 2026-03-16
 
 ### Bug Fixes
