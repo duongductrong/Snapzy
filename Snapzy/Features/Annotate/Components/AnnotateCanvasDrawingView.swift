@@ -43,7 +43,9 @@ final class DrawingCanvasNSView: NSView {
 
   // Selection and manipulation state
   private var isDraggingAnnotation = false
+  private var draggingAnnotationId: UUID?  // Local tracking to avoid async race
   private var isResizingAnnotation = false
+  private var resizingAnnotationId: UUID?  // Local tracking to avoid async race
   private var activeResizeHandle: ResizeHandle?
   private var dragOffset: CGPoint = .zero
   private var originalBounds: CGRect = .zero
@@ -339,6 +341,7 @@ final class DrawingCanvasNSView: NSView {
       let displayBounds = imageToDisplay(annotation.bounds)
       if let handle = hitTestHandle(at: displayPoint, for: displayBounds) {
         isResizingAnnotation = true
+        resizingAnnotationId = selectedId
         activeResizeHandle = handle
         originalBounds = annotation.bounds  // Store in image coords
         return
@@ -354,7 +357,12 @@ final class DrawingCanvasNSView: NSView {
     // Selection uses image coordinates
     if state.selectedTool == .selection {
       if let annotation = state.selectAnnotation(at: imagePoint) {
+        // Reflect clicked annotation's tool type in toolbar
+        Task { @MainActor in
+          state.selectedTool = annotation.type.toolType
+        }
         isDraggingAnnotation = true
+        draggingAnnotationId = annotation.id
         dragOffset = CGPoint(
           x: imagePoint.x - annotation.bounds.origin.x,
           y: imagePoint.y - annotation.bounds.origin.y
@@ -376,15 +384,19 @@ final class DrawingCanvasNSView: NSView {
     // Allow move/resize of existing annotations when clicking on them
     // even in non-selection tool modes (acts like selection for that item)
     if state.selectedTool != .crop, let annotation = hitTestAnnotation(at: imagePoint) {
-      Task { @MainActor in
-        state.selectedAnnotationId = annotation.id
-      }
+      // Set local tracking synchronously to avoid race condition with mouseDragged
       isDraggingAnnotation = true
+      draggingAnnotationId = annotation.id
       dragOffset = CGPoint(
         x: imagePoint.x - annotation.bounds.origin.x,
         y: imagePoint.y - annotation.bounds.origin.y
       )
       originalBounds = annotation.bounds
+      // Update state asynchronously (for UI reflection)
+      Task { @MainActor in
+        state.selectedAnnotationId = annotation.id
+        state.selectedTool = annotation.type.toolType
+      }
       NSCursor.closedHand.set()
       needsDisplay = true
       return
@@ -415,10 +427,10 @@ final class DrawingCanvasNSView: NSView {
 
     // Handle resizing (in image coordinates)
     if isResizingAnnotation, let handle = activeResizeHandle,
-       let selectedId = state.selectedAnnotationId {
+       let resizeId = resizingAnnotationId {
       let newBounds = calculateResizedBounds(handle: handle, currentPoint: imagePoint)
       Task { @MainActor in
-        state.updateAnnotationBounds(id: selectedId, bounds: newBounds)
+        state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
       }
       needsDisplay = true
       return
@@ -444,14 +456,14 @@ final class DrawingCanvasNSView: NSView {
     }
 
     // Handle dragging annotation (in image coordinates)
-    if isDraggingAnnotation, let selectedId = state.selectedAnnotationId {
+    if isDraggingAnnotation, let dragId = draggingAnnotationId {
       let newOrigin = CGPoint(
         x: imagePoint.x - dragOffset.x,
         y: imagePoint.y - dragOffset.y
       )
       let newBounds = CGRect(origin: newOrigin, size: originalBounds.size)
       Task { @MainActor in
-        state.updateAnnotationBounds(id: selectedId, bounds: newBounds)
+        state.updateAnnotationBounds(id: dragId, bounds: newBounds)
       }
       needsDisplay = true
       return
@@ -478,15 +490,16 @@ final class DrawingCanvasNSView: NSView {
     // Finish resizing
     if isResizingAnnotation {
       // Invalidate blur cache if resizing a blur annotation
-      if let selectedId = state.selectedAnnotationId,
-         let annotation = state.annotations.first(where: { $0.id == selectedId }),
+      if let resizeId = resizingAnnotationId,
+         let annotation = state.annotations.first(where: { $0.id == resizeId }),
          case .blur = annotation.type {
-        blurCacheManager.invalidate(id: selectedId)
+        blurCacheManager.invalidate(id: resizeId)
       }
       Task { @MainActor in
         state.saveState()
       }
       isResizingAnnotation = false
+      resizingAnnotationId = nil
       activeResizeHandle = nil
       needsDisplay = true
       return
@@ -511,6 +524,7 @@ final class DrawingCanvasNSView: NSView {
         state.saveState()
       }
       isDraggingAnnotation = false
+      draggingAnnotationId = nil
       updateCursor(for: event)
       needsDisplay = true
       return

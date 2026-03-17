@@ -62,6 +62,22 @@ enum AnnotationType: Equatable {
   case highlight([CGPoint])
   case blur(BlurType)
   case counter(Int)
+
+  /// Corresponding toolbar tool type for this annotation
+  var toolType: AnnotationToolType {
+    switch self {
+    case .path: return .pencil
+    case .rectangle: return .rectangle
+    case .filledRectangle: return .filledRectangle
+    case .oval: return .oval
+    case .arrow: return .arrow
+    case .line: return .line
+    case .text: return .text
+    case .highlight: return .highlighter
+    case .blur: return .blur
+    case .counter: return .counter
+    }
+  }
 }
 
 /// Visual properties for an annotation
