@@ -23,6 +23,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.5] - 2026-03-18
+
+### Features
+-  add splash screen skip functionality with a "Do not show again" option (c61f67e)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.2.4 (1053148)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.4] - 2026-03-17
 
 ### Bug Fixes
