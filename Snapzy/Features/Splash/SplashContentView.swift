@@ -16,9 +16,10 @@ private enum SplashPhase {
 // MARK: - SplashContentView
 
 struct SplashContentView: View {
-  let onContinue: () -> Void
+  let onContinue: (Bool) -> Void
 
   @State private var phase: SplashPhase = .idle
+  @State private var doNotShowAgain = false
 
   // Computed animation properties
   private var logoOpacity: Double { phase == .idle ? 0 : 1 }
@@ -90,7 +91,7 @@ private extension SplashContentView {
 
   var continueButton: some View {
     VStack(spacing: 6) {
-      Button(action: onContinue) {
+      Button(action: { onContinue(doNotShowAgain) }) {
         Text("Continue")
           .font(.system(size: 15, weight: .semibold))
           .foregroundStyle(VSDesignSystem.Colors.primary)
@@ -107,6 +108,12 @@ private extension SplashContentView {
       Text("Press Enter ↵")
         .font(.system(size: 11))
         .foregroundStyle(VSDesignSystem.Colors.quaternary)
+
+      Toggle("Do not show again", isOn: $doNotShowAgain)
+        .toggleStyle(.checkbox)
+        .font(.system(size: 12))
+        .foregroundStyle(VSDesignSystem.Colors.secondary)
+        .padding(.top, 4)
     }
     .padding(.top, 8)
   }
@@ -138,7 +145,7 @@ private extension SplashContentView {
 }
 
 #Preview {
-  SplashContentView(onContinue: {})
+  SplashContentView(onContinue: { _ in })
     .frame(width: 800, height: 600)
     .background(.black.opacity(0.5))
 }

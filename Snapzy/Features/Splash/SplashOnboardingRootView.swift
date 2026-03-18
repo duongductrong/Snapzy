@@ -49,7 +49,7 @@ struct SplashOnboardingRootView: View {
       Group {
         switch currentScreen {
         case .splash:
-          SplashContentView(onContinue: handleSplashContinue)
+          SplashContentView(onContinue: { skipSplash in handleSplashContinue(skipSplash: skipSplash) })
             .transition(.opacity)
 
         case .sponsor:
@@ -119,7 +119,11 @@ struct SplashOnboardingRootView: View {
     }
   }
 
-  private func handleSplashContinue() {
+  private func handleSplashContinue(skipSplash: Bool) {
+    if skipSplash {
+      UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
+    }
+
     if showSponsorPrompt {
       navigateForward(to: .sponsor)
     } else if needsOnboarding {

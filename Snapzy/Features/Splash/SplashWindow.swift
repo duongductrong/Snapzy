@@ -99,6 +99,14 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
   func show(forceOnboarding: Bool = false) {
     guard let screen = NSScreen.main else { return }
 
+    // Skip splash entirely when user opted out and no onboarding/sponsor is pending
+    if !forceOnboarding,
+       OnboardingFlowView.hasCompletedOnboarding,
+       UserDefaults.standard.bool(forKey: PreferencesKeys.sponsorPromptSeen),
+       UserDefaults.standard.bool(forKey: PreferencesKeys.splashSkipped) {
+      return
+    }
+
     // Show app in Cmd+Tab switcher
     NSApp.setActivationPolicy(.regular)
 

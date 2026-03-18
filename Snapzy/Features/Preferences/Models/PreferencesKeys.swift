@@ -12,6 +12,7 @@ enum PreferencesKeys {
   // Onboarding
   static let onboardingCompleted = "onboardingCompleted"
   static let sponsorPromptSeen = "sponsorPromptSeen"
+  static let splashSkipped = "splashSkipped"
   static let legacyLicenseCleanupCompleted = "legacyLicenseCleanupCompleted"
 
   // General
