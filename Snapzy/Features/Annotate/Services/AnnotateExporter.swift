@@ -107,7 +107,7 @@ final class AnnotateExporter {
 
     // WebP: use WebPEncoder (cwebp CLI) since ImageIO doesn't support WebP encoding
     if ext == "webp" {
-      return WebPEncoder.encode(cgImage)
+      return WebPEncoderService.encode(cgImage)
     }
 
     // PNG/JPEG: use CGImageDestination

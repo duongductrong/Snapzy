@@ -380,8 +380,8 @@ final class ScreenCaptureManager: ObservableObject {
 
       if isWebP {
         // WebP: use WebPEncoder (cwebp CLI) since ImageIO doesn't support WebP encoding
-        guard WebPEncoder.write(image, to: fileURL) else {
-          return .failure(.saveFailed("WebP encoding failed — ensure cwebp is installed (brew install webp)"))
+        guard WebPEncoderService.write(image, to: fileURL) else {
+          return .failure(.saveFailed("WebP encoding failed"))
         }
       } else {
         // PNG/JPEG: use CGImageDestination
