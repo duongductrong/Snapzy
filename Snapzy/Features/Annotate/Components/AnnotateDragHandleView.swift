@@ -62,8 +62,9 @@ final class DragHandleNSView: NSView {
 
     // Create a lazy file promise — NO rendering happens here.
     // The provider asks for the file only after the user actually drops.
+    let resolvedUTType = Self.preferredUTType()
     let provider = AnnotateDragFilePromiseProvider(
-      fileType: UTType.png.identifier,
+      fileType: resolvedUTType.identifier,
       delegate: self
     )
     provider.annotateState = state
@@ -145,7 +146,8 @@ extension DragHandleNSView: NSFilePromiseProviderDelegate {
     let provider = filePromiseProvider as? AnnotateDragFilePromiseProvider
     let baseName = provider?.annotateState?.sourceURL?
       .deletingPathExtension().lastPathComponent ?? "annotated_image"
-    return "\(baseName)_annotated.png"
+    let ext = Self.preferredFormatExtension()
+    return "\(baseName)_annotated.\(ext)"
   }
 
   /// Called on the writeQueue AFTER user drops — render + write happens here
@@ -168,19 +170,18 @@ extension DragHandleNSView: NSFilePromiseProviderDelegate {
         return
       }
 
-      // Encode + write on the promise queue (background)
+      // Encode in the user's configured format + write on the promise queue (background)
+      let ext = Self.preferredFormatExtension()
       DragHandleNSView.writeQueue.addOperation {
-        guard let tiffData = image.tiffRepresentation,
-              let bitmap = NSBitmapImageRep(data: tiffData),
-              let pngData = bitmap.representation(using: .png, properties: [:]) else {
+        guard let data = AnnotateExporter.imageData(from: image, for: ext) else {
           completionHandler(DragError.encodeFailed)
           return
         }
 
         do {
-          try pngData.write(to: url, options: .atomic)
+          try data.write(to: url, options: .atomic)
           completionHandler(nil)
-          print("[AnnotateDrag] Promise fulfilled: \(url.lastPathComponent)")
+          print("[AnnotateDrag] Promise fulfilled: \(url.lastPathComponent) (\(ext))")
         } catch {
           completionHandler(error)
         }
@@ -245,4 +246,26 @@ private enum DragError: Error {
   case noState
   case renderFailed
   case encodeFailed
+}
+
+// MARK: - Format Helpers
+
+extension DragHandleNSView {
+  /// Resolve the user's preferred screenshot format as UTType
+  static func preferredUTType() -> UTType {
+    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+          let option = ImageFormatOption(rawValue: raw) else { return .png }
+    switch option {
+    case .png:  return .png
+    case .jpeg: return .jpeg
+    case .webp: return .webP
+    }
+  }
+
+  /// Resolve the user's preferred screenshot format file extension
+  static func preferredFormatExtension() -> String {
+    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+          let option = ImageFormatOption(rawValue: raw) else { return "png" }
+    return option.format.fileExtension
+  }
 }

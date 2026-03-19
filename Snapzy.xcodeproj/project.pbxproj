@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A31BF0A72F1CF69100902D12 /* Sparkle */; };
+		B42DE1A02FA1B90000WEBP01 /* SDWebImageWebPCoder in Frameworks */ = {isa = PBXBuildFile; productRef = B42DE1A12FA1B90000WEBP01 /* SDWebImageWebPCoder */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,6 +42,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */,
+				B42DE1A02FA1B90000WEBP01 /* SDWebImageWebPCoder in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +86,7 @@
 			name = Snapzy;
 			packageProductDependencies = (
 				A31BF0A72F1CF69100902D12 /* Sparkle */,
+				B42DE1A12FA1B90000WEBP01 /* SDWebImageWebPCoder */,
 			);
 			productName = Snapzy;
 			productReference = A36462A32F18EEDA0003453D /* Snapzy.app */;
@@ -115,6 +118,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */,
+				B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "SDWebImageWebPCoder" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A36462A42F18EEDA0003453D /* Products */;
@@ -377,6 +381,14 @@
 				minimumVersion = 2.8.1;
 			};
 		};
+		B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "SDWebImageWebPCoder" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImageWebPCoder.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.14.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -384,6 +396,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */;
 			productName = Sparkle;
+		};
+		B42DE1A12FA1B90000WEBP01 /* SDWebImageWebPCoder */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "SDWebImageWebPCoder" */;
+			productName = SDWebImageWebPCoder;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

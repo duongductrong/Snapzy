@@ -433,7 +433,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     guard state.hasImage else { return }
 
     let panel = NSSavePanel()
-    panel.allowedContentTypes = [.png, .jpeg]
+    panel.allowedContentTypes = [.png, .jpeg, .webP]
     panel.nameFieldStringValue = generateFileName()
     panel.canCreateDirectories = true
 
@@ -443,6 +443,12 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       guard let self = self, response == .OK, let url = panel.url else { return }
       if AnnotateExporter.save(state: self.state, to: url) {
         self.state.markAsSaved()
+        // Dismiss Quick Access card if present
+        if let itemId = self.quickAccessItemId {
+          QuickAccessManager.shared.dismissCard(id: itemId)
+        }
+        // Close annotate window
+        self.forceClose()
       } else {
         self.showSaveErrorAlert()
       }
@@ -463,7 +469,9 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   private func generateFileName() -> String {
     guard let url = state.sourceURL else { return "annotated_image" }
     let baseName = url.deletingPathExtension().lastPathComponent
-    return "\(baseName)_annotated"
+    // Use the source file's extension so the default matches the configured format
+    let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
+    return "\(baseName)_annotated.\(ext)"
   }
 
   /// Copy = render once, copy to clipboard, update thumbnail, close, save in background
@@ -473,11 +481,9 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     // Render once, use for everything
     let renderedImage = AnnotateExporter.renderFinalImage(state: state)
 
-    // Copy to clipboard immediately
+    // Copy to clipboard immediately (format-aware)
     if let renderedImage = renderedImage {
-      let pasteboard = NSPasteboard.general
-      pasteboard.clearContents()
-      pasteboard.writeObjects([renderedImage])
+      ClipboardHelper.copyImage(renderedImage)
       SoundManager.play("Pop")
     }
 

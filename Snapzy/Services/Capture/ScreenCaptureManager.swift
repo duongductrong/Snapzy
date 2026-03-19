@@ -369,6 +369,7 @@ final class ScreenCaptureManager: ObservableObject {
     let utType = format.utType
 
     // Move file I/O to background thread to avoid blocking main thread
+    let isWebP = format.fileExtension == "webp"
     let writeResult: Result<URL, CaptureError> = await Task.detached {
       // Create directory if needed
       do {
@@ -377,23 +378,29 @@ final class ScreenCaptureManager: ObservableObject {
         return .failure(.saveFailed("Could not create directory: \(error.localizedDescription)"))
       }
 
-      // Create image destination
-      guard
-        let destination = CGImageDestinationCreateWithURL(
-          fileURL as CFURL,
-          utType,
-          1,
-          nil
-        )
-      else {
-        return .failure(.saveFailed("Could not create image destination"))
-      }
+      if isWebP {
+        // WebP: use WebPEncoder (cwebp CLI) since ImageIO doesn't support WebP encoding
+        guard WebPEncoder.write(image, to: fileURL) else {
+          return .failure(.saveFailed("WebP encoding failed — ensure cwebp is installed (brew install webp)"))
+        }
+      } else {
+        // PNG/JPEG: use CGImageDestination
+        guard
+          let destination = CGImageDestinationCreateWithURL(
+            fileURL as CFURL,
+            utType,
+            1,
+            nil
+          )
+        else {
+          return .failure(.saveFailed("Could not create image destination"))
+        }
 
-      // Add image and write
-      CGImageDestinationAddImage(destination, image, nil)
+        CGImageDestinationAddImage(destination, image, nil)
 
-      guard CGImageDestinationFinalize(destination) else {
-        return .failure(.saveFailed("Failed to write image to disk"))
+        guard CGImageDestinationFinalize(destination) else {
+          return .failure(.saveFailed("Failed to write image to disk"))
+        }
       }
 
       // Verify file is fully written
@@ -675,13 +682,13 @@ final class ScreenCaptureManager: ObservableObject {
 enum ImageFormat {
   case png
   case jpeg(quality: CGFloat)
-  case tiff
+  case webp
 
   var fileExtension: String {
     switch self {
     case .png: return "png"
     case .jpeg: return "jpg"
-    case .tiff: return "tiff"
+    case .webp: return "webp"
     }
   }
 
@@ -689,7 +696,7 @@ enum ImageFormat {
     switch self {
     case .png: return "public.png" as CFString
     case .jpeg: return "public.jpeg" as CFString
-    case .tiff: return "public.tiff" as CFString
+    case .webp: return "org.webmproject.webp" as CFString
     }
   }
 }

@@ -13,6 +13,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.hideDesktopIcons) private var hideDesktopIcons = false
   @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @AppStorage(PreferencesKeys.screenshotIncludeOwnApp) private var includeOwnAppInScreenshots = false
+  @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
 
   // Recording settings
   @AppStorage(PreferencesKeys.recordingFormat) private var format = "mov"
@@ -96,6 +97,20 @@ struct CaptureSettingsView: View {
         SettingRow(icon: "widget.small", title: "Hide desktop widgets", description: "Temporarily hide widgets during capture") {
           Toggle("", isOn: $hideDesktopWidgets)
             .labelsHidden()
+        }
+      }
+
+      // MARK: - Screenshot Format
+
+      Section("Screenshot Format") {
+        SettingRow(icon: "photo", title: "Image Format", description: "Output format for captured screenshots") {
+          Picker("", selection: $screenshotFormat) {
+            ForEach(ImageFormatOption.allCases, id: \.self) { option in
+              Text(option.displayName).tag(option.rawValue)
+            }
+          }
+          .labelsHidden()
+          .pickerStyle(.menu)
         }
       }
 

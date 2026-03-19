@@ -1,6 +1,33 @@
 {
-  "originHash" : "e721da7f9826abdffcb6185e886155efa2514bd6234475f1afa893e29eb258d6",
+  "originHash" : "622ba7aa9dc6fda3d9aa5ab3a3ad84e33757b55bf40b45578b008efd214c30c4",
   "pins" : [
+    {
+      "identity" : "libwebp-xcode",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/libwebp-Xcode.git",
+      "state" : {
+        "revision" : "0d60654eeefd5d7d2bef3835804892c40225e8b2",
+        "version" : "1.5.0"
+      }
+    },
+    {
+      "identity" : "sdwebimage",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/SDWebImage.git",
+      "state" : {
+        "revision" : "2de3a496eaf6df9a1312862adcfd54acd73c39c0",
+        "version" : "5.21.7"
+      }
+    },
+    {
+      "identity" : "sdwebimagewebpcoder",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/SDWebImage/SDWebImageWebPCoder.git",
+      "state" : {
+        "revision" : "12d83edbcc795fb7b5c0c3cb74d739108d3357d2",
+        "version" : "0.15.0"
+      }
+    },
     {
       "identity" : "sparkle",
       "kind" : "remoteSourceControl",

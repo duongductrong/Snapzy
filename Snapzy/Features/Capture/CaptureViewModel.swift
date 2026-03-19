@@ -14,13 +14,21 @@ import Foundation
 enum ImageFormatOption: String, CaseIterable {
   case png
   case jpeg
-  case tiff
+  case webp
 
   var format: ImageFormat {
     switch self {
     case .png: return .png
     case .jpeg: return .jpeg(quality: 0.9)
-    case .tiff: return .tiff
+    case .webp: return .webp
+    }
+  }
+
+  var displayName: String {
+    switch self {
+    case .png: return "PNG"
+    case .jpeg: return "JPEG"
+    case .webp: return "WebP"
     }
   }
 }
@@ -32,7 +40,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   @Published var hasPermission: Bool = false
   @Published var isCapturing: Bool = false
   @Published var saveDirectory: URL
-  @Published var selectedFormat: ImageFormatOption = .png
+  @Published var selectedFormat: ImageFormatOption {
+    didSet {
+      UserDefaults.standard.set(selectedFormat.rawValue, forKey: PreferencesKeys.screenshotFormat)
+    }
+  }
   @Published var showCursor: Bool = true
 
   @Published var lastCaptureResult: CaptureResult?
@@ -61,6 +73,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   @Published var recordingShortcut: ShortcutConfig
 
   init() {
+    // Initialize format from saved preference
+    if let savedFormat = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+       let format = ImageFormatOption(rawValue: savedFormat) {
+      selectedFormat = format
+    } else {
+      selectedFormat = .png
+    }
+
     fileAccessManager.ensureExportLocationInitialized()
     saveDirectory = fileAccessManager.resolvedExportDirectoryURL()
 
@@ -98,6 +118,15 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   private var includesOwnAppInScreenshots: Bool {
     UserDefaults.standard.bool(forKey: PreferencesKeys.screenshotIncludeOwnApp)
+  }
+
+  /// Always read format from UserDefaults to stay in sync with Settings @AppStorage
+  private var resolvedFormat: ImageFormat {
+    if let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+       let option = ImageFormatOption(rawValue: raw) {
+      return option.format
+    }
+    return .png
   }
 
   private var includesOwnAppInRecordings: Bool {
@@ -212,7 +241,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
       let result = await captureManager.captureFullscreen(
         saveDirectory: actualSaveDirectory,
-        format: selectedFormat.format,
+        format: resolvedFormat,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
         excludeOwnApplication: !includesOwnAppInScreenshots,
@@ -293,7 +322,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           let result = await self.captureManager.captureArea(
             rect: selectedRect,
             saveDirectory: actualSaveDirectory,
-            format: self.selectedFormat.format,
+            format: self.resolvedFormat,
             excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
             excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
             excludeOwnApplication: !self.includesOwnAppInScreenshots,

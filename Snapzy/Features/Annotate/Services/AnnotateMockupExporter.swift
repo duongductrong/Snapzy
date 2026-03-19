@@ -31,17 +31,19 @@ struct MockupExporter {
     static func saveAs(state: MockupState, scale: CGFloat = 2.0) {
         guard let image = renderFinalImage(state: state, scale: scale) else { return }
 
+        let preferredFormat = preferredImageFormat()
+
         let savePanel = NSSavePanel()
-        savePanel.allowedContentTypes = [.png]
-        savePanel.nameFieldStringValue = generateFilename()
+        savePanel.allowedContentTypes = [.png, .jpeg, .webP]
+        savePanel.nameFieldStringValue = generateFilename(format: preferredFormat)
         savePanel.canCreateDirectories = true
 
         savePanel.begin { response in
             guard response == .OK, let url = savePanel.url else { return }
 
-            if let pngData = convertToPNG(image: image) {
+            if let data = AnnotateExporter.imageData(from: image, for: url.pathExtension) {
                 do {
-                    try pngData.write(to: url)
+                    try data.write(to: url)
                 } catch {
                     print("Failed to save mockup: \(error)")
                 }
@@ -55,9 +57,7 @@ struct MockupExporter {
     static func copyToClipboard(state: MockupState, scale: CGFloat = 2.0) {
         guard let image = renderFinalImage(state: state, scale: scale) else { return }
 
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.writeObjects([image])
+        ClipboardHelper.copyImage(image)
     }
 
     // MARK: - Share
@@ -72,19 +72,19 @@ struct MockupExporter {
 
     // MARK: - Helpers
 
-    private static func generateFilename() -> String {
+    private static func generateFilename(format: ImageFormatOption = .png) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyyMMdd-HHmmss"
-        return "mockup-\(formatter.string(from: Date())).png"
+        return "mockup-\(formatter.string(from: Date())).\(format.format.fileExtension)"
     }
 
-    private static func convertToPNG(image: NSImage) -> Data? {
-        guard let tiffData = image.tiffRepresentation,
-              let bitmapRep = NSBitmapImageRep(data: tiffData) else {
-            return nil
+    /// Read the user's preferred screenshot format from UserDefaults
+    private static func preferredImageFormat() -> ImageFormatOption {
+        if let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+           let format = ImageFormatOption(rawValue: raw) {
+            return format
         }
-
-        return bitmapRep.representation(using: .png, properties: [:])
+        return .png
     }
 }
 

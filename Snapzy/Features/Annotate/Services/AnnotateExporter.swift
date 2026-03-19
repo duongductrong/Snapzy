@@ -16,7 +16,7 @@ final class AnnotateExporter {
   static func saveAs(state: AnnotateState, closeWindow: Bool = true) {
     guard state.hasImage else { return }
     let panel = NSSavePanel()
-    panel.allowedContentTypes = [.png, .jpeg]
+    panel.allowedContentTypes = [.png, .jpeg, .webP]
     panel.nameFieldStringValue = generateFileName(from: state.sourceURL)
     panel.canCreateDirectories = true
 
@@ -39,12 +39,7 @@ final class AnnotateExporter {
   static func save(state: AnnotateState, to url: URL) -> Bool {
     guard let image = renderFinalImage(state: state) else { return false }
 
-    let format: NSBitmapImageRep.FileType = url.pathExtension.lowercased() == "jpg" ? .jpeg : .png
-
-    guard let tiffData = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiffData),
-          let data = bitmap.representation(using: format, properties: [:])
-    else { return false }
+    guard let data = imageData(from: image, for: url.pathExtension) else { return false }
 
     do {
       try SandboxFileAccessManager.shared.withScopedAccess(to: url.deletingLastPathComponent()) {
@@ -65,12 +60,7 @@ final class AnnotateExporter {
   static func saveToFile(image: NSImage?, state: AnnotateState) -> Bool {
     guard let image = image, let sourceURL = state.sourceURL else { return false }
 
-    let format: NSBitmapImageRep.FileType = sourceURL.pathExtension.lowercased() == "jpg" ? .jpeg : .png
-
-    guard let tiffData = image.tiffRepresentation,
-          let bitmap = NSBitmapImageRep(data: tiffData),
-          let data = bitmap.representation(using: format, properties: [:])
-    else { return false }
+    guard let data = imageData(from: image, for: sourceURL.pathExtension) else { return false }
 
     do {
       try SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL.deletingLastPathComponent()) {
@@ -86,9 +76,7 @@ final class AnnotateExporter {
   static func copyToClipboard(state: AnnotateState) {
     guard let image = renderFinalImage(state: state) else { return }
 
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    pasteboard.writeObjects([image])
+    ClipboardHelper.copyImage(image)
     SoundManager.play("Pop")
   }
 
@@ -106,6 +94,40 @@ final class AnnotateExporter {
     guard let url = url else { return "annotated_image" }
     let baseName = url.deletingPathExtension().lastPathComponent
     return "\(baseName)_annotated"
+  }
+
+  /// Convert NSImage to Data for any supported format (PNG, JPEG, WebP)
+  /// Uses CGImageDestination for WebP support (macOS 14+)
+  static func imageData(from image: NSImage, for fileExtension: String) -> Data? {
+    guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+      return nil
+    }
+
+    let ext = fileExtension.lowercased()
+
+    // WebP: use WebPEncoder (cwebp CLI) since ImageIO doesn't support WebP encoding
+    if ext == "webp" {
+      return WebPEncoder.encode(cgImage)
+    }
+
+    // PNG/JPEG: use CGImageDestination
+    let utType: CFString
+    switch ext {
+    case "jpg", "jpeg":
+      utType = "public.jpeg" as CFString
+    default:
+      utType = "public.png" as CFString
+    }
+
+    let data = NSMutableData()
+    guard let destination = CGImageDestinationCreateWithData(data, utType, 1, nil) else {
+      return nil
+    }
+    CGImageDestinationAddImage(destination, cgImage, nil)
+    guard CGImageDestinationFinalize(destination) else {
+      return nil
+    }
+    return data as Data
   }
 
   /// Generate unique copy URL from original file path

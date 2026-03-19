@@ -82,22 +82,16 @@ final class PostCaptureActionHandler {
     }
   }
 
-  /// Copy file to clipboard (image data for screenshots, file URL for videos)
+  /// Copy file to clipboard (format-aware image data for screenshots, file URL for videos)
   private func copyToClipboard(url: URL, isVideo: Bool) {
-    let fileAccess = fileAccessManager.beginAccessingURL(url)
-    defer { fileAccess.stop() }
-
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-
     if isVideo {
+      let fileAccess = fileAccessManager.beginAccessingURL(url)
+      defer { fileAccess.stop() }
+      let pasteboard = NSPasteboard.general
+      pasteboard.clearContents()
       pasteboard.writeObjects([url as NSURL])
     } else {
-      if let image = NSImage(contentsOf: url) {
-        pasteboard.writeObjects([image])
-      } else {
-        logger.error("Failed to load image for clipboard: \(url.lastPathComponent)")
-      }
+      ClipboardHelper.copyImage(from: url)
     }
   }
 }

@@ -33,6 +33,7 @@ enum PreferencesKeys {
   static let areaShortcut = "areaShortcut"
 
   // Screenshot
+  static let screenshotFormat = "screenshot.format"
   static let screenshotIncludeOwnApp = "screenshot.includeOwnApp"
 
   // Floating Screenshot (Quick Access)
