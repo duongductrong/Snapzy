@@ -24,6 +24,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.2.6] - 2026-03-19
+
+### Features
+-  Add a warning message about WebP encoding speed in capture settings. (88bdc90)
+-  Add .webp, .jpg image format support and format-aware clipboard copying for screenshots and annotations. (8b152dd)
+
+### Chore
+- refactor: Migrate WebP encoding from SDWebImageWebPCoder to Swift-WebP for optimized performance using raw pixel data. (e175285)
+- chore: update appcast, cask, and readme for v1.2.5 (545848f)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.5] - 2026-03-18
 
 ### Features
