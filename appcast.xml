@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.3.0</title>
+      <sparkle:version>25</sparkle:version>
+      <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 20 Mar 2026 15:46:35 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Implement canvas panning functionality using the Space key and mouse drag, and refine zoom range options.</li><li>Add keyboard shortcuts and trackpad gestures for zoom, expand zoom range, and animate transitions.</li><li>Include window shadows in screen capture for macOS 14.0+ by setting  to false.</li><li>Introduce configurable shortcuts for the annotate editor's copy-and-close and toggle-pin actions, updating UI and event handling.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.3.0/Snapzy-v1.3.0.dmg"
+        sparkle:edSignature="K8rhondHxqXqsKiaK13Z8SfLE81S2Hjhtsc5cCKh2KVPUt3UpxP75aD5ux1gBqe23swcL8W2OoA7HV+pPTyKBQ=="
+        length="8597978"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.2.6</title>
       <sparkle:version>24</sparkle:version>
       <sparkle:shortVersionString>1.2.6</sparkle:shortVersionString>
