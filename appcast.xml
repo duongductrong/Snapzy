@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.3.1</title>
+      <sparkle:version>26</sparkle:version>
+      <sparkle:shortVersionString>1.3.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 20 Mar 2026 18:24:06 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>enhance image rendering and screen capture quality with pixel-perfect techniques and dynamic scaling.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.3.1/Snapzy-v1.3.1.dmg"
+        sparkle:edSignature="q+UsD20kxrsHiE7c26mG2Qzx3pbN4pXeFudeccpPNsuXpnEc/guoRg76cvWEvav7TMr+PxJqZKR7RoY/C67+CQ=="
+        length="8600161"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.3.0</title>
       <sparkle:version>25</sparkle:version>
       <sparkle:shortVersionString>1.3.0</sparkle:shortVersionString>
