@@ -25,6 +25,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.0] - 2026-03-20
+
+### Features
+-  Implement canvas panning functionality using the Space key and mouse drag, and refine zoom range options. (696b8c3)
+-  Add keyboard shortcuts and trackpad gestures for zoom, expand zoom range, and animate transitions. (e8412ce)
+-  Include window shadows in screen capture for macOS 14.0+ by setting `ignoreShadowsSingleWindow` to false. (2c6fbd7)
+-  Introduce configurable shortcuts for the annotate editor's copy-and-close and toggle-pin actions, updating UI and event handling. (7fd3e48)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.2.6 (c7425ed)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.2.6] - 2026-03-19
 
 ### Features
