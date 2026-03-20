@@ -187,10 +187,22 @@ final class ScreenCaptureManager: ObservableObject {
         excludeDesktopWidgets: excludeDesktopWidgets,
         excludeOwnApplication: excludeOwnApplication
       )
+      // Get the display's backing scale factor dynamically
+      let scaleFactor: CGFloat
+      if let screen = NSScreen.screens.first(where: {
+        Int($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0)
+          == display.displayID
+      }) {
+        scaleFactor = screen.backingScaleFactor
+      } else {
+        scaleFactor = display.frame.width > 0 ? CGFloat(display.width) / display.frame.width : 2.0
+      }
+
       let config = SCStreamConfiguration()
       if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
-      config.width = display.width * 2  // Retina resolution
-      config.height = display.height * 2
+      if #available(macOS 14.2, *) { config.captureResolution = .best }
+      config.width = Int(CGFloat(display.width) * scaleFactor)
+      config.height = Int(CGFloat(display.height) * scaleFactor)
       config.pixelFormat = kCVPixelFormatType_32BGRA
       config.showsCursor = true
 
@@ -275,6 +287,7 @@ final class ScreenCaptureManager: ObservableObject {
       )
       let config = SCStreamConfiguration()
       if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
+      if #available(macOS 14.2, *) { config.captureResolution = .best }
       config.pixelFormat = kCVPixelFormatType_32BGRA
       config.showsCursor = false
 
@@ -318,29 +331,32 @@ final class ScreenCaptureManager: ObservableObject {
         return .failure(.captureFailed("Selection area is outside display bounds"))
       }
 
-      // ScreenCaptureKit uses top-left origin for sourceRect
-      // Convert from bottom-left (Cocoa) to top-left coordinate system
-      let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
-      let sourceRect = CGRect(
-        x: clampedRect.origin.x,
-        y: flippedY,
-        width: clampedRect.width,
-        height: clampedRect.height
-      )
-      config.sourceRect = sourceRect
+      // Capture full display at native pixel resolution (avoid sourceRect interpolation blur)
+      config.width = Int(CGFloat(display.width) * scaleFactor)
+      config.height = Int(CGFloat(display.height) * scaleFactor)
 
-      // Output dimensions in pixels (Retina resolution) - use clamped rect
-      config.width = Int(ceil(clampedRect.width * scaleFactor))
-      config.height = Int(ceil(clampedRect.height * scaleFactor))
-
-      // Capture the image (compat: SCScreenshotManager requires macOS 14+)
-      let image = try await captureImageCompat(
+      // Capture the full display image
+      let fullImage = try await captureImageCompat(
         contentFilter: filter,
         configuration: config
       )
 
-      // Save the image
-      return await saveImage(image, to: saveDirectory, fileName: fileName, format: format)
+      // Post-capture crop: convert clamped rect to pixel coordinates (top-left origin)
+      // and crop the CGImage directly — no resampling, pixel-perfect quality
+      let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
+      let pixelCropRect = CGRect(
+        x: ceil(clampedRect.origin.x * scaleFactor),
+        y: ceil(flippedY * scaleFactor),
+        width: ceil(clampedRect.width * scaleFactor),
+        height: ceil(clampedRect.height * scaleFactor)
+      )
+
+      guard let croppedImage = fullImage.cropping(to: pixelCropRect) else {
+        return .failure(.captureFailed("Failed to crop captured image"))
+      }
+
+      // Save the cropped image
+      return await saveImage(croppedImage, to: saveDirectory, fileName: fileName, format: format)
 
     } catch {
       DiagnosticLogger.shared.log(.error, .capture, "Area capture failed: \(error.localizedDescription)")
@@ -512,6 +528,7 @@ final class ScreenCaptureManager: ObservableObject {
     )
     let config = SCStreamConfiguration()
     if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
+    if #available(macOS 14.2, *) { config.captureResolution = .best }
     config.pixelFormat = kCVPixelFormatType_32BGRA
     config.showsCursor = false
 
@@ -545,21 +562,25 @@ final class ScreenCaptureManager: ObservableObject {
       throw CaptureError.captureFailed("Selection area is outside display bounds")
     }
 
-    let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
-    let sourceRect = CGRect(
-      x: clampedRect.origin.x,
-      y: flippedY,
-      width: clampedRect.width,
-      height: clampedRect.height
-    )
-    config.sourceRect = sourceRect
-    config.width = Int(ceil(clampedRect.width * scaleFactor))
-    config.height = Int(ceil(clampedRect.height * scaleFactor))
+    // Capture full display at native pixel resolution (avoid sourceRect interpolation blur)
+    config.width = Int(CGFloat(display.width) * scaleFactor)
+    config.height = Int(CGFloat(display.height) * scaleFactor)
 
-    return try await captureImageCompat(
+    let fullImage = try await captureImageCompat(
       contentFilter: filter,
       configuration: config
     )
+
+    // Post-capture crop: pixel-perfect, no resampling
+    let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
+    let pixelCropRect = CGRect(
+      x: ceil(clampedRect.origin.x * scaleFactor),
+      y: ceil(flippedY * scaleFactor),
+      width: ceil(clampedRect.width * scaleFactor),
+      height: ceil(clampedRect.height * scaleFactor)
+    )
+
+    return fullImage.cropping(to: pixelCropRect)
   }
 
   // MARK: - Filter Builder

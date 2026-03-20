@@ -443,8 +443,7 @@ struct AnnotateCanvasView: View {
         .resizable()
         .aspectRatio(contentMode: .fit)
         .frame(width: width, height: height)
-        .cornerRadius(currentCornerRadius)
-        .drawingGroup() // Rasterize image with corners for performance
+        .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .shadow(
           color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
           radius: 15,
@@ -480,8 +479,7 @@ struct AnnotateCanvasView: View {
         .offset(x: cropOffset.x, y: cropOffset.y)
         .frame(width: cropWidth, height: cropHeight)
         .clipped()
-        .cornerRadius(currentCornerRadius)
-        .drawingGroup()
+        .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .shadow(
           color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
           radius: 15,

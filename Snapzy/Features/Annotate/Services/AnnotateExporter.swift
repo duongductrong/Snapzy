@@ -96,6 +96,19 @@ final class AnnotateExporter {
     return "\(baseName)_annotated"
   }
 
+  /// Determine the pixel-to-point scale factor from the source image.
+  /// Falls back to screen's backing scale factor, then 2.0.
+  private static func sourceImageScale(_ sourceImage: NSImage) -> CGFloat {
+    if let rep = sourceImage.representations.first as? NSBitmapImageRep {
+      let pixelWidth = CGFloat(rep.pixelsWide)
+      let pointWidth = sourceImage.size.width
+      if pointWidth > 0 && pixelWidth > pointWidth {
+        return pixelWidth / pointWidth
+      }
+    }
+    return NSScreen.main?.backingScaleFactor ?? 2.0
+  }
+
   /// Convert NSImage to Data for any supported format (PNG, JPEG, WebP)
   /// Uses CGImageDestination for WebP support (macOS 14+)
   static func imageData(from image: NSImage, for fileExtension: String) -> Data? {
@@ -173,13 +186,30 @@ final class AnnotateExporter {
       height: effectiveBounds.height + padding * 2 + alignmentSpace
     )
 
-    let image = NSImage(size: totalSize)
-    image.lockFocus()
+    // Render at pixel resolution using NSBitmapImageRep for Retina quality
+    let scale = sourceImageScale(sourceImage)
+    let pixelWidth = Int(totalSize.width * scale)
+    let pixelHeight = Int(totalSize.height * scale)
 
-    guard let context = NSGraphicsContext.current?.cgContext else {
-      image.unlockFocus()
-      return nil
-    }
+    guard let bitmapRep = NSBitmapImageRep(
+      bitmapDataPlanes: nil,
+      pixelsWide: pixelWidth,
+      pixelsHigh: pixelHeight,
+      bitsPerSample: 8,
+      samplesPerPixel: 4,
+      hasAlpha: true,
+      isPlanar: false,
+      colorSpaceName: .deviceRGB,
+      bytesPerRow: 0,
+      bitsPerPixel: 0
+    ) else { return nil }
+    bitmapRep.size = totalSize  // Point size — CG context will scale drawings to pixel dimensions
+
+    guard let graphicsContext = NSGraphicsContext(bitmapImageRep: bitmapRep) else { return nil }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = graphicsContext
+
+    let context = graphicsContext.cgContext
 
     // Draw background
     drawBackground(state: state, in: context, size: totalSize)
@@ -267,7 +297,10 @@ final class AnnotateExporter {
       renderer.draw(offsetAnnotation)
     }
 
-    image.unlockFocus()
+    NSGraphicsContext.restoreGraphicsState()
+
+    let image = NSImage(size: totalSize)
+    image.addRepresentation(bitmapRep)
     return image
   }
 
@@ -459,13 +492,30 @@ final class AnnotateExporter {
       effectiveBounds = CGRect(origin: .zero, size: sourceImage.size)
     }
 
-    let image = NSImage(size: effectiveBounds.size)
-    image.lockFocus()
+    // Render at pixel resolution using NSBitmapImageRep for Retina quality
+    let scale = sourceImageScale(sourceImage)
+    let pixelWidth = Int(effectiveBounds.width * scale)
+    let pixelHeight = Int(effectiveBounds.height * scale)
 
-    guard let context = NSGraphicsContext.current?.cgContext else {
-      image.unlockFocus()
-      return nil
-    }
+    guard let bitmapRep = NSBitmapImageRep(
+      bitmapDataPlanes: nil,
+      pixelsWide: pixelWidth,
+      pixelsHigh: pixelHeight,
+      bitsPerSample: 8,
+      samplesPerPixel: 4,
+      hasAlpha: true,
+      isPlanar: false,
+      colorSpaceName: .deviceRGB,
+      bytesPerRow: 0,
+      bitsPerPixel: 0
+    ) else { return nil }
+    bitmapRep.size = effectiveBounds.size  // Point size
+
+    guard let graphicsContext = NSGraphicsContext(bitmapImageRep: bitmapRep) else { return nil }
+    NSGraphicsContext.saveGraphicsState()
+    NSGraphicsContext.current = graphicsContext
+
+    let context = graphicsContext.cgContext
 
     // Draw cropped portion of source image
     let destRect = NSRect(origin: .zero, size: effectiveBounds.size)
@@ -492,7 +542,10 @@ final class AnnotateExporter {
       renderer.draw(offsetAnnotation)
     }
 
-    image.unlockFocus()
+    NSGraphicsContext.restoreGraphicsState()
+
+    let image = NSImage(size: effectiveBounds.size)
+    image.addRepresentation(bitmapRep)
     return image
   }
 }
