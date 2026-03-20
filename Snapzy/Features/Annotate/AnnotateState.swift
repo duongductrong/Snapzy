@@ -49,6 +49,14 @@ final class AnnotateState: ObservableObject {
   @Published var zoomLevel: CGFloat = 1.0
   @Published var isPinned: Bool = false
 
+  /// Valid zoom range (10%–500%)
+  static let zoomRange: ClosedRange<CGFloat> = 0.1...5.0
+
+  /// Clamp a zoom level to the valid range
+  func clampedZoom(_ level: CGFloat) -> CGFloat {
+    min(max(level, Self.zoomRange.lowerBound), Self.zoomRange.upperBound)
+  }
+
   // MARK: - Background Settings
 
   @Published var backgroundStyle: BackgroundStyle = .none {

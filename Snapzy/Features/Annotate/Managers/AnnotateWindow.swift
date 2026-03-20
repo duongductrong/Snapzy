@@ -16,6 +16,11 @@ extension Notification.Name {
   static let annotateTogglePin = Notification.Name("annotateTogglePin")
   static let annotateDragStarted = Notification.Name("annotateDragStarted")
   static let annotateDragEnded = Notification.Name("annotateDragEnded")
+  static let annotateZoomIn = Notification.Name("annotateZoomIn")
+  static let annotateZoomOut = Notification.Name("annotateZoomOut")
+  static let annotateZoomReset = Notification.Name("annotateZoomReset")
+  static let annotateScrollZoom = Notification.Name("annotateScrollZoom")
+  static let annotateMagnifyZoom = Notification.Name("annotateMagnifyZoom")
 }
 
 /// Custom NSWindow for annotation editing with dark mode appearance
@@ -113,6 +118,58 @@ final class AnnotateWindow: NSWindow {
       return true
     }
 
+    // Cmd+= or Cmd++ — zoom in
+    if event.keyCode == 24 && flags == .command {
+      NotificationCenter.default.post(name: .annotateZoomIn, object: self)
+      return true
+    }
+
+    // Cmd+- — zoom out
+    if event.keyCode == 27 && flags == .command {
+      NotificationCenter.default.post(name: .annotateZoomOut, object: self)
+      return true
+    }
+
+    // Cmd+0 — zoom to 100%
+    if event.keyCode == 29 && flags == .command {
+      NotificationCenter.default.post(name: .annotateZoomReset, object: self)
+      return true
+    }
+
     return super.performKeyEquivalent(with: event)
+  }
+
+  // MARK: - Scroll Wheel & Magnification Zoom
+
+  /// Intercept scroll wheel (Cmd+scroll) and trackpad magnify events
+  /// at the window level, before AppKit dispatches them to subviews.
+  /// This guarantees capture regardless of which view is under the cursor.
+  override func sendEvent(_ event: NSEvent) {
+    switch event.type {
+    case .scrollWheel where event.modifierFlags.contains(.command):
+      // Cmd + scroll wheel → zoom
+      let delta = event.scrollingDeltaY
+      guard delta != 0 else { break }
+      NotificationCenter.default.post(
+        name: .annotateScrollZoom,
+        object: self,
+        userInfo: ["delta": delta]
+      )
+      return  // Consume event — don't forward to subviews
+
+    case .magnify:
+      // Trackpad pinch → zoom
+      let magnification = event.magnification
+      NotificationCenter.default.post(
+        name: .annotateMagnifyZoom,
+        object: self,
+        userInfo: ["magnification": magnification]
+      )
+      return  // Consume event
+
+    default:
+      break
+    }
+    super.sendEvent(event)
   }
 }

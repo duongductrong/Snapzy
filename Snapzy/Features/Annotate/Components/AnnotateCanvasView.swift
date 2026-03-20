@@ -70,10 +70,38 @@ struct AnnotateCanvasView: View {
       }
     }
     .animation(.easeInOut(duration: 0.2), value: isCropToolbarVisible)
-    .onScrollWheelZoom { delta in
+    .onReceive(NotificationCenter.default.publisher(for: .annotateScrollZoom)) { notification in
+      guard state.hasImage,
+            let delta = notification.userInfo?["delta"] as? CGFloat else { return }
+      let step = delta * 0.1
+      withAnimation(.easeOut(duration: 0.15)) {
+        state.zoomLevel = state.clampedZoom(state.zoomLevel + step)
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .annotateMagnifyZoom)) { notification in
+      guard state.hasImage,
+            let magnification = notification.userInfo?["magnification"] as? CGFloat else { return }
+      withAnimation(.easeOut(duration: 0.1)) {
+        state.zoomLevel = state.clampedZoom(state.zoomLevel + magnification)
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomIn)) { _ in
       guard state.hasImage else { return }
-      let newZoom = state.zoomLevel + delta * 0.1
-      state.zoomLevel = min(max(newZoom, 0.25), 3.0)
+      withAnimation(.easeOut(duration: 0.15)) {
+        state.zoomLevel = state.clampedZoom(state.zoomLevel + 0.25)
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomOut)) { _ in
+      guard state.hasImage else { return }
+      withAnimation(.easeOut(duration: 0.15)) {
+        state.zoomLevel = state.clampedZoom(state.zoomLevel - 0.25)
+      }
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomReset)) { _ in
+      guard state.hasImage else { return }
+      withAnimation(.easeOut(duration: 0.15)) {
+        state.zoomLevel = 1.0
+      }
     }
     .onDrop(of: [.fileURL, .image], isTargeted: $isDragOver) { providers in
       handleDrop(providers: providers)
@@ -553,58 +581,7 @@ struct AnnotateCanvasView: View {
   }
 }
 
-// MARK: - Scroll Wheel Zoom Modifier
 
-struct ScrollWheelZoomModifier: ViewModifier {
-  let onZoom: (CGFloat) -> Void
-
-  func body(content: Content) -> some View {
-    content
-      .background(ScrollWheelZoomView(onZoom: onZoom))
-  }
-}
-
-struct ScrollWheelZoomView: NSViewRepresentable {
-  let onZoom: (CGFloat) -> Void
-
-  func makeNSView(context: Context) -> ScrollWheelZoomNSView {
-    ScrollWheelZoomNSView(onZoom: onZoom)
-  }
-
-  func updateNSView(_ nsView: ScrollWheelZoomNSView, context: Context) {
-    nsView.onZoom = onZoom
-  }
-}
-
-final class ScrollWheelZoomNSView: NSView {
-  var onZoom: (CGFloat) -> Void
-
-  init(onZoom: @escaping (CGFloat) -> Void) {
-    self.onZoom = onZoom
-    super.init(frame: .zero)
-  }
-
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-
-  override func scrollWheel(with event: NSEvent) {
-    // Only zoom when Command key is held
-    if event.modifierFlags.contains(.command) {
-      let delta = event.scrollingDeltaY
-      onZoom(delta)
-    } else {
-      super.scrollWheel(with: event)
-    }
-  }
-}
-
-extension View {
-  func onScrollWheelZoom(_ action: @escaping (CGFloat) -> Void) -> some View {
-    modifier(ScrollWheelZoomModifier(onZoom: action))
-  }
-}
 
 // MARK: - Focus Effect Disabled Modifier (macOS 13 compat)
 
