@@ -133,16 +133,18 @@ struct AnnotateBottomBarView: View {
   // MARK: - Action Buttons
 
   private var actionButtons: some View {
-    HStack(spacing: 12) {
+    let annotateShortcuts = AnnotateShortcutManager.shared
+
+    return HStack(spacing: 12) {
       BottomBarButton(icon: "square.and.arrow.up", tooltip: "Share") {
         share()
       }
 
-      BottomBarButton(icon: state.isPinned ? "pin.fill" : "pin", tooltip: state.isPinned ? "Unpin window (⌃⌘P)" : "Pin window (⌃⌘P)") {
+      BottomBarButton(icon: state.isPinned ? "pin.fill" : "pin", tooltip: state.isPinned ? "Unpin window (\(annotateShortcuts.togglePinShortcut.displayString))" : "Pin window (\(annotateShortcuts.togglePinShortcut.displayString))") {
         pin()
       }
 
-      BottomBarButton(icon: "doc.on.doc", tooltip: "Copy to clipboard (⇧⌘C)") {
+      BottomBarButton(icon: "doc.on.doc", tooltip: "Copy to clipboard (\(annotateShortcuts.copyAndCloseShortcut.displayString))") {
         copyToClipboard()
       }
 

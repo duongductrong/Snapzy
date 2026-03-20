@@ -89,26 +89,26 @@ final class AnnotateWindow: NSWindow {
 
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
-    // Cmd+S - Save (Done action)
+    // Cmd+S - Save (Done action) — standard macOS
     if event.keyCode == 1 && flags == .command {
       NotificationCenter.default.post(name: .annotateSave, object: self)
       return true
     }
 
-    // Cmd+Shift+S - Save As
+    // Cmd+Shift+S - Save As — standard macOS
     if event.keyCode == 1 && flags == [.command, .shift] {
       NotificationCenter.default.post(name: .annotateSaveAs, object: self)
       return true
     }
 
-    // Cmd+Shift+C - Copy to clipboard and close
-    if event.keyCode == 8 && flags == [.command, .shift] {
+    // Copy & Close — configurable (default: ⌘⇧C)
+    if AnnotateShortcutManager.shared.matchesCopyAndClose(event) {
       NotificationCenter.default.post(name: .annotateCopyAndClose, object: self)
       return true
     }
 
-    // Ctrl+Cmd+P - Toggle pin window
-    if event.keyCode == 35 && flags == [.command, .control] {
+    // Toggle Pin — configurable (default: ⌃⌘P)
+    if AnnotateShortcutManager.shared.matchesTogglePin(event) {
       NotificationCenter.default.post(name: .annotateTogglePin, object: self)
       return true
     }

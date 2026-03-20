@@ -14,6 +14,8 @@ struct ShortcutsSettingsView: View {
   @State private var recordingShortcut: ShortcutConfig
   @State private var annotateShortcut: ShortcutConfig
   @State private var videoEditorShortcut: ShortcutConfig
+  @State private var copyAndCloseShortcut: ShortcutConfig
+  @State private var togglePinShortcut: ShortcutConfig
   @State private var shortcutsEnabled: Bool
   @State private var showDisableConfirmation: Bool = false
   @State private var isConfirmedDisable: Bool = false
@@ -30,6 +32,8 @@ struct ShortcutsSettingsView: View {
     _recordingShortcut = State(initialValue: KeyboardShortcutManager.shared.recordingShortcut)
     _annotateShortcut = State(initialValue: KeyboardShortcutManager.shared.annotateShortcut)
     _videoEditorShortcut = State(initialValue: KeyboardShortcutManager.shared.videoEditorShortcut)
+    _copyAndCloseShortcut = State(initialValue: AnnotateShortcutManager.shared.copyAndCloseShortcut)
+    _togglePinShortcut = State(initialValue: AnnotateShortcutManager.shared.togglePinShortcut)
     _shortcutsEnabled = State(initialValue: KeyboardShortcutManager.shared.isEnabled)
     _hasSystemConflict = State(
       initialValue: SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
@@ -270,6 +274,28 @@ struct ShortcutsSettingsView: View {
             .padding(.top, 4)
         }
 
+        Section("Annotate Editor Actions") {
+          Text("Shortcuts for common actions inside the annotation editor.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+          ShortcutRecorderView(
+            label: "Copy & Close",
+            icon: "doc.on.doc",
+            description: "Copy annotated image to clipboard and close",
+            shortcut: $copyAndCloseShortcut,
+            onShortcutChanged: { annotateManager.setCopyAndCloseShortcut($0) }
+          )
+
+          ShortcutRecorderView(
+            label: "Toggle Pin",
+            icon: "pin",
+            description: "Pin or unpin the annotation window",
+            shortcut: $togglePinShortcut,
+            onShortcutChanged: { annotateManager.setTogglePinShortcut($0) }
+          )
+        }
+
         Section("Annotation Tool Shortcuts") {
           Text("Single-key shortcuts for switching tools in the annotation editor.")
             .font(.caption)
@@ -289,6 +315,22 @@ struct ShortcutsSettingsView: View {
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 4)
+        }
+
+        Section("Annotate Editor Reference") {
+          Text("Standard macOS shortcuts used in the annotation editor.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+          ReadOnlyShortcutRow(icon: "square.and.arrow.down", label: "Save (Done)", shortcut: "⌘ S")
+          ReadOnlyShortcutRow(icon: "square.and.arrow.down.on.square", label: "Save As…", shortcut: "⌘ ⇧ S")
+          ReadOnlyShortcutRow(icon: "arrow.uturn.backward", label: "Undo", shortcut: "⌘ Z")
+          ReadOnlyShortcutRow(icon: "arrow.uturn.forward", label: "Redo", shortcut: "⌘ ⇧ Z")
+          ReadOnlyShortcutRow(icon: "trash", label: "Delete Annotation", shortcut: "⌫")
+          ReadOnlyShortcutRow(icon: "escape", label: "Cancel / Deselect", shortcut: "⎋")
+          ReadOnlyShortcutRow(icon: "return", label: "Confirm Crop", shortcut: "↩")
+          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: "Nudge Annotation", shortcut: "← → ↑ ↓")
+          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: "Nudge 10px", shortcut: "⇧ ← → ↑ ↓")
         }
       }
     }
@@ -315,6 +357,8 @@ struct ShortcutsSettingsView: View {
     recordingShortcut = .defaultRecording
     annotateShortcut = .defaultAnnotate
     videoEditorShortcut = .defaultVideoEditor
+    copyAndCloseShortcut = AnnotateShortcutManager.defaultCopyAndClose
+    togglePinShortcut = AnnotateShortcutManager.defaultTogglePin
 
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
@@ -323,7 +367,7 @@ struct ShortcutsSettingsView: View {
     manager.setAnnotateShortcut(.defaultAnnotate)
     manager.setVideoEditorShortcut(.defaultVideoEditor)
 
-    // Reset annotation tool shortcuts
+    // Reset annotation tool + action shortcuts
     annotateManager.resetToDefaults()
   }
 
@@ -399,4 +443,37 @@ private struct PreferencesGuideStep: View {
 #Preview {
   ShortcutsSettingsView()
     .frame(width: 600, height: 500)
+}
+
+// MARK: - Read-Only Shortcut Row
+
+private struct ReadOnlyShortcutRow: View {
+  let icon: String
+  let label: String
+  let shortcut: String
+
+  var body: some View {
+    HStack(spacing: 12) {
+      Image(systemName: icon)
+        .font(.title3)
+        .foregroundColor(.secondary)
+        .frame(width: 24)
+
+      Text(label)
+        .frame(minWidth: 100, alignment: .leading)
+
+      Spacer()
+
+      Text(shortcut)
+        .font(.system(.body, design: .monospaced))
+        .foregroundColor(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(
+          RoundedRectangle(cornerRadius: 6)
+            .fill(Color.gray.opacity(0.1))
+        )
+    }
+    .padding(.vertical, 2)
+  }
 }
