@@ -26,6 +26,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.1] - 2026-03-20
+
+### Bug Fixes
+-  enhance image rendering and screen capture quality with pixel-perfect techniques and dynamic scaling. (6b98c2c)
+
+### Chore
+- docs: Add comprehensive documentation detailing the screen capture pipeline, architecture, and post-capture actions. (0c252f2)
+- chore: update appcast, cask, and readme for v1.3.0 (0b21b54)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.0] - 2026-03-20
 
 ### Features
