@@ -30,6 +30,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.5] - 2026-03-21
+
+### Chore
+- refactor: Enhance diagnostic logging with detailed system information, error context, and source location. (e45411d)
+- chore: update appcast, cask, and readme for v1.3.4 (9b583c3)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.4] - 2026-03-21
 
 ### Bug Fixes
