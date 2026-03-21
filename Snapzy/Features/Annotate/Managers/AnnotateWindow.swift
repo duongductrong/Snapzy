@@ -147,6 +147,12 @@ final class AnnotateWindow: NSWindow {
   /// Track whether Space key is currently held for pan mode
   private var isSpaceHeld = false
 
+  /// Whether the current first responder is a text input (TextEditor, NSTextView, etc.)
+  private var isTextInputActive: Bool {
+    guard let responder = firstResponder else { return false }
+    return responder is NSTextView || responder is NSTextField
+  }
+
   /// Intercept scroll wheel (Cmd+scroll), trackpad magnify, Space key,
   /// and mouse drag events at the window level for zoom & pan.
   override func sendEvent(_ event: NSEvent) {
@@ -173,21 +179,28 @@ final class AnnotateWindow: NSWindow {
       return  // Consume event
 
     case .keyDown where event.keyCode == 49:
+      // If a text input is focused, let Space pass through for typing
+      if isTextInputActive { break }
       // Space key down — consume ALL (including repeats) to prevent system beep
       if !event.isARepeat {
         isSpaceHeld = true
+        NSCursor.openHand.set()
         NotificationCenter.default.post(name: .annotateSpaceDown, object: self)
       }
       return  // Always consume to silence beep
 
     case .keyUp where event.keyCode == 49:
+      // If a text input is focused, let Space pass through
+      if isTextInputActive { break }
       // Space key up → deactivate pan mode
       isSpaceHeld = false
+      NSCursor.arrow.set()
       NotificationCenter.default.post(name: .annotateSpaceUp, object: self)
       return
 
     case .leftMouseDragged where isSpaceHeld:
       // Mouse drag while Space held → pan
+      NSCursor.closedHand.set()
       let dx = event.deltaX
       let dy = event.deltaY
       NotificationCenter.default.post(
@@ -202,7 +215,8 @@ final class AnnotateWindow: NSWindow {
       return
 
     case .leftMouseUp where isSpaceHeld:
-      // Consume mouse-up during pan
+      // Consume mouse-up during pan, restore open-hand cursor
+      NSCursor.openHand.set()
       return
 
     default:
