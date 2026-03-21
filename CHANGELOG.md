@@ -27,6 +27,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.2] - 2026-03-21
+
+### Bug Fixes
+-  Always display the 'Copy' button in the Quick Access card hover overlay. (c6bbde1)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.3.1 (d3b32f8)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.1] - 2026-03-20
 
 ### Bug Fixes
