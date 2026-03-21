@@ -28,22 +28,19 @@
 
 ## Features
 
-- Capture fullscreen or selected-area screenshots
-- Extract on-screen text with OCR capture
-- Record screen as video or GIF
-- Capture system audio and optional microphone input
-- Annotate images with shapes, text, blur, crop, counters, and mockup backgrounds
-- Edit recordings with trim, zoom, wallpaper backgrounds, and Follow Mouse support
-- Launch from the menu bar with global shortcuts and Quick Access actions
-- Hide desktop icons/widgets during capture and get in-app updates via Sparkle
-
-## Requirements
-
-- macOS 13.0+
-- Xcode 15.0+ for local builds
-- Command Line Tools: `xcode-select --install`
+- **Screenshot**: fullscreen or selected-area capture, OCR text extraction, window shadow capture (macOS 14+), multi-format export (PNG/JPG/WebP), hide desktop icons/widgets, quick screenshot during recording
+- **Screen Recording**: video or GIF output, system audio + microphone, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing
+- **Annotation Editor**: shapes, arrows, text, filled rectangles, blur/pixelate, counters, crop, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app, configurable tool shortcuts
+- **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
+- **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, open, and delete actions
+- **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools with system conflict detection
+- **Onboarding**: splash screen, guided permissions setup, and shortcut configuration for first-time users
+- **Updates & Diagnostics**: in-app updates via Sparkle, crash reporting, cache management
+- **Platform**: menu-bar app, appearance theming (light/dark/system), App Sandbox with secure file-access bookmarks
 
 ## Install
+
+> Requires **macOS 13.0** or later.
 
 ### Homebrew
 
@@ -86,6 +83,8 @@ Or if you cloned the repo:
 This will remove the app from `/Applications`, delete preferences and caches, and reset TCC permissions (Screen Recording, Microphone, Accessibility). You may need to log out or reboot for permission changes to fully take effect.
 
 ## Build from source
+
+> Requires **Xcode 15.0+** and Command Line Tools (`xcode-select --install`).
 
 1. Clone the repository:
 
