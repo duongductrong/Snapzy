@@ -258,19 +258,18 @@ final class RecordingToolbarWindow: NSWindow {
   private func positionBelowRect(_ rect: CGRect) {
     guard let size = contentView?.fittingSize else { return }
 
+    // Find the screen containing the anchor rect (not NSScreen.main which is always primary)
+    let screen = NSScreen.screens.first(where: { $0.frame.intersects(rect) })
+      ?? ScreenUtility.activeScreen()
+    let screenFrame = screen.visibleFrame
+
     // Position centered below the selection rect
     let x = rect.midX - size.width / 2
     let y = rect.minY - size.height - 20
 
-    // Ensure minimum distance from screen edge
-    let safeY = max(y, 40)
-
-    // Clamp X to screen bounds
-    var safeX = x
-    if let screen = NSScreen.main {
-      let screenFrame = screen.visibleFrame
-      safeX = max(screenFrame.minX + 10, min(x, screenFrame.maxX - size.width - 10))
-    }
+    // Clamp to the correct screen bounds
+    let safeX = max(screenFrame.minX + 10, min(x, screenFrame.maxX - size.width - 10))
+    let safeY = max(screenFrame.minY + 10, min(y, screenFrame.maxY - size.height - 10))
 
     setFrameOrigin(CGPoint(x: safeX, y: safeY))
     orderFrontRegardless()

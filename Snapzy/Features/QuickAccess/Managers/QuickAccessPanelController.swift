@@ -26,7 +26,7 @@ final class QuickAccessPanelController {
   func show<Content: View>(_ content: Content, size: CGSize) {
     guard !isAnimating else { return }
 
-    let screen = NSScreen.main ?? NSScreen.screens.first!
+    let screen = ScreenUtility.activeScreen()
     let targetOrigin = position.calculateOrigin(for: size, on: screen, padding: padding)
     let targetFrame = NSRect(origin: targetOrigin, size: size)
 
@@ -89,7 +89,7 @@ final class QuickAccessPanelController {
   /// Resize panel and reposition instantly to avoid fighting SwiftUI card animations
   func updateSize(_ size: CGSize) {
     guard let panel = panel, !isAnimating else { return }
-    let screen = NSScreen.main ?? NSScreen.screens.first!
+    let screen = ScreenUtility.activeScreen()
     let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
     let targetFrame = NSRect(origin: origin, size: size)
     panel.setFrame(targetFrame, display: true, animate: false)
@@ -113,7 +113,7 @@ final class QuickAccessPanelController {
       })
     } else {
       // Slide-out to off-screen
-      let screen = NSScreen.main ?? NSScreen.screens.first!
+      let screen = ScreenUtility.activeScreen()
       let size = panel.frame.size
       let offscreenOrigin = position.offscreenOrigin(for: size, on: screen, padding: padding)
       let offscreenFrame = NSRect(origin: offscreenOrigin, size: size)
@@ -142,7 +142,7 @@ final class QuickAccessPanelController {
   private func repositionPanel() {
     guard let panel = panel, !isAnimating else { return }
     let size = panel.frame.size
-    let screen = NSScreen.main ?? NSScreen.screens.first!
+    let screen = ScreenUtility.activeScreen()
     let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
 
     if reduceMotion {

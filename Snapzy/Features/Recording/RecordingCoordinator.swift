@@ -194,7 +194,7 @@ final class RecordingCoordinator: ObservableObject {
 
   /// Handle capture mode toggle between area and fullscreen
   private func handleCaptureModeChange(_ mode: RecordingCaptureMode) {
-    guard let screen = NSScreen.main else { return }
+    let screen = ScreenUtility.activeScreen()
 
     switch mode {
     case .fullscreen:

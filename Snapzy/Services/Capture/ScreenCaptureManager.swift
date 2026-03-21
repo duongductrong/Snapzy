@@ -171,7 +171,7 @@ final class ScreenCaptureManager: ObservableObject {
       let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
 
       // Get the target display
-      let targetDisplayID = displayID ?? CGMainDisplayID()
+      let targetDisplayID = displayID ?? ScreenUtility.activeDisplayID()
       guard
         let display = content.displays.first(where: { $0.displayID == targetDisplayID })
           ?? content.displays.first
