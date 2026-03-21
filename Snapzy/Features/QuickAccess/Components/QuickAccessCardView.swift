@@ -311,7 +311,6 @@ struct QuickAccessCardView: View {
 
   private var hoverOverlay: some View {
     let captureType: CaptureType = item.isVideo ? .recording : .screenshot
-    let showCopy = preferencesManager.isActionEnabled(.copyFile, for: captureType)
     let showSaveToggle = preferencesManager.isActionEnabled(.save, for: captureType)
     let isTempFile = TempCaptureManager.shared.isTempFile(item.url)
     // Always show save button for temp files (it's the only way to persist them)
@@ -322,19 +321,18 @@ struct QuickAccessCardView: View {
       RoundedRectangle(cornerRadius: cornerRadius)
         .fill(Color.black.opacity(0.4))
 
-      // Action buttons with stagger effect (only show enabled actions)
+      // Action buttons with stagger effect
       VStack(spacing: 8) {
-        if showCopy {
-          staggeredButton(label: "Copy", delay: 0) {
-            QuickAccessSound.copy.play(reduceMotion: reduceMotion)
-            manager.copyToClipboard(id: item.id)
-          }
+        // Always show Copy button for manual copy, regardless of auto-copy setting
+        staggeredButton(label: "Copy", delay: 0) {
+          QuickAccessSound.copy.play(reduceMotion: reduceMotion)
+          manager.copyToClipboard(id: item.id)
         }
 
         if showSave {
           staggeredButton(
             label: isTempFile ? "Save" : "Open",
-            delay: showCopy ? 1 : 0
+            delay: 1
           ) {
             QuickAccessSound.save.play(reduceMotion: reduceMotion)
             if isTempFile {
