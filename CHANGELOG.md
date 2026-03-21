@@ -28,6 +28,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.3] - 2026-03-21
+
+### Bug Fixes
+-  add `ScreenUtility` to accurately determine the active screen for multi-monitor UI positioning and capture operations. (d2ded2b)
+-  Write both NSURL and NSImage to the pasteboard for maximum compatibility across applications. (4f3bb18)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.3.2 (649c0f4)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.2] - 2026-03-21
 
 ### Bug Fixes
