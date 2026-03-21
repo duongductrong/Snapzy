@@ -29,6 +29,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.3.4] - 2026-03-21
+
+### Bug Fixes
+-  Update Space key to function in text inputs and provide cursor feedback for pan mode. (4579a65)
+
+### Chore
+- docs: Add a comprehensive security policy document and link it from the README. (ce2dfa2)
+- docs: update and expand README features list with more detail and relocate requirements. (ccb69dd)
+- chore: update appcast, cask, and readme for v1.3.3 (4a45eaa)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.3] - 2026-03-21
 
 ### Bug Fixes
