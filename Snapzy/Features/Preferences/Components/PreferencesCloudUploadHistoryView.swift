@@ -29,18 +29,52 @@ final class CloudUploadHistoryWindowController {
     let hostingView = NSHostingView(rootView: view)
 
     let newWindow = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 600, height: 500),
+      contentRect: NSRect(x: 0, y: 0, width: 800, height: 560),
       styleMask: [.titled, .closable, .resizable, .miniaturizable],
       backing: .buffered,
       defer: false
     )
     newWindow.title = "Cloud Upload History"
     newWindow.contentView = hostingView
+    newWindow.minSize = NSSize(width: 700, height: 400)
     newWindow.center()
     newWindow.isReleasedWhenClosed = false
     newWindow.makeKeyAndOrderFront(nil)
 
     window = newWindow
+  }
+}
+
+// MARK: - Filter Types
+
+enum HistoryDisplayMode: String, CaseIterable {
+  case list, grid
+  var icon: String {
+    switch self {
+    case .list: return "list.bullet"
+    case .grid: return "square.grid.2x2"
+    }
+  }
+}
+
+enum HistoryStatusFilter: String, CaseIterable {
+  case all, active, expired
+  var label: String { rawValue.capitalized }
+}
+
+enum HistorySortOrder: String, CaseIterable {
+  case newestFirst = "newest"
+  case oldestFirst = "oldest"
+  case largestFirst = "largest"
+  case smallestFirst = "smallest"
+
+  var label: String {
+    switch self {
+    case .newestFirst: return "Newest First"
+    case .oldestFirst: return "Oldest First"
+    case .largestFirst: return "Largest First"
+    case .smallestFirst: return "Smallest First"
+    }
   }
 }
 
@@ -50,105 +84,76 @@ final class CloudUploadHistoryWindowController {
 struct CloudUploadHistoryView: View {
   @ObservedObject private var store = CloudUploadHistoryStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
+
   @State private var searchText = ""
+  @State private var displayMode: HistoryDisplayMode = .list
+  @State private var statusFilter: HistoryStatusFilter = .all
+  @State private var providerFilter: CloudProviderType?
+  @State private var expireFilter: CloudExpireTime?
+  @State private var sortOrder: HistorySortOrder = .newestFirst
+  @State private var showFilterPopover = false
+
   @State private var confirmDeleteAll = false
   @State private var isDeleting = false
   @State private var deleteError: String?
 
+  /// Number of active (non-default) filters for badge
+  private var activeFilterCount: Int {
+    var count = 0
+    if statusFilter != .all { count += 1 }
+    if providerFilter != nil { count += 1 }
+    if expireFilter != nil { count += 1 }
+    if sortOrder != .newestFirst { count += 1 }
+    return count
+  }
+
   private var filteredRecords: [CloudUploadRecord] {
-    if searchText.isEmpty { return store.records }
-    return store.records.filter { record in
-      record.fileName.localizedCaseInsensitiveContains(searchText)
-        || record.publicURL.absoluteString.localizedCaseInsensitiveContains(searchText)
+    var result = store.records
+
+    // Search
+    if !searchText.isEmpty {
+      result = result.filter {
+        $0.fileName.localizedCaseInsensitiveContains(searchText)
+          || $0.publicURL.absoluteString.localizedCaseInsensitiveContains(searchText)
+      }
     }
+
+    // Status
+    switch statusFilter {
+    case .all: break
+    case .active: result = result.filter { !$0.isExpired }
+    case .expired: result = result.filter { $0.isExpired }
+    }
+
+    // Provider
+    if let provider = providerFilter {
+      result = result.filter { $0.providerType == provider }
+    }
+
+    // Expire time
+    if let expire = expireFilter {
+      result = result.filter { $0.expireTime == expire }
+    }
+
+    // Sort
+    switch sortOrder {
+    case .newestFirst: result.sort { $0.uploadedAt > $1.uploadedAt }
+    case .oldestFirst: result.sort { $0.uploadedAt < $1.uploadedAt }
+    case .largestFirst: result.sort { $0.fileSize > $1.fileSize }
+    case .smallestFirst: result.sort { $0.fileSize < $1.fileSize }
+    }
+
+    return result
   }
 
   var body: some View {
     VStack(spacing: 0) {
-      // Toolbar
-      HStack {
-        HStack(spacing: 6) {
-          Image(systemName: "magnifyingglass")
-            .foregroundColor(.secondary)
-            .font(.system(size: 12))
-          TextField("Search uploads...", text: $searchText)
-            .textFieldStyle(.plain)
-            .font(.system(size: 13))
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
-
-        Spacer()
-
-        if isDeleting {
-          ProgressView()
-            .scaleEffect(0.6)
-            .frame(width: 14, height: 14)
-        }
-
-        Text("\(store.records.count) uploads")
-          .font(.system(size: 11))
-          .foregroundColor(.secondary)
-
-        Button(role: .destructive) {
-          confirmDeleteAll = true
-        } label: {
-          Image(systemName: "trash")
-            .font(.system(size: 12))
-        }
-        .buttonStyle(.plain)
-        .help("Clear all history")
-        .disabled(store.records.isEmpty || isDeleting)
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 10)
-
-      // Error banner
-      if let error = deleteError {
-        HStack(spacing: 6) {
-          Image(systemName: "exclamationmark.triangle.fill")
-            .foregroundColor(.orange)
-            .font(.system(size: 11))
-          Text(error)
-            .font(.system(size: 11))
-            .foregroundColor(.orange)
-          Spacer()
-          Button("Dismiss") { deleteError = nil }
-            .font(.system(size: 10))
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(Color.orange.opacity(0.1))
-      }
-
+      toolbar
+      errorBanner
       Divider()
-
-      // Records list
-      if filteredRecords.isEmpty {
-        VStack(spacing: 8) {
-          Spacer()
-          Image(systemName: "icloud.slash")
-            .font(.system(size: 32))
-            .foregroundColor(.secondary)
-          Text(searchText.isEmpty ? "No uploads yet" : "No results found")
-            .font(.system(size: 14))
-            .foregroundColor(.secondary)
-          Spacer()
-        }
-        .frame(maxWidth: .infinity)
-      } else {
-        List {
-          ForEach(filteredRecords) { record in
-            HistoryRecordRow(record: record, isDeleting: isDeleting) {
-              deleteRecord(record)
-            }
-          }
-        }
-        .listStyle(.inset(alternatesRowBackgrounds: true))
-      }
+      contentArea
     }
-    .frame(minWidth: 500, minHeight: 350)
+    .frame(minWidth: 700, minHeight: 400)
     .alert("Clear All Upload History?", isPresented: $confirmDeleteAll) {
       Button("Delete from Cloud & Clear", role: .destructive) {
         deleteAllFromCloud()
@@ -158,9 +163,254 @@ struct CloudUploadHistoryView: View {
       }
       Button("Cancel", role: .cancel) {}
     } message: {
-      Text("\"Delete from Cloud & Clear\" removes files from cloud storage and local history.\n\"Clear History Only\" removes local records but keeps files on cloud.")
+      Text(
+        "\"Delete from Cloud & Clear\" removes files from cloud storage and local history.\n\"Clear History Only\" removes local records but keeps files on cloud."
+      )
     }
   }
+
+  // MARK: - Toolbar
+
+  private var toolbar: some View {
+    HStack(spacing: 10) {
+      // Search
+      HStack(spacing: 6) {
+        Image(systemName: "magnifyingglass")
+          .foregroundColor(.secondary)
+          .font(.system(size: 12))
+        TextField("Search uploads...", text: $searchText)
+          .textFieldStyle(.plain)
+          .font(.system(size: 13))
+      }
+      .padding(.horizontal, 8)
+      .padding(.vertical, 6)
+      .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.06)))
+      .frame(maxWidth: 240)
+
+      Spacer()
+
+      // Display mode toggle
+      Picker("", selection: $displayMode) {
+        ForEach(HistoryDisplayMode.allCases, id: \.self) { mode in
+          Image(systemName: mode.icon).tag(mode)
+        }
+      }
+      .pickerStyle(.segmented)
+      .frame(width: 70)
+
+      // Filter button
+      Button(action: { showFilterPopover.toggle() }) {
+        ZStack(alignment: .topTrailing) {
+          Image(systemName: "line.3.horizontal.decrease.circle")
+            .font(.system(size: 14))
+          if activeFilterCount > 0 {
+            Text("\(activeFilterCount)")
+              .font(.system(size: 8, weight: .bold))
+              .foregroundColor(.white)
+              .frame(width: 13, height: 13)
+              .background(Circle().fill(Color.accentColor))
+              .offset(x: 5, y: -5)
+          }
+        }
+      }
+      .buttonStyle(.plain)
+      .help("Filters")
+      .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
+        filterPopoverContent
+      }
+
+      if isDeleting {
+        ProgressView()
+          .scaleEffect(0.6)
+          .frame(width: 14, height: 14)
+      }
+
+      Text("\(filteredRecords.count) uploads")
+        .font(.system(size: 11))
+        .foregroundColor(.secondary)
+
+      Button(role: .destructive) {
+        confirmDeleteAll = true
+      } label: {
+        Image(systemName: "trash")
+          .font(.system(size: 12))
+      }
+      .buttonStyle(.plain)
+      .help("Clear all history")
+      .disabled(store.records.isEmpty || isDeleting)
+    }
+    .padding(.horizontal, 16)
+    .padding(.vertical, 10)
+  }
+
+  // MARK: - Filter Popover
+
+  private var filterPopoverContent: some View {
+    VStack(alignment: .leading, spacing: 14) {
+      // Status
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Status")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.secondary)
+        Picker("", selection: $statusFilter) {
+          ForEach(HistoryStatusFilter.allCases, id: \.self) { s in
+            Text(s.label).tag(s)
+          }
+        }
+        .pickerStyle(.segmented)
+      }
+
+      // Provider
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Provider")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.secondary)
+        Picker("", selection: $providerFilter) {
+          Text("All").tag(CloudProviderType?.none)
+          ForEach(CloudProviderType.allCases, id: \.self) { p in
+            Text(p.displayName).tag(CloudProviderType?.some(p))
+          }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+      }
+
+      // Expire Time
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Expire Time")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.secondary)
+        Picker("", selection: $expireFilter) {
+          Text("All").tag(CloudExpireTime?.none)
+          ForEach(CloudExpireTime.allCases, id: \.self) { e in
+            Text(e.displayName).tag(CloudExpireTime?.some(e))
+          }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+      }
+
+      // Sort
+      VStack(alignment: .leading, spacing: 4) {
+        Text("Sort By")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(.secondary)
+        Picker("", selection: $sortOrder) {
+          ForEach(HistorySortOrder.allCases, id: \.self) { s in
+            Text(s.label).tag(s)
+          }
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+      }
+
+      // Reset
+      if activeFilterCount > 0 {
+        Button("Reset Filters") {
+          statusFilter = .all
+          providerFilter = nil
+          expireFilter = nil
+          sortOrder = .newestFirst
+        }
+        .font(.system(size: 11))
+      }
+    }
+    .padding(14)
+    .frame(width: 220)
+  }
+
+  // MARK: - Error Banner
+
+  @ViewBuilder
+  private var errorBanner: some View {
+    if let error = deleteError {
+      HStack(spacing: 6) {
+        Image(systemName: "exclamationmark.triangle.fill")
+          .foregroundColor(.orange)
+          .font(.system(size: 11))
+        Text(error)
+          .font(.system(size: 11))
+          .foregroundColor(.orange)
+        Spacer()
+        Button("Dismiss") { deleteError = nil }
+          .font(.system(size: 10))
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 6)
+      .background(Color.orange.opacity(0.1))
+    }
+  }
+
+  // MARK: - Content Area
+
+  @ViewBuilder
+  private var contentArea: some View {
+    if filteredRecords.isEmpty {
+      emptyState
+    } else {
+      switch displayMode {
+      case .list: listView
+      case .grid: gridView
+      }
+    }
+  }
+
+  private var emptyState: some View {
+    VStack(spacing: 8) {
+      Spacer()
+      Image(systemName: "icloud.slash")
+        .font(.system(size: 32))
+        .foregroundColor(.secondary)
+      Text(searchText.isEmpty && activeFilterCount == 0 ? "No uploads yet" : "No results found")
+        .font(.system(size: 14))
+        .foregroundColor(.secondary)
+      if activeFilterCount > 0 {
+        Button("Reset Filters") {
+          statusFilter = .all
+          providerFilter = nil
+          expireFilter = nil
+          sortOrder = .newestFirst
+          searchText = ""
+        }
+        .font(.system(size: 12))
+      }
+      Spacer()
+    }
+    .frame(maxWidth: .infinity)
+  }
+
+  // MARK: - List View
+
+  private var listView: some View {
+    List {
+      ForEach(filteredRecords) { record in
+        HistoryRecordRow(record: record, isDeleting: isDeleting) {
+          deleteRecord(record)
+        }
+      }
+    }
+    .listStyle(.inset(alternatesRowBackgrounds: true))
+  }
+
+  // MARK: - Grid View
+
+  private var gridView: some View {
+    ScrollView {
+      LazyVGrid(
+        columns: [GridItem(.adaptive(minimum: 170, maximum: 220), spacing: 12)],
+        spacing: 12
+      ) {
+        ForEach(filteredRecords) { record in
+          HistoryGridItem(record: record, isDeleting: isDeleting) {
+            deleteRecord(record)
+          }
+        }
+      }
+      .padding(16)
+    }
+  }
+
+  // MARK: - Actions
 
   private func deleteRecord(_ record: CloudUploadRecord) {
     isDeleting = true
@@ -190,7 +440,7 @@ struct CloudUploadHistoryView: View {
   }
 }
 
-// MARK: - History Record Row
+// MARK: - History Record Row (List)
 
 private struct HistoryRecordRow: View {
   let record: CloudUploadRecord
@@ -202,11 +452,10 @@ private struct HistoryRecordRow: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      // File icon
-      Image(systemName: record.isExpired ? "doc.badge.clock" : "doc.fill")
-        .font(.system(size: 18))
-        .foregroundColor(record.isExpired ? .orange : .accentColor)
-        .frame(width: 28)
+      // Thumbnail or icon
+      thumbnailOrIcon
+        .frame(width: 36, height: 36)
+        .clipShape(RoundedRectangle(cornerRadius: 4))
 
       // File info
       VStack(alignment: .leading, spacing: 3) {
@@ -238,7 +487,7 @@ private struct HistoryRecordRow: View {
 
       Spacer()
 
-      // Actions
+      // Actions on hover
       if isHovering {
         HStack(spacing: 8) {
           Button(action: copyLink) {
@@ -273,6 +522,27 @@ private struct HistoryRecordRow: View {
     .animation(.easeInOut(duration: 0.15), value: isHovering)
   }
 
+  @ViewBuilder
+  private var thumbnailOrIcon: some View {
+    if let thumbURL = record.thumbnailURL,
+      let nsImage = NSImage(contentsOf: thumbURL)
+    {
+      Image(nsImage: nsImage)
+        .resizable()
+        .aspectRatio(contentMode: .fill)
+    } else {
+      Image(systemName: record.isExpired ? "doc.badge.clock" : fileTypeIcon)
+        .font(.system(size: 18))
+        .foregroundColor(record.isExpired ? .orange : .accentColor)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.primary.opacity(0.04))
+    }
+  }
+
+  private var fileTypeIcon: String {
+    record.isImageType ? "photo.fill" : "doc.fill"
+  }
+
   private func copyLink() {
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
@@ -289,7 +559,176 @@ private struct HistoryRecordRow: View {
   }
 }
 
+// MARK: - History Grid Item
+
+private struct HistoryGridItem: View {
+  let record: CloudUploadRecord
+  let isDeleting: Bool
+  let onDelete: () -> Void
+
+  @State private var isHovering = false
+  @State private var copied = false
+
+  var body: some View {
+    VStack(spacing: 0) {
+      // Thumbnail area
+      ZStack {
+        thumbnailArea
+          .frame(height: 120)
+          .frame(maxWidth: .infinity)
+          .clipped()
+
+        // Status badge (top-trailing)
+        VStack {
+          HStack {
+            Spacer()
+            if record.isExpired {
+              Text("Expired")
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.orange))
+            }
+          }
+          .padding(6)
+          Spacer()
+        }
+
+        // Hover overlay (centered)
+        if isHovering {
+          Color.black.opacity(0.4)
+          HStack(spacing: 12) {
+            gridActionButton(
+              icon: copied ? "checkmark" : "doc.on.doc",
+              color: copied ? .green : .white
+            ) {
+              copyLink()
+            }
+            gridActionButton(icon: "safari", color: .white) {
+              NSWorkspace.shared.open(record.publicURL)
+            }
+            gridActionButton(icon: "trash", color: .red) {
+              onDelete()
+            }
+          }
+          .transition(.opacity)
+        }
+      }
+      .frame(height: 120)
+      .clipShape(
+        UnevenRoundedRectangle(
+          topLeadingRadius: 8,
+          bottomLeadingRadius: 0,
+          bottomTrailingRadius: 0,
+          topTrailingRadius: 8
+        )
+      )
+
+      // Info area
+      VStack(alignment: .leading, spacing: 3) {
+        Text(record.fileName)
+          .font(.system(size: 12, weight: .medium))
+          .lineLimit(1)
+          .truncationMode(.middle)
+
+        HStack(spacing: 6) {
+          Text(record.formattedDate)
+          Text("·")
+          Text(record.formattedFileSize)
+        }
+        .font(.system(size: 10))
+        .foregroundColor(.secondary)
+        .lineLimit(1)
+      }
+      .padding(.horizontal, 10)
+      .padding(.vertical, 8)
+      .frame(maxWidth: .infinity, alignment: .leading)
+    }
+    .background(
+      RoundedRectangle(cornerRadius: 8)
+        .fill(Color.primary.opacity(isHovering ? 0.06 : 0.03))
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 8)
+        .strokeBorder(Color.primary.opacity(isHovering ? 0.15 : 0.08), lineWidth: 1)
+    )
+    .contentShape(Rectangle())
+    .onHover { isHovering = $0 }
+    .animation(.easeInOut(duration: 0.15), value: isHovering)
+  }
+
+  @ViewBuilder
+  private var thumbnailArea: some View {
+    if let thumbURL = record.thumbnailURL,
+      let nsImage = NSImage(contentsOf: thumbURL)
+    {
+      Image(nsImage: nsImage)
+        .resizable()
+        .aspectRatio(contentMode: .fill)
+    } else if record.isImageType {
+      // Fallback: load from cloud URL for older uploads without local thumbnail
+      AsyncImage(url: record.publicURL) { phase in
+        switch phase {
+        case .success(let image):
+          image
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+        case .failure:
+          placeholderIcon
+        case .empty:
+          ProgressView()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        @unknown default:
+          placeholderIcon
+        }
+      }
+    } else {
+      placeholderIcon
+    }
+  }
+
+  private var placeholderIcon: some View {
+    VStack(spacing: 6) {
+      Image(systemName: record.isImageType ? "photo" : "doc.fill")
+        .font(.system(size: 28))
+        .foregroundColor(.secondary.opacity(0.5))
+      Text(
+        (record.fileName as NSString).pathExtension.uppercased()
+      )
+      .font(.system(size: 10, weight: .medium, design: .monospaced))
+      .foregroundColor(.secondary.opacity(0.6))
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(Color.primary.opacity(0.03))
+  }
+
+  private func gridActionButton(
+    icon: String, color: Color, action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 13))
+        .foregroundColor(color)
+        .frame(width: 30, height: 30)
+        .background(Circle().fill(Color.black.opacity(0.5)))
+    }
+    .buttonStyle(.plain)
+  }
+
+  private func copyLink() {
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(record.publicURL.absoluteString, forType: .string)
+    copied = true
+    Task {
+      try? await Task.sleep(nanoseconds: 1_500_000_000)
+      copied = false
+    }
+  }
+}
+
 #Preview {
   CloudUploadHistoryView()
-    .frame(width: 600, height: 500)
+    .frame(width: 800, height: 560)
 }

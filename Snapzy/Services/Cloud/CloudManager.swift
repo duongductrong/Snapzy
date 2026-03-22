@@ -5,6 +5,7 @@
 //  Singleton facade managing cloud configuration, Keychain credentials, and upload orchestration
 //
 
+import AppKit
 import Combine
 import Foundation
 import os.log
@@ -215,17 +216,24 @@ final class CloudManager: ObservableObject {
       )
 
       // Record in history
+      let recordId = UUID()
       let record = CloudUploadRecord(
-        id: UUID(),
+        id: recordId,
         fileName: fileURL.lastPathComponent,
         publicURL: result.publicURL,
         key: result.key,
         fileSize: result.fileSize,
         uploadedAt: result.uploadedAt,
         providerType: provider.providerType,
-        expireTime: config.expireTime
+        expireTime: config.expireTime,
+        contentType: contentType
       )
       CloudUploadHistoryStore.shared.add(record)
+
+      // Generate thumbnail for image uploads
+      if contentType.hasPrefix("image/") {
+        saveThumbnail(from: fileURL, recordId: recordId)
+      }
 
       logger.info("Upload completed: \(result.publicURL.absoluteString)")
       return result
@@ -253,6 +261,7 @@ final class CloudManager: ObservableObject {
 
     try await provider.delete(key: record.key)
     CloudUploadHistoryStore.shared.remove(id: record.id)
+    cleanupThumbnail(recordId: record.id)
     logger.info("Deleted from cloud: \(record.key)")
   }
 
@@ -284,6 +293,9 @@ final class CloudManager: ObservableObject {
         lastError = error
       }
     }
+    for record in records {
+      cleanupThumbnail(recordId: record.id)
+    }
     CloudUploadHistoryStore.shared.removeAll()
     logger.info("Bulk delete completed: \(records.count) records")
 
@@ -307,6 +319,52 @@ final class CloudManager: ObservableObject {
     case "mp4": return "video/mp4"
     default: return "application/octet-stream"
     }
+  }
+
+  // MARK: - Thumbnail
+
+  private var thumbnailsDirectory: URL {
+    let appSupport = FileManager.default.urls(
+      for: .applicationSupportDirectory, in: .userDomainMask
+    ).first!
+    return appSupport
+      .appendingPathComponent("Snapzy", isDirectory: true)
+      .appendingPathComponent("thumbnails", isDirectory: true)
+  }
+
+  /// Generate a 200px max-dimension JPEG thumbnail for image uploads
+  private func saveThumbnail(from fileURL: URL, recordId: UUID) {
+    guard let image = NSImage(contentsOf: fileURL) else { return }
+    let maxDimension: CGFloat = 200
+    let size = image.size
+    let scale = min(maxDimension / size.width, maxDimension / size.height, 1.0)
+    let newSize = NSSize(width: size.width * scale, height: size.height * scale)
+
+    let thumbImage = NSImage(size: newSize)
+    thumbImage.lockFocus()
+    image.draw(
+      in: NSRect(origin: .zero, size: newSize),
+      from: NSRect(origin: .zero, size: size),
+      operation: .copy,
+      fraction: 1.0
+    )
+    thumbImage.unlockFocus()
+
+    guard let tiffData = thumbImage.tiffRepresentation,
+      let bitmap = NSBitmapImageRep(data: tiffData),
+      let jpegData = bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
+    else { return }
+
+    let dir = thumbnailsDirectory
+    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+    let thumbURL = dir.appendingPathComponent("\(recordId.uuidString).jpg")
+    try? jpegData.write(to: thumbURL, options: .atomic)
+  }
+
+  /// Remove thumbnail file when a record is deleted
+  private func cleanupThumbnail(recordId: UUID) {
+    let thumbURL = thumbnailsDirectory.appendingPathComponent("\(recordId.uuidString).jpg")
+    try? FileManager.default.removeItem(at: thumbURL)
   }
 
   // MARK: - Keychain Operations
