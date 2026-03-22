@@ -71,4 +71,14 @@ final class R2CloudProvider: CloudProvider {
     logger.info("R2 delete: \(key)")
     try await s3Provider.delete(key: key)
   }
+
+  func setExpiration(days: Int) async throws {
+    logger.info("R2 setExpiration: \(days) days")
+    try await s3Provider.setExpiration(days: days)
+  }
+
+  func removeExpiration() async throws {
+    logger.info("R2 removeExpiration")
+    try await s3Provider.removeExpiration()
+  }
 }

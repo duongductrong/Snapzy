@@ -149,7 +149,7 @@ private struct CloudCredentialFormView: View {
   @State private var region = "us-east-1"
   @State private var endpoint = ""
   @State private var customDomain = ""
-  @State private var expireTime: CloudExpireTime = .hour1
+  @State private var expireTime: CloudExpireTime = .day7
   @State private var showSecretKey = false
 
   @State private var isValidating = false
@@ -253,10 +253,24 @@ private struct CloudCredentialFormView: View {
               .font(.system(size: 12))
               .padding(.top, 1)
             Text(
-              "Upload history is stored locally only. If you uninstall the app and delete local data, you'll need to manually delete files on the storage to manage their lifecycle."
+              "No lifecycle rule will be set. Files will remain permanently unless manually deleted."
             )
             .font(.system(size: 11))
             .foregroundColor(.orange)
+            .fixedSize(horizontal: false, vertical: true)
+          }
+          .padding(.vertical, 4)
+        } else {
+          HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "info.circle")
+              .foregroundColor(.secondary)
+              .font(.system(size: 12))
+              .padding(.top, 1)
+            Text(
+              "A lifecycle rule will be configured on your bucket to auto-delete files after the selected period. Deletion may take up to 24 hours after expiration."
+            )
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
           }
           .padding(.vertical, 4)
@@ -350,6 +364,15 @@ private struct CloudCredentialFormView: View {
           secretKey: secretKey.trimmingCharacters(in: .whitespaces)
         )
         try await cloudManager.validateCredentials()
+
+        // Apply lifecycle rule (non-blocking — permission errors show as warning)
+        do {
+          try await cloudManager.applyLifecycleRule()
+        } catch {
+          // Lifecycle rule failed (likely missing permissions) — save still succeeds
+          validationError = "Configuration saved, but lifecycle rule failed: \(error.localizedDescription). Ensure your credentials have lifecycle management permissions."
+        }
+
         validationSuccess = true
         isValidating = false
 

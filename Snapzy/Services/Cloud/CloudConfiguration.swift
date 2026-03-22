@@ -9,69 +9,68 @@ import Foundation
 
 // MARK: - Cloud Expire Time
 
-/// Expiration time options for uploaded files
+/// Expiration time options for uploaded files.
+/// Aligned with AWS S3 / Cloudflare R2 lifecycle rule granularity (days).
 enum CloudExpireTime: String, Codable, CaseIterable {
-  case min15 = "15m"
-  case min30 = "30m"
-  case hour1 = "1h"
-  case hour2 = "2h"
-  case hour3 = "3h"
-  case hour5 = "5h"
-  case hour8 = "8h"
-  case hour12 = "12h"
   case day1 = "1d"
   case day3 = "3d"
-  case day5 = "5d"
   case day7 = "7d"
-  case day15 = "15d"
-  case day24 = "24d"
+  case day14 = "14d"
   case day30 = "30d"
+  case day60 = "60d"
+  case day90 = "90d"
   case permanent = "permanent"
 
   var displayName: String {
     switch self {
-    case .min15: return "15 minutes"
-    case .min30: return "30 minutes"
-    case .hour1: return "1 hour"
-    case .hour2: return "2 hours"
-    case .hour3: return "3 hours"
-    case .hour5: return "5 hours"
-    case .hour8: return "8 hours"
-    case .hour12: return "12 hours"
     case .day1: return "1 day"
     case .day3: return "3 days"
-    case .day5: return "5 days"
     case .day7: return "7 days"
-    case .day15: return "15 days"
-    case .day24: return "24 days"
+    case .day14: return "14 days"
     case .day30: return "30 days"
+    case .day60: return "60 days"
+    case .day90: return "90 days"
     case .permanent: return "Permanent"
     }
   }
 
-  /// Duration in seconds, nil for permanent
-  var seconds: Int? {
+  /// Number of days for S3/R2 lifecycle Expiration.Days, nil for permanent
+  var days: Int? {
     switch self {
-    case .min15: return 15 * 60
-    case .min30: return 30 * 60
-    case .hour1: return 3600
-    case .hour2: return 2 * 3600
-    case .hour3: return 3 * 3600
-    case .hour5: return 5 * 3600
-    case .hour8: return 8 * 3600
-    case .hour12: return 12 * 3600
-    case .day1: return 86400
-    case .day3: return 3 * 86400
-    case .day5: return 5 * 86400
-    case .day7: return 7 * 86400
-    case .day15: return 15 * 86400
-    case .day24: return 24 * 86400
-    case .day30: return 30 * 86400
+    case .day1: return 1
+    case .day3: return 3
+    case .day7: return 7
+    case .day14: return 14
+    case .day30: return 30
+    case .day60: return 60
+    case .day90: return 90
     case .permanent: return nil
     }
   }
 
+  /// Duration in seconds, nil for permanent. Used for local isExpired check and Cache-Control.
+  var seconds: Int? {
+    guard let d = days else { return nil }
+    return d * 86400
+  }
+
   var isPermanent: Bool { self == .permanent }
+
+  /// Decode legacy values (15m, 30m, 1h, etc.) by mapping to nearest day-based option
+  init(legacyRawValue: String) {
+    switch legacyRawValue {
+    case "15m", "30m", "1h", "2h", "3h", "5h", "8h", "12h":
+      self = .day1
+    case "5d":
+      self = .day7
+    case "15d":
+      self = .day14
+    case "24d":
+      self = .day30
+    default:
+      self = CloudExpireTime(rawValue: legacyRawValue) ?? .day7
+    }
+  }
 }
 
 // MARK: - Cloud Configuration

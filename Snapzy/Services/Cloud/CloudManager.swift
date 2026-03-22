@@ -78,6 +78,24 @@ final class CloudManager: ObservableObject {
     logger.info("Cloud configuration saved: \(config.providerType.displayName)")
   }
 
+  /// Apply lifecycle expiration rule to the bucket based on current config.
+  /// Call after saveConfiguration + validateCredentials.
+  func applyLifecycleRule() async throws {
+    guard let provider = createProvider(),
+      let config = loadConfiguration()
+    else {
+      throw CloudError.notConfigured
+    }
+
+    if let days = config.expireTime.days {
+      try await provider.setExpiration(days: days)
+      logger.info("Lifecycle rule applied: \(days) days")
+    } else {
+      try await provider.removeExpiration()
+      logger.info("Lifecycle rule removed (permanent)")
+    }
+  }
+
   /// Load the current cloud configuration (non-sensitive parts from UserDefaults).
   func loadConfiguration() -> CloudConfiguration? {
     guard isConfigured else { return nil }
@@ -92,8 +110,9 @@ final class CloudManager: ObservableObject {
     let region = defaults.string(forKey: PreferencesKeys.cloudRegion) ?? ""
     let endpoint = defaults.string(forKey: PreferencesKeys.cloudEndpoint)
     let customDomain = defaults.string(forKey: PreferencesKeys.cloudCustomDomain)
-    let expireRaw = defaults.string(forKey: PreferencesKeys.cloudExpireTime) ?? CloudExpireTime.hour1.rawValue
-    let expireTime = CloudExpireTime(rawValue: expireRaw) ?? .hour1
+    let expireRaw = defaults.string(forKey: PreferencesKeys.cloudExpireTime) ?? CloudExpireTime.day7.rawValue
+    // Use standard init first, fallback to legacy migration for old hour/minute values
+    let expireTime = CloudExpireTime(rawValue: expireRaw) ?? CloudExpireTime(legacyRawValue: expireRaw)
 
     return CloudConfiguration(
       providerType: type,

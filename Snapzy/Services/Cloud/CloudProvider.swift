@@ -61,6 +61,13 @@ protocol CloudProvider {
   /// Delete an object from cloud storage by its key.
   func delete(key: String) async throws
 
+  /// Set a lifecycle expiration rule on the bucket for objects with `snapzy/` prefix.
+  /// - Parameter days: Number of days after which objects expire
+  func setExpiration(days: Int) async throws
+
+  /// Remove the Snapzy lifecycle expiration rule from the bucket.
+  func removeExpiration() async throws
+
   /// Validate the provider credentials and configuration.
   func validate() async throws
 }

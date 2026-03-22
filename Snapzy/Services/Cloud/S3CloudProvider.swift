@@ -182,6 +182,163 @@ final class S3CloudProvider: CloudProvider {
     logger.info("S3 delete succeeded: \(key)")
   }
 
+  // MARK: - Lifecycle Rules
+
+  /// Snapzy lifecycle rule identifier
+  private static let lifecycleRuleID = "snapzy-auto-expire"
+  /// Prefix all Snapzy objects share
+  private static let objectPrefix = "snapzy/"
+
+  func setExpiration(days: Int) async throws {
+    // 1. Get existing rules (excluding our old rule)
+    var existingRules = try await getLifecycleRulesXML()
+    existingRules.removeAll { $0.contains("<ID>\(Self.lifecycleRuleID)</ID>") }
+
+    // 2. Build new Snapzy rule
+    let snapzyRule = """
+      <Rule>
+        <ID>\(Self.lifecycleRuleID)</ID>
+        <Filter><Prefix>\(Self.objectPrefix)</Prefix></Filter>
+        <Status>Enabled</Status>
+        <Expiration><Days>\(days)</Days></Expiration>
+      </Rule>
+      """
+    existingRules.append(snapzyRule)
+
+    // 3. PUT merged config
+    try await putLifecycleConfiguration(rules: existingRules)
+    logger.info("Lifecycle rule set: expire snapzy/ objects after \(days) days")
+  }
+
+  func removeExpiration() async throws {
+    var existingRules = try await getLifecycleRulesXML()
+    let before = existingRules.count
+    existingRules.removeAll { $0.contains("<ID>\(Self.lifecycleRuleID)</ID>") }
+
+    if existingRules.isEmpty {
+      // Delete entire lifecycle config if no rules remain
+      try await deleteLifecycleConfiguration()
+    } else if existingRules.count < before {
+      try await putLifecycleConfiguration(rules: existingRules)
+    }
+    logger.info("Lifecycle rule removed for snapzy/ prefix")
+  }
+
+  // MARK: - Lifecycle Helpers
+
+  /// Fetch existing lifecycle rules as raw XML strings (one per <Rule>)
+  private func getLifecycleRulesXML() async throws -> [String] {
+    let url = URL(string: "\(endpoint.absoluteString)/\(bucket)?lifecycle")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "GET"
+
+    let signedRequest = try AWSV4Signer.sign(
+      request: request,
+      accessKey: accessKey,
+      secretKey: secretKey,
+      region: region,
+      payloadHash: AWSV4Signer.sha256Hex("")
+    )
+
+    let (data, response) = try await URLSession.shared.data(for: signedRequest)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw CloudError.invalidResponse
+    }
+
+    // 404 = no lifecycle config exists yet
+    if httpResponse.statusCode == 404 {
+      return []
+    }
+
+    guard (200...299).contains(httpResponse.statusCode) else {
+      let body = String(data: data, encoding: .utf8) ?? ""
+      logger.error("GET lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
+      throw CloudError.uploadFailed(
+        statusCode: httpResponse.statusCode,
+        message: "Failed to get lifecycle config: \(body)"
+      )
+    }
+
+    // Parse XML to extract individual <Rule>...</Rule> blocks
+    return LifecycleXMLParser.parseRules(from: data)
+  }
+
+  /// PUT a lifecycle configuration with the given rules
+  private func putLifecycleConfiguration(rules: [String]) async throws {
+    let xmlBody = """
+      <?xml version="1.0" encoding="UTF-8"?>
+      <LifecycleConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+      \(rules.joined(separator: "\n"))
+      </LifecycleConfiguration>
+      """
+
+    let bodyData = xmlBody.data(using: .utf8)!
+    let url = URL(string: "\(endpoint.absoluteString)/\(bucket)?lifecycle")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "PUT"
+    request.setValue("application/xml", forHTTPHeaderField: "Content-Type")
+    request.setValue("\(bodyData.count)", forHTTPHeaderField: "Content-Length")
+
+    // S3 requires Content-MD5 for lifecycle configuration
+    let md5Hash = bodyData.md5Base64()
+    request.setValue(md5Hash, forHTTPHeaderField: "Content-MD5")
+
+    let payloadHash = AWSV4Signer.sha256Hex(bodyData)
+    let signedRequest = try AWSV4Signer.sign(
+      request: request,
+      accessKey: accessKey,
+      secretKey: secretKey,
+      region: region,
+      payloadHash: payloadHash
+    )
+
+    let (data, response) = try await URLSession.shared.upload(for: signedRequest, from: bodyData)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw CloudError.invalidResponse
+    }
+
+    guard (200...299).contains(httpResponse.statusCode) else {
+      let body = String(data: data, encoding: .utf8) ?? ""
+      logger.error("PUT lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
+      throw CloudError.uploadFailed(
+        statusCode: httpResponse.statusCode,
+        message: "Failed to set lifecycle config: \(body)"
+      )
+    }
+  }
+
+  /// DELETE entire lifecycle configuration from the bucket
+  private func deleteLifecycleConfiguration() async throws {
+    let url = URL(string: "\(endpoint.absoluteString)/\(bucket)?lifecycle")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "DELETE"
+
+    let signedRequest = try AWSV4Signer.sign(
+      request: request,
+      accessKey: accessKey,
+      secretKey: secretKey,
+      region: region,
+      payloadHash: AWSV4Signer.sha256Hex("")
+    )
+
+    let (data, response) = try await URLSession.shared.data(for: signedRequest)
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw CloudError.invalidResponse
+    }
+
+    guard (200...299).contains(httpResponse.statusCode) || httpResponse.statusCode == 404 else {
+      let body = String(data: data, encoding: .utf8) ?? ""
+      logger.error("DELETE lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
+      throw CloudError.uploadFailed(
+        statusCode: httpResponse.statusCode,
+        message: "Failed to delete lifecycle config: \(body)"
+      )
+    }
+  }
+
   // MARK: - Helpers
 
   private func buildObjectURL(key: String) -> URL {
