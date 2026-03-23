@@ -6,9 +6,10 @@
 //
 
 import Foundation
+import GRDB
 
 /// Record of a file uploaded to cloud storage, persisted locally
-struct CloudUploadRecord: Identifiable, Codable, Equatable {
+struct CloudUploadRecord: Identifiable, Codable, Equatable, FetchableRecord, PersistableRecord {
   let id: UUID
   let fileName: String
   let publicURL: URL

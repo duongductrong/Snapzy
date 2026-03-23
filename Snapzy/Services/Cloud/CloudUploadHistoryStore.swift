@@ -2,16 +2,17 @@
 //  CloudUploadHistoryStore.swift
 //  Snapzy
 //
-//  Local JSON persistence for cloud upload history records
+//  SQLite persistence for cloud upload history records via GRDB
 //
 
 import Combine
 import Foundation
+import GRDB
 import os.log
 
 private let logger = Logger(subsystem: "Snapzy", category: "CloudUploadHistoryStore")
 
-/// Manages persistent storage of cloud upload records using local JSON file
+/// Manages persistent storage of cloud upload records using SQLite via GRDB
 @MainActor
 final class CloudUploadHistoryStore: ObservableObject {
 
@@ -19,82 +20,92 @@ final class CloudUploadHistoryStore: ObservableObject {
 
   @Published private(set) var records: [CloudUploadRecord] = []
 
-  private let fileManager = FileManager.default
-  private let storageURL: URL
+  private let dbPool: DatabasePool
+  private var cancellable: AnyDatabaseCancellable?
 
   private init() {
-    let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-    let dir = appSupport.appendingPathComponent("Snapzy", isDirectory: true)
-    try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-    storageURL = dir.appendingPathComponent("cloud-upload-history.json")
-    loadAll()
+    dbPool = DatabaseManager.shared.dbPool
+    startObservation()
+  }
+
+  // MARK: - Reactive Observation
+
+  /// Observe all records ordered by uploadedAt desc.
+  /// Updates `records` automatically whenever the database changes.
+  private func startObservation() {
+    let observation = ValueObservation.tracking { db in
+      try CloudUploadRecord
+        .order(Column("uploadedAt").desc)
+        .fetchAll(db)
+    }
+    cancellable = observation.start(
+      in: dbPool,
+      scheduling: .immediate,
+      onError: { error in
+        logger.error("Database observation error: \(error.localizedDescription)")
+      },
+      onChange: { [weak self] newRecords in
+        Task { @MainActor in
+          self?.records = newRecords
+        }
+      }
+    )
   }
 
   // MARK: - Public API
 
   /// Add a new upload record
   func add(_ record: CloudUploadRecord) {
-    records.insert(record, at: 0)
-    save()
-    logger.info("Upload record added: \(record.fileName)")
+    do {
+      try dbPool.write { db in
+        try record.insert(db)
+      }
+      logger.info("Upload record added: \(record.fileName)")
+    } catch {
+      logger.error("Failed to add upload record: \(error.localizedDescription)")
+    }
   }
 
   /// Remove a record by ID
   func remove(id: UUID) {
-    records.removeAll { $0.id == id }
-    save()
+    do {
+      try dbPool.write { db in
+        _ = try CloudUploadRecord.deleteOne(db, id: id)
+      }
+    } catch {
+      logger.error("Failed to remove upload record: \(error.localizedDescription)")
+    }
   }
 
   /// Remove a record by cloud key (used when overwriting replaces the old key)
   func removeByKey(_ key: String) {
-    let before = records.count
-    records.removeAll { $0.key == key }
-    if records.count < before {
-      save()
-      logger.info("Removed overwritten record for key: \(key)")
+    do {
+      let count = try dbPool.write { db in
+        try CloudUploadRecord
+          .filter(Column("key") == key)
+          .deleteAll(db)
+      }
+      if count > 0 {
+        logger.info("Removed overwritten record for key: \(key)")
+      }
+    } catch {
+      logger.error("Failed to remove record by key: \(error.localizedDescription)")
     }
   }
 
   /// Remove all records
   func removeAll() {
-    records.removeAll()
-    save()
+    do {
+      try dbPool.write { db in
+        _ = try CloudUploadRecord.deleteAll(db)
+      }
+    } catch {
+      logger.error("Failed to remove all records: \(error.localizedDescription)")
+    }
   }
 
   /// Most recent N records
   func recentRecords(limit: Int = 5) -> [CloudUploadRecord] {
     Array(records.prefix(limit))
-  }
-
-  // MARK: - Persistence
-
-  func loadAll() {
-    guard fileManager.fileExists(atPath: storageURL.path) else {
-      records = []
-      return
-    }
-
-    do {
-      let data = try Data(contentsOf: storageURL)
-      let decoder = JSONDecoder()
-      decoder.dateDecodingStrategy = .iso8601
-      records = try decoder.decode([CloudUploadRecord].self, from: data)
-      logger.info("Loaded \(self.records.count) upload records")
-    } catch {
-      logger.error("Failed to load upload history: \(error.localizedDescription)")
-      records = []
-    }
-  }
-
-  func save() {
-    do {
-      let encoder = JSONEncoder()
-      encoder.dateEncodingStrategy = .iso8601
-      encoder.outputFormatting = .prettyPrinted
-      let data = try encoder.encode(records)
-      try data.write(to: storageURL, options: .atomic)
-    } catch {
-      logger.error("Failed to save upload history: \(error.localizedDescription)")
-    }
   }
 }
