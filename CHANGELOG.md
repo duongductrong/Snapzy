@@ -33,6 +33,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.2] - 2026-03-23
+
+### Features
+-  Implement caching for cloud usage data and refactor CloudUsageService with a dedicated worker actor. (b46267b)
+-  Add masked endpoint display logic to CloudManager and integrate it into the Preferences view. (46d9cfb)
+-  Implement password protection for cloud credentials, including gate and initialization UI. (ff036e8)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.1 (f2c685e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.1] - 2026-03-23
 
 ### Bug Fixes
