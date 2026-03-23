@@ -129,7 +129,7 @@ struct CloudSettingsView: View {
             SettingRow(
               icon: "server.rack",
               title: "Endpoint",
-              description: endpoint
+              description: cloudManager.maskedEndpoint()
             ) {
               EmptyView()
             }

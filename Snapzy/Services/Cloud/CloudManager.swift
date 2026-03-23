@@ -142,6 +142,39 @@ final class CloudManager: ObservableObject {
     return "\(prefix)••••\(suffix)"
   }
 
+  /// Load masked endpoint for display (e.g. "https://0ef6••••e2ca.r2.cloudflarestorage.com")
+  func maskedEndpoint() -> String {
+    guard let config = cachedConfiguration,
+      let endpoint = config.endpoint, !endpoint.isEmpty
+    else { return "••••••••" }
+
+    // Try to mask the host portion while keeping scheme and domain suffix visible
+    guard let url = URL(string: endpoint), let host = url.host else {
+      // Fallback: mask middle of the raw string
+      guard endpoint.count > 12 else { return "••••••••" }
+      let prefix = String(endpoint.prefix(8))
+      let suffix = String(endpoint.suffix(4))
+      return "\(prefix)••••\(suffix)"
+    }
+
+    let hostParts = host.split(separator: ".")
+    if hostParts.count >= 2 {
+      // Mask the first subdomain (typically account ID), keep domain suffix
+      let subdomain = String(hostParts[0])
+      let domainSuffix = hostParts.dropFirst().joined(separator: ".")
+      let maskedSub: String
+      if subdomain.count > 8 {
+        maskedSub = "\(subdomain.prefix(4))••••\(subdomain.suffix(4))"
+      } else {
+        maskedSub = "••••••••"
+      }
+      let scheme = url.scheme ?? "https"
+      return "\(scheme)://\(maskedSub).\(domainSuffix)"
+    }
+
+    return "••••••••"
+  }
+
   /// Load the full access key (for edit mode)
   func loadAccessKey() -> String {
     loadFromKeychain(key: KeychainKeys.accessKey) ?? ""
