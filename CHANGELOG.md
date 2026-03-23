@@ -32,6 +32,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.1] - 2026-03-23
+
+### Bug Fixes
+-  Prevent cloud configuration save if S3 lifecycle rule application fails and refactor S3 lifecycle XML string formatting. (ef90e10)
+-  Resolve AWS S3 signature issues by removing manual Content-Length and refining header/URI encoding for signing, and update Keychain identifiers. (e755bac)
+
+### Chore
+- refactor: Remove the recent uploads section and its associated record row from the cloud settings view. (586eb16)
+- chore: update appcast, cask, and readme for v1.4.0 (e9742ad)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.0] - 2026-03-23
 
 ### Features
