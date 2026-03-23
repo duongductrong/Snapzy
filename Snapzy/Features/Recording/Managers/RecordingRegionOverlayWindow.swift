@@ -61,6 +61,7 @@ final class RecordingRegionOverlayWindow: NSPanel {
     isFloatingPanel = true
     isOpaque = false
     backgroundColor = .clear
+    sharingType = .none
     level = .floating
     ignoresMouseEvents = true
     hasShadow = false

@@ -219,7 +219,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     // Permission is available; now load shareable content for actual setup.
     let content: SCShareableContent
     do {
-      content = try await SCShareableContent.current
+      content = try await loadShareableContentForCurrentFilters()
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "Failed to load shareable content for recording")
       state = .idle
@@ -643,6 +643,29 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       )
     }
 
+    // When own-app capture is enabled, desktop icons/widgets still need app-level filtering.
+    // Window-level filtering is unreliable for Finder desktop icons on some macOS setups.
+    if excludeDesktopIconsFromCapture || excludeDesktopWidgetsFromCapture {
+      var excludedApps: [SCRunningApplication] = []
+      var exceptedWindows: [SCWindow] = []
+
+      if excludeDesktopIconsFromCapture {
+        excludedApps += iconManager.getFinderApps(from: content)
+        exceptedWindows += iconManager.getVisibleFinderWindows(from: content)
+      }
+      if excludeDesktopWidgetsFromCapture {
+        excludedApps += iconManager.getWidgetApps(from: content)
+      }
+
+      if !excludedApps.isEmpty {
+        return SCContentFilter(
+          display: display,
+          excludingApplications: uniqueApplications(excludedApps),
+          exceptingWindows: uniqueWindows(exceptedWindows)
+        )
+      }
+    }
+
     var excludedWindows = content.windows.filter { excludedWindowIDs.contains($0.windowID) }
     if excludeDesktopIconsFromCapture {
       excludedWindows += iconManager.getDesktopIconWindows(from: content)
@@ -688,9 +711,19 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       ?? content.displays.first
   }
 
+  private func loadShareableContentForCurrentFilters() async throws -> SCShareableContent {
+    let requiresDesktopWindowEnumeration = excludeDesktopIconsFromCapture || excludeDesktopWidgetsFromCapture
+    if requiresDesktopWindowEnumeration {
+      // Finder/widget exclusion needs desktop windows in the shareable snapshot.
+      return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+    }
+
+    return try await SCShareableContent.current
+  }
+
   private func updateContentFilter(for activeStream: SCStream) async {
     do {
-      let content = try await SCShareableContent.current
+      let content = try await loadShareableContentForCurrentFilters()
       guard let display = currentDisplay(from: content) else { return }
       let filter = makeContentFilter(display: display, content: content)
       try await activeStream.updateContentFilter(filter)

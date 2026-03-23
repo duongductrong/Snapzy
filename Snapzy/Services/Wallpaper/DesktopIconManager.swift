@@ -20,6 +20,7 @@ final class DesktopIconManager {
   private static let widgetBundleIDs: Set<String> = [
     "com.apple.notificationcenterui",
     "com.apple.widgetkit.simulator",
+    "com.apple.widgetkitextensionhost",
   ]
 
   private init() {}

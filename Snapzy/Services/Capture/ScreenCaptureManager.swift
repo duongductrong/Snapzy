@@ -168,7 +168,11 @@ final class ScreenCaptureManager: ObservableObject {
     DiagnosticLogger.shared.log(.info, .capture, "Fullscreen capture started")
 
     do {
-      let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
+      let includeDesktopWindows = excludeDesktopIcons || excludeDesktopWidgets
+      let content = try await loadShareableContent(
+        prefetchedContentTask: prefetchedContentTask,
+        includeDesktopWindows: includeDesktopWindows
+      )
 
       // Get the target display
       let targetDisplayID = displayID ?? ScreenUtility.activeDisplayID()
@@ -249,7 +253,11 @@ final class ScreenCaptureManager: ObservableObject {
     DiagnosticLogger.shared.log(.info, .capture, "Area capture started \(Int(rect.width))x\(Int(rect.height))")
 
     do {
-      let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
+      let includeDesktopWindows = excludeDesktopIcons || excludeDesktopWidgets
+      let content = try await loadShareableContent(
+        prefetchedContentTask: prefetchedContentTask,
+        includeDesktopWindows: includeDesktopWindows
+      )
 
       // Find the display containing the rect using NSScreen frames (same coordinate system as input)
       // Then get the matching SCDisplay
@@ -495,7 +503,11 @@ final class ScreenCaptureManager: ObservableObject {
       throw unavailableError
     }
 
-    let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
+    let includeDesktopWindows = excludeDesktopIcons || excludeDesktopWidgets
+    let content = try await loadShareableContent(
+      prefetchedContentTask: prefetchedContentTask,
+      includeDesktopWindows: includeDesktopWindows
+    )
 
     // Find the display containing the rect
     var targetScreen: NSScreen?
@@ -587,8 +599,14 @@ final class ScreenCaptureManager: ObservableObject {
   // MARK: - Filter Builder
 
   private func loadShareableContent(
-    prefetchedContentTask: ShareableContentPrefetchTask?
+    prefetchedContentTask: ShareableContentPrefetchTask?,
+    includeDesktopWindows: Bool = false
   ) async throws -> SCShareableContent {
+    if includeDesktopWindows {
+      // Desktop icon/widget exclusion requires desktop windows/apps to be present in the shareable content snapshot.
+      return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+    }
+
     if let prefetchedContentTask {
       do {
         return try await prefetchedContentTask.value
