@@ -31,6 +31,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.0] - 2026-03-23
+
+### Features
+-  Implement LazyView for deferred SwiftUI tab loading and cache cloud configuration details. (ee0acdb)
+-  Enhance cloud upload records with content type and thumbnail support, and add advanced filtering, sorting, and display modes to the upload history view. (1de65df)
+-  Add cloud usage service to track and display bucket storage, object count, and lifecycle rules. (b57b9e0)
+-  Implement cloud object lifecycle management to configure and remove expiration rules for S3 and R2 storage providers. (da8451a)
+-  Improve UI of cloud configuration. (53097c7)
+-  Remove cloud overwrite confirmation alert and directly trigger cloud upload. (9920096)
+-  Ensure removes history records when overwrited upload screenshot (1b7a03f)
+-  Implement cloud storage integration with S3/R2 providers, preferences, and overwrite handling for annotated images. (8dcde11)
+
+### Bug Fixes
+-  Improve keystroke name resolution in `KeystrokeMonitorService` by using `keyCode`-based mapping for global monitor reliability. (e2c074e)
+-  Add support for punctuation, keypad, and navigation keys to `KeyboardShortcutManager`. (0f10b42)
+
+### Chore
+- refactor: reorder Share button to appear before the Cloud upload button in AnnotateBottomBarView. (a8633ce)
+- refactor: reimplement CloudUploadHistoryStore persistence using SQLite and GRDB, adding a new DatabaseManager and GRDB dependency. (6199fac)
+- chore: update appcast, cask, and readme for v1.3.5 (f01f845)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.3.5] - 2026-03-21
 
 ### Chore
