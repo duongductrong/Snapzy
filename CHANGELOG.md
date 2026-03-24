@@ -35,6 +35,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.4] - 2026-03-24
+
+### Features
+-  Refactor zoom segment layout and interaction to ensure a minimum visual width and improve UI adaptation for small blocks. (a82cc47)
+-  Align video preview zoom and pan calculations with export output for accuracy and update camera transition duration. (e414f8b)
+-  Enhance auto-focus engine with improved path generation, quality metrics, and canonical mouse sample handling. (e31b798)
+
+### Chore
+- refactor: Refactor `BlurEffectRenderer` to support separate source and destination regions for blur effects, improve coordinate mapping and clamping, and disable anti-aliasing for pixelated drawing. (00cec7d)
+- docs: document screen recording and Smart Camera (follow mouse) pipeline, runtime data layout, and metadata storage. (701c7fb)
+- chore: update appcast, cask, and readme for v1.4.3 (daec159)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.3] - 2026-03-24
 
 ### Features
