@@ -9,6 +9,13 @@ import CoreGraphics
 import Foundation
 
 enum VideoEditorAutoFocusEngine {
+  struct AutoFocusAccuracyMetrics {
+    let sampleCount: Int
+    let lockAccuracy: Double
+    let visibilityRate: Double
+    let meanError: Double
+  }
+
   static func buildPath(
     from metadata: RecordingMetadata,
     segment: ZoomSegment
@@ -16,7 +23,7 @@ enum VideoEditorAutoFocusEngine {
     guard segment.isAutoMode else { return [] }
 
     let settings = segment.autoFocusSettings
-    let samples = metadata.mouseSamples.sorted { $0.time < $1.time }
+    let samples = canonicalSamples(from: metadata)
     guard samples.count >= 2 else { return [] }
 
     let zoomLevel = settings.zoomLevel.clamped(to: AutoFocusSettings.zoomRange)
@@ -25,7 +32,7 @@ enum VideoEditorAutoFocusEngine {
     let safeHalfWidth = max(cropHalfWidth * settings.focusMargin.clamped(to: AutoFocusSettings.focusMarginRange), 0.02)
     let safeHalfHeight = max(cropHalfHeight * settings.focusMargin.clamped(to: AutoFocusSettings.focusMarginRange), 0.02)
 
-    var lastVisiblePoint = samples.first(where: \.isInsideCapture)?.normalizedPoint.clampedToUnitRect
+    var lastVisiblePoint = samples.first(where: \.isInsideCapture)?.point.clampedToUnitRect
       ?? CGPoint(x: 0.5, y: 0.5)
     var currentCenter = clampCenter(
       lastVisiblePoint,
@@ -33,50 +40,127 @@ enum VideoEditorAutoFocusEngine {
       cropHalfHeight: cropHalfHeight
     )
 
-    var path: [AutoFocusCameraSample] = []
-    var previousTime = samples[0].time
+    let minimumDelta = 1.0 / Double(max(metadata.samplesPerSecond, 1))
+    let maxResampleStep: TimeInterval = 1.0 / 60.0
+    var path: [AutoFocusCameraSample] = [
+      AutoFocusCameraSample(time: samples[0].time, center: currentCenter)
+    ]
 
-    for sample in samples {
-      let cursorPoint = sample.normalizedPoint.clampedToUnitRect
+    var previousTime = samples[0].time
+    var previousCursorPoint = samples[0].point.clampedToUnitRect
+
+    for sample in samples.dropFirst() {
+      let cursorPoint = sample.point.clampedToUnitRect
       if sample.isInsideCapture {
         lastVisiblePoint = cursorPoint
       }
 
-      let targetCenter = deadZoneAdjustedCenter(
-        currentCenter: currentCenter,
-        cursorPoint: sample.isInsideCapture ? cursorPoint : lastVisiblePoint,
-        safeHalfWidth: safeHalfWidth,
-        safeHalfHeight: safeHalfHeight,
-        cropHalfWidth: cropHalfWidth,
-        cropHalfHeight: cropHalfHeight
+      let cursorTarget = sample.isInsideCapture ? cursorPoint : lastVisiblePoint
+      let deltaTime = max(sample.time - previousTime, minimumDelta)
+      let filteredCursorTarget = clampedCursorPoint(
+        from: previousCursorPoint,
+        to: cursorTarget,
+        deltaTime: deltaTime
+      )
+      let stepCount = max(1, Int(ceil(deltaTime / maxResampleStep)))
+      let motion = motionIntensity(
+        from: previousCursorPoint,
+        to: filteredCursorTarget,
+        deltaTime: deltaTime
       )
 
-      let deltaTime = max(sample.time - previousTime, 1.0 / Double(max(metadata.samplesPerSecond, 1)))
-      let alpha = smoothingAlpha(
-        deltaTime: deltaTime,
-        followSpeed: settings.followSpeed.clamped(to: AutoFocusSettings.followSpeedRange)
-      )
-
-      currentCenter = CGPoint(
-        x: currentCenter.x + (targetCenter.x - currentCenter.x) * alpha,
-        y: currentCenter.y + (targetCenter.y - currentCenter.y) * alpha
-      )
-      currentCenter = clampCenter(
-        currentCenter,
-        cropHalfWidth: cropHalfWidth,
-        cropHalfHeight: cropHalfHeight
-      )
-
-      path.append(
-        AutoFocusCameraSample(
-          time: sample.time,
-          center: currentCenter
+      for step in 1...stepCount {
+        let progress = CGFloat(step) / CGFloat(stepCount)
+        let interpolatedCursor = interpolate(
+          from: previousCursorPoint,
+          to: filteredCursorTarget,
+          progress: progress
         )
-      )
+        let adaptiveSafeHalfWidth = max(safeHalfWidth * (1 - 0.45 * motion), 0.015)
+        let adaptiveSafeHalfHeight = max(safeHalfHeight * (1 - 0.45 * motion), 0.015)
+
+        let targetCenter = deadZoneAdjustedCenter(
+          currentCenter: currentCenter,
+          cursorPoint: interpolatedCursor,
+          safeHalfWidth: adaptiveSafeHalfWidth,
+          safeHalfHeight: adaptiveSafeHalfHeight,
+          cropHalfWidth: cropHalfWidth,
+          cropHalfHeight: cropHalfHeight
+        )
+
+        let alpha = smoothingAlpha(
+          deltaTime: deltaTime / Double(stepCount),
+          followSpeed: settings.followSpeed.clamped(to: AutoFocusSettings.followSpeedRange),
+          motionIntensity: motion
+        )
+        currentCenter = CGPoint(
+          x: currentCenter.x + (targetCenter.x - currentCenter.x) * alpha,
+          y: currentCenter.y + (targetCenter.y - currentCenter.y) * alpha
+        )
+        currentCenter = clampCenter(
+          currentCenter,
+          cropHalfWidth: cropHalfWidth,
+          cropHalfHeight: cropHalfHeight
+        )
+
+        path.append(
+          AutoFocusCameraSample(
+            time: previousTime + (deltaTime * Double(step) / Double(stepCount)),
+            center: currentCenter
+          )
+        )
+      }
+
       previousTime = sample.time
+      previousCursorPoint = filteredCursorTarget
     }
 
-    return path
+    return deduplicated(path)
+  }
+
+  static func evaluatePathQuality(
+    metadata: RecordingMetadata,
+    segment: ZoomSegment,
+    path: [AutoFocusCameraSample],
+    lockThreshold: CGFloat = 0.08
+  ) -> AutoFocusAccuracyMetrics {
+    let samples = canonicalSamples(from: metadata)
+      .filter { $0.time >= segment.startTime && $0.time <= segment.endTime }
+    guard !samples.isEmpty else {
+      return AutoFocusAccuracyMetrics(sampleCount: 0, lockAccuracy: 0, visibilityRate: 0, meanError: 0)
+    }
+
+    let zoomLevel = segment.zoomLevel.clamped(to: AutoFocusSettings.zoomRange)
+    let cropHalfWidth = 0.5 / zoomLevel
+    let cropHalfHeight = 0.5 / zoomLevel
+
+    var lockedSamples = 0
+    var visibleSamples = 0
+    var totalError: Double = 0
+
+    for sample in samples {
+      let centerPoint = path.isEmpty ? segment.zoomCenter : center(at: sample.time, in: path)
+      let dx = sample.point.x - centerPoint.x
+      let dy = sample.point.y - centerPoint.y
+      let distance = sqrt(dx * dx + dy * dy)
+      totalError += distance
+
+      if distance <= lockThreshold {
+        lockedSamples += 1
+      }
+
+      if abs(dx) <= cropHalfWidth && abs(dy) <= cropHalfHeight {
+        visibleSamples += 1
+      }
+    }
+
+    let totalCount = samples.count
+    return AutoFocusAccuracyMetrics(
+      sampleCount: totalCount,
+      lockAccuracy: Double(lockedSamples) / Double(totalCount),
+      visibilityRate: Double(visibleSamples) / Double(totalCount),
+      meanError: totalError / Double(totalCount)
+    )
   }
 
   static func cameraState(
@@ -198,8 +282,12 @@ enum VideoEditorAutoFocusEngine {
     )
   }
 
-  private static func smoothingAlpha(deltaTime: TimeInterval, followSpeed: Double) -> CGFloat {
-    let responseRate = 2.0 + (followSpeed * 10.0)
+  private static func smoothingAlpha(
+    deltaTime: TimeInterval,
+    followSpeed: Double,
+    motionIntensity: CGFloat
+  ) -> CGFloat {
+    let responseRate = 2.0 + (followSpeed * 10.0) + (Double(motionIntensity) * 6.0)
     let alpha = 1.0 - exp(-responseRate * deltaTime)
     return CGFloat(alpha).clamped(to: 0...1)
   }
@@ -258,6 +346,86 @@ enum VideoEditorAutoFocusEngine {
     }
 
     return deduplicatedPath
+  }
+
+  private struct CanonicalCursorSample {
+    var time: TimeInterval
+    var point: CGPoint
+    var isInsideCapture: Bool
+  }
+
+  private static func canonicalSamples(from metadata: RecordingMetadata) -> [CanonicalCursorSample] {
+    let sortedSamples = metadata.mouseSamples.sorted { $0.time < $1.time }
+    guard !sortedSamples.isEmpty else { return [] }
+
+    var canonical: [CanonicalCursorSample] = []
+    canonical.reserveCapacity(sortedSamples.count)
+
+    for sample in sortedSamples {
+      let point = canonicalPoint(for: sample, coordinateSpace: metadata.coordinateSpace)
+      let canonicalSample = CanonicalCursorSample(
+        time: sample.time,
+        point: point.clampedToUnitRect,
+        isInsideCapture: sample.isInsideCapture
+      )
+
+      if let last = canonical.last, abs(last.time - canonicalSample.time) < 0.0001 {
+        canonical[canonical.count - 1] = canonicalSample
+      } else {
+        canonical.append(canonicalSample)
+      }
+    }
+
+    return canonical
+  }
+
+  private static func canonicalPoint(
+    for sample: RecordedMouseSample,
+    coordinateSpace: RecordingCoordinateSpace
+  ) -> CGPoint {
+    switch coordinateSpace {
+    case .topLeftNormalized:
+      return sample.normalizedPoint
+    case .bottomLeftNormalized:
+      return CGPoint(
+        x: sample.normalizedX,
+        y: 1 - sample.normalizedY
+      )
+    }
+  }
+
+  private static func clampedCursorPoint(
+    from previous: CGPoint,
+    to current: CGPoint,
+    deltaTime: TimeInterval
+  ) -> CGPoint {
+    let maxSpeed: CGFloat = 4.0  // normalized units per second
+    let minDelta = max(deltaTime, 0.0001)
+    let maxDistance = maxSpeed * CGFloat(minDelta)
+    let distance = hypot(current.x - previous.x, current.y - previous.y)
+    guard distance > maxDistance, distance > 0.0001 else {
+      return current.clampedToUnitRect
+    }
+
+    let progress = (maxDistance / distance).clamped(to: 0...1)
+    return interpolate(from: previous, to: current, progress: progress).clampedToUnitRect
+  }
+
+  private static func motionIntensity(
+    from previous: CGPoint,
+    to current: CGPoint,
+    deltaTime: TimeInterval
+  ) -> CGFloat {
+    let minDelta = max(deltaTime, 0.0001)
+    let speed = hypot(current.x - previous.x, current.y - previous.y) / CGFloat(minDelta)
+    return (speed / 1.2).clamped(to: 0...1)
+  }
+
+  private static func interpolate(from start: CGPoint, to end: CGPoint, progress: CGFloat) -> CGPoint {
+    CGPoint(
+      x: start.x + (end.x - start.x) * progress,
+      y: start.y + (end.y - start.y) * progress
+    )
   }
 }
 

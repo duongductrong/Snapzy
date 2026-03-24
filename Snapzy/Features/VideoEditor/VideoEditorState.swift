@@ -1065,10 +1065,24 @@ final class VideoEditorState: ObservableObject {
         continue
       }
 
-      rebuiltPaths[segment.id] = VideoEditorAutoFocusEngine.buildPath(
+      let builtPath = VideoEditorAutoFocusEngine.buildPath(
         from: recordingMetadata,
         segment: segment
       )
+      rebuiltPaths[segment.id] = builtPath
+
+      let metrics = VideoEditorAutoFocusEngine.evaluatePathQuality(
+        metadata: recordingMetadata,
+        segment: segment,
+        path: builtPath
+      )
+      DiagnosticLogger.shared.log(.debug, .editor, "Auto-focus path rebuilt", context: [
+        "segmentId": segment.id.uuidString,
+        "sampleCount": "\(metrics.sampleCount)",
+        "lockAccuracy": String(format: "%.3f", metrics.lockAccuracy),
+        "visibilityRate": String(format: "%.3f", metrics.visibilityRate),
+        "meanError": String(format: "%.4f", metrics.meanError),
+      ])
     }
 
     autoFocusPathInputs = rebuiltInputs

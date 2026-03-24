@@ -22,24 +22,68 @@ struct RecordedMouseSample: Codable, Equatable {
   }
 }
 
+enum RecordingCoordinateSpace: String, Codable {
+  case bottomLeftNormalized
+  case topLeftNormalized
+}
+
 struct RecordingMetadata: Codable, Equatable {
-  static let currentVersion = 1
+  static let currentVersion = 2
 
   var version: Int
+  var coordinateSpace: RecordingCoordinateSpace
   var captureSize: CGSize
   var samplesPerSecond: Int
   var mouseSamples: [RecordedMouseSample]
 
   init(
     version: Int = RecordingMetadata.currentVersion,
+    coordinateSpace: RecordingCoordinateSpace = .topLeftNormalized,
     captureSize: CGSize,
     samplesPerSecond: Int,
     mouseSamples: [RecordedMouseSample]
   ) {
     self.version = version
+    self.coordinateSpace = coordinateSpace
     self.captureSize = captureSize
     self.samplesPerSecond = samplesPerSecond
     self.mouseSamples = mouseSamples
+  }
+
+  private enum CodingKeys: String, CodingKey {
+    case version
+    case coordinateSpace
+    case captureSize
+    case samplesPerSecond
+    case mouseSamples
+  }
+
+  init(from decoder: Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    let decodedVersion = try container.decodeIfPresent(Int.self, forKey: .version) ?? 1
+    let decodedCoordinateSpace = try container.decodeIfPresent(
+      RecordingCoordinateSpace.self,
+      forKey: .coordinateSpace
+    )
+
+    version = decodedVersion
+    coordinateSpace = decodedCoordinateSpace ?? (
+      decodedVersion >= RecordingMetadata.currentVersion
+        ? .topLeftNormalized
+        : .bottomLeftNormalized
+    )
+    captureSize = try container.decode(CGSize.self, forKey: .captureSize)
+    samplesPerSecond = try container.decode(Int.self, forKey: .samplesPerSecond)
+    mouseSamples = try container.decode([RecordedMouseSample].self, forKey: .mouseSamples)
+  }
+
+  func encode(to encoder: Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    try container.encode(version, forKey: .version)
+    try container.encode(coordinateSpace, forKey: .coordinateSpace)
+    try container.encode(captureSize, forKey: .captureSize)
+    try container.encode(samplesPerSecond, forKey: .samplesPerSecond)
+    try container.encode(mouseSamples, forKey: .mouseSamples)
   }
 }
 
@@ -67,6 +111,7 @@ enum RecordingMetadataStore {
   }
 
   private static let appSupportFolderName = "Snapzy"
+  private static let capturesFolderName = "Captures"
   private static let storeFolderName = "RecordingMetadata"
   private static let entriesFolderName = "Entries"
   private static let indexFileName = "index.json"
@@ -74,17 +119,52 @@ enum RecordingMetadataStore {
   private static let legacySidecarExtension = "snapzy-recording.json"
   private static let orphanGracePeriod: TimeInterval = 24 * 60 * 60
 
+  private enum StoreLayout {
+    case unified
+    case legacy
+
+    var pathComponents: [String] {
+      switch self {
+      case .unified:
+        return [RecordingMetadataStore.capturesFolderName, RecordingMetadataStore.storeFolderName]
+      case .legacy:
+        return [RecordingMetadataStore.storeFolderName]
+      }
+    }
+  }
+
   static func load(for videoURL: URL) -> RecordingMetadata? {
     do {
-      let location = try requiredStoreLocation()
-      var index = loadIndex(from: location)
+      let unifiedLocation = try requiredStoreLocation()
+      var unifiedIndex = loadIndex(from: unifiedLocation)
 
-      if let metadata = try loadStoredMetadata(for: videoURL, location: location, index: &index) {
-        return metadata
+      if let metadata = try loadStoredMetadata(
+        for: videoURL,
+        location: unifiedLocation,
+        index: &unifiedIndex
+      ) {
+        return metadata.canonicalizedForCurrentVersion()
       }
 
-      if let metadata = try migrateLegacySidecarIfNeeded(for: videoURL, location: location, index: &index) {
-        return metadata
+      if let metadata = try migrateLegacySidecarIfNeeded(
+        for: videoURL,
+        location: unifiedLocation,
+        index: &unifiedIndex
+      ) {
+        return metadata.canonicalizedForCurrentVersion()
+      }
+
+      for (layout, location) in try allStoreLocationsForRead() where layout == .legacy {
+        var index = loadIndex(from: location)
+        guard let metadata = try loadStoredMetadata(for: videoURL, location: location, index: &index)
+        else {
+          continue
+        }
+
+        let canonicalMetadata = metadata.canonicalizedForCurrentVersion()
+        try save(canonicalMetadata, for: videoURL)
+        try? deleteStoredMetadata(for: videoURL, location: location, index: &index)
+        return canonicalMetadata
       }
     } catch {
       recordingMetadataLogger.error("Failed to load recording metadata for \(videoURL.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
@@ -100,28 +180,51 @@ enum RecordingMetadataStore {
     let existingEntry = resolveEntry(for: videoURL, index: index)?.entry
     let entry = try makeEntry(id: existingEntry?.id ?? UUID(), for: videoURL)
     let metadataURL = self.metadataURL(for: entry.id, location: location)
+    let normalizedMetadata = metadata.canonicalizedForCurrentVersion()
 
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-    let data = try encoder.encode(metadata)
+    let data = try encoder.encode(normalizedMetadata)
     try data.write(to: metadataURL, options: .atomic)
 
     upsert(entry: entry, into: &index)
     try saveIndex(index, to: location)
+    if let legacyLocation = try storeLocation(layout: .legacy, createIfNeeded: false),
+       legacyLocation.entriesURL != location.entriesURL {
+      var legacyIndex = loadIndex(from: legacyLocation)
+      try? deleteStoredMetadata(for: videoURL, location: legacyLocation, index: &legacyIndex)
+    }
     try deleteLegacySidecarIfPresent(for: videoURL)
   }
 
   static func moveAssociation(from oldURL: URL, to newURL: URL) throws {
-    let location = try requiredStoreLocation()
-    var index = loadIndex(from: location)
+    let unifiedLocation = try requiredStoreLocation()
+    var unifiedIndex = loadIndex(from: unifiedLocation)
 
-    if let resolved = resolveEntry(for: oldURL, index: index) {
+    if let resolved = resolveEntry(for: oldURL, index: unifiedIndex) {
       let entry = try makeEntry(id: resolved.entry.id, for: newURL)
-      index.entries[resolved.index] = entry
-      try saveIndex(index, to: location)
+      unifiedIndex.entries[resolved.index] = entry
+      try saveIndex(unifiedIndex, to: unifiedLocation)
+      if let legacyLocation = try storeLocation(layout: .legacy, createIfNeeded: false),
+         legacyLocation.entriesURL != unifiedLocation.entriesURL {
+        var legacyIndex = loadIndex(from: legacyLocation)
+        try? deleteStoredMetadata(for: oldURL, location: legacyLocation, index: &legacyIndex)
+      }
       try deleteLegacySidecarIfPresent(for: oldURL)
       try deleteLegacySidecarIfPresent(for: newURL)
       return
+    }
+
+    if let legacyLocation = try storeLocation(layout: .legacy, createIfNeeded: false),
+       legacyLocation.entriesURL != unifiedLocation.entriesURL {
+      var legacyIndex = loadIndex(from: legacyLocation)
+      if let metadata = try loadStoredMetadata(for: oldURL, location: legacyLocation, index: &legacyIndex) {
+        try save(metadata, for: newURL)
+        try? deleteStoredMetadata(for: oldURL, location: legacyLocation, index: &legacyIndex)
+        try deleteLegacySidecarIfPresent(for: oldURL)
+        try deleteLegacySidecarIfPresent(for: newURL)
+        return
+      }
     }
 
     if let metadata = try loadLegacySidecarMetadata(for: oldURL) {
@@ -131,69 +234,64 @@ enum RecordingMetadataStore {
   }
 
   static func delete(for videoURL: URL) throws {
-    if let location = try storeLocation(createIfNeeded: false) {
+    for location in try allStoreLocationsForMaintenance() {
       var index = loadIndex(from: location)
-
-      if let resolved = resolveEntry(for: videoURL, index: index) {
-        let metadataURL = self.metadataURL(for: resolved.entry.id, location: location)
-        index.entries.remove(at: resolved.index)
-        try saveIndex(index, to: location)
-
-        if FileManager.default.fileExists(atPath: metadataURL.path) {
-          try FileManager.default.removeItem(at: metadataURL)
-        }
-      }
+      try deleteStoredMetadata(for: videoURL, location: location, index: &index)
     }
 
     try deleteLegacySidecarIfPresent(for: videoURL)
   }
 
   static func performOrphanCleanup(now: Date = Date()) throws {
-    guard let location = try storeLocation(createIfNeeded: false) else {
-      return
-    }
+    for location in try allStoreLocationsForMaintenance() {
+      var index = loadIndex(from: location)
+      var keptEntries: [MetadataIndexEntry] = []
+      var metadataURLsToDelete: [URL] = []
 
-    var index = loadIndex(from: location)
-    var keptEntries: [MetadataIndexEntry] = []
-    var metadataURLsToDelete: [URL] = []
+      for entry in index.entries {
+        let metadataURL = self.metadataURL(for: entry.id, location: location)
 
-    for entry in index.entries {
-      let metadataURL = self.metadataURL(for: entry.id, location: location)
+        guard FileManager.default.fileExists(atPath: metadataURL.path) else {
+          metadataURLsToDelete.append(metadataURL)
+          continue
+        }
 
-      guard FileManager.default.fileExists(atPath: metadataURL.path) else {
-        metadataURLsToDelete.append(metadataURL)
+        switch cleanupDisposition(for: entry, now: now) {
+        case .keep(let updatedEntry):
+          keptEntries.append(updatedEntry)
+        case .delete:
+          metadataURLsToDelete.append(metadataURL)
+        }
+      }
+
+      guard keptEntries != index.entries || !metadataURLsToDelete.isEmpty else {
         continue
       }
 
-      switch cleanupDisposition(for: entry, now: now) {
-      case .keep(let updatedEntry):
-        keptEntries.append(updatedEntry)
-      case .delete:
-        metadataURLsToDelete.append(metadataURL)
+      index.entries = keptEntries
+      try saveIndex(index, to: location)
+
+      for metadataURL in metadataURLsToDelete where FileManager.default.fileExists(atPath: metadataURL.path) {
+        try? FileManager.default.removeItem(at: metadataURL)
       }
-    }
-
-    guard keptEntries != index.entries || !metadataURLsToDelete.isEmpty else {
-      return
-    }
-
-    index.entries = keptEntries
-    try saveIndex(index, to: location)
-
-    for metadataURL in metadataURLsToDelete where FileManager.default.fileExists(atPath: metadataURL.path) {
-      try? FileManager.default.removeItem(at: metadataURL)
     }
   }
 
-  private static func storeLocation(createIfNeeded: Bool) throws -> StoreLocation? {
+  private static func storeLocation(
+    layout: StoreLayout,
+    createIfNeeded: Bool
+  ) throws -> StoreLocation? {
     guard let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
     else {
       return nil
     }
 
-    let rootURL = appSupportURL
+    let baseURL = appSupportURL
       .appendingPathComponent(appSupportFolderName, isDirectory: true)
-      .appendingPathComponent(storeFolderName, isDirectory: true)
+
+    let rootURL = layout.pathComponents.reduce(baseURL) { partial, component in
+      partial.appendingPathComponent(component, isDirectory: true)
+    }
     let entriesURL = rootURL.appendingPathComponent(entriesFolderName, isDirectory: true)
     let indexURL = rootURL.appendingPathComponent(indexFileName)
 
@@ -211,11 +309,43 @@ enum RecordingMetadataStore {
   }
 
   private static func requiredStoreLocation() throws -> StoreLocation {
-    if let location = try storeLocation(createIfNeeded: true) {
+    if let location = try storeLocation(layout: .unified, createIfNeeded: true) {
       return location
     }
 
     throw CocoaError(.fileNoSuchFile)
+  }
+
+  private static func allStoreLocationsForRead() throws -> [(layout: StoreLayout, location: StoreLocation)] {
+    var result: [(layout: StoreLayout, location: StoreLocation)] = []
+
+    if let unified = try storeLocation(layout: .unified, createIfNeeded: false) {
+      result.append((.unified, unified))
+    }
+
+    if let legacy = try storeLocation(layout: .legacy, createIfNeeded: false) {
+      let alreadyIncluded = result.contains { $0.location.entriesURL == legacy.entriesURL }
+      if !alreadyIncluded {
+        result.append((.legacy, legacy))
+      }
+    }
+
+    return result
+  }
+
+  private static func allStoreLocationsForMaintenance() throws -> [StoreLocation] {
+    var locations: [StoreLocation] = []
+
+    if let unified = try storeLocation(layout: .unified, createIfNeeded: false) {
+      locations.append(unified)
+    }
+
+    if let legacy = try storeLocation(layout: .legacy, createIfNeeded: false),
+       !locations.contains(where: { $0.entriesURL == legacy.entriesURL }) {
+      locations.append(legacy)
+    }
+
+    return locations
   }
 
   private static func loadIndex(from location: StoreLocation) -> MetadataIndex {
@@ -265,6 +395,24 @@ enum RecordingMetadataStore {
     }
 
     return metadata
+  }
+
+  private static func deleteStoredMetadata(
+    for videoURL: URL,
+    location: StoreLocation,
+    index: inout MetadataIndex
+  ) throws {
+    guard let resolved = resolveEntry(for: videoURL, index: index) else {
+      return
+    }
+
+    let metadataURL = self.metadataURL(for: resolved.entry.id, location: location)
+    index.entries.remove(at: resolved.index)
+    try saveIndex(index, to: location)
+
+    if FileManager.default.fileExists(atPath: metadataURL.path) {
+      try FileManager.default.removeItem(at: metadataURL)
+    }
   }
 
   private static func resolveEntry(
@@ -444,5 +592,35 @@ enum RecordingMetadataStore {
     videoURL
       .deletingPathExtension()
       .appendingPathExtension(legacySidecarExtension)
+  }
+}
+
+private extension RecordingMetadata {
+  func canonicalizedForCurrentVersion() -> RecordingMetadata {
+    let normalizedSamples: [RecordedMouseSample]
+    switch coordinateSpace {
+    case .topLeftNormalized:
+      normalizedSamples = mouseSamples
+    case .bottomLeftNormalized:
+      normalizedSamples = mouseSamples.map { sample in
+        var normalized = sample
+        normalized.normalizedY = (1 - sample.normalizedY).clamped(to: 0...1)
+        return normalized
+      }
+    }
+
+    return RecordingMetadata(
+      version: RecordingMetadata.currentVersion,
+      coordinateSpace: .topLeftNormalized,
+      captureSize: captureSize,
+      samplesPerSecond: samplesPerSecond,
+      mouseSamples: normalizedSamples
+    )
+  }
+}
+
+private extension CGFloat {
+  func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+    Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
   }
 }

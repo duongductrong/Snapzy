@@ -162,8 +162,8 @@ final class TempCaptureManager {
 
   /// Move associated recording metadata sidecar when saving a video
   private func moveRecordingMetadataIfNeeded(from sourceURL: URL, to destinationURL: URL) {
-    // RecordingMetadataStore uses a sidecar file pattern
-    // We need to re-save metadata at the new location
+    // RecordingMetadataStore keeps metadata in App Support and maps it by file bookmark/path.
+    // Re-save using destination URL so association follows the moved video.
     if let metadata = RecordingMetadataStore.load(for: sourceURL) {
       try? RecordingMetadataStore.save(metadata, for: destinationURL)
       try? RecordingMetadataStore.delete(for: sourceURL)

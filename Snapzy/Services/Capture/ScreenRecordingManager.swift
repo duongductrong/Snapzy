@@ -145,6 +145,13 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var exportDirectoryAccess: SandboxFileAccessManager.ScopedAccess?
   private var registeredOutputTypes: Set<SCStreamOutputType> = []
 
+  private struct CaptureGeometry {
+    let sourceRect: CGRect
+    let globalCaptureRect: CGRect
+    let outputWidth: Int
+    let outputHeight: Int
+  }
+
   // Dedicated queues to avoid audio starvation behind video processing work.
   private let videoProcessingQueue = DispatchQueue(
     label: "com.trongduong.snapzy.recording.video",
@@ -184,7 +191,6 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     error = nil
     session.sessionStarted = false
 
-    self.recordingRect = rect
     self.videoFormat = format
     self.videoQuality = quality
     self.fps = fps
@@ -269,8 +275,12 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       scaleFactor = 2.0
     }
 
-    let outputWidth = Int(ceil(rect.width * scaleFactor))
-    let outputHeight = Int(ceil(rect.height * scaleFactor))
+    let captureGeometry = try resolveCaptureGeometry(
+      display: display,
+      rect: rect,
+      scaleFactor: scaleFactor
+    )
+    self.recordingRect = captureGeometry.globalCaptureRect
 
     // Generate output URL
     let fileName = generateFileName()
@@ -294,18 +304,22 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     outputURL = scopedSaveDirectory.appendingPathComponent("\(fileName).\(format.fileExtension)")
 
     // Setup AVAssetWriter
-    try setupAssetWriter(width: outputWidth, height: outputHeight, captureSystemAudio: captureSystemAudio, captureMicrophone: captureMicrophone)
+    try setupAssetWriter(
+      width: captureGeometry.outputWidth,
+      height: captureGeometry.outputHeight,
+      captureSystemAudio: captureSystemAudio,
+      captureMicrophone: captureMicrophone
+    )
 
     try await setupStream(
       display: display,
-      rect: rect,
-      scaleFactor: scaleFactor,
+      captureGeometry: captureGeometry,
       captureSystemAudio: captureSystemAudio,
       captureMicrophone: captureMicrophone,
       content: content
     )
 
-    mouseTracker = RecordingMouseTracker(recordingRect: rect, fps: fps)
+    mouseTracker = RecordingMouseTracker(recordingRect: captureGeometry.globalCaptureRect, fps: fps)
   }
 
   /// Start the recording
@@ -325,17 +339,23 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     // Session will start lazily when first sample buffer arrives
     // This ensures timestamp synchronization with SCStream
 
+    session.isCapturing = true
+    session.setOnFirstVideoFrame { [weak self] in
+      Task { @MainActor [weak self] in
+        self?.mouseTracker?.start()
+      }
+    }
+
     do {
       try await stream?.startCapture()
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "Failed to start stream capture")
+      session.isCapturing = false
+      session.setOnFirstVideoFrame(nil)
       state = .idle
       self.error = .setupFailed(error.localizedDescription)
       throw RecordingError.setupFailed(error.localizedDescription)
     }
-
-    session.isCapturing = true
-    mouseTracker?.start()
 
     state = .recording
     DiagnosticLogger.shared.log(.info, .recording, "Recording started \(Int(recordingRect.width))x\(Int(recordingRect.height)) \(fps)fps \(videoFormat.rawValue)")
@@ -380,6 +400,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     guard state == .recording || state == .paused else { return nil }
 
     session.isCapturing = false
+    session.setOnFirstVideoFrame(nil)
 
     state = .stopping
 
@@ -403,6 +424,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       if mouseSamples.count >= 2 {
         do {
           let metadata = RecordingMetadata(
+            coordinateSpace: .topLeftNormalized,
             captureSize: recordingRect.size,
             samplesPerSecond: mouseTracker?.samplesPerSecond ?? fps,
             mouseSamples: mouseSamples
@@ -412,6 +434,15 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
           DiagnosticLogger.shared.logError(.recording, error, "Failed to save mouse tracking data")
           print("[RecordingMetadata] Failed to save mouse tracking data: \(error.localizedDescription)")
         }
+      }
+      if let diagnostics = mouseTracker?.diagnostics {
+        DiagnosticLogger.shared.log(.info, .recording, "Mouse tracking diagnostics", context: [
+          "samples": "\(diagnostics.sampleCount)",
+          "durationSeconds": String(format: "%.3f", diagnostics.duration),
+          "effectiveSamplesPerSecond": String(format: "%.2f", diagnostics.effectiveSamplesPerSecond),
+          "averageIntervalMs": String(format: "%.2f", diagnostics.averageIntervalMs),
+          "p95IntervalMs": String(format: "%.2f", diagnostics.p95IntervalMs),
+        ])
       }
       DiagnosticLogger.shared.log(.info, .recording, "Recording stopped: \(url.lastPathComponent) (\(elapsedSeconds)s)")
     }
@@ -433,6 +464,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       await teardownStream(activeStream)
     }
 
+    session.setOnFirstVideoFrame(nil)
     session.cancelWriting()
     mouseTracker?.reset()
     DiagnosticLogger.shared.log(.info, .recording, "Recording cancelled")
@@ -514,20 +546,11 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
   }
 
-  private func setupStream(display: SCDisplay, rect: CGRect, scaleFactor: CGFloat, captureSystemAudio: Bool, captureMicrophone: Bool, content: SCShareableContent) async throws {
-    let filter = makeContentFilter(display: display, content: content)
-
-    let config = SCStreamConfiguration()
-    // Higher queue depth helps absorb transient encoder backpressure at 60 FPS.
-    config.queueDepth = fps >= 60 ? 8 : 5
-    config.width = Int(ceil(rect.width * scaleFactor))
-    config.height = Int(ceil(rect.height * scaleFactor))
-    config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
-    config.pixelFormat = kCVPixelFormatType_32BGRA
-    config.showsCursor = true
-
-    // Get the NSScreen frame for coordinate conversion (Cocoa coordinates)
-    // This ensures we use the same coordinate system as the input rect
+  private func resolveCaptureGeometry(
+    display: SCDisplay,
+    rect: CGRect,
+    scaleFactor: CGFloat
+  ) throws -> CaptureGeometry {
     guard let matchingScreen = NSScreen.screens.first(where: {
       Int($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0)
         == display.displayID
@@ -536,8 +559,6 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     let screenFrame = matchingScreen.frame
-
-    // Calculate relative rect within the screen (in Cocoa coordinates)
     let relativeRect = CGRect(
       x: rect.origin.x - screenFrame.origin.x,
       y: rect.origin.y - screenFrame.origin.y,
@@ -545,28 +566,53 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       height: rect.height
     )
 
-    // Clamp to screen bounds
     let screenBounds = CGRect(x: 0, y: 0, width: screenFrame.width, height: screenFrame.height)
     let clampedRect = relativeRect.intersection(screenBounds)
-
-    // Guard against empty intersection
     guard !clampedRect.isEmpty else {
       throw RecordingError.setupFailed("Selection area is outside display bounds")
     }
 
-    // ScreenCaptureKit uses top-left origin for sourceRect
-    // Convert from bottom-left (Cocoa) to top-left coordinate system
+    // ScreenCaptureKit sourceRect uses top-left origin relative to display.
     let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
-    config.sourceRect = CGRect(
+    let sourceRect = CGRect(
       x: clampedRect.origin.x,
       y: flippedY,
       width: clampedRect.width,
       height: clampedRect.height
     )
+    let globalCaptureRect = CGRect(
+      x: clampedRect.origin.x + screenFrame.origin.x,
+      y: clampedRect.origin.y + screenFrame.origin.y,
+      width: clampedRect.width,
+      height: clampedRect.height
+    )
 
-    // Update dimensions to use clamped rect
-    config.width = Int(ceil(clampedRect.width * scaleFactor))
-    config.height = Int(ceil(clampedRect.height * scaleFactor))
+    return CaptureGeometry(
+      sourceRect: sourceRect,
+      globalCaptureRect: globalCaptureRect,
+      outputWidth: Int(ceil(clampedRect.width * scaleFactor)),
+      outputHeight: Int(ceil(clampedRect.height * scaleFactor))
+    )
+  }
+
+  private func setupStream(
+    display: SCDisplay,
+    captureGeometry: CaptureGeometry,
+    captureSystemAudio: Bool,
+    captureMicrophone: Bool,
+    content: SCShareableContent
+  ) async throws {
+    let filter = makeContentFilter(display: display, content: content)
+
+    let config = SCStreamConfiguration()
+    // Higher queue depth helps absorb transient encoder backpressure at 60 FPS.
+    config.queueDepth = fps >= 60 ? 8 : 5
+    config.width = captureGeometry.outputWidth
+    config.height = captureGeometry.outputHeight
+    config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
+    config.pixelFormat = kCVPixelFormatType_32BGRA
+    config.showsCursor = true
+    config.sourceRect = captureGeometry.sourceRect
 
     // System audio configuration
     if captureSystemAudio {
@@ -804,6 +850,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     registeredOutputTypes.removeAll()
     excludedWindowIDs.removeAll()
     exceptedWindowIDs.removeAll()
+    session.setOnFirstVideoFrame(nil)
     excludeOwnApplicationFromCapture = true
     excludeDesktopIconsFromCapture = false
     excludeDesktopWidgetsFromCapture = false

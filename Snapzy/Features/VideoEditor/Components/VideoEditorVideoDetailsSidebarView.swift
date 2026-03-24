@@ -67,6 +67,8 @@ struct VideoDetailsSidebarView: View {
         if state.hasMouseTrackingData {
           SidebarSection(title: "Smart Camera") {
             DetailRow(label: "Mouse Samples", value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)")
+            DetailRow(label: "Sample Rate", value: "\(state.recordingMetadata?.samplesPerSecond ?? 0) Hz")
+            DetailRow(label: "Coord Space", value: state.recordingMetadata?.coordinateSpace.rawValue ?? "—")
             DetailRow(label: "Auto Segments", value: "\(state.autoZoomSegmentCount)")
             DetailRow(label: "Status", value: state.isAutoZoomActiveAtCurrentTime ? "Active" : "Ready")
           }

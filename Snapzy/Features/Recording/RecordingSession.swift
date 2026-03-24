@@ -32,6 +32,7 @@ final class RecordingSession: @unchecked Sendable {
   private var _sessionStarted = false
   private var _isCapturing = false
   private var _firstTimestamp: CMTime?  // Track first video timestamp for timeline alignment
+  private var _onFirstVideoFrame: (() -> Void)?
   private var _videoFramesReceived = 0
   private var _videoFramesAppended = 0
   private var _videoFramesDroppedBackpressure = 0
@@ -72,6 +73,12 @@ final class RecordingSession: @unchecked Sendable {
   var isCapturing: Bool {
     get { lock.withLock { _isCapturing } }
     set { lock.withLock { _isCapturing = newValue } }
+  }
+
+  func setOnFirstVideoFrame(_ callback: (() -> Void)?) {
+    lock.withLock {
+      _onFirstVideoFrame = callback
+    }
   }
   
   /// Thread-safe check if ready to write frames
@@ -115,11 +122,11 @@ final class RecordingSession: @unchecked Sendable {
     let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
     guard timestamp.isValid else { return }
 
-    let (writer, videoInput, adaptor, shouldStartSession): (
-      AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool
+    let (writer, videoInput, adaptor, shouldStartSession, onFirstVideoFrame): (
+      AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool, (() -> Void)?
     ) = lock.withLock {
       guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil, false)
+        return (nil, nil, nil, false, nil)
       }
 
       var needsSessionStart = false
@@ -129,7 +136,7 @@ final class RecordingSession: @unchecked Sendable {
         needsSessionStart = true
       }
 
-      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart)
+      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart, _onFirstVideoFrame)
     }
 
     guard let writer = writer,
@@ -141,6 +148,7 @@ final class RecordingSession: @unchecked Sendable {
     if shouldStartSession {
       writer.startSession(atSourceTime: timestamp)
       print("[RecordingSession] Session started, first frame timestamp: \(timestamp.seconds)s")
+      onFirstVideoFrame?()
     }
 
     lock.withLock { _videoFramesReceived += 1 }
@@ -279,6 +287,7 @@ final class RecordingSession: @unchecked Sendable {
       _sessionStarted = false
       _isCapturing = false
       _firstTimestamp = nil
+      _onFirstVideoFrame = nil
       _videoFramesReceived = 0
       _videoFramesAppended = 0
       _videoFramesDroppedBackpressure = 0
