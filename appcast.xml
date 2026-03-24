@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.3</title>
+      <sparkle:version>34</sparkle:version>
+      <sparkle:shortVersionString>1.4.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 24 Mar 2026 06:06:04 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Implement a dedicated save flow for temporary captured videos and GIFs, including dynamic primary action button text.</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Dynamically set video composition frame duration from source and log detailed recording frame statistics.</li><li>Enhance screen capture and recording by improving desktop icon and widget exclusion and preventing self-capture of UI elements.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.4.3/Snapzy-v1.4.3.dmg"
+        sparkle:edSignature="dgifYb28aOwuJC+g8cOfVUEFo+mUFF+3rMFx/FWGrirFURliqHqVTWYJwthJ7pCyQJ3/Pe9wa504jUXOTV24Cg=="
+        length="11580073"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.4.2</title>
       <sparkle:version>33</sparkle:version>
       <sparkle:shortVersionString>1.4.2</sparkle:shortVersionString>
