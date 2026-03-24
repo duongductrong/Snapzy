@@ -15,7 +15,7 @@ struct ZoomableVideoPlayerSection: View {
   @State private var currentZoomLevel: CGFloat = 1.0
   @State private var currentZoomCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
 
-  private let animationDuration: Double = 0.25
+  private let cameraTransitionDuration: Double = 0.3
 
   var body: some View {
     GeometryReader { geometry in
@@ -26,7 +26,11 @@ struct ZoomableVideoPlayerSection: View {
       let scaledShadowY = state.backgroundShadowIntensity * 10 * scaleFactor
 
       // Calculate the composite frame size (video + padding) maintaining aspect ratio
-      let compositeSize = calculateCompositeSize(containerSize: geometry.size, scaledPadding: scaledPadding)
+      let compositeSize = calculateCompositeSize(containerSize: geometry.size)
+      let videoFrameSize = calculateVideoFrameSize(
+        compositeSize: compositeSize,
+        scaledPadding: scaledPadding
+      )
 
       ZStack {
         // Background layer - fills composite area only, no black gaps
@@ -37,7 +41,8 @@ struct ZoomableVideoPlayerSection: View {
         }
 
         // Video with effects - use scaled values for WYSIWYG with export
-        videoPlayerContent(in: geometry.size)
+        videoPlayerContent(in: videoFrameSize)
+          .frame(width: videoFrameSize.width, height: videoFrameSize.height)
           .cornerRadius(scaledCornerRadius)
           .shadow(
             color: .black.opacity(Double(state.backgroundShadowIntensity) * 0.5),
@@ -113,8 +118,6 @@ struct ZoomableVideoPlayerSection: View {
       .scaleEffect(currentZoomLevel)
       .offset(zoomOffset(in: size))
       .clipped()
-      .animation(.easeInOut(duration: animationDuration), value: currentZoomLevel)
-      .animation(.easeInOut(duration: animationDuration), value: currentZoomCenter)
       .overlay(alignment: .topTrailing) {
         zoomIndicator
           .allowsHitTesting(false)
@@ -190,7 +193,7 @@ struct ZoomableVideoPlayerSection: View {
 
   /// Calculate the size of the composite frame (video + padding) that fits within the container
   /// Uses export dimensions for WYSIWYG preview - shows scaled video matching export result
-  private func calculateCompositeSize(containerSize: CGSize, scaledPadding: CGFloat) -> CGSize {
+  private func calculateCompositeSize(containerSize: CGSize) -> CGSize {
     // Use export size for WYSIWYG preview
     let effectiveSize = state.exportSettings.exportSize(from: state.naturalSize)
     guard effectiveSize.width > 0 && effectiveSize.height > 0 &&
@@ -222,6 +225,13 @@ struct ZoomableVideoPlayerSection: View {
     }
   }
 
+  private func calculateVideoFrameSize(compositeSize: CGSize, scaledPadding: CGFloat) -> CGSize {
+    CGSize(
+      width: max(compositeSize.width - (scaledPadding * 2), 0),
+      height: max(compositeSize.height - (scaledPadding * 2), 0)
+    )
+  }
+
   // MARK: - Zoom Indicator
 
   @ViewBuilder
@@ -250,7 +260,7 @@ struct ZoomableVideoPlayerSection: View {
   private func updateZoomState(at time: TimeInterval) {
     let cameraState = state.cameraState(
       at: time,
-      transitionDuration: animationDuration
+      transitionDuration: cameraTransitionDuration
     )
 
     currentZoomLevel = cameraState.zoomLevel

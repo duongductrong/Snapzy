@@ -134,9 +134,10 @@ enum ZoomCalculator {
       return (scale: 1.0, offset: .zero)
     }
 
-    // Calculate offset to keep center point in view
-    let offsetX = (center.x - 0.5) * viewSize.width * (zoomLevel - 1)
-    let offsetY = (center.y - 0.5) * viewSize.height * (zoomLevel - 1)
+    // Keep preview translation mathematically aligned with export crop+scale mapping.
+    // With scaleEffect applied before offset, translation must be proportional to zoomLevel.
+    let offsetX = (center.x - 0.5) * viewSize.width * zoomLevel
+    let offsetY = (center.y - 0.5) * viewSize.height * zoomLevel
 
     return (scale: zoomLevel, offset: CGSize(width: -offsetX, height: -offsetY))
   }
