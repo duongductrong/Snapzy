@@ -394,8 +394,11 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
     await session.finishWriting()
 
+    let videoWriteStats = session.videoWriteStats()
+
     let mouseSamples = mouseTracker?.stop() ?? []
     let url = outputURL
+    await logRecordingFrameDiagnostics(outputURL: url, stats: videoWriteStats)
     if let url = url {
       if mouseSamples.count >= 2 {
         do {
@@ -515,7 +518,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     let filter = makeContentFilter(display: display, content: content)
 
     let config = SCStreamConfiguration()
-    config.queueDepth = 3
+    // Higher queue depth helps absorb transient encoder backpressure at 60 FPS.
+    config.queueDepth = fps >= 60 ? 8 : 5
     config.width = Int(ceil(rect.width * scaleFactor))
     config.height = Int(ceil(rect.height * scaleFactor))
     config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
@@ -744,6 +748,43 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private func updateElapsedTime() {
     guard let start = startTime, state == .recording else { return }
     elapsedSeconds = Int(Date().timeIntervalSince(start) - pausedDuration)
+  }
+
+  private func logRecordingFrameDiagnostics(outputURL: URL?, stats: RecordingSession.VideoWriteStats) async {
+    guard stats.receivedFrames > 0 || outputURL != nil else { return }
+
+    let droppedFrames = stats.droppedFramesDueToBackpressure + stats.failedAppendFrames
+    let dropRate = stats.receivedFrames > 0
+      ? (Double(droppedFrames) / Double(stats.receivedFrames)) * 100
+      : 0
+
+    var context: [String: String] = [
+      "configuredFPS": "\(fps)",
+      "receivedFrames": "\(stats.receivedFrames)",
+      "appendedFrames": "\(stats.appendedFrames)",
+      "droppedBackpressure": "\(stats.droppedFramesDueToBackpressure)",
+      "failedAppend": "\(stats.failedAppendFrames)",
+      "dropRatePercent": String(format: "%.2f", dropRate),
+    ]
+
+    if let outputURL {
+      let asset = AVURLAsset(url: outputURL)
+      if let track = try? await asset.loadTracks(withMediaType: .video).first {
+        let nominalFrameRate = (try? await track.load(.nominalFrameRate)) ?? 0
+        if nominalFrameRate > 0 {
+          context["outputNominalFPS"] = String(format: "%.2f", nominalFrameRate)
+        }
+
+        let minFrameDuration = try? await track.load(.minFrameDuration)
+        if let minFrameDuration,
+           minFrameDuration.isValid,
+           minFrameDuration.seconds > 0 {
+          context["outputFrameDurationMs"] = String(format: "%.2f", minFrameDuration.seconds * 1000)
+        }
+      }
+    }
+
+    DiagnosticLogger.shared.log(.info, .recording, "Recording frame diagnostics", context: context)
   }
 
   private func generateFileName() -> String {

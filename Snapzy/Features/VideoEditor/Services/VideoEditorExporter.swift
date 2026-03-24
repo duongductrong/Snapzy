@@ -83,9 +83,10 @@ enum VideoEditorExporter {
 
       // Get video track for composition
       if let videoTrack = try await state.asset.loadTracks(withMediaType: .video).first {
+        let sourceFrameDuration = try await sourceFrameDuration(for: videoTrack)
         let videoComposition = AVMutableVideoComposition()
         videoComposition.renderSize = targetSize
-        videoComposition.frameDuration = CMTime(value: 1, timescale: 30)
+        videoComposition.frameDuration = sourceFrameDuration
 
         // Create layer instruction for scaling
         let instruction = AVMutableVideoCompositionInstruction()
@@ -212,6 +213,7 @@ enum VideoEditorExporter {
       throw ExportError.exportFailed
     }
     print("🔍 [ZoomExport] Source video track ID: \(sourceVideoTrack.trackID)")
+    let sourceFrameDuration = try await sourceFrameDuration(for: sourceVideoTrack)
 
     guard let compositionVideoTrack = composition.addMutableTrack(
       withMediaType: .video,
@@ -291,6 +293,7 @@ enum VideoEditorExporter {
       zooms: adjustedZooms,
       autoFocusPaths: adjustedAutoFocusPaths,
       renderSize: baseRenderSize,
+      frameDuration: sourceFrameDuration,
       backgroundStyle: state.backgroundStyle,
       backgroundPadding: state.backgroundPadding,
       cornerRadius: state.backgroundCornerRadius
@@ -384,6 +387,7 @@ enum VideoEditorExporter {
     guard let videoTrack = try await state.asset.loadTracks(withMediaType: .video).first else {
       throw ExportError.exportFailed
     }
+    let sourceFrameDuration = try await sourceFrameDuration(for: videoTrack)
 
     guard let compositionVideoTrack = composition.addMutableTrack(
       withMediaType: .video,
@@ -405,7 +409,7 @@ enum VideoEditorExporter {
 
       let composition = AVMutableVideoComposition()
       composition.renderSize = targetSize
-      composition.frameDuration = CMTime(value: 1, timescale: 30)
+      composition.frameDuration = sourceFrameDuration
 
       // Create layer instruction for scaling
       let instruction = AVMutableVideoCompositionInstruction()
@@ -580,6 +584,20 @@ enum VideoEditorExporter {
     default:
       return .mp4
     }
+  }
+
+  private static func sourceFrameDuration(for videoTrack: AVAssetTrack) async throws -> CMTime {
+    let nominalFrameRate = try await videoTrack.load(.nominalFrameRate)
+    if nominalFrameRate > 0 {
+      return CMTime(seconds: 1.0 / Double(nominalFrameRate), preferredTimescale: 60_000)
+    }
+
+    let minFrameDuration = try await videoTrack.load(.minFrameDuration)
+    if minFrameDuration.isValid && minFrameDuration.seconds > 0 {
+      return minFrameDuration
+    }
+
+    return CMTime(value: 1, timescale: 30)
   }
 
   // MARK: - Errors

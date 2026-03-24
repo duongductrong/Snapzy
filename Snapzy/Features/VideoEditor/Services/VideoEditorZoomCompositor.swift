@@ -18,6 +18,7 @@ class ZoomCompositor {
   private let zooms: [ZoomSegment]
   private let autoFocusPaths: [UUID: [AutoFocusCameraSample]]
   private let renderSize: CGSize
+  private let frameDuration: CMTime
   private let transitionDuration: TimeInterval
 
   // Background properties
@@ -32,6 +33,7 @@ class ZoomCompositor {
     zooms: [ZoomSegment],
     autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:],
     renderSize: CGSize,
+    frameDuration: CMTime = CMTime(value: 1, timescale: 30),
     transitionDuration: TimeInterval = 0.3,
     backgroundStyle: BackgroundStyle = .none,
     backgroundPadding: CGFloat = 0,
@@ -40,6 +42,7 @@ class ZoomCompositor {
     self.zooms = zooms.filter { $0.isEnabled }
     self.autoFocusPaths = autoFocusPaths
     self.renderSize = renderSize
+    self.frameDuration = frameDuration
     self.transitionDuration = transitionDuration
     self.backgroundStyle = backgroundStyle
     self.backgroundPadding = backgroundPadding
@@ -70,7 +73,7 @@ class ZoomCompositor {
 
     let videoComposition = AVMutableVideoComposition()
     videoComposition.renderSize = renderSize
-    videoComposition.frameDuration = CMTime(value: 1, timescale: 30) // 30 fps
+    videoComposition.frameDuration = frameDuration
 
     // Get video track
     guard let videoTrack = try await asset.loadTracks(withMediaType: .video).first else {

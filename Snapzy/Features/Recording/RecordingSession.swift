@@ -15,6 +15,13 @@ import ScreenCaptureKit
 /// This allows safe access from any thread without crossing @MainActor boundaries.
 /// Implements lazy start: session begins when first sample buffer arrives to sync timestamps.
 final class RecordingSession: @unchecked Sendable {
+  struct VideoWriteStats {
+    let receivedFrames: Int
+    let appendedFrames: Int
+    let droppedFramesDueToBackpressure: Int
+    let failedAppendFrames: Int
+  }
+
   private let lock = NSLock()
 
   private var _assetWriter: AVAssetWriter?
@@ -25,6 +32,10 @@ final class RecordingSession: @unchecked Sendable {
   private var _sessionStarted = false
   private var _isCapturing = false
   private var _firstTimestamp: CMTime?  // Track first video timestamp for timeline alignment
+  private var _videoFramesReceived = 0
+  private var _videoFramesAppended = 0
+  private var _videoFramesDroppedBackpressure = 0
+  private var _videoFramesFailedAppend = 0
 
   init() {}
   
@@ -67,6 +78,17 @@ final class RecordingSession: @unchecked Sendable {
   func canWriteFrames() -> Bool {
     lock.withLock {
       _isCapturing && _assetWriter?.status == .writing
+    }
+  }
+
+  func videoWriteStats() -> VideoWriteStats {
+    lock.withLock {
+      VideoWriteStats(
+        receivedFrames: _videoFramesReceived,
+        appendedFrames: _videoFramesAppended,
+        droppedFramesDueToBackpressure: _videoFramesDroppedBackpressure,
+        failedAppendFrames: _videoFramesFailedAppend
+      )
     }
   }
 
@@ -121,15 +143,22 @@ final class RecordingSession: @unchecked Sendable {
       print("[RecordingSession] Session started, first frame timestamp: \(timestamp.seconds)s")
     }
 
+    lock.withLock { _videoFramesReceived += 1 }
+
     // Append pixel buffer with calculated presentation time
     if videoInput.isReadyForMoreMediaData {
       let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
       if !success {
+        lock.withLock { _videoFramesFailedAppend += 1 }
         print("[RecordingSession] Failed to append pixel buffer at \(timestamp.seconds)s")
         if let error = writer.error {
           print("[RecordingSession] Writer error: \(error.localizedDescription)")
         }
+      } else {
+        lock.withLock { _videoFramesAppended += 1 }
       }
+    } else {
+      lock.withLock { _videoFramesDroppedBackpressure += 1 }
     }
   }
 
@@ -250,6 +279,10 @@ final class RecordingSession: @unchecked Sendable {
       _sessionStarted = false
       _isCapturing = false
       _firstTimestamp = nil
+      _videoFramesReceived = 0
+      _videoFramesAppended = 0
+      _videoFramesDroppedBackpressure = 0
+      _videoFramesFailedAppend = 0
     }
   }
 }
