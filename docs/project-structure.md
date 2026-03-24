@@ -107,3 +107,25 @@ When generating code or refactoring:
 4.  **Refactor Trigger:**
     - If a Feature Root exceeds ~7 files, propose moving helpers into `Components` or `Managers`.
     - If a Service file exceeds ~300 lines, propose splitting it into a Service Folder.
+
+---
+
+## 5. Runtime Data Layout (Application Support)
+
+In addition to source-code structure, runtime capture data is centralized in Application Support:
+
+```text
+~/Library/Application Support/Snapzy/
+  Captures/
+    <temp or unsaved capture files>     // used when auto-save is OFF
+    RecordingMetadata/
+      index.json                         // bookmark/path -> metadata id mapping
+      Entries/
+        <uuid>.json                      // per-recording Smart Camera mouse timeline
+```
+
+Notes:
+
+- `Captures/` is the shared root for temp files and recording metadata.
+- `RecordingMetadata` is editor-only data used by Video Editor Auto Focus (Follow Mouse).
+- Legacy metadata locations are still readable and lazily migrated to `Captures/RecordingMetadata`.
