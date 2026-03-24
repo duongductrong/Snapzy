@@ -36,6 +36,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.5] - 2026-03-24
+
+### Features
+-  Introduce user-configurable filename templates for screenshots and recordings. (bfc61f3)
+-  Add cloud upload feature description and detail its security implementation in documentation. (3ce50c7)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.4 (458fd17)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.4] - 2026-03-24
 
 ### Features
