@@ -9,6 +9,7 @@ import SwiftUI
 
 /// Bottom bar for video editor with Cancel and Convert buttons
 struct VideoEditorBottomBar: View {
+  var primaryActionTitle: String = "Convert"
   var onCancel: () -> Void
   var onConvert: () -> Void
 
@@ -23,8 +24,8 @@ struct VideoEditorBottomBar: View {
 
         Spacer()
 
-        // Convert button (right) - always enabled
-        Button("Convert", action: onConvert)
+        // Primary action button (right) - always enabled
+        Button(primaryActionTitle, action: onConvert)
           .buttonStyle(.borderedProminent)
           .keyboardShortcut("s", modifiers: [.command])
       }

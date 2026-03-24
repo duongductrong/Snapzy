@@ -15,6 +15,8 @@ import UniformTypeIdentifiers
 final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private let fileAccessManager = SandboxFileAccessManager.shared
+  private let tempCaptureManager = TempCaptureManager.shared
+  private let quickAccessItemID: UUID?
   private var sourceFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var originalFileAccess: SandboxFileAccessManager.ScopedAccess?
   private var sourceURL: URL?
@@ -26,6 +28,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with QuickAccessItem (existing behavior)
   init(item: QuickAccessItem) {
+    self.quickAccessItemID = item.id
     self.sourceFileAccess = fileAccessManager.beginAccessingURL(item.url)
     self.sourceURL = item.url
     self.state = VideoEditorState(url: item.url)
@@ -38,6 +41,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with URL directly (for drag & drop from external sources)
   init(url: URL) {
+    self.quickAccessItemID = nil
     self.sourceFileAccess = fileAccessManager.beginAccessingURL(url)
     self.sourceURL = url
     self.state = VideoEditorState(url: url)
@@ -50,6 +54,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with URL and optional original URL (for drag & drop with temp copy)
   init(url: URL, originalURL: URL?) {
+    self.quickAccessItemID = nil
     self.sourceFileAccess = fileAccessManager.beginAccessingURL(url)
     if let originalURL = originalURL, originalURL != url {
       self.originalFileAccess = fileAccessManager.beginAccessingURL(originalURL)
@@ -65,6 +70,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with empty state (for drag & drop workflow)
   override init(window: NSWindow?) {
+    self.quickAccessItemID = nil
     self.sourceURL = nil
     self.state = nil
     self.isEmptyState = true
@@ -107,6 +113,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     let mainView = VideoEditorMainView(
       state: state,
+      primaryActionTitle: primaryActionTitle,
       onSave: { [weak self] in self?.showSaveConfirmation() },
       onCancel: { [weak self] in self?.handleCancel() }
     )
@@ -123,6 +130,15 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   func showWindow() {
     window?.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
+  }
+
+  private var isTempCaptureSource: Bool {
+    guard let state = state else { return false }
+    return tempCaptureManager.isTempFile(state.sourceURL)
+  }
+
+  private var primaryActionTitle: String {
+    isTempCaptureSource ? "Save" : "Convert"
   }
 
   // MARK: - NSWindowDelegate
@@ -173,6 +189,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func showSaveConfirmation() {
     guard let window = self.window, let state = state else { return }
 
+    // Temp capture flow: save directly to destination location.
+    if isTempCaptureSource {
+      saveTempCaptureToDestination()
+      return
+    }
+
     // GIF mode: resize export
     if state.isGIF {
       showGIFSaveConfirmation()
@@ -202,6 +224,181 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         break
       }
     }
+  }
+
+  // MARK: - Temp Capture Save Flow
+
+  private func saveTempCaptureToDestination() {
+    guard let state = state else { return }
+    guard let exportDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+      promptMessage: "Choose where Snapzy should save screenshots and recordings")
+    else {
+      return
+    }
+
+    let exportAccess = fileAccessManager.beginAccessingURL(exportDirectory)
+    defer { exportAccess.stop() }
+
+    let destinationURL = exportAccess.url.appendingPathComponent(state.sourceURL.lastPathComponent)
+    if FileManager.default.fileExists(atPath: destinationURL.path) {
+      showTempSaveCollisionAlert(destinationURL: destinationURL)
+      return
+    }
+
+    exportTempCapture(to: destinationURL)
+  }
+
+  private func showTempSaveCollisionAlert(destinationURL: URL) {
+    guard let window = window else { return }
+
+    let alert = NSAlert()
+    alert.messageText = "File Already Exists"
+    alert.informativeText =
+      "A file named \"\(destinationURL.lastPathComponent)\" already exists in the destination folder."
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: "Overwrite")
+    alert.addButton(withTitle: "Save As")
+    alert.addButton(withTitle: "Cancel")
+
+    alert.beginSheetModal(for: window) { [weak self] response in
+      guard let self = self else { return }
+
+      switch response {
+      case .alertFirstButtonReturn:
+        self.exportTempCapture(to: destinationURL, overwriteIfNeeded: true)
+      case .alertSecondButtonReturn:
+        self.showTempSaveAsPanel(
+          defaultDirectory: destinationURL.deletingLastPathComponent(),
+          suggestedFilename: self.defaultSaveAsFilename(for: destinationURL)
+        )
+      default:
+        break
+      }
+    }
+  }
+
+  private func showTempSaveAsPanel(defaultDirectory: URL, suggestedFilename: String) {
+    guard let window = window, let state = state else { return }
+
+    let savePanel = NSSavePanel()
+    savePanel.title = state.isGIF ? "Save GIF" : "Save Video"
+    savePanel.message = "Choose where to save the file"
+    savePanel.nameFieldLabel = "File Name:"
+    savePanel.nameFieldStringValue = suggestedFilename
+    savePanel.allowedContentTypes =
+      state.isGIF ? [.gif] : [.movie, .mpeg4Movie, .quickTimeMovie]
+    savePanel.canCreateDirectories = true
+    savePanel.directoryURL = defaultDirectory
+
+    savePanel.beginSheetModal(for: window) { [weak self] response in
+      guard response == .OK, let outputURL = savePanel.url else { return }
+      self?.exportTempCapture(to: outputURL, overwriteIfNeeded: true)
+    }
+  }
+
+  private func defaultSaveAsFilename(for destinationURL: URL) -> String {
+    guard let state = state else { return destinationURL.lastPathComponent }
+    if state.isGIF {
+      let baseName = destinationURL.deletingPathExtension().lastPathComponent
+      return "\(baseName)_copy.gif"
+    }
+    return VideoEditorExporter.generateCopyFilename(from: destinationURL)
+  }
+
+  private func exportTempCapture(to destinationURL: URL, overwriteIfNeeded: Bool = false) {
+    guard let state = state else { return }
+    let sourceURL = state.sourceURL
+
+    state.isExporting = true
+    state.exportProgress = 0
+    state.exportStatusMessage = state.isGIF ? "Preparing save..." : "Preparing export..."
+
+    Task {
+      do {
+        if overwriteIfNeeded && destinationURL.standardizedFileURL != sourceURL.standardizedFileURL {
+          try removeFileIfExists(at: destinationURL)
+        }
+
+        if state.isGIF {
+          try await saveTempGIF(state: state, to: destinationURL)
+        } else {
+          try await VideoEditorExporter.exportTrimmed(state: state, to: destinationURL) { [weak self] progress in
+            Task { @MainActor in
+              self?.state?.exportProgress = progress
+              self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
+            }
+          }
+        }
+
+        finalizeTempSave(destinationURL: destinationURL, sourceURL: sourceURL)
+      } catch {
+        DiagnosticLogger.shared.logError(.export, error, "Temp capture save failed")
+        state.isExporting = false
+        showExportError(error)
+      }
+    }
+  }
+
+  private func saveTempGIF(state: VideoEditorState, to outputURL: URL) async throws {
+    let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
+    let isResizing = Int(targetSize.width) != Int(state.naturalSize.width)
+      || Int(targetSize.height) != Int(state.naturalSize.height)
+    let outputDirectoryAccess = fileAccessManager.beginAccessingURL(outputURL.deletingLastPathComponent())
+    defer { outputDirectoryAccess.stop() }
+    let scopedOutputURL = outputDirectoryAccess.url.appendingPathComponent(outputURL.lastPathComponent)
+
+    if isResizing {
+      try GIFResizer.resize(
+        sourceURL: state.sourceURL,
+        targetSize: targetSize,
+        outputURL: scopedOutputURL
+      ) { progress in
+        Task { @MainActor in
+          state.exportProgress = Float(progress)
+          state.exportStatusMessage = progress < 0.95 ? "Resizing frames..." : "Finalizing..."
+        }
+      }
+      return
+    }
+
+    state.exportProgress = 0.95
+    state.exportStatusMessage = "Finalizing..."
+
+    let sourceAccess = fileAccessManager.beginAccessingURL(state.sourceURL)
+    defer { sourceAccess.stop() }
+    try FileManager.default.copyItem(at: sourceAccess.url, to: scopedOutputURL)
+  }
+
+  private func removeFileIfExists(at url: URL) throws {
+    let directoryAccess = fileAccessManager.beginAccessingURL(url.deletingLastPathComponent())
+    defer { directoryAccess.stop() }
+    if FileManager.default.fileExists(atPath: url.path) {
+      try FileManager.default.removeItem(at: url)
+    }
+  }
+
+  private func finalizeTempSave(destinationURL: URL, sourceURL: URL) {
+    state?.isExporting = false
+    state?.markAsSaved()
+
+    cleanupTempSourceFile(at: sourceURL)
+    if let quickAccessItemID {
+      QuickAccessManager.shared.dismissCard(id: quickAccessItemID)
+    }
+
+    NSWorkspace.shared.activateFileViewerSelecting([destinationURL])
+    forceClose()
+  }
+
+  private func cleanupTempSourceFile(at sourceURL: URL) {
+    guard tempCaptureManager.isTempFile(sourceURL) else { return }
+    let directoryAccess = fileAccessManager.beginAccessingURL(sourceURL.deletingLastPathComponent())
+    defer { directoryAccess.stop() }
+
+    if FileManager.default.fileExists(atPath: sourceURL.path) {
+      try? FileManager.default.removeItem(at: sourceURL)
+    }
+    try? RecordingMetadataStore.delete(for: sourceURL)
   }
 
   // MARK: - GIF Export

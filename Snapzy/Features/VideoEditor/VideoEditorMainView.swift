@@ -11,6 +11,7 @@ import SwiftUI
 /// Main view for video editor containing player, timeline, controls, and info
 struct VideoEditorMainView: View {
   @ObservedObject var state: VideoEditorState
+  var primaryActionTitle: String = "Convert"
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
 
@@ -95,6 +96,7 @@ struct VideoEditorMainView: View {
 
       // Bottom bar with Cancel/Save
       VideoEditorBottomBar(
+        primaryActionTitle: primaryActionTitle,
         onCancel: { onCancel?() },
         onConvert: { onSave?() }
       )
