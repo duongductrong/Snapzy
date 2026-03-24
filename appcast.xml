@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.4.5</title>
+      <sparkle:version>36</sparkle:version>
+      <sparkle:shortVersionString>1.4.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 24 Mar 2026 16:35:01 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Introduce user-configurable filename templates for screenshots and recordings.</li><li>Add cloud upload feature description and detail its security implementation in documentation.</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.4.5/Snapzy-v1.4.5.dmg"
+        sparkle:edSignature="tDe+KdpmPK0M6xZp5JhWoS81OIrwcBCuHgreKJt+wbmbnsvWHRwKdATXxa9f9+YommGTbmWFKaIeOO9SFz+QDA=="
+        length="11646467"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.4.4</title>
       <sparkle:version>35</sparkle:version>
       <sparkle:shortVersionString>1.4.4</sparkle:shortVersionString>
