@@ -12,11 +12,22 @@ import CoreGraphics
 /// Caches pixelated blur regions as CGImage to avoid per-frame recomputation
 final class BlurCacheManager {
   private var cache: [UUID: CacheEntry] = [:]
+  private let maxCachedPixelsPerBlur: CGFloat = 1_600_000
 
   private struct CacheEntry {
     let image: CGImage
     let bounds: CGRect
     let blurType: BlurType
+    let pixelSize: CGFloat
+    let sourceSignature: SourceSignature
+    let cacheScale: CGFloat
+  }
+
+  private struct SourceSignature: Equatable {
+    let pixelWidth: Int
+    let pixelHeight: Int
+    let pointWidth: Int
+    let pointHeight: Int
   }
 
   /// Get or create cached blur image for annotation
@@ -32,22 +43,51 @@ final class BlurCacheManager {
     bounds: CGRect,
     sourceImage: NSImage,
     blurType: BlurType = .pixelated,
-    pixelSize: CGFloat = BlurEffectRenderer.defaultPixelSize
+    pixelSize: CGFloat = BlurEffectRenderer.defaultPixelSize,
+    allowApproximateReuse: Bool = false
   ) -> CGImage? {
-    // Return cached if valid (same bounds and blur type)
-    if let entry = cache[annotationId], entry.bounds == bounds, entry.blurType == blurType {
+    let normalizedBounds = bounds.standardized
+    let sourceSignature = makeSourceSignature(for: sourceImage)
+    let cacheScale = renderScale(for: sourceImage, bounds: normalizedBounds)
+
+    // Return cached if valid.
+    // During interactive drag/resize we can temporarily reuse prior cache even if bounds changed,
+    // then regenerate accurate cache once interaction ends.
+    if let entry = cache[annotationId],
+       entry.blurType == blurType,
+       entry.pixelSize == pixelSize,
+       entry.sourceSignature == sourceSignature,
+       entry.cacheScale == cacheScale {
+      if entry.bounds.equalTo(normalizedBounds) || allowApproximateReuse {
+        return entry.image
+      }
+    }
+
+    // If approximate reuse was requested but scale changed, still prefer old cache over re-render.
+    if allowApproximateReuse, let entry = cache[annotationId],
+       entry.blurType == blurType,
+       entry.pixelSize == pixelSize,
+       entry.sourceSignature == sourceSignature {
       return entry.image
     }
 
     // Render to offscreen context
     guard let rendered = renderBlurToImage(
-      bounds: bounds,
+      bounds: normalizedBounds,
       sourceImage: sourceImage,
       blurType: blurType,
-      pixelSize: pixelSize
+      pixelSize: pixelSize,
+      cacheScale: cacheScale
     ) else { return nil }
 
-    cache[annotationId] = CacheEntry(image: rendered, bounds: bounds, blurType: blurType)
+    cache[annotationId] = CacheEntry(
+      image: rendered,
+      bounds: normalizedBounds,
+      blurType: blurType,
+      pixelSize: pixelSize,
+      sourceSignature: sourceSignature,
+      cacheScale: cacheScale
+    )
     return rendered
   }
 
@@ -70,10 +110,11 @@ final class BlurCacheManager {
     bounds: CGRect,
     sourceImage: NSImage,
     blurType: BlurType,
-    pixelSize: CGFloat
+    pixelSize: CGFloat,
+    cacheScale: CGFloat
   ) -> CGImage? {
-    let width = Int(ceil(bounds.width))
-    let height = Int(ceil(bounds.height))
+    let width = Int(ceil(bounds.width * cacheScale))
+    let height = Int(ceil(bounds.height * cacheScale))
     guard width > 0, height > 0 else { return nil }
 
     // Create bitmap context
@@ -87,13 +128,14 @@ final class BlurCacheManager {
       bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
     ) else { return nil }
 
-    // Create a temporary region at origin for rendering
+    // Render in point space at higher pixel density for stable compositing.
+    context.scaleBy(x: cacheScale, y: cacheScale)
     let localRegion = CGRect(x: 0, y: 0, width: bounds.width, height: bounds.height)
 
     // Render blur using the original bounds for sampling, but draw at origin
     switch blurType {
     case .pixelated:
-      renderPixelatedRegion(
+      BlurEffectRenderer.drawPixelatedRegion(
         in: context,
         sourceImage: sourceImage,
         sourceRegion: bounds,
@@ -101,7 +143,7 @@ final class BlurCacheManager {
         pixelSize: pixelSize
       )
     case .gaussian:
-      renderGaussianRegion(
+      BlurEffectRenderer.drawGaussianRegion(
         in: context,
         sourceImage: sourceImage,
         sourceRegion: bounds,
@@ -112,243 +154,28 @@ final class BlurCacheManager {
     return context.makeImage()
   }
 
-  /// Render pixelated region directly to context
-  /// Similar to BlurEffectRenderer but optimized for cache rendering
-  private func renderPixelatedRegion(
-    in context: CGContext,
-    sourceImage: NSImage,
-    sourceRegion: CGRect,
-    destRegion: CGRect,
-    pixelSize: CGFloat
-  ) {
-    guard sourceRegion.width > 0, sourceRegion.height > 0 else { return }
-
-    // Get CGImage from NSImage
-    guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Clamp source region to image bounds
-    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
-    let clampedSourceRegion = sourceRegion.intersection(imageBounds)
-    guard !clampedSourceRegion.isEmpty, clampedSourceRegion.width > 0, clampedSourceRegion.height > 0 else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Adjust destination region proportionally to match clamped source
-    let clampedDestRegion: CGRect
-    if clampedSourceRegion == sourceRegion {
-      clampedDestRegion = destRegion
-    } else {
-      // Map the clamped portion to destination space
-      let offsetX = clampedSourceRegion.origin.x - sourceRegion.origin.x
-      let offsetY = clampedSourceRegion.origin.y - sourceRegion.origin.y
-      let scaleX = destRegion.width / sourceRegion.width
-      let scaleY = destRegion.height / sourceRegion.height
-      clampedDestRegion = CGRect(
-        x: destRegion.origin.x + offsetX * scaleX,
-        y: destRegion.origin.y + offsetY * scaleY,
-        width: clampedSourceRegion.width * scaleX,
-        height: clampedSourceRegion.height * scaleY
-      )
-    }
-
-    // Calculate image scale (NSImage size vs CGImage pixels)
-    let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
-
-    // Convert clamped region to pixel coordinates (flip Y for CGImage)
-    let pixelRegion = CGRect(
-      x: clampedSourceRegion.origin.x * imageScale,
-      y: (sourceImage.size.height - clampedSourceRegion.origin.y - clampedSourceRegion.height) * imageScale,
-      width: clampedSourceRegion.width * imageScale,
-      height: clampedSourceRegion.height * imageScale
-    )
-
-    // Clamp to pixel bounds (safety check for rounding)
-    let clampedPixelRegion = pixelRegion.intersection(
-      CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
-    )
-    guard !clampedPixelRegion.isEmpty else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Crop the region from source image
-    guard let croppedImage = cgImage.cropping(to: clampedPixelRegion) else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Draw pixelated version with matched destination
-    drawPixelated(
-      croppedImage: croppedImage,
-      in: context,
-      destRect: clampedDestRegion,
-      pixelSize: pixelSize
+  private func makeSourceSignature(for sourceImage: NSImage) -> SourceSignature {
+    let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil)
+    return SourceSignature(
+      pixelWidth: cgImage?.width ?? Int(sourceImage.size.width),
+      pixelHeight: cgImage?.height ?? Int(sourceImage.size.height),
+      pointWidth: Int(sourceImage.size.width.rounded(.toNearestOrAwayFromZero)),
+      pointHeight: Int(sourceImage.size.height.rounded(.toNearestOrAwayFromZero))
     )
   }
 
-  /// Draw pixelated version of cropped image region
-  private func drawPixelated(
-    croppedImage: CGImage,
-    in context: CGContext,
-    destRect: CGRect,
-    pixelSize: CGFloat
-  ) {
-    // Calculate grid dimensions
-    let cols = Int(ceil(destRect.width / pixelSize))
-    let rows = Int(ceil(destRect.height / pixelSize))
-
-    guard cols > 0, rows > 0 else { return }
-
-    // Sample colors from the cropped image
-    let imageWidth = croppedImage.width
-    let imageHeight = croppedImage.height
-
-    // Create bitmap context to read pixel data
-    guard let dataProvider = croppedImage.dataProvider,
-          let data = dataProvider.data,
-          let bytes = CFDataGetBytePtr(data) else {
-      drawFallbackBlur(in: context, region: destRect)
-      return
+  private func renderScale(for sourceImage: NSImage, bounds: CGRect) -> CGFloat {
+    guard sourceImage.size.width > 0,
+          let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+      return 1
     }
 
-    let bytesPerPixel = croppedImage.bitsPerPixel / 8
-    let bytesPerRow = croppedImage.bytesPerRow
+    let baseScale = max(1, CGFloat(cgImage.width) / sourceImage.size.width)
+    let requestedPixelArea = bounds.width * bounds.height * baseScale * baseScale
+    guard requestedPixelArea > maxCachedPixelsPerBlur else { return baseScale }
 
-    // Clip to destRect to prevent any pixel blocks from overflowing
-    context.saveGState()
-    context.clip(to: destRect)
-
-    // Draw each pixel block
-    for row in 0..<rows {
-      for col in 0..<cols {
-        // Calculate sample position in image
-        let sampleX = Int((CGFloat(col) + 0.5) / CGFloat(cols) * CGFloat(imageWidth))
-        let sampleY = Int((CGFloat(row) + 0.5) / CGFloat(rows) * CGFloat(imageHeight))
-
-        // Clamp to valid range
-        let clampedX = min(max(sampleX, 0), imageWidth - 1)
-        let clampedY = min(max(sampleY, 0), imageHeight - 1)
-
-        // Get pixel color
-        let offset = clampedY * bytesPerRow + clampedX * bytesPerPixel
-        let r = CGFloat(bytes[offset]) / 255.0
-        let g = CGFloat(bytes[offset + 1]) / 255.0
-        let b = CGFloat(bytes[offset + 2]) / 255.0
-        let a = bytesPerPixel >= 4 ? CGFloat(bytes[offset + 3]) / 255.0 : 1.0
-
-        // Calculate block rect (flip Y for Core Graphics)
-        let blockX = destRect.origin.x + CGFloat(col) * pixelSize
-        let blockY = destRect.origin.y + destRect.height - CGFloat(row + 1) * pixelSize
-
-        let blockRect = CGRect(x: blockX, y: blockY, width: pixelSize, height: pixelSize)
-
-        // Fill block with sampled color (clipping prevents overflow)
-        context.setFillColor(red: r, green: g, blue: b, alpha: a)
-        context.fill(blockRect)
-      }
-    }
-
-    context.restoreGState()
-  }
-
-  /// Fallback blur when image sampling fails
-  private func drawFallbackBlur(in context: CGContext, region: CGRect) {
-    context.setFillColor(NSColor.gray.withAlphaComponent(0.7).cgColor)
-    context.fill(region)
-  }
-
-  /// Render Gaussian blur region using CIFilter (GPU-accelerated)
-  private func renderGaussianRegion(
-    in context: CGContext,
-    sourceImage: NSImage,
-    sourceRegion: CGRect,
-    destRegion: CGRect
-  ) {
-    guard sourceRegion.width > 0, sourceRegion.height > 0 else { return }
-
-    guard let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Clamp source region to image bounds
-    let imageBounds = CGRect(origin: .zero, size: sourceImage.size)
-    let clampedSourceRegion = sourceRegion.intersection(imageBounds)
-    guard !clampedSourceRegion.isEmpty, clampedSourceRegion.width > 0, clampedSourceRegion.height > 0 else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Adjust destination region proportionally to match clamped source
-    let clampedDestRegion: CGRect
-    if clampedSourceRegion == sourceRegion {
-      clampedDestRegion = destRegion
-    } else {
-      let offsetX = clampedSourceRegion.origin.x - sourceRegion.origin.x
-      let offsetY = clampedSourceRegion.origin.y - sourceRegion.origin.y
-      let scaleX = destRegion.width / sourceRegion.width
-      let scaleY = destRegion.height / sourceRegion.height
-      clampedDestRegion = CGRect(
-        x: destRegion.origin.x + offsetX * scaleX,
-        y: destRegion.origin.y + offsetY * scaleY,
-        width: clampedSourceRegion.width * scaleX,
-        height: clampedSourceRegion.height * scaleY
-      )
-    }
-
-    // Calculate image scale
-    let imageScale = CGFloat(cgImage.width) / sourceImage.size.width
-
-    // Convert clamped region to pixel coordinates (flip Y for CGImage)
-    let pixelRegion = CGRect(
-      x: clampedSourceRegion.origin.x * imageScale,
-      y: (sourceImage.size.height - clampedSourceRegion.origin.y - clampedSourceRegion.height) * imageScale,
-      width: clampedSourceRegion.width * imageScale,
-      height: clampedSourceRegion.height * imageScale
-    )
-
-    // Clamp to pixel bounds (safety check for rounding)
-    let clampedPixelRegion = pixelRegion.intersection(
-      CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
-    )
-    guard !clampedPixelRegion.isEmpty else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Crop the region
-    guard let croppedImage = cgImage.cropping(to: clampedPixelRegion) else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Apply CIGaussianBlur
-    let ciImage = CIImage(cgImage: croppedImage)
-    let filter = CIFilter(name: "CIGaussianBlur")
-    filter?.setValue(ciImage, forKey: kCIInputImageKey)
-    filter?.setValue(BlurEffectRenderer.defaultGaussianRadius, forKey: kCIInputRadiusKey)
-
-    guard let outputImage = filter?.outputImage else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Use shared GPU-backed CIContext for performance
-    let ciContext = BlurEffectRenderer.sharedCIContext
-
-    // Crop to original extent (blur expands the image)
-    let croppedOutput = outputImage.cropped(to: ciImage.extent)
-
-    guard let blurredCGImage = ciContext.createCGImage(croppedOutput, from: ciImage.extent) else {
-      drawFallbackBlur(in: context, region: destRegion)
-      return
-    }
-
-    // Draw using the clamped destination rect to match the clamped source
-    context.draw(blurredCGImage, in: clampedDestRegion)
+    let areaScale = sqrt(maxCachedPixelsPerBlur / requestedPixelArea)
+    let adaptiveScale = baseScale * areaScale
+    return max(1, min(baseScale, adaptiveScale))
   }
 }

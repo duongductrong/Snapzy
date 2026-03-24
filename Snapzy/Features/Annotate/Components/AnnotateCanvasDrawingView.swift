@@ -60,6 +60,7 @@ final class DrawingCanvasNSView: NSView {
 
   // Blur cache manager for performance optimization
   private let blurCacheManager = BlurCacheManager()
+  private var lastSourceImageIdentifier: ObjectIdentifier?
 
   init(state: AnnotateState) {
     self.state = state
@@ -520,6 +521,11 @@ final class DrawingCanvasNSView: NSView {
 
     // Finish dragging
     if isDraggingAnnotation {
+      if let dragId = draggingAnnotationId,
+         let annotation = state.annotations.first(where: { $0.id == dragId }),
+         case .blur = annotation.type {
+        blurCacheManager.invalidate(id: dragId)
+      }
       Task { @MainActor in
         state.saveState()
       }
@@ -632,6 +638,12 @@ final class DrawingCanvasNSView: NSView {
     super.draw(dirtyRect)
     guard let context = NSGraphicsContext.current?.cgContext else { return }
 
+    let currentImageIdentifier = state.sourceImage.map(ObjectIdentifier.init)
+    if currentImageIdentifier != lastSourceImageIdentifier {
+      blurCacheManager.clearAll()
+      lastSourceImageIdentifier = currentImageIdentifier
+    }
+
     // Apply scale transform for rendering
     context.saveGState()
     context.scaleBy(x: displayScale, y: displayScale)
@@ -641,7 +653,8 @@ final class DrawingCanvasNSView: NSView {
       context: context,
       editingTextId: state.editingTextAnnotationId,
       sourceImage: state.sourceImage,
-      blurCacheManager: blurCacheManager
+      blurCacheManager: blurCacheManager,
+      interactiveBlurAnnotationId: activeInteractiveBlurAnnotationId()
     )
     for annotation in state.annotations {
       renderer.draw(annotation)
@@ -674,6 +687,24 @@ final class DrawingCanvasNSView: NSView {
     }
 
     context.restoreGState()
+  }
+
+  private func activeInteractiveBlurAnnotationId() -> UUID? {
+    let candidateId: UUID?
+    if isResizingAnnotation {
+      candidateId = resizingAnnotationId
+    } else if isDraggingAnnotation {
+      candidateId = draggingAnnotationId
+    } else {
+      candidateId = nil
+    }
+
+    guard let id = candidateId,
+          let annotation = state.annotations.first(where: { $0.id == id }),
+          case .blur = annotation.type else {
+      return nil
+    }
+    return id
   }
 
   private func drawSelectionHandles(for bounds: CGRect, in context: CGContext) {

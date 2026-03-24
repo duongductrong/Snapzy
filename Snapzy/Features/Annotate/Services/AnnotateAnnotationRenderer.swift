@@ -11,21 +11,27 @@ import SwiftUI
 
 /// Renders annotations to a CGContext
 struct AnnotationRenderer {
+  private static let interactiveApproximateReuseAreaThreshold: CGFloat = 90_000
+  private static let livePreviewFullQualityAreaThreshold: CGFloat = 120_000
+
   let context: CGContext
   var editingTextId: UUID?
   var sourceImage: NSImage?
   var blurCacheManager: BlurCacheManager?
+  var interactiveBlurAnnotationId: UUID?
 
   init(
     context: CGContext,
     editingTextId: UUID? = nil,
     sourceImage: NSImage? = nil,
-    blurCacheManager: BlurCacheManager? = nil
+    blurCacheManager: BlurCacheManager? = nil,
+    interactiveBlurAnnotationId: UUID? = nil
   ) {
     self.context = context
     self.editingTextId = editingTextId
     self.sourceImage = sourceImage
     self.blurCacheManager = blurCacheManager
+    self.interactiveBlurAnnotationId = interactiveBlurAnnotationId
   }
 
   func draw(_ annotation: AnnotationItem) {
@@ -236,25 +242,49 @@ struct AnnotationRenderer {
   }
 
   private func drawBlur(bounds: CGRect, annotationId: UUID, blurType: BlurType) {
+    let visibleBounds = bounds.standardized
+    guard visibleBounds.width > 0, visibleBounds.height > 0 else { return }
+
     guard let sourceImage = sourceImage else {
       // Fallback when no source image available
       BlurEffectRenderer.drawBlurPreview(
         in: context,
-        region: bounds,
+        region: visibleBounds,
         strokeColor: NSColor.gray.cgColor
       )
       return
     }
 
+    let renderBounds = alignToSourcePixelGrid(visibleBounds, sourceImage: sourceImage)
+    let shouldAllowApproximateReuse =
+      interactiveBlurAnnotationId == annotationId &&
+      (visibleBounds.width * visibleBounds.height) >= Self.interactiveApproximateReuseAreaThreshold
+
+    context.saveGState()
+    context.clip(to: visibleBounds)
+    defer { context.restoreGState() }
+
     // Try cached version first for performance
     if let cacheManager = blurCacheManager,
        let cachedImage = cacheManager.getCachedBlur(
          for: annotationId,
-         bounds: bounds,
+         bounds: renderBounds,
          sourceImage: sourceImage,
-         blurType: blurType
+         blurType: blurType,
+         allowApproximateReuse: shouldAllowApproximateReuse
        ) {
-      context.draw(cachedImage, in: bounds)
+      switch blurType {
+      case .pixelated:
+        context.saveGState()
+        context.setAllowsAntialiasing(false)
+        context.setShouldAntialias(false)
+        context.interpolationQuality = .none
+        context.draw(cachedImage, in: renderBounds)
+        context.restoreGState()
+      case .gaussian:
+        context.interpolationQuality = .high
+        context.draw(cachedImage, in: renderBounds)
+      }
       return
     }
 
@@ -264,21 +294,49 @@ struct AnnotationRenderer {
       BlurEffectRenderer.drawPixelatedRegion(
         in: context,
         sourceImage: sourceImage,
-        region: bounds
+        region: renderBounds
       )
     case .gaussian:
       BlurEffectRenderer.drawGaussianRegion(
         in: context,
         sourceImage: sourceImage,
-        region: bounds
+        region: renderBounds
       )
     }
+  }
+
+  private func alignToSourcePixelGrid(_ rect: CGRect, sourceImage: NSImage) -> CGRect {
+    guard sourceImage.size.width > 0,
+          sourceImage.size.height > 0,
+          let cgImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil),
+          cgImage.width > 0,
+          cgImage.height > 0 else {
+      return rect
+    }
+
+    let scaleX = CGFloat(cgImage.width) / sourceImage.size.width
+    let scaleY = CGFloat(cgImage.height) / sourceImage.size.height
+    let minX = floor(rect.minX * scaleX) / scaleX
+    let maxX = ceil(rect.maxX * scaleX) / scaleX
+    let minY = floor(rect.minY * scaleY) / scaleY
+    let maxY = ceil(rect.maxY * scaleY) / scaleY
+    let aligned = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    return aligned.standardized
   }
 
   /// Draw blur preview during drag operation
   func drawBlurPreview(start: CGPoint, currentPoint: CGPoint, strokeColor: Color, blurType: BlurType) {
     let rect = makeRect(from: start, to: currentPoint)
     guard rect.width > 0, rect.height > 0 else { return }
+
+    if (rect.width * rect.height) >= Self.livePreviewFullQualityAreaThreshold {
+      BlurEffectRenderer.drawBlurPreview(
+        in: context,
+        region: rect,
+        strokeColor: NSColor(strokeColor).cgColor
+      )
+      return
+    }
 
     if let sourceImage = sourceImage {
       // Show preview based on selected blur type
