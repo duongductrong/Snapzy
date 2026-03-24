@@ -15,6 +15,7 @@ struct ZoomTimelineTrack: View {
 
   private let trackHeight: CGFloat = 32
   private let handleWidth: CGFloat = 8
+  private let minVisualBlockWidth: CGFloat = 64
 
   // MARK: - Drag State (Track-Level)
 
@@ -33,6 +34,16 @@ struct ZoomTimelineTrack: View {
     case position    // Dragging entire segment
     case startEdge   // Dragging left edge
     case endEdge     // Dragging right edge
+  }
+
+  private struct SegmentLayout {
+    let visualStartX: CGFloat
+    let visualEndX: CGFloat
+    let visualWidth: CGFloat
+
+    var centerX: CGFloat {
+      visualStartX + (visualWidth / 2)
+    }
   }
 
   // MARK: - Computed Properties
@@ -54,7 +65,7 @@ struct ZoomTimelineTrack: View {
   }
 
   private var isHoveringOverSegment: Bool {
-    state.zoomSegment(at: hoverTime) != nil
+    interactionSegment(atX: hoverLocation.x) != nil
   }
 
   private var shouldShowPlaceholder: Bool {
@@ -62,8 +73,9 @@ struct ZoomTimelineTrack: View {
   }
 
   private var placeholderWidth: CGFloat {
-    guard videoDuration > 0 else { return 32 }
-    return (ZoomSegment.defaultDuration / videoDuration) * timelineWidth
+    guard videoDuration > 0 else { return minVisualBlockWidth }
+    let logicalWidth = (ZoomSegment.defaultDuration / videoDuration) * timelineWidth
+    return min(timelineWidth, max(minVisualBlockWidth, logicalWidth))
   }
 
   private var placeholderX: CGFloat {
@@ -97,12 +109,13 @@ struct ZoomTimelineTrack: View {
 
       // Zoom blocks (visual only - gestures handled at track level)
       ForEach(state.zoomSegments) { segment in
+        let segmentLayout = layout(for: segment)
         ZoomBlockVisual(
           segment: segment,
           isSelected: state.selectedZoomId == segment.id,
           isDragging: dragSegmentId == segment.id,
-          timelineWidth: timelineWidth,
-          videoDuration: videoDuration
+          blockX: segmentLayout.visualStartX,
+          blockWidth: segmentLayout.visualWidth
         )
       }
 
@@ -151,21 +164,14 @@ struct ZoomTimelineTrack: View {
   }
 
   private func beginDrag(at location: CGPoint) {
-    let tappedTime = (location.x / timelineWidth) * videoDuration
-
-    // Find segment at tap location (including disabled segments for interaction)
-    guard let segment = state.zoomSegment(at: tappedTime) else {
+    guard let (segment, segmentLayout) = interactionSegment(atX: location.x) else {
       dragMode = .none
       return
     }
 
-    // Calculate block bounds
-    let blockStartX = (segment.startTime / videoDuration) * timelineWidth
-    let blockEndX = (segment.endTime / videoDuration) * timelineWidth
-
     // Determine drag mode based on tap position within block
-    let leftHandleEnd = blockStartX + handleWidth
-    let rightHandleStart = blockEndX - handleWidth
+    let leftHandleEnd = segmentLayout.visualStartX + handleWidth
+    let rightHandleStart = segmentLayout.visualEndX - handleWidth
 
     dragSegmentId = segment.id
     dragInitialStartTime = segment.startTime
@@ -233,7 +239,7 @@ struct ZoomTimelineTrack: View {
     let tappedTime = (location.x / timelineWidth) * videoDuration
     print("🎯 [Tap] location: \(location), time: \(tappedTime)s")
 
-    if let segment = state.zoomSegment(at: tappedTime) {
+    if let (segment, _) = interactionSegment(atX: location.x) {
       // Tapped on existing segment - select it
       print("🎯 [Tap] Selected segment: \(segment.id) (enabled: \(segment.isEnabled))")
       state.selectZoom(id: segment.id)
@@ -297,6 +303,57 @@ struct ZoomTimelineTrack: View {
     let currentTime = CMTimeGetSeconds(state.currentTime)
     state.addZoom(at: currentTime)
   }
+
+  private func layout(for segment: ZoomSegment) -> SegmentLayout {
+    guard videoDuration > 0, timelineWidth > 0 else {
+      return SegmentLayout(
+        visualStartX: 0,
+        visualEndX: minVisualBlockWidth,
+        visualWidth: minVisualBlockWidth
+      )
+    }
+
+    let logicalStartX = (segment.startTime / videoDuration) * timelineWidth
+    let logicalWidth = (segment.duration / videoDuration) * timelineWidth
+    let visualWidth = min(timelineWidth, max(minVisualBlockWidth, logicalWidth))
+    let maxStartX = max(0, timelineWidth - visualWidth)
+    let visualStartX = max(0, min(logicalStartX, maxStartX))
+
+    return SegmentLayout(
+      visualStartX: visualStartX,
+      visualEndX: visualStartX + visualWidth,
+      visualWidth: visualWidth
+    )
+  }
+
+  private func interactionSegment(atX x: CGFloat) -> (segment: ZoomSegment, layout: SegmentLayout)? {
+    let containing = state.zoomSegments.compactMap { segment -> (segment: ZoomSegment, layout: SegmentLayout)? in
+      let segmentLayout = layout(for: segment)
+      guard x >= segmentLayout.visualStartX && x <= segmentLayout.visualEndX else {
+        return nil
+      }
+      return (segment: segment, layout: segmentLayout)
+    }
+
+    guard !containing.isEmpty else { return nil }
+
+    if let selectedId = state.selectedZoomId,
+       let selected = containing.first(where: { $0.segment.id == selectedId }) {
+      return selected
+    }
+
+    return containing.sorted { lhs, rhs in
+      let leftDistance = abs(lhs.layout.centerX - x)
+      let rightDistance = abs(rhs.layout.centerX - x)
+      if leftDistance != rightDistance {
+        return leftDistance < rightDistance
+      }
+
+      let leftIndex = state.zoomSegments.firstIndex(where: { $0.id == lhs.segment.id }) ?? -1
+      let rightIndex = state.zoomSegments.firstIndex(where: { $0.id == rhs.segment.id }) ?? -1
+      return leftIndex > rightIndex
+    }.first
+  }
 }
 
 // MARK: - Zoom Block Visual (No Gestures)
@@ -306,22 +363,10 @@ private struct ZoomBlockVisual: View {
   let segment: ZoomSegment
   let isSelected: Bool
   let isDragging: Bool
-  let timelineWidth: CGFloat
-  let videoDuration: TimeInterval
+  let blockX: CGFloat
+  let blockWidth: CGFloat
 
   private let handleWidth: CGFloat = 8
-  private let minBlockWidth: CGFloat = 32
-
-  private var blockX: CGFloat {
-    guard videoDuration > 0 else { return 0 }
-    return (segment.startTime / videoDuration) * timelineWidth
-  }
-
-  private var blockWidth: CGFloat {
-    guard videoDuration > 0 else { return minBlockWidth }
-    let width = (segment.duration / videoDuration) * timelineWidth
-    return max(minBlockWidth, width)
-  }
 
   var body: some View {
     ZStack(alignment: .leading) {
@@ -339,12 +384,14 @@ private struct ZoomBlockVisual: View {
         Image(systemName: "plus.magnifyingglass")
           .font(.system(size: 10, weight: .semibold))
 
-        Text(segment.formattedZoomLevel)
-          .font(.system(size: 10, weight: .semibold))
+        if blockWidth >= 48 {
+          Text(segment.formattedZoomLevel)
+            .font(.system(size: 10, weight: .semibold))
+        }
 
         Spacer(minLength: 0)
 
-        if blockWidth > 80 {
+        if blockWidth >= 96 {
           Text(segment.zoomType.displayName)
             .font(.system(size: 8, weight: .medium))
             .padding(.horizontal, 4)
@@ -353,7 +400,7 @@ private struct ZoomBlockVisual: View {
             .cornerRadius(3)
         }
       }
-      .padding(.horizontal, handleWidth + 4)
+      .padding(.horizontal, blockWidth < 48 ? handleWidth + 2 : handleWidth + 4)
       .foregroundColor(.white)
 
       // Left handle indicator
