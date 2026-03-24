@@ -34,6 +34,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.3] - 2026-03-24
+
+### Features
+-  Implement a dedicated save flow for temporary captured videos and GIFs, including dynamic primary action button text. (a88beda)
+
+### Bug Fixes
+-  Dynamically set video composition frame duration from source and log detailed recording frame statistics. (2f1a760)
+-  Enhance screen capture and recording by improving desktop icon and widget exclusion and preventing self-capture of UI elements. (de2f192)
+
+### Chore
+- refactor: improve clarity and conciseness of capture settings UI text for including app windows in captures. (1196918)
+- chore: update appcast, cask, and readme for v1.4.2 (b00ed3a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.2] - 2026-03-23
 
 ### Features
