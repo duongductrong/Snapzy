@@ -34,7 +34,7 @@ Snapzy runs inside the **macOS App Sandbox**. The entitlements it requests and w
 | Entitlement | Purpose |
 | --- | --- |
 | `com.apple.security.app-sandbox` | Sandboxed execution — limits access to system resources |
-| `com.apple.security.network.client` | Outbound network for Sparkle update checks |
+| `com.apple.security.network.client` | Outbound network for Sparkle update checks and user-initiated cloud uploads |
 | `com.apple.security.files.user-selected.read-write` | Read/write files the user explicitly picks (save dialogs, drag-to-app) |
 | `com.apple.security.device.audio-input` | Microphone access for screen recordings with voice |
 | `com.apple.security.temporary-exception.shared-preference.read-only` | Read `com.apple.symbolichotkeys` to detect system shortcut conflicts |
@@ -52,10 +52,16 @@ All permissions are requested through standard macOS prompts and can be revoked 
 
 ## Data Handling
 
-- **Local-only** — Snapzy does not upload captures, recordings, or any user content to external servers.
+- **Local-first** — All captures and recordings are stored locally. Cloud upload is opt-in and sends files only to **your own** AWS S3 or Cloudflare R2 bucket — no third-party servers are involved.
 - **No telemetry** — No analytics, tracking, or usage data is collected.
 - **No accounts** — No sign-in, registration, or user accounts.
-- **Network usage** — The only outbound network request is the Sparkle update check against the project's GitHub releases (appcast). This can be disabled in Preferences.
+- **Network usage** — Outbound requests are limited to Sparkle update checks (appcast over HTTPS) and user-initiated cloud uploads. Both can be disabled in Preferences.
+
+## Cloud Credentials
+
+- **Keychain storage** — Cloud access keys and secret keys are stored exclusively in the macOS Keychain, never in plaintext files or UserDefaults.
+- **Optional password protection** — Users can set a protection password for cloud credentials. The password is SHA-256 hashed before storage; no plaintext password is persisted.
+- **No relay servers** — Uploads go directly from the app to the user's own S3/R2 endpoint using AWS Signature V4 authentication. Snapzy never proxies or stores files on its own infrastructure.
 
 ## Auto-Updates (Sparkle)
 

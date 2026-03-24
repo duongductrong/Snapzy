@@ -36,6 +36,7 @@
 - **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, open, and delete actions
 - **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools with system conflict detection
 - **Onboarding**: splash screen, guided permissions setup, and shortcut configuration for first-time users
+- **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, credentials stored in the macOS Keychain with optional password protection, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
 - **Updates & Diagnostics**: in-app updates via Sparkle, crash reporting, cache management
 - **Platform**: menu-bar app, appearance theming (light/dark/system), App Sandbox with secure file-access bookmarks
 
@@ -118,7 +119,7 @@ For release packaging details, see [docs/project-build.md](docs/project-build.md
 
 ## Security
 
-Snapzy runs inside the macOS App Sandbox with minimal entitlements. It makes no network requests except for Sparkle update checks and collects no telemetry.
+Snapzy runs inside the macOS App Sandbox with minimal entitlements. Network requests are limited to Sparkle update checks and user-initiated cloud uploads to **your own** S3/R2 bucket — no data is ever sent to third-party servers. Cloud credentials are stored exclusively in the macOS Keychain and can be further protected with an optional password (SHA-256 hashed, never stored in plaintext). Snapzy collects no telemetry.
 
 To report a vulnerability, please use a [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) or contact the maintainer privately. See [SECURITY.md](SECURITY.md) for full details.
 
