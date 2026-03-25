@@ -37,6 +37,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.6] - 2026-03-25
+
+### Features
+-  Enhance video encoding with dynamic bitrate, HEVC/H.264 codec selection, pixel-aligned capture, and diagnostic logging for recording. (482d5cb)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.5 (2aaf49b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.5] - 2026-03-24
 
 ### Features
