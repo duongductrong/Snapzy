@@ -27,6 +27,8 @@ struct AnnotationSessionData {
   let originalImageData: Data
   var annotations: [AnnotationItem]
   var canvasEffects: AnnotationCanvasEffects
+  /// Applied crop rectangle in image coordinates (if any)
+  var cropRect: CGRect?
 }
 
 /// Manages annotation window instances
@@ -214,12 +216,14 @@ final class AnnotateManager {
     for itemId: UUID,
     originalImageData: Data,
     annotations: [AnnotationItem],
-    canvasEffects: AnnotationCanvasEffects
+    canvasEffects: AnnotationCanvasEffects,
+    cropRect: CGRect?
   ) {
     sessionCache[itemId] = AnnotationSessionData(
       originalImageData: originalImageData,
       annotations: annotations,
-      canvasEffects: canvasEffects
+      canvasEffects: canvasEffects,
+      cropRect: cropRect
     )
   }
 

@@ -186,12 +186,7 @@ final class DrawingCanvasNSView: NSView {
           state.selectedAnnotationId = nil
           // Special handling for crop tool (must initialize crop rect)
           if matchedTool == .crop {
-            state.selectedTool = .crop
-            if state.cropRect == nil && state.hasImage {
-              state.initializeCrop()
-            } else if state.cropRect != nil {
-              state.isCropActive = true
-            }
+            state.beginCropInteraction()
           } else {
             state.selectedTool = matchedTool
           }
@@ -875,6 +870,8 @@ final class DrawingCanvasNSView: NSView {
   // MARK: - Crop Handling
 
   private func handleCropMouseDown(at imagePoint: CGPoint) {
+    state.collapseSidebarForCropInteraction()
+
     // Initialize crop if not set
     if state.cropRect == nil {
       Task { @MainActor in

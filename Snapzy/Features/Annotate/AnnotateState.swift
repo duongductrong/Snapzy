@@ -33,7 +33,14 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Tool State
 
-  @Published var selectedTool: AnnotationToolType = .selection
+  @Published var selectedTool: AnnotationToolType = .selection {
+    didSet {
+      // If user leaves crop by switching tool, restore sidebar if crop had auto-collapsed it.
+      if oldValue == .crop, selectedTool != .crop {
+        restoreSidebarAfterCropInteractionIfNeeded()
+      }
+    }
+  }
   @Published var strokeWidth: CGFloat = 3
   @Published var strokeColor: Color = .red
   @Published var fillColor: Color = .clear
@@ -339,6 +346,8 @@ final class AnnotateState: ObservableObject {
   @Published var isCropResizing: Bool = false
   /// Whether Shift is held (for aspect ratio lock)
   @Published var isCropShiftLocked: Bool = false
+  /// Restore sidebar when leaving crop if it was auto-collapsed on crop entry.
+  private var shouldRestoreSidebarAfterCropInteraction: Bool = false
 
   // MARK: - Mockup State
 
@@ -541,6 +550,38 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Crop Methods
 
+  /// Collapse sidebar when user starts interacting with crop UI.
+  func collapseSidebarForCropInteraction() {
+    guard showSidebar else { return }
+    shouldRestoreSidebarAfterCropInteraction = true
+    withAnimation(.easeInOut(duration: 0.2)) {
+      showSidebar = false
+    }
+  }
+
+  /// Restore sidebar when crop interaction ends.
+  func restoreSidebarAfterCropInteractionIfNeeded() {
+    guard shouldRestoreSidebarAfterCropInteraction else { return }
+    shouldRestoreSidebarAfterCropInteraction = false
+
+    guard !showSidebar else { return }
+    withAnimation(.easeInOut(duration: 0.2)) {
+      showSidebar = true
+    }
+  }
+
+  /// Activate crop tool from direct user interaction (toolbar/shortcut/canvas).
+  func beginCropInteraction() {
+    collapseSidebarForCropInteraction()
+    selectedTool = .crop
+
+    if cropRect == nil, hasImage {
+      initializeCrop()
+    } else if cropRect != nil {
+      isCropActive = true
+    }
+  }
+
   /// Initialize crop to full image bounds
   func initializeCrop() {
     DiagnosticLogger.shared.log(.info, .annotate, "Crop initialized", context: ["imageSize": "\(Int(imageWidth))x\(Int(imageHeight))"])
@@ -557,6 +598,7 @@ final class AnnotateState: ObservableObject {
     ])
     isCropActive = false
     hasUnsavedChanges = true
+    restoreSidebarAfterCropInteractionIfNeeded()
   }
 
   /// Reset unsaved changes flag after successful save
@@ -570,6 +612,7 @@ final class AnnotateState: ObservableObject {
     cropRect = nil
     isCropActive = false
     selectedTool = .selection
+    restoreSidebarAfterCropInteractionIfNeeded()
   }
 
   /// Reset crop to nil

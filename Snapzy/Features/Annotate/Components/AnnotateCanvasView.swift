@@ -526,12 +526,7 @@ struct AnnotateCanvasView: View {
 
     // Special handling for crop tool
     if tool == .crop {
-      state.selectedTool = .crop
-      if state.cropRect == nil && state.hasImage {
-        state.initializeCrop()
-      } else if state.cropRect != nil {
-        state.isCropActive = true
-      }
+      state.beginCropInteraction()
     } else {
       state.selectedTool = tool
     }
