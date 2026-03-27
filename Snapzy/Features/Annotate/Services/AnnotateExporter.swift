@@ -451,35 +451,63 @@ final class AnnotateExporter {
       break
 
     case .gradient(let preset):
-      let colors = preset.colors.map { NSColor($0).cgColor }
-      let gradient = CGGradient(
-        colorsSpace: CGColorSpaceCreateDeviceRGB(),
-        colors: colors as CFArray,
-        locations: nil
-      )
-      if let gradient = gradient {
-        context.drawLinearGradient(
-          gradient,
-          start: .zero,
-          end: CGPoint(x: size.width, y: size.height),
-          options: []
-        )
-      }
+      drawLinearGradient(colors: preset.colors, in: context, size: size)
 
     case .solidColor(let color):
       context.setFillColor(NSColor(color).cgColor)
       context.fill(rect)
 
-    case .wallpaper(let url), .blurred(let url):
-      if let wallpaper = SandboxFileAccessManager.shared.withScopedAccess(to: url, {
-        NSImage(contentsOf: url)
-      }) {
+    case .wallpaper(let url):
+      if url.scheme == "preset",
+         let presetName = url.host,
+         let preset = WallpaperPreset(rawValue: presetName) {
+        drawLinearGradient(colors: preset.colors, in: context, size: size)
+        return
+      }
+      if let wallpaper = resolveWallpaperImage(for: url, state: state, preferBlurred: false) {
         wallpaper.draw(in: rect)
-        if case .blurred = state.backgroundStyle {
-          // Apply blur effect would require CIFilter
-        }
+      }
+
+    case .blurred(let url):
+      if let wallpaper = resolveWallpaperImage(for: url, state: state, preferBlurred: true) {
+        wallpaper.draw(in: rect)
       }
     }
+  }
+
+  private static func drawLinearGradient(colors: [Color], in context: CGContext, size: NSSize) {
+    let cgColors = colors.map { NSColor($0).cgColor }
+    let gradient = CGGradient(
+      colorsSpace: CGColorSpaceCreateDeviceRGB(),
+      colors: cgColors as CFArray,
+      locations: nil
+    )
+    if let gradient = gradient {
+      context.drawLinearGradient(
+        gradient,
+        start: .zero,
+        end: CGPoint(x: size.width, y: size.height),
+        options: []
+      )
+    }
+  }
+
+  private static func resolveWallpaperImage(
+    for url: URL,
+    state: AnnotateState,
+    preferBlurred: Bool
+  ) -> NSImage? {
+    if preferBlurred, let blurred = state.cachedBlurredImage {
+      return blurred
+    }
+
+    if let cached = state.cachedBackgroundImage {
+      return cached
+    }
+
+    return SandboxFileAccessManager.shared.withScopedAccess(to: url, {
+      NSImage(contentsOf: url)
+    })
   }
 
 
@@ -658,7 +686,7 @@ struct MockupExportViewForAnnotate: View {
       if url.scheme == "preset", let presetName = url.host,
          let preset = WallpaperPreset(rawValue: presetName) {
         preset.gradient
-      } else if let image = NSImage(contentsOf: url) {
+      } else if let image = resolvedWallpaperImage(for: url) {
         Image(nsImage: image)
           .resizable()
           .aspectRatio(contentMode: .fill)
@@ -666,7 +694,11 @@ struct MockupExportViewForAnnotate: View {
         Color.gray.opacity(0.3)
       }
     case .blurred(let url):
-      if let image = NSImage(contentsOf: url) {
+      if let image = state.cachedBlurredImage {
+        Image(nsImage: image)
+          .resizable()
+          .aspectRatio(contentMode: .fill)
+      } else if let image = resolvedWallpaperImage(for: url) {
         Image(nsImage: image)
           .resizable()
           .aspectRatio(contentMode: .fill)
@@ -675,5 +707,14 @@ struct MockupExportViewForAnnotate: View {
         Color.gray.opacity(0.3)
       }
     }
+  }
+
+  private func resolvedWallpaperImage(for url: URL) -> NSImage? {
+    if let cached = state.cachedBackgroundImage {
+      return cached
+    }
+    return SandboxFileAccessManager.shared.withScopedAccess(to: url, {
+      NSImage(contentsOf: url)
+    })
   }
 }

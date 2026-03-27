@@ -19,9 +19,10 @@ class SystemWallpaperManager: ObservableObject {
   // MARK: - Thumbnail Cache (Performance Optimization)
 
   private let thumbnailCache = NSCache<NSURL, NSImage>()
-  private let thumbnailSize: CGFloat = 128  // Optimal for grid display
+  private let thumbnailSize: CGFloat = 96  // 48pt grid item @2x retina
   private var loadingURLs = Set<URL>()
   private let cacheQueue = DispatchQueue(label: "wallpaper.thumbnail.cache", qos: .userInitiated)
+  private let defaultSystemWallpaperLimit = 3
 
   // MARK: - Preview Cache (Canvas Display Optimization)
 
@@ -39,7 +40,7 @@ class SystemWallpaperManager: ObservableObject {
   private let wallpaperBookmarkKey = PreferencesKeys.wallpaperDirectoryBookmark
 
   struct WallpaperItem: Identifiable, Hashable {
-    let id = UUID()
+    var id: URL { fullImageURL }
     let fullImageURL: URL
     let thumbnailURL: URL?
     let name: String
@@ -100,7 +101,7 @@ class SystemWallpaperManager: ObservableObject {
       }
 
       self.cacheQueue.sync {
-        self.loadingURLs.remove(url)
+        _ = self.loadingURLs.remove(url)
       }
 
       DispatchQueue.main.async {
@@ -111,7 +112,7 @@ class SystemWallpaperManager: ObservableObject {
 
   /// Create downsampled thumbnail using ImageIO (memory efficient)
   private func createDownsampledThumbnail(from url: URL) -> NSImage? {
-    createDownsampledImage(from: url, maxSize: thumbnailSize * 2)
+    createDownsampledImage(from: url, maxSize: thumbnailSize)
   }
 
   /// Create downsampled image using ImageIO (memory efficient)
@@ -180,7 +181,7 @@ class SystemWallpaperManager: ObservableObject {
 
   /// Preload visible thumbnails (call when view appears)
   func preloadThumbnails(for items: [WallpaperItem]) {
-    for item in items.prefix(12) {  // Preload first 12 (visible in grid)
+    for item in items.prefix(6) {  // Keep preloading lightweight to avoid sidebar jank
       loadThumbnail(for: item) { _ in }
     }
   }
@@ -208,11 +209,12 @@ class SystemWallpaperManager: ObservableObject {
       accessDenied = true
     }
 
-    systemWallpapers = wallpapers
+    let limitedWallpapers = Array(wallpapers.prefix(defaultSystemWallpaperLimit))
+    systemWallpapers = limitedWallpapers
     isLoading = false
 
     // Preload first batch of thumbnails
-    preloadThumbnails(for: wallpapers)
+    preloadThumbnails(for: limitedWallpapers)
   }
 
   /// Load currently active desktop wallpaper(s) from display settings.
@@ -358,8 +360,9 @@ class SystemWallpaperManager: ObservableObject {
 
     // Enumerate user-selected directory
     let items = enumerateUserSelectedDirectory(url)
-    if !items.isEmpty {
-      systemWallpapers = items
+    let limitedItems = Array(items.prefix(defaultSystemWallpaperLimit))
+    if !limitedItems.isEmpty {
+      systemWallpapers = limitedItems
       accessDenied = false
     }
     return items.isEmpty ? nil : [url]

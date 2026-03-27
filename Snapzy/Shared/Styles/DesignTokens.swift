@@ -99,10 +99,12 @@ struct SidebarItemStyle: ViewModifier {
       .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
       .overlay(
         RoundedRectangle(cornerRadius: cornerRadius)
-          .stroke(borderColor, lineWidth: borderWidth)
+          .fill(isHovering && !isSelected ? SidebarColors.itemHover.opacity(0.35) : Color.clear)
       )
-      .scaleEffect(isHovering && !isSelected ? 1.05 : 1.0)
-      .animation(.easeInOut(duration: 0.15), value: isHovering)
+      .overlay(
+        RoundedRectangle(cornerRadius: cornerRadius)
+          .strokeBorder(borderColor, lineWidth: Size.strokeSelected)
+      )
       .onHover { isHovering = $0 }
   }
 
@@ -112,9 +114,6 @@ struct SidebarItemStyle: ViewModifier {
     return .clear
   }
 
-  private var borderWidth: CGFloat {
-    isSelected ? Size.strokeSelected : Size.strokeDefault
-  }
 }
 
 // MARK: - Color Swatch Style Modifier
@@ -176,8 +175,6 @@ struct ActionButtonStyle: ViewModifier {
           .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
           .foregroundColor(isHovering ? .primary.opacity(0.5) : .primary.opacity(0.3))
       )
-      .scaleEffect(isHovering ? 1.05 : 1.0)
-      .animation(.easeInOut(duration: 0.15), value: isHovering)
       .onHover { isHovering = $0 }
   }
 }

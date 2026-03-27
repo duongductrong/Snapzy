@@ -55,7 +55,7 @@ struct SidebarWallpaperSection: View {
         // }
 
         // System wallpapers
-        ForEach(systemManager.systemWallpapers) { item in
+        ForEach(Array(systemManager.systemWallpapers.prefix(3))) { item in
           SystemWallpaperButton(
             item: item,
             isSelected: isSystemWallpaperSelected(item)
