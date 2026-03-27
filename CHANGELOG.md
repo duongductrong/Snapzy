@@ -38,6 +38,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.7] - 2026-03-27
+
+### Features
+-  Optimize wallpaper loading and rendering with caching, limit displayed system wallpapers, and refine UI button hover effects. (162def4)
+
+### Bug Fixes
+-  Persist crop state and improve crop tool interaction with automatic sidebar management. (f83dd07)
+-  Introduce `AnnotationCanvasEffects` to persist and re-edit canvas visual effects in annotation sessions. (0ab7bf6)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.6 (bc2c83b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.6] - 2026-03-25
 
 ### Features
