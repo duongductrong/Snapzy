@@ -156,6 +156,7 @@ flowchart TD
 4. Configure `SCStreamConfiguration`:
    - `width/height` = display pixel dimensions × `backingScaleFactor`
    - `pixelFormat` = `kCVPixelFormatType_32BGRA`
+   - `showsCursor` = user preference `screenshot.showCursor` (default: `false`)
    - `captureResolution = .best` (macOS 14.2+)
 5. Capture via `SCScreenshotManager` (macOS 14+) or `SCStream` single-frame (macOS 13)
 6. Save via `CGImageDestination` (PNG/JPEG) or `WebPEncoderService` (WebP)
@@ -165,6 +166,7 @@ flowchart TD
 1. `AreaSelectionController` shows overlay → user drags selection rect
 2. Find matching `NSScreen` and `SCDisplay`
 3. Capture **full display** at native pixel resolution
+   - `showsCursor` follows user preference `screenshot.showCursor` (default: `false`)
 4. **Post-capture crop** using `CGImage.cropping(to:)` with pixel-coordinate rect — avoids `sourceRect` interpolation blur
 5. Save cropped image
 

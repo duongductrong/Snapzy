@@ -13,6 +13,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.hideDesktopIcons) private var hideDesktopIcons = false
   @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @AppStorage(PreferencesKeys.screenshotIncludeOwnApp) private var includeOwnAppInScreenshots = false
+  @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.screenshotFileNameTemplate)
   private var screenshotFileNameTemplate = CaptureOutputKind.screenshot.defaultTemplate
@@ -107,6 +108,15 @@ struct CaptureSettingsView: View {
       // MARK: - Screenshot Format
 
       Section("Screenshot Format") {
+        SettingRow(
+          icon: "cursorarrow",
+          title: "Show cursor",
+          description: "Include mouse pointer in captured screenshots"
+        ) {
+          Toggle("", isOn: $screenshotShowCursor)
+            .labelsHidden()
+        }
+
         SettingRow(icon: "photo", title: "Image Format", description: "Output format for captured screenshots") {
           Picker("", selection: $screenshotFormat) {
             ForEach(ImageFormatOption.allCases, id: \.self) { option in

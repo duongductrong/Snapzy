@@ -148,12 +148,14 @@ final class ScreenCaptureManager: ObservableObject {
   ///   - fileName: Optional custom filename (without extension). If nil, uses timestamp
   ///   - displayID: Optional specific display to capture. If nil, captures main display
   ///   - format: Image format for saving (default: PNG)
+  ///   - showCursor: Whether the cursor should appear in the captured screenshot
   /// - Returns: CaptureResult with the saved file URL or error
   func captureFullscreen(
     saveDirectory: URL,
     fileName: String? = nil,
     displayID: CGDirectDisplayID? = nil,
     format: ImageFormat = .png,
+    showCursor: Bool = false,
     excludeDesktopIcons: Bool = false,
     excludeDesktopWidgets: Bool = false,
     excludeOwnApplication: Bool = false,
@@ -208,7 +210,7 @@ final class ScreenCaptureManager: ObservableObject {
       config.width = Int(CGFloat(display.width) * scaleFactor)
       config.height = Int(CGFloat(display.height) * scaleFactor)
       config.pixelFormat = kCVPixelFormatType_32BGRA
-      config.showsCursor = true
+      config.showsCursor = showCursor
 
       // Capture the image (compat: SCScreenshotManager requires macOS 14+)
       let image = try await captureImageCompat(
@@ -233,12 +235,14 @@ final class ScreenCaptureManager: ObservableObject {
   ///   - saveDirectory: Directory URL where the screenshot will be saved
   ///   - fileName: Optional custom filename (without extension)
   ///   - format: Image format for saving
+  ///   - showCursor: Whether the cursor should appear in the captured screenshot
   /// - Returns: CaptureResult with the saved file URL or error
   func captureArea(
     rect: CGRect,
     saveDirectory: URL,
     fileName: String? = nil,
     format: ImageFormat = .png,
+    showCursor: Bool = false,
     excludeDesktopIcons: Bool = false,
     excludeDesktopWidgets: Bool = false,
     excludeOwnApplication: Bool = false,
@@ -297,7 +301,7 @@ final class ScreenCaptureManager: ObservableObject {
       if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
       if #available(macOS 14.2, *) { config.captureResolution = .best }
       config.pixelFormat = kCVPixelFormatType_32BGRA
-      config.showsCursor = false
+      config.showsCursor = showCursor
 
       // Get the display's backing scale factor (2.0 for Retina displays)
       let scaleFactor: CGFloat

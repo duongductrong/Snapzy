@@ -43,6 +43,10 @@ final class RecordingCoordinator: ObservableObject {
     UserDefaults.standard.bool(forKey: PreferencesKeys.screenshotIncludeOwnApp)
   }
 
+  private var showsCursorInScreenshots: Bool {
+    UserDefaults.standard.object(forKey: PreferencesKeys.screenshotShowCursor) as? Bool ?? false
+  }
+
   private var includeOwnAppInRecordings: Bool {
     UserDefaults.standard.bool(forKey: PreferencesKeys.recordingIncludeOwnApp)
   }
@@ -616,6 +620,7 @@ final class RecordingCoordinator: ObservableObject {
       let result = await captureManager.captureArea(
         rect: rect,
         saveDirectory: actualSaveDirectory,
+        showCursor: showsCursorInScreenshots,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
         excludeOwnApplication: !includeOwnAppInScreenshots,

@@ -45,7 +45,6 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       UserDefaults.standard.set(selectedFormat.rawValue, forKey: PreferencesKeys.screenshotFormat)
     }
   }
-  @Published var showCursor: Bool = true
 
   @Published var lastCaptureResult: CaptureResult?
   @Published var shortcutsEnabled: Bool = false {
@@ -118,6 +117,10 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   private var includesOwnAppInScreenshots: Bool {
     UserDefaults.standard.bool(forKey: PreferencesKeys.screenshotIncludeOwnApp)
+  }
+
+  private var showsCursorInScreenshots: Bool {
+    UserDefaults.standard.object(forKey: PreferencesKeys.screenshotShowCursor) as? Bool ?? false
   }
 
   /// Always read format from UserDefaults to stay in sync with Settings @AppStorage
@@ -247,6 +250,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       let result = await captureManager.captureFullscreen(
         saveDirectory: actualSaveDirectory,
         format: resolvedFormat,
+        showCursor: showsCursorInScreenshots,
         excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
         excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
         excludeOwnApplication: !includesOwnAppInScreenshots,
@@ -326,6 +330,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             rect: selectedRect,
             saveDirectory: actualSaveDirectory,
             format: self.resolvedFormat,
+            showCursor: self.showsCursorInScreenshots,
             excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
             excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
             excludeOwnApplication: !self.includesOwnAppInScreenshots,
