@@ -39,6 +39,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.4.8] - 2026-03-30
+
+### Features
+-  Add user preference for showing cursor in screenshots and recordings (53e4f6d)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.7 (3d7b4b1)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.7] - 2026-03-27
 
 ### Features
