@@ -40,6 +40,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.0] - 2026-03-31
+
+### Features
+-  Add background cutout auto-crop feature with user preference and UI updates (8437179)
+-  Implement object cutout feature with keyboard shortcut and UI updates (5403b01)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.4.8 (73cd237)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.4.8] - 2026-03-30
 
 ### Features
