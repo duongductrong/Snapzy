@@ -39,6 +39,10 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       self.state.applyCanvasEffects(sessionData.canvasEffects)
       self.state.cropRect = sessionData.cropRect
       self.state.isCropActive = false
+      self.state.restoreBackgroundCutout(
+        isApplied: sessionData.isCutoutApplied,
+        cutoutImageData: sessionData.cutoutImageData
+      )
     } else {
       // First open: load image from disk and capture raw file bytes (fast, no re-encoding)
       let image = Self.loadImageWithCorrectScale(from: item.url) ?? item.thumbnail
@@ -435,6 +439,12 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     guard state.hasImage else { return }
 
     if state.sourceURL != nil {
+      if let targetURL = state.sourceURL {
+        guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: state, targetURL: targetURL) else {
+          return
+        }
+      }
+
       // Render the annotated image once
       let renderedImage = AnnotateExporter.renderFinalImage(state: state)
 
@@ -471,6 +481,9 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     panel.beginSheetModal(for: window) { [weak self] response in
       guard let self = self, response == .OK, let url = panel.url else { return }
+      guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: self.state, targetURL: url) else {
+        return
+      }
       if AnnotateExporter.save(state: self.state, to: url) {
         self.state.markAsSaved()
         // Dismiss Quick Access card if present
@@ -719,12 +732,15 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   private func saveSessionCache() {
     guard let itemId = quickAccessItemId,
           let imageData = originalImageData else { return }
+    let cutoutSnapshot = state.cutoutSnapshot()
     AnnotateManager.shared.saveSessionData(
       for: itemId,
       originalImageData: imageData,
       annotations: state.annotations,
       canvasEffects: state.canvasEffectsSnapshot,
-      cropRect: state.cropRect
+      cropRect: state.cropRect,
+      isCutoutApplied: cutoutSnapshot.isApplied,
+      cutoutImageData: cutoutSnapshot.cutoutImageData
     )
   }
 }

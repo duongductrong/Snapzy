@@ -43,6 +43,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Cmd + Shift + 1
+  static let defaultObjectCutout = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_1),
+    modifiers: UInt32(cmdKey | shiftKey)
+  )
+
   /// Cmd + Shift + A
   static let defaultAnnotate = ShortcutConfig(
     keyCode: UInt32(kVK_ANSI_A),
@@ -199,6 +205,7 @@ enum ShortcutAction {
   case captureFullscreen
   case captureArea
   case captureOCR
+  case captureObjectCutout
   case recordVideo
   case openAnnotate
   case openVideoEditor
@@ -225,6 +232,7 @@ final class KeyboardShortcutManager {
   private(set) var videoEditorShortcut: ShortcutConfig
   private(set) var cloudUploadsShortcut: ShortcutConfig
   private(set) var ocrShortcut: ShortcutConfig
+  private(set) var objectCutoutShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
@@ -234,6 +242,7 @@ final class KeyboardShortcutManager {
   private var videoEditorHotkeyRef: EventHotKeyRef?
   private var cloudUploadsHotkeyRef: EventHotKeyRef?
   private var ocrHotkeyRef: EventHotKeyRef?
+  private var objectCutoutHotkeyRef: EventHotKeyRef?
 
   // Hotkey IDs
   private let fullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4631), id: 1)  // "ZSF1"
@@ -243,6 +252,7 @@ final class KeyboardShortcutManager {
   private let videoEditorHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4635), id: 5)  // "ZSF5"
   private let ocrHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4636), id: 6)  // "ZSF6"
   private let cloudUploadsHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4637), id: 7)  // "ZSF7"
+  private let objectCutoutHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4638), id: 8)  // "ZSF8"
 
   private var eventHandler: EventHandlerRef?
 
@@ -254,6 +264,7 @@ final class KeyboardShortcutManager {
   private let videoEditorShortcutKey = "videoEditorShortcut"
   private let cloudUploadsShortcutKey = "cloudUploadsShortcut"
   private let ocrShortcutKey = "ocrShortcut"
+  private let objectCutoutShortcutKey = "objectCutoutShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
 
   private init() {
@@ -264,6 +275,7 @@ final class KeyboardShortcutManager {
     videoEditorShortcut = .defaultVideoEditor
     cloudUploadsShortcut = .defaultCloudUploads
     ocrShortcut = .defaultOCR
+    objectCutoutShortcut = .defaultObjectCutout
     loadShortcuts()
     setupEventHandler()
 
@@ -327,6 +339,15 @@ final class KeyboardShortcutManager {
     if wasEnabled { enable() }
   }
 
+  /// Update object cutout shortcut
+  func setObjectCutoutShortcut(_ config: ShortcutConfig) {
+    let wasEnabled = isEnabled
+    if wasEnabled { disable() }
+    objectCutoutShortcut = config
+    saveShortcuts()
+    if wasEnabled { enable() }
+  }
+
   /// Update annotate shortcut
   func setAnnotateShortcut(_ config: ShortcutConfig) {
     let wasEnabled = isEnabled
@@ -379,6 +400,9 @@ final class KeyboardShortcutManager {
     if let ocrData = try? encoder.encode(ocrShortcut) {
       UserDefaults.standard.set(ocrData, forKey: ocrShortcutKey)
     }
+    if let objectCutoutData = try? encoder.encode(objectCutoutShortcut) {
+      UserDefaults.standard.set(objectCutoutData, forKey: objectCutoutShortcutKey)
+    }
   }
 
   private func loadShortcuts() {
@@ -417,6 +441,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: ocrData)
     {
       ocrShortcut = config
+    }
+    if let objectCutoutData = UserDefaults.standard.data(forKey: objectCutoutShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: objectCutoutData)
+    {
+      objectCutoutShortcut = config
     }
   }
 
@@ -485,6 +514,9 @@ final class KeyboardShortcutManager {
     case ocrHotkeyID.id:
       actionName = "ocr"
       action = .captureOCR
+    case objectCutoutHotkeyID.id:
+      actionName = "object-cutout"
+      action = .captureObjectCutout
     default:
       return
     }
@@ -576,6 +608,17 @@ final class KeyboardShortcutManager {
       0,
       &cloudUploadsHotkeyRef
     )
+
+    // Register object cutout shortcut
+    let objectCutoutID = objectCutoutHotkeyID
+    RegisterEventHotKey(
+      objectCutoutShortcut.keyCode,
+      objectCutoutShortcut.modifiers,
+      objectCutoutID,
+      GetApplicationEventTarget(),
+      0,
+      &objectCutoutHotkeyRef
+    )
   }
 
   private func unregisterAllShortcuts() {
@@ -606,6 +649,10 @@ final class KeyboardShortcutManager {
     if let ref = cloudUploadsHotkeyRef {
       UnregisterEventHotKey(ref)
       cloudUploadsHotkeyRef = nil
+    }
+    if let ref = objectCutoutHotkeyRef {
+      UnregisterEventHotKey(ref)
+      objectCutoutHotkeyRef = nil
     }
   }
 }

@@ -17,6 +17,11 @@ final class AnnotateState: ObservableObject {
 
   @Published var sourceImage: NSImage?
   @Published var sourceURL: URL?
+  @Published private(set) var cutoutImage: NSImage?
+  @Published private(set) var isCutoutApplied: Bool = false
+  @Published private(set) var isCutoutProcessing: Bool = false
+  @Published var cutoutErrorMessage: String?
+  private var activeCutoutOperationID: UUID?
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?
@@ -30,6 +35,21 @@ final class AnnotateState: ObservableObject {
 
   /// Whether an image is loaded
   var hasImage: Bool { sourceImage != nil }
+
+  /// Image currently used by preview/export. Cutout is non-destructive and overlays the original source image.
+  var effectiveSourceImage: NSImage? {
+    if isCutoutApplied {
+      return cutoutImage ?? sourceImage
+    }
+    return sourceImage
+  }
+
+  var canUseBackgroundCutout: Bool {
+    if #available(macOS 14.0, *) {
+      return true
+    }
+    return false
+  }
 
   // MARK: - Tool State
 
@@ -252,8 +272,8 @@ final class AnnotateState: ObservableObject {
   private static let defaultCanvasHeight: CGFloat = 300
 
   /// Original image dimensions (points, not pixels)
-  var imageWidth: CGFloat { sourceImage?.size.width ?? Self.defaultCanvasWidth }
-  var imageHeight: CGFloat { sourceImage?.size.height ?? Self.defaultCanvasHeight }
+  var imageWidth: CGFloat { effectiveSourceImage?.size.width ?? Self.defaultCanvasWidth }
+  var imageHeight: CGFloat { effectiveSourceImage?.size.height ?? Self.defaultCanvasHeight }
   var imageAspectRatio: CGFloat { imageWidth / imageHeight }
 
   /// Calculate display scale for given container size
@@ -430,6 +450,7 @@ final class AnnotateState: ObservableObject {
       DiagnosticLogger.shared.log(.error, .annotate, "Failed to load image", context: ["file": url.lastPathComponent])
       return
     }
+    resetBackgroundCutoutState(markUnsaved: false)
     self.sourceImage = image
     self.sourceURL = url
     // Reset annotations for new image
@@ -452,6 +473,7 @@ final class AnnotateState: ObservableObject {
       "size": "\(Int(image.size.width))x\(Int(image.size.height))",
       "url": url?.lastPathComponent ?? "nil"
     ])
+    resetBackgroundCutoutState(markUnsaved: false)
     self.sourceImage = image
     self.sourceURL = url
     // Reset annotations for new image
@@ -466,6 +488,109 @@ final class AnnotateState: ObservableObject {
     isCropActive = false
     editorMode = .annotate  // Reset to annotate mode
     hasUnsavedChanges = false
+  }
+
+  // MARK: - Background Cutout
+
+  func toggleBackgroundCutout() {
+    if isCutoutApplied {
+      resetBackgroundCutoutState(markUnsaved: true)
+    } else {
+      applyBackgroundCutout()
+    }
+  }
+
+  func applyBackgroundCutout() {
+    guard !isCutoutProcessing else { return }
+
+    guard canUseBackgroundCutout else {
+      cutoutErrorMessage = ForegroundCutoutError.unsupportedOS.localizedDescription
+      return
+    }
+
+    guard let sourceImage,
+          let sourceCGImage = sourceImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+      cutoutErrorMessage = "Unable to load image data for background cutout."
+      return
+    }
+
+    let operationID = UUID()
+    activeCutoutOperationID = operationID
+    isCutoutProcessing = true
+    cutoutErrorMessage = nil
+
+    Task { [sourceCGImage, sourceSize = sourceImage.size] in
+      do {
+        let cutoutCGImage = try await ForegroundCutoutService.shared.extractForeground(
+          from: sourceCGImage,
+          cropToSubject: false
+        )
+
+        guard activeCutoutOperationID == operationID else { return }
+        cutoutImage = NSImage(cgImage: cutoutCGImage, size: sourceSize)
+        isCutoutApplied = true
+        isCutoutProcessing = false
+        hasUnsavedChanges = true
+      } catch {
+        guard activeCutoutOperationID == operationID else { return }
+        isCutoutProcessing = false
+
+        if let localizedError = error as? LocalizedError, let message = localizedError.errorDescription {
+          cutoutErrorMessage = message
+        } else {
+          cutoutErrorMessage = error.localizedDescription
+        }
+      }
+    }
+  }
+
+  func resetBackgroundCutoutState(markUnsaved: Bool) {
+    activeCutoutOperationID = nil
+    isCutoutProcessing = false
+    cutoutImage = nil
+    isCutoutApplied = false
+    cutoutErrorMessage = nil
+
+    if markUnsaved {
+      hasUnsavedChanges = true
+    }
+  }
+
+  /// Snapshot cutout state for Quick Access session caching.
+  func cutoutSnapshot() -> (isApplied: Bool, cutoutImageData: Data?) {
+    guard isCutoutApplied, let cutoutImage else { return (false, nil) }
+    guard let cutoutImageData = Self.pngData(from: cutoutImage) else {
+      DiagnosticLogger.shared.log(.warning, .annotate, "Cutout snapshot skipped: PNG encoding failed")
+      return (false, nil)
+    }
+    return (true, cutoutImageData)
+  }
+
+  /// Restore cutout state from Quick Access session cache.
+  func restoreBackgroundCutout(isApplied: Bool, cutoutImageData: Data?) {
+    activeCutoutOperationID = nil
+    isCutoutProcessing = false
+    cutoutErrorMessage = nil
+
+    guard isApplied,
+          let cutoutImageData,
+          let restoredImage = NSImage(data: cutoutImageData) else {
+      cutoutImage = nil
+      isCutoutApplied = false
+      return
+    }
+
+    if let sourceImage {
+      restoredImage.size = sourceImage.size
+    }
+    cutoutImage = restoredImage
+    isCutoutApplied = true
+  }
+
+  private static func pngData(from image: NSImage) -> Data? {
+    guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+    let bitmap = NSBitmapImageRep(cgImage: cgImage)
+    return bitmap.representation(using: .png, properties: [:])
   }
 
   /// Load image and adjust size for Retina displays

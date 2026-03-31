@@ -633,7 +633,8 @@ final class DrawingCanvasNSView: NSView {
     super.draw(dirtyRect)
     guard let context = NSGraphicsContext.current?.cgContext else { return }
 
-    let currentImageIdentifier = state.sourceImage.map(ObjectIdentifier.init)
+    let effectiveSourceImage = state.effectiveSourceImage
+    let currentImageIdentifier = effectiveSourceImage.map(ObjectIdentifier.init)
     if currentImageIdentifier != lastSourceImageIdentifier {
       blurCacheManager.clearAll()
       lastSourceImageIdentifier = currentImageIdentifier
@@ -647,7 +648,7 @@ final class DrawingCanvasNSView: NSView {
     let renderer = AnnotationRenderer(
       context: context,
       editingTextId: state.editingTextAnnotationId,
-      sourceImage: state.sourceImage,
+      sourceImage: effectiveSourceImage,
       blurCacheManager: blurCacheManager,
       interactiveBlurAnnotationId: activeInteractiveBlurAnnotationId()
     )

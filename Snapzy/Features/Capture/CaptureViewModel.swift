@@ -70,6 +70,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   @Published var fullscreenShortcut: ShortcutConfig
   @Published var areaShortcut: ShortcutConfig
   @Published var recordingShortcut: ShortcutConfig
+  @Published var objectCutoutShortcut: ShortcutConfig
 
   init() {
     // Initialize format from saved preference
@@ -87,6 +88,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     fullscreenShortcut = KeyboardShortcutManager.shared.fullscreenShortcut
     areaShortcut = KeyboardShortcutManager.shared.areaShortcut
     recordingShortcut = KeyboardShortcutManager.shared.recordingShortcut
+    objectCutoutShortcut = KeyboardShortcutManager.shared.objectCutoutShortcut
 
     // Set up shortcut delegate
     shortcutManager.delegate = self
@@ -186,6 +188,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     recordingShortcut = config
   }
 
+  func updateObjectCutoutShortcut(_ config: ShortcutConfig) {
+    shortcutManager.setObjectCutoutShortcut(config)
+    objectCutoutShortcut = config
+  }
+
   // MARK: - KeyboardShortcutDelegate
 
   func shortcutTriggered(_ action: ShortcutAction) {
@@ -196,6 +203,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureArea()
     case .captureOCR:
       captureOCR()
+    case .captureObjectCutout:
+      captureObjectCutout()
     case .recordVideo:
       startRecordingFlow()
     case .openAnnotate:
@@ -498,5 +507,195 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         }
       }
     }
+  }
+
+  // MARK: - Object Cutout Capture
+
+  func captureObjectCutout() {
+    // Feature gate: keep app compatible on macOS 13 while disabling this flow safely.
+    guard #available(macOS 14.0, *) else {
+      DiagnosticLogger.shared.log(.warning, .capture, "Object cutout unavailable: macOS < 14")
+      lastCaptureResult = .failure(.unavailable("Object cutout requires macOS 14 or newer"))
+      AppToastManager.shared.show(
+        message: "Object cutout requires macOS 14 or newer.",
+        style: .warning,
+        position: .bottomCenter
+      )
+      QuickAccessSound.failed.play()
+      return
+    }
+
+    // Prevent multiple area captures
+    if isAreaSelectionActive {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureObjectCutout blocked: area selection active")
+      return
+    }
+
+    guard
+      let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+        promptMessage: "Choose where Snapzy should save screenshots and recordings")
+    else {
+      lastCaptureResult = .failure(.saveFailed("Save location permission is required"))
+      return
+    }
+    saveDirectory = resolvedSaveDirectory
+
+    isAreaSelectionActive = true
+    DiagnosticLogger.shared.log(.info, .capture, "Object cutout flow started")
+    let prefetchedContentTask = captureManager.prefetchShareableContent()
+
+    // Hide only normal-level app windows (not overlay panels)
+    hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+      guard let self = self else {
+        DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout: self deallocated")
+        AreaSelectionController.shared.cancelSelection()
+        return
+      }
+
+      AreaSelectionController.shared.startSelection { [weak self] rect in
+        guard let self = self else {
+          DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout completion: self deallocated")
+          return
+        }
+
+        guard let selectedRect = rect else {
+          self.isAreaSelectionActive = false
+          DiagnosticLogger.shared.log(.info, .capture, "Object cutout capture cancelled")
+          self.lastCaptureResult = .failure(.cancelled)
+          return
+        }
+
+        Task { @MainActor in
+          defer {
+            self.isAreaSelectionActive = false
+          }
+
+          self.isCapturing = true
+          await Task.yield()
+
+          do {
+            guard let capturedImage = try await self.captureManager.captureAreaAsImage(
+              rect: selectedRect,
+              excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+              excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
+              excludeOwnApplication: !self.includesOwnAppInScreenshots,
+              prefetchedContentTask: prefetchedContentTask
+            ) else {
+              self.isCapturing = false
+              self.lastCaptureResult = .failure(.captureFailed("Unable to capture selected area"))
+              AppToastManager.shared.show(
+                message: "Unable to capture selected area. Please try again.",
+                style: .error,
+                position: .bottomCenter
+              )
+              QuickAccessSound.failed.play()
+              return
+            }
+
+            let cutoutImage = try await ForegroundCutoutService.shared.extractForeground(
+              from: capturedImage,
+              cropToSubject: false
+            )
+
+            // Transparency cannot be stored in JPEG. For this mode we force alpha-capable output.
+            let output = self.resolvedCutoutOutputFormat()
+            if output.didOverrideFromJPEG {
+              DiagnosticLogger.shared.log(
+                .warning,
+                .capture,
+                "Object cutout format overridden to PNG because JPEG does not support transparency"
+              )
+            }
+
+            let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+              for: .screenshot,
+              exportDirectory: resolvedSaveDirectory
+            )
+
+            let result = await self.captureManager.saveProcessedImage(
+              cutoutImage,
+              to: actualSaveDirectory,
+              format: output.format
+            )
+            self.lastCaptureResult = result
+            self.isCapturing = false
+
+            switch result {
+            case .success:
+              SoundManager.play("Glass")
+            case .failure(let error):
+              AppToastManager.shared.show(
+                message: error.localizedDescription,
+                style: .error,
+                position: .bottomCenter
+              )
+              QuickAccessSound.failed.play()
+            }
+          } catch {
+            self.isCapturing = false
+            self.lastCaptureResult = .failure(.captureFailed(error.localizedDescription))
+            self.showCutoutFailureToast(for: error)
+            DiagnosticLogger.shared.logError(.capture, error, "Object cutout capture failed")
+            QuickAccessSound.failed.play()
+          }
+        }
+      }
+    }
+  }
+
+  private func resolvedCutoutOutputFormat() -> (format: ImageFormat, didOverrideFromJPEG: Bool) {
+    guard let raw = UserDefaults.standard.string(forKey: PreferencesKeys.screenshotFormat),
+          let option = ImageFormatOption(rawValue: raw) else {
+      return (.png, false)
+    }
+
+    switch option {
+    case .png:
+      return (.png, false)
+    case .webp:
+      return (.webp, false)
+    case .jpeg:
+      return (.png, true)
+    }
+  }
+
+  private func showCutoutFailureToast(for error: Error) {
+    if let cutoutError = error as? ForegroundCutoutError {
+      switch cutoutError {
+      case .noSubjectDetected:
+        AppToastManager.shared.show(
+          message: "No object detected. Try selecting a tighter area around the subject.",
+          style: .warning,
+          position: .bottomCenter
+        )
+      case .unsupportedOS:
+        AppToastManager.shared.show(
+          message: "Object cutout requires macOS 14 or newer.",
+          style: .warning,
+          position: .bottomCenter
+        )
+      case .imageConversionFailed:
+        AppToastManager.shared.show(
+          message: "Unable to process cutout image. Please try again.",
+          style: .error,
+          position: .bottomCenter
+        )
+      case .cutoutFailed(let underlying):
+        AppToastManager.shared.show(
+          message: "Background cutout failed: \(underlying.localizedDescription)",
+          style: .error,
+          position: .bottomCenter
+        )
+      }
+      return
+    }
+
+    AppToastManager.shared.show(
+      message: "Background cutout failed. Please try again.",
+      style: .error,
+      position: .bottomCenter
+    )
   }
 }

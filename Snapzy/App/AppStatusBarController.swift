@@ -234,6 +234,21 @@ final class AppStatusBarController: ObservableObject {
     captureOCRItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureOCRItem)
 
+    let captureObjectCutoutItem = NSMenuItem(
+      title: "Capture Object (Transparent)",
+      action: #selector(captureObjectCutoutAction),
+      keyEquivalent: "1"
+    )
+    captureObjectCutoutItem.keyEquivalentModifierMask = [.command, .shift]
+    captureObjectCutoutItem.target = self
+    captureObjectCutoutItem.image = NSImage(systemSymbolName: "person.crop.rectangle", accessibilityDescription: nil)
+    if #available(macOS 14.0, *) {
+      captureObjectCutoutItem.isEnabled = viewModel.hasPermission
+    } else {
+      captureObjectCutoutItem.isEnabled = false
+    }
+    menu?.addItem(captureObjectCutoutItem)
+
     menu?.addItem(NSMenuItem.separator())
 
     // Recording
@@ -355,6 +370,10 @@ final class AppStatusBarController: ObservableObject {
 
   @objc private func captureOCRAction() {
     viewModel?.captureOCR()
+  }
+
+  @objc private func captureObjectCutoutAction() {
+    viewModel?.captureObjectCutout()
   }
 
   @objc private func recordScreenAction() {

@@ -42,6 +42,17 @@ struct AnnotateToolbarView: View {
     }
     .windowTrafficLightsInset()
     .windowToolbarPadding()
+    .alert(
+      "Background Cutout",
+      isPresented: Binding(
+        get: { state.cutoutErrorMessage != nil },
+        set: { if !$0 { state.cutoutErrorMessage = nil } }
+      )
+    ) {
+      Button("OK", role: .cancel) {}
+    } message: {
+      Text(state.cutoutErrorMessage ?? "Unable to remove background.")
+    }
   }
 
   // MARK: - Tool Groups
@@ -55,6 +66,21 @@ struct AnnotateToolbarView: View {
         state.beginCropInteraction()
       }
       .help("Crop")
+
+      ToolbarButton(
+        icon: state.isCutoutProcessing ? "hourglass" : "person.crop.rectangle",
+        selectedIcon: "person.crop.rectangle.fill",
+        isSelected: state.isCutoutApplied
+      ) {
+        state.toggleBackgroundCutout()
+      }
+      .disabled(!state.canUseBackgroundCutout || !state.hasImage || state.isCutoutProcessing)
+      .opacity((!state.canUseBackgroundCutout || !state.hasImage) ? 0.4 : 1)
+      .help(
+        state.canUseBackgroundCutout
+          ? (state.isCutoutApplied ? "Background Removed (Click to restore)" : "Remove Background")
+          : "Requires macOS 14+"
+      )
 
       ToolbarButton(
         icon: "rectangle.on.rectangle",
@@ -154,8 +180,11 @@ struct AnnotateToolbarView: View {
 
 struct ToolbarButton: View {
   let icon: String
+  var selectedIcon: String? = nil
   let isSelected: Bool
   var highlightColor: Color = .primary
+  var selectedForegroundColor: Color? = nil
+  var selectedBadgeIcon: String? = nil
 
   let action: () -> Void
 
@@ -163,14 +192,24 @@ struct ToolbarButton: View {
 
   var body: some View {
     Button(action: action) {
-      Image(systemName: icon)
+      Image(systemName: displayedIcon)
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(isSelected ? highlightColor : .primary)
+        .foregroundColor(foregroundColor)
         .frame(width: 28, height: 28)
         .background(
           RoundedRectangle(cornerRadius: 6)
             .fill(backgroundColor)
         )
+        .overlay(alignment: .topTrailing) {
+          if let selectedBadgeIcon, isSelected {
+            Image(systemName: selectedBadgeIcon)
+              .font(.system(size: 7, weight: .bold))
+              .foregroundColor(highlightColor)
+              .frame(width: 12, height: 12)
+              .background(Circle().fill(Color.white))
+              .offset(x: 3, y: -3)
+          }
+        }
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
@@ -183,6 +222,20 @@ struct ToolbarButton: View {
       return Color.primary.opacity(0.1)
     }
     return Color.clear
+  }
+
+  private var displayedIcon: String {
+    if isSelected {
+      return selectedIcon ?? icon
+    }
+    return icon
+  }
+
+  private var foregroundColor: Color {
+    if isSelected {
+      return selectedForegroundColor ?? highlightColor
+    }
+    return .primary
   }
 }
 

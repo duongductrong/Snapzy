@@ -22,6 +22,7 @@ final class AnnotateExporter {
     panel.canCreateDirectories = true
 
     if panel.runModal() == .OK, let url = panel.url {
+      guard confirmTransparencyLossIfNeeded(state: state, targetURL: url) else { return }
       let didSave = save(state: state, to: url)
       if didSave && closeWindow {
         NSApp.keyWindow?.close()
@@ -33,6 +34,7 @@ final class AnnotateExporter {
   @discardableResult
   static func saveToOriginal(state: AnnotateState) -> Bool {
     guard let sourceURL = state.sourceURL else { return false }
+    guard confirmTransparencyLossIfNeeded(state: state, targetURL: sourceURL) else { return false }
     DiagnosticLogger.shared.log(.info, .annotate, "Save to original", context: ["file": sourceURL.lastPathComponent])
     return save(state: state, to: sourceURL)
   }
@@ -117,6 +119,22 @@ final class AnnotateExporter {
     return "\(baseName)_annotated"
   }
 
+  /// JPEG does not support alpha. Confirm before flattening a cutout result.
+  static func confirmTransparencyLossIfNeeded(state: AnnotateState, targetURL: URL) -> Bool {
+    guard state.isCutoutApplied else { return true }
+
+    let ext = targetURL.pathExtension.lowercased()
+    guard ext == "jpg" || ext == "jpeg" else { return true }
+
+    let alert = NSAlert()
+    alert.messageText = "JPEG Removes Transparency"
+    alert.informativeText = "This image uses a transparent background cutout. Saving as JPEG will flatten transparency to an opaque background. Use PNG or WebP to keep transparency."
+    alert.alertStyle = .warning
+    alert.addButton(withTitle: "Save as JPEG")
+    alert.addButton(withTitle: "Cancel")
+    return alert.runModal() == .alertFirstButtonReturn
+  }
+
   /// Determine the pixel-to-point scale factor from the source image.
   /// Falls back to screen's backing scale factor, then 2.0.
   private static func sourceImageScale(_ sourceImage: NSImage) -> CGFloat {
@@ -182,7 +200,7 @@ final class AnnotateExporter {
   }
 
   static func renderFinalImage(state: AnnotateState) -> NSImage? {
-    guard let sourceImage = state.sourceImage else { return nil }
+    guard let sourceImage = state.effectiveSourceImage else { return nil }
 
     // If mockup mode is active, use mockup rendering path with 3D transforms
     if state.editorMode == .mockup {
@@ -517,7 +535,7 @@ final class AnnotateExporter {
   /// Render mockup image with 3D transforms using ImageRenderer
   /// First flattens image + annotations, then applies 3D transforms
   private static func renderMockupImage(state: AnnotateState) -> NSImage? {
-    guard state.sourceImage != nil else { return nil }
+    guard state.effectiveSourceImage != nil else { return nil }
 
     // Step 1: Render flat image with annotations (temporarily disable mockup mode)
     let savedMode = state.editorMode
@@ -538,7 +556,7 @@ final class AnnotateExporter {
 
   /// Render flat image with annotations (no mockup transforms)
   private static func renderFlatImageWithAnnotations(state: AnnotateState) -> NSImage? {
-    guard let sourceImage = state.sourceImage else { return nil }
+    guard let sourceImage = state.effectiveSourceImage else { return nil }
 
     // Determine effective bounds (crop or full image)
     let effectiveBounds: CGRect

@@ -29,6 +29,10 @@ struct AnnotationSessionData {
   var canvasEffects: AnnotationCanvasEffects
   /// Applied crop rectangle in image coordinates (if any)
   var cropRect: CGRect?
+  /// Whether background cutout was active in this editing session.
+  var isCutoutApplied: Bool = false
+  /// PNG data for the cutout source image (alpha preserved) when cutout is active.
+  var cutoutImageData: Data? = nil
 }
 
 /// Manages annotation window instances
@@ -217,13 +221,17 @@ final class AnnotateManager {
     originalImageData: Data,
     annotations: [AnnotationItem],
     canvasEffects: AnnotationCanvasEffects,
-    cropRect: CGRect?
+    cropRect: CGRect?,
+    isCutoutApplied: Bool = false,
+    cutoutImageData: Data? = nil
   ) {
     sessionCache[itemId] = AnnotationSessionData(
       originalImageData: originalImageData,
       annotations: annotations,
       canvasEffects: canvasEffects,
-      cropRect: cropRect
+      cropRect: cropRect,
+      isCutoutApplied: isCutoutApplied,
+      cutoutImageData: cutoutImageData
     )
   }
 

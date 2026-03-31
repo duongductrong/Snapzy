@@ -10,6 +10,7 @@ import SwiftUI
 struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig
   @State private var areaShortcut: ShortcutConfig
+  @State private var objectCutoutShortcut: ShortcutConfig
   @State private var ocrShortcut: ShortcutConfig
   @State private var recordingShortcut: ShortcutConfig
   @State private var annotateShortcut: ShortcutConfig
@@ -30,6 +31,7 @@ struct ShortcutsSettingsView: View {
   init() {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.fullscreenShortcut)
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.areaShortcut)
+    _objectCutoutShortcut = State(initialValue: KeyboardShortcutManager.shared.objectCutoutShortcut)
     _ocrShortcut = State(initialValue: KeyboardShortcutManager.shared.ocrShortcut)
     _recordingShortcut = State(initialValue: KeyboardShortcutManager.shared.recordingShortcut)
     _annotateShortcut = State(initialValue: KeyboardShortcutManager.shared.annotateShortcut)
@@ -237,6 +239,14 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
+            label: "Capture Object (Transparent)",
+            icon: "person.crop.rectangle",
+            description: "Select an area and remove background automatically",
+            shortcut: $objectCutoutShortcut,
+            onShortcutChanged: { manager.setObjectCutoutShortcut($0) }
+          )
+
+          ShortcutRecorderView(
             label: "Capture Text (OCR)",
             icon: "text.viewfinder",
             description: "Extract text from screen region",
@@ -373,6 +383,7 @@ struct ShortcutsSettingsView: View {
   private func resetToDefaults() {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
+    objectCutoutShortcut = .defaultObjectCutout
     ocrShortcut = .defaultOCR
     recordingShortcut = .defaultRecording
     annotateShortcut = .defaultAnnotate
@@ -384,6 +395,7 @@ struct ShortcutsSettingsView: View {
 
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
+    manager.setObjectCutoutShortcut(.defaultObjectCutout)
     manager.setOCRShortcut(.defaultOCR)
     manager.setRecordingShortcut(.defaultRecording)
     manager.setAnnotateShortcut(.defaultAnnotate)

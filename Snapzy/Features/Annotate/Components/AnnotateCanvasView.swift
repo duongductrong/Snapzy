@@ -438,7 +438,7 @@ struct AnnotateCanvasView: View {
     let currentCornerRadius = state.effectiveCornerRadius
     let currentShadowIntensity = state.effectiveShadowIntensity
 
-    if let sourceImage = state.sourceImage {
+    if let sourceImage = state.effectiveSourceImage {
       Image(nsImage: sourceImage)
         .resizable()
         .aspectRatio(contentMode: .fit)
@@ -470,7 +470,7 @@ struct AnnotateCanvasView: View {
     let fullImageWidth = state.imageWidth * scale
     let fullImageHeight = state.imageHeight * scale
 
-    if let sourceImage = state.sourceImage {
+    if let sourceImage = state.effectiveSourceImage {
       // Render full image, offset so crop region is at top-left, then clip
       Image(nsImage: sourceImage)
         .resizable()

@@ -463,6 +463,17 @@ final class ScreenCaptureManager: ObservableObject {
     }
   }
 
+  /// Save an already-processed image (for example OCR/cutout post-processing flows)
+  /// using the same naming, sandbox access, verification, and post-capture pipeline.
+  func saveProcessedImage(
+    _ image: CGImage,
+    to directory: URL,
+    fileName: String? = nil,
+    format: ImageFormat = .png
+  ) async -> CaptureResult {
+    await saveImage(image, to: directory, fileName: fileName, format: format)
+  }
+
   /// Verify file exists on disk with non-zero size, retrying up to maxAttempts.
   /// Runs on caller's thread (designed for background execution).
   private nonisolated static func verifyFileWritten(at url: URL, maxAttempts: Int = 3, delayMs: UInt64 = 50) async -> Bool {

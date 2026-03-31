@@ -140,6 +140,20 @@ struct CaptureSettingsView: View {
           }
           .padding(.vertical, 4)
         }
+
+        if screenshotFormat == ImageFormatOption.jpeg.rawValue {
+          HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "info.circle.fill")
+              .foregroundColor(.blue)
+              .font(.system(size: 12))
+              .padding(.top, 1)
+            Text("Object cutout captures require transparency. Snapzy will save them as PNG even when JPEG is selected.")
+              .font(.system(size: 11))
+              .foregroundColor(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .padding(.vertical, 4)
+        }
       }
 
       Section("Output Naming") {
