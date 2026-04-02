@@ -23,21 +23,46 @@ enum AppToastStyle {
     }
   }
 
-  var backgroundColor: NSColor {
+  /// Vibrant gradient tints per severity — provides visual distinction on the neutral background.
+  var iconGradientColors: [Color] {
     switch self {
-    case .info: return NSColor(calibratedRed: 0.15, green: 0.35, blue: 0.75, alpha: 0.95)
-    case .success: return NSColor(calibratedRed: 0.10, green: 0.50, blue: 0.20, alpha: 0.95)
-    case .warning: return NSColor(calibratedRed: 0.75, green: 0.45, blue: 0.08, alpha: 0.95)
-    case .error: return NSColor(calibratedRed: 0.65, green: 0.20, blue: 0.18, alpha: 0.95)
+    case .info: return [Color.blue, Color.cyan]
+    case .success: return [Color.green, Color.mint]
+    case .warning: return [Color.orange, Color.yellow]
+    case .error: return [Color.red, Color.pink]
+    }
+  }
+
+  // MARK: - Appearance-adaptive colors (inverted from system theme)
+
+  /// Neutral background — dark on Light mode, light on Dark mode.
+  var backgroundColor: NSColor {
+    NSColor(name: nil) { appearance in
+      if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+        return NSColor(srgbRed: 0.96, green: 0.96, blue: 0.97, alpha: 0.97)
+      } else {
+        return NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 0.97)
+      }
     }
   }
 
   var borderColor: NSColor {
-    switch self {
-    case .info: return NSColor(calibratedRed: 0.60, green: 0.75, blue: 0.95, alpha: 0.55)
-    case .success: return NSColor(calibratedRed: 0.65, green: 0.90, blue: 0.70, alpha: 0.55)
-    case .warning: return NSColor(calibratedRed: 0.95, green: 0.80, blue: 0.55, alpha: 0.55)
-    case .error: return NSColor(calibratedRed: 0.95, green: 0.65, blue: 0.60, alpha: 0.55)
+    NSColor(name: nil) { appearance in
+      if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+        return NSColor(srgbRed: 0.82, green: 0.82, blue: 0.84, alpha: 0.25)
+      } else {
+        return NSColor(srgbRed: 0.30, green: 0.30, blue: 0.32, alpha: 0.35)
+      }
+    }
+  }
+
+  var textColor: NSColor {
+    NSColor(name: nil) { appearance in
+      if appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
+        return NSColor(srgbRed: 0.11, green: 0.11, blue: 0.12, alpha: 1.0)
+      } else {
+        return NSColor(srgbRed: 0.96, green: 0.96, blue: 0.97, alpha: 1.0)
+      }
     }
   }
 }
@@ -173,21 +198,28 @@ final class AppToastManager {
 private struct AppToastView: View {
   let message: String
   let style: AppToastStyle
+  @State private var appeared = false
 
   var body: some View {
-    HStack(alignment: .center, spacing: 8) {
+    HStack(alignment: .center, spacing: 10) {
       Image(systemName: style.iconName)
-        .font(.system(size: 14, weight: .semibold))
-        .foregroundColor(.white)
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(
+          LinearGradient(
+            colors: style.iconGradientColors,
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          )
+        )
 
       Text(message)
-        .font(.system(size: 13, weight: .semibold))
-        .foregroundColor(.white)
+        .font(.system(size: 13, weight: .medium))
+        .foregroundColor(Color(nsColor: style.textColor))
         .lineLimit(3)
-        .multilineTextAlignment(.center)
+        .multilineTextAlignment(.leading)
     }
-    .padding(.horizontal, 14)
-    .padding(.vertical, 10)
+    .padding(.horizontal, 16)
+    .padding(.vertical, 11)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(
       RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -195,7 +227,13 @@ private struct AppToastView: View {
     )
     .overlay(
       RoundedRectangle(cornerRadius: 10, style: .continuous)
-        .stroke(Color(nsColor: style.borderColor), lineWidth: 1)
+        .stroke(Color(nsColor: style.borderColor), lineWidth: 0.5)
     )
+    .scaleEffect(appeared ? 1.0 : 0.96)
+    .onAppear {
+      withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
+        appeared = true
+      }
+    }
   }
 }
