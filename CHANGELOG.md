@@ -41,6 +41,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.1] - 2026-04-02
+
+### Features
+-  Add validation highlighting and popover for shortcut recording (48d6d4c)
+-  Enhance shortcut management with validation and conflict detection (6464500)
+-  Implement keycap rendering for keyboard shortcuts and enhance shortcut recording UI (5894b7b)
+-  Enhance shortcut management and user experience (97bf2be)
+
+### Chore
+- chore: Enhance AppToast appearance with gradient icons and adaptive colors (845726d)
+- refactor: Update SoundManager to play native macOS screenshot sound and refactor sound playback logic (6762219)
+- chore: update appcast, cask, and readme for v1.5.0 (4b8d214)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.0] - 2026-03-31
 
 ### Features
