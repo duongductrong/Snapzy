@@ -30,7 +30,7 @@ struct KeyCapView: View {
   }
 }
 
-/// Renders an array of key parts as keycap pills separated by „+"
+/// Renders an array of key parts as keycap pills separated by "+"
 struct KeyCapGroupView: View {
   let parts: [String]
   var fontSize: CGFloat = 12

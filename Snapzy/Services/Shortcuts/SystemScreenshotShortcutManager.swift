@@ -51,6 +51,21 @@ final class SystemScreenshotShortcutManager {
         return .defaultRecording
       }
     }
+
+    var displayName: String {
+      switch self {
+      case .saveAreaToFile:
+        return "macOS Capture Area"
+      case .copyAreaToClipboard:
+        return "macOS Copy Area"
+      case .saveScreenToFile:
+        return "macOS Capture Fullscreen"
+      case .copyScreenToClipboard:
+        return "macOS Copy Fullscreen"
+      case .screenshotOptions:
+        return "macOS Screenshot & Recording Options"
+      }
+    }
   }
 
   // MARK: - UserDefaults Keys
@@ -80,25 +95,12 @@ final class SystemScreenshotShortcutManager {
       return false
     }
 
-    let mappings: [(snapzy: GlobalShortcutKind, system: [SystemHotkeyID])] = [
-      (.fullscreen, [.saveScreenToFile, .copyScreenToClipboard]),
-      (.area, [.saveAreaToFile, .copyAreaToClipboard]),
-      (.recording, [.screenshotOptions]),
-    ]
+    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
+      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
+      let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind)
 
-    for mapping in mappings {
-      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: mapping.snapzy) else { continue }
-      let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: mapping.snapzy)
-
-      for hotkeyID in mapping.system where isHotkeyEnabled(id: hotkeyID.rawValue, in: hotkeys) {
-        guard let systemShortcut = shortcutConfig(for: hotkeyID, in: hotkeys) else { continue }
-        if systemShortcut == snapzyShortcut {
-          DiagnosticLogger.shared.log(
-            .info, .action,
-            "System screenshot hotkey \(hotkeyID.rawValue) matches Snapzy \(mapping.snapzy.rawValue) shortcut"
-          )
-          return true
-        }
+      if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty {
+        return true
       }
     }
 
@@ -107,6 +109,17 @@ final class SystemScreenshotShortcutManager {
       "No conflicting system screenshot shortcuts detected"
     )
     return false
+  }
+
+  /// Return human-readable system shortcut names that currently conflict with a proposed Snapzy shortcut.
+  func conflictDescriptions(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> [String] {
+    guard kind.isSystemConflictRelevant, let hotkeys = readHotkeys() else { return [] }
+    return matchingSystemHotkeys(for: kind, shortcut: shortcut, in: hotkeys)
+      .map(\.displayName)
+  }
+
+  func hasConflict(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> Bool {
+    !conflictDescriptions(for: kind, shortcut: shortcut).isEmpty
   }
 
   /// Open System Settings to the Keyboard Shortcuts → Screenshots pane
@@ -249,6 +262,41 @@ final class SystemScreenshotShortcutManager {
     }
 
     return modifiers
+  }
+
+  private func matchingSystemHotkeys(
+    for kind: GlobalShortcutKind,
+    shortcut: ShortcutConfig,
+    in hotkeys: [String: Any]
+  ) -> [SystemHotkeyID] {
+    relevantSystemHotkeys(for: kind).filter { hotkeyID in
+      guard isHotkeyEnabled(id: hotkeyID.rawValue, in: hotkeys),
+            let systemShortcut = shortcutConfig(for: hotkeyID, in: hotkeys) else {
+        return false
+      }
+
+      let matches = systemShortcut == shortcut
+      if matches {
+        DiagnosticLogger.shared.log(
+          .info, .action,
+          "System screenshot hotkey \(hotkeyID.rawValue) matches Snapzy \(kind.rawValue) shortcut"
+        )
+      }
+      return matches
+    }
+  }
+
+  private func relevantSystemHotkeys(for kind: GlobalShortcutKind) -> [SystemHotkeyID] {
+    switch kind {
+    case .fullscreen:
+      return [.saveScreenToFile, .copyScreenToClipboard]
+    case .area:
+      return [.saveAreaToFile, .copyAreaToClipboard]
+    case .recording:
+      return [.screenshotOptions]
+    default:
+      return []
+    }
   }
 
   private init() {}

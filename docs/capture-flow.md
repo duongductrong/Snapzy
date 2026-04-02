@@ -139,7 +139,9 @@ flowchart TD
 | `Features/Annotate/AnnotateState.swift` | Manages annotation state. `loadImageWithCorrectScale()` loads images at correct Retina scale. |
 | `Features/Annotate/Components/AnnotateCanvasView.swift` | Displays image + annotations on canvas with scale-to-fit, zoom, pan. |
 | `Features/Annotate/Services/AnnotateExporter.swift` | Exports annotated images. `renderFinalImage()` combines source image + annotations + background at pixel resolution. |
+| `Services/Shortcuts/KeyboardShortcutManager.swift` | Global shortcut registration lifecycle, including app-wide enable state, per-shortcut enable state, and temporary suppression while recorder UI is listening. |
 | `Services/Shortcuts/SystemScreenshotShortcutManager.swift` | Detects/manages conflicts with macOS built-in screenshot shortcuts. |
+| `Services/Shortcuts/ShortcutValidationService.swift` | Centralized duplicate/conflict validation and warning decisions for editable shortcuts in Preferences. |
 | `Services/Capture/ScreenRecordingManager.swift` | Recording pipeline, stream/asset-writer setup, geometry normalization, metadata persistence for Smart Camera. |
 | `Services/Capture/RecordingMouseTracker.swift` | Captures dense cursor timeline during recording (global monitor + timer fallback), pause/resume aware timing. |
 | `Services/Capture/RecordingMetadata.swift` | Metadata schema + storage in App Support (`Captures/RecordingMetadata`), legacy migration/backward compatibility. |
@@ -193,6 +195,16 @@ Configured in user preferences, handled by `PostCaptureActionHandler`:
 - **Quick Access Card** — floating overlay showing thumbnail, drag-to-app, copy/open actions
 - **Copy to Clipboard** — `NSPasteboard` with image data
 - **Open Annotate** — loads image into annotation editor
+
+## Shortcut Activation Rules
+
+Global shortcut trigger requires all conditions below:
+
+1. App-wide shortcut system is enabled.
+2. The specific global shortcut row is enabled.
+3. Recorder UI is not actively listening (temporary suppression is released).
+
+Conflict warnings against macOS screenshot hotkeys are evaluated only for currently enabled Snapzy shortcut rows.
 
 ## Recording Metadata and Storage
 

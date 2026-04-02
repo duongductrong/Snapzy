@@ -35,7 +35,7 @@
 - **After Capture Settings**: per-mode action matrix for screenshot/recording plus a separate global remove-background auto-crop toggle (enabled by default)
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
 - **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, open, and delete actions
-- **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools with system conflict detection
+- **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools, with per-shortcut on/off control and system conflict detection
 - **Onboarding**: splash screen, guided permissions setup, and shortcut configuration for first-time users
 - **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, credentials stored in the macOS Keychain with optional password protection, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
 - **Updates & Diagnostics**: in-app updates via Sparkle, crash reporting, cache management

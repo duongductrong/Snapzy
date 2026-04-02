@@ -153,6 +153,17 @@ final class AnnotateShortcutManager: ObservableObject {
     !disabledActionShortcuts.contains(kind)
   }
 
+  func shortcut(for kind: AnnotateActionShortcutKind) -> ShortcutConfig {
+    switch kind {
+    case .copyAndClose:
+      return copyAndCloseShortcut
+    case .togglePin:
+      return togglePinShortcut
+    case .cloudUpload:
+      return cloudUploadShortcut
+    }
+  }
+
   func setActionShortcutEnabled(_ enabled: Bool, for kind: AnnotateActionShortcutKind) {
     guard isActionShortcutEnabled(for: kind) != enabled else { return }
     var updated = disabledActionShortcuts

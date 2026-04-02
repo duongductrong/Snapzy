@@ -267,7 +267,6 @@ final class KeyboardShortcutManager {
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var temporarySuspensionCount: Int = 0
-  private var areShortcutsRegistered: Bool = false
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
   private var areaHotkeyRef: EventHotKeyRef?
@@ -361,10 +360,10 @@ final class KeyboardShortcutManager {
   }
 
   private func refreshShortcutRegistration() {
+    unregisterAllShortcuts()
+
     if shouldRegisterShortcuts {
       registerShortcuts()
-    } else {
-      unregisterAllShortcuts()
     }
   }
 
@@ -588,14 +587,8 @@ final class KeyboardShortcutManager {
   }
 
   private func mutateShortcutRegistration(_ mutation: () -> Void) {
-    let shouldRestoreRegistration = areShortcutsRegistered
-    if shouldRestoreRegistration {
-      unregisterAllShortcuts()
-    }
     mutation()
-    if shouldRestoreRegistration {
-      registerShortcuts()
-    }
+    refreshShortcutRegistration()
   }
 
   private func handleHotkey(id: UInt32) {
@@ -642,7 +635,7 @@ final class KeyboardShortcutManager {
   }
 
   private func registerShortcuts() {
-    guard shouldRegisterShortcuts, !areShortcutsRegistered else { return }
+    guard shouldRegisterShortcuts else { return }
 
     registerShortcutIfNeeded(
       kind: .fullscreen,
@@ -650,57 +643,48 @@ final class KeyboardShortcutManager {
       hotkeyID: fullscreenHotkeyID,
       ref: &fullscreenHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .area,
       config: areaShortcut,
       hotkeyID: areaHotkeyID,
       ref: &areaHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .recording,
       config: recordingShortcut,
       hotkeyID: recordingHotkeyID,
       ref: &recordingHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .annotate,
       config: annotateShortcut,
       hotkeyID: annotateHotkeyID,
       ref: &annotateHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .videoEditor,
       config: videoEditorShortcut,
       hotkeyID: videoEditorHotkeyID,
       ref: &videoEditorHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .ocr,
       config: ocrShortcut,
       hotkeyID: ocrHotkeyID,
       ref: &ocrHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .cloudUploads,
       config: cloudUploadsShortcut,
       hotkeyID: cloudUploadsHotkeyID,
       ref: &cloudUploadsHotkeyRef
     )
-
     registerShortcutIfNeeded(
       kind: .objectCutout,
       config: objectCutoutShortcut,
       hotkeyID: objectCutoutHotkeyID,
       ref: &objectCutoutHotkeyRef
     )
-
-    areShortcutsRegistered = true
   }
 
   private func registerShortcutIfNeeded(
@@ -710,7 +694,8 @@ final class KeyboardShortcutManager {
     ref: inout EventHotKeyRef?
   ) {
     guard isShortcutEnabled(for: kind) else { return }
-    RegisterEventHotKey(
+
+    let status = RegisterEventHotKey(
       config.keyCode,
       config.modifiers,
       hotkeyID,
@@ -718,11 +703,20 @@ final class KeyboardShortcutManager {
       0,
       &ref
     )
+
+    if status != noErr || ref == nil {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .action,
+        "Failed to register shortcut \(kind.rawValue)",
+        context: ["status": String(status)]
+      )
+      ref = nil
+      return
+    }
   }
 
   private func unregisterAllShortcuts() {
-    guard areShortcutsRegistered else { return }
-
     if let ref = fullscreenHotkeyRef {
       UnregisterEventHotKey(ref)
       fullscreenHotkeyRef = nil
@@ -755,7 +749,5 @@ final class KeyboardShortcutManager {
       UnregisterEventHotKey(ref)
       objectCutoutHotkeyRef = nil
     }
-
-    areShortcutsRegistered = false
   }
 }

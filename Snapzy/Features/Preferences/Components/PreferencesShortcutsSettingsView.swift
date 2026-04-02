@@ -21,6 +21,9 @@ struct ShortcutsSettingsView: View {
   @State private var cloudUploadShortcut: ShortcutConfig
   @State private var globalShortcutEnabled: [GlobalShortcutKind: Bool]
   @State private var annotateActionEnabled: [AnnotateActionShortcutKind: Bool]
+  @State private var globalValidationIssues: [GlobalShortcutKind: ShortcutValidationIssue] = [:]
+  @State private var annotateActionValidationIssues: [AnnotateActionShortcutKind: ShortcutValidationIssue] = [:]
+  @State private var annotateToolValidationIssues: [AnnotationToolType: ShortcutValidationIssue] = [:]
   @State private var shortcutsEnabled: Bool
   @State private var showDisableConfirmation: Bool = false
   @State private var isConfirmedDisable: Bool = false
@@ -28,6 +31,7 @@ struct ShortcutsSettingsView: View {
   @State private var isRefreshingConflict: Bool = false
 
   private let manager = KeyboardShortcutManager.shared
+  private let validator = ShortcutValidationService.shared
   @ObservedObject private var annotateManager = AnnotateShortcutManager.shared
 
   init() {
@@ -244,10 +248,8 @@ struct ShortcutsSettingsView: View {
             description: "Capture entire screen instantly",
             shortcut: $fullscreenShortcut,
             isEnabled: globalEnabledBinding(for: .fullscreen),
-            onShortcutChanged: {
-              manager.setFullscreenShortcut($0)
-              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
-            }
+            validationIssue: globalValidationIssues[.fullscreen],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .fullscreen) }
           )
 
           ShortcutRecorderView(
@@ -256,10 +258,8 @@ struct ShortcutsSettingsView: View {
             description: "Select a region to capture",
             shortcut: $areaShortcut,
             isEnabled: globalEnabledBinding(for: .area),
-            onShortcutChanged: {
-              manager.setAreaShortcut($0)
-              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
-            }
+            validationIssue: globalValidationIssues[.area],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
           )
 
           ShortcutRecorderView(
@@ -268,7 +268,8 @@ struct ShortcutsSettingsView: View {
             description: "Select an area, remove background, and optionally auto-crop",
             shortcut: $objectCutoutShortcut,
             isEnabled: globalEnabledBinding(for: .objectCutout),
-            onShortcutChanged: { manager.setObjectCutoutShortcut($0) }
+            validationIssue: globalValidationIssues[.objectCutout],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .objectCutout) }
           )
 
           ShortcutRecorderView(
@@ -277,7 +278,8 @@ struct ShortcutsSettingsView: View {
             description: "Extract text from screen region",
             shortcut: $ocrShortcut,
             isEnabled: globalEnabledBinding(for: .ocr),
-            onShortcutChanged: { manager.setOCRShortcut($0) }
+            validationIssue: globalValidationIssues[.ocr],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .ocr) }
           )
         }
 
@@ -288,10 +290,8 @@ struct ShortcutsSettingsView: View {
             description: "Start screen recording",
             shortcut: $recordingShortcut,
             isEnabled: globalEnabledBinding(for: .recording),
-            onShortcutChanged: {
-              manager.setRecordingShortcut($0)
-              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
-            }
+            validationIssue: globalValidationIssues[.recording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .recording) }
           )
         }
 
@@ -302,7 +302,8 @@ struct ShortcutsSettingsView: View {
             description: "Open image annotation editor",
             shortcut: $annotateShortcut,
             isEnabled: globalEnabledBinding(for: .annotate),
-            onShortcutChanged: { manager.setAnnotateShortcut($0) }
+            validationIssue: globalValidationIssues[.annotate],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .annotate) }
           )
 
           ShortcutRecorderView(
@@ -311,7 +312,8 @@ struct ShortcutsSettingsView: View {
             description: "Open video editing tools",
             shortcut: $videoEditorShortcut,
             isEnabled: globalEnabledBinding(for: .videoEditor),
-            onShortcutChanged: { manager.setVideoEditorShortcut($0) }
+            validationIssue: globalValidationIssues[.videoEditor],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .videoEditor) }
           )
 
           ShortcutRecorderView(
@@ -320,7 +322,8 @@ struct ShortcutsSettingsView: View {
             description: "Open cloud upload history",
             shortcut: $cloudUploadsShortcut,
             isEnabled: globalEnabledBinding(for: .cloudUploads),
-            onShortcutChanged: { manager.setCloudUploadsShortcut($0) }
+            validationIssue: globalValidationIssues[.cloudUploads],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .cloudUploads) }
           )
 
           Text("Click a shortcut button to record new keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.")
@@ -340,7 +343,8 @@ struct ShortcutsSettingsView: View {
             description: "Copy annotated image to clipboard and close",
             shortcut: $copyAndCloseShortcut,
             isEnabled: annotateActionEnabledBinding(for: .copyAndClose),
-            onShortcutChanged: { annotateManager.setCopyAndCloseShortcut($0) }
+            validationIssue: annotateActionValidationIssues[.copyAndClose],
+            onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .copyAndClose) }
           )
 
           ShortcutRecorderView(
@@ -349,7 +353,8 @@ struct ShortcutsSettingsView: View {
             description: "Pin or unpin the annotation window",
             shortcut: $togglePinShortcut,
             isEnabled: annotateActionEnabledBinding(for: .togglePin),
-            onShortcutChanged: { annotateManager.setTogglePinShortcut($0) }
+            validationIssue: annotateActionValidationIssues[.togglePin],
+            onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .togglePin) }
           )
 
           ShortcutRecorderView(
@@ -358,7 +363,8 @@ struct ShortcutsSettingsView: View {
             description: "Upload annotated image to cloud",
             shortcut: $cloudUploadShortcut,
             isEnabled: annotateActionEnabledBinding(for: .cloudUpload),
-            onShortcutChanged: { annotateManager.setCloudUploadShortcut($0) }
+            validationIssue: annotateActionValidationIssues[.cloudUpload],
+            onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .cloudUpload) }
           )
         }
 
@@ -372,7 +378,8 @@ struct ShortcutsSettingsView: View {
               tool: tool,
               shortcut: bindingForTool(tool),
               isEnabled: toolEnabledBinding(for: tool),
-              onChanged: { annotateManager.setShortcut($0, for: tool) },
+              validationIssue: annotateToolValidationIssues[tool],
+              onChanged: { handleAnnotateToolShortcutChange($0, for: tool) },
               conflictingTool: conflictForTool(tool),
               context: toolContext(for: tool)
             )
@@ -435,6 +442,9 @@ struct ShortcutsSettingsView: View {
     annotateActionEnabled = Dictionary(
       uniqueKeysWithValues: AnnotateActionShortcutKind.allCases.map { ($0, true) }
     )
+    globalValidationIssues = [:]
+    annotateActionValidationIssues = [:]
+    annotateToolValidationIssues = [:]
 
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
@@ -476,7 +486,22 @@ struct ShortcutsSettingsView: View {
   private func toolEnabledBinding(for tool: AnnotationToolType) -> Binding<Bool> {
     Binding(
       get: { annotateManager.isShortcutEnabled(for: tool) },
-      set: { annotateManager.setShortcutEnabled($0, for: tool) }
+      set: { newValue in
+        if newValue, let key = annotateManager.shortcut(for: tool) {
+          switch validator.validateAnnotateToolShortcut(key, for: tool) {
+          case .accept(let issue):
+            annotateToolValidationIssues[tool] = issue
+          case .reject(let issue):
+            annotateToolValidationIssues[tool] = issue
+            return
+          }
+        }
+
+        annotateManager.setShortcutEnabled(newValue, for: tool)
+        if !newValue {
+          annotateToolValidationIssues.removeValue(forKey: tool)
+        }
+      }
     )
   }
 
@@ -484,8 +509,21 @@ struct ShortcutsSettingsView: View {
     Binding(
       get: { globalShortcutEnabled[kind] ?? true },
       set: { newValue in
+        if newValue {
+          switch validator.validateGlobalShortcut(manager.shortcut(for: kind), for: kind) {
+          case .accept(let issue):
+            globalValidationIssues[kind] = issue
+          case .reject(let issue):
+            globalValidationIssues[kind] = issue
+            return
+          }
+        }
+
         globalShortcutEnabled[kind] = newValue
         manager.setShortcutEnabled(newValue, for: kind)
+        if !newValue {
+          globalValidationIssues.removeValue(forKey: kind)
+        }
         if kind.isSystemConflictRelevant {
           hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
         }
@@ -497,8 +535,21 @@ struct ShortcutsSettingsView: View {
     Binding(
       get: { annotateActionEnabled[kind] ?? true },
       set: { newValue in
+        if newValue {
+          switch validator.validateAnnotateActionShortcut(annotateManager.shortcut(for: kind), for: kind) {
+          case .accept(let issue):
+            annotateActionValidationIssues[kind] = issue
+          case .reject(let issue):
+            annotateActionValidationIssues[kind] = issue
+            return
+          }
+        }
+
         annotateActionEnabled[kind] = newValue
         annotateManager.setActionShortcutEnabled(newValue, for: kind)
+        if !newValue {
+          annotateActionValidationIssues.removeValue(forKey: kind)
+        }
       }
     )
   }
@@ -507,6 +558,93 @@ struct ShortcutsSettingsView: View {
     guard annotateManager.isShortcutEnabled(for: tool),
           let key = annotateManager.shortcut(for: tool) else { return nil }
     return annotateManager.conflictingTool(for: key, excluding: tool)
+  }
+
+  private func handleGlobalShortcutChange(_ config: ShortcutConfig, for kind: GlobalShortcutKind) -> Bool {
+    switch validator.validateGlobalShortcut(config, for: kind) {
+    case .accept(let issue):
+      globalValidationIssues[kind] = issue
+      switch kind {
+      case .fullscreen:
+        fullscreenShortcut = config
+        manager.setFullscreenShortcut(config)
+      case .area:
+        areaShortcut = config
+        manager.setAreaShortcut(config)
+      case .recording:
+        recordingShortcut = config
+        manager.setRecordingShortcut(config)
+      case .annotate:
+        annotateShortcut = config
+        manager.setAnnotateShortcut(config)
+      case .videoEditor:
+        videoEditorShortcut = config
+        manager.setVideoEditorShortcut(config)
+      case .cloudUploads:
+        cloudUploadsShortcut = config
+        manager.setCloudUploadsShortcut(config)
+      case .ocr:
+        ocrShortcut = config
+        manager.setOCRShortcut(config)
+      case .objectCutout:
+        objectCutoutShortcut = config
+        manager.setObjectCutoutShortcut(config)
+      }
+
+      if kind.isSystemConflictRelevant {
+        hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+      }
+      return true
+    case .reject(let issue):
+      globalValidationIssues[kind] = issue
+      return false
+    }
+  }
+
+  private func handleAnnotateActionShortcutChange(
+    _ config: ShortcutConfig,
+    for kind: AnnotateActionShortcutKind
+  ) -> Bool {
+    switch validator.validateAnnotateActionShortcut(config, for: kind) {
+    case .accept(let issue):
+      annotateActionValidationIssues[kind] = issue
+      switch kind {
+      case .copyAndClose:
+        copyAndCloseShortcut = config
+        annotateManager.setCopyAndCloseShortcut(config)
+      case .togglePin:
+        togglePinShortcut = config
+        annotateManager.setTogglePinShortcut(config)
+      case .cloudUpload:
+        cloudUploadShortcut = config
+        annotateManager.setCloudUploadShortcut(config)
+      }
+      return true
+    case .reject(let issue):
+      annotateActionValidationIssues[kind] = issue
+      return false
+    }
+  }
+
+  private func handleAnnotateToolShortcutChange(
+    _ key: Character?,
+    for tool: AnnotationToolType
+  ) -> Bool {
+    guard let key else {
+      annotateToolValidationIssues.removeValue(forKey: tool)
+      annotateManager.setShortcut(nil, for: tool)
+      return true
+    }
+
+    switch validator.validateAnnotateToolShortcut(key, for: tool) {
+    case .accept(let issue):
+      annotateToolValidationIssues[tool] = issue
+      annotateManager.setShortcut(key, for: tool)
+      return true
+    case .reject(let issue):
+      annotateToolValidationIssues[tool] = issue
+      return false
+    }
   }
 
   /// Recording annotation supports a subset of tools
@@ -577,7 +715,19 @@ private struct ReadOnlyShortcutRow: View {
 
       Spacer()
 
-      KeyCapGroupView(parts: shortcutParts)
+      if shouldUseKeycaps {
+        KeyCapGroupView(parts: shortcutParts)
+      } else {
+        Text(shortcut)
+          .font(.system(.body, design: .monospaced))
+          .foregroundColor(.secondary)
+          .padding(.horizontal, 12)
+          .padding(.vertical, 6)
+          .background(
+            RoundedRectangle(cornerRadius: 6)
+              .fill(Color.gray.opacity(0.1))
+          )
+      }
     }
     .padding(.vertical, 2)
   }
@@ -587,5 +737,13 @@ private struct ReadOnlyShortcutRow: View {
     shortcut
       .split(separator: " ")
       .map(String.init)
+  }
+
+  private var shouldUseKeycaps: Bool {
+    shortcutParts.filter { !modifierTokens.contains($0) }.count <= 1
+  }
+
+  private var modifierTokens: Set<String> {
+    ["⌘", "⇧", "⌥", "⌃"]
   }
 }
