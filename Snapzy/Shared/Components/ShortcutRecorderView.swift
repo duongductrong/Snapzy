@@ -19,6 +19,7 @@ struct ShortcutRecorderView: View {
 
   @State private var isRecording = false
   @State private var eventMonitor: Any?
+  @State private var didSuspendGlobalShortcuts = false
 
   init(
     label: String,
@@ -58,11 +59,16 @@ struct ShortcutRecorderView: View {
       Button {
         startRecording()
       } label: {
-        Text(isRecording ? "Press keys..." : shortcut.displayString)
-          .font(.system(.body, design: .monospaced))
-          .frame(minWidth: 100)
+        if isRecording {
+          Text("Press keys...")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.accentColor)
+            .frame(minWidth: 100)
+        } else {
+          KeyCapGroupView(parts: shortcut.displayParts)
+        }
       }
-      .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
+      .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
 
       if let toggleBinding {
         HStack(spacing: 6) {
@@ -98,6 +104,8 @@ struct ShortcutRecorderView: View {
   private func startRecording() {
     guard !isRecording else { return }
     isRecording = true
+    KeyboardShortcutManager.shared.beginTemporaryShortcutSuppression()
+    didSuspendGlobalShortcuts = true
 
     // Add local event monitor for key events
     eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
@@ -126,26 +134,59 @@ struct ShortcutRecorderView: View {
       NSEvent.removeMonitor(monitor)
       eventMonitor = nil
     }
+    if didSuspendGlobalShortcuts {
+      KeyboardShortcutManager.shared.endTemporaryShortcutSuppression()
+      didSuspendGlobalShortcuts = false
+    }
   }
 }
 
-/// Custom button style for shortcut recorder
+/// Transparent button style for keycap-based shortcut recorder — keycaps provide visual affordance
+struct ShortcutKeycapButtonStyle: ButtonStyle {
+  let isRecording: Bool
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .padding(.horizontal, 6)
+      .padding(.vertical, 4)
+      .background(
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+          .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+          .strokeBorder(
+            isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
+            lineWidth: 1
+          )
+      )
+      .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+      .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
+  }
+}
+
+/// Legacy button style kept for backward compatibility (e.g. if referenced elsewhere)
 struct ShortcutButtonStyle: ButtonStyle {
   let isRecording: Bool
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .padding(.horizontal, 12)
-      .padding(.vertical, 6)
+      .padding(.horizontal, 6)
+      .padding(.vertical, 4)
       .background(
-        RoundedRectangle(cornerRadius: 6)
-          .fill(isRecording ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.15))
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+          .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 6)
-          .stroke(isRecording ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: 1)
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+          .strokeBorder(
+            isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
+            lineWidth: 1
+          )
       )
-      .scaleEffect(configuration.isPressed ? 0.98 : 1.0)
+      .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+      .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
   }
 }

@@ -49,6 +49,7 @@ struct SingleKeyRecorderView: View {
 
   @State private var isRecording = false
   @State private var eventMonitor: Any?
+  @State private var didSuspendGlobalShortcuts = false
 
   var body: some View {
     HStack(spacing: 12) {
@@ -86,9 +87,19 @@ struct SingleKeyRecorderView: View {
       Button {
         startRecording()
       } label: {
-        Text(displayText)
-          .font(.system(.body, design: .monospaced))
-          .frame(minWidth: 40)
+        if isRecording {
+          Text("...")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.accentColor)
+            .frame(minWidth: 40)
+        } else if let key = shortcut {
+          KeyCapView(symbol: String(key).uppercased())
+        } else {
+          Text("–")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.secondary)
+            .frame(minWidth: 40)
+        }
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
 
@@ -106,15 +117,11 @@ struct SingleKeyRecorderView: View {
     .onDisappear { stopRecording() }
   }
 
-  private var displayText: String {
-    if isRecording { return "..." }
-    if let key = shortcut { return String(key).uppercased() }
-    return "-"
-  }
-
   private func startRecording() {
     guard !isRecording else { return }
     isRecording = true
+    KeyboardShortcutManager.shared.beginTemporaryShortcutSuppression()
+    didSuspendGlobalShortcuts = true
 
     eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
       // Escape cancels
@@ -148,6 +155,10 @@ struct SingleKeyRecorderView: View {
     if let monitor = eventMonitor {
       NSEvent.removeMonitor(monitor)
       eventMonitor = nil
+    }
+    if didSuspendGlobalShortcuts {
+      KeyboardShortcutManager.shared.endTemporaryShortcutSuppression()
+      didSuspendGlobalShortcuts = false
     }
   }
 }

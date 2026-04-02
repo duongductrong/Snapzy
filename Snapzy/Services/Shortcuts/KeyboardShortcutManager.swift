@@ -81,6 +81,17 @@ struct ShortcutConfig: Equatable, Codable {
     return parts.joined(separator: " ")
   }
 
+  /// Individual key parts for keycap-style rendering
+  var displayParts: [String] {
+    var parts: [String] = []
+    if modifiers & UInt32(cmdKey) != 0 { parts.append("⌘") }
+    if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
+    if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
+    if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
+    parts.append(Self.keyCodeToString(keyCode))
+    return parts
+  }
+
   /// Initialize from NSEvent for shortcut recording
   init?(from event: NSEvent) {
     guard event.type == .keyDown else { return nil }
@@ -255,6 +266,8 @@ final class KeyboardShortcutManager {
   private(set) var objectCutoutShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
+  private var temporarySuspensionCount: Int = 0
+  private var areShortcutsRegistered: Bool = false
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
   private var areaHotkeyRef: EventHotKeyRef?
@@ -313,17 +326,46 @@ final class KeyboardShortcutManager {
   /// Enable global shortcuts
   func enable() {
     guard !isEnabled else { return }
-    registerShortcuts()
     isEnabled = true
     UserDefaults.standard.set(true, forKey: shortcutsEnabledKey)
+    refreshShortcutRegistration()
   }
 
   /// Disable global shortcuts
   func disable() {
     guard isEnabled else { return }
-    unregisterAllShortcuts()
     isEnabled = false
     UserDefaults.standard.set(false, forKey: shortcutsEnabledKey)
+    refreshShortcutRegistration()
+  }
+
+  /// Temporarily suspend registered hotkeys without mutating the persisted enabled setting.
+  func beginTemporaryShortcutSuppression() {
+    temporarySuspensionCount += 1
+    refreshShortcutRegistration()
+  }
+
+  /// Resume registered hotkeys once all temporary suppression requests are released.
+  func endTemporaryShortcutSuppression() {
+    guard temporarySuspensionCount > 0 else { return }
+    temporarySuspensionCount -= 1
+    refreshShortcutRegistration()
+  }
+
+  var isTemporarilySuspended: Bool {
+    temporarySuspensionCount > 0
+  }
+
+  private var shouldRegisterShortcuts: Bool {
+    isEnabled && !isTemporarilySuspended
+  }
+
+  private func refreshShortcutRegistration() {
+    if shouldRegisterShortcuts {
+      registerShortcuts()
+    } else {
+      unregisterAllShortcuts()
+    }
   }
 
   func shortcut(for kind: GlobalShortcutKind) -> ShortcutConfig {
@@ -546,10 +588,14 @@ final class KeyboardShortcutManager {
   }
 
   private func mutateShortcutRegistration(_ mutation: () -> Void) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
+    let shouldRestoreRegistration = areShortcutsRegistered
+    if shouldRestoreRegistration {
+      unregisterAllShortcuts()
+    }
     mutation()
-    if wasEnabled { enable() }
+    if shouldRestoreRegistration {
+      registerShortcuts()
+    }
   }
 
   private func handleHotkey(id: UInt32) {
@@ -596,6 +642,8 @@ final class KeyboardShortcutManager {
   }
 
   private func registerShortcuts() {
+    guard shouldRegisterShortcuts, !areShortcutsRegistered else { return }
+
     registerShortcutIfNeeded(
       kind: .fullscreen,
       config: fullscreenShortcut,
@@ -651,6 +699,8 @@ final class KeyboardShortcutManager {
       hotkeyID: objectCutoutHotkeyID,
       ref: &objectCutoutHotkeyRef
     )
+
+    areShortcutsRegistered = true
   }
 
   private func registerShortcutIfNeeded(
@@ -671,6 +721,8 @@ final class KeyboardShortcutManager {
   }
 
   private func unregisterAllShortcuts() {
+    guard areShortcutsRegistered else { return }
+
     if let ref = fullscreenHotkeyRef {
       UnregisterEventHotKey(ref)
       fullscreenHotkeyRef = nil
@@ -703,5 +755,7 @@ final class KeyboardShortcutManager {
       UnregisterEventHotKey(ref)
       objectCutoutHotkeyRef = nil
     }
+
+    areShortcutsRegistered = false
   }
 }

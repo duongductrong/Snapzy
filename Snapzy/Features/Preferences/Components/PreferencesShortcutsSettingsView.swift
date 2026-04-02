@@ -577,16 +577,15 @@ private struct ReadOnlyShortcutRow: View {
 
       Spacer()
 
-      Text(shortcut)
-        .font(.system(.body, design: .monospaced))
-        .foregroundColor(.secondary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(Color.gray.opacity(0.1))
-        )
+      KeyCapGroupView(parts: shortcutParts)
     }
     .padding(.vertical, 2)
+  }
+
+  /// Split the display string (e.g. "⌘ ⇧ Z" or "← → ↑ ↓") into individual parts
+  private var shortcutParts: [String] {
+    shortcut
+      .split(separator: " ")
+      .map(String.init)
   }
 }
