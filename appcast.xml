@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.1</title>
+      <sparkle:version>41</sparkle:version>
+      <sparkle:shortVersionString>1.5.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 02 Apr 2026 18:41:02 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add validation highlighting and popover for shortcut recording</li><li>Enhance shortcut management with validation and conflict detection</li><li>Implement keycap rendering for keyboard shortcuts and enhance shortcut recording UI</li><li>Enhance shortcut management and user experience</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.5.1/Snapzy-v1.5.1.dmg"
+        sparkle:edSignature="Ey/r0JhstJ8Fx9AiBoTD+fYmKGM/MNmh1rNSbQSG3xF+EHT2oBID+fPz9f2pcIqNtTz3sEF1eKmHPd4my7M8CA=="
+        length="11869078"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.5.0</title>
       <sparkle:version>40</sparkle:version>
       <sparkle:shortVersionString>1.5.0</sparkle:shortVersionString>
