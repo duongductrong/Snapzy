@@ -19,6 +19,8 @@ struct ShortcutsSettingsView: View {
   @State private var copyAndCloseShortcut: ShortcutConfig
   @State private var togglePinShortcut: ShortcutConfig
   @State private var cloudUploadShortcut: ShortcutConfig
+  @State private var globalShortcutEnabled: [GlobalShortcutKind: Bool]
+  @State private var annotateActionEnabled: [AnnotateActionShortcutKind: Bool]
   @State private var shortcutsEnabled: Bool
   @State private var showDisableConfirmation: Bool = false
   @State private var isConfirmedDisable: Bool = false
@@ -40,6 +42,20 @@ struct ShortcutsSettingsView: View {
     _copyAndCloseShortcut = State(initialValue: AnnotateShortcutManager.shared.copyAndCloseShortcut)
     _togglePinShortcut = State(initialValue: AnnotateShortcutManager.shared.togglePinShortcut)
     _cloudUploadShortcut = State(initialValue: AnnotateShortcutManager.shared.cloudUploadShortcut)
+    _globalShortcutEnabled = State(
+      initialValue: Dictionary(
+        uniqueKeysWithValues: GlobalShortcutKind.allCases.map {
+          ($0, KeyboardShortcutManager.shared.isShortcutEnabled(for: $0))
+        }
+      )
+    )
+    _annotateActionEnabled = State(
+      initialValue: Dictionary(
+        uniqueKeysWithValues: AnnotateActionShortcutKind.allCases.map {
+          ($0, AnnotateShortcutManager.shared.isActionShortcutEnabled(for: $0))
+        }
+      )
+    )
     _shortcutsEnabled = State(initialValue: KeyboardShortcutManager.shared.isEnabled)
     _hasSystemConflict = State(
       initialValue: SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
@@ -60,9 +76,9 @@ struct ShortcutsSettingsView: View {
                   .foregroundColor(.orange)
 
                 VStack(alignment: .leading, spacing: 2) {
-                  Text("macOS screenshot shortcuts are still active")
+                  Text("macOS screenshot shortcuts overlap with Snapzy")
                     .font(.system(size: 13, weight: .semibold))
-                  Text("Snapzy shortcuts will not work until you disable the macOS defaults.")
+                  Text("Turn off the overlapping macOS shortcuts to avoid conflicts with the Snapzy shortcuts you keep enabled.")
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 }
@@ -85,7 +101,7 @@ struct ShortcutsSettingsView: View {
                 )
                 PreferencesGuideStep(
                   step: "3",
-                  text: "Uncheck **⌘⇧3**, **⌘⇧4**, and **⌘⇧5**"
+                  text: "Uncheck the macOS screenshot shortcuts that overlap with the Snapzy shortcuts you want to keep on"
                 )
               }
               .padding(10)
@@ -149,7 +165,7 @@ struct ShortcutsSettingsView: View {
               VStack(alignment: .leading, spacing: 2) {
                 Text("No conflicts detected")
                   .font(.system(size: 13, weight: .semibold))
-                Text("macOS default screenshot shortcuts are disabled. Snapzy shortcuts will work correctly.")
+                Text("No overlapping macOS screenshot shortcuts were found for the Snapzy shortcuts you currently have enabled.")
                   .font(.system(size: 11))
                   .foregroundColor(.secondary)
               }
@@ -227,7 +243,11 @@ struct ShortcutsSettingsView: View {
             icon: "rectangle.dashed.and.paperclip",
             description: "Capture entire screen instantly",
             shortcut: $fullscreenShortcut,
-            onShortcutChanged: { manager.setFullscreenShortcut($0) }
+            isEnabled: globalEnabledBinding(for: .fullscreen),
+            onShortcutChanged: {
+              manager.setFullscreenShortcut($0)
+              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+            }
           )
 
           ShortcutRecorderView(
@@ -235,7 +255,11 @@ struct ShortcutsSettingsView: View {
             icon: "rectangle.dashed",
             description: "Select a region to capture",
             shortcut: $areaShortcut,
-            onShortcutChanged: { manager.setAreaShortcut($0) }
+            isEnabled: globalEnabledBinding(for: .area),
+            onShortcutChanged: {
+              manager.setAreaShortcut($0)
+              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+            }
           )
 
           ShortcutRecorderView(
@@ -243,6 +267,7 @@ struct ShortcutsSettingsView: View {
             icon: "person.crop.rectangle",
             description: "Select an area, remove background, and optionally auto-crop",
             shortcut: $objectCutoutShortcut,
+            isEnabled: globalEnabledBinding(for: .objectCutout),
             onShortcutChanged: { manager.setObjectCutoutShortcut($0) }
           )
 
@@ -251,6 +276,7 @@ struct ShortcutsSettingsView: View {
             icon: "text.viewfinder",
             description: "Extract text from screen region",
             shortcut: $ocrShortcut,
+            isEnabled: globalEnabledBinding(for: .ocr),
             onShortcutChanged: { manager.setOCRShortcut($0) }
           )
         }
@@ -261,7 +287,11 @@ struct ShortcutsSettingsView: View {
             icon: "record.circle",
             description: "Start screen recording",
             shortcut: $recordingShortcut,
-            onShortcutChanged: { manager.setRecordingShortcut($0) }
+            isEnabled: globalEnabledBinding(for: .recording),
+            onShortcutChanged: {
+              manager.setRecordingShortcut($0)
+              hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+            }
           )
         }
 
@@ -271,6 +301,7 @@ struct ShortcutsSettingsView: View {
             icon: "pencil.and.scribble",
             description: "Open image annotation editor",
             shortcut: $annotateShortcut,
+            isEnabled: globalEnabledBinding(for: .annotate),
             onShortcutChanged: { manager.setAnnotateShortcut($0) }
           )
 
@@ -279,6 +310,7 @@ struct ShortcutsSettingsView: View {
             icon: "film",
             description: "Open video editing tools",
             shortcut: $videoEditorShortcut,
+            isEnabled: globalEnabledBinding(for: .videoEditor),
             onShortcutChanged: { manager.setVideoEditorShortcut($0) }
           )
 
@@ -287,10 +319,11 @@ struct ShortcutsSettingsView: View {
             icon: "icloud.and.arrow.up",
             description: "Open cloud upload history",
             shortcut: $cloudUploadsShortcut,
+            isEnabled: globalEnabledBinding(for: .cloudUploads),
             onShortcutChanged: { manager.setCloudUploadsShortcut($0) }
           )
 
-          Text("Click a shortcut button to record new keys. Press Esc to cancel.")
+          Text("Click a shortcut button to record new keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.")
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 4)
@@ -306,6 +339,7 @@ struct ShortcutsSettingsView: View {
             icon: "doc.on.doc",
             description: "Copy annotated image to clipboard and close",
             shortcut: $copyAndCloseShortcut,
+            isEnabled: annotateActionEnabledBinding(for: .copyAndClose),
             onShortcutChanged: { annotateManager.setCopyAndCloseShortcut($0) }
           )
 
@@ -314,6 +348,7 @@ struct ShortcutsSettingsView: View {
             icon: "pin",
             description: "Pin or unpin the annotation window",
             shortcut: $togglePinShortcut,
+            isEnabled: annotateActionEnabledBinding(for: .togglePin),
             onShortcutChanged: { annotateManager.setTogglePinShortcut($0) }
           )
 
@@ -322,6 +357,7 @@ struct ShortcutsSettingsView: View {
             icon: "icloud.and.arrow.up",
             description: "Upload annotated image to cloud",
             shortcut: $cloudUploadShortcut,
+            isEnabled: annotateActionEnabledBinding(for: .cloudUpload),
             onShortcutChanged: { annotateManager.setCloudUploadShortcut($0) }
           )
         }
@@ -335,13 +371,14 @@ struct ShortcutsSettingsView: View {
             SingleKeyRecorderView(
               tool: tool,
               shortcut: bindingForTool(tool),
+              isEnabled: toolEnabledBinding(for: tool),
               onChanged: { annotateManager.setShortcut($0, for: tool) },
               conflictingTool: conflictForTool(tool),
               context: toolContext(for: tool)
             )
           }
 
-          Text("Click to record. Press Backspace to clear. Esc to cancel.")
+          Text("Click to record. Use Backspace while recording or the row toggle to turn a shortcut off. Esc to cancel.")
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 4)
@@ -392,6 +429,12 @@ struct ShortcutsSettingsView: View {
     copyAndCloseShortcut = AnnotateShortcutManager.defaultCopyAndClose
     togglePinShortcut = AnnotateShortcutManager.defaultTogglePin
     cloudUploadShortcut = AnnotateShortcutManager.defaultCloudUpload
+    globalShortcutEnabled = Dictionary(
+      uniqueKeysWithValues: GlobalShortcutKind.allCases.map { ($0, true) }
+    )
+    annotateActionEnabled = Dictionary(
+      uniqueKeysWithValues: AnnotateActionShortcutKind.allCases.map { ($0, true) }
+    )
 
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
@@ -401,9 +444,13 @@ struct ShortcutsSettingsView: View {
     manager.setAnnotateShortcut(.defaultAnnotate)
     manager.setVideoEditorShortcut(.defaultVideoEditor)
     manager.setCloudUploadsShortcut(.defaultCloudUploads)
+    for kind in GlobalShortcutKind.allCases {
+      manager.setShortcutEnabled(true, for: kind)
+    }
 
     // Reset annotation tool + action shortcuts
     annotateManager.resetToDefaults()
+    hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
   }
 
   /// Re-check system shortcut conflict status with spinner animation
@@ -426,8 +473,39 @@ struct ShortcutsSettingsView: View {
     )
   }
 
+  private func toolEnabledBinding(for tool: AnnotationToolType) -> Binding<Bool> {
+    Binding(
+      get: { annotateManager.isShortcutEnabled(for: tool) },
+      set: { annotateManager.setShortcutEnabled($0, for: tool) }
+    )
+  }
+
+  private func globalEnabledBinding(for kind: GlobalShortcutKind) -> Binding<Bool> {
+    Binding(
+      get: { globalShortcutEnabled[kind] ?? true },
+      set: { newValue in
+        globalShortcutEnabled[kind] = newValue
+        manager.setShortcutEnabled(newValue, for: kind)
+        if kind.isSystemConflictRelevant {
+          hasSystemConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
+        }
+      }
+    )
+  }
+
+  private func annotateActionEnabledBinding(for kind: AnnotateActionShortcutKind) -> Binding<Bool> {
+    Binding(
+      get: { annotateActionEnabled[kind] ?? true },
+      set: { newValue in
+        annotateActionEnabled[kind] = newValue
+        annotateManager.setActionShortcutEnabled(newValue, for: kind)
+      }
+    )
+  }
+
   private func conflictForTool(_ tool: AnnotationToolType) -> AnnotationToolType? {
-    guard let key = annotateManager.shortcut(for: tool) else { return nil }
+    guard annotateManager.isShortcutEnabled(for: tool),
+          let key = annotateManager.shortcut(for: tool) else { return nil }
     return annotateManager.conflictingTool(for: key, excluding: tool)
   }
 

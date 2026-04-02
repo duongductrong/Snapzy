@@ -31,6 +31,9 @@ enum PreferencesKeys {
   static let shortcutsEnabled = "shortcutsEnabled"
   static let fullscreenShortcut = "fullscreenShortcut"
   static let areaShortcut = "areaShortcut"
+  static let disabledGlobalShortcuts = "shortcuts.disabledGlobalActions"
+  static let disabledAnnotateActionShortcuts = "shortcuts.disabledAnnotateActionShortcuts"
+  static let disabledAnnotateToolShortcuts = "shortcuts.disabledAnnotateToolShortcuts"
 
   // Screenshot
   static let screenshotFormat = "screenshot.format"

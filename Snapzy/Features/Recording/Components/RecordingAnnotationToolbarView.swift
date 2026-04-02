@@ -67,8 +67,8 @@ struct RecordingAnnotationToolbarView: View {
         action: { state.selectedTool = tool }
       )
       .overlay(alignment: .bottomTrailing) {
-        if state.isShortcutModeActive {
-          Text(shortcutLabel(for: tool))
+        if state.isShortcutModeActive, let shortcutLabel = shortcutLabel(for: tool) {
+          Text(shortcutLabel)
             .font(.system(size: 8, weight: .bold, design: .monospaced))
             .foregroundColor(.white)
             .padding(.horizontal, 3)
@@ -82,7 +82,7 @@ struct RecordingAnnotationToolbarView: View {
         }
       }
       .animation(.easeInOut(duration: 0.15), value: state.isShortcutModeActive)
-      .help("\(tool.displayName) (\(shortcutLabel(for: tool)))")
+      .help(shortcutHelpText(for: tool))
     }
   }
 
@@ -182,11 +182,17 @@ struct RecordingAnnotationToolbarView: View {
 
   // MARK: - Helpers
 
-  private func shortcutLabel(for tool: AnnotationToolType) -> String {
-    if let key = shortcutManager.shortcut(for: tool) {
-      return String(key).uppercased()
+  private func shortcutLabel(for tool: AnnotationToolType) -> String? {
+    guard shortcutManager.isShortcutEnabled(for: tool),
+          let key = shortcutManager.shortcut(for: tool) else {
+      return nil
     }
-    return String(tool.defaultShortcut).uppercased()
+    return String(key).uppercased()
+  }
+
+  private func shortcutHelpText(for tool: AnnotationToolType) -> String {
+    guard let shortcutLabel = shortcutLabel(for: tool) else { return tool.displayName }
+    return "\(tool.displayName) (\(shortcutLabel))"
   }
 
   // MARK: - Divider

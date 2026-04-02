@@ -69,7 +69,7 @@ struct ShortcutsView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.orange)
 
-              Text("Disable macOS default shortcuts")
+              Text("Resolve macOS shortcut overlap")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -101,7 +101,7 @@ struct ShortcutsView: View {
             VStack(alignment: .leading, spacing: 4) {
               GuideStepRow(step: "1", text: "Open System Settings → Keyboard → Keyboard Shortcuts")
               GuideStepRow(step: "2", text: "Select Screenshots from the sidebar")
-              GuideStepRow(step: "3", text: "Uncheck ⌘⇧3, ⌘⇧4, and ⌘⇧5")
+              GuideStepRow(step: "3", text: "Uncheck the macOS screenshot shortcuts that overlap with the Snapzy shortcuts you want to keep on")
             }
           }
           .padding(.horizontal, 14)
@@ -127,7 +127,7 @@ struct ShortcutsView: View {
             .font(.system(size: 16))
             .foregroundColor(.green)
 
-          Text("macOS default shortcuts are disabled — ready to go!")
+          Text("No overlapping macOS screenshot shortcuts detected — ready to go!")
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -155,7 +155,7 @@ struct ShortcutsView: View {
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
 
-        Text("You can customize shortcuts anytime in Preferences → Shortcuts.")
+        Text("You can customize or turn off shortcuts anytime in Preferences → Shortcuts.")
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
       }

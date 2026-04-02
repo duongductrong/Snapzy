@@ -14,6 +14,7 @@ struct ShortcutRecorderView: View {
   let icon: String
   let description: String
   @Binding var shortcut: ShortcutConfig
+  let isEnabled: Binding<Bool>?
   let onShortcutChanged: (ShortcutConfig) -> Void
 
   @State private var isRecording = false
@@ -24,12 +25,14 @@ struct ShortcutRecorderView: View {
     icon: String = "command",
     description: String = "",
     shortcut: Binding<ShortcutConfig>,
+    isEnabled: Binding<Bool>? = nil,
     onShortcutChanged: @escaping (ShortcutConfig) -> Void
   ) {
     self.label = label
     self.icon = icon
     self.description = description
     self._shortcut = shortcut
+    self.isEnabled = isEnabled
     self.onShortcutChanged = onShortcutChanged
   }
 
@@ -60,11 +63,36 @@ struct ShortcutRecorderView: View {
           .frame(minWidth: 100)
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
+
+      if let toggleBinding {
+        HStack(spacing: 6) {
+          Text(toggleBinding.wrappedValue ? "On" : "Off")
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+          Toggle("", isOn: toggleBinding)
+            .labelsHidden()
+        }
+      }
     }
     .padding(.vertical, 4)
+    .opacity(rowOpacity)
     .onDisappear {
       stopRecording()
     }
+  }
+
+  private var toggleBinding: Binding<Bool>? {
+    guard let isEnabled else { return nil }
+    return Binding(
+      get: { isEnabled.wrappedValue },
+      set: { isEnabled.wrappedValue = $0 }
+    )
+  }
+
+  private var rowOpacity: Double {
+    guard let isEnabled else { return 1 }
+    return isEnabled.wrappedValue ? 1 : 0.62
   }
 
   private func startRecording() {

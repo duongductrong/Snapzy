@@ -11,6 +11,12 @@ import Carbon.HIToolbox
 import Combine
 import Foundation
 
+enum AnnotateActionShortcutKind: String, CaseIterable, Codable {
+  case copyAndClose
+  case togglePin
+  case cloudUpload
+}
+
 /// Manager for annotation tool keyboard shortcuts
 @MainActor
 final class AnnotateShortcutManager: ObservableObject {
@@ -19,17 +25,21 @@ final class AnnotateShortcutManager: ObservableObject {
 
   /// Current shortcut bindings (tool -> key)
   @Published private(set) var shortcuts: [AnnotationToolType: Character] = [:]
+  @Published private(set) var disabledToolShortcuts: Set<AnnotationToolType> = []
 
   /// Configurable action shortcuts (modifier+key combos)
   @Published private(set) var copyAndCloseShortcut: ShortcutConfig
   @Published private(set) var togglePinShortcut: ShortcutConfig
   @Published private(set) var cloudUploadShortcut: ShortcutConfig
+  @Published private(set) var disabledActionShortcuts: Set<AnnotateActionShortcutKind> = []
 
   /// UserDefaults key prefix
   private let keyPrefix = "annotate.shortcut."
   private let copyAndCloseKey = "annotate.action.copyAndClose"
   private let togglePinKey = "annotate.action.togglePin"
   private let cloudUploadKey = "annotate.action.cloudUpload"
+  private let disabledToolShortcutsKey = PreferencesKeys.disabledAnnotateToolShortcuts
+  private let disabledActionShortcutsKey = PreferencesKeys.disabledAnnotateActionShortcuts
 
   /// Tools that support shortcuts (excludes mockup - internal only)
   static let configurableTools: [AnnotationToolType] = [
@@ -60,19 +70,37 @@ final class AnnotateShortcutManager: ObservableObject {
     togglePinShortcut = Self.defaultTogglePin
     cloudUploadShortcut = Self.defaultCloudUpload
     loadShortcuts()
+    loadDisabledToolShortcuts()
     loadActionShortcuts()
+    loadDisabledActionShortcuts()
   }
 
   // MARK: - Lookup
 
   /// Get tool for a given key press
   func tool(for key: Character) -> AnnotationToolType? {
-    shortcuts.first { $0.value == key }?.key
+    shortcuts.first { isShortcutEnabled(for: $0.key) && $0.value == key }?.key
   }
 
   /// Get current shortcut for a tool
   func shortcut(for tool: AnnotationToolType) -> Character? {
     shortcuts[tool]
+  }
+
+  func isShortcutEnabled(for tool: AnnotationToolType) -> Bool {
+    !disabledToolShortcuts.contains(tool)
+  }
+
+  func setShortcutEnabled(_ enabled: Bool, for tool: AnnotationToolType) {
+    guard isShortcutEnabled(for: tool) != enabled else { return }
+    var updated = disabledToolShortcuts
+    if enabled {
+      updated.remove(tool)
+    } else {
+      updated.insert(tool)
+    }
+    disabledToolShortcuts = updated
+    saveDisabledToolShortcuts()
   }
 
   // MARK: - Mutation
@@ -93,7 +121,12 @@ final class AnnotateShortcutManager: ObservableObject {
       shortcuts[tool] = tool.defaultShortcut
       saveShortcut(for: tool)
     }
+    disabledToolShortcuts = []
+    saveDisabledToolShortcuts()
+
     // Reset action shortcuts
+    disabledActionShortcuts = []
+    saveDisabledActionShortcuts()
     setCopyAndCloseShortcut(Self.defaultCopyAndClose)
     setTogglePinShortcut(Self.defaultTogglePin)
     setCloudUploadShortcut(Self.defaultCloudUpload)
@@ -116,26 +149,47 @@ final class AnnotateShortcutManager: ObservableObject {
     saveActionShortcut(config, forKey: cloudUploadKey)
   }
 
+  func isActionShortcutEnabled(for kind: AnnotateActionShortcutKind) -> Bool {
+    !disabledActionShortcuts.contains(kind)
+  }
+
+  func setActionShortcutEnabled(_ enabled: Bool, for kind: AnnotateActionShortcutKind) {
+    guard isActionShortcutEnabled(for: kind) != enabled else { return }
+    var updated = disabledActionShortcuts
+    if enabled {
+      updated.remove(kind)
+    } else {
+      updated.insert(kind)
+    }
+    disabledActionShortcuts = updated
+    saveDisabledActionShortcuts()
+  }
+
   /// Check if an NSEvent matches the Copy & Close shortcut
   func matchesCopyAndClose(_ event: NSEvent) -> Bool {
-    matchesShortcut(copyAndCloseShortcut, event: event)
+    guard isActionShortcutEnabled(for: .copyAndClose) else { return false }
+    return matchesShortcut(copyAndCloseShortcut, event: event)
   }
 
   /// Check if an NSEvent matches the Toggle Pin shortcut
   func matchesTogglePin(_ event: NSEvent) -> Bool {
-    matchesShortcut(togglePinShortcut, event: event)
+    guard isActionShortcutEnabled(for: .togglePin) else { return false }
+    return matchesShortcut(togglePinShortcut, event: event)
   }
 
   /// Check if an NSEvent matches the Cloud Upload shortcut
   func matchesCloudUpload(_ event: NSEvent) -> Bool {
-    matchesShortcut(cloudUploadShortcut, event: event)
+    guard isActionShortcutEnabled(for: .cloudUpload) else { return false }
+    return matchesShortcut(cloudUploadShortcut, event: event)
   }
 
   // MARK: - Validation
 
   /// Check if key conflicts with another tool's shortcut
   func conflictingTool(for key: Character, excluding tool: AnnotationToolType) -> AnnotationToolType? {
-    shortcuts.first { $0.key != tool && $0.value == key }?.key
+    shortcuts.first {
+      $0.key != tool && isShortcutEnabled(for: $0.key) && $0.value == key
+    }?.key
   }
 
   // MARK: - Persistence
@@ -153,6 +207,14 @@ final class AnnotateShortcutManager: ObservableObject {
     }
   }
 
+  private func loadDisabledToolShortcuts() {
+    guard let rawValues = UserDefaults.standard.array(forKey: disabledToolShortcutsKey) as? [String] else {
+      disabledToolShortcuts = []
+      return
+    }
+    disabledToolShortcuts = Set(rawValues.compactMap(AnnotationToolType.init(rawValue:)))
+  }
+
   private func saveShortcut(for tool: AnnotationToolType) {
     let key = keyPrefix + tool.rawValue
     if let shortcut = shortcuts[tool] {
@@ -160,6 +222,11 @@ final class AnnotateShortcutManager: ObservableObject {
     } else {
       UserDefaults.standard.removeObject(forKey: key)
     }
+  }
+
+  private func saveDisabledToolShortcuts() {
+    let rawValues = disabledToolShortcuts.map(\.rawValue).sorted()
+    UserDefaults.standard.set(rawValues, forKey: disabledToolShortcutsKey)
   }
 
   // MARK: - Action Shortcut Persistence
@@ -180,10 +247,23 @@ final class AnnotateShortcutManager: ObservableObject {
     }
   }
 
+  private func loadDisabledActionShortcuts() {
+    guard let rawValues = UserDefaults.standard.array(forKey: disabledActionShortcutsKey) as? [String] else {
+      disabledActionShortcuts = []
+      return
+    }
+    disabledActionShortcuts = Set(rawValues.compactMap(AnnotateActionShortcutKind.init(rawValue:)))
+  }
+
   private func saveActionShortcut(_ config: ShortcutConfig, forKey key: String) {
     if let data = try? JSONEncoder().encode(config) {
       UserDefaults.standard.set(data, forKey: key)
     }
+  }
+
+  private func saveDisabledActionShortcuts() {
+    let rawValues = disabledActionShortcuts.map(\.rawValue).sorted()
+    UserDefaults.standard.set(rawValues, forKey: disabledActionShortcutsKey)
   }
 
   /// Check if an NSEvent matches a given ShortcutConfig

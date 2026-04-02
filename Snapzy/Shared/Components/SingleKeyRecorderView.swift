@@ -42,6 +42,7 @@ enum AnnotationToolContext {
 struct SingleKeyRecorderView: View {
   let tool: AnnotationToolType
   @Binding var shortcut: Character?
+  @Binding var isEnabled: Bool
   let onChanged: (Character?) -> Void
   let conflictingTool: AnnotationToolType?
   var context: AnnotationToolContext = .both
@@ -76,7 +77,7 @@ struct SingleKeyRecorderView: View {
       Spacer()
 
       // Conflict warning
-      if let conflict = conflictingTool {
+      if isEnabled, let conflict = conflictingTool {
         Label("Used by \(conflict.displayName)", systemImage: "exclamationmark.triangle")
           .font(.caption)
           .foregroundColor(.orange)
@@ -90,8 +91,18 @@ struct SingleKeyRecorderView: View {
           .frame(minWidth: 40)
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
+
+      HStack(spacing: 6) {
+        Text(isEnabled ? "On" : "Off")
+          .font(.caption)
+          .foregroundColor(.secondary)
+
+        Toggle("", isOn: $isEnabled)
+          .labelsHidden()
+      }
     }
     .padding(.vertical, 2)
+    .opacity(isEnabled ? 1 : 0.62)
     .onDisappear { stopRecording() }
   }
 
@@ -112,10 +123,9 @@ struct SingleKeyRecorderView: View {
         return nil
       }
 
-      // Delete/Backspace clears shortcut
+      // Delete/Backspace turns the shortcut off without discarding the key
       if event.keyCode == 51 || event.keyCode == 117 {
-        shortcut = nil
-        onChanged(nil)
+        isEnabled = false
         stopRecording()
         return nil
       }

@@ -6,10 +6,11 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Foundation
 
-/// Manages detection and resolution of conflicts between Snapzy shortcuts
-/// and macOS built-in screenshot shortcuts (⌘⇧3, ⌘⇧4, ⌘⇧5).
+/// Manages detection and resolution of conflicts between active Snapzy shortcuts
+/// and macOS built-in screenshot shortcuts.
 ///
 /// Requires entitlement:
 ///   com.apple.security.temporary-exception.shared-preference.read-only
@@ -29,6 +30,27 @@ final class SystemScreenshotShortcutManager {
     case saveScreenToFile = 30      // ⌘⇧3 — Save picture of screen as file
     case copyScreenToClipboard = 31 // ⌃⌘⇧3 — Copy picture of screen to clipboard
     case screenshotOptions = 184    // ⌘⇧5 — Screenshot and recording options
+
+    var fallbackShortcut: ShortcutConfig {
+      switch self {
+      case .saveAreaToFile:
+        return .defaultArea
+      case .copyAreaToClipboard:
+        return ShortcutConfig(
+          keyCode: UInt32(kVK_ANSI_4),
+          modifiers: UInt32(cmdKey | shiftKey | controlKey)
+        )
+      case .saveScreenToFile:
+        return .defaultFullscreen
+      case .copyScreenToClipboard:
+        return ShortcutConfig(
+          keyCode: UInt32(kVK_ANSI_3),
+          modifiers: UInt32(cmdKey | shiftKey | controlKey)
+        )
+      case .screenshotOptions:
+        return .defaultRecording
+      }
+    }
   }
 
   // MARK: - UserDefaults Keys
@@ -43,8 +65,8 @@ final class SystemScreenshotShortcutManager {
     set { UserDefaults.standard.set(newValue, forKey: promptSeenKey) }
   }
 
-  /// Check if any macOS system screenshot shortcuts are still enabled
-  /// that would conflict with Snapzy's default shortcuts.
+  /// Check if any enabled macOS screenshot shortcuts conflict with the
+  /// currently-enabled Snapzy fullscreen/area/recording shortcuts.
   ///
   /// Reads `com.apple.symbolichotkeys` via UserDefaults(suiteName:),
   /// which requires the shared-preference.read-only entitlement in sandbox.
@@ -58,20 +80,25 @@ final class SystemScreenshotShortcutManager {
       return false
     }
 
-    // Check only the IDs that directly conflict with Snapzy defaults (⌘⇧3, ⌘⇧4, ⌘⇧5)
-    let conflictingIDs: [SystemHotkeyID] = [
-      .saveScreenToFile,     // ⌘⇧3 conflicts with Snapzy fullscreen
-      .saveAreaToFile,       // ⌘⇧4 conflicts with Snapzy area capture
-      .screenshotOptions,    // ⌘⇧5 conflicts with Snapzy recording
+    let mappings: [(snapzy: GlobalShortcutKind, system: [SystemHotkeyID])] = [
+      (.fullscreen, [.saveScreenToFile, .copyScreenToClipboard]),
+      (.area, [.saveAreaToFile, .copyAreaToClipboard]),
+      (.recording, [.screenshotOptions]),
     ]
 
-    for hotkeyID in conflictingIDs {
-      if isHotkeyEnabled(id: hotkeyID.rawValue, in: hotkeys) {
-        DiagnosticLogger.shared.log(
-          .info, .action,
-          "System screenshot hotkey \(hotkeyID.rawValue) is enabled — conflict detected"
-        )
-        return true
+    for mapping in mappings {
+      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: mapping.snapzy) else { continue }
+      let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: mapping.snapzy)
+
+      for hotkeyID in mapping.system where isHotkeyEnabled(id: hotkeyID.rawValue, in: hotkeys) {
+        guard let systemShortcut = shortcutConfig(for: hotkeyID, in: hotkeys) else { continue }
+        if systemShortcut == snapzyShortcut {
+          DiagnosticLogger.shared.log(
+            .info, .action,
+            "System screenshot hotkey \(hotkeyID.rawValue) matches Snapzy \(mapping.snapzy.rawValue) shortcut"
+          )
+          return true
+        }
       }
     }
 
@@ -164,6 +191,64 @@ final class SystemScreenshotShortcutManager {
 
     // If no "enabled" key, assume enabled by default (macOS default behavior)
     return true
+  }
+
+  private func shortcutConfig(for id: SystemHotkeyID, in hotkeys: [String: Any]) -> ShortcutConfig? {
+    guard let entry = hotkeys[String(id.rawValue)] as? [String: Any] else {
+      return id.fallbackShortcut
+    }
+    return parseShortcutConfig(from: entry) ?? id.fallbackShortcut
+  }
+
+  private func parseShortcutConfig(from entry: [String: Any]) -> ShortcutConfig? {
+    guard let value = entry["value"] as? [String: Any],
+          let parameters = value["parameters"] as? [Any],
+          parameters.count >= 3,
+          let keyCode = integerValue(parameters[1]),
+          let flags = integerValue(parameters[2]) else {
+      return nil
+    }
+
+    return ShortcutConfig(
+      keyCode: UInt32(keyCode),
+      modifiers: carbonModifiers(fromSystemFlags: UInt64(flags))
+    )
+  }
+
+  private func integerValue(_ value: Any) -> Int? {
+    switch value {
+    case let number as NSNumber:
+      return number.intValue
+    case let int as Int:
+      return int
+    case let int32 as Int32:
+      return Int(int32)
+    case let uint as UInt32:
+      return Int(uint)
+    case let uint as UInt64:
+      return Int(uint)
+    default:
+      return nil
+    }
+  }
+
+  private func carbonModifiers(fromSystemFlags flags: UInt64) -> UInt32 {
+    var modifiers: UInt32 = 0
+
+    if flags & UInt64(NSEvent.ModifierFlags.command.rawValue) != 0 {
+      modifiers |= UInt32(cmdKey)
+    }
+    if flags & UInt64(NSEvent.ModifierFlags.shift.rawValue) != 0 {
+      modifiers |= UInt32(shiftKey)
+    }
+    if flags & UInt64(NSEvent.ModifierFlags.option.rawValue) != 0 {
+      modifiers |= UInt32(optionKey)
+    }
+    if flags & UInt64(NSEvent.ModifierFlags.control.rawValue) != 0 {
+      modifiers |= UInt32(controlKey)
+    }
+
+    return modifiers
   }
 
   private init() {}

@@ -12,6 +12,7 @@ struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var preferencesManager = PreferencesManager.shared
+  @ObservedObject private var annotateShortcutManager = AnnotateShortcutManager.shared
 
   @State private var isCloudUploading = false
   @State private var cloudUploadProgress: Double = 0
@@ -183,8 +184,13 @@ struct AnnotateBottomBarView: View {
   // MARK: - Action Buttons
 
   private var actionButtons: some View {
-    let annotateShortcuts = AnnotateShortcutManager.shared
     let showCloudButton = preferencesManager.isActionEnabled(.uploadToCloud, for: .screenshot)
+    let cloudUploadShortcut = annotateShortcutManager.isActionShortcutEnabled(for: .cloudUpload)
+      ? annotateShortcutManager.cloudUploadShortcut.displayString : nil
+    let togglePinShortcut = annotateShortcutManager.isActionShortcutEnabled(for: .togglePin)
+      ? annotateShortcutManager.togglePinShortcut.displayString : nil
+    let copyAndCloseShortcut = annotateShortcutManager.isActionShortcutEnabled(for: .copyAndClose)
+      ? annotateShortcutManager.copyAndCloseShortcut.displayString : nil
 
     return HStack(spacing: 12) {
       BottomBarButton(icon: "square.and.arrow.up", tooltip: "Share") {
@@ -196,10 +202,14 @@ struct AnnotateBottomBarView: View {
         // needsReUpload: true when image changed in current session OR was changed since last upload
         let needsReUpload = state.hasUnsavedChanges || state.isCloudStale
         let alreadyUploaded = state.cloudURL != nil && !needsReUpload
-        let uploadShortcutStr = annotateShortcuts.cloudUploadShortcut.displayString
         BottomBarButton(
           icon: alreadyUploaded ? "checkmark.icloud" : "icloud.and.arrow.up",
-          tooltip: alreadyUploaded ? "Uploaded to Cloud" : (state.cloudKey != nil ? "Re-upload to Cloud (\(uploadShortcutStr))" : "Upload to Cloud (\(uploadShortcutStr))")
+          tooltip: alreadyUploaded
+            ? "Uploaded to Cloud"
+            : tooltipText(
+              state.cloudKey != nil ? "Re-upload to Cloud" : "Upload to Cloud",
+              shortcut: cloudUploadShortcut
+            )
         ) {
           if state.cloudKey != nil && needsReUpload {
             showOverwriteConfirmation = true
@@ -211,11 +221,14 @@ struct AnnotateBottomBarView: View {
         .opacity(alreadyUploaded ? 0.6 : 1)
       }
 
-      BottomBarButton(icon: state.isPinned ? "pin.fill" : "pin", tooltip: state.isPinned ? "Unpin window (\(annotateShortcuts.togglePinShortcut.displayString))" : "Pin window (\(annotateShortcuts.togglePinShortcut.displayString))") {
+      BottomBarButton(
+        icon: state.isPinned ? "pin.fill" : "pin",
+        tooltip: tooltipText(state.isPinned ? "Unpin window" : "Pin window", shortcut: togglePinShortcut)
+      ) {
         pin()
       }
 
-      BottomBarButton(icon: "doc.on.doc", tooltip: "Copy to clipboard (\(annotateShortcuts.copyAndCloseShortcut.displayString))") {
+      BottomBarButton(icon: "doc.on.doc", tooltip: tooltipText("Copy to clipboard", shortcut: copyAndCloseShortcut)) {
         copyToClipboard()
       }
 
@@ -225,6 +238,11 @@ struct AnnotateBottomBarView: View {
       .disabled(state.sourceURL == nil)
       .opacity(state.sourceURL == nil ? 0.5 : 1)
     }
+  }
+
+  private func tooltipText(_ title: String, shortcut: String?) -> String {
+    guard let shortcut else { return title }
+    return "\(title) (\(shortcut))"
   }
 
   // MARK: - Actions

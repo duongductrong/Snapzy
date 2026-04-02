@@ -200,6 +200,26 @@ struct ShortcutConfig: Equatable, Codable {
   }
 }
 
+enum GlobalShortcutKind: String, CaseIterable, Codable {
+  case fullscreen
+  case area
+  case recording
+  case annotate
+  case videoEditor
+  case cloudUploads
+  case ocr
+  case objectCutout
+
+  var isSystemConflictRelevant: Bool {
+    switch self {
+    case .fullscreen, .area, .recording:
+      return true
+    default:
+      return false
+    }
+  }
+}
+
 /// Shortcut action types
 enum ShortcutAction {
   case captureFullscreen
@@ -234,6 +254,7 @@ final class KeyboardShortcutManager {
   private(set) var ocrShortcut: ShortcutConfig
   private(set) var objectCutoutShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
+  private var disabledShortcuts: Set<GlobalShortcutKind> = []
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
   private var areaHotkeyRef: EventHotKeyRef?
@@ -266,6 +287,7 @@ final class KeyboardShortcutManager {
   private let ocrShortcutKey = "ocrShortcut"
   private let objectCutoutShortcutKey = "objectCutoutShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
+  private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
 
   private init() {
     fullscreenShortcut = .defaultFullscreen
@@ -277,6 +299,7 @@ final class KeyboardShortcutManager {
     ocrShortcut = .defaultOCR
     objectCutoutShortcut = .defaultObjectCutout
     loadShortcuts()
+    loadDisabledShortcuts()
     setupEventHandler()
 
     // Auto-enable if previously enabled
@@ -303,76 +326,97 @@ final class KeyboardShortcutManager {
     UserDefaults.standard.set(false, forKey: shortcutsEnabledKey)
   }
 
+  func shortcut(for kind: GlobalShortcutKind) -> ShortcutConfig {
+    switch kind {
+    case .fullscreen: return fullscreenShortcut
+    case .area: return areaShortcut
+    case .recording: return recordingShortcut
+    case .annotate: return annotateShortcut
+    case .videoEditor: return videoEditorShortcut
+    case .cloudUploads: return cloudUploadsShortcut
+    case .ocr: return ocrShortcut
+    case .objectCutout: return objectCutoutShortcut
+    }
+  }
+
+  func isShortcutEnabled(for kind: GlobalShortcutKind) -> Bool {
+    !disabledShortcuts.contains(kind)
+  }
+
+  func setShortcutEnabled(_ enabled: Bool, for kind: GlobalShortcutKind) {
+    guard isShortcutEnabled(for: kind) != enabled else { return }
+    mutateShortcutRegistration {
+      if enabled {
+        disabledShortcuts.remove(kind)
+      } else {
+        disabledShortcuts.insert(kind)
+      }
+      saveDisabledShortcuts()
+    }
+  }
+
   /// Update fullscreen shortcut
   func setFullscreenShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    fullscreenShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      fullscreenShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update area shortcut
   func setAreaShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    areaShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      areaShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update recording shortcut
   func setRecordingShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    recordingShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      recordingShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update OCR shortcut
   func setOCRShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    ocrShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      ocrShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update object cutout shortcut
   func setObjectCutoutShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    objectCutoutShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      objectCutoutShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update annotate shortcut
   func setAnnotateShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    annotateShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      annotateShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update video editor shortcut
   func setVideoEditorShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    videoEditorShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      videoEditorShortcut = config
+      saveShortcuts()
+    }
   }
 
   /// Update cloud uploads shortcut
   func setCloudUploadsShortcut(_ config: ShortcutConfig) {
-    let wasEnabled = isEnabled
-    if wasEnabled { disable() }
-    cloudUploadsShortcut = config
-    saveShortcuts()
-    if wasEnabled { enable() }
+    mutateShortcutRegistration {
+      cloudUploadsShortcut = config
+      saveShortcuts()
+    }
   }
 
   // MARK: - Persistence
@@ -449,6 +493,19 @@ final class KeyboardShortcutManager {
     }
   }
 
+  private func saveDisabledShortcuts() {
+    let rawValues = disabledShortcuts.map(\.rawValue).sorted()
+    UserDefaults.standard.set(rawValues, forKey: disabledShortcutsKey)
+  }
+
+  private func loadDisabledShortcuts() {
+    guard let rawValues = UserDefaults.standard.array(forKey: disabledShortcutsKey) as? [String] else {
+      disabledShortcuts = []
+      return
+    }
+    disabledShortcuts = Set(rawValues.compactMap(GlobalShortcutKind.init(rawValue:)))
+  }
+
   // MARK: - Private Methods
 
   private func setupEventHandler() {
@@ -486,6 +543,13 @@ final class KeyboardShortcutManager {
       nil,
       &eventHandler
     )
+  }
+
+  private func mutateShortcutRegistration(_ mutation: () -> Void) {
+    let wasEnabled = isEnabled
+    if wasEnabled { disable() }
+    mutation()
+    if wasEnabled { enable() }
   }
 
   private func handleHotkey(id: UInt32) {
@@ -532,92 +596,77 @@ final class KeyboardShortcutManager {
   }
 
   private func registerShortcuts() {
-    // Register fullscreen shortcut
-    let fullscreenID = fullscreenHotkeyID
-    RegisterEventHotKey(
-      fullscreenShortcut.keyCode,
-      fullscreenShortcut.modifiers,
-      fullscreenID,
-      GetApplicationEventTarget(),
-      0,
-      &fullscreenHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .fullscreen,
+      config: fullscreenShortcut,
+      hotkeyID: fullscreenHotkeyID,
+      ref: &fullscreenHotkeyRef
     )
 
-    // Register area shortcut
-    let areaID = areaHotkeyID
-    RegisterEventHotKey(
-      areaShortcut.keyCode,
-      areaShortcut.modifiers,
-      areaID,
-      GetApplicationEventTarget(),
-      0,
-      &areaHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .area,
+      config: areaShortcut,
+      hotkeyID: areaHotkeyID,
+      ref: &areaHotkeyRef
     )
 
-    // Register recording shortcut
-    let recordingID = recordingHotkeyID
-    RegisterEventHotKey(
-      recordingShortcut.keyCode,
-      recordingShortcut.modifiers,
-      recordingID,
-      GetApplicationEventTarget(),
-      0,
-      &recordingHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .recording,
+      config: recordingShortcut,
+      hotkeyID: recordingHotkeyID,
+      ref: &recordingHotkeyRef
     )
 
-    // Register annotate shortcut
-    let annotateID = annotateHotkeyID
-    RegisterEventHotKey(
-      annotateShortcut.keyCode,
-      annotateShortcut.modifiers,
-      annotateID,
-      GetApplicationEventTarget(),
-      0,
-      &annotateHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .annotate,
+      config: annotateShortcut,
+      hotkeyID: annotateHotkeyID,
+      ref: &annotateHotkeyRef
     )
 
-    // Register video editor shortcut
-    let videoEditorID = videoEditorHotkeyID
-    RegisterEventHotKey(
-      videoEditorShortcut.keyCode,
-      videoEditorShortcut.modifiers,
-      videoEditorID,
-      GetApplicationEventTarget(),
-      0,
-      &videoEditorHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .videoEditor,
+      config: videoEditorShortcut,
+      hotkeyID: videoEditorHotkeyID,
+      ref: &videoEditorHotkeyRef
     )
 
-    // Register OCR shortcut
-    let ocrID = ocrHotkeyID
-    RegisterEventHotKey(
-      ocrShortcut.keyCode,
-      ocrShortcut.modifiers,
-      ocrID,
-      GetApplicationEventTarget(),
-      0,
-      &ocrHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .ocr,
+      config: ocrShortcut,
+      hotkeyID: ocrHotkeyID,
+      ref: &ocrHotkeyRef
     )
 
-    // Register cloud uploads shortcut
-    let cloudUploadsID = cloudUploadsHotkeyID
-    RegisterEventHotKey(
-      cloudUploadsShortcut.keyCode,
-      cloudUploadsShortcut.modifiers,
-      cloudUploadsID,
-      GetApplicationEventTarget(),
-      0,
-      &cloudUploadsHotkeyRef
+    registerShortcutIfNeeded(
+      kind: .cloudUploads,
+      config: cloudUploadsShortcut,
+      hotkeyID: cloudUploadsHotkeyID,
+      ref: &cloudUploadsHotkeyRef
     )
 
-    // Register object cutout shortcut
-    let objectCutoutID = objectCutoutHotkeyID
+    registerShortcutIfNeeded(
+      kind: .objectCutout,
+      config: objectCutoutShortcut,
+      hotkeyID: objectCutoutHotkeyID,
+      ref: &objectCutoutHotkeyRef
+    )
+  }
+
+  private func registerShortcutIfNeeded(
+    kind: GlobalShortcutKind,
+    config: ShortcutConfig,
+    hotkeyID: EventHotKeyID,
+    ref: inout EventHotKeyRef?
+  ) {
+    guard isShortcutEnabled(for: kind) else { return }
     RegisterEventHotKey(
-      objectCutoutShortcut.keyCode,
-      objectCutoutShortcut.modifiers,
-      objectCutoutID,
+      config.keyCode,
+      config.modifiers,
+      hotkeyID,
       GetApplicationEventTarget(),
       0,
-      &objectCutoutHotkeyRef
+      &ref
     )
   }
 
