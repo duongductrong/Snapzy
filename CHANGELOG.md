@@ -42,6 +42,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.2] - 2026-04-04
+
+### Features
+-  add release-readiness CI checks and improve build artifact validation and code signing path resolution (6e991b5)
+-  Implement keychain trust persistence verification and defer cloud credential loading to UI interaction (00ffb48)
+
+### Chore
+- docs: update README to include DeepWiki integration and reorganize featured badges (6bc5513)
+- chore: update appcast, cask, and readme for v1.5.1 (e10e21c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.1] - 2026-04-02
 
 ### Features
