@@ -45,6 +45,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.5] - 2026-04-04
+
+### Changes
+
 ## [1.5.4] - 2026-04-04
 
 ### Chore
