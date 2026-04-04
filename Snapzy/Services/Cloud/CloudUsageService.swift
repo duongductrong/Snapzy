@@ -345,6 +345,18 @@ final class CloudUsageService: ObservableObject {
 
   // MARK: - Helpers
 
+  func hydrateCachedUsageIfAvailable() {
+    guard let config = CloudManager.shared.loadConfiguration() else {
+      usageInfo = nil
+      error = nil
+      return
+    }
+
+    let fingerprint = Self.makeConfigFingerprint(config: config)
+    _ = applyCachedUsageIfAvailable(fingerprint: fingerprint)
+    error = nil
+  }
+
   private func loadCredentials() -> (accessKey: String, secretKey: String)? {
     let accessKey = CloudManager.shared.loadAccessKey().trimmingCharacters(in: .whitespacesAndNewlines)
     let secretKey = CloudManager.shared.loadSecretKey().trimmingCharacters(in: .whitespacesAndNewlines)
