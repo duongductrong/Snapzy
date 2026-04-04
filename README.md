@@ -56,7 +56,7 @@ brew install --cask snapzy
 
 ```bash
 # Install a specific version
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.5.1/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.5.3/install.sh | bash
 ```
 
 ### Download a release
