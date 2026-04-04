@@ -44,6 +44,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.4] - 2026-04-04
+
+### Chore
+- refactor: centralize cloud request context and improve error messaging for S3 and R2 providers (fc079c2)
+- chore: update appcast, cask, and readme for v1.5.3 (c536625)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.3] - 2026-04-04
 
 ### Chore
