@@ -43,6 +43,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.3] - 2026-04-04
+
+### Chore
+- docs: update installation version, add DeepWiki integration, and reorganize featured badges (746cd50)
+- chore: bump version to v1.5.2 (#63) (542a976)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.2] - 2026-04-04
 
 ### Changes
