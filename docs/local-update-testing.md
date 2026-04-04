@@ -85,6 +85,31 @@ export SPARKLE_PRIVATE_KEY_FILE=~/path/to/sparkle_private_key.pem
 
 Removes `/tmp/test-sparkle-update/`. Does **not** remove `/Applications/Snapzy.app` — re-install from a release DMG or use `test-tcc-local.sh` to restore.
 
+## Keychain Trust Persistence Test
+
+Use the dedicated script to verify that Keychain `Always Allow` survives updates when signing identity stays stable:
+
+```bash
+# Stable identity scenario (expected: no re-prompt after update)
+./scripts/test-keychain-update-local.sh verify-stable
+
+# Negative control (expected: prompt can reappear with ad-hoc update)
+./scripts/test-keychain-update-local.sh verify-adhoc-control
+```
+
+Outputs:
+
+- JSON report: `plans/260404-0843-cloud-keychain-persistence/reports/phase-03-keychain-update-verification.json`
+- Markdown report: `plans/260404-0843-cloud-keychain-persistence/reports/phase-03-keychain-update-verification.md`
+
+The app probe path uses launch argument `--keychain-probe-cloud` and returns one of:
+
+- `KC_OK`
+- `KC_AUTH_REQUIRED`
+- `KC_INTERACTION_NOT_ALLOWED`
+- `KC_ITEM_NOT_FOUND`
+- `KC_ERROR_<status>`
+
 ## Notes
 
 - Test versions (`99.0.0`, `99.0.1`) avoid conflicts with real releases
@@ -98,3 +123,4 @@ Removes `/tmp/test-sparkle-update/`. Does **not** remove `/Applications/Snapzy.a
 - [Self-signed certificate setup](self-signed-certificate-setup.md)
 - [Release workflow](project-workflow.md)
 - `scripts/test-tcc-local.sh` — TCC permission persistence testing (separate concern)
+- `scripts/test-keychain-update-local.sh` — Keychain trust persistence testing

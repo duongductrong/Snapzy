@@ -75,6 +75,7 @@ struct CloudSettingsView: View {
       )
     }
     .onAppear {
+      cloudManager.refreshCloudSummaryForDisplay()
       checkPasswordInitNeeded()
     }
   }

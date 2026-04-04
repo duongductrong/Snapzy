@@ -1,10 +1,15 @@
 # Self-Signed Certificate Setup
 
-Snapzy uses a self-signed code signing certificate to preserve macOS TCC permissions (Screen Recording, Microphone, etc.) across Sparkle updates.
+Snapzy uses a self-signed code signing certificate to preserve macOS permission trust across Sparkle updates.
+
+This includes:
+
+- TCC permissions (Screen Recording, Microphone, etc.)
+- Keychain `Always Allow` trust for cloud credential access
 
 ## Why This Matters
 
-macOS tracks app permissions by **code signing identity**. Ad-hoc signing (`codesign --sign -`) produces a unique identity per build, so every update causes macOS to revoke permissions. A persistent self-signed certificate fixes this.
+macOS tracks permission and trust decisions by **code signing identity**. Ad-hoc signing (`codesign --sign -`) produces a unique identity per build, so every update can invalidate previously granted trust. A persistent self-signed certificate fixes this.
 
 ## One-Time Setup
 
@@ -25,6 +30,12 @@ Go to **Settings → Secrets and variables → Actions** in your GitHub repo and
 |---|---|
 | `SELF_SIGNED_CERT_P12` | Base64 output from the script |
 | `SELF_SIGNED_CERT_PASSWORD` | The password you entered |
+
+Optional (recommended for identity continuity checks in CI):
+
+| Secret Name | Value |
+|---|---|
+| `EXPECTED_RELEASE_CERT_SHA256` | Leaf certificate SHA-256 fingerprint (hex, with or without `:` separators) |
 
 ### 3. Verify
 
@@ -51,6 +62,16 @@ Use `scripts/test-tcc-local.sh` to verify TCC permissions persist across updates
 # → Open app → Permissions are LOST ❌
 ```
 
+Use `scripts/test-keychain-update-local.sh` to verify Keychain trust persistence:
+
+```bash
+# Stable identity should keep "Always Allow" across update
+./scripts/test-keychain-update-local.sh verify-stable
+
+# Ad-hoc control should reproduce re-approval behavior
+./scripts/test-keychain-update-local.sh verify-adhoc-control
+```
+
 Clean up test artifacts when done:
 
 ```bash
@@ -62,8 +83,8 @@ Clean up test artifacts when done:
 The release workflow uses this fallback chain:
 
 1. **Developer ID** — best (Gatekeeper pass + TCC persist). Requires Apple Developer Program.
-2. **Self-signed cert** — good (TCC persist, Gatekeeper warning on first install).
-3. **Ad-hoc** — worst (TCC revoked every update).
+2. **Self-signed cert** — good (TCC + Keychain trust persist, Gatekeeper warning on first install).
+3. **Ad-hoc** — worst (trust can be revoked every update).
 
 ## Upgrading to Developer ID
 

@@ -24,6 +24,7 @@ jobs:
       HAS_SELF_SIGNED_CERT: ${{ secrets.SELF_SIGNED_CERT_P12 != '' && secrets.SELF_SIGNED_CERT_PASSWORD != '' && 'true' || 'false' }}
       HAS_NOTARIZATION_CREDENTIALS: ${{ secrets.APPLE_ID != '' && secrets.APPLE_ID_PASSWORD != '' && secrets.APPLE_TEAM_ID != '' && 'true' || 'false' }}
       HAS_SPARKLE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY != '' && 'true' || 'false' }}
+      EXPECTED_RELEASE_CERT_SHA256: ${{ secrets.EXPECTED_RELEASE_CERT_SHA256 }}
 
     steps:
       - name: Extract version
@@ -83,10 +84,17 @@ jobs:
             exit 1
           fi
 
+      - name: Enforce stable signing identity for public release
+        run: |
+          set -euo pipefail
+          if [ "${HAS_DEVELOPER_ID_CERT}" != "true" ] && [ "${HAS_SELF_SIGNED_CERT}" != "true" ]; then
+            echo "::error::Public Sparkle releases require a stable signing identity (Developer ID or approved self-signed cert). Ad-hoc signing is blocked."
+            exit 1
+          fi
+
       # --- Code Signing (conditional) ---
-      # Priority: Developer ID > Self-signed cert > Ad-hoc
-      # Self-signed cert preserves TCC permissions across Sparkle updates
-      # without requiring Apple Developer Program enrollment.
+      # Priority: Developer ID > Self-signed cert
+      # Ad-hoc signing is intentionally blocked for public Sparkle releases.
       - name: Import signing certificate
         if: env.HAS_DEVELOPER_ID_CERT == 'true' || env.HAS_SELF_SIGNED_CERT == 'true'
         env:
@@ -159,14 +167,13 @@ jobs:
             SPARKLE_FRAMEWORK="$APP_PATH/Contents/Frameworks/Sparkle.framework"
 
             # Determine signing identity:
-            #   Self-signed cert → stable identity → TCC permissions persist across updates
-            #   Ad-hoc (--sign -) → unique per build → TCC revoked every update
+            #   Self-signed cert -> stable identity -> permissions persist across updates
             if [ "${HAS_SELF_SIGNED_CERT}" = "true" ]; then
               SIGN_IDENTITY="Snapzy Self-Signed"
               echo "Signing with self-signed certificate: $SIGN_IDENTITY"
             else
-              SIGN_IDENTITY="-"
-              echo "::warning::Signing ad-hoc — TCC permissions will be lost after each update"
+              echo "::error::Self-signed certificate is required when Developer ID export is unavailable."
+              exit 1
             fi
 
             # Sign Sparkle components inside-out per official docs
@@ -219,6 +226,67 @@ jobs:
             echo "::error::Expected app sandbox entitlement missing from exported app"
             exit 1
           fi
+
+      - name: Identity Continuity Check
+        run: |
+          set -euo pipefail
+          APP_PATH="build/Snapzy.app"
+          if [ -d "build/export/Snapzy.app" ]; then
+            APP_PATH="build/export/Snapzy.app"
+          fi
+
+          IDENTITY_DIR="build/identity-check"
+          mkdir -p "$IDENTITY_DIR"
+
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist")
+          if [ "$BUNDLE_ID" != "com.trongduong.snapzy" ]; then
+            echo "::error::Unexpected bundle ID in release artifact: $BUNDLE_ID"
+            exit 1
+          fi
+
+          CODESIGN_DV=$(codesign -dv --verbose=4 "$APP_PATH" 2>&1)
+          SIGNATURE_KIND=$(printf '%s\n' "$CODESIGN_DV" | sed -n 's/^Signature=//p' | head -1)
+          if [ "$SIGNATURE_KIND" = "adhoc" ]; then
+            echo "::error::Ad-hoc signature detected in release artifact."
+            exit 1
+          fi
+
+          DR_OUTPUT=$(codesign -d -r- "$APP_PATH" 2>&1)
+          DR_LINE=$(printf '%s\n' "$DR_OUTPUT" | sed -n 's/^designated => //p' | head -1)
+          AUTHORITY_SUMMARY=$(printf '%s\n' "$CODESIGN_DV" | grep '^Authority=' || true)
+          TEAM_IDENTIFIER=$(printf '%s\n' "$CODESIGN_DV" | sed -n 's/^TeamIdentifier=//p' | head -1)
+
+          rm -f "$IDENTITY_DIR"/codesign*
+          (
+            cd "$IDENTITY_DIR"
+            codesign -d --extract-certificates "$APP_PATH" >/dev/null 2>&1
+          )
+
+          LEAF_CERT="$IDENTITY_DIR/codesign0"
+          if [ ! -f "$LEAF_CERT" ]; then
+            echo "::error::Failed to extract signing certificate from release artifact."
+            exit 1
+          fi
+
+          CERT_SHA256=$(openssl x509 -inform DER -in "$LEAF_CERT" -noout -fingerprint -sha256 | cut -d'=' -f2 | tr -d ':')
+          CERT_SHA256=$(printf '%s' "$CERT_SHA256" | tr '[:lower:]' '[:upper:]')
+          EXPECTED_CERT_SHA256=$(printf '%s' "${EXPECTED_RELEASE_CERT_SHA256:-}" | tr -d ':' | tr '[:lower:]' '[:upper:]')
+
+          if [ -n "$EXPECTED_CERT_SHA256" ] && [ "$CERT_SHA256" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::Release certificate fingerprint drift detected. Expected $EXPECTED_CERT_SHA256, got $CERT_SHA256"
+            exit 1
+          fi
+
+          {
+            echo "bundle_id=$BUNDLE_ID"
+            echo "signature_kind=${SIGNATURE_KIND:-unknown}"
+            echo "team_identifier=${TEAM_IDENTIFIER:-unknown}"
+            echo "cert_sha256=$CERT_SHA256"
+            echo "designated_requirement=${DR_LINE:-unknown}"
+            echo "authorities_start"
+            printf '%s\n' "${AUTHORITY_SUMMARY:-none}"
+            echo "authorities_end"
+          } | tee "$IDENTITY_DIR/identity-continuity.txt"
 
       - name: Install create-dmg
         run: HOMEBREW_NO_AUTO_UPDATE=1 brew install create-dmg
@@ -281,9 +349,9 @@ jobs:
           elif [ "${HAS_DEVELOPER_ID_CERT}" = "true" ]; then
             NOTE="- Release artifact: Developer ID signed, not notarized."
           elif [ "${HAS_SELF_SIGNED_CERT}" = "true" ]; then
-            NOTE="- Release artifact: self-signed certificate, not notarized. Permissions persist across updates. Install to /Applications before first launch."
+            NOTE="- Release artifact: self-signed certificate, not notarized. Keychain/TCC permissions persist across updates when identity is unchanged. Install to /Applications before first launch."
           else
-            NOTE="- Release artifact: ad-hoc signed fallback, not notarized. Install to /Applications before first launch."
+            NOTE="- Release artifact: unknown signing mode."
           fi
 
           {

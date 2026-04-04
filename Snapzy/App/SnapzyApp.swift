@@ -36,9 +36,17 @@ struct SnapzyApp: App {
 @MainActor
 class AppDelegate: NSObject, NSApplicationDelegate {
   private var coordinator: AppCoordinator?
+  private let cloudKeychainProbeArg = "--keychain-probe-cloud"
 
   func applicationDidFinishLaunching(_ notification: Notification) {
     AppIdentityManager.shared.refresh()
+
+    if ProcessInfo.processInfo.arguments.contains(cloudKeychainProbeArg) {
+      let statusCode = CloudManager.shared.probeAccessKeyStatusCode()
+      print("SNAPZY_KEYCHAIN_PROBE_STATUS=\(statusCode)")
+      NSApp.terminate(nil)
+      return
+    }
 
     // Cleanup orphaned temp capture files from previous sessions
     TempCaptureManager.shared.cleanupOrphanedFiles()

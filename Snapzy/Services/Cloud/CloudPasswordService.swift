@@ -8,7 +8,10 @@
 
 import CryptoKit
 import Foundation
+import os.log
 import Security
+
+private let logger = Logger(subsystem: "Snapzy", category: "CloudPasswordService")
 
 /// Manages the optional protection password for cloud credentials.
 /// The password is hashed with SHA-256 before storage; verification compares hashes.
@@ -22,6 +25,14 @@ final class CloudPasswordService {
   private enum KeychainKeys {
     static let passwordHash = "com.trongduong.snapzy.cloud.passwordHash"
     static let service = "com.trongduong.snapzy.cloud"
+  }
+
+  private enum KeychainReadOutcome {
+    case success(String)
+    case itemNotFound
+    case authRequired(OSStatus)
+    case interactionNotAllowed
+    case error(OSStatus)
   }
 
   private init() {}
@@ -62,6 +73,24 @@ final class CloudPasswordService {
   // MARK: - Keychain Helpers
 
   private func loadHash() -> String? {
+    switch readHashFromKeychain() {
+    case .success(let value):
+      return value
+    case .itemNotFound:
+      return nil
+    case .authRequired(let status):
+      logger.notice("Keychain auth required (\(status, privacy: .public)) [loadHash]")
+      return nil
+    case .interactionNotAllowed:
+      logger.notice("Keychain interaction not allowed [loadHash]")
+      return nil
+    case .error(let status):
+      logger.error("Keychain read failed (\(status, privacy: .public)) [loadHash]")
+      return nil
+    }
+  }
+
+  private func readHashFromKeychain() -> KeychainReadOutcome {
     let query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrAccount as String: KeychainKeys.passwordHash,
@@ -73,8 +102,21 @@ final class CloudPasswordService {
     var result: CFTypeRef?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-    guard status == errSecSuccess, let data = result as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
+    switch status {
+    case errSecSuccess:
+      guard let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
+        return .error(errSecDecode)
+      }
+      return .success(value)
+    case errSecItemNotFound:
+      return .itemNotFound
+    case errSecAuthFailed, errSecUserCanceled:
+      return .authRequired(status)
+    case errSecInteractionNotAllowed:
+      return .interactionNotAllowed
+    default:
+      return .error(status)
+    }
   }
 
   private func saveToKeychain(key: String, value: String) throws {

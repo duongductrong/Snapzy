@@ -34,6 +34,15 @@ final class CloudManager: ObservableObject {
   private enum KeychainKeys {
     static let accessKey = "com.trongduong.snapzy.cloud.accessKey"
     static let secretKey = "com.trongduong.snapzy.cloud.secretKey"
+    static let service = "com.trongduong.snapzy.cloud"
+  }
+
+  private enum KeychainReadOutcome {
+    case success(String)
+    case itemNotFound
+    case authRequired(OSStatus)
+    case interactionNotAllowed
+    case error(OSStatus)
   }
 
   // MARK: - Init
@@ -49,9 +58,9 @@ final class CloudManager: ObservableObject {
     {
       providerType = type
     }
-    // Cache config and masked key for SwiftUI body reads
+    // Keep startup path keychain-silent; only fetch masked key on explicit cloud UI access.
     cachedConfiguration = loadConfiguration()
-    cachedMaskedAccessKey = maskedAccessKey()
+    cachedMaskedAccessKey = "••••••••"
   }
 
   // MARK: - Configuration
@@ -135,12 +144,19 @@ final class CloudManager: ObservableObject {
 
   /// Load masked access key for display (e.g. "AKIA••••WXYZ")
   func maskedAccessKey() -> String {
-    guard let key = loadFromKeychain(key: KeychainKeys.accessKey), key.count > 8 else {
+    guard let key = loadFromKeychain(key: KeychainKeys.accessKey, context: "maskedAccessKey"), key.count > 8 else {
       return "••••••••"
     }
     let prefix = String(key.prefix(4))
     let suffix = String(key.suffix(4))
     return "\(prefix)••••\(suffix)"
+  }
+
+  /// Refresh cloud summary data for UI display.
+  /// Call this on explicit cloud settings entry to avoid startup keychain prompts.
+  func refreshCloudSummaryForDisplay() {
+    cachedConfiguration = loadConfiguration()
+    cachedMaskedAccessKey = maskedAccessKey()
   }
 
   /// Load masked endpoint for display (e.g. "https://0ef6••••e2ca.r2.cloudflarestorage.com")
@@ -178,12 +194,29 @@ final class CloudManager: ObservableObject {
 
   /// Load the full access key (for edit mode)
   func loadAccessKey() -> String {
-    loadFromKeychain(key: KeychainKeys.accessKey) ?? ""
+    loadFromKeychain(key: KeychainKeys.accessKey, context: "loadAccessKey") ?? ""
   }
 
   /// Load the full secret key (for edit mode)
   func loadSecretKey() -> String {
-    loadFromKeychain(key: KeychainKeys.secretKey) ?? ""
+    loadFromKeychain(key: KeychainKeys.secretKey, context: "loadSecretKey") ?? ""
+  }
+
+  /// Deterministic keychain probe used by local verification scripts.
+  /// Returns a stable status code for automation and release checks.
+  func probeAccessKeyStatusCode() -> String {
+    switch readFromKeychain(key: KeychainKeys.accessKey) {
+    case .success:
+      return "KC_OK"
+    case .itemNotFound:
+      return "KC_ITEM_NOT_FOUND"
+    case .authRequired:
+      return "KC_AUTH_REQUIRED"
+    case .interactionNotAllowed:
+      return "KC_INTERACTION_NOT_ALLOWED"
+    case .error(let status):
+      return "KC_ERROR_\(status)"
+    }
   }
 
   /// Clear all cloud configuration and credentials
@@ -218,8 +251,8 @@ final class CloudManager: ObservableObject {
   /// Create the active cloud provider from saved configuration.
   func createProvider() -> CloudProvider? {
     guard let config = loadConfiguration() else { return nil }
-    guard let accessKey = loadFromKeychain(key: KeychainKeys.accessKey),
-      let secretKey = loadFromKeychain(key: KeychainKeys.secretKey)
+    guard let accessKey = loadFromKeychain(key: KeychainKeys.accessKey, context: "createProvider.accessKey"),
+      let secretKey = loadFromKeychain(key: KeychainKeys.secretKey, context: "createProvider.secretKey")
     else { return nil }
 
     switch config.providerType {
@@ -428,7 +461,7 @@ final class CloudManager: ObservableObject {
     let query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
+      kSecAttrService as String: KeychainKeys.service,
       kSecValueData as String: data,
       kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
     ]
@@ -439,11 +472,29 @@ final class CloudManager: ObservableObject {
     }
   }
 
-  private func loadFromKeychain(key: String) -> String? {
+  private func loadFromKeychain(key: String, context: String) -> String? {
+    switch readFromKeychain(key: key) {
+    case .success(let value):
+      return value
+    case .itemNotFound:
+      return nil
+    case .authRequired(let status):
+      logger.notice("Keychain auth required (\(status, privacy: .public)) [\(context, privacy: .public)]")
+      return nil
+    case .interactionNotAllowed:
+      logger.notice("Keychain interaction not allowed [\(context, privacy: .public)]")
+      return nil
+    case .error(let status):
+      logger.error("Keychain read failed (\(status, privacy: .public)) [\(context, privacy: .public)]")
+      return nil
+    }
+  }
+
+  private func readFromKeychain(key: String) -> KeychainReadOutcome {
     let query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
+      kSecAttrService as String: KeychainKeys.service,
       kSecReturnData as String: true,
       kSecMatchLimit as String: kSecMatchLimitOne,
     ]
@@ -451,15 +502,28 @@ final class CloudManager: ObservableObject {
     var result: CFTypeRef?
     let status = SecItemCopyMatching(query as CFDictionary, &result)
 
-    guard status == errSecSuccess, let data = result as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
+    switch status {
+    case errSecSuccess:
+      guard let data = result as? Data, let value = String(data: data, encoding: .utf8) else {
+        return .error(errSecDecode)
+      }
+      return .success(value)
+    case errSecItemNotFound:
+      return .itemNotFound
+    case errSecAuthFailed, errSecUserCanceled:
+      return .authRequired(status)
+    case errSecInteractionNotAllowed:
+      return .interactionNotAllowed
+    default:
+      return .error(status)
+    }
   }
 
   private func deleteFromKeychain(key: String) {
     let query: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
+      kSecAttrService as String: KeychainKeys.service,
     ]
     SecItemDelete(query as CFDictionary)
   }
