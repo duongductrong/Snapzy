@@ -257,9 +257,10 @@ jobs:
           TEAM_IDENTIFIER=$(printf '%s\n' "$CODESIGN_DV" | sed -n 's/^TeamIdentifier=//p' | head -1)
 
           rm -f "$IDENTITY_DIR"/codesign*
+          ABS_APP_PATH="$(cd "$(dirname "$APP_PATH")" && pwd)/$(basename "$APP_PATH")"
           (
             cd "$IDENTITY_DIR"
-            codesign -d --extract-certificates "$APP_PATH" >/dev/null 2>&1
+            codesign -d --extract-certificates "$ABS_APP_PATH" >/dev/null 2>&1
           )
 
           LEAF_CERT="$IDENTITY_DIR/codesign0"

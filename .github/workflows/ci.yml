@@ -11,6 +11,140 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ─── Static release-readiness checks (no build needed) ───
+  release-readiness:
+    runs-on: macos-15
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate bundle identifier
+        run: |
+          set -euo pipefail
+          EXPECTED_BUNDLE_ID="com.trongduong.snapzy"
+
+          # Check project.pbxproj for PRODUCT_BUNDLE_IDENTIFIER
+          BUNDLE_IDS=$(grep 'PRODUCT_BUNDLE_IDENTIFIER' Snapzy.xcodeproj/project.pbxproj \
+            | sed 's/.*= *//' | sed 's/;.*//' | tr -d ' "' | sort -u)
+
+          echo "Bundle IDs found in project: $BUNDLE_IDS"
+
+          while IFS= read -r bid; do
+            if [ "$bid" != "$EXPECTED_BUNDLE_ID" ]; then
+              echo "::error::Unexpected bundle identifier in project: '$bid' (expected '$EXPECTED_BUNDLE_ID')"
+              exit 1
+            fi
+          done <<< "$BUNDLE_IDS"
+
+          echo "✅ Bundle identifier: $EXPECTED_BUNDLE_ID"
+
+      - name: Validate entitlements
+        run: |
+          set -euo pipefail
+          ENTITLEMENTS="Snapzy/Snapzy.entitlements"
+
+          if [ ! -f "$ENTITLEMENTS" ]; then
+            echo "::error::Entitlements file not found: $ENTITLEMENTS"
+            exit 1
+          fi
+
+          # Required entitlements for release
+          REQUIRED_KEYS=(
+            "com.apple.security.app-sandbox"
+          )
+
+          for key in "${REQUIRED_KEYS[@]}"; do
+            if ! grep -q "$key" "$ENTITLEMENTS"; then
+              echo "::error::Required entitlement missing: $key"
+              exit 1
+            fi
+          done
+
+          # Verify Sparkle mach-lookup entitlements use variable substitution
+          if grep -q 'mach-lookup' "$ENTITLEMENTS"; then
+            if ! grep -q '$(PRODUCT_BUNDLE_IDENTIFIER)-spk' "$ENTITLEMENTS"; then
+              echo "::warning::Sparkle mach-lookup entitlements may not use PRODUCT_BUNDLE_IDENTIFIER variable"
+            fi
+          fi
+
+          echo "✅ Entitlements valid"
+
+      - name: Validate Info.plist consistency
+        run: |
+          set -euo pipefail
+
+          # Check that project has required version fields
+          if ! grep -q 'MARKETING_VERSION' Snapzy.xcodeproj/project.pbxproj; then
+            echo "::error::MARKETING_VERSION not found in project"
+            exit 1
+          fi
+          if ! grep -q 'CURRENT_PROJECT_VERSION' Snapzy.xcodeproj/project.pbxproj; then
+            echo "::error::CURRENT_PROJECT_VERSION not found in project"
+            exit 1
+          fi
+
+          # Extract and validate version format (semver)
+          VERSION=$(grep -m1 'MARKETING_VERSION' Snapzy.xcodeproj/project.pbxproj \
+            | sed 's/.*= *//' | sed 's/;.*//' | tr -d ' ')
+          if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::MARKETING_VERSION is not valid semver: '$VERSION'"
+            exit 1
+          fi
+
+          echo "✅ Version: $VERSION"
+
+      - name: Validate entitlements referenced in project
+        run: |
+          set -euo pipefail
+          if ! grep -q 'Snapzy.entitlements' Snapzy.xcodeproj/project.pbxproj; then
+            echo "::error::Snapzy.entitlements not referenced in project.pbxproj — release signing will fail"
+            exit 1
+          fi
+          echo "✅ Entitlements referenced in project"
+
+      - name: Validate release workflow assets
+        run: |
+          set -euo pipefail
+          ERRORS=0
+
+          # DMG background required by release-publish
+          if [ ! -f "assets/dmg-background.png" ]; then
+            echo "::error::DMG background missing: assets/dmg-background.png"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Appcast required by release-publish
+          if [ ! -f "appcast.xml" ]; then
+            echo "::error::appcast.xml missing — release-publish update step will fail"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Update script required by release-publish
+          if [ ! -f "scripts/update-appcast.sh" ]; then
+            echo "::error::scripts/update-appcast.sh missing"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # Homebrew cask
+          if [ ! -f "Casks/snapzy.rb" ]; then
+            echo "::error::Casks/snapzy.rb missing — release-publish cask step will fail"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          # CHANGELOG.md required for release notes
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "::error::CHANGELOG.md missing — release notes extraction will fail"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ "$ERRORS" -gt 0 ]; then
+            exit 1
+          fi
+          echo "✅ All release assets present"
+
+  # ─── Full build check ───
   build:
     runs-on: macos-15
     timeout-minutes: 30
@@ -53,3 +187,27 @@ jobs:
             exit 1
           fi
           echo "Build successful: $APP_PATH"
+
+      - name: Validate built bundle identity
+        run: |
+          set -euo pipefail
+          APP_PATH="build/DerivedData/Build/Products/Release/Snapzy.app"
+
+          # Verify bundle ID in built artifact matches expected
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist")
+          if [ "$BUNDLE_ID" != "com.trongduong.snapzy" ]; then
+            echo "::error::Built bundle ID mismatch: '$BUNDLE_ID' (expected 'com.trongduong.snapzy')"
+            exit 1
+          fi
+
+          # Verify necessary Info.plist keys exist
+          for key in CFBundleShortVersionString CFBundleVersion CFBundleName CFBundleIdentifier; do
+            if ! /usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Contents/Info.plist" >/dev/null 2>&1; then
+              echo "::error::Missing required Info.plist key: $key"
+              exit 1
+            fi
+          done
+
+          VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP_PATH/Contents/Info.plist")
+          BUILD=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$APP_PATH/Contents/Info.plist")
+          echo "✅ Built bundle: $BUNDLE_ID v$VERSION ($BUILD)"
