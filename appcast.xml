@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.5</title>
+      <sparkle:version>45</sparkle:version>
+      <sparkle:shortVersionString>1.5.5</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 04 Apr 2026 07:51:05 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>extract Keychain logic to CloudKeychainStore and update CloudManager credential handling</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.5.5/Snapzy-v1.5.5.dmg"
+        sparkle:edSignature="jI1I1zp0uT2NMXWY2KEiJbyAAKaDVto2Ktl3PzlSY8+PBrpSgBmlo7+RrUDeWj6SNEquRv8wsHtgtJhN3rFpAA=="
+        length="11897045"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.5.4</title>
       <sparkle:version>44</sparkle:version>
       <sparkle:shortVersionString>1.5.4</sparkle:shortVersionString>
