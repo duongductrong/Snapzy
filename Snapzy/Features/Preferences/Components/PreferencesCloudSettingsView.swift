@@ -28,6 +28,11 @@ private enum CloudProtectedAction {
   }
 }
 
+private struct ImportArchiveSelection: Identifiable {
+  let id = UUID()
+  let fileURL: URL
+}
+
 /// Cloud settings tab in Preferences
 struct CloudSettingsView: View {
   @ObservedObject private var cloudManager = CloudManager.shared
@@ -39,9 +44,8 @@ struct CloudSettingsView: View {
 
   @State private var showPasswordGate = false
   @State private var pendingProtectedAction: CloudProtectedAction?
-  @State private var showImportSheet = false
+  @State private var importArchiveSelection: ImportArchiveSelection?
   @State private var showExportSheet = false
-  @State private var selectedImportArchiveURL: URL?
   @State private var exportPayload: CloudCredentialTransferPayload?
   @State private var importedPayload: CloudCredentialTransferPayload?
   @State private var importNotice: String?
@@ -123,16 +127,12 @@ struct CloudSettingsView: View {
         }
       )
     }
-    .sheet(isPresented: $showImportSheet, onDismiss: {
-      selectedImportArchiveURL = nil
-    }) {
-      if let selectedImportArchiveURL {
-        CloudCredentialImportSheet(
-          fileURL: selectedImportArchiveURL,
-          onImported: handleImportedPayload,
-          onCancel: { showImportSheet = false }
-        )
-      }
+    .sheet(item: $importArchiveSelection) { selection in
+      CloudCredentialImportSheet(
+        fileURL: selection.fileURL,
+        onImported: handleImportedPayload,
+        onCancel: { importArchiveSelection = nil }
+      )
     }
     .sheet(isPresented: $showExportSheet, onDismiss: {
       exportPayload = nil
@@ -297,13 +297,13 @@ struct CloudSettingsView: View {
   }
 
   private func beginImportFlow() {
+    guard importArchiveSelection == nil else { return }
     guard let selectedURL = selectImportArchiveURL() else { return }
-    selectedImportArchiveURL = selectedURL
-    showImportSheet = true
+    importArchiveSelection = ImportArchiveSelection(fileURL: selectedURL)
   }
 
   private func handleImportedPayload(_ payload: CloudCredentialTransferPayload) {
-    showImportSheet = false
+    importArchiveSelection = nil
     importedPayload = payload
     importNotice = "Imported credentials loaded. Review the values, then click Save & Test to apply them."
 
