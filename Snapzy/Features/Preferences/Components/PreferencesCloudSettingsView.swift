@@ -75,19 +75,15 @@ struct CloudSettingsView: View {
       )
     }
     .onAppear {
-      checkPasswordInitNeeded()
+      cloudManager.refreshCloudSummaryForDisplay()
+      usageService.hydrateCachedUsageIfAvailable()
     }
   }
 
   // MARK: - Password Init Check
 
   private func checkPasswordInitNeeded() {
-    guard cloudManager.isConfigured,
-      !CloudPasswordService.shared.hasPassword,
-      !UserDefaults.standard.bool(forKey: PreferencesKeys.cloudPasswordSkipped),
-      !passwordInitCompleted
-    else { return }
-    showPasswordInit = true
+    // Intentionally disabled to avoid passive keychain reads when the Cloud tab opens.
   }
 
   // MARK: - Configured State
@@ -170,7 +166,7 @@ struct CloudSettingsView: View {
   }
 
   private func handleEditTapped() {
-    if CloudPasswordService.shared.hasPassword {
+    if CloudPasswordService.shared.shouldRequirePasswordForEdit() {
       showPasswordGate = true
     } else {
       isEditing = true
@@ -281,11 +277,6 @@ struct CloudSettingsView: View {
     } header: {
       Text("Cloud Status")
     }
-    .onAppear {
-      if cloudManager.isConfigured && usageService.usageInfo == nil {
-        Task { await usageService.fetchUsage() }
-      }
-    }
   }
 
   private func lifecycleShortLabel(_ days: Int?) -> String {
@@ -391,11 +382,15 @@ private struct CloudPasswordGateView: View {
 
   private func verify() {
     guard !password.isEmpty else { return }
-    if CloudPasswordService.shared.verifyPassword(password) {
+    switch CloudPasswordService.shared.verifyPassword(password) {
+    case .verified:
       onVerified()
-    } else {
+    case .incorrectPassword:
       attempts += 1
       errorMessage = "Incorrect password. Please try again. (\(attempts) attempt\(attempts > 1 ? "s" : ""))"
+      password = ""
+    case .unavailable(let message):
+      errorMessage = message
       password = ""
     }
   }
@@ -828,25 +823,34 @@ private struct CloudCredentialFormView: View {
     )
 
     Task {
-      do {
-        try cloudManager.saveConfiguration(
-          config,
-          accessKey: accessKey.trimmingCharacters(in: .whitespaces),
-          secretKey: secretKey.trimmingCharacters(in: .whitespaces)
-        )
-        try await cloudManager.validateCredentials()
+      let trimmedAccessKey = accessKey.trimmingCharacters(in: .whitespacesAndNewlines)
+      let trimmedSecretKey = secretKey.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Apply lifecycle rule — treat failure as a save failure
+      do {
+        try await cloudManager.validateCredentials(
+          config: config,
+          accessKey: trimmedAccessKey,
+          secretKey: trimmedSecretKey
+        )
+
         do {
-          try await cloudManager.applyLifecycleRule()
+          try await cloudManager.applyLifecycleRule(
+            config: config,
+            accessKey: trimmedAccessKey,
+            secretKey: trimmedSecretKey
+          )
         } catch {
-          validationError = "Configuration saved, but lifecycle rule failed: \(error.localizedDescription). Ensure your credentials have lifecycle management permissions."
+          validationError = "Lifecycle rule failed: \(error.localizedDescription). Ensure your credentials have lifecycle management permissions."
           isValidating = false
-          // Don't set validationSuccess — form stays open for user to review
           return
         }
 
-        // Save protection password if provided
+        try cloudManager.saveConfiguration(
+          config,
+          accessKey: trimmedAccessKey,
+          secretKey: trimmedSecretKey
+        )
+
         if !protectionPassword.isEmpty {
           do {
             try CloudPasswordService.shared.savePassword(protectionPassword)
@@ -862,8 +866,8 @@ private struct CloudCredentialFormView: View {
 
         validationSuccess = true
         isValidating = false
+        Task { await CloudUsageService.shared.fetchUsage(forceRefresh: true) }
 
-        // Delay then close form
         try? await Task.sleep(nanoseconds: 1_000_000_000)
         onSave()
       } catch {
@@ -886,7 +890,7 @@ private struct CloudCredentialFormView: View {
   }
 
   private func refreshPasswordState() {
-    hasExistingPassword = CloudPasswordService.shared.hasPassword
+    hasExistingPassword = CloudPasswordService.shared.hasPasswordConfigured
   }
 }
 

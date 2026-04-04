@@ -9,7 +9,6 @@ import AppKit
 import Combine
 import Foundation
 import os.log
-import Security
 
 private let logger = Logger(subsystem: "Snapzy", category: "CloudManager")
 
@@ -29,11 +28,9 @@ final class CloudManager: ObservableObject {
   @Published var isUploading: Bool = false
   @Published var uploadProgress: Double = 0
 
-  // MARK: - Keychain Keys
-
-  private enum KeychainKeys {
-    static let accessKey = "com.trongduong.snapzy.cloud.accessKey"
-    static let secretKey = "com.trongduong.snapzy.cloud.secretKey"
+  private enum DisplayStrings {
+    static let hidden = "••••••••"
+    static let storedSecurely = "Stored securely in Keychain"
   }
 
   // MARK: - Init
@@ -49,9 +46,8 @@ final class CloudManager: ObservableObject {
     {
       providerType = type
     }
-    // Cache config and masked key for SwiftUI body reads
     cachedConfiguration = loadConfiguration()
-    cachedMaskedAccessKey = maskedAccessKey()
+    cachedMaskedAccessKey = isConfigured ? DisplayStrings.storedSecurely : DisplayStrings.hidden
   }
 
   // MARK: - Configuration
@@ -63,11 +59,9 @@ final class CloudManager: ObservableObject {
     accessKey: String,
     secretKey: String
   ) throws {
-    // Save secrets to Keychain
-    try saveToKeychain(key: KeychainKeys.accessKey, value: accessKey)
-    try saveToKeychain(key: KeychainKeys.secretKey, value: secretKey)
+    try saveToKeychain(item: .accessKey, value: accessKey)
+    try saveToKeychain(item: .secretKey, value: secretKey)
 
-    // Save non-sensitive config to UserDefaults
     let defaults = UserDefaults.standard
     defaults.set(config.providerType.rawValue, forKey: PreferencesKeys.cloudProviderType)
     defaults.set(config.bucket, forKey: PreferencesKeys.cloudBucket)
@@ -81,21 +75,19 @@ final class CloudManager: ObservableObject {
     isConfigured = true
     providerType = config.providerType
     cachedConfiguration = config
-    cachedMaskedAccessKey = maskedAccessKey()
+    cachedMaskedAccessKey = accessKeySummary(for: accessKey)
     CloudUsageService.shared.invalidateCache()
 
     logger.info("Cloud configuration saved: \(config.providerType.displayName)")
   }
 
-  /// Apply lifecycle expiration rule to the bucket based on current config.
-  /// Call after saveConfiguration + validateCredentials.
-  func applyLifecycleRule() async throws {
-    guard let provider = createProvider(),
-      let config = loadConfiguration()
-    else {
-      throw CloudError.notConfigured
-    }
-
+  /// Apply lifecycle expiration rule using explicit credentials before persistence.
+  func applyLifecycleRule(
+    config: CloudConfiguration,
+    accessKey: String,
+    secretKey: String
+  ) async throws {
+    let provider = createProvider(config: config, accessKey: accessKey, secretKey: secretKey)
     if let days = config.expireTime.days {
       try await provider.setExpiration(days: days)
       logger.info("Lifecycle rule applied: \(days) days")
@@ -135,12 +127,16 @@ final class CloudManager: ObservableObject {
 
   /// Load masked access key for display (e.g. "AKIA••••WXYZ")
   func maskedAccessKey() -> String {
-    guard let key = loadFromKeychain(key: KeychainKeys.accessKey), key.count > 8 else {
-      return "••••••••"
+    guard let key = loadFromKeychain(item: .accessKey, context: "maskedAccessKey") else {
+      return isConfigured ? DisplayStrings.storedSecurely : DisplayStrings.hidden
     }
-    let prefix = String(key.prefix(4))
-    let suffix = String(key.suffix(4))
-    return "\(prefix)••••\(suffix)"
+    return accessKeySummary(for: key)
+  }
+
+  /// Refresh non-sensitive cloud summary for UI display without forcing a keychain read.
+  func refreshCloudSummaryForDisplay() {
+    cachedConfiguration = loadConfiguration()
+    cachedMaskedAccessKey = isConfigured ? cachedMaskedAccessKey : DisplayStrings.hidden
   }
 
   /// Load masked endpoint for display (e.g. "https://0ef6••••e2ca.r2.cloudflarestorage.com")
@@ -178,20 +174,19 @@ final class CloudManager: ObservableObject {
 
   /// Load the full access key (for edit mode)
   func loadAccessKey() -> String {
-    loadFromKeychain(key: KeychainKeys.accessKey) ?? ""
+    loadFromKeychain(item: .accessKey, context: "loadAccessKey") ?? ""
   }
 
   /// Load the full secret key (for edit mode)
   func loadSecretKey() -> String {
-    loadFromKeychain(key: KeychainKeys.secretKey) ?? ""
+    loadFromKeychain(item: .secretKey, context: "loadSecretKey") ?? ""
   }
 
   /// Clear all cloud configuration and credentials
   func clearConfiguration() {
-    deleteFromKeychain(key: KeychainKeys.accessKey)
-    deleteFromKeychain(key: KeychainKeys.secretKey)
+    deleteFromKeychain(item: .accessKey)
+    deleteFromKeychain(item: .secretKey)
 
-    // Clear password protection
     CloudPasswordService.shared.removePassword()
 
     let defaults = UserDefaults.standard
@@ -207,7 +202,7 @@ final class CloudManager: ObservableObject {
     isConfigured = false
     providerType = nil
     cachedConfiguration = nil
-    cachedMaskedAccessKey = "••••••••"
+    cachedMaskedAccessKey = DisplayStrings.hidden
     CloudUsageService.shared.invalidateCache()
 
     logger.info("Cloud configuration cleared")
@@ -218,16 +213,51 @@ final class CloudManager: ObservableObject {
   /// Create the active cloud provider from saved configuration.
   func createProvider() -> CloudProvider? {
     guard let config = loadConfiguration() else { return nil }
-    guard let accessKey = loadFromKeychain(key: KeychainKeys.accessKey),
-      let secretKey = loadFromKeychain(key: KeychainKeys.secretKey)
+    guard let credentials = loadCredentialPair(context: "createProvider")
     else { return nil }
 
+    return createProvider(
+      config: config,
+      accessKey: credentials.accessKey,
+      secretKey: credentials.secretKey
+    )
+  }
+
+  private func createProvider(
+    config: CloudConfiguration,
+    accessKey: String,
+    secretKey: String
+  ) -> CloudProvider {
     switch config.providerType {
     case .awsS3:
       return S3CloudProvider(config: config, accessKey: accessKey, secretKey: secretKey)
     case .cloudflareR2:
       return R2CloudProvider(config: config, accessKey: accessKey, secretKey: secretKey)
     }
+  }
+
+  private func loadCredentialPair(context: String) -> (accessKey: String, secretKey: String)? {
+    guard let accessKey = loadFromKeychain(item: .accessKey, context: "\(context).accessKey"),
+      let secretKey = loadFromKeychain(item: .secretKey, context: "\(context).secretKey")
+    else { return nil }
+    return (accessKey, secretKey)
+  }
+
+  private func accessKeySummary(for accessKey: String) -> String {
+    guard accessKey.count > 8 else { return DisplayStrings.storedSecurely }
+    let prefix = String(accessKey.prefix(4))
+    let suffix = String(accessKey.suffix(4))
+    return "\(prefix)••••\(suffix)"
+  }
+
+  /// Validate credentials using in-memory values before persistence.
+  func validateCredentials(
+    config: CloudConfiguration,
+    accessKey: String,
+    secretKey: String
+  ) async throws {
+    let provider = createProvider(config: config, accessKey: accessKey, secretKey: secretKey)
+    try await provider.validate()
   }
 
   // MARK: - Upload
@@ -257,7 +287,7 @@ final class CloudManager: ObservableObject {
         expireTime: config.expireTime,
         existingKey: existingKey,
         progress: { [weak self] progress in
-          Task { @MainActor in
+          DispatchQueue.main.async {
             self?.uploadProgress = progress
           }
         }
@@ -289,14 +319,6 @@ final class CloudManager: ObservableObject {
       logger.error("Upload failed: \(error.localizedDescription)")
       throw error
     }
-  }
-
-  /// Validate credentials by testing connection to the cloud provider.
-  func validateCredentials() async throws {
-    guard let provider = createProvider() else {
-      throw CloudError.notConfigured
-    }
-    try await provider.validate()
   }
 
   // MARK: - Delete
@@ -417,50 +439,29 @@ final class CloudManager: ObservableObject {
 
   // MARK: - Keychain Operations
 
-  private func saveToKeychain(key: String, value: String) throws {
-    guard let data = value.data(using: .utf8) else {
-      throw CloudError.keychainError("Failed to encode value")
-    }
+  private func saveToKeychain(item: CloudKeychainItem, value: String) throws {
+    try CloudKeychainStore.upsert(item: item, value: value)
+  }
 
-    // Delete existing item first
-    deleteFromKeychain(key: key)
-
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
-      kSecValueData as String: data,
-      kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
-    ]
-
-    let status = SecItemAdd(query as CFDictionary, nil)
-    guard status == errSecSuccess else {
-      throw CloudError.keychainError("SecItemAdd failed: \(status)")
+  private func loadFromKeychain(item: CloudKeychainItem, context: String) -> String? {
+    switch CloudKeychainStore.read(item: item, context: context) {
+    case .success(let value):
+      return value
+    case .itemNotFound:
+      return nil
+    case .authRequired(let status):
+      logger.notice("Keychain auth required (\(status, privacy: .public)) [\(context, privacy: .public)]")
+      return nil
+    case .interactionNotAllowed:
+      logger.notice("Keychain interaction not allowed [\(context, privacy: .public)]")
+      return nil
+    case .error(let status):
+      logger.error("Keychain read failed (\(status, privacy: .public)) [\(context, privacy: .public)]")
+      return nil
     }
   }
 
-  private func loadFromKeychain(key: String) -> String? {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
-      kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
-    ]
-
-    var result: CFTypeRef?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-    guard status == errSecSuccess, let data = result as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
-  }
-
-  private func deleteFromKeychain(key: String) {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: key,
-      kSecAttrService as String: "com.trongduong.snapzy.cloud",
-    ]
-    SecItemDelete(query as CFDictionary)
+  private func deleteFromKeychain(item: CloudKeychainItem) {
+    CloudKeychainStore.delete(item: item)
   }
 }

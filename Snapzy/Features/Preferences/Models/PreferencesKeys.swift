@@ -93,6 +93,7 @@ enum PreferencesKeys {
   static let cloudCustomDomain = "cloud.customDomain"
   static let cloudExpireTime = "cloud.expireTime"
   static let cloudConfigured = "cloud.configured"
+  static let cloudPasswordEnabled = "cloud.passwordEnabled"
   static let cloudPasswordSkipped = "cloud.passwordSkipped"
   static let cloudUsageStatsCache = "cloud.usageStatsCache"
 }

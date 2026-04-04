@@ -8,47 +8,85 @@
 
 import CryptoKit
 import Foundation
-import Security
+import os.log
+
+enum CloudPasswordVerificationResult {
+  case verified
+  case incorrectPassword
+  case unavailable(String)
+}
 
 /// Manages the optional protection password for cloud credentials.
 /// The password is hashed with SHA-256 before storage; verification compares hashes.
 @MainActor
 final class CloudPasswordService {
-
   static let shared = CloudPasswordService()
-
-  // MARK: - Keychain Key
-
-  private enum KeychainKeys {
-    static let passwordHash = "com.trongduong.snapzy.cloud.passwordHash"
-    static let service = "com.trongduong.snapzy.cloud"
-  }
+  private let logger = Logger(subsystem: "Snapzy", category: "CloudPasswordService")
+  private let defaults = UserDefaults.standard
 
   private init() {}
 
   // MARK: - Public API
 
-  /// Whether a protection password has been set.
-  var hasPassword: Bool {
-    loadHash() != nil
+  /// Cached non-sensitive state used to avoid passive keychain reads.
+  var hasPasswordConfigured: Bool {
+    defaults.bool(forKey: PreferencesKeys.cloudPasswordEnabled)
   }
 
   /// Hash and store a new protection password in the Keychain.
   func savePassword(_ password: String) throws {
     let hash = sha256(password)
-    try saveToKeychain(key: KeychainKeys.passwordHash, value: hash)
+    try CloudKeychainStore.upsert(item: .passwordHash, value: hash)
+    setPasswordConfigured(true)
+  }
+
+  /// Explicit check used when the user taps Edit.
+  /// Reads keychain only when necessary to preserve existing password-protected installs.
+  func shouldRequirePasswordForEdit() -> Bool {
+    if hasPasswordConfigured {
+      return true
+    }
+
+    switch loadHash(context: "shouldRequirePasswordForEdit") {
+    case .success:
+      setPasswordConfigured(true)
+      return true
+    case .itemNotFound:
+      return false
+    case .authRequired(let status):
+      logger.notice("Keychain auth required (\(status, privacy: .public)) [shouldRequirePasswordForEdit]")
+      return true
+    case .interactionNotAllowed:
+      logger.notice("Keychain interaction not allowed [shouldRequirePasswordForEdit]")
+      return true
+    case .error(let status):
+      logger.error("Keychain read failed (\(status, privacy: .public)) [shouldRequirePasswordForEdit]")
+      return true
+    }
   }
 
   /// Verify a password against the stored hash.
-  /// Returns `false` if no password is set or the hash doesn't match.
-  func verifyPassword(_ password: String) -> Bool {
-    guard let storedHash = loadHash() else { return false }
-    return sha256(password) == storedHash
+  func verifyPassword(_ password: String) -> CloudPasswordVerificationResult {
+    switch loadHash(context: "verifyPassword") {
+    case .success(let storedHash):
+      setPasswordConfigured(true)
+      return sha256(password) == storedHash ? .verified : .incorrectPassword
+    case .itemNotFound:
+      setPasswordConfigured(false)
+      return .unavailable("Protection password is not configured.")
+    case .authRequired:
+      return .unavailable("Keychain access was not granted. Allow access and try again.")
+    case .interactionNotAllowed:
+      return .unavailable("Keychain interaction is unavailable right now. Unlock your Mac and try again.")
+    case .error:
+      return .unavailable("Couldn't read the saved protection password from Keychain.")
+    }
   }
 
   /// Remove the stored password hash from the Keychain.
   func removePassword() {
-    deleteFromKeychain(key: KeychainKeys.passwordHash)
+    CloudKeychainStore.delete(item: .passwordHash)
+    setPasswordConfigured(false)
   }
 
   // MARK: - Hashing
@@ -59,52 +97,13 @@ final class CloudPasswordService {
     return digest.map { String(format: "%02x", $0) }.joined()
   }
 
-  // MARK: - Keychain Helpers
+  // MARK: - Helpers
 
-  private func loadHash() -> String? {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: KeychainKeys.passwordHash,
-      kSecAttrService as String: KeychainKeys.service,
-      kSecReturnData as String: true,
-      kSecMatchLimit as String: kSecMatchLimitOne,
-    ]
-
-    var result: CFTypeRef?
-    let status = SecItemCopyMatching(query as CFDictionary, &result)
-
-    guard status == errSecSuccess, let data = result as? Data else { return nil }
-    return String(data: data, encoding: .utf8)
+  private func loadHash(context: String) -> CloudKeychainReadOutcome {
+    CloudKeychainStore.read(item: .passwordHash, context: context)
   }
 
-  private func saveToKeychain(key: String, value: String) throws {
-    guard let data = value.data(using: .utf8) else {
-      throw CloudError.keychainError("Failed to encode password hash")
-    }
-
-    // Delete existing item first
-    deleteFromKeychain(key: key)
-
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: key,
-      kSecAttrService as String: KeychainKeys.service,
-      kSecValueData as String: data,
-      kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
-    ]
-
-    let status = SecItemAdd(query as CFDictionary, nil)
-    guard status == errSecSuccess else {
-      throw CloudError.keychainError("SecItemAdd failed: \(status)")
-    }
-  }
-
-  private func deleteFromKeychain(key: String) {
-    let query: [String: Any] = [
-      kSecClass as String: kSecClassGenericPassword,
-      kSecAttrAccount as String: key,
-      kSecAttrService as String: KeychainKeys.service,
-    ]
-    SecItemDelete(query as CFDictionary)
+  private func setPasswordConfigured(_ enabled: Bool) {
+    defaults.set(enabled, forKey: PreferencesKeys.cloudPasswordEnabled)
   }
 }
