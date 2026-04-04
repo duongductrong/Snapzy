@@ -46,6 +46,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.6] - 2026-04-04
+
+### Features
+-  Implement cloud credential import and export functionality with password protection (65300a6)
+
+### Chore
+- refactor: replace boolean sheet toggle with identifiable selection state in CloudSettingsView (e259882)
+- chore: update appcast, cask, and readme for v1.5.5 (c414d49)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.5] - 2026-04-04
 
 ### Bug Fixes
