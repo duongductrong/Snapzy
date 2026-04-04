@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.6</title>
+      <sparkle:version>46</sparkle:version>
+      <sparkle:shortVersionString>1.5.6</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 04 Apr 2026 09:23:33 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Implement cloud credential import and export functionality with password protection</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.5.6/Snapzy-v1.5.6.dmg"
+        sparkle:edSignature="+VpnW4Sz4KPN7TZTpifhf3tjhtFY+SM7NvZVYAqLOu/mto02yEpURSoqdVDFRMrC26Nj0E9YRyUJon8UDDQMAA=="
+        length="11980263"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.5.5</title>
       <sparkle:version>45</sparkle:version>
       <sparkle:shortVersionString>1.5.5</sparkle:shortVersionString>
