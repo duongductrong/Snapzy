@@ -49,6 +49,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.9] - 2026-04-05
+
+### Features
+-  Enable shadow for RecordingToolbarWindow and remove shadows from status bar and toolbar views (8cae763)
+-  Align custom wallpaper rendering with system wallpapers and remove unnecessary frame height (43acbb1)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.5.8 (f8ec52c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.8] - 2026-04-05
 
 ### Features
