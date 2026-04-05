@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.7</title>
+      <sparkle:version>47</sparkle:version>
+      <sparkle:shortVersionString>1.5.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 05 Apr 2026 06:29:33 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add zoom transition duration configuration and improve zoom transition functionality in video editor</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.5.7/Snapzy-v1.5.7.dmg"
+        sparkle:edSignature="fE8SFOmQ0LHTvSZyujJ85YqSbu6Nw4Pwv0RoUAcyOJLluOnqQroA88Wlq5MCF/b9EmG+WloVYo2HaeiMBRlTCA=="
+        length="11992746"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.5.6</title>
       <sparkle:version>46</sparkle:version>
       <sparkle:shortVersionString>1.5.6</sparkle:shortVersionString>
