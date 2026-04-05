@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.5.9</title>
+      <sparkle:version>49</sparkle:version>
+      <sparkle:shortVersionString>1.5.9</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 05 Apr 2026 17:33:05 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enable shadow for RecordingToolbarWindow and remove shadows from status bar and toolbar views</li><li>Align custom wallpaper rendering with system wallpapers and remove unnecessary frame height</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.5.9/Snapzy-v1.5.9.dmg"
+        sparkle:edSignature="FwEflBUiIlcnes36lmche7WJiltoI+7GOPqweWTGA4FCX+ALJyuZm2KtFCfputDI9/xz+WeNoGpT5BiCD9vTAw=="
+        length="12133483"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.5.8</title>
       <sparkle:version>48</sparkle:version>
       <sparkle:shortVersionString>1.5.8</sparkle:shortVersionString>
