@@ -48,6 +48,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.8] - 2026-04-05
+
+### Features
+-  Implement user-defined canvas presets with storage and management functionality (2b0d478)
+-  Enhance annotation functionality with embedded image support and improved import handling (4e5f3e2)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.5.7 (78b0f11)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.7] - 2026-04-05
 
 ### Features
