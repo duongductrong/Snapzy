@@ -227,7 +227,6 @@ struct VideoCustomWallpaperButton: View {
             )
         }
       }
-      .frame(height: Size.gridItem)
       .clipped()
       .cornerRadius(Size.radiusMd)
       .sidebarItemStyle(isSelected: isSelected)
@@ -239,6 +238,12 @@ struct VideoCustomWallpaperButton: View {
   }
 
   private func loadThumbnail() {
+    // Keep custom wallpaper rendering path identical with system wallpapers.
+    if let cached = SystemWallpaperManager.shared.cachedThumbnail(for: url) {
+      thumbnail = cached
+      return
+    }
+
     // Create a temporary WallpaperItem for custom URLs
     let item = SystemWallpaperManager.WallpaperItem(
       fullImageURL: url,
