@@ -117,7 +117,6 @@ struct RecordingStatusBarView: View {
     .coordinateSpace(name: "statusBar")
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
-    .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
     .onPreferenceChange(AnnotateButtonCenterXKey.self) { centerX in
       onAnnotateButtonLayout?(centerX)
     }

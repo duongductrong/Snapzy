@@ -173,7 +173,7 @@ final class RecordingToolbarWindow: NSWindow {
     // Use popUpMenu level to ensure toolbar is above the region overlay (.floating)
     level = .popUpMenu
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-    hasShadow = false
+    hasShadow = true
     isReleasedWhenClosed = false
 
     // Apply theme appearance at window level (mirrors AnnotateWindow.applyTheme)
@@ -232,6 +232,7 @@ final class RecordingToolbarWindow: NSWindow {
     effect.blendingMode = .behindWindow
     effect.wantsLayer = true
     effect.layer?.cornerRadius = ToolbarConstants.toolbarCornerRadius
+    effect.layer?.cornerCurve = .continuous
     effect.layer?.masksToBounds = true
 
     // Make hosting view transparent so material shows through
@@ -254,6 +255,7 @@ final class RecordingToolbarWindow: NSWindow {
     effectView = effect
 
     setContentSize(fittingSize)
+    invalidateShadow()
   }
 
   private func positionBelowRect(_ rect: CGRect) {

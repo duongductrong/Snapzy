@@ -59,7 +59,6 @@ struct RecordingToolbarView: View {
     }
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
-    .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
     .accessibilityElement(children: .contain)
     .accessibilityLabel("Recording toolbar")
   }
