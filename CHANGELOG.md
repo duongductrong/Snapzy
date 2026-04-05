@@ -47,6 +47,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.7] - 2026-04-05
+
+### Features
+-  Add zoom transition duration configuration and improve zoom transition functionality in video editor (db3f907)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.5.6 (68a15e9)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.6] - 2026-04-04
 
 ### Features
