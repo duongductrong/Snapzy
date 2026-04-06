@@ -50,6 +50,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.10] - 2026-04-06
+
+### Features
+-  Add keyboard shortcut overlay with customizable shortcuts and navigation (dfb1b4f)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.5.9 (dc5266c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.9] - 2026-04-05
 
 ### Features
