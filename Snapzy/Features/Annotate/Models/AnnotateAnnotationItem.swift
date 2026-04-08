@@ -31,6 +31,272 @@ enum BlurType: String, CaseIterable, Identifiable, Equatable {
   }
 }
 
+enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
+  case straight
+  case elbow
+  case curve
+
+  var id: String { rawValue }
+
+  var displayName: String {
+    switch self {
+    case .straight: return "Straight"
+    case .elbow: return "Elbow"
+    case .curve: return "Curve"
+    }
+  }
+
+  var icon: String {
+    switch self {
+    case .straight: return "arrow.up.right"
+    case .elbow: return "arrow.turn.up.right"
+    case .curve: return "arrow.up.left.and.arrow.down.right"
+    }
+  }
+
+  var helperText: String {
+    switch self {
+    case .straight: return "Direct line from start to end"
+    case .elbow: return "Right-angle callout arrow"
+    case .curve: return "Smooth curved callout arrow"
+    }
+  }
+}
+
+struct ArrowGeometry: Equatable {
+  var start: CGPoint
+  var end: CGPoint
+  var style: ArrowStyle
+  var controlPoint: CGPoint?
+
+  init(start: CGPoint, end: CGPoint, style: ArrowStyle, controlPoint: CGPoint? = nil) {
+    self.start = start
+    self.end = end
+    self.style = style
+    self.controlPoint = Self.normalizedControlPoint(
+      start: start,
+      end: end,
+      style: style,
+      current: controlPoint
+    )
+  }
+
+  var resolvedControlPoint: CGPoint? {
+    Self.normalizedControlPoint(start: start, end: end, style: style, current: controlPoint)
+  }
+
+  var isRenderable: Bool {
+    let points = sampledPoints()
+    guard let first = points.first else { return false }
+    return points.dropFirst().contains { $0 != first }
+  }
+
+  func path() -> CGPath {
+    let path = CGMutablePath()
+    path.move(to: start)
+
+    switch style {
+    case .straight:
+      path.addLine(to: end)
+
+    case .elbow:
+      if let corner = resolvedControlPoint {
+        if corner != start {
+          path.addLine(to: corner)
+        }
+        if end != corner {
+          path.addLine(to: end)
+        }
+      } else {
+        path.addLine(to: end)
+      }
+
+    case .curve:
+      if let control = resolvedControlPoint {
+        path.addQuadCurve(to: end, control: control)
+      } else {
+        path.addLine(to: end)
+      }
+    }
+
+    return path
+  }
+
+  func sampledPoints(curveSegments: Int = 16) -> [CGPoint] {
+    switch style {
+    case .straight:
+      return deduplicated([start, end])
+
+    case .elbow:
+      guard let corner = resolvedControlPoint else {
+        return deduplicated([start, end])
+      }
+      return deduplicated([start, corner, end])
+
+    case .curve:
+      guard let control = resolvedControlPoint else {
+        return deduplicated([start, end])
+      }
+
+      var points: [CGPoint] = []
+      points.reserveCapacity(curveSegments + 1)
+
+      for segment in 0...curveSegments {
+        let t = CGFloat(segment) / CGFloat(curveSegments)
+        let oneMinusT = 1 - t
+        let point = CGPoint(
+          x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
+          y: oneMinusT * oneMinusT * start.y + 2 * oneMinusT * t * control.y + t * t * end.y
+        )
+        points.append(point)
+      }
+
+      return deduplicated(points)
+    }
+  }
+
+  func tangentAngleAtEnd() -> CGFloat {
+    switch style {
+    case .straight:
+      return atan2(end.y - start.y, end.x - start.x)
+
+    case .elbow:
+      if let corner = resolvedControlPoint, corner != end {
+        return atan2(end.y - corner.y, end.x - corner.x)
+      }
+      return atan2(end.y - start.y, end.x - start.x)
+
+    case .curve:
+      if let control = resolvedControlPoint, control != end {
+        return atan2(end.y - control.y, end.x - control.x)
+      }
+      return atan2(end.y - start.y, end.x - start.x)
+    }
+  }
+
+  func bounds() -> CGRect {
+    let points = sampledPoints()
+    guard let first = points.first else { return CGRect(x: start.x, y: start.y, width: 1, height: 1) }
+
+    var minX = first.x
+    var maxX = first.x
+    var minY = first.y
+    var maxY = first.y
+
+    for point in points.dropFirst() {
+      minX = min(minX, point.x)
+      maxX = max(maxX, point.x)
+      minY = min(minY, point.y)
+      maxY = max(maxY, point.y)
+    }
+
+    var rect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY).standardized
+    if rect.width < 1 {
+      rect.origin.x -= (1 - rect.width) / 2
+      rect.size.width = 1
+    }
+    if rect.height < 1 {
+      rect.origin.y -= (1 - rect.height) / 2
+      rect.size.height = 1
+    }
+    return rect
+  }
+
+  func translatedBy(dx: CGFloat, dy: CGFloat) -> ArrowGeometry {
+    ArrowGeometry(
+      start: CGPoint(x: start.x + dx, y: start.y + dy),
+      end: CGPoint(x: end.x + dx, y: end.y + dy),
+      style: style,
+      controlPoint: resolvedControlPoint.map { CGPoint(x: $0.x + dx, y: $0.y + dy) }
+    )
+  }
+
+  func remapped(from oldBounds: CGRect, to newBounds: CGRect) -> ArrowGeometry {
+    ArrowGeometry(
+      start: Self.remap(point: start, from: oldBounds, to: newBounds),
+      end: Self.remap(point: end, from: oldBounds, to: newBounds),
+      style: style,
+      controlPoint: resolvedControlPoint.map { Self.remap(point: $0, from: oldBounds, to: newBounds) }
+    )
+  }
+
+  func withStyle(_ newStyle: ArrowStyle) -> ArrowGeometry {
+    ArrowGeometry(start: start, end: end, style: newStyle)
+  }
+
+  private static func normalizedControlPoint(
+    start: CGPoint,
+    end: CGPoint,
+    style: ArrowStyle,
+    current: CGPoint?
+  ) -> CGPoint? {
+    switch style {
+    case .straight:
+      return nil
+    case .elbow:
+      return current ?? defaultElbowControlPoint(start: start, end: end)
+    case .curve:
+      return current ?? defaultCurveControlPoint(start: start, end: end)
+    }
+  }
+
+  private static func defaultElbowControlPoint(start: CGPoint, end: CGPoint) -> CGPoint {
+    let dx = abs(end.x - start.x)
+    let dy = abs(end.y - start.y)
+
+    if dx >= dy {
+      return CGPoint(x: end.x, y: start.y)
+    }
+    return CGPoint(x: start.x, y: end.y)
+  }
+
+  private static func defaultCurveControlPoint(start: CGPoint, end: CGPoint) -> CGPoint {
+    let mid = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    let length = max(hypot(dx, dy), 1)
+    let normal = CGPoint(x: -dy / length, y: dx / length)
+    let offset = min(max(length * 0.22, 18), 72)
+    return CGPoint(
+      x: mid.x + normal.x * offset,
+      y: mid.y + normal.y * offset
+    )
+  }
+
+  private static func remap(point: CGPoint, from oldBounds: CGRect, to newBounds: CGRect) -> CGPoint {
+    CGPoint(
+      x: remapCoordinate(point.x, oldMin: oldBounds.minX, oldSize: oldBounds.width, newMin: newBounds.minX, newSize: newBounds.width),
+      y: remapCoordinate(point.y, oldMin: oldBounds.minY, oldSize: oldBounds.height, newMin: newBounds.minY, newSize: newBounds.height)
+    )
+  }
+
+  private static func remapCoordinate(
+    _ value: CGFloat,
+    oldMin: CGFloat,
+    oldSize: CGFloat,
+    newMin: CGFloat,
+    newSize: CGFloat
+  ) -> CGFloat {
+    guard oldSize != 0 else {
+      return newMin + newSize / 2
+    }
+
+    let progress = (value - oldMin) / oldSize
+    return newMin + progress * newSize
+  }
+
+  private func deduplicated(_ points: [CGPoint]) -> [CGPoint] {
+    var result: [CGPoint] = []
+    result.reserveCapacity(points.count)
+
+    for point in points where result.last != point {
+      result.append(point)
+    }
+
+    return result
+  }
+}
+
 /// Single annotation element on the canvas
 struct AnnotationItem: Identifiable, Equatable {
   let id: UUID
@@ -56,7 +322,7 @@ enum AnnotationType: Equatable {
   case rectangle
   case filledRectangle
   case oval
-  case arrow(start: CGPoint, end: CGPoint)
+  case arrow(ArrowGeometry)
   case line(start: CGPoint, end: CGPoint)
   case text(String)
   case highlight([CGPoint])
@@ -145,7 +411,10 @@ extension AnnotationItem {
     case .oval:
       return pointInEllipse(point, in: bounds)
 
-    case .arrow(let start, let end), .line(let start, let end):
+    case .arrow(let geometry):
+      return distanceToPolyline(point, points: geometry.sampledPoints()) <= tolerance
+
+    case .line(let start, let end):
       return distanceToSegment(point, from: start, to: end) <= tolerance
 
     case .path(let points), .highlight(let points):

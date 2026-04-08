@@ -42,6 +42,11 @@ struct AnnotateQuickPropertiesBar: View {
           QuickStrokeWidthControl(value: state.quickStrokeWidthBinding)
         }
 
+        if state.quickPropertiesSupportsArrowStyle {
+          QuickPropertiesDivider()
+          QuickArrowStyleControl(selectedStyle: state.quickArrowStyleBinding)
+        }
+
         Spacer(minLength: 0)
 
         if !state.showSidebar {
@@ -183,6 +188,40 @@ private struct QuickStrokeWidthControl: View {
           .font(Typography.labelSmall)
           .foregroundColor(SidebarColors.labelSecondary)
           .frame(width: 22, alignment: .trailing)
+      }
+    }
+  }
+}
+
+private struct QuickArrowStyleControl: View {
+  @Binding var selectedStyle: ArrowStyle
+
+  var body: some View {
+    QuickPropertiesGroup(title: "Style") {
+      HStack(spacing: 6) {
+        ForEach(ArrowStyle.allCases) { style in
+          Button {
+            selectedStyle = style
+          } label: {
+            Image(systemName: style.icon)
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+              .frame(width: 28, height: 24)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                  .stroke(
+                    selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
+                    lineWidth: 1
+                  )
+              )
+          }
+          .buttonStyle(.plain)
+          .help(style.displayName)
+        }
       }
     }
   }

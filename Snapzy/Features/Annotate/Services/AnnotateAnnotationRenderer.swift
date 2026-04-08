@@ -69,8 +69,8 @@ struct AnnotationRenderer {
     case .oval:
       context.strokeEllipse(in: annotation.bounds)
 
-    case .arrow(let start, let end):
-      drawArrow(from: start, to: end)
+    case .arrow(let geometry):
+      drawArrow(geometry, strokeWidth: annotation.properties.strokeWidth)
 
     case .line(let start, let end):
       context.move(to: start)
@@ -99,7 +99,8 @@ struct AnnotationRenderer {
     start: CGPoint,
     currentPath: [CGPoint],
     strokeColor: Color,
-    strokeWidth: CGFloat
+    strokeWidth: CGFloat,
+    arrowStyle: ArrowStyle = .straight
   ) {
     context.setStrokeColor(NSColor(strokeColor).cgColor)
     context.setLineWidth(strokeWidth)
@@ -145,7 +146,10 @@ struct AnnotationRenderer {
 
     case .arrow:
       let currentPoint = currentPath.last ?? start
-      drawArrow(from: start, to: currentPoint)
+      drawArrow(
+        ArrowGeometry(start: start, end: currentPoint, style: arrowStyle),
+        strokeWidth: strokeWidth
+      )
 
     default:
       break
@@ -168,14 +172,16 @@ struct AnnotationRenderer {
     context.setAlpha(1.0)
   }
 
-  private func drawArrow(from start: CGPoint, to end: CGPoint) {
-    context.move(to: start)
-    context.addLine(to: end)
+  private func drawArrow(_ geometry: ArrowGeometry, strokeWidth: CGFloat) {
+    context.addPath(geometry.path())
     context.strokePath()
 
-    let angle = atan2(end.y - start.y, end.x - start.x)
-    let arrowLength: CGFloat = 15
+    guard geometry.isRenderable else { return }
+
+    let angle = geometry.tangentAngleAtEnd()
+    let arrowLength = min(max(strokeWidth * 3.5, 12), 24)
     let arrowAngle: CGFloat = .pi / 6
+    let end = geometry.end
 
     let point1 = CGPoint(
       x: end.x - arrowLength * cos(angle - arrowAngle),

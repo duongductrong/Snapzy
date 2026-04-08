@@ -26,13 +26,6 @@ enum RecordingAnnotationFactory {
       strokeWidth: strokeWidth
     )
 
-    let bounds = CGRect(
-      x: min(start.x, end.x),
-      y: min(start.y, end.y),
-      width: abs(end.x - start.x),
-      height: abs(end.y - start.y)
-    )
-
     let type: AnnotationType?
 
     switch tool {
@@ -41,7 +34,7 @@ enum RecordingAnnotationFactory {
     case .oval:
       type = .oval
     case .arrow:
-      type = .arrow(start: start, end: end)
+      type = .arrow(ArrowGeometry(start: start, end: end, style: .straight))
     case .line:
       type = .line(start: start, end: end)
     case .pencil:
@@ -55,6 +48,18 @@ enum RecordingAnnotationFactory {
     }
 
     guard let annotationType = type else { return nil }
+    let bounds: CGRect
+    switch annotationType {
+    case .arrow(let geometry):
+      bounds = geometry.bounds()
+    default:
+      bounds = CGRect(
+        x: min(start.x, end.x),
+        y: min(start.y, end.y),
+        width: abs(end.x - start.x),
+        height: abs(end.y - start.y)
+      )
+    }
     return AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
   }
 }

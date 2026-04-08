@@ -30,13 +30,6 @@ enum AnnotationFactory {
       properties.fillColor = state.strokeColor.opacity(1)
     }
 
-    let bounds = CGRect(
-      x: min(start.x, end.x),
-      y: min(start.y, end.y),
-      width: abs(end.x - start.x),
-      height: abs(end.y - start.y)
-    )
-
     let type: AnnotationType?
 
     switch tool {
@@ -50,7 +43,7 @@ enum AnnotationFactory {
       type = .oval
 
     case .arrow:
-      type = .arrow(start: start, end: end)
+      type = .arrow(ArrowGeometry(start: start, end: end, style: state.arrowStyle))
 
     case .line:
       type = .line(start: start, end: end)
@@ -74,6 +67,18 @@ enum AnnotationFactory {
     }
 
     guard let annotationType = type else { return nil }
+    let bounds: CGRect
+    switch annotationType {
+    case .arrow(let geometry):
+      bounds = geometry.bounds()
+    default:
+      bounds = CGRect(
+        x: min(start.x, end.x),
+        y: min(start.y, end.y),
+        width: abs(end.x - start.x),
+        height: abs(end.y - start.y)
+      )
+    }
     return AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
   }
 }

@@ -684,7 +684,8 @@ final class DrawingCanvasNSView: NSView {
           start: start,
           currentPath: currentPath,
           strokeColor: state.strokeColor,
-          strokeWidth: state.strokeWidth
+          strokeWidth: state.strokeWidth,
+          arrowStyle: state.arrowStyle
         )
       }
     }

@@ -395,10 +395,12 @@ final class AnnotateExporter {
 
     // Offset internal points for types that store coordinates
     switch annotation.type {
-    case .arrow(let start, let end):
+    case .arrow(let geometry):
       result.type = .arrow(
-        start: CGPoint(x: start.x - cropOrigin.x + imageX, y: start.y - cropOrigin.y + imageY),
-        end: CGPoint(x: end.x - cropOrigin.x + imageX, y: end.y - cropOrigin.y + imageY)
+        geometry.translatedBy(
+          dx: -cropOrigin.x + imageX,
+          dy: -cropOrigin.y + imageY
+        )
       )
     case .line(let start, let end):
       result.type = .line(
@@ -436,10 +438,12 @@ final class AnnotateExporter {
 
     // Offset internal points for types that store coordinates
     switch annotation.type {
-    case .arrow(let start, let end):
+    case .arrow(let geometry):
       result.type = .arrow(
-        start: CGPoint(x: start.x - cropOrigin.x + padding, y: start.y - cropOrigin.y + padding),
-        end: CGPoint(x: end.x - cropOrigin.x + padding, y: end.y - cropOrigin.y + padding)
+        geometry.translatedBy(
+          dx: -cropOrigin.x + padding,
+          dy: -cropOrigin.y + padding
+        )
       )
     case .line(let start, let end):
       result.type = .line(
@@ -468,11 +472,8 @@ final class AnnotateExporter {
 
     // Also offset internal points for types that store coordinates
     switch annotation.type {
-    case .arrow(let start, let end):
-      result.type = .arrow(
-        start: CGPoint(x: start.x + padding, y: start.y + padding),
-        end: CGPoint(x: end.x + padding, y: end.y + padding)
-      )
+    case .arrow(let geometry):
+      result.type = .arrow(geometry.translatedBy(dx: padding, dy: padding))
     case .line(let start, let end):
       result.type = .line(
         start: CGPoint(x: start.x + padding, y: start.y + padding),

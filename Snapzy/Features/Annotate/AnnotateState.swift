@@ -81,6 +81,7 @@ final class AnnotateState: ObservableObject {
   @Published var strokeColor: Color = .red
   @Published var fillColor: Color = .clear
   @Published var blurType: BlurType = .pixelated
+  @Published var arrowStyle: ArrowStyle = .straight
 
   // MARK: - Editor Mode
 
@@ -1542,15 +1543,14 @@ final class AnnotateState: ObservableObject {
 
     // Also update embedded coordinates for arrows/lines/paths
     switch annotations[index].type {
-    case .arrow(let start, let end):
-      annotations[index].type = .arrow(
-        start: CGPoint(x: start.x + dx, y: start.y + dy),
-        end: CGPoint(x: end.x + dx, y: end.y + dy)
-      )
+    case .arrow(let geometry):
+      let updated = geometry.remapped(from: oldBounds, to: bounds)
+      annotations[index].type = .arrow(updated)
+      annotations[index].bounds = updated.bounds()
     case .line(let start, let end):
       annotations[index].type = .line(
-        start: CGPoint(x: start.x + dx, y: start.y + dy),
-        end: CGPoint(x: end.x + dx, y: end.y + dy)
+        start: remapPoint(start, from: oldBounds, to: bounds),
+        end: remapPoint(end, from: oldBounds, to: bounds)
       )
     case .path(let points):
       annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
@@ -1576,6 +1576,15 @@ final class AnnotateState: ObservableObject {
       newBounds.origin.y = currentBounds.maxY - newBounds.height
       annotations[index].bounds = newBounds
     }
+  }
+
+  func updateArrowStyle(id: UUID, style: ArrowStyle) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .arrow(let geometry) = annotations[index].type else { return }
+
+    let updated = geometry.withStyle(style)
+    annotations[index].type = .arrow(updated)
+    annotations[index].bounds = updated.bounds()
   }
 
   /// Update annotation properties (strokeWidth, fontSize, colors)
@@ -1650,6 +1659,55 @@ final class AnnotateState: ObservableObject {
   var selectedAnnotation: AnnotationItem? {
     guard let id = selectedAnnotationId else { return nil }
     return annotations.first { $0.id == id }
+  }
+
+  var selectedArrowAnnotation: AnnotationItem? {
+    guard let annotation = selectedAnnotation,
+          case .arrow = annotation.type else {
+      return nil
+    }
+    return annotation
+  }
+
+  var activeArrowStyle: ArrowStyle {
+    if let annotation = selectedArrowAnnotation,
+       case .arrow(let geometry) = annotation.type {
+      return geometry.style
+    }
+    return arrowStyle
+  }
+
+  func setActiveArrowStyle(_ style: ArrowStyle) {
+    if let annotation = selectedArrowAnnotation {
+      updateArrowStyle(id: annotation.id, style: style)
+    } else {
+      arrowStyle = style
+    }
+  }
+
+  var quickPropertiesSupportsArrowStyle: Bool {
+    guard editorMode == .annotate,
+          selectedTool != .crop else {
+      return false
+    }
+
+    if let annotation = quickPropertiesAnnotation,
+       case .arrow = annotation.type {
+      return true
+    }
+
+    return quickPropertiesTool == .arrow
+  }
+
+  var quickArrowStyleBinding: Binding<ArrowStyle> {
+    Binding(
+      get: { [weak self] in
+        self?.activeArrowStyle ?? .straight
+      },
+      set: { [weak self] newStyle in
+        self?.setActiveArrowStyle(newStyle)
+      }
+    )
   }
 
   var quickPropertiesAnnotation: AnnotationItem? {
@@ -1833,11 +1891,10 @@ final class AnnotateState: ObservableObject {
 
     // Also update embedded points for arrows/lines/paths
     switch annotations[index].type {
-    case .arrow(let start, let end):
-      annotations[index].type = .arrow(
-        start: CGPoint(x: start.x + dx, y: start.y + dy),
-        end: CGPoint(x: end.x + dx, y: end.y + dy)
-      )
+    case .arrow(let geometry):
+      let updated = geometry.translatedBy(dx: dx, dy: dy)
+      annotations[index].type = .arrow(updated)
+      annotations[index].bounds = updated.bounds()
     case .line(let start, let end):
       annotations[index].type = .line(
         start: CGPoint(x: start.x + dx, y: start.y + dy),
@@ -1850,6 +1907,28 @@ final class AnnotateState: ObservableObject {
     default:
       break
     }
+  }
+
+  private func remapPoint(_ point: CGPoint, from oldBounds: CGRect, to newBounds: CGRect) -> CGPoint {
+    CGPoint(
+      x: remapCoordinate(point.x, oldMin: oldBounds.minX, oldSize: oldBounds.width, newMin: newBounds.minX, newSize: newBounds.width),
+      y: remapCoordinate(point.y, oldMin: oldBounds.minY, oldSize: oldBounds.height, newMin: newBounds.minY, newSize: newBounds.height)
+    )
+  }
+
+  private func remapCoordinate(
+    _ value: CGFloat,
+    oldMin: CGFloat,
+    oldSize: CGFloat,
+    newMin: CGFloat,
+    newSize: CGFloat
+  ) -> CGFloat {
+    guard oldSize != 0 else {
+      return newMin + newSize / 2
+    }
+
+    let progress = (value - oldMin) / oldSize
+    return newMin + progress * newSize
   }
 }
 
