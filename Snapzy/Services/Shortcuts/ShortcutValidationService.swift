@@ -120,31 +120,6 @@ final class ShortcutValidationService {
   private init() {}
 }
 
-private extension GlobalShortcutKind {
-  var displayName: String {
-    switch self {
-    case .fullscreen:
-      return "Capture Fullscreen"
-    case .area:
-      return "Capture Area"
-    case .recording:
-      return "Record Video"
-    case .annotate:
-      return "Open Annotate"
-    case .videoEditor:
-      return "Open Video Editor"
-    case .cloudUploads:
-      return "Cloud Uploads"
-    case .shortcutList:
-      return "Show Shortcut List"
-    case .ocr:
-      return "Capture Text (OCR)"
-    case .objectCutout:
-      return "Capture Object (Transparent)"
-    }
-  }
-}
-
 private extension AnnotateActionShortcutKind {
   var displayName: String {
     switch self {

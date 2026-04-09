@@ -235,7 +235,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(captureOCRItem)
 
     let captureObjectCutoutItem = NSMenuItem(
-      title: "Capture Object (Transparent)",
+      title: GlobalShortcutKind.objectCutout.displayName,
       action: #selector(captureObjectCutoutAction),
       keyEquivalent: "1"
     )

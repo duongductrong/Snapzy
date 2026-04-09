@@ -265,9 +265,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Capture Object (Transparent)",
+            label: GlobalShortcutKind.objectCutout.displayName,
             icon: "person.crop.rectangle",
-            description: "Select an area, remove background, and optionally auto-crop",
+            description: "Select an area, isolate the subject, and optionally auto-crop",
             shortcut: $objectCutoutShortcut,
             isEnabled: globalEnabledBinding(for: .objectCutout),
             validationIssue: globalValidationIssues[.objectCutout],

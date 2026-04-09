@@ -710,7 +710,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       switch cutoutError {
       case .noSubjectDetected:
         AppToastManager.shared.show(
-          message: "No object detected. Try selecting a tighter area around the subject.",
+          message: "No subject detected. Try selecting a tighter area around the subject.",
           style: .warning,
           position: .bottomCenter
         )

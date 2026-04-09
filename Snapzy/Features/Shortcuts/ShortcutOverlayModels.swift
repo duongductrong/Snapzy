@@ -37,27 +37,27 @@ enum ShortcutOverlayContentBuilder {
         id: "capture",
         title: "Capture",
         items: [
-          globalItem(kind: .fullscreen, title: "Capture Fullscreen", icon: "rectangle.dashed.and.paperclip", manager: keyboard),
-          globalItem(kind: .area, title: "Capture Area", icon: "rectangle.dashed", manager: keyboard),
-          globalItem(kind: .objectCutout, title: "Capture Object (Transparent)", icon: "person.crop.rectangle", manager: keyboard),
-          globalItem(kind: .ocr, title: "Capture Text (OCR)", icon: "text.viewfinder", manager: keyboard),
+          globalItem(kind: .fullscreen, icon: "rectangle.dashed.and.paperclip", manager: keyboard),
+          globalItem(kind: .area, icon: "rectangle.dashed", manager: keyboard),
+          globalItem(kind: .objectCutout, icon: "person.crop.rectangle", manager: keyboard),
+          globalItem(kind: .ocr, icon: "text.viewfinder", manager: keyboard),
         ]
       ),
       ShortcutOverlaySection(
         id: "recording",
         title: "Recording",
         items: [
-          globalItem(kind: .recording, title: "Record Video", icon: "record.circle", manager: keyboard),
+          globalItem(kind: .recording, icon: "record.circle", manager: keyboard),
         ]
       ),
       ShortcutOverlaySection(
         id: "tools",
         title: "Tools",
         items: [
-          globalItem(kind: .annotate, title: "Open Annotate", icon: "pencil.and.scribble", manager: keyboard),
-          globalItem(kind: .videoEditor, title: "Open Video Editor", icon: "film", manager: keyboard),
-          globalItem(kind: .cloudUploads, title: "Cloud Uploads", icon: "icloud.and.arrow.up", manager: keyboard),
-          globalItem(kind: .shortcutList, title: "Show Shortcut List", icon: "list.bullet.rectangle", manager: keyboard),
+          globalItem(kind: .annotate, icon: "pencil.and.scribble", manager: keyboard),
+          globalItem(kind: .videoEditor, icon: "film", manager: keyboard),
+          globalItem(kind: .cloudUploads, icon: "icloud.and.arrow.up", manager: keyboard),
+          globalItem(kind: .shortcutList, icon: "list.bullet.rectangle", manager: keyboard),
         ]
       ),
       ShortcutOverlaySection(
@@ -111,7 +111,6 @@ enum ShortcutOverlayContentBuilder {
 
   private static func globalItem(
     kind: GlobalShortcutKind,
-    title: String,
     icon: String,
     manager: KeyboardShortcutManager
   ) -> ShortcutOverlayItem {
@@ -119,7 +118,7 @@ enum ShortcutOverlayContentBuilder {
     return ShortcutOverlayItem(
       id: "global-\(kind.rawValue)",
       icon: icon,
-      title: title,
+      title: kind.displayName,
       subtitle: nil,
       isEnabled: manager.isShortcutEnabled(for: kind),
       display: .keycaps(config.displayParts)

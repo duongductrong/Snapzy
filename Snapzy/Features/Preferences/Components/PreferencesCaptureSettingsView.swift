@@ -370,7 +370,7 @@ struct CaptureSettingsView: View {
         SettingRow(
           icon: "person.crop.rectangle",
           title: "Auto-Crop Subject",
-          description: "Applies to remove background in both Capture Object and Annotate"
+          description: "Applies to background removal in capture and Annotate"
         ) {
           Toggle("", isOn: $backgroundCutoutAutoCropEnabled)
             .labelsHidden()
