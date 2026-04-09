@@ -51,6 +51,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.5.11] - 2026-04-09
+
+### Features
+-  Add arrow styling options and update annotation handling for arrows (f54163a)
+-  Refactor background cutout button and update annotation tools group (b70da95)
+-  Implement quick properties bar for annotation tools with customizable options (1b02061)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.5.10 (00a7fff)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.5.10] - 2026-04-06
 
 ### Features
