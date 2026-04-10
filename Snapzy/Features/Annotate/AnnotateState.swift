@@ -106,12 +106,42 @@ final class AnnotateState: ObservableObject {
   @Published var zoomLevel: CGFloat = 1.0
   @Published var isPinned: Bool = false
 
-  /// Valid zoom range (25%–400%)
-  static let zoomRange: ClosedRange<CGFloat> = 0.25...4.0
+  static let minimumZoomLevel: CGFloat = 0.25
+  static let defaultMaximumZoomLevel: CGFloat = 4.0
+  static let hardMaximumZoomLevel: CGFloat = 16.0
+  static let zoomPresetPercents = [25, 50, 75, 100, 125, 150, 200, 300, 400, 600, 800, 1200, 1600]
+
+  /// Base fitted canvas size before zoom is applied.
+  @Published private(set) var baseCanvasDisplaySize: CGSize = .zero
+
+  /// Fit scale used to derive a dynamic max zoom for very long captures.
+  @Published private(set) var fitScale: CGFloat = 1.0
+
+  var effectiveMaximumZoomLevel: CGFloat {
+    guard fitScale > 0 else { return Self.defaultMaximumZoomLevel }
+    return min(Self.hardMaximumZoomLevel, max(Self.defaultMaximumZoomLevel, 1.0 / fitScale))
+  }
+
+  var effectiveZoomRange: ClosedRange<CGFloat> {
+    Self.minimumZoomLevel...effectiveMaximumZoomLevel
+  }
+
+  var zoomMenuPresetPercents: [Int] {
+    var options = Self.zoomPresetPercents.filter {
+      CGFloat($0) / 100 <= effectiveMaximumZoomLevel + 0.001
+    }
+
+    let roundedCap = max(25, Int((effectiveMaximumZoomLevel * 100).rounded(.down) / 25) * 25)
+    if roundedCap > (options.last ?? 0) {
+      options.append(roundedCap)
+    }
+
+    return options
+  }
 
   /// Clamp a zoom level to the valid range
   func clampedZoom(_ level: CGFloat) -> CGFloat {
-    min(max(level, Self.zoomRange.lowerBound), Self.zoomRange.upperBound)
+    min(max(level, effectiveZoomRange.lowerBound), effectiveZoomRange.upperBound)
   }
 
   // MARK: - Pan State (for zoomed canvas navigation)
@@ -125,9 +155,49 @@ final class AnnotateState: ObservableObject {
   /// Canvas container size for pan bounds calculation (updated by GeometryReader)
   var canvasContainerSize: CGSize = .zero
 
-  /// Reset pan when zoom returns to fit (≤ 1.0)
+  var canPanInteractively: Bool {
+    let overflow = panOverflow(at: zoomLevel)
+    return overflow.width > 0.5 || overflow.height > 0.5
+  }
+
+  func updateViewportMetrics(containerSize: CGSize, baseCanvasSize: CGSize, fitScale: CGFloat) {
+    let normalizedFitScale = max(fitScale, 0.0001)
+    let metricsChanged = canvasContainerSize != containerSize
+      || baseCanvasDisplaySize != baseCanvasSize
+      || abs(self.fitScale - normalizedFitScale) > 0.0001
+
+    canvasContainerSize = containerSize
+    if baseCanvasDisplaySize != baseCanvasSize {
+      baseCanvasDisplaySize = baseCanvasSize
+    }
+    if abs(self.fitScale - normalizedFitScale) > 0.0001 {
+      self.fitScale = normalizedFitScale
+    }
+
+    guard metricsChanged else { return }
+
+    let clampedLevel = clampedZoom(zoomLevel)
+    if abs(clampedLevel - zoomLevel) > 0.0001 {
+      zoomLevel = clampedLevel
+    } else {
+      resetPanIfNeeded()
+    }
+  }
+
+  func pan(by delta: CGSize) {
+    guard canPanInteractively else {
+      panOffset = .zero
+      return
+    }
+
+    panOffset.width += delta.width
+    panOffset.height += delta.height
+    clampPanOffset()
+  }
+
+  /// Reset pan when content no longer overflows.
   func resetPanIfNeeded() {
-    if zoomLevel <= 1.0 {
+    if !canPanInteractively {
       panOffset = .zero
     } else {
       clampPanOffset()
@@ -137,25 +207,36 @@ final class AnnotateState: ObservableObject {
   /// Clamp pan offset to keep content partially visible.
   /// At least ~40% of the canvas remains in the viewport at all times.
   func clampPanOffset() {
-    guard zoomLevel > 1.0, canvasContainerSize.width > 0 else {
+    let overflow = panOverflow(at: zoomLevel)
+    guard overflow.width > 0 || overflow.height > 0 else {
       panOffset = .zero
       return
     }
 
-    // Content overflows viewport by this amount at current zoom
-    // At zoom 1.0, content fits perfectly → overflow = 0
-    // At zoom 2.0, content is 2x → overflow = containerSize
-    let overflowX = canvasContainerSize.width * (zoomLevel - 1.0) / 2
-    let overflowY = canvasContainerSize.height * (zoomLevel - 1.0) / 2
-
-    // Add small margin (20% of container) so user can pan slightly beyond edge
-    let marginX = canvasContainerSize.width * 0.1
-    let marginY = canvasContainerSize.height * 0.1
-    let maxPanX = overflowX + marginX
-    let maxPanY = overflowY + marginY
+    let marginX = overflow.width > 0 ? canvasContainerSize.width * 0.1 : 0
+    let marginY = overflow.height > 0 ? canvasContainerSize.height * 0.1 : 0
+    let maxPanX = overflow.width + marginX
+    let maxPanY = overflow.height + marginY
 
     panOffset.width = min(max(panOffset.width, -maxPanX), maxPanX)
     panOffset.height = min(max(panOffset.height, -maxPanY), maxPanY)
+  }
+
+  private func panOverflow(at zoomLevel: CGFloat) -> CGSize {
+    guard canvasContainerSize.width > 0,
+          canvasContainerSize.height > 0,
+          baseCanvasDisplaySize.width > 0,
+          baseCanvasDisplaySize.height > 0 else {
+      return .zero
+    }
+
+    let renderedWidth = baseCanvasDisplaySize.width * zoomLevel
+    let renderedHeight = baseCanvasDisplaySize.height * zoomLevel
+
+    return CGSize(
+      width: max((renderedWidth - canvasContainerSize.width) / 2, 0),
+      height: max((renderedHeight - canvasContainerSize.height) / 2, 0)
+    )
   }
 
   // MARK: - Background Settings

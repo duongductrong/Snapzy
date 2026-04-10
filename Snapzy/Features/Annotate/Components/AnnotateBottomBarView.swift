@@ -95,17 +95,17 @@ struct AnnotateBottomBarView: View {
 
   private var zoomPicker: some View {
     Menu {
-      ForEach([25, 50, 75, 100, 125, 150, 200, 300, 400], id: \.self) { percent in
+      ForEach(state.zoomMenuPresetPercents, id: \.self) { percent in
         Button("\(percent)%") {
           withAnimation(.easeOut(duration: 0.15)) {
-            state.zoomLevel = CGFloat(percent) / 100
+            state.zoomLevel = state.clampedZoom(CGFloat(percent) / 100)
           }
         }
       }
 
       Divider()
 
-      Button("Actual Size (⌘0)") {
+      Button("Fit (⌘0)") {
         withAnimation(.easeOut(duration: 0.15)) {
           state.zoomLevel = 1.0
         }

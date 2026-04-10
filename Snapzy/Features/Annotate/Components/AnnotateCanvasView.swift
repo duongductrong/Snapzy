@@ -8,6 +8,12 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private struct AnnotateViewportMetrics: Equatable {
+  let containerSize: CGSize
+  let baseCanvasSize: CGSize
+  let fitScale: CGFloat
+}
+
 /// Canvas view for displaying and annotating the image
 struct AnnotateCanvasView: View {
   @ObservedObject var state: AnnotateState
@@ -49,11 +55,15 @@ struct AnnotateCanvasView: View {
             // Centered, scaled canvas
             canvasContent(in: geometry.size)
               .frame(width: geometry.size.width, height: geometry.size.height)
-              .onAppear { state.canvasContainerSize = geometry.size }
-              .onChange(of: geometry.size) { newSize in state.canvasContainerSize = newSize }
           } else {
             // Drop zone when no image loaded
             AnnotateDropZoneView(isDragOver: $isDragOver)
+              .onAppear {
+                state.updateViewportMetrics(containerSize: geometry.size, baseCanvasSize: .zero, fitScale: 1.0)
+              }
+              .onChange(of: geometry.size) { newSize in
+                state.updateViewportMetrics(containerSize: newSize, baseCanvasSize: .zero, fitScale: 1.0)
+              }
           }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -107,7 +117,7 @@ struct AnnotateCanvasView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .annotateSpaceDown)) { _ in
       guard state.hasImage,
-            state.zoomLevel > 1.0,
+            state.canPanInteractively,
             state.editingTextAnnotationId == nil else { return }
       state.isSpacePanning = true
     }
@@ -118,9 +128,15 @@ struct AnnotateCanvasView: View {
       guard state.isSpacePanning,
             let dx = notification.userInfo?["deltaX"] as? CGFloat,
             let dy = notification.userInfo?["deltaY"] as? CGFloat else { return }
-      state.panOffset.width += dx
-      state.panOffset.height += dy
-      state.clampPanOffset()
+      state.pan(by: CGSize(width: dx, height: dy))
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .annotatePanScroll)) { notification in
+      guard state.hasImage,
+            state.canPanInteractively,
+            state.editingTextAnnotationId == nil,
+            let dx = notification.userInfo?["deltaX"] as? CGFloat,
+            let dy = notification.userInfo?["deltaY"] as? CGFloat else { return }
+      state.pan(by: CGSize(width: dx, height: dy))
     }
     .onChange(of: state.zoomLevel) { _ in
       state.resetPanIfNeeded()
@@ -219,6 +235,11 @@ struct AnnotateCanvasView: View {
     // Background = logical canvas * scale (includes padding + alignment space)
     let bgWidth = logicalCanvasWidth * scale
     let bgHeight = logicalCanvasHeight * scale
+    let viewportMetrics = AnnotateViewportMetrics(
+      containerSize: containerSize,
+      baseCanvasSize: CGSize(width: bgWidth, height: bgHeight),
+      fitScale: scale
+    )
 
     // When crop is applied, use CROP dimensions for image display frame
     // This ensures the image frame fits within the background+padding area
@@ -344,7 +365,20 @@ struct AnnotateCanvasView: View {
       }
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
-
+    }
+    .onAppear {
+      state.updateViewportMetrics(
+        containerSize: viewportMetrics.containerSize,
+        baseCanvasSize: viewportMetrics.baseCanvasSize,
+        fitScale: viewportMetrics.fitScale
+      )
+    }
+    .onChange(of: viewportMetrics) { newMetrics in
+      state.updateViewportMetrics(
+        containerSize: newMetrics.containerSize,
+        baseCanvasSize: newMetrics.baseCanvasSize,
+        fitScale: newMetrics.fitScale
+      )
     }
   }
 

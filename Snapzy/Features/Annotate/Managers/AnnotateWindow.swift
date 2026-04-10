@@ -26,10 +26,12 @@ extension Notification.Name {
   static let annotateSpaceDown = Notification.Name("annotateSpaceDown")
   static let annotateSpaceUp = Notification.Name("annotateSpaceUp")
   static let annotatePanDrag = Notification.Name("annotatePanDrag")
+  static let annotatePanScroll = Notification.Name("annotatePanScroll")
 }
 
 /// Custom NSWindow for annotation editing with dark mode appearance
 final class AnnotateWindow: NSWindow {
+  weak var interactionState: AnnotateState?
 
   init(contentRect: NSRect) {
     super.init(
@@ -151,7 +153,7 @@ final class AnnotateWindow: NSWindow {
       return true
     }
 
-    // Cmd+0 — zoom to 100%
+    // Cmd+0 — zoom to fit
     if event.keyCode == 29 && flags == .command {
       NotificationCenter.default.post(name: .annotateZoomReset, object: self)
       return true
@@ -171,6 +173,38 @@ final class AnnotateWindow: NSWindow {
     return responder is NSTextView || responder is NSTextField
   }
 
+  private func viewUnderCursor(for event: NSEvent) -> NSView? {
+    guard let contentView else { return nil }
+    let point = contentView.convert(event.locationInWindow, from: nil)
+    return contentView.hitTest(point)
+  }
+
+  private func isCursorOverScrollableView(for event: NSEvent) -> Bool {
+    var currentView = viewUnderCursor(for: event)
+    while let view = currentView {
+      if view is NSScrollView || view is NSScroller {
+        return true
+      }
+      currentView = view.superview
+    }
+    return false
+  }
+
+  private func shouldPanForScrollEvent(_ event: NSEvent) -> Bool {
+    guard !event.modifierFlags.contains(.command),
+          !isTextInputActive,
+          interactionState?.canPanInteractively == true,
+          !isCursorOverScrollableView(for: event) else { return false }
+    return event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0
+  }
+
+  private func gesturePanDelta(for event: NSEvent) -> CGSize {
+    // Direct manipulation UX: finger gesture direction should match image movement.
+    // `state.pan(by:)` eventually feeds `.offset(...)` on the canvas, so using the
+    // raw scroll deltas here keeps touchpad pan feeling like "grab and move".
+    CGSize(width: event.scrollingDeltaX, height: event.scrollingDeltaY)
+  }
+
   /// Intercept scroll wheel (Cmd+scroll), trackpad magnify, Space key,
   /// and mouse drag events at the window level for zoom & pan.
   override func sendEvent(_ event: NSEvent) {
@@ -186,6 +220,18 @@ final class AnnotateWindow: NSWindow {
       )
       return  // Consume event
 
+    case .scrollWheel where shouldPanForScrollEvent(event):
+      let delta = gesturePanDelta(for: event)
+      NotificationCenter.default.post(
+        name: .annotatePanScroll,
+        object: self,
+        userInfo: [
+          "deltaX": delta.width,
+          "deltaY": delta.height
+        ]
+      )
+      return
+
     case .magnify:
       // Trackpad pinch → zoom
       let magnification = event.magnification
@@ -200,7 +246,7 @@ final class AnnotateWindow: NSWindow {
       // If a text input is focused, let Space pass through for typing
       if isTextInputActive { break }
       // Space key down — consume ALL (including repeats) to prevent system beep
-      if !event.isARepeat {
+      if !event.isARepeat, interactionState?.canPanInteractively == true {
         isSpaceHeld = true
         NSCursor.openHand.set()
         NotificationCenter.default.post(name: .annotateSpaceDown, object: self)
@@ -211,9 +257,12 @@ final class AnnotateWindow: NSWindow {
       // If a text input is focused, let Space pass through
       if isTextInputActive { break }
       // Space key up → deactivate pan mode
+      let wasSpaceHeld = isSpaceHeld
       isSpaceHeld = false
-      NSCursor.arrow.set()
-      NotificationCenter.default.post(name: .annotateSpaceUp, object: self)
+      if wasSpaceHeld {
+        NSCursor.arrow.set()
+        NotificationCenter.default.post(name: .annotateSpaceUp, object: self)
+      }
       return
 
     case .leftMouseDragged where isSpaceHeld:

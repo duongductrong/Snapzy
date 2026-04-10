@@ -75,6 +75,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     super.init(window: window)
 
     window.delegate = self
+    window.interactionState = state
     setupContent()
     setupKeyboardShortcutObservers()
     setupSourceURLObservation()
@@ -104,6 +105,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     super.init(window: window)
 
     window.delegate = self
+    window.interactionState = state
     setupContent()
     setupKeyboardShortcutObservers()
     setupSourceURLObservation()
@@ -137,6 +139,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     super.init(window: window)
 
     window.delegate = self
+    window.interactionState = state
     setupContent()
     setupKeyboardShortcutObservers()
     setupSourceURLObservation()
