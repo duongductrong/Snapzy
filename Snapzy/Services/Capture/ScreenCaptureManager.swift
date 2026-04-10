@@ -64,6 +64,9 @@ final class ScreenCaptureManager: ObservableObject {
     let contentFilter: SCContentFilter
     let configuration: SCStreamConfiguration
     let pixelCropRect: CGRect
+    let sourceRect: CGRect
+    let outputWidth: Int
+    let outputHeight: Int
     let scaleFactor: CGFloat
   }
 
@@ -470,7 +473,42 @@ final class ScreenCaptureManager: ObservableObject {
       configuration: context.configuration
     )
 
+    let fullImageBounds = CGRect(
+      x: 0,
+      y: 0,
+      width: fullImage.width,
+      height: fullImage.height
+    )
+    if context.pixelCropRect.integral == fullImageBounds.integral {
+      return fullImage
+    }
+
     return fullImage.cropping(to: context.pixelCropRect)
+  }
+
+  func makeAreaStreamConfiguration(
+    from context: PreparedAreaCaptureContext,
+    maximumFrameRate: Int = 30,
+    showsCursor: Bool = false
+  ) -> SCStreamConfiguration {
+    let configuration = SCStreamConfiguration()
+    configuration.width = context.outputWidth
+    configuration.height = context.outputHeight
+    configuration.pixelFormat = kCVPixelFormatType_32BGRA
+    configuration.showsCursor = showsCursor
+    configuration.sourceRect = context.sourceRect
+    configuration.queueDepth = maximumFrameRate >= 60 ? 3 : 2
+    configuration.minimumFrameInterval = CMTime(
+      value: 1,
+      timescale: CMTimeScale(max(1, maximumFrameRate))
+    )
+    if #available(macOS 14.0, *) {
+      configuration.ignoreShadowsSingleWindow = false
+    }
+    if #available(macOS 14.2, *) {
+      configuration.captureResolution = .best
+    }
+    return configuration
   }
 
   private func makePreparedAreaCaptureContext(
@@ -557,23 +595,58 @@ final class ScreenCaptureManager: ObservableObject {
       throw CaptureError.captureFailed("Selection area is outside display bounds")
     }
 
-    config.width = Int(CGFloat(display.width) * scaleFactor)
-    config.height = Int(CGFloat(display.height) * scaleFactor)
+    let alignedRect = pixelAlignedRect(clampedRect, scaleFactor: scaleFactor, bounds: screenBounds)
+    guard !alignedRect.isEmpty else {
+      throw CaptureError.captureFailed("Selection area is outside display bounds")
+    }
 
-    let flippedY = screenFrame.height - clampedRect.origin.y - clampedRect.height
+    let flippedY = screenFrame.height - alignedRect.origin.y - alignedRect.height
+    let sourceRect = CGRect(
+      x: alignedRect.origin.x,
+      y: flippedY,
+      width: alignedRect.width,
+      height: alignedRect.height
+    )
+    let outputWidth = max(1, Int((alignedRect.width * scaleFactor).rounded()))
+    let outputHeight = max(1, Int((alignedRect.height * scaleFactor).rounded()))
+    config.width = outputWidth
+    config.height = outputHeight
+    config.sourceRect = sourceRect
+
     let pixelCropRect = CGRect(
-      x: ceil(clampedRect.origin.x * scaleFactor),
-      y: ceil(flippedY * scaleFactor),
-      width: ceil(clampedRect.width * scaleFactor),
-      height: ceil(clampedRect.height * scaleFactor)
+      x: 0,
+      y: 0,
+      width: outputWidth,
+      height: outputHeight
     )
 
     return PreparedAreaCaptureContext(
       contentFilter: contentFilter,
       configuration: config,
       pixelCropRect: pixelCropRect,
+      sourceRect: sourceRect,
+      outputWidth: outputWidth,
+      outputHeight: outputHeight,
       scaleFactor: scaleFactor
     )
+  }
+
+  private func pixelAlignedRect(_ rect: CGRect, scaleFactor: CGFloat, bounds: CGRect) -> CGRect {
+    guard scaleFactor > 0 else { return rect.intersection(bounds) }
+
+    let minX = floor(rect.minX * scaleFactor) / scaleFactor
+    let minY = floor(rect.minY * scaleFactor) / scaleFactor
+    let maxX = ceil(rect.maxX * scaleFactor) / scaleFactor
+    let maxY = ceil(rect.maxY * scaleFactor) / scaleFactor
+
+    let alignedRect = CGRect(
+      x: minX,
+      y: minY,
+      width: max(0, maxX - minX),
+      height: max(0, maxY - minY)
+    )
+
+    return alignedRect.intersection(bounds)
   }
 
   // MARK: - Filter Builder

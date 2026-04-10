@@ -16,6 +16,32 @@ enum ScrollingCapturePhase {
   case saving
 }
 
+enum ScrollingCaptureRuntimeState {
+  case ready
+  case streaming
+  case previewing
+  case committing
+  case paused
+  case saving
+
+  var label: String {
+    switch self {
+    case .ready:
+      return "Ready"
+    case .streaming:
+      return "Streaming"
+    case .previewing:
+      return "Preview Live"
+    case .committing:
+      return "Syncing Capture"
+    case .paused:
+      return "Needs Recovery"
+    case .saving:
+      return "Saving"
+    }
+  }
+}
+
 enum ScrollingCaptureFeature {
   static var isEnabled: Bool {
     UserDefaults.standard.object(forKey: PreferencesKeys.scrollingCaptureEnabled) as? Bool ?? false
@@ -36,9 +62,12 @@ enum ScrollingCaptureFeature {
 final class ScrollingCaptureSessionModel: ObservableObject {
   @Published var selectedRect: CGRect
   @Published var phase: ScrollingCapturePhase = .ready
+  @Published var runtimeState: ScrollingCaptureRuntimeState = .ready
   @Published var statusText = "Adjust the region so only the moving content stays inside, then press Start Capture."
   @Published var previewCaption = "Start Capture to lock the first frame"
-  @Published var previewImage: NSImage?
+  @Published var previewImage: CGImage?
+  @Published var livePreviewImage: CGImage?
+  @Published var isUsingLivePreview = false
   @Published var acceptedFrameCount = 0
   @Published var stitchedPixelHeight = 0
   @Published var autoScrollEnabled: Bool
@@ -58,5 +87,13 @@ final class ScrollingCaptureSessionModel: ObservableObject {
 
   var selectionSummary: String {
     "\(Int(selectedRect.width)) x \(Int(selectedRect.height))"
+  }
+
+  var activePreviewImage: CGImage? {
+    if phase == .capturing, isUsingLivePreview, let livePreviewImage {
+      return livePreviewImage
+    }
+
+    return previewImage ?? livePreviewImage
   }
 }

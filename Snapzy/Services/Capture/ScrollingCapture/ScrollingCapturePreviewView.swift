@@ -10,22 +10,40 @@ import SwiftUI
 struct ScrollingCapturePreviewView: View {
   @ObservedObject var model: ScrollingCaptureSessionModel
 
+  private var isShowingLivePreview: Bool {
+    model.phase == .capturing && model.isUsingLivePreview && model.livePreviewImage != nil
+  }
+
   var body: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Text("Preview")
-        .font(.system(size: 12, weight: .semibold))
+      HStack(spacing: 6) {
+        Text("Preview")
+          .font(.system(size: 12, weight: .semibold))
+
+        if isShowingLivePreview {
+          Text("Live")
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(
+              Capsule(style: .continuous)
+                .fill(Color.accentColor.opacity(0.9))
+            )
+        }
+      }
 
       Group {
-        if let previewImage = model.previewImage {
+        if let previewImage = model.activePreviewImage {
           GeometryReader { geometry in
-            Image(nsImage: previewImage)
-              .resizable()
-              .interpolation(.high)
-              .aspectRatio(contentMode: model.acceptedFrameCount > 1 ? .fill : .fit)
+            ScrollingCapturePreviewRenderer(
+              image: previewImage,
+              scaling: isShowingLivePreview || model.acceptedFrameCount <= 1 ? .fit : .fillBottom
+            )
               .frame(
                 width: geometry.size.width,
                 height: geometry.size.height,
-                alignment: model.acceptedFrameCount > 1 ? .bottom : .center
+                alignment: .center
               )
               .clipped()
           }

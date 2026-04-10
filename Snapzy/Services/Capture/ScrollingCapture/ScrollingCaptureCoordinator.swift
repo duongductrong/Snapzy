@@ -24,7 +24,9 @@ final class ScrollingCaptureCoordinator {
   private let fastMinimumPendingScrollPoints: CGFloat = 8
   private let defaultForcedRefreshScrollPoints: CGFloat = 42
   private let fastForcedRefreshScrollPoints: CGFloat = 28
-  private let autoScrollCaptureDelayNanoseconds: UInt64 = 95_000_000
+  private let autoScrollFrameWaitTimeoutNanoseconds: UInt64 = 220_000_000
+  private let autoScrollFallbackCaptureDelayNanoseconds: UInt64 = 85_000_000
+  private let livePreviewFramePollIntervalNanoseconds: UInt64 = 8_000_000
   private let scrollHitSlop: CGFloat = 32
   private let processingQueue = DispatchQueue(
     label: "com.snapzy.scrolling-capture.processing",
@@ -38,6 +40,10 @@ final class ScrollingCaptureCoordinator {
   private var latestImage: CGImage?
   private var stitcher: ScrollingCaptureStitcher?
   private var autoScrollEngine: ScrollingCaptureAutoScrollEngine?
+  private var liveFrameSource: ScrollingCaptureFrameSource?
+  private var commitScheduler: ScrollingCaptureCommitScheduler?
+  private var sessionMetrics = ScrollingCaptureSessionMetrics()
+  private var didFlushSessionMetrics = false
   private var selectedRect: CGRect?
   private var saveDirectory: URL?
   private var format: ImageFormat = .png
@@ -60,6 +66,15 @@ final class ScrollingCaptureCoordinator {
   private var autoScrollStepPoints: CGFloat = 0
   private var autoScrollConsecutiveFailures = 0
   private var autoScrollConsecutiveNoMovement = 0
+  private var livePreviewFrameSequence = 0
+  private var lastScheduledCommitSequenceNumber = 0
+  private var lastScheduledCommitUpdate: ScrollingCaptureStitchUpdate?
+
+  private enum AutoScrollFrameObservation {
+    case frameArrived(waitDurationMs: Int)
+    case timedOut(waitDurationMs: Int)
+    case fallbackDelay(waitDurationMs: Int)
+  }
 
   var isActive: Bool {
     sessionModel != nil
@@ -92,10 +107,17 @@ final class ScrollingCaptureCoordinator {
     self.preparedCaptureContext = nil
     self.prepareCaptureContextTask = nil
     self.autoScrollEngine = nil
+    self.liveFrameSource = nil
+    self.commitScheduler = makeCommitScheduler()
     self.autoScrollTask = nil
     self.autoScrollStepPoints = 0
     self.autoScrollConsecutiveFailures = 0
     self.autoScrollConsecutiveNoMovement = 0
+    self.livePreviewFrameSequence = 0
+    self.lastScheduledCommitSequenceNumber = 0
+    self.lastScheduledCommitUpdate = nil
+    self.sessionMetrics = ScrollingCaptureSessionMetrics()
+    self.didFlushSessionMetrics = false
 
     showRegionOverlay(for: rect)
     hudWindow = ScrollingCaptureHUDWindow(
@@ -129,6 +151,7 @@ final class ScrollingCaptureCoordinator {
   }
 
   func cancel() {
+    flushSessionMetricsIfNeeded(reason: "cancelled")
     sessionGeneration += 1
     pendingRefreshTask?.cancel()
     pendingRefreshTask = nil
@@ -136,6 +159,9 @@ final class ScrollingCaptureCoordinator {
     autoScrollTask = nil
     prepareCaptureContextTask?.cancel()
     prepareCaptureContextTask = nil
+    commitScheduler?.cancel()
+    commitScheduler = nil
+    stopLivePreviewIfNeeded()
 
     if let scrollMonitor {
       NSEvent.removeMonitor(scrollMonitor)
@@ -167,9 +193,15 @@ final class ScrollingCaptureCoordinator {
     isRefreshingPreview = false
     autoScrollEngine?.invalidate()
     autoScrollEngine = nil
+    commitScheduler = nil
     autoScrollStepPoints = 0
     autoScrollConsecutiveFailures = 0
     autoScrollConsecutiveNoMovement = 0
+    livePreviewFrameSequence = 0
+    lastScheduledCommitSequenceNumber = 0
+    lastScheduledCommitUpdate = nil
+    sessionMetrics = ScrollingCaptureSessionMetrics()
+    didFlushSessionMetrics = false
   }
 
   private func startCapture() {
@@ -182,12 +214,14 @@ final class ScrollingCaptureCoordinator {
 
     setRegionOverlayInteractionEnabled(false)
     sessionModel.phase = .capturing
+    sessionModel.runtimeState = .streaming
     sessionModel.statusText = sessionModel.autoScrollEnabled && autoScrollEngine != nil
       ? "Capturing the first frame. After that, Snapzy will auto-scroll the target surface."
       : "Capturing the first frame. After that, keep scrolling downward at a steady pace."
     installScrollMonitorIfNeeded()
 
     Task { @MainActor in
+      await startLivePreviewIfPossible()
       let initialUpdate = await refreshPreview(reason: "Initial frame captured")
       if case .initialized? = initialUpdate?.outcome {
         startAutoScrollIfNeeded()
@@ -213,12 +247,20 @@ final class ScrollingCaptureCoordinator {
         _ = await refreshPreview(reason: "Current frame captured before save")
       }
 
+      stopLivePreviewIfNeeded()
+
+      if let mergedImage = stitcher?.mergedImage() {
+        latestImage = mergedImage
+        sessionModel.previewImage = mergedImage
+      }
+
       guard let latestImage, let saveDirectory else {
         AppToastManager.shared.show(message: "No stitched frame is ready yet.", style: .warning)
         return
       }
 
       sessionModel.phase = .saving
+      sessionModel.runtimeState = .saving
       sessionModel.statusText = "Saving the stitched long image."
 
       let result = await captureManager.saveProcessedImage(
@@ -229,6 +271,7 @@ final class ScrollingCaptureCoordinator {
 
       switch result {
       case .success:
+        flushSessionMetricsIfNeeded(reason: "saved")
         SoundManager.playScreenshotCapture()
         AppToastManager.shared.show(
           message: "Scrolling Capture experimental: saved the stitched image.",
@@ -265,12 +308,14 @@ final class ScrollingCaptureCoordinator {
     let multiplier: CGFloat = event.hasPreciseScrollingDeltas ? 1 : 18
     let deltaY = CGFloat(event.scrollingDeltaY) * multiplier
     guard abs(deltaY) > 0.5 else { return }
+    sessionMetrics.recordScrollEvent(deltaY: deltaY)
 
     let direction = deltaY > 0 ? 1 : -1
     if let lockedScrollDirection, direction != lockedScrollDirection {
       sessionModel.statusText = "Direction changed. Keep scrolling the same way or restart the session."
       pendingRefreshTask?.cancel()
       pendingRefreshTask = nil
+      commitScheduler?.discardPendingRequest()
       pendingScrollDistancePoints = 0
       pendingScrollDirection = nil
       pendingMixedDirections = false
@@ -298,6 +343,8 @@ final class ScrollingCaptureCoordinator {
     guard let sessionModel else { return nil }
     guard !isRefreshingPreview else { return nil }
 
+    sessionModel.runtimeState = .committing
+    let refreshStartedAt = CFAbsoluteTimeGetCurrent()
     isRefreshingPreview = true
     defer {
       isRefreshingPreview = false
@@ -324,31 +371,64 @@ final class ScrollingCaptureCoordinator {
       pendingMixedDirections = false
 
       if hadMixedDirections {
+        sessionModel.runtimeState = .paused
         sessionModel.statusText = "Mixed scroll directions detected. Keep one direction so Snapzy can align."
+        let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
+        sessionMetrics.recordRefreshFailure(
+          reason: reason,
+          captureDurationMs: 0,
+          stitchDurationMs: 0,
+          totalDurationMs: totalDurationMs
+        )
         return nil
       }
 
+      let captureStartedAt = CFAbsoluteTimeGetCurrent()
       guard let capturedImage = try await capturePreparedAreaForSession() else {
+        sessionModel.runtimeState = .paused
         sessionModel.statusText = "Unable to capture the selected area."
+        let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
+        sessionMetrics.recordRefreshFailure(
+          reason: reason,
+          captureDurationMs: Self.elapsedMilliseconds(since: captureStartedAt),
+          stitchDurationMs: 0,
+          totalDurationMs: totalDurationMs
+        )
         return nil
       }
+      let captureDurationMs = Self.elapsedMilliseconds(since: captureStartedAt)
       guard generation == sessionGeneration, self.sessionModel != nil else { return nil }
 
+      let stitchStartedAt = CFAbsoluteTimeGetCurrent()
       let (update, processedStitcher) = await stitchCapturedImage(
         capturedImage,
-        expectedSignedDeltaPixels: expectedSignedDeltaPixels
+        expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+        renderMergedImage: !(sessionModel.isUsingLivePreview && sessionModel.livePreviewImage != nil)
       )
+      let stitchDurationMs = Self.elapsedMilliseconds(since: stitchStartedAt)
       guard generation == sessionGeneration, let sessionModel = self.sessionModel else { return nil }
       if let processedStitcher {
         self.stitcher = processedStitcher
       }
 
-      guard let update, let mergedImage = update.mergedImage else {
+      guard let update else {
+        sessionModel.runtimeState = .paused
         sessionModel.statusText = "Unable to render the stitched preview."
+        let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
+        sessionMetrics.recordRefreshFailure(
+          reason: reason,
+          captureDurationMs: captureDurationMs,
+          stitchDurationMs: stitchDurationMs,
+          totalDurationMs: totalDurationMs
+        )
         return nil
       }
 
-      latestImage = mergedImage
+      let previewPublishStartedAt = CFAbsoluteTimeGetCurrent()
+      if let mergedImage = update.mergedImage {
+        latestImage = mergedImage
+        sessionModel.previewImage = mergedImage
+      }
       if
         case .appended = update.outcome,
         lockedScrollDirection == nil,
@@ -357,40 +437,60 @@ final class ScrollingCaptureCoordinator {
       {
         lockedScrollDirection = batchScrollDirection
       }
-      sessionModel.previewImage = NSImage(
-        cgImage: mergedImage,
-        size: NSSize(width: mergedImage.width, height: mergedImage.height)
-      )
       sessionModel.acceptedFrameCount = update.acceptedFrameCount
       sessionModel.stitchedPixelHeight = update.outputHeight
+      let previewPublishDurationMs = Self.elapsedMilliseconds(since: previewPublishStartedAt)
+      let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
+      sessionMetrics.recordRefreshSuccess(
+        reason: reason,
+        captureDurationMs: captureDurationMs,
+        stitchDurationMs: stitchDurationMs,
+        previewPublishDurationMs: previewPublishDurationMs,
+        totalDurationMs: totalDurationMs,
+        outcome: update.outcome,
+        alignmentDebug: update.alignmentDebug
+      )
 
       switch update.outcome {
       case .initialized:
         lastAcceptedDeltaPixels = nil
+        sessionModel.runtimeState = previewRuntimeState()
         sessionModel.previewCaption = reason
         sessionModel.statusText =
           "First frame locked. Keep the pointer over the highlighted region and scroll downward steadily."
       case .appended(let deltaY):
         lastAcceptedDeltaPixels = deltaY
+        sessionModel.runtimeState = previewRuntimeState()
         sessionModel.previewCaption =
           "\(update.acceptedFrameCount) frames stitched • +\(deltaY) px"
         sessionModel.statusText =
           "Session active. \(update.acceptedFrameCount) frames stitched into \(update.outputHeight) px."
       case .ignoredNoMovement:
+        sessionModel.runtimeState = previewRuntimeState()
         sessionModel.statusText = "Waiting for new content. Keep the scroll moving in one direction."
       case .ignoredAlignmentFailed:
+        sessionModel.runtimeState = update.matchFailureCount >= 2 ? .paused : previewRuntimeState()
         if update.matchFailureCount >= 2 {
           sessionModel.statusText = "Alignment paused. Slow down and keep one direction so Snapzy can recover."
         } else {
           sessionModel.statusText = "Couldn't align that frame. Keep the same direction and a steadier pace."
         }
       case .reachedHeightLimit:
+        sessionModel.runtimeState = .paused
         sessionModel.previewCaption = "\(update.acceptedFrameCount) frames stitched • height limit reached"
         sessionModel.statusText =
           "Reached the \(maxOutputHeight) px output limit. Press Done to save the current result."
       }
       return update
     } catch {
+      let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
+      sessionMetrics.recordRefreshFailure(
+        reason: reason,
+        captureDurationMs: 0,
+        stitchDurationMs: 0,
+        totalDurationMs: totalDurationMs
+      )
+      sessionModel.runtimeState = .paused
       DiagnosticLogger.shared.log(
         .error,
         .capture,
@@ -452,10 +552,14 @@ final class ScrollingCaptureCoordinator {
     autoScrollStepPoints = 0
     autoScrollConsecutiveFailures = 0
     autoScrollConsecutiveNoMovement = 0
+    livePreviewFrameSequence = 0
+    lastScheduledCommitSequenceNumber = 0
+    lastScheduledCommitUpdate = nil
     sessionModel.previewImage = nil
     sessionModel.previewCaption = "Start Capture to lock the first frame"
     sessionModel.acceptedFrameCount = 0
     sessionModel.stitchedPixelHeight = 0
+    sessionModel.runtimeState = .ready
     sessionModel.statusText =
       "Adjust the region so only the moving content stays inside, then press Start Capture."
 
@@ -556,13 +660,13 @@ final class ScrollingCaptureCoordinator {
           && self.canStartRefresh(at: now)
 
         if shouldRefresh {
-          _ = await self.refreshPreview(reason: "Live stitched preview")
-          continue
+          self.scheduleCommitRefresh(reason: "Live stitched preview")
+          return
         }
 
         if idleDuration >= self.scrollIdleTimeout {
           if hasPendingMotion && self.canStartRefresh(at: now) {
-            _ = await self.refreshPreview(reason: "Latest visible frame")
+            self.scheduleCommitRefresh(reason: "Latest visible frame")
           }
           return
         }
@@ -655,7 +759,9 @@ final class ScrollingCaptureCoordinator {
       guard let sessionModel = self.sessionModel, sessionModel.phase == .capturing else { return }
 
       let requestedStepPoints = min(max(autoScrollStepPoints, 28), maxAutoScrollStepPoints())
+      let frameSequenceBeforeStep = livePreviewFrameSequence
       let stepOutcome = await autoScrollEngine.performStep(points: requestedStepPoints)
+      sessionMetrics.recordAutoScrollStep(requestedPoints: requestedStepPoints, outcome: stepOutcome)
       if Task.isCancelled { return }
 
       switch stepOutcome {
@@ -675,7 +781,7 @@ final class ScrollingCaptureCoordinator {
         try? await Task.sleep(nanoseconds: 80_000_000)
         continue
       case .reachedBoundary(let description):
-        _ = await refreshPreview(
+        _ = await scheduleCommitRefreshAndWait(
           reason: "Final auto-scroll frame",
           expectedSignedDeltaPixelsOverride: Int(round(requestedStepPoints * captureScaleFactor))
         )
@@ -684,9 +790,19 @@ final class ScrollingCaptureCoordinator {
         return
       case .scrolled(let estimatedPoints, let boundaryReached):
         sessionModel.statusText = "Auto-scrolling and stitching the latest visible content..."
-        try? await Task.sleep(nanoseconds: autoScrollCaptureDelayNanoseconds)
+        let frameObservation = await waitForAutoScrollFrameObservation(after: frameSequenceBeforeStep)
+        let observedFrame: Bool
+        switch frameObservation {
+        case .frameArrived:
+          observedFrame = true
+        case .timedOut:
+          observedFrame = false
+          sessionModel.autoScrollStatusText = "Auto-scroll waiting for frame sync."
+        case .fallbackDelay:
+          observedFrame = false
+        }
 
-        let update = await refreshPreview(
+        let update = await scheduleCommitRefreshAndWait(
           reason: "Auto-scroll preview",
           expectedSignedDeltaPixelsOverride: Int(round(estimatedPoints * captureScaleFactor))
         )
@@ -702,11 +818,14 @@ final class ScrollingCaptureCoordinator {
         case .appended(let deltaY):
           autoScrollConsecutiveFailures = 0
           autoScrollConsecutiveNoMovement = 0
+          sessionMetrics.recordAutoScrollCommitAccepted()
           let acceptedPoints = CGFloat(deltaY) / max(captureScaleFactor, 1)
           let blendedStep = acceptedPoints * 0.82 + requestedStepPoints * 0.18
           autoScrollStepPoints = min(maxAutoScrollStepPoints(), max(24, blendedStep))
           sessionModel.autoScrollStatusText =
-            "Auto-scroll running • step \(Int(round(autoScrollStepPoints))) pt"
+            observedFrame
+            ? "Auto-scroll frame-synced • step \(Int(round(autoScrollStepPoints))) pt"
+            : "Auto-scroll running • step \(Int(round(autoScrollStepPoints))) pt"
 
           if boundaryReached {
             sessionModel.statusText = "Auto-scroll reached the end. Press Done to save the current result."
@@ -717,7 +836,9 @@ final class ScrollingCaptureCoordinator {
           autoScrollConsecutiveNoMovement += 1
           autoScrollStepPoints = min(maxAutoScrollStepPoints(), requestedStepPoints * 1.22)
           if autoScrollConsecutiveNoMovement >= 3 {
-            sessionModel.statusText = "Auto-scroll no longer sees new content. You can press Done or continue manually."
+            sessionModel.statusText = observedFrame
+              ? "Auto-scroll no longer sees new content. You can press Done or continue manually."
+              : "Auto-scroll paused after repeated frame stalls. You can continue manually or press Done."
             return
           }
         case .ignoredAlignmentFailed:
@@ -737,9 +858,84 @@ final class ScrollingCaptureCoordinator {
   }
 
   private func waitForPendingPreviewRefresh() async {
+    await commitScheduler?.waitForIdle()
     while isRefreshingPreview {
       try? await Task.sleep(nanoseconds: 20_000_000)
     }
+  }
+
+  private func startLivePreviewIfPossible() async {
+    guard let sessionModel else { return }
+    guard sessionModel.phase == .capturing else { return }
+
+    do {
+      let context = try await ensurePreparedCaptureContext()
+      let frameSource = liveFrameSource ?? ScrollingCaptureFrameSource()
+      liveFrameSource = frameSource
+
+      try await frameSource.start(
+        with: context,
+        frameHandler: { [weak self] cgImage in
+          self?.publishLivePreviewFrame(cgImage)
+        },
+        failureHandler: { [weak self] errorDescription in
+          self?.handleLivePreviewFailure(errorDescription)
+        }
+      )
+      sessionMetrics.recordLivePreviewStart(success: true)
+      sessionModel.livePreviewImage = nil
+      sessionModel.isUsingLivePreview = true
+      sessionModel.runtimeState = .streaming
+      sessionModel.previewCaption = "Live preview running while Snapzy locks the stitched frame."
+    } catch {
+      sessionMetrics.recordLivePreviewStart(success: false)
+      sessionMetrics.recordLivePreviewFallbackActivation()
+      sessionModel.isUsingLivePreview = false
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Scrolling capture live preview fallback to stitched preview",
+        context: ["error": error.localizedDescription]
+      )
+    }
+  }
+
+  private func stopLivePreviewIfNeeded(clearImage: Bool = true) {
+    liveFrameSource?.stop()
+    liveFrameSource = nil
+    if clearImage {
+      sessionModel?.livePreviewImage = nil
+    }
+    sessionModel?.isUsingLivePreview = false
+  }
+
+  private func publishLivePreviewFrame(_ cgImage: CGImage) {
+    guard let sessionModel, sessionModel.phase == .capturing else { return }
+
+    let publishStartedAt = CFAbsoluteTimeGetCurrent()
+    livePreviewFrameSequence += 1
+    sessionModel.livePreviewImage = cgImage
+    sessionModel.isUsingLivePreview = true
+    if !(commitScheduler?.isRunning ?? false), sessionModel.runtimeState != .paused {
+      sessionModel.runtimeState = .previewing
+    }
+    let publishDurationMs = Self.elapsedMilliseconds(since: publishStartedAt)
+    sessionMetrics.recordLivePreviewFramePublished(
+      at: ProcessInfo.processInfo.systemUptime,
+      publishDurationMs: publishDurationMs
+    )
+  }
+
+  private func handleLivePreviewFailure(_ errorDescription: String) {
+    sessionMetrics.recordLivePreviewFailure()
+    DiagnosticLogger.shared.log(
+      .warning,
+      .capture,
+      "Scrolling capture live preview stream stopped",
+      context: ["error": errorDescription]
+    )
+    stopLivePreviewIfNeeded(clearImage: false)
+    sessionModel?.runtimeState = .paused
   }
 
   private func normalizedExpectedDeltaPixels(from rawValue: Int) -> Int {
@@ -760,7 +956,8 @@ final class ScrollingCaptureCoordinator {
 
   private func stitchCapturedImage(
     _ capturedImage: CGImage,
-    expectedSignedDeltaPixels: Int?
+    expectedSignedDeltaPixels: Int?,
+    renderMergedImage: Bool
   ) async -> (ScrollingCaptureStitchUpdate?, ScrollingCaptureStitcher?) {
     let currentStitcher = stitcher
     let maxOutputHeight = maxOutputHeight
@@ -772,7 +969,8 @@ final class ScrollingCaptureCoordinator {
             let update = currentStitcher.append(
               capturedImage,
               maxOutputHeight: maxOutputHeight,
-              expectedSignedDeltaPixels: expectedSignedDeltaPixels
+              expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+              renderMergedImage: renderMergedImage
             )
             continuation.resume(returning: (update, currentStitcher))
           } else {
@@ -820,6 +1018,133 @@ final class ScrollingCaptureCoordinator {
   private func scaleFactor(for rect: CGRect) -> CGFloat {
     let screen = NSScreen.screens.first(where: { $0.frame.intersects(rect) }) ?? NSScreen.main
     return screen?.backingScaleFactor ?? 2
+  }
+
+  private func previewRuntimeState() -> ScrollingCaptureRuntimeState {
+    guard let sessionModel, sessionModel.phase == .capturing else { return .ready }
+    if sessionModel.isUsingLivePreview, sessionModel.livePreviewImage != nil {
+      return .previewing
+    }
+    return .streaming
+  }
+
+  private func performScheduledCommit(_ request: ScrollingCaptureCommitScheduler.Request) async {
+    let update = await refreshPreview(
+      reason: request.reason,
+      expectedSignedDeltaPixelsOverride: request.expectedSignedDeltaPixels
+    )
+    lastScheduledCommitSequenceNumber = request.sequenceNumber
+    lastScheduledCommitUpdate = update
+  }
+
+  private func makeCommitScheduler() -> ScrollingCaptureCommitScheduler {
+    ScrollingCaptureCommitScheduler(
+      onRequestCoalesced: { [weak self] in
+        self?.sessionMetrics.recordCommitCoalesced()
+      },
+      operation: { [weak self] request in
+        guard let self else { return }
+        await self.performScheduledCommit(request)
+      }
+    )
+  }
+
+  @discardableResult
+  private func scheduleCommitRefresh(
+    reason: String,
+    expectedSignedDeltaPixelsOverride: Int? = nil
+  ) -> ScrollingCaptureCommitScheduler.Request? {
+    sessionMetrics.recordCommitScheduled()
+    return commitScheduler?.schedule(
+      reason: reason,
+      expectedSignedDeltaPixels: expectedSignedDeltaPixelsOverride
+    )
+  }
+
+  private func scheduleCommitRefreshAndWait(
+    reason: String,
+    expectedSignedDeltaPixelsOverride: Int? = nil
+  ) async -> ScrollingCaptureStitchUpdate? {
+    guard let commitScheduler else {
+      return await refreshPreview(
+        reason: reason,
+        expectedSignedDeltaPixelsOverride: expectedSignedDeltaPixelsOverride
+      )
+    }
+
+    guard let request = scheduleCommitRefresh(
+      reason: reason,
+      expectedSignedDeltaPixelsOverride: expectedSignedDeltaPixelsOverride
+    ) else {
+      return nil
+    }
+
+    await commitScheduler.waitForIdle()
+    guard lastScheduledCommitSequenceNumber >= request.sequenceNumber else { return nil }
+    return lastScheduledCommitUpdate
+  }
+
+  private func waitForAutoScrollFrameObservation(after sequenceNumber: Int) async -> AutoScrollFrameObservation {
+    guard let sessionModel else { return .timedOut(waitDurationMs: 0) }
+
+    if !sessionModel.isUsingLivePreview {
+      let startedAt = CFAbsoluteTimeGetCurrent()
+      try? await Task.sleep(nanoseconds: autoScrollFallbackCaptureDelayNanoseconds)
+      let waitDurationMs = Self.elapsedMilliseconds(since: startedAt)
+      sessionMetrics.recordAutoScrollFrameObservation(
+        waitDurationMs: waitDurationMs,
+        didObserveFrame: false
+      )
+      return .fallbackDelay(waitDurationMs: waitDurationMs)
+    }
+
+    let startedAt = CFAbsoluteTimeGetCurrent()
+    while !Task.isCancelled {
+      if livePreviewFrameSequence > sequenceNumber {
+        let waitDurationMs = Self.elapsedMilliseconds(since: startedAt)
+        sessionMetrics.recordAutoScrollFrameObservation(
+          waitDurationMs: waitDurationMs,
+          didObserveFrame: true
+        )
+        return .frameArrived(waitDurationMs: waitDurationMs)
+      }
+
+      let elapsedNanoseconds = UInt64((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000_000_000)
+      if elapsedNanoseconds >= autoScrollFrameWaitTimeoutNanoseconds {
+        let waitDurationMs = Self.elapsedMilliseconds(since: startedAt)
+        sessionMetrics.recordAutoScrollFrameObservation(
+          waitDurationMs: waitDurationMs,
+          didObserveFrame: false
+        )
+        return .timedOut(waitDurationMs: waitDurationMs)
+      }
+
+      try? await Task.sleep(nanoseconds: livePreviewFramePollIntervalNanoseconds)
+    }
+
+    let waitDurationMs = Self.elapsedMilliseconds(since: startedAt)
+    sessionMetrics.recordAutoScrollFrameObservation(
+      waitDurationMs: waitDurationMs,
+      didObserveFrame: false
+    )
+    return .timedOut(waitDurationMs: waitDurationMs)
+  }
+
+  private func flushSessionMetricsIfNeeded(reason: String) {
+    guard !didFlushSessionMetrics else { return }
+    guard sessionMetrics.hadActivity else { return }
+
+    didFlushSessionMetrics = true
+    DiagnosticLogger.shared.log(
+      .info,
+      .capture,
+      "Scrolling capture session metrics",
+      context: sessionMetrics.summaryContext(reason: reason)
+    )
+  }
+
+  private static func elapsedMilliseconds(since startedAt: CFAbsoluteTime) -> Int {
+    Int(((CFAbsoluteTimeGetCurrent() - startedAt) * 1_000).rounded())
   }
 }
 

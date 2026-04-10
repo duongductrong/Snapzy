@@ -4,6 +4,11 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Features
+- rework Scrolling Capture around a region-scoped live preview lane, latest-only commit scheduler, fast guided stitch matching, and frame-aware auto-scroll fallback handling
+
 
 
 

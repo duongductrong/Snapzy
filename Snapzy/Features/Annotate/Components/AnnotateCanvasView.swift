@@ -386,8 +386,6 @@ struct AnnotateCanvasView: View {
 
   @ViewBuilder
   private func backgroundLayer(width: CGFloat, height: CGFloat) -> some View {
-    // Use effective values for smooth preview during slider drag
-    let currentCornerRadius = state.effectiveCornerRadius
     let currentShadowIntensity = state.effectiveShadowIntensity
 
     Group {
@@ -396,7 +394,7 @@ struct AnnotateCanvasView: View {
         EmptyView()
 
       case .gradient(let preset):
-        RoundedRectangle(cornerRadius: currentCornerRadius)
+        Rectangle()
           .fill(LinearGradient(
             colors: preset.colors,
             startPoint: .topLeading,
@@ -414,7 +412,7 @@ struct AnnotateCanvasView: View {
         // Check if this is a preset wallpaper
         if url.scheme == "preset", let presetName = url.host,
            let preset = WallpaperPreset(rawValue: presetName) {
-          RoundedRectangle(cornerRadius: currentCornerRadius)
+          Rectangle()
             .fill(preset.gradient)
             .frame(width: width, height: height)
             .shadow(
@@ -430,7 +428,6 @@ struct AnnotateCanvasView: View {
             .aspectRatio(contentMode: .fill)
             .frame(width: width, height: height)
             .clipped()
-            .cornerRadius(currentCornerRadius)
         }
 
       case .blurred(let url):
@@ -443,7 +440,6 @@ struct AnnotateCanvasView: View {
             .aspectRatio(contentMode: .fill)
             .frame(width: width, height: height)
             .clipped()
-            .cornerRadius(currentCornerRadius)
         } else if let nsImage = state.cachedBackgroundImage {
           // Fallback: show non-blurred while computing
           Image(nsImage: nsImage)
@@ -451,11 +447,10 @@ struct AnnotateCanvasView: View {
             .aspectRatio(contentMode: .fill)
             .frame(width: width, height: height)
             .clipped()
-            .cornerRadius(currentCornerRadius)
         }
 
       case .solidColor(let color):
-        RoundedRectangle(cornerRadius: currentCornerRadius)
+        Rectangle()
           .fill(color)
           .frame(width: width, height: height)
           .shadow(

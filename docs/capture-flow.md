@@ -141,51 +141,60 @@ flowchart TD
 
     subgraph Session["ScrollingCaptureCoordinator"]
         B1["beginSession(rect, saveDirectory, format, prefetchedContentTask)"]
-        B2["Prewarm prepared area capture context"]
-        B3["Prepare AX auto-scroll engine if enabled"]
-        B4["Show HUD + live preview"]
+        B2["Prepare region-scoped area capture context (pixel aligned sourceRect)"]
+        B3["Create live preview stream + commit scheduler"]
+        B4["Prepare AX auto-scroll engine if enabled"]
+        B5["Show HUD + preview windows"]
     end
 
-    subgraph FirstFrame["Start Capture"]
-        C1["startCapture()"]
-        C2["Capture first visible frame"]
-        C3["ScrollingCaptureStitcher initializes stitched canvas"]
-        C4{"AX auto-scroll ready?"}
+    subgraph Preview["Preview Lane"]
+        C1["ScrollingCaptureFrameSource starts SCStream"]
+        C2["Latest complete region frame arrives"]
+        C3["ScrollingCapturePreviewRenderer presents current frame"]
+        C4["Stale preview frames are dropped"]
+    end
+
+    subgraph Commit["Commit Lane"]
+        D1["Initial frame commit or scroll-triggered commit requested"]
+        D2["ScrollingCaptureCommitScheduler keeps only latest pending request"]
+        D3["refreshPreview() captures selected region"]
+        D4["ScrollingCaptureStitcher initializes or appends"]
+        D5["Stitched preview + metrics updated"]
+        D6{"Accepted / ignored / paused / height limit?"}
+    end
+
+    subgraph Manual["Manual Scroll Input"]
+        E1["Global scroll monitor accumulates wheel deltas"]
+        E2["Short settle timer decides commit eligibility"]
+        E3["Manual request enqueued into commit scheduler"]
     end
 
     subgraph Auto["AX Auto-scroll Loop"]
-        D1["Resolve best AX scroll target from selected rect"]
-        D2["Post pixel wheel event to target pid"]
-        D3["Wait short settle delay"]
-        D4["Capture next frame"]
-        D5["Vision + consensus alignment"]
-        D6["Adapt next step size from accepted delta"]
-        D7{"Boundary / no movement / misses?"}
-    end
-
-    subgraph Manual["Manual Scroll Loop"]
-        E1["Global scroll monitor accumulates wheel deltas"]
-        E2["Throttle refresh until gesture settles"]
-        E3["Capture next frame"]
-        E4["Guided + recovery alignment"]
-        E5{"Append / ignore / pause"}
+        F1["Resolve best AX scroll target from selected rect"]
+        F2["Post pixel wheel event or AX scrollbar nudge"]
+        F3["Wait for next live preview frame or fallback delay"]
+        F4["Commit scheduler flushes the newest auto-scroll request"]
+        F5["Adapt next step size from accepted delta"]
+        F6{"Boundary / no movement / misses?"}
     end
 
     subgraph Finish["Finish"]
-        F1["finish() flushes final frame if needed"]
-        F2["saveProcessedImage(latestImage, directory, format)"]
-        F3["PostCaptureActionHandler"]
+        G1["finish() waits for commit lane, flushes final frame if needed"]
+        G2["saveProcessedImage(latestImage, directory, format)"]
+        G3["PostCaptureActionHandler"]
     end
 
-    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> B4
-    B4 --> C1 --> C2 --> C3 --> C4
-    C4 -->|Yes| D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7
-    C4 -->|No| E1 --> E2 --> E3 --> E4 --> E5
-    D7 -->|Continue| D2
-    D7 -->|Fallback to manual| E1
-    D7 -->|Reached boundary| F1
-    E5 -->|Continue| E1
-    E5 -->|Done / limit| F1 --> F2 --> F3
+    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> B4 --> B5
+    B5 --> C1 --> C2 --> C3 --> C4 --> C2
+    B5 --> D1 --> D2 --> D3 --> D4 --> D5 --> D6
+    B5 --> E1 --> E2 --> E3 --> D2
+    B5 --> F1 --> F2 --> F3 --> F4 --> D3
+    D6 -->|Continue manual| E1
+    D6 -->|Continue auto| F5 --> F6
+    F6 -->|Continue| F2
+    F6 -->|Fallback to manual| E1
+    F6 -->|Reached boundary| G1
+    D6 -->|Done / limit| G1 --> G2 --> G3
 ```
 
 ## Key Files
@@ -207,8 +216,12 @@ flowchart TD
 | `Features/Recording/RecordingSession.swift` | Thread-safe frame append and first-video-frame callback used to align cursor timeline with media timeline. |
 | `Features/VideoEditor/Services/VideoEditorAutoFocusEngine.swift` | Rebuilds auto-follow path from metadata and computes quality metrics (lock accuracy/visibility/error). |
 | `Services/Capture/ScrollingCapture/ScrollingCaptureCoordinator.swift` | Runs the scrolling-capture session, manages preview cadence, coordinates auto-scroll, and saves the stitched result. |
+| `Services/Capture/ScrollingCapture/ScrollingCaptureFrameSource.swift` | Owns the region-scoped `SCStream` used for low-latency live preview frames. |
+| `Services/Capture/ScrollingCapture/ScrollingCaptureCommitScheduler.swift` | Coalesces pending stitch refresh requests so the commit lane only consumes the latest eligible work. |
+| `Services/Capture/ScrollingCapture/ScrollingCapturePreviewRenderer.swift` | Layer-backed preview surface that presents `CGImage` frames without rebuilding SwiftUI image state every refresh. |
+| `Services/Capture/ScrollingCapture/ScrollingCaptureMetrics.swift` | Records per-session preview, commit, alignment, and auto-scroll diagnostics for before/after comparison. |
 | `Services/Capture/ScrollingCapture/ScrollingCaptureAutoScrollEngine.swift` | Finds the best AX scroll target inside the selected rect and drives synthetic scroll-wheel events with fallback handling. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Builds the long image with band trimming, Vision registration, consensus scoring, and guided/recovery alignment. |
+| `Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Builds the long image with band trimming, a fast guided matcher on the hot path, and Vision-assisted recovery only when confidence is unsafe. |
 | `Services/Capture/ScrollingCapture/ScrollingCaptureHUDView.swift` | Presents capture controls, auto-scroll state, and live guidance during the session. |
 
 ## Capture Modes
@@ -230,10 +243,10 @@ flowchart TD
 
 1. `AreaSelectionController` shows overlay → user drags selection rect
 2. Find matching `NSScreen` and `SCDisplay`
-3. Capture **full display** at native pixel resolution
+3. Build a prepared area-capture context with a pixel-aligned selection rect and region-scoped `sourceRect`
    - `showsCursor` follows user preference `screenshot.showCursor` (default: `false`)
-4. **Post-capture crop** using `CGImage.cropping(to:)` with pixel-coordinate rect — avoids `sourceRect` interpolation blur
-5. Save cropped image
+4. Capture only the selected region at native pixel resolution
+5. Save the region image directly
 
 ### OCR Area (`captureAreaAsImage`)
 
@@ -242,13 +255,14 @@ Same as Area Select but returns `CGImage` directly for text recognition instead 
 ### Scrolling Capture (`captureScrolling`)
 
 1. `CaptureViewModel` switches the area-selection overlay into `.scrollingCapture` mode.
-2. `ScrollingCaptureCoordinator.beginSession()` keeps a persistent highlighted region overlay on screen, creates the HUD + preview windows, prewarms a prepared area-capture context, and probes AX auto-scroll when the preference is enabled.
-3. `startCapture()` grabs the first visible frame and initializes `ScrollingCaptureStitcher`.
-4. The session then follows one of two loops:
-   - AX auto-scroll loop: `ScrollingCaptureAutoScrollEngine` resolves the best overlapping AX scroll container, posts pixel wheel events to the target app, falls back to direct AX scrollbar value nudges when wheel delivery stalls, waits a short settle delay, and asks the coordinator to capture the next frame.
-   - Manual loop: the coordinator listens for global wheel events, blends raw wheel deltas with the last accepted stitched delta, waits for the gesture to settle, and captures the next frame.
-5. `ScrollingCaptureStitcher` trims static top/bottom/side bands, estimates translation with Vision, scores multi-band agreement, and either appends, ignores, or pauses when confidence is unsafe.
-6. `finish()` flushes any final visible frame, saves the stitched image, and hands the result to the normal post-capture action pipeline.
+2. `ScrollingCaptureCoordinator.beginSession()` keeps a persistent highlighted region overlay on screen, creates the HUD + preview windows, prepares a region-scoped area-capture context, creates a commit scheduler, and probes AX auto-scroll when the preference is enabled.
+3. `startCapture()` starts the region-scoped live preview stream first, then commits the first frame into `ScrollingCaptureStitcher`.
+4. From there the session runs two lanes:
+   - Preview lane: `ScrollingCaptureFrameSource` receives complete `SCStream` frames for the selected region and `ScrollingCapturePreviewRenderer` presents the newest one immediately.
+   - Commit lane: manual scroll input or AX auto-scroll requests are coalesced by `ScrollingCaptureCommitScheduler`, then `refreshPreview()` captures the newest eligible region frame and submits it to the stitcher.
+5. `ScrollingCaptureStitcher` first tries a fast guided matcher without Vision. If that cannot produce a safe match, it escalates to Vision-assisted guided/recovery search and records alignment confidence for diagnostics.
+6. AX auto-scroll waits for the next live preview frame before scheduling the next commit whenever the stream is healthy. If the stream stalls, Snapzy falls back to a bounded capture delay and eventually pauses auto-scroll instead of smearing the output.
+7. `finish()` waits for the commit lane to go idle, flushes any final visible frame, rebuilds the final merged bitmap if the live lane skipped preview composition, saves the stitched image, and hands the result to the normal post-capture action pipeline.
 
 ## Image Quality Pipeline
 
@@ -267,11 +281,14 @@ Same as Area Select but returns `CGImage` directly for text recognition instead 
 Scrolling capture is intentionally closed-loop rather than trusting raw wheel deltas.
 
 1. Selection hygiene matters: best results come from selecting only the moving content, not sticky headers, sidebars, or oversized scrollbars.
-2. AX auto-scroll is opportunistic: Snapzy first looks for a supported scrollable AX element that materially overlaps the selected rect. If that probe fails, the session stays in manual mode.
-3. Stitch acceptance is image-driven: wheel deltas only guide the search window. Final acceptance depends on visual alignment, not on the gesture delta alone.
-4. Recovery is multi-stage: the stitcher uses trimmed content regions, Vision-based translation estimates, and a wider recovery search before pausing.
-5. Auto-scroll is multi-strategy: Snapzy tries wheel-event scrolling first and can fall back to direct AX scrollbar adjustments on native scroll surfaces before giving up.
-6. Auto-scroll remains bounded: repeated no-movement or alignment failures fall back to manual mode instead of appending low-confidence frames.
+2. Live preview is region-scoped: the preview lane samples only the selected region via `SCStreamConfiguration.sourceRect`, so the current frame can stay responsive even when stitch work is busy.
+3. Manual commit is latest-only: the commit scheduler coalesces pending refreshes so fast scrolling does not create an unbounded backlog of stale stitch jobs.
+4. AX auto-scroll is opportunistic: Snapzy first looks for a supported scrollable AX element that materially overlaps the selected rect. If that probe fails, the session stays in manual mode.
+5. Stitch acceptance is image-driven: wheel deltas only guide the search window. Final acceptance depends on visual alignment, not on the gesture delta alone.
+6. Recovery is multi-stage: the stitcher tries a fast guided matcher first, then escalates to Vision-assisted guided/recovery search before pausing.
+7. Auto-scroll is frame-aware when possible: Snapzy waits for the next live preview frame before committing the newest auto-scroll request, which keeps step pacing closer to what the user actually sees.
+8. Auto-scroll is multi-strategy: Snapzy tries wheel-event scrolling first and can fall back to direct AX scrollbar adjustments on native scroll surfaces before giving up.
+9. Auto-scroll remains bounded: repeated frame stalls, no-movement results, or alignment failures fall back to manual mode instead of appending low-confidence frames.
 
 ## Post-Capture Actions
 

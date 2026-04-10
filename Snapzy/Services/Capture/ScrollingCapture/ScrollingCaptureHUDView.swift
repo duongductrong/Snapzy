@@ -64,6 +64,12 @@ struct ScrollingCaptureHUDView: View {
           .foregroundStyle(.secondary)
       }
 
+      if model.phase != .ready {
+        Text(model.runtimeState.label)
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundStyle(.secondary)
+      }
+
       if model.acceptedFrameCount > 0 {
         Text("\(model.acceptedFrameCount) frame\(model.acceptedFrameCount == 1 ? "" : "s") stitched • \(model.stitchedPixelHeight) px")
           .font(.system(size: 11, weight: .medium))

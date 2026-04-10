@@ -23,6 +23,26 @@ enum ScrollingCaptureStitchOutcome {
   case reachedHeightLimit
 }
 
+enum ScrollingCaptureAlignmentPath: String {
+  case initialFrame = "initial-frame"
+  case fastGuided = "fast-guided"
+  case guidedVision = "guided-vision"
+  case recoveryVision = "recovery-vision"
+  case noMovement = "no-movement"
+  case alignmentFailed = "alignment-failed"
+  case heightLimit = "height-limit"
+}
+
+struct ScrollingCaptureAlignmentDebugInfo {
+  let path: ScrollingCaptureAlignmentPath
+  let usedVisionEstimate: Bool
+  let confidence: Double
+  let pixelScore: Double?
+  let totalScore: Double?
+  let appendDeltaY: Int?
+  let visionAgreementCount: Int
+}
+
 struct ScrollingCaptureStitchUpdate {
   let outcome: ScrollingCaptureStitchOutcome
   let mergedImage: CGImage?
@@ -30,6 +50,7 @@ struct ScrollingCaptureStitchUpdate {
   let outputHeight: Int
   let matchFailureCount: Int
   let mergeDirection: ScrollingCaptureMergeDirection
+  let alignmentDebug: ScrollingCaptureAlignmentDebugInfo?
 }
 
 final class ScrollingCaptureStitcher {
@@ -316,20 +337,30 @@ final class ScrollingCaptureStitcher {
       acceptedFrameCount: acceptedFrameCount,
       outputHeight: outputHeight,
       matchFailureCount: matchNotFoundCount,
-      mergeDirection: mergeDirection
+      mergeDirection: mergeDirection,
+      alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+        path: .initialFrame,
+        usedVisionEstimate: false,
+        confidence: 1,
+        pixelScore: nil,
+        totalScore: nil,
+        appendDeltaY: nil,
+        visionAgreementCount: 0
+      )
     )
   }
 
   func append(
     _ image: CGImage,
     maxOutputHeight: Int,
-    expectedSignedDeltaPixels: Int? = nil
+    expectedSignedDeltaPixels: Int? = nil,
+    renderMergedImage: Bool = true
   ) -> ScrollingCaptureStitchUpdate? {
     guard let lastRaster, let baseRaster else { return start(with: image) }
     guard let raster = RasterImage(cgImage: image) else { return nil }
     guard raster.width == lastRaster.width, raster.height == lastRaster.height else {
       matchNotFoundCount += 1
-      return currentUpdate(outcome: .ignoredAlignmentFailed)
+      return currentUpdate(outcome: .ignoredAlignmentFailed, includeMergedImage: renderMergedImage)
     }
 
     let inferredHeaderHeight = headerHeight == 0
@@ -352,7 +383,6 @@ final class ScrollingCaptureStitcher {
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth
     )
-
     let frameDifference = contentDifference(
       previous: lastRaster,
       current: raster,
@@ -361,13 +391,7 @@ final class ScrollingCaptureStitcher {
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth
     )
-    if frameDifference < 8.5,
-      !(visionAlignmentEstimate?.agreementCount ?? 0 >= 2 && (visionAlignmentEstimate?.deltaY ?? 0) >= 10)
-    {
-      return currentUpdate(outcome: .ignoredNoMovement)
-    }
-
-    let guidedMatch = bestMatch(
+    let fastGuidedMatch = bestMatch(
       previous: lastRaster,
       current: raster,
       headerHeight: inferredHeaderHeight,
@@ -375,24 +399,87 @@ final class ScrollingCaptureStitcher {
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth,
       expectedSignedDeltaPixels: expectedSignedDeltaPixels,
-      visionAlignmentEstimate: visionAlignmentEstimate,
+      visionAlignmentEstimate: nil,
       searchMode: .guided
     )
-    let match = guidedMatch ?? bestMatch(
-      previous: lastRaster,
-      current: raster,
-      headerHeight: inferredHeaderHeight,
-      footerHeight: inferredFooterHeight,
-      leadingStaticWidth: inferredLeadingStaticWidth,
-      trailingStaticWidth: inferredTrailingStaticWidth,
-      expectedSignedDeltaPixels: nil,
-      visionAlignmentEstimate: visionAlignmentEstimate,
-      searchMode: .recovery
-    )
+
+    if
+      frameDifference < 8.5,
+      !(visionAlignmentEstimate?.agreementCount ?? 0 >= 2 && (visionAlignmentEstimate?.deltaY ?? 0) >= 10),
+      fastGuidedMatch == nil
+    {
+      return currentUpdate(
+        outcome: .ignoredNoMovement,
+        includeMergedImage: renderMergedImage,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .noMovement,
+          usedVisionEstimate: false,
+          confidence: 1,
+          pixelScore: nil,
+          totalScore: nil,
+          appendDeltaY: nil,
+          visionAgreementCount: 0
+        )
+      )
+    }
+
+    var alignmentPath: ScrollingCaptureAlignmentPath = .fastGuided
+    var match = fastGuidedMatch
+
+    if shouldValidateFastGuidedMatch(match, visionAlignmentEstimate: visionAlignmentEstimate) {
+      let guidedVisionMatch = bestMatch(
+        previous: lastRaster,
+        current: raster,
+        headerHeight: inferredHeaderHeight,
+        footerHeight: inferredFooterHeight,
+        leadingStaticWidth: inferredLeadingStaticWidth,
+        trailingStaticWidth: inferredTrailingStaticWidth,
+        expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+        visionAlignmentEstimate: visionAlignmentEstimate,
+        searchMode: .guided
+      )
+
+      if let guidedVisionMatch {
+        match = guidedVisionMatch
+        alignmentPath = .guidedVision
+      } else if match == nil || !fastGuidedMatchDisagreesWithVision(match, visionAlignmentEstimate: visionAlignmentEstimate) {
+        match = fastGuidedMatch
+        alignmentPath = .fastGuided
+      } else {
+        match = nil
+      }
+    }
+
+    if match == nil {
+      match = bestMatch(
+        previous: lastRaster,
+        current: raster,
+        headerHeight: inferredHeaderHeight,
+        footerHeight: inferredFooterHeight,
+        leadingStaticWidth: inferredLeadingStaticWidth,
+        trailingStaticWidth: inferredTrailingStaticWidth,
+        expectedSignedDeltaPixels: nil,
+        visionAlignmentEstimate: visionAlignmentEstimate,
+        searchMode: .recovery
+      )
+      alignmentPath = .recoveryVision
+    }
 
     guard let match else {
       matchNotFoundCount += 1
-      return currentUpdate(outcome: .ignoredAlignmentFailed)
+      return currentUpdate(
+        outcome: .ignoredAlignmentFailed,
+        includeMergedImage: renderMergedImage,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .alignmentFailed,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          confidence: 0,
+          pixelScore: nil,
+          totalScore: nil,
+          appendDeltaY: nil,
+          visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
+        )
+      )
     }
 
     if mergeDirection == .unresolved {
@@ -406,13 +493,34 @@ final class ScrollingCaptureStitcher {
 
     let remainingHeight = maxOutputHeight - outputHeight
     guard remainingHeight > 0 else {
-      return currentUpdate(outcome: .reachedHeightLimit)
+      return currentUpdate(
+        outcome: .reachedHeightLimit,
+        includeMergedImage: renderMergedImage,
+        alignmentDebug: makeAlignmentDebugInfo(
+          for: match,
+          path: .heightLimit,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          visionAlignmentEstimate: visionAlignmentEstimate
+        )
+      )
     }
 
     let acceptedDelta = min(match.deltaY, remainingHeight)
     guard let sliceStart = sliceStartRow(for: match.direction, in: raster, deltaY: acceptedDelta) else {
       matchNotFoundCount += 1
-      return currentUpdate(outcome: .ignoredAlignmentFailed)
+      return currentUpdate(
+        outcome: .ignoredAlignmentFailed,
+        includeMergedImage: renderMergedImage,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .alignmentFailed,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          confidence: 0,
+          pixelScore: match.pixelScore,
+          totalScore: match.totalScore,
+          appendDeltaY: nil,
+          visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
+        )
+      )
     }
 
     contentSlices.append(ContentSlice(raster: raster, startRow: sliceStart, rowCount: acceptedDelta))
@@ -435,7 +543,17 @@ final class ScrollingCaptureStitcher {
       ? .reachedHeightLimit
       : .appended(deltaY: acceptedDelta)
 
-    return currentUpdate(outcome: outcome)
+    return currentUpdate(
+      outcome: outcome,
+      includeMergedImage: renderMergedImage,
+      alignmentDebug: makeAlignmentDebugInfo(
+        for: match,
+        path: acceptedDelta < match.deltaY ? .heightLimit : alignmentPath,
+        usedVisionEstimate: visionAlignmentEstimate != nil,
+        visionAlignmentEstimate: visionAlignmentEstimate,
+        appendDeltaY: acceptedDelta
+      )
+    )
   }
 
   func mergedImage() -> CGImage? {
@@ -471,14 +589,37 @@ final class ScrollingCaptureStitcher {
     return cachedMergedImage
   }
 
-  private func currentUpdate(outcome: ScrollingCaptureStitchOutcome) -> ScrollingCaptureStitchUpdate {
+  private func currentUpdate(
+    outcome: ScrollingCaptureStitchOutcome,
+    includeMergedImage: Bool = true,
+    alignmentDebug: ScrollingCaptureAlignmentDebugInfo? = nil
+  ) -> ScrollingCaptureStitchUpdate {
     ScrollingCaptureStitchUpdate(
       outcome: outcome,
-      mergedImage: mergedImage(),
+      mergedImage: includeMergedImage ? mergedImage() : cachedMergedImage,
       acceptedFrameCount: acceptedFrameCount,
       outputHeight: outputHeight,
       matchFailureCount: matchNotFoundCount,
-      mergeDirection: mergeDirection
+      mergeDirection: mergeDirection,
+      alignmentDebug: alignmentDebug
+    )
+  }
+
+  private func makeAlignmentDebugInfo(
+    for match: Match,
+    path: ScrollingCaptureAlignmentPath,
+    usedVisionEstimate: Bool,
+    visionAlignmentEstimate: VisionAlignmentEstimate?,
+    appendDeltaY: Int? = nil
+  ) -> ScrollingCaptureAlignmentDebugInfo {
+    ScrollingCaptureAlignmentDebugInfo(
+      path: path,
+      usedVisionEstimate: usedVisionEstimate,
+      confidence: matcherConfidence(for: match),
+      pixelScore: match.pixelScore,
+      totalScore: match.totalScore,
+      appendDeltaY: appendDeltaY,
+      visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
     )
   }
 
@@ -1127,6 +1268,48 @@ final class ScrollingCaptureStitcher {
     }
 
     return false
+  }
+
+  private func matcherConfidence(for match: Match) -> Double {
+    let pixelComponent = max(0, 1 - match.pixelScore / 20)
+    let totalComponent = max(0, 1 - match.totalScore / 32)
+    let strongBandComponent = Double(match.strongBandCount) / Double(max(1, match.bandCount))
+    let variancePenalty = min(1, match.bandVariance / 30)
+
+    let confidence =
+      pixelComponent * 0.4 +
+      totalComponent * 0.3 +
+      strongBandComponent * 0.2 +
+      (1 - variancePenalty) * 0.1
+
+    return min(1, max(0, confidence))
+  }
+
+  private func shouldValidateFastGuidedMatch(
+    _ match: Match?,
+    visionAlignmentEstimate: VisionAlignmentEstimate?
+  ) -> Bool {
+    guard let match else { return true }
+    guard let visionAlignmentEstimate, visionAlignmentEstimate.deltaY > 0 else { return false }
+
+    return matcherConfidence(for: match) < 0.82
+      || fastGuidedMatchDisagreesWithVision(match, visionAlignmentEstimate: visionAlignmentEstimate)
+  }
+
+  private func fastGuidedMatchDisagreesWithVision(
+    _ match: Match?,
+    visionAlignmentEstimate: VisionAlignmentEstimate?
+  ) -> Bool {
+    guard let match, let visionAlignmentEstimate, visionAlignmentEstimate.deltaY > 0 else { return false }
+
+    let tolerance: Int
+    if visionAlignmentEstimate.agreementCount >= 2 {
+      tolerance = max(18, visionAlignmentEstimate.deltaY / 3)
+    } else {
+      tolerance = max(32, visionAlignmentEstimate.deltaY / 2)
+    }
+
+    return abs(match.deltaY - visionAlignmentEstimate.deltaY) > tolerance
   }
 
   private func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {
