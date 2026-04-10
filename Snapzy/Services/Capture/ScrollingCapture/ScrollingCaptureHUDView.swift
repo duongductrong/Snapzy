@@ -27,18 +27,24 @@ struct ScrollingCaptureHUDView: View {
         Spacer()
 
         if model.phase == .ready {
-          Button("Start Capture", action: onStart)
-            .buttonStyle(.borderedProminent)
-            .controlSize(.small)
-        } else {
           Button("Cancel", action: onCancel)
             .buttonStyle(.bordered)
             .controlSize(.small)
 
+          Button("Start Capture", action: onStart)
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .disabled(!model.canStartCapture)
+        } else {
+          Button("Cancel", action: onCancel)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
+            .disabled(!model.canCancelSession)
+
           Button("Done", action: onDone)
             .buttonStyle(.borderedProminent)
             .controlSize(.small)
-            .disabled(model.phase == .saving)
+            .disabled(!model.canFinishCapture)
         }
       }
 
@@ -51,7 +57,7 @@ struct ScrollingCaptureHUDView: View {
           }
         ))
         .toggleStyle(.switch)
-        .disabled(!model.autoScrollAvailable || model.phase != .ready)
+        .disabled(!model.autoScrollAvailable || model.phase != .ready || model.isInteractionLocked)
 
         Text(model.autoScrollStatusText)
           .font(.system(size: 11))
@@ -70,10 +76,27 @@ struct ScrollingCaptureHUDView: View {
           .foregroundStyle(.secondary)
       }
 
+      if model.isInteractionLocked {
+        HStack(spacing: 8) {
+          ProgressView()
+            .controlSize(.small)
+          Text("Snapzy is still working on the current capture.")
+            .font(.system(size: 11, weight: .medium))
+            .foregroundStyle(.secondary)
+        }
+      }
+
       if model.acceptedFrameCount > 0 {
         Text("\(model.acceptedFrameCount) frame\(model.acceptedFrameCount == 1 ? "" : "s") stitched • \(model.stitchedPixelHeight) px")
           .font(.system(size: 11, weight: .medium))
           .foregroundStyle(.secondary)
+      }
+
+      if model.phase != .ready {
+        Text(model.previewTruthDescription)
+          .font(.system(size: 11))
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
       }
 
       Text(model.statusText)

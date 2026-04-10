@@ -10,8 +10,21 @@ import SwiftUI
 struct ScrollingCapturePreviewView: View {
   @ObservedObject var model: ScrollingCaptureSessionModel
 
-  private var isShowingLivePreview: Bool {
-    model.phase == .capturing && model.isUsingLivePreview && model.livePreviewImage != nil
+  private var badgeColor: Color {
+    switch model.previewTruthState {
+    case .committedOnly:
+      return .secondary.opacity(0.9)
+    case .liveSynced:
+      return .green.opacity(0.9)
+    case .liveAhead:
+      return .orange.opacity(0.95)
+    case .pausedRecovery:
+      return .yellow.opacity(0.9)
+    case .finalizing, .saving:
+      return .blue.opacity(0.9)
+    case .ready:
+      return .clear
+    }
   }
 
   var body: some View {
@@ -20,15 +33,15 @@ struct ScrollingCapturePreviewView: View {
         Text("Preview")
           .font(.system(size: 12, weight: .semibold))
 
-        if isShowingLivePreview {
-          Text("Live")
+        if let badgeLabel = model.previewTruthState.badgeLabel {
+          Text(badgeLabel)
             .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.white)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
               Capsule(style: .continuous)
-                .fill(Color.accentColor.opacity(0.9))
+                .fill(badgeColor)
             )
         }
       }
@@ -38,7 +51,7 @@ struct ScrollingCapturePreviewView: View {
           GeometryReader { geometry in
             ScrollingCapturePreviewRenderer(
               image: previewImage,
-              scaling: isShowingLivePreview || model.acceptedFrameCount <= 1 ? .fit : .fillBottom
+              scaling: model.isShowingLiveViewport || model.acceptedFrameCount <= 1 ? .fit : .fillBottom
             )
               .frame(
                 width: geometry.size.width,
@@ -66,10 +79,19 @@ struct ScrollingCapturePreviewView: View {
           .fill(Color.black.opacity(0.08))
       )
 
-      Text(model.previewCaption)
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
+      VStack(alignment: .leading, spacing: 4) {
+        Text(model.previewCaption)
+          .font(.system(size: 11))
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+
+        if model.phase != .ready {
+          Text(model.previewTruthDescription)
+            .font(.system(size: 11))
+            .foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+      }
     }
     .padding(12)
     .frame(width: 244)

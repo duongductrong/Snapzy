@@ -27,6 +27,7 @@ final class ScrollingCaptureCoordinator {
   private let autoScrollFrameWaitTimeoutNanoseconds: UInt64 = 220_000_000
   private let autoScrollFallbackCaptureDelayNanoseconds: UInt64 = 85_000_000
   private let livePreviewFramePollIntervalNanoseconds: UInt64 = 8_000_000
+  private let previewTruthLagToleranceMs = 90
   private let scrollHitSlop: CGFloat = 32
   private let processingQueue = DispatchQueue(
     label: "com.snapzy.scrolling-capture.processing",
@@ -49,6 +50,8 @@ final class ScrollingCaptureCoordinator {
   private var format: ImageFormat = .png
   private var prefetchedContentTask: ShareableContentPrefetchTask?
   private var scrollMonitor: Any?
+  private var localSessionKeyMonitor: Any?
+  private var globalSessionKeyMonitor: Any?
   private var pendingRefreshTask: Task<Void, Never>?
   private var autoScrollTask: Task<Void, Never>?
   private var prepareCaptureContextTask: Task<Void, Never>?
@@ -69,6 +72,8 @@ final class ScrollingCaptureCoordinator {
   private var livePreviewFrameSequence = 0
   private var lastScheduledCommitSequenceNumber = 0
   private var lastScheduledCommitUpdate: ScrollingCaptureStitchUpdate?
+  private var lastLivePreviewPublishedAt: TimeInterval?
+  private var lastCommittedObservationAt: TimeInterval?
 
   private enum AutoScrollFrameObservation {
     case frameArrived(waitDurationMs: Int)
@@ -116,6 +121,8 @@ final class ScrollingCaptureCoordinator {
     self.livePreviewFrameSequence = 0
     self.lastScheduledCommitSequenceNumber = 0
     self.lastScheduledCommitUpdate = nil
+    self.lastLivePreviewPublishedAt = nil
+    self.lastCommittedObservationAt = nil
     self.sessionMetrics = ScrollingCaptureSessionMetrics()
     self.didFlushSessionMetrics = false
 
@@ -131,8 +138,10 @@ final class ScrollingCaptureCoordinator {
 
     hudWindow?.orderFrontRegardless()
     previewWindow?.orderFrontRegardless()
+    installSessionKeyMonitorsIfNeeded()
     prewarmCaptureContext(for: rect)
     prepareAutoScrollEngineIfNeeded(for: rect, model: model)
+    updatePreviewTruthState()
 
     if ScrollingCaptureFeature.showHints {
       AppToastManager.shared.show(
@@ -162,6 +171,7 @@ final class ScrollingCaptureCoordinator {
     commitScheduler?.cancel()
     commitScheduler = nil
     stopLivePreviewIfNeeded()
+    removeSessionKeyMonitors()
 
     if let scrollMonitor {
       NSEvent.removeMonitor(scrollMonitor)
@@ -200,6 +210,8 @@ final class ScrollingCaptureCoordinator {
     livePreviewFrameSequence = 0
     lastScheduledCommitSequenceNumber = 0
     lastScheduledCommitUpdate = nil
+    lastLivePreviewPublishedAt = nil
+    lastCommittedObservationAt = nil
     sessionMetrics = ScrollingCaptureSessionMetrics()
     didFlushSessionMetrics = false
   }
@@ -218,6 +230,7 @@ final class ScrollingCaptureCoordinator {
     sessionModel.statusText = sessionModel.autoScrollEnabled && autoScrollEngine != nil
       ? "Capturing the first frame. After that, Snapzy will auto-scroll the target surface."
       : "Capturing the first frame. After that, keep scrolling downward at a steady pace."
+    updatePreviewTruthState()
     installScrollMonitorIfNeeded()
 
     Task { @MainActor in
@@ -231,10 +244,14 @@ final class ScrollingCaptureCoordinator {
 
   private func finish() {
     guard let sessionModel else { return }
+    guard sessionModel.phase == .capturing else {
+      if sessionModel.isInteractionLocked {
+        sessionMetrics.recordFinalizingBlockedInput()
+      }
+      return
+    }
 
-    stopAutoScrollLoop()
-    pendingRefreshTask?.cancel()
-    pendingRefreshTask = nil
+    beginFinalizing()
 
     Task { @MainActor in
       await waitForPendingPreviewRefresh()
@@ -255,13 +272,23 @@ final class ScrollingCaptureCoordinator {
       }
 
       guard let latestImage, let saveDirectory else {
+        sessionMetrics.recordFinalizingCompleted(at: ProcessInfo.processInfo.systemUptime)
+        sessionModel.phase = .capturing
+        sessionModel.runtimeState = .paused
+        sessionModel.statusText =
+          "Snapzy couldn't lock a savable stitched image yet. You can keep capturing, try Done again, or Cancel."
+        sessionModel.previewCaption = "No savable stitched result is ready yet"
+        updatePreviewTruthState()
         AppToastManager.shared.show(message: "No stitched frame is ready yet.", style: .warning)
         return
       }
 
+      sessionMetrics.recordFinalizingCompleted(at: ProcessInfo.processInfo.systemUptime)
       sessionModel.phase = .saving
       sessionModel.runtimeState = .saving
       sessionModel.statusText = "Saving the stitched long image."
+      sessionModel.previewCaption = "Saving stitched result..."
+      updatePreviewTruthState()
 
       let result = await captureManager.saveProcessedImage(
         latestImage,
@@ -280,7 +307,11 @@ final class ScrollingCaptureCoordinator {
         cancel()
       case .failure(let error):
         sessionModel.phase = .capturing
-        sessionModel.statusText = "Save failed. You can try Done again."
+        sessionModel.runtimeState = .paused
+        sessionModel.statusText =
+          "Save failed. The stitched result is frozen, so you can try Done again or Cancel."
+        sessionModel.previewCaption = "Save failed • stitched result is still ready"
+        updatePreviewTruthState()
         AppToastManager.shared.show(message: error.localizedDescription, style: .error)
       }
     }
@@ -319,6 +350,7 @@ final class ScrollingCaptureCoordinator {
       pendingScrollDistancePoints = 0
       pendingScrollDirection = nil
       pendingMixedDirections = false
+      updatePreviewTruthState()
       return
     }
 
@@ -333,6 +365,7 @@ final class ScrollingCaptureCoordinator {
 
     sessionModel.statusText = "Capturing and aligning the latest visible content..."
     startLiveRefreshLoopIfNeeded()
+    updatePreviewTruthState()
   }
 
   private func refreshPreview(
@@ -341,15 +374,19 @@ final class ScrollingCaptureCoordinator {
   ) async -> ScrollingCaptureStitchUpdate? {
     let generation = sessionGeneration
     guard let sessionModel else { return nil }
+    guard sessionModel.phase == .capturing || sessionModel.phase == .finalizing else { return nil }
     guard !isRefreshingPreview else { return nil }
+    let isFinalizingRefresh = sessionModel.phase == .finalizing
 
-    sessionModel.runtimeState = .committing
+    sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .committing
+    updatePreviewTruthState()
     let refreshStartedAt = CFAbsoluteTimeGetCurrent()
     isRefreshingPreview = true
     defer {
       isRefreshingPreview = false
       if generation == sessionGeneration {
         lastRefreshTime = ProcessInfo.processInfo.systemUptime
+        updatePreviewTruthState()
       }
     }
 
@@ -371,8 +408,10 @@ final class ScrollingCaptureCoordinator {
       pendingMixedDirections = false
 
       if hadMixedDirections {
-        sessionModel.runtimeState = .paused
-        sessionModel.statusText = "Mixed scroll directions detected. Keep one direction so Snapzy can align."
+        sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
+        sessionModel.statusText = isFinalizingRefresh
+          ? "Finalizing the current stitched result after mixed scroll directions."
+          : "Mixed scroll directions detected. Keep one direction so Snapzy can align."
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -380,13 +419,16 @@ final class ScrollingCaptureCoordinator {
           stitchDurationMs: 0,
           totalDurationMs: totalDurationMs
         )
+        updatePreviewTruthState()
         return nil
       }
 
       let captureStartedAt = CFAbsoluteTimeGetCurrent()
       guard let capturedImage = try await capturePreparedAreaForSession() else {
-        sessionModel.runtimeState = .paused
-        sessionModel.statusText = "Unable to capture the selected area."
+        sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
+        sessionModel.statusText = isFinalizingRefresh
+          ? "Couldn't capture the last frame. Snapzy will save the current stitched result."
+          : "Unable to capture the selected area."
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -394,6 +436,7 @@ final class ScrollingCaptureCoordinator {
           stitchDurationMs: 0,
           totalDurationMs: totalDurationMs
         )
+        updatePreviewTruthState()
         return nil
       }
       let captureDurationMs = Self.elapsedMilliseconds(since: captureStartedAt)
@@ -412,8 +455,10 @@ final class ScrollingCaptureCoordinator {
       }
 
       guard let update else {
-        sessionModel.runtimeState = .paused
-        sessionModel.statusText = "Unable to render the stitched preview."
+        sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
+        sessionModel.statusText = isFinalizingRefresh
+          ? "Couldn't refresh the last frame. Snapzy will save the current stitched result."
+          : "Unable to render the stitched preview."
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -421,6 +466,7 @@ final class ScrollingCaptureCoordinator {
           stitchDurationMs: stitchDurationMs,
           totalDurationMs: totalDurationMs
         )
+        updatePreviewTruthState()
         return nil
       }
 
@@ -437,6 +483,7 @@ final class ScrollingCaptureCoordinator {
       {
         lockedScrollDirection = batchScrollDirection
       }
+      recordCommittedObservation(for: update.outcome)
       sessionModel.acceptedFrameCount = update.acceptedFrameCount
       sessionModel.stitchedPixelHeight = update.outputHeight
       let previewPublishDurationMs = Self.elapsedMilliseconds(since: previewPublishStartedAt)
@@ -450,6 +497,14 @@ final class ScrollingCaptureCoordinator {
         outcome: update.outcome,
         alignmentDebug: update.alignmentDebug
       )
+
+      if isFinalizingRefresh {
+        sessionModel.runtimeState = .finalizing
+        sessionModel.previewCaption = finalizingPreviewCaption(for: update)
+        sessionModel.statusText = finalizingStatusText(for: update)
+        updatePreviewTruthState()
+        return update
+      }
 
       switch update.outcome {
       case .initialized:
@@ -481,6 +536,7 @@ final class ScrollingCaptureCoordinator {
         sessionModel.statusText =
           "Reached the \(maxOutputHeight) px output limit. Press Done to save the current result."
       }
+      updatePreviewTruthState()
       return update
     } catch {
       let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
@@ -490,14 +546,17 @@ final class ScrollingCaptureCoordinator {
         stitchDurationMs: 0,
         totalDurationMs: totalDurationMs
       )
-      sessionModel.runtimeState = .paused
+      sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
       DiagnosticLogger.shared.log(
         .error,
         .capture,
         "Scrolling capture preview refresh failed",
         context: ["error": error.localizedDescription]
       )
-        sessionModel.statusText = "Preview refresh failed. You can Cancel and try again."
+      sessionModel.statusText = isFinalizingRefresh
+        ? "Finalizing the current stitched result after the last refresh failed."
+        : "Preview refresh failed. You can Cancel and try again."
+      updatePreviewTruthState()
       return nil
     }
   }
@@ -555,16 +614,21 @@ final class ScrollingCaptureCoordinator {
     livePreviewFrameSequence = 0
     lastScheduledCommitSequenceNumber = 0
     lastScheduledCommitUpdate = nil
+    lastLivePreviewPublishedAt = nil
+    lastCommittedObservationAt = nil
     sessionModel.previewImage = nil
+    sessionModel.livePreviewImage = nil
+    sessionModel.isUsingLivePreview = false
     sessionModel.previewCaption = "Start Capture to lock the first frame"
     sessionModel.acceptedFrameCount = 0
     sessionModel.stitchedPixelHeight = 0
     sessionModel.runtimeState = .ready
     sessionModel.statusText =
-      "Adjust the region so only the moving content stays inside, then press Start Capture."
+      "Adjust the region so only the moving content stays inside, then press Start Capture. Press Esc to cancel."
 
     prewarmCaptureContext(for: selectedRect)
     prepareAutoScrollEngineIfNeeded(for: selectedRect, model: sessionModel)
+    updatePreviewTruthState()
   }
 
   private func prewarmCaptureContext(for rect: CGRect) {
@@ -887,10 +951,12 @@ final class ScrollingCaptureCoordinator {
       sessionModel.isUsingLivePreview = true
       sessionModel.runtimeState = .streaming
       sessionModel.previewCaption = "Live preview running while Snapzy locks the stitched frame."
+      updatePreviewTruthState()
     } catch {
       sessionMetrics.recordLivePreviewStart(success: false)
       sessionMetrics.recordLivePreviewFallbackActivation()
       sessionModel.isUsingLivePreview = false
+      updatePreviewTruthState()
       DiagnosticLogger.shared.log(
         .warning,
         .capture,
@@ -907,23 +973,27 @@ final class ScrollingCaptureCoordinator {
       sessionModel?.livePreviewImage = nil
     }
     sessionModel?.isUsingLivePreview = false
+    updatePreviewTruthState()
   }
 
   private func publishLivePreviewFrame(_ cgImage: CGImage) {
     guard let sessionModel, sessionModel.phase == .capturing else { return }
 
     let publishStartedAt = CFAbsoluteTimeGetCurrent()
+    let publishedAt = ProcessInfo.processInfo.systemUptime
     livePreviewFrameSequence += 1
     sessionModel.livePreviewImage = cgImage
     sessionModel.isUsingLivePreview = true
     if !(commitScheduler?.isRunning ?? false), sessionModel.runtimeState != .paused {
       sessionModel.runtimeState = .previewing
     }
+    lastLivePreviewPublishedAt = publishedAt
     let publishDurationMs = Self.elapsedMilliseconds(since: publishStartedAt)
     sessionMetrics.recordLivePreviewFramePublished(
-      at: ProcessInfo.processInfo.systemUptime,
+      at: publishedAt,
       publishDurationMs: publishDurationMs
     )
+    updatePreviewTruthState()
   }
 
   private func handleLivePreviewFailure(_ errorDescription: String) {
@@ -936,6 +1006,7 @@ final class ScrollingCaptureCoordinator {
     )
     stopLivePreviewIfNeeded(clearImage: false)
     sessionModel?.runtimeState = .paused
+    updatePreviewTruthState()
   }
 
   private func normalizedExpectedDeltaPixels(from rawValue: Int) -> Int {
@@ -1029,12 +1100,14 @@ final class ScrollingCaptureCoordinator {
   }
 
   private func performScheduledCommit(_ request: ScrollingCaptureCommitScheduler.Request) async {
+    guard sessionModel?.phase == .capturing else { return }
     let update = await refreshPreview(
       reason: request.reason,
       expectedSignedDeltaPixelsOverride: request.expectedSignedDeltaPixels
     )
     lastScheduledCommitSequenceNumber = request.sequenceNumber
     lastScheduledCommitUpdate = update
+    updatePreviewTruthState()
   }
 
   private func makeCommitScheduler() -> ScrollingCaptureCommitScheduler {
@@ -1054,11 +1127,14 @@ final class ScrollingCaptureCoordinator {
     reason: String,
     expectedSignedDeltaPixelsOverride: Int? = nil
   ) -> ScrollingCaptureCommitScheduler.Request? {
+    guard let sessionModel, sessionModel.phase == .capturing else { return nil }
     sessionMetrics.recordCommitScheduled()
-    return commitScheduler?.schedule(
+    let request = commitScheduler?.schedule(
       reason: reason,
       expectedSignedDeltaPixels: expectedSignedDeltaPixelsOverride
     )
+    updatePreviewTruthState()
+    return request
   }
 
   private func scheduleCommitRefreshAndWait(
@@ -1130,6 +1206,160 @@ final class ScrollingCaptureCoordinator {
     return .timedOut(waitDurationMs: waitDurationMs)
   }
 
+  private func beginFinalizing() {
+    guard let sessionModel else { return }
+
+    stopAutoScrollLoop()
+    pendingRefreshTask?.cancel()
+    pendingRefreshTask = nil
+    sessionModel.phase = .finalizing
+    sessionModel.runtimeState = .finalizing
+    sessionModel.statusText =
+      "Finalizing the current capture. Snapzy is locking the latest stitched result before saving."
+    sessionModel.previewCaption = "Finalizing stitched result..."
+    sessionMetrics.recordFinalizingStarted(at: ProcessInfo.processInfo.systemUptime)
+    updatePreviewTruthState()
+  }
+
+  private func installSessionKeyMonitorsIfNeeded() {
+    guard localSessionKeyMonitor == nil else { return }
+
+    localSessionKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      guard event.keyCode == 53 else { return event }
+      guard let self else { return event }
+      return self.handleSessionEscapeKey() ? nil : event
+    }
+
+    globalSessionKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      guard event.keyCode == 53 else { return }
+      DispatchQueue.main.async {
+        _ = self?.handleSessionEscapeKey()
+      }
+    }
+  }
+
+  private func removeSessionKeyMonitors() {
+    if let localSessionKeyMonitor {
+      NSEvent.removeMonitor(localSessionKeyMonitor)
+      self.localSessionKeyMonitor = nil
+    }
+
+    if let globalSessionKeyMonitor {
+      NSEvent.removeMonitor(globalSessionKeyMonitor)
+      self.globalSessionKeyMonitor = nil
+    }
+  }
+
+  @discardableResult
+  private func handleSessionEscapeKey() -> Bool {
+    guard let sessionModel else { return false }
+
+    switch sessionModel.phase {
+    case .ready:
+      sessionMetrics.recordPreStartEscapeCancel()
+      cancel()
+      return true
+    case .finalizing, .saving:
+      sessionMetrics.recordFinalizingBlockedInput()
+      return true
+    case .capturing:
+      return false
+    }
+  }
+
+  private func recordCommittedObservation(for outcome: ScrollingCaptureStitchOutcome) {
+    switch outcome {
+    case .initialized, .appended, .ignoredNoMovement:
+      lastCommittedObservationAt = ProcessInfo.processInfo.systemUptime
+    case .ignoredAlignmentFailed, .reachedHeightLimit:
+      break
+    }
+  }
+
+  private func finalizingPreviewCaption(for update: ScrollingCaptureStitchUpdate) -> String {
+    switch update.outcome {
+    case .initialized, .ignoredNoMovement:
+      return "Finalizing stitched result • \(update.acceptedFrameCount) frames locked"
+    case .appended(let deltaY):
+      return "Final frame locked • \(update.acceptedFrameCount) frames • +\(deltaY) px"
+    case .ignoredAlignmentFailed:
+      return "Finalizing current stitched result • last frame skipped"
+    case .reachedHeightLimit:
+      return "\(update.acceptedFrameCount) frames stitched • height limit reached"
+    }
+  }
+
+  private func finalizingStatusText(for update: ScrollingCaptureStitchUpdate) -> String {
+    switch update.outcome {
+    case .initialized, .appended, .ignoredNoMovement:
+      return "Locking the current capture. Snapzy is sealing \(update.acceptedFrameCount) stitched frames before saving."
+    case .ignoredAlignmentFailed:
+      return "Couldn't align the last frame cleanly. Snapzy will save the current stitched result."
+    case .reachedHeightLimit:
+      return "Height limit reached. Snapzy is saving the current stitched result."
+    }
+  }
+
+  private func updatePreviewTruthState() {
+    guard let sessionModel else { return }
+
+    let schedulerPendingCount = commitScheduler?.activeRequestCount ?? 0
+    let pendingCommitCount = max(schedulerPendingCount, isRefreshingPreview ? 1 : 0)
+    sessionModel.pendingCommitCount = pendingCommitCount
+
+    let previewLagMs: Int
+    if let lastLivePreviewPublishedAt {
+      if let lastCommittedObservationAt {
+        previewLagMs = max(
+          0,
+          Int(((lastLivePreviewPublishedAt - lastCommittedObservationAt) * 1_000).rounded())
+        )
+      } else if sessionModel.isUsingLivePreview {
+        previewLagMs = previewTruthLagToleranceMs + 1
+      } else {
+        previewLagMs = 0
+      }
+    } else {
+      previewLagMs = 0
+    }
+    sessionModel.previewCommitLagMs = previewLagMs
+
+    let previewTruthState: ScrollingCapturePreviewTruthState
+    switch sessionModel.phase {
+    case .ready:
+      previewTruthState = .ready
+    case .capturing:
+      if sessionModel.runtimeState == .paused {
+        if sessionModel.livePreviewImage != nil || sessionModel.isUsingLivePreview {
+          previewTruthState = .pausedRecovery
+        } else if sessionModel.previewImage != nil || sessionModel.acceptedFrameCount > 0 {
+          previewTruthState = .committedOnly
+        } else {
+          previewTruthState = .pausedRecovery
+        }
+      } else if sessionModel.isUsingLivePreview, sessionModel.livePreviewImage != nil {
+        let hasCommittedTruth = lastCommittedObservationAt != nil || sessionModel.acceptedFrameCount > 0
+        let isLiveAhead = !hasCommittedTruth
+          || pendingCommitCount > 0
+          || previewLagMs > previewTruthLagToleranceMs
+        previewTruthState = isLiveAhead ? .liveAhead : .liveSynced
+      } else if sessionModel.previewImage != nil || sessionModel.acceptedFrameCount > 0 {
+        previewTruthState = .committedOnly
+      } else {
+        previewTruthState = .ready
+      }
+    case .finalizing:
+      previewTruthState = .finalizing
+    case .saving:
+      previewTruthState = .saving
+    }
+
+    sessionModel.previewTruthState = previewTruthState
+    if previewTruthState == .liveAhead {
+      sessionMetrics.recordPreviewTruthLiveAhead(lagMs: previewLagMs)
+    }
+  }
+
   private func flushSessionMetricsIfNeeded(reason: String) {
     guard !didFlushSessionMetrics else { return }
     guard sessionMetrics.hadActivity else { return }
@@ -1161,14 +1391,14 @@ extension ScrollingCaptureCoordinator: RecordingRegionOverlayDelegate {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     refreshSelectionPreparation()
     sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture."
+      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
   }
 
   func overlay(_ overlay: RecordingRegionOverlayWindow, didReselectWithRect rect: CGRect) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     updateSelectedRect(rect, reprepareSession: true)
     sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture."
+      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
   }
 
   func overlay(_ overlay: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect) {
@@ -1181,6 +1411,6 @@ extension ScrollingCaptureCoordinator: RecordingRegionOverlayDelegate {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     refreshSelectionPreparation()
     sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture."
+      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
   }
 }

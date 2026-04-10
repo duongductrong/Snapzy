@@ -20,6 +20,8 @@ struct ScrollingCaptureSessionMetrics {
   private(set) var livePreviewPublishDurationTotalMs = 0
   private(set) var livePreviewGapTotalMs = 0
   private(set) var livePreviewGapMaxMs = 0
+  private(set) var previewTruthLiveAheadCount = 0
+  private(set) var previewTruthLiveAheadMaxLagMs = 0
 
   private(set) var commitScheduleCount = 0
   private(set) var commitCoalescedCount = 0
@@ -58,16 +60,24 @@ struct ScrollingCaptureSessionMetrics {
   private(set) var autoScrollFrameObservationTimeoutCount = 0
   private(set) var autoScrollFrameWaitDurationTotalMs = 0
   private(set) var autoScrollCommitAcceptedCount = 0
+  private(set) var finalizingStartCount = 0
+  private(set) var finalizingDurationTotalMs = 0
+  private(set) var finalizingBlockedInputCount = 0
+  private(set) var preStartEscapeCancelCount = 0
 
   private var lastLivePreviewFrameAt: TimeInterval?
   private var currentAlignmentFailureStreak = 0
+  private var finalizingStartedAt: TimeInterval?
 
   var hadActivity: Bool {
     scrollEventCount > 0
       || livePreviewStartAttempts > 0
       || livePreviewFrameCount > 0
+      || previewTruthLiveAheadCount > 0
       || refreshAttemptCount > 0
       || autoScrollStepCount > 0
+      || finalizingStartCount > 0
+      || preStartEscapeCancelCount > 0
   }
 
   mutating func recordScrollEvent(deltaY: CGFloat) {
@@ -105,6 +115,11 @@ struct ScrollingCaptureSessionMetrics {
     }
 
     lastLivePreviewFrameAt = timestamp
+  }
+
+  mutating func recordPreviewTruthLiveAhead(lagMs: Int) {
+    previewTruthLiveAheadCount += 1
+    previewTruthLiveAheadMaxLagMs = max(previewTruthLiveAheadMaxLagMs, lagMs)
   }
 
   mutating func recordCommitScheduled() {
@@ -221,6 +236,25 @@ struct ScrollingCaptureSessionMetrics {
     autoScrollCommitAcceptedCount += 1
   }
 
+  mutating func recordFinalizingStarted(at timestamp: TimeInterval) {
+    finalizingStartCount += 1
+    finalizingStartedAt = timestamp
+  }
+
+  mutating func recordFinalizingCompleted(at timestamp: TimeInterval) {
+    guard let finalizingStartedAt else { return }
+    finalizingDurationTotalMs += Int(((timestamp - finalizingStartedAt) * 1_000).rounded())
+    self.finalizingStartedAt = nil
+  }
+
+  mutating func recordFinalizingBlockedInput() {
+    finalizingBlockedInputCount += 1
+  }
+
+  mutating func recordPreStartEscapeCancel() {
+    preStartEscapeCancelCount += 1
+  }
+
   func summaryContext(reason: String) -> [String: String] {
     let sessionDurationSeconds = max(0, ProcessInfo.processInfo.systemUptime - sessionStartedAt)
     let livePreviewGapCount = max(0, livePreviewFrameCount - 1)
@@ -273,6 +307,8 @@ struct ScrollingCaptureSessionMetrics {
       ),
       "livePreviewGapAvgMs": Self.averageString(total: livePreviewGapTotalMs, count: livePreviewGapCount),
       "livePreviewGapMaxMs": "\(livePreviewGapMaxMs)",
+      "previewTruthLiveAhead": "\(previewTruthLiveAheadCount)",
+      "previewTruthLiveAheadMaxLagMs": "\(previewTruthLiveAheadMaxLagMs)",
       "autoScrollSteps": "\(autoScrollStepCount)",
       "autoScrollStepAvgPoints": Self.averageString(
         total: Int(autoScrollRequestedStepTotalPoints.rounded()),
@@ -288,7 +324,11 @@ struct ScrollingCaptureSessionMetrics {
         total: autoScrollFrameWaitDurationTotalMs,
         count: autoScrollFrameObservationCount
       ),
-      "autoScrollCommitAccepted": "\(autoScrollCommitAcceptedCount)"
+      "autoScrollCommitAccepted": "\(autoScrollCommitAcceptedCount)",
+      "finalizingStarts": "\(finalizingStartCount)",
+      "finalizingAvgMs": Self.averageString(total: finalizingDurationTotalMs, count: finalizingStartCount),
+      "finalizingBlockedInput": "\(finalizingBlockedInputCount)",
+      "preStartEscapeCancels": "\(preStartEscapeCancelCount)"
     ]
   }
 

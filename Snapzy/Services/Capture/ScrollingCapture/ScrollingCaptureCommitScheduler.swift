@@ -40,6 +40,17 @@ final class ScrollingCaptureCommitScheduler {
     currentRequest != nil || pendingRequest != nil || runnerTask != nil
   }
 
+  var activeRequestCount: Int {
+    var count = 0
+    if currentRequest != nil {
+      count += 1
+    }
+    if pendingRequest != nil {
+      count += 1
+    }
+    return count
+  }
+
   @discardableResult
   func schedule(reason: String, expectedSignedDeltaPixels: Int?) -> Request {
     nextSequenceNumber += 1
