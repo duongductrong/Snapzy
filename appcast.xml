@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.6.1</title>
+      <sparkle:version>53</sparkle:version>
+      <sparkle:shortVersionString>1.6.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 11 Apr 2026 18:16:06 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enhance badge label display with animation and improved visibility in scrolling capture preview</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.6.1/Snapzy-v1.6.1.dmg"
+        sparkle:edSignature="K/P35ZX6Q2cvJtTYZn06Fo9KNzXe5RoCkhOxBnZQd601T9UIFnEzA05hZWV4ydsDCLUP5HcCOGegXZqC0P7lAw=="
+        length="12499430"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.6.0</title>
       <sparkle:version>52</sparkle:version>
       <sparkle:shortVersionString>1.6.0</sparkle:shortVersionString>
