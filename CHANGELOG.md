@@ -5,6 +5,20 @@ All notable changes to Snapzy will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
+
+## [1.6.1] - 2026-04-11
+
+### Features
+-  Enhance badge label display with animation and improved visibility in scrolling capture preview (0c42fd0)
+
+### Chore
+- docs: Enhance documentation and project structure (0b0485f)
+- chore: update appcast, cask, and readme for v1.6.0 (808c219)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.6.0] - 2026-04-11
 
 ### Features
