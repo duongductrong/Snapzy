@@ -29,15 +29,15 @@
 
 ## Features
 
-- **Screenshot**: fullscreen or selected-area capture, OCR text extraction, transparent object cutout capture with optional safe auto-crop, window shadow capture (macOS 14+), multi-format export (PNG/JPG/WebP), hide desktop icons/widgets, quick screenshot during recording
-- **Screen Recording**: video or GIF output, system audio + microphone, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing
+- **Screenshot**: fullscreen or selected-area capture, scrolling capture with live stitched preview, OCR text extraction, transparent object cutout capture with optional safe auto-crop, window shadow capture (macOS 14+), multi-format export (PNG/JPG/WebP), hide desktop icons/widgets, quick screenshot during recording
+- **Screen Recording**: video or GIF output, system audio + microphone, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing, Smart Camera metadata for Follow Mouse edits
 - **Annotation Editor**: shapes, arrows, text, filled rectangles, blur/pixelate, counters, crop, remove background with crop-aware auto-crop support, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app, configurable tool shortcuts
-- **After Capture Settings**: per-mode action matrix for screenshot/recording plus a separate global remove-background auto-crop toggle (enabled by default)
+- **After Capture Settings**: per-mode action matrix for save, Quick Access, clipboard copy, and annotate plus a separate global remove-background auto-crop toggle (enabled by default)
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
 - **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, open, and delete actions
 - **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools, with per-shortcut on/off control and system conflict detection
 - **Onboarding**: splash screen, guided permissions setup, and shortcut configuration for first-time users
-- **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, credentials stored in the macOS Keychain with optional password protection, manual encrypted credential import/export for faster setup on another Mac, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
+- **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, manual upload from Quick Access or Annotate, credentials stored in the macOS Keychain with optional password protection, manual encrypted credential import/export for faster setup on another Mac, upload history, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
 - **Updates & Diagnostics**: in-app updates via Sparkle, crash reporting, cache management
 - **Platform**: menu-bar app, appearance theming (light/dark/system), App Sandbox with secure file-access bookmarks
 
@@ -115,9 +115,12 @@ For release packaging details, see [docs/project-build.md](docs/project-build.md
 ## Documentation
 
 - [Ask DeepWiki (interactive docs assistant)](https://deepwiki.com/duongductrong/Snapzy)
+- [Docs map for humans and agents](docs/README.md)
+- [Project structure and runtime architecture](docs/project-structure.md)
+- [Capture, recording, and editing flows](docs/capture-flow.md)
 - [Project build guide](docs/project-build.md)
-- [Project structure](docs/project-structure.md)
-- [Release workflow](docs/project-workflow.md)
+- [Release and update workflow](docs/project-workflow.md)
+- [Local Sparkle update testing](docs/local-update-testing.md)
 
 ## Featured On
 

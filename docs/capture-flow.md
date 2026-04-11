@@ -1,316 +1,267 @@
-# Capture Flow
+# Capture, Recording, and Editing Flows
 
-Documentation of Snapzy's screenshot + screen-recording pipelines — from keyboard shortcut trigger to saved file and post-capture/editor actions.
+This doc follows the runtime path from trigger to saved asset, Quick Access, editors, and cloud actions.
 
-## Architecture Overview
-
-```mermaid
-flowchart TD
-    subgraph Trigger["Trigger (Global Shortcut)"]
-        A1["Cmd+Shift+3 (Fullscreen)"]
-        A2["Cmd+Shift+4 (Area Select)"]
-    end
-
-    subgraph VM["CaptureViewModel"]
-        B1["captureFullscreen()"]
-        B2["captureArea()"]
-        B3["Resolve save directory"]
-        B4["Prefetch SCShareableContent"]
-    end
-
-    subgraph Selection["Area Selection"]
-        C1["AreaSelectionController.startSelection()"]
-        C2["User drags rect (NSScreen coords)"]
-        C3["Returns CGRect"]
-    end
-
-    subgraph Engine["ScreenCaptureManager"]
-        D1["loadShareableContent()"]
-        D2["Find target SCDisplay"]
-        D3["buildFilter() (exclude icons/widgets/self)"]
-        D4["Configure SCStreamConfiguration"]
-        D5["captureImageCompat()"]
-        D6["macOS 14+: SCScreenshotManager | macOS 13: SCStream"]
-        D7["Returns CGImage"]
-    end
-
-    subgraph Save["Image Saving"]
-        F1["saveImage()"]
-        F2{"Format?"}
-        F3["PNG/JPEG: CGImageDestination"]
-        F4["WebP: WebPEncoderService"]
-        F5["verifyFileWritten()"]
-        F6["captureCompletedSubject"]
-    end
-
-    subgraph Post["PostCaptureActionHandler"]
-        G1["Show QuickAccess Card"]
-        G2["Copy to Clipboard"]
-        G3["Open Annotate Editor"]
-    end
-
-    subgraph Annotate["Annotate Pipeline"]
-        H1["loadImageWithCorrectScale()"]
-        H2["AnnotateCanvasView (preview)"]
-        H3["renderFinalImage() (export)"]
-        H4["imageData() → save to disk"]
-    end
-
-    A1 --> B1
-    A2 --> B2 --> C1 --> C2 --> C3
-
-    B1 & B2 --> B3 & B4 --> D1
-    C3 --> D1
-
-    D1 --> D2 --> D3 --> D4 --> D5 --> D6 --> D7
-    D7 --> F1 --> F2
-    F2 -->|PNG/JPEG| F3
-    F2 -->|WebP| F4
-    F3 & F4 --> F5 --> F6
-
-    F6 --> G1 & G2 & G3
-    G3 --> H1 --> H2 -->|Save/Export| H3 --> H4
-```
-
-## Recording + Smart Camera (Follow Mouse)
+## Flow Index
 
 ```mermaid
 flowchart TD
-    subgraph Trigger["Trigger (Global Shortcut)"]
-        A1["Start recording"]
-    end
+    A["Trigger from menu bar or global shortcut"] --> B{"Mode"}
 
-    subgraph VM["CaptureViewModel"]
-        B1["Resolve save directory"]
-        B2["ScreenRecordingManager.prepareRecording(rect, fps, format)"]
-        B3["setupAssetWriter + setupStream"]
-        B4["RecordingMouseTracker(recordingRect, fps) created"]
-    end
+    B --> C["Fullscreen / Area screenshot"]
+    B --> D["Scrolling capture"]
+    B --> E["Capture Text (OCR)"]
+    B --> F["Object cutout"]
+    B --> G["Record screen"]
 
-    subgraph Stream["ScreenRecordingManager.startRecording()"]
-        C1["AVAssetWriter.startWriting()"]
-        C2["SCStream.startCapture()"]
-        C3["RecordingSession waits first complete video frame"]
-        C4["writer.startSession(atSourceTime:firstVideoTimestamp)"]
-        C5["onFirstVideoFrame callback -> mouseTracker.start()"]
-    end
+    C --> H["ScreenCaptureManager"]
+    D --> I["ScrollingCaptureCoordinator"]
+    E --> J["captureAreaAsImage -> OCRService"]
+    F --> K["captureAreaAsImage -> ForegroundCutoutService"]
+    G --> L["RecordingCoordinator -> ScreenRecordingManager"]
 
-    subgraph Track["Mouse Tracking"]
-        D1["Global event monitor: moved/dragged"]
-        D2["Timer fallback sampling"]
-        D3["Sample point normalized to top-left space"]
-        D4["Pause/Resume aware elapsed-time timeline"]
-    end
+    H --> M["TempCaptureManager + PostCaptureActionHandler"]
+    I --> M
+    K --> M
+    L --> M
 
-    subgraph Stop["Stop Recording"]
-        E1["mouseTracker.stop()"]
-        E2["Build RecordingMetadata(version=2, coordinateSpace=topLeftNormalized)"]
-        E3["RecordingMetadataStore.save()"]
-        E4["VideoEditorState.loadRecordingMetadata()"]
-        E5["VideoEditorAutoFocusEngine.buildPath() + evaluatePathQuality()"]
-    end
+    J --> N["Clipboard text result"]
 
-    subgraph Store["App Support Storage"]
-        F1["~/Library/Application Support/Snapzy/Captures/"]
-        F2["RecordingMetadata/index.json"]
-        F3["RecordingMetadata/Entries/<uuid>.json"]
-    end
+    M --> O["Quick Access"]
+    M --> P["Clipboard copy"]
+    M --> Q["Annotate auto-open"]
 
-    A1 --> B1 --> B2 --> B3 --> B4
-    B4 --> C1 --> C2 --> C3 --> C4 --> C5
-    C5 --> D1
-    C5 --> D2
-    D1 --> D3 --> D4
-    D2 --> D3
-    D4 --> E1 --> E2 --> E3 --> F2
-    E3 --> F3
-    E3 --> E4 --> E5
-    F1 --> F2
-    F1 --> F3
+    O --> R["Annotate"]
+    O --> S["Video Editor"]
+    O --> T["Manual screenshot cloud upload"]
 ```
+
+## Screenshot, OCR, and Cutout
+
+```mermaid
+flowchart TD
+    A["ScreenCaptureViewModel"] --> B["Ensure export folder permission"]
+    B --> C["Prefetch SCShareableContent"]
+    C --> D{"Capture mode"}
+
+    D -->|Fullscreen| E["captureFullscreen()"]
+    D -->|Area| F["AreaSelectionController.startSelection()"]
+    D -->|OCR| G["AreaSelectionController.startSelection()"]
+    D -->|Cutout| H["AreaSelectionController.startSelection()"]
+
+    E --> I["ScreenCaptureManager.captureFullscreen()"]
+    F --> J["ScreenCaptureManager.captureArea()"]
+    G --> K["ScreenCaptureManager.captureAreaAsImage()"]
+    H --> L["ScreenCaptureManager.captureAreaAsImage()"]
+
+    I --> M["TempCaptureManager.resolveSaveDirectory(.screenshot)"]
+    J --> M
+    M --> N["saveImage()/saveProcessedImage()"]
+    N --> O["PostCaptureActionHandler"]
+
+    K --> P["OCRService.recognizeText()"]
+    P --> Q["Copy recognized text to NSPasteboard"]
+
+    L --> R["ForegroundCutoutService.extractForegroundResult()"]
+    R --> S{"Auto-crop suggested and enabled?"}
+    S -->|Yes| T["Crop transparent canvas to suggested rect"]
+    S -->|No| U["Keep full transparent canvas"]
+    T --> V["saveProcessedImage()"]
+    U --> V
+    V --> O
+```
+
+### Notes
+
+- Fullscreen and area capture both run through `ScreenCaptureManager`, with desktop icon/widget exclusion and include-own-app settings applied before the image is written.
+- OCR is the only capture path that does not create a file; it captures a `CGImage`, runs Vision OCR, and copies text to the pasteboard.
+- Object cutout is macOS 14+ only. JPEG is overridden to PNG because transparency must be preserved.
 
 ## Scrolling Capture
 
 ```mermaid
 flowchart TD
-    subgraph Trigger["Trigger (Scrolling Capture)"]
-        A1["CaptureViewModel.captureScrolling()"]
-        A2["AreaSelectionController.startSelection(mode: .scrollingCapture)"]
-        A3["User selects only the moving content"]
-    end
+    A["captureScrolling()"] --> B["AreaSelectionController.startSelection(mode: .scrollingCapture)"]
+    B --> C["User selects only moving content"]
+    C --> D["ScrollingCaptureCoordinator.beginSession()"]
 
-    subgraph Session["ScrollingCaptureCoordinator"]
-        B1["beginSession(rect, saveDirectory, format, prefetchedContentTask)"]
-        B2["Prepare region-scoped area capture context (pixel aligned sourceRect)"]
-        B3["Create live preview stream + commit scheduler"]
-        B4["Show HUD + preview windows"]
-    end
+    D --> E["Prepare region-scoped capture context"]
+    D --> F["Show region overlay, HUD, preview window"]
+    D --> G["Create live preview stream"]
+    D --> H["Create commit scheduler"]
 
-    subgraph Preview["Preview Lane"]
-        C1["ScrollingCaptureFrameSource starts SCStream"]
-        C2["Latest complete region frame arrives"]
-        C3["ScrollingCapturePreviewRenderer presents current frame"]
-        C4["Stale preview frames are dropped"]
-    end
+    G --> I["ScrollingCaptureFrameSource receives latest region frame"]
+    I --> J["ScrollingCapturePreviewRenderer presents live image"]
 
-    subgraph Commit["Commit Lane"]
-        D1["Initial frame commit or scroll-triggered commit requested"]
-        D2["ScrollingCaptureCommitScheduler keeps only latest pending request"]
-        D3["refreshPreview() captures selected region"]
-        D4["ScrollingCaptureStitcher initializes or appends"]
-        D5["Stitched preview + metrics updated"]
-        D6{"Accepted / ignored / paused / height limit?"}
-    end
+    H --> K["Initial commit or scroll-triggered commit request"]
+    K --> L["ScrollingCaptureCommitScheduler keeps latest pending request"]
+    L --> M["refreshPreview() captures newest eligible frame"]
+    M --> N["ScrollingCaptureStitcher append / ignore / pause / height-limit"]
+    N --> O["Session model updates badge, caption, metrics"]
 
-    subgraph Manual["Manual Scroll Input"]
-        E1["Global scroll monitor accumulates wheel deltas"]
-        E2["Short settle timer decides commit eligibility"]
-        E3["Manual request enqueued into commit scheduler"]
-    end
+    F --> P["Global scroll monitor + settle timer"]
+    P --> L
 
-    subgraph Finish["Finish"]
-        F1["finish() waits for commit lane, flushes final frame if needed"]
-        F2["saveProcessedImage(latestImage, directory, format)"]
-        F3["PostCaptureActionHandler"]
-    end
+    O --> Q{"Done, cancel, or limit?"}
+    Q -->|Continue| P
+    Q -->|Done| R["finish() waits for idle commit lane"]
+    R --> S["Flush final visible frame if needed"]
+    S --> T["saveProcessedImage()"]
+    T --> U["PostCaptureActionHandler"]
+```
 
-    A1 --> A2 --> A3 --> B1 --> B2 --> B3 --> B4
-    B4 --> C1 --> C2 --> C3 --> C4 --> C2
-    B4 --> D1 --> D2 --> D3 --> D4 --> D5 --> D6
-    B4 --> E1 --> E2 --> E3 --> D2
-    D6 -->|Continue manual| E1
-    D6 -->|Done / limit| F1 --> F2 --> F3
+### Notes
+
+- The subsystem in `Services/Capture/ScrollingCapture/` is intentionally self-contained: preview, stitcher, HUD, metrics, commit scheduling, and window placement all live there.
+- The preview lane and commit lane are separate. Live preview can stay ahead while the stitcher locks the next safe frame.
+- Vision is a recovery tool inside `ScrollingCaptureStitcher`, not the default hot path.
+
+## Recording, GIF Output, and Smart Camera
+
+```mermaid
+flowchart TD
+    A["startRecordingFlow()"] --> B{"Remember last area?"}
+    B -->|Yes| C["RecordingCoordinator.showToolbar(savedRect)"]
+    B -->|No| D["AreaSelectionController.startSelection(mode: .recording)"]
+    D --> C
+
+    C --> E["RecordingToolbarWindow + region overlays"]
+    E --> F["prepareRecording(rect, format, quality, fps, audio flags)"]
+    F --> G["ScreenRecordingManager.startRecording()"]
+
+    G --> H["SCStream + AVAssetWriter"]
+    G --> I["RecordingMouseTracker"]
+    G --> J["Optional click highlight + keystroke + annotation overlays"]
+
+    H --> K["stopRecording()"]
+    I --> K
+    J --> K
+
+    K --> L["Persist RecordingMetadata if mouse samples are available"]
+    K --> M{"Output mode"}
+
+    M -->|Video| N["PostCaptureActionHandler.handleVideoCapture()"]
+    M -->|GIF| O["Quick Access placeholder card"]
+    O --> P["GIFConverter.convert()"]
+    P --> Q["Replace Quick Access item URL with GIF"]
+    Q --> R["PostCaptureActionHandler.handleVideoCapture(skipQuickAccess: true)"]
+
+    L --> S["VideoEditorAutoFocusEngine reads metadata later"]
+```
+
+### Notes
+
+- Recording metadata is stored separately from the media file and powers Smart Camera / Follow Mouse in the video editor.
+- GIF output is a two-step flow: record video first, then convert and swap the Quick Access item.
+- `RecordingCoordinator` owns toolbar and overlay UX. `ScreenRecordingManager` owns media capture, timing, and metadata persistence.
+
+## Post-Capture Routing
+
+```mermaid
+flowchart TD
+    A["Capture file is ready"] --> B["TempCaptureManager.resolveSaveDirectory()"]
+    B --> C{"Save enabled for this capture type?"}
+    C -->|Yes| D["Write into user export directory"]
+    C -->|No| E["Write into Application Support temp capture directory"]
+
+    D --> F["PostCaptureActionHandler"]
+    E --> F
+
+    F --> G{"Show Quick Access?"}
+    F --> H{"Copy file?"}
+    F --> I{"Open Annotate? screenshot only"}
+
+    G -->|Yes| J["QuickAccessManager.addScreenshot/addVideo"]
+    G -->|No| K["No overlay card"]
+
+    H -->|Yes| L["ClipboardHelper or file URL pasteboard write"]
+    H -->|No| M["Skip clipboard"]
+
+    I -->|Yes| N["AnnotateManager.openAnnotation(url:)"]
+    I -->|No| O["Skip auto-open"]
+
+    J --> P{"Temp file?"}
+    P -->|Yes| Q["Save action moves file to export directory"]
+    P -->|Dismiss| R["Temp file deleted"]
+    P -->|Saved file| S["Open / drag / copy / delete"]
+
+    J --> T{"Screenshot or video?"}
+    T -->|Screenshot| U["Annotate, drag, cloud upload, save/open, delete"]
+    T -->|Video or GIF| V["Video editor, drag, copy, save/open, delete"]
+```
+
+### Notes
+
+- `AfterCaptureAction.save` is not a post-write callback. It changes the destination before the file is written.
+- Current cloud behavior is manual from Quick Access or Annotate for screenshots. The preference toggle enables those affordances; it does not auto-upload in `PostCaptureActionHandler`.
+- Temp captures are intentionally stored in Application Support, not `/tmp`, so drag-and-drop remains stable.
+
+## Annotate and Cloud Re-Upload
+
+```mermaid
+flowchart TD
+    A["Quick Access screenshot or auto-open"] --> B["AnnotateManager"]
+    B --> C["AnnotateWindowController + AnnotateState"]
+    C --> D["Canvas, crop, blur, text, shapes, mockup, cutout"]
+
+    D --> E{"Action"}
+    E -->|Save / export| F["AnnotateExporter.renderFinalImage()"]
+    E -->|Copy| G["Clipboard write"]
+    E -->|Share| H["NSSharingServicePicker"]
+    E -->|Upload| I["CloudManager.upload()"]
+
+    F --> J["Update file on disk"]
+    J --> K["QuickAccess thumbnail refresh"]
+    J --> L{"Cloud URL already exists?"}
+    L -->|Yes| M["Mark item as cloud-stale"]
+    L -->|No| N["No stale marker"]
+
+    I --> O["Persist cloud URL + key"]
+    O --> P["Copy public URL to clipboard"]
+    O --> Q["Clear stale marker"]
+```
+
+### Notes
+
+- Annotate windows cache session state per Quick Access item so the user can reopen the same card and keep editing.
+- If a screenshot was already uploaded, later edits mark the cloud state stale until the user re-uploads.
+
+## Video Editor
+
+```mermaid
+flowchart TD
+    A["Quick Access video/GIF or empty editor"] --> B["VideoEditorManager"]
+    B --> C["VideoEditorWindowController + VideoEditorState"]
+    C --> D["Load asset and timeline"]
+    D --> E{"Recording metadata available?"}
+    E -->|Yes| F["VideoEditorAutoFocusEngine builds Follow Mouse path"]
+    E -->|No| G["Manual zoom workflow only"]
+
+    F --> H["Trim, zoom segments, wallpaper/background, export settings"]
+    G --> H
+    H --> I{"Export mode"}
+    I -->|Video| J["VideoEditorExporter"]
+    I -->|GIF| K["GIFResizer / GIF export path"]
+    J --> L["Saved output file"]
+    K --> L
 ```
 
 ## Key Files
 
 | File | Responsibility |
-|------|----------------|
-| `Features/Capture/CaptureViewModel.swift` | Orchestrates capture from UI. Resolves save directory, prefetches content, calls ScreenCaptureManager. |
-| `Services/Capture/ScreenCaptureManager.swift` | Core capture engine. Configures SCStreamConfiguration, builds content filters, captures via SCScreenshotManager (14+) or SCStream (13). |
-| `Services/Capture/PostCaptureActionHandler.swift` | Executes post-capture actions: Quick Access card, clipboard copy, open Annotate. |
-| `Features/Annotate/AnnotateState.swift` | Manages annotation state. `loadImageWithCorrectScale()` loads images at correct Retina scale. |
-| `Features/Annotate/Components/AnnotateCanvasView.swift` | Displays image + annotations on canvas with scale-to-fit, zoom, pan. |
-| `Features/Annotate/Services/AnnotateExporter.swift` | Exports annotated images. `renderFinalImage()` combines source image + annotations + background at pixel resolution. |
-| `Services/Shortcuts/KeyboardShortcutManager.swift` | Global shortcut registration lifecycle, including app-wide enable state, per-shortcut enable state, and temporary suppression while recorder UI is listening. |
-| `Services/Shortcuts/SystemScreenshotShortcutManager.swift` | Detects/manages conflicts with macOS built-in screenshot shortcuts. |
-| `Services/Shortcuts/ShortcutValidationService.swift` | Centralized duplicate/conflict validation and warning decisions for editable shortcuts in Preferences. |
-| `Services/Capture/ScreenRecordingManager.swift` | Recording pipeline, stream/asset-writer setup, geometry normalization, metadata persistence for Smart Camera. |
-| `Services/Capture/RecordingMouseTracker.swift` | Captures dense cursor timeline during recording (global monitor + timer fallback), pause/resume aware timing. |
-| `Services/Capture/RecordingMetadata.swift` | Metadata schema + storage in App Support (`Captures/RecordingMetadata`), legacy migration/backward compatibility. |
-| `Features/Recording/RecordingSession.swift` | Thread-safe frame append and first-video-frame callback used to align cursor timeline with media timeline. |
-| `Features/VideoEditor/Services/VideoEditorAutoFocusEngine.swift` | Rebuilds auto-follow path from metadata and computes quality metrics (lock accuracy/visibility/error). |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureCoordinator.swift` | Runs the scrolling-capture session, manages preview cadence, coordinates manual commit timing, and saves the stitched result. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureFrameSource.swift` | Owns the region-scoped `SCStream` used for low-latency live preview frames. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureCommitScheduler.swift` | Coalesces pending stitch refresh requests so the commit lane only consumes the latest eligible work. |
-| `Services/Capture/ScrollingCapture/ScrollingCapturePreviewRenderer.swift` | Layer-backed preview surface that presents `CGImage` frames without rebuilding SwiftUI image state every refresh. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureMetrics.swift` | Records per-session preview, commit, and alignment diagnostics for before/after comparison. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Builds the long image with band trimming, a fast guided matcher on the hot path, and Vision-assisted recovery only when confidence is unsafe. |
-| `Services/Capture/ScrollingCapture/ScrollingCaptureHUDView.swift` | Presents capture controls, progress summary, and live guidance during the session. |
-
-## Capture Modes
-
-### Fullscreen (`captureFullscreen`)
-
-1. Prefetch `SCShareableContent`
-2. Find target `SCDisplay` by display ID
-3. Build `SCContentFilter` (display-level, excludes icons/widgets/self as configured)
-4. Configure `SCStreamConfiguration`:
-   - `width/height` = display pixel dimensions × `backingScaleFactor`
-   - `pixelFormat` = `kCVPixelFormatType_32BGRA`
-   - `showsCursor` = user preference `screenshot.showCursor` (default: `false`)
-   - `captureResolution = .best` (macOS 14.2+)
-5. Capture via `SCScreenshotManager` (macOS 14+) or `SCStream` single-frame (macOS 13)
-6. Save via `CGImageDestination` (PNG/JPEG) or `WebPEncoderService` (WebP)
-
-### Area Select (`captureArea`)
-
-1. `AreaSelectionController` shows overlay → user drags selection rect
-2. Find matching `NSScreen` and `SCDisplay`
-3. Build a prepared area-capture context with a pixel-aligned selection rect and region-scoped `sourceRect`
-   - `showsCursor` follows user preference `screenshot.showCursor` (default: `false`)
-4. Capture only the selected region at native pixel resolution
-5. Save the region image directly
-
-### OCR Area (`captureAreaAsImage`)
-
-Same as Area Select but returns `CGImage` directly for text recognition instead of saving to disk.
-
-### Scrolling Capture (`captureScrolling`)
-
-1. `CaptureViewModel` switches the area-selection overlay into `.scrollingCapture` mode.
-2. `ScrollingCaptureCoordinator.beginSession()` keeps a persistent highlighted region overlay on screen, creates the HUD + preview windows, prepares a region-scoped area-capture context, and creates a commit scheduler.
-3. `startCapture()` starts the region-scoped live preview stream first, then commits the first frame into `ScrollingCaptureStitcher`.
-4. From there the session runs two lanes:
-   - Preview lane: `ScrollingCaptureFrameSource` receives complete `SCStream` frames for the selected region and `ScrollingCapturePreviewRenderer` presents the newest one immediately.
-   - Commit lane: manual scroll input is coalesced by `ScrollingCaptureCommitScheduler`, then `refreshPreview()` captures the newest eligible region frame and submits it to the stitcher.
-5. `ScrollingCaptureStitcher` first tries a fast guided matcher without Vision. If that cannot produce a safe match, it escalates to Vision-assisted guided/recovery search and records alignment confidence for diagnostics.
-6. `finish()` waits for the commit lane to go idle, flushes any final visible frame, rebuilds the final merged bitmap if the live lane skipped preview composition, saves the stitched image, and hands the result to the normal post-capture action pipeline.
-
-## Image Quality Pipeline
-
-| Stage | Units | Key Detail |
-|-------|-------|------------|
-| SCStreamConfiguration `width/height` | Pixels | Set to `display.width × backingScaleFactor` |
-| `captureResolution = .best` | — | Hints SCK to use optimal pixel density (macOS 14.2+) |
-| `CGImage.cropping(to:)` | Pixels | Post-capture crop, no resampling |
-| `CGImageDestination` save | Pixels | Direct pixel data write, no quality loss |
-| `loadImageWithCorrectScale()` | Points | Sets `NSImage.size = pixelSize / scaleFactor` (preserves bitmap rep) |
-| `AnnotateCanvasView` display | Points | Scale-to-fit within window using `.clipShape()` (no rasterization) |
-| `renderFinalImage()` export | Pixels | Uses `NSBitmapImageRep` at `pointSize × sourceImageScale` for Retina output |
-
-## Scrolling Capture Stability Notes
-
-Scrolling capture is intentionally image-driven rather than trusting raw wheel deltas alone.
-
-1. Selection hygiene matters: best results come from selecting only the moving content, not sticky headers, sidebars, or oversized scrollbars.
-2. Live preview is region-scoped: the preview lane samples only the selected region via `SCStreamConfiguration.sourceRect`, so the current frame can stay responsive even when stitch work is busy.
-3. Manual commit is latest-only: the commit scheduler coalesces pending refreshes so fast scrolling does not create an unbounded backlog of stale stitch jobs.
-4. Stitch acceptance is image-driven: wheel deltas only guide the search window. Final acceptance depends on visual alignment, not on the gesture delta alone.
-5. Recovery is multi-stage: the stitcher tries a fast guided matcher first, then escalates to Vision-assisted guided/recovery search before pausing.
-6. Direction discipline matters: reversing direction or mixing directions can poison the stitch, so the session intentionally nudges the user toward one steady downward pass.
-
-## Post-Capture Actions
-
-Configured in user preferences, handled by `PostCaptureActionHandler`:
-
-- **Quick Access Card** — floating overlay showing thumbnail, drag-to-app, copy/open actions
-- **Copy to Clipboard** — `NSPasteboard` with image data
-- **Open Annotate** — loads image into annotation editor
-
-## Shortcut Activation Rules
-
-Global shortcut trigger requires all conditions below:
-
-1. App-wide shortcut system is enabled.
-2. The specific global shortcut row is enabled.
-3. Recorder UI is not actively listening (temporary suppression is released).
-
-Conflict warnings against macOS screenshot hotkeys are evaluated only for currently enabled Snapzy shortcut rows.
-
-## Recording Metadata and Storage
-
-Smart Camera (Auto/Follow Mouse) relies on recording metadata written at stop-recording time.
-
-- Canonical storage root: `~/Library/Application Support/Snapzy/Captures/RecordingMetadata`
-- Index file: `index.json` (maps recorded video URL bookmark/path to metadata entry id)
-- Entry files: `Entries/<uuid>.json`
-- Schema version: `2`
-- Coordinate space: `topLeftNormalized` (legacy `bottomLeftNormalized` data is auto-canonicalized when read)
-- Temp recording files still live in `~/Library/Application Support/Snapzy/Captures`; metadata is centralized under the same root for easier maintenance.
-
-## Smart Camera Accuracy Notes
-
-Current follow-mouse accuracy improvements are based on:
-
-1. Denser capture cadence: effective tracker cadence increased (up to 120 SPS depending on FPS).
-2. Better temporal alignment: tracker starts on first complete video frame callback.
-3. Coordinate-space consistency: capture + editor use top-left normalized cursor points.
-4. Path robustness: sample dedup, outlier speed clamp, interpolation/resampling, adaptive dead-zone + smoothing.
-
-Editor diagnostics now log per auto segment:
-
-- `lockAccuracy` (target lock ratio)
-- `visibilityRate` (cursor inside crop visibility ratio)
-- `meanError` (average cursor-to-center distance)
-- `sampleCount`
+| --- | --- |
+| `Snapzy/Features/Capture/CaptureViewModel.swift` | Entry point for screenshot, scrolling capture, OCR, cutout, and recording launch |
+| `Snapzy/Services/Capture/ScreenCaptureManager.swift` | Core screenshot engine and file writing |
+| `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Quick Access, clipboard, and screenshot auto-open routing |
+| `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination logic and temp capture lifecycle |
+| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureCoordinator.swift` | Long screenshot session orchestration |
+| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Stitching and Vision-assisted recovery |
+| `Snapzy/Features/Recording/RecordingCoordinator.swift` | Recording toolbar, overlays, stop/GIF handoff |
+| `Snapzy/Services/Capture/ScreenRecordingManager.swift` | Screen recording media pipeline and metadata persistence |
+| `Snapzy/Features/QuickAccess/QuickAccessManager.swift` | Floating stack state and countdown behavior |
+| `Snapzy/Features/QuickAccess/Components/QuickAccessCardView.swift` | Card-level actions including screenshot cloud upload |
+| `Snapzy/Features/Annotate/AnnotateManager.swift` | Annotate window lifecycle and session caching |
+| `Snapzy/Features/Annotate/Services/AnnotateExporter.swift` | Final image render/export |
+| `Snapzy/Features/VideoEditor/VideoEditorManager.swift` | Video editor window lifecycle |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorAutoFocusEngine.swift` | Follow Mouse / Smart Camera path reconstruction |
+| `Snapzy/Services/Cloud/CloudManager.swift` | Upload facade, provider creation, history persistence |

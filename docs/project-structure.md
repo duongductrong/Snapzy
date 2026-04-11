@@ -1,131 +1,216 @@
-# Project Architecture & Guidelines (Pragmatic Flattened)
+# Project Structure & Runtime Architecture
 
-**Context:** macOS Application (SwiftUI + AppKit)
-**Style:** Feature-Based, Pragmatic Flattened
-**Version:** 2.0 (Nested Support)
+This doc mirrors the current Snapzy codebase and runtime ownership. Keep it in sync with source, not with intended architecture.
 
-## 1. Directory Philosophy
+## Runtime Map
 
-We adopt a **Pragmatic Flattened Structure**. Simplicity is priority, but organization is key when complexity grows.
+```mermaid
+flowchart LR
+    subgraph AppShell["App shell"]
+        A["SnapzyApp"]
+        B["AppDelegate"]
+        C["AppCoordinator"]
+        D["AppStatusBarController"]
+        E["SplashWindowController"]
+        F["PreferencesView"]
+    end
 
-- **Rule 1: Feature Root Visibility.** Main Views and ViewModels must reside at the root of the Feature folder for instant access.
-- **Rule 2: Limited Nesting.** Inside a Feature, you may create **one level** of subfolders only for `Components`, `Managers`, or `Services` if necessary.
-- **Rule 3: Service Expansion.** Global Services are single files by default. If a Service grows complex, convert it into a folder containing the main service and its helpers.
+    subgraph CaptureDomain["Capture domain"]
+        G["ScreenCaptureViewModel"]
+        H["ScreenCaptureManager"]
+        I["ScrollingCaptureCoordinator"]
+        J["RecordingCoordinator"]
+        K["ScreenRecordingManager"]
+        L["PostCaptureActionHandler"]
+        M["TempCaptureManager"]
+    end
 
----
+    subgraph EditingUX["Editing + post-capture UX"]
+        N["QuickAccessManager"]
+        O["AnnotateManager"]
+        P["VideoEditorManager"]
+    end
 
-## 2. Directory Structure Tree
+    subgraph PlatformServices["Platform services"]
+        Q["KeyboardShortcutManager"]
+        R["CloudManager"]
+        S["UpdaterManager"]
+        T["DiagnosticLogger + CrashSentinel"]
+        U["DesktopIconManager"]
+    end
 
-```text
-App/
-  App.swift                       // @main
-  AppCoordinator.swift            // Window & Navigation Logic
-  AppEnvironment.swift            // DI Container
+    subgraph Storage["Persistence"]
+        V["Application Support/Snapzy/Captures"]
+        W["RecordingMetadataStore"]
+        X["Application Support/Snapzy/snapzy.db"]
+        Y["Keychain"]
+        Z["UserDefaults"]
+    end
 
-Features/
-  [FeatureName]/                  // e.g., "Capture"
-    CaptureView.swift             // MAIN Entry View (Keep at Root)
-    CaptureViewModel.swift        // MAIN State (Keep at Root)
+    A --> B --> C
+    C --> D
+    C --> E
+    D --> F
+    D --> G
+    D --> Q
+    D --> S
+    C --> T
 
-    Components/                   // [Optional] Sub-views specific to this feature
-      CaptureButton.swift
-      SelectionOverlay.swift
-    Managers/                     // [Optional] Logic controllers
-      SelectionManager.swift
-    Services/                     // [Optional] Local services
-      OCRService.swift
+    G --> H
+    G --> I
+    G --> J
+    G --> U
+    G --> Z
 
-Services/                         // Global System Services
-  PermissionService.swift         // Simple Service (Single File)
+    J --> K
+    H --> L
+    I --> L
+    K --> L
+    L --> M
+    L --> N
+    L --> O
 
-  Windowing/                      // Complex Service (Folder)
-    WindowService.swift           // Main Interface
-    WindowLayoutStrategy.swift    // Helper Logic
-    WindowOverlayConfig.swift     // Configuration models
+    N --> O
+    N --> P
+    N --> R
+    O --> R
 
-Shared/
-  Components/                     // Reusable UI (Buttons, Tooltips)
-  Bridging/                       // AppKit Wrappers (NSViewRepresentable)
-  Extensions/                     // Swift Extensions
-  Styles/                         // Design System tokens
-
-Resources/
-  Assets.xcassets
-  Info.plist
+    M --> V
+    K --> W
+    R --> X
+    R --> Y
+    G --> Z
+    Q --> Z
+    F --> Z
 ```
 
-## 3. Implementation Rules (Pragmatic Flattened)
+## Source Tree
 
-### A. Feature Organization (1-Level Nesting)
+```text
+Snapzy/
+  App/
+    SnapzyApp.swift
+    AppCoordinator.swift
+    AppEnvironment.swift
+    AppStatusBarController.swift
 
-Inside `Features/[FeatureName]/`:
+  Features/
+    Annotate/
+    Capture/
+    CrashReport/
+    Onboarding/
+    Preferences/
+    QuickAccess/
+    Recording/
+    Shortcuts/
+    Splash/
+    Updates/
+    VideoEditor/
 
-- **Root Level (Mandatory):** MUST contain the primary `[Feature]View.swift` and `[Feature]ViewModel.swift`. Do not hide the entry points inside subfolders.
-- **Nested Level (Allowed):** You are explicitly allowed to create specific folders **only** for:
-  - `Components/`: Smaller sub-views used only in this feature.
-  - `Managers/`: Logic classes (e.g., `CaptureSessionManager`).
-  - `Services/`: Services scoped strictly to this feature.
-  - `Models/`: Data structures (if numerous).
+  Services/
+    AppIdentity/
+    Appearance/
+    Capture/
+      ScrollingCapture/
+    Clipboard/
+    Cloud/
+    Diagnostics/
+    FileAccess/
+    Media/
+    Shortcuts/
+    Updates/
+    Wallpaper/
 
-### B. Service Scalability (Adaptive)
+  Shared/
+    Components/
+    Extensions/
+    Services/
+    Styles/
 
-- **Default (Simple):** Create a service as a single file in the root `Services/` folder (e.g., `Services/HapticService.swift`).
-- **Expansion (Complex):** If a Service logic becomes complex (e.g., > 300 lines or requires multiple helpers):
-  1. Create a folder named after the domain (e.g., `Services/Windowing/`).
-  2. Place the main service file inside (`Windowing/WindowService.swift`).
-  3. Place helper files side-by-side (`Windowing/WindowLayoutStrategy.swift`).
+  Common/
+    Components/
 
-### C. Naming & Colocation
+  Config/
+  Resources/
+```
 
-- **Strict Prefixes:** Even inside nested folders, maintain strict naming to ensure clarity.
-  - `Features/Capture/Components/CaptureToolbar.swift` (Clear context)
-  - `Features/Capture/Managers/CaptureLogic.swift`
-- **Visibility:** Main components must remain visible at the top level of the feature folder.
+## Feature Roots
 
-### D. The Coordinator Pattern
+| Path | Owns |
+| --- | --- |
+| `App/` | Entry point, app lifecycle, menu bar bootstrap, preferences wiring |
+| `Features/Splash/` | Splash window, onboarding root coordinator, intro flow |
+| `Features/Onboarding/` | Onboarding step views and visual system |
+| `Features/Capture/` | High-level screenshot, OCR, cutout, scrolling-capture, and recording entry actions |
+| `Features/Recording/` | Recording toolbar, overlays, live annotation, stop/GIF handoff |
+| `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app |
+| `Features/Annotate/` | Image editor, export, crop, blur, mockup, cutout-aware editing |
+| `Features/VideoEditor/` | Trim, zoom, background, Smart Camera, GIF/video export |
+| `Features/Preferences/` | General, Capture, Quick Access, Shortcuts, Permissions, Cloud, About tabs |
+| `Features/Shortcuts/` | Keyboard shortcut cheat-sheet overlay |
+| `Features/Updates/` | Sparkle menu binding and update UI bridge |
+| `Features/CrashReport/` | Crash report prompt and diagnostics UX |
 
-The `App/AppCoordinator.swift` remains the single source of truth for:
+## Service Roots
 
-- **Window Management:** Opening/Closing `NSWindow` and `NSPanel`.
-- **Menu Bar:** Toggling the `NSStatusBar` item.
-- **Z-Ordering:** Handling `NSWindow.Level` (e.g., keeping the overlay above other apps).
+| Path | Owns |
+| --- | --- |
+| `Services/Capture/` | ScreenCaptureKit capture engine, recording engine, temp storage, post-capture routing |
+| `Services/Capture/ScrollingCapture/` | Long screenshot session model, live preview, stitcher, HUD, metrics |
+| `Services/Cloud/` | S3/R2 providers, upload orchestration, GRDB history, Keychain credentials, encrypted transfer |
+| `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
+| `Services/Media/` | OCR, foreground cutout, GIF conversion helpers, WebP encode |
+| `Services/Shortcuts/` | Global shortcuts, conflict detection, system shortcut checks |
+| `Services/Diagnostics/` | Crash sentinel, logs, toasts, cleanup |
+| `Services/Updates/` | Sparkle updater bootstrap |
+| `Services/Wallpaper/` | Desktop icon and wallpaper helpers used by capture/editor UX |
+| `Services/Appearance/` | Theme and appearance mode management |
 
----
-
-## 4. Workflow for AI
-
-When generating code or refactoring:
-
-1.  **Identify Context:** Determine if the code is a primary feature entry point or a supporting component.
-2.  **Placement Logic:**
-    - **Main View/VM:** Place directly in `Features/[Name]/` (Root).
-    - **Helper/Sub-component:** Place in `Features/[Name]/Components/`.
-    - **Logic/Manager:** Place in `Features/[Name]/Managers/`.
-3.  **Service Handling:**
-    - **Simple:** Generate as a single file in `Services/`.
-    - **Complex:** Generate a folder in `Services/` and split files for readability.
-4.  **Refactor Trigger:**
-    - If a Feature Root exceeds ~7 files, propose moving helpers into `Components` or `Managers`.
-    - If a Service file exceeds ~300 lines, propose splitting it into a Service Folder.
-
----
-
-## 5. Runtime Data Layout (Application Support)
-
-In addition to source-code structure, runtime capture data is centralized in Application Support:
+## Persistence Map
 
 ```text
 ~/Library/Application Support/Snapzy/
   Captures/
-    <temp or unsaved capture files>     // used when auto-save is OFF
+    <temp screenshot or recording files when Save is OFF>
     RecordingMetadata/
-      index.json                         // bookmark/path -> metadata id mapping
+      index.json
       Entries/
-        <uuid>.json                      // per-recording Smart Camera mouse timeline
+        <uuid>.json
+  snapzy.db
 ```
 
-Notes:
+| Store | Used for |
+| --- | --- |
+| `UserDefaults` | Preferences, shortcut configs, onboarding flags, feature toggles |
+| `Keychain` | Cloud access key, secret key, optional cloud protection password |
+| `Application Support/Snapzy/Captures/` | Temp captures and recording metadata sidecars |
+| `Application Support/Snapzy/snapzy.db` | Cloud upload history via GRDB |
 
-- `Captures/` is the shared root for temp files and recording metadata.
-- `RecordingMetadata` is editor-only data used by Video Editor Auto Focus (Follow Mouse).
-- Legacy metadata locations are still readable and lazily migrated to `Captures/RecordingMetadata`.
+## Implementation Notes That Matter
+
+- `ScreenCaptureViewModel` is the main entrypoint for capture actions fired from shortcuts or the status bar menu.
+- `PostCaptureActionHandler` executes Quick Access, clipboard copy, and screenshot auto-open in Annotate after files already exist.
+- `TempCaptureManager` is where the `Save` after-capture toggle becomes real behavior.
+- `RecordingCoordinator` owns the toolbar/overlay UX. `ScreenRecordingManager` owns the media pipeline.
+- `ScrollingCaptureCoordinator` is its own subsystem. Treat `Services/Capture/ScrollingCapture/*` as a unit.
+- `CloudManager` is a facade. Provider-specific behavior lives under `Services/Cloud/`.
+
+## Agent Edit Guide
+
+| Task | Start here |
+| --- | --- |
+| New screenshot mode or capture behavior | `Features/Capture/CaptureViewModel.swift`, `Services/Capture/ScreenCaptureManager.swift`, `docs/capture-flow.md` |
+| Scrolling capture UX or stitching | `Services/Capture/ScrollingCapture/` |
+| Recording toolbar, overlays, GIF flow | `Features/Recording/`, `Services/Capture/ScreenRecordingManager.swift` |
+| Post-capture actions or temp-file logic | `Features/Preferences/PreferencesManager.swift`, `Services/Capture/PostCaptureActionHandler.swift`, `Services/Capture/TempCaptureManager.swift`, `Features/QuickAccess/` |
+| Annotate editor | `Features/Annotate/` |
+| Video editor or Smart Camera | `Features/VideoEditor/`, `Services/Capture/RecordingMetadata.swift` |
+| Cloud upload/config transfer | `Services/Cloud/`, `Features/Preferences/Components/PreferencesCloudSettingsView.swift`, `Features/QuickAccess/Components/QuickAccessCardView.swift`, `Features/Annotate/Components/AnnotateBottomBarView.swift` |
+| Onboarding or app startup | `App/`, `Features/Splash/`, `Features/Onboarding/` |
+| Shortcuts and conflicts | `Services/Shortcuts/`, `Features/Shortcuts/` |
+
+## Current Behavior Clarifications
+
+- `Upload to Cloud & copy link` in Preferences is a screenshot-only capability toggle. Current implementation exposes upload actions in Quick Access and Annotate; it does not auto-run inside `PostCaptureActionHandler`.
+- Quick Access can outlive the original capture location: saved captures stay in the export folder, temp captures are deleted when dismissed unless the user explicitly saves them.
+- Annotate and Video Editor both pause Quick Access countdowns for the edited item and resume them when the editor closes.
