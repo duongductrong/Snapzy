@@ -4,6 +4,27 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+
+## [1.6.0] - 2026-04-11
+
+### Features
+-  Add preview image generation and scaling adjustments for scrolling capture (2de8353)
+-  Enhance scrolling capture feedback with boundary detection and status updates (52a4314)
+-  Introduce guidance system for scrolling capture with visual cues and state management (9bdf518)
+-  Enhance scrolling capture with finalizing state, preview truth management, and HUD updates (f938dcf)
+-  Implement Scrolling Capture Preview Renderer and Update Capture Flow (739cf63)
+-  Enhance zoom and pan functionality with dynamic limits and improved state management (cd3ff08)
+-  Add scrolling capture feature with keyboard shortcut and documentation (ec14757)
+-  Update shortcut display names and descriptions for clarity (839c54f)
+
+### Chore
+- refactor: Refactor scrolling capture implementation to remove auto-scroll functionality (5e3376a)
+- chore: update appcast, cask, and readme for v1.5.11 (857ee68)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [Unreleased]
 
 ### Features
