@@ -266,17 +266,15 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
           )
 
-          if ScrollingCaptureFeature.isEnabled {
-            ShortcutRecorderView(
-              label: GlobalShortcutKind.scrollingCapture.displayName,
-              icon: "arrow.up.and.down",
-              description: "Experimental guided session for long screenshots",
-              shortcut: $scrollingCaptureShortcut,
-              isEnabled: globalEnabledBinding(for: .scrollingCapture),
-              validationIssue: globalValidationIssues[.scrollingCapture],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .scrollingCapture) }
-            )
-          }
+          ShortcutRecorderView(
+            label: GlobalShortcutKind.scrollingCapture.displayName,
+            icon: "arrow.up.and.down",
+            description: "Guided session for long screenshots",
+            shortcut: $scrollingCaptureShortcut,
+            isEnabled: globalEnabledBinding(for: .scrollingCapture),
+            validationIssue: globalValidationIssues[.scrollingCapture],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .scrollingCapture) }
+          )
 
           ShortcutRecorderView(
             label: GlobalShortcutKind.objectCutout.displayName,

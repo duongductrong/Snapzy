@@ -23,23 +23,6 @@ struct ScrollingCaptureHUDView: View {
     return "\(model.selectionSummary) • \(capturedSummary)"
   }
 
-  /// Compact auto-scroll indicator icon based on current state.
-  private var autoScrollIndicator: some View {
-    Group {
-      if model.autoScrollEnabled && model.autoScrollAvailable {
-        Image(systemName: "arrow.up.arrow.down.circle.fill")
-          .foregroundStyle(.white.opacity(0.9))
-      } else if !model.autoScrollAvailable {
-        Image(systemName: "exclamationmark.triangle.fill")
-          .foregroundStyle(.orange.opacity(0.85))
-      } else {
-        Image(systemName: "arrow.up.arrow.down.circle")
-          .foregroundStyle(.white.opacity(0.5))
-      }
-    }
-    .font(.system(size: 12))
-  }
-
   var body: some View {
     HStack(spacing: 10) {
       // MARK: - Left: Title + summary
@@ -53,24 +36,6 @@ struct ScrollingCaptureHUDView: View {
       }
 
       Spacer(minLength: 4)
-
-      // MARK: - Auto-scroll toggle (compact)
-      HStack(spacing: 5) {
-        Toggle(isOn: Binding(
-          get: { model.autoScrollEnabled },
-          set: {
-            model.autoScrollEnabled = $0
-            UserDefaults.standard.set($0, forKey: PreferencesKeys.scrollingCaptureAutoScrollEnabled)
-          }
-        )) {
-          EmptyView()
-        }
-        .toggleStyle(.switch)
-        .controlSize(.mini)
-        .labelsHidden()
-        .disabled(!model.autoScrollAvailable || model.phase != .ready || model.isInteractionLocked)
-      }
-      .help(model.autoScrollStatusText)
 
       // MARK: - Divider
       Divider()

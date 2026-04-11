@@ -798,7 +798,6 @@ final class KeyboardShortcutManager {
     hotkeyID: EventHotKeyID,
     ref: inout EventHotKeyRef?
   ) {
-    guard shortcutFeatureIsAvailable(for: kind) else { return }
     guard isShortcutEnabled(for: kind) else { return }
 
     let status = RegisterEventHotKey(
@@ -865,12 +864,4 @@ final class KeyboardShortcutManager {
     }
   }
 
-  private func shortcutFeatureIsAvailable(for kind: GlobalShortcutKind) -> Bool {
-    switch kind {
-    case .scrollingCapture:
-      return ScrollingCaptureFeature.isEnabled
-    default:
-      return true
-    }
-  }
 }

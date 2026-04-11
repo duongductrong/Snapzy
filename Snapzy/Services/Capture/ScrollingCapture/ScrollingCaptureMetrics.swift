@@ -2,7 +2,7 @@
 //  ScrollingCaptureMetrics.swift
 //  Snapzy
 //
-//  Lightweight per-session metrics for scrolling capture diagnostics.
+//  Lightweight per-session metrics for scrolling capture preview and stitch diagnostics.
 //
 
 import Foundation
@@ -51,16 +51,6 @@ struct ScrollingCaptureSessionMetrics {
   private(set) var appendedDeltaTotalPixels = 0
   private(set) var appendedDeltaMaxPixels = 0
 
-  private(set) var autoScrollStepCount = 0
-  private(set) var autoScrollRequestedStepTotalPoints: CGFloat = 0
-  private(set) var autoScrollRequestedStepMaxPoints: CGFloat = 0
-  private(set) var autoScrollBlockedCount = 0
-  private(set) var autoScrollBoundaryCount = 0
-  private(set) var autoScrollFailureCount = 0
-  private(set) var autoScrollFrameObservationCount = 0
-  private(set) var autoScrollFrameObservationTimeoutCount = 0
-  private(set) var autoScrollFrameWaitDurationTotalMs = 0
-  private(set) var autoScrollCommitAcceptedCount = 0
   private(set) var finalizingStartCount = 0
   private(set) var finalizingDurationTotalMs = 0
   private(set) var finalizingBlockedInputCount = 0
@@ -76,7 +66,6 @@ struct ScrollingCaptureSessionMetrics {
       || livePreviewFrameCount > 0
       || previewTruthLiveAheadCount > 0
       || refreshAttemptCount > 0
-      || autoScrollStepCount > 0
       || finalizingStartCount > 0
       || preStartEscapeCancelCount > 0
   }
@@ -209,38 +198,6 @@ struct ScrollingCaptureSessionMetrics {
     refreshDurationTotalMs += totalDurationMs
   }
 
-  mutating func recordAutoScrollStep(
-    requestedPoints: CGFloat,
-    outcome: ScrollingCaptureAutoScrollEngine.StepOutcome
-  ) {
-    autoScrollStepCount += 1
-    autoScrollRequestedStepTotalPoints += requestedPoints
-    autoScrollRequestedStepMaxPoints = max(autoScrollRequestedStepMaxPoints, requestedPoints)
-
-    switch outcome {
-    case .scrolled:
-      break
-    case .blocked:
-      autoScrollBlockedCount += 1
-    case .reachedBoundary:
-      autoScrollBoundaryCount += 1
-    case .failed:
-      autoScrollFailureCount += 1
-    }
-  }
-
-  mutating func recordAutoScrollFrameObservation(waitDurationMs: Int, didObserveFrame: Bool) {
-    autoScrollFrameObservationCount += 1
-    autoScrollFrameWaitDurationTotalMs += waitDurationMs
-    if !didObserveFrame {
-      autoScrollFrameObservationTimeoutCount += 1
-    }
-  }
-
-  mutating func recordAutoScrollCommitAccepted() {
-    autoScrollCommitAcceptedCount += 1
-  }
-
   mutating func recordFinalizingStarted(at timestamp: TimeInterval) {
     finalizingStartCount += 1
     finalizingStartedAt = timestamp
@@ -315,22 +272,6 @@ struct ScrollingCaptureSessionMetrics {
       "livePreviewGapMaxMs": "\(livePreviewGapMaxMs)",
       "previewTruthLiveAhead": "\(previewTruthLiveAheadCount)",
       "previewTruthLiveAheadMaxLagMs": "\(previewTruthLiveAheadMaxLagMs)",
-      "autoScrollSteps": "\(autoScrollStepCount)",
-      "autoScrollStepAvgPoints": Self.averageString(
-        total: Int(autoScrollRequestedStepTotalPoints.rounded()),
-        count: autoScrollStepCount
-      ),
-      "autoScrollStepMaxPoints": Self.formatted(autoScrollRequestedStepMaxPoints),
-      "autoScrollBlocked": "\(autoScrollBlockedCount)",
-      "autoScrollBoundaries": "\(autoScrollBoundaryCount)",
-      "autoScrollFailures": "\(autoScrollFailureCount)",
-      "autoScrollFrameObservations": "\(autoScrollFrameObservationCount)",
-      "autoScrollFrameTimeouts": "\(autoScrollFrameObservationTimeoutCount)",
-      "autoScrollFrameWaitAvgMs": Self.averageString(
-        total: autoScrollFrameWaitDurationTotalMs,
-        count: autoScrollFrameObservationCount
-      ),
-      "autoScrollCommitAccepted": "\(autoScrollCommitAcceptedCount)",
       "finalizingStarts": "\(finalizingStartCount)",
       "finalizingAvgMs": Self.averageString(total: finalizingDurationTotalMs, count: finalizingStartCount),
       "finalizingBlockedInput": "\(finalizingBlockedInputCount)",

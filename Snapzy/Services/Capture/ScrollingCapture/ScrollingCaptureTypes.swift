@@ -2,11 +2,10 @@
 //  ScrollingCaptureTypes.swift
 //  Snapzy
 //
-//  Shared state and feature toggles for scrolling capture.
+//  Shared state and configuration for scrolling capture.
 //
 
 import AppKit
-import ApplicationServices
 import Combine
 import Foundation
 
@@ -97,15 +96,7 @@ struct ScrollingCaptureSelectionGuidance {
   let tone: ScrollingCaptureSelectionGuidanceTone
 }
 
-enum ScrollingCaptureFeature {
-  static var isEnabled: Bool {
-    UserDefaults.standard.object(forKey: PreferencesKeys.scrollingCaptureEnabled) as? Bool ?? false
-  }
-
-  static var defaultAutoScrollEnabled: Bool {
-    UserDefaults.standard.object(forKey: PreferencesKeys.scrollingCaptureAutoScrollEnabled) as? Bool ?? false
-  }
-
+enum ScrollingCaptureConfiguration {
   static var showHints: Bool {
     UserDefaults.standard.object(forKey: PreferencesKeys.scrollingCaptureShowHints) as? Bool ?? true
   }
@@ -129,19 +120,9 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   @Published var pendingCommitCount = 0
   @Published var acceptedFrameCount = 0
   @Published var stitchedPixelHeight = 0
-  @Published var autoScrollEnabled: Bool
-  @Published var autoScrollAvailable: Bool
-  @Published var autoScrollStatusText: String
-  @Published var isAutoScrolling = false
 
   init(selectedRect: CGRect) {
-    let autoScrollAvailable = AXIsProcessTrusted()
     self.selectedRect = selectedRect
-    self.autoScrollEnabled = ScrollingCaptureFeature.defaultAutoScrollEnabled
-    self.autoScrollAvailable = autoScrollAvailable
-    self.autoScrollStatusText = autoScrollAvailable
-      ? "Auto-scroll can start after the first frame is locked."
-      : "Auto-scroll needs Accessibility permission."
   }
 
   var selectionSummary: String {
@@ -218,16 +199,9 @@ final class ScrollingCaptureSessionModel: ObservableObject {
         )
       }
 
-      let readyDetail: String
-      if autoScrollEnabled && !autoScrollAvailable {
-        readyDetail = "Auto-scroll needs Accessibility permission"
-      } else {
-        readyDetail = "Then press Start Capture"
-      }
-
       return ScrollingCaptureSelectionGuidance(
         title: "Frame only the scrolling content",
-        detail: readyDetail,
+        detail: "Then press Start Capture",
         tone: .neutral
       )
 
@@ -330,14 +304,6 @@ final class ScrollingCaptureSessionModel: ObservableObject {
           title: "Preview needs recovery",
           detail: "Keep one direction or restart",
           tone: .warning
-        )
-      }
-
-      if isAutoScrolling {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Auto-scrolling",
-          detail: "Press Done when the page ends",
-          tone: .progress
         )
       }
 

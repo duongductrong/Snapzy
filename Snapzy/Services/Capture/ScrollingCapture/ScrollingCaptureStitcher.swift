@@ -2,7 +2,7 @@
 //  ScrollingCaptureStitcher.swift
 //  Snapzy
 //
-//  Experimental vertical stitcher for scrolling capture sessions.
+//  Vertical stitcher for scrolling capture sessions.
 //
 
 import AppKit

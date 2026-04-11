@@ -223,18 +223,16 @@ final class AppStatusBarController: ObservableObject {
     captureFullscreenItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureFullscreenItem)
 
-    if ScrollingCaptureFeature.isEnabled {
-      let scrollingCaptureItem = NSMenuItem(
-        title: "Scrolling Capture (Experimental)",
-        action: #selector(captureScrollingAction),
-        keyEquivalent: "6"
-      )
-      scrollingCaptureItem.keyEquivalentModifierMask = [.command, .shift]
-      scrollingCaptureItem.target = self
-      scrollingCaptureItem.image = NSImage(systemSymbolName: "arrow.up.and.down", accessibilityDescription: nil)
-      scrollingCaptureItem.isEnabled = viewModel.hasPermission && !ScrollingCaptureCoordinator.shared.isActive
-      menu?.addItem(scrollingCaptureItem)
-    }
+    let scrollingCaptureItem = NSMenuItem(
+      title: "Scrolling Capture",
+      action: #selector(captureScrollingAction),
+      keyEquivalent: "6"
+    )
+    scrollingCaptureItem.keyEquivalentModifierMask = [.command, .shift]
+    scrollingCaptureItem.target = self
+    scrollingCaptureItem.image = NSImage(systemSymbolName: "arrow.up.and.down", accessibilityDescription: nil)
+    scrollingCaptureItem.isEnabled = viewModel.hasPermission && !ScrollingCaptureCoordinator.shared.isActive
+    menu?.addItem(scrollingCaptureItem)
 
     let captureOCRItem = NSMenuItem(
       title: "Capture Text (OCR)",

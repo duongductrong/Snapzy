@@ -373,15 +373,6 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   }
 
   func captureScrolling() {
-    guard ScrollingCaptureFeature.isEnabled else {
-      AppToastManager.shared.show(
-        message: "Enable Scrolling Capture in Preferences > Capture to try the experimental build.",
-        style: .info,
-        position: .bottomCenter
-      )
-      return
-    }
-
     guard !ScrollingCaptureCoordinator.shared.isActive else {
       AppToastManager.shared.show(
         message: "A scrolling capture session is already active.",

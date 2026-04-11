@@ -124,11 +124,8 @@ enum ShortcutOverlayContentBuilder {
     var items: [ShortcutOverlayItem] = [
       globalItem(kind: .fullscreen, icon: "rectangle.dashed.and.paperclip", manager: manager),
       globalItem(kind: .area, icon: "rectangle.dashed", manager: manager),
+      globalItem(kind: .scrollingCapture, icon: "arrow.up.and.down", manager: manager),
     ]
-
-    if ScrollingCaptureFeature.isEnabled {
-      items.append(globalItem(kind: .scrollingCapture, icon: "arrow.up.and.down", manager: manager))
-    }
 
     items.append(globalItem(kind: .objectCutout, icon: "person.crop.rectangle", manager: manager))
     items.append(globalItem(kind: .ocr, icon: "text.viewfinder", manager: manager))
