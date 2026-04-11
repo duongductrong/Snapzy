@@ -38,6 +38,7 @@ struct ScrollingCaptureSessionMetrics {
   private(set) var initializedCount = 0
   private(set) var appendedCount = 0
   private(set) var ignoredNoMovementCount = 0
+  private(set) var likelyBoundaryNoMovementCount = 0
   private(set) var ignoredAlignmentFailedCount = 0
   private(set) var reachedHeightLimitCount = 0
   private(set) var alignmentFailureStreakMax = 0
@@ -170,6 +171,10 @@ struct ScrollingCaptureSessionMetrics {
     }
 
     if let alignmentDebug {
+      if alignmentDebug.path == .duplicateBoundary {
+        likelyBoundaryNoMovementCount += 1
+      }
+
       if alignmentDebug.usedVisionEstimate {
         visionEstimateCount += 1
       }
@@ -284,6 +289,7 @@ struct ScrollingCaptureSessionMetrics {
       "initialized": "\(initializedCount)",
       "appended": "\(appendedCount)",
       "ignoredNoMovement": "\(ignoredNoMovementCount)",
+      "likelyBoundaryNoMovement": "\(likelyBoundaryNoMovementCount)",
       "ignoredAlignmentFailed": "\(ignoredAlignmentFailedCount)",
       "alignmentFailureStreakMax": "\(alignmentFailureStreakMax)",
       "heightLimitHits": "\(reachedHeightLimitCount)",

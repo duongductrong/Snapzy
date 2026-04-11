@@ -268,6 +268,16 @@ final class ScrollingCaptureSessionModel: ObservableObject {
         )
       }
 
+      if normalizedStatus.contains("no new content detected")
+        || normalizedStatus.contains("probably at the end")
+      {
+        return ScrollingCaptureSelectionGuidance(
+          title: "Press Done to save",
+          detail: "No new content was detected",
+          tone: .active
+        )
+      }
+
       if normalizedStatus.contains("press done")
         || normalizedStatus.contains("reached the end")
       {

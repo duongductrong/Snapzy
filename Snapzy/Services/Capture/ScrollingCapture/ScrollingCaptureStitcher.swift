@@ -29,6 +29,7 @@ enum ScrollingCaptureAlignmentPath: String {
   case guidedVision = "guided-vision"
   case recoveryVision = "recovery-vision"
   case noMovement = "no-movement"
+  case duplicateBoundary = "duplicate-boundary"
   case alignmentFailed = "alignment-failed"
   case heightLimit = "height-limit"
 }
@@ -50,6 +51,7 @@ struct ScrollingCaptureStitchUpdate {
   let outputHeight: Int
   let matchFailureCount: Int
   let mergeDirection: ScrollingCaptureMergeDirection
+  let likelyReachedBoundary: Bool
   let alignmentDebug: ScrollingCaptureAlignmentDebugInfo?
 }
 
@@ -338,6 +340,7 @@ final class ScrollingCaptureStitcher {
       outputHeight: outputHeight,
       matchFailureCount: matchNotFoundCount,
       mergeDirection: mergeDirection,
+      likelyReachedBoundary: false,
       alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
         path: .initialFrame,
         usedVisionEstimate: false,
@@ -358,6 +361,7 @@ final class ScrollingCaptureStitcher {
   ) -> ScrollingCaptureStitchUpdate? {
     guard let lastRaster, let baseRaster else { return start(with: image) }
     guard let raster = RasterImage(cgImage: image) else { return nil }
+    let expectedDeltaPixels = expectedSignedDeltaPixels.map(abs)
     guard raster.width == lastRaster.width, raster.height == lastRaster.height else {
       matchNotFoundCount += 1
       return currentUpdate(outcome: .ignoredAlignmentFailed, includeMergedImage: renderMergedImage)
@@ -402,18 +406,20 @@ final class ScrollingCaptureStitcher {
       visionAlignmentEstimate: nil,
       searchMode: .guided
     )
+    let strongVisionMovement = hasStrongVisionMovement(visionAlignmentEstimate)
 
     if
       frameDifference < 8.5,
-      !(visionAlignmentEstimate?.agreementCount ?? 0 >= 2 && (visionAlignmentEstimate?.deltaY ?? 0) >= 10),
+      !strongVisionMovement,
       fastGuidedMatch == nil
     {
       return currentUpdate(
         outcome: .ignoredNoMovement,
         includeMergedImage: renderMergedImage,
+        likelyReachedBoundary: true,
         alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
-          path: .noMovement,
-          usedVisionEstimate: false,
+          path: .duplicateBoundary,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
           confidence: 1,
           pixelScore: nil,
           totalScore: nil,
@@ -463,6 +469,28 @@ final class ScrollingCaptureStitcher {
         searchMode: .recovery
       )
       alignmentPath = .recoveryVision
+    }
+
+    if isLikelyDuplicateBoundary(
+      frameDifference: frameDifference,
+      match: match,
+      expectedDeltaPixels: expectedDeltaPixels,
+      visionAlignmentEstimate: visionAlignmentEstimate
+    ) {
+      return currentUpdate(
+        outcome: .ignoredNoMovement,
+        includeMergedImage: renderMergedImage,
+        likelyReachedBoundary: true,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .duplicateBoundary,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          confidence: match.map { matcherConfidence(for: $0) } ?? 1,
+          pixelScore: match?.pixelScore,
+          totalScore: match?.totalScore,
+          appendDeltaY: nil,
+          visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
+        )
+      )
     }
 
     guard let match else {
@@ -592,6 +620,7 @@ final class ScrollingCaptureStitcher {
   private func currentUpdate(
     outcome: ScrollingCaptureStitchOutcome,
     includeMergedImage: Bool = true,
+    likelyReachedBoundary: Bool = false,
     alignmentDebug: ScrollingCaptureAlignmentDebugInfo? = nil
   ) -> ScrollingCaptureStitchUpdate {
     ScrollingCaptureStitchUpdate(
@@ -601,6 +630,7 @@ final class ScrollingCaptureStitcher {
       outputHeight: outputHeight,
       matchFailureCount: matchNotFoundCount,
       mergeDirection: mergeDirection,
+      likelyReachedBoundary: likelyReachedBoundary,
       alignmentDebug: alignmentDebug
     )
   }
@@ -1310,6 +1340,30 @@ final class ScrollingCaptureStitcher {
     }
 
     return abs(match.deltaY - visionAlignmentEstimate.deltaY) > tolerance
+  }
+
+  private func hasStrongVisionMovement(_ visionAlignmentEstimate: VisionAlignmentEstimate?) -> Bool {
+    guard let visionAlignmentEstimate else { return false }
+    return visionAlignmentEstimate.agreementCount >= 2 && visionAlignmentEstimate.deltaY >= 10
+  }
+
+  private func isLikelyDuplicateBoundary(
+    frameDifference: Double,
+    match: Match?,
+    expectedDeltaPixels: Int?,
+    visionAlignmentEstimate: VisionAlignmentEstimate?
+  ) -> Bool {
+    guard frameDifference < 8.5 else { return false }
+    guard !hasStrongVisionMovement(visionAlignmentEstimate) else { return false }
+    guard let match else { return true }
+
+    let priorDelta = lastMatch?.deltaY ?? 0
+    let baselineDelta = max(priorDelta, expectedDeltaPixels ?? 0)
+    let suspiciousDeltaCeiling = max(18, min(36, max(baselineDelta / 2, priorDelta / 3)))
+    let suspiciousExpectedMismatch = baselineDelta > 0 && match.deltaY < max(18, baselineDelta / 2)
+    let lowConfidence = matcherConfidence(for: match) < 0.84
+
+    return lowConfidence || suspiciousExpectedMismatch || match.deltaY <= suspiciousDeltaCeiling
   }
 
   private func clamp(_ value: Int, to range: ClosedRange<Int>) -> Int {

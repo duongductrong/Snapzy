@@ -22,7 +22,9 @@ final class ScrollingCapturePreviewWindow: NSPanel {
     )
 
     isFloatingPanel = true
-    level = .floating
+    // Keep the preview above the interactive region overlay (.floating)
+    // while still leaving the HUD on top at .popUpMenu.
+    level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
     isOpaque = false
     backgroundColor = .clear
     hasShadow = true

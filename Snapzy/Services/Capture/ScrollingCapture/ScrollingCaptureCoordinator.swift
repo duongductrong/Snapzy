@@ -529,7 +529,13 @@ final class ScrollingCaptureCoordinator {
           "Session active. \(update.acceptedFrameCount) frames stitched into \(update.outputHeight) px."
       case .ignoredNoMovement:
         sessionModel.runtimeState = previewRuntimeState()
-        sessionModel.statusText = "Waiting for new content. Keep the scroll moving in one direction."
+        if update.likelyReachedBoundary {
+          sessionModel.previewCaption = "\(update.acceptedFrameCount) frames stitched • no new content"
+          sessionModel.statusText =
+            "No new content detected. You're probably at the end of the scrollable content. Press Done to save."
+        } else {
+          sessionModel.statusText = "Waiting for new content. Keep the scroll moving in one direction."
+        }
       case .ignoredAlignmentFailed:
         sessionModel.runtimeState = update.matchFailureCount >= 2 ? .paused : previewRuntimeState()
         if update.matchFailureCount >= 2 {
@@ -944,6 +950,12 @@ final class ScrollingCaptureCoordinator {
             return
           }
         case .ignoredNoMovement:
+          if update.likelyReachedBoundary {
+            sessionModel.statusText =
+              "No new content detected. Auto-scroll reached the end. Press Done to save the current result."
+            sessionModel.autoScrollStatusText = "Reached the end of the scrollable content."
+            return
+          }
           autoScrollConsecutiveNoMovement += 1
           autoScrollStepPoints = min(maxAutoScrollStepPoints(), requestedStepPoints * 1.22)
           if autoScrollConsecutiveNoMovement >= 3 {
@@ -1325,8 +1337,12 @@ final class ScrollingCaptureCoordinator {
 
   private func finalizingPreviewCaption(for update: ScrollingCaptureStitchUpdate) -> String {
     switch update.outcome {
-    case .initialized, .ignoredNoMovement:
+    case .initialized:
       return "Finalizing stitched result • \(update.acceptedFrameCount) frames locked"
+    case .ignoredNoMovement:
+      return update.likelyReachedBoundary
+        ? "Finalizing current result • no new content"
+        : "Finalizing stitched result • \(update.acceptedFrameCount) frames locked"
     case .appended(let deltaY):
       return "Final frame locked • \(update.acceptedFrameCount) frames • +\(deltaY) px"
     case .ignoredAlignmentFailed:
@@ -1338,8 +1354,12 @@ final class ScrollingCaptureCoordinator {
 
   private func finalizingStatusText(for update: ScrollingCaptureStitchUpdate) -> String {
     switch update.outcome {
-    case .initialized, .appended, .ignoredNoMovement:
+    case .initialized, .appended:
       return "Locking the current capture. Snapzy is sealing \(update.acceptedFrameCount) stitched frames before saving."
+    case .ignoredNoMovement:
+      return update.likelyReachedBoundary
+        ? "No new content was detected. Snapzy is saving the current stitched result."
+        : "Locking the current capture. Snapzy is sealing \(update.acceptedFrameCount) stitched frames before saving."
     case .ignoredAlignmentFailed:
       return "Couldn't align the last frame cleanly. Snapzy will save the current stitched result."
     case .reachedHeightLimit:
