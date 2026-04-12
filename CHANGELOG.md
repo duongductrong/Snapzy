@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.6.3] - 2026-04-12
+
+### Chore
+- chore: enhance keychain security by enabling data protection and improving credential handling (d318651)
+- chore: update appcast, cask, and readme for v1.6.2 (8cd66da)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.6.2] - 2026-04-12
 
 ### Chore
