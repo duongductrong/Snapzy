@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.6.3</title>
+      <sparkle:version>55</sparkle:version>
+      <sparkle:shortVersionString>1.6.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 12 Apr 2026 18:54:59 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🔧 Maintenance</h3><ul><li>Bug fixes and improvements</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.6.3/Snapzy-v1.6.3.dmg"
+        sparkle:edSignature="M0XZ75CD7yyb/L+PME88EAxXWRm49U9ABym1b4RFr+1WEP0+MyoP930fkGi3E7inzFufd4mPohIgFEna7qx/AQ=="
+        length="12497822"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.6.2</title>
       <sparkle:version>54</sparkle:version>
       <sparkle:shortVersionString>1.6.2</sparkle:shortVersionString>
