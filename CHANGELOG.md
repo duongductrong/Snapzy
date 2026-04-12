@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.6.2] - 2026-04-12
+
+### Chore
+- refactor: remove mode guidance drawing for scrolling capture in AreaSelectionOverlayView (149b2b3)
+- chore: update appcast, cask, and readme for v1.6.1 (2b39b62)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.6.1] - 2026-04-11
 
 ### Features
