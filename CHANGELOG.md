@@ -8,6 +8,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.0] - 2026-04-13
+
+### Features
+-  Add language selection feature in preferences with localization support (0de300f)
+-  Add localized privacy usage descriptions for multiple languages (3672c67)
+-  Add localization support for English and Vietnamese, update documentation (e9ffe51)
+-  Setup multi-language base (df24ddb)
+
+### Chore
+- refactor: Refactor code structure for improved readability and maintainability (200b4b2)
+- refactor: Refactor localization management and documentation (3b05971)
+- refactor: Refactor localization architecture and introduce catalog management tool (961e881)
+- chore: update appcast, cask, and readme for v1.6.3 (d13220c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.6.3] - 2026-04-12
 
 ### Chore
