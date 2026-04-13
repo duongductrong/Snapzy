@@ -24,6 +24,12 @@ jobs:
         with:
           xcode-version: '26.2'
 
+      - name: Verify localization catalogs
+        run: |
+          set -euo pipefail
+          mkdir -p build/swift-module-cache
+          swift -module-cache-path build/swift-module-cache tools/localization/catalog-tool.swift verify
+
       - name: Build
         run: |
           set -euo pipefail

@@ -1,0 +1,129 @@
+{
+  "runtimeCatalog": "Snapzy/Resources/Localizable.xcstrings",
+  "sourceDirectory": "LocalizationCatalogSources",
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "fragments": [
+    {
+      "file": "app-shell.xcstrings",
+      "prefixes": [
+        "action.",
+        "menu.",
+        "common.",
+        "appearance.",
+        "splash.",
+        "app-identity.",
+        "permission-row.",
+        "crash-report."
+      ]
+    },
+    {
+      "file": "onboarding.xcstrings",
+      "prefixes": [
+        "onboarding.",
+        "sponsor."
+      ]
+    },
+    {
+      "file": "preferences-general.xcstrings",
+      "prefixes": [
+        "preferences.tab.",
+        "preferences-general."
+      ]
+    },
+    {
+      "file": "preferences-capture.xcstrings",
+      "prefixes": [
+        "preferences-capture."
+      ]
+    },
+    {
+      "file": "preferences-shortcuts.xcstrings",
+      "prefixes": [
+        "preferences-shortcuts."
+      ]
+    },
+    {
+      "file": "preferences-cloud-history-and-about.xcstrings",
+      "prefixes": [
+        "preferences-cloud-history.",
+        "preferences-about."
+      ]
+    },
+    {
+      "file": "preferences-quick-access-and-permissions.xcstrings",
+      "prefixes": [
+        "preferences-quick-access.",
+        "preferences-permissions."
+      ]
+    },
+    {
+      "file": "capture-core.xcstrings",
+      "prefixes": [
+        "after-capture.",
+        "capture-kind.",
+        "capture-storage.",
+        "file-access.",
+        "foreground-cutout.",
+        "ocr.",
+        "screen-capture."
+      ]
+    },
+    {
+      "file": "scrolling-capture.xcstrings",
+      "prefixes": [
+        "scrolling-capture.",
+        "scrolling-capture-status."
+      ]
+    },
+    {
+      "file": "recording.xcstrings",
+      "prefixes": [
+        "gif.",
+        "keystroke-position.",
+        "microphone.",
+        "recording.",
+        "recording-annotation.",
+        "recording-toolbar."
+      ]
+    },
+    {
+      "file": "annotate-and-quick-access.xcstrings",
+      "prefixes": [
+        "annotate.",
+        "annotate-context.",
+        "quick-access."
+      ]
+    },
+    {
+      "file": "video-editor.xcstrings",
+      "prefixes": [
+        "video-editor.",
+        "video-editor-timeline.",
+        "video-export.",
+        "zoom-compositor."
+      ]
+    },
+    {
+      "file": "cloud.xcstrings",
+      "prefixes": [
+        "cloud-expire.",
+        "cloud-operation.",
+        "cloud-password.",
+        "cloud-provider.",
+        "cloud-settings.",
+        "cloud-transfer.",
+        "cloud-usage."
+      ]
+    },
+    {
+      "file": "shortcuts.xcstrings",
+      "prefixes": [
+        "shortcut-overlay.",
+        "shortcut-recorder.",
+        "shortcut-validation.",
+        "system-shortcuts."
+      ]
+    }
+  ]
+}
