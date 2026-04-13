@@ -72,7 +72,7 @@ struct Mockup3DRenderer: View {
                     Image(systemName: "photo")
                         .font(.system(size: 40))
                         .foregroundStyle(.secondary)
-                    Text("Drop an image here")
+                    Text(L10n.AnnotateUI.dropImageHere)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

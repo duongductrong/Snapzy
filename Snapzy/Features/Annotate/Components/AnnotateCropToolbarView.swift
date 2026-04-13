@@ -68,20 +68,20 @@ struct CropToolbarView: View {
         )
     }
     .buttonStyle(.plain)
-    .help("Toggle rule of thirds grid")
+    .help(L10n.AnnotateUI.toggleRuleOfThirdsGrid)
   }
 
   // MARK: - Action Buttons
 
   private var actionButtons: some View {
     HStack(spacing: 8) {
-      Button("Cancel") {
+      Button(L10n.Common.cancel) {
         state.cancelCrop()
       }
       .buttonStyle(.bordered)
       .controlSize(.small)
 
-      Button("Apply") {
+      Button(L10n.Common.apply) {
         state.applyCrop()
         state.selectedTool = .selection
       }

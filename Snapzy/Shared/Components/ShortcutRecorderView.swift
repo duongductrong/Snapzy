@@ -63,7 +63,7 @@ struct ShortcutRecorderView: View {
         startRecording()
       } label: {
         if isRecording {
-          Text("Press keys...")
+          Text(L10n.ShortcutRecorder.pressKeys)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(.accentColor)
             .frame(minWidth: 100)
@@ -74,11 +74,11 @@ struct ShortcutRecorderView: View {
       .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
       .shortcutValidationHighlight(issue: validationIssue)
       .disabled(!isInteractionEnabled)
-      .help(isInteractionEnabled ? "Click to record a shortcut." : "Turn this shortcut on to edit it.")
+      .help(isInteractionEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
       if let toggleBinding {
         HStack(spacing: 6) {
-          Text(toggleBinding.wrappedValue ? "On" : "Off")
+          Text(toggleBinding.wrappedValue ? L10n.Common.on : L10n.Common.off)
             .font(.caption)
             .foregroundColor(.secondary)
 

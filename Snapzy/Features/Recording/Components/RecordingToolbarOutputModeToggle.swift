@@ -38,8 +38,10 @@ struct ToolbarOutputModeDropdown: View {
     .popover(isPresented: $showPopover, arrowEdge: .bottom) {
       OutputModePopoverContent(state: state)
     }
-    .accessibilityLabel("Output mode: \(state.outputMode.displayName)")
-    .accessibilityHint("Opens output format selection")
+    .accessibilityLabel(
+      "\(L10n.RecordingToolbar.outputModeAccessibilityPrefix): \(state.outputMode.displayName)"
+    )
+    .accessibilityHint(L10n.RecordingToolbar.outputModeHint)
   }
 }
 
@@ -53,7 +55,7 @@ struct RecordButtonWithBadge: View {
   var body: some View {
     Button(action: onRecord) {
       HStack(spacing: 6) {
-        Text("Record")
+        Text(L10n.RecordingToolbar.record)
           .font(.system(size: 13, weight: .regular))
 
         // Output mode badge
@@ -82,8 +84,8 @@ struct RecordButtonWithBadge: View {
       RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
         .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
     )
-    .accessibilityLabel("Start recording as \(state.outputMode.displayName)")
-    .accessibilityHint("Begins screen recording with current settings")
+    .accessibilityLabel(L10n.RecordingToolbar.startRecordingAs(state.outputMode.displayName))
+    .accessibilityHint(L10n.RecordingToolbar.startRecordingHint)
   }
 
   private var badgeTextColor: Color {

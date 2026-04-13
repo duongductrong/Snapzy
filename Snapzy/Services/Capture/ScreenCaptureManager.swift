@@ -35,17 +35,17 @@ enum CaptureError: Error, LocalizedError {
   var errorDescription: String? {
     switch self {
     case .permissionDenied:
-      return "Screen capture permission denied"
+      return L10n.ScreenCapture.permissionDenied
     case .unavailable(let reason):
       return reason
     case .noDisplayFound:
-      return "No display found to capture"
+      return L10n.ScreenCapture.noDisplayFound
     case .captureFailed(let reason):
-      return "Capture failed: \(reason)"
+      return L10n.ScreenCapture.captureFailed(reason)
     case .saveFailed(let reason):
-      return "Failed to save screenshot: \(reason)"
+      return L10n.ScreenCapture.saveFailed(reason)
     case .cancelled:
-      return "Capture was cancelled"
+      return L10n.ScreenCapture.cancelled
     }
   }
 }
@@ -277,7 +277,7 @@ final class ScreenCaptureManager: ObservableObject {
       )
 
       guard let croppedImage = try await capturePreparedArea(context) else {
-        return .failure(.captureFailed("Failed to crop captured image"))
+        return .failure(.captureFailed(L10n.ScreenCapture.failedToCropCapturedImage))
       }
 
       // Save the cropped image
@@ -321,7 +321,7 @@ final class ScreenCaptureManager: ObservableObject {
       do {
         try FileManager.default.createDirectory(at: scopedDirectory, withIntermediateDirectories: true)
       } catch {
-        return .failure(.saveFailed("Could not create directory: \(error.localizedDescription)"))
+        return .failure(.saveFailed(L10n.ScreenCapture.couldNotCreateDirectory(error.localizedDescription)))
       }
 
       let fileURL = CaptureOutputNaming.makeUniqueFileURL(
@@ -333,7 +333,7 @@ final class ScreenCaptureManager: ObservableObject {
       if isWebP {
         // WebP: use WebPEncoder (cwebp CLI) since ImageIO doesn't support WebP encoding
         guard WebPEncoderService.write(image, to: fileURL) else {
-          return .failure(.saveFailed("WebP encoding failed"))
+          return .failure(.saveFailed(L10n.ScreenCapture.webpEncodingFailed))
         }
       } else {
         // PNG/JPEG: use CGImageDestination
@@ -345,13 +345,13 @@ final class ScreenCaptureManager: ObservableObject {
             nil
           )
         else {
-          return .failure(.saveFailed("Could not create image destination"))
+          return .failure(.saveFailed(L10n.ScreenCapture.couldNotCreateImageDestination))
         }
 
         CGImageDestinationAddImage(destination, image, nil)
 
         guard CGImageDestinationFinalize(destination) else {
-          return .failure(.saveFailed("Failed to write image to disk"))
+          return .failure(.saveFailed(L10n.ScreenCapture.failedToWriteImageToDisk))
         }
       }
 
@@ -360,7 +360,7 @@ final class ScreenCaptureManager: ObservableObject {
       if verified {
         return .success(fileURL)
       } else {
-        return .failure(.saveFailed("File write verification failed for \(fileURL.lastPathComponent)"))
+        return .failure(.saveFailed(L10n.ScreenCapture.fileWriteVerificationFailed(fileURL.lastPathComponent)))
       }
     }.value
 
@@ -592,12 +592,12 @@ final class ScreenCaptureManager: ObservableObject {
     let clampedRect = relativeRect.intersection(screenBounds)
 
     guard !clampedRect.isEmpty else {
-      throw CaptureError.captureFailed("Selection area is outside display bounds")
+      throw CaptureError.captureFailed(L10n.ScreenCapture.selectionOutsideDisplayBounds)
     }
 
     let alignedRect = pixelAlignedRect(clampedRect, scaleFactor: scaleFactor, bounds: screenBounds)
     guard !alignedRect.isEmpty else {
-      throw CaptureError.captureFailed("Selection area is outside display bounds")
+      throw CaptureError.captureFailed(L10n.ScreenCapture.selectionOutsideDisplayBounds)
     }
 
     let flippedY = screenFrame.height - alignedRect.origin.y - alignedRect.height
@@ -835,7 +835,7 @@ private final class SingleFrameStreamOutput: NSObject, SCStreamOutput {
     let rect = CGRect(x: 0, y: 0, width: CVPixelBufferGetWidth(imageBuffer), height: CVPixelBufferGetHeight(imageBuffer))
 
     guard let cgImage = context.createCGImage(ciImage, from: rect) else {
-      continuation.resume(throwing: CaptureError.captureFailed("Failed to create CGImage from stream frame"))
+      continuation.resume(throwing: CaptureError.captureFailed(L10n.ScreenCapture.failedToCreateImageFromFrame))
       stopStream()
       return
     }

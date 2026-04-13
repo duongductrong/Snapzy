@@ -176,7 +176,7 @@ struct ZoomBlockView: View {
     Button {
       onSelect()
     } label: {
-      Label("Edit Zoom", systemImage: "slider.horizontal.3")
+      Label(L10n.VideoEditor.editZoom, systemImage: "slider.horizontal.3")
     }
 
     Divider()
@@ -185,7 +185,7 @@ struct ZoomBlockView: View {
       // Toggle enabled handled by parent
     } label: {
       Label(
-        segment.isEnabled ? "Disable Zoom" : "Enable Zoom",
+        segment.isEnabled ? L10n.VideoEditor.disableZoom : L10n.VideoEditor.enableZoom,
         systemImage: segment.isEnabled ? "eye.slash" : "eye"
       )
     }
@@ -193,7 +193,7 @@ struct ZoomBlockView: View {
     Button(role: .destructive) {
       // Delete handled by parent
     } label: {
-      Label("Delete Zoom", systemImage: "trash")
+      Label(L10n.VideoEditor.deleteZoom, systemImage: "trash")
     }
   }
 

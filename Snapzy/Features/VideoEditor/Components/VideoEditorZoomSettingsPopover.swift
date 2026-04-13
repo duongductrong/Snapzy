@@ -57,7 +57,7 @@ struct ZoomSettingsPopover: View {
       Image(systemName: "plus.magnifyingglass")
         .foregroundColor(ZoomColors.primary)
 
-      Text("Zoom Settings")
+      Text(L10n.VideoEditor.zoomSettings)
         .font(.system(size: 12, weight: .semibold))
 
       Spacer()
@@ -76,7 +76,7 @@ struct ZoomSettingsPopover: View {
   private var zoomLevelSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack {
-        Text("Zoom Level")
+        Text(L10n.VideoEditor.zoomLevel)
           .font(.system(size: 11, weight: .medium))
           .foregroundColor(.secondary)
 
@@ -133,7 +133,7 @@ struct ZoomSettingsPopover: View {
 
   private var centerPickerSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Zoom Center")
+      Text(L10n.VideoEditor.zoomCenter)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -179,7 +179,7 @@ struct ZoomSettingsPopover: View {
       } label: {
         HStack(spacing: 4) {
           Image(systemName: selectedSegment?.isEnabled == true ? "eye" : "eye.slash")
-          Text(selectedSegment?.isEnabled == true ? "Enabled" : "Disabled")
+          Text(selectedSegment?.isEnabled == true ? L10n.Common.enabled : L10n.Common.disabled)
         }
         .font(.system(size: 10))
         .padding(.horizontal, 8)
@@ -218,11 +218,11 @@ struct ZoomSettingsPopover: View {
 
   private var centerPresets: [CenterPreset] {
     [
-      CenterPreset(name: "Top Left", icon: "arrow.up.left", point: CGPoint(x: 0.25, y: 0.25)),
-      CenterPreset(name: "Top Right", icon: "arrow.up.right", point: CGPoint(x: 0.75, y: 0.25)),
-      CenterPreset(name: "Center", icon: "circle", point: CGPoint(x: 0.5, y: 0.5)),
-      CenterPreset(name: "Bottom Left", icon: "arrow.down.left", point: CGPoint(x: 0.25, y: 0.75)),
-      CenterPreset(name: "Bottom Right", icon: "arrow.down.right", point: CGPoint(x: 0.75, y: 0.75)),
+      CenterPreset(name: L10n.VideoEditor.topLeft, icon: "arrow.up.left", point: CGPoint(x: 0.25, y: 0.25)),
+      CenterPreset(name: L10n.VideoEditor.topRight, icon: "arrow.up.right", point: CGPoint(x: 0.75, y: 0.25)),
+      CenterPreset(name: L10n.VideoEditor.center, icon: "circle", point: CGPoint(x: 0.5, y: 0.5)),
+      CenterPreset(name: L10n.VideoEditor.bottomLeft, icon: "arrow.down.left", point: CGPoint(x: 0.25, y: 0.75)),
+      CenterPreset(name: L10n.VideoEditor.bottomRight, icon: "arrow.down.right", point: CGPoint(x: 0.75, y: 0.75)),
     ]
   }
 

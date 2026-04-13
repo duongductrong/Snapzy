@@ -32,14 +32,14 @@ struct PermissionsSettingsView: View {
 
   var body: some View {
     Form {
-      Section("Permissions") {
-        Text("Snapzy requires certain permissions to capture your screen and audio.")
+      Section(L10n.Preferences.permissionsTab) {
+        Text(L10n.PreferencesPermissions.intro)
           .font(.caption)
           .foregroundColor(.secondary)
 
         permissionRow(
           icon: "rectangle.inset.filled.and.person.filled",
-          name: "Screen Recording",
+          name: L10n.Onboarding.screenRecording,
           description: screenRecordingDescription,
           statusLabel: screenRecordingStatusLabel,
           statusIcon: screenRecordingStatusIcon,
@@ -50,9 +50,9 @@ struct PermissionsSettingsView: View {
 
         permissionRow(
           icon: "folder.fill",
-          name: "Save Folder",
-          description: "Required to save screenshots and recordings",
-          statusLabel: saveFolderGranted ? "Granted" : "Not Granted",
+          name: L10n.Onboarding.saveFolder,
+          description: L10n.Onboarding.requiredForCaptures,
+          statusLabel: saveFolderGranted ? L10n.PermissionRow.granted : L10n.Common.notGranted,
           statusIcon: saveFolderGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
           statusColor: saveFolderGranted ? .green : .orange,
           isRequired: true,
@@ -61,9 +61,9 @@ struct PermissionsSettingsView: View {
 
         permissionRow(
           icon: "mic.fill",
-          name: "Microphone",
-          description: "Optional for voice recording",
-          statusLabel: microphoneGranted ? "Granted" : "Not Granted",
+          name: L10n.Onboarding.microphone,
+          description: L10n.Onboarding.optionalForVoiceRecording,
+          statusLabel: microphoneGranted ? L10n.PermissionRow.granted : L10n.Common.notGranted,
           statusIcon: microphoneGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
           statusColor: microphoneGranted ? .green : .orange,
           isRequired: false,
@@ -72,9 +72,9 @@ struct PermissionsSettingsView: View {
 
         permissionRow(
           icon: "hand.raised.fill",
-          name: "Accessibility",
-          description: "Optional for global shortcuts",
-          statusLabel: accessibilityGranted ? "Granted" : "Not Granted",
+          name: L10n.Onboarding.accessibility,
+          description: L10n.Onboarding.optionalForGlobalShortcuts,
+          statusLabel: accessibilityGranted ? L10n.PermissionRow.granted : L10n.Common.notGranted,
           statusIcon: accessibilityGranted ? "checkmark.circle.fill" : "xmark.circle.fill",
           statusColor: accessibilityGranted ? .green : .orange,
           isRequired: false,
@@ -83,7 +83,7 @@ struct PermissionsSettingsView: View {
 
         if !identityManager.health.isHealthy {
           VStack(alignment: .leading, spacing: 6) {
-            Text("Build Identity Needs Attention")
+            Text(L10n.Onboarding.buildIdentityNeedsAttention)
               .font(.caption)
               .fontWeight(.semibold)
               .foregroundColor(.orange)
@@ -109,7 +109,7 @@ struct PermissionsSettingsView: View {
               } else {
                 Image(systemName: "arrow.clockwise")
               }
-              Text("Refresh Status")
+              Text(L10n.Onboarding.refreshStatus)
             }
           }
           .disabled(isChecking)
@@ -155,7 +155,7 @@ struct PermissionsSettingsView: View {
           Text(name)
             .fontWeight(.medium)
           if isRequired {
-            Text("Required")
+            Text(L10n.PermissionRow.required)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
@@ -183,7 +183,7 @@ struct PermissionsSettingsView: View {
       .background(statusColor.opacity(0.1))
       .cornerRadius(6)
 
-      Button("Open Settings") {
+      Button(L10n.Common.openSettings) {
         openSystemSettings(settingsURL)
       }
       .buttonStyle(.bordered)
@@ -231,22 +231,22 @@ struct PermissionsSettingsView: View {
   private var screenRecordingDescription: String {
     switch screenCaptureManager.permissionStatus {
     case .granted:
-      return "Required for screenshots and recordings"
+      return L10n.Onboarding.requiredForCaptures
     case .notGranted:
-      return "Required for screenshots and recordings"
+      return L10n.Onboarding.requiredForCaptures
     case .grantedButUnavailableDueToAppIdentity:
-      return "macOS granted the permission, but this build identity is still blocking capture."
+      return L10n.Onboarding.screenRecordingIdentityBlocked
     }
   }
 
   private var screenRecordingStatusLabel: String {
     switch screenCaptureManager.permissionStatus {
     case .granted:
-      return "Granted"
+      return L10n.PermissionRow.granted
     case .notGranted:
-      return "Not Granted"
+      return L10n.Common.notGranted
     case .grantedButUnavailableDueToAppIdentity:
-      return "Unavailable"
+      return L10n.Onboarding.unavailable
     }
   }
 

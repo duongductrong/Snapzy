@@ -22,17 +22,17 @@ enum CloudCredentialTransferError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .passphraseTooShort(let minimumLength):
-      return "Export passphrase must be at least \(minimumLength) characters."
+      return L10n.CloudTransfer.exportPassphraseTooShort(minimumLength)
     case .invalidArchive:
-      return "The selected file is not a valid Snapzy cloud credential archive."
+      return L10n.CloudTransfer.invalidArchive
     case .unsupportedSchemaVersion(let version):
-      return "This archive uses unsupported schema version \(version)."
+      return L10n.CloudTransfer.unsupportedSchemaVersion(version)
     case .unsupportedArchiveFormat:
-      return "This archive uses an unsupported encryption format."
+      return L10n.CloudTransfer.unsupportedArchiveFormat
     case .unlockFailed:
-      return "Couldn't unlock the archive. Check the passphrase or choose a valid archive."
+      return L10n.CloudTransfer.unlockFailed
     case .randomizationFailed:
-      return "Couldn't generate secure random bytes for the archive."
+      return L10n.CloudTransfer.randomizationFailed
     }
   }
 }

@@ -48,7 +48,7 @@ struct ScrollingCapturePreviewView: View {
 
     VStack(alignment: .leading, spacing: 8) {
       HStack(spacing: 6) {
-        Text("Preview")
+        Text(L10n.Common.preview)
           .font(.system(size: 12, weight: .semibold))
 
         Text(model.previewTruthState.badgeLabel ?? "")
@@ -84,7 +84,7 @@ struct ScrollingCapturePreviewView: View {
             Image(systemName: "photo")
               .font(.system(size: 22, weight: .medium))
               .foregroundStyle(.secondary)
-            Text("Start Capture to lock the first frame.")
+            Text(L10n.ScrollingCapture.captionStartCaptureToLockFirstFrame + ".")
               .font(.system(size: 11))
               .foregroundStyle(.secondary)
               .multilineTextAlignment(.center)

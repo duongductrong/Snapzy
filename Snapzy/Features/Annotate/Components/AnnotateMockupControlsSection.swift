@@ -23,24 +23,24 @@ struct MockupControlsSection: View {
 
     private var rotationSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SidebarSectionHeader(title: "Rotation")
+            SidebarSectionHeader(title: L10n.Common.rotation)
 
             MockupSlider(
-                label: "X Axis",
+                label: L10n.AnnotateUI.xAxis,
                 value: $state.mockupRotationX,
                 range: -45...45,
                 format: "%.1f°"
             )
 
             MockupSlider(
-                label: "Y Axis",
+                label: L10n.AnnotateUI.yAxis,
                 value: $state.mockupRotationY,
                 range: -45...45,
                 format: "%.1f°"
             )
 
             MockupSlider(
-                label: "Z Axis",
+                label: L10n.AnnotateUI.zAxis,
                 value: $state.mockupRotationZ,
                 range: -180...180,
                 format: "%.1f°"
@@ -52,10 +52,10 @@ struct MockupControlsSection: View {
 
     private var perspectiveSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            SidebarSectionHeader(title: "Perspective")
+            SidebarSectionHeader(title: L10n.Common.perspective)
 
             MockupSlider(
-                label: "Depth",
+                label: L10n.AnnotateUI.depth,
                 value: $state.mockupPerspective,
                 range: 0.1...1.0,
                 format: "%.2f"
@@ -69,7 +69,7 @@ struct MockupControlsSection: View {
         Button {
             state.resetMockup()
         } label: {
-            Text("Reset Mockup")
+            Text(L10n.AnnotateUI.resetMockup)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.primary)
                 .frame(maxWidth: .infinity)

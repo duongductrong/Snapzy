@@ -225,10 +225,10 @@ enum GIFConversionError: Error, LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .invalidVideo: return "Invalid or empty video file"
-    case .noFrames: return "Could not extract any frames from video"
-    case .destinationCreationFailed: return "Failed to create GIF output file"
-    case .finalizationFailed: return "Failed to finalize GIF file"
+    case .invalidVideo: return L10n.GIF.invalidVideo
+    case .noFrames: return L10n.GIF.noFramesFromVideo
+    case .destinationCreationFailed: return L10n.GIF.cannotCreateOutputFile
+    case .finalizationFailed: return L10n.GIF.finalizeFailed
     }
   }
 }

@@ -16,7 +16,7 @@ struct SidebarGradientSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Gradients")
+      SidebarSectionHeader(title: L10n.Common.gradients)
 
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         ForEach(GradientPreset.allCases) { preset in
@@ -41,7 +41,7 @@ struct SidebarWallpaperSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Wallpapers")
+      SidebarSectionHeader(title: L10n.Common.wallpapers)
 
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         // 3 bundled presets
@@ -91,7 +91,7 @@ struct SidebarWallpaperSection: View {
         HStack {
           ProgressView()
             .scaleEffect(0.6)
-          Text("Loading wallpapers...")
+          Text(L10n.AnnotateUI.loadingWallpapers)
             .font(Typography.labelSmall)
             .foregroundColor(SidebarColors.labelSecondary)
         }
@@ -167,7 +167,7 @@ struct SidebarWallpaperSection: View {
 struct SidebarBlurredSection: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Blurred")
+      SidebarSectionHeader(title: L10n.AnnotateUI.blurType)
 
       HStack(spacing: GridConfig.gap) {
         BlurredPlaceholder()
@@ -184,7 +184,7 @@ struct SidebarColorSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Plain color")
+      SidebarSectionHeader(title: L10n.Common.colors)
       ColorSwatchGrid(selectedColor: colorBinding)
     }
   }
@@ -214,7 +214,7 @@ struct SidebarSlidersSection: View {
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
       SliderRow(
-        label: "Padding",
+        label: L10n.Common.padding,
         value: $state.padding,
         range: 0...100,
         onDragging: { isDragging, value in
@@ -222,7 +222,7 @@ struct SidebarSlidersSection: View {
         }
       )
       SliderRow(
-        label: "Inset",
+        label: L10n.Common.inset,
         value: $state.inset,
         range: 0...50,
         onDragging: { isDragging, value in
@@ -230,13 +230,13 @@ struct SidebarSlidersSection: View {
         }
       )
 
-      Toggle("Auto-balance", isOn: $state.autoBalance)
+      Toggle(L10n.AnnotateUI.autoBalance, isOn: $state.autoBalance)
         .font(Typography.body)
         .foregroundColor(SidebarColors.labelPrimary.opacity(0.8))
         .padding(.leading, Spacing.xs)
 
       SliderRow(
-        label: "Shadow",
+        label: L10n.Common.shadow,
         value: $state.shadowIntensity,
         range: 0...1,
         onDragging: { isDragging, value in
@@ -244,7 +244,7 @@ struct SidebarSlidersSection: View {
         }
       )
       SliderRow(
-        label: "Corners",
+        label: L10n.Common.corners,
         value: $state.cornerRadius,
         range: 0...32,
         onDragging: { isDragging, value in
@@ -262,7 +262,7 @@ struct BlurTypeSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Blur Type")
+      SidebarSectionHeader(title: L10n.AnnotateUI.blurType)
 
       HStack(spacing: Spacing.sm) {
         ForEach(BlurType.allCases) { blurType in
@@ -275,9 +275,11 @@ struct BlurTypeSection: View {
         }
       }
 
-      Text(state.blurType == .pixelated
-           ? "Pixelated blur for redacting sensitive content"
-           : "Smooth Gaussian blur similar to CSS filter")
+      Text(
+        state.blurType == .pixelated
+          ? L10n.AnnotateUI.pixelatedBlurDescription
+          : L10n.AnnotateUI.gaussianBlurDescription
+      )
         .font(Typography.labelSmall)
         .foregroundColor(SidebarColors.labelSecondary)
         .padding(.top, 2)

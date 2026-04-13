@@ -23,13 +23,13 @@ enum AppIdentityIssue: Equatable, Hashable {
     switch self {
     case .unexpectedBundleIdentifier(let bundleIdentifier):
       let currentIdentifier = bundleIdentifier ?? "missing"
-      return "Expected bundle ID \(AppBundleIdentity.expected), found \(currentIdentifier)."
+      return L10n.AppIdentity.unexpectedBundleIdentifier(currentIdentifier)
     case .invalidBundleSignature:
-      return "This app bundle does not pass macOS code-signature validation."
+      return L10n.AppIdentity.invalidSignature
     case .outsideApplications(let bundleURL):
-      return "Install Snapzy in /Applications before granting permissions. Current path: \(bundleURL.path)"
+      return L10n.AppIdentity.outsideApplications(bundleURL.path)
     case .quarantined:
-      return "This app still has the macOS quarantine flag. Reinstall with the installer script or remove quarantine before granting permissions."
+      return L10n.AppIdentity.quarantined
     }
   }
 }
@@ -44,7 +44,7 @@ struct AppIdentityHealth: Equatable {
 
   var summary: String {
     if issues.isEmpty {
-      return "App identity is healthy."
+      return L10n.AppIdentity.healthy
     }
 
     return issues.map(\.description).joined(separator: " ")

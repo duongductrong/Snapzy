@@ -34,7 +34,6 @@ struct ToolbarIconButton: View {
     .buttonStyle(.plain)
     .onHover { isHovered = $0 }
     .accessibilityLabel(accessibilityLabel)
-    .accessibilityHint("Double-tap to activate")
   }
 }
 
@@ -43,12 +42,12 @@ struct ToolbarIconButton: View {
     ToolbarIconButton(
       systemName: "xmark",
       action: {},
-      accessibilityLabel: "Close"
+      accessibilityLabel: L10n.Common.close
     )
     ToolbarIconButton(
       systemName: "gearshape",
       action: {},
-      accessibilityLabel: "Settings"
+      accessibilityLabel: L10n.Common.preferences
     )
   }
   .padding(10)

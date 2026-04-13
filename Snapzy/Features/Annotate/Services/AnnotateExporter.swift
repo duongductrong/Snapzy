@@ -114,7 +114,7 @@ final class AnnotateExporter {
   // MARK: - Private
 
   private static func generateFileName(from url: URL?) -> String {
-    guard let url = url else { return "annotated_image" }
+    guard let url = url else { return L10n.AnnotateUI.defaultAnnotatedFileName }
     let baseName = url.deletingPathExtension().lastPathComponent
     return "\(baseName)_annotated"
   }
@@ -127,11 +127,11 @@ final class AnnotateExporter {
     guard ext == "jpg" || ext == "jpeg" else { return true }
 
     let alert = NSAlert()
-    alert.messageText = "JPEG Removes Transparency"
-    alert.informativeText = "This image uses a transparent background cutout. Saving as JPEG will flatten transparency to an opaque background. Use PNG or WebP to keep transparency."
+    alert.messageText = L10n.AnnotateUI.jpegRemovesTransparencyTitle
+    alert.informativeText = L10n.AnnotateUI.jpegRemovesTransparencyMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Save as JPEG")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.AnnotateUI.saveAsJPEG)
+    alert.addButton(withTitle: L10n.Common.cancel)
     return alert.runModal() == .alertFirstButtonReturn
   }
 

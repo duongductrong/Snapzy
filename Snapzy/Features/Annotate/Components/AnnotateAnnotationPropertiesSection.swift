@@ -17,7 +17,7 @@ struct AnnotationPropertiesSection: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: 10) {
-      SidebarSectionHeader(title: "Annotation")
+      SidebarSectionHeader(title: L10n.AnnotateUI.annotation)
 
       // Stroke color
       strokeColorPicker
@@ -54,7 +54,7 @@ struct AnnotationPropertiesSection: View {
 
   private var strokeColorPicker: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text("Color")
+      Text(L10n.Common.color)
         .font(.system(size: 10))
         .foregroundColor(.secondary)
 
@@ -67,7 +67,7 @@ struct AnnotationPropertiesSection: View {
 
   private var strokeWidthSlider: some View {
     CompactSliderRow(
-      label: "Stroke",
+      label: L10n.Common.stroke,
       value: strokeWidthBinding,
       range: 1...20
     )
@@ -75,7 +75,7 @@ struct AnnotationPropertiesSection: View {
 
   private var fillColorPicker: some View {
     VStack(alignment: .leading, spacing: 4) {
-      Text("Fill")
+      Text(L10n.Common.fill)
         .font(.system(size: 10))
         .foregroundColor(.secondary)
 

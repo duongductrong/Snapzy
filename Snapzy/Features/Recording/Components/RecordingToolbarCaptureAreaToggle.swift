@@ -45,8 +45,8 @@ struct ToolbarCaptureAreaToggle: View {
       }
       .buttonStyle(.plain)
       .onHover { isFullscreenHovered = $0 }
-      .help("Fullscreen capture")
-      .accessibilityLabel("Fullscreen capture")
+      .help(L10n.RecordingToolbar.fullscreenCapture)
+      .accessibilityLabel(L10n.RecordingToolbar.fullscreenCapture)
       .accessibilityAddTraits(isFullscreen ? .isSelected : [])
 
       // Area selection button
@@ -70,8 +70,8 @@ struct ToolbarCaptureAreaToggle: View {
       }
       .buttonStyle(.plain)
       .onHover { isAreaHovered = $0 }
-      .help("Area selection")
-      .accessibilityLabel("Area selection capture")
+      .help(L10n.RecordingToolbar.areaSelection)
+      .accessibilityLabel(L10n.RecordingToolbar.areaSelectionCapture)
       .accessibilityAddTraits(!isFullscreen ? .isSelected : [])
     }
   }

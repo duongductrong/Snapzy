@@ -22,9 +22,9 @@ struct CloudCredentialImportSheet: View {
         Image(systemName: "square.and.arrow.down.fill")
           .font(.system(size: 30))
           .foregroundColor(.accentColor)
-        Text("Import Cloud Credentials")
+        Text(L10n.CloudTransfer.importTitle)
           .font(.headline)
-        Text("Unlock the encrypted archive to load its values into the Cloud form.")
+        Text(L10n.CloudTransfer.importDescription)
           .font(.system(size: 12))
           .foregroundColor(.secondary)
           .multilineTextAlignment(.center)
@@ -32,7 +32,7 @@ struct CloudCredentialImportSheet: View {
 
       VStack(alignment: .leading, spacing: 12) {
         VStack(alignment: .leading, spacing: 4) {
-          Text("Selected Archive")
+          Text(L10n.CloudTransfer.selectedArchive)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.secondary)
           Text(fileURL.lastPathComponent)
@@ -42,10 +42,10 @@ struct CloudCredentialImportSheet: View {
         }
 
         VStack(alignment: .leading, spacing: 6) {
-          Text("Archive Passphrase")
+          Text(L10n.CloudTransfer.archivePassphrase)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.secondary)
-          SecureField("Enter archive passphrase", text: $passphrase)
+          SecureField(L10n.CloudTransfer.enterArchivePassphrase, text: $passphrase)
             .textFieldStyle(.roundedBorder)
             .onSubmit { importArchive() }
         }
@@ -63,7 +63,7 @@ struct CloudCredentialImportSheet: View {
       }
 
       HStack(spacing: 12) {
-        Button("Cancel") {
+        Button(L10n.Common.cancel) {
           onCancel()
         }
         .keyboardShortcut(.escape, modifiers: [])
@@ -73,7 +73,7 @@ struct CloudCredentialImportSheet: View {
             ProgressView()
               .controlSize(.small)
           } else {
-            Text("Import")
+            Text(L10n.Common.importAction)
           }
         }
         .buttonStyle(.borderedProminent)

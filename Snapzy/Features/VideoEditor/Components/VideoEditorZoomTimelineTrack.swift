@@ -99,7 +99,7 @@ struct ZoomTimelineTrack: View {
         Image(systemName: "plus.magnifyingglass")
           .font(.system(size: 9))
           .foregroundColor(.secondary)
-        Text("Zooms")
+        Text(L10n.VideoEditor.zooms)
           .font(.system(size: 9, weight: .medium))
           .foregroundColor(.secondary)
         Spacer()
@@ -259,7 +259,10 @@ struct ZoomTimelineTrack: View {
       let addTime = isHovering ? hoverTime : CMTimeGetSeconds(state.currentTime)
       state.addZoom(at: addTime)
     } label: {
-      Label(isHovering ? "Add Zoom Here" : "Add Zoom at Playhead", systemImage: "plus.magnifyingglass")
+      Label(
+        isHovering ? L10n.VideoEditor.addZoomHere : L10n.VideoEditor.addZoomAtPlayhead,
+        systemImage: "plus.magnifyingglass"
+      )
     }
 
     if state.selectedZoomId != nil {
@@ -272,7 +275,7 @@ struct ZoomTimelineTrack: View {
       } label: {
         if let segment = state.selectedZoomSegment {
           Label(
-            segment.isEnabled ? "Disable Zoom" : "Enable Zoom",
+            segment.isEnabled ? L10n.VideoEditor.disableZoom : L10n.VideoEditor.enableZoom,
             systemImage: segment.isEnabled ? "eye.slash" : "eye"
           )
         }
@@ -283,7 +286,7 @@ struct ZoomTimelineTrack: View {
           state.removeZoom(id: id)
         }
       } label: {
-        Label("Delete Zoom", systemImage: "trash")
+        Label(L10n.VideoEditor.deleteZoom, systemImage: "trash")
       }
     }
 
@@ -294,7 +297,7 @@ struct ZoomTimelineTrack: View {
         state.zoomSegments.removeAll()
         state.selectedZoomId = nil
       } label: {
-        Label("Remove All Zooms", systemImage: "trash.fill")
+        Label(L10n.VideoEditor.removeAllZooms, systemImage: "trash.fill")
       }
     }
   }
@@ -463,7 +466,7 @@ private struct ZoomPlaceholderView: View {
         HStack(spacing: 4) {
           Image(systemName: "plus.magnifyingglass")
             .font(.system(size: 10, weight: .medium))
-          Text("Click to add")
+          Text(L10n.VideoEditor.clickToAdd)
             .font(.system(size: 9, weight: .medium))
         }
         .foregroundColor(ZoomColors.primary.opacity(0.8))

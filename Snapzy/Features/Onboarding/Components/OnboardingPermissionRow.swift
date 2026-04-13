@@ -41,7 +41,7 @@ struct PermissionRow: View {
             .foregroundColor(VSDesignSystem.Colors.primary)
 
           if isRequired {
-            Text("Required")
+            Text(L10n.PermissionRow.required)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
@@ -49,7 +49,7 @@ struct PermissionRow: View {
               .foregroundColor(.orange)
               .cornerRadius(4)
           } else {
-            Text("Optional")
+            Text(L10n.PermissionRow.optional)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
@@ -105,7 +105,7 @@ struct PermissionRow: View {
   private var badge: (label: String, color: Color, icon: String)? {
     switch status {
     case .granted:
-      return ("Granted", .green, "checkmark.circle.fill")
+      return (L10n.PermissionRow.granted, .green, "checkmark.circle.fill")
     case .needsAction:
       return nil
     case .blocked(let label, _):

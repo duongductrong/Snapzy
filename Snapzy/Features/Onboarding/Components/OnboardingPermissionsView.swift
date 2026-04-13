@@ -38,11 +38,11 @@ struct PermissionsView: View {
         .font(.system(size: 48))
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
-      Text("Grant Permissions")
+      Text(L10n.Onboarding.permissionsTitle)
         .vsHeading()
         .padding(.top, 24)
 
-      Text("Snapzy needs permissions for capture, audio, and save location.")
+      Text(L10n.Onboarding.permissionsSubtitle)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -53,7 +53,7 @@ struct PermissionsView: View {
         // Screen Recording - Required
         PermissionRow(
           icon: "rectangle.dashed.badge.record",
-          title: "Screen Recording",
+          title: L10n.Onboarding.screenRecording,
           description: screenRecordingDescription,
           status: screenRecordingStatus,
           isRequired: true,
@@ -71,9 +71,9 @@ struct PermissionsView: View {
         // Save Folder - Required
         PermissionRow(
           icon: "folder.fill",
-          title: "Save Folder",
-          description: "Required to save screenshots and recordings",
-          status: exportFolderGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
+          title: L10n.Onboarding.saveFolder,
+          description: L10n.Onboarding.requiredForCaptures,
+          status: exportFolderGranted ? .granted : .needsAction(buttonTitle: L10n.Onboarding.grantAccess),
           isRequired: true,
           onGrant: {
             requestExportFolderPermission()
@@ -83,9 +83,9 @@ struct PermissionsView: View {
         // Microphone - Optional
         PermissionRow(
           icon: "mic.fill",
-          title: "Microphone",
-          description: "Optional for voice recording",
-          status: microphoneGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
+          title: L10n.Onboarding.microphone,
+          description: L10n.Onboarding.optionalForVoiceRecording,
+          status: microphoneGranted ? .granted : .needsAction(buttonTitle: L10n.Onboarding.grantAccess),
           isRequired: false,
           onGrant: {
             requestMicrophonePermission()
@@ -95,9 +95,9 @@ struct PermissionsView: View {
         // Accessibility - Optional
         PermissionRow(
           icon: "hand.raised.fill",
-          title: "Accessibility",
-          description: "Optional for global shortcuts",
-          status: accessibilityGranted ? .granted : .needsAction(buttonTitle: "Grant Access"),
+          title: L10n.Onboarding.accessibility,
+          description: L10n.Onboarding.optionalForGlobalShortcuts,
+          status: accessibilityGranted ? .granted : .needsAction(buttonTitle: L10n.Onboarding.grantAccess),
           isRequired: false,
           onGrant: {
             requestAccessibilityPermission()
@@ -109,7 +109,7 @@ struct PermissionsView: View {
 
       if !identityManager.health.isHealthy {
         VStack(alignment: .leading, spacing: 8) {
-          Text("Build Identity Needs Attention")
+          Text(L10n.Onboarding.buildIdentityNeedsAttention)
             .font(.system(size: 13, weight: .semibold))
             .foregroundColor(.orange)
 
@@ -134,12 +134,12 @@ struct PermissionsView: View {
 
       // Bottom Navigation
       HStack(spacing: 16) {
-        Button("Quit") {
+        Button(L10n.Onboarding.quit) {
           onQuit()
         }
         .buttonStyle(VSDesignSystem.SecondaryButtonStyle())
 
-        Button("Next") {
+        Button(L10n.Common.next) {
           onNext()
         }
         .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
@@ -177,11 +177,11 @@ struct PermissionsView: View {
   private var screenRecordingDescription: String {
     switch screenCaptureManager.permissionStatus {
     case .granted:
-      return "Required for screenshots and recordings"
+      return L10n.Onboarding.requiredForCaptures
     case .notGranted:
-      return "Required for screenshots and recordings"
+      return L10n.Onboarding.requiredForCaptures
     case .grantedButUnavailableDueToAppIdentity:
-      return "Granted in System Settings, but this build cannot use the permission until the identity issues below are fixed."
+      return L10n.Onboarding.screenRecordingIdentityBlocked
     }
   }
 
@@ -190,9 +190,9 @@ struct PermissionsView: View {
     case .granted:
       return .granted
     case .notGranted:
-      return .needsAction(buttonTitle: "Grant Access")
+      return .needsAction(buttonTitle: L10n.Onboarding.grantAccess)
     case .grantedButUnavailableDueToAppIdentity:
-      return .blocked(label: "Unavailable", buttonTitle: "Refresh Status")
+      return .blocked(label: L10n.Onboarding.unavailable, buttonTitle: L10n.Onboarding.refreshStatus)
     }
   }
 
@@ -207,8 +207,8 @@ struct PermissionsView: View {
 
   private func requestExportFolderPermission() {
     _ = fileAccessManager.chooseExportDirectory(
-      message: "Choose a folder for Snapzy captures (default: Desktop/Snapzy)",
-      prompt: "Grant Access",
+      message: L10n.Onboarding.chooseFolderMessage,
+      prompt: L10n.Onboarding.grantAccess,
       directoryURL: fileAccessManager.defaultExportDirectory
     )
     checkExportFolderPermission()

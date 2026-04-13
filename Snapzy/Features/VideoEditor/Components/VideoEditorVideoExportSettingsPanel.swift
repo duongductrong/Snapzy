@@ -40,7 +40,7 @@ struct VideoExportSettingsPanel: View {
 
   private var qualitySection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Quality")
+      Text(L10n.Common.quality)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -58,7 +58,7 @@ struct VideoExportSettingsPanel: View {
       settings.quality = quality
       state.updateExportSettings(settings)
     } label: {
-      Text(quality.rawValue)
+      Text(quality.localizedLabel)
         .font(.system(size: 10, weight: .medium))
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -83,7 +83,7 @@ struct VideoExportSettingsPanel: View {
 
   private var dimensionsSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Dimensions")
+      Text(L10n.Common.dimensions)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -116,7 +116,7 @@ struct VideoExportSettingsPanel: View {
 
     return Group {
       if reduction > 0 {
-        Text("~\(reduction)% smaller file size")
+        Text(L10n.VideoEditor.smallerFileSizeHint(reduction))
           .font(.system(size: 9))
           .foregroundColor(.green.opacity(0.8))
       }
@@ -125,10 +125,11 @@ struct VideoExportSettingsPanel: View {
 
   private var customDimensionFields: some View {
     HStack(spacing: 4) {
-      TextField("W", value: widthBinding, format: .number)
+      TextField("", value: widthBinding, format: .number, prompt: Text(verbatim: "W"))
         .textFieldStyle(.roundedBorder)
         .frame(width: 60)
         .controlSize(.small)
+        .accessibilityLabel(L10n.Common.width)
 
       Button {
         var settings = state.exportSettings
@@ -141,10 +142,11 @@ struct VideoExportSettingsPanel: View {
       }
       .buttonStyle(.plain)
 
-      TextField("H", value: heightBinding, format: .number)
+      TextField("", value: heightBinding, format: .number, prompt: Text(verbatim: "H"))
         .textFieldStyle(.roundedBorder)
         .frame(width: 60)
         .controlSize(.small)
+        .accessibilityLabel(L10n.Common.height)
     }
   }
 
@@ -152,7 +154,7 @@ struct VideoExportSettingsPanel: View {
 
   private var audioSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Audio")
+      Text(L10n.Common.audio)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -192,7 +194,7 @@ struct VideoExportSettingsPanel: View {
         .cornerRadius(4)
     }
     .buttonStyle(.plain)
-    .help(mode.rawValue)
+    .help(mode.localizedLabel)
   }
 
   private var volumeSlider: some View {
@@ -217,7 +219,7 @@ struct VideoExportSettingsPanel: View {
 
   private var fileSizeSection: some View {
     VStack(alignment: .trailing, spacing: 4) {
-      Text("Estimated Size")
+      Text(L10n.Common.estimatedSize)
         .font(.system(size: 10, weight: .medium))
         .foregroundColor(.secondary)
 

@@ -73,11 +73,11 @@ struct CaptureSettingsView: View {
 
   var body: some View {
     Form {
-      Section("App Windows") {
+      Section(L10n.PreferencesCapture.appWindowsSection) {
         SettingRow(
           icon: "photo.on.rectangle",
-          title: "Include in Screenshots",
-          description: "Show Snapzy windows such as Annotate in captured images"
+          title: L10n.PreferencesCapture.includeInScreenshotsTitle,
+          description: L10n.PreferencesCapture.includeInScreenshotsDescription
         ) {
           Toggle("", isOn: $includeOwnAppInScreenshots)
             .labelsHidden()
@@ -85,8 +85,8 @@ struct CaptureSettingsView: View {
 
         SettingRow(
           icon: "video",
-          title: "Include in Recordings",
-          description: "Show Snapzy windows such as Annotate in recorded videos"
+          title: L10n.PreferencesCapture.includeInRecordingsTitle,
+          description: L10n.PreferencesCapture.includeInRecordingsDescription
         ) {
           Toggle("", isOn: $includeOwnAppInRecordings)
             .labelsHidden()
@@ -95,13 +95,21 @@ struct CaptureSettingsView: View {
 
       // MARK: - Desktop
 
-      Section("Desktop") {
-        SettingRow(icon: "eye.slash", title: "Hide desktop icons", description: "Temporarily hide icons during capture") {
+      Section(L10n.PreferencesCapture.desktopSection) {
+        SettingRow(
+          icon: "eye.slash",
+          title: L10n.PreferencesCapture.hideDesktopIconsTitle,
+          description: L10n.PreferencesCapture.hideDesktopIconsDescription
+        ) {
           Toggle("", isOn: $hideDesktopIcons)
             .labelsHidden()
         }
 
-        SettingRow(icon: "widget.small", title: "Hide desktop widgets", description: "Temporarily hide widgets during capture") {
+        SettingRow(
+          icon: "widget.small",
+          title: L10n.PreferencesCapture.hideDesktopWidgetsTitle,
+          description: L10n.PreferencesCapture.hideDesktopWidgetsDescription
+        ) {
           Toggle("", isOn: $hideDesktopWidgets)
             .labelsHidden()
         }
@@ -109,17 +117,21 @@ struct CaptureSettingsView: View {
 
       // MARK: - Screenshot Format
 
-      Section("Screenshot Format") {
+      Section(L10n.PreferencesCapture.screenshotFormatSection) {
         SettingRow(
           icon: "cursorarrow",
-          title: "Show cursor",
-          description: "Include mouse pointer in captured screenshots"
+          title: L10n.PreferencesCapture.showCursorTitle,
+          description: L10n.PreferencesCapture.showCursorDescription
         ) {
           Toggle("", isOn: $screenshotShowCursor)
             .labelsHidden()
         }
 
-        SettingRow(icon: "photo", title: "Image Format", description: "Output format for captured screenshots") {
+        SettingRow(
+          icon: "photo",
+          title: L10n.PreferencesCapture.imageFormatTitle,
+          description: L10n.PreferencesCapture.imageFormatDescription
+        ) {
           Picker("", selection: $screenshotFormat) {
             ForEach(ImageFormatOption.allCases, id: \.self) { option in
               Text(option.displayName).tag(option.rawValue)
@@ -135,7 +147,7 @@ struct CaptureSettingsView: View {
               .foregroundColor(.orange)
               .font(.system(size: 12))
               .padding(.top, 1)
-            Text("WebP encoding is slower than other formats. For faster capture speed, consider using PNG or JPEG.")
+            Text(L10n.PreferencesCapture.webpWarning)
               .font(.system(size: 11))
               .foregroundColor(.orange)
               .fixedSize(horizontal: false, vertical: true)
@@ -149,7 +161,7 @@ struct CaptureSettingsView: View {
               .foregroundColor(.blue)
               .font(.system(size: 12))
               .padding(.top, 1)
-            Text("Object cutout captures require transparency. Snapzy will save them as PNG even when JPEG is selected.")
+            Text(L10n.PreferencesCapture.jpegCutoutNote)
               .font(.system(size: 11))
               .foregroundColor(.secondary)
               .fixedSize(horizontal: false, vertical: true)
@@ -158,11 +170,11 @@ struct CaptureSettingsView: View {
         }
       }
 
-      Section("Scrolling Capture") {
+      Section(L10n.PreferencesCapture.scrollingCaptureSection) {
         SettingRow(
           icon: "lightbulb",
-          title: "Show Session Hints",
-          description: "Keep guidance visible when starting a scrolling capture session"
+          title: L10n.PreferencesCapture.showSessionHintsTitle,
+          description: L10n.PreferencesCapture.showSessionHintsDescription
         ) {
           Toggle("", isOn: $scrollingCaptureShowHints)
             .labelsHidden()
@@ -173,7 +185,7 @@ struct CaptureSettingsView: View {
             .foregroundColor(.blue)
             .font(.system(size: 12))
             .padding(.top, 1)
-          Text("Best results come from selecting only the moving content, then scrolling in one direction at a steady pace.")
+          Text(L10n.PreferencesCapture.scrollingCaptureInfo)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -181,11 +193,11 @@ struct CaptureSettingsView: View {
         .padding(.vertical, 4)
       }
 
-      Section("Output Naming") {
+      Section(L10n.PreferencesCapture.outputNamingSection) {
         SettingRow(
           icon: "textformat",
-          title: "Screenshot Template",
-          description: "Pattern for auto-saved screenshot filename"
+          title: L10n.PreferencesCapture.screenshotTemplateTitle,
+          description: L10n.PreferencesCapture.screenshotTemplateDescription
         ) {
           TextField("", text: $screenshotFileNameTemplate)
             .textFieldStyle(.roundedBorder)
@@ -194,8 +206,8 @@ struct CaptureSettingsView: View {
 
         SettingRow(
           icon: "textformat.abc",
-          title: "Recording Template",
-          description: "Pattern for auto-saved recording filename"
+          title: L10n.PreferencesCapture.recordingTemplateTitle,
+          description: L10n.PreferencesCapture.recordingTemplateDescription
         ) {
           TextField("", text: $recordingFileNameTemplate)
             .textFieldStyle(.roundedBorder)
@@ -207,7 +219,7 @@ struct CaptureSettingsView: View {
             .foregroundColor(.secondary)
             .font(.system(size: 12))
             .padding(.top, 1)
-          Text("Available tokens: {datetime}, {date}, {time}, {ms}, {timestamp}, {type}")
+          Text(L10n.PreferencesCapture.availableTokens)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -215,8 +227,8 @@ struct CaptureSettingsView: View {
         .padding(.vertical, 2)
 
         VStack(alignment: .leading, spacing: 2) {
-          Text("Screenshot preview: \(screenshotFilenamePreview)")
-          Text("Recording preview: \(recordingFilenamePreview)")
+          Text(L10n.PreferencesCapture.screenshotPreview(screenshotFilenamePreview))
+          Text(L10n.PreferencesCapture.recordingPreview(recordingFilenamePreview))
         }
         .font(.system(size: 11))
         .foregroundColor(.secondary)
@@ -224,7 +236,7 @@ struct CaptureSettingsView: View {
 
         HStack {
           Spacer()
-          Button("Reset Naming Defaults") {
+          Button(L10n.PreferencesCapture.resetNamingDefaults) {
             resetOutputNamingDefaults()
           }
           .font(.system(size: 11))
@@ -235,19 +247,27 @@ struct CaptureSettingsView: View {
 
       // MARK: - Recording
 
-      Section("Recording Format") {
-        SettingRow(icon: "film", title: "Video Format", description: "MOV offers better quality. MP4 provides wider compatibility.") {
+      Section(L10n.PreferencesCapture.recordingFormatSection) {
+        SettingRow(
+          icon: "film",
+          title: L10n.PreferencesCapture.videoFormatTitle,
+          description: L10n.PreferencesCapture.videoFormatDescription
+        ) {
           Picker("", selection: $format) {
-            Text("MOV").tag("mov")
-            Text("MP4").tag("mp4")
+            Text(verbatim: "MOV").tag("mov")
+            Text(verbatim: "MP4").tag("mp4")
           }
           .labelsHidden()
           .pickerStyle(.menu)
         }
       }
 
-      Section("Recording Quality") {
-        SettingRow(icon: "gauge.with.dots.needle.33percent", title: "Frame Rate", description: "Higher FPS for smoother motion") {
+      Section(L10n.PreferencesCapture.recordingQualitySection) {
+        SettingRow(
+          icon: "gauge.with.dots.needle.33percent",
+          title: L10n.PreferencesCapture.frameRateTitle,
+          description: L10n.PreferencesCapture.frameRateDescription
+        ) {
           Picker("", selection: $fps) {
             Text("30 FPS").tag(30)
             Text("60 FPS").tag(60)
@@ -256,19 +276,27 @@ struct CaptureSettingsView: View {
           .pickerStyle(.menu)
         }
 
-        SettingRow(icon: "sparkles", title: "Quality", description: "Higher quality = larger file size") {
+        SettingRow(
+          icon: "sparkles",
+          title: L10n.PreferencesCapture.qualityTitle,
+          description: L10n.PreferencesCapture.qualityDescription
+        ) {
           Picker("", selection: $quality) {
-            Text("High").tag("high")
-            Text("Medium").tag("medium")
-            Text("Low").tag("low")
+            ForEach(VideoQuality.allCases, id: \.self) { option in
+              Text(option.displayName).tag(option.rawValue)
+            }
           }
           .labelsHidden()
           .pickerStyle(.menu)
         }
       }
 
-      Section("Recording Behavior") {
-        SettingRow(icon: "rectangle.dashed", title: "Remember Last Area", description: "Restore previous recording area on next capture") {
+      Section(L10n.PreferencesCapture.recordingBehaviorSection) {
+        SettingRow(
+          icon: "rectangle.dashed",
+          title: L10n.PreferencesCapture.rememberLastAreaTitle,
+          description: L10n.PreferencesCapture.rememberLastAreaDescription
+        ) {
           Toggle("", isOn: $rememberLastArea)
             .labelsHidden()
         }
@@ -276,18 +304,32 @@ struct CaptureSettingsView: View {
 
       // MARK: - Recording Overlays
 
-      Section("Mouse Highlight") {
-        SettingRow(icon: "cursorarrow.click.2", title: "Highlight Size", description: "Diameter of ripple effect (\(Int(mouseHighlightSize))px)") {
+      Section(L10n.PreferencesCapture.mouseHighlightSection) {
+        SettingRow(
+          icon: "cursorarrow.click.2",
+          title: L10n.PreferencesCapture.highlightSizeTitle,
+          description: L10n.PreferencesCapture.highlightSizeDescription(Int(mouseHighlightSize))
+        ) {
           Slider(value: $mouseHighlightSize, in: 30...100, step: 2)
             .frame(width: 140)
         }
 
-        SettingRow(icon: "timer", title: "Animation Duration", description: "Ripple expand speed (\(String(format: "%.1f", mouseHighlightAnimDuration))s)") {
+        SettingRow(
+          icon: "timer",
+          title: L10n.PreferencesCapture.animationDurationTitle,
+          description: L10n.PreferencesCapture.animationDurationDescription(
+            String(format: "%.1f", mouseHighlightAnimDuration)
+          )
+        ) {
           Slider(value: $mouseHighlightAnimDuration, in: 0.3...2.0, step: 0.1)
             .frame(width: 140)
         }
 
-        SettingRow(icon: "circle.grid.3x3", title: "Ripple Count", description: "Number of expanding rings") {
+        SettingRow(
+          icon: "circle.grid.3x3",
+          title: L10n.PreferencesCapture.rippleCountTitle,
+          description: L10n.PreferencesCapture.rippleCountDescription
+        ) {
           Picker("", selection: $mouseHighlightRippleCount) {
             ForEach(1...5, id: \.self) { count in
               Text("\(count)").tag(count)
@@ -298,19 +340,27 @@ struct CaptureSettingsView: View {
           .frame(width: 80)
         }
 
-        SettingRow(icon: "paintpalette", title: "Highlight Color", description: "Color of click rings") {
+        SettingRow(
+          icon: "paintpalette",
+          title: L10n.PreferencesCapture.highlightColorTitle,
+          description: L10n.PreferencesCapture.highlightColorDescription
+        ) {
           ColorPicker("", selection: mouseHighlightSwiftColor, supportsOpacity: false)
             .labelsHidden()
         }
 
-        SettingRow(icon: "circle.lefthalf.filled", title: "Opacity", description: "Ring transparency (\(Int(mouseHighlightOpacity * 100))%)") {
+        SettingRow(
+          icon: "circle.lefthalf.filled",
+          title: L10n.PreferencesCapture.opacityTitle,
+          description: L10n.PreferencesCapture.opacityDescription(Int(mouseHighlightOpacity * 100))
+        ) {
           Slider(value: $mouseHighlightOpacity, in: 0.2...1.0, step: 0.05)
             .frame(width: 140)
         }
 
         HStack {
           Spacer()
-          Button("Reset to Default") {
+          Button(L10n.Common.resetToDefault) {
             resetMouseHighlightDefaults()
           }
           .font(.system(size: 11))
@@ -319,13 +369,21 @@ struct CaptureSettingsView: View {
         }
       }
 
-      Section("Keystroke Overlay") {
-        SettingRow(icon: "textformat.size", title: "Font Size", description: "Badge text size (\(Int(keystrokeFontSize))pt)") {
+      Section(L10n.PreferencesCapture.keystrokeOverlaySection) {
+        SettingRow(
+          icon: "textformat.size",
+          title: L10n.PreferencesCapture.fontSizeTitle,
+          description: L10n.PreferencesCapture.fontSizeDescription(Int(keystrokeFontSize))
+        ) {
           Slider(value: $keystrokeFontSize, in: 12...32, step: 1)
             .frame(width: 140)
         }
 
-        SettingRow(icon: "square.and.arrow.down.on.square", title: "Position", description: "Badge placement in recording area") {
+        SettingRow(
+          icon: "square.and.arrow.down.on.square",
+          title: L10n.PreferencesCapture.positionTitle,
+          description: L10n.PreferencesCapture.positionDescription
+        ) {
           Picker("", selection: $keystrokePosition) {
             ForEach(KeystrokeOverlayPosition.allCases) { pos in
               Text(pos.displayName).tag(pos.rawValue)
@@ -336,14 +394,20 @@ struct CaptureSettingsView: View {
           .frame(width: 140)
         }
 
-        SettingRow(icon: "clock", title: "Display Duration", description: "Time before badge fades (\(String(format: "%.1f", keystrokeDisplayDuration))s)") {
+        SettingRow(
+          icon: "clock",
+          title: L10n.PreferencesCapture.displayDurationTitle,
+          description: L10n.PreferencesCapture.displayDurationDescription(
+            String(format: "%.1f", keystrokeDisplayDuration)
+          )
+        ) {
           Slider(value: $keystrokeDisplayDuration, in: 0.5...5.0, step: 0.5)
             .frame(width: 140)
         }
 
         HStack {
           Spacer()
-          Button("Reset to Default") {
+          Button(L10n.Common.resetToDefault) {
             resetKeystrokeDefaults()
           }
           .font(.system(size: 11))
@@ -352,13 +416,21 @@ struct CaptureSettingsView: View {
         }
       }
 
-      Section("Audio") {
-        SettingRow(icon: "speaker.wave.3.fill", title: "System Audio", description: "Capture sounds from apps") {
+      Section(L10n.PreferencesCapture.audioSection) {
+        SettingRow(
+          icon: "speaker.wave.3.fill",
+          title: L10n.PreferencesCapture.systemAudioTitle,
+          description: L10n.PreferencesCapture.systemAudioDescription
+        ) {
           Toggle("", isOn: $captureAudio)
             .labelsHidden()
         }
 
-        SettingRow(icon: "mic.fill", title: "Microphone", description: microphoneDescription) {
+        SettingRow(
+          icon: "mic.fill",
+          title: L10n.Onboarding.microphone,
+          description: microphoneDescription
+        ) {
           Toggle("", isOn: Binding(
             get: { captureMicrophone },
             set: { newValue in
@@ -373,28 +445,28 @@ struct CaptureSettingsView: View {
           .disabled(!captureAudio || !isMicAvailable)
         }
       }
-      .alert("Microphone Access Required", isPresented: $showPermissionDeniedAlert) {
-        Button("Open System Settings") {
+      .alert(L10n.Microphone.accessRequiredTitle, isPresented: $showPermissionDeniedAlert) {
+        Button(L10n.Common.openSystemSettings) {
           openMicrophoneSettings()
         }
-        Button("Cancel", role: .cancel) {}
+        Button(L10n.Common.cancel, role: .cancel) {}
       } message: {
-        Text("Snapzy needs microphone permission. Please enable it in System Settings > Privacy & Security > Microphone.")
+        Text(L10n.Microphone.preferencesMessage)
       }
 
       // MARK: - After Capture
 
-      Section("After Capture") {
+      Section(L10n.PreferencesCapture.afterCaptureSection) {
         AfterCaptureMatrixView()
 
-        Text("Remove Background")
+        Text(L10n.PreferencesCapture.removeBackground)
           .font(.caption)
           .foregroundColor(.secondary)
 
         SettingRow(
           icon: "person.crop.rectangle",
-          title: "Auto-Crop Subject",
-          description: "Applies to background removal in capture and Annotate"
+          title: L10n.PreferencesCapture.autoCropSubjectTitle,
+          description: L10n.PreferencesCapture.autoCropSubjectDescription
         ) {
           Toggle("", isOn: $backgroundCutoutAutoCropEnabled)
             .labelsHidden()
@@ -408,9 +480,9 @@ struct CaptureSettingsView: View {
 
   private var microphoneDescription: String {
     if !isMicAvailable {
-      return "Requires macOS 15.0+"
+      return L10n.PreferencesCapture.microphoneRequiresMacOS
     }
-    return "Capture your voice"
+    return L10n.PreferencesCapture.microphoneDescription
   }
 
   private var screenshotFilenamePreview: String {

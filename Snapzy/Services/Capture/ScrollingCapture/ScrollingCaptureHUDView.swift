@@ -15,7 +15,7 @@ struct ScrollingCaptureHUDView: View {
 
   private var capturedSummary: String {
     let count = model.acceptedFrameCount
-    return "\(count) section\(count == 1 ? "" : "s") captured"
+    return L10n.ScrollingCapture.sectionsCaptured(count)
   }
 
   private var headerSummary: String {
@@ -27,7 +27,7 @@ struct ScrollingCaptureHUDView: View {
     HStack(spacing: 10) {
       // MARK: - Left: Title + summary
       VStack(alignment: .leading, spacing: 1) {
-        Text("Scrolling Capture")
+        Text(L10n.Actions.scrollingCapture)
           .font(.system(size: 12, weight: .semibold))
         Text(headerSummary)
           .font(.system(size: 10))
@@ -44,21 +44,21 @@ struct ScrollingCaptureHUDView: View {
 
       // MARK: - Action buttons
       if model.phase == .ready {
-        Button("Cancel", action: onCancel)
+        Button(L10n.Common.cancel, action: onCancel)
           .buttonStyle(.bordered)
           .controlSize(.small)
 
-        Button("Start Capture", action: onStart)
+        Button(L10n.ScrollingCapture.startCapture, action: onStart)
           .buttonStyle(.borderedProminent)
           .controlSize(.small)
           .disabled(!model.canStartCapture)
       } else {
-        Button("Cancel", action: onCancel)
+        Button(L10n.Common.cancel, action: onCancel)
           .buttonStyle(.bordered)
           .controlSize(.small)
           .disabled(!model.canCancelSession)
 
-        Button("Done", action: onDone)
+        Button(L10n.Common.done, action: onDone)
           .buttonStyle(.borderedProminent)
           .controlSize(.small)
           .disabled(!model.canFinishCapture)

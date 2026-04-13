@@ -210,10 +210,10 @@ enum GIFResizeError: Error, LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .cannotReadSource: return "Cannot read GIF file"
-    case .noFrames: return "GIF contains no frames"
-    case .cannotCreateDestination: return "Failed to create output GIF file"
-    case .finalizationFailed: return "Failed to finalize resized GIF"
+    case .cannotReadSource: return L10n.GIF.cannotReadSource
+    case .noFrames: return L10n.GIF.noFramesInGIF
+    case .cannotCreateDestination: return L10n.GIF.cannotCreateOutputFile
+    case .finalizationFailed: return L10n.GIF.finalizeResizedFailed
     }
   }
 }

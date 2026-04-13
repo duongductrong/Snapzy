@@ -9,14 +9,21 @@
 import SwiftUI
 
 /// Tab selection for right sidebar
-enum VideoEditorSidebarTab: String, CaseIterable {
-  case background = "Background"
-  case zoom = "Zoom"
+enum VideoEditorSidebarTab: CaseIterable {
+  case background
+  case zoom
 
   var icon: String {
     switch self {
     case .background: return "rectangle.on.rectangle"
     case .zoom: return "plus.magnifyingglass"
+    }
+  }
+
+  var title: String {
+    switch self {
+    case .background: return L10n.VideoEditor.backgroundTab
+    case .zoom: return L10n.VideoEditor.zoomTab
     }
   }
 }
@@ -40,7 +47,7 @@ struct VideoEditorRightSidebar: View {
         selection: $selectedTab,
         tabs: VideoEditorSidebarTab.allCases
       ) { tab in
-        (icon: tab.icon, title: tab.rawValue)
+        (icon: tab.icon, title: tab.title)
       }
     }
     .frame(width: 320)
@@ -130,12 +137,12 @@ struct ZoomSettingsContent: View {
   private func modeSection(for segment: ZoomSegment) -> some View {
     VStack(alignment: .leading, spacing: 12) {
       HStack {
-        Label("Zoom Item", systemImage: "plus.magnifyingglass")
+        Label(L10n.VideoEditor.zoomItem, systemImage: "plus.magnifyingglass")
           .font(.system(size: 12, weight: .semibold))
 
         Spacer()
 
-        Text(segment.isAutoMode ? "Follow Mouse" : "Manual")
+        Text(segment.isAutoMode ? L10n.VideoEditor.followMouse : L10n.VideoEditor.manual)
           .font(.system(size: 9, weight: .semibold))
           .padding(.horizontal, 6)
           .padding(.vertical, 3)
@@ -146,7 +153,7 @@ struct ZoomSettingsContent: View {
 
       HStack(spacing: 8) {
         modeButton(
-          title: "Manual",
+          title: L10n.VideoEditor.manual,
           icon: "hand.tap",
           isSelected: !segment.isAutoMode,
           isDisabled: false
@@ -155,7 +162,7 @@ struct ZoomSettingsContent: View {
         }
 
         modeButton(
-          title: "Auto",
+          title: L10n.VideoEditor.auto,
           icon: "camera.metering.center.weighted",
           isSelected: segment.isAutoMode,
           isDisabled: !canSwitchSelectedSegmentToAuto
@@ -166,7 +173,7 @@ struct ZoomSettingsContent: View {
 
       if segment.isAutoMode {
         if state.hasMouseTrackingData {
-          Text("Camera position follows the recorded mouse path only while this zoom item is active.")
+          Text(L10n.VideoEditor.followMouseActiveDescription)
             .font(.system(size: 10))
             .foregroundColor(.secondary.opacity(0.8))
             .fixedSize(horizontal: false, vertical: true)
@@ -174,7 +181,7 @@ struct ZoomSettingsContent: View {
           availabilityWarning
         }
       } else if state.hasMouseTrackingData {
-        Text("Manual mode keeps camera framing fixed. Switch to Auto when this zoom item should follow the mouse.")
+        Text(L10n.VideoEditor.manualModeDescription)
           .font(.system(size: 10))
           .foregroundColor(.secondary.opacity(0.8))
           .fixedSize(horizontal: false, vertical: true)
@@ -220,11 +227,11 @@ struct ZoomSettingsContent: View {
 
   private var availabilityWarning: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Label("Mouse tracking data unavailable", systemImage: "cursorarrow.slash")
+      Label(L10n.VideoEditor.mouseTrackingDataUnavailable, systemImage: "cursorarrow.slash")
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
-      Text("Follow Mouse only works with videos recorded by Snapzy after mouse tracking was added.")
+      Text(L10n.VideoEditor.followMouseOnlyWorksWithSnapzy)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
         .fixedSize(horizontal: false, vertical: true)
@@ -241,11 +248,11 @@ struct ZoomSettingsContent: View {
         .font(.system(size: 32))
         .foregroundColor(.secondary.opacity(0.5))
 
-      Text("No Zoom Selected")
+      Text(L10n.VideoEditor.noZoomSelected)
         .font(.system(size: 13, weight: .medium))
         .foregroundColor(.secondary)
 
-      Text("Press Z to add a zoom at the playhead, or click a zoom item in the timeline.")
+      Text(L10n.VideoEditor.pressZToAddZoom)
         .font(.system(size: 11))
         .foregroundColor(.secondary.opacity(0.7))
         .multilineTextAlignment(.center)
@@ -257,7 +264,7 @@ struct ZoomSettingsContent: View {
   private var zoomLevelSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack {
-        Text("Zoom Level")
+        Text(L10n.VideoEditor.zoomLevel)
           .font(.system(size: 11, weight: .medium))
           .foregroundColor(.secondary)
 
@@ -314,7 +321,7 @@ struct ZoomSettingsContent: View {
   private var followSpeedSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack {
-        Text("Follow Speed")
+        Text(L10n.VideoEditor.followSpeed)
           .font(.system(size: 11, weight: .medium))
           .foregroundColor(.secondary)
 
@@ -331,7 +338,7 @@ struct ZoomSettingsContent: View {
         }
       }
 
-      Text("Lower values feel calmer. Higher values react faster when the cursor changes direction.")
+      Text(L10n.VideoEditor.followSpeedDescription)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
         .fixedSize(horizontal: false, vertical: true)
@@ -345,16 +352,16 @@ struct ZoomSettingsContent: View {
 
   private var transitionPresets: [TransitionPreset] {
     [
-      TransitionPreset(title: "Fast", value: ZoomCalculator.fastTransitionDuration),
-      TransitionPreset(title: "Balanced", value: ZoomCalculator.balancedTransitionDuration),
-      TransitionPreset(title: "Smooth", value: ZoomCalculator.smoothTransitionDuration),
+      TransitionPreset(title: L10n.VideoEditor.fast, value: ZoomCalculator.fastTransitionDuration),
+      TransitionPreset(title: L10n.VideoEditor.balanced, value: ZoomCalculator.balancedTransitionDuration),
+      TransitionPreset(title: L10n.VideoEditor.smooth, value: ZoomCalculator.smoothTransitionDuration),
     ]
   }
 
   private var transitionSmoothnessSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack {
-        Text("Transition Smoothness")
+        Text(L10n.VideoEditor.transitionSmoothness)
           .font(.system(size: 11, weight: .medium))
           .foregroundColor(.secondary)
 
@@ -366,7 +373,7 @@ struct ZoomSettingsContent: View {
       }
 
       HStack(spacing: 8) {
-        Text("Fast")
+        Text(L10n.VideoEditor.fast)
           .font(.system(size: 9))
           .foregroundColor(.secondary)
 
@@ -380,7 +387,7 @@ struct ZoomSettingsContent: View {
           }
         }
 
-        Text("Smooth")
+        Text(L10n.VideoEditor.smooth)
           .font(.system(size: 9))
           .foregroundColor(.secondary)
       }
@@ -406,7 +413,7 @@ struct ZoomSettingsContent: View {
         }
       }
 
-      Text("Applies to all zoom items in this editor. Higher values feel calmer when entering or leaving zoom.")
+      Text(L10n.VideoEditor.transitionAppliesDescription)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
         .fixedSize(horizontal: false, vertical: true)
@@ -416,7 +423,7 @@ struct ZoomSettingsContent: View {
   private var focusMarginSection: some View {
     VStack(alignment: .leading, spacing: 6) {
       HStack {
-        Text("Focus Margin")
+        Text(L10n.VideoEditor.focusMargin)
           .font(.system(size: 11, weight: .medium))
           .foregroundColor(.secondary)
 
@@ -433,7 +440,7 @@ struct ZoomSettingsContent: View {
         }
       }
 
-      Text("Adds a stability zone so tiny cursor motion does not keep nudging the camera.")
+      Text(L10n.VideoEditor.focusMarginDescription)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
         .fixedSize(horizontal: false, vertical: true)
@@ -442,7 +449,7 @@ struct ZoomSettingsContent: View {
 
   private var centerPickerSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Zoom Center")
+      Text(L10n.VideoEditor.zoomCenter)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -475,7 +482,7 @@ struct ZoomSettingsContent: View {
         }
       }
 
-      Text("Manual camera control is available only in Manual mode.")
+      Text(L10n.VideoEditor.manualCameraControlOnlyInManualMode)
         .font(.system(size: 10))
         .foregroundColor(.secondary.opacity(0.8))
     }
@@ -490,7 +497,7 @@ struct ZoomSettingsContent: View {
       } label: {
         HStack(spacing: 4) {
           Image(systemName: selectedSegment?.isEnabled == true ? "eye" : "eye.slash")
-          Text(selectedSegment?.isEnabled == true ? "Enabled" : "Disabled")
+          Text(selectedSegment?.isEnabled == true ? L10n.Common.enabled : L10n.Common.disabled)
         }
         .font(.system(size: 10))
         .padding(.horizontal, 8)
@@ -526,11 +533,11 @@ struct ZoomSettingsContent: View {
 
   private var centerPresets: [CenterPreset] {
     [
-      CenterPreset(name: "Top Left", icon: "arrow.up.left", point: CGPoint(x: 0.25, y: 0.25)),
-      CenterPreset(name: "Top Right", icon: "arrow.up.right", point: CGPoint(x: 0.75, y: 0.25)),
-      CenterPreset(name: "Center", icon: "circle", point: CGPoint(x: 0.5, y: 0.5)),
-      CenterPreset(name: "Bottom Left", icon: "arrow.down.left", point: CGPoint(x: 0.25, y: 0.75)),
-      CenterPreset(name: "Bottom Right", icon: "arrow.down.right", point: CGPoint(x: 0.75, y: 0.75)),
+      CenterPreset(name: L10n.VideoEditor.topLeft, icon: "arrow.up.left", point: CGPoint(x: 0.25, y: 0.25)),
+      CenterPreset(name: L10n.VideoEditor.topRight, icon: "arrow.up.right", point: CGPoint(x: 0.75, y: 0.25)),
+      CenterPreset(name: L10n.VideoEditor.center, icon: "circle", point: CGPoint(x: 0.5, y: 0.5)),
+      CenterPreset(name: L10n.VideoEditor.bottomLeft, icon: "arrow.down.left", point: CGPoint(x: 0.25, y: 0.75)),
+      CenterPreset(name: L10n.VideoEditor.bottomRight, icon: "arrow.down.right", point: CGPoint(x: 0.75, y: 0.75)),
     ]
   }
 

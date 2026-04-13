@@ -257,13 +257,13 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
   private func showUnsavedChangesAlert(for window: NSWindow) {
     let alert = NSAlert()
-    alert.messageText = "Unsaved Changes"
-    alert.informativeText = "You have unsaved changes. Do you want to save before closing?"
+    alert.messageText = L10n.AnnotateUI.unsavedChangesTitle
+    alert.informativeText = L10n.AnnotateUI.unsavedChangesMessage
     alert.alertStyle = .warning
 
-    alert.addButton(withTitle: "Save")
-    alert.addButton(withTitle: "Don't Save")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.VideoEditor.save)
+    alert.addButton(withTitle: L10n.AnnotateUI.dontSave)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }
@@ -556,15 +556,15 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     guard let window = self.window else { return }
 
     let alert = NSAlert()
-    alert.messageText = "Save Failed"
-    alert.informativeText = "Snapzy couldn't write to the selected location. Please choose another folder."
+    alert.messageText = L10n.AnnotateUI.saveFailedTitle
+    alert.informativeText = L10n.AnnotateUI.saveFailedMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.beginSheetModal(for: window)
   }
 
   private func generateFileName() -> String {
-    guard let url = state.sourceURL else { return "annotated_image" }
+    guard let url = state.sourceURL else { return L10n.AnnotateUI.defaultAnnotatedFileName }
     let baseName = url.deletingPathExtension().lastPathComponent
     // Use the source file's extension so the default matches the configured format
     let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
@@ -632,11 +632,11 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     }
 
     let alert = NSAlert()
-    alert.messageText = "Overwrite Cloud File?"
-    alert.informativeText = "This image was previously uploaded to cloud. Saving will replace the cloud file with your changes."
+    alert.messageText = L10n.AnnotateUI.overwriteCloudFileTitle
+    alert.informativeText = L10n.AnnotateUI.overwriteCloudFileOnSaveMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Overwrite")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.Common.overwrite)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { response in
       if response == .alertFirstButtonReturn {

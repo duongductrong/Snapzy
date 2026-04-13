@@ -20,27 +20,27 @@ struct WelcomeView: View {
         .frame(width: 128, height: 128)
 
       // Title
-      Text("Snapzy")
+      Text(verbatim: "Snapzy")
         .vsHeading()
 
       // Subtitle
-      Text("A powerful screenshot & screen recording app for macOS")
+      Text(L10n.Onboarding.welcomeSubtitle)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 320)
 
       // Feature highlights
       VStack(alignment: .leading, spacing: 12) {
-        FeatureRow(icon: "crop", text: "Capture area or fullscreen screenshots")
-        FeatureRow(icon: "video", text: "Record screen with audio")
-        FeatureRow(icon: "pencil.and.outline", text: "Annotate and edit captures")
+        FeatureRow(icon: "crop", text: L10n.Onboarding.welcomeFeatureCapture)
+        FeatureRow(icon: "video", text: L10n.Onboarding.welcomeFeatureRecord)
+        FeatureRow(icon: "pencil.and.outline", text: L10n.Onboarding.welcomeFeatureAnnotate)
       }
       .padding(.top, 8)
 
       Spacer()
 
       // Primary CTA
-      Button("Let's do it!") {
+      Button(L10n.Onboarding.letsDoIt) {
         onContinue()
       }
       .buttonStyle(VSDesignSystem.PrimaryButtonStyle())

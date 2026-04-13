@@ -131,7 +131,7 @@ final class ScrollingCaptureCoordinator {
 
     if ScrollingCaptureConfiguration.showHints {
       AppToastManager.shared.show(
-        message: "Select only the moving content, press Start Capture, then keep scrolling in one direction at a steady pace.",
+        message: L10n.ScrollingCaptureStatus.readyHintToast,
         style: .info,
         position: .topCenter
       )
@@ -204,8 +204,10 @@ final class ScrollingCaptureCoordinator {
     setRegionOverlayInteractionEnabled(false)
     sessionModel.phase = .capturing
     sessionModel.runtimeState = .streaming
-    sessionModel.statusText =
-      "Capturing the first frame. After that, keep scrolling downward at a steady pace."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.capturingFirstFrame,
+      guidance: .holdSteady
+    )
     updatePreviewTruthState()
     installScrollMonitorIfNeeded()
 
@@ -248,19 +250,24 @@ final class ScrollingCaptureCoordinator {
         sessionMetrics.recordFinalizingCompleted(at: ProcessInfo.processInfo.systemUptime)
         sessionModel.phase = .capturing
         sessionModel.runtimeState = .paused
-        sessionModel.statusText =
-          "Snapzy couldn't lock a savable stitched image yet. You can keep capturing, try Done again, or Cancel."
-        sessionModel.previewCaption = "No savable stitched result is ready yet"
+        sessionModel.setStatus(
+          L10n.ScrollingCaptureStatus.noSavableResultReady,
+          guidance: .keepCapturing
+        )
+        sessionModel.previewCaption = L10n.ScrollingCapture.captionNoSavableResultReady
         updatePreviewTruthState()
-        AppToastManager.shared.show(message: "No stitched frame is ready yet.", style: .warning)
+        AppToastManager.shared.show(message: L10n.ScrollingCapture.toastNoStitchedFrameReady, style: .warning)
         return
       }
 
       sessionMetrics.recordFinalizingCompleted(at: ProcessInfo.processInfo.systemUptime)
       sessionModel.phase = .saving
       sessionModel.runtimeState = .saving
-      sessionModel.statusText = "Saving the stitched long image."
-      sessionModel.previewCaption = "Saving stitched result..."
+      sessionModel.setStatus(
+        L10n.ScrollingCaptureStatus.savingStitchedImage,
+        guidance: .savingLongScreenshot
+      )
+      sessionModel.previewCaption = L10n.ScrollingCapture.captionSavingStitchedResult
       updatePreviewTruthState()
 
       let result = await captureManager.saveProcessedImage(
@@ -274,16 +281,18 @@ final class ScrollingCaptureCoordinator {
         flushSessionMetricsIfNeeded(reason: "saved")
         SoundManager.playScreenshotCapture()
         AppToastManager.shared.show(
-          message: "Scrolling Capture saved the stitched image.",
+          message: L10n.ScrollingCapture.toastSavedStitchedImage,
           style: .info
         )
         cancel()
       case .failure(let error):
         sessionModel.phase = .capturing
         sessionModel.runtimeState = .paused
-        sessionModel.statusText =
-          "Save failed. The stitched result is frozen, so you can try Done again or Cancel."
-        sessionModel.previewCaption = "Save failed • stitched result is still ready"
+        sessionModel.setStatus(
+          L10n.ScrollingCaptureStatus.saveFailedResultStillReady,
+          guidance: .tryDoneAgain
+        )
+        sessionModel.previewCaption = L10n.ScrollingCapture.captionSaveFailedResultStillReady
         updatePreviewTruthState()
         AppToastManager.shared.show(message: error.localizedDescription, style: .error)
       }
@@ -315,7 +324,10 @@ final class ScrollingCaptureCoordinator {
 
     let direction = deltaY > 0 ? 1 : -1
     if let lockedScrollDirection, direction != lockedScrollDirection {
-      sessionModel.statusText = "Direction changed. Keep scrolling the same way or restart the session."
+      sessionModel.setStatus(
+        L10n.ScrollingCaptureStatus.directionChanged,
+        guidance: .keepOneDirection
+      )
       pendingRefreshTask?.cancel()
       pendingRefreshTask = nil
       commitScheduler?.discardPendingRequest()
@@ -335,7 +347,10 @@ final class ScrollingCaptureCoordinator {
     pendingScrollDistancePoints += deltaY
     lastScrollEventTime = ProcessInfo.processInfo.systemUptime
 
-    sessionModel.statusText = "Capturing and aligning the latest visible content..."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.aligningLatestContent,
+      guidance: .scrollDownSteadily
+    )
     startLiveRefreshLoopIfNeeded()
     updatePreviewTruthState()
   }
@@ -381,9 +396,12 @@ final class ScrollingCaptureCoordinator {
 
       if hadMixedDirections {
         sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
-        sessionModel.statusText = isFinalizingRefresh
-          ? "Finalizing the current stitched result after mixed scroll directions."
-          : "Mixed scroll directions detected. Keep one direction so Snapzy can align."
+        sessionModel.setStatus(
+          isFinalizingRefresh
+            ? L10n.ScrollingCaptureStatus.mixedDirectionsFinalizing
+            : L10n.ScrollingCaptureStatus.mixedDirectionsDetected,
+          guidance: isFinalizingRefresh ? .lockingCurrentCapture : .keepOneDirection
+        )
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -398,9 +416,12 @@ final class ScrollingCaptureCoordinator {
       let captureStartedAt = CFAbsoluteTimeGetCurrent()
       guard let capturedImage = try await capturePreparedAreaForSession() else {
         sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
-        sessionModel.statusText = isFinalizingRefresh
-          ? "Couldn't capture the last frame. Snapzy will save the current stitched result."
-          : "Unable to capture the selected area."
+        sessionModel.setStatus(
+          isFinalizingRefresh
+            ? L10n.ScrollingCaptureStatus.couldntCaptureLastFrame
+            : L10n.ScrollingCaptureStatus.unableToCaptureArea,
+          guidance: isFinalizingRefresh ? .lockingCurrentCapture : .previewNeedsRecovery
+        )
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -428,9 +449,12 @@ final class ScrollingCaptureCoordinator {
 
       guard let update else {
         sessionModel.runtimeState = isFinalizingRefresh ? .finalizing : .paused
-        sessionModel.statusText = isFinalizingRefresh
-          ? "Couldn't refresh the last frame. Snapzy will save the current stitched result."
-          : "Unable to render the stitched preview."
+        sessionModel.setStatus(
+          isFinalizingRefresh
+            ? L10n.ScrollingCaptureStatus.couldntRefreshLastFrame
+            : L10n.ScrollingCaptureStatus.unableToRenderPreview,
+          guidance: isFinalizingRefresh ? .lockingCurrentCapture : .previewNeedsRecovery
+        )
         let totalDurationMs = Self.elapsedMilliseconds(since: refreshStartedAt)
         sessionMetrics.recordRefreshFailure(
           reason: reason,
@@ -478,7 +502,10 @@ final class ScrollingCaptureCoordinator {
       if isFinalizingRefresh {
         sessionModel.runtimeState = .finalizing
         sessionModel.previewCaption = finalizingPreviewCaption(for: update)
-        sessionModel.statusText = finalizingStatusText(for: update)
+        sessionModel.setStatus(
+          finalizingStatusText(for: update),
+          guidance: finalizingGuidanceKind(for: update)
+        )
         updatePreviewTruthState()
         return update
       }
@@ -487,37 +514,53 @@ final class ScrollingCaptureCoordinator {
       case .initialized:
         lastAcceptedDeltaPixels = nil
         sessionModel.runtimeState = previewRuntimeState()
-        sessionModel.previewCaption = reason
-        sessionModel.statusText =
-          "First frame locked. Keep the pointer over the highlighted region and scroll downward steadily."
+        sessionModel.previewCaption = L10n.ScrollingCapture.captionFirstFrameLocked
+        sessionModel.setStatus(
+          L10n.ScrollingCaptureStatus.firstFrameLocked,
+          guidance: .holdSteady
+        )
       case .appended(let deltaY):
         lastAcceptedDeltaPixels = deltaY
         sessionModel.runtimeState = previewRuntimeState()
-        sessionModel.previewCaption =
-          "\(update.acceptedFrameCount) frames stitched • +\(deltaY) px"
-        sessionModel.statusText =
-          "Session active. \(update.acceptedFrameCount) frames stitched into \(update.outputHeight) px."
+        sessionModel.previewCaption = L10n.ScrollingCapture.framesStitchedDelta(update.acceptedFrameCount, deltaY)
+        sessionModel.setStatus(
+          L10n.ScrollingCaptureStatus.sessionActive(update.acceptedFrameCount, update.outputHeight),
+          guidance: .scrollDownSteadily
+        )
       case .ignoredNoMovement:
         sessionModel.runtimeState = previewRuntimeState()
         if update.likelyReachedBoundary {
-          sessionModel.previewCaption = "\(update.acceptedFrameCount) frames stitched • no new content"
-          sessionModel.statusText =
-            "No new content detected. You're probably at the end of the scrollable content. Press Done to save."
+          sessionModel.previewCaption = L10n.ScrollingCapture.framesStitchedNoNewContent(update.acceptedFrameCount)
+          sessionModel.setStatus(
+            L10n.ScrollingCaptureStatus.endReachedNoNewContent,
+            guidance: .pressDoneNoNewContent
+          )
         } else {
-          sessionModel.statusText = "Waiting for new content. Keep the scroll moving in one direction."
+          sessionModel.setStatus(
+            L10n.ScrollingCaptureStatus.waitingForNewContent,
+            guidance: .keepScrollingDown
+          )
         }
       case .ignoredAlignmentFailed:
         sessionModel.runtimeState = update.matchFailureCount >= 2 ? .paused : previewRuntimeState()
         if update.matchFailureCount >= 2 {
-          sessionModel.statusText = "Alignment paused. Slow down and keep one direction so Snapzy can recover."
+          sessionModel.setStatus(
+            L10n.ScrollingCaptureStatus.alignmentPaused,
+            guidance: .slowDown
+          )
         } else {
-          sessionModel.statusText = "Couldn't align that frame. Keep the same direction and a steadier pace."
+          sessionModel.setStatus(
+            L10n.ScrollingCaptureStatus.couldntAlignFrame,
+            guidance: .keepSteadierPace
+          )
         }
       case .reachedHeightLimit:
         sessionModel.runtimeState = .paused
-        sessionModel.previewCaption = "\(update.acceptedFrameCount) frames stitched • height limit reached"
-        sessionModel.statusText =
-          "Reached the \(maxOutputHeight) px output limit. Press Done to save the current result."
+        sessionModel.previewCaption = L10n.ScrollingCapture.framesStitchedHeightLimitReached(update.acceptedFrameCount)
+        sessionModel.setStatus(
+          L10n.ScrollingCaptureStatus.heightLimitReached(maxOutputHeight),
+          guidance: .heightLimitReached
+        )
       }
       updatePreviewTruthState()
       return update
@@ -536,9 +579,12 @@ final class ScrollingCaptureCoordinator {
         "Scrolling capture preview refresh failed",
         context: ["error": error.localizedDescription]
       )
-      sessionModel.statusText = isFinalizingRefresh
-        ? "Finalizing the current stitched result after the last refresh failed."
-        : "Preview refresh failed. You can Cancel and try again."
+      sessionModel.setStatus(
+        isFinalizingRefresh
+          ? L10n.ScrollingCaptureStatus.finalizingCurrentCapture
+          : L10n.ScrollingCaptureStatus.previewRefreshFailed,
+        guidance: isFinalizingRefresh ? .lockingCurrentCapture : .previewNeedsRecovery
+      )
       updatePreviewTruthState()
       return nil
     }
@@ -639,12 +685,14 @@ final class ScrollingCaptureCoordinator {
     sessionModel.previewImage = nil
     sessionModel.livePreviewImage = nil
     sessionModel.isUsingLivePreview = false
-    sessionModel.previewCaption = "Start Capture to lock the first frame"
+    sessionModel.previewCaption = L10n.ScrollingCapture.captionStartCaptureToLockFirstFrame
     sessionModel.acceptedFrameCount = 0
     sessionModel.stitchedPixelHeight = 0
     sessionModel.runtimeState = .ready
-    sessionModel.statusText =
-      "Adjust the region so only the moving content stays inside, then press Start Capture. Press Esc to cancel."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.adjustRegion,
+      guidance: .frameOnlyScrollingContent
+    )
 
     prewarmCaptureContext(for: selectedRect)
     updatePreviewTruthState()
@@ -792,7 +840,7 @@ final class ScrollingCaptureCoordinator {
       sessionModel.livePreviewImage = nil
       sessionModel.isUsingLivePreview = true
       sessionModel.runtimeState = .streaming
-      sessionModel.previewCaption = "Live preview running while Snapzy locks the stitched frame."
+      sessionModel.previewCaption = L10n.ScrollingCapture.captionLivePreviewRunning
       updatePreviewTruthState()
     } catch {
       sessionMetrics.recordLivePreviewStart(success: false)
@@ -999,9 +1047,11 @@ final class ScrollingCaptureCoordinator {
     pendingRefreshTask = nil
     sessionModel.phase = .finalizing
     sessionModel.runtimeState = .finalizing
-    sessionModel.statusText =
-      "Finalizing the current capture. Snapzy is locking the latest stitched result before saving."
-    sessionModel.previewCaption = "Finalizing stitched result..."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.finalizingCurrentCapture,
+      guidance: .lockingCurrentCapture
+    )
+    sessionModel.previewCaption = L10n.ScrollingCapture.captionFinalizingStitchedResult
     sessionMetrics.recordFinalizingStarted(at: ProcessInfo.processInfo.systemUptime)
     updatePreviewTruthState()
   }
@@ -1071,32 +1121,41 @@ final class ScrollingCaptureCoordinator {
   private func finalizingPreviewCaption(for update: ScrollingCaptureStitchUpdate) -> String {
     switch update.outcome {
     case .initialized:
-      return "Finalizing stitched result • \(update.acceptedFrameCount) frames locked"
+      return L10n.ScrollingCapture.finalizingFramesLocked(update.acceptedFrameCount)
     case .ignoredNoMovement:
       return update.likelyReachedBoundary
-        ? "Finalizing current result • no new content"
-        : "Finalizing stitched result • \(update.acceptedFrameCount) frames locked"
+        ? L10n.ScrollingCapture.captionFinalizingCurrentResultNoNewContent
+        : L10n.ScrollingCapture.finalizingFramesLocked(update.acceptedFrameCount)
     case .appended(let deltaY):
-      return "Final frame locked • \(update.acceptedFrameCount) frames • +\(deltaY) px"
+      return L10n.ScrollingCapture.finalFrameLocked(update.acceptedFrameCount, deltaY)
     case .ignoredAlignmentFailed:
-      return "Finalizing current stitched result • last frame skipped"
+      return L10n.ScrollingCapture.captionFinalizingCurrentResultLastFrameSkipped
     case .reachedHeightLimit:
-      return "\(update.acceptedFrameCount) frames stitched • height limit reached"
+      return L10n.ScrollingCapture.framesStitchedHeightLimitReached(update.acceptedFrameCount)
     }
   }
 
   private func finalizingStatusText(for update: ScrollingCaptureStitchUpdate) -> String {
     switch update.outcome {
     case .initialized, .appended:
-      return "Locking the current capture. Snapzy is sealing \(update.acceptedFrameCount) stitched frames before saving."
+      return L10n.ScrollingCaptureStatus.finalizingFrames(update.acceptedFrameCount)
     case .ignoredNoMovement:
       return update.likelyReachedBoundary
-        ? "No new content was detected. Snapzy is saving the current stitched result."
-        : "Locking the current capture. Snapzy is sealing \(update.acceptedFrameCount) stitched frames before saving."
+        ? L10n.ScrollingCaptureStatus.finalizingNoNewContent
+        : L10n.ScrollingCaptureStatus.finalizingFrames(update.acceptedFrameCount)
     case .ignoredAlignmentFailed:
-      return "Couldn't align the last frame cleanly. Snapzy will save the current stitched result."
+      return L10n.ScrollingCaptureStatus.finalizingCouldntAlignLastFrame
     case .reachedHeightLimit:
-      return "Height limit reached. Snapzy is saving the current stitched result."
+      return L10n.ScrollingCaptureStatus.finalizingHeightLimitReached
+    }
+  }
+
+  private func finalizingGuidanceKind(for update: ScrollingCaptureStitchUpdate) -> ScrollingCaptureSelectionGuidanceKind {
+    switch update.outcome {
+    case .reachedHeightLimit:
+      return .savingCurrentResult
+    case .initialized, .appended, .ignoredNoMovement, .ignoredAlignmentFailed:
+      return .lockingCurrentCapture
     }
   }
 
@@ -1184,33 +1243,45 @@ extension ScrollingCaptureCoordinator: RecordingRegionOverlayDelegate {
   func overlay(_ overlay: RecordingRegionOverlayWindow, didMoveRegionTo rect: CGRect) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     updateSelectedRect(rect, reprepareSession: false)
-    sessionModel.statusText = "Release to lock the updated scrolling region."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.releaseToLockUpdatedRegion,
+      guidance: .releaseToLockArea
+    )
   }
 
   func overlayDidFinishMoving(_ overlay: RecordingRegionOverlayWindow) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     refreshSelectionPreparation()
-    sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.regionUpdated,
+      guidance: .areaUpdated
+    )
   }
 
   func overlay(_ overlay: RecordingRegionOverlayWindow, didReselectWithRect rect: CGRect) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     updateSelectedRect(rect, reprepareSession: true)
-    sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.regionUpdated,
+      guidance: .areaUpdated
+    )
   }
 
   func overlay(_ overlay: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     updateSelectedRect(rect, reprepareSession: false)
-    sessionModel.statusText = "Release to lock the updated scrolling region."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.releaseToLockUpdatedRegion,
+      guidance: .releaseToLockArea
+    )
   }
 
   func overlayDidFinishResizing(_ overlay: RecordingRegionOverlayWindow) {
     guard let sessionModel, sessionModel.phase == .ready else { return }
     refreshSelectionPreparation()
-    sessionModel.statusText =
-      "Region updated. Keep only the moving content inside, then press Start Capture. Press Esc to cancel."
+    sessionModel.setStatus(
+      L10n.ScrollingCaptureStatus.regionUpdated,
+      guidance: .areaUpdated
+    )
   }
 }

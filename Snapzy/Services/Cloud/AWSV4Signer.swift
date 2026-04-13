@@ -35,7 +35,7 @@ enum AWSV4Signer {
       let host = url.host,
       let method = request.httpMethod
     else {
-      throw CloudError.signingFailed("Invalid request URL or method")
+      throw CloudError.signingFailed(L10n.CloudOperation.invalidRequestURLOrMethod)
     }
 
     var signedRequest = request
@@ -111,7 +111,7 @@ enum AWSV4Signer {
     expireSeconds: Int = 3600
   ) throws -> URL {
     guard let host = url.host else {
-      throw CloudError.signingFailed("Invalid URL for presigning")
+      throw CloudError.signingFailed(L10n.CloudOperation.invalidURLForPresigning)
     }
 
     let now = Date()
@@ -168,7 +168,7 @@ enum AWSV4Signer {
       "\(url.scheme ?? "https")://\(host)\(canonicalURI)?\(canonicalQueryString)&X-Amz-Signature=\(signature)"
 
     guard let presignedURL = URL(string: presignedURLString) else {
-      throw CloudError.signingFailed("Failed to construct presigned URL")
+      throw CloudError.signingFailed(L10n.CloudOperation.failedToConstructPresignedURL)
     }
     return presignedURL
   }

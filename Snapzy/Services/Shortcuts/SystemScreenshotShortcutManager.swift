@@ -55,15 +55,15 @@ final class SystemScreenshotShortcutManager {
     var displayName: String {
       switch self {
       case .saveAreaToFile:
-        return "macOS Capture Area"
+        return L10n.SystemShortcuts.macOSCaptureArea
       case .copyAreaToClipboard:
-        return "macOS Copy Area"
+        return L10n.SystemShortcuts.macOSCopyArea
       case .saveScreenToFile:
-        return "macOS Capture Fullscreen"
+        return L10n.SystemShortcuts.macOSCaptureFullscreen
       case .copyScreenToClipboard:
-        return "macOS Copy Fullscreen"
+        return L10n.SystemShortcuts.macOSCopyFullscreen
       case .screenshotOptions:
-        return "macOS Screenshot & Recording Options"
+        return L10n.SystemShortcuts.macOSScreenshotOptions
       }
     }
   }

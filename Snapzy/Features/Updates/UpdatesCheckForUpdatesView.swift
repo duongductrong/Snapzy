@@ -28,7 +28,7 @@ struct CheckForUpdatesView: View {
     }
 
     var body: some View {
-        Button("Check for Updates...") {
+        Button(L10n.Menu.checkForUpdates) {
             updater.checkForUpdates()
         }
         .disabled(!viewModel.canCheckForUpdates)

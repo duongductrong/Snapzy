@@ -96,11 +96,11 @@ struct VerticalTabBar<Tab: Hashable>: View {
     ) { tab in
       switch tab {
       case "background":
-        return (icon: "rectangle.on.rectangle", title: "Background")
+        return (icon: "rectangle.on.rectangle", title: L10n.VideoEditor.backgroundTab)
       case "zoom":
-        return (icon: "plus.magnifyingglass", title: "Zoom")
+        return (icon: "plus.magnifyingglass", title: L10n.VideoEditor.zoomTab)
       default:
-        return (icon: "questionmark", title: "Unknown")
+        return (icon: "questionmark", title: L10n.VideoEditor.unknownTab)
       }
     }
   }

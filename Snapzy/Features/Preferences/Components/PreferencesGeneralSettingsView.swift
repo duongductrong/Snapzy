@@ -16,8 +16,8 @@ struct GeneralSettingsView: View {
   @ObservedObject private var themeManager = ThemeManager.shared
 
   @State private var startAtLogin = LoginItemManager.isEnabled
-  @State private var logSizeText = "Calculating..."
-  @State private var cacheSizeText = "Calculating..."
+  @State private var logSizeText = L10n.PreferencesGeneral.calculating
+  @State private var cacheSizeText = L10n.PreferencesGeneral.calculating
   @State private var canClearCache = true
   @State private var isClearingCache = false
   private let fileAccessManager = SandboxFileAccessManager.shared
@@ -29,8 +29,8 @@ struct GeneralSettingsView: View {
 
   var body: some View {
     Form {
-      Section("Startup") {
-        SettingRow(icon: "power.circle", title: "Start at login", description: "Launch Snapzy when you log in") {
+      Section(L10n.PreferencesGeneral.startupSection) {
+        SettingRow(icon: "power.circle", title: L10n.PreferencesGeneral.startAtLoginTitle, description: L10n.PreferencesGeneral.startAtLoginDescription) {
           Toggle("", isOn: $startAtLogin)
             .labelsHidden()
             .onChange(of: startAtLogin) { newValue in
@@ -38,29 +38,29 @@ struct GeneralSettingsView: View {
             }
         }
 
-        SettingRow(icon: "speaker.wave.2", title: "Play sounds", description: "Audio feedback for captures") {
+        SettingRow(icon: "speaker.wave.2", title: L10n.PreferencesGeneral.playSoundsTitle, description: L10n.PreferencesGeneral.playSoundsDescription) {
           Toggle("", isOn: $playSounds)
             .labelsHidden()
         }
       }
 
-      Section("Appearance") {
-        SettingRow(icon: "circle.lefthalf.filled", title: "Theme", description: "Choose your preferred appearance") {
+      Section(L10n.PreferencesGeneral.appearanceSection) {
+        SettingRow(icon: "circle.lefthalf.filled", title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
           AppearanceModePicker(selection: $themeManager.preferredAppearance)
         }
       }
 
-      Section("Storage") {
-        SettingRow(icon: "folder.fill", title: "Save location", description: exportLocationDisplay) {
-          Button("Choose...") {
+      Section(L10n.PreferencesGeneral.storageSection) {
+        SettingRow(icon: "folder.fill", title: L10n.PreferencesGeneral.saveLocationTitle, description: exportLocationDisplay) {
+          Button(L10n.PreferencesGeneral.chooseButton) {
             chooseExportLocation()
           }
           .buttonStyle(.bordered)
           .controlSize(.small)
         }
 
-        SettingRow(icon: "externaldrive.fill", title: "Cache", description: cacheSizeText) {
-          Button(isClearingCache ? "Clearing..." : "Clear...") {
+        SettingRow(icon: "externaldrive.fill", title: L10n.PreferencesGeneral.cacheTitle, description: cacheSizeText) {
+          Button(isClearingCache ? L10n.PreferencesGeneral.clearingButton : L10n.PreferencesGeneral.clearButton) {
             clearCacheWithConfirmation()
           }
           .buttonStyle(.bordered)
@@ -69,8 +69,8 @@ struct GeneralSettingsView: View {
         }
       }
 
-      Section("Software Updates") {
-        SettingRow(icon: "arrow.triangle.2.circlepath", title: "Check automatically", description: "Look for updates on launch") {
+      Section(L10n.PreferencesGeneral.updatesSection) {
+        SettingRow(icon: "arrow.triangle.2.circlepath", title: L10n.PreferencesGeneral.checkAutomaticallyTitle, description: L10n.PreferencesGeneral.checkAutomaticallyDescription) {
           Toggle("", isOn: Binding(
             get: { updater.automaticallyChecksForUpdates },
             set: { updater.automaticallyChecksForUpdates = $0 }
@@ -78,7 +78,7 @@ struct GeneralSettingsView: View {
           .labelsHidden()
         }
 
-        SettingRow(icon: "arrow.down.circle", title: "Download automatically", description: "Download updates in background") {
+        SettingRow(icon: "arrow.down.circle", title: L10n.PreferencesGeneral.downloadAutomaticallyTitle, description: L10n.PreferencesGeneral.downloadAutomaticallyDescription) {
           Toggle("", isOn: Binding(
             get: { updater.automaticallyDownloadsUpdates },
             set: { updater.automaticallyDownloadsUpdates = $0 }
@@ -86,27 +86,27 @@ struct GeneralSettingsView: View {
           .labelsHidden()
         }
 
-        SettingRow(icon: "clock", title: "Last checked", description: nil) {
+        SettingRow(icon: "clock", title: L10n.PreferencesGeneral.lastCheckedTitle, description: nil) {
           if let lastCheck = updater.lastUpdateCheckDate {
             Text(lastCheck, style: .relative)
               .font(.caption)
               .foregroundColor(.secondary)
           } else {
-            Text("Never")
+            Text(L10n.PreferencesGeneral.never)
               .font(.caption)
               .foregroundColor(.secondary)
           }
         }
       }
 
-      Section("Diagnostics") {
-        SettingRow(icon: "doc.text.magnifyingglass", title: "Crash Logging", description: "Collect diagnostic logs to help us fix bugs") {
+      Section(L10n.PreferencesGeneral.diagnosticsSection) {
+        SettingRow(icon: "doc.text.magnifyingglass", title: L10n.PreferencesGeneral.crashLoggingTitle, description: L10n.PreferencesGeneral.crashLoggingDescription) {
           Toggle("", isOn: $diagnosticsEnabled)
             .labelsHidden()
         }
 
-        SettingRow(icon: "folder", title: "Log Files", description: logSizeText) {
-          Button("Open Folder") {
+        SettingRow(icon: "folder", title: L10n.PreferencesGeneral.logFilesTitle, description: logSizeText) {
+          Button(L10n.PreferencesGeneral.openFolderButton) {
             revealLogFolder()
           }
           .buttonStyle(.bordered)
@@ -114,9 +114,9 @@ struct GeneralSettingsView: View {
         }
       }
 
-      Section("Help") {
-        SettingRow(icon: "arrow.counterclockwise.circle", title: "Restart Onboarding", description: "Show the welcome tutorial again") {
-          Button("Restart") {
+      Section(L10n.PreferencesGeneral.helpSection) {
+        SettingRow(icon: "arrow.counterclockwise.circle", title: L10n.PreferencesGeneral.restartOnboardingTitle, description: L10n.PreferencesGeneral.restartOnboardingDescription) {
+          Button(L10n.PreferencesGeneral.restartButton) {
             restartOnboarding()
           }
           .buttonStyle(.bordered)
@@ -137,7 +137,7 @@ struct GeneralSettingsView: View {
 
   private var exportLocationDisplay: String {
     if exportLocation.isEmpty {
-      return "Desktop/Snapzy"
+      return L10n.PreferencesGeneral.defaultSaveLocation
     }
 
     let folderName = URL(fileURLWithPath: exportLocation).lastPathComponent
@@ -145,7 +145,7 @@ struct GeneralSettingsView: View {
       return folderName
     }
 
-    return "\(folderName) (Access not granted)"
+    return L10n.PreferencesGeneral.accessNotGranted(folderName)
   }
 
   private func initializeExportLocation() {
@@ -155,8 +155,8 @@ struct GeneralSettingsView: View {
 
   private func chooseExportLocation() {
     if let url = fileAccessManager.chooseExportDirectory(
-      message: "Choose where Snapzy saves captures",
-      prompt: "Save Here",
+      message: L10n.PreferencesGeneral.chooseSaveLocationMessage,
+      prompt: L10n.PreferencesGeneral.saveHereButton,
       directoryURL: fileAccessManager.resolvedExportDirectoryURL()
     ) {
       exportLocation = url.path
@@ -175,11 +175,11 @@ struct GeneralSettingsView: View {
 
   private func clearCacheWithConfirmation() {
     let alert = NSAlert()
-    alert.messageText = "Clear Cache?"
-    alert.informativeText = "This will remove all temporary capture files. Active captures will not be affected. This action cannot be undone."
+    alert.messageText = L10n.PreferencesGeneral.clearCacheAlertTitle
+    alert.informativeText = L10n.PreferencesGeneral.clearCacheAlertMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Clear Cache")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.PreferencesGeneral.clearCacheConfirm)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     guard alert.runModal() == .alertFirstButtonReturn else { return }
 
@@ -189,10 +189,10 @@ struct GeneralSettingsView: View {
         try await storageManager.clearCache()
       } catch {
         let errorAlert = NSAlert()
-        errorAlert.messageText = "Could Not Clear Cache"
+        errorAlert.messageText = L10n.PreferencesGeneral.clearCacheErrorTitle
         errorAlert.informativeText = error.localizedDescription
         errorAlert.alertStyle = .informational
-        errorAlert.addButton(withTitle: "OK")
+        errorAlert.addButton(withTitle: L10n.Common.ok)
         errorAlert.runModal()
       }
       isClearingCache = false
@@ -225,7 +225,7 @@ struct GeneralSettingsView: View {
     let logDir = DiagnosticLogger.shared.logDirectoryURL
     let fm = FileManager.default
     guard let files = try? fm.contentsOfDirectory(atPath: logDir.path) else {
-      logSizeText = "No logs"
+      logSizeText = L10n.PreferencesGeneral.noLogs
       return
     }
     let totalBytes = files.compactMap { file -> Int? in
@@ -234,11 +234,9 @@ struct GeneralSettingsView: View {
     }.reduce(0, +)
 
     if totalBytes == 0 {
-      logSizeText = "No logs"
-    } else if totalBytes < 1024 {
-      logSizeText = "\(totalBytes) B"
+      logSizeText = L10n.PreferencesGeneral.noLogs
     } else {
-      logSizeText = String(format: "%.1f KB", Double(totalBytes) / 1024.0)
+      logSizeText = ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file)
     }
   }
 }

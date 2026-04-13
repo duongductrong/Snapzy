@@ -80,10 +80,10 @@ private extension SplashContentView {
 
   var welcomeText: some View {
     VStack(spacing: 8) {
-      Text("Welcome to Snapzy")
+      Text(L10n.Splash.welcomeTitle)
         .font(.system(size: 28, weight: .bold))
         .foregroundStyle(VSDesignSystem.Colors.primary)
-      Text("Screenshot & recording, simplified.")
+      Text(L10n.Splash.welcomeSubtitle)
         .font(.system(size: 16))
         .foregroundStyle(VSDesignSystem.Colors.secondary)
     }
@@ -92,7 +92,7 @@ private extension SplashContentView {
   var continueButton: some View {
     VStack(spacing: 6) {
       Button(action: { onContinue(doNotShowAgain) }) {
-        Text("Continue")
+        Text(L10n.Common.continueAction)
           .font(.system(size: 15, weight: .semibold))
           .foregroundStyle(VSDesignSystem.Colors.primary)
           .padding(.horizontal, 32)
@@ -105,11 +105,11 @@ private extension SplashContentView {
       .buttonStyle(.plain)
       .keyboardShortcut(.return, modifiers: [])
 
-      Text("Press Enter ↵")
+      Text(L10n.Splash.pressEnter)
         .font(.system(size: 11))
         .foregroundStyle(VSDesignSystem.Colors.quaternary)
 
-      Toggle("Do not show again", isOn: $doNotShowAgain)
+      Toggle(L10n.Splash.doNotShowAgain, isOn: $doNotShowAgain)
         .toggleStyle(.checkbox)
         .font(.system(size: 12))
         .foregroundStyle(VSDesignSystem.Colors.secondary)

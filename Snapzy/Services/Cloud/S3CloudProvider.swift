@@ -144,7 +144,7 @@ final class S3CloudProvider: CloudProvider {
       }
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
-        message: "Bucket validation failed"
+        message: L10n.CloudOperation.bucketValidationFailed
       )
     }
 
@@ -176,7 +176,10 @@ final class S3CloudProvider: CloudProvider {
     guard (200...299).contains(httpResponse.statusCode) || httpResponse.statusCode == 404 else {
       let body = String(data: data, encoding: .utf8) ?? "No response body"
       logger.error("S3 delete failed: HTTP \(httpResponse.statusCode) — \(body)")
-      throw CloudError.uploadFailed(statusCode: httpResponse.statusCode, message: "Delete failed: \(body)")
+      throw CloudError.uploadFailed(
+        statusCode: httpResponse.statusCode,
+        message: L10n.CloudOperation.deleteFailed(body)
+      )
     }
 
     logger.info("S3 delete succeeded: \(key)")
@@ -249,7 +252,7 @@ final class S3CloudProvider: CloudProvider {
       logger.error("GET lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
-        message: "Failed to get lifecycle config: \(body)"
+        message: L10n.CloudOperation.getLifecycleConfigFailed(body)
       )
     }
 
@@ -294,7 +297,7 @@ final class S3CloudProvider: CloudProvider {
       logger.error("PUT lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
-        message: "Failed to set lifecycle config: \(body)"
+        message: L10n.CloudOperation.setLifecycleConfigFailed(body)
       )
     }
   }
@@ -324,7 +327,7 @@ final class S3CloudProvider: CloudProvider {
       logger.error("DELETE lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
-        message: "Failed to delete lifecycle config: \(body)"
+        message: L10n.CloudOperation.deleteLifecycleConfigFailed(body)
       )
     }
   }

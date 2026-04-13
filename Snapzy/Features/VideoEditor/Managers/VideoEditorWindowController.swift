@@ -138,7 +138,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private var primaryActionTitle: String {
-    isTempCaptureSource ? "Save" : "Convert"
+    isTempCaptureSource ? L10n.VideoEditor.save : L10n.VideoEditor.convert
   }
 
   // MARK: - NSWindowDelegate
@@ -160,13 +160,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private func showUnsavedChangesAlert(for window: NSWindow) {
     let alert = NSAlert()
-    alert.messageText = "Unsaved Changes"
-    alert.informativeText = "You have unsaved video edits. Do you want to save before closing?"
+    alert.messageText = L10n.VideoEditor.unsavedChangesTitle
+    alert.informativeText = L10n.VideoEditor.unsavedChangesMessage
     alert.alertStyle = .warning
 
-    alert.addButton(withTitle: "Save")
-    alert.addButton(withTitle: "Don't Save")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.VideoEditor.save)
+    alert.addButton(withTitle: L10n.VideoEditor.dontSave)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }
@@ -202,13 +202,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     }
 
     let alert = NSAlert()
-    alert.messageText = "Save Edited Video"
-    alert.informativeText = "How would you like to save the edited video \"\(state.filename)\"?"
+    alert.messageText = L10n.VideoEditor.saveEditedVideoTitle
+    alert.informativeText = L10n.VideoEditor.saveEditedVideoMessage(state.filename)
     alert.alertStyle = .informational
 
-    alert.addButton(withTitle: "Replace Original")
-    alert.addButton(withTitle: "Save as Copy")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.VideoEditor.replaceOriginal)
+    alert.addButton(withTitle: L10n.VideoEditor.saveAsCopy)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }
@@ -231,7 +231,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func saveTempCaptureToDestination() {
     guard let state = state else { return }
     guard let exportDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-      promptMessage: "Choose where Snapzy should save screenshots and recordings")
+      promptMessage: L10n.Recording.chooseSaveLocationMessage)
     else {
       return
     }
@@ -252,13 +252,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     guard let window = window else { return }
 
     let alert = NSAlert()
-    alert.messageText = "File Already Exists"
-    alert.informativeText =
-      "A file named \"\(destinationURL.lastPathComponent)\" already exists in the destination folder."
+    alert.messageText = L10n.VideoEditor.fileAlreadyExistsTitle
+    alert.informativeText = L10n.VideoEditor.fileAlreadyExistsMessage(destinationURL.lastPathComponent)
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Overwrite")
-    alert.addButton(withTitle: "Save As")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.Common.overwrite)
+    alert.addButton(withTitle: L10n.Common.saveAs)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }
@@ -281,9 +280,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     guard let window = window, let state = state else { return }
 
     let savePanel = NSSavePanel()
-    savePanel.title = state.isGIF ? "Save GIF" : "Save Video"
-    savePanel.message = "Choose where to save the file"
-    savePanel.nameFieldLabel = "File Name:"
+    savePanel.title = state.isGIF ? L10n.VideoEditor.saveGIFTitle : L10n.VideoEditor.saveVideoTitle
+    savePanel.message = L10n.VideoEditor.chooseWhereToSaveFile
+    savePanel.nameFieldLabel = L10n.VideoEditor.fileNameLabel
     savePanel.nameFieldStringValue = suggestedFilename
     savePanel.allowedContentTypes =
       state.isGIF ? [.gif] : [.movie, .mpeg4Movie, .quickTimeMovie]
@@ -311,7 +310,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     state.isExporting = true
     state.exportProgress = 0
-    state.exportStatusMessage = state.isGIF ? "Preparing save..." : "Preparing export..."
+    state.exportStatusMessage = state.isGIF ? L10n.VideoEditor.preparingSave : L10n.VideoEditor.preparingExport
 
     Task {
       do {
@@ -325,7 +324,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
           try await VideoEditorExporter.exportTrimmed(state: state, to: destinationURL) { [weak self] progress in
             Task { @MainActor in
               self?.state?.exportProgress = progress
-              self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
+              self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? L10n.VideoEditor.exporting
             }
           }
         }
@@ -412,22 +411,28 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     guard isResizing else {
       let alert = NSAlert()
-      alert.messageText = "No Changes"
-      alert.informativeText = "The GIF dimensions haven't changed. Select a different size preset to resize."
+      alert.messageText = L10n.VideoEditor.noChangesTitle
+      alert.informativeText = L10n.VideoEditor.gifDimensionsNotChanged
       alert.alertStyle = .informational
-      alert.addButton(withTitle: "OK")
+      alert.addButton(withTitle: L10n.Common.ok)
       alert.beginSheetModal(for: window)
       return
     }
 
     let alert = NSAlert()
-    alert.messageText = "Save Resized GIF"
-    alert.informativeText = "Resize \"\(state.filename)\" from \(Int(state.naturalSize.width))×\(Int(state.naturalSize.height)) to \(Int(targetSize.width))×\(Int(targetSize.height))?"
+    alert.messageText = L10n.VideoEditor.saveResizedGIFTitle
+    alert.informativeText = L10n.VideoEditor.resizeGifMessage(
+      state.filename,
+      Int(state.naturalSize.width),
+      Int(state.naturalSize.height),
+      Int(targetSize.width),
+      Int(targetSize.height)
+    )
     alert.alertStyle = .informational
 
-    alert.addButton(withTitle: "Replace Original")
-    alert.addButton(withTitle: "Save as Copy")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.VideoEditor.replaceOriginal)
+    alert.addButton(withTitle: L10n.VideoEditor.saveAsCopy)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }
@@ -452,7 +457,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     state.isExporting = true
     state.exportProgress = 0
-    state.exportStatusMessage = "Resizing GIF..."
+    state.exportStatusMessage = L10n.VideoEditor.resizingGIF
 
     Task {
       do {
@@ -463,7 +468,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         ) { progress in
           Task { @MainActor in
             state.exportProgress = Float(progress)
-            state.exportStatusMessage = progress < 0.95 ? "Resizing frames..." : "Finalizing..."
+            state.exportStatusMessage = progress < 0.95 ? L10n.VideoEditor.resizingFrames : L10n.VideoEditor.finalizing
           }
         }
 
@@ -492,9 +497,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     guard let state = state, let window = self.window else { return }
 
     let savePanel = NSSavePanel()
-    savePanel.title = "Save Resized GIF"
-    savePanel.message = "Choose where to save the resized GIF"
-    savePanel.nameFieldLabel = "File Name:"
+    savePanel.title = L10n.VideoEditor.saveResizedGIFTitle
+    savePanel.message = L10n.VideoEditor.chooseWhereToSaveFile
+    savePanel.nameFieldLabel = L10n.VideoEditor.fileNameLabel
 
     let baseName = state.sourceURL.deletingPathExtension().lastPathComponent
     savePanel.nameFieldStringValue = "\(baseName)_resized.gif"
@@ -514,7 +519,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     state.isExporting = true
     state.exportProgress = 0
-    state.exportStatusMessage = "Resizing GIF..."
+    state.exportStatusMessage = L10n.VideoEditor.resizingGIF
 
     Task {
       do {
@@ -525,7 +530,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         ) { progress in
           Task { @MainActor in
             state.exportProgress = Float(progress)
-            state.exportStatusMessage = progress < 0.95 ? "Resizing frames..." : "Finalizing..."
+            state.exportStatusMessage = progress < 0.95 ? L10n.VideoEditor.resizingFrames : L10n.VideoEditor.finalizing
           }
         }
 
@@ -547,14 +552,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     state.isExporting = true
     state.exportProgress = 0
-    state.exportStatusMessage = "Preparing export..."
+    state.exportStatusMessage = L10n.VideoEditor.preparingExport
 
     Task {
       do {
         try await VideoEditorExporter.replaceOriginal(state: state) { [weak self] progress in
           Task { @MainActor in
             self?.state?.exportProgress = progress
-            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
+            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? L10n.VideoEditor.exporting
           }
         }
         state.isExporting = false
@@ -577,9 +582,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     // Show save panel to let user choose destination
     let savePanel = NSSavePanel()
-    savePanel.title = "Save Video Copy"
-    savePanel.message = "Choose where to save the edited video"
-    savePanel.nameFieldLabel = "File Name:"
+    savePanel.title = L10n.VideoEditor.saveVideoCopyTitle
+    savePanel.message = L10n.VideoEditor.chooseWhereToSaveEditedVideo
+    savePanel.nameFieldLabel = L10n.VideoEditor.fileNameLabel
     savePanel.nameFieldStringValue = VideoEditorExporter.generateCopyFilename(from: state.sourceURL)
     savePanel.allowedContentTypes = [.movie, .mpeg4Movie, .quickTimeMovie]
     savePanel.canCreateDirectories = true
@@ -595,14 +600,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     state.isExporting = true
     state.exportProgress = 0
-    state.exportStatusMessage = "Preparing export..."
+    state.exportStatusMessage = L10n.VideoEditor.preparingExport
 
     Task {
       do {
         try await VideoEditorExporter.exportTrimmed(state: state, to: outputURL) { [weak self] progress in
           Task { @MainActor in
             self?.state?.exportProgress = progress
-            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? "Exporting..."
+            self?.state?.exportStatusMessage = self?.progressMessage(for: progress) ?? L10n.VideoEditor.exporting
           }
         }
         state.isExporting = false
@@ -621,17 +626,17 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func progressMessage(for progress: Float) -> String {
     switch progress {
     case 0..<0.1:
-      return "Preparing export..."
+      return L10n.VideoEditor.preparingExport
     case 0.1..<0.3:
-      return "Processing video..."
+      return L10n.VideoEditor.processingVideo
     case 0.3..<0.7:
-      return "Applying effects..."
+      return L10n.VideoEditor.applyingEffects
     case 0.7..<0.9:
-      return "Encoding frames..."
+      return L10n.VideoEditor.encodingFrames
     case 0.9..<1.0:
-      return "Finalizing..."
+      return L10n.VideoEditor.finalizing
     default:
-      return "Completing..."
+      return L10n.VideoEditor.completing
     }
   }
 
@@ -640,10 +645,10 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     guard let window = self.window else { return }
 
     let alert = NSAlert()
-    alert.messageText = "Export Failed"
+    alert.messageText = L10n.VideoEditor.exportFailedTitle
     alert.informativeText = error.localizedDescription
     alert.alertStyle = .critical
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.beginSheetModal(for: window)
   }
 
@@ -651,12 +656,11 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     guard let window = self.window else { return }
 
     let alert = NSAlert()
-    alert.messageText = "Cannot Replace Original"
-    alert.informativeText =
-      "Snapzy doesn't have write access to this file location. Save as a copy instead.\n\n\(error.localizedDescription)"
+    alert.messageText = L10n.VideoEditor.cannotReplaceOriginalTitle
+    alert.informativeText = L10n.VideoEditor.cannotReplaceOriginalMessage(error.localizedDescription)
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Save as Copy")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.VideoEditor.saveAsCopy)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
       guard let self = self else { return }

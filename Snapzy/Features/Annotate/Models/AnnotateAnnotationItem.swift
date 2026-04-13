@@ -18,8 +18,8 @@ enum BlurType: String, CaseIterable, Identifiable, Equatable {
 
   var displayName: String {
     switch self {
-    case .pixelated: return "Pixelated"
-    case .gaussian: return "Gaussian"
+    case .pixelated: return L10n.AnnotateUI.pixelated
+    case .gaussian: return L10n.AnnotateUI.gaussian
     }
   }
 
@@ -40,9 +40,9 @@ enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
 
   var displayName: String {
     switch self {
-    case .straight: return "Straight"
-    case .elbow: return "Elbow"
-    case .curve: return "Curve"
+    case .straight: return L10n.AnnotateUI.straight
+    case .elbow: return L10n.AnnotateUI.elbow
+    case .curve: return L10n.AnnotateUI.curve
     }
   }
 
@@ -56,9 +56,9 @@ enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
 
   var helperText: String {
     switch self {
-    case .straight: return "Direct line from start to end"
-    case .elbow: return "Right-angle callout arrow"
-    case .curve: return "Smooth curved callout arrow"
+    case .straight: return L10n.AnnotateUI.straightArrowHelp
+    case .elbow: return L10n.AnnotateUI.elbowArrowHelp
+    case .curve: return L10n.AnnotateUI.curveArrowHelp
     }
   }
 }

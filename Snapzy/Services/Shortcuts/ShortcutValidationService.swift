@@ -34,14 +34,14 @@ final class ShortcutValidationService {
     if let conflictKind = conflictingGlobalShortcut(for: config, excluding: kind) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: "Already used by \(conflictKind.displayName)."
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
       ))
     }
 
     if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: nil) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: "Already used by \(conflictKind.displayName) in Annotate Editor."
+        message: L10n.ShortcutValidation.alreadyUsedByInAnnotate(conflictKind.displayName)
       ))
     }
 
@@ -53,7 +53,7 @@ final class ShortcutValidationService {
     if let systemConflict = systemConflicts.first {
       return .accept(issue: ShortcutValidationIssue(
         severity: .warning,
-        message: "Matches \(systemConflict). macOS may win."
+        message: L10n.ShortcutValidation.matchesSystemConflict(systemConflict)
       ))
     }
 
@@ -67,14 +67,14 @@ final class ShortcutValidationService {
     if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: kind) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: "Already used by \(conflictKind.displayName)."
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
       ))
     }
 
     if let conflictKind = conflictingGlobalShortcut(for: config, excluding: nil) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: "Already used by \(conflictKind.displayName)."
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
       ))
     }
 
@@ -88,7 +88,7 @@ final class ShortcutValidationService {
     if let conflictTool = AnnotateShortcutManager.shared.conflictingTool(for: key, excluding: tool) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: "Already used by \(conflictTool.displayName)."
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictTool.displayName)
       ))
     }
 
@@ -124,11 +124,11 @@ private extension AnnotateActionShortcutKind {
   var displayName: String {
     switch self {
     case .copyAndClose:
-      return "Copy & Close"
+      return L10n.ShortcutOverlay.copyAndClose
     case .togglePin:
-      return "Toggle Pin"
+      return L10n.ShortcutOverlay.togglePin
     case .cloudUpload:
-      return "Cloud Upload"
+      return L10n.ShortcutOverlay.cloudUpload
     }
   }
 }

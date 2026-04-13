@@ -26,12 +26,12 @@ struct ShortcutsView: View {
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
-      Text("Set as default screenshot tool?")
+      Text(L10n.Onboarding.shortcutsTitle)
         .vsHeading()
         .padding(.top, 20)
 
       // Subtitle
-      Text("Assign system shortcuts to Snapzy for quick access.")
+      Text(L10n.Onboarding.shortcutsSubtitle)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -39,19 +39,19 @@ struct ShortcutsView: View {
 
       // Shortcut groups
       VStack(spacing: 14) {
-        ShortcutGroup(title: "Capture", shortcuts: [
-          ShortcutItem(keys: "⇧⌘3", action: "Capture Fullscreen"),
-          ShortcutItem(keys: "⇧⌘4", action: "Capture Area"),
-          ShortcutItem(keys: "⇧⌘2", action: "Capture Text (OCR)"),
+        ShortcutGroup(title: L10n.ShortcutOverlay.captureSection, shortcuts: [
+          ShortcutItem(keys: "⇧⌘3", action: L10n.Actions.captureFullscreen),
+          ShortcutItem(keys: "⇧⌘4", action: L10n.Actions.captureArea),
+          ShortcutItem(keys: "⇧⌘2", action: L10n.Actions.captureTextOCR),
         ])
 
-        ShortcutGroup(title: "Recording", shortcuts: [
-          ShortcutItem(keys: "⇧⌘5", action: "Record Screen"),
+        ShortcutGroup(title: L10n.Onboarding.recordingSection, shortcuts: [
+          ShortcutItem(keys: "⇧⌘5", action: L10n.Menu.recordScreen),
         ])
 
-        ShortcutGroup(title: "Tools", shortcuts: [
-          ShortcutItem(keys: "⇧⌘A", action: "Open Annotate"),
-          ShortcutItem(keys: "⇧⌘E", action: "Open Video Editor"),
+        ShortcutGroup(title: L10n.Onboarding.toolsSection, shortcuts: [
+          ShortcutItem(keys: "⇧⌘A", action: L10n.Actions.openAnnotate),
+          ShortcutItem(keys: "⇧⌘E", action: L10n.Actions.openVideoEditor),
         ])
       }
       .frame(maxWidth: 380)
@@ -69,7 +69,7 @@ struct ShortcutsView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.orange)
 
-              Text("Resolve macOS shortcut overlap")
+              Text(L10n.Onboarding.resolveShortcutOverlap)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -92,16 +92,16 @@ struct ShortcutsView: View {
               }
               .buttonStyle(.plain)
 
-              Text("Open Settings →")
+              Text(L10n.Onboarding.openSettings)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.orange)
             }
 
             // Step-by-step guidance
             VStack(alignment: .leading, spacing: 4) {
-              GuideStepRow(step: "1", text: "Open System Settings → Keyboard → Keyboard Shortcuts")
-              GuideStepRow(step: "2", text: "Select Screenshots from the sidebar")
-              GuideStepRow(step: "3", text: "Uncheck the macOS screenshot shortcuts that overlap with the Snapzy shortcuts you want to keep on")
+              GuideStepRow(step: "1", text: L10n.Onboarding.guideStep1)
+              GuideStepRow(step: "2", text: L10n.Onboarding.guideStep2)
+              GuideStepRow(step: "3", text: L10n.Onboarding.guideStep3)
             }
           }
           .padding(.horizontal, 14)
@@ -127,7 +127,7 @@ struct ShortcutsView: View {
             .font(.system(size: 16))
             .foregroundColor(.green)
 
-          Text("No overlapping macOS screenshot shortcuts detected — ready to go!")
+          Text(L10n.Onboarding.noConflictDetected)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -155,7 +155,7 @@ struct ShortcutsView: View {
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
 
-        Text("You can customize or turn off shortcuts anytime in Preferences → Shortcuts.")
+        Text(L10n.Onboarding.customizeHint)
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
       }
@@ -163,13 +163,13 @@ struct ShortcutsView: View {
 
       // Actions
       HStack(spacing: 16) {
-        Button("No, thanks") {
+        Button(L10n.Onboarding.noThanks) {
           stopPolling()
           onDecline()
         }
         .buttonStyle(VSDesignSystem.SecondaryButtonStyle())
 
-        Button("Yes, enable shortcuts") {
+        Button(L10n.Onboarding.enableShortcuts) {
           if hasConflict {
             triggerConflictHint()
           } else {

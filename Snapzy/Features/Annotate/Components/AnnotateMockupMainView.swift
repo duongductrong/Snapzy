@@ -55,7 +55,7 @@ struct MockupToolbarView: View {
                 } label: {
                     Image(systemName: "sidebar.left")
                 }
-                .help("Toggle Sidebar")
+                .help(L10n.AnnotateUI.toggleSidebar)
 
                 Divider()
                     .frame(height: 16)
@@ -66,7 +66,7 @@ struct MockupToolbarView: View {
                     Image(systemName: "arrow.uturn.backward")
                 }
                 .disabled(!state.canUndo)
-                .help("Undo")
+                .help(L10n.Common.undo)
 
                 Button {
                     state.redo()
@@ -74,13 +74,13 @@ struct MockupToolbarView: View {
                     Image(systemName: "arrow.uturn.forward")
                 }
                 .disabled(!state.canRedo)
-                .help("Redo")
+                .help(L10n.Common.redo)
             }
 
             Spacer()
 
             // Center - Title
-            Text("Mockup")
+            Text(L10n.AnnotateUI.modeMockup)
                 .font(.headline)
 
             Spacer()
@@ -92,24 +92,24 @@ struct MockupToolbarView: View {
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                 }
-                .help("Reset to Defaults")
+                .help(L10n.AnnotateUI.resetToDefaults)
 
                 Divider()
                     .frame(height: 16)
 
                 Menu {
-                    Button("Save As...") {
+                    Button(L10n.Common.saveAs) {
                         MockupExporter.saveAs(state: state)
                     }
-                    Button("Copy to Clipboard") {
+                    Button(L10n.Common.copyToClipboard) {
                         MockupExporter.copyToClipboard(state: state)
                     }
                     Divider()
-                    Button("Share...") {
+                    Button(L10n.Common.share) {
                         // Share functionality
                     }
                 } label: {
-                    Label("Export", systemImage: "square.and.arrow.up")
+                    Label(L10n.Common.exportAction, systemImage: "square.and.arrow.up")
                 }
                 .menuStyle(.borderlessButton)
                 .fixedSize()

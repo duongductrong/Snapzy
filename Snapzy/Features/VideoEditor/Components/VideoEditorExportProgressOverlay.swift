@@ -26,7 +26,7 @@ struct ExportProgressOverlay: View {
           .modifier(PulseEffectModifier())
 
         // Title
-        Text("Exporting Video")
+        Text(L10n.VideoEditor.exportingVideo)
           .font(.system(size: 16, weight: .semibold))
           .foregroundColor(.primary)
 

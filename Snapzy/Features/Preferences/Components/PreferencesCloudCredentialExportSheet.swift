@@ -24,9 +24,9 @@ struct CloudCredentialExportSheet: View {
         Image(systemName: "square.and.arrow.up.fill")
           .font(.system(size: 30))
           .foregroundColor(.accentColor)
-        Text("Export Cloud Credentials")
+        Text(L10n.CloudTransfer.exportTitle)
           .font(.headline)
-        Text("Create an encrypted archive you can import on another Mac. Snapzy does not store this archive passphrase.")
+        Text(L10n.CloudTransfer.exportDescription)
           .font(.system(size: 12))
           .foregroundColor(.secondary)
           .multilineTextAlignment(.center)
@@ -34,29 +34,36 @@ struct CloudCredentialExportSheet: View {
 
       VStack(alignment: .leading, spacing: 12) {
         VStack(alignment: .leading, spacing: 4) {
-          Text("Archive Contents")
+          Text(L10n.CloudTransfer.archiveContents)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.secondary)
-          Text("\(payload.providerDisplayName) • Bucket: \(payload.configuration.bucket)")
+          Text(
+            L10n.CloudTransfer.archiveContentsSummary(
+              payload.providerDisplayName,
+              bucket: payload.configuration.bucket
+            )
+          )
             .font(.system(size: 12))
         }
 
         VStack(alignment: .leading, spacing: 6) {
-          Text("Archive Passphrase")
+          Text(L10n.CloudTransfer.archivePassphrase)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.secondary)
           SecureField(
-            "At least \(CloudCredentialTransferService.minimumPassphraseLength) characters",
+            L10n.CloudTransfer.minimumPassphrase(
+              CloudCredentialTransferService.minimumPassphraseLength
+            ),
             text: $passphrase
           )
           .textFieldStyle(.roundedBorder)
         }
 
         VStack(alignment: .leading, spacing: 6) {
-          Text("Confirm Passphrase")
+          Text(L10n.CloudTransfer.confirmPassphrase)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.secondary)
-          SecureField("Re-enter archive passphrase", text: $confirmPassphrase)
+          SecureField(L10n.CloudTransfer.reenterPassphrase, text: $confirmPassphrase)
             .textFieldStyle(.roundedBorder)
             .onSubmit { exportArchive() }
         }
@@ -74,7 +81,7 @@ struct CloudCredentialExportSheet: View {
       }
 
       HStack(spacing: 12) {
-        Button("Cancel") {
+        Button(L10n.Common.cancel) {
           onCancel()
         }
         .keyboardShortcut(.escape, modifiers: [])
@@ -84,7 +91,7 @@ struct CloudCredentialExportSheet: View {
             ProgressView()
               .controlSize(.small)
           } else {
-            Text("Choose Destination")
+            Text(L10n.CloudTransfer.chooseDestination)
           }
         }
         .buttonStyle(.borderedProminent)
@@ -100,12 +107,13 @@ struct CloudCredentialExportSheet: View {
     errorMessage = nil
 
     guard passphrase.count >= CloudCredentialTransferService.minimumPassphraseLength else {
-      errorMessage =
-        "Passphrase must be at least \(CloudCredentialTransferService.minimumPassphraseLength) characters."
+      errorMessage = L10n.CloudTransfer.passphraseTooShort(
+        CloudCredentialTransferService.minimumPassphraseLength
+      )
       return
     }
     guard passphrase == confirmPassphrase else {
-      errorMessage = "Passphrases do not match."
+      errorMessage = L10n.CloudTransfer.passphrasesDoNotMatch
       return
     }
     guard let destinationURL = chooseExportDestinationURL() else { return }
@@ -133,8 +141,8 @@ struct CloudCredentialExportSheet: View {
     panel.isExtensionHidden = false
     panel.allowedContentTypes = [CloudCredentialTransferService.archiveContentType]
     panel.nameFieldStringValue = CloudCredentialTransferService.suggestedArchiveFileName(for: payload)
-    panel.title = "Export Cloud Credentials"
-    panel.message = "Choose where Snapzy should save the encrypted credential archive."
+    panel.title = L10n.CloudTransfer.exportTitle
+    panel.message = L10n.CloudTransfer.savePanelMessage
     return panel.runModal() == .OK ? panel.url : nil
   }
 }

@@ -52,7 +52,11 @@ struct RecordingStatusBarView: View {
             value: indicatorOpacity
           )
           .onAppear { indicatorOpacity = 0.3 }
-          .accessibilityLabel(recorder.isPaused ? "Recording paused" : "Recording in progress")
+          .accessibilityLabel(
+            recorder.isPaused
+              ? L10n.RecordingToolbar.recordingPaused
+              : L10n.RecordingToolbar.recordingInProgress
+          )
 
         Text(recorder.formattedDuration)
           .font(.system(size: 13, weight: .medium, design: .monospaced))
@@ -66,7 +70,9 @@ struct RecordingStatusBarView: View {
       ToolbarIconButton(
         systemName: recorder.isPaused ? "play.fill" : "pause.fill",
         action: { recorder.togglePause() },
-        accessibilityLabel: recorder.isPaused ? "Resume recording" : "Pause recording"
+        accessibilityLabel: recorder.isPaused
+          ? L10n.RecordingToolbar.resumeRecording
+          : L10n.RecordingToolbar.pauseRecording
       )
 
       // Annotate toggle button
@@ -76,7 +82,8 @@ struct RecordingStatusBarView: View {
           : "pencil.tip.crop.circle",
         action: { annotationState.isAnnotationEnabled.toggle() },
         accessibilityLabel: annotationState.isAnnotationEnabled
-          ? "Disable annotations" : "Enable annotations"
+          ? L10n.RecordingToolbar.disableAnnotations
+          : L10n.RecordingToolbar.enableAnnotations
       )
       .background(
         GeometryReader { geo in
@@ -93,26 +100,26 @@ struct RecordingStatusBarView: View {
       ToolbarIconButton(
         systemName: "arrow.counterclockwise",
         action: onRestart,
-        accessibilityLabel: "Restart recording"
+        accessibilityLabel: L10n.RecordingToolbar.restartRecording
       )
 
       // Delete button
       ToolbarIconButton(
         systemName: "trash",
         action: onDelete,
-        accessibilityLabel: "Delete recording"
+        accessibilityLabel: L10n.RecordingToolbar.deleteRecording
       )
 
       RecordingToolbarDivider()
 
       // Stop button (native text style)
       Button(action: onStop) {
-        Text("Stop")
+        Text(L10n.RecordingToolbar.stop)
       }
       .buttonStyle(StopButtonStyle())
       .fixedSize()
-      .accessibilityLabel("Stop recording - Duration: \(recorder.formattedDuration)")
-      .accessibilityHint("Stops and saves the recording")
+      .accessibilityLabel(L10n.RecordingToolbar.stopRecordingAccessibility(recorder.formattedDuration))
+      .accessibilityHint(L10n.RecordingToolbar.stopRecordingHint)
     }
     .coordinateSpace(name: "statusBar")
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
@@ -121,7 +128,7 @@ struct RecordingStatusBarView: View {
       onAnnotateButtonLayout?(centerX)
     }
     .accessibilityElement(children: .contain)
-    .accessibilityLabel("Recording status bar")
+    .accessibilityLabel(L10n.RecordingToolbar.statusBarAccessibility)
   }
 }
 

@@ -22,7 +22,7 @@ struct RecordingToolbarView: View {
       ToolbarIconButton(
         systemName: "xmark",
         action: onCancel,
-        accessibilityLabel: "Cancel recording"
+        accessibilityLabel: L10n.RecordingToolbar.cancelRecording
       )
 
       RecordingToolbarDivider()
@@ -31,7 +31,7 @@ struct RecordingToolbarView: View {
       ToolbarIconButton(
         systemName: "camera",
         action: onCapture,
-        accessibilityLabel: "Capture screenshot"
+        accessibilityLabel: L10n.RecordingToolbar.captureScreenshot
       )
 
       RecordingToolbarDivider()
@@ -60,7 +60,7 @@ struct RecordingToolbarView: View {
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
     .accessibilityElement(children: .contain)
-    .accessibilityLabel("Recording toolbar")
+    .accessibilityLabel(L10n.RecordingToolbar.toolbarAccessibility)
   }
 }
 

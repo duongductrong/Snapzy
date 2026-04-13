@@ -21,14 +21,12 @@ struct DiagnosticsOptInView: View {
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
-      Text("Help Us Improve")
+      Text(L10n.Onboarding.diagnosticsTitle)
         .vsHeading()
         .padding(.top, 24)
 
       // Description
-      Text(
-        "Snapzy can collect anonymous diagnostic logs when something goes wrong. These logs help us find and fix bugs faster."
-      )
+      Text(L10n.Onboarding.diagnosticsDescription)
       .vsBody()
       .multilineTextAlignment(.center)
       .frame(maxWidth: 340)
@@ -43,11 +41,11 @@ struct DiagnosticsOptInView: View {
             .frame(width: 24, alignment: .center)
 
           VStack(alignment: .leading, spacing: 2) {
-            Text("Enable Crash Logging")
+            Text(L10n.Onboarding.enableCrashLogging)
               .font(.system(size: 13, weight: .medium))
               .foregroundColor(VSDesignSystem.Colors.primary)
 
-            Text("Logs are stored locally on your device")
+            Text(L10n.Onboarding.logsStoredLocally)
               .font(.system(size: 12))
               .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
@@ -73,7 +71,7 @@ struct DiagnosticsOptInView: View {
       .padding(.top, 24)
 
       // Privacy note
-      Text("No personal data is collected. Nothing is sent without your action.")
+      Text(L10n.Onboarding.diagnosticsPrivacyNote)
         .font(.system(size: 11))
         .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
@@ -81,7 +79,7 @@ struct DiagnosticsOptInView: View {
         .padding(.top, 8)
 
       // Navigation
-      Button("Next") {
+      Button(L10n.Common.next) {
         onNext()
       }
       .buttonStyle(VSDesignSystem.PrimaryButtonStyle())

@@ -252,9 +252,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     Task {
       guard
         let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-          promptMessage: "Choose where Snapzy should save screenshots and recordings")
+          promptMessage: L10n.Recording.chooseSaveLocationMessage)
       else {
-        lastCaptureResult = .failure(.saveFailed("Save location permission is required"))
+        lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
         DiagnosticLogger.shared.log(.error, .capture, "Fullscreen capture aborted: no save location")
         return
       }
@@ -299,9 +299,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     guard
       let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-        promptMessage: "Choose where Snapzy should save screenshots and recordings")
+        promptMessage: L10n.Recording.chooseSaveLocationMessage)
     else {
-      lastCaptureResult = .failure(.saveFailed("Save location permission is required"))
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
       return
     }
     saveDirectory = resolvedSaveDirectory
@@ -375,7 +375,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   func captureScrolling() {
     guard !ScrollingCaptureCoordinator.shared.isActive else {
       AppToastManager.shared.show(
-        message: "A scrolling capture session is already active.",
+        message: L10n.ScrollingCapture.toastSessionAlreadyActive,
         style: .warning,
         position: .bottomCenter
       )
@@ -389,9 +389,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     guard
       let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-        promptMessage: "Choose where Snapzy should save screenshots and recordings")
+        promptMessage: L10n.Recording.chooseSaveLocationMessage)
     else {
-      lastCaptureResult = .failure(.saveFailed("Save location permission is required"))
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
       return
     }
     saveDirectory = resolvedSaveDirectory
@@ -442,8 +442,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   func chooseSaveDirectory() {
     if let url = fileAccessManager.chooseExportDirectory(
-      message: "Choose where Snapzy should save screenshots and recordings",
-      prompt: "Save Here",
+      message: L10n.Recording.chooseSaveLocationMessage,
+      prompt: L10n.PreferencesGeneral.saveHereButton,
       directoryURL: fileAccessManager.resolvedExportDirectoryURL()
     ) {
       saveDirectory = url
@@ -598,9 +598,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Feature gate: keep app compatible on macOS 13 while disabling this flow safely.
     guard #available(macOS 14.0, *) else {
       DiagnosticLogger.shared.log(.warning, .capture, "Object cutout unavailable: macOS < 14")
-      lastCaptureResult = .failure(.unavailable("Object cutout requires macOS 14 or newer"))
+      lastCaptureResult = .failure(.unavailable(L10n.ForegroundCutout.unsupportedOS))
       AppToastManager.shared.show(
-        message: "Object cutout requires macOS 14 or newer.",
+        message: L10n.ForegroundCutout.unsupportedOS,
         style: .warning,
         position: .bottomCenter
       )
@@ -616,9 +616,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     guard
       let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-        promptMessage: "Choose where Snapzy should save screenshots and recordings")
+        promptMessage: L10n.Recording.chooseSaveLocationMessage)
     else {
-      lastCaptureResult = .failure(.saveFailed("Save location permission is required"))
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
       return
     }
     saveDirectory = resolvedSaveDirectory
@@ -667,9 +667,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               prefetchedContentTask: prefetchedContentTask
             ) else {
               self.isCapturing = false
-              self.lastCaptureResult = .failure(.captureFailed("Unable to capture selected area"))
+              self.lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.unableToCaptureSelectedArea))
               AppToastManager.shared.show(
-                message: "Unable to capture selected area. Please try again.",
+                message: L10n.ScreenCapture.unableToCaptureSelectedArea,
                 style: .error,
                 position: .bottomCenter
               )
@@ -787,25 +787,25 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       switch cutoutError {
       case .noSubjectDetected:
         AppToastManager.shared.show(
-          message: "No subject detected. Try selecting a tighter area around the subject.",
+          message: L10n.ForegroundCutout.noSubjectDetectedTryTighterArea,
           style: .warning,
           position: .bottomCenter
         )
       case .unsupportedOS:
         AppToastManager.shared.show(
-          message: "Object cutout requires macOS 14 or newer.",
+          message: L10n.ForegroundCutout.unsupportedOS,
           style: .warning,
           position: .bottomCenter
         )
       case .imageConversionFailed:
         AppToastManager.shared.show(
-          message: "Unable to process cutout image. Please try again.",
+          message: L10n.ForegroundCutout.unableToProcessImageTryAgain,
           style: .error,
           position: .bottomCenter
         )
       case .cutoutFailed(let underlying):
         AppToastManager.shared.show(
-          message: "Background cutout failed: \(underlying.localizedDescription)",
+          message: L10n.ForegroundCutout.cutoutFailed(underlying.localizedDescription),
           style: .error,
           position: .bottomCenter
         )
@@ -814,7 +814,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
 
     AppToastManager.shared.show(
-      message: "Background cutout failed. Please try again.",
+      message: L10n.ForegroundCutout.genericFailure,
       style: .error,
       position: .bottomCenter
     )

@@ -65,19 +65,19 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
   /// Display name for the tool
   var displayName: String {
     switch self {
-    case .selection: return "Selection"
-    case .crop: return "Crop"
-    case .rectangle: return "Rectangle"
-    case .filledRectangle: return "Filled Rectangle"
-    case .oval: return "Oval"
-    case .arrow: return "Arrow"
-    case .line: return "Line"
-    case .text: return "Text"
-    case .highlighter: return "Highlighter"
-    case .blur: return "Blur"
-    case .counter: return "Counter"
-    case .pencil: return "Pencil"
-    case .mockup: return "Mockup"
+    case .selection: return L10n.Annotate.selectionTool
+    case .crop: return L10n.Annotate.cropTool
+    case .rectangle: return L10n.Annotate.rectangleTool
+    case .filledRectangle: return L10n.Annotate.filledRectangleTool
+    case .oval: return L10n.Annotate.ovalTool
+    case .arrow: return L10n.Annotate.arrowTool
+    case .line: return L10n.Annotate.lineTool
+    case .text: return L10n.Annotate.textTool
+    case .highlighter: return L10n.Annotate.highlighterTool
+    case .blur: return L10n.Annotate.blurTool
+    case .counter: return L10n.Annotate.counterTool
+    case .pencil: return L10n.Annotate.pencilTool
+    case .mockup: return L10n.Annotate.mockupTool
     }
   }
 

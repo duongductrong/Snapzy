@@ -14,11 +14,11 @@ struct QuickAccessSettingsView: View {
 
   var body: some View {
     Form {
-      Section("Position") {
-        SettingRow(icon: "rectangle.leadinghalf.inset.filled", title: "Screen Edge", description: "Where the overlay appears") {
+      Section(L10n.PreferencesQuickAccess.positionSection) {
+        SettingRow(icon: "rectangle.leadinghalf.inset.filled", title: L10n.PreferencesQuickAccess.screenEdgeTitle, description: L10n.PreferencesQuickAccess.screenEdgeDescription) {
           Picker("", selection: $positionIsLeft) {
-            Text("Left").tag(true)
-            Text("Right").tag(false)
+            Text(L10n.PreferencesQuickAccess.left).tag(true)
+            Text(L10n.PreferencesQuickAccess.right).tag(false)
           }
           .labelsHidden()
           .pickerStyle(.menu)
@@ -28,28 +28,28 @@ struct QuickAccessSettingsView: View {
         }
       }
 
-      Section("Appearance") {
-        SettingRow(icon: "arrow.up.left.and.arrow.down.right", title: "Overlay Size", description: "Adjust the floating preview size") {
+      Section(L10n.PreferencesQuickAccess.appearanceSection) {
+        SettingRow(icon: "arrow.up.left.and.arrow.down.right", title: L10n.PreferencesQuickAccess.overlaySizeTitle, description: L10n.PreferencesQuickAccess.overlaySizeDescription) {
           HStack(spacing: 8) {
-            Text("S")
+            Text(verbatim: "S")
               .font(.caption)
               .foregroundColor(.secondary)
             Slider(value: $manager.overlayScale, in: 0.75...1.5, step: 0.25)
               .frame(width: 100)
-            Text("L")
+            Text(verbatim: "L")
               .font(.caption)
               .foregroundColor(.secondary)
           }
         }
       }
 
-      Section("Behaviors") {
-        SettingRow(icon: "square.on.square", title: "Floating Overlay", description: "Show preview after capture") {
+      Section(L10n.PreferencesQuickAccess.behaviorsSection) {
+        SettingRow(icon: "square.on.square", title: L10n.PreferencesQuickAccess.floatingOverlayTitle, description: L10n.PreferencesQuickAccess.floatingOverlayDescription) {
           Toggle("", isOn: $manager.isEnabled)
             .labelsHidden()
         }
 
-        SettingRow(icon: "timer", title: "Auto-close", description: autoCloseDescription) {
+        SettingRow(icon: "timer", title: L10n.PreferencesQuickAccess.autoCloseTitle, description: autoCloseDescription) {
           Toggle("", isOn: $manager.autoDismissEnabled)
             .labelsHidden()
         }
@@ -61,7 +61,7 @@ struct QuickAccessSettingsView: View {
               .foregroundColor(.secondary)
               .frame(width: 28)
 
-            Text("Close after")
+            Text(L10n.PreferencesQuickAccess.closeAfter)
               .fontWeight(.medium)
 
             Spacer()
@@ -78,13 +78,13 @@ struct QuickAccessSettingsView: View {
         }
 
         if manager.autoDismissEnabled {
-          SettingRow(icon: "cursorarrow.motionlines", title: "Pause on Hover", description: "Pause countdown when hovering over the card") {
+          SettingRow(icon: "cursorarrow.motionlines", title: L10n.PreferencesQuickAccess.pauseOnHoverTitle, description: L10n.PreferencesQuickAccess.pauseOnHoverDescription) {
             Toggle("", isOn: $manager.pauseCountdownOnHover)
               .labelsHidden()
           }
         }
 
-        SettingRow(icon: "hand.draw", title: "Drag & Drop", description: "Drag captures to other apps") {
+        SettingRow(icon: "hand.draw", title: L10n.PreferencesQuickAccess.dragAndDropTitle, description: L10n.PreferencesQuickAccess.dragAndDropDescription) {
           Toggle("", isOn: $manager.dragDropEnabled)
             .labelsHidden()
         }
@@ -100,9 +100,9 @@ struct QuickAccessSettingsView: View {
 
   private var autoCloseDescription: String {
     if manager.autoDismissEnabled {
-      return "Closes after \(Int(manager.autoDismissDelay)) seconds"
+      return L10n.PreferencesQuickAccess.closesAfter(Int(manager.autoDismissDelay))
     }
-    return "Keep overlay open until dismissed"
+    return L10n.PreferencesQuickAccess.keepOpenUntilDismissed
   }
 }
 

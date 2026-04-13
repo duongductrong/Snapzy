@@ -43,13 +43,13 @@ enum ForegroundCutoutError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .unsupportedOS:
-      return "Background cutout requires macOS 14 or newer."
+      return L10n.ForegroundCutout.unsupportedOS
     case .noSubjectDetected:
-      return "No foreground subject was detected in the selected area."
+      return L10n.ForegroundCutout.noSubjectDetected
     case .cutoutFailed(let error):
-      return "Background cutout failed: \(error.localizedDescription)"
+      return L10n.ForegroundCutout.cutoutFailed(error.localizedDescription)
     case .imageConversionFailed:
-      return "Unable to convert cutout result to image."
+      return L10n.ForegroundCutout.imageConversionFailed
     }
   }
 }

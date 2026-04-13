@@ -30,7 +30,7 @@ final class CloudManager: ObservableObject {
 
   private enum DisplayStrings {
     static let hidden = "••••••••"
-    static let storedSecurely = "Stored securely in Keychain"
+    static let storedSecurely = L10n.CloudSettings.storedSecurelyInKeychain
   }
 
   private enum CredentialSnapshotState {

@@ -29,7 +29,7 @@ struct AnnotateQuickPropertiesBar: View {
 
         if state.quickPropertiesSupportsFill {
           QuickPropertiesDivider()
-          QuickPropertiesGroup(title: "Fill") {
+          QuickPropertiesGroup(title: L10n.Common.fill) {
             QuickPropertiesColorPalette(
               selectedColor: state.quickFillColorBinding,
               colors: fillColors
@@ -61,7 +61,7 @@ struct AnnotateQuickPropertiesBar: View {
   }
 
   private var colorTitle: String {
-    state.quickPropertiesTool == .text ? "Text" : "Color"
+    state.quickPropertiesTool == .text ? L10n.Common.text : L10n.Common.color
   }
 
   private var contextChip: some View {
@@ -90,7 +90,7 @@ struct AnnotateQuickPropertiesBar: View {
         state.showSidebar = true
       }
     } label: {
-      Label("More", systemImage: "sidebar.left")
+      Label(L10n.Common.more, systemImage: "sidebar.left")
         .font(Typography.labelMedium)
         .foregroundColor(.primary)
         .padding(.horizontal, 10)
@@ -105,7 +105,7 @@ struct AnnotateQuickPropertiesBar: View {
         )
     }
     .buttonStyle(.plain)
-    .help("Open sidebar for more annotate controls")
+    .help(L10n.AnnotateUI.openSidebarForMoreControls)
   }
 }
 
@@ -174,7 +174,7 @@ private struct QuickStrokeWidthControl: View {
   @Binding var value: CGFloat
 
   var body: some View {
-    QuickPropertiesGroup(title: "Stroke") {
+    QuickPropertiesGroup(title: L10n.Common.stroke) {
       HStack(spacing: 8) {
         Image(systemName: "line.diagonal")
           .font(.system(size: 10))
@@ -197,7 +197,7 @@ private struct QuickArrowStyleControl: View {
   @Binding var selectedStyle: ArrowStyle
 
   var body: some View {
-    QuickPropertiesGroup(title: "Style") {
+    QuickPropertiesGroup(title: L10n.Common.style) {
       HStack(spacing: 6) {
         ForEach(ArrowStyle.allCases) { style in
           Button {

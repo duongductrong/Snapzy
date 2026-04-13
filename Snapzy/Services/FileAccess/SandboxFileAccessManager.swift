@@ -107,8 +107,8 @@ final class SandboxFileAccessManager {
 
   @discardableResult
   func chooseExportDirectory(
-    message: String = "Choose where Snapzy saves captures",
-    prompt: String = "Grant Access",
+    message: String = L10n.FileAccess.chooseCapturesFolderMessage,
+    prompt: String = L10n.FileAccess.grantAccessPrompt,
     directoryURL: URL? = nil
   ) -> URL? {
     ensureExportLocationInitialized()
@@ -147,7 +147,7 @@ final class SandboxFileAccessManager {
 
     return chooseExportDirectory(
       message: promptMessage,
-      prompt: "Choose Folder",
+      prompt: L10n.FileAccess.chooseFolderPrompt,
       directoryURL: resolvedExportDirectoryURL()
     )
   }
@@ -244,11 +244,10 @@ final class SandboxFileAccessManager {
 
   private func showBookmarkSaveFailedAlert() {
     let alert = NSAlert()
-    alert.messageText = "Folder Access Not Granted"
-    alert.informativeText =
-      "Snapzy could not persist access to this folder. Please choose the folder again and confirm permission."
+    alert.messageText = L10n.FileAccess.bookmarkSaveFailedTitle
+    alert.informativeText = L10n.FileAccess.bookmarkSaveFailedMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.runModal()
   }
 

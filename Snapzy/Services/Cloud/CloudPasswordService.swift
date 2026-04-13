@@ -73,13 +73,13 @@ final class CloudPasswordService {
       return sha256(password) == storedHash ? .verified : .incorrectPassword
     case .itemNotFound:
       setPasswordConfigured(false)
-      return .unavailable("Protection password is not configured.")
+      return .unavailable(L10n.CloudPassword.notConfigured)
     case .authRequired:
-      return .unavailable("Keychain access was not granted. Allow access and try again.")
+      return .unavailable(L10n.CloudPassword.keychainAccessDenied)
     case .interactionNotAllowed:
-      return .unavailable("Keychain interaction is unavailable right now. Unlock your Mac and try again.")
+      return .unavailable(L10n.CloudPassword.keychainInteractionUnavailable)
     case .error:
-      return .unavailable("Couldn't read the saved protection password from Keychain.")
+      return .unavailable(L10n.CloudPassword.couldntReadSavedPassword)
     }
   }
 

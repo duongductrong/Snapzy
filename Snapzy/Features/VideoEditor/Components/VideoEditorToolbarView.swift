@@ -49,7 +49,7 @@ struct VideoEditorToolbarView: View {
       .disabled(!state.canUndo)
       .opacity(state.canUndo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command])
-      .help("Undo (⌘Z)")
+      .help(L10n.VideoEditor.undoShortcutHint)
 
       // Redo button
       Button(action: { state.redo() }) {
@@ -63,7 +63,7 @@ struct VideoEditorToolbarView: View {
       .disabled(!state.canRedo)
       .opacity(state.canRedo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command, .shift])
-      .help("Redo (⌘⇧Z)")
+      .help(L10n.VideoEditor.redoShortcutHint)
 
       Divider()
         .frame(height: 20)
@@ -77,7 +77,7 @@ struct VideoEditorToolbarView: View {
           .clipShape(RoundedRectangle(cornerRadius: 6))
       }
       .buttonStyle(.plain)
-      .help("Open in Finder")
+      .help(L10n.Common.openInFinder)
 
       // Video Info button
       Button(action: { state.toggleVideoInfoSidebar() }) {
@@ -90,7 +90,7 @@ struct VideoEditorToolbarView: View {
       }
       .buttonStyle(.plain)
       .keyboardShortcut("i", modifiers: [])
-      .help(state.isVideoInfoSidebarVisible ? "Hide Video Info (I)" : "Show Video Info (I)")
+      .help(state.isVideoInfoSidebarVisible ? L10n.VideoEditor.hideVideoInfoHint : L10n.VideoEditor.showVideoInfoHint)
     }
   }
 
@@ -99,7 +99,7 @@ struct VideoEditorToolbarView: View {
   private var centerSection: some View {
     HStack(spacing: 6) {
       if state.isRenamingFile {
-        TextField("Filename", text: $editingFilename, onCommit: commitRename)
+        TextField(L10n.VideoEditor.filenamePlaceholder, text: $editingFilename, onCommit: commitRename)
           .textFieldStyle(.plain)
           .font(.system(size: 13, weight: .medium))
           .frame(width: 200)
@@ -127,7 +127,7 @@ struct VideoEditorToolbarView: View {
             .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-        .help("Rename file")
+        .help(L10n.Common.renameFile)
       }
 
       if let error = renameError {
@@ -154,7 +154,7 @@ struct VideoEditorToolbarView: View {
         }
         .buttonStyle(.plain)
         .keyboardShortcut(".", modifiers: [.command])
-        .help(state.isRightSidebarVisible ? "Hide Sidebar (⌘.)" : "Show Sidebar (⌘.)")
+        .help(state.isRightSidebarVisible ? L10n.VideoEditor.hideSidebarHint : L10n.VideoEditor.showSidebarHint)
       }
 
       // Unsaved changes indicator (video only)
@@ -166,7 +166,7 @@ struct VideoEditorToolbarView: View {
           Image(systemName: "circle.fill")
             .font(.system(size: 6))
             .foregroundColor(.orange)
-          Text("Unsaved")
+          Text(L10n.Common.unsaved)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
         }

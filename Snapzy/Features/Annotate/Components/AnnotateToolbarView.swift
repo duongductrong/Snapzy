@@ -39,15 +39,15 @@ struct AnnotateToolbarView: View {
     .windowTrafficLightsInset()
     .windowToolbarPadding()
     .alert(
-      "Background Cutout",
+      L10n.AnnotateUI.backgroundCutoutTitle,
       isPresented: Binding(
         get: { state.cutoutErrorMessage != nil },
         set: { if !$0 { state.cutoutErrorMessage = nil } }
       )
     ) {
-      Button("OK", role: .cancel) {}
+      Button(L10n.Common.ok, role: .cancel) {}
     } message: {
-      Text(state.cutoutErrorMessage ?? "Unable to remove background.")
+      Text(state.cutoutErrorMessage ?? L10n.AnnotateUI.unableToRemoveBackground)
     }
   }
 
@@ -61,7 +61,7 @@ struct AnnotateToolbarView: View {
       ) {
         state.beginCropInteraction()
       }
-      .help("Crop")
+      .help(L10n.AnnotateUI.crop)
 
       ToolbarButton(
         icon: "rectangle.on.rectangle",
@@ -72,7 +72,7 @@ struct AnnotateToolbarView: View {
           state.showSidebar.toggle()
         }
       }
-      .help("Toggle sidebar")
+      .help(L10n.AnnotateUI.toggleSidebar)
     }
   }
 
@@ -106,11 +106,11 @@ struct AnnotateToolbarView: View {
     .help(
       state.canUseBackgroundCutout
         ? (state.isCutoutApplied
-          ? "Background Removed (Click to restore)"
+          ? L10n.AnnotateUI.backgroundRemovedClickToRestore
           : (backgroundCutoutAutoCropEnabled
-            ? "Remove Background (Auto-crops when safe)"
-            : "Remove Background (Auto-crop disabled in Settings)"))
-        : "Requires macOS 14+"
+            ? L10n.AnnotateUI.removeBackgroundAutoCropsWhenSafe
+            : L10n.AnnotateUI.removeBackgroundAutoCropDisabledInSettings))
+        : L10n.AnnotateUI.requiresMacOS14OrLater
     )
   }
 
@@ -132,14 +132,14 @@ struct AnnotateToolbarView: View {
       ToolbarButton(icon: "arrow.uturn.backward", isSelected: false) {
         state.undo()
       }
-      .help("Undo")
+      .help(L10n.Common.undo)
       .disabled(!state.canUndo)
       .opacity(state.canUndo ? 1 : 0.4)
 
       ToolbarButton(icon: "arrow.uturn.forward", isSelected: false) {
         state.redo()
       }
-      .help("Redo")
+      .help(L10n.Common.redo)
       .disabled(!state.canRedo)
       .opacity(state.canRedo ? 1 : 0.4)
     }
@@ -147,12 +147,12 @@ struct AnnotateToolbarView: View {
 
   private var actionButtons: some View {
     HStack(spacing: 8) {
-      Button("Save as...") {
+      Button(L10n.Common.saveAs) {
         saveAs()
       }
       .buttonStyle(.bordered)
 
-      Button("Done") {
+      Button(L10n.Common.done) {
         done()
       }
       .buttonStyle(.borderedProminent)

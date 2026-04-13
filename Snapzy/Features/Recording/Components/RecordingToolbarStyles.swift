@@ -107,9 +107,9 @@ struct StopButtonStyle: ButtonStyle {
 
 #Preview("Record Button") {
   HStack {
-    Button("Options") {}
+    Button(L10n.RecordingToolbar.options) {}
       .buttonStyle(OptionsButtonStyle())
-    Button("Record") {}
+    Button(L10n.RecordingToolbar.record) {}
       .buttonStyle(RecordButtonStyle())
   }
   .padding()
@@ -119,9 +119,9 @@ struct StopButtonStyle: ButtonStyle {
 
 #Preview("Toolbar Divider") {
   HStack {
-    Text("Left")
+    Text(L10n.PreferencesQuickAccess.left)
     RecordingToolbarDivider()
-    Text("Right")
+    Text(L10n.PreferencesQuickAccess.right)
   }
   .padding()
 }

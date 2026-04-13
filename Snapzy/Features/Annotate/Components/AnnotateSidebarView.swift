@@ -74,7 +74,7 @@ struct AnnotateSidebarView: View {
 
   private var presetControlsSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Presets")
+      SidebarSectionHeader(title: L10n.AnnotateUI.presets)
 
       HStack(spacing: Spacing.xs) {
         noneButton
@@ -91,7 +91,7 @@ struct AnnotateSidebarView: View {
     Button {
       state.resetCanvasEffectsToNone()
     } label: {
-      Text("None")
+      Text(L10n.Common.none)
         .font(Typography.labelMedium)
         .foregroundColor(SidebarColors.labelPrimary)
         .frame(minWidth: 50)
@@ -110,7 +110,7 @@ struct AnnotateSidebarView: View {
         )
     }
     .buttonStyle(.plain)
-    .help("Reset background, padding, shadow, and corners")
+    .help(L10n.AnnotateUI.resetCanvasEffectsHelp)
   }
 
   private var presetDropdownButton: some View {
@@ -118,7 +118,7 @@ struct AnnotateSidebarView: View {
       isPresetDropdownPresented.toggle()
     } label: {
       HStack(spacing: Spacing.xs) {
-        Text(state.selectedCanvasPreset?.name ?? "Select preset")
+        Text(state.selectedCanvasPreset?.name ?? L10n.AnnotateUI.selectPreset)
           .font(Typography.labelSmall)
           .foregroundColor(SidebarColors.labelPrimary)
           .lineLimit(1)
@@ -147,7 +147,7 @@ struct AnnotateSidebarView: View {
     }
     .buttonStyle(.plain)
     .frame(maxWidth: .infinity)
-    .help("Apply a saved style preset")
+    .help(L10n.AnnotateUI.applySavedStylePreset)
     .popover(isPresented: $isPresetDropdownPresented, arrowEdge: .bottom) {
       presetDropdownContent
     }
@@ -162,7 +162,7 @@ struct AnnotateSidebarView: View {
         HStack(spacing: Spacing.xs) {
           Image(systemName: "plus")
             .font(.system(size: 11, weight: .semibold))
-          Text("Add new preset")
+          Text(L10n.AnnotateUI.addNewPreset)
             .lineLimit(1)
           Spacer(minLength: Spacing.xs)
         }
@@ -179,7 +179,7 @@ struct AnnotateSidebarView: View {
         .padding(.vertical, 4)
 
       if state.canvasPresets.isEmpty {
-        Text("No presets yet")
+        Text(L10n.AnnotateUI.noPresetsYet)
           .font(Typography.labelSmall)
           .foregroundColor(SidebarColors.labelSecondary)
           .padding(.horizontal, Spacing.sm)
@@ -226,7 +226,7 @@ struct AnnotateSidebarView: View {
           .frame(width: 18, height: 18)
       }
       .buttonStyle(.plain)
-      .help("Delete preset")
+      .help(L10n.AnnotateUI.deletePresetHelp)
     }
     .padding(.horizontal, Spacing.sm)
     .padding(.vertical, 6)
@@ -239,7 +239,7 @@ struct AnnotateSidebarView: View {
       HStack(spacing: Spacing.xs) {
         Image(systemName: "arrow.triangle.2.circlepath")
           .font(.system(size: 11, weight: .semibold))
-        Text("Update preset")
+        Text(L10n.AnnotateUI.updatePreset)
           .font(Typography.labelSmall)
           .lineLimit(1)
         Spacer(minLength: Spacing.xs)
@@ -257,7 +257,7 @@ struct AnnotateSidebarView: View {
       )
     }
     .buttonStyle(.plain)
-    .help("Update selected preset with current values")
+    .help(L10n.AnnotateUI.updateSelectedPresetHelp)
   }
 
   private func handleCreatePreset() {
@@ -267,8 +267,8 @@ struct AnnotateSidebarView: View {
     }
 
     guard let name = promptForPresetName(
-      title: "Save Preset",
-      message: "Enter a name for this canvas preset.",
+      title: L10n.AnnotateUI.savePresetTitle,
+      message: L10n.AnnotateUI.savePresetMessage,
       defaultValue: state.nextSuggestedCanvasPresetName
     ) else {
       return
@@ -292,11 +292,11 @@ struct AnnotateSidebarView: View {
     guard let preset = state.selectedCanvasPreset else { return }
 
     let alert = NSAlert()
-    alert.messageText = "Update Preset"
-    alert.informativeText = "Replace \"\(preset.name)\" with current settings?"
+    alert.messageText = L10n.AnnotateUI.updatePresetTitle
+    alert.informativeText = L10n.AnnotateUI.updatePresetMessage(preset.name)
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Update")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.AnnotateUI.updatePreset)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     guard alert.runModal() == .alertFirstButtonReturn else {
       return
@@ -314,11 +314,11 @@ struct AnnotateSidebarView: View {
 
   private func handleDeletePreset(_ preset: AnnotateCanvasPreset) {
     let alert = NSAlert()
-    alert.messageText = "Delete Preset"
-    alert.informativeText = "Delete \"\(preset.name)\"?"
+    alert.messageText = L10n.AnnotateUI.deletePresetTitle
+    alert.informativeText = L10n.AnnotateUI.deletePresetMessage(preset.name)
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Delete")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.Common.deleteAction)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     if alert.runModal() == .alertFirstButtonReturn {
       _ = state.deleteCanvasPreset(id: preset.id)
@@ -334,12 +334,12 @@ struct AnnotateSidebarView: View {
     alert.messageText = title
     alert.informativeText = message
     alert.alertStyle = .informational
-    alert.addButton(withTitle: "Save")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.Common.save)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 240, height: 24))
     textField.stringValue = defaultValue
-    textField.placeholderString = "Preset name"
+    textField.placeholderString = L10n.AnnotateUI.presetNamePlaceholder
     alert.accessoryView = textField
 
     let response = alert.runModal()
@@ -353,19 +353,19 @@ struct AnnotateSidebarView: View {
 
   private func showPresetLimitAlert() {
     let alert = NSAlert()
-    alert.messageText = "Preset Limit Reached"
-    alert.informativeText = "You can save up to 20 presets. Delete one to add a new preset."
+    alert.messageText = L10n.AnnotateUI.presetLimitReachedTitle
+    alert.informativeText = L10n.AnnotateUI.presetLimitReachedMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.runModal()
   }
 
   private func showPresetUnavailableAlert() {
     let alert = NSAlert()
-    alert.messageText = "Unable to Save Preset"
-    alert.informativeText = "Current canvas style cannot be stored as a preset right now."
+    alert.messageText = L10n.AnnotateUI.unableToSavePresetTitle
+    alert.informativeText = L10n.AnnotateUI.unableToSavePresetMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.runModal()
   }
   
@@ -373,7 +373,7 @@ struct AnnotateSidebarView: View {
   
   private var gradientSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Gradients")
+      SidebarSectionHeader(title: L10n.Common.gradients)
 
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         ForEach(GradientPreset.allCases) { preset in
@@ -399,7 +399,7 @@ struct AnnotateSidebarView: View {
 
   private var colorSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Colors")
+      SidebarSectionHeader(title: L10n.Common.colors)
       CompactColorSwatchGrid(selectedColor: colorBinding)
     }
   }
@@ -423,7 +423,7 @@ struct AnnotateSidebarView: View {
   private var slidersSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       CompactSliderRow(
-        label: "Padding",
+        label: L10n.Common.padding,
         value: Binding(
           get: { state.padding },
           set: { newValue in
@@ -440,7 +440,7 @@ struct AnnotateSidebarView: View {
         }
       )
       CompactSliderRow(
-        label: "Shadow",
+        label: L10n.Common.shadow,
         value: $state.shadowIntensity,
         range: 0...1,
         onDragging: { isDragging, value in
@@ -448,7 +448,7 @@ struct AnnotateSidebarView: View {
         }
       )
       CompactSliderRow(
-        label: "Corners",
+        label: L10n.Common.corners,
         value: $state.cornerRadius,
         range: 0...60,
         onDragging: { isDragging, value in
@@ -460,7 +460,7 @@ struct AnnotateSidebarView: View {
   
   private var alignmentSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      SidebarSectionHeader(title: "Alignment")
+      SidebarSectionHeader(title: L10n.AnnotateUI.alignment)
       AlignmentGrid(selected: $state.imageAlignment, onAlignmentChange: { newAlignment in
         print("DEBUG [Alignment]: Callback fired with newAlignment = \(newAlignment)")
         print("DEBUG [Alignment]: Current padding = \(state.padding), backgroundStyle = \(state.backgroundStyle)")

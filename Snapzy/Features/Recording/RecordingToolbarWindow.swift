@@ -22,8 +22,8 @@ enum RecordingOutputMode: String, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .video: return "Video"
-    case .gif: return "GIF"
+    case .video: return L10n.RecordingToolbar.outputVideo
+    case .gif: return L10n.RecordingToolbar.outputGIF
     }
   }
 

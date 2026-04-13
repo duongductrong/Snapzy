@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Bottom bar for video editor with Cancel and Convert buttons
 struct VideoEditorBottomBar: View {
-  var primaryActionTitle: String = "Convert"
+  var primaryActionTitle: String = L10n.VideoEditor.convert
   var onCancel: () -> Void
   var onConvert: () -> Void
 
@@ -19,7 +19,7 @@ struct VideoEditorBottomBar: View {
 
       HStack {
         // Cancel button (left)
-        Button("Cancel", action: onCancel)
+        Button(L10n.Common.cancel, action: onCancel)
           .buttonStyle(.bordered)
 
         Spacer()

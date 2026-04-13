@@ -17,6 +17,14 @@ enum ExportQuality: String, CaseIterable, Identifiable {
 
     var id: String { rawValue }
 
+    var localizedLabel: String {
+        switch self {
+        case .low: return L10n.Common.low
+        case .medium: return L10n.Common.medium
+        case .high: return L10n.Common.high
+        }
+    }
+
     /// Maps to AVAssetExportSession preset
     var exportPreset: String {
         switch self {
@@ -44,6 +52,14 @@ enum AudioExportMode: String, CaseIterable, Identifiable {
     case custom = "Custom Volume"
 
     var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .keep: return L10n.VideoEditor.keepOriginal
+        case .mute: return L10n.VideoEditor.mute
+        case .custom: return L10n.VideoEditor.customVolume
+        }
+    }
 
     var icon: String {
         switch self {
@@ -92,7 +108,10 @@ enum ExportDimensionPreset: String, CaseIterable, Identifiable {
 
     switch self {
     case .original:
-      return "Original (\(Int(naturalSize.width))×\(Int(naturalSize.height)))"
+      return L10n.VideoEditor.originalDimensionsLabel(
+        Int(naturalSize.width),
+        Int(naturalSize.height)
+      )
     case .percent90, .percent80, .percent60, .percent50, .percent40, .percent30, .percent20:
       guard let scale = scaleFactor else { return rawValue }
       let width = Int(naturalSize.width * scale)
@@ -102,7 +121,7 @@ enum ExportDimensionPreset: String, CaseIterable, Identifiable {
       let evenHeight = height - (height % 2)
       return "\(rawValue) (\(evenWidth)×\(evenHeight))"
     case .custom:
-      return "Custom"
+      return L10n.Common.custom
     }
   }
 }

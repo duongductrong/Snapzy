@@ -18,11 +18,11 @@ enum AfterCaptureAction: String, CaseIterable, Codable {
 
   var displayName: String {
     switch self {
-    case .showQuickAccess: return "Show Quick Access Overlay"
-    case .copyFile: return "Copy file"
-    case .save: return "Save"
-    case .openAnnotate: return "Open Annotate Editor"
-    case .uploadToCloud: return "Upload to Cloud & copy link"
+    case .showQuickAccess: return L10n.Actions.showQuickAccessOverlay
+    case .copyFile: return L10n.AfterCapture.copyFileAction
+    case .save: return L10n.AfterCapture.saveAction
+    case .openAnnotate: return L10n.AfterCapture.openAnnotateAction
+    case .uploadToCloud: return L10n.AfterCapture.uploadToCloudAction
     }
   }
 }
@@ -31,6 +31,15 @@ enum AfterCaptureAction: String, CaseIterable, Codable {
 enum CaptureType: String, CaseIterable, Codable {
   case screenshot
   case recording
+
+  var displayName: String {
+    switch self {
+    case .screenshot:
+      return L10n.CaptureKind.screenshot
+    case .recording:
+      return L10n.CaptureKind.recording
+    }
+  }
 }
 
 /// Manager for complex preferences that require more than simple @AppStorage

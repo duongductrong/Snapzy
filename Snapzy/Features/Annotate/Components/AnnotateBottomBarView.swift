@@ -54,19 +54,19 @@ struct AnnotateBottomBarView: View {
         .frame(height: 3)
         .opacity(isCloudUploading ? 1 : 0)
     }
-    .alert("Cloud Not Configured", isPresented: $showCloudNotConfiguredAlert) {
-      Button("OK", role: .cancel) {}
+    .alert(L10n.AnnotateUI.cloudNotConfiguredTitle, isPresented: $showCloudNotConfiguredAlert) {
+      Button(L10n.Common.ok, role: .cancel) {}
     } message: {
-      Text("Please set up your cloud credentials in Preferences → Cloud before uploading.")
+      Text(L10n.AnnotateUI.cloudNotConfiguredMessage)
     }
-    .alert("Overwrite Cloud File?", isPresented: $showOverwriteConfirmation) {
-      Button("Overwrite") {
+    .alert(L10n.AnnotateUI.overwriteCloudFileTitle, isPresented: $showOverwriteConfirmation) {
+      Button(L10n.Common.overwrite) {
         handleCloudUpload()
       }
       .keyboardShortcut(.defaultAction)
-      Button("Cancel", role: .cancel) {}
+      Button(L10n.Common.cancel, role: .cancel) {}
     } message: {
-      Text("This image was previously uploaded to cloud. Re-uploading will replace the existing file with your changes.")
+      Text(L10n.AnnotateUI.overwriteCloudFileMessage)
     }
     .onReceive(NotificationCenter.default.publisher(for: .annotateCloudUpload)) { _ in
       // ⌘U shortcut: trigger cloud upload (with overwrite confirmation if needed)
@@ -105,7 +105,7 @@ struct AnnotateBottomBarView: View {
 
       Divider()
 
-      Button("Fit (⌘0)") {
+      Button(L10n.AnnotateUI.fitWithShortcut("⌘0")) {
         withAnimation(.easeOut(duration: 0.15)) {
           state.zoomLevel = 1.0
         }
@@ -138,11 +138,11 @@ struct AnnotateBottomBarView: View {
 
   private var modeToggle: some View {
     Picker("", selection: $state.editorMode) {
-      Label("Annotate", systemImage: "pencil.and.outline")
+      Label(L10n.AnnotateUI.modeAnnotate, systemImage: "pencil.and.outline")
         .tag(AnnotateState.EditorMode.annotate)
-      Label("Mockup", systemImage: "cube.transparent")
+      Label(L10n.AnnotateUI.modeMockup, systemImage: "cube.transparent")
         .tag(AnnotateState.EditorMode.mockup)
-      Label("Preview", systemImage: "eye")
+      Label(L10n.AnnotateUI.modePreview, systemImage: "eye")
         .tag(AnnotateState.EditorMode.preview)
     }
     .pickerStyle(.segmented)
@@ -162,7 +162,7 @@ struct AnnotateBottomBarView: View {
             .font(.system(size: 13, weight: .medium))
             .foregroundColor(isDragHovering ? .primary : .secondary)
 
-          Text("Drag to app")
+          Text(L10n.AnnotateUI.dragToApp)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(isDragHovering ? .primary : .secondary)
         }
@@ -178,7 +178,7 @@ struct AnnotateBottomBarView: View {
       )
       .onHover { isDragHovering = $0 }
       .animation(.easeInOut(duration: 0.15), value: isDragHovering)
-      .help("Drag this to another app to share the annotated image")
+      .help(L10n.AnnotateUI.dragToAppHelp)
   }
 
   // MARK: - Action Buttons
@@ -193,7 +193,7 @@ struct AnnotateBottomBarView: View {
       ? annotateShortcutManager.copyAndCloseShortcut.displayString : nil
 
     return HStack(spacing: 12) {
-      BottomBarButton(icon: "square.and.arrow.up", tooltip: "Share") {
+      BottomBarButton(icon: "square.and.arrow.up", tooltip: L10n.Common.share) {
         share()
       }
 
@@ -205,9 +205,9 @@ struct AnnotateBottomBarView: View {
         BottomBarButton(
           icon: alreadyUploaded ? "checkmark.icloud" : "icloud.and.arrow.up",
           tooltip: alreadyUploaded
-            ? "Uploaded to Cloud"
+            ? L10n.AnnotateUI.uploadedToCloud
             : tooltipText(
-              state.cloudKey != nil ? "Re-upload to Cloud" : "Upload to Cloud",
+              state.cloudKey != nil ? L10n.AnnotateUI.reuploadToCloud : L10n.AnnotateUI.uploadToCloud,
               shortcut: cloudUploadShortcut
             )
         ) {
@@ -223,16 +223,22 @@ struct AnnotateBottomBarView: View {
 
       BottomBarButton(
         icon: state.isPinned ? "pin.fill" : "pin",
-        tooltip: tooltipText(state.isPinned ? "Unpin window" : "Pin window", shortcut: togglePinShortcut)
+        tooltip: tooltipText(
+          state.isPinned ? L10n.AnnotateUI.unpinWindow : L10n.AnnotateUI.pinWindow,
+          shortcut: togglePinShortcut
+        )
       ) {
         pin()
       }
 
-      BottomBarButton(icon: "doc.on.doc", tooltip: tooltipText("Copy to clipboard", shortcut: copyAndCloseShortcut)) {
+      BottomBarButton(
+        icon: "doc.on.doc",
+        tooltip: tooltipText(L10n.AnnotateUI.copyToClipboard, shortcut: copyAndCloseShortcut)
+      ) {
         copyToClipboard()
       }
 
-      BottomBarButton(icon: "trash", tooltip: "Delete") {
+      BottomBarButton(icon: "trash", tooltip: L10n.Common.deleteAction) {
         confirmAndDeleteImage()
       }
       .disabled(state.sourceURL == nil)
@@ -242,7 +248,7 @@ struct AnnotateBottomBarView: View {
 
   private func tooltipText(_ title: String, shortcut: String?) -> String {
     guard let shortcut else { return title }
-    return "\(title) (\(shortcut))"
+    return L10n.Common.withShortcut(title, shortcut)
   }
 
   // MARK: - Actions
@@ -271,11 +277,11 @@ struct AnnotateBottomBarView: View {
           let window = NSApp.keyWindow else { return }
 
     let alert = NSAlert()
-    alert.messageText = "Delete Screenshot"
-    alert.informativeText = "This will move \"\(sourceURL.lastPathComponent)\" to Trash."
+    alert.messageText = L10n.AnnotateUI.deleteScreenshotTitle
+    alert.informativeText = L10n.AnnotateUI.deleteScreenshotMessage(sourceURL.lastPathComponent)
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Delete")
-    alert.addButton(withTitle: "Cancel")
+    alert.addButton(withTitle: L10n.Common.deleteAction)
+    alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [state] response in
       guard response == .alertFirstButtonReturn else { return }

@@ -25,7 +25,7 @@ enum SponsorLinks {
     SponsorLink(
       id: "github-sponsors",
       title: "GitHub Sponsors",
-      subtitle: "Recurring support",
+      subtitle: L10n.Sponsor.recurringSupport,
       systemImage: "heart.fill",
       color: .pink,
       url: URL(string: "https://github.com/sponsors/duongductrong")!
@@ -33,7 +33,7 @@ enum SponsorLinks {
     SponsorLink(
       id: "ko-fi",
       title: "Ko-fi",
-      subtitle: "One-time tip",
+      subtitle: L10n.Sponsor.oneTimeTip,
       systemImage: "cup.and.saucer.fill",
       color: .orange,
       url: URL(string: "https://ko-fi.com/duongductrong")!
@@ -41,7 +41,7 @@ enum SponsorLinks {
     SponsorLink(
       id: "paypal",
       title: "PayPal",
-      subtitle: "Direct support",
+      subtitle: L10n.Sponsor.directSupport,
       systemImage: "creditcard.fill",
       color: .blue,
       url: URL(string: "https://www.paypal.com/paypalme/duongductrong")!

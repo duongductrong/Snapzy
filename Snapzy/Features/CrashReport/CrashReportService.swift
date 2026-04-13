@@ -18,11 +18,11 @@ enum CrashReportService {
   @discardableResult
   static func presentAlert() -> Bool {
     let alert = NSAlert()
-    alert.messageText = "Snapzy quit unexpectedly"
-    alert.informativeText = "A diagnostic log was saved. Drag the file below to the bug report page."
+    alert.messageText = L10n.CrashReport.alertTitle
+    alert.informativeText = L10n.CrashReport.alertMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "Submit")
-    alert.addButton(withTitle: "Dismiss")
+    alert.addButton(withTitle: L10n.CrashReport.submit)
+    alert.addButton(withTitle: L10n.CrashReport.dismiss)
 
     let logFile = DiagnosticLogger.shared.currentLogFileURL
     if FileManager.default.fileExists(atPath: logFile.path) {

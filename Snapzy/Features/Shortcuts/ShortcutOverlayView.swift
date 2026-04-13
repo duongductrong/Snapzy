@@ -57,9 +57,9 @@ struct ShortcutOverlayView: View {
   private var header: some View {
     HStack {
       VStack(alignment: .leading, spacing: 4) {
-        Text("Keyboard Shortcuts")
+        Text(L10n.ShortcutOverlay.title)
           .font(.system(size: 20, weight: .semibold))
-        Text("Press Esc or click outside to close")
+        Text(L10n.ShortcutOverlay.subtitle)
           .font(.system(size: 12))
           .foregroundColor(.secondary)
       }
@@ -74,7 +74,7 @@ struct ShortcutOverlayView: View {
           .foregroundColor(.secondary.opacity(0.85))
       }
       .buttonStyle(.plain)
-      .help("Close")
+      .help(L10n.ShortcutOverlay.closeHelp)
     }
     .padding(.horizontal, 20)
     .padding(.vertical, 16)
@@ -82,7 +82,7 @@ struct ShortcutOverlayView: View {
 
   private var footer: some View {
     HStack {
-      Button("Customize in Settings…") {
+      Button(L10n.ShortcutOverlay.customizeInSettings) {
         onOpenSettings()
       }
       .buttonStyle(.borderedProminent)
@@ -90,7 +90,7 @@ struct ShortcutOverlayView: View {
 
       Spacer()
 
-      Button("Close") {
+      Button(L10n.Common.close) {
         onClose()
       }
       .buttonStyle(.bordered)
@@ -148,7 +148,7 @@ struct ShortcutOverlayView: View {
       Spacer()
 
       if !item.isEnabled {
-        Text("Off")
+        Text(L10n.Common.off)
           .font(.system(size: 10, weight: .semibold))
           .foregroundColor(.secondary)
           .padding(.horizontal, 6)

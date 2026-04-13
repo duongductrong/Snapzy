@@ -100,7 +100,7 @@ final class CaptureStorageManager {
 
   /// Formats a byte count into a human-readable string (e.g. "12.3 MB").
   static func formattedSize(_ bytes: Int64) -> String {
-    if bytes == 0 { return "Empty" }
+    if bytes == 0 { return L10n.CaptureStorage.empty }
 
     let formatter = ByteCountFormatter()
     formatter.allowedUnits = [.useBytes, .useKB, .useMB, .useGB]
@@ -175,7 +175,7 @@ enum CacheCleanupError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .operationInProgress:
-      return "Cannot clear cache while a capture or recording is in progress."
+      return L10n.CaptureStorage.operationInProgress
     }
   }
 }

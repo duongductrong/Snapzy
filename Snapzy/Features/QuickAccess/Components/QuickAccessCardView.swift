@@ -333,14 +333,14 @@ struct QuickAccessCardView: View {
       // Action buttons with stagger effect
       VStack(spacing: 8) {
         // Always show Copy button for manual copy, regardless of auto-copy setting
-        staggeredButton(label: "Copy", delay: 0) {
+        staggeredButton(label: L10n.Common.copy, delay: 0) {
           QuickAccessSound.copy.play(reduceMotion: reduceMotion)
           manager.copyToClipboard(id: item.id)
         }
 
         if showSave {
           staggeredButton(
-            label: isTempFile ? "Save" : "Open",
+            label: isTempFile ? L10n.Common.save : L10n.Common.open,
             delay: 1
           ) {
             QuickAccessSound.save.play(reduceMotion: reduceMotion)
@@ -401,7 +401,7 @@ struct QuickAccessCardView: View {
                 isDismissing = true
                 manager.deleteItem(id: item.id)
               },
-              helpText: "Delete"
+              helpText: L10n.Common.deleteAction
             )
             .transition(cornerButtonTransition(delay: 3))
             .padding(6)
@@ -418,7 +418,7 @@ struct QuickAccessCardView: View {
           QuickAccessIconButton(
             icon: "pencil",
             action: handleDoubleClick,
-            helpText: item.isVideo ? "Edit Video" : "Annotate"
+            helpText: item.isVideo ? L10n.QuickAccess.editVideo : L10n.AnnotateUI.modeAnnotate
           )
           .transition(cornerButtonTransition(delay: 4))
           .padding(6)
@@ -438,7 +438,9 @@ struct QuickAccessCardView: View {
               action: {
                 uploadToCloud()
               },
-              helpText: alreadyUploaded ? "Uploaded to Cloud" : (item.isCloudStale ? "Re-upload to Cloud" : "Upload to Cloud")
+              helpText: alreadyUploaded
+                ? L10n.AnnotateUI.uploadedToCloud
+                : (item.isCloudStale ? L10n.AnnotateUI.reuploadToCloud : L10n.AnnotateUI.uploadToCloud)
             )
             .transition(cornerButtonTransition(delay: 5))
             .padding(6)

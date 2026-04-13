@@ -41,7 +41,7 @@ struct VideoBackgroundSidebarView: View {
       state.backgroundStyle = .none
       state.backgroundPadding = 0
     } label: {
-      Text("None")
+      Text(L10n.Common.none)
         .font(Typography.labelMedium)
         .foregroundColor(SidebarColors.labelPrimary)
         .frame(maxWidth: .infinity)
@@ -62,7 +62,7 @@ struct VideoBackgroundSidebarView: View {
 
   private var gradientSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      VideoSidebarSectionHeader(title: "Gradients")
+      VideoSidebarSectionHeader(title: L10n.Common.gradients)
 
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         ForEach(GradientPreset.allCases) { preset in
@@ -84,7 +84,7 @@ struct VideoBackgroundSidebarView: View {
 
   private var wallpaperSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      VideoSidebarSectionHeader(title: "Wallpapers")
+      VideoSidebarSectionHeader(title: L10n.Common.wallpapers)
 
       LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: GridConfig.gap), count: GridConfig.backgroundColumns), spacing: GridConfig.gap) {
         // System wallpapers
@@ -118,7 +118,7 @@ struct VideoBackgroundSidebarView: View {
         HStack {
           ProgressView()
             .scaleEffect(0.6)
-          Text("Loading wallpapers...")
+          Text(L10n.AnnotateUI.loadingWallpapers)
             .font(Typography.labelSmall)
             .foregroundColor(SidebarColors.labelSecondary)
         }
@@ -174,7 +174,7 @@ struct VideoBackgroundSidebarView: View {
 
   private var colorSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
-      VideoSidebarSectionHeader(title: "Colors")
+      VideoSidebarSectionHeader(title: L10n.Common.colors)
       VideoColorSwatchGrid(selectedColor: colorBinding)
     }
   }
@@ -203,7 +203,7 @@ struct VideoBackgroundSidebarView: View {
   private var slidersSection: some View {
     VStack(alignment: .leading, spacing: Spacing.sm) {
       VideoSliderRow(
-        label: "Padding",
+        label: L10n.Common.padding,
         value: Binding(
           get: { state.backgroundPadding },
           set: { newValue in
@@ -216,8 +216,8 @@ struct VideoBackgroundSidebarView: View {
         ),
         range: 0...300
       )
-      VideoSliderRow(label: "Shadow", value: $state.backgroundShadowIntensity, range: 0...1)
-      VideoSliderRow(label: "Corners", value: $state.backgroundCornerRadius, range: 0...60)
+      VideoSliderRow(label: L10n.Common.shadow, value: $state.backgroundShadowIntensity, range: 0...1)
+      VideoSliderRow(label: L10n.Common.corners, value: $state.backgroundCornerRadius, range: 0...60)
     }
   }
 }

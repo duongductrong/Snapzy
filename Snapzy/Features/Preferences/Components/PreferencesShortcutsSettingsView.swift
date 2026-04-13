@@ -84,9 +84,9 @@ struct ShortcutsSettingsView: View {
                   .foregroundColor(.orange)
 
                 VStack(alignment: .leading, spacing: 2) {
-                  Text("macOS screenshot shortcuts overlap with Snapzy")
+                  Text(L10n.PreferencesShortcuts.systemConflictTitle)
                     .font(.system(size: 13, weight: .semibold))
-                  Text("Turn off the overlapping macOS shortcuts to avoid conflicts with the Snapzy shortcuts you keep enabled.")
+                  Text(L10n.PreferencesShortcuts.systemConflictDescription)
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                 }
@@ -94,22 +94,22 @@ struct ShortcutsSettingsView: View {
 
               // Step-by-step guide
               VStack(alignment: .leading, spacing: 6) {
-                Text("HOW TO DISABLE")
+                Text(L10n.PreferencesShortcuts.howToDisable)
                   .font(.system(size: 10, weight: .semibold))
                   .foregroundColor(.secondary)
                   .tracking(0.8)
 
                 PreferencesGuideStep(
                   step: "1",
-                  text: "Open **System Settings → Keyboard → Keyboard Shortcuts**"
+                  text: L10n.Onboarding.guideStep1
                 )
                 PreferencesGuideStep(
                   step: "2",
-                  text: "Select **Screenshots** from the sidebar"
+                  text: L10n.Onboarding.guideStep2
                 )
                 PreferencesGuideStep(
                   step: "3",
-                  text: "Uncheck the macOS screenshot shortcuts that overlap with the Snapzy shortcuts you want to keep on"
+                  text: L10n.Onboarding.guideStep3
                 )
               }
               .padding(10)
@@ -126,7 +126,7 @@ struct ShortcutsSettingsView: View {
                   HStack {
                     Image(systemName: "gear")
                       .font(.system(size: 12))
-                    Text("Open Keyboard Shortcuts Settings")
+                    Text(L10n.PreferencesShortcuts.openKeyboardShortcutsSettings)
                       .font(.system(size: 12, weight: .medium))
                   }
                 }
@@ -149,7 +149,7 @@ struct ShortcutsSettingsView: View {
                         : .default,
                       value: isRefreshingConflict
                     )
-                    Text("Refresh")
+                    Text(L10n.Common.refresh)
                       .font(.system(size: 12, weight: .medium))
                   }
                 }
@@ -159,7 +159,7 @@ struct ShortcutsSettingsView: View {
             }
             .padding(.vertical, 4)
           } header: {
-            Label("Action Required", systemImage: "exclamationmark.circle.fill")
+            Label(L10n.PreferencesShortcuts.actionRequired, systemImage: "exclamationmark.circle.fill")
               .foregroundColor(.orange)
           }
         } else {
@@ -171,9 +171,9 @@ struct ShortcutsSettingsView: View {
                 .foregroundColor(.green)
 
               VStack(alignment: .leading, spacing: 2) {
-                Text("No conflicts detected")
+                Text(L10n.PreferencesShortcuts.noConflictsDetected)
                   .font(.system(size: 13, weight: .semibold))
-                Text("No overlapping macOS screenshot shortcuts were found for the Snapzy shortcuts you currently have enabled.")
+                Text(L10n.PreferencesShortcuts.noConflictsDescription)
                   .font(.system(size: 11))
                   .foregroundColor(.secondary)
               }
@@ -200,18 +200,18 @@ struct ShortcutsSettingsView: View {
             }
             .padding(.vertical, 4)
           } header: {
-            Label("System Shortcuts", systemImage: "checkmark.seal.fill")
+            Label(L10n.PreferencesShortcuts.systemShortcuts, systemImage: "checkmark.seal.fill")
               .foregroundColor(.green)
           }
         }
       }
 
-      Section("Global Shortcuts") {
-        Text("Use keyboard shortcuts to capture from anywhere.")
+      Section(L10n.PreferencesShortcuts.globalSection) {
+        Text(L10n.PreferencesShortcuts.globalSectionDescription)
           .font(.caption)
           .foregroundColor(.secondary)
 
-        SettingRow(icon: "keyboard", title: "Enable Shortcuts", description: "Capture from any app") {
+        SettingRow(icon: "keyboard", title: L10n.PreferencesShortcuts.enableShortcutsTitle, description: L10n.PreferencesShortcuts.enableShortcutsDescription) {
           Toggle("", isOn: $shortcutsEnabled)
             .labelsHidden()
             .onChange(of: shortcutsEnabled) { newValue in
@@ -233,23 +233,23 @@ struct ShortcutsSettingsView: View {
               }
             }
         }
-        .alert("Disable Keyboard Shortcuts?", isPresented: $showDisableConfirmation) {
-          Button("Cancel", role: .cancel) {}
-          Button("Disable", role: .destructive) {
+        .alert(L10n.PreferencesShortcuts.disableShortcutsTitle, isPresented: $showDisableConfirmation) {
+          Button(L10n.Common.cancel, role: .cancel) {}
+          Button(L10n.Common.disable, role: .destructive) {
             isConfirmedDisable = true
             shortcutsEnabled = false
           }
         } message: {
-          Text("You won't be able to capture screenshots or recordings using keyboard shortcuts from any app. You'll need to open Snapzy manually to use capture features.")
+          Text(L10n.PreferencesShortcuts.disableShortcutsMessage)
         }
       }
 
       if shortcutsEnabled {
-        Section("Capture Shortcuts") {
+        Section(L10n.PreferencesShortcuts.captureSection) {
           ShortcutRecorderView(
-            label: "Capture Fullscreen",
+            label: L10n.Actions.captureFullscreen,
             icon: "rectangle.dashed.and.paperclip",
-            description: "Capture entire screen instantly",
+            description: L10n.PreferencesShortcuts.captureFullscreenDescription,
             shortcut: $fullscreenShortcut,
             isEnabled: globalEnabledBinding(for: .fullscreen),
             validationIssue: globalValidationIssues[.fullscreen],
@@ -257,9 +257,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Capture Area",
+            label: L10n.Actions.captureArea,
             icon: "rectangle.dashed",
-            description: "Select a region to capture",
+            description: L10n.PreferencesShortcuts.captureAreaDescription,
             shortcut: $areaShortcut,
             isEnabled: globalEnabledBinding(for: .area),
             validationIssue: globalValidationIssues[.area],
@@ -287,9 +287,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Capture Text (OCR)",
+            label: L10n.Actions.captureTextOCR,
             icon: "text.viewfinder",
-            description: "Extract text from screen region",
+            description: L10n.PreferencesShortcuts.captureTextDescription,
             shortcut: $ocrShortcut,
             isEnabled: globalEnabledBinding(for: .ocr),
             validationIssue: globalValidationIssues[.ocr],
@@ -297,11 +297,11 @@ struct ShortcutsSettingsView: View {
           )
         }
 
-        Section("Recording Shortcuts") {
+        Section(L10n.PreferencesShortcuts.recordingSection) {
           ShortcutRecorderView(
-            label: "Record Video",
+            label: L10n.Actions.recordVideo,
             icon: "record.circle",
-            description: "Start screen recording",
+            description: L10n.PreferencesShortcuts.recordVideoDescription,
             shortcut: $recordingShortcut,
             isEnabled: globalEnabledBinding(for: .recording),
             validationIssue: globalValidationIssues[.recording],
@@ -309,11 +309,11 @@ struct ShortcutsSettingsView: View {
           )
         }
 
-        Section("Tools Shortcuts") {
+        Section(L10n.PreferencesShortcuts.toolsSection) {
           ShortcutRecorderView(
-            label: "Open Annotate",
+            label: L10n.Actions.openAnnotate,
             icon: "pencil.and.scribble",
-            description: "Open image annotation editor",
+            description: L10n.PreferencesShortcuts.openAnnotateDescription,
             shortcut: $annotateShortcut,
             isEnabled: globalEnabledBinding(for: .annotate),
             validationIssue: globalValidationIssues[.annotate],
@@ -321,9 +321,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Open Video Editor",
+            label: L10n.Actions.openVideoEditor,
             icon: "film",
-            description: "Open video editing tools",
+            description: L10n.PreferencesShortcuts.openVideoEditorDescription,
             shortcut: $videoEditorShortcut,
             isEnabled: globalEnabledBinding(for: .videoEditor),
             validationIssue: globalValidationIssues[.videoEditor],
@@ -331,9 +331,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Cloud Uploads",
+            label: L10n.Actions.cloudUploads,
             icon: "icloud.and.arrow.up",
-            description: "Open cloud upload history",
+            description: L10n.PreferencesShortcuts.cloudUploadsDescription,
             shortcut: $cloudUploadsShortcut,
             isEnabled: globalEnabledBinding(for: .cloudUploads),
             validationIssue: globalValidationIssues[.cloudUploads],
@@ -341,30 +341,30 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Show Shortcut List",
+            label: L10n.Actions.showShortcutList,
             icon: "list.bullet.rectangle",
-            description: "Open keyboard shortcuts overlay",
+            description: L10n.PreferencesShortcuts.shortcutListDescription,
             shortcut: $shortcutListShortcut,
             isEnabled: globalEnabledBinding(for: .shortcutList),
             validationIssue: globalValidationIssues[.shortcutList],
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .shortcutList) }
           )
 
-          Text("Click a shortcut button to record new keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.")
+          Text(L10n.PreferencesShortcuts.recorderHint)
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 4)
         }
 
-        Section("Annotate Editor Actions") {
-          Text("Shortcuts for common actions inside the annotation editor.")
+        Section(L10n.ShortcutOverlay.annotateActions) {
+          Text(L10n.PreferencesShortcuts.annotateActionsDescription)
             .font(.caption)
             .foregroundColor(.secondary)
 
           ShortcutRecorderView(
-            label: "Copy & Close",
+            label: L10n.ShortcutOverlay.copyAndClose,
             icon: "doc.on.doc",
-            description: "Copy annotated image to clipboard and close",
+            description: L10n.PreferencesShortcuts.copyAndCloseDescription,
             shortcut: $copyAndCloseShortcut,
             isEnabled: annotateActionEnabledBinding(for: .copyAndClose),
             validationIssue: annotateActionValidationIssues[.copyAndClose],
@@ -372,9 +372,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Toggle Pin",
+            label: L10n.ShortcutOverlay.togglePin,
             icon: "pin",
-            description: "Pin or unpin the annotation window",
+            description: L10n.PreferencesShortcuts.togglePinDescription,
             shortcut: $togglePinShortcut,
             isEnabled: annotateActionEnabledBinding(for: .togglePin),
             validationIssue: annotateActionValidationIssues[.togglePin],
@@ -382,9 +382,9 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
-            label: "Cloud Upload",
+            label: L10n.ShortcutOverlay.cloudUpload,
             icon: "icloud.and.arrow.up",
-            description: "Upload annotated image to cloud",
+            description: L10n.PreferencesShortcuts.cloudUploadDescription,
             shortcut: $cloudUploadShortcut,
             isEnabled: annotateActionEnabledBinding(for: .cloudUpload),
             validationIssue: annotateActionValidationIssues[.cloudUpload],
@@ -392,8 +392,8 @@ struct ShortcutsSettingsView: View {
           )
         }
 
-        Section("Annotation Tool Shortcuts") {
-          Text("Single-key shortcuts for switching tools in the annotation editor.")
+        Section(L10n.ShortcutOverlay.annotateToolKeys) {
+          Text(L10n.PreferencesShortcuts.annotationToolDescription)
             .font(.caption)
             .foregroundColor(.secondary)
 
@@ -409,26 +409,26 @@ struct ShortcutsSettingsView: View {
             )
           }
 
-          Text("Click to record. Use Backspace while recording or the row toggle to turn a shortcut off. Esc to cancel.")
+          Text(L10n.PreferencesShortcuts.singleKeyHint)
             .font(.caption)
             .foregroundColor(.secondary)
             .padding(.top, 4)
         }
 
-        Section("Annotate Editor Reference") {
-          Text("Standard macOS shortcuts used in the annotation editor.")
+        Section(L10n.ShortcutOverlay.annotateReference) {
+          Text(L10n.PreferencesShortcuts.referenceDescription)
             .font(.caption)
             .foregroundColor(.secondary)
 
-          ReadOnlyShortcutRow(icon: "square.and.arrow.down", label: "Save (Done)", shortcut: "⌘ S")
-          ReadOnlyShortcutRow(icon: "square.and.arrow.down.on.square", label: "Save As…", shortcut: "⌘ ⇧ S")
-          ReadOnlyShortcutRow(icon: "arrow.uturn.backward", label: "Undo", shortcut: "⌘ Z")
-          ReadOnlyShortcutRow(icon: "arrow.uturn.forward", label: "Redo", shortcut: "⌘ ⇧ Z")
-          ReadOnlyShortcutRow(icon: "trash", label: "Delete Annotation", shortcut: "⌫")
-          ReadOnlyShortcutRow(icon: "escape", label: "Cancel / Deselect", shortcut: "⎋")
-          ReadOnlyShortcutRow(icon: "return", label: "Confirm Crop", shortcut: "↩")
-          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: "Nudge Annotation", shortcut: "← → ↑ ↓")
-          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: "Nudge 10px", shortcut: "⇧ ← → ↑ ↓")
+          ReadOnlyShortcutRow(icon: "square.and.arrow.down", label: L10n.ShortcutOverlay.saveDone, shortcut: "⌘ S")
+          ReadOnlyShortcutRow(icon: "square.and.arrow.down.on.square", label: L10n.ShortcutOverlay.saveAs, shortcut: "⌘ ⇧ S")
+          ReadOnlyShortcutRow(icon: "arrow.uturn.backward", label: L10n.ShortcutOverlay.undo, shortcut: "⌘ Z")
+          ReadOnlyShortcutRow(icon: "arrow.uturn.forward", label: L10n.ShortcutOverlay.redo, shortcut: "⌘ ⇧ Z")
+          ReadOnlyShortcutRow(icon: "trash", label: L10n.ShortcutOverlay.deleteAnnotation, shortcut: "⌫")
+          ReadOnlyShortcutRow(icon: "escape", label: L10n.ShortcutOverlay.cancelDeselect, shortcut: "⎋")
+          ReadOnlyShortcutRow(icon: "return", label: L10n.ShortcutOverlay.confirmCrop, shortcut: "↩")
+          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: L10n.ShortcutOverlay.nudgeAnnotation, shortcut: "← → ↑ ↓")
+          ReadOnlyShortcutRow(icon: "arrow.up.arrow.down.arrow.left.arrow.right", label: L10n.ShortcutOverlay.nudgeTenPixels, shortcut: "⇧ ← → ↑ ↓")
         }
       }
     }
@@ -436,7 +436,7 @@ struct ShortcutsSettingsView: View {
     .safeAreaInset(edge: .bottom) {
       HStack {
         Spacer()
-        Button("Reset to Defaults") {
+        Button(L10n.PreferencesShortcuts.resetToDefaults) {
           resetToDefaults()
         }
         .buttonStyle(.bordered)

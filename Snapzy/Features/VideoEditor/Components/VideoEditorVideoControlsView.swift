@@ -69,7 +69,7 @@ struct VideoControlsView: View {
             .font(.system(size: 11))
             .foregroundColor(.green)
 
-          Text("Auto")
+          Text(L10n.VideoEditor.auto)
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.green)
         }

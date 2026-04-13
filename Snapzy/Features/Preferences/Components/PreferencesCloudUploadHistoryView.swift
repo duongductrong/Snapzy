@@ -34,7 +34,7 @@ final class CloudUploadHistoryWindowController {
       backing: .buffered,
       defer: false
     )
-    newWindow.title = "Cloud Upload History"
+    newWindow.title = L10n.PreferencesCloudHistory.windowTitle
     newWindow.contentView = hostingView
     newWindow.minSize = NSSize(width: 700, height: 400)
     newWindow.center()
@@ -59,7 +59,13 @@ enum HistoryDisplayMode: String, CaseIterable {
 
 enum HistoryStatusFilter: String, CaseIterable {
   case all, active, expired
-  var label: String { rawValue.capitalized }
+  var label: String {
+    switch self {
+    case .all: return L10n.PreferencesCloudHistory.statusAll
+    case .active: return L10n.PreferencesCloudHistory.statusActive
+    case .expired: return L10n.PreferencesCloudHistory.statusExpired
+    }
+  }
 }
 
 enum HistorySortOrder: String, CaseIterable {
@@ -70,10 +76,10 @@ enum HistorySortOrder: String, CaseIterable {
 
   var label: String {
     switch self {
-    case .newestFirst: return "Newest First"
-    case .oldestFirst: return "Oldest First"
-    case .largestFirst: return "Largest First"
-    case .smallestFirst: return "Smallest First"
+    case .newestFirst: return L10n.PreferencesCloudHistory.newestFirst
+    case .oldestFirst: return L10n.PreferencesCloudHistory.oldestFirst
+    case .largestFirst: return L10n.PreferencesCloudHistory.largestFirst
+    case .smallestFirst: return L10n.PreferencesCloudHistory.smallestFirst
     }
   }
 }
@@ -154,18 +160,16 @@ struct CloudUploadHistoryView: View {
       contentArea
     }
     .frame(minWidth: 700, minHeight: 400)
-    .alert("Clear All Upload History?", isPresented: $confirmDeleteAll) {
-      Button("Delete from Cloud & Clear", role: .destructive) {
+    .alert(L10n.PreferencesCloudHistory.clearAllTitle, isPresented: $confirmDeleteAll) {
+      Button(L10n.PreferencesCloudHistory.deleteFromCloudAndClear, role: .destructive) {
         deleteAllFromCloud()
       }
-      Button("Clear History Only") {
+      Button(L10n.PreferencesCloudHistory.clearHistoryOnly) {
         store.removeAll()
       }
-      Button("Cancel", role: .cancel) {}
+      Button(L10n.Common.cancel, role: .cancel) {}
     } message: {
-      Text(
-        "\"Delete from Cloud & Clear\" removes files from cloud storage and local history.\n\"Clear History Only\" removes local records but keeps files on cloud."
-      )
+      Text(L10n.PreferencesCloudHistory.clearAllMessage)
     }
   }
 
@@ -178,7 +182,7 @@ struct CloudUploadHistoryView: View {
         Image(systemName: "magnifyingglass")
           .foregroundColor(.secondary)
           .font(.system(size: 12))
-        TextField("Search uploads...", text: $searchText)
+        TextField(L10n.PreferencesCloudHistory.searchUploads, text: $searchText)
           .textFieldStyle(.plain)
           .font(.system(size: 13))
       }
@@ -214,7 +218,7 @@ struct CloudUploadHistoryView: View {
         }
       }
       .buttonStyle(.plain)
-      .help("Filters")
+      .help(L10n.PreferencesCloudHistory.filters)
       .popover(isPresented: $showFilterPopover, arrowEdge: .bottom) {
         filterPopoverContent
       }
@@ -225,7 +229,7 @@ struct CloudUploadHistoryView: View {
           .frame(width: 14, height: 14)
       }
 
-      Text("\(filteredRecords.count) uploads")
+      Text(L10n.PreferencesCloudHistory.uploadsCount(filteredRecords.count))
         .font(.system(size: 11))
         .foregroundColor(.secondary)
 
@@ -236,7 +240,7 @@ struct CloudUploadHistoryView: View {
           .font(.system(size: 12))
       }
       .buttonStyle(.plain)
-      .help("Clear all history")
+      .help(L10n.PreferencesCloudHistory.clearAllHistory)
       .disabled(store.records.isEmpty || isDeleting)
     }
     .padding(.horizontal, 16)
@@ -249,7 +253,7 @@ struct CloudUploadHistoryView: View {
     VStack(alignment: .leading, spacing: 14) {
       // Status
       VStack(alignment: .leading, spacing: 4) {
-        Text("Status")
+        Text(L10n.PreferencesCloudHistory.status)
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.secondary)
         Picker("", selection: $statusFilter) {
@@ -262,11 +266,11 @@ struct CloudUploadHistoryView: View {
 
       // Provider
       VStack(alignment: .leading, spacing: 4) {
-        Text("Provider")
+        Text(L10n.PreferencesCloudHistory.provider)
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.secondary)
         Picker("", selection: $providerFilter) {
-          Text("All").tag(CloudProviderType?.none)
+          Text(L10n.PreferencesCloudHistory.statusAll).tag(CloudProviderType?.none)
           ForEach(CloudProviderType.allCases, id: \.self) { p in
             Text(p.displayName).tag(CloudProviderType?.some(p))
           }
@@ -277,11 +281,11 @@ struct CloudUploadHistoryView: View {
 
       // Expire Time
       VStack(alignment: .leading, spacing: 4) {
-        Text("Expire Time")
+        Text(L10n.PreferencesCloudHistory.expireTime)
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.secondary)
         Picker("", selection: $expireFilter) {
-          Text("All").tag(CloudExpireTime?.none)
+          Text(L10n.PreferencesCloudHistory.statusAll).tag(CloudExpireTime?.none)
           ForEach(CloudExpireTime.allCases, id: \.self) { e in
             Text(e.displayName).tag(CloudExpireTime?.some(e))
           }
@@ -292,7 +296,7 @@ struct CloudUploadHistoryView: View {
 
       // Sort
       VStack(alignment: .leading, spacing: 4) {
-        Text("Sort By")
+        Text(L10n.PreferencesCloudHistory.sortBy)
           .font(.system(size: 11, weight: .semibold))
           .foregroundColor(.secondary)
         Picker("", selection: $sortOrder) {
@@ -306,7 +310,7 @@ struct CloudUploadHistoryView: View {
 
       // Reset
       if activeFilterCount > 0 {
-        Button("Reset Filters") {
+        Button(L10n.PreferencesCloudHistory.resetFilters) {
           statusFilter = .all
           providerFilter = nil
           expireFilter = nil
@@ -332,7 +336,7 @@ struct CloudUploadHistoryView: View {
           .font(.system(size: 11))
           .foregroundColor(.orange)
         Spacer()
-        Button("Dismiss") { deleteError = nil }
+        Button(L10n.PreferencesCloudHistory.dismiss) { deleteError = nil }
           .font(.system(size: 10))
       }
       .padding(.horizontal, 16)
@@ -361,11 +365,15 @@ struct CloudUploadHistoryView: View {
       Image(systemName: "icloud.slash")
         .font(.system(size: 32))
         .foregroundColor(.secondary)
-      Text(searchText.isEmpty && activeFilterCount == 0 ? "No uploads yet" : "No results found")
+      Text(
+        searchText.isEmpty && activeFilterCount == 0
+          ? L10n.PreferencesCloudHistory.noUploadsYet
+          : L10n.PreferencesCloudHistory.noResultsFound
+      )
         .font(.system(size: 14))
         .foregroundColor(.secondary)
       if activeFilterCount > 0 {
-        Button("Reset Filters") {
+        Button(L10n.PreferencesCloudHistory.resetFilters) {
           statusFilter = .all
           providerFilter = nil
           expireFilter = nil
@@ -419,7 +427,7 @@ struct CloudUploadHistoryView: View {
       do {
         try await cloudManager.deleteFromCloud(record: record)
       } catch {
-        deleteError = "Failed to delete \(record.fileName): \(error.localizedDescription)"
+        deleteError = L10n.PreferencesCloudHistory.failedToDelete(record.fileName, error.localizedDescription)
       }
       isDeleting = false
     }
@@ -433,7 +441,7 @@ struct CloudUploadHistoryView: View {
       do {
         try await cloudManager.deleteAllFromCloud(records: records)
       } catch {
-        deleteError = "Some files could not be deleted: \(error.localizedDescription)"
+        deleteError = L10n.PreferencesCloudHistory.someFilesCouldNotBeDeleted(error.localizedDescription)
       }
       isDeleting = false
     }
@@ -470,7 +478,7 @@ private struct HistoryRecordRow: View {
           Label(record.providerType.displayName, systemImage: "cloud")
 
           if record.isExpired {
-            Text("Expired")
+            Text(L10n.PreferencesCloudHistory.expired)
               .fontWeight(.medium)
               .foregroundColor(.orange)
           }
@@ -496,14 +504,14 @@ private struct HistoryRecordRow: View {
               .foregroundColor(copied ? .green : .primary)
           }
           .buttonStyle(.plain)
-          .help("Copy link")
+          .help(L10n.PreferencesCloudHistory.copyLink)
 
           Button(action: openInBrowser) {
             Image(systemName: "safari")
               .font(.system(size: 11))
           }
           .buttonStyle(.plain)
-          .help("Open in browser")
+          .help(L10n.PreferencesCloudHistory.openInBrowser)
 
           Button(role: .destructive, action: onDelete) {
             Image(systemName: "trash")
@@ -511,7 +519,7 @@ private struct HistoryRecordRow: View {
               .foregroundColor(.red)
           }
           .buttonStyle(.plain)
-          .help("Remove from history")
+          .help(L10n.PreferencesCloudHistory.removeFromHistory)
         }
         .transition(.opacity)
       }
@@ -583,7 +591,7 @@ private struct HistoryGridItem: View {
           HStack {
             Spacer()
             if record.isExpired {
-              Text("Expired")
+              Text(L10n.PreferencesCloudHistory.expired)
                 .font(.system(size: 9, weight: .semibold))
                 .foregroundColor(.white)
                 .padding(.horizontal, 6)

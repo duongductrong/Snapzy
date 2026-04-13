@@ -17,11 +17,11 @@ enum OCRError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .imageConversionFailed:
-      return "Failed to convert image for OCR processing"
+      return L10n.OCR.imageConversionFailed
     case .noTextFound:
-      return "No text found in the selected area"
+      return L10n.OCR.noTextFound
     case .recognitionFailed(let error):
-      return "OCR recognition failed: \(error.localizedDescription)"
+      return L10n.OCR.recognitionFailed(error.localizedDescription)
     }
   }
 }

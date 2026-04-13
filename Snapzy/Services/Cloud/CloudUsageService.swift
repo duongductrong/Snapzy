@@ -187,17 +187,17 @@ private actor CloudUsageWorker {
     let lowercasedBody = body.lowercased()
 
     if statusCode == 403 || lowercasedBody.contains("accessdenied") {
-      return "Cloud status check failed: missing bucket list permission (e.g. s3:ListBucket)."
+      return L10n.CloudUsage.missingBucketListPermission
     }
 
     if statusCode == 401 || lowercasedBody.contains("signature") || lowercasedBody.contains("unauthorized") {
       if providerType == .cloudflareR2 {
-        return "Cloud status check failed: unauthorized. Verify R2 endpoint and API credentials."
+        return L10n.CloudUsage.unauthorizedR2
       }
-      return "Cloud status check failed: unauthorized. Verify endpoint, region, and credentials."
+      return L10n.CloudUsage.unauthorizedGeneric
     }
 
-    return "ListObjectsV2 failed: \(body)"
+    return L10n.CloudUsage.listObjectsFailed(body)
   }
 }
 
@@ -244,7 +244,7 @@ final class CloudUsageService: ObservableObject {
       ? Self.r2PricePerGB : Self.s3PricePerGB
 
     if info.totalStorageBytes <= freeBytes {
-      return "Free tier"
+      return L10n.CloudUsage.freeTier
     }
 
     let billableGB = max(0.0, storageGB - Double(freeBytes) / 1_073_741_824.0)
@@ -262,12 +262,12 @@ final class CloudUsageService: ObservableObject {
   func fetchUsage(forceRefresh: Bool = false) async {
     guard let config = CloudManager.shared.loadConfiguration() else {
       usageInfo = nil
-      error = "Cloud not configured"
+      error = L10n.CloudUsage.notConfigured
       return
     }
     guard let credentials = loadCredentials() else {
       usageInfo = nil
-      error = "Cloud not configured"
+      error = L10n.CloudUsage.notConfigured
       return
     }
 
@@ -322,7 +322,7 @@ final class CloudUsageService: ObservableObject {
           if self.usageInfo == nil {
             self.error = Self.userFacingErrorMessage(from: error)
           } else {
-            self.error = "Couldn't refresh cloud stats. Showing cached data."
+            self.error = L10n.CloudUsage.couldntRefreshShowingCached
           }
           logger.error("Usage fetch failed: \(error.localizedDescription)")
         }

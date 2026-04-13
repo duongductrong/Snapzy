@@ -61,9 +61,9 @@ enum WallpaperPreset: String, CaseIterable, Identifiable {
 
   var displayName: String {
     switch self {
-    case .oceanBreeze: return "Ocean"
-    case .sunsetGlow: return "Sunset"
-    case .forestMist: return "Forest"
+    case .oceanBreeze: return L10n.AnnotateContext.wallpaperOcean
+    case .sunsetGlow: return L10n.AnnotateContext.wallpaperSunset
+    case .forestMist: return L10n.AnnotateContext.wallpaperForest
     }
   }
 

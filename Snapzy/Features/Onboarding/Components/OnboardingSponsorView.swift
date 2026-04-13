@@ -17,13 +17,11 @@ struct SponsorView: View {
         .font(.system(size: 48, weight: .light))
         .foregroundColor(.pink.opacity(0.85))
 
-      Text("Sponsor the Author")
+      Text(L10n.Onboarding.sponsorTitle)
         .vsHeading()
         .padding(.top, 24)
 
-      Text(
-        "Snapzy is now open-source. If it saves you time, consider supporting ongoing development."
-      )
+      Text(L10n.Onboarding.sponsorDescription)
       .vsBody()
       .multilineTextAlignment(.center)
       .frame(maxWidth: 360)
@@ -73,14 +71,14 @@ struct SponsorView: View {
       .frame(maxWidth: 400)
       .padding(.top, 24)
 
-      Text("Support is optional. Snapzy remains fully usable without sponsoring.")
+      Text(L10n.Onboarding.sponsorOptionalNote)
         .font(.system(size: 11))
         .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 360)
         .padding(.top, 10)
 
-      Button("Continue") {
+      Button(L10n.Common.continueAction) {
         onContinue()
       }
       .buttonStyle(VSDesignSystem.PrimaryButtonStyle())

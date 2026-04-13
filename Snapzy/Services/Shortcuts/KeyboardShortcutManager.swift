@@ -249,25 +249,25 @@ extension GlobalShortcutKind {
   var displayName: String {
     switch self {
     case .fullscreen:
-      return "Capture Fullscreen"
+      return L10n.Actions.captureFullscreen
     case .area:
-      return "Capture Area"
+      return L10n.Actions.captureArea
     case .scrollingCapture:
-      return "Scrolling Capture"
+      return L10n.Actions.scrollingCapture
     case .recording:
-      return "Record Video"
+      return L10n.Actions.recordVideo
     case .annotate:
-      return "Open Annotate"
+      return L10n.Actions.openAnnotate
     case .videoEditor:
-      return "Open Video Editor"
+      return L10n.Actions.openVideoEditor
     case .cloudUploads:
-      return "Cloud Uploads"
+      return L10n.Actions.cloudUploads
     case .shortcutList:
-      return "Show Shortcut List"
+      return L10n.Actions.showShortcutList
     case .ocr:
-      return "Capture Text (OCR)"
+      return L10n.Actions.captureTextOCR
     case .objectCutout:
-      return "Capture Subject"
+      return L10n.Actions.captureSubject
     }
   }
 }

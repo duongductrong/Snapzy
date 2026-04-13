@@ -35,19 +35,19 @@ enum ShortcutOverlayContentBuilder {
     return [
       ShortcutOverlaySection(
         id: "capture",
-        title: "Capture",
+        title: L10n.ShortcutOverlay.captureSection,
         items: captureItems(manager: keyboard)
       ),
       ShortcutOverlaySection(
         id: "recording",
-        title: "Recording",
+        title: L10n.Onboarding.recordingSection,
         items: [
           globalItem(kind: .recording, icon: "record.circle", manager: keyboard),
         ]
       ),
       ShortcutOverlaySection(
         id: "tools",
-        title: "Tools",
+        title: L10n.ShortcutOverlay.toolsSection,
         items: [
           globalItem(kind: .annotate, icon: "pencil.and.scribble", manager: keyboard),
           globalItem(kind: .videoEditor, icon: "film", manager: keyboard),
@@ -57,7 +57,7 @@ enum ShortcutOverlayContentBuilder {
       ),
       ShortcutOverlaySection(
         id: "annotate-actions",
-        title: "Annotate Actions",
+        title: L10n.ShortcutOverlay.annotateActions,
         items: AnnotateActionShortcutKind.allCases.map { kind in
           let (title, icon) = annotateActionMetadata(kind)
           let shortcut = annotate.shortcut(for: kind)
@@ -65,7 +65,7 @@ enum ShortcutOverlayContentBuilder {
             id: "annotate-action-\(kind.rawValue)",
             icon: icon,
             title: title,
-            subtitle: "Inside annotate editor",
+            subtitle: L10n.ShortcutOverlay.insideAnnotateEditor,
             isEnabled: annotate.isActionShortcutEnabled(for: kind),
             display: .keycaps(shortcut.displayParts)
           )
@@ -73,7 +73,7 @@ enum ShortcutOverlayContentBuilder {
       ),
       ShortcutOverlaySection(
         id: "annotate-tools",
-        title: "Annotate Tool Keys",
+        title: L10n.ShortcutOverlay.annotateToolKeys,
         items: AnnotateShortcutManager.configurableTools.map { tool in
           let singleKey = annotate.shortcut(for: tool).map { String($0).uppercased() } ?? "-"
           return ShortcutOverlayItem(
@@ -88,17 +88,17 @@ enum ShortcutOverlayContentBuilder {
       ),
       ShortcutOverlaySection(
         id: "annotate-reference",
-        title: "Annotate Reference",
+        title: L10n.ShortcutOverlay.annotateReference,
         items: [
-          ShortcutOverlayItem(id: "annotate-ref-save", icon: "square.and.arrow.down", title: "Save (Done)", subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "S"])),
-          ShortcutOverlayItem(id: "annotate-ref-save-as", icon: "square.and.arrow.down.on.square", title: "Save As…", subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "⇧", "S"])),
-          ShortcutOverlayItem(id: "annotate-ref-undo", icon: "arrow.uturn.backward", title: "Undo", subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "Z"])),
-          ShortcutOverlayItem(id: "annotate-ref-redo", icon: "arrow.uturn.forward", title: "Redo", subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "⇧", "Z"])),
-          ShortcutOverlayItem(id: "annotate-ref-delete", icon: "trash", title: "Delete Annotation", subtitle: nil, isEnabled: true, display: .keycaps(["⌫"])),
-          ShortcutOverlayItem(id: "annotate-ref-cancel", icon: "escape", title: "Cancel / Deselect", subtitle: nil, isEnabled: true, display: .keycaps(["⎋"])),
-          ShortcutOverlayItem(id: "annotate-ref-confirm-crop", icon: "return", title: "Confirm Crop", subtitle: nil, isEnabled: true, display: .keycaps(["↩"])),
-          ShortcutOverlayItem(id: "annotate-ref-nudge", icon: "arrow.up.arrow.down.arrow.left.arrow.right", title: "Nudge Annotation", subtitle: nil, isEnabled: true, display: .text("← → ↑ ↓")),
-          ShortcutOverlayItem(id: "annotate-ref-nudge-10", icon: "arrow.up.arrow.down.arrow.left.arrow.right", title: "Nudge 10px", subtitle: nil, isEnabled: true, display: .text("⇧ ← → ↑ ↓")),
+          ShortcutOverlayItem(id: "annotate-ref-save", icon: "square.and.arrow.down", title: L10n.ShortcutOverlay.saveDone, subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "S"])),
+          ShortcutOverlayItem(id: "annotate-ref-save-as", icon: "square.and.arrow.down.on.square", title: L10n.ShortcutOverlay.saveAs, subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "⇧", "S"])),
+          ShortcutOverlayItem(id: "annotate-ref-undo", icon: "arrow.uturn.backward", title: L10n.ShortcutOverlay.undo, subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "Z"])),
+          ShortcutOverlayItem(id: "annotate-ref-redo", icon: "arrow.uturn.forward", title: L10n.ShortcutOverlay.redo, subtitle: nil, isEnabled: true, display: .keycaps(["⌘", "⇧", "Z"])),
+          ShortcutOverlayItem(id: "annotate-ref-delete", icon: "trash", title: L10n.ShortcutOverlay.deleteAnnotation, subtitle: nil, isEnabled: true, display: .keycaps(["⌫"])),
+          ShortcutOverlayItem(id: "annotate-ref-cancel", icon: "escape", title: L10n.ShortcutOverlay.cancelDeselect, subtitle: nil, isEnabled: true, display: .keycaps(["⎋"])),
+          ShortcutOverlayItem(id: "annotate-ref-confirm-crop", icon: "return", title: L10n.ShortcutOverlay.confirmCrop, subtitle: nil, isEnabled: true, display: .keycaps(["↩"])),
+          ShortcutOverlayItem(id: "annotate-ref-nudge", icon: "arrow.up.arrow.down.arrow.left.arrow.right", title: L10n.ShortcutOverlay.nudgeAnnotation, subtitle: nil, isEnabled: true, display: .text("← → ↑ ↓")),
+          ShortcutOverlayItem(id: "annotate-ref-nudge-10", icon: "arrow.up.arrow.down.arrow.left.arrow.right", title: L10n.ShortcutOverlay.nudgeTenPixels, subtitle: nil, isEnabled: true, display: .text("⇧ ← → ↑ ↓")),
         ]
       ),
     ]
@@ -135,11 +135,11 @@ enum ShortcutOverlayContentBuilder {
   private static func annotateActionMetadata(_ kind: AnnotateActionShortcutKind) -> (title: String, icon: String) {
     switch kind {
     case .copyAndClose:
-      return ("Copy & Close", "doc.on.doc")
+      return (L10n.ShortcutOverlay.copyAndClose, "doc.on.doc")
     case .togglePin:
-      return ("Toggle Pin", "pin")
+      return (L10n.ShortcutOverlay.togglePin, "pin")
     case .cloudUpload:
-      return ("Cloud Upload", "icloud.and.arrow.up")
+      return (L10n.ShortcutOverlay.cloudUpload, "icloud.and.arrow.up")
     }
   }
 
@@ -155,8 +155,8 @@ enum ShortcutOverlayContentBuilder {
     let inScreenshot = screenshotTools.contains(tool)
     let inRecording = recordingTools.contains(tool)
 
-    if inScreenshot && inRecording { return "Screenshot + Recording" }
-    if inRecording { return "Recording only" }
-    return "Screenshot only"
+    if inScreenshot && inRecording { return L10n.ShortcutOverlay.screenshotAndRecording }
+    if inRecording { return L10n.ShortcutOverlay.recordingOnly }
+    return L10n.ShortcutOverlay.screenshotOnly
   }
 }

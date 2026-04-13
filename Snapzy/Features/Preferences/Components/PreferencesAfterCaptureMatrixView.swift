@@ -20,11 +20,11 @@ struct AfterCaptureMatrixView: View {
           .frame(width: 28)
         Spacer()
         HStack(spacing: 16) {
-          Text("Screenshot")
+          Text(CaptureType.screenshot.displayName)
             .font(.caption2)
             .foregroundColor(.secondary)
             .frame(width: 70)
-          Text("Recording")
+          Text(CaptureType.recording.displayName)
             .font(.caption2)
             .foregroundColor(.secondary)
             .frame(width: 70)
@@ -36,10 +36,10 @@ struct AfterCaptureMatrixView: View {
         actionRow(for: action)
       }
     }
-    .alert("Cloud Not Configured", isPresented: $showCloudNotConfiguredAlert) {
-      Button("OK", role: .cancel) {}
+    .alert(L10n.AfterCapture.cloudAlertTitle, isPresented: $showCloudNotConfiguredAlert) {
+      Button(L10n.Common.ok, role: .cancel) {}
     } message: {
-      Text("Please set up your cloud credentials in Preferences → Cloud before enabling this option.")
+      Text(L10n.AfterCapture.cloudAlertMessage)
     }
   }
 
@@ -62,20 +62,20 @@ struct AfterCaptureMatrixView: View {
       Spacer()
 
       HStack(spacing: 16) {
-        toggleColumn(label: "Screenshot", action: action, type: .screenshot)
-        toggleColumn(label: "Recording", action: action, type: .recording)
+        toggleColumn(captureType: .screenshot, action: action, type: .screenshot)
+        toggleColumn(captureType: .recording, action: action, type: .recording)
       }
     }
     .padding(.vertical, 4)
   }
 
   @ViewBuilder
-  private func toggleColumn(label: String, action: AfterCaptureAction, type: CaptureType) -> some View {
+  private func toggleColumn(captureType: CaptureType, action: AfterCaptureAction, type: CaptureType) -> some View {
     let isDisabled = (action == .openAnnotate && type == .recording)
       || (action == .uploadToCloud && type == .recording)
     Toggle("", isOn: cloudAwareBinding(for: action, type: type))
       .labelsHidden()
-      .accessibilityLabel("\(action.displayName) for \(label.lowercased())")
+      .accessibilityLabel(L10n.AfterCapture.accessibilityLabel(action.displayName, captureKind: captureType.displayName))
       .frame(width: 70)
       .disabled(isDisabled)
       .opacity(isDisabled ? 0.3 : 1)
@@ -99,15 +99,15 @@ struct AfterCaptureMatrixView: View {
   private func description(for action: AfterCaptureAction) -> String {
     switch action {
     case .showQuickAccess:
-      return "Display overlay with quick actions"
+      return L10n.AfterCapture.showQuickAccessDescription
     case .copyFile:
-      return "Copy to clipboard automatically"
+      return L10n.AfterCapture.copyFileDescription
     case .save:
-      return "Save to export location"
+      return L10n.AfterCapture.saveDescription
     case .openAnnotate:
-      return "Open annotate editor after capture"
+      return L10n.AfterCapture.openAnnotateDescription
     case .uploadToCloud:
-      return "Upload screenshot to cloud & copy link"
+      return L10n.AfterCapture.uploadToCloudDescription
     }
   }
 

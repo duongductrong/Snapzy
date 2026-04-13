@@ -23,14 +23,14 @@ enum CloudExpireTime: String, Codable, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .day1: return "1 day"
-    case .day3: return "3 days"
-    case .day7: return "7 days"
-    case .day14: return "14 days"
-    case .day30: return "30 days"
-    case .day60: return "60 days"
-    case .day90: return "90 days"
-    case .permanent: return "Permanent"
+    case .day1: return L10n.CloudExpire.day1
+    case .day3: return L10n.CloudExpire.day3
+    case .day7: return L10n.CloudExpire.day7
+    case .day14: return L10n.CloudExpire.day14
+    case .day30: return L10n.CloudExpire.day30
+    case .day60: return L10n.CloudExpire.day60
+    case .day90: return L10n.CloudExpire.day90
+    case .permanent: return L10n.CloudExpire.permanent
     }
   }
 

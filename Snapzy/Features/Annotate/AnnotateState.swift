@@ -1832,9 +1832,9 @@ final class AnnotateState: ObservableObject {
     guard let tool = quickPropertiesTool else { return "" }
     switch quickPropertiesMode {
     case .selectedItem:
-      return "Selected \(tool.displayName)"
+      return L10n.AnnotateContext.selected(tool.displayName)
     case .toolDefaults:
-      return "\(tool.displayName) Defaults"
+      return L10n.AnnotateContext.defaults(tool.displayName)
     case .hidden:
       return ""
     }

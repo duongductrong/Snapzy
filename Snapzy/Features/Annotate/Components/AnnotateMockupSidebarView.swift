@@ -29,24 +29,24 @@ struct MockupSidebarView: View {
 
     private var rotationSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Rotation", action: resetRotation)
+            sectionHeader(L10n.Common.rotation, action: resetRotation)
 
             MockupSliderRow(
-                label: "X Axis",
+                label: L10n.AnnotateUI.xAxis,
                 value: $state.rotationX,
                 range: -45...45,
                 format: "%.1f°"
             )
 
             MockupSliderRow(
-                label: "Y Axis",
+                label: L10n.AnnotateUI.yAxis,
                 value: $state.rotationY,
                 range: -45...45,
                 format: "%.1f°"
             )
 
             MockupSliderRow(
-                label: "Z Axis",
+                label: L10n.AnnotateUI.zAxis,
                 value: $state.rotationZ,
                 range: -180...180,
                 format: "%.1f°"
@@ -58,10 +58,10 @@ struct MockupSidebarView: View {
 
     private var perspectiveSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Perspective", action: resetPerspective)
+            sectionHeader(L10n.Common.perspective, action: resetPerspective)
 
             MockupSliderRow(
-                label: "Depth",
+                label: L10n.AnnotateUI.depth,
                 value: $state.perspective,
                 range: 0.1...1.0,
                 format: "%.2f"
@@ -73,10 +73,10 @@ struct MockupSidebarView: View {
 
     private var appearanceSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Appearance", action: resetAppearance)
+            sectionHeader(L10n.Common.style, action: resetAppearance)
 
             MockupSliderRow(
-                label: "Padding",
+                label: L10n.Common.padding,
                 value: Binding(
                     get: { Double(state.padding) },
                     set: { state.padding = CGFloat($0) }
@@ -86,14 +86,14 @@ struct MockupSidebarView: View {
             )
 
             MockupSliderRow(
-                label: "Shadow",
+                label: L10n.Common.shadow,
                 value: $state.shadowIntensity,
                 range: 0...1,
                 format: "%.2f"
             )
 
             MockupSliderRow(
-                label: "Corner Radius",
+                label: L10n.Common.corners,
                 value: $state.cornerRadius,
                 range: 0...50,
                 format: "%.0f"
@@ -105,7 +105,7 @@ struct MockupSidebarView: View {
 
     private var backgroundSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            sectionHeader("Background", action: nil)
+            sectionHeader(L10n.Common.background, action: nil)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 32))], spacing: 8) {
                 ForEach(GradientPreset.allCases) { preset in
@@ -114,12 +114,12 @@ struct MockupSidebarView: View {
             }
 
             HStack {
-                Button("None") {
+                Button(L10n.Common.none) {
                     state.backgroundStyle = .none
                 }
                 .buttonStyle(.bordered)
 
-                ColorPicker("Solid", selection: solidColorBinding)
+                ColorPicker(L10n.Common.solid, selection: solidColorBinding)
                     .labelsHidden()
             }
         }
@@ -133,7 +133,7 @@ struct MockupSidebarView: View {
                 .font(.headline)
             Spacer()
             if let action = action {
-                Button("Reset") {
+                Button(L10n.Common.reset) {
                     action()
                 }
                 .buttonStyle(.plain)

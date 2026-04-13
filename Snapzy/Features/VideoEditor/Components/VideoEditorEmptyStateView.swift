@@ -30,7 +30,7 @@ struct VideoEditorEmptyStateView: View {
       // Cancel button at bottom
       HStack {
         Spacer()
-        Button("Cancel") {
+        Button(L10n.Common.cancel) {
           NSApp.keyWindow?.close()
         }
         .keyboardShortcut(.cancelAction)
@@ -38,8 +38,8 @@ struct VideoEditorEmptyStateView: View {
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .alert("Invalid File", isPresented: $showError) {
-      Button("OK", role: .cancel) {}
+    .alert(L10n.VideoEditor.invalidFileTitle, isPresented: $showError) {
+      Button(L10n.Common.ok, role: .cancel) {}
     } message: {
       Text(errorMessage)
     }
@@ -54,17 +54,17 @@ struct VideoEditorEmptyStateView: View {
 
       // Instructions
       VStack(spacing: 4) {
-        Text("Drop a video here to edit")
+        Text(L10n.VideoEditor.dropVideoHereToEdit)
           .font(.headline)
           .foregroundColor(.primary)
 
-        Text("Supports MOV, MP4, GIF, and other video formats")
+        Text(L10n.VideoEditor.supportsVideoFormats)
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
 
       // Browse button
-      Button("Browse Files...") {
+      Button(L10n.VideoEditor.browseFiles) {
         browseForVideo()
       }
       .buttonStyle(.bordered)
@@ -103,7 +103,7 @@ struct VideoEditorEmptyStateView: View {
     }) else {
       print("[VideoEditor Drop] No supported video type found")
       DispatchQueue.main.async {
-        showError(message: "Unsupported file type")
+        showError(message: L10n.VideoEditor.unsupportedFileType)
       }
       return false
     }
@@ -115,7 +115,7 @@ struct VideoEditorEmptyStateView: View {
       if let error = error {
         print("[VideoEditor Drop] loadItem error: \(error)")
         DispatchQueue.main.async {
-          self.showError(message: "Failed to load file: \(error.localizedDescription)")
+          self.showError(message: L10n.VideoEditor.failedToLoadFile(error.localizedDescription))
         }
         return
       }
@@ -138,7 +138,7 @@ struct VideoEditorEmptyStateView: View {
         if let repError = repError {
           print("[VideoEditor Drop] loadFileRepresentation error: \(repError)")
           DispatchQueue.main.async {
-            self.showError(message: "Failed to load file: \(repError.localizedDescription)")
+            self.showError(message: L10n.VideoEditor.failedToLoadFile(repError.localizedDescription))
           }
           return
         }
@@ -146,7 +146,7 @@ struct VideoEditorEmptyStateView: View {
         guard let tempURL = tempURL else {
           print("[VideoEditor Drop] No temp URL received")
           DispatchQueue.main.async {
-            self.showError(message: "Could not read file")
+            self.showError(message: L10n.VideoEditor.couldNotReadFile)
           }
           return
         }
@@ -174,7 +174,7 @@ struct VideoEditorEmptyStateView: View {
         } catch {
           print("[VideoEditor Drop] Copy error: \(error)")
           DispatchQueue.main.async {
-            self.showError(message: "Failed to prepare file: \(error.localizedDescription)")
+            self.showError(message: L10n.VideoEditor.failedToPrepareFile(error.localizedDescription))
           }
         }
       }
@@ -201,14 +201,14 @@ struct VideoEditorEmptyStateView: View {
   private func validateAndLoad(url: URL, originalURL: URL? = nil) {
     // Validate file exists
     guard FileManager.default.fileExists(atPath: url.path) else {
-      showError(message: "File not found")
+      showError(message: L10n.VideoEditor.fileNotFound)
       return
     }
 
     // Validate it's a video or GIF file
     guard let type = try? url.resourceValues(forKeys: [.contentTypeKey]).contentType,
           type.conforms(to: .movie) || type.conforms(to: .video) || type.conforms(to: .gif) else {
-      showError(message: "Please select a valid video or GIF file")
+      showError(message: L10n.VideoEditor.selectValidVideoOrGIFFile)
       return
     }
 

@@ -18,9 +18,9 @@ enum AnnotationClearMode: Equatable, Hashable {
 
   var displayName: String {
     switch self {
-    case .persist: return "Persist"
+    case .persist: return L10n.RecordingAnnotation.persist
     case .timeBased(let s): return "\(Int(s))s"
-    case .countBased(let c): return "Last \(c)"
+    case .countBased(let c): return L10n.RecordingAnnotation.lastCount(c)
     }
   }
 }

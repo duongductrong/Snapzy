@@ -24,7 +24,7 @@ struct VideoDetailsSidebarView: View {
         HStack {
           Image(systemName: "info.circle.fill")
             .foregroundColor(ZoomColors.primary)
-          Text("Video Details")
+          Text(L10n.VideoEditor.videoDetails)
             .font(Typography.sectionHeader)
             .foregroundColor(SidebarColors.labelPrimary)
         }
@@ -32,45 +32,45 @@ struct VideoDetailsSidebarView: View {
         Divider().background(Color(nsColor: .separatorColor))
 
         // File Info Section
-        SidebarSection(title: "File") {
-          DetailRow(label: "Name", value: state.filename)
-          DetailRow(label: "Path", value: state.sourceURL.deletingLastPathComponent().path)
-          DetailRow(label: "Size", value: state.fileSizeString)
-          DetailRow(label: "Format", value: state.fileExtension.uppercased())
+        SidebarSection(title: L10n.Common.file) {
+          DetailRow(label: L10n.Common.name, value: state.filename)
+          DetailRow(label: L10n.Common.path, value: state.sourceURL.deletingLastPathComponent().path)
+          DetailRow(label: L10n.Common.size, value: state.fileSizeString)
+          DetailRow(label: L10n.Common.format, value: state.fileExtension.uppercased())
         }
 
         // Video Info Section
-        SidebarSection(title: "Video") {
-          DetailRow(label: "Resolution", value: state.resolutionString)
-          DetailRow(label: "Aspect Ratio", value: state.aspectRatioString)
-          DetailRow(label: "Duration", value: state.formattedDuration)
+        SidebarSection(title: L10n.Common.video) {
+          DetailRow(label: L10n.Common.resolution, value: state.resolutionString)
+          DetailRow(label: L10n.VideoEditor.aspectRatio, value: state.aspectRatioString)
+          DetailRow(label: L10n.Common.duration, value: state.formattedDuration)
         }
 
         // Dates Section
-        SidebarSection(title: "Dates") {
+        SidebarSection(title: L10n.Common.dates) {
           if let created = state.fileCreationDate {
-            DetailRow(label: "Created", value: dateFormatter.string(from: created))
+            DetailRow(label: L10n.Common.created, value: dateFormatter.string(from: created))
           }
           if let modified = state.fileModificationDate {
-            DetailRow(label: "Modified", value: dateFormatter.string(from: modified))
+            DetailRow(label: L10n.Common.modified, value: dateFormatter.string(from: modified))
           }
         }
 
         // Zoom Summary
         if !state.zoomSegments.isEmpty {
-          SidebarSection(title: "Zoom Effects") {
-            DetailRow(label: "Segments", value: "\(state.zoomSegments.count)")
-            DetailRow(label: "Enabled", value: "\(state.zoomSegments.filter { $0.isEnabled }.count)")
+          SidebarSection(title: L10n.VideoEditor.zoomEffects) {
+            DetailRow(label: L10n.VideoEditor.segments, value: "\(state.zoomSegments.count)")
+            DetailRow(label: L10n.Common.enabled, value: "\(state.zoomSegments.filter { $0.isEnabled }.count)")
           }
         }
 
         if state.hasMouseTrackingData {
-          SidebarSection(title: "Smart Camera") {
-            DetailRow(label: "Mouse Samples", value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)")
-            DetailRow(label: "Sample Rate", value: "\(state.recordingMetadata?.samplesPerSecond ?? 0) Hz")
-            DetailRow(label: "Coord Space", value: state.recordingMetadata?.coordinateSpace.rawValue ?? "—")
-            DetailRow(label: "Auto Segments", value: "\(state.autoZoomSegmentCount)")
-            DetailRow(label: "Status", value: state.isAutoZoomActiveAtCurrentTime ? "Active" : "Ready")
+          SidebarSection(title: L10n.VideoEditor.smartCamera) {
+            DetailRow(label: L10n.VideoEditor.mouseSamples, value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)")
+            DetailRow(label: L10n.VideoEditor.sampleRate, value: "\(state.recordingMetadata?.samplesPerSecond ?? 0) Hz")
+            DetailRow(label: L10n.VideoEditor.coordSpace, value: state.recordingMetadata?.coordinateSpace.rawValue ?? "—")
+            DetailRow(label: L10n.VideoEditor.autoSegments, value: "\(state.autoZoomSegmentCount)")
+            DetailRow(label: L10n.Common.status, value: state.isAutoZoomActiveAtCurrentTime ? L10n.Common.active : L10n.Common.ready)
           }
         }
 

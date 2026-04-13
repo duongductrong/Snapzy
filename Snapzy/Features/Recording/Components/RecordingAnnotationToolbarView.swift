@@ -161,7 +161,7 @@ struct RecordingAnnotationToolbarView: View {
     let currentTool = state.selectedTool
     let currentMode = state.clearMode(for: currentTool)
 
-    Text("Auto-clear: \(currentTool.displayName)")
+    Text(L10n.RecordingAnnotation.autoClear(currentTool.displayName))
       .font(.caption)
 
     Divider()
@@ -192,7 +192,7 @@ struct RecordingAnnotationToolbarView: View {
 
   private func shortcutHelpText(for tool: AnnotationToolType) -> String {
     guard let shortcutLabel = shortcutLabel(for: tool) else { return tool.displayName }
-    return "\(tool.displayName) (\(shortcutLabel))"
+    return L10n.Common.withShortcut(tool.displayName, shortcutLabel)
   }
 
   // MARK: - Divider

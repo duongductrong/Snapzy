@@ -20,9 +20,9 @@ enum AnnotationShortcutModifier: String, CaseIterable, Identifiable {
 
   var displayName: String {
     switch self {
-    case .shift: return "Shift (⇧)"
-    case .control: return "Control (⌃)"
-    case .option: return "Option (⌥)"
+    case .shift: return L10n.RecordingAnnotation.modifierShift
+    case .control: return L10n.RecordingAnnotation.modifierControl
+    case .option: return L10n.RecordingAnnotation.modifierOption
     }
   }
 

@@ -20,7 +20,7 @@ struct VideoTimelineFrameStrip: View {
           Spacer()
           ProgressView()
             .scaleEffect(0.8)
-          Text("Extracting frames...")
+          Text(L10n.VideoEditorTimeline.extractingFrames)
             .font(.caption)
             .foregroundColor(.secondary)
           Spacer()

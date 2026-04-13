@@ -19,7 +19,7 @@ struct ToolbarOptionsMenu: View {
       showPopover.toggle()
     } label: {
       HStack(spacing: 2) {
-        Text("Options")
+        Text(L10n.RecordingToolbar.options)
           .font(.system(size: 13, weight: .regular))
         Image(systemName: "chevron.down")
           .font(.system(size: 8, weight: .semibold))
@@ -39,8 +39,8 @@ struct ToolbarOptionsMenu: View {
     .popover(isPresented: $showPopover, arrowEdge: .bottom) {
       ToolbarOptionsPopoverContent(state: state)
     }
-    .accessibilityLabel("Recording options")
-    .accessibilityHint("Opens settings for format, quality, and audio")
+    .accessibilityLabel(L10n.RecordingToolbar.recordingOptionsAccessibility)
+    .accessibilityHint(L10n.RecordingToolbar.recordingOptionsHint)
   }
 }
 
@@ -55,7 +55,7 @@ private struct ToolbarOptionsPopoverContent: View {
       HStack {
         Image(systemName: "gearshape")
           .foregroundColor(.secondary)
-        Text("Recording Settings")
+        Text(L10n.RecordingToolbar.settingsTitle)
           .font(.system(size: 12, weight: .semibold))
         Spacer()
       }
@@ -63,7 +63,7 @@ private struct ToolbarOptionsPopoverContent: View {
       Divider()
 
       // Format Section
-      SettingsSection(title: "Format", icon: "film") {
+      SettingsSection(title: L10n.RecordingToolbar.formatSection, icon: "film") {
         HStack(spacing: 6) {
           ForEach(VideoFormat.allCases, id: \.self) { format in
             OptionPill(
@@ -77,7 +77,7 @@ private struct ToolbarOptionsPopoverContent: View {
       }
 
       // Quality Section
-      SettingsSection(title: "Quality", icon: "sparkles") {
+      SettingsSection(title: L10n.RecordingToolbar.qualitySection, icon: "sparkles") {
         HStack(spacing: 6) {
           ForEach(VideoQuality.allCases, id: \.self) { quality in
             OptionPill(
@@ -93,9 +93,9 @@ private struct ToolbarOptionsPopoverContent: View {
       Divider()
 
       // Audio Section
-      SettingsSection(title: "Audio", icon: "speaker.wave.2") {
+      SettingsSection(title: L10n.RecordingToolbar.audioSection, icon: "speaker.wave.2") {
         Toggle(isOn: $state.captureAudio) {
-          Text("System Audio")
+          Text(L10n.RecordingToolbar.systemAudio)
             .font(.system(size: 11))
         }
         .toggleStyle(.switch)
@@ -105,7 +105,7 @@ private struct ToolbarOptionsPopoverContent: View {
       Divider()
 
       // Overlays Section
-      SettingsSection(title: "Overlays", icon: "square.stack.3d.up") {
+      SettingsSection(title: L10n.RecordingToolbar.overlaysSection, icon: "square.stack.3d.up") {
         Toggle(isOn: Binding(
           get: { state.highlightClicks },
           set: { newValue in
@@ -113,7 +113,7 @@ private struct ToolbarOptionsPopoverContent: View {
             UserDefaults.standard.set(newValue, forKey: PreferencesKeys.recordingHighlightClicks)
           }
         )) {
-          Text("Highlight Clicks")
+          Text(L10n.RecordingToolbar.highlightClicks)
             .font(.system(size: 11))
         }
         .toggleStyle(.switch)
@@ -126,7 +126,7 @@ private struct ToolbarOptionsPopoverContent: View {
             UserDefaults.standard.set(newValue, forKey: PreferencesKeys.recordingShowKeystrokes)
           }
         )) {
-          Text("Show Keystrokes")
+          Text(L10n.RecordingToolbar.showKeystrokes)
             .font(.system(size: 11))
         }
         .toggleStyle(.switch)

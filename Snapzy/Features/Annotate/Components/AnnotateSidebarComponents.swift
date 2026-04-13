@@ -102,7 +102,7 @@ struct CustomWallpaperButton: View {
             .shadow(color: .black.opacity(0.5), radius: 2, x: 0, y: 1)
         }
         .buttonStyle(.plain)
-        .help("Remove custom wallpaper")
+        .help(L10n.AnnotateUI.removeCustomWallpaper)
         .offset(x: -4, y: -4)
         .transition(.opacity.combined(with: .scale(scale: 0.8)))
       }
@@ -197,7 +197,7 @@ struct GrantAccessButton: View {
       VStack(spacing: Spacing.xs) {
         Image(systemName: "folder.badge.plus")
           .font(.system(size: 16, weight: .medium))
-        Text("Grant")
+        Text(L10n.Onboarding.grantAccess)
           .font(Typography.labelSmall)
       }
       .foregroundColor(.primary.opacity(0.5))

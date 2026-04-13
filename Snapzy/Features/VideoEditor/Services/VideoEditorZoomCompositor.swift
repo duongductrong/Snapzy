@@ -114,11 +114,14 @@ class ZoomCompositor {
     var errorDescription: String? {
       switch self {
       case .noVideoTrack:
-        return "Video file format is incompatible or corrupted. Please try re-recording."
+        return L10n.ZoomCompositor.noVideoTrack
       case .compositionFailed:
-        return "Failed to apply zoom effects. The video may be corrupted or in an unsupported format."
+        return L10n.ZoomCompositor.compositionFailed
       case .trackMismatch(let expected, let available):
-        return "Track ID mismatch: expected \(expected), available: \(available). Please try re-exporting."
+        return L10n.ZoomCompositor.trackMismatch(
+          String(expected),
+          available.map(String.init(describing:)).joined(separator: ", ")
+        )
       }
     }
   }

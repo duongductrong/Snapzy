@@ -19,11 +19,11 @@ private enum CloudProtectedAction {
   var passwordPrompt: String {
     switch self {
     case .editCredentials:
-      return "Enter your protection password to edit cloud credentials."
+      return L10n.CloudSettings.editCredentialsPasswordPrompt
     case .importCredentials:
-      return "Enter your protection password to import credentials over the current cloud setup."
+      return L10n.CloudSettings.importCredentialsPasswordPrompt
     case .exportCredentials:
-      return "Enter your protection password to export the current cloud credentials."
+      return L10n.CloudSettings.exportCredentialsPasswordPrompt
     }
   }
 }
@@ -84,25 +84,25 @@ struct CloudSettingsView: View {
       }
     }
     .formStyle(.grouped)
-    .alert("Reset Cloud Configuration?", isPresented: $showResetConfirmation) {
-      Button("Reset", role: .destructive) {
+    .alert(L10n.CloudSettings.resetConfigurationTitle, isPresented: $showResetConfirmation) {
+      Button(L10n.CloudSettings.reset, role: .destructive) {
         cloudManager.clearConfiguration()
         passwordInitCompleted = false
       }
-      Button("Cancel", role: .cancel) {}
+      Button(L10n.Common.cancel, role: .cancel) {}
     } message: {
-      Text("This will remove all cloud credentials, protection password, and settings. This action cannot be undone.")
+      Text(L10n.CloudSettings.resetConfigurationMessage)
     }
-    .alert("Import Cloud Credentials?", isPresented: $showImportReplaceConfirmation) {
-      Button("Import", role: .destructive) {
+    .alert(L10n.CloudSettings.importCredentialsTitle, isPresented: $showImportReplaceConfirmation) {
+      Button(L10n.Common.importAction, role: .destructive) {
         beginImportFlow()
       }
-      Button("Cancel", role: .cancel) {}
+      Button(L10n.Common.cancel, role: .cancel) {}
     } message: {
-      Text("Snapzy will load the imported values into the editor. Your current saved configuration stays unchanged until you click Save & Test.")
+      Text(L10n.CloudSettings.importCredentialsMessage)
     }
-    .alert("Cloud Transfer", isPresented: transferAlertBinding) {
-      Button("OK", role: .cancel) {
+    .alert(L10n.CloudSettings.transferAlertTitle, isPresented: transferAlertBinding) {
+      Button(L10n.Common.ok, role: .cancel) {
         transferAlertMessage = nil
       }
     } message: {
@@ -142,7 +142,7 @@ struct CloudSettingsView: View {
           payload: exportPayload,
           onExported: { destinationURL in
             showExportSheet = false
-            transferAlertMessage = "Encrypted archive saved to \(destinationURL.path)."
+            transferAlertMessage = L10n.CloudTransfer.archiveSaved(destinationURL.path)
           },
           onCancel: { showExportSheet = false }
         )
@@ -167,19 +167,19 @@ struct CloudSettingsView: View {
       // Cloud stats at the very top
       cloudStatsSection
 
-      Section("Cloud Provider") {
+      Section(L10n.CloudSettings.providerSection) {
         if let config = cloudManager.cachedConfiguration {
           SettingRow(
             icon: "cloud.fill",
             title: config.providerType.displayName,
-            description: "Bucket: \(config.bucket)"
+            description: L10n.CloudSettings.bucketDescription(config.bucket)
           ) {
             EmptyView()
           }
 
           SettingRow(
             icon: "key.fill",
-            title: "Access Key",
+            title: L10n.CloudSettings.accessKey,
             description: cloudManager.cachedMaskedAccessKey
           ) {
             EmptyView()
@@ -188,7 +188,7 @@ struct CloudSettingsView: View {
           if !config.region.isEmpty && config.providerType == .awsS3 {
             SettingRow(
               icon: "globe",
-              title: "Region",
+              title: L10n.CloudSettings.region,
               description: config.region
             ) {
               EmptyView()
@@ -198,7 +198,7 @@ struct CloudSettingsView: View {
           if let endpoint = config.endpoint, !endpoint.isEmpty {
             SettingRow(
               icon: "server.rack",
-              title: "Endpoint",
+              title: L10n.CloudSettings.endpoint,
               description: cloudManager.maskedEndpoint()
             ) {
               EmptyView()
@@ -207,7 +207,7 @@ struct CloudSettingsView: View {
 
           SettingRow(
             icon: "clock",
-            title: "Expire Time",
+            title: L10n.CloudSettings.expireTime,
             description: config.expireTime.displayName
           ) {
             EmptyView()
@@ -216,7 +216,7 @@ struct CloudSettingsView: View {
           if let domain = config.customDomain, !domain.isEmpty {
             SettingRow(
               icon: "link",
-              title: "Custom Domain",
+              title: L10n.CloudSettings.customDomain,
               description: domain
             ) {
               EmptyView()
@@ -226,19 +226,19 @@ struct CloudSettingsView: View {
 
         HStack(spacing: 12) {
           Button(action: handleEditTapped) {
-            Label("Edit", systemImage: "pencil")
+            Label(L10n.CloudSettings.edit, systemImage: "pencil")
           }
 
           Button(action: handleImportTapped) {
-            Label("Import", systemImage: "square.and.arrow.down")
+            Label(L10n.Common.importAction, systemImage: "square.and.arrow.down")
           }
 
           Button(action: handleExportTapped) {
-            Label("Export", systemImage: "square.and.arrow.up")
+            Label(L10n.Common.exportAction, systemImage: "square.and.arrow.up")
           }
 
           Button(role: .destructive, action: { showResetConfirmation = true }) {
-            Label("Reset", systemImage: "arrow.counterclockwise")
+            Label(L10n.CloudSettings.reset, systemImage: "arrow.counterclockwise")
           }
           .foregroundColor(.red)
         }
@@ -305,7 +305,7 @@ struct CloudSettingsView: View {
   private func handleImportedPayload(_ payload: CloudCredentialTransferPayload) {
     importArchiveSelection = nil
     importedPayload = payload
-    importNotice = "Imported credentials loaded. Review the values, then click Save & Test to apply them."
+    importNotice = L10n.CloudTransfer.importedCredentialsLoaded
 
     if cloudManager.isConfigured {
       isEditing = true
@@ -323,8 +323,8 @@ struct CloudSettingsView: View {
     panel.canChooseFiles = true
     panel.allowsMultipleSelection = false
     panel.allowedContentTypes = [CloudCredentialTransferService.archiveContentType]
-    panel.title = "Import Cloud Credentials"
-    panel.message = "Choose a Snapzy encrypted credential archive."
+    panel.title = L10n.CloudTransfer.importTitle
+    panel.message = L10n.CloudTransfer.chooserMessage
     return panel.runModal() == .OK ? panel.url : nil
   }
 
@@ -348,7 +348,7 @@ struct CloudSettingsView: View {
           Spacer()
           ProgressView()
             .scaleEffect(0.8)
-          Text("Loading stats...")
+          Text(L10n.CloudUsage.loadingStats)
             .font(.system(size: 12))
             .foregroundColor(.secondary)
           Spacer()
@@ -377,22 +377,22 @@ struct CloudSettingsView: View {
         ) {
           CloudStatCard(
             icon: "externaldrive",
-            label: "Storage",
+            label: L10n.CloudUsage.storage,
             value: info?.formattedStorage ?? "—"
           )
           CloudStatCard(
             icon: "doc.on.doc",
-            label: "Objects",
+            label: L10n.CloudUsage.objects,
             value: info.map { "\($0.objectCount)" } ?? "—"
           )
           CloudStatCard(
             icon: "clock.arrow.circlepath",
-            label: "Lifecycle",
+            label: L10n.CloudUsage.lifecycle,
             value: lifecycleShortLabel(info?.lifecycleRuleDays)
           )
           CloudStatCard(
             icon: "dollarsign.circle",
-            label: "Est. Cost/mo",
+            label: L10n.CloudUsage.estimatedCostPerMonth,
             value: usageService.estimatedMonthlyCost
           )
         }
@@ -400,7 +400,11 @@ struct CloudSettingsView: View {
         // Footer: last updated + refresh
         HStack(spacing: 6) {
           if let fetchedAt = info?.fetchedAt {
-            Text("Updated \(fetchedAt, style: .relative) ago")
+            (
+              Text("\(L10n.CloudUsage.updatedPrefix) ")
+              + Text(fetchedAt, style: .relative)
+              + Text(" \(L10n.CloudUsage.agoSuffix)")
+            )
               .font(.system(size: 10))
               .foregroundColor(.secondary)
           }
@@ -419,7 +423,7 @@ struct CloudSettingsView: View {
                 Image(systemName: "arrow.clockwise")
                   .font(.system(size: 10))
               }
-              Text("Refresh")
+              Text(L10n.Common.refresh)
                 .font(.system(size: 10))
             }
             .foregroundColor(.secondary)
@@ -441,13 +445,13 @@ struct CloudSettingsView: View {
         }
       }
     } header: {
-      Text("Cloud Status")
+      Text(L10n.CloudUsage.cloudStatus)
     }
   }
 
   private func lifecycleShortLabel(_ days: Int?) -> String {
-    guard let days = days else { return "None" }
-    return "\(days)d expire"
+    guard let days = days else { return L10n.CloudUsage.none }
+    return L10n.CloudUsage.daysExpire(days)
   }
 }
 
@@ -502,7 +506,7 @@ private struct CloudPasswordGateView: View {
         Image(systemName: "lock.shield.fill")
           .font(.system(size: 32))
           .foregroundColor(.accentColor)
-        Text("Password Required")
+        Text(L10n.CloudSettings.passwordRequiredTitle)
           .font(.headline)
         Text(purposeDescription)
           .font(.system(size: 12))
@@ -512,7 +516,7 @@ private struct CloudPasswordGateView: View {
 
       // Password field
       VStack(alignment: .leading, spacing: 6) {
-        SecureField("Protection Password", text: $password)
+        SecureField(L10n.CloudSettings.protectionPassword, text: $password)
           .textFieldStyle(.roundedBorder)
           .onSubmit { verify() }
 
@@ -526,17 +530,17 @@ private struct CloudPasswordGateView: View {
       // Actions
       VStack(spacing: 10) {
         HStack(spacing: 12) {
-          Button("Cancel") { onCancel() }
+          Button(L10n.Common.cancel) { onCancel() }
             .keyboardShortcut(.escape, modifiers: [])
 
-          Button("Verify") { verify() }
+          Button(L10n.CloudSettings.verify) { verify() }
             .keyboardShortcut(.return, modifiers: [])
             .disabled(password.isEmpty)
             .buttonStyle(.borderedProminent)
         }
 
         Button(action: { onReset() }) {
-          Text("Forgot Password? Reset Configuration")
+          Text(L10n.CloudSettings.forgotPasswordResetConfiguration)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
         }
@@ -554,7 +558,7 @@ private struct CloudPasswordGateView: View {
       onVerified()
     case .incorrectPassword:
       attempts += 1
-      errorMessage = "Incorrect password. Please try again. (\(attempts) attempt\(attempts > 1 ? "s" : ""))"
+      errorMessage = L10n.CloudSettings.incorrectPasswordAttempts(attempts)
       password = ""
     case .unavailable(let message):
       errorMessage = message
@@ -582,9 +586,9 @@ private struct CloudPasswordInitView: View {
           Image(systemName: "lock.shield.fill")
             .font(.system(size: 28))
             .foregroundColor(.accentColor)
-          Text("Protect Your Cloud Credentials")
+          Text(L10n.CloudSettings.protectCredentialsTitle)
             .font(.headline)
-          Text("Set a password to prevent unauthorized access to your cloud configuration. This password will be required to view or edit your credentials.")
+          Text(L10n.CloudSettings.protectCredentialsDescription)
             .font(.system(size: 12))
             .foregroundColor(.secondary)
             .multilineTextAlignment(.center)
@@ -594,13 +598,13 @@ private struct CloudPasswordInitView: View {
 
         // Password fields
         VStack(alignment: .leading, spacing: 8) {
-          SettingRow(icon: "lock", title: "Protection Password", description: nil) {
+          SettingRow(icon: "lock", title: L10n.CloudSettings.protectionPassword, description: nil) {
             SecureField("", text: $password)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
           }
 
-          SettingRow(icon: "lock.rotation", title: "Confirm Password", description: nil) {
+          SettingRow(icon: "lock.rotation", title: L10n.CloudSettings.confirmPassword, description: nil) {
             SecureField("", text: $confirmPassword)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
@@ -620,13 +624,13 @@ private struct CloudPasswordInitView: View {
 
         // Actions
         HStack(spacing: 12) {
-          Button("Set Password") {
+          Button(L10n.CloudSettings.setPassword) {
             savePassword()
           }
           .disabled(password.isEmpty || confirmPassword.isEmpty)
           .buttonStyle(.borderedProminent)
 
-          Button("Skip for Now") {
+          Button(L10n.CloudSettings.skipForNow) {
             showSkipWarning = true
           }
         }
@@ -637,7 +641,7 @@ private struct CloudPasswordInitView: View {
             .foregroundColor(.secondary)
             .font(.system(size: 12))
             .padding(.top, 1)
-          Text("If you forget this password, you will need to reset your cloud configuration and re-enter all credentials.")
+          Text(L10n.CloudSettings.forgotPasswordInfo)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -646,31 +650,31 @@ private struct CloudPasswordInitView: View {
       }
       .padding(.vertical, 8)
     }
-    .alert("Skip Password Protection?", isPresented: $showSkipWarning) {
-      Button("Skip", role: .destructive) {
+    .alert(L10n.CloudSettings.skipPasswordProtectionTitle, isPresented: $showSkipWarning) {
+      Button(L10n.CloudSettings.skip, role: .destructive) {
         UserDefaults.standard.set(true, forKey: PreferencesKeys.cloudPasswordSkipped)
         onComplete()
       }
-      Button("Set Password", role: .cancel) {}
+      Button(L10n.CloudSettings.setPassword, role: .cancel) {}
     } message: {
-      Text("Without a password, anyone with access to your Mac can view and modify your cloud credentials. We strongly recommend setting a password.")
+      Text(L10n.CloudSettings.skipPasswordProtectionMessage)
     }
   }
 
   private func savePassword() {
     guard password == confirmPassword else {
-      errorMessage = "Passwords do not match."
+      errorMessage = L10n.CloudSettings.passwordsDoNotMatch
       return
     }
     guard password.count >= 4 else {
-      errorMessage = "Password must be at least 4 characters."
+      errorMessage = L10n.CloudSettings.passwordMinimumLength(4)
       return
     }
     do {
       try CloudPasswordService.shared.savePassword(password)
       onComplete()
     } catch {
-      errorMessage = "Failed to save password: \(error.localizedDescription)"
+      errorMessage = L10n.CloudSettings.failedToSavePassword(error.localizedDescription)
     }
   }
 }
@@ -727,19 +731,24 @@ private struct CloudCredentialFormView: View {
       }
 
       if !isEditing, let onImport {
-        Section("Transfer") {
+        Section(L10n.CloudSettings.transferSection) {
           Button(action: onImport) {
-            Label("Import Encrypted Archive", systemImage: "square.and.arrow.down")
+            Label(L10n.CloudSettings.importEncryptedArchive, systemImage: "square.and.arrow.down")
           }
 
-          Text("Load a previously exported Snapzy cloud archive to prefill this form.")
+          Text(L10n.CloudSettings.importEncryptedArchiveDescription)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
         }
       }
 
-      Section("Cloud Provider") {
-        SettingRow(icon: "cloud", title: "Provider", description: nil, tooltip: "Select your cloud storage provider") {
+      Section(L10n.CloudSettings.providerSection) {
+        SettingRow(
+          icon: "cloud",
+          title: L10n.CloudSettings.provider,
+          description: nil,
+          tooltip: L10n.CloudSettings.providerTooltip
+        ) {
           Picker("", selection: $providerType) {
             ForEach(CloudProviderType.allCases, id: \.self) { type in
               Text(type.displayName).tag(type)
@@ -750,14 +759,24 @@ private struct CloudCredentialFormView: View {
         }
       }
 
-      Section("Credentials") {
-        SettingRow(icon: "key", title: "Access Key ID", description: nil, tooltip: "Your cloud provider access key") {
+      Section(L10n.CloudSettings.credentialsSection) {
+        SettingRow(
+          icon: "key",
+          title: L10n.CloudSettings.accessKeyID,
+          description: nil,
+          tooltip: L10n.CloudSettings.accessKeyTooltip
+        ) {
           TextField("", text: $accessKey)
             .textFieldStyle(.roundedBorder)
             .frame(width: 240)
         }
 
-        SettingRow(icon: "lock", title: "Secret Access Key", description: nil, tooltip: "Your cloud provider secret key") {
+        SettingRow(
+          icon: "lock",
+          title: L10n.CloudSettings.secretAccessKey,
+          description: nil,
+          tooltip: L10n.CloudSettings.secretKeyTooltip
+        ) {
           HStack(spacing: 6) {
             if showSecretKey {
               TextField("", text: $secretKey)
@@ -778,15 +797,25 @@ private struct CloudCredentialFormView: View {
         }
       }
 
-      Section("Storage") {
-        SettingRow(icon: "externaldrive", title: "Bucket Name", description: nil, tooltip: "S3 or R2 bucket name") {
+      Section(L10n.CloudSettings.storageSection) {
+        SettingRow(
+          icon: "externaldrive",
+          title: L10n.CloudSettings.bucketName,
+          description: nil,
+          tooltip: L10n.CloudSettings.bucketTooltip
+        ) {
           TextField("", text: $bucket)
             .textFieldStyle(.roundedBorder)
             .frame(width: 240)
         }
 
         if providerType == .awsS3 {
-          SettingRow(icon: "globe", title: "Region", description: nil, tooltip: "AWS region (e.g. us-east-1)") {
+          SettingRow(
+            icon: "globe",
+            title: L10n.CloudSettings.region,
+            description: nil,
+            tooltip: L10n.CloudSettings.regionTooltip
+          ) {
             TextField("", text: $region)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
@@ -794,9 +823,9 @@ private struct CloudCredentialFormView: View {
 
           SettingRow(
             icon: "server.rack",
-            title: "Endpoint",
+            title: L10n.CloudSettings.endpoint,
             description: nil,
-            tooltip: "Optional custom S3 endpoint for LocalStack or other S3-compatible storage"
+            tooltip: L10n.CloudSettings.endpointTooltipS3
           ) {
             TextField("", text: $endpoint)
               .textFieldStyle(.roundedBorder)
@@ -805,22 +834,32 @@ private struct CloudCredentialFormView: View {
         }
 
         if providerType == .cloudflareR2 {
-          SettingRow(icon: "server.rack", title: "Endpoint", description: nil, tooltip: "R2 account endpoint URL") {
+          SettingRow(
+            icon: "server.rack",
+            title: L10n.CloudSettings.endpoint,
+            description: nil,
+            tooltip: L10n.CloudSettings.endpointTooltipR2
+          ) {
             TextField("", text: $endpoint)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
           }
         }
 
-        SettingRow(icon: "link", title: "Custom Domain", description: nil, tooltip: "Public access domain (optional)") {
+        SettingRow(
+          icon: "link",
+          title: L10n.CloudSettings.customDomain,
+          description: nil,
+          tooltip: L10n.CloudSettings.customDomainTooltip
+        ) {
           TextField("", text: $customDomain)
             .textFieldStyle(.roundedBorder)
             .frame(width: 240)
         }
       }
 
-      Section("File Expiration") {
-        Picker("Expire Time", selection: $expireTime) {
+      Section(L10n.CloudSettings.fileExpirationSection) {
+        Picker(L10n.CloudSettings.expireTime, selection: $expireTime) {
           ForEach(CloudExpireTime.allCases, id: \.self) { time in
             Text(time.displayName).tag(time)
           }
@@ -832,9 +871,7 @@ private struct CloudCredentialFormView: View {
               .foregroundColor(.orange)
               .font(.system(size: 12))
               .padding(.top, 1)
-            Text(
-              "No lifecycle rule will be set. Files will remain permanently unless manually deleted."
-            )
+            Text(L10n.CloudSettings.noLifecycleRuleWarning)
             .font(.system(size: 11))
             .foregroundColor(.orange)
             .fixedSize(horizontal: false, vertical: true)
@@ -846,9 +883,7 @@ private struct CloudCredentialFormView: View {
               .foregroundColor(.secondary)
               .font(.system(size: 12))
               .padding(.top, 1)
-            Text(
-              "A lifecycle rule will be configured on your bucket to auto-delete files after the selected period. Deletion may take up to 24 hours after expiration."
-            )
+            Text(L10n.CloudSettings.lifecycleRuleInfo)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -859,14 +894,14 @@ private struct CloudCredentialFormView: View {
 
       // Protection password section
       if !isEditing || !hasExistingPassword {
-        Section("Protection Password") {
+        Section(L10n.CloudSettings.protectionPasswordSection) {
           SettingRow(
             icon: "lock.shield",
-            title: "Password",
+            title: L10n.CloudSettings.password,
             description: nil,
-            tooltip: "Optional password to protect credentials from unauthorized access"
+            tooltip: L10n.CloudSettings.passwordTooltip
           ) {
-            SecureField("Optional", text: $protectionPassword)
+            SecureField(L10n.CloudSettings.optional, text: $protectionPassword)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
           }
@@ -874,9 +909,9 @@ private struct CloudCredentialFormView: View {
           if !protectionPassword.isEmpty {
             SettingRow(
               icon: "lock.rotation",
-              title: "Confirm Password",
+              title: L10n.CloudSettings.confirmPassword,
               description: nil,
-              tooltip: "Re-enter the protection password"
+              tooltip: L10n.CloudSettings.confirmPasswordTooltip
             ) {
               SecureField("", text: $confirmProtectionPassword)
                 .textFieldStyle(.roundedBorder)
@@ -889,9 +924,7 @@ private struct CloudCredentialFormView: View {
               .foregroundColor(.accentColor)
               .font(.system(size: 12))
               .padding(.top, 1)
-            Text(
-              "We recommend setting a password to protect your cloud credentials from unauthorized access. This password will be required to view or edit your configuration."
-            )
+            Text(L10n.CloudSettings.protectionRecommendation)
             .font(.system(size: 11))
             .foregroundColor(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -918,7 +951,7 @@ private struct CloudCredentialFormView: View {
             Image(systemName: "checkmark.circle.fill")
               .foregroundColor(.green)
               .font(.system(size: 12))
-            Text("Connection verified successfully!")
+            Text(L10n.CloudSettings.connectionVerifiedSuccessfully)
               .font(.system(size: 11))
               .foregroundColor(.green)
           }
@@ -930,15 +963,15 @@ private struct CloudCredentialFormView: View {
               ProgressView()
                 .scaleEffect(0.7)
                 .frame(width: 14, height: 14)
-              Text("Testing...")
+              Text(L10n.CloudSettings.testing)
             } else {
-              Text("Save & Test")
+              Text(L10n.CloudSettings.saveAndTest)
             }
           }
           .disabled(!isFormValid || isValidating)
 
           if isEditing {
-            Button("Cancel") {
+            Button(L10n.Common.cancel) {
               onCancel()
             }
           }
@@ -953,14 +986,14 @@ private struct CloudCredentialFormView: View {
       guard let newValue else { return }
       applyImportedPayload(newValue)
     }
-    .alert("Proceed Without Password?", isPresented: $showSkipPasswordWarning) {
-      Button("Skip", role: .destructive) {
+    .alert(L10n.CloudSettings.proceedWithoutPasswordTitle, isPresented: $showSkipPasswordWarning) {
+      Button(L10n.CloudSettings.skip, role: .destructive) {
         UserDefaults.standard.set(true, forKey: PreferencesKeys.cloudPasswordSkipped)
         saveAndTest()
       }
-      Button("Set Password", role: .cancel) {}
+      Button(L10n.CloudSettings.setPassword, role: .cancel) {}
     } message: {
-      Text("Without a password, anyone with access to your Mac can view and modify your cloud credentials. We strongly recommend setting a password to protect your configuration.")
+      Text(L10n.CloudSettings.proceedWithoutPasswordMessage)
     }
   }
 
@@ -986,11 +1019,11 @@ private struct CloudCredentialFormView: View {
     // Validate password fields first
     if !protectionPassword.isEmpty {
       guard protectionPassword == confirmProtectionPassword else {
-        validationError = "Protection passwords do not match."
+        validationError = L10n.CloudSettings.protectionPasswordsDoNotMatch
         return
       }
       guard protectionPassword.count >= 4 else {
-        validationError = "Protection password must be at least 4 characters."
+        validationError = L10n.CloudSettings.protectionPasswordMinimumLength(4)
         return
       }
     }
@@ -1040,7 +1073,7 @@ private struct CloudCredentialFormView: View {
             secretKey: trimmedSecretKey
           )
         } catch {
-          validationError = "Lifecycle rule failed: \(error.localizedDescription). Ensure your credentials have lifecycle management permissions."
+          validationError = L10n.CloudSettings.lifecycleRuleFailed(error.localizedDescription)
           isValidating = false
           return
         }
@@ -1058,7 +1091,9 @@ private struct CloudCredentialFormView: View {
             // Clear the skip flag since they set a password
             UserDefaults.standard.removeObject(forKey: PreferencesKeys.cloudPasswordSkipped)
           } catch {
-            validationError = "Configuration saved, but password setup failed: \(error.localizedDescription)"
+            validationError = L10n.CloudSettings.configurationSavedButPasswordSetupFailed(
+              error.localizedDescription
+            )
             isValidating = false
             return
           }

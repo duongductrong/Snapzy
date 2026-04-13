@@ -21,12 +21,12 @@ enum KeystrokeOverlayPosition: String, CaseIterable, Identifiable {
 
   var displayName: String {
     switch self {
-    case .bottomCenter: return "Bottom Center"
-    case .bottomLeft: return "Bottom Left"
-    case .bottomRight: return "Bottom Right"
-    case .topCenter: return "Top Center"
-    case .topLeft: return "Top Left"
-    case .topRight: return "Top Right"
+    case .bottomCenter: return L10n.KeystrokePosition.bottomCenter
+    case .bottomLeft: return L10n.KeystrokePosition.bottomLeft
+    case .bottomRight: return L10n.KeystrokePosition.bottomRight
+    case .topCenter: return L10n.KeystrokePosition.topCenter
+    case .topLeft: return L10n.KeystrokePosition.topLeft
+    case .topRight: return L10n.KeystrokePosition.topRight
     }
   }
 }

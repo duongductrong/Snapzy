@@ -90,8 +90,8 @@ enum ZoomType: String, Codable, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .auto: return "Auto"
-    case .manual: return "Manual"
+    case .auto: return L10n.VideoEditor.auto
+    case .manual: return L10n.VideoEditor.manual
     }
   }
 

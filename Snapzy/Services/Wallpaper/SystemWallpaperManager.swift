@@ -346,8 +346,8 @@ class SystemWallpaperManager: ObservableObject {
   @MainActor
   func requestUserAccess() async -> [URL]? {
     let panel = NSOpenPanel()
-    panel.message = "Select the Desktop Pictures folder to grant access"
-    panel.prompt = "Grant Access"
+    panel.message = L10n.FileAccess.desktopPicturesAccessMessage
+    panel.prompt = L10n.FileAccess.grantAccessPrompt
     panel.canChooseFiles = false
     panel.canChooseDirectories = true
     panel.allowsMultipleSelection = false

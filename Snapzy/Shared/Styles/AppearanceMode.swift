@@ -16,5 +16,14 @@ enum AppearanceMode: String, CaseIterable, Identifiable {
   var id: String { rawValue }
 
   /// Display name for UI
-  var displayName: String { rawValue }
+  var displayName: String {
+    switch self {
+    case .system:
+      return L10n.Appearance.system
+    case .light:
+      return L10n.Appearance.light
+    case .dark:
+      return L10n.Appearance.dark
+    }
+  }
 }

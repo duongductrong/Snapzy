@@ -16,8 +16,8 @@ enum CloudProviderType: String, Codable, CaseIterable {
 
   var displayName: String {
     switch self {
-    case .awsS3: return "AWS S3"
-    case .cloudflareR2: return "Cloudflare R2"
+    case .awsS3: return L10n.CloudProvider.awsS3
+    case .cloudflareR2: return L10n.CloudProvider.cloudflareR2
     }
   }
 }
@@ -88,21 +88,21 @@ enum CloudError: LocalizedError {
   var errorDescription: String? {
     switch self {
     case .notConfigured:
-      return "Cloud storage is not configured. Please set up your credentials in Preferences → Cloud."
+      return L10n.CloudOperation.notConfigured
     case .invalidCredentials:
-      return "Invalid cloud credentials. Please verify your Access Key and Secret Key."
+      return L10n.CloudOperation.invalidCredentials
     case .uploadFailed(let code, let message):
-      return "Upload failed (HTTP \(code)): \(message)"
+      return L10n.CloudOperation.uploadFailed(code, message: message)
     case .networkError(let error):
-      return "Network error: \(error.localizedDescription)"
+      return L10n.CloudOperation.networkError(error.localizedDescription)
     case .fileNotFound(let url):
-      return "File not found: \(url.lastPathComponent)"
+      return L10n.CloudOperation.fileNotFound(url.lastPathComponent)
     case .signingFailed(let reason):
-      return "Request signing failed: \(reason)"
+      return L10n.CloudOperation.signingFailed(reason)
     case .invalidResponse:
-      return "Invalid response from cloud provider."
+      return L10n.CloudOperation.invalidResponse
     case .keychainError(let reason):
-      return "Keychain error: \(reason)"
+      return L10n.CloudOperation.keychainError(reason)
     }
   }
 }

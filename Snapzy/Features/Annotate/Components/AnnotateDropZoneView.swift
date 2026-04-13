@@ -17,11 +17,11 @@ struct AnnotateDropZoneView: View {
         .font(.system(size: 64))
         .foregroundColor(isDragOver ? .accentColor : .secondary)
 
-      Text("Drop an image here")
+      Text(L10n.AnnotateUI.dropImageHere)
         .font(.title2)
         .fontWeight(.medium)
 
-      Text("or capture a screenshot to annotate")
+      Text(L10n.AnnotateUI.captureScreenshotToAnnotate)
         .font(.subheadline)
         .foregroundColor(.secondary)
 

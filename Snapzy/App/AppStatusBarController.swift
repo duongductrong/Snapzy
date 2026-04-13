@@ -188,7 +188,7 @@ final class AppStatusBarController: ObservableObject {
     // Recording status indicator (when recording)
     if recorder.isActive {
       let stopItem = NSMenuItem(
-        title: "Stop Recording (\(recorder.formattedDuration))",
+        title: L10n.Menu.stopRecording(recorder.formattedDuration),
         action: #selector(stopRecordingAction),
         keyEquivalent: ""
       )
@@ -201,7 +201,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Capture Actions
     let captureAreaItem = NSMenuItem(
-      title: "Capture Area",
+      title: L10n.Actions.captureArea,
       action: #selector(captureAreaAction),
       keyEquivalent: "4"
     )
@@ -212,7 +212,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(captureAreaItem)
 
     let captureFullscreenItem = NSMenuItem(
-      title: "Capture Fullscreen",
+      title: L10n.Actions.captureFullscreen,
       action: #selector(captureFullscreenAction),
       keyEquivalent: "3"
     )
@@ -224,7 +224,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(captureFullscreenItem)
 
     let scrollingCaptureItem = NSMenuItem(
-      title: "Scrolling Capture",
+      title: L10n.Actions.scrollingCapture,
       action: #selector(captureScrollingAction),
       keyEquivalent: "6"
     )
@@ -235,7 +235,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(scrollingCaptureItem)
 
     let captureOCRItem = NSMenuItem(
-      title: "Capture Text (OCR)",
+      title: L10n.Actions.captureTextOCR,
       action: #selector(captureOCRAction),
       keyEquivalent: "2"
     )
@@ -264,7 +264,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Recording
     let recordItem = NSMenuItem(
-      title: "Record Screen",
+      title: L10n.Menu.recordScreen,
       action: #selector(recordScreenAction),
       keyEquivalent: "5"
     )
@@ -278,7 +278,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Tools
     let annotateItem = NSMenuItem(
-      title: "Open Annotate",
+      title: L10n.Actions.openAnnotate,
       action: #selector(openAnnotateAction),
       keyEquivalent: "a"
     )
@@ -290,7 +290,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(annotateItem)
 
     let editVideoItem = NSMenuItem(
-      title: "Edit Video...",
+      title: L10n.Menu.editVideo,
       action: #selector(editVideoAction),
       keyEquivalent: "e"
     )
@@ -301,7 +301,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(editVideoItem)
 
     let cloudUploadsItem = NSMenuItem(
-      title: "Cloud Uploads",
+      title: L10n.Actions.cloudUploads,
       action: #selector(openCloudUploadsAction),
       keyEquivalent: "l"
     )
@@ -312,7 +312,7 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(cloudUploadsItem)
 
     let shortcutListItem = NSMenuItem(
-      title: "Keyboard Shortcuts",
+      title: L10n.Menu.keyboardShortcuts,
       action: #selector(showShortcutListAction),
       keyEquivalent: "k"
     )
@@ -327,7 +327,7 @@ final class AppStatusBarController: ObservableObject {
     // Permission (if not granted)
     if !viewModel.hasPermission {
       let permissionItem = NSMenuItem(
-        title: "Grant Permission...",
+        title: L10n.Menu.grantPermission,
         action: #selector(grantPermissionAction),
         keyEquivalent: ""
       )
@@ -341,7 +341,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Check for Updates
     let updateItem = NSMenuItem(
-      title: "Check for Updates...",
+      title: L10n.Menu.checkForUpdates,
       action: #selector(checkForUpdatesAction),
       keyEquivalent: ""
     )
@@ -351,7 +351,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Preferences
     let prefsItem = NSMenuItem(
-      title: "Preferences...",
+      title: L10n.Menu.preferences,
       action: #selector(openPreferencesAction),
       keyEquivalent: ","
     )
@@ -365,7 +365,7 @@ final class AppStatusBarController: ObservableObject {
 
     // Quit
     let quitItem = NSMenuItem(
-      title: "Quit Snapzy",
+      title: L10n.Menu.quitSnapzy,
       action: #selector(quitAction),
       keyEquivalent: "q"
     )

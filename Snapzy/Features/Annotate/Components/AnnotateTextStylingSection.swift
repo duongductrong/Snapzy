@@ -14,7 +14,7 @@ struct TextStylingSection: View {
   var body: some View {
     if let annotation = state.selectedTextAnnotation {
       VStack(alignment: .leading, spacing: 10) {
-        SidebarSectionHeader(title: "Text Style")
+        SidebarSectionHeader(title: L10n.AnnotateUI.textStyle)
 
         // Font size slider
         fontSizeSlider(for: annotation)
@@ -33,7 +33,7 @@ struct TextStylingSection: View {
   private func fontSizeSlider(for annotation: AnnotationItem) -> some View {
     VStack(alignment: .leading, spacing: 2) {
       HStack {
-        Text("Size")
+        Text(L10n.Common.size)
           .font(.system(size: 10))
           .foregroundColor(.secondary)
         Spacer()
@@ -57,7 +57,7 @@ struct TextStylingSection: View {
 
   private func textColorPicker(for annotation: AnnotationItem) -> some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Text Color")
+      Text(L10n.AnnotateUI.textColor)
         .font(.system(size: 10))
         .foregroundColor(.secondary)
 
@@ -87,7 +87,7 @@ struct TextStylingSection: View {
 
   private func backgroundColorPicker(for annotation: AnnotationItem) -> some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Background")
+      Text(L10n.Common.background)
         .font(.system(size: 10))
         .foregroundColor(.secondary)
 
@@ -96,7 +96,7 @@ struct TextStylingSection: View {
         Button {
           state.updateAnnotationProperties(id: annotation.id, fillColor: .clear)
         } label: {
-          Text("None")
+          Text(L10n.Common.none)
             .font(.system(size: 9))
             .foregroundColor(.primary)
             .frame(width: 36, height: 24)

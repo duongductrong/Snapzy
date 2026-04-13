@@ -100,7 +100,7 @@ struct CloudKeychainStore {
 
   static func upsert(item: CloudKeychainItem, value: String) throws {
     guard let data = value.data(using: .utf8) else {
-      throw CloudError.keychainError("Failed to encode keychain value")
+      throw CloudError.keychainError(L10n.CloudOperation.failedToEncodeKeychainValue)
     }
 
     let location = Location(
@@ -120,7 +120,7 @@ struct CloudKeychainStore {
       return
     }
     guard updateStatus == errSecItemNotFound else {
-      throw CloudError.keychainError("SecItemUpdate failed: \(updateStatus)")
+      throw CloudError.keychainError(L10n.CloudOperation.secItemUpdateFailed(Int(updateStatus)))
     }
 
     var addQuery = matchQuery
@@ -129,7 +129,7 @@ struct CloudKeychainStore {
 
     let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
     guard addStatus == errSecSuccess else {
-      throw CloudError.keychainError("SecItemAdd failed: \(addStatus)")
+      throw CloudError.keychainError(L10n.CloudOperation.secItemAddFailed(Int(addStatus)))
     }
     cleanupLegacyLocations(for: item)
   }

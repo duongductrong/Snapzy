@@ -50,7 +50,7 @@ final class MockupManager {
         let hostingController = NSHostingController(rootView: contentView)
 
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Mockup"
+        window.title = L10n.AnnotateUI.modeMockup
         window.styleMask = [.titled, .closable, .resizable, .miniaturizable]
         window.setContentSize(NSSize(width: 1000, height: 700))
         window.minSize = NSSize(width: 800, height: 600)

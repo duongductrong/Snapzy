@@ -35,7 +35,7 @@ struct VideoEditorGIFSettingsPanel: View {
 
   private var dimensionsSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("Dimensions")
+      Text(L10n.Common.dimensions)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -65,7 +65,7 @@ struct VideoEditorGIFSettingsPanel: View {
 
     return Group {
       if reduction > 0 {
-        Text("~\(reduction)% smaller file size")
+        Text(L10n.VideoEditor.smallerFileSizeHint(reduction))
           .font(.system(size: 9))
           .foregroundColor(.green.opacity(0.8))
       }
@@ -74,10 +74,11 @@ struct VideoEditorGIFSettingsPanel: View {
 
   private var customDimensionFields: some View {
     HStack(spacing: 4) {
-      TextField("W", value: widthBinding, format: .number)
+      TextField("", value: widthBinding, format: .number, prompt: Text(verbatim: "W"))
         .textFieldStyle(.roundedBorder)
         .frame(width: 60)
         .controlSize(.small)
+        .accessibilityLabel(L10n.Common.width)
 
       Button {
         var settings = state.exportSettings
@@ -90,10 +91,11 @@ struct VideoEditorGIFSettingsPanel: View {
       }
       .buttonStyle(.plain)
 
-      TextField("H", value: heightBinding, format: .number)
+      TextField("", value: heightBinding, format: .number, prompt: Text(verbatim: "H"))
         .textFieldStyle(.roundedBorder)
         .frame(width: 60)
         .controlSize(.small)
+        .accessibilityLabel(L10n.Common.height)
     }
   }
 
@@ -101,7 +103,7 @@ struct VideoEditorGIFSettingsPanel: View {
 
   private var infoSection: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("GIF Info")
+      Text(L10n.VideoEditor.gifInfo)
         .font(.system(size: 11, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -113,7 +115,7 @@ struct VideoEditorGIFSettingsPanel: View {
         }
 
         if state.gifFrameCount > 0 {
-          Text("\(state.gifFrameCount) frames")
+          Text(L10n.VideoEditor.framesCount(state.gifFrameCount))
             .font(.system(size: 10))
             .foregroundColor(.secondary)
         }
@@ -131,7 +133,7 @@ struct VideoEditorGIFSettingsPanel: View {
 
   private var fileSizeSection: some View {
     VStack(alignment: .trailing, spacing: 4) {
-      Text("Current Size")
+      Text(L10n.Common.currentSize)
         .font(.system(size: 10, weight: .medium))
         .foregroundColor(.secondary)
 
@@ -141,7 +143,7 @@ struct VideoEditorGIFSettingsPanel: View {
 
       if state.exportSettings.dimensionPreset != .original,
          state.estimatedFileSize > 0 {
-        Text("Estimated")
+        Text(L10n.Common.estimated)
           .font(.system(size: 10, weight: .medium))
           .foregroundColor(.secondary)
           .padding(.top, 4)

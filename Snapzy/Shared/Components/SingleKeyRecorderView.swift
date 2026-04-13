@@ -26,13 +26,13 @@ enum AnnotationToolContext {
   var badges: [AnnotationToolBadge] {
     switch self {
     case .screenshotOnly:
-      return [AnnotationToolBadge(label: "Screenshot", color: .blue)]
+      return [AnnotationToolBadge(label: L10n.CaptureKind.screenshot, color: .blue)]
     case .recordingOnly:
-      return [AnnotationToolBadge(label: "Recording", color: .orange)]
+      return [AnnotationToolBadge(label: L10n.CaptureKind.recording, color: .orange)]
     case .both:
       return [
-        AnnotationToolBadge(label: "Screenshot", color: .blue),
-        AnnotationToolBadge(label: "Recording", color: .orange),
+        AnnotationToolBadge(label: L10n.CaptureKind.screenshot, color: .blue),
+        AnnotationToolBadge(label: L10n.CaptureKind.recording, color: .orange),
       ]
     }
   }
@@ -80,7 +80,7 @@ struct SingleKeyRecorderView: View {
 
       // Conflict warning
       if isEnabled, validationIssue == nil, let conflict = conflictingTool {
-        Label("Used by \(conflict.displayName)", systemImage: "exclamationmark.triangle")
+        Label(L10n.ShortcutRecorder.usedBy(conflict.displayName), systemImage: "exclamationmark.triangle")
           .font(.caption)
           .foregroundColor(.orange)
       }
@@ -105,10 +105,10 @@ struct SingleKeyRecorderView: View {
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
       .shortcutValidationHighlight(issue: validationIssue)
       .disabled(!isEnabled)
-      .help(isEnabled ? "Click to record a shortcut." : "Turn this shortcut on to edit it.")
+      .help(isEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
       HStack(spacing: 6) {
-        Text(isEnabled ? "On" : "Off")
+        Text(isEnabled ? L10n.Common.on : L10n.Common.off)
           .font(.caption)
           .foregroundColor(.secondary)
 

@@ -398,17 +398,17 @@ final class RecordingCoordinator: ObservableObject {
   private func showErrorAlert(_ error: RecordingError) {
     DiagnosticLogger.shared.log(.error, .recording, "Error alert shown", context: ["error": error.localizedDescription])
     let alert = NSAlert()
-    alert.messageText = "Recording Failed"
+    alert.messageText = L10n.Recording.failedTitle
     alert.informativeText = error.localizedDescription
     alert.alertStyle = .warning
 
     // Special handling for microphone permission denied
     if case .microphonePermissionDenied = error {
-      alert.messageText = "Microphone Access Required"
-      alert.informativeText = "Snapzy needs microphone permission to record audio. Please grant access in System Settings."
-      alert.addButton(withTitle: "Open System Settings")
-      alert.addButton(withTitle: "Continue Without Mic")
-      alert.addButton(withTitle: "Cancel")
+      alert.messageText = L10n.Microphone.accessRequiredTitle
+      alert.informativeText = L10n.Microphone.recordingMessage
+      alert.addButton(withTitle: L10n.Common.openSystemSettings)
+      alert.addButton(withTitle: L10n.Microphone.continueWithoutMic)
+      alert.addButton(withTitle: L10n.Common.cancel)
 
       let response = alert.runModal()
       switch response {
@@ -425,7 +425,7 @@ final class RecordingCoordinator: ObservableObject {
         break
       }
     } else {
-      alert.addButton(withTitle: "OK")
+      alert.addButton(withTitle: L10n.Common.ok)
       alert.runModal()
     }
   }
@@ -634,10 +634,10 @@ final class RecordingCoordinator: ObservableObject {
         // ScreenCaptureManager.captureCompletedPublisher → ScreenCaptureViewModel
       case .failure(let error):
         let alert = NSAlert()
-        alert.messageText = "Screenshot Failed"
+        alert.messageText = L10n.Recording.screenshotFailedTitle
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: L10n.Common.ok)
         alert.runModal()
       }
 
@@ -681,15 +681,16 @@ final class RecordingCoordinator: ObservableObject {
 
   private func resolveSaveDirectoryForOperation() -> URL? {
     SandboxFileAccessManager.shared.ensureExportDirectoryForOperation(
-      promptMessage: "Choose where Snapzy should save screenshots and recordings")
+      promptMessage: L10n.Recording.chooseSaveLocationMessage
+    )
   }
 
   private func showSaveLocationPermissionAlert() {
     let alert = NSAlert()
-    alert.messageText = "Save Location Access Required"
-    alert.informativeText = "Snapzy needs a save folder permission to continue. Please choose a folder in onboarding or grant it now."
+    alert.messageText = L10n.Recording.saveLocationAccessRequiredTitle
+    alert.informativeText = L10n.Recording.saveLocationAccessRequiredMessage
     alert.alertStyle = .warning
-    alert.addButton(withTitle: "OK")
+    alert.addButton(withTitle: L10n.Common.ok)
     alert.runModal()
   }
 

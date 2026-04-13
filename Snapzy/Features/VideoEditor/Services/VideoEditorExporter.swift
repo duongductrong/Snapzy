@@ -610,9 +610,9 @@ enum VideoEditorExporter {
     var errorDescription: String? {
       switch self {
       case .sessionCreationFailed:
-        return "Failed to create export session"
+        return L10n.VideoExport.sessionCreationFailed
       case .exportFailed:
-        return "Video export failed"
+        return L10n.VideoExport.exportFailed
       }
     }
   }

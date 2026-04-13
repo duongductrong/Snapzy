@@ -20,12 +20,12 @@ struct SkipConfirmationView: View {
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
-      Text("Skip remaining setup?")
+      Text(L10n.Onboarding.skipTitle)
         .vsHeading()
         .padding(.top, 24)
 
       // Description
-      Text("All remaining settings will use their defaults. You can always change them later in Preferences.")
+      Text(L10n.Onboarding.skipDescription)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -38,7 +38,7 @@ struct SkipConfirmationView: View {
             .font(.system(size: 14))
             .foregroundColor(VSDesignSystem.Colors.tertiary)
             .frame(width: 20)
-          Text("Keyboard shortcuts — system defaults")
+          Text(L10n.Onboarding.skipShortcutDefaults)
             .font(.system(size: 13))
             .foregroundColor(VSDesignSystem.Colors.tertiary)
         }
@@ -57,12 +57,12 @@ struct SkipConfirmationView: View {
 
       // Actions
       HStack(spacing: 16) {
-        Button("Go Back") {
+        Button(L10n.Onboarding.goBack) {
           onGoBack()
         }
         .buttonStyle(VSDesignSystem.SecondaryButtonStyle())
 
-        Button("Skip Setup") {
+        Button(L10n.Onboarding.skipSetup) {
           onConfirmSkip()
         }
         .buttonStyle(VSDesignSystem.PrimaryButtonStyle())

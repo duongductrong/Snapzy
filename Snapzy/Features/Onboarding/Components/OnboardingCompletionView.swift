@@ -19,12 +19,12 @@ struct CompletionView: View {
         .foregroundColor(.green.opacity(0.85))
 
       // Title
-      Text("You're all set!")
+      Text(L10n.Onboarding.completionTitle)
         .vsHeading()
         .padding(.top, 20)
 
       // Subtitle
-      Text("Snapzy is ready. Access it from the menu bar or use your keyboard shortcuts.")
+      Text(L10n.Onboarding.completionDescription)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -34,20 +34,20 @@ struct CompletionView: View {
       VStack(spacing: 10) {
         CompletionHintRow(
           icon: "menubar.arrow.up.rectangle",
-          title: "Menu Bar",
-          description: "Look for the camera icon in your menu bar"
+          title: L10n.Onboarding.menuBar,
+          description: L10n.Onboarding.menuBarHint
         )
 
         CompletionHintRow(
           icon: "keyboard",
-          title: "Shortcuts",
-          description: "Use ⇧⌘3, ⇧⌘4, ⇧⌘5 to capture anytime"
+          title: L10n.Preferences.shortcutsTab,
+          description: L10n.Onboarding.shortcutsHint
         )
 
         CompletionHintRow(
           icon: "gearshape",
-          title: "Preferences",
-          description: "Customize shortcuts, output format, and more"
+          title: L10n.Common.preferences,
+          description: L10n.Onboarding.preferencesHint
         )
       }
       .frame(maxWidth: 380)
@@ -60,20 +60,20 @@ struct CompletionView: View {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             onComplete()
           } label: {
-            Text("Open Preferences")
+            Text(L10n.Onboarding.openPreferences)
               .font(.system(size: 13, weight: .medium))
               .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
           .buttonStyle(.plain)
 
-          Button("Get Started") {
+          Button(L10n.Onboarding.getStarted) {
             onComplete()
           }
           .buttonStyle(VSDesignSystem.SuccessButtonStyle())
           .keyboardShortcut(.return, modifiers: [])
         }
 
-        Text("Press Enter ↵")
+        Text(L10n.Splash.pressEnter)
           .font(.system(size: 11))
           .foregroundStyle(VSDesignSystem.Colors.quaternary)
       }

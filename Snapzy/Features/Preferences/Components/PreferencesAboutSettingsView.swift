@@ -38,23 +38,26 @@ struct AboutSettingsView: View {
         .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
 
       VStack(spacing: Spacing.xs) {
-        Text("Snapzy")
+        Text(verbatim: "Snapzy")
           .font(.system(size: 28, weight: .bold, design: .rounded))
 
-        Text("Screenshot & Recording for macOS")
+        Text(L10n.PreferencesAbout.appSubtitle)
           .font(.subheadline)
           .foregroundColor(.secondary)
       }
 
       HStack(spacing: Spacing.sm) {
-        Text("Version \(appVersion)")
+        Text(L10n.PreferencesAbout.version(appVersion))
           .font(.caption)
           .foregroundColor(.secondary)
 
         if let lastCheck = updater.lastUpdateCheckDate {
           Text("•")
             .foregroundColor(.secondary.opacity(0.5))
-          Text("Checked \(lastCheck, style: .relative) ago")
+          Text(L10n.PreferencesAbout.checkedLabel)
+            .font(.caption)
+            .foregroundColor(.secondary)
+          Text(lastCheck, style: .relative)
             .font(.caption)
             .foregroundColor(.secondary)
         }
@@ -68,7 +71,7 @@ struct AboutSettingsView: View {
         Button(action: { updater.checkForUpdates() }) {
           HStack(spacing: Spacing.sm) {
             Image(systemName: "arrow.triangle.2.circlepath")
-            Text("Check for Updates")
+            Text(L10n.PreferencesAbout.checkForUpdates)
           }
         }
         .buttonStyle(.borderedProminent)
@@ -77,7 +80,7 @@ struct AboutSettingsView: View {
         Button(action: { CrashReportService.presentAlert() }) {
           HStack(spacing: Spacing.sm) {
             Image(systemName: "exclamationmark.triangle")
-            Text("Submit Crash Report")
+            Text(L10n.PreferencesAbout.submitCrashReport)
           }
         }
         .buttonStyle(.bordered)
@@ -93,7 +96,7 @@ struct AboutSettingsView: View {
             .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-        .help("Website")
+        .help(L10n.PreferencesAbout.website)
 
         Link(destination: URL(string: "https://github.com/duongductrong")!) {
           Image(systemName: "person.crop.circle")
@@ -101,7 +104,7 @@ struct AboutSettingsView: View {
             .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-        .help("GitHub")
+        .help(L10n.PreferencesAbout.github)
 
         Link(destination: URL(string: "https://github.com/duongductrong/Snapzy/issues")!) {
           Image(systemName: "ant.fill")
@@ -109,7 +112,7 @@ struct AboutSettingsView: View {
             .foregroundColor(.secondary)
         }
         .buttonStyle(.plain)
-        .help("Report a Bug")
+        .help(L10n.PreferencesAbout.reportBug)
       }
       .padding(.top, Spacing.xs)
     }
@@ -120,10 +123,10 @@ struct AboutSettingsView: View {
   private var sponsorSection: some View {
     VStack(alignment: .center, spacing: Spacing.sm) {
       VStack(spacing: 6) {
-        Text("Support Snapzy")
+        Text(L10n.PreferencesAbout.supportTitle)
           .font(.system(size: 14, weight: .semibold))
 
-        Text("Snapzy is open-source. Sponsor ongoing development if it helps your workflow.")
+        Text(L10n.PreferencesAbout.supportDescription)
           .font(.system(size: 12))
           .foregroundColor(.secondary)
           .multilineTextAlignment(.center)

@@ -32,7 +32,12 @@ enum CropAspectRatio: String, CaseIterable, Identifiable {
 
   /// Display name for UI
   var displayName: String {
-    rawValue
+    switch self {
+    case .free:
+      return L10n.Common.free
+    default:
+      return rawValue
+    }
   }
 
   /// Icon for the aspect ratio

@@ -31,16 +31,16 @@ struct ToolbarMicToggleButton: View {
 
   private var accessibilityLabel: String {
     if !isAvailable {
-      return "Microphone unavailable on this macOS version"
+      return L10n.Microphone.unavailableVersion
     }
-    return state.captureMicrophone ? "Mute microphone" : "Unmute microphone"
+    return state.captureMicrophone ? L10n.Microphone.mute : L10n.Microphone.unmute
   }
 
   private var tooltipText: String {
     if !isAvailable {
-      return "Requires macOS 15.0+"
+      return L10n.PreferencesCapture.microphoneRequiresMacOS
     }
-    return state.captureMicrophone ? "Microphone on" : "Microphone off"
+    return state.captureMicrophone ? L10n.Microphone.on : L10n.Microphone.off
   }
 
   var body: some View {
@@ -68,14 +68,14 @@ struct ToolbarMicToggleButton: View {
     .disabled(!isAvailable)
     .help(tooltipText)
     .accessibilityLabel(accessibilityLabel)
-    .accessibilityHint(isAvailable ? "Double-tap to toggle" : "")
-    .alert("Microphone Access Required", isPresented: $showPermissionDeniedAlert) {
-      Button("Open System Settings") {
+    .accessibilityHint(isAvailable ? L10n.Microphone.doubleTapToToggle : "")
+    .alert(L10n.Microphone.accessRequiredTitle, isPresented: $showPermissionDeniedAlert) {
+      Button(L10n.Common.openSystemSettings) {
         openMicrophoneSettings()
       }
-      Button("Cancel", role: .cancel) {}
+      Button(L10n.Common.cancel, role: .cancel) {}
     } message: {
-      Text("Snapzy needs microphone permission. Please enable it in System Settings > Privacy & Security > Microphone.")
+      Text(L10n.Microphone.preferencesMessage)
     }
   }
 

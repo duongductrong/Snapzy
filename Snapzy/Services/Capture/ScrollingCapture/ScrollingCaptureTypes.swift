@@ -28,19 +28,19 @@ enum ScrollingCaptureRuntimeState {
   var label: String {
     switch self {
     case .ready:
-      return "Ready"
+      return L10n.ScrollingCapture.runtimeReady
     case .streaming:
-      return "Capturing"
+      return L10n.ScrollingCapture.runtimeCapturing
     case .previewing:
-      return "Live"
+      return L10n.ScrollingCapture.runtimeLive
     case .committing:
-      return "Processing"
+      return L10n.ScrollingCapture.runtimeProcessing
     case .paused:
-      return "Paused"
+      return L10n.ScrollingCapture.runtimePaused
     case .finalizing:
-      return "Finishing"
+      return L10n.ScrollingCapture.runtimeFinishing
     case .saving:
-      return "Saving"
+      return L10n.ScrollingCapture.runtimeSaving
     }
   }
 }
@@ -59,17 +59,17 @@ enum ScrollingCapturePreviewTruthState: Equatable {
     case .ready:
       return nil
     case .committedOnly:
-      return "Captured"
+      return L10n.ScrollingCapture.badgeCaptured
     case .liveSynced:
-      return "Live"
+      return L10n.ScrollingCapture.badgeLive
     case .liveAhead:
-      return "Syncing"
+      return L10n.ScrollingCapture.badgeSyncing
     case .pausedRecovery:
-      return "Paused"
+      return L10n.ScrollingCapture.badgePaused
     case .finalizing:
-      return "Finishing"
+      return L10n.ScrollingCapture.badgeFinishing
     case .saving:
-      return "Saving"
+      return L10n.ScrollingCapture.badgeSaving
     }
   }
 
@@ -96,6 +96,147 @@ struct ScrollingCaptureSelectionGuidance {
   let tone: ScrollingCaptureSelectionGuidanceTone
 }
 
+enum ScrollingCaptureSelectionGuidanceKind {
+  case frameOnlyScrollingContent
+  case releaseToLockArea
+  case areaUpdated
+  case keepOneDirection
+  case keepCapturing
+  case tryDoneAgain
+  case heightLimitReached
+  case pressDoneNoNewContent
+  case pressDoneCurrentResultReady
+  case continueManually
+  case holdSteady
+  case slowDown
+  case keepSteadierPace
+  case previewNeedsRecovery
+  case keepScrollingDown
+  case scrollDownSteadily
+  case savingCurrentResult
+  case lockingCurrentCapture
+  case savingLongScreenshot
+
+  var guidance: ScrollingCaptureSelectionGuidance {
+    switch self {
+    case .frameOnlyScrollingContent:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceFrameOnlyScrollingContent,
+        detail: L10n.ScrollingCapture.guidanceThenPressStartCapture,
+        tone: .neutral
+      )
+    case .releaseToLockArea:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceReleaseToLockArea,
+        detail: L10n.ScrollingCapture.guidanceKeepOnlyScrollingContent,
+        tone: .active
+      )
+    case .areaUpdated:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceAreaUpdated,
+        detail: L10n.ScrollingCapture.guidanceKeepOnlyScrollingContent,
+        tone: .active
+      )
+    case .keepOneDirection:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceKeepOneDirection,
+        detail: L10n.ScrollingCapture.guidanceReverseScrollingCanBreakStitch,
+        tone: .warning
+      )
+    case .keepCapturing:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceKeepCapturing,
+        detail: L10n.ScrollingCapture.guidanceThenTryDoneAgain,
+        tone: .warning
+      )
+    case .tryDoneAgain:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceTryDoneAgain,
+        detail: L10n.ScrollingCapture.guidanceCurrentResultStillReady,
+        tone: .warning
+      )
+    case .heightLimitReached:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceHeightLimitReached,
+        detail: L10n.ScrollingCapture.guidancePressDoneToSave,
+        tone: .warning
+      )
+    case .pressDoneNoNewContent:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidancePressDoneToSave,
+        detail: L10n.ScrollingCapture.guidanceNoNewContentDetected,
+        tone: .active
+      )
+    case .pressDoneCurrentResultReady:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidancePressDoneToSave,
+        detail: L10n.ScrollingCapture.guidanceCurrentStitchedResultReady,
+        tone: .active
+      )
+    case .continueManually:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceContinueManually,
+        detail: L10n.ScrollingCapture.guidancePressDoneWhenReady,
+        tone: .active
+      )
+    case .holdSteady:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceHoldSteady,
+        detail: L10n.ScrollingCapture.guidanceSnapzyLockingFirstFrame,
+        tone: .progress
+      )
+    case .slowDown:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceSlowDown,
+        detail: L10n.ScrollingCapture.guidanceKeepOneDirectionSoSnapzyCanRealign,
+        tone: .warning
+      )
+    case .keepSteadierPace:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceKeepSteadierPace,
+        detail: L10n.ScrollingCapture.guidanceStayOnOneDirection,
+        tone: .warning
+      )
+    case .previewNeedsRecovery:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidancePreviewNeedsRecovery,
+        detail: L10n.ScrollingCapture.guidanceKeepOneDirectionOrRestart,
+        tone: .warning
+      )
+    case .keepScrollingDown:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceKeepScrollingDown,
+        detail: L10n.ScrollingCapture.guidanceOneDirectionSteadyPace,
+        tone: .progress
+      )
+    case .scrollDownSteadily:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceScrollDownSteadily,
+        detail: L10n.ScrollingCapture.guidanceKeepOneDirectionForCleanStitch,
+        tone: .progress
+      )
+    case .savingCurrentResult:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceSavingCurrentResult,
+        detail: L10n.ScrollingCapture.guidanceHeightLimitReached,
+        tone: .active
+      )
+    case .lockingCurrentCapture:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceLockingCurrentCapture,
+        detail: L10n.ScrollingCapture.guidanceSnapzySealingStitchedResult,
+        tone: .progress
+      )
+    case .savingLongScreenshot:
+      return ScrollingCaptureSelectionGuidance(
+        title: L10n.ScrollingCapture.guidanceSavingLongScreenshot,
+        detail: L10n.ScrollingCapture.guidancePleaseWait,
+        tone: .progress
+      )
+    }
+  }
+}
+
 enum ScrollingCaptureConfiguration {
   static var showHints: Bool {
     UserDefaults.standard.object(forKey: PreferencesKeys.scrollingCaptureShowHints) as? Bool ?? true
@@ -109,9 +250,9 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   @Published var selectedRect: CGRect
   @Published var phase: ScrollingCapturePhase = .ready
   @Published var runtimeState: ScrollingCaptureRuntimeState = .ready
-  @Published var statusText =
-    "Adjust the region so only the moving content stays inside, then press Start Capture. Press Esc to cancel."
-  @Published var previewCaption = "Start Capture to lock the first frame"
+  @Published var statusText = L10n.ScrollingCaptureStatus.adjustRegion
+  @Published var guidanceKind: ScrollingCaptureSelectionGuidanceKind = .frameOnlyScrollingContent
+  @Published var previewCaption = L10n.ScrollingCapture.captionStartCaptureToLockFirstFrame
   @Published var previewImage: CGImage?
   @Published var livePreviewImage: CGImage?
   @Published var isUsingLivePreview = false
@@ -123,6 +264,11 @@ final class ScrollingCaptureSessionModel: ObservableObject {
 
   init(selectedRect: CGRect) {
     self.selectedRect = selectedRect
+  }
+
+  func setStatus(_ text: String, guidance: ScrollingCaptureSelectionGuidanceKind) {
+    statusText = text
+    guidanceKind = guidance
   }
 
   var selectionSummary: String {
@@ -158,186 +304,23 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   var previewTruthDescription: String {
     switch previewTruthState {
     case .ready:
-      return "Press Start Capture to begin."
+      return L10n.ScrollingCapture.previewPressStartToBegin
     case .committedOnly:
-      return "Showing the latest stitched capture."
+      return L10n.ScrollingCapture.previewShowingLatestStitchedCapture
     case .liveSynced:
-      return "Preview matches the stitched capture."
+      return L10n.ScrollingCapture.previewMatchesStitchedCapture
     case .liveAhead:
-      return "Showing the latest stitched result while Snapzy locks newer content."
+      return L10n.ScrollingCapture.previewShowingLatestWhileLockingNewerContent
     case .pausedRecovery:
-      return "Preview paused — scroll slowly so Snapzy can re-align."
+      return L10n.ScrollingCapture.previewPausedScrollSlowly
     case .finalizing:
-      return "Finishing up — saving your capture."
+      return L10n.ScrollingCapture.previewFinishingSavingCapture
     case .saving:
-      return "Saving your capture…"
+      return L10n.ScrollingCapture.previewSavingCapture
     }
   }
 
   var selectionGuidance: ScrollingCaptureSelectionGuidance {
-    let normalizedStatus = statusText.lowercased()
-
-    switch phase {
-    case .ready:
-      if normalizedStatus.contains("release to lock") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Release to lock area",
-          detail: "Keep only the scrolling content",
-          tone: .active
-        )
-      }
-
-      if normalizedStatus.contains("region updated") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Area updated",
-          detail: "Keep only the scrolling content",
-          tone: .active
-        )
-      }
-
-      return ScrollingCaptureSelectionGuidance(
-        title: "Frame only the scrolling content",
-        detail: "Then press Start Capture",
-        tone: .neutral
-      )
-
-    case .capturing:
-      if normalizedStatus.contains("direction changed")
-        || normalizedStatus.contains("mixed scroll directions")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Keep one direction",
-          detail: "Reverse scrolling can break the stitch",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("no savable") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Keep capturing",
-          detail: "Then try Done again",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("save failed") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Try Done again",
-          detail: "Current result is still ready",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("height limit reached")
-        || normalizedStatus.contains("output limit")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Height limit reached",
-          detail: "Press Done to save",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("no new content detected")
-        || normalizedStatus.contains("probably at the end")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Press Done to save",
-          detail: "No new content was detected",
-          tone: .active
-        )
-      }
-
-      if normalizedStatus.contains("press done")
-        || normalizedStatus.contains("reached the end")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Press Done to save",
-          detail: "Current stitched result is ready",
-          tone: .active
-        )
-      }
-
-      if normalizedStatus.contains("continue scrolling manually") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Continue manually",
-          detail: "Press Done when you're ready",
-          tone: .active
-        )
-      }
-
-      if normalizedStatus.contains("first frame") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Hold steady",
-          detail: "Snapzy is locking the first frame",
-          tone: .progress
-        )
-      }
-
-      if normalizedStatus.contains("alignment paused")
-        || normalizedStatus.contains("slow down")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Slow down",
-          detail: "Keep one direction so Snapzy can re-align",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("couldn't align") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Keep a steadier pace",
-          detail: "Stay on one direction",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("unable to capture")
-        || normalizedStatus.contains("unable to render")
-        || normalizedStatus.contains("preview refresh failed")
-      {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Preview needs recovery",
-          detail: "Keep one direction or restart",
-          tone: .warning
-        )
-      }
-
-      if normalizedStatus.contains("waiting for new content") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Keep scrolling down",
-          detail: "One direction, steady pace",
-          tone: .progress
-        )
-      }
-
-      return ScrollingCaptureSelectionGuidance(
-        title: "Scroll down steadily",
-        detail: "Keep one direction for a clean stitch",
-        tone: .progress
-      )
-
-    case .finalizing:
-      if normalizedStatus.contains("height limit reached") {
-        return ScrollingCaptureSelectionGuidance(
-          title: "Saving current result",
-          detail: "Height limit reached",
-          tone: .active
-        )
-      }
-
-      return ScrollingCaptureSelectionGuidance(
-        title: "Locking current capture",
-        detail: "Snapzy is sealing the stitched result",
-        tone: .progress
-      )
-
-    case .saving:
-      return ScrollingCaptureSelectionGuidance(
-        title: "Saving long screenshot",
-        detail: "Please wait",
-        tone: .progress
-      )
-    }
+    guidanceKind.guidance
   }
 }

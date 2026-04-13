@@ -81,9 +81,9 @@ enum VideoQuality: String, CaseIterable, Codable {
 
   var displayName: String {
     switch self {
-    case .high: return "High"
-    case .medium: return "Medium"
-    case .low: return "Low"
+    case .high: return L10n.RecordingToolbar.qualityHigh
+    case .medium: return L10n.RecordingToolbar.qualityMedium
+    case .low: return L10n.RecordingToolbar.qualityLow
     }
   }
 }
@@ -110,12 +110,12 @@ enum RecordingError: Error, LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .permissionDenied: return "Screen recording permission denied"
-    case .microphonePermissionDenied: return "Microphone permission denied"
-    case .noDisplayFound: return "No display found"
-    case .setupFailed(let msg): return "Setup failed: \(msg)"
-    case .writeFailed(let msg): return "Write failed: \(msg)"
-    case .cancelled: return "Recording cancelled"
+    case .permissionDenied: return L10n.Recording.screenPermissionDenied
+    case .microphonePermissionDenied: return L10n.Recording.microphonePermissionDenied
+    case .noDisplayFound: return L10n.Recording.noDisplayFound
+    case .setupFailed(let msg): return L10n.Recording.setupFailed(msg)
+    case .writeFailed(let msg): return L10n.Recording.writeFailed(msg)
+    case .cancelled: return L10n.Recording.cancelled
     }
   }
 }
@@ -258,7 +258,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "Failed to load shareable content for recording")
       state = .idle
-      let message = "ScreenCaptureKit could not load shareable content: \(error.localizedDescription)"
+      let message = L10n.Recording.shareableContentLoadFailed(error.localizedDescription)
       self.error = .setupFailed(message)
       throw RecordingError.setupFailed(message)
     }
@@ -366,7 +366,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
     // Validate writer status
     guard session.assetWriter?.status == .writing else {
-      let errorMsg = session.assetWriter?.error?.localizedDescription ?? "Failed to start writing"
+      let errorMsg = session.assetWriter?.error?.localizedDescription ?? L10n.Recording.failedToStartWriting
       state = .idle
       self.error = .setupFailed(errorMsg)
       throw RecordingError.setupFailed(errorMsg)
@@ -515,7 +515,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
   private func setupAssetWriter(width: Int, height: Int, captureSystemAudio: Bool, captureMicrophone: Bool) throws {
     guard let url = outputURL else {
-      throw RecordingError.setupFailed("No output URL")
+      throw RecordingError.setupFailed(L10n.Recording.noOutputURL)
     }
 
     // Remove existing file if any
@@ -550,7 +550,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     guard writer.canAdd(videoIn) else {
-      throw RecordingError.setupFailed("Cannot add video writer input")
+      throw RecordingError.setupFailed(L10n.Recording.cannotAddVideoWriterInput)
     }
 
     videoIn.expectsMediaDataInRealTime = true
@@ -587,7 +587,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       let audioIn = AVAssetWriterInput(mediaType: .audio, outputSettings: audioSettings)
       audioIn.expectsMediaDataInRealTime = true
       guard writer.canAdd(audioIn) else {
-        throw RecordingError.setupFailed("Cannot add system audio writer input")
+        throw RecordingError.setupFailed(L10n.Recording.cannotAddSystemAudioWriterInput)
       }
       session.audioInput = audioIn
       writer.add(audioIn)
@@ -604,7 +604,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       let micIn = AVAssetWriterInput(mediaType: .audio, outputSettings: micSettings)
       micIn.expectsMediaDataInRealTime = true
       guard writer.canAdd(micIn) else {
-        throw RecordingError.setupFailed("Cannot add microphone writer input")
+        throw RecordingError.setupFailed(L10n.Recording.cannotAddMicrophoneWriterInput)
       }
       session.microphoneInput = micIn
       writer.add(micIn)
@@ -685,12 +685,12 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     let screenBounds = CGRect(x: 0, y: 0, width: screenFrame.width, height: screenFrame.height)
     let clampedRect = relativeRect.intersection(screenBounds)
     guard !clampedRect.isEmpty else {
-      throw RecordingError.setupFailed("Selection area is outside display bounds")
+      throw RecordingError.setupFailed(L10n.Recording.selectionOutsideDisplayBounds)
     }
 
     let alignedRect = pixelAlignedRect(clampedRect, scaleFactor: scaleFactor, bounds: screenBounds)
     guard !alignedRect.isEmpty else {
-      throw RecordingError.setupFailed("Selection area is outside display bounds")
+      throw RecordingError.setupFailed(L10n.Recording.selectionOutsideDisplayBounds)
     }
 
     // ScreenCaptureKit sourceRect uses top-left origin relative to display.
