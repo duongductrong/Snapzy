@@ -2,6 +2,8 @@
 
 This doc follows the runtime path from trigger to saved asset, Quick Access, editors, and cloud actions.
 
+User-facing copy in these flows is localized through `Snapzy/Shared/Localization/L10n.swift` and `Snapzy/Resources/Localizable.xcstrings`. Privacy permission copy lives in `InfoPlist.strings`. For localization ownership and rules, read [`localization.md`](localization.md).
+
 ## Flow Index
 
 ```mermaid
@@ -76,6 +78,7 @@ flowchart TD
 - Fullscreen and area capture both run through `ScreenCaptureManager`, with desktop icon/widget exclusion and include-own-app settings applied before the image is written.
 - OCR is the only capture path that does not create a file; it captures a `CGImage`, runs Vision OCR, and copies text to the pasteboard.
 - Object cutout is macOS 14+ only. JPEG is overridden to PNG because transparency must be preserved.
+- Capture toasts, alerts, open-panel prompts, and error surfaces are localized through `L10n`.
 
 ## Scrolling Capture
 
@@ -115,6 +118,7 @@ flowchart TD
 - The subsystem in `Services/Capture/ScrollingCapture/` is intentionally self-contained: preview, stitcher, HUD, metrics, commit scheduling, and window placement all live there.
 - The preview lane and commit lane are separate. Live preview can stay ahead while the stitcher locks the next safe frame.
 - Vision is a recovery tool inside `ScrollingCaptureStitcher`, not the default hot path.
+- Session guidance, runtime badges, preview captions, and recovery toasts are localized and should stay in sync with `docs/localization.md`.
 
 ## Recording, GIF Output, and Smart Camera
 
@@ -154,6 +158,7 @@ flowchart TD
 - Recording metadata is stored separately from the media file and powers Smart Camera / Follow Mouse in the video editor.
 - GIF output is a two-step flow: record video first, then convert and swap the Quick Access item.
 - `RecordingCoordinator` owns toolbar and overlay UX. `ScreenRecordingManager` owns media capture, timing, and metadata persistence.
+- Recording toolbar labels, output mode copy, microphone/save-folder alerts, and export errors are localized.
 
 ## Post-Capture Routing
 
@@ -195,6 +200,7 @@ flowchart TD
 - `AfterCaptureAction.save` is not a post-write callback. It changes the destination before the file is written.
 - Current cloud behavior is manual from Quick Access or Annotate for screenshots. The preference toggle enables those affordances; it does not auto-upload in `PostCaptureActionHandler`.
 - Temp captures are intentionally stored in Application Support, not `/tmp`, so drag-and-drop remains stable.
+- Quick Access action labels and post-capture error states are localized.
 
 ## Annotate and Cloud Re-Upload
 
@@ -225,6 +231,7 @@ flowchart TD
 
 - Annotate windows cache session state per Quick Access item so the user can reopen the same card and keep editing.
 - If a screenshot was already uploaded, later edits mark the cloud state stale until the user re-uploads.
+- Annotate dialogs, preset actions, mockup labels, cutout/export alerts, and cloud re-upload messaging are localized.
 
 ## Video Editor
 
@@ -250,6 +257,8 @@ flowchart TD
 
 | File | Responsibility |
 | --- | --- |
+| `Snapzy/Shared/Localization/L10n.swift` | Shared localization bridge for these flows |
+| `Snapzy/Resources/Localizable.xcstrings` | String Catalog backing translated flow copy |
 | `Snapzy/Features/Capture/CaptureViewModel.swift` | Entry point for screenshot, scrolling capture, OCR, cutout, and recording launch |
 | `Snapzy/Services/Capture/ScreenCaptureManager.swift` | Core screenshot engine and file writing |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Quick Access, clipboard, and screenshot auto-open routing |

@@ -124,6 +124,7 @@ Snapzy/
   Shared/
     Components/
     Extensions/
+    Localization/
     Services/
     Styles/
 
@@ -132,6 +133,9 @@ Snapzy/
 
   Config/
   Resources/
+    Localizable.xcstrings
+    en.lproj/
+    vi.lproj/
 ```
 
 ## Feature Roots
@@ -165,6 +169,7 @@ Snapzy/
 | `Services/Updates/` | Sparkle updater bootstrap |
 | `Services/Wallpaper/` | Desktop icon and wallpaper helpers used by capture/editor UX |
 | `Services/Appearance/` | Theme and appearance mode management |
+| `Shared/Localization/` | Shared localization helpers for AppKit, service copy, alerts, toasts, and display labels |
 
 ## Persistence Map
 
@@ -194,11 +199,15 @@ Snapzy/
 - `RecordingCoordinator` owns the toolbar/overlay UX. `ScreenRecordingManager` owns the media pipeline.
 - `ScrollingCaptureCoordinator` is its own subsystem. Treat `Services/Capture/ScrollingCapture/*` as a unit.
 - `CloudManager` is a facade. Provider-specific behavior lives under `Services/Cloud/`.
+- `Shared/Localization/L10n.swift` is the bridge for user-facing copy that does not live directly in SwiftUI view literals.
+- `Resources/Localizable.xcstrings` and `Resources/*/InfoPlist.strings` own translated runtime copy and privacy permission text.
+- Keep brand names, file formats, key labels, MIME types, and other technical tokens verbatim unless product behavior explicitly changes.
 
 ## Agent Edit Guide
 
 | Task | Start here |
 | --- | --- |
+| Localization, String Catalog, alert copy, translated display labels | `Shared/Localization/L10n.swift`, `Resources/Localizable.xcstrings`, `docs/localization.md` |
 | New screenshot mode or capture behavior | `Features/Capture/CaptureViewModel.swift`, `Services/Capture/ScreenCaptureManager.swift`, `docs/capture-flow.md` |
 | Scrolling capture UX or stitching | `Services/Capture/ScrollingCapture/` |
 | Recording toolbar, overlays, GIF flow | `Features/Recording/`, `Services/Capture/ScreenRecordingManager.swift` |

@@ -8,6 +8,7 @@ Flow-first entrypoint for humans and agents working in Snapzy.
 | --- | --- | --- |
 | [`../README.md`](../README.md) | Public product summary, install, feature list | Any new session |
 | [`project-structure.md`](project-structure.md) | Real source-tree map, runtime architecture, edit guide | Any code change |
+| [`localization.md`](localization.md) | Localization architecture, String Catalog ownership, translation rules, verification | Copy, UI text, alerts, onboarding, preferences |
 | [`capture-flow.md`](capture-flow.md) | Feature flows for capture, scrolling capture, recording, post-capture, editors | Capture, media, UX work |
 | [`project-build.md`](project-build.md) | Local build and archive commands | Build, packaging |
 | [`project-workflow.md`](project-workflow.md) | Release and appcast workflow | Shipping updates |
@@ -56,6 +57,7 @@ flowchart TD
 ## Agent Reading Order
 
 - Capture, scrolling capture, recording: `project-structure.md` -> `capture-flow.md`
+- Localization or user-facing copy: `project-structure.md` -> `localization.md` -> `capture-flow.md` when capture/editor UX is affected
 - Onboarding, menu bar, preferences: `project-structure.md`
 - Cloud storage and upload UX: `project-structure.md` + `capture-flow.md`
 - Build, release, updater: `project-build.md` -> `project-workflow.md` -> `local-update-testing.md`
