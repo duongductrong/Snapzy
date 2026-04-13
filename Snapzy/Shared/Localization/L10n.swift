@@ -1205,6 +1205,46 @@ enum L10n {
       defaultValue: "Choose your preferred appearance",
       comment: "General preferences setting description"
     )
+    static let languageTitle = string(
+      "preferences-general.language-title",
+      defaultValue: "App Language",
+      comment: "General preferences setting title"
+    )
+    static let languageDescription = string(
+      "preferences-general.language-description",
+      defaultValue: "Choose the language used across Snapzy",
+      comment: "General preferences setting description"
+    )
+    static let languageSystem = string(
+      "preferences-general.language-system",
+      defaultValue: "System Default",
+      comment: "General preferences picker option that follows the macOS app language"
+    )
+    static let languageRestartHint = string(
+      "preferences-general.language-restart-hint",
+      defaultValue: "Language changes apply after relaunch",
+      comment: "General preferences helper text shown when a language change is pending"
+    )
+    static let languageRelaunchConfirmationTitle = string(
+      "preferences-general.language-relaunch-confirmation-title",
+      defaultValue: "Relaunch Snapzy?",
+      comment: "Alert title shown before the app relaunches to apply a language change"
+    )
+    static let languageRelaunchConfirmationMessage = string(
+      "preferences-general.language-relaunch-confirmation-message",
+      defaultValue: "Snapzy needs to quit and reopen to apply this language change everywhere.",
+      comment: "Alert message shown before the app relaunches to apply a language change"
+    )
+    static let languageRelaunchConfirmationAction = string(
+      "preferences-general.language-relaunch-confirmation-action",
+      defaultValue: "Relaunch Snapzy",
+      comment: "Alert button title that confirms relaunching the app after changing language"
+    )
+    static let languageRelaunchErrorTitle = string(
+      "preferences-general.language-relaunch-error-title",
+      defaultValue: "Could Not Relaunch Snapzy",
+      comment: "Alert title shown when the app cannot relaunch after changing language"
+    )
     static let saveLocationTitle = string(
       "preferences-general.save-location-title",
       defaultValue: "Save location",

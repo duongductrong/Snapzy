@@ -45,6 +45,8 @@ struct GeneralSettingsView: View {
       }
 
       Section(L10n.PreferencesGeneral.appearanceSection) {
+        PreferencesLanguageSettingRow()
+
         SettingRow(icon: "circle.lefthalf.filled", title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
           AppearanceModePicker(selection: $themeManager.preferredAppearance)
         }
