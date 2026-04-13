@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Snapzy требуется доступ к микрофону для записи звука вместе с записями экрана.";
+"NSScreenCaptureUsageDescription" = "Snapzy требуется разрешение на запись экрана, чтобы делать снимки экрана и записывать ваш экран.";

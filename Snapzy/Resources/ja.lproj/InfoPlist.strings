@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Snapzy では、画面録画で音声を録音するにはマイクへのアクセスが必要です。";
+"NSScreenCaptureUsageDescription" = "Snapzy では、スクリーンショットをキャプチャして画面を記録するには、画面記録許可が必要です。";

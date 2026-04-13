@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Snapzy a besoin d'un accès au microphone pour enregistrer de l'audio avec vos enregistrements d'écran.";
+"NSScreenCaptureUsageDescription" = "Snapzy a besoin d'une autorisation d'enregistrement d'écran pour capturer des captures d'écran et enregistrer votre écran.";

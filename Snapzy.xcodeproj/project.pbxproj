@@ -117,6 +117,14 @@
 				en,
 				vi,
 				Base,
+				zh-Hans,
+				zh-Hant,
+				es,
+				ja,
+				ko,
+				ru,
+				fr,
+				de,
 			);
 			mainGroup = A364629A2F18EEDA0003453D;
 			minimizedProjectReferenceProxies = 1;

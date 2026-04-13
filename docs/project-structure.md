@@ -134,8 +134,7 @@ Snapzy/
   Config/
   Resources/
     Localizable.xcstrings
-    en.lproj/
-    vi.lproj/
+    *.lproj/
 ```
 
 ## Feature Roots

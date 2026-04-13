@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "Snapzy가 화면 녹화와 함께 오디오를 녹음하려면 마이크 액세스 권한이 필요합니다.";
+"NSScreenCaptureUsageDescription" = "Snapzy가 스크린샷을 캡처하고 화면을 녹화하려면 화면 녹화 권한이 필요합니다.";

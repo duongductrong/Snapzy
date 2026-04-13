@@ -5,7 +5,7 @@ This doc describes how Snapzy localizes user-facing text today. Keep it synced w
 ## Current State
 
 - Source language: `en`
-- Supported app locales: `en`, `vi`
+- Supported app locales: `en`, `vi`, `zh-Hans`, `zh-Hant`, `es`, `ja`, `ko`, `ru`, `fr`, `de`
 - Language selection: native macOS app language selection. Snapzy does not ship a custom language picker.
 - Coverage: menu bar, onboarding, preferences, capture flows, recording flows, Quick Access, Annotate, Video Editor, cloud dialogs, alerts, toasts, and scrolling capture HUD/status text
 
@@ -17,7 +17,7 @@ flowchart LR
     C["AppKit alerts, open panels, menus"] --> D["Shared/Localization/L10n.swift"]
     E["Shared displayName/errorDescription/status copy"] --> D
     D --> B
-    F["Privacy permission copy"] --> G["Resources/en.lproj + vi.lproj/InfoPlist.strings"]
+    F["Privacy permission copy"] --> G["Resources/*.lproj/InfoPlist.strings"]
 ```
 
 ## File Map
@@ -25,9 +25,8 @@ flowchart LR
 | Path | Owns |
 | --- | --- |
 | `Snapzy/Shared/Localization/L10n.swift` | Shared localization bridge for AppKit strings, alerts, toasts, `displayName`, `errorDescription`, and text that does not auto-extract cleanly from SwiftUI |
-| `Snapzy/Resources/Localizable.xcstrings` | Main String Catalog for `en` and `vi` |
-| `Snapzy/Resources/en.lproj/InfoPlist.strings` | English privacy usage descriptions |
-| `Snapzy/Resources/vi.lproj/InfoPlist.strings` | Vietnamese privacy usage descriptions |
+| `Snapzy/Resources/Localizable.xcstrings` | Main String Catalog for all supported locales |
+| `Snapzy/Resources/*.lproj/InfoPlist.strings` | Privacy usage descriptions per locale |
 | `Snapzy.xcodeproj/project.pbxproj` | Project regions and String Catalog related build settings |
 
 ## Working Rules
