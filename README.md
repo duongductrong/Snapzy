@@ -13,6 +13,12 @@
   </p>
 
   <p>
+    <a href="./README.md">🇺🇸 English</a> •
+    <a href="./README.vi.md">🇻🇳 Tiếng Việt</a> •
+    <a href="./README.zh-CN.md">🇨🇳 简体中文</a>
+  </p>
+
+  <p>
     <a href="#features">Features</a> •
     <a href="#install">Install</a> •
     <a href="#build-from-source">Build from source</a> •
