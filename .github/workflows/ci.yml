@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/swift-module-cache
-          swift -module-cache-path build/swift-module-cache tools/localization/catalog-tool.swift verify
+          swift -module-cache-path build/swift-module-cache tools/localization/CatalogTool.swift verify
 
       - name: Build
         run: |
