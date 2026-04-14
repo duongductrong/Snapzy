@@ -6064,7 +6064,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thay \"%@\" bang thiết lập hiện tại?"
+            "value": "Thay \"%@\" bằng thiết lập hiện tại?"
           }
         },
         "zh-Hans": {
@@ -6192,7 +6192,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cập nhật preset đang chọn bang giá trị hiện tại"
+            "value": "Cập nhật preset đang chọn bằng giá trị hiện tại"
           }
         },
         "zh-Hans": {

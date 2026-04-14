@@ -7280,7 +7280,7 @@
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Track ID khong khop: mong đợi %@, hiện có %@. Vui lòng thử xuất lại."
+            "value": "Track ID không khớp: mong đợi %@, hiện có %@. Vui lòng thử xuất lại."
           }
         },
         "zh-Hans": {
