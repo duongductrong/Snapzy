@@ -9,6 +9,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.1] - 2026-04-14
+
+### Bug Fixes
+-  Correct case of CatalogTool.swift in CI workflow (c47093c)
+-  Correct Vietnamese translations in localization files (799d264)
+
+### Chore
+- docs: Update localization section in README to include flag emojis for languages (47f6aa9)
+- refactor: Simplify status item icon setup by using a dedicated method for idle status image (d6e2d2c)
+- refactor: Add localization support for permissions and restructure localization files (2634241)
+- chore: update appcast, cask, and readme for v1.7.0 (c82391c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.0] - 2026-04-13
 
 ### Features
