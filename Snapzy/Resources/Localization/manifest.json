@@ -1,0 +1,123 @@
+{
+  "sourceDirectory": "Snapzy/Resources/Localization",
+  "sourceLanguage": "en",
+  "version": "1.0",
+  "fragments": [
+    {
+      "file": "Shared/Common.xcstrings",
+      "prefixes": [
+        "action.",
+        "app-identity.",
+        "appearance.",
+        "common."
+      ]
+    },
+    {
+      "file": "Shared/Errors.xcstrings",
+      "prefixes": [
+        "crash-report."
+      ]
+    },
+    {
+      "file": "Shared/Permissions.xcstrings",
+      "prefixes": [
+        "file-access.",
+        "permission-row.",
+        "preferences-permissions."
+      ]
+    },
+    {
+      "file": "Features/Annotate.xcstrings",
+      "prefixes": [
+        "annotate.",
+        "annotate-context."
+      ]
+    },
+    {
+      "file": "Features/Capture.xcstrings",
+      "prefixes": [
+        "after-capture.",
+        "capture-kind.",
+        "capture-storage.",
+        "foreground-cutout.",
+        "ocr.",
+        "preferences-capture.",
+        "screen-capture.",
+        "scrolling-capture.",
+        "scrolling-capture-status."
+      ]
+    },
+    {
+      "file": "Features/Cloud.xcstrings",
+      "prefixes": [
+        "cloud-expire.",
+        "cloud-operation.",
+        "cloud-password.",
+        "cloud-provider.",
+        "cloud-settings.",
+        "cloud-transfer.",
+        "cloud-usage.",
+        "preferences-cloud-history."
+      ]
+    },
+    {
+      "file": "Features/Menubar.xcstrings",
+      "prefixes": [
+        "menu."
+      ]
+    },
+    {
+      "file": "Features/Onboarding.xcstrings",
+      "prefixes": [
+        "onboarding.",
+        "splash.",
+        "sponsor."
+      ]
+    },
+    {
+      "file": "Features/QuickAccess.xcstrings",
+      "prefixes": [
+        "preferences-quick-access.",
+        "quick-access."
+      ]
+    },
+    {
+      "file": "Features/Recording.xcstrings",
+      "prefixes": [
+        "gif.",
+        "keystroke-position.",
+        "microphone.",
+        "recording.",
+        "recording-annotation.",
+        "recording-toolbar."
+      ]
+    },
+    {
+      "file": "Features/Settings.xcstrings",
+      "prefixes": [
+        "preferences-about.",
+        "preferences-general.",
+        "preferences.tab."
+      ]
+    },
+    {
+      "file": "Features/Shortcuts.xcstrings",
+      "prefixes": [
+        "preferences-shortcuts.",
+        "shortcut-overlay.",
+        "shortcut-recorder.",
+        "shortcut-validation.",
+        "system-shortcuts."
+      ]
+    },
+    {
+      "file": "Features/VideoEditor.xcstrings",
+      "prefixes": [
+        "video-editor.",
+        "video-editor-timeline.",
+        "video-export.",
+        "zoom-compositor."
+      ]
+    }
+  ]
+}

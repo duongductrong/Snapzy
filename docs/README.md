@@ -8,7 +8,7 @@ Flow-first entrypoint for humans and agents working in Snapzy.
 | --- | --- | --- |
 | [`../README.md`](../README.md) | Public product summary, install, feature list | Any new session |
 | [`project-structure.md`](project-structure.md) | Real source-tree map, runtime architecture, edit guide | Any code change |
-| [`localization.md`](localization.md) | Localization architecture for `Resources/L10n`, ownership rules, verification | Copy, UI text, alerts, onboarding, preferences |
+| [`localization.md`](localization.md) | Localization architecture for `Resources/Localization`, ownership rules, verification | Copy, UI text, alerts, onboarding, preferences |
 | [`capture-flow.md`](capture-flow.md) | Feature flows for capture, scrolling capture, recording, post-capture, editors | Capture, media, UX work |
 | [`project-build.md`](project-build.md) | Local build and archive commands | Build, packaging |
 | [`project-workflow.md`](project-workflow.md) | Release and appcast workflow | Shipping updates |

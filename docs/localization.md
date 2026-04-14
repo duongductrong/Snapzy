@@ -7,14 +7,14 @@ This doc describes how Snapzy localizes user-facing text today. Keep it synced w
 - Source language: `en`
 - Supported app locales: `en`, `vi`, `zh-Hans`, `zh-Hant`, `es`, `ja`, `ko`, `ru`, `fr`, `de`
 - Language selection: native macOS app language selection. Snapzy does not ship a custom language picker.
-- Source-of-truth and runtime catalogs: split by domain under `Snapzy/Resources/L10n/*.xcstrings`
+- Source-of-truth and runtime catalogs: centralized under `Snapzy/Resources/Localization/`, split into `Shared/*.xcstrings` and `Features/*.xcstrings`
 - Coverage: menu bar, onboarding, preferences, capture flows, recording flows, Quick Access, Annotate, Video Editor, cloud dialogs, alerts, toasts, and scrolling capture HUD/status text
 
 ## Runtime Model
 
 ```mermaid
 flowchart LR
-    A["Resources/L10n/*.xcstrings"] --> B["SwiftUI views"]
+    A["Resources/Localization/{Shared,Features}/*.xcstrings"] --> B["SwiftUI views"]
     A --> C["Shared/Localization/L10n.swift"]
     C --> D["Prefix -> table lookup"]
     D --> A
@@ -25,9 +25,11 @@ flowchart LR
 
 | Path | Owns |
 | --- | --- |
-| `Snapzy/Resources/L10n/*.xcstrings` | Domain-owned runtime String Catalog fragments |
-| `Snapzy/Resources/L10n/manifest.json` | Prefix ownership for the split runtime catalogs |
-| `tools/localization/catalog-tool.swift` | Audit and verify workflow for split catalogs |
+| `Snapzy/Resources/Localization/Shared/*.xcstrings` | Cross-feature runtime String Catalog fragments |
+| `Snapzy/Resources/Localization/Features/*.xcstrings` | Feature-owned runtime String Catalog fragments |
+| `Snapzy/Resources/Localization/Generated/` | Reserved location for generated localization artifacts |
+| `Snapzy/Resources/Localization/manifest.json` | Prefix ownership for the split runtime catalogs |
+| `tools/localization/CatalogTool.swift` | Audit and verify workflow for split catalogs |
 | `Snapzy/Shared/Localization/L10n.swift` | Shared localization bridge for AppKit strings, alerts, toasts, `displayName`, `errorDescription`, and text that does not auto-extract cleanly from SwiftUI |
 | `Snapzy/Resources/*.lproj/InfoPlist.strings` | Privacy usage descriptions per locale |
 | `Snapzy.xcodeproj/project.pbxproj` | Project regions and String Catalog related build settings |
@@ -35,7 +37,7 @@ flowchart LR
 ## Working Rules
 
 - Localize all user-facing copy.
-- Edit the domain fragment in `Snapzy/Resources/L10n/`.
+- Edit the owning fragment in `Snapzy/Resources/Localization/Shared/` or `Snapzy/Resources/Localization/Features/`.
 - Prefer `L10n` for AppKit, service-layer errors, toasts, open-panel prompts, and shared model labels.
 - Keep raw ids and persisted values stable. Localize at the display layer, not in storage models.
 - Use `Text(verbatim:)` or other explicit verbatim rendering for tokens that should stay raw.
@@ -61,7 +63,7 @@ flowchart LR
 - Verify fragment ownership and `L10n` coverage with:
 
 ```bash
-swift -module-cache-path build/swift-module-cache tools/localization/catalog-tool.swift verify
+swift -module-cache-path build/swift-module-cache tools/localization/CatalogTool.swift verify
 ```
 
 - Build with:

@@ -2,7 +2,7 @@
 
 This doc follows the runtime path from trigger to saved asset, Quick Access, editors, and cloud actions.
 
-User-facing copy in these flows is localized through `Snapzy/Shared/Localization/L10n.swift` and `Snapzy/Resources/L10n/*.xcstrings`. Privacy permission copy lives in `InfoPlist.strings`. For localization ownership and rules, read [`localization.md`](localization.md).
+User-facing copy in these flows is localized through `Snapzy/Shared/Localization/L10n.swift` and `Snapzy/Resources/Localization/{Shared,Features}/*.xcstrings`. Privacy permission copy lives in `InfoPlist.strings`. For localization ownership and rules, read [`localization.md`](localization.md).
 
 ## Flow Index
 
@@ -258,7 +258,7 @@ flowchart TD
 | File | Responsibility |
 | --- | --- |
 | `Snapzy/Shared/Localization/L10n.swift` | Shared localization bridge for these flows |
-| `Snapzy/Resources/L10n/*.xcstrings` | Split runtime String Catalogs backing translated flow copy |
+| `Snapzy/Resources/Localization/{Shared,Features}/*.xcstrings` | Split runtime String Catalogs backing translated flow copy |
 | `Snapzy/Features/Capture/CaptureViewModel.swift` | Entry point for screenshot, scrolling capture, OCR, cutout, and recording launch |
 | `Snapzy/Services/Capture/ScreenCaptureManager.swift` | Core screenshot engine and file writing |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Quick Access, clipboard, and screenshot auto-open routing |

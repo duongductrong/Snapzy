@@ -89,7 +89,7 @@ flowchart LR
 ```text
 tools/
   localization/
-    catalog-tool.swift
+    CatalogTool.swift
 
 Snapzy/
   App/
@@ -137,8 +137,12 @@ Snapzy/
 
   Config/
   Resources/
-    L10n/
-      *.xcstrings
+    Localization/
+      Shared/
+        *.xcstrings
+      Features/
+        *.xcstrings
+      Generated/
       manifest.json
     *.lproj/
 ```
@@ -205,8 +209,8 @@ Snapzy/
 - `ScrollingCaptureCoordinator` is its own subsystem. Treat `Services/Capture/ScrollingCapture/*` as a unit.
 - `CloudManager` is a facade. Provider-specific behavior lives under `Services/Cloud/`.
 - `Shared/Localization/L10n.swift` is the bridge for user-facing copy that does not live directly in SwiftUI view literals.
-- `Resources/L10n/*.xcstrings` are the domain-owned runtime localization catalogs.
-- `tools/localization/catalog-tool.swift` owns audit and verify for split localization catalogs.
+- `Resources/Localization/Shared/*.xcstrings` and `Resources/Localization/Features/*.xcstrings` are the runtime localization catalogs.
+- `tools/localization/CatalogTool.swift` owns audit and verify for split localization catalogs.
 - `Resources/*/InfoPlist.strings` still own privacy permission text.
 - Keep brand names, file formats, key labels, MIME types, and other technical tokens verbatim unless product behavior explicitly changes.
 
@@ -214,7 +218,7 @@ Snapzy/
 
 | Task | Start here |
 | --- | --- |
-| Localization, String Catalog, alert copy, translated display labels | `Resources/L10n/manifest.json`, `tools/localization/catalog-tool.swift`, `Shared/Localization/L10n.swift`, `docs/localization.md` |
+| Localization, String Catalog, alert copy, translated display labels | `Resources/Localization/manifest.json`, `tools/localization/CatalogTool.swift`, `Shared/Localization/L10n.swift`, `docs/localization.md` |
 | New screenshot mode or capture behavior | `Features/Capture/CaptureViewModel.swift`, `Services/Capture/ScreenCaptureManager.swift`, `docs/capture-flow.md` |
 | Scrolling capture UX or stitching | `Services/Capture/ScrollingCapture/` |
 | Recording toolbar, overlays, GIF flow | `Features/Recording/`, `Services/Capture/ScreenRecordingManager.swift` |

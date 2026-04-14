@@ -20,6 +20,8 @@
 		A3A629C62F5E9E4E00E06B7C /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Resources/Localization/Generated/README.md,
+				Resources/Localization/README.md,
 				Resources/Info.plist,
 			);
 			target = A36462A22F18EEDA0003453D /* Snapzy */;
