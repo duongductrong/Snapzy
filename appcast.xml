@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.3</title>
+      <sparkle:version>59</sparkle:version>
+      <sparkle:shortVersionString>1.7.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 16 Apr 2026 17:32:47 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>: add language selection step with immediate localization updates</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.7.3/Snapzy-v1.7.3.dmg"
+        sparkle:edSignature="sjj4ClgxEsGslZbWhXvNO9erlxCAATKp0z39NMZL47SSzxo899fj6/ONNweLvDs3575xavshu3Va+LjsP7BsBg=="
+        length="13001204"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.7.2</title>
       <sparkle:version>58</sparkle:version>
       <sparkle:shortVersionString>1.7.2</sparkle:shortVersionString>
