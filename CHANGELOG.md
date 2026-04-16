@@ -11,6 +11,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.3] - 2026-04-16
+
+### Features
+- : add language selection step with immediate localization updates (8d025f1)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.7.2 (3a19aa2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.2] - 2026-04-16
 
 ### Features
