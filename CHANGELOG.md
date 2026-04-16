@@ -10,6 +10,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.2] - 2026-04-16
+
+### Features
+-  Add Vietnamese and Simplified Chinese localization to README files (a46311d)
+
+### Bug Fixes
+-  Enhance zoom functionality and image scaling across annotation features (cd72a9a)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.7.1 (62ddfd9)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.1] - 2026-04-14
 
 ### Bug Fixes
