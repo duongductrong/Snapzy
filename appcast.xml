@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.2</title>
+      <sparkle:version>58</sparkle:version>
+      <sparkle:shortVersionString>1.7.2</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 16 Apr 2026 09:26:03 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add Vietnamese and Simplified Chinese localization to README files</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Enhance zoom functionality and image scaling across annotation features</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.7.2/Snapzy-v1.7.2.dmg"
+        sparkle:edSignature="5kU66g4RS9+j6SuK423GWDf310Q5EYBNZl2Ved24vW7Aimu4MJTMzU8B1M1vm9mcwhSnJinY+6T9Csi3JOaZCg=="
+        length="12942538"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.7.1</title>
       <sparkle:version>57</sparkle:version>
       <sparkle:shortVersionString>1.7.1</sparkle:shortVersionString>
