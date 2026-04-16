@@ -71,6 +71,18 @@ enum L10n {
     return nil
   }
 
+  private nonisolated static func bundle(for localeIdentifier: String) -> Bundle {
+    guard
+      !localeIdentifier.isEmpty,
+      let resourcePath = Bundle.main.path(forResource: localeIdentifier, ofType: "lproj"),
+      let bundle = Bundle(path: resourcePath)
+    else {
+      return .main
+    }
+
+    return bundle
+  }
+
   nonisolated static func string(_ key: String, defaultValue: String, comment: String) -> String {
     NSLocalizedString(
       key,
@@ -78,6 +90,20 @@ enum L10n {
       bundle: .main,
       value: defaultValue,
       comment: comment
+    )
+  }
+
+  nonisolated static func string(
+    _ key: String,
+    defaultValue: String,
+    localeIdentifier: String,
+    comment: String
+  ) -> String {
+    let lookupBundle = bundle(for: localeIdentifier)
+    return lookupBundle.localizedString(
+      forKey: key,
+      value: defaultValue,
+      table: tableName(for: key)
     )
   }
 
@@ -89,6 +115,26 @@ enum L10n {
   ) -> String {
     let format = string(key, defaultValue: defaultValue, comment: comment)
     return String(format: format, locale: Locale.current, arguments: arguments)
+  }
+
+  nonisolated static func format(
+    _ key: String,
+    defaultValue: String,
+    localeIdentifier: String,
+    comment: String,
+    _ arguments: CVarArg...
+  ) -> String {
+    let format = string(
+      key,
+      defaultValue: defaultValue,
+      localeIdentifier: localeIdentifier,
+      comment: comment
+    )
+    return String(
+      format: format,
+      locale: Locale(identifier: localeIdentifier),
+      arguments: arguments
+    )
   }
 
   enum Preferences {
@@ -771,6 +817,39 @@ enum L10n {
       "onboarding.welcome.cta",
       defaultValue: "Let's do it!",
       comment: "Primary call to action on onboarding welcome screen"
+    )
+    static let languageTitle = string(
+      "onboarding.language.title",
+      defaultValue: "Choose your language",
+      comment: "Onboarding language step title"
+    )
+    static let languageSubtitle = string(
+      "onboarding.language.subtitle",
+      defaultValue: "Snapzy can follow your Mac or preview a specific app language during setup.",
+      comment: "Onboarding language step subtitle"
+    )
+    static let languageAutoTitle = string(
+      "onboarding.language.auto-title",
+      defaultValue: "Auto",
+      comment: "Auto language option title shown during onboarding"
+    )
+    static func languageAutoDescription(_ languageName: String) -> String {
+      format(
+        "onboarding.language.auto-description",
+        defaultValue: "Follow macOS. Currently %@.",
+        comment: "Description for the onboarding auto language option. %@ is the resolved language display name.",
+        languageName
+      )
+    }
+    static let languageApplyLater = string(
+      "onboarding.language.apply-later",
+      defaultValue: "Continue and Apply on Finish",
+      comment: "Primary button title when onboarding language changes will be applied after completing onboarding"
+    )
+    static let languagePreferencesHint = string(
+      "onboarding.language.preferences-hint",
+      defaultValue: "You can change this anytime in Preferences -> General.",
+      comment: "Hint shown below the onboarding language picker"
     )
 
     static let permissionsTitle = string(

@@ -21,6 +21,8 @@ struct PermissionRow: View {
   var isRequired: Bool = true
   let onGrant: () -> Void
 
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
   var body: some View {
     HStack(spacing: 16) {
       // Icon
@@ -41,7 +43,7 @@ struct PermissionRow: View {
             .foregroundColor(VSDesignSystem.Colors.primary)
 
           if isRequired {
-            Text(L10n.PermissionRow.required)
+            Text(requiredLabel)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
@@ -49,7 +51,7 @@ struct PermissionRow: View {
               .foregroundColor(.orange)
               .cornerRadius(4)
           } else {
-            Text(L10n.PermissionRow.optional)
+            Text(optionalLabel)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
@@ -105,7 +107,7 @@ struct PermissionRow: View {
   private var badge: (label: String, color: Color, icon: String)? {
     switch status {
     case .granted:
-      return (L10n.PermissionRow.granted, .green, "checkmark.circle.fill")
+      return (grantedLabel, .green, "checkmark.circle.fill")
     case .needsAction:
       return nil
     case .blocked(let label, _):
@@ -120,6 +122,30 @@ struct PermissionRow: View {
     case .needsAction(let buttonTitle), .blocked(_, let buttonTitle):
       return buttonTitle
     }
+  }
+
+  private var requiredLabel: String {
+    onboardingLocalization.string(
+      "permission-row.required",
+      defaultValue: "Required",
+      comment: "Badge label shown on required permission rows"
+    )
+  }
+
+  private var optionalLabel: String {
+    onboardingLocalization.string(
+      "permission-row.optional",
+      defaultValue: "Optional",
+      comment: "Badge label shown on optional permission rows"
+    )
+  }
+
+  private var grantedLabel: String {
+    onboardingLocalization.string(
+      "permission-row.granted",
+      defaultValue: "Granted",
+      comment: "Badge label shown when a permission has been granted"
+    )
   }
 }
 

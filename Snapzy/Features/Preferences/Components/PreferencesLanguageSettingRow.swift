@@ -55,6 +55,11 @@ struct PreferencesLanguageSettingRow: View {
         guard !isRelaunching else { return }
         guard newIdentifier != languageManager.selectedLanguageIdentifier else { return }
 
+        if !languageManager.requiresRelaunch(for: newIdentifier) {
+          languageManager.selectLanguage(newIdentifier)
+          return
+        }
+
         pendingLanguageIdentifier = newIdentifier
         showRelaunchConfirmation = true
       }

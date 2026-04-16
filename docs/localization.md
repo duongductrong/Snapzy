@@ -6,7 +6,7 @@ This doc describes how Snapzy localizes user-facing text today. Keep it synced w
 
 - Source language: `en`
 - Supported app locales: `en`, `vi`, `zh-Hans`, `zh-Hant`, `es`, `ja`, `ko`, `ru`, `fr`, `de`
-- Language selection: native macOS app language selection. Snapzy does not ship a custom language picker.
+- Language selection: Snapzy supports app language selection in Preferences and a first-run onboarding language step. Preferences still relies on the macOS app-language override plus relaunch behavior, while onboarding previews the selected locale immediately inside the onboarding flow and only commits the override when onboarding finishes.
 - Source-of-truth and runtime catalogs: centralized under `Snapzy/Resources/Localization/`, split into `Shared/*.xcstrings` and `Features/*.xcstrings`
 - Coverage: menu bar, onboarding, preferences, capture flows, recording flows, Quick Access, Annotate, Video Editor, cloud dialogs, alerts, toasts, and scrolling capture HUD/status text
 
@@ -55,6 +55,8 @@ flowchart LR
 - Scrolling capture uses localized HUD labels, guidance copy, preview captions, and toast messages.
 - Annotate and Video Editor surfaces are localized, including shared tool labels, dialogs, export messaging, and empty states.
 - Preferences, onboarding, Quick Access, menu bar, and cloud flows are localized.
+- The onboarding welcome screen renders a multilingual greeting cluster with verbatim native greetings from the supported app locales.
+- The onboarding language step defaults to `Auto`, previews the effective locale immediately through `OnboardingLocalizationController`, commits the app-language override through `AppLanguageManager` when onboarding completes, and relaunches only at the end when the effective language actually changed.
 - Privacy permission prompts come from `InfoPlist.strings`, not from the split runtime catalogs.
 
 ## Verification

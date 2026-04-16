@@ -98,12 +98,21 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
   /// - Parameter forceOnboarding: When true, always show onboarding steps (used by "Restart Onboarding")
   func show(forceOnboarding: Bool = false) {
     guard let screen = NSScreen.main else { return }
+    let defaults = UserDefaults.standard
+
+    if !forceOnboarding,
+       defaults.bool(forKey: PreferencesKeys.splashSkipOnceAfterOnboardingRelaunch),
+       OnboardingFlowView.hasCompletedOnboarding,
+       defaults.bool(forKey: PreferencesKeys.sponsorPromptSeen) {
+      defaults.removeObject(forKey: PreferencesKeys.splashSkipOnceAfterOnboardingRelaunch)
+      return
+    }
 
     // Skip splash entirely when user opted out and no onboarding/sponsor is pending
     if !forceOnboarding,
        OnboardingFlowView.hasCompletedOnboarding,
-       UserDefaults.standard.bool(forKey: PreferencesKeys.sponsorPromptSeen),
-       UserDefaults.standard.bool(forKey: PreferencesKeys.splashSkipped) {
+       defaults.bool(forKey: PreferencesKeys.sponsorPromptSeen),
+       defaults.bool(forKey: PreferencesKeys.splashSkipped) {
       return
     }
 
@@ -119,7 +128,7 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
     let rootView = SplashOnboardingRootView(
       needsOnboarding: needsOnboarding,
       showSponsorPrompt: forceOnboarding
-        || !UserDefaults.standard.bool(forKey: PreferencesKeys.sponsorPromptSeen),
+        || !defaults.bool(forKey: PreferencesKeys.sponsorPromptSeen),
       onDismiss: { [weak self] in
         self?.dismiss()
       }

@@ -152,8 +152,8 @@ Snapzy/
 | Path | Owns |
 | --- | --- |
 | `App/` | Entry point, app lifecycle, menu bar bootstrap, preferences wiring |
-| `Features/Splash/` | Splash window, onboarding root coordinator, intro flow |
-| `Features/Onboarding/` | Onboarding step views and visual system |
+| `Features/Splash/` | Splash window, onboarding root coordinator, intro flow, multilingual welcome screen |
+| `Features/Onboarding/` | Onboarding step views and visual system, including first-run language selection |
 | `Features/Capture/` | High-level screenshot, OCR, cutout, scrolling-capture, and recording entry actions |
 | `Features/Recording/` | Recording toolbar, overlays, live annotation, stop/GIF handoff |
 | `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app |

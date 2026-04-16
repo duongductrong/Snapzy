@@ -11,24 +11,26 @@ import SwiftUI
 struct SponsorView: View {
   let onContinue: () -> Void
 
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
   var body: some View {
     OnboardingStepContainer {
       Image(systemName: "heart.circle")
         .font(.system(size: 48, weight: .light))
         .foregroundColor(.pink.opacity(0.85))
 
-      Text(L10n.Onboarding.sponsorTitle)
+      Text(sponsorTitle)
         .vsHeading()
         .padding(.top, 24)
 
-      Text(L10n.Onboarding.sponsorDescription)
+      Text(sponsorDescription)
       .vsBody()
       .multilineTextAlignment(.center)
       .frame(maxWidth: 360)
       .padding(.top, 4)
 
       VStack(spacing: 12) {
-        ForEach(SponsorLinks.all) { link in
+        ForEach(localizedSponsorLinks) { link in
           Button {
             NSWorkspace.shared.open(link.url)
           } label: {
@@ -71,20 +73,105 @@ struct SponsorView: View {
       .frame(maxWidth: 400)
       .padding(.top, 24)
 
-      Text(L10n.Onboarding.sponsorOptionalNote)
+      Text(sponsorOptionalNote)
         .font(.system(size: 11))
         .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
         .frame(maxWidth: 360)
         .padding(.top, 10)
 
-      Button(L10n.Common.continueAction) {
+      Button(commonContinueTitle) {
         onContinue()
       }
       .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
       .keyboardShortcut(.return, modifiers: [])
       .padding(.top, 32)
     }
+  }
+
+  private var localizedSponsorLinks: [SponsorLink] {
+    [
+      SponsorLink(
+        id: "github-sponsors",
+        title: "GitHub Sponsors",
+        subtitle: recurringSupportTitle,
+        systemImage: "heart.fill",
+        color: .pink,
+        url: URL(string: "https://github.com/sponsors/duongductrong")!
+      ),
+      SponsorLink(
+        id: "ko-fi",
+        title: "Ko-fi",
+        subtitle: oneTimeTipTitle,
+        systemImage: "cup.and.saucer.fill",
+        color: .orange,
+        url: URL(string: "https://ko-fi.com/duongductrong")!
+      ),
+      SponsorLink(
+        id: "paypal",
+        title: "PayPal",
+        subtitle: directSupportTitle,
+        systemImage: "creditcard.fill",
+        color: .blue,
+        url: URL(string: "https://www.paypal.com/paypalme/duongductrong")!
+      ),
+    ]
+  }
+
+  private var sponsorTitle: String {
+    onboardingLocalization.string(
+      "onboarding.sponsor.title",
+      defaultValue: "Support Snapzy",
+      comment: "Onboarding sponsor step title"
+    )
+  }
+
+  private var sponsorDescription: String {
+    onboardingLocalization.string(
+      "onboarding.sponsor.description",
+      defaultValue: "If Snapzy saves you time, supporting the project helps keep it independent and improving.",
+      comment: "Onboarding sponsor step description"
+    )
+  }
+
+  private var sponsorOptionalNote: String {
+    onboardingLocalization.string(
+      "onboarding.sponsor.optional-note",
+      defaultValue: "Completely optional. Snapzy stays fully usable either way.",
+      comment: "Note shown below sponsor links during onboarding"
+    )
+  }
+
+  private var recurringSupportTitle: String {
+    onboardingLocalization.string(
+      "sponsor.recurring-support",
+      defaultValue: "Recurring support",
+      comment: "Subtitle for GitHub Sponsors option"
+    )
+  }
+
+  private var oneTimeTipTitle: String {
+    onboardingLocalization.string(
+      "sponsor.one-time-tip",
+      defaultValue: "One-time tip",
+      comment: "Subtitle for Ko-fi option"
+    )
+  }
+
+  private var directSupportTitle: String {
+    onboardingLocalization.string(
+      "sponsor.direct-support",
+      defaultValue: "Direct support",
+      comment: "Subtitle for PayPal option"
+    )
+  }
+
+  private var commonContinueTitle: String {
+    onboardingLocalization.string(
+      "common.continue",
+      defaultValue: "Continue",
+      comment: "Generic continue button title"
+    )
   }
 }
 

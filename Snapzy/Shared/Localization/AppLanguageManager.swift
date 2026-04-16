@@ -12,8 +12,22 @@ import Foundation
 struct AppLanguageOption: Identifiable, Hashable {
   let identifier: String
   let displayName: String
+  let greeting: String
 
   var id: String { identifier }
+
+  static let supported: [AppLanguageOption] = [
+    AppLanguageOption(identifier: "en", displayName: "English", greeting: "Hello"),
+    AppLanguageOption(identifier: "vi", displayName: "Tiếng Việt", greeting: "Xin chào"),
+    AppLanguageOption(identifier: "zh-Hans", displayName: "简体中文", greeting: "欢迎"),
+    AppLanguageOption(identifier: "zh-Hant", displayName: "繁體中文", greeting: "歡迎"),
+    AppLanguageOption(identifier: "es", displayName: "Español", greeting: "Hola"),
+    AppLanguageOption(identifier: "ja", displayName: "日本語", greeting: "ようこそ"),
+    AppLanguageOption(identifier: "ko", displayName: "한국어", greeting: "안녕하세요"),
+    AppLanguageOption(identifier: "ru", displayName: "Русский", greeting: "Привет"),
+    AppLanguageOption(identifier: "fr", displayName: "Français", greeting: "Bonjour"),
+    AppLanguageOption(identifier: "de", displayName: "Deutsch", greeting: "Hallo"),
+  ]
 }
 
 @MainActor
@@ -24,31 +38,20 @@ final class AppLanguageManager: ObservableObject {
 
   let availableOptions: [AppLanguageOption]
 
-  // L10n.swift resolves localized values through static lets, so a relaunch is
-  // required before the new app language can fully take effect everywhere.
+  // Most app surfaces still resolve localized values through static lets, so a
+  // relaunch is required before a new app language fully takes effect
+  // everywhere. Onboarding uses a separate controller for in-flow previewing.
   var requiresRelaunch: Bool {
-    selectedLanguageIdentifier != activeLanguageIdentifier
+    requiresRelaunch(for: selectedLanguageIdentifier)
   }
 
   private let activeLanguageIdentifier: String
 
   private static let appleLanguagesKey = "AppleLanguages"
-  private static let supportedOptions: [AppLanguageOption] = [
-    AppLanguageOption(identifier: "en", displayName: "English"),
-    AppLanguageOption(identifier: "vi", displayName: "Tiếng Việt"),
-    AppLanguageOption(identifier: "zh-Hans", displayName: "简体中文"),
-    AppLanguageOption(identifier: "zh-Hant", displayName: "繁體中文"),
-    AppLanguageOption(identifier: "es", displayName: "Español"),
-    AppLanguageOption(identifier: "ja", displayName: "日本語"),
-    AppLanguageOption(identifier: "ko", displayName: "한국어"),
-    AppLanguageOption(identifier: "ru", displayName: "Русский"),
-    AppLanguageOption(identifier: "fr", displayName: "Français"),
-    AppLanguageOption(identifier: "de", displayName: "Deutsch"),
-  ]
 
   private init() {
     let bundledLanguageIdentifiers = Set(Bundle.main.localizations)
-    availableOptions = Self.supportedOptions.filter { bundledLanguageIdentifiers.contains($0.identifier) }
+    availableOptions = AppLanguageOption.supported.filter { bundledLanguageIdentifiers.contains($0.identifier) }
 
     let activeLanguageIdentifier = Self.currentOverrideIdentifier()
     self.activeLanguageIdentifier = activeLanguageIdentifier
@@ -59,6 +62,34 @@ final class AppLanguageManager: ObservableObject {
     guard selectedLanguageIdentifier != identifier else { return }
     selectedLanguageIdentifier = identifier
     Self.persistOverride(identifier)
+  }
+
+  var systemResolvedIdentifier: String {
+    Self.resolvedSystemIdentifier(availableOptions: availableOptions)
+  }
+
+  var systemResolvedOption: AppLanguageOption? {
+    option(for: systemResolvedIdentifier)
+  }
+
+  var activeEffectiveLanguageIdentifier: String {
+    effectiveIdentifier(for: activeLanguageIdentifier)
+  }
+
+  func effectiveIdentifier(for selection: String) -> String {
+    Self.effectiveIdentifier(
+      for: selection,
+      systemResolvedIdentifier: systemResolvedIdentifier
+    )
+  }
+
+  func requiresRelaunch(for selection: String) -> Bool {
+    effectiveIdentifier(for: selection) != activeEffectiveLanguageIdentifier
+  }
+
+  func option(for identifier: String) -> AppLanguageOption? {
+    availableOptions.first(where: { $0.identifier == identifier })
+      ?? AppLanguageOption.supported.first(where: { $0.identifier == identifier })
   }
 
   func relaunchApplication() async throws {
@@ -127,5 +158,31 @@ final class AppLanguageManager: ObservableObject {
     }
 
     return nil
+  }
+
+  private static func resolvedSystemIdentifier(availableOptions: [AppLanguageOption]) -> String {
+    let availableIdentifiers = availableOptions.map(\.identifier)
+    let preferredIdentifiers = Bundle.preferredLocalizations(
+      from: availableIdentifiers,
+      forPreferences: Locale.preferredLanguages
+    )
+
+    if let preferredIdentifier = preferredIdentifiers.first,
+       let normalizedIdentifier = normalizedIdentifier(from: preferredIdentifier) {
+      return normalizedIdentifier
+    }
+
+    return "en"
+  }
+
+  private static func effectiveIdentifier(
+    for selection: String,
+    systemResolvedIdentifier: String
+  ) -> String {
+    if selection.isEmpty {
+      return systemResolvedIdentifier
+    }
+
+    return normalizedIdentifier(from: selection) ?? systemResolvedIdentifier
   }
 }

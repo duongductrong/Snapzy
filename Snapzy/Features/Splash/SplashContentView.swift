@@ -27,7 +27,7 @@ struct SplashContentView: View {
   private var logoOffset: CGFloat {
     switch phase {
     case .idle, .logoVisible: return 0
-    case .contentVisible, .buttonVisible: return -40
+    case .contentVisible, .buttonVisible: return -20
     }
   }
   private var textOpacity: Double {
@@ -42,7 +42,7 @@ struct SplashContentView: View {
     ZStack {
       Color.clear
 
-      VStack(spacing: 20) {
+      VStack(spacing: 16) {
         Spacer()
 
         appLogo
@@ -60,6 +60,13 @@ struct SplashContentView: View {
 
         Spacer()
       }
+
+      VStack {
+        Spacer()
+        supportedLanguagesInfo
+          .opacity(textOpacity)
+          .padding(.bottom, 28)
+      }
     }
     .task { await startAnimationSequence() }
   }
@@ -68,24 +75,52 @@ struct SplashContentView: View {
 // MARK: - Subviews
 
 private extension SplashContentView {
+  var supportedLanguageNames: String {
+    let bundledLanguageIdentifiers = Set(Bundle.main.localizations)
+    let names = AppLanguageOption.supported
+      .filter { bundledLanguageIdentifiers.contains($0.identifier) }
+      .map(\.displayName)
+    return names.joined(separator: " · ")
+  }
 
   var appLogo: some View {
     Image(nsImage: NSApp.applicationIconImage)
       .resizable()
       .aspectRatio(contentMode: .fit)
-      .frame(width: 120, height: 120)
+      .frame(width: 100, height: 100)
       .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-      .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 6)
+      .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 4)
   }
 
   var welcomeText: some View {
-    VStack(spacing: 8) {
+    VStack(spacing: 6) {
       Text(L10n.Splash.welcomeTitle)
-        .font(.system(size: 28, weight: .bold))
+        .font(.system(size: 22, weight: .bold))
         .foregroundStyle(VSDesignSystem.Colors.primary)
+
       Text(L10n.Splash.welcomeSubtitle)
-        .font(.system(size: 16))
+        .font(.system(size: 14))
         .foregroundStyle(VSDesignSystem.Colors.secondary)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 380)
+    }
+  }
+
+  var supportedLanguagesInfo: some View {
+    VStack(spacing: 6) {
+      HStack(spacing: 5) {
+        Image(systemName: "globe")
+          .font(.system(size: 11, weight: .medium))
+        Text(verbatim: "Supported Languages")
+          .font(.system(size: 11, weight: .medium))
+      }
+      .foregroundStyle(VSDesignSystem.Colors.quaternary)
+
+      Text(verbatim: supportedLanguageNames)
+        .font(.system(size: 12, weight: .medium, design: .rounded))
+        .foregroundStyle(VSDesignSystem.Colors.tertiary)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: 420)
     }
   }
 
@@ -115,7 +150,7 @@ private extension SplashContentView {
         .foregroundStyle(VSDesignSystem.Colors.secondary)
         .padding(.top, 4)
     }
-    .padding(.top, 8)
+    .padding(.top, 4)
   }
 }
 

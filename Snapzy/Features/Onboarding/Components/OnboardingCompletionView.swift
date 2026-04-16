@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct CompletionView: View {
+  var onBack: (() -> Void)? = nil
   let onComplete: () -> Void
 
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
   var body: some View {
-    OnboardingStepContainer {
+    OnboardingStepContainer(onBack: onBack) {
 
       // Success Icon
       Image(systemName: "checkmark.circle")
@@ -19,12 +22,12 @@ struct CompletionView: View {
         .foregroundColor(.green.opacity(0.85))
 
       // Title
-      Text(L10n.Onboarding.completionTitle)
+      Text(completionTitle)
         .vsHeading()
         .padding(.top, 20)
 
       // Subtitle
-      Text(L10n.Onboarding.completionDescription)
+      Text(completionDescription)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -34,20 +37,20 @@ struct CompletionView: View {
       VStack(spacing: 10) {
         CompletionHintRow(
           icon: "menubar.arrow.up.rectangle",
-          title: L10n.Onboarding.menuBar,
-          description: L10n.Onboarding.menuBarHint
+          title: completionMenuBarTitle,
+          description: completionMenuBarHint
         )
 
         CompletionHintRow(
           icon: "keyboard",
-          title: L10n.Preferences.shortcutsTab,
-          description: L10n.Onboarding.shortcutsHint
+          title: preferencesShortcutsTabTitle,
+          description: completionShortcutsHint
         )
 
         CompletionHintRow(
           icon: "gearshape",
-          title: L10n.Common.preferences,
-          description: L10n.Onboarding.preferencesHint
+          title: commonPreferencesTitle,
+          description: completionPreferencesHint
         )
       }
       .frame(maxWidth: 380)
@@ -60,25 +63,113 @@ struct CompletionView: View {
             NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             onComplete()
           } label: {
-            Text(L10n.Onboarding.openPreferences)
+            Text(openPreferencesTitle)
               .font(.system(size: 13, weight: .medium))
               .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
           .buttonStyle(.plain)
 
-          Button(L10n.Onboarding.getStarted) {
+          Button(getStartedTitle) {
             onComplete()
           }
           .buttonStyle(VSDesignSystem.SuccessButtonStyle())
           .keyboardShortcut(.return, modifiers: [])
         }
 
-        Text(L10n.Splash.pressEnter)
+        Text(splashPressEnterTitle)
           .font(.system(size: 11))
           .foregroundStyle(VSDesignSystem.Colors.quaternary)
       }
       .padding(.top, 32)
     }
+  }
+
+  private var completionTitle: String {
+    onboardingLocalization.string(
+      "onboarding.completion.title",
+      defaultValue: "You're all set!",
+      comment: "Onboarding completion title"
+    )
+  }
+
+  private var completionDescription: String {
+    onboardingLocalization.string(
+      "onboarding.completion.description",
+      defaultValue: "Snapzy is ready. Access it from the menu bar or use your keyboard shortcuts.",
+      comment: "Onboarding completion description"
+    )
+  }
+
+  private var completionMenuBarTitle: String {
+    onboardingLocalization.string(
+      "onboarding.completion.menu-bar",
+      defaultValue: "Menu Bar",
+      comment: "Completion card title"
+    )
+  }
+
+  private var completionMenuBarHint: String {
+    onboardingLocalization.string(
+      "onboarding.completion.menu-bar-hint",
+      defaultValue: "Look for the camera icon in your menu bar",
+      comment: "Completion card description"
+    )
+  }
+
+  private var preferencesShortcutsTabTitle: String {
+    onboardingLocalization.string(
+      "preferences.tab.shortcuts",
+      defaultValue: "Shortcuts",
+      comment: "Preferences tab title"
+    )
+  }
+
+  private var completionShortcutsHint: String {
+    onboardingLocalization.string(
+      "onboarding.completion.shortcuts-hint",
+      defaultValue: "Use ⇧⌘3, ⇧⌘4, ⇧⌘5 to capture anytime",
+      comment: "Completion card description"
+    )
+  }
+
+  private var commonPreferencesTitle: String {
+    onboardingLocalization.string(
+      "common.preferences",
+      defaultValue: "Preferences",
+      comment: "Generic preferences title"
+    )
+  }
+
+  private var completionPreferencesHint: String {
+    onboardingLocalization.string(
+      "onboarding.completion.preferences-hint",
+      defaultValue: "Customize shortcuts, output format, and more",
+      comment: "Completion card description"
+    )
+  }
+
+  private var openPreferencesTitle: String {
+    onboardingLocalization.string(
+      "onboarding.completion.open-preferences",
+      defaultValue: "Open Preferences",
+      comment: "Secondary action on onboarding completion screen"
+    )
+  }
+
+  private var getStartedTitle: String {
+    onboardingLocalization.string(
+      "onboarding.completion.get-started",
+      defaultValue: "Get Started",
+      comment: "Primary action on onboarding completion screen"
+    )
+  }
+
+  private var splashPressEnterTitle: String {
+    onboardingLocalization.string(
+      "splash.press-enter",
+      defaultValue: "Press Enter ↵",
+      comment: "Hint text under buttons on splash and completion screens"
+    )
   }
 }
 
@@ -125,6 +216,7 @@ private struct CompletionHintRow: View {
   CompletionView(
     onComplete: {}
   )
+  .environmentObject(OnboardingLocalizationController())
   .frame(width: 500, height: 520)
   .background(.black.opacity(0.5))
 }

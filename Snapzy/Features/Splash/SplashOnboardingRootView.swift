@@ -9,6 +9,7 @@ import SwiftUI
 
 enum SplashScreen: Equatable {
   case splash
+  case language
   case sponsor
   case permissions
   case shortcuts
@@ -18,6 +19,7 @@ enum SplashScreen: Equatable {
 
 private enum NavigationDirection {
   case forward
+  case backward
 }
 
 struct SplashOnboardingRootView: View {
@@ -28,10 +30,12 @@ struct SplashOnboardingRootView: View {
   @State private var currentScreen: SplashScreen = .splash
   @State private var contentOpacity: Double = 1
   @State private var navigationDirection: NavigationDirection = .forward
+  @State private var isCompletingOnboarding = false
+  @StateObject private var onboardingLocalization = OnboardingLocalizationController()
   @ObservedObject private var screenCaptureManager = ScreenCaptureManager.shared
 
   private static let onboardingSteps: [SplashScreen] = [
-    .permissions, .shortcuts, .diagnostics, .completion,
+    .language, .permissions, .shortcuts, .diagnostics, .completion,
   ]
 
   private var isOnboardingStep: Bool {
@@ -52,6 +56,13 @@ struct SplashOnboardingRootView: View {
           SplashContentView(onContinue: { skipSplash in handleSplashContinue(skipSplash: skipSplash) })
             .transition(.opacity)
 
+        case .language:
+          OnboardingLanguageSelectionView(
+            onBack: { navigateBackward(to: .splash) },
+            onContinue: handleLanguageContinue
+          )
+          .transition(stepTransition)
+
         case .sponsor:
           SponsorView(onContinue: handleSponsorContinue)
             .transition(.opacity)
@@ -59,13 +70,14 @@ struct SplashOnboardingRootView: View {
         case .permissions:
           PermissionsView(
             screenCaptureManager: screenCaptureManager,
-            onQuit: { NSApplication.shared.terminate(nil) },
+            onBack: { navigateBackward(to: showSponsorPrompt ? .sponsor : .language) },
             onNext: { navigateForward(to: .shortcuts) }
           )
           .transition(stepTransition)
 
         case .shortcuts:
           ShortcutsView(
+            onBack: { navigateBackward(to: .permissions) },
             onDecline: { navigateForward(to: .diagnostics) },
             onAccept: {
               KeyboardShortcutManager.shared.enable()
@@ -76,18 +88,21 @@ struct SplashOnboardingRootView: View {
 
         case .diagnostics:
           DiagnosticsOptInView(
+            onBack: { navigateBackward(to: .shortcuts) },
             onNext: { navigateForward(to: .completion) }
           )
           .transition(stepTransition)
 
         case .completion:
           CompletionView(
+            onBack: { navigateBackward(to: .diagnostics) },
             onComplete: handleComplete
           )
           .transition(stepTransition)
         }
       }
       .opacity(contentOpacity)
+      .environmentObject(onboardingLocalization)
 
       if isOnboardingStep {
         VStack {
@@ -116,6 +131,11 @@ struct SplashOnboardingRootView: View {
         insertion: .move(edge: .trailing).combined(with: .opacity),
         removal: .move(edge: .leading).combined(with: .opacity)
       )
+    case .backward:
+      return .asymmetric(
+        insertion: .move(edge: .leading).combined(with: .opacity),
+        removal: .move(edge: .trailing).combined(with: .opacity)
+      )
     }
   }
 
@@ -124,12 +144,20 @@ struct SplashOnboardingRootView: View {
       UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
     }
 
-    if showSponsorPrompt {
+    if needsOnboarding {
+      navigateForward(to: .language)
+    } else if showSponsorPrompt {
       navigateForward(to: .sponsor)
-    } else if needsOnboarding {
-      navigateForward(to: .permissions)
     } else {
       dismiss()
+    }
+  }
+
+  private func handleLanguageContinue() {
+    if showSponsorPrompt {
+      navigateForward(to: .sponsor)
+    } else {
+      navigateForward(to: .permissions)
     }
   }
 
@@ -150,18 +178,50 @@ struct SplashOnboardingRootView: View {
     }
   }
 
+  private func navigateBackward(to screen: SplashScreen) {
+    navigationDirection = .backward
+    withAnimation(.easeInOut(duration: 0.4)) {
+      currentScreen = screen
+    }
+  }
+
   private func handleComplete() {
+    guard !isCompletingOnboarding else { return }
+    isCompletingOnboarding = true
     UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
-    dismiss()
+    let requiresRelaunch = onboardingLocalization.requiresRelaunchOnCompletion
+    onboardingLocalization.commitLanguageSelection()
+
+    if requiresRelaunch {
+      UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipOnceAfterOnboardingRelaunch)
+      fadeOut {
+        Task {
+          do {
+            try await onboardingLocalization.relaunchApplication()
+          } catch {
+            self.isCompletingOnboarding = false
+            self.onDismiss()
+          }
+        }
+      }
+    } else {
+      dismiss()
+    }
   }
 
   private func dismiss() {
+    fadeOut {
+      onDismiss()
+    }
+  }
+
+  private func fadeOut(completion: @escaping () -> Void) {
     withAnimation(.easeIn(duration: 0.3)) {
       contentOpacity = 0
     }
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-      onDismiss()
+      completion()
     }
   }
 }

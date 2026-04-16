@@ -43,7 +43,7 @@
 - **Trình chỉnh sửa video**: cắt với timeline trực quan + dải frame, zoom segment với auto-focus (Follow Mouse), nền wallpaper + padding, kích thước export tùy chỉnh, trình xem GIF động, undo/redo
 - **Quick Access**: bảng nổi sau mỗi lần chụp với các thao tác copy, edit, drag-to-app, open và delete
 - **Shortcut**: shortcut toàn cục cấu hình đầy đủ cho chụp, quay và công cụ annotate, có bật/tắt cho từng shortcut và phát hiện xung đột hệ thống
-- **Onboarding**: màn hình chào, hướng dẫn cấp quyền, và cấu hình shortcut cho người dùng lần đầu
+- **Onboarding**: màn hình chào, chọn ngôn ngữ lần đầu, hướng dẫn cấp quyền, và cấu hình shortcut cho người dùng lần đầu
 - **Bản địa hóa**: bản địa hóa ứng dụng cho 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French và 🇩🇪 German, hỗ trợ chọn ngôn ngữ riêng cho từng app theo macOS
 - **Cloud Upload**: quyền riêng tư trước hết với mô hình tự mang storage bằng AWS S3 hoặc Cloudflare R2, không dùng server bên thứ ba, upload thủ công từ Quick Access hoặc Annotate, credential lưu trong macOS Keychain với bảo vệ mật khẩu tùy chọn, import/export credential mã hóa thủ công để thiết lập nhanh trên Mac khác, lịch sử upload, auto-expiration cấu hình được (1–90 ngày hoặc vĩnh viễn), lifecycle rules, hỗ trợ custom domain
 - **Cập nhật & chẩn đoán**: cập nhật trong app qua Sparkle, crash reporting, quản lý cache

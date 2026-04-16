@@ -24,28 +24,54 @@ struct OnboardingStepContainer<Content: View>: View {
         }
       }
 
-      // Back arrow — fixed at center-left, doesn't scroll
+      // Back button — fixed at center-left, doesn't scroll
+      // Offset upward by titlebar height (28pt) to visually center
+      // within the content area below the transparent titlebar
       if let onBack {
         VStack {
           Spacer()
           HStack {
-            Button {
-              onBack()
-            } label: {
-              Image(systemName: "arrow.left")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(VSDesignSystem.Colors.tertiary)
-            }
-            .buttonStyle(.plain)
-            .contentShape(Rectangle())
-            .padding(.leading, 24)
-
+            BackButton(action: onBack)
+              .padding(.leading, 24)
             Spacer()
           }
           Spacer()
         }
+        .padding(.bottom, 28)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+  }
+}
+
+// MARK: - Back Button
+
+private struct BackButton: View {
+  let action: () -> Void
+
+  @State private var isHovered = false
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: "arrow.left")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundColor(VSDesignSystem.Colors.tertiary)
+        .frame(width: 32, height: 32)
+        .background(
+          Circle()
+            .fill(isHovered ? VSDesignSystem.Colors.cardFill : Color.clear)
+        )
+        .overlay(
+          Circle()
+            .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
+        )
+        .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+    .onHover { hovering in
+      withAnimation(.easeInOut(duration: 0.15)) {
+        isHovered = hovering
+      }
+    }
   }
 }

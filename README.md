@@ -42,7 +42,7 @@
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
 - **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, open, and delete actions
 - **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools, with per-shortcut on/off control and system conflict detection
-- **Onboarding**: splash screen, guided permissions setup, and shortcut configuration for first-time users
+- **Onboarding**: splash screen, first-run language selection, guided permissions setup, and shortcut configuration for first-time users
 - **Localization**: 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French, and 🇩🇪 German app localization with native macOS per-app language support
 - **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, manual upload from Quick Access or Annotate, credentials stored in the macOS Keychain with optional password protection, manual encrypted credential import/export for faster setup on another Mac, upload history, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
 - **Updates & Diagnostics**: in-app updates via Sparkle, crash reporting, cache management

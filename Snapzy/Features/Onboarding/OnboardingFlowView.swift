@@ -17,5 +17,6 @@ struct OnboardingFlowView {
   static func resetOnboarding() {
     UserDefaults.standard.set(false, forKey: onboardingCompletedKey)
     UserDefaults.standard.set(false, forKey: PreferencesKeys.splashSkipped)
+    UserDefaults.standard.removeObject(forKey: PreferencesKeys.splashSkipOnceAfterOnboardingRelaunch)
   }
 }

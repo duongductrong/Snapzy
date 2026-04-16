@@ -8,9 +8,11 @@
 import SwiftUI
 
 struct ShortcutsView: View {
+  var onBack: (() -> Void)? = nil
   let onDecline: () -> Void
   let onAccept: () -> Void
 
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
   @State private var hasConflict: Bool = true
   @State private var isCheckingConflict: Bool = false
   @State private var pollTimer: Timer?
@@ -18,7 +20,7 @@ struct ShortcutsView: View {
   @State private var conflictCardHighlight: Bool = false
 
   var body: some View {
-    OnboardingStepContainer {
+    OnboardingStepContainer(onBack: onBack) {
 
       // Header icon
       Image(systemName: "keyboard")
@@ -26,12 +28,12 @@ struct ShortcutsView: View {
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
-      Text(L10n.Onboarding.shortcutsTitle)
+      Text(shortcutsTitle)
         .vsHeading()
         .padding(.top, 20)
 
       // Subtitle
-      Text(L10n.Onboarding.shortcutsSubtitle)
+      Text(shortcutsSubtitle)
         .vsBody()
         .multilineTextAlignment(.center)
         .frame(maxWidth: 340)
@@ -39,19 +41,19 @@ struct ShortcutsView: View {
 
       // Shortcut groups
       VStack(spacing: 14) {
-        ShortcutGroup(title: L10n.ShortcutOverlay.captureSection, shortcuts: [
-          ShortcutItem(keys: "⇧⌘3", action: L10n.Actions.captureFullscreen),
-          ShortcutItem(keys: "⇧⌘4", action: L10n.Actions.captureArea),
-          ShortcutItem(keys: "⇧⌘2", action: L10n.Actions.captureTextOCR),
+        ShortcutGroup(title: captureSectionTitle, shortcuts: [
+          ShortcutItem(keys: "⇧⌘3", action: captureFullscreenTitle),
+          ShortcutItem(keys: "⇧⌘4", action: captureAreaTitle),
+          ShortcutItem(keys: "⇧⌘2", action: captureTextOCRTitle),
         ])
 
-        ShortcutGroup(title: L10n.Onboarding.recordingSection, shortcuts: [
-          ShortcutItem(keys: "⇧⌘5", action: L10n.Menu.recordScreen),
+        ShortcutGroup(title: recordingSectionTitle, shortcuts: [
+          ShortcutItem(keys: "⇧⌘5", action: recordScreenTitle),
         ])
 
-        ShortcutGroup(title: L10n.Onboarding.toolsSection, shortcuts: [
-          ShortcutItem(keys: "⇧⌘A", action: L10n.Actions.openAnnotate),
-          ShortcutItem(keys: "⇧⌘E", action: L10n.Actions.openVideoEditor),
+        ShortcutGroup(title: toolsSectionTitle, shortcuts: [
+          ShortcutItem(keys: "⇧⌘A", action: openAnnotateTitle),
+          ShortcutItem(keys: "⇧⌘E", action: openVideoEditorTitle),
         ])
       }
       .frame(maxWidth: 380)
@@ -69,7 +71,7 @@ struct ShortcutsView: View {
                 .font(.system(size: 14))
                 .foregroundColor(.orange)
 
-              Text(L10n.Onboarding.resolveShortcutOverlap)
+              Text(resolveShortcutOverlapTitle)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -92,16 +94,16 @@ struct ShortcutsView: View {
               }
               .buttonStyle(.plain)
 
-              Text(L10n.Onboarding.openSettings)
+              Text(openSettingsTitle)
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.orange)
             }
 
             // Step-by-step guidance
             VStack(alignment: .leading, spacing: 4) {
-              GuideStepRow(step: "1", text: L10n.Onboarding.guideStep1)
-              GuideStepRow(step: "2", text: L10n.Onboarding.guideStep2)
-              GuideStepRow(step: "3", text: L10n.Onboarding.guideStep3)
+              GuideStepRow(step: "1", text: guideStep1Title)
+              GuideStepRow(step: "2", text: guideStep2Title)
+              GuideStepRow(step: "3", text: guideStep3Title)
             }
           }
           .padding(.horizontal, 14)
@@ -127,7 +129,7 @@ struct ShortcutsView: View {
             .font(.system(size: 16))
             .foregroundColor(.green)
 
-          Text(L10n.Onboarding.noConflictDetected)
+          Text(noConflictDetectedTitle)
             .font(.system(size: 12, weight: .medium))
             .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -155,7 +157,7 @@ struct ShortcutsView: View {
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
 
-        Text(L10n.Onboarding.customizeHint)
+        Text(customizeHintTitle)
           .font(.system(size: 12))
           .foregroundColor(VSDesignSystem.Colors.quaternary)
       }
@@ -163,13 +165,13 @@ struct ShortcutsView: View {
 
       // Actions
       HStack(spacing: 16) {
-        Button(L10n.Onboarding.noThanks) {
+        Button(noThanksTitle) {
           stopPolling()
           onDecline()
         }
         .buttonStyle(VSDesignSystem.SecondaryButtonStyle())
 
-        Button(L10n.Onboarding.enableShortcuts) {
+        Button(enableShortcutsTitle) {
           if hasConflict {
             triggerConflictHint()
           } else {
@@ -221,6 +223,166 @@ struct ShortcutsView: View {
         }
       }
     }
+  }
+
+  private var shortcutsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.title",
+      defaultValue: "Set as default screenshot tool?",
+      comment: "Onboarding shortcuts step title"
+    )
+  }
+
+  private var shortcutsSubtitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.subtitle",
+      defaultValue: "Assign system shortcuts to Snapzy for quick access.",
+      comment: "Onboarding shortcuts step subtitle"
+    )
+  }
+
+  private var captureSectionTitle: String {
+    onboardingLocalization.string(
+      "shortcut-overlay.capture-section",
+      defaultValue: "Capture",
+      comment: "Capture section title in shortcut overlay"
+    )
+  }
+
+  private var captureFullscreenTitle: String {
+    onboardingLocalization.string(
+      "action.capture-fullscreen",
+      defaultValue: "Capture Fullscreen",
+      comment: "Action label for fullscreen screenshot"
+    )
+  }
+
+  private var captureAreaTitle: String {
+    onboardingLocalization.string(
+      "action.capture-area",
+      defaultValue: "Capture Area",
+      comment: "Action label for area screenshot"
+    )
+  }
+
+  private var captureTextOCRTitle: String {
+    onboardingLocalization.string(
+      "action.capture-text-ocr",
+      defaultValue: "Capture Text (OCR)",
+      comment: "Action label for OCR screenshot"
+    )
+  }
+
+  private var recordingSectionTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.section-recording",
+      defaultValue: "Recording",
+      comment: "Shortcut group title in onboarding"
+    )
+  }
+
+  private var recordScreenTitle: String {
+    onboardingLocalization.string(
+      "menu.record-screen",
+      defaultValue: "Record Screen",
+      comment: "Menu action title for starting screen recording"
+    )
+  }
+
+  private var toolsSectionTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.section-tools",
+      defaultValue: "Tools",
+      comment: "Shortcut group title in onboarding"
+    )
+  }
+
+  private var openAnnotateTitle: String {
+    onboardingLocalization.string(
+      "action.open-annotate",
+      defaultValue: "Open Annotate",
+      comment: "Action label for opening the image annotator"
+    )
+  }
+
+  private var openVideoEditorTitle: String {
+    onboardingLocalization.string(
+      "action.open-video-editor",
+      defaultValue: "Open Video Editor",
+      comment: "Action label for opening the video editor"
+    )
+  }
+
+  private var resolveShortcutOverlapTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.resolve-overlap",
+      defaultValue: "Resolve macOS shortcut overlap",
+      comment: "Warning title when system screenshot shortcuts overlap with Snapzy shortcuts"
+    )
+  }
+
+  private var openSettingsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.open-settings",
+      defaultValue: "Open Settings →",
+      comment: "Action hint to open system settings"
+    )
+  }
+
+  private var guideStep1Title: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.guide-step-1",
+      defaultValue: "Open System Settings → Keyboard → Keyboard Shortcuts",
+      comment: "Step 1 in onboarding shortcut conflict resolution guide"
+    )
+  }
+
+  private var guideStep2Title: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.guide-step-2",
+      defaultValue: "Select Screenshots from the sidebar",
+      comment: "Step 2 in onboarding shortcut conflict resolution guide"
+    )
+  }
+
+  private var guideStep3Title: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.guide-step-3",
+      defaultValue: "Uncheck the macOS screenshot shortcuts that overlap with the Snapzy shortcuts you want to keep on",
+      comment: "Step 3 in onboarding shortcut conflict resolution guide"
+    )
+  }
+
+  private var noConflictDetectedTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.no-conflict",
+      defaultValue: "No overlapping macOS screenshot shortcuts detected — ready to go!",
+      comment: "Success message when no system shortcut conflict exists"
+    )
+  }
+
+  private var customizeHintTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.customize-hint",
+      defaultValue: "You can customize or turn off shortcuts anytime in Preferences → Shortcuts.",
+      comment: "Hint text below shortcut setup card"
+    )
+  }
+
+  private var noThanksTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.no-thanks",
+      defaultValue: "No, thanks",
+      comment: "Secondary decline button on shortcut setup screen"
+    )
+  }
+
+  private var enableShortcutsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.shortcuts.enable",
+      defaultValue: "Yes, enable shortcuts",
+      comment: "Primary accept button on shortcut setup screen"
+    )
   }
 
   private func stopPolling() {

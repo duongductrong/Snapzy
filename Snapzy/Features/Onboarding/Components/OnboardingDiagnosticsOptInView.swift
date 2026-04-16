@@ -8,12 +8,14 @@
 import SwiftUI
 
 struct DiagnosticsOptInView: View {
+  var onBack: (() -> Void)? = nil
   let onNext: () -> Void
 
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
   @AppStorage(PreferencesKeys.diagnosticsEnabled) private var diagnosticsEnabled = true
 
   var body: some View {
-    OnboardingStepContainer {
+    OnboardingStepContainer(onBack: onBack) {
 
       // Icon
       Image(systemName: "doc.text.magnifyingglass")
@@ -21,12 +23,12 @@ struct DiagnosticsOptInView: View {
         .foregroundColor(VSDesignSystem.Colors.secondary)
 
       // Title
-      Text(L10n.Onboarding.diagnosticsTitle)
+      Text(diagnosticsTitle)
         .vsHeading()
         .padding(.top, 24)
 
       // Description
-      Text(L10n.Onboarding.diagnosticsDescription)
+      Text(diagnosticsDescription)
       .vsBody()
       .multilineTextAlignment(.center)
       .frame(maxWidth: 340)
@@ -41,11 +43,11 @@ struct DiagnosticsOptInView: View {
             .frame(width: 24, alignment: .center)
 
           VStack(alignment: .leading, spacing: 2) {
-            Text(L10n.Onboarding.enableCrashLogging)
+            Text(enableCrashLoggingTitle)
               .font(.system(size: 13, weight: .medium))
               .foregroundColor(VSDesignSystem.Colors.primary)
 
-            Text(L10n.Onboarding.logsStoredLocally)
+            Text(logsStoredLocallyTitle)
               .font(.system(size: 12))
               .foregroundColor(VSDesignSystem.Colors.tertiary)
           }
@@ -71,7 +73,7 @@ struct DiagnosticsOptInView: View {
       .padding(.top, 24)
 
       // Privacy note
-      Text(L10n.Onboarding.diagnosticsPrivacyNote)
+      Text(diagnosticsPrivacyNoteTitle)
         .font(.system(size: 11))
         .foregroundColor(VSDesignSystem.Colors.quaternary)
         .multilineTextAlignment(.center)
@@ -79,13 +81,61 @@ struct DiagnosticsOptInView: View {
         .padding(.top, 8)
 
       // Navigation
-      Button(L10n.Common.next) {
+      Button(commonNextTitle) {
         onNext()
       }
       .buttonStyle(VSDesignSystem.PrimaryButtonStyle())
       .keyboardShortcut(.return, modifiers: [])
       .padding(.top, 32)
     }
+  }
+
+  private var diagnosticsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.diagnostics.title",
+      defaultValue: "Help improve Snapzy?",
+      comment: "Diagnostics onboarding step title"
+    )
+  }
+
+  private var diagnosticsDescription: String {
+    onboardingLocalization.string(
+      "onboarding.diagnostics.description",
+      defaultValue: "Allow local crash logs so Snapzy can recover better when something goes wrong.",
+      comment: "Diagnostics onboarding step description"
+    )
+  }
+
+  private var enableCrashLoggingTitle: String {
+    onboardingLocalization.string(
+      "onboarding.diagnostics.enable-crash-logging",
+      defaultValue: "Enable crash logging",
+      comment: "Toggle label for enabling crash logging during onboarding"
+    )
+  }
+
+  private var logsStoredLocallyTitle: String {
+    onboardingLocalization.string(
+      "onboarding.diagnostics.logs-stored-locally",
+      defaultValue: "Logs stay on this Mac unless you choose to share them.",
+      comment: "Supporting text below crash logging toggle during onboarding"
+    )
+  }
+
+  private var diagnosticsPrivacyNoteTitle: String {
+    onboardingLocalization.string(
+      "onboarding.diagnostics.privacy-note",
+      defaultValue: "You can change this later in Preferences -> General.",
+      comment: "Privacy note shown below diagnostics toggle during onboarding"
+    )
+  }
+
+  private var commonNextTitle: String {
+    onboardingLocalization.string(
+      "common.next",
+      defaultValue: "Next",
+      comment: "Primary next action button title"
+    )
   }
 }
 
