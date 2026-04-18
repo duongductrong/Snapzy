@@ -15,6 +15,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.7] - 2026-04-18
+
+### Bug Fixes
+-  Enhance CloudKeychainStore with improved upsert logic and legacy migration handling (91a1dbc)
+
+### Chore
+- docs: Add community section with Discord link to README files (1d933c3)
+- chore: update appcast, cask, and readme for v1.7.6 (7ba9be5)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.6] - 2026-04-18
 
 ### Features
