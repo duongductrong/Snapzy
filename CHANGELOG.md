@@ -14,6 +14,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.6] - 2026-04-18
+
+### Features
+-  Enhance AppStatusBarController to maintain menu accessibility during recording and manage Preferences window exclusion (ed0f533)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.7.5 (0580563)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.5] - 2026-04-18
 
 ### Features
