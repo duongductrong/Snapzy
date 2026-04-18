@@ -13,6 +13,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.5] - 2026-04-18
+
+### Features
+-  Enhance screen capture with fast snapshot support and improved session handling (023ca72)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.7.4 (0830ab6)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.4] - 2026-04-17
 
 ### Features
