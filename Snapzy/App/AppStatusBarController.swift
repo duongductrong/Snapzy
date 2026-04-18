@@ -2,7 +2,7 @@
 //  AppStatusBarController.swift
 //  Snapzy
 //
-//  Manages the NSStatusItem for dynamic recording status and click-to-stop functionality
+//  Manages the NSStatusItem for menu-driven capture actions and live recording status.
 //
 
 import AppKit
@@ -20,6 +20,7 @@ final class AppStatusBarController: ObservableObject {
   private var statusItem: NSStatusItem?
   private var cancellables = Set<AnyCancellable>()
   private let recorder = ScreenRecordingManager.shared
+  private lazy var idleStatusImage = makeIdleStatusImage()
   private var menu: NSMenu?
   private var didDetectCrash = false
 
@@ -29,6 +30,9 @@ final class AppStatusBarController: ObservableObject {
 
   // Track if we elevated activation policy for Settings window
   private var didElevateForSettings = false
+  private weak var trackedPreferencesWindow: NSWindow?
+  private var trackedPreferencesExcludedWindowID: CGWindowID?
+  private var pendingPreferencesWindowTrackingWorkItem: DispatchWorkItem?
 
   private init() {}
 
@@ -48,18 +52,8 @@ final class AppStatusBarController: ObservableObject {
     AreaSelectionController.shared.prepareWindowPool()
   }
 
-  /// Stop recording from external trigger (click-to-stop)
   func stopRecording() {
-    Task {
-      // Properly stop recording (saves video and shows QuickAccess)
-      let url = await ScreenRecordingManager.shared.stopRecording()
-      if let url = url {
-        SoundManager.play("Glass")
-        await QuickAccessManager.shared.addVideo(url: url)
-      }
-      // Cleanup coordinator UI (toolbar, overlays) - cancel() now guards against double cleanup
-      RecordingCoordinator.shared.cancel()
-    }
+    RecordingCoordinator.shared.stopFromStatusItem()
   }
 
   // MARK: - Private Setup
@@ -68,28 +62,21 @@ final class AppStatusBarController: ObservableObject {
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
     if let button = statusItem?.button {
-      button.image = makeIdleStatusImage()
-
-      // Set up click action
+      button.imagePosition = .imageLeading
       button.target = self
       button.action = #selector(statusBarButtonClicked(_:))
       button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+      renderStatusItem()
     }
   }
 
   @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {
     guard let event = NSApp.currentEvent else { return }
-
-    if recorder.isActive {
-      // During recording: left-click stops, right-click shows menu
-      if event.type == .leftMouseUp {
-        stopRecording()
-      } else {
-        showMenu()
-      }
-    } else {
-      // Not recording: always show menu
+    switch event.type {
+    case .leftMouseUp, .rightMouseUp:
       showMenu()
+    default:
+      break
     }
   }
 
@@ -106,46 +93,70 @@ final class AppStatusBarController: ObservableObject {
   private func observeRecordingState() {
     recorder.$state
       .receive(on: RunLoop.main)
-      .sink { [weak self] state in
-        self?.updateStatusIcon(for: state)
+      .sink { [weak self] _ in
+        self?.renderStatusItem()
+        self?.syncTrackedPreferencesWindowExclusion()
+      }
+      .store(in: &cancellables)
+
+    recorder.$elapsedSeconds
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.renderStatusItem()
       }
       .store(in: &cancellables)
   }
 
-  private func updateStatusIcon(for state: RecordingState) {
+  private func renderStatusItem() {
     guard let button = statusItem?.button else { return }
+    button.image = idleStatusImage
+    button.contentTintColor = nil
+    button.attributedTitle = statusItemAttributedTitle(for: recorder.state)
+    button.toolTip = statusItemTooltip(for: recorder.state)
+  }
 
-    let iconName: String
-    let useTemplate: Bool
-
+  private func statusItemAttributedTitle(for state: RecordingState) -> NSAttributedString {
+    let title: String
     switch state {
     case .recording:
-      iconName = "record.circle.fill"
-      useTemplate = false
+      title = recorder.formattedDuration
     case .paused:
-      iconName = "pause.circle.fill"
-      useTemplate = false
-    case .preparing, .stopping:
-      iconName = "record.circle"
-      useTemplate = false
-    case .idle:
-      iconName = "camera.aperture"
-      useTemplate = true
+      title = "|| \(recorder.formattedDuration)"
+    case .idle, .preparing, .stopping:
+      title = ""
     }
 
-    if useTemplate {
-      button.image = makeIdleStatusImage()
-      button.contentTintColor = nil
-    } else {
-      // Colored icon for recording states - use hierarchical rendering with red
-      let config = NSImage.SymbolConfiguration(hierarchicalColor: .systemRed)
-      if let image = NSImage(systemSymbolName: iconName, accessibilityDescription: "Snapzy")?
-        .withSymbolConfiguration(config)
-      {
-        image.isTemplate = false
-        button.image = image
-        button.contentTintColor = nil
-      }
+    guard !title.isEmpty else {
+      return NSAttributedString(string: "")
+    }
+
+    let menuBarFont = NSFont.menuBarFont(ofSize: 0)
+    let monospacedDigitsFont = NSFont.monospacedDigitSystemFont(
+      ofSize: menuBarFont.pointSize,
+      weight: .regular
+    )
+
+    return NSAttributedString(
+      string: title,
+      attributes: [
+        .font: monospacedDigitsFont,
+        .foregroundColor: NSColor.labelColor,
+      ]
+    )
+  }
+
+  private func statusItemTooltip(for state: RecordingState) -> String {
+    switch state {
+    case .recording:
+      return "\(L10n.RecordingToolbar.recordingInProgress) (\(recorder.formattedDuration))"
+    case .paused:
+      return "\(L10n.RecordingToolbar.recordingPaused) (\(recorder.formattedDuration))"
+    case .preparing:
+      return "Snapzy"
+    case .stopping:
+      return "Snapzy"
+    case .idle:
+      return "Snapzy"
     }
   }
 
@@ -176,7 +187,7 @@ final class AppStatusBarController: ObservableObject {
     guard let viewModel = viewModel else { return }
 
     // Recording status indicator (when recording)
-    if recorder.isActive {
+    if recorder.state == .recording || recorder.state == .paused {
       let stopItem = NSMenuItem(
         title: L10n.Menu.stopRecording(recorder.formattedDuration),
         action: #selector(stopRecordingAction),
@@ -186,6 +197,20 @@ final class AppStatusBarController: ObservableObject {
       stopItem.image = NSImage(systemSymbolName: "stop.fill", accessibilityDescription: nil)
       stopItem.isEnabled = true
       menu?.addItem(stopItem)
+
+      let pauseResumeItem = NSMenuItem(
+        title: recorder.isPaused ? L10n.RecordingToolbar.resumeRecording : L10n.RecordingToolbar.pauseRecording,
+        action: #selector(togglePauseRecordingAction),
+        keyEquivalent: ""
+      )
+      pauseResumeItem.target = self
+      pauseResumeItem.image = NSImage(
+        systemSymbolName: recorder.isPaused ? "play.fill" : "pause.fill",
+        accessibilityDescription: nil
+      )
+      pauseResumeItem.isEnabled = recorder.state == .recording || recorder.state == .paused
+      menu?.addItem(pauseResumeItem)
+
       menu?.addItem(NSMenuItem.separator())
     }
 
@@ -372,6 +397,10 @@ final class AppStatusBarController: ObservableObject {
     stopRecording()
   }
 
+  @objc private func togglePauseRecordingAction() {
+    recorder.togglePause()
+  }
+
   @objc private func captureAreaAction() {
     viewModel?.captureArea()
   }
@@ -438,6 +467,8 @@ final class AppStatusBarController: ObservableObject {
   }
 
   private func presentPreferencesWindow() {
+    let existingWindowNumbers = Set(NSApp.windows.map(\.windowNumber))
+
     // Elevate to regular app so Snapzy appears in top-left menu bar
     if !didElevateForSettings {
       NSApp.setActivationPolicy(.regular)
@@ -473,9 +504,16 @@ final class AppStatusBarController: ObservableObject {
     } else {
       NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
     }
+
+    schedulePreferencesWindowTracking(excludingWindowNumbers: existingWindowNumbers)
   }
 
   @objc private func windowDidClose(_ notification: Notification) {
+    if let window = notification.object as? NSWindow, trackedPreferencesWindow === window {
+      trackedPreferencesWindow = nil
+      removeTrackedPreferencesWindowExclusion()
+    }
+
     // Check if any visible windows remain (excluding status bar popover)
     let visibleWindows = NSApp.windows.filter { window in
       window.isVisible &&
@@ -497,5 +535,83 @@ final class AppStatusBarController: ObservableObject {
 
   @objc private func quitAction() {
     NSApp.terminate(nil)
+  }
+
+  private func schedulePreferencesWindowTracking(excludingWindowNumbers existingWindowNumbers: Set<Int>) {
+    pendingPreferencesWindowTrackingWorkItem?.cancel()
+
+    let workItem = DispatchWorkItem { [weak self] in
+      self?.trackPreferencesWindow(excludingWindowNumbers: existingWindowNumbers, remainingAttempts: 12)
+    }
+    pendingPreferencesWindowTrackingWorkItem = workItem
+    DispatchQueue.main.async(execute: workItem)
+  }
+
+  private func trackPreferencesWindow(excludingWindowNumbers existingWindowNumbers: Set<Int>, remainingAttempts: Int) {
+    pendingPreferencesWindowTrackingWorkItem = nil
+
+    if let trackedPreferencesWindow, trackedPreferencesWindow.isVisible {
+      syncTrackedPreferencesWindowExclusion()
+      return
+    }
+
+    if let candidate = NSApp.windows.first(where: {
+      $0.isVisible &&
+      $0.level == .normal &&
+      $0.className != "NSStatusBarWindow" &&
+      !existingWindowNumbers.contains($0.windowNumber)
+    }) {
+      trackedPreferencesWindow = candidate
+      syncTrackedPreferencesWindowExclusion()
+      return
+    }
+
+    guard remainingAttempts > 1 else { return }
+
+    let workItem = DispatchWorkItem { [weak self] in
+      self?.trackPreferencesWindow(
+        excludingWindowNumbers: existingWindowNumbers,
+        remainingAttempts: remainingAttempts - 1
+      )
+    }
+    pendingPreferencesWindowTrackingWorkItem = workItem
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05, execute: workItem)
+  }
+
+  private func syncTrackedPreferencesWindowExclusion() {
+    guard let trackedPreferencesWindow, trackedPreferencesWindow.isVisible else {
+      removeTrackedPreferencesWindowExclusion()
+      return
+    }
+
+    let windowID = CGWindowID(trackedPreferencesWindow.windowNumber)
+
+    guard recorder.isActive else {
+      removeTrackedPreferencesWindowExclusion()
+      return
+    }
+
+    guard trackedPreferencesExcludedWindowID != windowID else { return }
+
+    let previousWindowID = trackedPreferencesExcludedWindowID
+    trackedPreferencesExcludedWindowID = windowID
+
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      if let previousWindowID, previousWindowID != windowID {
+        await self.recorder.removeRuntimeExcludedWindow(windowID: previousWindowID)
+      }
+      await self.recorder.addRuntimeExcludedWindow(windowID: windowID)
+    }
+  }
+
+  private func removeTrackedPreferencesWindowExclusion() {
+    guard let windowID = trackedPreferencesExcludedWindowID else { return }
+    trackedPreferencesExcludedWindowID = nil
+
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.recorder.removeRuntimeExcludedWindow(windowID: windowID)
+    }
   }
 }

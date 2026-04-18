@@ -68,5 +68,6 @@ flowchart TD
 - `AfterCaptureAction.uploadToCloud` currently enables screenshot cloud-upload entry points in Quick Access and Annotate. It is not executed directly by `PostCaptureActionHandler`.
 - GIF recording flow first creates a video, inserts it into Quick Access, converts it, then swaps the card to the GIF output.
 - Annotate and Video Editor temporarily elevate Snapzy from accessory mode to regular app mode so the editor windows appear in Dock and Cmd+Tab.
+- During recording, the menu bar item stays menu-first instead of left-click-to-stop. It shows the live timer, keeps Preferences reachable, and temporarily excludes the Settings window from own-app recordings when needed.
 
 If one of these behaviors changes, update this file, [`project-structure.md`](project-structure.md), [`capture-flow.md`](capture-flow.md), and the root [`README.md`](../README.md) in the same change.

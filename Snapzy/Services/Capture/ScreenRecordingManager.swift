@@ -431,6 +431,20 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
   }
 
+  func addRuntimeExcludedWindow(windowID: CGWindowID) async {
+    guard state != .idle else { return }
+    guard excludedWindowIDs.insert(windowID).inserted else { return }
+    guard let activeStream = stream else { return }
+    await updateContentFilter(for: activeStream)
+  }
+
+  func removeRuntimeExcludedWindow(windowID: CGWindowID) async {
+    guard state != .idle else { return }
+    guard excludedWindowIDs.remove(windowID) != nil else { return }
+    guard let activeStream = stream else { return }
+    await updateContentFilter(for: activeStream)
+  }
+
   /// Stop the recording and save the file
   func stopRecording() async -> URL? {
     guard state == .recording || state == .paused else { return nil }

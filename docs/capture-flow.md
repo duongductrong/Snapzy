@@ -161,6 +161,8 @@ flowchart TD
 - Recording metadata is stored separately from the media file and powers Smart Camera / Follow Mouse in the video editor.
 - GIF output is a two-step flow: record video first, then convert and swap the Quick Access item.
 - `RecordingCoordinator` owns toolbar and overlay UX. `ScreenRecordingManager` owns media capture, timing, and metadata persistence.
+- `AppStatusBarController` stays menu-first during active recording. The menu bar item keeps Snapzy's normal identity, shows the live elapsed time, and exposes stop plus pause/resume from the menu instead of left-click-to-stop.
+- Opening Preferences from the menu bar during recording keeps Settings reachable without forcing a stop. When own-app capture is enabled, the active recording stream dynamically excludes that Settings window.
 - Recording toolbar labels, output mode copy, microphone/save-folder alerts, and export errors are localized.
 
 ## Post-Capture Routing

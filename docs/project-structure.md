@@ -205,6 +205,7 @@ Snapzy/
 ## Implementation Notes That Matter
 
 - `ScreenCaptureViewModel` is the main entrypoint for capture actions fired from shortcuts or the status bar menu.
+- `AppStatusBarController` is the AppKit bridge for the menu bar item. It now keeps the menu accessible during active recording, renders the live recording timer from `ScreenRecordingManager`, and coordinates temporary Preferences-window exclusion for record-own-app sessions.
 - Area screenshot now freezes the active display first through `FrozenAreaCaptureSession`, then crops from that cached bitmap instead of live-recapturing after selection while blocker overlays keep other displays non-interactive.
 - `PostCaptureActionHandler` executes Quick Access, clipboard copy, and screenshot auto-open in Annotate after files already exist.
 - `TempCaptureManager` is where the `Save` after-capture toggle becomes real behavior.
@@ -237,3 +238,5 @@ Snapzy/
 - `Upload to Cloud & copy link` in Preferences is a screenshot-only capability toggle. Current implementation exposes upload actions in Quick Access and Annotate; it does not auto-run inside `PostCaptureActionHandler`.
 - Quick Access can outlive the original capture location: saved captures stay in the export folder, temp captures are deleted when dismissed unless the user explicitly saves them.
 - Annotate and Video Editor both pause Quick Access countdowns for the edited item and resume them when the editor closes.
+- During recording, the menu bar item no longer turns into a left-click stop button. It keeps the normal menu path available, adds a live timer to the status item, and exposes stop plus pause/resume from the active menu section.
+- When Preferences is opened during an active recording with own-app capture enabled, Snapzy temporarily excludes that Settings window from the stream instead of forcing the user to stop recording first.

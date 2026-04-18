@@ -109,6 +109,17 @@ final class RecordingCoordinator: ObservableObject {
 
   // MARK: - Public API
 
+  func stopFromStatusItem() {
+    switch recorder.state {
+    case .recording, .paused:
+      stopRecording()
+    case .preparing:
+      cancel()
+    case .idle, .stopping:
+      break
+    }
+  }
+
   /// Start recording flow after area selection
   func showToolbar(for rect: CGRect) {
     guard !isActive else { return }
