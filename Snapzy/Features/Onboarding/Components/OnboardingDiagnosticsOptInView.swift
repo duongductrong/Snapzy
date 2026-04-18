@@ -144,5 +144,5 @@ struct DiagnosticsOptInView: View {
     onNext: {}
   )
   .frame(width: 500, height: 520)
-  .background(.black.opacity(0.5))
+  .background(OnboardingSurfaceBackground())
 }

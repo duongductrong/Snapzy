@@ -212,5 +212,5 @@ private struct LanguageOptionRow: View {
   OnboardingLanguageSelectionView(onContinue: {})
     .environmentObject(OnboardingLocalizationController())
     .frame(width: 500, height: 560)
-    .background(.black.opacity(0.5))
+    .background(OnboardingSurfaceBackground())
 }

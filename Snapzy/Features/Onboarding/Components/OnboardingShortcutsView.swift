@@ -525,5 +525,5 @@ private struct GuideStepRow: View {
 #Preview {
   ShortcutsView(onDecline: {}, onAccept: {})
     .frame(width: 500, height: 600)
-    .background(.black.opacity(0.5))
+    .background(OnboardingSurfaceBackground())
 }

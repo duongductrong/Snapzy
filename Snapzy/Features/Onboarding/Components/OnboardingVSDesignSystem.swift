@@ -2,7 +2,7 @@
 //  VSDesignSystem.swift
 //  Snapzy
 //
-//  Design system for onboarding views — adaptive dark/light theme for hudWindow material
+//  Design system for onboarding views — adaptive dark/light theme for opaque surface
 //
 
 import AppKit
@@ -13,8 +13,8 @@ struct VSDesignSystem {
   // MARK: - Adaptive Colors
 
   /// Semantic color tokens that adapt to dark/light mode.
-  /// `.hudWindow` is dark in dark mode and light-translucent in light mode,
-  /// so text must flip between white-on-dark and dark-on-light.
+  /// Tuned for an opaque window surface — text and controls stay readable
+  /// regardless of the user's desktop wallpaper.
   struct Colors {
     /// Headings, titles, prominent icon tints
     static let primary = Color(nsColor: NSColor(
@@ -27,8 +27,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.7)
-          : NSColor.black.withAlphaComponent(0.65)
+          ? NSColor.white.withAlphaComponent(0.85)
+          : NSColor.black.withAlphaComponent(0.7)
       }
     ))
 
@@ -37,8 +37,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.5)
-          : NSColor.black.withAlphaComponent(0.45)
+          ? NSColor.white.withAlphaComponent(0.65)
+          : NSColor.black.withAlphaComponent(0.5)
       }
     ))
 
@@ -47,8 +47,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.35)
-          : NSColor.black.withAlphaComponent(0.3)
+          ? NSColor.white.withAlphaComponent(0.5)
+          : NSColor.black.withAlphaComponent(0.35)
       }
     ))
 
@@ -57,8 +57,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.06)
-          : NSColor.black.withAlphaComponent(0.06)
+          ? NSColor.white.withAlphaComponent(0.08)
+          : NSColor.black.withAlphaComponent(0.04)
       }
     ))
 
@@ -67,7 +67,7 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.1)
+          ? NSColor.white.withAlphaComponent(0.14)
           : NSColor.black.withAlphaComponent(0.1)
       }
     ))
@@ -77,8 +77,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.08)
-          : NSColor.black.withAlphaComponent(0.08)
+          ? NSColor.white.withAlphaComponent(0.12)
+          : NSColor.black.withAlphaComponent(0.1)
       }
     ))
 
@@ -87,8 +87,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.2)
-          : NSColor.black.withAlphaComponent(0.12)
+          ? NSColor.white.withAlphaComponent(0.25)
+          : NSColor.black.withAlphaComponent(0.1)
       }
     ))
 
@@ -97,7 +97,7 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.3)
+          ? NSColor.white.withAlphaComponent(0.35)
           : NSColor.black.withAlphaComponent(0.2)
       }
     ))
@@ -107,8 +107,8 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.1)
-          : NSColor.black.withAlphaComponent(0.07)
+          ? NSColor.white.withAlphaComponent(0.12)
+          : NSColor.black.withAlphaComponent(0.06)
       }
     ))
 
@@ -117,7 +117,7 @@ struct VSDesignSystem {
       name: nil,
       dynamicProvider: { appearance in
         appearance.bestMatch(from: [.darkAqua]) == .darkAqua
-          ? NSColor.white.withAlphaComponent(0.2)
+          ? NSColor.white.withAlphaComponent(0.22)
           : NSColor.black.withAlphaComponent(0.15)
       }
     ))

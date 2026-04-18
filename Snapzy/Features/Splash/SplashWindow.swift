@@ -30,14 +30,21 @@ final class SplashWindow: NSWindow {
       defer: false
     )
     configureWindow()
-    setupBlurBackground()
+    setupOpaqueBackground()
   }
 
   private func configureWindow() {
     titlebarAppearsTransparent = true
     titleVisibility = .hidden
-    backgroundColor = .clear
-    isOpaque = false
+    backgroundColor = NSColor(
+      name: nil,
+      dynamicProvider: { appearance in
+        appearance.bestMatch(from: [.darkAqua]) == .darkAqua
+          ? NSColor(srgbRed: 28/255, green: 28/255, blue: 30/255, alpha: 1)   // #1C1C1E
+          : NSColor(srgbRed: 242/255, green: 242/255, blue: 247/255, alpha: 1) // #F2F2F7
+      }
+    )
+    isOpaque = true
     level = .normal
     hasShadow = true
     isReleasedWhenClosed = false
@@ -49,17 +56,13 @@ final class SplashWindow: NSWindow {
     alphaValue = 0
   }
 
-  private func setupBlurBackground() {
+  private func setupOpaqueBackground() {
     let container = NSView()
     container.wantsLayer = true
 
-    // Blur effect behind the window
-    let blurView = NSVisualEffectView()
-    blurView.blendingMode = .behindWindow
-    blurView.material = .hudWindow
-    blurView.state = .active
-    blurView.autoresizingMask = [.width, .height]
-    container.addSubview(blurView)
+    // Let NSWindow.backgroundColor (set in configureWindow) paint the entire
+    // window including the transparent titlebar area. No extra layer color needed —
+    // this ensures traffic lights sit on the same surface as content.
 
     self.contentView = container
   }

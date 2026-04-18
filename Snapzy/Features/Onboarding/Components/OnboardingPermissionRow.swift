@@ -170,5 +170,5 @@ struct PermissionRow: View {
   }
   .padding()
   .frame(width: 450)
-  .background(.black.opacity(0.5))
+  .background(OnboardingSurfaceBackground())
 }

@@ -182,5 +182,5 @@ private extension SplashContentView {
 #Preview {
   SplashContentView(onContinue: { _ in })
     .frame(width: 800, height: 600)
-    .background(.black.opacity(0.5))
+    .background(OnboardingSurfaceBackground())
 }

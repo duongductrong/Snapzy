@@ -48,7 +48,9 @@ struct SplashOnboardingRootView: View {
 
   var body: some View {
     ZStack {
-      Color.clear
+      // Stable opaque base — extends behind titlebar for seamless look
+      OnboardingSurfaceBackground()
+        .ignoresSafeArea()
 
       Group {
         switch currentScreen {
@@ -233,5 +235,4 @@ struct SplashOnboardingRootView: View {
     onDismiss: {}
   )
   .frame(width: 800, height: 600)
-  .background(.black.opacity(0.5))
 }

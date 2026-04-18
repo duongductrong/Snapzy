@@ -178,5 +178,5 @@ struct SponsorView: View {
 #Preview {
   SponsorView(onContinue: {})
     .frame(width: 500, height: 520)
-    .background(.black.opacity(0.5))
+    .background(OnboardingSurfaceBackground())
 }

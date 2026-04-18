@@ -76,5 +76,5 @@ struct SkipConfirmationView: View {
 #Preview {
   SkipConfirmationView(onGoBack: {}, onConfirmSkip: {})
     .frame(width: 500, height: 450)
-    .background(.black.opacity(0.5))
+    .background(OnboardingSurfaceBackground())
 }

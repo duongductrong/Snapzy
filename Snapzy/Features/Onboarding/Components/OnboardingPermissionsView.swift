@@ -404,5 +404,5 @@ struct PermissionsView: View {
     onNext: {}
   )
   .frame(width: 500, height: 500)
-  .background(.black.opacity(0.5))
+  .background(OnboardingSurfaceBackground())
 }
