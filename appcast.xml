@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.7.7</title>
+      <sparkle:version>63</sparkle:version>
+      <sparkle:shortVersionString>1.7.7</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 18 Apr 2026 15:33:52 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>Enhance CloudKeychainStore with improved upsert logic and legacy migration handling</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.7.7/Snapzy-v1.7.7.dmg"
+        sparkle:edSignature="WcNOunWK3FrID2sDDbity9z/WX96Uy380dnEOsTEydxvUD7o8yV5gw/efCYVLJGrFGXWWXYQtJcKCU8HUy+SBA=="
+        length="13048328"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.7.6</title>
       <sparkle:version>62</sparkle:version>
       <sparkle:shortVersionString>1.7.6</sparkle:shortVersionString>
