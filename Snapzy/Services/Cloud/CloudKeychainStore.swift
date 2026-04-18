@@ -51,7 +51,7 @@ struct CloudKeychainDeleteIssue {
 }
 
 struct CloudKeychainStore {
-  private struct Location {
+  private struct Location: Equatable {
     let service: String
     let account: String
     let usesDataProtection: Bool
@@ -59,6 +59,12 @@ struct CloudKeychainStore {
     var description: String {
       "\(service):\(account):\(usesDataProtection ? "dp" : "legacy")"
     }
+  }
+
+  private enum UpsertAttemptResult {
+    case success
+    case updateFailed(OSStatus)
+    case addFailed(OSStatus)
   }
 
   private static let logger = Logger(subsystem: "Snapzy", category: "CloudKeychainStore")
@@ -78,6 +84,11 @@ struct CloudKeychainStore {
       return .success(value)
     case .itemNotFound:
       break
+    case .error(let status) where status == errSecMissingEntitlement:
+      logger.notice(
+        "Data-protection keychain unavailable (\(status, privacy: .public)); falling back [\(context, privacy: .public)]"
+      )
+      break
     case .authRequired, .interactionNotAllowed, .error:
       return primaryOutcome
     }
@@ -86,7 +97,13 @@ struct CloudKeychainStore {
       let legacyOutcome = readValue(at: legacyLocation)
       switch legacyOutcome {
       case .success(let value):
-        migrateLegacyValue(value, item: item, from: legacyLocation, context: context)
+        if shouldMigrateLegacyValue(
+          from: legacyLocation,
+          item: item,
+          primaryOutcome: primaryOutcome
+        ) {
+          migrateLegacyValue(value, item: item, from: legacyLocation, context: context)
+        }
         return .success(value)
       case .itemNotFound:
         continue
@@ -98,40 +115,44 @@ struct CloudKeychainStore {
     return .itemNotFound
   }
 
-  static func upsert(item: CloudKeychainItem, value: String) throws {
+  @discardableResult
+  static func upsert(item: CloudKeychainItem, value: String) throws -> String {
     guard let data = value.data(using: .utf8) else {
       throw CloudError.keychainError(L10n.CloudOperation.failedToEncodeKeychainValue)
     }
 
-    let location = Location(
+    let dataProtectionLocation = Location(
       service: currentService,
       account: item.account,
       usesDataProtection: true
     )
-    let matchQuery = baseQuery(for: location)
-    let updateAttributes: [String: Any] = [
-      kSecValueData as String: data,
-      kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlocked,
-    ]
-
-    let updateStatus = SecItemUpdate(matchQuery as CFDictionary, updateAttributes as CFDictionary)
-    if updateStatus == errSecSuccess {
+    let primaryAttempt = upsertValue(data, at: dataProtectionLocation)
+    switch primaryAttempt {
+    case .success:
       cleanupLegacyLocations(for: item)
-      return
-    }
-    guard updateStatus == errSecItemNotFound else {
-      throw CloudError.keychainError(L10n.CloudOperation.secItemUpdateFailed(Int(updateStatus)))
+      return dataProtectionLocation.description
+    case .updateFailed(let status), .addFailed(let status):
+      guard status == errSecMissingEntitlement else {
+        throw keychainError(for: primaryAttempt)
+      }
     }
 
-    var addQuery = matchQuery
-    addQuery[kSecValueData as String] = data
-    addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
-
-    let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
-    guard addStatus == errSecSuccess else {
-      throw CloudError.keychainError(L10n.CloudOperation.secItemAddFailed(Int(addStatus)))
+    let fileBasedLocation = Location(
+      service: currentService,
+      account: item.account,
+      usesDataProtection: false
+    )
+    let fallbackAttempt = upsertValue(data, at: fileBasedLocation)
+    switch fallbackAttempt {
+    case .success:
+      logger.notice(
+        "Stored cloud secret in file-based keychain due missing entitlement [\(item.account, privacy: .public)]"
+      )
+      cleanupLegacyLocations(for: item, excluding: fileBasedLocation)
+      return fileBasedLocation.description
+    case .updateFailed, .addFailed:
+      throw keychainError(for: fallbackAttempt)
     }
-    cleanupLegacyLocations(for: item)
   }
 
   @discardableResult
@@ -157,12 +178,25 @@ struct CloudKeychainStore {
     context: String
   ) {
     do {
-      try upsert(item: item, value: value)
+      let storedLocationDescription = try upsert(item: item, value: value)
+      guard storedLocationDescription != location.description else { return }
       deleteValue(at: location)
       logger.info("Migrated legacy keychain item for \(context, privacy: .public)")
     } catch {
       logger.error("Legacy keychain migration failed for \(context, privacy: .public): \(error.localizedDescription)")
     }
+  }
+
+  private static func shouldMigrateLegacyValue(
+    from location: Location,
+    item: CloudKeychainItem,
+    primaryOutcome: CloudKeychainReadOutcome
+  ) -> Bool {
+    guard case .error(let status) = primaryOutcome, status == errSecMissingEntitlement else {
+      return true
+    }
+
+    return !(location.service == currentService && location.account == item.account)
   }
 
   private static func legacyLocations(for item: CloudKeychainItem) -> [Location] {
@@ -208,8 +242,12 @@ struct CloudKeychainStore {
     SecItemDelete(query as CFDictionary)
   }
 
-  private static func cleanupLegacyLocations(for item: CloudKeychainItem) {
+  private static func cleanupLegacyLocations(
+    for item: CloudKeychainItem,
+    excluding preservedLocation: Location? = nil
+  ) {
     for location in legacyLocations(for: item) {
+      guard location != preservedLocation else { continue }
       let status = SecItemDelete(baseQuery(for: location) as CFDictionary)
       guard status != errSecSuccess, status != errSecItemNotFound else { continue }
       logger.error(
@@ -223,6 +261,7 @@ struct CloudKeychainStore {
     into issues: inout [CloudKeychainDeleteIssue]
   ) {
     let status = SecItemDelete(baseQuery(for: location) as CFDictionary)
+    guard !(location.usesDataProtection && status == errSecMissingEntitlement) else { return }
     guard status != errSecSuccess, status != errSecItemNotFound else { return }
     issues.append(
       CloudKeychainDeleteIssue(
@@ -244,5 +283,55 @@ struct CloudKeychainStore {
     }
 
     return query
+  }
+
+  private static func upsertValue(_ data: Data, at location: Location) -> UpsertAttemptResult {
+    let matchQuery = baseQuery(for: location)
+    let updateStatus = SecItemUpdate(
+      matchQuery as CFDictionary,
+      updateAttributes(for: location, data: data) as CFDictionary
+    )
+    if updateStatus == errSecSuccess {
+      return .success
+    }
+    guard updateStatus == errSecItemNotFound else {
+      return .updateFailed(updateStatus)
+    }
+
+    var addQuery = matchQuery
+    addAttributes(for: location, data: data).forEach { addQuery[$0.key] = $0.value }
+
+    let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+    guard addStatus == errSecSuccess else {
+      return .addFailed(addStatus)
+    }
+    return .success
+  }
+
+  private static func updateAttributes(for location: Location, data: Data) -> [String: Any] {
+    var attributes: [String: Any] = [
+      kSecValueData as String: data
+    ]
+    if location.usesDataProtection {
+      attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlocked
+    }
+    return attributes
+  }
+
+  private static func addAttributes(for location: Location, data: Data) -> [String: Any] {
+    var attributes = updateAttributes(for: location, data: data)
+    attributes[kSecValueData as String] = data
+    return attributes
+  }
+
+  private static func keychainError(for result: UpsertAttemptResult) -> CloudError {
+    switch result {
+    case .success:
+      return CloudError.keychainError(L10n.CloudOperation.secItemAddFailed(Int(errSecInternalError)))
+    case .updateFailed(let status):
+      return CloudError.keychainError(L10n.CloudOperation.secItemUpdateFailed(Int(status)))
+    case .addFailed(let status):
+      return CloudError.keychainError(L10n.CloudOperation.secItemAddFailed(Int(status)))
+    }
   }
 }
