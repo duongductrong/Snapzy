@@ -16,6 +16,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.7.8] - 2026-04-18
+
+### Features
+-  Improve Onboarding UI by replace black background with Opaque Background (67e794a)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.7.7 (b2bc28b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.7] - 2026-04-18
 
 ### Bug Fixes
