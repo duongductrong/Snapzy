@@ -173,6 +173,27 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
   <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy on Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
+## Benchmark
+
+### OCR
+
+基准测试日期：2026 年 4 月 19 日。README 中的 OCR 数据来自可复现的 runner `scripts/ocr_readme_benchmark.swift`，测试语料为干净的合成 UI/article text 换行文本，覆盖 `10 种支持语言`，每种语言 `12 个样本`。`Character accuracy` 是主要指标，`exact match` 采用严格计算，此语料上的 `no-output` 比例在下表所有语言中均为 `0%`。
+
+| 语言 | Character Accuracy | Exact Match |
+| --- | ---: | ---: |
+| English | 100.0% | 100.0% |
+| Vietnamese | 100.0% | 100.0% |
+| Simplified Chinese | 99.3% | 75.0% |
+| Traditional Chinese | 99.0% | 66.7% |
+| Spanish | 99.9% | 91.7% |
+| Japanese | 99.4% | 66.7% |
+| Korean | 99.7% | 83.3% |
+| Russian | 100.0% | 100.0% |
+| French | 99.3% | 33.3% |
+| German | 99.8% | 75.0% |
+
+真实截图中的表现可能低于这组语料，尤其是在包含 emoji、低对比度页脚、特殊标点、渐变背景、模糊效果或装饰性很强的字体时。
+
 <a id="security"></a>
 
 ## 安全

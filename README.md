@@ -159,6 +159,27 @@ For release packaging details, see [docs/project-build.md](docs/project-build.md
   <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy trên Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
+## Benchmark
+
+### OCR
+
+Benchmark date: April 19, 2026. Current OCR numbers come from `scripts/ocr_readme_benchmark.swift` on a clean synthetic wrapped UI/article-text corpus with `12 samples / language` across `10 supported languages`. `Character accuracy` is the primary signal, `exact match` is intentionally strict, and `no-output` on this corpus is `0%` for all languages below.
+
+| Language | Character Accuracy | Exact Match |
+| --- | ---: | ---: |
+| English | 100.0% | 100.0% |
+| Vietnamese | 100.0% | 100.0% |
+| Simplified Chinese | 99.3% | 75.0% |
+| Traditional Chinese | 99.0% | 66.7% |
+| Spanish | 99.9% | 91.7% |
+| Japanese | 99.4% | 66.7% |
+| Korean | 99.7% | 83.3% |
+| Russian | 100.0% | 100.0% |
+| French | 99.3% | 33.3% |
+| German | 99.8% | 75.0% |
+
+Real-world screenshots can score lower, especially with emoji, low-contrast footers, unusual punctuation, gradients, blur, or decorative fonts.
+
 ## Security
 
 Snapzy runs inside the macOS App Sandbox with minimal entitlements. Network requests are limited to Sparkle update checks and user-initiated cloud uploads to **your own** S3/R2 bucket — no data is ever sent to third-party servers. Cloud credentials are stored exclusively in the macOS Keychain, can be further protected with an optional password (SHA-256 hashed, never stored in plaintext), and can only be transferred via a manual encrypted export/import flow protected by a user-supplied archive passphrase. Snapzy collects no telemetry.

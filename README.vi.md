@@ -173,6 +173,27 @@ Chi tiết đóng gói bản phát hành nằm ở [docs/project-build.md](docs/
   <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy trên Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
+## Benchmark
+
+### OCR
+
+Ngày benchmark: 19 tháng 4, 2026. Các con số OCR trong README được lấy từ runner có thể tái lập `scripts/ocr_readme_benchmark.swift`, chạy trên corpus sạch dạng UI/article text có xuống dòng với `12 mẫu / ngôn ngữ` trên `10 ngôn ngữ được hỗ trợ`. `Character accuracy` là chỉ số chính, `exact match` được tính rất chặt, và tỷ lệ `no-output` trên corpus này là `0%` cho toàn bộ bảng bên dưới.
+
+| Ngôn ngữ | Character Accuracy | Exact Match |
+| --- | ---: | ---: |
+| English | 100.0% | 100.0% |
+| Vietnamese | 100.0% | 100.0% |
+| Simplified Chinese | 99.3% | 75.0% |
+| Traditional Chinese | 99.0% | 66.7% |
+| Spanish | 99.9% | 91.7% |
+| Japanese | 99.4% | 66.7% |
+| Korean | 99.7% | 83.3% |
+| Russian | 100.0% | 100.0% |
+| French | 99.3% | 33.3% |
+| German | 99.8% | 75.0% |
+
+Screenshot thực tế có thể thấp hơn corpus này, nhất là khi có emoji, footer tương phản thấp, dấu câu lạ, nền gradient, blur, hoặc font trang trí mạnh.
+
 <a id="security"></a>
 
 ## Bảo mật

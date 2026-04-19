@@ -709,7 +709,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             }
 
             // Perform OCR
-            let text = try await OCRService.shared.recognizeText(from: image)
+            let text = try await OCRService.shared.recognizeText(
+              from: image,
+              preferredLanguageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier,
+              contentType: .interfaceText
+            )
 
             // Copy to clipboard
             let pasteboard = NSPasteboard.general

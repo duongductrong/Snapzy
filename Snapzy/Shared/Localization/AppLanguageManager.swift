@@ -76,6 +76,10 @@ final class AppLanguageManager: ObservableObject {
     effectiveIdentifier(for: activeLanguageIdentifier)
   }
 
+  var activeOCRLanguageIdentifier: String {
+    activeEffectiveLanguageIdentifier
+  }
+
   func effectiveIdentifier(for selection: String) -> String {
     Self.effectiveIdentifier(
       for: selection,
@@ -90,6 +94,11 @@ final class AppLanguageManager: ObservableObject {
   func option(for identifier: String) -> AppLanguageOption? {
     availableOptions.first(where: { $0.identifier == identifier })
       ?? AppLanguageOption.supported.first(where: { $0.identifier == identifier })
+  }
+
+  static func normalizedLanguageIdentifier(from identifier: String?) -> String? {
+    guard let identifier, !identifier.isEmpty else { return nil }
+    return normalizedIdentifier(from: identifier)
   }
 
   func relaunchApplication() async throws {
