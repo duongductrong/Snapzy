@@ -21,6 +21,7 @@
   <p>
     <a href="#features">功能</a> •
     <a href="#install">安装</a> •
+    <a href="#shortcuts">快捷键</a> •
     <a href="#build-from-source">从源码构建</a> •
     <a href="#documentation">文档</a> •
     <a href="#community">社区</a> •
@@ -36,9 +37,10 @@
 </div>
 
 <a id="features"></a>
+
 ## 功能
 
-- **截图**：支持全屏或选区截图、带实时拼接预览的滚动截图、OCR 文字提取、透明背景对象抠图并可选安全自动裁剪、窗口阴影保留（macOS 14+）、多格式导出（PNG/JPG/WebP）、隐藏桌面图标/小组件，以及录屏时快速截图
+- **截图**：支持全屏或选区截图，并可在手动选区/应用窗口模式间切换（`Application Capture`，默认 `A`）；同时支持带实时拼接预览的滚动截图、OCR 文字提取、透明背景对象抠图并可选安全自动裁剪、窗口阴影保留（macOS 14+）、多格式导出（PNG/JPG/WebP）、隐藏桌面图标/小组件，以及录屏时快速截图
 - **屏幕录制**：支持视频或 GIF 导出、系统音频 + 麦克风、鼠标点击高亮、按键覆盖层、屏幕实时标注、记住上次区域、GIF 尺寸调整，以及用于 Follow Mouse 编辑的 Smart Camera 元数据
 - **标注编辑器**：提供形状、箭头、文本、填充矩形、模糊/像素化、编号、裁剪、去背景与感知裁剪区域的自动裁剪、3D 渲染器模拟背景、缩放/平移（触控板捏合 + 键盘）、拖拽到其他应用，以及可配置工具快捷键
 - **截图后设置**：按模式分别配置保存、Quick Access、复制到剪贴板和标注动作矩阵，并为去背景提供独立的全局自动裁剪开关（默认开启）
@@ -52,6 +54,7 @@
 - **平台特性**：菜单栏应用、浅色/深色/跟随系统主题，以及带安全文件访问书签的 App Sandbox
 
 <a id="install"></a>
+
 ## 安装
 
 > 需要 **macOS 13.0** 或更高版本。
@@ -96,7 +99,26 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninsta
 
 该脚本会从 `/Applications` 中移除应用，删除偏好设置和缓存，并重置 TCC 权限（Screen Recording、Microphone、Accessibility）。权限变更可能需要注销或重启后才会完全生效。
 
+<a id="shortcuts"></a>
+
+## 快捷键
+
+| 操作                                                 | 快捷键 |
+| ---------------------------------------------------- | ------ |
+| 全屏截图                                             | `⇧⌘3`  |
+| 选区截图                                             | `⇧⌘4`  |
+| ↳ 切换手动选区/应用窗口模式（`Application Capture`） | `A`    |
+| 滚动截图                                             | `⇧⌘6`  |
+| 屏幕录制                                             | `⇧⌘5`  |
+| OCR 文字识别                                         | `⇧⌘2`  |
+| 对象抠图截图                                         | `⇧⌘1`  |
+| 打开标注编辑器                                       | `⇧⌘A`  |
+| 打开视频编辑器                                       | `⇧⌘E`  |
+| 打开云上传                                           | `⇧⌘L`  |
+| 显示快捷键列表                                       | `⇧⌘K`  |
+
 <a id="build-from-source"></a>
+
 ## 从源码构建
 
 > 需要 **Xcode 15.0+** 和 Command Line Tools（`xcode-select --install`）。
@@ -125,6 +147,7 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
 关于发行版打包的更多细节，请参阅 [docs/project-build.md](docs/project-build.md)。
 
 <a id="documentation"></a>
+
 ## 文档
 
 - [询问 DeepWiki（交互式文档助手）](https://deepwiki.com/duongductrong/Snapzy)
@@ -136,11 +159,13 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
 - [本地 Sparkle 更新测试](docs/local-update-testing.md)
 
 <a id="community"></a>
+
 ## 社区
 
 - 加入 Snapzy Discord 社区，获取支持、反馈与讨论：[https://discord.gg/6CRdUKaC](https://discord.gg/6CRdUKaC)
 
 <a id="featured-on"></a>
+
 ## 收录平台
 
 <p>
@@ -149,6 +174,7 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
 </p>
 
 <a id="security"></a>
+
 ## 安全
 
 Snapzy 在 macOS App Sandbox 中运行，仅请求最小必要 entitlement。网络请求仅用于 Sparkle 更新检查，以及用户主动发起到自己 S3/R2 bucket 的云上传，数据不会发送到第三方服务器。云凭据只保存在 macOS Keychain 中，并可额外通过可选密码保护（SHA-256 哈希，绝不以明文存储）；凭据仅能通过用户提供归档口令保护的手动加密导出/导入流程转移。Snapzy 不收集任何遥测数据。
@@ -156,6 +182,7 @@ Snapzy 在 macOS App Sandbox 中运行，仅请求最小必要 entitlement。网
 如果你需要报告安全漏洞，请使用 [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) 或私下联系维护者。完整细节见 [SECURITY.md](SECURITY.md)。
 
 <a id="contributing"></a>
+
 ## 贡献
 
 欢迎贡献代码。提交 pull request 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
