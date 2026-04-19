@@ -17,6 +17,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.8.0] - 2026-04-19
+
+### Features
+-  Add configurable Application Capture shortcut and enhance overlay functionality (af1827f)
+-  Implement application window selection mode in area capture (4140a87)
+
+### Chore
+- refactor: Remove custom application capture cursor and use pointing hand cursor instead (7c96bcb)
+- chore: Enhance area selection cursor functionality and add application capture cursor (1d5d768)
+- chore: update appcast, cask, and readme for v1.7.8 (4a1b7c7)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.7.8] - 2026-04-18
 
 ### Features
