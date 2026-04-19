@@ -5,11 +5,13 @@
 //  Keyboard shortcuts configuration tab
 //
 
+import AppKit
 import SwiftUI
 
 struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig
   @State private var areaShortcut: ShortcutConfig
+  @State private var areaApplicationCaptureShortcut: Character
   @State private var scrollingCaptureShortcut: ShortcutConfig
   @State private var objectCutoutShortcut: ShortcutConfig
   @State private var ocrShortcut: ShortcutConfig
@@ -39,6 +41,9 @@ struct ShortcutsSettingsView: View {
   init() {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.fullscreenShortcut)
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.areaShortcut)
+    _areaApplicationCaptureShortcut = State(
+      initialValue: CaptureOverlayShortcutSettings.applicationCaptureShortcut
+    )
     _scrollingCaptureShortcut = State(initialValue: KeyboardShortcutManager.shared.scrollingCaptureShortcut)
     _objectCutoutShortcut = State(initialValue: KeyboardShortcutManager.shared.objectCutoutShortcut)
     _ocrShortcut = State(initialValue: KeyboardShortcutManager.shared.ocrShortcut)
@@ -256,15 +261,28 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .fullscreen) }
           )
 
-          ShortcutRecorderView(
-            label: L10n.Actions.captureArea,
-            icon: "rectangle.dashed",
-            description: L10n.PreferencesShortcuts.captureAreaDescription,
-            shortcut: $areaShortcut,
-            isEnabled: globalEnabledBinding(for: .area),
-            validationIssue: globalValidationIssues[.area],
-            onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
-          )
+          VStack(alignment: .leading, spacing: 4) {
+            ShortcutRecorderView(
+              label: L10n.Actions.captureArea,
+              icon: "rectangle.dashed",
+              description: L10n.PreferencesShortcuts.captureAreaDescription,
+              shortcut: $areaShortcut,
+              isEnabled: globalEnabledBinding(for: .area),
+              validationIssue: globalValidationIssues[.area],
+              onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
+            )
+
+            CaptureOverlayShortcutRecorderRow(
+              label: L10n.PreferencesShortcuts.applicationCaptureTitle,
+              description: L10n.PreferencesShortcuts.applicationCaptureDescription,
+              shortcut: $areaApplicationCaptureShortcut,
+              isEnabled: globalEnabledBinding(for: .area)
+            ) { newShortcut in
+              areaApplicationCaptureShortcut = newShortcut
+              CaptureOverlayShortcutSettings.setApplicationCaptureShortcut(newShortcut)
+            }
+          }
+          .padding(.vertical, 2)
 
           ShortcutRecorderView(
             label: GlobalShortcutKind.scrollingCapture.displayName,
@@ -451,6 +469,7 @@ struct ShortcutsSettingsView: View {
   private func resetToDefaults() {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
+    areaApplicationCaptureShortcut = CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut
     scrollingCaptureShortcut = .defaultScrollingCapture
     objectCutoutShortcut = .defaultObjectCutout
     ocrShortcut = .defaultOCR
@@ -482,6 +501,7 @@ struct ShortcutsSettingsView: View {
     manager.setVideoEditorShortcut(.defaultVideoEditor)
     manager.setCloudUploadsShortcut(.defaultCloudUploads)
     manager.setShortcutListShortcut(.defaultShortcutList)
+    CaptureOverlayShortcutSettings.resetApplicationCaptureShortcut()
     for kind in GlobalShortcutKind.allCases {
       manager.setShortcutEnabled(true, for: kind)
     }
@@ -698,6 +718,124 @@ struct ShortcutsSettingsView: View {
     if inScreenshot && inRecording { return .both }
     if inRecording { return .recordingOnly }
     return .screenshotOnly
+  }
+}
+
+private struct CaptureOverlayShortcutRecorderRow: View {
+  let label: String
+  let description: String
+  @Binding var shortcut: Character
+  let isEnabled: Binding<Bool>
+  let onShortcutChanged: (Character) -> Void
+
+  @State private var isRecording = false
+  @State private var eventMonitor: Any?
+  @State private var didSuspendGlobalShortcuts = false
+
+  var body: some View {
+    HStack(spacing: 12) {
+      Image(systemName: "macwindow")
+        .font(.title2)
+        .foregroundColor(.secondary)
+        .frame(width: 28)
+
+      VStack(alignment: .leading, spacing: 2) {
+        Text(label)
+          .fontWeight(.medium)
+        Text(description)
+          .font(.caption)
+          .foregroundColor(.secondary)
+      }
+
+      Spacer()
+
+      shortcutRecorderButton
+
+      toggleStatus
+    }
+    .padding(.vertical, 4)
+    .opacity(rowOpacity)
+    .onChange(of: isEnabled.wrappedValue) { newValue in
+      if !newValue {
+        stopRecording()
+      }
+    }
+    .onDisappear {
+      stopRecording()
+    }
+  }
+
+  private var shortcutRecorderButton: some View {
+    Button {
+      startRecording()
+    } label: {
+      if isRecording {
+        Text(L10n.ShortcutRecorder.pressKeys)
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.accentColor)
+          .frame(minWidth: 100)
+      } else {
+        KeyCapGroupView(parts: [String(shortcut).uppercased()])
+      }
+    }
+    .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
+    .disabled(!isEnabled.wrappedValue)
+    .help(isEnabled.wrappedValue ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
+  }
+
+  private var toggleStatus: some View {
+    HStack(spacing: 6) {
+      Text(isEnabled.wrappedValue ? L10n.Common.on : L10n.Common.off)
+        .font(.caption)
+        .foregroundColor(.secondary)
+
+      Toggle("", isOn: isEnabled)
+        .labelsHidden()
+    }
+  }
+
+  private var rowOpacity: Double {
+    isEnabled.wrappedValue ? 1 : 0.62
+  }
+
+  private func startRecording() {
+    guard !isRecording, isEnabled.wrappedValue else { return }
+    isRecording = true
+    KeyboardShortcutManager.shared.beginTemporaryShortcutSuppression()
+    didSuspendGlobalShortcuts = true
+
+    eventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+      if event.keyCode == 53 {
+        stopRecording()
+        return nil
+      }
+
+      guard event.modifierFlags.intersection([.command, .control, .option, .function]).isEmpty else {
+        return nil
+      }
+
+      guard let newShortcut = event.charactersIgnoringModifiers?.lowercased().first,
+            newShortcut.isLetter else {
+        return nil
+      }
+
+      shortcut = newShortcut
+      onShortcutChanged(newShortcut)
+      stopRecording()
+      return nil
+    }
+  }
+
+  private func stopRecording() {
+    isRecording = false
+    if let monitor = eventMonitor {
+      NSEvent.removeMonitor(monitor)
+      eventMonitor = nil
+    }
+    if didSuspendGlobalShortcuts {
+      KeyboardShortcutManager.shared.endTemporaryShortcutSuppression()
+      didSuspendGlobalShortcuts = false
+    }
   }
 }
 

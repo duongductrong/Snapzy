@@ -158,11 +158,13 @@ struct ShortcutRecorderView: View {
 /// Transparent button style for keycap-based shortcut recorder; keycaps provide visual affordance
 struct ShortcutKeycapButtonStyle: ButtonStyle {
   let isRecording: Bool
+  var horizontalPadding: CGFloat = 6
+  var verticalPadding: CGFloat = 4
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .padding(.horizontal, 6)
-      .padding(.vertical, 4)
+      .padding(.horizontal, horizontalPadding)
+      .padding(.vertical, verticalPadding)
       .background(
         RoundedRectangle(cornerRadius: 7, style: .continuous)
           .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)

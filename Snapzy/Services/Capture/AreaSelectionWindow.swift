@@ -310,10 +310,7 @@ final class AreaSelectionController: NSObject {
     guard event.modifierFlags.intersection([.command, .control, .option, .function]).isEmpty else {
       return false
     }
-    guard let characters = event.charactersIgnoringModifiers?.lowercased(), characters == "a" else {
-      return false
-    }
-    return true
+    return CaptureOverlayShortcutSettings.matchesApplicationCaptureShortcut(event)
   }
 
   private func toggleInteractionMode() {
@@ -992,9 +989,10 @@ final class AreaSelectionOverlayView: NSView {
   private func drawModeHint() {
     guard selectionMode == .screenshot, allowsApplicationWindowSelection else { return }
 
+    let shortcut = CaptureOverlayShortcutSettings.applicationCaptureShortcutDisplay
     let hint = interactionMode == .manualRegion
-      ? L10n.ScreenCapture.applicationModeHint
-      : L10n.ScreenCapture.manualModeHint
+      ? L10n.ScreenCapture.applicationModeHint(shortcut)
+      : L10n.ScreenCapture.manualModeHint(shortcut)
     let attributes: [NSAttributedString.Key: Any] = [
       .font: NSFont.systemFont(ofSize: 12, weight: .medium),
       .foregroundColor: NSColor.white,

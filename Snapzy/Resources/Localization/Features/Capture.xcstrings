@@ -6342,61 +6342,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drücke A, um ein App-Fenster aufzunehmen"
+            "value" : "Drücke %@, um ein App-Fenster aufzunehmen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Press A to capture an app window"
+            "value" : "Press %@ to capture an app window"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pulsa A para capturar una ventana de app"
+            "value" : "Pulsa %@ para capturar una ventana de app"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Appuyez sur A pour capturer une fenêtre d’application"
+            "value" : "Appuyez sur %@ pour capturer une fenêtre d’application"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aキーでアプリのウィンドウをキャプチャ"
+            "value" : "%@ キーでアプリのウィンドウをキャプチャ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A를 눌러 앱 창 캡처"
+            "value" : "%@를 눌러 앱 창 캡처"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нажмите A, чтобы захватить окно приложения"
+            "value" : "Нажмите %@, чтобы захватить окно приложения"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nhấn A để chụp cửa sổ ứng dụng"
+            "value" : "Nhấn %@ để chụp cửa sổ ứng dụng"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 A 捕获应用窗口"
+            "value" : "按 %@ 捕获应用窗口"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 A 捕獲應用程式視窗"
+            "value" : "按 %@ 捕獲應用程式視窗"
           }
         }
       }
@@ -6598,61 +6598,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Drücke A für die manuelle Bereichsauswahl"
+            "value" : "Drücke %@ für die manuelle Bereichsauswahl"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Press A for manual area capture"
+            "value" : "Press %@ for manual area capture"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Pulsa A para volver a la captura manual de área"
+            "value" : "Pulsa %@ para volver a la captura manual de área"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Appuyez sur A pour revenir à la capture manuelle de zone"
+            "value" : "Appuyez sur %@ pour revenir à la capture manuelle de zone"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aキーで手動範囲キャプチャに戻る"
+            "value" : "%@ キーで手動範囲キャプチャに戻る"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A를 눌러 수동 영역 캡처로 전환"
+            "value" : "%@를 눌러 수동 영역 캡처로 전환"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нажмите A для ручного выбора области"
+            "value" : "Нажмите %@ для ручного выбора области"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nhấn A để quay lại chụp vùng thủ công"
+            "value" : "Nhấn %@ để quay lại chụp vùng thủ công"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 A 切回手动区域捕获"
+            "value" : "按 %@ 切回手动区域捕获"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 A 切回手動區域捕獲"
+            "value" : "按 %@ 切回手動區域捕獲"
           }
         }
       }

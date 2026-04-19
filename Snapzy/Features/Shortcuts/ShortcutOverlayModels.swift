@@ -121,9 +121,19 @@ enum ShortcutOverlayContentBuilder {
   }
 
   private static func captureItems(manager: KeyboardShortcutManager) -> [ShortcutOverlayItem] {
+    let areaConfig = manager.shortcut(for: .area)
     var items: [ShortcutOverlayItem] = [
       globalItem(kind: .fullscreen, icon: "rectangle.dashed.and.paperclip", manager: manager),
-      globalItem(kind: .area, icon: "rectangle.dashed", manager: manager),
+      ShortcutOverlayItem(
+        id: "global-\(GlobalShortcutKind.area.rawValue)",
+        icon: "rectangle.dashed",
+        title: GlobalShortcutKind.area.displayName,
+        subtitle: L10n.ShortcutOverlay.applicationCapture(
+          CaptureOverlayShortcutSettings.applicationCaptureShortcutDisplay
+        ),
+        isEnabled: manager.isShortcutEnabled(for: .area),
+        display: .keycaps(areaConfig.displayParts)
+      ),
       globalItem(kind: .scrollingCapture, icon: "arrow.up.and.down", manager: manager),
     ]
 
