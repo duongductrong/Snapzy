@@ -7,13 +7,14 @@ Flow-first entrypoint for humans and agents working in Snapzy.
 | Doc | Why it exists | Read when |
 | --- | --- | --- |
 | [`../README.md`](../README.md) | Public product summary, install, feature list | Any new session |
-| [`project-structure.md`](project-structure.md) | Real source-tree map, runtime architecture, edit guide | Any code change |
-| [`localization.md`](localization.md) | Localization architecture for `Resources/Localization`, ownership rules, verification | Copy, UI text, alerts, onboarding, preferences |
-| [`capture-flow.md`](capture-flow.md) | Feature flows for capture, scrolling capture, recording, post-capture, editors | Capture, media, UX work |
-| [`project-build.md`](project-build.md) | Local build and archive commands | Build, packaging |
-| [`project-workflow.md`](project-workflow.md) | Release and appcast workflow | Shipping updates |
-| [`local-update-testing.md`](local-update-testing.md) | Local Sparkle update test harness | Updater changes |
-| [`self-signed-certificate-setup.md`](self-signed-certificate-setup.md) | Local signing setup | Update testing |
+| [`DEVELOPMENT.md`](DEVELOPMENT.md) | First-time local setup and source-based development | Running from source |
+| [`STRUCTURE.md`](STRUCTURE.md) | Real source-tree map, runtime architecture, edit guide | Any code change |
+| [`LOCALIZATION.md`](LOCALIZATION.md) | Localization architecture for `Resources/Localization`, ownership rules, verification | Copy, UI text, alerts, onboarding, preferences |
+| [`CAPTURE.md`](CAPTURE.md) | Feature flows for capture, scrolling capture, recording, post-capture, editors | Capture, media, UX work |
+| [`BUILD.md`](BUILD.md) | Archive, export, and DMG packaging commands | Packaging, release prep |
+| [`RELEASES.md`](RELEASES.md) | Release and appcast workflow | Shipping updates |
+| [`UPDATE_TESTING.md`](UPDATE_TESTING.md) | Local Sparkle update test harness | Updater changes |
+| [`SELF_SIGNED_CERT.md`](SELF_SIGNED_CERT.md) | Local signing setup | Update testing |
 
 ## Product Flow Map
 
@@ -56,11 +57,11 @@ flowchart TD
 
 ## Agent Reading Order
 
-- Capture, scrolling capture, recording: `project-structure.md` -> `capture-flow.md`
-- Localization or user-facing copy: `project-structure.md` -> `localization.md` -> `capture-flow.md` when capture/editor UX is affected
-- Onboarding, menu bar, preferences: `project-structure.md`
-- Cloud storage and upload UX: `project-structure.md` + `capture-flow.md`
-- Build, release, updater: `project-build.md` -> `project-workflow.md` -> `local-update-testing.md`
+- Capture, scrolling capture, recording: `STRUCTURE.md` -> `CAPTURE.md`
+- Localization or user-facing copy: `STRUCTURE.md` -> `LOCALIZATION.md` -> `CAPTURE.md` when capture/editor UX is affected
+- Onboarding, menu bar, preferences: `STRUCTURE.md`
+- Cloud storage and upload UX: `STRUCTURE.md` + `CAPTURE.md`
+- Build, release, updater: `DEVELOPMENT.md` -> `BUILD.md` -> `RELEASES.md` -> `UPDATE_TESTING.md`
 
 ## Current Behavior Notes
 
@@ -70,4 +71,4 @@ flowchart TD
 - Annotate and Video Editor temporarily elevate Snapzy from accessory mode to regular app mode so the editor windows appear in Dock and Cmd+Tab.
 - During recording, the menu bar item stays menu-first instead of left-click-to-stop. It shows the live timer, keeps Preferences reachable, and temporarily excludes the Settings window from own-app recordings when needed.
 
-If one of these behaviors changes, update this file, [`project-structure.md`](project-structure.md), [`capture-flow.md`](capture-flow.md), and the root [`README.md`](../README.md) in the same change.
+If one of these behaviors changes, update this file, [`STRUCTURE.md`](STRUCTURE.md), [`CAPTURE.md`](CAPTURE.md), and the root [`README.md`](../README.md) in the same change.

@@ -22,7 +22,7 @@
     <a href="#features">功能</a> •
     <a href="#install">安装</a> •
     <a href="#shortcuts">快捷键</a> •
-    <a href="#build-from-source">从源码构建</a> •
+    <a href="#development">Development</a> •
     <a href="#documentation">文档</a> •
     <a href="#community">社区</a> •
     <a href="#security">安全</a> •
@@ -117,34 +117,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninsta
 | 打开云上传                                           | `⇧⌘L`  |
 | 显示快捷键列表                                       | `⇧⌘K`  |
 
-<a id="build-from-source"></a>
+<a id="development"></a>
 
-## 从源码构建
+## Development
 
-> 需要 **Xcode 15.0+** 和 Command Line Tools（`xcode-select --install`）。
+如果你要进行本地开发、从源码运行，或完成首次开发环境设置，请先阅读 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
 
-1. 克隆仓库：
-
-```bash
-git clone https://github.com/duongductrong/Snapzy.git
-cd Snapzy
-```
-
-2. 打开项目：
-
-```bash
-open Snapzy.xcodeproj
-```
-
-3. 使用 `Cmd+R` 构建并运行
-
-你也可以在终端中构建：
-
-```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
-```
-
-关于发行版打包的更多细节，请参阅 [docs/project-build.md](docs/project-build.md)。
+如果你需要 archive、export 或 DMG 打包命令，请参阅 [docs/BUILD.md](docs/BUILD.md)。如果你想查看贡献流程，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 <a id="documentation"></a>
 
@@ -152,11 +131,11 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
 
 - [询问 DeepWiki（交互式文档助手）](https://deepwiki.com/duongductrong/Snapzy)
 - [面向开发者和 agent 的文档索引](docs/README.md)
-- [项目结构与运行时架构](docs/project-structure.md)
-- [截图、录制与编辑流程](docs/capture-flow.md)
-- [项目构建指南](docs/project-build.md)
-- [发布与更新工作流](docs/project-workflow.md)
-- [本地 Sparkle 更新测试](docs/local-update-testing.md)
+- [项目结构与运行时架构](docs/STRUCTURE.md)
+- [截图、录制与编辑流程](docs/CAPTURE.md)
+- [构建与打包指南](docs/BUILD.md)
+- [发布与更新工作流](docs/RELEASES.md)
+- [本地 Sparkle 更新测试](docs/UPDATE_TESTING.md)
 
 <a id="community"></a>
 

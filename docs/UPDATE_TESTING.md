@@ -95,6 +95,6 @@ Removes `/tmp/test-sparkle-update/`. Does **not** remove `/Applications/Snapzy.a
 
 ## Related
 
-- [Self-signed certificate setup](self-signed-certificate-setup.md)
-- [Release workflow](project-workflow.md)
+- [Self-signed certificate setup](SELF_SIGNED_CERT.md)
+- [Release workflow](RELEASES.md)
 - `scripts/test-tcc-local.sh` — TCC permission persistence testing (separate concern)

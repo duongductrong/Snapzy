@@ -2,7 +2,7 @@
 
 This doc follows the runtime path from trigger to saved asset, Quick Access, editors, and cloud actions.
 
-User-facing copy in these flows is localized through `Snapzy/Shared/Localization/L10n.swift` and `Snapzy/Resources/Localization/{Shared,Features}/*.xcstrings`. Privacy permission copy lives in `InfoPlist.strings`. For localization ownership and rules, read [`localization.md`](localization.md).
+User-facing copy in these flows is localized through `Snapzy/Shared/Localization/L10n.swift` and `Snapzy/Resources/Localization/{Shared,Features}/*.xcstrings`. Privacy permission copy lives in `InfoPlist.strings`. For localization ownership and rules, read [`LOCALIZATION.md`](LOCALIZATION.md).
 
 ## Flow Index
 
@@ -127,7 +127,7 @@ flowchart TD
 - The subsystem in `Services/Capture/ScrollingCapture/` is intentionally self-contained: preview, stitcher, HUD, metrics, commit scheduling, and window placement all live there.
 - The preview lane and commit lane are separate. Live preview can stay ahead while the stitcher locks the next safe frame.
 - Vision is a recovery tool inside `ScrollingCaptureStitcher`, not the default hot path.
-- Session guidance, runtime badges, preview captions, and recovery toasts are localized and should stay in sync with `docs/localization.md`.
+- Session guidance, runtime badges, preview captions, and recovery toasts are localized and should stay in sync with `docs/LOCALIZATION.md`.
 
 ## Recording, GIF Output, and Smart Camera
 

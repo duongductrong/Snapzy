@@ -2,6 +2,8 @@
 
 Build Snapzy from source on your local machine.
 
+> If you only need first-time local setup and a basic debug run, start with [DEVELOPMENT.md](DEVELOPMENT.md).
+
 ## Prerequisites
 
 - macOS 13.0+

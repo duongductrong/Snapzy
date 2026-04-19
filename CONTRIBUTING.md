@@ -20,29 +20,9 @@ Snapzy is an open-source native macOS screenshot and screen recording app built 
 
 ## Development setup
 
-### Requirements
+Use [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for local setup, cloning, opening the Xcode project, and running a debug build.
 
-- macOS 13.0+
-- Xcode 15.0+
-- Command Line Tools: `xcode-select --install`
-
-### Clone and run
-
-```bash
-git clone https://github.com/duongductrong/Snapzy.git
-cd Snapzy
-open Snapzy.xcodeproj
-```
-
-Build and run with `Cmd+R`.
-
-### Command-line build
-
-```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
-```
-
-For more build details, see [docs/project-build.md](docs/project-build.md).
+If you need archive, export, or DMG packaging commands, see [docs/BUILD.md](docs/BUILD.md).
 
 ## Project conventions
 
@@ -53,7 +33,7 @@ Snapzy uses a feature-based structure with limited nesting.
 - Prefer colocating feature-specific logic with the feature.
 - Avoid unrelated renames or directory reshuffles in the same pull request.
 
-See [docs/project-structure.md](docs/project-structure.md) for the current architecture guidance.
+See [docs/STRUCTURE.md](docs/STRUCTURE.md) for the current architecture guidance.
 
 ## Contribution workflow
 

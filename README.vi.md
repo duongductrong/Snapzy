@@ -22,7 +22,7 @@
     <a href="#features">Tính năng</a> •
     <a href="#install">Cài đặt</a> •
     <a href="#shortcuts">Phím tắt</a> •
-    <a href="#build-from-source">Build từ source</a> •
+    <a href="#development">Development</a> •
     <a href="#documentation">Tài liệu</a> •
     <a href="#community">Cộng đồng</a> •
     <a href="#security">Bảo mật</a> •
@@ -117,34 +117,13 @@ Lệnh này sẽ xóa ứng dụng khỏi `/Applications`, xóa preferences và 
 | Mở Cloud Uploads                                                  | `⇧⌘L`    |
 | Hiện danh sách shortcut                                           | `⇧⌘K`    |
 
-<a id="build-from-source"></a>
+<a id="development"></a>
 
-## Build từ source
+## Development
 
-> Yêu cầu **Xcode 15.0+** và Command Line Tools (`xcode-select --install`).
+Để setup local, build từ source, và bắt đầu workflow phát triển, hãy đọc [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-1. Clone repository:
-
-```bash
-git clone https://github.com/duongductrong/Snapzy.git
-cd Snapzy
-```
-
-2. Mở project:
-
-```bash
-open Snapzy.xcodeproj
-```
-
-3. Build và chạy với `Cmd+R`
-
-Bạn cũng có thể build từ terminal:
-
-```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
-```
-
-Chi tiết đóng gói bản phát hành nằm ở [docs/project-build.md](docs/project-build.md).
+Nếu bạn cần lệnh archive, export, hoặc đóng gói DMG, xem [docs/BUILD.md](docs/BUILD.md). Nếu bạn muốn workflow đóng góp, xem [CONTRIBUTING.md](CONTRIBUTING.md).
 
 <a id="documentation"></a>
 
@@ -152,11 +131,11 @@ Chi tiết đóng gói bản phát hành nằm ở [docs/project-build.md](docs/
 
 - [Hỏi DeepWiki (trợ lý tài liệu tương tác)](https://deepwiki.com/duongductrong/Snapzy)
 - [Bản đồ tài liệu cho con người và agent](docs/README.md)
-- [Cấu trúc dự án và kiến trúc runtime](docs/project-structure.md)
-- [Luồng chụp, quay và chỉnh sửa](docs/capture-flow.md)
-- [Hướng dẫn build dự án](docs/project-build.md)
-- [Quy trình release và update](docs/project-workflow.md)
-- [Kiểm thử update Sparkle cục bộ](docs/local-update-testing.md)
+- [Cấu trúc dự án và kiến trúc runtime](docs/STRUCTURE.md)
+- [Luồng chụp, quay và chỉnh sửa](docs/CAPTURE.md)
+- [Hướng dẫn build và đóng gói](docs/BUILD.md)
+- [Quy trình release và update](docs/RELEASES.md)
+- [Kiểm thử update Sparkle cục bộ](docs/UPDATE_TESTING.md)
 
 <a id="community"></a>
 

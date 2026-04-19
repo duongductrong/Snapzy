@@ -22,7 +22,7 @@
     <a href="#features">Features</a> •
     <a href="#install">Install</a> •
     <a href="#shortcuts">Shortcuts</a> •
-    <a href="#build-from-source">Build from source</a> •
+    <a href="#development">Development</a> •
     <a href="#documentation">Documentation</a> •
     <a href="#community">Community</a> •
     <a href="#security">Security</a> •
@@ -111,42 +111,21 @@ This will remove the app from `/Applications`, delete preferences and caches, an
 | Open Cloud Uploads                                      | `⇧⌘L`    |
 | Show shortcuts list                                     | `⇧⌘K`    |
 
-## Build from source
+## Development
 
-> Requires **Xcode 15.0+** and Command Line Tools (`xcode-select --install`).
+For local setup, source builds, and first-time development workflow, start with [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
-1. Clone the repository:
-
-```bash
-git clone https://github.com/duongductrong/Snapzy.git
-cd Snapzy
-```
-
-2. Open the project:
-
-```bash
-open Snapzy.xcodeproj
-```
-
-3. Build and run with `Cmd+R`
-
-You can also build from the terminal:
-
-```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
-```
-
-For release packaging details, see [docs/project-build.md](docs/project-build.md).
+If you need archive, export, or DMG packaging commands, see [docs/BUILD.md](docs/BUILD.md). If you want the contribution workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Documentation
 
 - [Ask DeepWiki (interactive docs assistant)](https://deepwiki.com/duongductrong/Snapzy)
 - [Docs map for humans and agents](docs/README.md)
-- [Project structure and runtime architecture](docs/project-structure.md)
-- [Capture, recording, and editing flows](docs/capture-flow.md)
-- [Project build guide](docs/project-build.md)
-- [Release and update workflow](docs/project-workflow.md)
-- [Local Sparkle update testing](docs/local-update-testing.md)
+- [Project structure and runtime architecture](docs/STRUCTURE.md)
+- [Capture, recording, and editing flows](docs/CAPTURE.md)
+- [Build and packaging guide](docs/BUILD.md)
+- [Release and update workflow](docs/RELEASES.md)
+- [Local Sparkle update testing](docs/UPDATE_TESTING.md)
 
 ## Community
 
