@@ -18,6 +18,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.8.1] - 2026-04-19
+
+### Features
+-  Implement OCR request handling and benchmarking for improved text recognition (8952333)
+
+### Chore
+- docs: Add comprehensive documentation for development, localization, capture flows, release workflow, and self-signed certificate setup (72d3964)
+- docs: Update shortcuts info and capture app feature (4a79ecc)
+- chore: update appcast, cask, and readme for v1.8.0 (1330058)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.8.0] - 2026-04-19
 
 ### Features
