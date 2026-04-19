@@ -28,7 +28,6 @@ struct VideoEditorMainView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      // NEW: Full-width toolbar at top
       VideoEditorToolbarView(state: state)
 
       Divider()
@@ -131,6 +130,7 @@ struct VideoEditorMainView: View {
         ExportProgressOverlay(state: state)
       }
     }
+    .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()
       await state.extractFrames()

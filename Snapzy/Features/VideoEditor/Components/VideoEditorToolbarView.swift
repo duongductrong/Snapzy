@@ -7,30 +7,63 @@
 
 import SwiftUI
 
+private enum VideoEditorToolbarSection: Hashable {
+  case left
+  case right
+}
+
+private struct VideoEditorToolbarSectionWidthKey: PreferenceKey {
+  static var defaultValue: [VideoEditorToolbarSection: CGFloat] = [:]
+
+  static func reduce(
+    value: inout [VideoEditorToolbarSection: CGFloat],
+    nextValue: () -> [VideoEditorToolbarSection: CGFloat]
+  ) {
+    value.merge(nextValue(), uniquingKeysWith: { _, next in next })
+  }
+}
+
+private extension View {
+  func measureVideoEditorToolbarWidth(for section: VideoEditorToolbarSection) -> some View {
+    background(
+      GeometryReader { proxy in
+        Color.clear.preference(
+          key: VideoEditorToolbarSectionWidthKey.self,
+          value: [section: proxy.size.width]
+        )
+      }
+    )
+  }
+}
+
 /// Top toolbar for video editor window
 struct VideoEditorToolbarView: View {
   @ObservedObject var state: VideoEditorState
 
   @State private var editingFilename: String = ""
   @State private var renameError: String?
+  @State private var leftSectionWidth: CGFloat = 0
+  @State private var rightSectionWidth: CGFloat = 0
 
   var body: some View {
-    HStack(spacing: 0) {
-      // LEFT: Undo/Redo/Folder
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
       leftSection
-
-      Spacer()
-
-      // CENTER: Filename
+        .fixedSize(horizontal: true, vertical: false)
+        .measureVideoEditorToolbarWidth(for: .left)
+        .frame(width: reservedSideWidth, alignment: .leading)
       centerSection
-
-      Spacer()
-
-      // RIGHT: Save actions
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.horizontal, WindowSpacingConfiguration.default.toolbarItemSpacing)
       rightSection
+        .fixedSize(horizontal: true, vertical: false)
+        .measureVideoEditorToolbarWidth(for: .right)
+        .frame(width: reservedSideWidth, alignment: .trailing)
     }
-    .windowToolbarHeight()
-    .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
+    .windowToolbarPadding()
+    .onPreferenceChange(VideoEditorToolbarSectionWidthKey.self) { widths in
+      leftSectionWidth = widths[.left] ?? 0
+      rightSectionWidth = widths[.right] ?? 0
+    }
   }
 
   // MARK: - Left Section
@@ -92,6 +125,7 @@ struct VideoEditorToolbarView: View {
       .keyboardShortcut("i", modifiers: [])
       .help(state.isVideoInfoSidebarVisible ? L10n.VideoEditor.hideVideoInfoHint : L10n.VideoEditor.showVideoInfoHint)
     }
+    .padding(.leading, trafficLightsInsetWidth)
   }
 
   // MARK: - Center Section
@@ -119,7 +153,7 @@ struct VideoEditorToolbarView: View {
           .font(.system(size: 13, weight: .medium))
           .lineLimit(1)
           .truncationMode(.middle)
-          .frame(maxWidth: 300)
+          .frame(maxWidth: 320)
 
         Button(action: startRename) {
           Image(systemName: "pencil")
@@ -134,8 +168,11 @@ struct VideoEditorToolbarView: View {
         Text(error)
           .font(.system(size: 10))
           .foregroundColor(.red)
+          .lineLimit(1)
+          .truncationMode(.tail)
       }
     }
+    .frame(maxWidth: .infinity, alignment: .center)
   }
 
   // MARK: - Right Section
@@ -175,6 +212,18 @@ struct VideoEditorToolbarView: View {
   }
 
   // MARK: - Helpers
+
+  private var reservedSideWidth: CGFloat {
+    max(leftSectionWidth, rightSectionWidth)
+  }
+
+  private var trafficLightsInsetWidth: CGFloat {
+    let trafficConfig = TrafficLightConfiguration.default
+    return trafficConfig.horizontalOffset +
+      (3 * 14) +
+      (2 * trafficConfig.buttonSpacing) +
+      WindowSpacingConfiguration.default.trafficLightsGap
+  }
 
   private var filenameWithoutExtension: String {
     let filename = state.filename
