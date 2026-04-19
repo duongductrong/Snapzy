@@ -164,6 +164,7 @@ final class AreaSelectionController: NSObject {
         window.overlayView.resetSelection()
         window.selectionDelegate = self
         window.orderFrontRegardless()
+        window.overlayView.refreshCursor()
       } else {
         // Fallback: create window if not pooled
         let window = AreaSelectionWindow(screen: screen, pooled: false)
@@ -181,6 +182,7 @@ final class AreaSelectionController: NSObject {
         window.selectionDelegate = self
         windowPool[displayID] = window
         window.orderFrontRegardless()
+        window.overlayView.refreshCursor()
       }
     }
   }
@@ -610,6 +612,7 @@ final class AreaSelectionOverlayView: NSView {
   private let crosshairIndicatorLineWidth: CGFloat = 1.5
   private let crosshairIndicatorCenterRadius: CGFloat = 6.0
   private var selectionEnabled = true
+  private lazy var applicationCaptureCursor: NSCursor = Self.makeApplicationCaptureCursor()
 
   /// Disabled animations for instant layer updates
   private var disabledActions: [String: CAAction] {
@@ -724,11 +727,11 @@ final class AreaSelectionOverlayView: NSView {
   }
 
   override func mouseEntered(with event: NSEvent) {
-    activeCursor.push()
+    activeCursor.set()
   }
 
   override func mouseExited(with event: NSEvent) {
-    NSCursor.pop()
+    NSCursor.arrow.set()
   }
 
   override func resetCursorRects() {
@@ -741,6 +744,15 @@ final class AreaSelectionOverlayView: NSView {
       removeTrackingArea(area)
     }
     setupTrackingArea()
+  }
+
+  private func refreshActiveCursor() {
+    window?.invalidateCursorRects(for: self)
+    activeCursor.set()
+  }
+
+  func refreshCursor() {
+    refreshActiveCursor()
   }
 
   // MARK: - Public Methods
@@ -778,6 +790,7 @@ final class AreaSelectionOverlayView: NSView {
     // Update interaction state immediately
     if selectionEnabled {
       refreshInteractionState()
+      refreshActiveCursor()
     }
 
     needsDisplay = true
@@ -785,7 +798,7 @@ final class AreaSelectionOverlayView: NSView {
 
   func setSelectionEnabled(_ enabled: Bool) {
     selectionEnabled = enabled
-    resetCursorRects()
+    refreshActiveCursor()
   }
 
   func applyBackdrop(_ backdrop: AreaSelectionBackdrop) {
@@ -1029,6 +1042,7 @@ final class AreaSelectionOverlayView: NSView {
     } else {
       refreshInteractionState()
     }
+    refreshActiveCursor()
     needsDisplay = true
   }
 
@@ -1173,6 +1187,7 @@ final class AreaSelectionOverlayView: NSView {
 
   override func mouseMoved(with event: NSEvent) {
     guard selectionEnabled else { return }
+    activeCursor.set()
     let point = convert(event.locationInWindow, from: nil)
     switch interactionMode {
     case .manualRegion:
@@ -1189,9 +1204,42 @@ final class AreaSelectionOverlayView: NSView {
     delegate?.overlayViewDidCancel(self)
   }
 
+  private static func makeApplicationCaptureCursor() -> NSCursor {
+    let cursorSize = NSSize(width: 24, height: 24)
+    let image = NSImage(size: cursorSize)
+
+    image.lockFocus()
+
+    // Circular dark plate to keep icon visible over bright content.
+    let plateRect = NSRect(x: 2, y: 2, width: 20, height: 20)
+    NSColor.black.withAlphaComponent(0.84).setFill()
+    NSBezierPath(ovalIn: plateRect).fill()
+
+    // Camera body.
+    let bodyRect = NSRect(x: 6.5, y: 9, width: 11, height: 7.5)
+    NSColor.white.setFill()
+    NSBezierPath(roundedRect: bodyRect, xRadius: 1.6, yRadius: 1.6).fill()
+
+    // Camera top bump.
+    let topRect = NSRect(x: 9, y: 15.2, width: 4.5, height: 1.6)
+    NSBezierPath(roundedRect: topRect, xRadius: 0.8, yRadius: 0.8).fill()
+
+    // Lens ring.
+    let lensRect = NSRect(x: 10, y: 10.8, width: 4, height: 4)
+    NSColor.black.withAlphaComponent(0.88).setFill()
+    NSBezierPath(ovalIn: lensRect).fill()
+
+    image.unlockFocus()
+
+    return NSCursor(
+      image: image,
+      hotSpot: NSPoint(x: cursorSize.width / 2, y: cursorSize.height / 2)
+    )
+  }
+
   private var activeCursor: NSCursor {
     guard selectionEnabled else { return .arrow }
-    return interactionMode == .manualRegion ? .crosshair : .arrow
+    return interactionMode == .manualRegion ? .crosshair : applicationCaptureCursor
   }
 
   var isManualSelectionInProgress: Bool {
