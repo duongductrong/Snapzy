@@ -123,7 +123,6 @@ private struct TrimHandle: View {
           .font(.system(size: 16, weight: .bold))
           .foregroundColor(.black.opacity(0.5))
       )
-      .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
       .contentShape(Rectangle().inset(by: -10))
   }
 }
