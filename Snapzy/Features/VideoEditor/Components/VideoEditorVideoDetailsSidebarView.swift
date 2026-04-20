@@ -20,7 +20,6 @@ struct VideoDetailsSidebarView: View {
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
       VStack(alignment: .leading, spacing: Spacing.md) {
-        // Header
         HStack {
           Image(systemName: "info.circle.fill")
             .foregroundColor(ZoomColors.primary)
@@ -28,8 +27,13 @@ struct VideoDetailsSidebarView: View {
             .font(Typography.sectionHeader)
             .foregroundColor(SidebarColors.labelPrimary)
         }
-
-        Divider().background(Color(nsColor: .separatorColor))
+        .padding(.horizontal, 10)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+          RoundedRectangle(cornerRadius: 12, style: .continuous)
+            .fill(SidebarColors.itemDefault)
+        )
 
         // File Info Section
         SidebarSection(title: L10n.Common.file) {

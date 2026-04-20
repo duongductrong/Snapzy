@@ -37,11 +37,9 @@ struct VideoEditorRightSidebar: View {
   @State private var selectedTab: VideoEditorSidebarTab = .background
 
   var body: some View {
-    HStack(spacing: 0) {
+    HStack(alignment: .top, spacing: 10) {
       tabContent
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-      Divider()
 
       VerticalTabBar(
         selection: $selectedTab,
@@ -49,7 +47,9 @@ struct VideoEditorRightSidebar: View {
       ) { tab in
         (icon: tab.icon, title: tab.title)
       }
+      .videoEditorSidebarRail()
     }
+    .padding(10)
     .frame(width: 320)
     .frame(maxHeight: .infinity)
     .onChange(of: state.selectedZoomId) { newValue in

@@ -16,6 +16,7 @@ struct VideoEditorMainView: View {
   var onCancel: (() -> Void)?
 
   private let videoDetailsSidebarWidth: CGFloat = 280
+  private let workspaceSpacing: CGFloat = 14
 
   // Computed property for current frame preview
   private var currentFrameImage: NSImage? {
@@ -102,6 +103,8 @@ struct VideoEditorMainView: View {
   private var videoEditorContent: some View {
     VStack(spacing: 0) {
       videoWorkspaceRow
+        .windowContentHPadding()
+        .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
 
       VideoTimelineView(state: state)
@@ -117,24 +120,23 @@ struct VideoEditorMainView: View {
   }
 
   private var videoWorkspaceRow: some View {
-    HStack(spacing: 0) {
+    HStack(alignment: .top, spacing: workspaceSpacing) {
       if state.isVideoInfoSidebarVisible {
         VideoDetailsSidebarView(state: state)
           .frame(width: videoDetailsSidebarWidth)
           .frame(maxHeight: .infinity, alignment: .top)
-
-        Divider()
+          .videoEditorSidebarPanel()
       }
 
       videoPlayerColumn
 
       if state.isRightSidebarVisible {
-        Divider()
-
         VideoEditorRightSidebar(
           state: state,
           previewImage: currentFrameImage
         )
+        .frame(maxHeight: .infinity, alignment: .top)
+        .videoEditorSidebarPanel()
       }
     }
     .animation(.easeInOut(duration: 0.2), value: state.isVideoInfoSidebarVisible)

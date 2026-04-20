@@ -7,6 +7,78 @@
 
 import SwiftUI
 
+private enum VideoEditorSidebarChrome {
+  static let cornerRadius: CGFloat = 20
+  static let shadowRadius: CGFloat = 18
+  static let shadowYOffset: CGFloat = 10
+  static let railCornerRadius: CGFloat = 18
+
+  static var panelFill: Color {
+    Color(nsColor: .controlBackgroundColor).opacity(0.96)
+  }
+
+  static var panelStroke: Color {
+    Color.primary.opacity(0.06)
+  }
+
+  static var panelShadow: Color {
+    Color.black.opacity(0.08)
+  }
+
+  static var railFill: Color {
+    Color(nsColor: .windowBackgroundColor).opacity(0.92)
+  }
+
+  static var railStroke: Color {
+    Color.primary.opacity(0.05)
+  }
+}
+
+private struct VideoEditorSidebarPanelStyle: ViewModifier {
+  func body(content: Content) -> some View {
+    content
+      .clipShape(RoundedRectangle(cornerRadius: VideoEditorSidebarChrome.cornerRadius, style: .continuous))
+      .background(
+        RoundedRectangle(cornerRadius: VideoEditorSidebarChrome.cornerRadius, style: .continuous)
+          .fill(VideoEditorSidebarChrome.panelFill)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: VideoEditorSidebarChrome.cornerRadius, style: .continuous)
+          .stroke(VideoEditorSidebarChrome.panelStroke, lineWidth: 1)
+      )
+      .shadow(
+        color: VideoEditorSidebarChrome.panelShadow,
+        radius: VideoEditorSidebarChrome.shadowRadius,
+        x: 0,
+        y: VideoEditorSidebarChrome.shadowYOffset
+      )
+  }
+}
+
+private struct VideoEditorSidebarRailStyle: ViewModifier {
+  func body(content: Content) -> some View {
+    content
+      .background(
+        RoundedRectangle(cornerRadius: VideoEditorSidebarChrome.railCornerRadius, style: .continuous)
+          .fill(VideoEditorSidebarChrome.railFill)
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: VideoEditorSidebarChrome.railCornerRadius, style: .continuous)
+          .stroke(VideoEditorSidebarChrome.railStroke, lineWidth: 1)
+      )
+  }
+}
+
+extension View {
+  func videoEditorSidebarPanel() -> some View {
+    modifier(VideoEditorSidebarPanelStyle())
+  }
+
+  func videoEditorSidebarRail() -> some View {
+    modifier(VideoEditorSidebarRailStyle())
+  }
+}
+
 // MARK: - Section Header
 
 struct VideoSidebarSectionHeader: View {

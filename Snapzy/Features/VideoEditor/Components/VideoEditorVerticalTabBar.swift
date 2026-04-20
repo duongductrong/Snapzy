@@ -22,15 +22,16 @@ struct VerticalTabItem: View {
       Image(systemName: icon)
         .font(.system(size: 18, weight: .medium))
         .foregroundColor(isSelected ? .white : .primary)
-        .frame(width: 36, height: 36)
+        .frame(width: 38, height: 38)
         .background(
           Group {
             if isSelected {
-              RoundedRectangle(cornerRadius: 8)
+              RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color.accentColor)
+                .shadow(color: Color.accentColor.opacity(0.28), radius: 10, y: 4)
             } else if isHovered {
-              RoundedRectangle(cornerRadius: 8)
-                .fill(Color(NSColor.controlBackgroundColor).opacity(0.8))
+              RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(SidebarColors.itemHover)
             } else {
               Color.clear
             }
