@@ -68,6 +68,7 @@ final class AreaSelectionController: NSObject {
   private var windowSelectionTask: Task<Void, Never>?
   private var selectionSessionID = UUID()
   private var activeWindow: AreaSelectionWindow?
+  private var keyboardOwnerDisplayID: CGDirectDisplayID?
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
 
@@ -142,6 +143,7 @@ final class AreaSelectionController: NSObject {
     for screen in NSScreen.screens {
       guard let displayID = screen.displayID else { continue }
       let allowsSelection = selectionEnabled(for: displayID)
+      let receivesKeyboardInput = displayID == keyboardOwnerDisplayID
 
       if let window = windowPool[displayID] {
         // Sync frame to current screen position before showing
@@ -162,8 +164,10 @@ final class AreaSelectionController: NSObject {
         window.overlayView.setInteractionMode(interactionMode, resetSelection: false)
         window.overlayView.setSelectionEnabled(allowsSelection)
         window.overlayView.resetSelection()
+        window.setReceivesKeyboardInput(receivesKeyboardInput)
         window.selectionDelegate = self
         window.orderFrontRegardless()
+        window.activateKeyboardInputIfNeeded()
         window.overlayView.refreshCursor()
       } else {
         // Fallback: create window if not pooled
@@ -179,9 +183,11 @@ final class AreaSelectionController: NSObject {
         window.overlayView.setInteractionMode(interactionMode, resetSelection: false)
         window.overlayView.setSelectionEnabled(allowsSelection)
         window.overlayView.resetSelection()
+        window.setReceivesKeyboardInput(receivesKeyboardInput)
         window.selectionDelegate = self
         windowPool[displayID] = window
         window.orderFrontRegardless()
+        window.activateKeyboardInputIfNeeded()
         window.overlayView.refreshCursor()
       }
     }
@@ -190,6 +196,7 @@ final class AreaSelectionController: NSObject {
   /// Deactivate all windows (hide, don't close)
   private func deactivatePooledWindows() {
     for (_, window) in windowPool {
+      window.setReceivesKeyboardInput(false)
       window.orderOut(nil)
       window.overlayView.resetSelection()
       window.overlayView.clearBackdrop()
@@ -256,6 +263,7 @@ final class AreaSelectionController: NSObject {
     interactionMode = .manualRegion
     windowSelectionSnapshot = nil
     selectionSessionID = UUID()
+    keyboardOwnerDisplayID = resolvedKeyboardOwnerDisplayID()
 
     // Ensure pool is ready (lazy initialization if not called at app launch)
     if !isPoolReady {
@@ -266,21 +274,33 @@ final class AreaSelectionController: NSObject {
     activatePooledWindows()
     startWindowSelectionPreparationIfNeeded()
 
-    // Set up session key monitoring (local for when app is active)
-    localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-      if self?.handleSessionKeyEvent(event) == true {
-        return nil
+    if keyboardOwnerDisplayID == nil {
+      // Set up session key monitoring only when the overlay cannot own keyboard input directly.
+      localEscapeMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        if self?.handleSessionKeyEvent(event) == true {
+          return nil
+        }
+        return event
       }
-      return event
+
+      // Global monitor for when app may not be fully active.
+      globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        guard self?.isSessionKeyEvent(event) == true else { return }
+        DispatchQueue.main.async {
+          _ = self?.handleSessionKeyEvent(event)
+        }
+      }
+    }
+  }
+
+  private func resolvedKeyboardOwnerDisplayID() -> CGDirectDisplayID? {
+    guard selectionMode == .screenshot else { return nil }
+
+    if selectionBackdrops.count == 1 {
+      return selectionBackdrops.keys.first
     }
 
-    // Global monitor for when app may not be fully active.
-    globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-      guard self?.isSessionKeyEvent(event) == true else { return }
-      DispatchQueue.main.async {
-        _ = self?.handleSessionKeyEvent(event)
-      }
-    }
+    return ScreenUtility.activeDisplayID()
   }
 
   private func selectionEnabled(for displayID: CGDirectDisplayID) -> Bool {
@@ -423,6 +443,7 @@ final class AreaSelectionController: NSObject {
     allowsApplicationWindowSelection = false
     interactionMode = .manualRegion
     windowSelectionSnapshot = nil
+    keyboardOwnerDisplayID = nil
   }
 
   deinit {
@@ -450,6 +471,11 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
   func areaSelectionWindowDidBecomeActive(_ window: AreaSelectionWindow) {
     activeWindow = window
   }
+
+  func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool {
+    guard window.displayID == keyboardOwnerDisplayID else { return false }
+    return handleSessionKeyEvent(event)
+  }
 }
 
 // MARK: - AreaSelectionWindowDelegate Protocol
@@ -459,6 +485,7 @@ protocol AreaSelectionWindowDelegate: AnyObject {
   func areaSelectionWindow(_ window: AreaSelectionWindow, didSelectWindow target: WindowCaptureTarget)
   func areaSelectionWindowDidCancel(_ window: AreaSelectionWindow)
   func areaSelectionWindowDidBecomeActive(_ window: AreaSelectionWindow)
+  func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool
 }
 
 // MARK: - AreaSelectionWindow
@@ -472,6 +499,7 @@ final class AreaSelectionWindow: NSPanel {
 
   let overlayView: AreaSelectionOverlayView
   private let targetScreen: NSScreen
+  private var receivesKeyboardInput = false
 
   /// Initialize window for a screen
   /// - Parameters:
@@ -500,10 +528,15 @@ final class AreaSelectionWindow: NSPanel {
     self.hidesOnDeactivate = false
     self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     self.animationBehavior = .none  // Disable window animations for instant appearance
+    self.becomesKeyOnlyIfNeeded = true
 
     // Set up content view
     self.contentView = overlayView
     overlayView.delegate = self
+    overlayView.keyEventHandler = { [weak self] event in
+      guard let self else { return false }
+      return self.selectionDelegate?.areaSelectionWindow(self, didReceiveKeyEvent: event) ?? false
+    }
 
     if pooled {
       // Pooled windows start hidden
@@ -522,12 +555,22 @@ final class AreaSelectionWindow: NSPanel {
     overlayView.selectionMode = mode
   }
 
+  func setReceivesKeyboardInput(_ receivesKeyboardInput: Bool) {
+    self.receivesKeyboardInput = receivesKeyboardInput
+  }
+
+  func activateKeyboardInputIfNeeded() {
+    guard receivesKeyboardInput else { return }
+    makeKey()
+    makeFirstResponder(overlayView)
+  }
+
   var displayID: CGDirectDisplayID? {
     targetScreen.displayID
   }
 
   // Non-activating: prevent stealing focus from other apps
-  override var canBecomeKey: Bool { false }
+  override var canBecomeKey: Bool { receivesKeyboardInput }
   override var canBecomeMain: Bool { false }
 }
 
@@ -577,6 +620,7 @@ protocol AreaSelectionOverlayViewDelegate: AnyObject {
 final class AreaSelectionOverlayView: NSView {
 
   weak var delegate: AreaSelectionOverlayViewDelegate?
+  var keyEventHandler: ((NSEvent) -> Bool)?
   var selectionMode: SelectionMode = .screenshot {
     didSet {
       needsDisplay = true
@@ -855,6 +899,17 @@ final class AreaSelectionOverlayView: NSView {
 
   override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
     return true
+  }
+
+  override var acceptsFirstResponder: Bool {
+    true
+  }
+
+  override func keyDown(with event: NSEvent) {
+    if keyEventHandler?(event) == true {
+      return
+    }
+    super.keyDown(with: event)
   }
 
   // MARK: - Layout

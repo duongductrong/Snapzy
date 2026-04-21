@@ -214,7 +214,7 @@ Snapzy/
 - `ScreenCaptureViewModel` is the main entrypoint for capture actions fired from shortcuts or the status bar menu.
 - `AppStatusBarController` is the AppKit bridge for the menu bar item. It now keeps the menu accessible during active recording, renders the live recording timer from `ScreenRecordingManager`, and coordinates temporary Preferences-window exclusion for record-own-app sessions.
 - Area screenshot now freezes the active display first through `FrozenAreaCaptureSession`, then keeps one overlay session that can toggle between manual region selection and application window selection with the configurable `Application Capture` overlay key. The default key is `A`.
-- `AreaSelectionController` and `AreaSelectionWindow` own the cross-display overlay session, keyboard handling, and highlight rendering for both manual and application screenshot interaction modes.
+- `AreaSelectionController` and `AreaSelectionWindow` own the cross-display overlay session, target-display keyboard ownership for screenshot sessions, and highlight rendering for both manual and application screenshot interaction modes.
 - `WindowSelectionQueryService` resolves the hovered topmost app window from CoreGraphics window lists plus `SCShareableContent`, so app-mode hover stays accurate without doing expensive live queries on every draw pass.
 - `PostCaptureActionHandler` executes Quick Access, clipboard copy, and screenshot auto-open in Annotate after files already exist.
 - `TempCaptureManager` is where the `Save` after-capture toggle becomes real behavior.
