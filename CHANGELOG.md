@@ -19,6 +19,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.8.2] - 2026-04-21
+
+### Bug Fixes
+-  Implement keyboard input handling for area screenshot sessions in AreaSelectionController and AreaSelectionWindow for resolve issue #99 (88ddfba)
+-  Resolve issue #100 by implement dynamic keyboard shortcut handling in AppStatusBarController (8452a16)
+-  Enhance clipboard functionality for edited captures in annotation and video editor workflows (ae19104)
+
+### Chore
+- refactor: Adjust padding and layout for VideoEditorGIFSettingsPanel in VideoEditorMainView (970303c)
+- refactor: Improve layout and responsiveness of GIF settings panel in VideoEditorMainView (8d43310)
+- refactor: Enhance video export settings and aspect ratio handling in VideoEditor components (f71b0b8)
+- refactor: Simplify layout and remove unnecessary styling in VideoEditor components (a1baf4d)
+- refactor: Enhance VideoEditor components with improved styling and layout adjustments (fe7a7ab)
+- refactor: Revamp VideoExportSettingsPanel with collapsible tabs and improved layout (1499a0a)
+- refactor: Remove shadow effect from trim handle for cleaner appearance (c0d4b65)
+- refactor: Refactor VideoEditorMainView and VideoControlsView for improved layout and functionality (e8449a2)
+- refactor: Enhance VideoEditorToolbarView with dynamic width measurement and improved layout (7192783)
+- chore: update appcast, cask, and readme for v1.8.1 (160cb29)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.8.1] - 2026-04-19
 
 ### Features
