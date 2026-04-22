@@ -20,6 +20,7 @@ final class TempCaptureManager {
 
   private let preferencesManager = PreferencesManager.shared
   private let fileAccessManager = SandboxFileAccessManager.shared
+  private let defaults = UserDefaults.standard
 
   /// Temp directory for unsaved captures (Application Support/Snapzy/Captures/).
   /// Uses Application Support instead of /tmp/ so macOS won't purge files
@@ -132,7 +133,9 @@ final class TempCaptureManager {
     return filePath.hasPrefix(tempPath)
   }
 
-  /// Cleanup all orphaned temp files (call on app launch)
+  /// Cleanup all orphaned temp files (call on app launch).
+  /// Skips files that have an active history record — the retention service
+  /// will delete them when the history record ages out.
   func cleanupOrphanedFiles() {
     let fm = FileManager.default
     guard let contents = try? fm.contentsOfDirectory(
@@ -140,8 +143,26 @@ final class TempCaptureManager {
       includingPropertiesForKeys: nil
     ) else { return }
 
+    let historyEnabled = defaults.object(forKey: PreferencesKeys.historyEnabled) as? Bool ?? true
     var count = 0
+    var skipped = 0
+    var preservedForRetention = 0
+
     for fileURL in contents {
+      // Skip files referenced by active history records
+      if CaptureHistoryStore.shared.hasRecord(forFilePath: fileURL.path) {
+        skipped += 1
+        continue
+      }
+
+      // Keep recent temp captures alive while history is enabled, even if the
+      // startup lookup cannot reconcile them yet. Retention and explicit cache
+      // clearing remain the mechanisms that actually delete these files.
+      if shouldPreserveForHistoryRetention(fileURL, historyEnabled: historyEnabled) {
+        preservedForRetention += 1
+        continue
+      }
+
       do {
         try fm.removeItem(at: fileURL)
         try? RecordingMetadataStore.delete(for: fileURL)
@@ -156,6 +177,18 @@ final class TempCaptureManager {
       logger.info("Cleaned up \(count) orphaned temp capture file(s)")
       DiagnosticLogger.shared.log(.info, .lifecycle, "[TempCapture] Startup cleanup: removed \(count) orphaned file(s)")
     }
+    if skipped > 0 {
+      logger.info("Preserved \(skipped) temp file(s) with active history records")
+      DiagnosticLogger.shared.log(.info, .lifecycle, "[TempCapture] Preserved \(skipped) temp file(s) with active history records")
+    }
+    if preservedForRetention > 0 {
+      logger.info("Preserved \(preservedForRetention) recent temp file(s) within history retention window")
+      DiagnosticLogger.shared.log(
+        .info,
+        .lifecycle,
+        "[TempCapture] Preserved \(preservedForRetention) recent temp file(s) within history retention window"
+      )
+    }
   }
 
   // MARK: - Private
@@ -168,5 +201,26 @@ final class TempCaptureManager {
       try? RecordingMetadataStore.save(metadata, for: destinationURL)
       try? RecordingMetadataStore.delete(for: sourceURL)
     }
+  }
+
+  private func shouldPreserveForHistoryRetention(_ fileURL: URL, historyEnabled: Bool) -> Bool {
+    guard historyEnabled else { return false }
+    guard
+      let values = try? fileURL.resourceValues(
+        forKeys: [.isRegularFileKey, .contentModificationDateKey, .creationDateKey]
+      ),
+      values.isRegularFile == true
+    else {
+      return false
+    }
+
+    let retentionDays = defaults.integer(forKey: PreferencesKeys.historyRetentionDays)
+    if retentionDays == 0 {
+      return true
+    }
+
+    let referenceDate = values.contentModificationDate ?? values.creationDate ?? .distantPast
+    let cutoff = Date().addingTimeInterval(-TimeInterval(retentionDays * 24 * 60 * 60))
+    return referenceDate >= cutoff
   }
 }

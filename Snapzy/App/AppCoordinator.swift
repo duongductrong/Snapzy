@@ -25,6 +25,34 @@ final class AppCoordinator {
     LogCleanupScheduler.shared.start()
     RecordingMetadataCleanupScheduler.shared.start()
 
+    // History defaults
+    let defaults = UserDefaults.standard
+    if defaults.object(forKey: PreferencesKeys.historyEnabled) == nil {
+      defaults.set(true, forKey: PreferencesKeys.historyEnabled)
+    }
+    if defaults.object(forKey: PreferencesKeys.historyRetentionDays) == nil {
+      defaults.set(30, forKey: PreferencesKeys.historyRetentionDays)
+    }
+    if defaults.object(forKey: PreferencesKeys.historyMaxCount) == nil {
+      defaults.set(500, forKey: PreferencesKeys.historyMaxCount)
+    }
+    if defaults.object(forKey: PreferencesKeys.historyOpenOnLaunch) == nil {
+      defaults.set(false, forKey: PreferencesKeys.historyOpenOnLaunch)
+    }
+
+    // Floating history panel defaults
+    if defaults.object(forKey: "history.floating.enabled") == nil {
+      defaults.set(true, forKey: "history.floating.enabled")
+    }
+    if defaults.object(forKey: "history.floating.position") == nil {
+      defaults.set("topCenter", forKey: "history.floating.position")
+    }
+    if defaults.object(forKey: "history.floating.maxDisplayedItems") == nil {
+      defaults.set(10, forKey: "history.floating.maxDisplayedItems")
+    }
+
+    CaptureHistoryRetentionService.shared.start()
+
     AppStatusBarController.shared.setup(
       viewModel: environment.screenCaptureViewModel,
       updater: UpdaterManager.shared.updater,

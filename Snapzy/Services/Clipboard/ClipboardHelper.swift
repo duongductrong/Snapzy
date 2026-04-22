@@ -26,6 +26,26 @@ enum ClipboardHelper {
 
   // MARK: - File-based copy
 
+  /// Copy one or more file URLs to the clipboard.
+  ///
+  /// Used for non-image captures and multi-selection where Finder-style file copy
+  /// semantics are more appropriate than rendering image pixel data.
+  static func copyFileURLs(_ urls: [URL]) {
+    guard !urls.isEmpty else { return }
+
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.writeObjects(urls.map { $0 as NSURL })
+
+    logger.info("Clipboard: copied \(urls.count) file url(s)")
+    DiagnosticLogger.shared.log(
+      .info,
+      .clipboard,
+      "Copy file URLs",
+      context: ["count": "\(urls.count)"]
+    )
+  }
+
   /// Copy an image file to clipboard with both file reference and image data.
   ///
   /// Writes `NSURL` (preserves original format in Finder) **and** `NSImage`

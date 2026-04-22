@@ -235,6 +235,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       NSApp.activate(ignoringOtherApps: true)
     case .openShortcutList:
       ShortcutOverlayManager.shared.toggle()
+    case .openHistory:
+      HistoryFloatingManager.shared.toggle()
     }
   }
 

@@ -221,12 +221,22 @@ final class QuickAccessManager: ObservableObject {
     }
 
     // Auto-delete temp files on dismiss (unsaved captures)
+    // Skip deletion if history is enabled and the file has a history record —
+    // the retention service will clean it up when the record ages out.
     if tempCaptureManager.isTempFile(item.url) {
       let url = item.url
-      DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
-      print("[Snapzy:QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
-      Task { @MainActor in
-        tempCaptureManager.deleteTempFile(at: url)
+      let historyEnabled = UserDefaults.standard.bool(forKey: PreferencesKeys.historyEnabled)
+      let hasHistoryRecord = historyEnabled && CaptureHistoryStore.shared.hasRecord(forFilePath: url.path)
+
+      if hasHistoryRecord {
+        DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss temp file (preserved for history): \(url.lastPathComponent)")
+        print("[Snapzy:QuickAccess] Dismiss temp file (preserved for history): \(url.lastPathComponent)")
+      } else {
+        DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
+        print("[Snapzy:QuickAccess] Dismiss temp file (auto-delete): \(url.lastPathComponent)")
+        Task { @MainActor in
+          tempCaptureManager.deleteTempFile(at: url)
+        }
       }
     } else {
       DiagnosticLogger.shared.log(.info, .action, "[QuickAccess] Dismiss saved file: \(item.url.lastPathComponent)")
@@ -490,6 +500,13 @@ final class QuickAccessManager: ObservableObject {
     // Move file from temp to export location
     Task { @MainActor in
       if let savedURL = tempCaptureManager.saveToExportLocation(tempURL: tempURL) {
+        // Update history records by original file path. QuickAccess item IDs are
+        // independent from persisted history record IDs.
+        CaptureHistoryStore.shared.updateFilePath(
+          from: tempURL.path,
+          to: savedURL.path
+        )
+
         let captureType: CaptureType = item.isVideo ? .recording : .screenshot
         PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
           for: captureType,

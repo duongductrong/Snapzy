@@ -6,6 +6,8 @@
 //
 
 import AppKit
+import AVFoundation
+import CoreGraphics
 import Foundation
 import os.log
 
@@ -28,12 +30,95 @@ final class PostCaptureActionHandler {
   /// Execute all enabled post-capture actions for a screenshot
   func handleScreenshotCapture(url: URL) async {
     await executeActions(for: .screenshot, url: url)
+
+    // Add to capture history
+    await addScreenshotToHistory(url: url)
+  }
+
+  /// Add a screenshot to capture history
+  private func addScreenshotToHistory(url: URL) async {
+    guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+    let imageSource = CGImageSourceCreateWithURL(url as CFURL, nil)
+    var width: Int?
+    var height: Int?
+    if let source = imageSource {
+      if let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] {
+        if let pixelWidth = properties[kCGImagePropertyPixelWidth as String] as? Int {
+          width = pixelWidth
+        }
+        if let pixelHeight = properties[kCGImagePropertyPixelHeight as String] as? Int {
+          height = pixelHeight
+        }
+      }
+    }
+
+    CaptureHistoryStore.shared.addCapture(
+      url: url,
+      captureType: .screenshot,
+      width: width,
+      height: height
+    )
   }
 
   /// Execute all enabled post-capture actions for a video recording
   /// - Parameter skipQuickAccess: When true, skip adding to QuickAccess (e.g. GIF flow already added it)
   func handleVideoCapture(url: URL, skipQuickAccess: Bool = false) async {
     await executeActions(for: .recording, url: url, skipQuickAccess: skipQuickAccess)
+
+    // Add to capture history
+    await addVideoToHistory(url: url)
+  }
+
+  /// Add a video or GIF to capture history
+  private func addVideoToHistory(url: URL) async {
+    guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+    let isGIF = url.pathExtension.lowercased() == "gif"
+    let captureType: CaptureHistoryType = isGIF ? .gif : .video
+
+    var duration: TimeInterval?
+    var width: Int?
+    var height: Int?
+
+    if !isGIF {
+      let asset = AVURLAsset(url: url)
+      let assetDuration: CMTime
+      if #available(macOS 15.0, *) {
+        assetDuration = (try? await asset.load(.duration)) ?? .invalid
+      } else {
+        assetDuration = asset.duration
+      }
+      let seconds = CMTimeGetSeconds(assetDuration)
+      if seconds.isFinite && seconds > 0 {
+        duration = seconds
+      }
+
+      let videoTrack: AVAssetTrack?
+      if #available(macOS 15.0, *) {
+        videoTrack = try? await asset.loadTracks(withMediaType: .video).first
+      } else {
+        videoTrack = asset.tracks(withMediaType: .video).first
+      }
+      if let track = videoTrack {
+        let naturalSize: CGSize
+        if #available(macOS 15.0, *) {
+          naturalSize = (try? await track.load(.naturalSize)) ?? .zero
+        } else {
+          naturalSize = track.naturalSize
+        }
+        width = Int(naturalSize.width)
+        height = Int(naturalSize.height)
+      }
+    }
+
+    CaptureHistoryStore.shared.addCapture(
+      url: url,
+      captureType: captureType,
+      duration: duration,
+      width: width,
+      height: height
+    )
   }
 
   /// Re-run clipboard automation after an in-place edit save succeeds.

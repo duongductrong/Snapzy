@@ -135,35 +135,41 @@ final class CaptureStorageManager {
       return 0
     }
 
-    let deletedCount = await Task.detached {
+    let deletedPaths = await Task.detached(priority: .utility) { () -> [String] in
       let fm = FileManager.default
-      var deleted = 0
+      var deletedPaths: [String] = []
+      let backgroundLogger = Logger(subsystem: "Snapzy", category: "CaptureStorageManager")
 
       guard let contents = try? fm.contentsOfDirectory(
         at: dirURL,
         includingPropertiesForKeys: nil,
         options: [.skipsHiddenFiles]
       ) else {
-        return 0
+        return []
       }
 
       for fileURL in contents {
         do {
           try fm.removeItem(at: fileURL)
-          deleted += 1
+          deletedPaths.append(fileURL.path)
         } catch {
           // Skip files that can't be deleted (in-use, locked, etc.)
-          logger.warning(
+          backgroundLogger.warning(
             "Skipped deleting \(fileURL.lastPathComponent, privacy: .public): \(error.localizedDescription, privacy: .public)"
           )
         }
       }
 
-      return deleted
+      return deletedPaths
     }.value
 
-    logger.info("Cache cleared: \(deletedCount) item(s) removed")
-    return deletedCount
+    for path in deletedPaths {
+      CaptureHistoryStore.shared.removeByFilePath(path)
+      try? RecordingMetadataStore.delete(for: URL(fileURLWithPath: path))
+    }
+
+    logger.info("Cache cleared: \(deletedPaths.count) item(s) removed")
+    return deletedPaths.count
   }
 }
 

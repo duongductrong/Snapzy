@@ -79,6 +79,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Cmd + Shift + H
+  static let defaultHistory = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_H),
+    modifiers: UInt32(cmdKey | shiftKey)
+  )
+
   var displayString: String {
     var parts: [String] = []
 
@@ -369,6 +375,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case shortcutList
   case ocr
   case objectCutout
+  case history
 
   var isSystemConflictRelevant: Bool {
     switch self {
@@ -403,6 +410,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.captureTextOCR
     case .objectCutout:
       return L10n.Actions.captureSubject
+    case .history:
+      return L10n.Actions.openHistory
     }
   }
 }
@@ -419,6 +428,7 @@ enum ShortcutAction {
   case openVideoEditor
   case openCloudUploads
   case openShortcutList
+  case openHistory
 }
 
 /// Protocol for handling shortcut events
@@ -444,6 +454,7 @@ final class KeyboardShortcutManager {
   private(set) var shortcutListShortcut: ShortcutConfig
   private(set) var ocrShortcut: ShortcutConfig
   private(set) var objectCutoutShortcut: ShortcutConfig
+  private(set) var historyShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var temporarySuspensionCount: Int = 0
@@ -458,6 +469,7 @@ final class KeyboardShortcutManager {
   private var shortcutListHotkeyRef: EventHotKeyRef?
   private var ocrHotkeyRef: EventHotKeyRef?
   private var objectCutoutHotkeyRef: EventHotKeyRef?
+  private var historyHotkeyRef: EventHotKeyRef?
 
   // Hotkey IDs
   private let fullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4631), id: 1)  // "ZSF1"
@@ -470,6 +482,7 @@ final class KeyboardShortcutManager {
   private let cloudUploadsHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4638), id: 8)  // "ZSF8"
   private let objectCutoutHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4639), id: 9)  // "ZSF9"
   private let shortcutListHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4641), id: 10)  // "ZSFA"
+  private let historyHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4642), id: 11)  // "ZSFB"
 
   private var eventHandler: EventHandlerRef?
 
@@ -484,6 +497,7 @@ final class KeyboardShortcutManager {
   private let shortcutListShortcutKey = PreferencesKeys.shortcutListShortcut
   private let ocrShortcutKey = "ocrShortcut"
   private let objectCutoutShortcutKey = "objectCutoutShortcut"
+  private let historyShortcutKey = "historyShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
   private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
 
@@ -498,6 +512,7 @@ final class KeyboardShortcutManager {
     shortcutListShortcut = .defaultShortcutList
     ocrShortcut = .defaultOCR
     objectCutoutShortcut = .defaultObjectCutout
+    historyShortcut = .defaultHistory
     loadShortcuts()
     loadDisabledShortcuts()
     setupEventHandler()
@@ -567,6 +582,7 @@ final class KeyboardShortcutManager {
     case .shortcutList: return shortcutListShortcut
     case .ocr: return ocrShortcut
     case .objectCutout: return objectCutoutShortcut
+    case .history: return historyShortcut
     }
   }
 
@@ -666,6 +682,14 @@ final class KeyboardShortcutManager {
     }
   }
 
+  /// Update history shortcut
+  func setHistoryShortcut(_ config: ShortcutConfig) {
+    mutateShortcutRegistration {
+      historyShortcut = config
+      saveShortcuts()
+    }
+  }
+
   // MARK: - Persistence
 
   private func saveShortcuts() {
@@ -699,6 +723,9 @@ final class KeyboardShortcutManager {
     }
     if let objectCutoutData = try? encoder.encode(objectCutoutShortcut) {
       UserDefaults.standard.set(objectCutoutData, forKey: objectCutoutShortcutKey)
+    }
+    if let historyData = try? encoder.encode(historyShortcut) {
+      UserDefaults.standard.set(historyData, forKey: historyShortcutKey)
     }
   }
 
@@ -753,6 +780,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: objectCutoutData)
     {
       objectCutoutShortcut = config
+    }
+    if let historyData = UserDefaults.standard.data(forKey: historyShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: historyData)
+    {
+      historyShortcut = config
     }
   }
 
@@ -848,6 +880,9 @@ final class KeyboardShortcutManager {
     case objectCutoutHotkeyID.id:
       actionName = "object-cutout"
       action = .captureObjectCutout
+    case historyHotkeyID.id:
+      actionName = "history"
+      action = .openHistory
     default:
       return
     }
@@ -925,6 +960,12 @@ final class KeyboardShortcutManager {
       hotkeyID: objectCutoutHotkeyID,
       ref: &objectCutoutHotkeyRef
     )
+    registerShortcutIfNeeded(
+      kind: .history,
+      config: historyShortcut,
+      hotkeyID: historyHotkeyID,
+      ref: &historyHotkeyRef
+    )
   }
 
   private func registerShortcutIfNeeded(
@@ -996,6 +1037,10 @@ final class KeyboardShortcutManager {
     if let ref = objectCutoutHotkeyRef {
       UnregisterEventHotKey(ref)
       objectCutoutHotkeyRef = nil
+    }
+    if let ref = historyHotkeyRef {
+      UnregisterEventHotKey(ref)
+      historyHotkeyRef = nil
     }
   }
 

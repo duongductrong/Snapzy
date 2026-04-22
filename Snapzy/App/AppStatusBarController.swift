@@ -327,6 +327,17 @@ final class AppStatusBarController: ObservableObject {
     cloudUploadsItem.isEnabled = CloudManager.shared.isConfigured
     menu?.addItem(cloudUploadsItem)
 
+    let historyItem = NSMenuItem(
+      title: L10n.Actions.openHistory,
+      action: #selector(openHistoryAction),
+      keyEquivalent: ""
+    )
+    applyConfiguredShortcut(historyItem, for: .history, using: shortcutManager)
+    historyItem.target = self
+    historyItem.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
+    historyItem.isEnabled = true
+    menu?.addItem(historyItem)
+
     let shortcutListItem = NSMenuItem(
       title: L10n.Menu.keyboardShortcuts,
       action: #selector(showShortcutListAction),
@@ -437,6 +448,10 @@ final class AppStatusBarController: ObservableObject {
   @objc private func openCloudUploadsAction() {
     CloudUploadHistoryWindowController.shared.showWindow()
     NSApp.activate(ignoringOtherApps: true)
+  }
+
+  @objc private func openHistoryAction() {
+    HistoryFloatingManager.shared.toggle()
   }
 
   @objc private func showShortcutListAction() {

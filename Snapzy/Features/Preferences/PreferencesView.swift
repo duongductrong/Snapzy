@@ -25,6 +25,10 @@ struct PreferencesView: View {
         .tabItem { Label(L10n.Preferences.quickAccessTab, systemImage: "square.stack.fill") }
         .tag(PreferencesTab.quickAccess)
 
+      LazyView(HistorySettingsView())
+        .tabItem { Label(L10n.Preferences.historyTab, systemImage: "clock.arrow.circlepath") }
+        .tag(PreferencesTab.history)
+
       LazyView(ShortcutsSettingsView())
         .tabItem { Label(L10n.Preferences.shortcutsTab, systemImage: "keyboard.fill") }
         .tag(PreferencesTab.shortcuts)

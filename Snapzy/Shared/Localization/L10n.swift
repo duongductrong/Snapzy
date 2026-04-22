@@ -26,7 +26,10 @@ enum L10n {
     ("preferences-cloud-history.", "Cloud"),
     ("preferences-about.", "Settings"),
     ("preferences-quick-access.", "QuickAccess"),
+    ("preferences-history.", "Settings"),
     ("preferences-permissions.", "Permissions"),
+    ("history-background-style.", "Settings"),
+    ("history-panel-position.", "Settings"),
     ("after-capture.", "Capture"),
     ("capture-kind.", "Capture"),
     ("capture-storage.", "Capture"),
@@ -153,6 +156,11 @@ enum L10n {
       defaultValue: "Quick Access",
       comment: "Preferences tab title"
     )
+    static let historyTab = string(
+      "preferences.tab.history",
+      defaultValue: "History",
+      comment: "Preferences tab title"
+    )
     static let shortcutsTab = string(
       "preferences.tab.shortcuts",
       defaultValue: "Shortcuts",
@@ -230,6 +238,11 @@ enum L10n {
       "action.show-quick-access-overlay",
       defaultValue: "Show Quick Access Overlay",
       comment: "Action title for showing the quick access overlay"
+    )
+    static let openHistory = string(
+      "action.open-history",
+      defaultValue: "Open History",
+      comment: "Action title for opening capture history"
     )
   }
 
@@ -445,6 +458,11 @@ enum L10n {
       "common.open",
       defaultValue: "Open",
       comment: "Generic open button title"
+    )
+    static let restore = string(
+      "common.restore",
+      defaultValue: "Restore",
+      comment: "Generic restore button title"
     )
     static let openInFinder = string(
       "common.open-in-finder",
@@ -5813,6 +5831,183 @@ enum L10n {
       "app-identity.healthy",
       defaultValue: "App identity is healthy.",
       comment: "Identity summary when no issues exist"
+    )
+  }
+
+  enum PreferencesHistory {
+    static let floatingPanelSection = string(
+      "preferences-history.floating-panel-section",
+      defaultValue: "Floating Panel",
+      comment: "History settings section title for floating panel"
+    )
+    static let floatingPanelTitle = string(
+      "preferences-history.floating-panel-title",
+      defaultValue: "Enable Floating Panel",
+      comment: "History settings toggle for floating panel"
+    )
+    static let floatingPanelDescription = string(
+      "preferences-history.floating-panel-description",
+      defaultValue: "Show a floating panel for quick access to recent captures",
+      comment: "History settings description for floating panel"
+    )
+    static let panelPositionTitle = string(
+      "preferences-history.panel-position-title",
+      defaultValue: "Panel Position",
+      comment: "History settings title for panel position"
+    )
+    static let panelPositionDescription = string(
+      "preferences-history.panel-position-description",
+      defaultValue: "Choose where the floating panel appears on screen",
+      comment: "History settings description for panel position"
+    )
+    static let displaySection = string(
+      "preferences-history.display-section",
+      defaultValue: "Display",
+      comment: "History settings section title for display options"
+    )
+    static let backgroundStyleTitle = string(
+      "preferences-history.background-style-title",
+      defaultValue: "Background Style",
+      comment: "History settings title for choosing the History background style"
+    )
+    static let backgroundStyleDescription = string(
+      "preferences-history.background-style-description",
+      defaultValue: "Applies to the History window and floating panel",
+      comment: "History settings description for choosing the History background style"
+    )
+    static let defaultFilterTitle = string(
+      "preferences-history.default-filter-title",
+      defaultValue: "Default Filter",
+      comment: "History settings title for default filter"
+    )
+    static let defaultFilterDescription = string(
+      "preferences-history.default-filter-description",
+      defaultValue: "Filter shown when opening the floating panel",
+      comment: "History settings description for default filter"
+    )
+    static let maxItemsTitle = string(
+      "preferences-history.max-items-title",
+      defaultValue: "Max Displayed Items",
+      comment: "History settings title for max displayed items"
+    )
+    static let panelSizeTitle = string(
+      "preferences-history.panel-size-title",
+      defaultValue: "Panel Size",
+      comment: "History settings title for floating panel size"
+    )
+    static let panelSizeDescription = string(
+      "preferences-history.panel-size-description",
+      defaultValue: "Resize the floating panel and its preview cards",
+      comment: "History settings description for floating panel size"
+    )
+    static let maxItemsDescription = string(
+      "preferences-history.max-items-description",
+      defaultValue: "Maximum number of items shown in the floating panel",
+      comment: "History settings description for max displayed items"
+    )
+    static let retentionSection = string(
+      "preferences-history.retention-section",
+      defaultValue: "Retention",
+      comment: "History settings section title for retention"
+    )
+    static let retentionDaysTitle = string(
+      "preferences-history.retention-days-title",
+      defaultValue: "Auto-Clear After",
+      comment: "History settings title for retention days"
+    )
+    static func deleteAfterDays(_ days: Int) -> String {
+      format(
+        "preferences-history.delete-after-days",
+        defaultValue: "Delete captures older than %d days",
+        comment: "History settings description for retention days. %d is the number of days.",
+        days
+      )
+    }
+    static let keepForever = string(
+      "preferences-history.keep-forever",
+      defaultValue: "Keep captures forever",
+      comment: "History settings description when retention is disabled"
+    )
+    static let maxCountTitle = string(
+      "preferences-history.max-count-title",
+      defaultValue: "Max Stored Items",
+      comment: "History settings title for max stored items"
+    )
+    static let maxCountDescription = string(
+      "preferences-history.max-count-description",
+      defaultValue: "Maximum number of captures stored in history",
+      comment: "History settings description for max stored items"
+    )
+    static let storageSection = string(
+      "preferences-history.storage-section",
+      defaultValue: "Storage",
+      comment: "History settings section title for storage"
+    )
+    static let clearHistoryTitle = string(
+      "preferences-history.clear-history-title",
+      defaultValue: "Clear All History",
+      comment: "History settings title for clearing history"
+    )
+    static let clearHistoryDescription = string(
+      "preferences-history.clear-history-description",
+      defaultValue: "Remove all capture history records",
+      comment: "History settings description for clearing history"
+    )
+    static let clearHistoryButton = string(
+      "preferences-history.clear-history-button",
+      defaultValue: "Clear History",
+      comment: "History settings button for clearing history"
+    )
+    static let clearHistoryAlertTitle = string(
+      "preferences-history.clear-history-alert-title",
+      defaultValue: "Clear All History?",
+      comment: "Alert title when clearing history"
+    )
+    static let clearHistoryAlertMessage = string(
+      "preferences-history.clear-history-alert-message",
+      defaultValue: "This will remove all capture history records. The actual files will not be deleted.",
+      comment: "Alert message when clearing history"
+    )
+    static let clearHistoryConfirm = string(
+      "preferences-history.clear-history-confirm",
+      defaultValue: "Clear",
+      comment: "Confirm button for clearing history"
+    )
+  }
+
+  enum HistoryPanelPosition {
+    static let topCenter = string(
+      "history-panel-position.top-center",
+      defaultValue: "Top Center",
+      comment: "History panel position option"
+    )
+    static let bottomCenter = string(
+      "history-panel-position.bottom-center",
+      defaultValue: "Bottom Center",
+      comment: "History panel position option"
+    )
+  }
+
+  enum HistoryBackgroundStyle {
+    static let hud = string(
+      "history-background-style.hud",
+      defaultValue: "HUD",
+      comment: "History background style option"
+    )
+    static let solid = string(
+      "history-background-style.solid",
+      defaultValue: "Solid",
+      comment: "History background style option"
+    )
+    static let glass = string(
+      "history-background-style.glass",
+      defaultValue: "Glass",
+      comment: "History background style option"
+    )
+    static let gradient = string(
+      "history-background-style.gradient",
+      defaultValue: "Gradient",
+      comment: "History background style option"
     )
   }
 }

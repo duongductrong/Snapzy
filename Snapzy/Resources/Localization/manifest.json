@@ -95,8 +95,11 @@
     {
       "file": "Features/Settings.xcstrings",
       "prefixes": [
+        "history-background-style.",
+        "history-panel-position.",
         "preferences-about.",
         "preferences-general.",
+        "preferences-history.",
         "preferences.tab."
       ]
     },

@@ -20,6 +20,7 @@ struct ShortcutsSettingsView: View {
   @State private var videoEditorShortcut: ShortcutConfig
   @State private var cloudUploadsShortcut: ShortcutConfig
   @State private var shortcutListShortcut: ShortcutConfig
+  @State private var historyShortcut: ShortcutConfig
   @State private var copyAndCloseShortcut: ShortcutConfig
   @State private var togglePinShortcut: ShortcutConfig
   @State private var cloudUploadShortcut: ShortcutConfig
@@ -52,6 +53,7 @@ struct ShortcutsSettingsView: View {
     _videoEditorShortcut = State(initialValue: KeyboardShortcutManager.shared.videoEditorShortcut)
     _cloudUploadsShortcut = State(initialValue: KeyboardShortcutManager.shared.cloudUploadsShortcut)
     _shortcutListShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcutListShortcut)
+    _historyShortcut = State(initialValue: KeyboardShortcutManager.shared.historyShortcut)
     _copyAndCloseShortcut = State(initialValue: AnnotateShortcutManager.shared.copyAndCloseShortcut)
     _togglePinShortcut = State(initialValue: AnnotateShortcutManager.shared.togglePinShortcut)
     _cloudUploadShortcut = State(initialValue: AnnotateShortcutManager.shared.cloudUploadShortcut)
@@ -368,6 +370,16 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .shortcutList) }
           )
 
+          ShortcutRecorderView(
+            label: L10n.Actions.openHistory,
+            icon: "clock.arrow.circlepath",
+            description: "Open the capture history browser",
+            shortcut: $historyShortcut,
+            isEnabled: globalEnabledBinding(for: .history),
+            validationIssue: globalValidationIssues[.history],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .history) }
+          )
+
           Text(L10n.PreferencesShortcuts.recorderHint)
             .font(.caption)
             .foregroundColor(.secondary)
@@ -478,6 +490,7 @@ struct ShortcutsSettingsView: View {
     videoEditorShortcut = .defaultVideoEditor
     cloudUploadsShortcut = .defaultCloudUploads
     shortcutListShortcut = .defaultShortcutList
+    historyShortcut = .defaultHistory
     copyAndCloseShortcut = AnnotateShortcutManager.defaultCopyAndClose
     togglePinShortcut = AnnotateShortcutManager.defaultTogglePin
     cloudUploadShortcut = AnnotateShortcutManager.defaultCloudUpload
@@ -501,6 +514,7 @@ struct ShortcutsSettingsView: View {
     manager.setVideoEditorShortcut(.defaultVideoEditor)
     manager.setCloudUploadsShortcut(.defaultCloudUploads)
     manager.setShortcutListShortcut(.defaultShortcutList)
+    manager.setHistoryShortcut(.defaultHistory)
     CaptureOverlayShortcutSettings.resetApplicationCaptureShortcut()
     for kind in GlobalShortcutKind.allCases {
       manager.setShortcutEnabled(true, for: kind)
@@ -643,6 +657,9 @@ struct ShortcutsSettingsView: View {
       case .objectCutout:
         objectCutoutShortcut = config
         manager.setObjectCutoutShortcut(config)
+      case .history:
+        historyShortcut = config
+        manager.setHistoryShortcut(config)
       }
 
       if kind.isSystemConflictRelevant {

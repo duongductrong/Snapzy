@@ -69,6 +69,37 @@ final class DatabaseManager: @unchecked Sendable {
       )
     }
 
+    migrator.registerMigration("v2_createCaptureHistoryRecords") { db in
+      try db.create(table: "captureHistoryRecord") { t in
+        t.column("id", .text).primaryKey()
+        t.column("filePath", .text).notNull()
+        t.column("fileName", .text).notNull()
+        t.column("captureType", .text).notNull()
+        t.column("fileSize", .integer).notNull()
+        t.column("capturedAt", .datetime).notNull()
+        t.column("width", .integer)
+        t.column("height", .integer)
+        t.column("duration", .double)
+        t.column("thumbnailPath", .text)
+        t.column("isDeleted", .boolean).notNull().defaults(to: false)
+      }
+      try db.create(
+        index: "idx_captureHistory_type",
+        on: "captureHistoryRecord",
+        columns: ["captureType"]
+      )
+      try db.create(
+        index: "idx_captureHistory_capturedAt",
+        on: "captureHistoryRecord",
+        columns: ["capturedAt"]
+      )
+      try db.create(
+        index: "idx_captureHistory_deleted",
+        on: "captureHistoryRecord",
+        columns: ["isDeleted"]
+      )
+    }
+
     return migrator
   }
 }

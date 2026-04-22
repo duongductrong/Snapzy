@@ -91,6 +91,14 @@ enum PreferencesKeys {
   static let diagnosticsEnabled = "diagnostics.enabled"
   static let diagnosticsSessionActive = "diagnostics.sessionActive"
 
+  // History
+  static let historyEnabled = "history.enabled"
+  static let historyRetentionDays = "history.retentionDays"
+  static let historyMaxCount = "history.maxCount"
+  static let historyBackgroundStyle = "history.backgroundStyle"
+  static let historyFloatingScale = "history.floating.scale"
+  static let historyOpenOnLaunch = "history.openOnLaunch"
+
   // Cloud
   static let cloudProviderType = "cloud.providerType"
   static let cloudBucket = "cloud.bucket"
