@@ -596,6 +596,7 @@ final class DrawingCanvasNSView: NSView {
     )
     if let item = item {
       state.annotations.append(item)
+      state.selectedAnnotationId = item.id
     }
   }
 
