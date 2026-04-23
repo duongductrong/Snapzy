@@ -37,6 +37,11 @@ final class HistoryFloatingPanel: NSPanel {
   override var canBecomeKey: Bool { true }
   override var canBecomeMain: Bool { false }
 
+  private var isTextInputActive: Bool {
+    guard let responder = firstResponder else { return false }
+    return responder is NSTextView || responder is NSTextField
+  }
+
   override func resignKey() {
     super.resignKey()
 
@@ -53,10 +58,25 @@ final class HistoryFloatingPanel: NSPanel {
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
     if event.keyCode == 8 && flags == .command {
+      if isTextInputActive {
+        return super.performKeyEquivalent(with: event)
+      }
+
       NotificationCenter.default.post(name: .historyCopySelection, object: self)
       return true
     }
 
     return super.performKeyEquivalent(with: event)
+  }
+
+  override func keyDown(with event: NSEvent) {
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+    if !isTextInputActive, flags.isEmpty, (event.keyCode == 36 || event.keyCode == 76) {
+      NotificationCenter.default.post(name: .historyActivateSelection, object: self)
+      return
+    }
+
+    super.keyDown(with: event)
   }
 }

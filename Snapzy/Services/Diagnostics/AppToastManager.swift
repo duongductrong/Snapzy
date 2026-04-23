@@ -72,6 +72,88 @@ enum AppToastPosition {
   case bottomCenter
 }
 
+enum AppToastVariant {
+  case regular
+  case compact
+
+  var iconFontSize: CGFloat {
+    switch self {
+    case .regular: return 15
+    case .compact: return 13
+    }
+  }
+
+  var textFontSize: CGFloat {
+    switch self {
+    case .regular: return 13
+    case .compact: return 11
+    }
+  }
+
+  var horizontalPadding: CGFloat {
+    switch self {
+    case .regular: return 16
+    case .compact: return 13
+    }
+  }
+
+  var verticalPadding: CGFloat {
+    switch self {
+    case .regular: return 11
+    case .compact: return 8
+    }
+  }
+
+  var contentSpacing: CGFloat {
+    switch self {
+    case .regular: return 10
+    case .compact: return 8
+    }
+  }
+
+  var minWidth: CGFloat {
+    switch self {
+    case .regular: return 240
+    case .compact: return 180
+    }
+  }
+
+  var minHeight: CGFloat {
+    switch self {
+    case .regular: return 44
+    case .compact: return 34
+    }
+  }
+
+  var cornerRadius: CGFloat {
+    switch self {
+    case .regular: return 10
+    case .compact: return 9
+    }
+  }
+
+  var lineLimit: Int {
+    switch self {
+    case .regular: return 3
+    case .compact: return 2
+    }
+  }
+
+  var textWeight: Font.Weight {
+    switch self {
+    case .regular: return .medium
+    case .compact: return .semibold
+    }
+  }
+
+  var measurementWeight: NSFont.Weight {
+    switch self {
+    case .regular: return .medium
+    case .compact: return .semibold
+    }
+  }
+}
+
 @MainActor
 final class AppToastManager {
   static let shared = AppToastManager()
@@ -86,18 +168,19 @@ final class AppToastManager {
     message: String,
     style: AppToastStyle = .error,
     position: AppToastPosition = .bottomCenter,
-    duration: TimeInterval = 2.5
+    duration: TimeInterval = 2.5,
+    variant: AppToastVariant = .regular
   ) {
     let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !trimmed.isEmpty else { return }
 
-    guard let frame = frameForToast(message: trimmed, position: position) else { return }
+    guard let frame = frameForToast(message: trimmed, position: position, variant: variant) else { return }
 
     dismissTask?.cancel()
     let presentationID = UUID()
     activePresentationID = presentationID
 
-    let contentView = NSHostingView(rootView: AppToastView(message: trimmed, style: style))
+    let contentView = NSHostingView(rootView: AppToastView(message: trimmed, style: style, variant: variant))
 
     if let panel {
       panel.contentView = contentView
@@ -152,11 +235,15 @@ final class AppToastManager {
     })
   }
 
-  private func frameForToast(message: String, position: AppToastPosition) -> CGRect? {
+  private func frameForToast(
+    message: String,
+    position: AppToastPosition,
+    variant: AppToastVariant
+  ) -> CGRect? {
     guard let screen = targetScreen() else { return nil }
     let visibleFrame = screen.visibleFrame
     let maxWidth = min(560, visibleFrame.width - 32)
-    let size = measuredToastSize(for: message, maxWidth: maxWidth)
+    let size = measuredToastSize(for: message, maxWidth: maxWidth, variant: variant)
 
     let x = visibleFrame.midX - size.width / 2
     let y: CGFloat
@@ -170,19 +257,21 @@ final class AppToastManager {
     return CGRect(x: x, y: y, width: size.width, height: size.height)
   }
 
-  private func measuredToastSize(for message: String, maxWidth: CGFloat) -> CGSize {
-    let font = NSFont.systemFont(ofSize: 13, weight: .semibold)
-    let horizontalPadding: CGFloat = 56
-    let verticalPadding: CGFloat = 20
-    let minWidth: CGFloat = 240
-    let maxTextWidth = max(120, maxWidth - horizontalPadding)
+  private func measuredToastSize(
+    for message: String,
+    maxWidth: CGFloat,
+    variant: AppToastVariant
+  ) -> CGSize {
+    let font = NSFont.systemFont(ofSize: variant.textFontSize, weight: variant.measurementWeight)
+    let horizontalChrome = (variant.horizontalPadding * 2) + variant.iconFontSize + variant.contentSpacing + 4
+    let maxTextWidth = max(120, maxWidth - horizontalChrome)
     let attributed = NSAttributedString(string: message, attributes: [.font: font])
     let textBounds = attributed.boundingRect(
       with: NSSize(width: maxTextWidth, height: CGFloat.greatestFiniteMagnitude),
       options: [.usesLineFragmentOrigin, .usesFontLeading]
     )
-    let width = min(maxWidth, max(minWidth, ceil(textBounds.width) + horizontalPadding))
-    let height = max(44, ceil(textBounds.height) + verticalPadding)
+    let width = min(maxWidth, max(variant.minWidth, ceil(textBounds.width) + horizontalChrome))
+    let height = max(variant.minHeight, ceil(textBounds.height) + (variant.verticalPadding * 2))
     return CGSize(width: width, height: height)
   }
 
@@ -198,12 +287,13 @@ final class AppToastManager {
 private struct AppToastView: View {
   let message: String
   let style: AppToastStyle
+  let variant: AppToastVariant
   @State private var appeared = false
 
   var body: some View {
-    HStack(alignment: .center, spacing: 10) {
+    HStack(alignment: .center, spacing: variant.contentSpacing) {
       Image(systemName: style.iconName)
-        .font(.system(size: 15, weight: .semibold))
+        .font(.system(size: variant.iconFontSize, weight: .semibold))
         .foregroundStyle(
           LinearGradient(
             colors: style.iconGradientColors,
@@ -213,20 +303,20 @@ private struct AppToastView: View {
         )
 
       Text(message)
-        .font(.system(size: 13, weight: .medium))
+        .font(.system(size: variant.textFontSize, weight: variant.textWeight))
         .foregroundColor(Color(nsColor: style.textColor))
-        .lineLimit(3)
+        .lineLimit(variant.lineLimit)
         .multilineTextAlignment(.leading)
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 11)
+    .padding(.horizontal, variant.horizontalPadding)
+    .padding(.vertical, variant.verticalPadding)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(
-      RoundedRectangle(cornerRadius: 10, style: .continuous)
+      RoundedRectangle(cornerRadius: variant.cornerRadius, style: .continuous)
         .fill(Color(nsColor: style.backgroundColor))
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 10, style: .continuous)
+      RoundedRectangle(cornerRadius: variant.cornerRadius, style: .continuous)
         .stroke(Color(nsColor: style.borderColor), lineWidth: 0.5)
     )
     .scaleEffect(appeared ? 1.0 : 0.96)

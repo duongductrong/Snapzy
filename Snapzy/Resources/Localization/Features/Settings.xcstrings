@@ -4641,6 +4641,38 @@
         }
       }
     },
+    "preferences-history.panel-size-description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resize the floating panel and its preview cards"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Điều chỉnh kích thước bảng nổi và các thẻ xem trước"
+          }
+        }
+      }
+    },
+    "preferences-history.panel-size-title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel Size"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kích thước bảng"
+          }
+        }
+      }
+    },
     "preferences-history.panel-position-description" : {
       "localizations" : {
         "en" : {

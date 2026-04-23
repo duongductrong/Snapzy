@@ -449,6 +449,11 @@ enum L10n {
       defaultValue: "Copy to Clipboard",
       comment: "Generic copy to clipboard button title"
     )
+    static let copiedToClipboard = string(
+      "common.copied-to-clipboard",
+      defaultValue: "Copied to clipboard",
+      comment: "Generic toast shown after copying content to the clipboard"
+    )
     static let copy = string(
       "common.copy",
       defaultValue: "Copy",

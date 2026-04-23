@@ -9,6 +9,7 @@ import AppKit
 
 extension Notification.Name {
   static let historyCopySelection = Notification.Name("historyCopySelection")
+  static let historyActivateSelection = Notification.Name("historyActivateSelection")
 }
 
 final class HistoryWindow: NSWindow {
@@ -64,10 +65,16 @@ final class HistoryWindowController {
       case .video:
         ClipboardHelper.copyFileURLs([record.fileURL])
       }
-      return
+    } else {
+      ClipboardHelper.copyFileURLs(existingRecords.map(\.fileURL))
     }
 
-    ClipboardHelper.copyFileURLs(existingRecords.map(\.fileURL))
+    AppToastManager.shared.show(
+      message: L10n.Common.copiedToClipboard,
+      style: .success,
+      duration: 1.6,
+      variant: .compact
+    )
   }
 
   func openItem(_ record: CaptureHistoryRecord) {

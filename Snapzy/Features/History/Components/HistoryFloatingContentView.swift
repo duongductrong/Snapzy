@@ -103,6 +103,10 @@ struct HistoryFloatingContentView: View {
         guard notification.object is HistoryFloatingPanel else { return }
         copySelectedRecord()
       }
+      .onReceive(NotificationCenter.default.publisher(for: .historyActivateSelection)) { notification in
+        guard notification.object is HistoryFloatingPanel else { return }
+        openSelectedRecord()
+      }
   }
 
   private var content: some View {
@@ -649,6 +653,14 @@ struct HistoryFloatingContentView: View {
     else { return }
 
     HistoryWindowController.shared.copyToClipboard([record])
+  }
+
+  private func openSelectedRecord() {
+    guard let selectedId,
+      let record = activeRecords.first(where: { $0.id == selectedId })
+    else { return }
+
+    HistoryWindowController.shared.openItem(record)
   }
 
   private func expandedTypeFilterMinWidth(for filter: CaptureHistoryType?) -> CGFloat {
