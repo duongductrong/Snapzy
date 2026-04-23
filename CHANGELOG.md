@@ -20,6 +20,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.0] - 2026-04-23
+
+### Features
+-  Add Capture History management and retention policies (ac7e76d)
+
+### Chore
+- chore: Implement HistoryCompactCarouselView for improved compact history display (d1c1861)
+- chore: Update CaptureHistoryStore with new file path after export (a6dbe19)
+- chore: Enhance history panel functionality with new selection activation and clipboard notifications (9c9d57f)
+- refactor: Refactor History Floating Panel and Thumbnail Generation (e69dc41)
+- chore: update appcast, cask, and readme for v1.8.2 (8948d52)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.8.2] - 2026-04-21
 
 ### Bug Fixes
