@@ -30,6 +30,10 @@ enum AnnotationFactory {
       properties.fillColor = state.strokeColor.opacity(1)
     }
 
+    if tool == .rectangle || tool == .filledRectangle {
+      properties.cornerRadius = state.rectangleCornerRadius
+    }
+
     let type: AnnotationType?
 
     switch tool {

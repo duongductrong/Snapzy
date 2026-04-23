@@ -42,6 +42,11 @@ struct AnnotateQuickPropertiesBar: View {
           QuickStrokeWidthControl(value: state.quickStrokeWidthBinding)
         }
 
+        if state.quickPropertiesSupportsCornerRadius {
+          QuickPropertiesDivider()
+          QuickCornerRadiusControl(value: state.quickCornerRadiusBinding)
+        }
+
         if state.quickPropertiesSupportsArrowStyle {
           QuickPropertiesDivider()
           QuickArrowStyleControl(selectedStyle: state.quickArrowStyleBinding)
@@ -181,6 +186,29 @@ private struct QuickStrokeWidthControl: View {
           .foregroundColor(.secondary)
 
         Slider(value: $value, in: 1...20, step: 1)
+          .frame(width: 120)
+          .controlSize(.small)
+
+        Text("\(Int(value))")
+          .font(Typography.labelSmall)
+          .foregroundColor(SidebarColors.labelSecondary)
+          .frame(width: 22, alignment: .trailing)
+      }
+    }
+  }
+}
+
+private struct QuickCornerRadiusControl: View {
+  @Binding var value: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.Common.corners) {
+      HStack(spacing: 8) {
+        Image(systemName: "roundedbottom.horizontal")
+          .font(.system(size: 10))
+          .foregroundColor(.secondary)
+
+        Slider(value: $value, in: 0...60, step: 1)
           .frame(width: 120)
           .controlSize(.small)
 

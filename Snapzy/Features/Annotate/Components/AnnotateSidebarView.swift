@@ -43,12 +43,6 @@ struct AnnotateSidebarView: View {
           Divider().background(Color(nsColor: .separatorColor))
           TextStylingSection(state: state)
         }
-        // General annotation properties (non-text selected)
-        else if let selectedAnnotation = state.selectedAnnotation,
-                selectedAnnotation.type.supportsPropertyEditing {
-          Divider().background(Color(nsColor: .separatorColor))
-          AnnotationPropertiesSection(state: state)
-        }
 
         // Blur type section (shown when blur tool is active)
         if state.selectedTool == .blur {

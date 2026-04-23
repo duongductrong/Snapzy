@@ -106,4 +106,13 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
       return false
     }
   }
+
+  var supportsQuickCornerRadius: Bool {
+    switch self {
+    case .rectangle, .filledRectangle:
+      return true
+    case .selection, .crop, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil, .mockup:
+      return false
+    }
+  }
 }

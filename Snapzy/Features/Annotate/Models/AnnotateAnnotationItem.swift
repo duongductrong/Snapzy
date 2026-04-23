@@ -379,6 +379,7 @@ struct AnnotationProperties: Equatable {
   var strokeColor: Color
   var fillColor: Color
   var strokeWidth: CGFloat
+  var cornerRadius: CGFloat
   var fontSize: CGFloat
   var fontName: String
 
@@ -386,12 +387,14 @@ struct AnnotationProperties: Equatable {
     strokeColor: Color = .red,
     fillColor: Color = .clear,
     strokeWidth: CGFloat = 3,
+    cornerRadius: CGFloat = 0,
     fontSize: CGFloat = 16,
     fontName: String = "SF Pro"
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
     self.strokeWidth = strokeWidth
+    self.cornerRadius = cornerRadius
     self.fontSize = fontSize
     self.fontName = fontName
   }

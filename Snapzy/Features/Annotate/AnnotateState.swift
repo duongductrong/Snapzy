@@ -80,6 +80,7 @@ final class AnnotateState: ObservableObject {
   @Published var strokeWidth: CGFloat = 3
   @Published var strokeColor: Color = .red
   @Published var fillColor: Color = .clear
+  @Published var rectangleCornerRadius: CGFloat = 0
   @Published var blurType: BlurType = .pixelated
   @Published var arrowStyle: ArrowStyle = .straight
 
@@ -1697,7 +1698,8 @@ final class AnnotateState: ObservableObject {
     strokeWidth: CGFloat? = nil,
     fontSize: CGFloat? = nil,
     strokeColor: Color? = nil,
-    fillColor: Color? = nil
+    fillColor: Color? = nil,
+    cornerRadius: CGFloat? = nil
   ) {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
 
@@ -1725,6 +1727,9 @@ final class AnnotateState: ObservableObject {
     }
     if let fillColor = fillColor {
       annotations[index].properties.fillColor = fillColor
+    }
+    if let cornerRadius = cornerRadius {
+      annotations[index].properties.cornerRadius = max(0, cornerRadius)
     }
   }
 
@@ -1884,6 +1889,10 @@ final class AnnotateState: ObservableObject {
     return quickPropertiesTool?.supportsQuickStrokeWidth ?? false
   }
 
+  var quickPropertiesSupportsCornerRadius: Bool {
+    quickPropertiesTool?.supportsQuickCornerRadius ?? false
+  }
+
   var quickStrokeColorBinding: Binding<Color> {
     Binding(
       get: { [weak self] in
@@ -1930,6 +1939,24 @@ final class AnnotateState: ObservableObject {
           self.updateAnnotationProperties(id: selectedId, strokeWidth: newWidth)
         } else {
           self.strokeWidth = newWidth
+        }
+      }
+    )
+  }
+
+  var quickCornerRadiusBinding: Binding<CGFloat> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return 0 }
+        return self.quickPropertiesAnnotation?.properties.cornerRadius ?? self.rectangleCornerRadius
+      },
+      set: { [weak self] newRadius in
+        guard let self else { return }
+        let clampedRadius = max(0, newRadius)
+        if let selectedId = self.quickPropertiesAnnotation?.id {
+          self.updateAnnotationProperties(id: selectedId, cornerRadius: clampedRadius)
+        } else {
+          self.rectangleCornerRadius = clampedRadius
         }
       }
     )

@@ -19,9 +19,6 @@ struct TextStylingSection: View {
         // Font size slider
         fontSizeSlider(for: annotation)
 
-        // Text color picker
-        textColorPicker(for: annotation)
-
         // Background color picker
         backgroundColorPicker(for: annotation)
       }
@@ -50,36 +47,6 @@ struct TextStylingSection: View {
         step: 1
       )
       .controlSize(.small)
-    }
-  }
-
-  // MARK: - Text Color Picker
-
-  private func textColorPicker(for annotation: AnnotationItem) -> some View {
-    VStack(alignment: .leading, spacing: 6) {
-      Text(L10n.AnnotateUI.textColor)
-        .font(.system(size: 10))
-        .foregroundColor(.secondary)
-
-      HStack(spacing: 4) {
-        ForEach(textColors, id: \.self) { color in
-          Button {
-            state.updateAnnotationProperties(id: annotation.id, strokeColor: color)
-          } label: {
-            Circle()
-              .fill(color)
-              .frame(width: 24, height: 24)
-              .overlay(
-                Circle()
-                  .stroke(
-                    colorsMatch(annotation.properties.strokeColor, color) ? Color.accentColor : Color.secondary.opacity(0.5),
-                    lineWidth: colorsMatch(annotation.properties.strokeColor, color) ? 2 : 1
-                  )
-              )
-          }
-          .buttonStyle(.plain)
-        }
-      }
     }
   }
 
@@ -130,10 +97,6 @@ struct TextStylingSection: View {
   }
 
   // MARK: - Color Definitions
-
-  private var textColors: [Color] {
-    [.white, .black, .red, .orange, .yellow, .green, .blue]
-  }
 
   private var backgroundColors: [Color] {
     [.white, .black, .yellow, .blue]

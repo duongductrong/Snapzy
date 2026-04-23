@@ -60,11 +60,12 @@ struct AnnotationRenderer {
 
     switch annotation.type {
     case .rectangle:
-      context.stroke(annotation.bounds)
+      context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
+      context.strokePath()
 
     case .filledRectangle:
-      context.fill(annotation.bounds)
-      context.stroke(annotation.bounds)
+      context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
+      context.drawPath(using: .fillStroke)
 
     case .oval:
       context.strokeEllipse(in: annotation.bounds)
@@ -100,7 +101,9 @@ struct AnnotationRenderer {
     currentPath: [CGPoint],
     strokeColor: Color,
     strokeWidth: CGFloat,
-    arrowStyle: ArrowStyle = .straight
+    fillColor: Color = .clear,
+    arrowStyle: ArrowStyle = .straight,
+    rectangleCornerRadius: CGFloat = 0
   ) {
     context.setStrokeColor(NSColor(strokeColor).cgColor)
     context.setLineWidth(strokeWidth)
@@ -123,15 +126,17 @@ struct AnnotationRenderer {
     case .rectangle:
       let currentPoint = currentPath.last ?? start
       let rect = makeRect(from: start, to: currentPoint)
-      context.stroke(rect)
+      context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
+      context.strokePath()
 
     case .filledRectangle:
       let currentPoint = currentPath.last ?? start
       let rect = makeRect(from: start, to: currentPoint)
-      context.setFillColor(NSColor(strokeColor).withAlphaComponent(1).cgColor)
-      context.fill(rect)
+      let resolvedFillColor = fillColor == .clear ? strokeColor.opacity(1) : fillColor
+      context.setFillColor(NSColor(resolvedFillColor).cgColor)
+      context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
+      context.drawPath(using: .fillStroke)
       context.setFillColor(NSColor.clear.cgColor)
-      context.stroke(rect)
 
     case .oval:
       let currentPoint = currentPath.last ?? start
@@ -170,6 +175,19 @@ struct AnnotationRenderer {
     }
     context.strokePath()
     context.setAlpha(1.0)
+  }
+
+  private func roundedRectPath(in rect: CGRect, cornerRadius: CGFloat) -> CGPath {
+    let clampedCornerRadius = max(0, min(cornerRadius, min(rect.width, rect.height) / 2))
+    guard clampedCornerRadius > 0 else {
+      return CGPath(rect: rect, transform: nil)
+    }
+    return CGPath(
+      roundedRect: rect,
+      cornerWidth: clampedCornerRadius,
+      cornerHeight: clampedCornerRadius,
+      transform: nil
+    )
   }
 
   private func drawArrow(_ geometry: ArrowGeometry, strokeWidth: CGFloat) {
