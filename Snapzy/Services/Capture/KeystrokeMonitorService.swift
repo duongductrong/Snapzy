@@ -105,8 +105,8 @@ final class KeystrokeMonitorService {
       return special
     }
 
-    // 2. KeyCode-based lookup via ShortcutConfig (always reliable)
-    let mapped = ShortcutConfig.keyCodeToString(UInt32(keyCode))
+    // 2. KeyCode-based lookup via ShortcutConfig using the active keyboard layout.
+    let mapped = ShortcutConfig.keyCodeToDisplayString(UInt32(keyCode))
     if mapped != "?" {
       return mapped
     }

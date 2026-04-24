@@ -93,7 +93,7 @@ struct ShortcutConfig: Equatable, Codable {
     if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
     if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
 
-    let keyChar = Self.keyCodeToString(keyCode)
+    let keyChar = Self.keyCodeToDisplayString(keyCode)
 
     parts.append(keyChar)
     return parts.joined(separator: " ")
@@ -106,7 +106,7 @@ struct ShortcutConfig: Equatable, Codable {
     if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
     if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
     if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
-    parts.append(Self.keyCodeToString(keyCode))
+    parts.append(Self.keyCodeToDisplayString(keyCode))
     return parts
   }
 
@@ -226,6 +226,17 @@ struct ShortcutConfig: Equatable, Codable {
     case kVK_PageDown: return "⇟"
     default: return "?"
     }
+  }
+
+  /// Map key code to the key label users see on their active keyboard layout.
+  static func keyCodeToDisplayString(_ keyCode: UInt32) -> String {
+    let fallback = keyCodeToString(keyCode)
+
+    if fallback.count != 1, fallback != "?" {
+      return fallback
+    }
+
+    return currentLayoutPrintableKeyDisplayString(for: keyCode) ?? fallback
   }
 }
 
@@ -350,6 +361,17 @@ extension ShortcutConfig {
       .trimmingCharacters(in: .controlCharacters)
     guard let printable = keyEquivalent.first else { return nil }
     return String(printable).lowercased()
+  }
+
+  private static func currentLayoutPrintableKeyDisplayString(for keyCode: UInt32) -> String? {
+    guard let keyEquivalent = currentLayoutPrintableKeyEquivalent(for: keyCode),
+          let printable = keyEquivalent.first else { return nil }
+
+    let keyLabel = String(printable)
+    guard printable.isLetter else { return keyLabel }
+
+    let uppercased = keyLabel.uppercased()
+    return uppercased.count == 1 ? uppercased : keyLabel
   }
 
   private static func fallbackPrintableKeyEquivalent(for keyCode: UInt32) -> String? {
