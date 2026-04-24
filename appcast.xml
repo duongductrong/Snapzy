@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.1</title>
+      <sparkle:version>69</sparkle:version>
+      <sparkle:shortVersionString>1.9.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 24 Apr 2026 15:42:23 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Improve wallpaper management to load bundled default wallpapers and update related UI components</li><li>Add corner radius support for rectangle annotations and update related UI components</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Set selected annotation ID upon adding a new annotation</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.9.1/Snapzy-v1.9.1.dmg"
+        sparkle:edSignature="DQsItgsUEffcB8P3NPdwLznXe3nwtAwkgVwao7ZNOadVN9YTR58earpK+ExxY/JqHX7pyrP+WMN+5v8yTt7iBA=="
+        length="43959607"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.9.0</title>
       <sparkle:version>68</sparkle:version>
       <sparkle:shortVersionString>1.9.0</sparkle:shortVersionString>
