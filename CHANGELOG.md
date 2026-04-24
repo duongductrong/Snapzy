@@ -22,6 +22,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.2] - 2026-04-24
+
+### Bug Fixes
+-  Update key code mapping to use active keyboard layout German for improved shortcut display (#111) (36ca328)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.9.1 (3ece56d)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.1] - 2026-04-24
 
 ### Features
