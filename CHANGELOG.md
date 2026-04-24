@@ -21,6 +21,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.1] - 2026-04-24
+
+### Features
+-  Improve wallpaper management to load bundled default wallpapers and update related UI components (47d55c0)
+-  Add corner radius support for rectangle annotations and update related UI components (43141d8)
+
+### Bug Fixes
+-  Set selected annotation ID upon adding a new annotation (f1460bd)
+
+### Chore
+- chore: Enhance wallpaper management by adding custom wallpaper support and improving UI interactions (60c2bec)
+- refactor: Refactor annotation handling and improve selection features (0064bfd)
+- chore: Add docs for capture history feature with floating panel and browser for recent screenshots, videos, and GIFs (8b2ae68)
+- refactor: Enhance shareable content prefetching with desktop window inclusion options (c847439)
+- chore: update appcast, cask, and readme for v1.9.0 (ade6b87)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.0] - 2026-04-23
 
 ### Features
