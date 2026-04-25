@@ -31,6 +31,37 @@ enum BlurType: String, CaseIterable, Identifiable, Equatable {
   }
 }
 
+enum WatermarkStyle: String, CaseIterable, Identifiable, Equatable {
+  case single
+  case diagonal
+  case tiled
+
+  var id: String { rawValue }
+
+  var displayName: String {
+    switch self {
+    case .single: return L10n.AnnotateUI.watermarkSingle
+    case .diagonal: return L10n.AnnotateUI.watermarkDiagonal
+    case .tiled: return L10n.AnnotateUI.watermarkTiled
+    }
+  }
+
+  var icon: String {
+    switch self {
+    case .single: return "text.aligncenter"
+    case .diagonal: return "line.diagonal"
+    case .tiled: return "square.grid.3x3"
+    }
+  }
+
+  var defaultRotationDegrees: CGFloat {
+    switch self {
+    case .single: return 0
+    case .diagonal, .tiled: return -24
+    }
+  }
+}
+
 enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
   case straight
   case elbow
@@ -328,6 +359,7 @@ enum AnnotationType: Equatable {
   case highlight([CGPoint])
   case blur(BlurType)
   case counter(Int)
+  case watermark(String)
   case embeddedImage(UUID)
 
   /// Corresponding toolbar tool type for this annotation
@@ -343,6 +375,7 @@ enum AnnotationType: Equatable {
     case .highlight: return .highlighter
     case .blur: return .blur
     case .counter: return .counter
+    case .watermark: return .watermark
     case .embeddedImage: return .selection
     }
   }
@@ -384,6 +417,9 @@ struct AnnotationProperties: Equatable {
   var cornerRadius: CGFloat
   var fontSize: CGFloat
   var fontName: String
+  var opacity: CGFloat
+  var rotationDegrees: CGFloat
+  var watermarkStyle: WatermarkStyle
 
   init(
     strokeColor: Color = .red,
@@ -391,7 +427,10 @@ struct AnnotationProperties: Equatable {
     strokeWidth: CGFloat = 3,
     cornerRadius: CGFloat = 0,
     fontSize: CGFloat = 16,
-    fontName: String = "SF Pro"
+    fontName: String = "SF Pro",
+    opacity: CGFloat = 1,
+    rotationDegrees: CGFloat = 0,
+    watermarkStyle: WatermarkStyle = .single
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -399,6 +438,9 @@ struct AnnotationProperties: Equatable {
     self.cornerRadius = cornerRadius
     self.fontSize = fontSize
     self.fontName = fontName
+    self.opacity = opacity
+    self.rotationDegrees = rotationDegrees
+    self.watermarkStyle = watermarkStyle
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -419,6 +461,14 @@ struct AnnotationProperties: Equatable {
 
   static func gaussianBlurRadius(for controlValue: CGFloat) -> CGFloat {
     8 + clampedControlValue(controlValue) * 4
+  }
+
+  static func clampedOpacity(_ value: CGFloat) -> CGFloat {
+    min(max(value, 0.05), 0.65)
+  }
+
+  static func clampedRotationDegrees(_ value: CGFloat) -> CGFloat {
+    min(max(value, -45), 45)
   }
 }
 
@@ -449,7 +499,7 @@ extension AnnotationItem {
     let tolerance = baseTolerance + properties.strokeWidth / 2
 
     switch type {
-    case .rectangle, .filledRectangle, .blur(_), .embeddedImage:
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage:
       return bounds.contains(point)
 
     case .oval:

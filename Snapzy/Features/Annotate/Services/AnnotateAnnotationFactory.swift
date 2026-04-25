@@ -53,6 +53,10 @@ enum AnnotationFactory {
     case .counter:
       type = .counter(state.nextCounterValue())
 
+    case .watermark:
+      let text = state.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
+      type = .watermark(text.isEmpty ? "Snapzy" : text)
+
     case .selection, .crop, .text, .mockup:
       return nil
     }
@@ -70,6 +74,18 @@ enum AnnotationFactory {
         width: diameter,
         height: diameter
       )
+    case .watermark:
+      let drawnBounds = CGRect(
+        x: min(start.x, end.x),
+        y: min(start.y, end.y),
+        width: abs(end.x - start.x),
+        height: abs(end.y - start.y)
+      )
+      bounds = watermarkBounds(
+        drawnBounds: drawnBounds,
+        center: start,
+        imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
+      )
     default:
       bounds = CGRect(
         x: min(start.x, end.x),
@@ -79,5 +95,23 @@ enum AnnotationFactory {
       )
     }
     return AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
+  }
+
+  private static func watermarkBounds(
+    drawnBounds: CGRect,
+    center: CGPoint,
+    imageSize: CGSize
+  ) -> CGRect {
+    guard drawnBounds.width >= 24, drawnBounds.height >= 24 else {
+      let width = min(max(imageSize.width * 0.42, 220), max(imageSize.width, 1))
+      let height = min(max(imageSize.height * 0.18, 72), max(imageSize.height, 1))
+      let origin = CGPoint(
+        x: min(max(center.x - width / 2, 0), max(imageSize.width - width, 0)),
+        y: min(max(center.y - height / 2, 0), max(imageSize.height - height, 0))
+      )
+      return CGRect(origin: origin, size: CGSize(width: width, height: height))
+    }
+
+    return drawnBounds.standardized
   }
 }

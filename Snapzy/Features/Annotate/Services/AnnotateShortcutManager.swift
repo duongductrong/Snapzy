@@ -44,7 +44,7 @@ final class AnnotateShortcutManager: ObservableObject {
   /// Tools that support shortcuts (excludes mockup - internal only)
   static let configurableTools: [AnnotationToolType] = [
     .selection, .crop, .rectangle, .filledRectangle, .oval, .arrow,
-    .line, .text, .highlighter, .blur, .counter, .pencil
+    .line, .text, .highlighter, .blur, .counter, .watermark, .pencil
   ]
 
   /// Default: ⌘⇧C

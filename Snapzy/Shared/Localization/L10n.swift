@@ -3697,6 +3697,26 @@ enum L10n {
       defaultValue: "Smooth Gaussian blur similar to CSS filter",
       comment: "Description shown for the gaussian blur style"
     )
+    static let watermarkSingle = string(
+      "annotate.watermark-single",
+      defaultValue: "Single",
+      comment: "Label for a single watermark style"
+    )
+    static let watermarkDiagonal = string(
+      "annotate.watermark-diagonal",
+      defaultValue: "Diagonal",
+      comment: "Label for a centered diagonal watermark style"
+    )
+    static let watermarkTiled = string(
+      "annotate.watermark-tiled",
+      defaultValue: "Tiled",
+      comment: "Label for a repeated tiled watermark style"
+    )
+    static let watermarkOpacity = string(
+      "annotate.watermark-opacity",
+      defaultValue: "Opacity",
+      comment: "Label for watermark opacity controls"
+    )
     static let straight = string(
       "annotate.straight",
       defaultValue: "Straight",
@@ -5254,6 +5274,11 @@ enum L10n {
     static let counterTool = string(
       "annotate.tool.counter",
       defaultValue: "Counter",
+      comment: "Annotation tool display name"
+    )
+    static let watermarkTool = string(
+      "annotate.tool.watermark",
+      defaultValue: "Watermark",
       comment: "Annotation tool display name"
     )
     static let pencilTool = string(

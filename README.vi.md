@@ -42,7 +42,7 @@
 
 - **Chụp màn hình**: chụp toàn màn hình hoặc vùng chọn với chuyển đổi giữa chế độ chọn tay/chế độ cửa sổ ứng dụng (`Application Capture`, mặc định `A`), chụp cuộn với xem trước ghép ảnh trực tiếp, trích xuất văn bản OCR, chụp cắt đối tượng nền trong suốt với tự động crop an toàn tùy chọn, giữ bóng cửa sổ (macOS 14+), xuất nhiều định dạng (PNG/JPG/WebP), ẩn icon/widget desktop, chụp nhanh khi đang quay
 - **Quay màn hình**: xuất video hoặc GIF, thu âm thanh hệ thống + microphone, làm nổi bật cú nhấp chuột, overlay phím bấm, chú thích trực tiếp trên màn hình, nhớ vùng quay gần nhất, resize GIF, metadata Smart Camera cho chỉnh sửa Follow Mouse
-- **Trình chỉnh sửa chú thích**: shape, mũi tên, văn bản, hình chữ nhật tô màu, blur/pixelate, counter, crop, xóa nền với auto-crop nhận biết vùng cắt, nền mockup với 3D renderer, zoom/pan (pinch + bàn phím), kéo thả sang app khác, shortcut công cụ có thể cấu hình
+- **Trình chỉnh sửa chú thích**: shape, mũi tên, văn bản, watermark, hình chữ nhật tô màu, blur/pixelate, counter, crop, xóa nền với auto-crop nhận biết vùng cắt, nền mockup với 3D renderer, zoom/pan (pinch + bàn phím), kéo thả sang app khác, shortcut công cụ có thể cấu hình
 - **Thiết lập sau khi chụp**: ma trận hành động theo từng chế độ cho lưu, Quick Access, copy clipboard và annotate, cùng một tùy chọn auto-crop toàn cục riêng cho remove background (bật mặc định)
 - **Trình chỉnh sửa video**: cắt với timeline trực quan + dải frame, zoom segment với auto-focus (Follow Mouse), nền wallpaper + padding, kích thước export tùy chỉnh, trình xem GIF động, undo/redo
 - **Quick Access**: bảng nổi sau mỗi lần chụp với các thao tác copy, edit, drag-to-app, open và delete

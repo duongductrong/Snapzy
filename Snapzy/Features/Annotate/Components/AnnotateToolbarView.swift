@@ -90,7 +90,7 @@ struct AnnotateToolbarView: View {
   }
 
   private var drawingTools: [AnnotationToolType] {
-    [.rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil]
+    [.rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .watermark, .pencil]
   }
 
   private var backgroundCutoutButton: some View {

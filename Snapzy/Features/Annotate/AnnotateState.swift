@@ -92,6 +92,7 @@ final class AnnotateState: ObservableObject {
   @Published var rectangleCornerRadius: CGFloat = 0
   @Published var blurType: BlurType = .pixelated
   @Published var arrowStyle: ArrowStyle = .straight
+  @Published var watermarkText: String = "Snapzy"
   @Published private var annotationToolProperties: [AnnotationToolType: AnnotationProperties] = [:]
 
   // MARK: - Editor Mode
@@ -1816,6 +1817,13 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  func updateWatermarkText(id: UUID, text: String) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .watermark = annotations[index].type else { return }
+
+    annotations[index].type = .watermark(text)
+  }
+
   func updateArrowStyle(id: UUID, style: ArrowStyle) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .arrow(let geometry) = annotations[index].type else { return }
@@ -1839,7 +1847,10 @@ final class AnnotateState: ObservableObject {
     fontSize: CGFloat? = nil,
     strokeColor: Color? = nil,
     fillColor: Color? = nil,
-    cornerRadius: CGFloat? = nil
+    cornerRadius: CGFloat? = nil,
+    opacity: CGFloat? = nil,
+    rotationDegrees: CGFloat? = nil,
+    watermarkStyle: WatermarkStyle? = nil
   ) {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
 
@@ -1875,6 +1886,15 @@ final class AnnotateState: ObservableObject {
     }
     if let cornerRadius = cornerRadius {
       annotations[index].properties.cornerRadius = max(0, cornerRadius)
+    }
+    if let opacity = opacity {
+      annotations[index].properties.opacity = AnnotationProperties.clampedOpacity(opacity)
+    }
+    if let rotationDegrees = rotationDegrees {
+      annotations[index].properties.rotationDegrees = AnnotationProperties.clampedRotationDegrees(rotationDegrees)
+    }
+    if let watermarkStyle = watermarkStyle {
+      annotations[index].properties.watermarkStyle = watermarkStyle
     }
   }
 
@@ -1937,6 +1957,13 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  private var selectedWatermarkAnnotations: [AnnotationItem] {
+    selectedAnnotations.filter { annotation in
+      if case .watermark = annotation.type { return true }
+      return false
+    }
+  }
+
   var activeArrowStyle: ArrowStyle {
     if let annotation = selectedArrowAnnotations.first,
        case .arrow(let geometry) = annotation.type {
@@ -1971,9 +1998,49 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  var activeWatermarkStyle: WatermarkStyle {
+    selectedWatermarkAnnotations.first?.properties.watermarkStyle
+      ?? defaultAnnotationProperties(for: .watermark).watermarkStyle
+  }
+
+  func setActiveWatermarkStyle(_ style: WatermarkStyle) {
+    let rotationDegrees = style.defaultRotationDegrees
+    let watermarkAnnotations = selectedWatermarkAnnotations
+    if !watermarkAnnotations.isEmpty {
+      watermarkAnnotations.forEach {
+        updateAnnotationProperties(
+          id: $0.id,
+          rotationDegrees: rotationDegrees,
+          watermarkStyle: style
+        )
+      }
+    } else {
+      updateDefaultAnnotationProperties(
+        for: .watermark,
+        rotationDegrees: rotationDegrees,
+        watermarkStyle: style
+      )
+    }
+  }
+
   private func defaultAnnotationProperties(for tool: AnnotationToolType?) -> AnnotationProperties {
     guard let tool else { return AnnotationProperties() }
-    return annotationToolProperties[tool] ?? AnnotationProperties()
+    if let properties = annotationToolProperties[tool] {
+      return properties
+    }
+
+    guard tool == .watermark else { return AnnotationProperties() }
+    return AnnotationProperties(
+      strokeColor: .white,
+      fillColor: .clear,
+      strokeWidth: 3,
+      cornerRadius: 0,
+      fontSize: 36,
+      fontName: "SF Pro",
+      opacity: 0.22,
+      rotationDegrees: WatermarkStyle.diagonal.defaultRotationDegrees,
+      watermarkStyle: .diagonal
+    )
   }
 
   func annotationCreationProperties(for tool: AnnotationToolType) -> AnnotationProperties {
@@ -1991,7 +2058,10 @@ final class AnnotateState: ObservableObject {
     fillColor: Color? = nil,
     cornerRadius: CGFloat? = nil,
     fontSize: CGFloat? = nil,
-    fontName: String? = nil
+    fontName: String? = nil,
+    opacity: CGFloat? = nil,
+    rotationDegrees: CGFloat? = nil,
+    watermarkStyle: WatermarkStyle? = nil
   ) {
     var properties = defaultAnnotationProperties(for: tool)
 
@@ -2012,6 +2082,15 @@ final class AnnotateState: ObservableObject {
     }
     if let fontName = fontName {
       properties.fontName = fontName
+    }
+    if let opacity = opacity {
+      properties.opacity = AnnotationProperties.clampedOpacity(opacity)
+    }
+    if let rotationDegrees = rotationDegrees {
+      properties.rotationDegrees = AnnotationProperties.clampedRotationDegrees(rotationDegrees)
+    }
+    if let watermarkStyle = watermarkStyle {
+      properties.watermarkStyle = watermarkStyle
     }
 
     annotationToolProperties[tool] = properties
@@ -2086,6 +2165,9 @@ final class AnnotateState: ObservableObject {
     fillColor: Color? = nil,
     cornerRadius: CGFloat? = nil,
     fontSize: CGFloat? = nil,
+    opacity: CGFloat? = nil,
+    rotationDegrees: CGFloat? = nil,
+    watermarkStyle: WatermarkStyle? = nil,
     matching predicate: ((AnnotationType) -> Bool)? = nil
   ) -> Bool {
     let selected = quickPropertiesSelectionTargets.filter { annotation in
@@ -2099,7 +2181,10 @@ final class AnnotateState: ObservableObject {
         fontSize: fontSize,
         strokeColor: strokeColor,
         fillColor: fillColor,
-        cornerRadius: cornerRadius
+        cornerRadius: cornerRadius,
+        opacity: opacity,
+        rotationDegrees: rotationDegrees,
+        watermarkStyle: watermarkStyle
       )
     }
     return true
@@ -2142,6 +2227,27 @@ final class AnnotateState: ObservableObject {
     let selected = quickPropertiesSelectionAnnotations
     if !selected.isEmpty {
       return selected.contains {
+        switch $0.type {
+        case .text, .watermark:
+          return true
+        default:
+          return false
+        }
+      }
+    }
+
+    return quickPropertiesTool == .text || quickPropertiesTool == .watermark
+  }
+
+  var quickPropertiesSupportsTextBackground: Bool {
+    guard editorMode == .annotate,
+          selectedTool != .crop else {
+      return false
+    }
+
+    let selected = quickPropertiesSelectionAnnotations
+    if !selected.isEmpty {
+      return selected.contains {
         if case .text = $0.type { return true }
         return false
       }
@@ -2150,17 +2256,17 @@ final class AnnotateState: ObservableObject {
     return quickPropertiesTool == .text
   }
 
-  var quickPropertiesSupportsTextBackground: Bool {
-    quickPropertiesSupportsTextFontSize
-  }
-
   var quickTextFontSizeBinding: Binding<CGFloat> {
     Binding(
       get: { [weak self] in
         guard let self else { return 16 }
         return self.quickSelectionTargets(matching: {
-          if case .text = $0 { return true }
-          return false
+          switch $0 {
+          case .text, .watermark:
+            return true
+          default:
+            return false
+          }
         }).first?.properties.fontSize
           ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).fontSize
       },
@@ -2170,8 +2276,12 @@ final class AnnotateState: ObservableObject {
         if !self.updateQuickSelectionProperties(
           fontSize: clampedSize,
           matching: {
-            if case .text = $0 { return true }
-            return false
+            switch $0 {
+            case .text, .watermark:
+              return true
+            default:
+              return false
+            }
           }
         ) {
           if let tool = self.quickPropertiesTool {
@@ -2233,6 +2343,114 @@ final class AnnotateState: ObservableObject {
       },
       set: { [weak self] newType in
         self?.setActiveBlurType(newType)
+      }
+    )
+  }
+
+  var quickPropertiesSupportsWatermark: Bool {
+    guard editorMode == .annotate,
+          selectedTool != .crop else {
+      return false
+    }
+
+    let selected = quickPropertiesSelectionAnnotations
+    if !selected.isEmpty {
+      return selected.contains {
+        if case .watermark = $0.type { return true }
+        return false
+      }
+    }
+
+    return quickPropertiesTool == .watermark
+  }
+
+  var quickWatermarkTextBinding: Binding<String> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return "Snapzy" }
+        if let annotation = self.quickSelectionTargets(matching: {
+          if case .watermark = $0 { return true }
+          return false
+        }).first,
+           case .watermark(let text) = annotation.type {
+          return text
+        }
+        return self.watermarkText
+      },
+      set: { [weak self] newText in
+        guard let self else { return }
+        let selected = self.quickSelectionTargets(matching: {
+          if case .watermark = $0 { return true }
+          return false
+        })
+        if selected.isEmpty {
+          self.watermarkText = newText
+        } else {
+          selected.forEach { self.updateWatermarkText(id: $0.id, text: newText) }
+        }
+      }
+    )
+  }
+
+  var quickWatermarkStyleBinding: Binding<WatermarkStyle> {
+    Binding(
+      get: { [weak self] in
+        self?.activeWatermarkStyle ?? .diagonal
+      },
+      set: { [weak self] newStyle in
+        self?.setActiveWatermarkStyle(newStyle)
+      }
+    )
+  }
+
+  var quickWatermarkOpacityBinding: Binding<CGFloat> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return 0.22 }
+        return self.quickSelectionTargets(matching: {
+          if case .watermark = $0 { return true }
+          return false
+        }).first?.properties.opacity
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).opacity
+      },
+      set: { [weak self] newOpacity in
+        guard let self else { return }
+        let clampedOpacity = AnnotationProperties.clampedOpacity(newOpacity)
+        if !self.updateQuickSelectionProperties(
+          opacity: clampedOpacity,
+          matching: {
+            if case .watermark = $0 { return true }
+            return false
+          }
+        ) {
+          self.updateDefaultAnnotationProperties(for: .watermark, opacity: clampedOpacity)
+        }
+      }
+    )
+  }
+
+  var quickWatermarkRotationBinding: Binding<CGFloat> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return -24 }
+        return self.quickSelectionTargets(matching: {
+          if case .watermark = $0 { return true }
+          return false
+        }).first?.properties.rotationDegrees
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).rotationDegrees
+      },
+      set: { [weak self] newRotation in
+        guard let self else { return }
+        let clampedRotation = AnnotationProperties.clampedRotationDegrees(newRotation)
+        if !self.updateQuickSelectionProperties(
+          rotationDegrees: clampedRotation,
+          matching: {
+            if case .watermark = $0 { return true }
+            return false
+          }
+        ) {
+          self.updateDefaultAnnotationProperties(for: .watermark, rotationDegrees: clampedRotation)
+        }
       }
     )
   }

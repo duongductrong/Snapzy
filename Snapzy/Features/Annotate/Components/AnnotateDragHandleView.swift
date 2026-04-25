@@ -510,7 +510,10 @@ private struct DragFallbackSignature: Equatable {
       String(quantize(properties.strokeWidth)),
       String(quantize(properties.cornerRadius)),
       String(quantize(properties.fontSize)),
-      properties.fontName
+      properties.fontName,
+      String(quantize(properties.opacity)),
+      String(quantize(properties.rotationDegrees)),
+      properties.watermarkStyle.rawValue
     ].joined(separator: "|")
   }
 
@@ -537,6 +540,8 @@ private struct DragFallbackSignature: Equatable {
       return "blur|\(blurType.rawValue)"
     case .counter(let value):
       return "counter|\(value)"
+    case .watermark(let text):
+      return "watermark|\(text)"
     case .embeddedImage(let assetId):
       return "embeddedImage|\(assetId.uuidString)"
     }

@@ -95,6 +95,9 @@ struct AnnotationRenderer {
     case .text(let content):
       drawText(content, in: annotation.bounds, properties: annotation.properties)
 
+    case .watermark(let content):
+      drawWatermark(content, in: annotation.bounds, properties: annotation.properties)
+
     case .embeddedImage(let assetId):
       drawEmbeddedImage(assetId: assetId, annotationId: annotation.id, in: annotation.bounds)
     }
@@ -108,7 +111,12 @@ struct AnnotationRenderer {
     strokeWidth: CGFloat,
     fillColor: Color = .clear,
     arrowStyle: ArrowStyle = .straight,
-    rectangleCornerRadius: CGFloat = 0
+    rectangleCornerRadius: CGFloat = 0,
+    watermarkText: String = "Snapzy",
+    watermarkStyle: WatermarkStyle = .diagonal,
+    watermarkOpacity: CGFloat = 0.22,
+    watermarkRotationDegrees: CGFloat = -24,
+    watermarkFontSize: CGFloat = 36
   ) {
     context.setStrokeColor(NSColor(strokeColor).cgColor)
     context.setLineWidth(strokeWidth)
@@ -159,6 +167,24 @@ struct AnnotationRenderer {
       drawArrow(
         ArrowGeometry(start: start, end: currentPoint, style: arrowStyle),
         strokeWidth: strokeWidth
+      )
+
+    case .watermark:
+      let currentPoint = currentPath.last ?? start
+      let rect = makeRect(from: start, to: currentPoint)
+      guard rect.width >= 24, rect.height >= 24 else { return }
+      drawWatermark(
+        watermarkText,
+        in: rect,
+        properties: AnnotationProperties(
+          strokeColor: strokeColor,
+          fillColor: .clear,
+          strokeWidth: strokeWidth,
+          fontSize: watermarkFontSize,
+          opacity: watermarkOpacity,
+          rotationDegrees: watermarkRotationDegrees,
+          watermarkStyle: watermarkStyle
+        )
       )
 
     default:
@@ -277,6 +303,101 @@ struct AnnotationRenderer {
     let textRect = AnnotateTextLayout.textRect(for: content, font: font, in: bounds)
     let text = displayText as NSString
     text.draw(in: textRect, withAttributes: attributes)
+  }
+
+  private func drawWatermark(_ content: String, in bounds: CGRect, properties: AnnotationProperties) {
+    let resolvedText = content.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !resolvedText.isEmpty else { return }
+
+    let visibleBounds = bounds.standardized
+    guard visibleBounds.width > 0, visibleBounds.height > 0 else { return }
+
+    let font = NSFontManager.shared.convert(
+      AnnotateTextLayout.font(size: properties.fontSize, fontName: properties.fontName),
+      toHaveTrait: .boldFontMask
+    )
+    let alpha = AnnotationProperties.clampedOpacity(properties.opacity)
+    let text = resolvedText as NSString
+    let attributes = watermarkAttributes(
+      font: font,
+      color: NSColor(properties.strokeColor).withAlphaComponent(alpha)
+    )
+    let textSize = text.size(withAttributes: attributes)
+
+    context.saveGState()
+    context.clip(to: visibleBounds)
+
+    switch properties.watermarkStyle {
+    case .single:
+      drawCenteredWatermarkText(text, textSize: textSize, attributes: attributes, in: visibleBounds, rotationDegrees: properties.rotationDegrees)
+
+    case .diagonal:
+      drawCenteredWatermarkText(text, textSize: textSize, attributes: attributes, in: visibleBounds, rotationDegrees: properties.rotationDegrees)
+
+    case .tiled:
+      drawTiledWatermarkText(text, textSize: textSize, attributes: attributes, in: visibleBounds, rotationDegrees: properties.rotationDegrees)
+    }
+
+    context.restoreGState()
+  }
+
+  private func watermarkAttributes(font: NSFont, color: NSColor) -> [NSAttributedString.Key: Any] {
+    let shadow = NSShadow()
+    shadow.shadowBlurRadius = 1.5
+    shadow.shadowOffset = .zero
+    shadow.shadowColor = NSColor.black.withAlphaComponent(min(color.alphaComponent * 0.35, 0.12))
+
+    return [
+      .font: font,
+      .foregroundColor: color,
+      .kern: font.pointSize * 0.04,
+      .shadow: shadow
+    ]
+  }
+
+  private func drawCenteredWatermarkText(
+    _ text: NSString,
+    textSize: CGSize,
+    attributes: [NSAttributedString.Key: Any],
+    in bounds: CGRect,
+    rotationDegrees: CGFloat
+  ) {
+    context.saveGState()
+    context.translateBy(x: bounds.midX, y: bounds.midY)
+    context.rotate(by: rotationDegrees * .pi / 180)
+    text.draw(
+      at: CGPoint(x: -textSize.width / 2, y: -textSize.height / 2),
+      withAttributes: attributes
+    )
+    context.restoreGState()
+  }
+
+  private func drawTiledWatermarkText(
+    _ text: NSString,
+    textSize: CGSize,
+    attributes: [NSAttributedString.Key: Any],
+    in bounds: CGRect,
+    rotationDegrees: CGFloat
+  ) {
+    let span = hypot(bounds.width, bounds.height)
+    let xStep = max(textSize.width + textSize.height * 2.4, 120)
+    let yStep = max(textSize.height * 3.4, 72)
+
+    context.saveGState()
+    context.translateBy(x: bounds.midX, y: bounds.midY)
+    context.rotate(by: rotationDegrees * .pi / 180)
+
+    var y = -span
+    while y <= span {
+      var x = -span
+      while x <= span {
+        text.draw(at: CGPoint(x: x - textSize.width / 2, y: y - textSize.height / 2), withAttributes: attributes)
+        x += xStep
+      }
+      y += yStep
+    }
+
+    context.restoreGState()
   }
 
   private func drawEmbeddedImage(assetId: UUID, annotationId: UUID, in bounds: CGRect) {

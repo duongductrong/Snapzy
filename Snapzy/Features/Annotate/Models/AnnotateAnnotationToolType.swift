@@ -20,6 +20,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
   case highlighter
   case blur
   case counter
+  case watermark
   case pencil
   case mockup
 
@@ -38,6 +39,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .highlighter: return "highlighter"
     case .blur: return "eye.slash"
     case .counter: return "list.number"
+    case .watermark: return "seal"
     case .pencil: return "pencil"
     case .mockup: return "cube.transparent"
     }
@@ -57,6 +59,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .highlighter: return "h"
     case .blur: return "b"
     case .counter: return "n"
+    case .watermark: return "w"
     case .pencil: return "p"
     case .mockup: return "m"
     }
@@ -76,6 +79,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     case .highlighter: return L10n.Annotate.highlighterTool
     case .blur: return L10n.Annotate.blurTool
     case .counter: return L10n.Annotate.counterTool
+    case .watermark: return L10n.Annotate.watermarkTool
     case .pencil: return L10n.Annotate.pencilTool
     case .mockup: return L10n.Annotate.mockupTool
     }
@@ -83,7 +87,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickPropertiesBar: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .watermark, .pencil:
       return true
     case .selection, .crop, .mockup:
       return false
@@ -92,7 +96,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickStrokeColor: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .counter, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .counter, .watermark, .pencil:
       return true
     case .selection, .crop, .blur, .mockup:
       return false
@@ -107,7 +111,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .counter, .pencil:
       return true
-    case .selection, .crop, .text, .mockup:
+    case .selection, .crop, .text, .watermark, .mockup:
       return false
     }
   }
@@ -116,7 +120,7 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle:
       return true
-    case .selection, .crop, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .pencil, .mockup:
+    case .selection, .crop, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
       return false
     }
   }

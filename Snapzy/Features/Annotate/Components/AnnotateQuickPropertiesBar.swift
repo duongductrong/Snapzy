@@ -74,6 +74,34 @@ private enum QuickPropertiesDensity {
     }
   }
 
+  var watermarkTextControlWidth: CGFloat {
+    switch self {
+    case .regular: return 210
+    case .compact: return 158
+    }
+  }
+
+  var watermarkStyleControlWidth: CGFloat {
+    switch self {
+    case .regular: return 142
+    case .compact: return 124
+    }
+  }
+
+  var opacityControlWidth: CGFloat {
+    switch self {
+    case .regular: return 220
+    case .compact: return 184
+    }
+  }
+
+  var rotationControlWidth: CGFloat {
+    switch self {
+    case .regular: return 232
+    case .compact: return 196
+    }
+  }
+
   var cornerControlWidth: CGFloat {
     switch self {
     case .regular: return 190
@@ -127,7 +155,7 @@ struct AnnotateQuickPropertiesBar: View {
   private let strokeColors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
   private let fillColors: [Color] = [.clear, .red, .orange, .yellow, .green, .blue, .purple, .white, .black]
   private let textBackgroundColors: [Color] = [.clear, .white, .black, .yellow, .blue]
-  private let selectionStyleTools: [AnnotationToolType] = [.selection, .rectangle, .arrow, .text, .highlighter]
+  private let selectionStyleTools: [AnnotationToolType] = [.selection, .rectangle, .arrow, .text, .watermark, .highlighter]
 
   var body: some View {
     ViewThatFits(in: .horizontal) {
@@ -153,6 +181,7 @@ struct AnnotateQuickPropertiesBar: View {
     let showFill = state.quickPropertiesSupportsFill
     let showTextBackground = state.quickPropertiesSupportsTextBackground
     let showTextFontSize = state.quickPropertiesSupportsTextFontSize
+    let showWatermark = state.quickPropertiesSupportsWatermark
     let showBlurType = state.quickPropertiesSupportsBlurType
     let showStrokeWidth = state.quickPropertiesSupportsStrokeWidth
     let showCornerRadius = state.quickPropertiesSupportsCornerRadius
@@ -161,6 +190,7 @@ struct AnnotateQuickPropertiesBar: View {
       || showFill
       || showTextBackground
       || showTextFontSize
+      || showWatermark
       || showBlurType
       || showStrokeWidth
       || showCornerRadius
@@ -169,7 +199,11 @@ struct AnnotateQuickPropertiesBar: View {
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
     let hasBeforeTextBackground = showStrokeColor || showFill
     let hasBeforeTextFontSize = hasBeforeTextBackground || showTextBackground
-    let hasBeforeBlurType = hasBeforeTextFontSize || showTextFontSize
+    let hasBeforeWatermarkText = hasBeforeTextFontSize || showTextFontSize
+    let hasBeforeWatermarkStyle = hasBeforeWatermarkText || showWatermark
+    let hasBeforeWatermarkOpacity = hasBeforeWatermarkStyle || showWatermark
+    let hasBeforeWatermarkRotation = hasBeforeWatermarkOpacity || showWatermark
+    let hasBeforeBlurType = hasBeforeWatermarkRotation || showWatermark
     let hasBeforeStrokeWidth = hasBeforeBlurType || showBlurType
     let hasBeforeCornerRadius = hasBeforeStrokeWidth || showStrokeWidth
     let hasBeforeArrowStyle = hasBeforeCornerRadius || showCornerRadius
@@ -258,6 +292,57 @@ struct AnnotateQuickPropertiesBar: View {
       ) {
         QuickTextFontSizeControl(
           value: state.quickTextFontSizeBinding,
+          sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showWatermark,
+        isEnabled: state.quickPropertiesSupportsWatermark,
+        showsLeadingDivider: hasBeforeWatermarkText,
+        width: density.watermarkTextControlWidth
+      ) {
+        QuickWatermarkTextControl(
+          text: state.quickWatermarkTextBinding,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showWatermark,
+        isEnabled: state.quickPropertiesSupportsWatermark,
+        showsLeadingDivider: hasBeforeWatermarkStyle,
+        width: density.watermarkStyleControlWidth
+      ) {
+        QuickWatermarkStyleControl(
+          selectedStyle: state.quickWatermarkStyleBinding,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showWatermark,
+        isEnabled: state.quickPropertiesSupportsWatermark,
+        showsLeadingDivider: hasBeforeWatermarkOpacity,
+        width: density.opacityControlWidth
+      ) {
+        QuickWatermarkOpacityControl(
+          value: state.quickWatermarkOpacityBinding,
+          sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showWatermark,
+        isEnabled: state.quickPropertiesSupportsWatermark,
+        showsLeadingDivider: hasBeforeWatermarkRotation,
+        width: density.rotationControlWidth
+      ) {
+        QuickWatermarkRotationControl(
+          value: state.quickWatermarkRotationBinding,
           sliderWidth: density.sliderWidth,
           groupSpacing: density.groupSpacing
         )
@@ -755,6 +840,121 @@ private struct QuickTextFontSizeControl: View {
           .lineLimit(1)
           .monospacedDigit()
           .frame(width: 34, alignment: .trailing)
+      }
+    }
+  }
+}
+
+private struct QuickWatermarkTextControl: View {
+  @Binding var text: String
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.Common.text, spacing: groupSpacing) {
+      TextField("", text: $text)
+        .textFieldStyle(.plain)
+        .font(Typography.labelSmall)
+        .foregroundColor(SidebarColors.labelPrimary)
+        .lineLimit(1)
+        .padding(.horizontal, 8)
+        .frame(height: 24)
+        .background(
+          RoundedRectangle(cornerRadius: 7)
+            .fill(SidebarColors.itemDefault)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 7)
+            .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
+        )
+    }
+  }
+}
+
+private struct QuickWatermarkStyleControl: View {
+  @Binding var selectedStyle: WatermarkStyle
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.Common.style, spacing: groupSpacing) {
+      HStack(spacing: 5) {
+        ForEach(WatermarkStyle.allCases) { style in
+          Button {
+            selectedStyle = style
+          } label: {
+            Image(systemName: style.icon)
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+              .frame(width: buttonWidth, height: 24)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                  .stroke(
+                    selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
+                    lineWidth: 1
+                  )
+              )
+          }
+          .buttonStyle(.plain)
+          .help(style.displayName)
+        }
+      }
+    }
+  }
+}
+
+private struct QuickWatermarkOpacityControl: View {
+  @Binding var value: CGFloat
+  let sliderWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.watermarkOpacity, spacing: groupSpacing) {
+      HStack(spacing: 6) {
+        Image(systemName: "circle.lefthalf.filled")
+          .font(.system(size: 10))
+          .foregroundColor(.secondary)
+
+        Slider(value: $value, in: 0.05...0.65, step: 0.01)
+          .frame(width: sliderWidth)
+          .controlSize(.small)
+
+        Text("\(Int((value * 100).rounded()))%")
+          .font(Typography.labelSmall)
+          .foregroundColor(SidebarColors.labelSecondary)
+          .lineLimit(1)
+          .monospacedDigit()
+          .frame(width: 38, alignment: .trailing)
+      }
+    }
+  }
+}
+
+private struct QuickWatermarkRotationControl: View {
+  @Binding var value: CGFloat
+  let sliderWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.Common.rotation, spacing: groupSpacing) {
+      HStack(spacing: 6) {
+        Image(systemName: "rotate.right")
+          .font(.system(size: 10))
+          .foregroundColor(.secondary)
+
+        Slider(value: $value, in: -45...45, step: 1)
+          .frame(width: sliderWidth)
+          .controlSize(.small)
+
+        Text("\(Int(value.rounded()))deg")
+          .font(Typography.labelSmall)
+          .foregroundColor(SidebarColors.labelSecondary)
+          .lineLimit(1)
+          .monospacedDigit()
+          .frame(width: 44, alignment: .trailing)
       }
     }
   }

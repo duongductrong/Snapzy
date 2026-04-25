@@ -806,7 +806,12 @@ final class DrawingCanvasNSView: NSView {
           strokeWidth: previewProperties.strokeWidth,
           fillColor: previewProperties.fillColor,
           arrowStyle: state.arrowStyle,
-          rectangleCornerRadius: previewProperties.cornerRadius
+          rectangleCornerRadius: previewProperties.cornerRadius,
+          watermarkText: state.watermarkText,
+          watermarkStyle: previewProperties.watermarkStyle,
+          watermarkOpacity: previewProperties.opacity,
+          watermarkRotationDegrees: previewProperties.rotationDegrees,
+          watermarkFontSize: previewProperties.fontSize
         )
       }
     }
