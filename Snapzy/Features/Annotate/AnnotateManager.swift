@@ -52,7 +52,7 @@ final class AnnotateManager {
   static let shared = AnnotateManager()
 
   private var windowControllers: [UUID: AnnotateWindowController] = [:]
-  private var emptyWindowController: AnnotateWindowController?
+  private var manualWindowControllers: [UUID: AnnotateWindowController] = [:]
 
   /// In-memory cache: original image + annotations, keyed by QuickAccessItem.id
   private var sessionCache: [UUID: AnnotationSessionData] = [:]
@@ -74,14 +74,14 @@ final class AnnotateManager {
   /// Switch back to accessory mode (menu bar only) if no windows open
   private func becomeAccessoryAppIfNeeded() {
     guard isRegularAppMode else { return }
-    guard windowControllers.isEmpty && emptyWindowController == nil else { return }
+    guard windowControllers.isEmpty && manualWindowControllers.isEmpty else { return }
     isRegularAppMode = false
     NSApp.setActivationPolicy(.accessory)
   }
 
   /// Check if any annotate windows are open
   var hasOpenWindows: Bool {
-    !windowControllers.isEmpty || emptyWindowController != nil
+    !windowControllers.isEmpty || !manualWindowControllers.isEmpty
   }
 
   /// Open annotation window for a quick access item
@@ -131,13 +131,15 @@ final class AnnotateManager {
 
   /// Close all annotation windows
   func closeAll() {
-    for controller in windowControllers.values {
+    for controller in Array(windowControllers.values) {
       controller.window?.close()
     }
     windowControllers.removeAll()
 
-    emptyWindowController?.window?.close()
-    emptyWindowController = nil
+    for controller in Array(manualWindowControllers.values) {
+      controller.window?.close()
+    }
+    manualWindowControllers.removeAll()
 
     becomeAccessoryAppIfNeeded()
   }
@@ -187,13 +189,6 @@ final class AnnotateManager {
 
   /// Open empty annotation window for drag-drop workflow
   func openEmptyAnnotation() {
-    // Reuse existing empty window if open
-    if let existing = emptyWindowController {
-      existing.showWindow()
-      DiagnosticLogger.shared.log(.info, .action, "Annotate empty window reused")
-      return
-    }
-
     guard NSScreen.screens.isEmpty == false else {
       DiagnosticLogger.shared.log(.error, .action, "Annotate open failed: no screens available")
       return
@@ -203,8 +198,9 @@ final class AnnotateManager {
     becomeRegularApp()
 
     let controller = AnnotateWindowController()
-    emptyWindowController = controller
-    DiagnosticLogger.shared.log(.info, .action, "Annotate empty window opened")
+    let controllerId = UUID()
+    manualWindowControllers[controllerId] = controller
+    DiagnosticLogger.shared.log(.info, .action, "Annotate manual window opened")
 
     // Clear reference when window closes
     if let window = controller.window {
@@ -214,7 +210,7 @@ final class AnnotateManager {
         queue: .main
       ) { [weak self] _ in
         MainActor.assumeIsolated {
-          self?.emptyWindowController = nil
+          self?.manualWindowControllers.removeValue(forKey: controllerId)
           self?.becomeAccessoryAppIfNeeded()
         }
       }

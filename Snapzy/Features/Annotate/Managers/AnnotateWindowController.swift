@@ -386,7 +386,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     // Drag-to-app: hide window when drag starts
     NotificationCenter.default.addObserver(
       forName: .annotateDragStarted,
-      object: nil,
+      object: window,
       queue: .main
     ) { [weak self] _ in
       MainActor.assumeIsolated {
@@ -397,7 +397,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     // Drag-to-app: restore or close window when drag ends
     NotificationCenter.default.addObserver(
       forName: .annotateDragEnded,
-      object: nil,
+      object: window,
       queue: .main
     ) { [weak self] notification in
       MainActor.assumeIsolated {

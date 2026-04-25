@@ -3383,6 +3383,11 @@ enum L10n {
       defaultValue: "Drag this to another app to share the annotated image",
       comment: "Tooltip shown for the annotate drag handle"
     )
+    static let newWindow = string(
+      "annotate.new-window",
+      defaultValue: "New Annotate Window",
+      comment: "Tooltip shown for opening another independent annotate window"
+    )
     static let uploadedToCloud = string(
       "annotate.uploaded-to-cloud",
       defaultValue: "Uploaded to Cloud",

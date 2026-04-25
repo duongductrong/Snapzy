@@ -242,6 +242,7 @@ flowchart TD
 ### Notes
 
 - Annotate windows cache session state per Quick Access item so the user can reopen the same card and keep editing.
+- Manually opened Annotate windows from the menu bar, global shortcut, or toolbar plus button are independent, so users can work with multiple clipboard/drop sessions side by side.
 - If a screenshot was already uploaded, later edits mark the cloud state stale until the user re-uploads.
 - Annotate dialogs, preset actions, mockup labels, cutout/export alerts, and cloud re-upload messaging are localized.
 

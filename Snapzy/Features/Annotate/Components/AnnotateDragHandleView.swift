@@ -38,8 +38,9 @@ struct AnnotateDragHandleView: NSViewRepresentable {
 final class DragHandleNSView: NSView {
   var state: AnnotateState
   private var isDragging = false
+  private weak var draggingWindow: NSWindow?
 
-  /// Dedicated queue for rendering + writing on drop (off main thread)
+  /// Dedicated queue for file writes on drop (off main thread)
   private static let writeQueue = OperationQueue()
 
   init(state: AnnotateState) {
@@ -96,8 +97,9 @@ final class DragHandleNSView: NSView {
       contents: dragImage
     )
 
-    // Notify window controller to hide the window
-    NotificationCenter.default.post(name: .annotateDragStarted, object: nil)
+    // Notify only this window controller to hide the source window.
+    draggingWindow = window
+    NotificationCenter.default.post(name: .annotateDragStarted, object: draggingWindow)
 
     // Start drag session — instant, nothing blocked
     let session = beginDraggingSession(with: [dragItem], event: event, source: self)
@@ -124,11 +126,13 @@ extension DragHandleNSView: NSDraggingSource {
   ) {
     isDragging = false
     let success = operation != []
+    let sourceWindow = draggingWindow
+    draggingWindow = nil
     print("[AnnotateDrag] Drag ended — success=\(success), op=\(operation.rawValue)")
     Task { @MainActor in
       NotificationCenter.default.post(
         name: .annotateDragEnded,
-        object: nil,
+        object: sourceWindow,
         userInfo: ["success": success]
       )
     }
@@ -162,22 +166,22 @@ extension DragHandleNSView: NSFilePromiseProviderDelegate {
       return
     }
 
-    // Render happens on main thread (AppKit requirement)
-    DispatchQueue.main.async {
+    // Render and encode on MainActor because the exporter touches AppKit image APIs.
+    Task { @MainActor in
       let image = AnnotateExporter.renderFinalImage(state: state)
       guard let image = image else {
         completionHandler(DragError.renderFailed)
         return
       }
 
-      // Encode in the user's configured format + write on the promise queue (background)
       let ext = Self.preferredFormatExtension()
-      DragHandleNSView.writeQueue.addOperation {
-        guard let data = AnnotateExporter.imageData(from: image, for: ext) else {
-          completionHandler(DragError.encodeFailed)
-          return
-        }
+      guard let data = AnnotateExporter.imageData(from: image, for: ext) else {
+        completionHandler(DragError.encodeFailed)
+        return
+      }
 
+      // Write on the promise queue so the drop target is not blocked by disk IO.
+      DragHandleNSView.writeQueue.addOperation {
         do {
           try data.write(to: url, options: .atomic)
           completionHandler(nil)
