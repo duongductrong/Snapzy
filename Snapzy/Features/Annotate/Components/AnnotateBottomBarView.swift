@@ -242,6 +242,13 @@ struct AnnotateBottomBarView: View {
       ? annotateShortcutManager.copyAndCloseShortcut.displayString : nil
 
     return HStack(spacing: 12) {
+      BottomBarButton(
+        icon: "plus.rectangle.on.rectangle",
+        tooltip: L10n.AnnotateUI.newWindow
+      ) {
+        AnnotateManager.shared.openEmptyAnnotation()
+      }
+
       BottomBarButton(icon: "square.and.arrow.up", tooltip: L10n.Common.share) {
         share()
       }

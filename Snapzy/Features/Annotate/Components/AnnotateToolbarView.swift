@@ -147,12 +147,6 @@ struct AnnotateToolbarView: View {
 
   private var actionButtons: some View {
     HStack(spacing: 8) {
-      ToolbarButton(icon: "plus.square", isSelected: false) {
-        AnnotateManager.shared.openEmptyAnnotation()
-      }
-      .help(L10n.AnnotateUI.newWindow)
-      .accessibilityLabel(Text(L10n.AnnotateUI.newWindow))
-
       Button(L10n.Common.saveAs) {
         saveAs()
       }
