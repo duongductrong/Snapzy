@@ -6,6 +6,22 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.9.3</title>
+      <sparkle:version>71</sparkle:version>
+      <sparkle:shortVersionString>1.9.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 25 Apr 2026 02:24:38 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enhance annotation features with counter tool and improved stroke width management</li><li>Add support for opening multiple independent annotate windows and improve localization for new window action</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Improve drag-to-app preparation state management and enhance drag handle UI feedback</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.9.3/Snapzy-v1.9.3.dmg"
+        sparkle:edSignature="ahL1Me77EMB1spOwLodTIF8bOiry5VJcDJv49Sx/vUfWbcR6jalqdlfjNhvTy7gm73ERqrMzHrAUT8CKtYmdAg=="
+        length="44001790"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.9.2</title>
       <sparkle:version>70</sparkle:version>
       <sparkle:shortVersionString>1.9.2</sparkle:shortVersionString>
