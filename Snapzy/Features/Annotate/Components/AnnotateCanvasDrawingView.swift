@@ -795,7 +795,8 @@ final class DrawingCanvasNSView: NSView {
           start: start,
           currentPoint: lastPoint,
           strokeColor: state.strokeColor,
-          blurType: state.blurType
+          blurType: state.blurType,
+          controlValue: state.annotationCreationProperties(for: .blur).strokeWidth
         )
       } else {
         let previewProperties = state.annotationCreationProperties(for: state.selectedTool)

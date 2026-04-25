@@ -283,7 +283,10 @@ struct AnnotateQuickPropertiesBar: View {
         width: density.strokeControlWidth
       ) {
         QuickStrokeWidthControl(
+          title: state.quickStrokeWidthLabel,
+          iconName: state.quickStrokeWidthIcon,
           value: state.quickStrokeWidthBinding,
+          displayText: state.quickStrokeWidthDisplayText,
           sliderWidth: density.sliderWidth,
           groupSpacing: density.groupSpacing
         )
@@ -701,27 +704,30 @@ private struct QuickSelectionInfoControl: View {
 }
 
 private struct QuickStrokeWidthControl: View {
+  let title: String
+  let iconName: String
   @Binding var value: CGFloat
+  let displayText: String
   let sliderWidth: CGFloat
   let groupSpacing: CGFloat
 
   var body: some View {
-    QuickPropertiesGroup(title: L10n.Common.stroke, spacing: groupSpacing) {
+    QuickPropertiesGroup(title: title, spacing: groupSpacing) {
       HStack(spacing: 6) {
-        Image(systemName: "line.diagonal")
+        Image(systemName: iconName)
           .font(.system(size: 10))
           .foregroundColor(.secondary)
 
-        Slider(value: $value, in: 1...20, step: 1)
+        Slider(value: $value, in: AnnotationProperties.controlValueRange, step: 1)
           .frame(width: sliderWidth)
           .controlSize(.small)
 
-        Text("\(Int(value))")
+        Text(displayText)
           .font(Typography.labelSmall)
           .foregroundColor(SidebarColors.labelSecondary)
           .lineLimit(1)
           .monospacedDigit()
-          .frame(width: 22, alignment: .trailing)
+          .frame(width: 28, alignment: .trailing)
       }
     }
   }

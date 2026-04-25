@@ -62,6 +62,14 @@ enum AnnotationFactory {
     switch annotationType {
     case .arrow(let geometry):
       bounds = geometry.bounds()
+    case .counter:
+      let diameter = AnnotationProperties.counterDiameter(for: properties.strokeWidth)
+      bounds = CGRect(
+        x: start.x - diameter / 2,
+        y: start.y - diameter / 2,
+        width: diameter,
+        height: diameter
+      )
     default:
       bounds = CGRect(
         x: min(start.x, end.x),

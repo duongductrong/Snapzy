@@ -376,6 +376,8 @@ enum AnnotationType: Equatable {
 
 /// Visual properties for an annotation
 struct AnnotationProperties: Equatable {
+  static let controlValueRange: ClosedRange<CGFloat> = 1...20
+
   var strokeColor: Color
   var fillColor: Color
   var strokeWidth: CGFloat
@@ -398,6 +400,26 @@ struct AnnotationProperties: Equatable {
     self.fontSize = fontSize
     self.fontName = fontName
   }
+
+  static func clampedControlValue(_ value: CGFloat) -> CGFloat {
+    min(max(value, controlValueRange.lowerBound), controlValueRange.upperBound)
+  }
+
+  static func counterDiameter(for controlValue: CGFloat) -> CGFloat {
+    12 + clampedControlValue(controlValue) * 4
+  }
+
+  static func controlValue(forCounterDiameter diameter: CGFloat) -> CGFloat {
+    clampedControlValue((max(diameter, 16) - 12) / 4)
+  }
+
+  static func pixelatedBlurSize(for controlValue: CGFloat) -> CGFloat {
+    6 + clampedControlValue(controlValue) * 2
+  }
+
+  static func gaussianBlurRadius(for controlValue: CGFloat) -> CGFloat {
+    8 + clampedControlValue(controlValue) * 4
+  }
 }
 
 // MARK: - Hit Testing
@@ -412,6 +434,8 @@ extension AnnotationItem {
       baseBounds = Self.bounds(containing: [start, end]) ?? bounds
     case .path(let points), .highlight(let points):
       baseBounds = Self.bounds(containing: points) ?? bounds
+    case .counter:
+      baseBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
     default:
       baseBounds = bounds
     }
@@ -445,9 +469,8 @@ extension AnnotationItem {
       return bounds.contains(point)
 
     case .counter:
-      let center = CGPoint(x: bounds.midX, y: bounds.midY)
-      let radius: CGFloat = 12 + baseTolerance
-      return hypot(point.x - center.x, point.y - center.y) <= radius
+      let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
+      return pointInEllipse(point, in: counterBounds.insetBy(dx: -baseTolerance, dy: -baseTolerance))
     }
   }
 
@@ -482,6 +505,16 @@ extension AnnotationItem {
     let dx = (point.x - cx) / rx
     let dy = (point.y - cy) / ry
     return (dx * dx + dy * dy) <= 1
+  }
+
+  private static func counterBounds(center: CGPoint, properties: AnnotationProperties) -> CGRect {
+    let diameter = AnnotationProperties.counterDiameter(for: properties.strokeWidth)
+    return CGRect(
+      x: center.x - diameter / 2,
+      y: center.y - diameter / 2,
+      width: diameter,
+      height: diameter
+    )
   }
 
   private func distanceToSegment(_ point: CGPoint, from start: CGPoint, to end: CGPoint) -> CGFloat {

@@ -82,10 +82,15 @@ struct AnnotationRenderer {
       drawPath(points: points, isHighlight: annotation.type.isHighlight)
 
     case .counter(let value):
-      drawCounter(value: value, at: annotation.bounds.origin, color: annotation.properties.strokeColor)
+      drawCounter(value: value, in: annotation.bounds, properties: annotation.properties)
 
     case .blur(let blurType):
-      drawBlur(bounds: annotation.bounds, annotationId: annotation.id, blurType: blurType)
+      drawBlur(
+        bounds: annotation.bounds,
+        annotationId: annotation.id,
+        blurType: blurType,
+        controlValue: annotation.properties.strokeWidth
+      )
 
     case .text(let content):
       drawText(content, in: annotation.bounds, properties: annotation.properties)
@@ -217,22 +222,28 @@ struct AnnotationRenderer {
     context.strokePath()
   }
 
-  private func drawCounter(value: Int, at point: CGPoint, color: Color) {
-    let size: CGFloat = 24
-    let rect = CGRect(x: point.x - size/2, y: point.y - size/2, width: size, height: size)
+  private func drawCounter(value: Int, in bounds: CGRect, properties: AnnotationProperties) {
+    let rect: CGRect
+    if bounds.standardized.isEmpty {
+      let size = AnnotationProperties.counterDiameter(for: properties.strokeWidth)
+      rect = CGRect(x: bounds.origin.x - size / 2, y: bounds.origin.y - size / 2, width: size, height: size)
+    } else {
+      rect = bounds.standardized
+    }
 
-    context.setFillColor(NSColor(color).cgColor)
+    context.setFillColor(NSColor(properties.strokeColor).cgColor)
     context.fillEllipse(in: rect)
 
+    let fontSize = min(max(rect.height * 0.5, 11), 56)
     let attributes: [NSAttributedString.Key: Any] = [
-      .font: NSFont.systemFont(ofSize: 12, weight: .bold),
+      .font: NSFont.systemFont(ofSize: fontSize, weight: .bold),
       .foregroundColor: NSColor.white
     ]
     let text = "\(value)" as NSString
     let textSize = text.size(withAttributes: attributes)
     let textPoint = CGPoint(
-      x: point.x - textSize.width/2,
-      y: point.y - textSize.height/2
+      x: rect.midX - textSize.width / 2,
+      y: rect.midY - textSize.height / 2
     )
     text.draw(at: textPoint, withAttributes: attributes)
   }
@@ -302,7 +313,7 @@ struct AnnotationRenderer {
     )
   }
 
-  private func drawBlur(bounds: CGRect, annotationId: UUID, blurType: BlurType) {
+  private func drawBlur(bounds: CGRect, annotationId: UUID, blurType: BlurType, controlValue: CGFloat) {
     let visibleBounds = bounds.standardized
     guard visibleBounds.width > 0, visibleBounds.height > 0 else { return }
 
@@ -317,6 +328,7 @@ struct AnnotationRenderer {
     }
 
     let renderBounds = alignToSourcePixelGrid(visibleBounds, sourceImage: sourceImage)
+    let effectValue = blurEffectValue(for: blurType, controlValue: controlValue)
     let shouldAllowApproximateReuse =
       interactiveBlurAnnotationId == annotationId &&
       (visibleBounds.width * visibleBounds.height) >= Self.interactiveApproximateReuseAreaThreshold
@@ -332,6 +344,7 @@ struct AnnotationRenderer {
          bounds: renderBounds,
          sourceImage: sourceImage,
          blurType: blurType,
+         effectValue: effectValue,
          allowApproximateReuse: shouldAllowApproximateReuse
        ) {
       switch blurType {
@@ -355,13 +368,15 @@ struct AnnotationRenderer {
       BlurEffectRenderer.drawPixelatedRegion(
         in: context,
         sourceImage: sourceImage,
-        region: renderBounds
+        region: renderBounds,
+        pixelSize: effectValue
       )
     case .gaussian:
       BlurEffectRenderer.drawGaussianRegion(
         in: context,
         sourceImage: sourceImage,
-        region: renderBounds
+        region: renderBounds,
+        radius: Double(effectValue)
       )
     }
   }
@@ -386,7 +401,13 @@ struct AnnotationRenderer {
   }
 
   /// Draw blur preview during drag operation
-  func drawBlurPreview(start: CGPoint, currentPoint: CGPoint, strokeColor: Color, blurType: BlurType) {
+  func drawBlurPreview(
+    start: CGPoint,
+    currentPoint: CGPoint,
+    strokeColor: Color,
+    blurType: BlurType,
+    controlValue: CGFloat
+  ) {
     let rect = makeRect(from: start, to: currentPoint)
     guard rect.width > 0, rect.height > 0 else { return }
 
@@ -400,6 +421,7 @@ struct AnnotationRenderer {
     }
 
     if let sourceImage = sourceImage {
+      let effectValue = blurEffectValue(for: blurType, controlValue: controlValue)
       // Show preview based on selected blur type
       switch blurType {
       case .pixelated:
@@ -407,13 +429,14 @@ struct AnnotationRenderer {
           in: context,
           sourceImage: sourceImage,
           region: rect,
-          pixelSize: BlurEffectRenderer.defaultPixelSize
+          pixelSize: effectValue
         )
       case .gaussian:
         BlurEffectRenderer.drawGaussianRegion(
           in: context,
           sourceImage: sourceImage,
-          region: rect
+          region: rect,
+          radius: Double(effectValue)
         )
       }
     }
@@ -424,6 +447,15 @@ struct AnnotationRenderer {
       region: rect,
       strokeColor: NSColor(strokeColor).cgColor
     )
+  }
+
+  private func blurEffectValue(for blurType: BlurType, controlValue: CGFloat) -> CGFloat {
+    switch blurType {
+    case .pixelated:
+      return AnnotationProperties.pixelatedBlurSize(for: controlValue)
+    case .gaussian:
+      return AnnotationProperties.gaussianBlurRadius(for: controlValue)
+    }
   }
 }
 

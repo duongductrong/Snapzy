@@ -18,7 +18,7 @@ final class BlurCacheManager {
     let image: CGImage
     let bounds: CGRect
     let blurType: BlurType
-    let pixelSize: CGFloat
+    let effectValue: CGFloat
     let sourceSignature: SourceSignature
     let cacheScale: CGFloat
   }
@@ -36,14 +36,14 @@ final class BlurCacheManager {
   ///   - bounds: The annotation bounds in image coordinates
   ///   - sourceImage: The source image to sample from
   ///   - blurType: The type of blur effect to apply
-  ///   - pixelSize: Size of each pixel block for pixelated blur effect
+  ///   - effectValue: Pixel block size for pixelated blur, or blur radius for Gaussian blur
   /// - Returns: Cached CGImage if available, or newly rendered image
   func getCachedBlur(
     for annotationId: UUID,
     bounds: CGRect,
     sourceImage: NSImage,
     blurType: BlurType = .pixelated,
-    pixelSize: CGFloat = BlurEffectRenderer.defaultPixelSize,
+    effectValue: CGFloat = BlurEffectRenderer.defaultPixelSize,
     allowApproximateReuse: Bool = false
   ) -> CGImage? {
     let normalizedBounds = bounds.standardized
@@ -55,7 +55,7 @@ final class BlurCacheManager {
     // then regenerate accurate cache once interaction ends.
     if let entry = cache[annotationId],
        entry.blurType == blurType,
-       entry.pixelSize == pixelSize,
+       entry.effectValue == effectValue,
        entry.sourceSignature == sourceSignature,
        entry.cacheScale == cacheScale {
       if entry.bounds.equalTo(normalizedBounds) || allowApproximateReuse {
@@ -66,7 +66,7 @@ final class BlurCacheManager {
     // If approximate reuse was requested but scale changed, still prefer old cache over re-render.
     if allowApproximateReuse, let entry = cache[annotationId],
        entry.blurType == blurType,
-       entry.pixelSize == pixelSize,
+       entry.effectValue == effectValue,
        entry.sourceSignature == sourceSignature {
       return entry.image
     }
@@ -76,7 +76,7 @@ final class BlurCacheManager {
       bounds: normalizedBounds,
       sourceImage: sourceImage,
       blurType: blurType,
-      pixelSize: pixelSize,
+      effectValue: effectValue,
       cacheScale: cacheScale
     ) else { return nil }
 
@@ -84,7 +84,7 @@ final class BlurCacheManager {
       image: rendered,
       bounds: normalizedBounds,
       blurType: blurType,
-      pixelSize: pixelSize,
+      effectValue: effectValue,
       sourceSignature: sourceSignature,
       cacheScale: cacheScale
     )
@@ -110,7 +110,7 @@ final class BlurCacheManager {
     bounds: CGRect,
     sourceImage: NSImage,
     blurType: BlurType,
-    pixelSize: CGFloat,
+    effectValue: CGFloat,
     cacheScale: CGFloat
   ) -> CGImage? {
     let width = Int(ceil(bounds.width * cacheScale))
@@ -140,14 +140,15 @@ final class BlurCacheManager {
         sourceImage: sourceImage,
         sourceRegion: bounds,
         destRegion: localRegion,
-        pixelSize: pixelSize
+        pixelSize: effectValue
       )
     case .gaussian:
       BlurEffectRenderer.drawGaussianRegion(
         in: context,
         sourceImage: sourceImage,
         sourceRegion: bounds,
-        destRegion: localRegion
+        destRegion: localRegion,
+        radius: Double(effectValue)
       )
     }
 

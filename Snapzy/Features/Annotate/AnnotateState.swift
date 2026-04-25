@@ -1727,6 +1727,11 @@ final class AnnotateState: ObservableObject {
       annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
     case .highlight(let points):
       annotations[index].type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    case .counter:
+      let diameter = max(bounds.width, bounds.height)
+      let normalizedBounds = counterBounds(center: CGPoint(x: bounds.midX, y: bounds.midY), controlValue: AnnotationProperties.controlValue(forCounterDiameter: diameter))
+      annotations[index].bounds = normalizedBounds
+      annotations[index].properties.strokeWidth = AnnotationProperties.controlValue(forCounterDiameter: diameter)
     default:
       break
     }
@@ -1777,7 +1782,12 @@ final class AnnotateState: ObservableObject {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
 
     if let strokeWidth = strokeWidth {
-      annotations[index].properties.strokeWidth = strokeWidth
+      let clampedWidth = AnnotationProperties.clampedControlValue(strokeWidth)
+      annotations[index].properties.strokeWidth = clampedWidth
+      if case .counter = annotations[index].type {
+        let center = CGPoint(x: annotations[index].bounds.midX, y: annotations[index].bounds.midY)
+        annotations[index].bounds = counterBounds(center: center, controlValue: clampedWidth)
+      }
     }
     if let fontSize = fontSize {
       annotations[index].properties.fontSize = fontSize
@@ -1924,7 +1934,7 @@ final class AnnotateState: ObservableObject {
     var properties = defaultAnnotationProperties(for: tool)
 
     if let strokeWidth = strokeWidth {
-      properties.strokeWidth = strokeWidth
+      properties.strokeWidth = AnnotationProperties.clampedControlValue(strokeWidth)
     }
     if let strokeColor = strokeColor {
       properties.strokeColor = strokeColor
@@ -1946,6 +1956,16 @@ final class AnnotateState: ObservableObject {
     if selectedTool == tool {
       applyToolPropertiesToLegacyState(properties, for: tool)
     }
+  }
+
+  private func counterBounds(center: CGPoint, controlValue: CGFloat) -> CGRect {
+    let diameter = AnnotationProperties.counterDiameter(for: controlValue)
+    return CGRect(
+      x: center.x - diameter / 2,
+      y: center.y - diameter / 2,
+      width: diameter,
+      height: diameter
+    )
   }
 
   private func syncActiveToolProperties() {
@@ -2256,6 +2276,58 @@ final class AnnotateState: ObservableObject {
       return quickSelectionAnySupport { $0.supportsQuickStrokeWidth }
     }
     return quickPropertiesTool?.supportsQuickStrokeWidth ?? false
+  }
+
+  var quickStrokeWidthLabel: String {
+    quickStrokeWidthUsesSizeLabel ? L10n.Common.size : L10n.Common.stroke
+  }
+
+  var quickStrokeWidthIcon: String {
+    quickStrokeWidthUsesSizeLabel ? "arrow.up.left.and.arrow.down.right" : "line.diagonal"
+  }
+
+  var quickStrokeWidthDisplayText: String {
+    let controlValue = quickStrokeWidthValue
+
+    switch quickStrokeWidthSemanticTool {
+    case .counter:
+      return "\(Int(AnnotationProperties.counterDiameter(for: controlValue).rounded()))"
+    case .blur:
+      let value: CGFloat
+      switch activeBlurType {
+      case .pixelated:
+        value = AnnotationProperties.pixelatedBlurSize(for: controlValue)
+      case .gaussian:
+        value = AnnotationProperties.gaussianBlurRadius(for: controlValue)
+      }
+      return "\(Int(value.rounded()))"
+    default:
+      return "\(Int(controlValue.rounded()))"
+    }
+  }
+
+  private var quickStrokeWidthUsesSizeLabel: Bool {
+    switch quickStrokeWidthSemanticTool {
+    case .blur, .counter:
+      return true
+    default:
+      return false
+    }
+  }
+
+  private var quickStrokeWidthSemanticTool: AnnotationToolType? {
+    let selectedStrokeTargets = quickSelectionTargets(matching: { $0.supportsQuickStrokeWidth })
+    if !selectedStrokeTargets.isEmpty {
+      let tools = Set(selectedStrokeTargets.map { $0.type.toolType })
+      guard tools.count == 1 else { return nil }
+      return tools.first
+    }
+    return quickPropertiesTool
+  }
+
+  private var quickStrokeWidthValue: CGFloat {
+    quickSelectionTargets(matching: { $0.supportsQuickStrokeWidth }).first?.properties.strokeWidth
+      ?? defaultAnnotationProperties(for: quickPropertiesTool).strokeWidth
   }
 
   var quickPropertiesSupportsCornerRadius: Bool {
