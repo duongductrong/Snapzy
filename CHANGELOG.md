@@ -25,6 +25,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.5] - 2026-04-25
+
+### Features
+-  Implement file change tracking and thumbnail reload for history records (d4badb5)
+-  Add watermark annotation feature with customizable properties (aa9eaf2)
+
+### Bug Fixes
+-  Implement dynamic font scaling for text annotations in overlay (#101) (aae0970)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.9.4 (957ee65)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.4] - 2026-04-25
 
 ### Features
