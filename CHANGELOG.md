@@ -23,6 +23,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.3] - 2026-04-25
+
+### Features
+-  Enhance annotation features with counter tool and improved stroke width management (#105) (254223e)
+-  Add support for opening multiple independent annotate windows and improve localization for new window action (#107) (9b16d74)
+
+### Bug Fixes
+-  Improve drag-to-app preparation state management and enhance drag handle UI feedback (#107) (3a8989f)
+
+### Chore
+- refactor: Add new window button to bottom bar and remove duplicate from toolbar (8c7bca3)
+- chore: update appcast, cask, and readme for v1.9.2 (4c1a7c7)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.2] - 2026-04-24
 
 ### Bug Fixes
