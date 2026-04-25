@@ -24,6 +24,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.4] - 2026-04-25
+
+### Features
+-  Enhance crop interaction management with context restoration and keyboard shortcuts (e743310)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.9.3 (255c54a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.3] - 2026-04-25
 
 ### Features
