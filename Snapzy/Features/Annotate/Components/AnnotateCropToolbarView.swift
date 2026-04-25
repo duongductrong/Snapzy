@@ -82,8 +82,7 @@ struct CropToolbarView: View {
       .controlSize(.small)
 
       Button(L10n.Common.apply) {
-        state.applyCrop()
-        state.selectedTool = .selection
+        state.confirmCropInteraction()
       }
       .buttonStyle(.borderedProminent)
       .tint(.blue)

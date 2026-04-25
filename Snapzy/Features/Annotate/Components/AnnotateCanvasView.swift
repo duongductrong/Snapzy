@@ -550,18 +550,16 @@ struct AnnotateCanvasView: View {
     // Look up tool for this key
     guard let tool = AnnotateShortcutManager.shared.tool(for: lowered) else { return }
 
-    // Commit any active text edit before switching
-    if state.editingTextAnnotationId != nil {
-      state.commitTextEditing()
-    }
-
-    // Deselect active annotation when switching tools
-    state.selectedAnnotationId = nil
-
-    // Special handling for crop tool
     if tool == .crop {
       state.beginCropInteraction()
     } else {
+      // Commit any active text edit before switching
+      if state.editingTextAnnotationId != nil {
+        state.commitTextEditing()
+      }
+
+      // Deselect active annotation when switching tools
+      state.selectedAnnotationId = nil
       state.selectedTool = tool
     }
   }

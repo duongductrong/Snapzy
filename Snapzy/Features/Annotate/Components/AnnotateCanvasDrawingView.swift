@@ -146,7 +146,7 @@ final class DrawingCanvasNSView: NSView {
 
     case 53: // Escape
       // Cancel crop if active
-      if state.selectedTool == .crop && state.isCropActive {
+      if state.isCropInteractionActive {
         Task { @MainActor in
           state.cancelCrop()
         }
@@ -159,10 +159,9 @@ final class DrawingCanvasNSView: NSView {
       needsDisplay = true
 
     case 36: // Enter - confirm crop
-      if state.selectedTool == .crop && state.isCropActive {
+      if state.isCropInteractionActive {
         Task { @MainActor in
-          state.applyCrop()
-          state.selectedTool = .selection
+          state.confirmCropInteraction()
         }
         needsDisplay = true
         return
@@ -218,16 +217,15 @@ final class DrawingCanvasNSView: NSView {
          let char = event.characters?.lowercased().first,
          let matchedTool = shortcutManager.tool(for: char) {
         Task { @MainActor in
-          // Commit any active text edit before switching
-          if state.editingTextAnnotationId != nil {
-            state.commitTextEditing()
-          }
-          // Deselect active annotation when switching tools
-          state.deselectAnnotation()
-          // Special handling for crop tool (must initialize crop rect)
           if matchedTool == .crop {
             state.beginCropInteraction()
           } else {
+            // Commit any active text edit before switching
+            if state.editingTextAnnotationId != nil {
+              state.commitTextEditing()
+            }
+            // Deselect active annotation when switching tools
+            state.deselectAnnotation()
             state.selectedTool = matchedTool
           }
         }

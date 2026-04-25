@@ -92,6 +92,12 @@ final class AnnotateWindow: NSWindow {
 
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
+    // Cmd+S while actively editing crop confirms the crop first.
+    if event.keyCode == 1 && flags == .command && interactionState?.isCropInteractionActive == true && !isTextInputActive {
+      interactionState?.confirmCropInteraction()
+      return true
+    }
+
     // Cmd+S - Save (Done action) — standard macOS
     if event.keyCode == 1 && flags == .command {
       NotificationCenter.default.post(name: .annotateSave, object: self)
@@ -200,6 +206,16 @@ final class AnnotateWindow: NSWindow {
   /// and mouse drag events at the window level for zoom & pan.
   override func sendEvent(_ event: NSEvent) {
     switch event.type {
+    case .keyDown where event.keyCode == 53:
+      guard !isTextInputActive, interactionState?.isCropInteractionActive == true else { break }
+      interactionState?.cancelCrop()
+      return
+
+    case .keyDown where event.keyCode == 36 || event.keyCode == 76:
+      guard !isTextInputActive, interactionState?.isCropInteractionActive == true else { break }
+      interactionState?.confirmCropInteraction()
+      return
+
     case .scrollWheel where event.modifierFlags.contains(.command):
       // Cmd + scroll wheel → zoom
       let delta = event.scrollingDeltaY

@@ -17,6 +17,14 @@ final class AnnotateState: ObservableObject {
     var embeddedImageAssets: [UUID: NSImage]
   }
 
+  private struct CropInteractionContext {
+    let selectedTool: AnnotationToolType
+    let selectedAnnotationIds: Set<UUID>
+    let cropRect: CGRect?
+    let didCutoutAutoApplyCrop: Bool
+    let cutoutAutoAppliedCropRect: CGRect?
+  }
+
   private static let importedImageMaxCoverage: CGFloat = 0.7
   private static let importedImageCascadeStep: CGFloat = 24
   private static let importedImageCountWarningThreshold: Int = 8
@@ -803,6 +811,8 @@ final class AnnotateState: ObservableObject {
   @Published var cropRect: CGRect?
   /// Original crop rect when crop mode started (used as base for aspect ratio calculations)
   private var originalCropRect: CGRect?
+  /// Context to restore after leaving crop mode.
+  private var cropInteractionContext: CropInteractionContext?
   /// Whether crop mode is actively being edited
   @Published var isCropActive: Bool = false
   /// Selected aspect ratio for crop
@@ -835,6 +845,7 @@ final class AnnotateState: ObservableObject {
   var mockupShadowOffsetX: CGFloat { CGFloat(mockupRotationY) * 0.8 }
   var mockupShadowOffsetY: CGFloat { CGFloat(mockupRotationX) * 0.5 + 8 }
   var mockupShadowRadius: CGFloat { CGFloat(20 * (1.1 - mockupPerspective) * mockupShadowIntensity * 2) }
+  var isCropInteractionActive: Bool { selectedTool == .crop && isCropActive }
 
   /// Apply mockup preset
   func applyMockupPreset(_ preset: MockupPreset) {
@@ -1079,6 +1090,8 @@ final class AnnotateState: ObservableObject {
 
     // Reset crop for new image
     cropRect = nil
+    originalCropRect = nil
+    cropInteractionContext = nil
     isCropActive = false
     editorMode = .annotate
     hasUnsavedChanges = false
@@ -1515,14 +1528,34 @@ final class AnnotateState: ObservableObject {
 
   /// Activate crop tool from direct user interaction (toolbar/shortcut/canvas).
   func beginCropInteraction() {
+    if editingTextAnnotationId != nil {
+      commitTextEditing()
+    }
+    if cropInteractionContext == nil {
+      cropInteractionContext = CropInteractionContext(
+        selectedTool: selectedTool == .crop ? .selection : selectedTool,
+        selectedAnnotationIds: selectedAnnotationIds,
+        cropRect: cropRect,
+        didCutoutAutoApplyCrop: didCutoutAutoApplyCrop,
+        cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect
+      )
+    }
+
     collapseSidebarForCropInteraction()
+    deselectAnnotation()
     selectedTool = .crop
 
-    if cropRect == nil, hasImage {
+    guard hasImage else { return }
+
+    if cropRect == nil {
       initializeCrop()
-    } else if cropRect != nil {
+    } else if let cropRect {
+      originalCropRect = cropRect
       isCropActive = true
     }
+
+    isCropResizing = false
+    isCropShiftLocked = false
   }
 
   /// Initialize crop to full image bounds
@@ -1550,6 +1583,12 @@ final class AnnotateState: ObservableObject {
     restoreSidebarAfterCropInteractionIfNeeded()
   }
 
+  /// Apply crop and return to the context active before crop mode.
+  func confirmCropInteraction() {
+    applyCrop()
+    restoreContextAfterCropInteraction()
+  }
+
   /// Reset unsaved changes flag after successful save
   func markAsSaved() {
     hasUnsavedChanges = false
@@ -1558,16 +1597,29 @@ final class AnnotateState: ObservableObject {
   /// Cancel crop and reset
   func cancelCrop() {
     DiagnosticLogger.shared.log(.info, .annotate, "Crop cancelled")
-    cropRect = nil
+
+    if let context = cropInteractionContext {
+      cropRect = context.cropRect
+      didCutoutAutoApplyCrop = context.didCutoutAutoApplyCrop
+      cutoutAutoAppliedCropRect = context.cutoutAutoAppliedCropRect
+    } else {
+      cropRect = nil
+      clearCutoutAutoCropTracking()
+    }
+
+    originalCropRect = nil
     isCropActive = false
-    clearCutoutAutoCropTracking()
-    selectedTool = .selection
+    isCropResizing = false
+    isCropShiftLocked = false
     restoreSidebarAfterCropInteractionIfNeeded()
+    restoreContextAfterCropInteraction()
   }
 
   /// Reset crop to nil
   func resetCrop() {
     cropRect = nil
+    originalCropRect = nil
+    cropInteractionContext = nil
     isCropActive = false
     clearCutoutAutoCropTracking()
     cropAspectRatio = .free
@@ -1604,6 +1656,16 @@ final class AnnotateState: ObservableObject {
       clearCutoutAutoCropTracking()
     }
     cropRect = constrainedRect
+  }
+
+  private func restoreContextAfterCropInteraction() {
+    let context = cropInteractionContext
+    cropInteractionContext = nil
+    originalCropRect = nil
+
+    let restoredTool = context?.selectedTool == .crop ? AnnotationToolType.selection : (context?.selectedTool ?? .selection)
+    selectedTool = restoredTool
+    setSelectedAnnotationIds(context?.selectedAnnotationIds ?? [])
   }
 
   /// Update crop rect with bounds constraint
