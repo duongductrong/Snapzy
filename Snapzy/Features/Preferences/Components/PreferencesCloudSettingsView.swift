@@ -37,6 +37,8 @@ private struct ImportArchiveSelection: Identifiable {
 struct CloudSettingsView: View {
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var usageService = CloudUsageService.shared
+  @AppStorage(PreferencesKeys.cloudUploadsFloatingPosition)
+  private var uploadsWindowPosition: CloudUploadFloatingPosition = .defaultPosition
 
   @State private var isEditing = false
   @State private var showResetConfirmation = false
@@ -82,6 +84,8 @@ struct CloudSettingsView: View {
           }
         )
       }
+
+      uploadsWindowSection
     }
     .formStyle(.grouped)
     .alert(L10n.CloudSettings.resetConfigurationTitle, isPresented: $showResetConfirmation) {
@@ -151,6 +155,9 @@ struct CloudSettingsView: View {
     .onAppear {
       cloudManager.refreshCloudSummaryForDisplay()
       usageService.hydrateCachedUsageIfAvailable()
+    }
+    .onChange(of: uploadsWindowPosition) { newValue in
+      CloudUploadHistoryWindowController.shared.updatePosition(newValue)
     }
   }
 
@@ -243,6 +250,26 @@ struct CloudSettingsView: View {
           .foregroundColor(.red)
         }
         .padding(.top, 4)
+      }
+    }
+  }
+
+  private var uploadsWindowSection: some View {
+    Section(L10n.CloudSettings.uploadsWindowSection) {
+      SettingRow(
+        icon: "rectangle.center.inset.filled",
+        title: L10n.CloudSettings.uploadsWindowPositionTitle,
+        description: L10n.CloudSettings.uploadsWindowPositionDescription
+      ) {
+        Picker("", selection: $uploadsWindowPosition) {
+          ForEach(CloudUploadFloatingPosition.allCases) { position in
+            Text(position.displayName).tag(position)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .fixedSize()
+        .frame(width: 140, alignment: .trailing)
       }
     }
   }

@@ -10,20 +10,22 @@ import SwiftUI
 struct HistoryGridView: View {
   let records: [CaptureHistoryRecord]
   @Binding var selectedIds: Set<UUID>
+  @AppStorage(PreferencesKeys.historyBackgroundStyle) private var backgroundStyle: HistoryBackgroundStyle = .defaultStyle
   @State private var lastSelectedId: UUID?
 
   private let columns = [
-    GridItem(.adaptive(minimum: 140, maximum: 180), spacing: 12)
+    GridItem(.adaptive(minimum: 170, maximum: 230), spacing: 12)
   ]
 
   var body: some View {
-    ScrollView {
+    ScrollView(.vertical, showsIndicators: false) {
       LazyVGrid(columns: columns, spacing: 12) {
         ForEach(records) { record in
-          HistoryItemView(
+          HistoryExpandedCaptureCardView(
             record: record,
             isSelected: selectedIds.contains(record.id),
-            onSelect: {
+            backgroundStyle: backgroundStyle,
+            onTap: {
               handleTap(record: record)
             }
           )
@@ -32,8 +34,8 @@ struct HistoryGridView: View {
           }
         }
       }
-      .padding(.horizontal, 18)
-      .padding(.top, 8)
+      .padding(.horizontal, 2)
+      .padding(.top, 4)
       .padding(.bottom, 16)
     }
   }

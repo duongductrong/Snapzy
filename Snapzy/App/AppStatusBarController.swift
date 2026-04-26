@@ -446,8 +446,9 @@ final class AppStatusBarController: ObservableObject {
   }
 
   @objc private func openCloudUploadsAction() {
-    CloudUploadHistoryWindowController.shared.showWindow()
-    NSApp.activate(ignoringOtherApps: true)
+    if CloudUploadHistoryWindowController.shared.toggleWindow() {
+      NSApp.activate(ignoringOtherApps: true)
+    }
   }
 
   @objc private func openHistoryAction() {

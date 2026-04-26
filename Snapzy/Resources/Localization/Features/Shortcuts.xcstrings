@@ -646,61 +646,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cloud-Upload-Verlauf öffnen"
+            "value" : "Cloud-Upload-Verlauf ein-/ausblenden"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Open cloud upload history"
+            "value" : "Toggle cloud upload history"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Abrir historial de carga en la nube"
+            "value" : "Mostrar u ocultar el historial de cargas en la nube"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ouvrir l'historique de téléchargement dans le cloud"
+            "value" : "Afficher ou masquer l'historique des téléversements cloud"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クラウドのアップロード履歴を開く"
+            "value" : "クラウドアップロード履歴の表示を切り替え"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "클라우드 업로드 기록 열기"
+            "value" : "클라우드 업로드 기록 표시 전환"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Открыть историю загрузок в облако"
+            "value" : "Показать или скрыть историю загрузок в облако"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mở lịch sử tải lên cloud"
+            "value" : "Bật/tắt lịch sử tải lên cloud"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开云端上传历史"
+            "value" : "显示或隐藏云端上传历史"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開雲端上傳歷史"
+            "value" : "顯示或隱藏雲端上傳歷史"
           }
         }
       }

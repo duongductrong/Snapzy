@@ -40,7 +40,7 @@ struct HistoryMainView: View {
       HistoryBackdropView(style: backgroundStyle)
         .ignoresSafeArea()
 
-      VStack(spacing: 0) {
+      VStack(spacing: 18) {
         HistoryToolbar(
           searchText: $searchText,
           selectedCount: selectedRecords.count,
@@ -54,8 +54,6 @@ struct HistoryMainView: View {
           selectedFilter: $selectedFilter,
           counts: filterCounts
         )
-        .padding(.horizontal)
-        .padding(.vertical, 8)
 
         if filteredRecords.isEmpty {
           HistoryEmptyStateView(
@@ -69,6 +67,9 @@ struct HistoryMainView: View {
           )
         }
       }
+      .padding(.horizontal, 20)
+      .padding(.top, 18)
+      .padding(.bottom, 20)
     }
     .preferredColorScheme(themeManager.systemAppearance)
     .onReceive(NotificationCenter.default.publisher(for: .historyCopySelection)) { notification in

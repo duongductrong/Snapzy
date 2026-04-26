@@ -38,6 +38,7 @@ struct HistoryFilterBar: View {
 }
 
 private struct FilterPill: View {
+  @AppStorage(PreferencesKeys.historyBackgroundStyle) private var backgroundStyle: HistoryBackgroundStyle = .defaultStyle
   @Environment(\.colorScheme) private var colorScheme
 
   let label: String
@@ -50,29 +51,29 @@ private struct FilterPill: View {
     Button(action: action) {
       HStack(spacing: 6) {
         Image(systemName: icon)
-          .font(.system(size: 12, weight: .medium))
+          .font(.system(size: 11, weight: .semibold))
         Text(label)
-          .font(.system(size: 13, weight: .medium))
+          .font(.system(size: 12, weight: .semibold))
         if count > 0 {
           Text("\(count)")
-            .font(.system(size: 11, weight: .semibold))
+            .font(.system(size: 10, weight: .bold))
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(isSelected ? 0.18 : (colorScheme == .dark ? 0.12 : 0.84)))
+            .background(pillCountBackground.opacity(isSelected ? 0.18 : 1))
             .clipShape(Capsule())
         }
       }
       .padding(.horizontal, 12)
-      .padding(.vertical, 6)
+      .padding(.vertical, 8)
       .background(backgroundFill)
-      .foregroundColor(isSelected ? .white : .primary)
+      .foregroundColor(isSelected ? .white : .primary.opacity(0.82))
       .clipShape(Capsule())
       .overlay(
         Capsule()
           .stroke(borderColor, lineWidth: 1)
       )
     }
-    .buttonStyle(PlainButtonStyle())
+    .buttonStyle(.plain)
   }
 
   private var backgroundFill: AnyShapeStyle {
@@ -89,7 +90,15 @@ private struct FilterPill: View {
       )
     }
 
-    return AnyShapeStyle(.regularMaterial)
+    if backgroundStyle == .solid {
+      return colorScheme == .dark
+        ? AnyShapeStyle(Color.white.opacity(0.07))
+        : AnyShapeStyle(Color.white.opacity(0.76))
+    }
+
+    return colorScheme == .dark
+      ? AnyShapeStyle(Color.white.opacity(0.08))
+      : AnyShapeStyle(Color.black.opacity(0.05))
   }
 
   private var borderColor: Color {
@@ -97,6 +106,10 @@ private struct FilterPill: View {
       return Color.white.opacity(0.15)
     }
 
-    return colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+    return colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.64)
+  }
+
+  private var pillCountBackground: Color {
+    colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.84)
   }
 }

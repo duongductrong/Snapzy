@@ -2176,7 +2176,7 @@ enum L10n {
     )
     static let cloudUploadsDescription = string(
       "preferences-shortcuts.cloud-uploads-description",
-      defaultValue: "Open cloud upload history",
+      defaultValue: "Toggle cloud upload history",
       comment: "Description for cloud uploads shortcut"
     )
     static let shortcutListDescription = string(
@@ -3018,6 +3018,36 @@ enum L10n {
       "cloud-settings.custom-domain",
       defaultValue: "Custom Domain",
       comment: "Cloud settings label for custom domain"
+    )
+    static let uploadsWindowSection = string(
+      "cloud-settings.uploads-window-section",
+      defaultValue: "Uploads Window",
+      comment: "Section title for Cloud Uploads window settings"
+    )
+    static let uploadsWindowPositionTitle = string(
+      "cloud-settings.uploads-window-position-title",
+      defaultValue: "Floating Position",
+      comment: "Cloud settings title for choosing the Cloud Uploads floating window position"
+    )
+    static let uploadsWindowPositionDescription = string(
+      "cloud-settings.uploads-window-position-description",
+      defaultValue: "Choose where Cloud Uploads opens on screen",
+      comment: "Cloud settings description for choosing the Cloud Uploads floating window position"
+    )
+    static let uploadsWindowPositionTop = string(
+      "cloud-settings.uploads-window-position-top",
+      defaultValue: "Top",
+      comment: "Cloud Uploads floating window position option"
+    )
+    static let uploadsWindowPositionCenter = string(
+      "cloud-settings.uploads-window-position-center",
+      defaultValue: "Center",
+      comment: "Cloud Uploads floating window position option"
+    )
+    static let uploadsWindowPositionBottom = string(
+      "cloud-settings.uploads-window-position-bottom",
+      defaultValue: "Bottom",
+      comment: "Cloud Uploads floating window position option"
     )
     static let storedSecurelyInKeychain = string(
       "cloud-settings.stored-securely-in-keychain",
