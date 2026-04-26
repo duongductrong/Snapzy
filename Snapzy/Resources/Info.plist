@@ -4,6 +4,17 @@
 <dict>
 	<key>CFBundleIconFile</key>
 	<string>SnapzyIcon</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.trongduong.snapzy</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>snapzy</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Snapzy needs microphone access to record audio with your screen recordings.</string>
 	<key>NSScreenCaptureUsageDescription</key>
