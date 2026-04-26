@@ -26,6 +26,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.6] - 2026-04-26
+
+### Features
+-  Improve Cloud Uploads to Floating UI (cea033f)
+-  Improve cloud upload functionality for Videos/Gifs (14ab2b0)
+-  Implement multi-selection and deletion functionality in history panel (548b30b)
+-  Enhance capture settings UI with segmented navigation for general, screenshot, and recording options (821c941)
+
+### Bug Fixes
+-  Adjust frame sizes and alignment for history settings UI elements (d11a3c1)
+-  Add size and mode hint indicators to area selection overlay (bd04f93)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.9.5 (f4ac35f)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.5] - 2026-04-25
 
 ### Features
