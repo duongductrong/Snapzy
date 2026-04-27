@@ -582,61 +582,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Absturzprotokollierung aktivieren"
+            "value" : "Diagnoseprotokollierung aktivieren"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enable Crash Logging"
+            "value" : "Enable Diagnostic Logging"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Habilitar registro de fallos"
+            "value" : "Habilitar registro de diagnóstico"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Activer la journalisation des incidents"
+            "value" : "Activer la journalisation des diagnostics"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クラッシュ ログを有効にする"
+            "value" : "診断ログを有効にする"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "충돌 로깅 활성화"
+            "value" : "진단 로깅 활성화"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Включить ведение журнала сбоев"
+            "value" : "Включить журналирование диагностики"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bật ghi log sự cố"
+            "value" : "Bật ghi log chẩn đoán"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用崩溃日志"
+            "value" : "启用诊断日志"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啓用崩潰日誌"
+            "value" : "啟用診斷日誌"
           }
         }
       }

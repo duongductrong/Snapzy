@@ -90,6 +90,7 @@ enum PreferencesKeys {
 
   // Diagnostics
   static let diagnosticsEnabled = "diagnostics.enabled"
+  static let diagnosticsRetentionDays = "diagnostics.retentionDays"
   static let diagnosticsSessionActive = "diagnostics.sessionActive"
 
   // History

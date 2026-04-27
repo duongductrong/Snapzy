@@ -2,19 +2,27 @@
 //  LogCleanupScheduler.swift
 //  Snapzy
 //
-//  Prunes log entries older than 2 hours and deletes old daily files
+//  Deletes diagnostic daily log files after the configured retention period.
 //
 
 import Foundation
 
 final class LogCleanupScheduler {
   static let shared = LogCleanupScheduler()
+  static let defaultRetentionDays = 3
+  static let retentionDaysRange = 1...30
 
-  private let ttlSeconds: TimeInterval = 2 * 60 * 60 // 2 hours
   private let cleanupInterval: TimeInterval = 30 * 60 // 30 minutes
   private var timer: Timer?
 
   private init() {}
+
+  var retentionDays: Int {
+    let defaults = UserDefaults.standard
+    let storedValue = defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) as? Int
+      ?? Self.defaultRetentionDays
+    return min(max(storedValue, Self.retentionDaysRange.lowerBound), Self.retentionDaysRange.upperBound)
+  }
 
   // MARK: - Scheduling
 
@@ -40,76 +48,55 @@ final class LogCleanupScheduler {
     timer = nil
   }
 
+  func performCleanupNow() {
+    performCleanup()
+  }
+
   // MARK: - Cleanup Logic
 
   private func performCleanup() {
     DispatchQueue.global(qos: .utility).async { [weak self] in
       guard let self else { return }
-      self.pruneOldEntries()
       self.deleteOldFiles()
     }
   }
 
-  /// Remove entries older than 2 hours from today's log file.
-  private func pruneOldEntries() {
-    let logger = DiagnosticLogger.shared
-    let logFile = logger.currentLogFileURL
-    let fm = FileManager.default
-
-    guard fm.fileExists(atPath: logFile.path),
-      let content = try? String(contentsOf: logFile, encoding: .utf8)
-    else { return }
-
-    let now = Date()
-    let cutoff = now.addingTimeInterval(-ttlSeconds)
-    let lines = content.components(separatedBy: "\n")
-
-    var keptLines: [String] = []
-    for line in lines {
-      // Keep session headers (start with "===") and enriched header context lines
-      if line.hasPrefix("===") || line.hasPrefix("macOS ") || line.isEmpty
-        || line.contains("GB RAM") || line.contains("screen") || line.contains("PID")
-        || line.hasPrefix("Locale:") || line.hasPrefix("Previous crash:")
-      {
-        keptLines.append(line)
-        continue
-      }
-
-      // Parse timestamp and check TTL
-      if let entryTime = DiagnosticLogEntry.parseTimestamp(from: line, referenceDate: now) {
-        if entryTime >= cutoff {
-          keptLines.append(line)
-        }
-      } else {
-        // Keep unparseable lines (context lines, etc.)
-        keptLines.append(line)
-      }
-    }
-
-    let pruned = keptLines.joined(separator: "\n")
-
-    // Only rewrite if we actually removed something
-    if pruned.count < content.count {
-      // Close handles before rewriting
-      logger.closeHandles()
-      try? pruned.write(to: logFile, atomically: true, encoding: .utf8)
-    }
-  }
-
-  /// Delete log files from previous days.
+  /// Delete daily log files older than the configured retention window.
   private func deleteOldFiles() {
     let logger = DiagnosticLogger.shared
     let logDir = logger.logDirectoryURL
     let fm = FileManager.default
-    let todayFileName = logger.currentLogFileURL.lastPathComponent
 
     guard let files = try? fm.contentsOfDirectory(atPath: logDir.path) else { return }
 
+    let calendar = Calendar.current
+    let today = calendar.startOfDay(for: Date())
+    let earliestKeptDay = calendar.date(
+      byAdding: .day,
+      value: -(retentionDays - 1),
+      to: today
+    ) ?? today
+
     for file in files {
-      if file.hasPrefix("snapzy_") && file.hasSuffix(".txt") && file != todayFileName {
-        let filePath = logDir.appendingPathComponent(file)
-        try? fm.removeItem(at: filePath)
-      }
+      guard let fileDay = Self.date(fromLogFileName: file), fileDay < earliestKeptDay else { continue }
+      let filePath = logDir.appendingPathComponent(file)
+      try? fm.removeItem(at: filePath)
     }
+  }
+
+  private static func date(fromLogFileName fileName: String) -> Date? {
+    guard fileName.hasPrefix("snapzy_"), fileName.hasSuffix(".txt") else { return nil }
+
+    let start = fileName.index(fileName.startIndex, offsetBy: "snapzy_".count)
+    let end = fileName.index(fileName.endIndex, offsetBy: -".txt".count)
+    guard start < end else { return nil }
+
+    let dateString = String(fileName[start..<end])
+    let formatter = DateFormatter()
+    formatter.dateFormat = "yyyy-MM-dd"
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = Calendar.current.timeZone
+    formatter.isLenient = false
+    return formatter.date(from: dateString).map { Calendar.current.startOfDay(for: $0) }
   }
 }

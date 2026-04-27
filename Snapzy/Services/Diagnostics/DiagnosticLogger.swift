@@ -112,10 +112,16 @@ final class DiagnosticLogger {
 
   // MARK: - File Management
 
-  private func logFileName(for date: Date) -> String {
+  private func logDateString(for date: Date) -> String {
     let fmt = DateFormatter()
     fmt.dateFormat = "yyyy-MM-dd"
-    return "\(filePrefix)\(fmt.string(from: date)).\(fileExtension)"
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    fmt.timeZone = Calendar.current.timeZone
+    return fmt.string(from: date)
+  }
+
+  private func logFileName(for date: Date) -> String {
+    "\(filePrefix)\(logDateString(for: date)).\(fileExtension)"
   }
 
   private func ensureLogDirectory() {
@@ -126,11 +132,7 @@ final class DiagnosticLogger {
   }
 
   private func fileHandle(for date: Date) -> FileHandle? {
-    let dateString = {
-      let fmt = DateFormatter()
-      fmt.dateFormat = "yyyy-MM-dd"
-      return fmt.string(from: date)
-    }()
+    let dateString = logDateString(for: date)
 
     // Reuse handle if same day
     if dateString == currentDateString, let handle = currentFileHandle {

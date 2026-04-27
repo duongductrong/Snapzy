@@ -1478,61 +1478,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sammeln Sie Diagnoseprotokolle, um uns bei der Behebung von Fehlern zu helfen"
+            "value" : "Lokale Protokolle für App-, Aufnahme-, Bildschirmaufzeichnungs- und Absturzdiagnosen speichern"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collect diagnostic logs to help us fix bugs"
+            "value" : "Save local logs for app, capture, recording, and crash diagnostics"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recopile registros de diagnóstico para ayudarnos a corregir errores"
+            "value" : "Guardar registros locales para diagnósticos de la app, capturas, grabaciones y fallos"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Collectez les journaux de diagnostic pour nous aider à corriger les bugs"
+            "value" : "Enregistrer des journaux locaux pour diagnostiquer l’app, les captures, les enregistrements et les incidents"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バグ修正に役立つ診断ログを収集します"
+            "value" : "アプリ、キャプチャ、録画、クラッシュの診断用にローカルログを保存します"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "버그 수정에 도움이 되도록 진단 로그를 수집하세요"
+            "value" : "앱, 캡처, 녹화, 충돌 진단을 위해 로컬 로그를 저장합니다"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Соберите журналы диагностики, чтобы помочь нам исправить ошибки"
+            "value" : "Сохранять локальные журналы для диагностики приложения, снимков, записей и сбоев"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Thu thập log chẩn đoán để giúp chúng tôi sửa lỗi"
+            "value" : "Lưu log cục bộ cho chẩn đoán app, chụp, quay màn hình và sự cố"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "收集诊断日志以帮助我们修复错误"
+            "value" : "保存用于应用、截图、录制和崩溃诊断的本地日志"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "收集診斷日誌以幫助我們修復錯誤"
+            "value" : "儲存用於 App、截圖、錄影和崩潰診斷的本機日誌"
           }
         }
       }
@@ -1542,61 +1542,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Absturzprotokollierung"
+            "value" : "Diagnoseprotokollierung"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Crash Logging"
+            "value" : "Diagnostic Logging"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Registro de fallos"
+            "value" : "Registro de diagnóstico"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Journalisation des incidents"
+            "value" : "Journalisation des diagnostics"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クラッシュログ"
+            "value" : "診断ログ"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "충돌 로깅"
+            "value" : "진단 로깅"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Регистрация сбоев"
+            "value" : "Журналирование диагностики"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ghi log sự cố"
+            "value" : "Ghi log chẩn đoán"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "崩溃记录"
+            "value" : "诊断日志"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "崩潰記錄"
+            "value" : "診斷日誌"
           }
         }
       }
@@ -2433,6 +2433,134 @@
         }
       }
     },
+    "preferences-general.log-retention-description" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eine Diagnoseprotokolldatei pro Tag für %d Tage behalten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep one diagnostic log file per day for %d days"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conservar un archivo de registro de diagnóstico por día durante %d días"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conserver un fichier journal de diagnostic par jour pendant %d jours"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d日間、1日につき1つの診断ログファイルを保持します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d일 동안 하루에 하나의 진단 로그 파일을 보관합니다"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранить по одному файлу журнала диагностики в день в течение %d дней"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữ mỗi ngày 1 tệp log chẩn đoán trong %d ngày"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留 %d 天，每天一个诊断日志文件"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留 %d 天，每天一個診斷日誌檔案"
+          }
+        }
+      }
+    },
+    "preferences-general.log-retention-title" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Protokolle behalten für"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Logs For"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conservar registros durante"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Conserver les journaux pendant"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ログの保持期間"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그 보관 기간"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Хранить журналы"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữ log trong"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志保留时间"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日誌保留時間"
+          }
+        }
+      }
+    },
     "preferences-general.never" : {
       "localizations" : {
         "de" : {
@@ -2625,6 +2753,70 @@
         }
       }
     },
+    "preferences-general.open-report-page-button" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Berichtsseite öffnen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Report Page"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir página de informe"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir la page de rapport"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "報告ページを開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고 페이지 열기"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть страницу отчета"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở trang báo lỗi"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开报告页面"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開啟回報頁面"
+          }
+        }
+      }
+    },
     "preferences-general.play-sounds-description" : {
       "localizations" : {
         "de" : {
@@ -2813,6 +3005,134 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重新啓動"
+          }
+        }
+      }
+    },
+    "preferences-general.report-issue-description" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnoseprotokolle bei Problemen über %@ senden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send diagnostic logs at %@ when something goes wrong"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envía registros de diagnóstico en %@ cuando algo vaya mal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Envoyez les journaux de diagnostic sur %@ en cas de problème"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "問題が発生したら %@ で診断ログを送信します"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제가 생기면 %@에서 진단 로그를 보내세요"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При проблемах отправляйте журналы диагностики на %@"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gửi log chẩn đoán tại %@ khi gặp vấn đề"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遇到问题时在 %@ 发送诊断日志"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "遇到問題時在 %@ 傳送診斷日誌"
+          }
+        }
+      }
+    },
+    "preferences-general.report-issue-title" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Problem melden"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Report a Problem"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Informar de un problema"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signaler un problème"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "問題を報告"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문제 신고"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сообщить о проблеме"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Báo vấn đề"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "报告问题"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "回報問題"
           }
         }
       }

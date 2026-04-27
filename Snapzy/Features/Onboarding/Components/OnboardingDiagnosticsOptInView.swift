@@ -2,7 +2,7 @@
 //  DiagnosticsOptInView.swift
 //  Snapzy
 //
-//  Onboarding step for crash logging opt-in — adaptive dark/light theme
+//  Onboarding step for diagnostic logging opt-in — adaptive dark/light theme
 //
 
 import SwiftUI
@@ -43,7 +43,7 @@ struct DiagnosticsOptInView: View {
             .frame(width: 24, alignment: .center)
 
           VStack(alignment: .leading, spacing: 2) {
-            Text(enableCrashLoggingTitle)
+            Text(enableDiagnosticLoggingTitle)
               .font(.system(size: 13, weight: .medium))
               .foregroundColor(VSDesignSystem.Colors.primary)
 
@@ -101,16 +101,16 @@ struct DiagnosticsOptInView: View {
   private var diagnosticsDescription: String {
     onboardingLocalization.string(
       "onboarding.diagnostics.description",
-      defaultValue: "Allow local crash logs so Snapzy can recover better when something goes wrong.",
+      defaultValue: "Allow local diagnostic logs so Snapzy can recover better when something goes wrong.",
       comment: "Diagnostics onboarding step description"
     )
   }
 
-  private var enableCrashLoggingTitle: String {
+  private var enableDiagnosticLoggingTitle: String {
     onboardingLocalization.string(
       "onboarding.diagnostics.enable-crash-logging",
-      defaultValue: "Enable crash logging",
-      comment: "Toggle label for enabling crash logging during onboarding"
+      defaultValue: "Enable diagnostic logging",
+      comment: "Toggle label for enabling diagnostic logging during onboarding"
     )
   }
 
@@ -118,7 +118,7 @@ struct DiagnosticsOptInView: View {
     onboardingLocalization.string(
       "onboarding.diagnostics.logs-stored-locally",
       defaultValue: "Logs stay on this Mac unless you choose to share them.",
-      comment: "Supporting text below crash logging toggle during onboarding"
+      comment: "Supporting text below diagnostic logging toggle during onboarding"
     )
   }
 

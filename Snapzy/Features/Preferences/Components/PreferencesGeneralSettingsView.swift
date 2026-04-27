@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
   @AppStorage(PreferencesKeys.diagnosticsEnabled) private var diagnosticsEnabled = true
+  @AppStorage(PreferencesKeys.diagnosticsRetentionDays) private var diagnosticsRetentionDays = LogCleanupScheduler.defaultRetentionDays
   @Environment(\.openWindow) private var openWindow
   @ObservedObject private var themeManager = ThemeManager.shared
 
@@ -102,14 +103,53 @@ struct GeneralSettingsView: View {
       }
 
       Section(L10n.PreferencesGeneral.diagnosticsSection) {
-        SettingRow(icon: "doc.text.magnifyingglass", title: L10n.PreferencesGeneral.crashLoggingTitle, description: L10n.PreferencesGeneral.crashLoggingDescription) {
+        SettingRow(
+          icon: "doc.text.magnifyingglass",
+          title: L10n.PreferencesGeneral.diagnosticLoggingTitle,
+          description: L10n.PreferencesGeneral.diagnosticLoggingDescription
+        ) {
           Toggle("", isOn: $diagnosticsEnabled)
             .labelsHidden()
+        }
+
+        SettingRow(
+          icon: "calendar.badge.clock",
+          title: L10n.PreferencesGeneral.logRetentionTitle,
+          description: L10n.PreferencesGeneral.logRetentionDescription(diagnosticsRetentionDays)
+        ) {
+          HStack(spacing: 8) {
+            Text("\(diagnosticsRetentionDays)d")
+              .frame(width: 36, alignment: .trailing)
+              .monospacedDigit()
+              .foregroundColor(.secondary)
+            Stepper(
+              "",
+              value: Binding(
+                get: { diagnosticsRetentionDays },
+                set: { diagnosticsRetentionDays = $0 }
+              ),
+              in: LogCleanupScheduler.retentionDaysRange
+            )
+            .labelsHidden()
+          }
+          .frame(width: 120, alignment: .trailing)
         }
 
         SettingRow(icon: "folder", title: L10n.PreferencesGeneral.logFilesTitle, description: logSizeText) {
           Button(L10n.PreferencesGeneral.openFolderButton) {
             revealLogFolder()
+          }
+          .buttonStyle(.bordered)
+          .controlSize(.small)
+        }
+
+        SettingRow(
+          icon: "exclamationmark.bubble",
+          title: L10n.PreferencesGeneral.reportIssueTitle,
+          description: L10n.PreferencesGeneral.reportIssueDescription(bugReportDisplayAddress)
+        ) {
+          Button(L10n.PreferencesGeneral.openReportPageButton) {
+            openBugReportPage()
           }
           .buttonStyle(.bordered)
           .controlSize(.small)
@@ -132,6 +172,9 @@ struct GeneralSettingsView: View {
       initializeExportLocation()
       updateLogSize()
       updateCacheSize()
+    }
+    .onChange(of: diagnosticsRetentionDays) { _ in
+      LogCleanupScheduler.shared.performCleanupNow()
     }
   }
 
@@ -214,6 +257,10 @@ struct GeneralSettingsView: View {
 
   // MARK: - Diagnostics
 
+  private var bugReportDisplayAddress: String {
+    CrashReportService.bugReportURL.absoluteString.replacingOccurrences(of: "https://", with: "")
+  }
+
   private func revealLogFolder() {
     let logDir = DiagnosticLogger.shared.logDirectoryURL
     let fm = FileManager.default
@@ -240,6 +287,10 @@ struct GeneralSettingsView: View {
     } else {
       logSizeText = ByteCountFormatter.string(fromByteCount: Int64(totalBytes), countStyle: .file)
     }
+  }
+
+  private func openBugReportPage() {
+    NSWorkspace.shared.open(CrashReportService.bugReportURL)
   }
 }
 

@@ -1032,9 +1032,9 @@ enum L10n {
       defaultValue: "Snapzy can collect anonymous diagnostic logs when something goes wrong. These logs help us find and fix bugs faster.",
       comment: "Diagnostics opt-in description"
     )
-    static let enableCrashLogging = string(
+    static let enableDiagnosticLogging = string(
       "onboarding.diagnostics.enable-crash-logging",
-      defaultValue: "Enable Crash Logging",
+      defaultValue: "Enable Diagnostic Logging",
       comment: "Diagnostics toggle title"
     )
     static let logsStoredLocally = string(
@@ -1474,14 +1474,14 @@ enum L10n {
       defaultValue: "Never",
       comment: "Label shown when an event has never happened"
     )
-    static let crashLoggingTitle = string(
+    static let diagnosticLoggingTitle = string(
       "preferences-general.crash-logging-title",
-      defaultValue: "Crash Logging",
+      defaultValue: "Diagnostic Logging",
       comment: "General preferences setting title"
     )
-    static let crashLoggingDescription = string(
+    static let diagnosticLoggingDescription = string(
       "preferences-general.crash-logging-description",
-      defaultValue: "Collect diagnostic logs to help us fix bugs",
+      defaultValue: "Save local logs for app, capture, recording, and crash diagnostics",
       comment: "General preferences setting description"
     )
     static let logFilesTitle = string(
@@ -1489,11 +1489,42 @@ enum L10n {
       defaultValue: "Log Files",
       comment: "General preferences setting title"
     )
+    static let logRetentionTitle = string(
+      "preferences-general.log-retention-title",
+      defaultValue: "Keep Logs For",
+      comment: "General preferences setting title"
+    )
+    static func logRetentionDescription(_ days: Int) -> String {
+      format(
+        "preferences-general.log-retention-description",
+        defaultValue: "Keep one diagnostic log file per day for %d days",
+        comment: "General preferences setting description. %d is the number of days.",
+        days
+      )
+    }
     static let openFolderButton = string(
       "preferences-general.open-folder-button",
       defaultValue: "Open Folder",
       comment: "General preferences button title"
     )
+    static let openReportPageButton = string(
+      "preferences-general.open-report-page-button",
+      defaultValue: "Open Report Page",
+      comment: "General preferences button title"
+    )
+    static let reportIssueTitle = string(
+      "preferences-general.report-issue-title",
+      defaultValue: "Report a Problem",
+      comment: "General preferences setting title"
+    )
+    static func reportIssueDescription(_ destination: String) -> String {
+      format(
+        "preferences-general.report-issue-description",
+        defaultValue: "Send diagnostic logs at %@ when something goes wrong",
+        comment: "General preferences setting description. %@ is the bug report destination.",
+        destination
+      )
+    }
     static let restartOnboardingTitle = string(
       "preferences-general.restart-onboarding-title",
       defaultValue: "Restart Onboarding",

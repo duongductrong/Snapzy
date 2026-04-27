@@ -28,11 +28,16 @@ final class AppCoordinator {
       context: ["previousCrash": didCrash ? "true" : "false"]
     )
     LegacyLicenseCleanupService.shared.runIfNeeded()
+
+    let defaults = UserDefaults.standard
+    if defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) == nil {
+      defaults.set(LogCleanupScheduler.defaultRetentionDays, forKey: PreferencesKeys.diagnosticsRetentionDays)
+    }
+
     LogCleanupScheduler.shared.start()
     RecordingMetadataCleanupScheduler.shared.start()
 
     // History defaults
-    let defaults = UserDefaults.standard
     if defaults.object(forKey: PreferencesKeys.historyEnabled) == nil {
       defaults.set(true, forKey: PreferencesKeys.historyEnabled)
     }
