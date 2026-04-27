@@ -28,6 +28,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.8] - 2026-04-27
+
+### Bug Fixes
+-  Enhance recording functionality with improved state management and error handling (8935e48)
+
+### Chore
+- refactor: Refactor crash reporting to problem reporting (b4c0b5c)
+- refactor: Improve diagnostic logging retention settings and localization updates (a2eac24)
+- refactor: Enhance diagnostic logging across various services (286e825)
+- chore: update appcast, cask, and readme for v1.9.7 (16b398a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.7] - 2026-04-27
 
 ### Chore
