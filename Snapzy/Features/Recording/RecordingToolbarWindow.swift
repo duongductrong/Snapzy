@@ -47,6 +47,7 @@ final class RecordingToolbarState: ObservableObject {
   @Published var outputMode: RecordingOutputMode
   @Published var highlightClicks: Bool
   @Published var showKeystrokes: Bool
+  @Published var isPreparingToRecord: Bool = false
 
   var onCaptureModeChanged: ((RecordingCaptureMode) -> Void)?
 

@@ -107,6 +107,7 @@ enum RecordingError: Error, LocalizedError {
   case setupFailed(String)
   case writeFailed(String)
   case cancelled
+  case alreadyActive
 
   var errorDescription: String? {
     switch self {
@@ -116,6 +117,7 @@ enum RecordingError: Error, LocalizedError {
     case .setupFailed(let msg): return L10n.Recording.setupFailed(msg)
     case .writeFailed(let msg): return L10n.Recording.writeFailed(msg)
     case .cancelled: return L10n.Recording.cancelled
+    case .alreadyActive: return L10n.RecordingToolbar.recordingInProgress
     }
   }
 }
@@ -215,7 +217,12 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     excludeOwnApplication: Bool = true,
     excludedWindowIDs: [CGWindowID] = []
   ) async throws {
-    guard state == .idle else { return }
+    guard state == .idle else {
+      DiagnosticLogger.shared.log(.debug, .recording, "prepareRecording blocked: recorder busy", context: [
+        "state": "\(state)"
+      ])
+      throw RecordingError.alreadyActive
+    }
     state = .preparing
     error = nil
     session.sessionStarted = false
@@ -304,11 +311,17 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       scaleFactor = 2.0
     }
 
-    let captureGeometry = try resolveCaptureGeometry(
-      display: display,
-      rect: rect,
-      scaleFactor: scaleFactor
-    )
+    let captureGeometry: CaptureGeometry
+    do {
+      captureGeometry = try resolveCaptureGeometry(
+        display: display,
+        rect: rect,
+        scaleFactor: scaleFactor
+      )
+    } catch {
+      cleanup()
+      throw error
+    }
     self.recordingRect = captureGeometry.globalCaptureRect
 
     // Generate output URL using user-configurable template (with legacy fallback).
@@ -339,28 +352,38 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       fileExtension: format.fileExtension
     )
 
-    // Setup AVAssetWriter
-    try setupAssetWriter(
-      width: captureGeometry.outputWidth,
-      height: captureGeometry.outputHeight,
-      captureSystemAudio: captureSystemAudio,
-      captureMicrophone: captureMicrophone
-    )
+    do {
+      // Setup AVAssetWriter
+      try setupAssetWriter(
+        width: captureGeometry.outputWidth,
+        height: captureGeometry.outputHeight,
+        captureSystemAudio: captureSystemAudio,
+        captureMicrophone: captureMicrophone
+      )
 
-    try await setupStream(
-      display: display,
-      captureGeometry: captureGeometry,
-      captureSystemAudio: captureSystemAudio,
-      captureMicrophone: captureMicrophone,
-      content: content
-    )
+      try await setupStream(
+        display: display,
+        captureGeometry: captureGeometry,
+        captureSystemAudio: captureSystemAudio,
+        captureMicrophone: captureMicrophone,
+        content: content
+      )
 
-    mouseTracker = RecordingMouseTracker(recordingRect: captureGeometry.globalCaptureRect, fps: fps)
+      mouseTracker = RecordingMouseTracker(recordingRect: captureGeometry.globalCaptureRect, fps: fps)
+    } catch {
+      cleanup()
+      throw error
+    }
   }
 
   /// Start the recording
   func startRecording() async throws {
-    guard state == .preparing else { return }
+    guard state == .preparing else {
+      DiagnosticLogger.shared.log(.debug, .recording, "startRecording blocked: recorder not prepared", context: [
+        "state": "\(state)"
+      ])
+      throw RecordingError.alreadyActive
+    }
 
     session.assetWriter?.startWriting()
 
@@ -388,8 +411,12 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       DiagnosticLogger.shared.logError(.recording, error, "Failed to start stream capture")
       session.isCapturing = false
       session.setOnFirstVideoFrame(nil)
-      state = .idle
       self.error = .setupFailed(error.localizedDescription)
+      if let activeStream = stream {
+        await teardownStream(activeStream)
+      }
+      session.cancelWriting()
+      cleanup()
       throw RecordingError.setupFailed(error.localizedDescription)
     }
 

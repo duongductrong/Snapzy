@@ -20,6 +20,7 @@ final class RecordingCoordinator: ObservableObject {
   private var regionOverlayWindows: [RecordingRegionOverlayWindow] = []
   private var selectedRect: CGRect?
   private let recorder = ScreenRecordingManager.shared
+  private var isStartingRecording = false
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
 
@@ -291,11 +292,13 @@ final class RecordingCoordinator: ObservableObject {
         SoundManager.play("Purr")
 
       } catch let error as RecordingError {
-        showErrorAlert(error)
-        cancel()
+        if !showErrorAlert(error) {
+          cancel()
+        }
       } catch {
-        showErrorAlert(.setupFailed(error.localizedDescription))
-        cancel()
+        if !showErrorAlert(.setupFailed(error.localizedDescription)) {
+          cancel()
+        }
       }
     }
   }
@@ -314,6 +317,7 @@ final class RecordingCoordinator: ObservableObject {
 
   private func startRecording() {
     guard let rect = selectedRect, let window = toolbarWindow else { return }
+    guard beginRecordingStartAttempt(source: "toolbar") else { return }
 
     let format = window.selectedFormat
     DiagnosticLogger.shared.log(.info, .recording, "Start recording", context: [
@@ -341,6 +345,7 @@ final class RecordingCoordinator: ObservableObject {
     let captureMicrophone = window.captureMicrophone
 
     guard let saveDirectory = resolveSaveDirectoryForOperation() else {
+      finishRecordingStartAttempt()
       showSaveLocationPermissionAlert()
       return
     }
@@ -393,20 +398,27 @@ final class RecordingCoordinator: ObservableObject {
 
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder)
+        finishRecordingStartAttempt()
 
       } catch let error as RecordingError {
         DiagnosticLogger.shared.logError(.recording, error, "Recording setup failed")
-        showErrorAlert(error)
-        cancel()
+        finishRecordingStartAttempt()
+        if case .alreadyActive = error { return }
+        if !showErrorAlert(error) {
+          cancel()
+        }
       } catch {
         DiagnosticLogger.shared.logError(.recording, error, "Recording setup failed (generic)")
-        showErrorAlert(.setupFailed(error.localizedDescription))
-        cancel()
+        finishRecordingStartAttempt()
+        if !showErrorAlert(.setupFailed(error.localizedDescription)) {
+          cancel()
+        }
       }
     }
   }
 
-  private func showErrorAlert(_ error: RecordingError) {
+  @discardableResult
+  private func showErrorAlert(_ error: RecordingError) -> Bool {
     DiagnosticLogger.shared.log(.error, .recording, "Error alert shown", context: ["error": error.localizedDescription])
     let alert = NSAlert()
     alert.messageText = L10n.Recording.failedTitle
@@ -428,21 +440,24 @@ final class RecordingCoordinator: ObservableObject {
         if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
           NSWorkspace.shared.open(url)
         }
+        return false
       case .alertSecondButtonReturn:
         // Continue recording without microphone
         startRecordingWithoutMicrophone()
-        return
+        return true
       default:
-        break
+        return false
       }
     } else {
       alert.addButton(withTitle: L10n.Common.ok)
       alert.runModal()
+      return false
     }
   }
 
   private func startRecordingWithoutMicrophone() {
     guard let rect = selectedRect, let window = toolbarWindow else { return }
+    guard beginRecordingStartAttempt(source: "microphone-retry") else { return }
 
     // Disable microphone and retry
     window.captureMicrophone = false
@@ -460,6 +475,7 @@ final class RecordingCoordinator: ObservableObject {
     }
 
     guard let saveDirectory = resolveSaveDirectoryForOperation() else {
+      finishRecordingStartAttempt()
       showSaveLocationPermissionAlert()
       return
     }
@@ -495,12 +511,18 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setInteractionEnabled(false)
         }
         window.showRecordingStatusBar(recorder: recorder)
+        finishRecordingStartAttempt()
       } catch let error as RecordingError {
-        showErrorAlert(error)
-        cancel()
+        finishRecordingStartAttempt()
+        if case .alreadyActive = error { return }
+        if !showErrorAlert(error) {
+          cancel()
+        }
       } catch {
-        showErrorAlert(.setupFailed(error.localizedDescription))
-        cancel()
+        finishRecordingStartAttempt()
+        if !showErrorAlert(.setupFailed(error.localizedDescription)) {
+          cancel()
+        }
       }
     }
   }
@@ -662,6 +684,7 @@ final class RecordingCoordinator: ObservableObject {
 
   private func cleanup() {
     DiagnosticLogger.shared.log(.debug, .recording, "Recording cleanup")
+    finishRecordingStartAttempt()
     // Remove escape monitors
     removeEscapeMonitors()
 
@@ -692,6 +715,25 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow = nil
     selectedRect = nil
     isActive = false
+  }
+
+  private func beginRecordingStartAttempt(source: String) -> Bool {
+    guard !isStartingRecording, recorder.state == .idle else {
+      DiagnosticLogger.shared.log(.debug, .recording, "Recording start blocked: recorder busy", context: [
+        "source": source,
+        "state": "\(recorder.state)"
+      ])
+      return false
+    }
+
+    isStartingRecording = true
+    toolbarWindow?.state.isPreparingToRecord = true
+    return true
+  }
+
+  private func finishRecordingStartAttempt() {
+    isStartingRecording = false
+    toolbarWindow?.state.isPreparingToRecord = false
   }
 
   private func resolveSaveDirectoryForOperation() -> URL? {

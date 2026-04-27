@@ -53,7 +53,10 @@ struct RecordButtonWithBadge: View {
   @State private var isHovered = false
 
   var body: some View {
-    Button(action: onRecord) {
+    Button {
+      guard !state.isPreparingToRecord else { return }
+      onRecord()
+    } label: {
       HStack(spacing: 6) {
         Text(L10n.RecordingToolbar.record)
           .font(.system(size: 13, weight: .regular))
@@ -75,6 +78,7 @@ struct RecordButtonWithBadge: View {
       .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
     }
     .buttonStyle(.plain)
+    .disabled(state.isPreparingToRecord)
     .onHover { hovering in
       withAnimation(ToolbarConstants.hoverAnimation) {
         isHovered = hovering
@@ -82,8 +86,9 @@ struct RecordButtonWithBadge: View {
     }
     .background(
       RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-        .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+        .fill(Color.primary.opacity(isHovered && !state.isPreparingToRecord ? 0.08 : 0))
     )
+    .opacity(state.isPreparingToRecord ? 0.65 : 1)
     .accessibilityLabel(L10n.RecordingToolbar.startRecordingAs(state.outputMode.displayName))
     .accessibilityHint(L10n.RecordingToolbar.startRecordingHint)
   }
