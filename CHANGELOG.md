@@ -27,6 +27,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.9.7] - 2026-04-27
+
+### Chore
+- chore: Refactor History Settings UI for improved structure and clarity (52dad5e)
+- chore: update appcast, cask, and readme for v1.9.6 (b919a97)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.6] - 2026-04-26
 
 ### Features
