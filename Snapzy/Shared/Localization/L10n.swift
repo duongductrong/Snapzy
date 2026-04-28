@@ -1730,11 +1730,7 @@ enum L10n {
       defaultValue: "Screenshot Format",
       comment: "Capture preferences section title"
     )
-    static let ocrSection = string(
-      "preferences-capture.section-ocr",
-      defaultValue: "OCR",
-      comment: "Capture preferences section title"
-    )
+
     static let scrollingCaptureSection = string(
       "preferences-capture.section-scrolling-capture",
       defaultValue: "Scrolling Capture",
@@ -1851,16 +1847,7 @@ enum L10n {
       defaultValue: "Object cutout captures require transparency. Snapzy will save them as PNG even when JPEG is selected.",
       comment: "Informational note shown when JPEG screenshot format is selected"
     )
-    static let showOCRScanningOverlayTitle = string(
-      "preferences-capture.show-ocr-scanning-overlay-title",
-      defaultValue: "Show OCR effect",
-      comment: "Capture preferences setting title"
-    )
-    static let showOCRScanningOverlayDescription = string(
-      "preferences-capture.show-ocr-scanning-overlay-description",
-      defaultValue: "Show a subtle progress effect while selected content is being recognized",
-      comment: "Capture preferences setting description"
-    )
+
     static let showSessionHintsTitle = string(
       "preferences-capture.show-session-hints-title",
       defaultValue: "Show Session Hints",

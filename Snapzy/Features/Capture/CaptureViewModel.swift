@@ -131,9 +131,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     UserDefaults.standard.object(forKey: PreferencesKeys.backgroundCutoutAutoCropEnabled) as? Bool ?? true
   }
 
-  private var isOCRScanningOverlayEnabled: Bool {
-    UserDefaults.standard.object(forKey: PreferencesKeys.ocrScanningOverlayEnabled) as? Bool ?? true
-  }
+
 
   /// Always read format from UserDefaults to stay in sync with Settings @AppStorage
   private var resolvedFormat: ImageFormat {
@@ -699,8 +697,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         return
       }
 
-      let keepSelectionOverlay = self.isOCRScanningOverlayEnabled
-      AreaSelectionController.shared.setDismissesAfterSelection(!keepSelectionOverlay)
+
 
       AreaSelectionController.shared.startSelection { [weak self] rect in
         guard let self = self else {
@@ -718,9 +715,6 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         Task { @MainActor in
           defer {
             self.isAreaSelectionActive = false
-            if keepSelectionOverlay {
-              AreaSelectionController.shared.cancelSelection()
-            }
           }
           await Task.yield()
 
@@ -741,13 +735,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             }
             let captureDurationMs = Self.elapsedMilliseconds(since: captureStartTime)
 
-            let scanningOverlaySession = self.isOCRScanningOverlayEnabled
-              ? OCRScanningOverlayController.shared.begin(over: selectedRect)
-              : nil
-            defer {
-              OCRScanningOverlayController.shared.finish(scanningOverlaySession)
-            }
-            await Task.yield()
+
 
             let processingStartTime = CFAbsoluteTimeGetCurrent()
             async let qrResultTask = self.detectQRCodes(in: image)

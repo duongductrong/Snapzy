@@ -33,7 +33,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @AppStorage(PreferencesKeys.screenshotIncludeOwnApp) private var includeOwnAppInScreenshots = false
   @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
-  @AppStorage(PreferencesKeys.ocrScanningOverlayEnabled) private var ocrScanningOverlayEnabled = true
+
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
   @AppStorage(PreferencesKeys.backgroundCutoutAutoCropEnabled) private var backgroundCutoutAutoCropEnabled = true
@@ -215,18 +215,7 @@ struct CaptureSettingsView: View {
           }
         }
 
-        if selectedPane == .screenshot {
-          Section(L10n.PreferencesCapture.ocrSection) {
-            SettingRow(
-              icon: "viewfinder",
-              title: L10n.PreferencesCapture.showOCRScanningOverlayTitle,
-              description: L10n.PreferencesCapture.showOCRScanningOverlayDescription
-            ) {
-              Toggle("", isOn: $ocrScanningOverlayEnabled)
-                .labelsHidden()
-            }
-          }
-        }
+
 
         if selectedPane == .screenshot {
           Section(L10n.PreferencesCapture.scrollingCaptureSection) {
