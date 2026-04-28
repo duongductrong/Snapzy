@@ -151,16 +151,95 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   }
 
   private let windowHideSettleDelay: TimeInterval = 1.0 / 60.0
+  private let frozenSnapshotWindowHideSettleDelay: TimeInterval = 0.05
 
-  @discardableResult
-  private func hideVisibleNormalWindowsIfNeeded(_ shouldHide: Bool) -> Bool {
-    guard shouldHide else { return false }
+  @MainActor
+  private final class HiddenWindowSession {
+    private struct Entry {
+      weak var window: NSWindow?
+      let windowNumber: Int
+      let orderIndex: Int
+    }
 
-    let visibleNormalWindows = NSApp.windows.filter { $0.isVisible && $0.level == .normal }
-    guard !visibleNormalWindows.isEmpty else { return false }
+    private var entries: [Entry]
+    private let keyWindowNumber: Int?
+    private let mainWindowNumber: Int?
+    private let shouldReactivateApp: Bool
+    private var didRestore = false
+
+    init(
+      windows: [NSWindow] = [],
+      keyWindow: NSWindow? = nil,
+      mainWindow: NSWindow? = nil,
+      shouldReactivateApp: Bool = false
+    ) {
+      entries = windows.enumerated().map { index, window in
+        Entry(window: window, windowNumber: window.windowNumber, orderIndex: index)
+      }
+      keyWindowNumber = keyWindow?.windowNumber
+      mainWindowNumber = mainWindow?.windowNumber
+      self.shouldReactivateApp = shouldReactivateApp
+    }
+
+    var didHideWindows: Bool {
+      !entries.isEmpty
+    }
+
+    func restore() {
+      guard !didRestore else { return }
+      didRestore = true
+
+      let liveEntries = entries.compactMap { entry -> (window: NSWindow, windowNumber: Int, orderIndex: Int)? in
+        guard let window = entry.window else { return nil }
+        return (window, entry.windowNumber, entry.orderIndex)
+      }
+      guard !liveEntries.isEmpty else { return }
+
+      for entry in liveEntries.sorted(by: { $0.orderIndex < $1.orderIndex }) where !entry.window.isVisible {
+        entry.window.orderFront(nil)
+      }
+
+      let keyCandidate = liveEntries.first {
+        $0.windowNumber == keyWindowNumber && $0.window.canBecomeKey
+      } ?? liveEntries.first {
+        $0.windowNumber == mainWindowNumber && $0.window.canBecomeKey
+      } ?? liveEntries.last(where: { $0.window.canBecomeKey })
+
+      if let keyCandidate {
+        keyCandidate.window.makeKeyAndOrderFront(nil)
+      }
+
+      if shouldReactivateApp {
+        NSApp.activate(ignoringOtherApps: true)
+      }
+
+      DiagnosticLogger.shared.log(.debug, .ui, "Hidden Snapzy windows restored", context: [
+        "count": "\(liveEntries.count)"
+      ])
+    }
+  }
+
+  private func hideVisibleNormalWindowsIfNeeded(_ shouldHide: Bool) -> HiddenWindowSession {
+    guard shouldHide else { return HiddenWindowSession() }
+
+    let visibleNormalWindows = NSApp.windows.filter {
+      $0.isVisible &&
+      $0.level == .normal &&
+      $0.className != "NSStatusBarWindow"
+    }
+    let session = HiddenWindowSession(
+      windows: visibleNormalWindows,
+      keyWindow: NSApp.keyWindow,
+      mainWindow: NSApp.mainWindow,
+      shouldReactivateApp: NSApp.isActive
+    )
+    guard !visibleNormalWindows.isEmpty else { return session }
 
     visibleNormalWindows.forEach { $0.orderOut(nil) }
-    return true
+    DiagnosticLogger.shared.log(.debug, .ui, "Snapzy windows hidden for capture", context: [
+      "count": "\(visibleNormalWindows.count)"
+    ])
+    return session
   }
 
   // MARK: - Quick Access Settings
@@ -350,13 +429,15 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     let shouldHideOwnWindows = excludeOwnApplication
 
     // Hide only normal-level app windows (not overlay panels) to avoid hiding pooled overlay windows
-    let didHideOwnWindows = hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindows)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindows)
 
-    // Minimal delay to ensure own windows are hidden before the frozen snapshot is taken.
-    let snapshotDelay = didHideOwnWindows ? windowHideSettleDelay : 0
+    // Frozen snapshots can run through the CoreGraphics fast path, so give WindowServer
+    // a few frames to fully remove hidden app windows before the display image is read.
+    let snapshotDelay = hiddenWindowSession.didHideWindows ? frozenSnapshotWindowHideSettleDelay : 0
     DispatchQueue.main.asyncAfter(deadline: .now() + snapshotDelay) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureArea: self deallocated")
+        hiddenWindowSession.restore()
         AreaSelectionController.shared.cancelSelection()
         return
       }
@@ -405,12 +486,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           self.isCapturing = false
           self.isAreaSelectionActive = false
           self.lastCaptureResult = .failure(error)
+          hiddenWindowSession.restore()
           DiagnosticLogger.shared.log(.error, .capture, "Frozen area capture setup failed: \(error.localizedDescription)")
           return
         } catch {
           self.isCapturing = false
           self.isAreaSelectionActive = false
           self.lastCaptureResult = .failure(.captureFailed(error.localizedDescription))
+          hiddenWindowSession.restore()
           DiagnosticLogger.shared.log(.error, .capture, "Frozen area capture setup failed: \(error.localizedDescription)")
           return
         }
@@ -422,7 +505,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           excludeDesktopIcons: excludeDesktopIcons,
           excludeDesktopWidgets: excludeDesktopWidgets,
           excludeOwnApplication: excludeOwnApplication,
-          initialInteractionMode: initialInteractionMode
+          initialInteractionMode: initialInteractionMode,
+          hiddenWindowSession: hiddenWindowSession
         )
       }
     }
@@ -436,7 +520,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     excludeDesktopIcons: Bool,
     excludeDesktopWidgets: Bool,
     excludeOwnApplication: Bool,
-    initialInteractionMode: AreaSelectionInteractionMode = .manualRegion
+    initialInteractionMode: AreaSelectionInteractionMode = .manualRegion,
+    hiddenWindowSession: HiddenWindowSession
   ) {
     AreaSelectionController.shared.startSelection(
       mode: .screenshot,
@@ -450,6 +535,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureArea completion: self deallocated")
         frozenSession.invalidate()
+        hiddenWindowSession.restore()
         return
       }
       defer {
@@ -458,12 +544,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
       guard let selection else {
         frozenSession.invalidate()
+        hiddenWindowSession.restore()
         DiagnosticLogger.shared.log(.info, .capture, "Area capture cancelled by user")
         self.lastCaptureResult = .failure(.cancelled)
         return
       }
 
       Task { @MainActor in
+        defer {
+          hiddenWindowSession.restore()
+        }
         self.isCapturing = true
         await Task.yield()
 
@@ -573,11 +663,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
     )
 
-    let didHideOwnWindows = hideVisibleNormalWindowsIfNeeded(true)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(true)
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + (didHideOwnWindows ? windowHideSettleDelay : 0)) { [weak self] in
+    DispatchQueue.main.asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling: self deallocated")
+        hiddenWindowSession.restore()
         AreaSelectionController.shared.cancelSelection()
         return
       }
@@ -585,6 +676,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       AreaSelectionController.shared.startSelection(mode: .scrollingCapture) { [weak self] rect, _ in
         guard let self = self else {
           DiagnosticLogger.shared.log(.warning, .capture, "captureScrolling completion: self deallocated")
+          hiddenWindowSession.restore()
           return
         }
 
@@ -595,6 +687,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         guard let selectedRect = rect else {
           DiagnosticLogger.shared.log(.info, .capture, "Scrolling capture cancelled by user")
           self.lastCaptureResult = .failure(.cancelled)
+          hiddenWindowSession.restore()
           return
         }
 
@@ -607,7 +700,10 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           rect: selectedRect,
           saveDirectory: actualSaveDirectory,
           format: self.resolvedFormat,
-          prefetchedContentTask: prefetchedContentTask
+          prefetchedContentTask: prefetchedContentTask,
+          onSessionEnded: {
+            hiddenWindowSession.restore()
+          }
         )
       }
     }
@@ -655,12 +751,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     ])
 
     // Hide only normal-level app windows (not overlay panels)
-    hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindowsForRecordingToolbarFlow)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindowsForRecordingToolbarFlow)
 
     // Small delay to ensure window is hidden
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow: self deallocated")
+        hiddenWindowSession.restore()
         AreaSelectionController.shared.cancelSelection()
         return
       }
@@ -673,7 +770,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         self.isAreaSelectionActive = false
         DiagnosticLogger.shared.log(.info, .recording, "Using saved recording area", context: ["rect": "\(Int(savedRect.width))x\(Int(savedRect.height))"])
         Task { @MainActor in
-          RecordingCoordinator.shared.showToolbar(for: savedRect)
+          RecordingCoordinator.shared.showToolbar(
+            for: savedRect,
+            onSessionEnded: {
+              hiddenWindowSession.restore()
+            }
+          )
         }
         return
       }
@@ -691,22 +793,34 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       ) { [weak self] selection in
         guard let self = self else {
           DiagnosticLogger.shared.log(.warning, .recording, "startRecordingFlow completion: self deallocated")
+          hiddenWindowSession.restore()
           return
         }
 
         self.isAreaSelectionActive = false
 
-        guard let selection else { return }
+        guard let selection else {
+          hiddenWindowSession.restore()
+          return
+        }
 
         Task { @MainActor in
           switch selection.target {
           case .rect:
-            RecordingCoordinator.shared.showToolbar(for: selection.rect)
+            RecordingCoordinator.shared.showToolbar(
+              for: selection.rect,
+              onSessionEnded: {
+                hiddenWindowSession.restore()
+              }
+            )
           case .window(let target):
             RecordingCoordinator.shared.showToolbar(
               for: selection.rect,
               captureMode: .application,
-              windowTarget: target
+              windowTarget: target,
+              onSessionEnded: {
+                hiddenWindowSession.restore()
+              }
             )
           }
         }
@@ -735,12 +849,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     )
 
     // Hide only normal-level app windows (not overlay panels)
-    let didHideOwnWindows = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
 
     // Minimal delay to ensure window is hidden when we actually hid one.
-    DispatchQueue.main.asyncAfter(deadline: .now() + (didHideOwnWindows ? windowHideSettleDelay : 0)) { [weak self] in
+    DispatchQueue.main.asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR: self deallocated")
+        hiddenWindowSession.restore()
         AreaSelectionController.shared.cancelSelection()
         return
       }
@@ -750,11 +865,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       AreaSelectionController.shared.startSelection { [weak self] rect in
         guard let self = self else {
           DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR completion: self deallocated")
+          hiddenWindowSession.restore()
           return
         }
 
         guard let selectedRect = rect else {
           self.isAreaSelectionActive = false
+          hiddenWindowSession.restore()
           DiagnosticLogger.shared.log(.info, .ocr, "OCR capture cancelled")
           return
         }
@@ -763,6 +880,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         Task { @MainActor in
           defer {
             self.isAreaSelectionActive = false
+            hiddenWindowSession.restore()
           }
           await Task.yield()
 
@@ -990,11 +1108,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     )
 
     // Hide only normal-level app windows (not overlay panels)
-    let didHideOwnWindows = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
 
-    DispatchQueue.main.asyncAfter(deadline: .now() + (didHideOwnWindows ? windowHideSettleDelay : 0)) { [weak self] in
+    DispatchQueue.main.asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout: self deallocated")
+        hiddenWindowSession.restore()
         AreaSelectionController.shared.cancelSelection()
         return
       }
@@ -1002,11 +1121,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       AreaSelectionController.shared.startSelection { [weak self] rect in
         guard let self = self else {
           DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout completion: self deallocated")
+          hiddenWindowSession.restore()
           return
         }
 
         guard let selectedRect = rect else {
           self.isAreaSelectionActive = false
+          hiddenWindowSession.restore()
           DiagnosticLogger.shared.log(.info, .capture, "Object cutout capture cancelled")
           self.lastCaptureResult = .failure(.cancelled)
           return
@@ -1015,6 +1136,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         Task { @MainActor in
           defer {
             self.isAreaSelectionActive = false
+            hiddenWindowSession.restore()
           }
 
           self.isCapturing = true

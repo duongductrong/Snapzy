@@ -69,6 +69,7 @@ final class ScrollingCaptureCoordinator {
   private var lastScheduledCommitUpdate: ScrollingCaptureStitchUpdate?
   private var lastLivePreviewPublishedAt: TimeInterval?
   private var lastCommittedObservationAt: TimeInterval?
+  private var onSessionEnded: (@MainActor () -> Void)?
 
   var isActive: Bool {
     sessionModel != nil
@@ -78,11 +79,13 @@ final class ScrollingCaptureCoordinator {
     rect: CGRect,
     saveDirectory: URL,
     format: ImageFormat,
-    prefetchedContentTask: ShareableContentPrefetchTask?
+    prefetchedContentTask: ShareableContentPrefetchTask?,
+    onSessionEnded: (@MainActor () -> Void)? = nil
   ) {
     cancel()
     sessionGeneration += 1
 
+    self.onSessionEnded = onSessionEnded
     let model = ScrollingCaptureSessionModel(selectedRect: rect)
     self.sessionModel = model
     self.selectedRect = rect
@@ -195,6 +198,10 @@ final class ScrollingCaptureCoordinator {
     lastCommittedObservationAt = nil
     sessionMetrics = ScrollingCaptureSessionMetrics()
     didFlushSessionMetrics = false
+
+    let sessionEndHandler = onSessionEnded
+    onSessionEnded = nil
+    sessionEndHandler?()
   }
 
   private func startCapture() {

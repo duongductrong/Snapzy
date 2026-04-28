@@ -25,6 +25,7 @@ final class RecordingCoordinator: ObservableObject {
   private var isStartingRecording = false
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
+  private var onSessionEnded: (@MainActor () -> Void)?
 
   // Annotation overlay
   private var annotationToolbarWindow: RecordingAnnotationToolbarWindow?
@@ -140,13 +141,16 @@ final class RecordingCoordinator: ObservableObject {
   func showToolbar(
     for rect: CGRect,
     captureMode: RecordingCaptureMode = .area,
-    windowTarget: WindowCaptureTarget? = nil
+    windowTarget: WindowCaptureTarget? = nil,
+    onSessionEnded: (@MainActor () -> Void)? = nil
   ) {
     guard !isActive else {
       DiagnosticLogger.shared.log(.debug, .recording, "Recording toolbar request ignored: coordinator active")
+      onSessionEnded?()
       return
     }
     isActive = true
+    self.onSessionEnded = onSessionEnded
     presentToolbar(
       for: rect,
       captureMode: captureMode,
@@ -986,6 +990,9 @@ final class RecordingCoordinator: ObservableObject {
     selectedRect = nil
     selectedWindowTarget = nil
     isActive = false
+    let sessionEndHandler = onSessionEnded
+    onSessionEnded = nil
+    sessionEndHandler?()
   }
 
   private func beginRecordingStartAttempt(source: String) -> Bool {
