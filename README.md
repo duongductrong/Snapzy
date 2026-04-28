@@ -26,7 +26,8 @@
     <a href="#documentation">Documentation</a> •
     <a href="#community">Community</a> •
     <a href="#security">Security</a> •
-    <a href="#contributing">Contributing</a>
+    <a href="#contributing">Contributing</a> •
+    <a href="#contributors">Contributors</a>
   </p>
 
   <p>
@@ -116,21 +117,21 @@ This will remove the app from `/Applications`, delete preferences and caches, an
 
 Snapzy registers the `snapzy://` URL scheme so launchers and automation tools can trigger capture actions.
 
-| Action                  | URL |
-| ----------------------- | --- |
-| Fullscreen screenshot   | `snapzy://capture/fullscreen` |
-| Area screenshot         | `snapzy://capture/area` |
-| Scrolling screenshot    | `snapzy://capture/scrolling` |
-| OCR text capture        | `snapzy://capture/ocr` |
-| Object cutout capture   | `snapzy://capture/object-cutout` |
-| Screen recording        | `snapzy://record/screen` |
-| Open Annotate           | `snapzy://open/annotate` |
-| Open Video Editor       | `snapzy://open/video-editor` |
-| Open Cloud Uploads      | `snapzy://open/cloud-uploads` |
-| Open Capture History    | `snapzy://open/history` |
-| Show shortcuts list     | `snapzy://show/shortcuts` |
-| Open Settings           | `snapzy://settings` |
-| Open Settings tab       | `snapzy://settings?tab=shortcuts` |
+| Action                | URL                               |
+| --------------------- | --------------------------------- |
+| Fullscreen screenshot | `snapzy://capture/fullscreen`     |
+| Area screenshot       | `snapzy://capture/area`           |
+| Scrolling screenshot  | `snapzy://capture/scrolling`      |
+| OCR text capture      | `snapzy://capture/ocr`            |
+| Object cutout capture | `snapzy://capture/object-cutout`  |
+| Screen recording      | `snapzy://record/screen`          |
+| Open Annotate         | `snapzy://open/annotate`          |
+| Open Video Editor     | `snapzy://open/video-editor`      |
+| Open Cloud Uploads    | `snapzy://open/cloud-uploads`     |
+| Open Capture History  | `snapzy://open/history`           |
+| Show shortcuts list   | `snapzy://show/shortcuts`         |
+| Open Settings         | `snapzy://settings`               |
+| Open Settings tab     | `snapzy://settings?tab=shortcuts` |
 
 ## Development
 
@@ -165,18 +166,18 @@ If you need archive, export, or DMG packaging commands, see [docs/BUILD.md](docs
 
 Benchmark date: April 19, 2026. Current OCR numbers come from `scripts/ocr_readme_benchmark.swift` on a clean synthetic wrapped UI/article-text corpus with `12 samples / language` across `10 supported languages`. `Character accuracy` is the primary signal, `exact match` is intentionally strict, and `no-output` on this corpus is `0%` for all languages below.
 
-| Language | Character Accuracy | Exact Match |
-| --- | ---: | ---: |
-| English | 100.0% | 100.0% |
-| Vietnamese | 100.0% | 100.0% |
-| Simplified Chinese | 99.3% | 75.0% |
-| Traditional Chinese | 99.0% | 66.7% |
-| Spanish | 99.9% | 91.7% |
-| Japanese | 99.4% | 66.7% |
-| Korean | 99.7% | 83.3% |
-| Russian | 100.0% | 100.0% |
-| French | 99.3% | 33.3% |
-| German | 99.8% | 75.0% |
+| Language            | Character Accuracy | Exact Match |
+| ------------------- | -----------------: | ----------: |
+| English             |             100.0% |      100.0% |
+| Vietnamese          |             100.0% |      100.0% |
+| Simplified Chinese  |              99.3% |       75.0% |
+| Traditional Chinese |              99.0% |       66.7% |
+| Spanish             |              99.9% |       91.7% |
+| Japanese            |              99.4% |       66.7% |
+| Korean              |              99.7% |       83.3% |
+| Russian             |             100.0% |      100.0% |
+| French              |              99.3% |       33.3% |
+| German              |              99.8% |       75.0% |
 
 Real-world screenshots can score lower, especially with emoji, low-contrast footers, unusual punctuation, gradients, blur, or decorative fonts.
 
@@ -189,6 +190,14 @@ To report a vulnerability, please use a [GitHub Security Advisory](https://githu
 ## Contributing
 
 Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
+
+## Contributors
+
+Thanks to all the people who contribute to Snapzy!
+
+<a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
+</a>
 
 ## Star History
 
