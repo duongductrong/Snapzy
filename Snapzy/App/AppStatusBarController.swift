@@ -34,6 +34,10 @@ final class AppStatusBarController: ObservableObject {
   private var trackedPreferencesExcludedWindowID: CGWindowID?
   private var pendingPreferencesWindowTrackingWorkItem: DispatchWorkItem?
 
+  // Processing indicator (OCR, etc.)
+  private var processingSpinner: NSProgressIndicator?
+  private(set) var isProcessing = false
+
   private init() {}
 
   // MARK: - Public API
@@ -60,6 +64,52 @@ final class AppStatusBarController: ObservableObject {
 
   func stopRecording() {
     RecordingCoordinator.shared.stopFromStatusItem()
+  }
+
+  /// Show or hide a processing spinner on the menu bar icon (e.g. during OCR).
+  /// The spinner runs on Core Animation so it stays animated even when the main thread is briefly busy.
+  func setProcessing(_ active: Bool) {
+    guard active != isProcessing else { return }
+    isProcessing = active
+
+    guard let button = statusItem?.button else { return }
+
+    if active {
+      // Swap to a transparent placeholder of the same size to preserve layout
+      if let icon = button.image {
+        let placeholder = NSImage(size: icon.size)
+        placeholder.isTemplate = true
+        button.image = placeholder
+      }
+
+      // Create a spinning indicator sized to match the icon
+      let size: CGFloat = 16
+      let spinner = NSProgressIndicator()
+      spinner.style = .spinning
+      spinner.controlSize = .small
+      spinner.isIndeterminate = true
+      spinner.isDisplayedWhenStopped = false
+      spinner.frame = CGRect(
+        x: (button.bounds.width - size) / 2,
+        y: (button.bounds.height - size) / 2,
+        width: size,
+        height: size
+      )
+      spinner.autoresizingMask = [.minXMargin, .maxXMargin, .minYMargin, .maxYMargin]
+      button.addSubview(spinner)
+      spinner.startAnimation(nil)
+      processingSpinner = spinner
+
+      DiagnosticLogger.shared.log(.debug, .ui, "Status bar processing indicator started")
+    } else {
+      processingSpinner?.stopAnimation(nil)
+      processingSpinner?.removeFromSuperview()
+      processingSpinner = nil
+
+      // Restore original icon
+      button.image = idleStatusImage
+      DiagnosticLogger.shared.log(.debug, .ui, "Status bar processing indicator stopped")
+    }
   }
 
   // MARK: - Private Setup

@@ -5590,6 +5590,11 @@ enum L10n {
   }
 
   enum OCR {
+    static let extractingContent = string(
+      "ocr.extracting-content",
+      defaultValue: "Extracting content...",
+      comment: "Progress toast shown while OCR is extracting text or QR content from the selected area"
+    )
     static let imageConversionFailed = string(
       "ocr.image-conversion-failed",
       defaultValue: "Failed to convert image for OCR processing",

@@ -721,6 +721,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           do {
             let operationStartTime = CFAbsoluteTimeGetCurrent()
 
+            // Show menubar spinner for processing feedback
+            AppStatusBarController.shared.setProcessing(true)
+
             // Capture the screen region
             let captureStartTime = CFAbsoluteTimeGetCurrent()
             guard let image = try await self.captureManager.captureAreaAsImage(
@@ -730,12 +733,17 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               excludeOwnApplication: !self.includesOwnAppInScreenshots,
               prefetchedContentTask: prefetchedContentTask
             ) else {
+              AppStatusBarController.shared.setProcessing(false)
+              AppToastManager.shared.show(
+                message: L10n.ScreenCapture.unableToCaptureSelectedArea,
+                style: .error,
+                position: .bottomCenter,
+                variant: .compact
+              )
               QuickAccessSound.failed.play()
               return
             }
             let captureDurationMs = Self.elapsedMilliseconds(since: captureStartTime)
-
-
 
             let processingStartTime = CFAbsoluteTimeGetCurrent()
             async let qrResultTask = self.detectQRCodes(in: image)
@@ -755,6 +763,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               "totalMs": totalDurationMs
             ]
 
+            AppStatusBarController.shared.setProcessing(false)
+
             guard let clipboardText else {
               if qrResult.unsupportedPayloadCount > 0 {
                 var context = performanceContext
@@ -763,10 +773,17 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 AppToastManager.shared.show(
                   message: L10n.OCR.qrTextOnlyUnsupported,
                   style: .warning,
-                  position: .bottomCenter
+                  position: .bottomCenter,
+                  variant: .compact
                 )
               } else {
                 DiagnosticLogger.shared.log(.warning, .ocr, "OCR capture failed: no text or QR payload found", context: performanceContext)
+                AppToastManager.shared.show(
+                  message: L10n.OCR.noTextFound,
+                  style: .warning,
+                  position: .bottomCenter,
+                  variant: .compact
+                )
               }
               QuickAccessSound.failed.play()
               return
@@ -781,11 +798,24 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             successContext["qrCount"] = "\(qrResult.detections.count)"
             successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
             DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
+            AppToastManager.shared.show(
+              message: L10n.Common.copiedToClipboard,
+              style: .success,
+              position: .bottomCenter,
+              variant: .compact
+            )
             QuickAccessSound.complete.play()
 
           } catch {
             // Error feedback
+            AppStatusBarController.shared.setProcessing(false)
             DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
+            AppToastManager.shared.show(
+              message: error.localizedDescription,
+              style: .error,
+              position: .bottomCenter,
+              variant: .compact
+            )
             QuickAccessSound.failed.play()
           }
         }
