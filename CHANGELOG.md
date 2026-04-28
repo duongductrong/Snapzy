@@ -29,6 +29,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.10.0] - 2026-04-28
+
+### Features
+-  add automation URL scheme (#120) (e93292b)
+-  Add OCR scanning overlay and QR code detection support (77f5035)
+
+### Chore
+- refactor: Remove OCR scanning overlay localization strings (0331578)
+- refactor: Add toggle preference to enable or disable OCR success notifications (363a2df)
+- docs: Add contributors section and reformat markdown tables for consistency (b5377ac)
+- refactor: Update Discord community link in README files (5a59043)
+- refactor: Remove variant parameter from AppToastManager calls in CaptureViewModel (212a3f4)
+- refactor: Add menu bar processing indicator and enhance toast notifications with update support (44de5ba)
+- refactor: Remove OCR scanning overlay functionality and related preferences (2e59202)
+- chore: update appcast, cask, and readme for v1.9.8 (a715356)
+
+### Contributors
+- @Oltian Kadriu
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.9.8] - 2026-04-27
 
 ### Bug Fixes
