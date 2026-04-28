@@ -97,6 +97,11 @@ final class AppCoordinator {
     observers.removeAll()
   }
 
+  func handleDeepLink(_ url: URL) {
+    SnapzyDeepLinkHandler(screenCaptureViewModel: environment.screenCaptureViewModel)
+      .handle(url)
+  }
+
   private func observeNotifications() {
     let onboardingObserver = NotificationCenter.default.addObserver(
       forName: .showOnboarding,

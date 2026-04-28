@@ -112,6 +112,26 @@ This will remove the app from `/Applications`, delete preferences and caches, an
 | Open Cloud Uploads                                      | `⇧⌘L`    |
 | Show shortcuts list                                     | `⇧⌘K`    |
 
+## Automation
+
+Snapzy registers the `snapzy://` URL scheme so launchers and automation tools can trigger capture actions.
+
+| Action                  | URL |
+| ----------------------- | --- |
+| Fullscreen screenshot   | `snapzy://capture/fullscreen` |
+| Area screenshot         | `snapzy://capture/area` |
+| Scrolling screenshot    | `snapzy://capture/scrolling` |
+| OCR text capture        | `snapzy://capture/ocr` |
+| Object cutout capture   | `snapzy://capture/object-cutout` |
+| Screen recording        | `snapzy://record/screen` |
+| Open Annotate           | `snapzy://open/annotate` |
+| Open Video Editor       | `snapzy://open/video-editor` |
+| Open Cloud Uploads      | `snapzy://open/cloud-uploads` |
+| Open Capture History    | `snapzy://open/history` |
+| Show shortcuts list     | `snapzy://show/shortcuts` |
+| Open Settings           | `snapzy://settings` |
+| Open Settings tab       | `snapzy://settings?tab=shortcuts` |
+
 ## Development
 
 For local setup, source builds, and first-time development workflow, start with [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
