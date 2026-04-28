@@ -31,6 +31,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.11.1] - 2026-04-28
+
+### Bug Fixes
+-  Implement hidden window session management for improved capture handling (8eaa7c8)
+
+### Chore
+- docs: Add notarization note for macOS installation in README files (b536032)
+- chore: update appcast, cask, and readme for v1.11.0 (41ba8e2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.11.0] - 2026-04-28
 
 ### Features
