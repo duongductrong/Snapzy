@@ -86,6 +86,14 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install
 6. Mở lại Snapzy sau khi cấp quyền Screen Recording nếu macOS yêu cầu
 7. Cấp thêm quyền Microphone nếu bạn muốn ghi giọng nói trong video
 
+**Lưu ý:** Snapzy hiện chưa được Apple notarize, nên macOS có thể chặn app trong lần mở đầu tiên. Sau khi cài Snapzy vào `/Applications`, hãy chạy:
+
+```bash
+sudo xattr -cr /Applications/Snapzy.app
+```
+
+Tìm hiểu thêm tại [Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445).
+
 ## Gỡ cài đặt
 
 Để xóa hoàn toàn Snapzy, reset mọi quyền và dọn dữ liệu ứng dụng:

@@ -86,6 +86,14 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install
 6. 如果 macOS 提示，请在授予 Screen Recording 后重新启动 Snapzy
 7. 如果你想在录屏中录制人声，也请授予 Microphone 权限
 
+**注意：** Snapzy 目前尚未经过 Apple notarize，因此 macOS 可能会在首次启动时阻止应用打开。将 Snapzy 安装到 `/Applications` 后，请运行：
+
+```bash
+sudo xattr -cr /Applications/Snapzy.app
+```
+
+了解更多：[Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445)。
+
 ## 卸载
 
 若要彻底移除 Snapzy、重置所有权限并清理应用数据：
