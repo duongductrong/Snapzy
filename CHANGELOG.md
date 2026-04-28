@@ -32,6 +32,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.11.2] - 2026-04-28
+
+### Bug Fixes
+-  Increase frozen snapshot window hide settle delay and add option to exclude own application in capture (6981740)
+
+### Contributors
+- @duongductrong
+
 ## [1.11.1] - 2026-04-28
 
 ### Bug Fixes
