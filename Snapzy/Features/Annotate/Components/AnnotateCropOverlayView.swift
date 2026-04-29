@@ -11,7 +11,7 @@ import SwiftUI
 struct CropOverlayView: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
-  let imageSize: CGSize
+  let canvasBounds: CGRect
 
   private let handleSize: CGFloat = 12
   private let cornerHandleLength: CGFloat = 20
@@ -112,10 +112,10 @@ struct CropOverlayView: View {
   }
 
   private func scaledCropRect(_ rect: CGRect) -> CGRect {
-    // Convert from bottom-left origin (image coords) to top-left origin (SwiftUI coords)
+    // Convert from bottom-left origin (canvas coords) to top-left origin (SwiftUI coords)
     CGRect(
-      x: rect.origin.x * scale,
-      y: (imageSize.height - rect.origin.y - rect.height) * scale,
+      x: (rect.origin.x - canvasBounds.minX) * scale,
+      y: (canvasBounds.maxY - rect.origin.y - rect.height) * scale,
       width: rect.width * scale,
       height: rect.height * scale
     )

@@ -712,6 +712,12 @@ final class AnnotateState: ObservableObject {
   var imageWidth: CGFloat { effectiveSourceImage?.size.width ?? Self.defaultCanvasWidth }
   var imageHeight: CGFloat { effectiveSourceImage?.size.height ?? Self.defaultCanvasHeight }
   var imageAspectRatio: CGFloat { imageWidth / imageHeight }
+  var sourceImageBounds: CGRect {
+    CGRect(origin: .zero, size: CGSize(width: imageWidth, height: imageHeight))
+  }
+  var activeAnnotationBounds: CGRect {
+    cropRect?.standardized ?? sourceImageBounds
+  }
 
   /// Calculate display scale for given container size
   /// Image shrinks to fit within (container - padding*2)
@@ -1628,6 +1634,21 @@ final class AnnotateState: ObservableObject {
     isCropShiftLocked = false
   }
 
+  /// Revert the active crop rect to the original image bounds while staying in crop mode.
+  func revertCropToOriginalBounds() {
+    guard hasImage else { return }
+
+    DiagnosticLogger.shared.log(.info, .annotate, "Crop reverted to original bounds")
+    let fullImageRect = sourceImageBounds
+    cropRect = fullImageRect
+    originalCropRect = fullImageRect
+    cropAspectRatio = .free
+    isCropActive = true
+    isCropResizing = false
+    isCropShiftLocked = false
+    clearCutoutAutoCropTracking()
+  }
+
   /// Apply aspect ratio to current crop rect
   func applyCropAspectRatio(_ ratio: CropAspectRatio) {
     cropAspectRatio = ratio
@@ -1680,29 +1701,14 @@ final class AnnotateState: ObservableObject {
     cropRect = constrainedRect
   }
 
-  /// Constrain crop rect to image bounds with minimum size
+  /// Normalize crop rect with minimum size. Crop expansion outside the source image is allowed.
   private func constrainCropToImageBounds(_ rect: CGRect) -> CGRect {
-    var constrained = rect
+    var constrained = rect.standardized
 
     // Enforce minimum size
     let minSize: CGFloat = 20
     if constrained.width < minSize { constrained.size.width = minSize }
     if constrained.height < minSize { constrained.size.height = minSize }
-
-    // Constrain to image bounds
-    constrained.origin.x = max(0, constrained.origin.x)
-    constrained.origin.y = max(0, constrained.origin.y)
-
-    if constrained.maxX > imageWidth {
-      constrained.origin.x = imageWidth - constrained.width
-    }
-    if constrained.maxY > imageHeight {
-      constrained.origin.y = imageHeight - constrained.height
-    }
-
-    // Final clamp for edge cases
-    constrained.origin.x = max(0, constrained.origin.x)
-    constrained.origin.y = max(0, constrained.origin.y)
 
     return constrained
   }

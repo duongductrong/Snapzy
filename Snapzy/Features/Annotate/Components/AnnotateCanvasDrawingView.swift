@@ -13,10 +13,12 @@ import SwiftUI
 struct CanvasDrawingView: NSViewRepresentable {
   let state: AnnotateState
   var displayScale: CGFloat = 1.0
+  var canvasBounds: CGRect
 
   func makeNSView(context: Context) -> DrawingCanvasNSView {
     let view = DrawingCanvasNSView(state: state)
     view.displayScale = displayScale
+    view.canvasBounds = canvasBounds
     return view
   }
 
@@ -26,6 +28,10 @@ struct CanvasDrawingView: NSViewRepresentable {
     }
     if abs(nsView.displayScale - displayScale) > 0.0001 {
       nsView.displayScale = displayScale
+      nsView.invalidateDrawing()
+    }
+    if nsView.canvasBounds != canvasBounds {
+      nsView.canvasBounds = canvasBounds
       nsView.invalidateDrawing()
     }
   }
@@ -47,6 +53,7 @@ final class DrawingCanvasNSView: NSView {
     }
   }
   var displayScale: CGFloat = 1.0
+  var canvasBounds: CGRect = .zero
   private let shortcutManager = AnnotateShortcutManager.shared
   private var currentPath: [CGPoint] = []
   private var isDrawing = false
@@ -286,24 +293,24 @@ final class DrawingCanvasNSView: NSView {
   private func displayToImage(_ point: CGPoint) -> CGPoint {
     guard displayScale > 0 else { return point }
     return CGPoint(
-      x: point.x / displayScale,
-      y: point.y / displayScale
+      x: point.x / displayScale + effectiveCanvasBounds.minX,
+      y: point.y / displayScale + effectiveCanvasBounds.minY
     )
   }
 
   /// Convert image point to display coordinates (for rendering)
   private func imageToDisplay(_ point: CGPoint) -> CGPoint {
     return CGPoint(
-      x: point.x * displayScale,
-      y: point.y * displayScale
+      x: (point.x - effectiveCanvasBounds.minX) * displayScale,
+      y: (point.y - effectiveCanvasBounds.minY) * displayScale
     )
   }
 
   /// Convert image rect to display coordinates
   private func imageToDisplay(_ rect: CGRect) -> CGRect {
     return CGRect(
-      x: rect.origin.x * displayScale,
-      y: rect.origin.y * displayScale,
+      x: (rect.origin.x - effectiveCanvasBounds.minX) * displayScale,
+      y: (rect.origin.y - effectiveCanvasBounds.minY) * displayScale,
       width: rect.width * displayScale,
       height: rect.height * displayScale
     )
@@ -313,37 +320,40 @@ final class DrawingCanvasNSView: NSView {
   private func displayToImage(_ rect: CGRect) -> CGRect {
     guard displayScale > 0 else { return rect }
     return CGRect(
-      x: rect.origin.x / displayScale,
-      y: rect.origin.y / displayScale,
+      x: rect.origin.x / displayScale + effectiveCanvasBounds.minX,
+      y: rect.origin.y / displayScale + effectiveCanvasBounds.minY,
       width: rect.width / displayScale,
       height: rect.height / displayScale
     )
   }
 
-  /// Clamp point to effective drawing bounds (crop rect if applied, otherwise full image)
-  private func clampToImageBounds(_ point: CGPoint) -> CGPoint {
-    // Use crop bounds if crop is applied (not actively editing)
-    let bounds: CGRect
-    if let cropRect = state.cropRect, !state.isCropActive {
-      // Crop is applied - constrain to crop area
-      bounds = cropRect
-    } else {
-      // No crop or crop is being edited - use full image bounds
-      bounds = CGRect(origin: .zero, size: CGSize(width: state.imageWidth, height: state.imageHeight))
+  private var effectiveCanvasBounds: CGRect {
+    guard canvasBounds.width > 0, canvasBounds.height > 0 else {
+      return state.sourceImageBounds
     }
+    return canvasBounds.standardized
+  }
 
+  /// Clamp point to the active drawing bounds. Applied expanded crops become drawable canvas.
+  private func clampToCanvasBounds(_ point: CGPoint) -> CGPoint {
+    let bounds = state.activeAnnotationBounds.standardized
     return CGPoint(
       x: max(bounds.minX, min(point.x, bounds.maxX)),
       y: max(bounds.minY, min(point.y, bounds.maxY))
     )
   }
 
+  private func interactionPoint(from displayPoint: CGPoint) -> CGPoint {
+    let rawImagePoint = displayToImage(displayPoint)
+    guard state.selectedTool != .crop else { return rawImagePoint }
+    return clampToCanvasBounds(rawImagePoint)
+  }
+
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let rawImagePoint = displayToImage(displayPoint)
-    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
+    let imagePoint = interactionPoint(from: displayPoint)
     dragStart = imagePoint  // Store in image coords
 
     // Handle double-click on text annotations to enter edit mode
@@ -506,8 +516,7 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseDragged(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let rawImagePoint = displayToImage(displayPoint)
-    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
+    let imagePoint = interactionPoint(from: displayPoint)
 
     // Handle resizing (in image coordinates)
     if isResizingAnnotation, let handle = activeResizeHandle,
@@ -586,8 +595,7 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseUp(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
-    let rawImagePoint = displayToImage(displayPoint)
-    let imagePoint = clampToImageBounds(rawImagePoint)  // Constrain to canvas
+    let imagePoint = interactionPoint(from: displayPoint)
 
     // Finish resizing
     if isResizingAnnotation {
@@ -756,6 +764,7 @@ final class DrawingCanvasNSView: NSView {
     // Apply scale transform for rendering
     context.saveGState()
     context.scaleBy(x: displayScale, y: displayScale)
+    context.translateBy(x: -effectiveCanvasBounds.minX, y: -effectiveCanvasBounds.minY)
 
     // Draw existing annotations (at image coordinates - transform handles scaling)
     let renderer = AnnotationRenderer(
@@ -1135,14 +1144,6 @@ final class DrawingCanvasNSView: NSView {
   private func handleCropResize(handle: CropHandle, currentPoint: CGPoint, shiftHeld: Bool = false) {
     var newRect = originalCropRect
 
-    // Clamp current point to image boundaries
-    let imageWidth = state.imageWidth
-    let imageHeight = state.imageHeight
-    let clampedPoint = CGPoint(
-      x: max(0, min(currentPoint.x, imageWidth)),
-      y: max(0, min(currentPoint.y, imageHeight))
-    )
-
     let minSize: CGFloat = 20
 
     // Determine target aspect ratio
@@ -1160,40 +1161,40 @@ final class DrawingCanvasNSView: NSView {
     case .topLeft:
       let maxX = originalCropRect.maxX - minSize
       let minY = originalCropRect.minY + minSize
-      newRect.origin.x = min(clampedPoint.x, maxX)
+      newRect.origin.x = min(currentPoint.x, maxX)
       newRect.size.width = originalCropRect.maxX - newRect.origin.x
-      newRect.size.height = max(clampedPoint.y, minY) - originalCropRect.minY
+      newRect.size.height = max(currentPoint.y, minY) - originalCropRect.minY
     case .top:
       let minY = originalCropRect.minY + minSize
-      newRect.size.height = max(clampedPoint.y, minY) - originalCropRect.minY
+      newRect.size.height = max(currentPoint.y, minY) - originalCropRect.minY
     case .topRight:
       let minX = originalCropRect.minX + minSize
       let minY = originalCropRect.minY + minSize
-      newRect.size.width = max(clampedPoint.x, minX) - originalCropRect.minX
-      newRect.size.height = max(clampedPoint.y, minY) - originalCropRect.minY
+      newRect.size.width = max(currentPoint.x, minX) - originalCropRect.minX
+      newRect.size.height = max(currentPoint.y, minY) - originalCropRect.minY
     case .left:
       let maxX = originalCropRect.maxX - minSize
-      newRect.origin.x = min(clampedPoint.x, maxX)
+      newRect.origin.x = min(currentPoint.x, maxX)
       newRect.size.width = originalCropRect.maxX - newRect.origin.x
     case .right:
       let minX = originalCropRect.minX + minSize
-      newRect.size.width = max(clampedPoint.x, minX) - originalCropRect.minX
+      newRect.size.width = max(currentPoint.x, minX) - originalCropRect.minX
     case .bottomLeft:
       let maxX = originalCropRect.maxX - minSize
       let maxY = originalCropRect.maxY - minSize
-      newRect.origin.x = min(clampedPoint.x, maxX)
-      newRect.origin.y = min(clampedPoint.y, maxY)
+      newRect.origin.x = min(currentPoint.x, maxX)
+      newRect.origin.y = min(currentPoint.y, maxY)
       newRect.size.width = originalCropRect.maxX - newRect.origin.x
       newRect.size.height = originalCropRect.maxY - newRect.origin.y
     case .bottom:
       let maxY = originalCropRect.maxY - minSize
-      newRect.origin.y = min(clampedPoint.y, maxY)
+      newRect.origin.y = min(currentPoint.y, maxY)
       newRect.size.height = originalCropRect.maxY - newRect.origin.y
     case .bottomRight:
       let minX = originalCropRect.minX + minSize
       let maxY = originalCropRect.maxY - minSize
-      newRect.origin.y = min(clampedPoint.y, maxY)
-      newRect.size.width = max(clampedPoint.x, minX) - originalCropRect.minX
+      newRect.origin.y = min(currentPoint.y, maxY)
+      newRect.size.width = max(currentPoint.x, minX) - originalCropRect.minX
       newRect.size.height = originalCropRect.maxY - newRect.origin.y
     case .body:
       break
@@ -1223,17 +1224,6 @@ final class DrawingCanvasNSView: NSView {
       // Center the height adjustment
       result.origin.y = rect.origin.y - heightDiff / 2
       result.size.height = newHeight
-      // Clamp to image bounds
-      if result.origin.y < 0 {
-        result.origin.y = 0
-      }
-      if result.maxY > state.imageHeight {
-        result.size.height = state.imageHeight - result.origin.y
-        result.size.width = result.size.height * ratio
-        if handle == .left {
-          result.origin.x = original.maxX - result.size.width
-        }
-      }
 
     case .top, .bottom:
       // Height is the primary dimension, calculate width from height
@@ -1242,17 +1232,6 @@ final class DrawingCanvasNSView: NSView {
       // Center the width adjustment
       result.origin.x = rect.origin.x - widthDiff / 2
       result.size.width = newWidth
-      // Clamp to image bounds
-      if result.origin.x < 0 {
-        result.origin.x = 0
-      }
-      if result.maxX > state.imageWidth {
-        result.size.width = state.imageWidth - result.origin.x
-        result.size.height = result.size.width / ratio
-        if handle == .bottom {
-          result.origin.y = original.maxY - result.size.height
-        }
-      }
 
     case .topLeft, .topRight, .bottomLeft, .bottomRight:
       // For corners, adjust based on which dimension changed more

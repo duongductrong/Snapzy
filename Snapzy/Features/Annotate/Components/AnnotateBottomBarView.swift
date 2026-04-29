@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+private enum AnnotateBottomActionRegistration: Equatable {
+  case annotateDefault
+  case crop
+}
+
 /// Bottom bar containing zoom controls and action buttons
 struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
@@ -31,7 +36,7 @@ struct AnnotateBottomBarView: View {
       // Balanced left — center — right layout
       ZStack {
         // Center: Drag handle (absolute center)
-        if state.hasImage {
+        if state.hasImage && activeActionRegistration == .annotateDefault {
           dragHandle
         }
 
@@ -42,11 +47,12 @@ struct AnnotateBottomBarView: View {
 
           Spacer()
 
-          // Right section: action buttons
-          actionButtons
+          // Right section: registered action surface
+          registeredActionSurface
         }
       }
       .windowBottomBarPadding()
+      .animation(.easeInOut(duration: 0.16), value: activeActionRegistration)
 
       // Cloud upload progress bar (always present to avoid layout shift)
       ProgressView(value: cloudUploadProgress)
@@ -232,7 +238,28 @@ struct AnnotateBottomBarView: View {
 
   // MARK: - Action Buttons
 
-  private var actionButtons: some View {
+  private var activeActionRegistration: AnnotateBottomActionRegistration {
+    // Specialized tools can register a replacement for the default Annotate actions here.
+    if state.selectedTool == .crop && state.isCropActive {
+      return .crop
+    }
+
+    return .annotateDefault
+  }
+
+  @ViewBuilder
+  private var registeredActionSurface: some View {
+    switch activeActionRegistration {
+    case .annotateDefault:
+      annotateActionButtons
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    case .crop:
+      CropToolbarView(state: state)
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    }
+  }
+
+  private var annotateActionButtons: some View {
     let showCloudButton = preferencesManager.isActionEnabled(.uploadToCloud, for: .screenshot)
     let cloudUploadShortcut = annotateShortcutManager.isActionShortcutEnabled(for: .cloudUpload)
       ? annotateShortcutManager.cloudUploadShortcut.displayString : nil

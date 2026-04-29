@@ -84,7 +84,7 @@ enum AnnotationFactory {
       bounds = watermarkBounds(
         drawnBounds: drawnBounds,
         center: start,
-        imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
+        canvasBounds: state.activeAnnotationBounds
       )
     default:
       bounds = CGRect(
@@ -100,14 +100,14 @@ enum AnnotationFactory {
   private static func watermarkBounds(
     drawnBounds: CGRect,
     center: CGPoint,
-    imageSize: CGSize
+    canvasBounds: CGRect
   ) -> CGRect {
     guard drawnBounds.width >= 24, drawnBounds.height >= 24 else {
-      let width = min(max(imageSize.width * 0.42, 220), max(imageSize.width, 1))
-      let height = min(max(imageSize.height * 0.18, 72), max(imageSize.height, 1))
+      let width = min(max(canvasBounds.width * 0.42, 220), max(canvasBounds.width, 1))
+      let height = min(max(canvasBounds.height * 0.18, 72), max(canvasBounds.height, 1))
       let origin = CGPoint(
-        x: min(max(center.x - width / 2, 0), max(imageSize.width - width, 0)),
-        y: min(max(center.y - height / 2, 0), max(imageSize.height - height, 0))
+        x: min(max(center.x - width / 2, canvasBounds.minX), max(canvasBounds.maxX - width, canvasBounds.minX)),
+        y: min(max(center.y - height / 2, canvasBounds.minY), max(canvasBounds.maxY - height, canvasBounds.minY))
       )
       return CGRect(origin: origin, size: CGSize(width: width, height: height))
     }

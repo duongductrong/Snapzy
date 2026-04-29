@@ -12,7 +12,7 @@ import SwiftUI
 struct TextEditOverlay: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
-  let imageSize: CGSize
+  let canvasBounds: CGRect
 
   @State private var editingText: String = ""
   @State private var textHeight: CGFloat = 28
@@ -102,20 +102,20 @@ struct TextEditOverlay: View {
   }
 
   /// Convert image bounds to display coordinates
-  /// The parent view supplies a frame that matches the full image display size.
-  /// Crop clipping and offset are handled by AnnotateCanvasView, so we only:
+  /// The parent view supplies a frame that matches the active canvas bounds.
+  /// Crop offset is handled by this conversion, so we only:
   /// 1. Scale the bounds
   /// 2. Flip Y axis (AppKit bottom-left origin → SwiftUI top-left origin)
   private func calculateDisplayBounds(_ imageBounds: CGRect) -> CGRect {
     // Scale the bounds
-    let scaledX = imageBounds.origin.x * scale
+    let scaledX = (imageBounds.origin.x - canvasBounds.minX) * scale
     let scaledWidth = imageBounds.width * scale
     let scaledHeight = imageBounds.height * scale
 
     // Flip Y axis: AppKit uses bottom-left origin, SwiftUI uses top-left
     // In AppKit: y=0 is bottom, y increases upward
     // In SwiftUI: y=0 is top, y increases downward
-    let flippedY = (imageSize.height - imageBounds.origin.y - imageBounds.height) * scale
+    let flippedY = (canvasBounds.maxY - imageBounds.origin.y - imageBounds.height) * scale
 
     return CGRect(
       x: scaledX,

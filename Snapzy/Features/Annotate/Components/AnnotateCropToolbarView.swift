@@ -2,17 +2,17 @@
 //  CropToolbarView.swift
 //  Snapzy
 //
-//  Floating toolbar for crop tool with aspect ratio presets and controls
+//  Bottom control surface for crop tool with aspect ratio presets and grid toggle
 //
 
 import SwiftUI
 
-/// Floating toolbar displayed during crop mode
+/// Bottom control surface displayed while crop mode owns the shared bottom action slot.
 struct CropToolbarView: View {
   @ObservedObject var state: AnnotateState
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: 10) {
       // Aspect ratio picker
       aspectRatioPicker
 
@@ -21,20 +21,7 @@ struct CropToolbarView: View {
 
       // Grid toggle
       gridToggle
-
-      Divider()
-        .frame(height: 20)
-
-      // Action buttons
-      actionButtons
     }
-    .padding(.horizontal, 16)
-    .padding(.vertical, 10)
-    .background(
-      RoundedRectangle(cornerRadius: 10)
-        .fill(.ultraThinMaterial)
-        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
-    )
   }
 
   // MARK: - Aspect Ratio Picker
@@ -60,34 +47,15 @@ struct CropToolbarView: View {
     } label: {
       Image(systemName: state.showCropGrid ? "grid" : "grid.circle")
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(state.showCropGrid ? .blue : .primary)
+        .foregroundStyle(state.showCropGrid ? Color.accentColor : Color.primary)
         .frame(width: 28, height: 28)
         .background(
           RoundedRectangle(cornerRadius: 6)
-            .fill(state.showCropGrid ? Color.blue.opacity(0.2) : Color.clear)
+            .fill(state.showCropGrid ? Color.accentColor.opacity(0.2) : Color.clear)
         )
     }
     .buttonStyle(.plain)
     .help(L10n.AnnotateUI.toggleRuleOfThirdsGrid)
-  }
-
-  // MARK: - Action Buttons
-
-  private var actionButtons: some View {
-    HStack(spacing: 8) {
-      Button(L10n.Common.cancel) {
-        state.cancelCrop()
-      }
-      .buttonStyle(.bordered)
-      .controlSize(.small)
-
-      Button(L10n.Common.apply) {
-        state.confirmCropInteraction()
-      }
-      .buttonStyle(.borderedProminent)
-      .tint(.blue)
-      .controlSize(.small)
-    }
   }
 }
 
@@ -104,7 +72,7 @@ struct CropRatioButton: View {
     Button(action: action) {
       Text(ratio.displayName)
         .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-        .foregroundColor(isSelected ? .blue : .primary)
+        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(
@@ -118,7 +86,7 @@ struct CropRatioButton: View {
 
   private var backgroundColor: Color {
     if isSelected {
-      return Color.blue.opacity(0.2)
+      return Color.accentColor.opacity(0.2)
     } else if isHovering {
       return Color.primary.opacity(0.1)
     }

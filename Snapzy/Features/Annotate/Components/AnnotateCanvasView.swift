@@ -39,49 +39,29 @@ struct AnnotateCanvasView: View {
     (state.editorMode == .mockup || state.editorMode == .preview) && hasMockupTransforms
   }
 
-  /// Crop toolbar is only visible while the crop rect is actively editable.
-  private var isCropToolbarVisible: Bool {
-    state.selectedTool == .crop && state.isCropActive
-  }
-
   var body: some View {
-    VStack(spacing: 0) {
-      GeometryReader { geometry in
-        ZStack {
-          // Background
-//          Color(nsColor: .textBackgroundColor)
+    GeometryReader { geometry in
+      ZStack {
+        // Background
+//        Color(nsColor: .textBackgroundColor)
 
-          if state.hasImage {
-            // Centered, scaled canvas
-            canvasContent(in: geometry.size)
-              .frame(width: geometry.size.width, height: geometry.size.height)
-          } else {
-            // Drop zone when no image loaded
-            AnnotateDropZoneView(isDragOver: $isDragOver)
-              .onAppear {
-                state.updateViewportMetrics(containerSize: geometry.size, baseCanvasSize: .zero, fitScale: 1.0)
-              }
-              .onChange(of: geometry.size) { newSize in
-                state.updateViewportMetrics(containerSize: newSize, baseCanvasSize: .zero, fitScale: 1.0)
-              }
-          }
+        if state.hasImage {
+          // Centered, scaled canvas
+          canvasContent(in: geometry.size)
+            .frame(width: geometry.size.width, height: geometry.size.height)
+        } else {
+          // Drop zone when no image loaded
+          AnnotateDropZoneView(isDragOver: $isDragOver)
+            .onAppear {
+              state.updateViewportMetrics(containerSize: geometry.size, baseCanvasSize: .zero, fitScale: 1.0)
+            }
+            .onChange(of: geometry.size) { newSize in
+              state.updateViewportMetrics(containerSize: newSize, baseCanvasSize: .zero, fitScale: 1.0)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
-
-      if isCropToolbarVisible {
-        HStack {
-          Spacer(minLength: 0)
-          CropToolbarView(state: state)
-          Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 12)
-        .padding(.bottom, 20)
-        .transition(.move(edge: .bottom).combined(with: .opacity))
-      }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .animation(.easeInOut(duration: 0.2), value: isCropToolbarVisible)
     .onReceive(NotificationCenter.default.publisher(for: .annotateScrollZoom)) { notification in
       guard state.hasImage,
             let delta = notification.userInfo?["delta"] as? CGFloat else { return }
@@ -176,7 +156,7 @@ struct AnnotateCanvasView: View {
       .padding(.vertical, 10)
       .background(Color.red.opacity(0.9))
       .cornerRadius(8)
-      .padding(.bottom, isCropToolbarVisible ? 96 : 20)
+      .padding(.bottom, 20)
       .transition(.move(edge: .bottom).combined(with: .opacity))
       .animation(.easeInOut(duration: 0.3), value: showDropError)
   }
@@ -197,8 +177,8 @@ struct AnnotateCanvasView: View {
 
   private func canvasContent(in containerSize: CGSize) -> some View {
     let margin: CGFloat = 40
-    let availableWidth = containerSize.width - margin * 2
-    let availableHeight = containerSize.height - margin * 2
+    let availableWidth = max(containerSize.width - margin * 2, 1)
+    let availableHeight = max(containerSize.height - margin * 2, 1)
 
     // Use effective values for smooth preview during slider drag
     let currentPadding = state.effectivePadding
@@ -207,30 +187,42 @@ struct AnnotateCanvasView: View {
     // This expands the background to allow image movement
     let alignmentSpace: CGFloat = state.imageAlignment != .center ? 40 : 0
 
-    // Determine effective dimensions based on crop state
-    // When crop is applied (not editing), use crop dimensions for centering
-    let isCropApplied = state.cropRect != nil && !state.isCropActive
-    let effectiveWidth: CGFloat
-    let effectiveHeight: CGFloat
+    let imageBounds = state.sourceImageBounds
+    let cropBounds = state.cropRect?.standardized
 
-    if isCropApplied, let cropRect = state.cropRect {
-      // Use crop dimensions for canvas layout
-      effectiveWidth = cropRect.width
-      effectiveHeight = cropRect.height
+    let fitBounds: CGRect
+    if let cropBounds, !state.isCropActive {
+      fitBounds = cropBounds
     } else {
-      // Use full image dimensions
-      effectiveWidth = state.imageWidth
-      effectiveHeight = state.imageHeight
+      fitBounds = imageBounds
+    }
+
+    // Scale is tied to the currently fitted image/crop, not to the live crop rect.
+    // This keeps crop dimensions predictable while users drag handles outward.
+    let fitLogicalCanvasWidth = fitBounds.width + currentPadding * 2 + alignmentSpace
+    let fitLogicalCanvasHeight = fitBounds.height + currentPadding * 2 + alignmentSpace
+    let scaleX = availableWidth / fitLogicalCanvasWidth
+    let scaleY = availableHeight / fitLogicalCanvasHeight
+    let scale = min(scaleX, scaleY, 1.0)
+
+    let foregroundBounds: CGRect
+    if let cropBounds {
+      if state.isCropActive {
+        foregroundBounds = cropWorkspaceBounds(
+          for: imageBounds,
+          availableSize: CGSize(width: availableWidth, height: availableHeight),
+          scale: scale
+        )
+      } else {
+        foregroundBounds = cropBounds
+      }
+    } else {
+      foregroundBounds = imageBounds
     }
 
     // Logical canvas = effective size + padding + alignment space
-    let logicalCanvasWidth = effectiveWidth + currentPadding * 2 + alignmentSpace
-    let logicalCanvasHeight = effectiveHeight + currentPadding * 2 + alignmentSpace
-
-    // Scale entire canvas to fit in available space (unified scaling)
-    let scaleX = availableWidth / logicalCanvasWidth
-    let scaleY = availableHeight / logicalCanvasHeight
-    let scale = min(scaleX, scaleY, 1.0)
+    let logicalCanvasWidth = foregroundBounds.width + currentPadding * 2 + alignmentSpace
+    let logicalCanvasHeight = foregroundBounds.height + currentPadding * 2 + alignmentSpace
 
     // Background = logical canvas * scale (includes padding + alignment space)
     let bgWidth = logicalCanvasWidth * scale
@@ -241,51 +233,14 @@ struct AnnotateCanvasView: View {
       fitScale: scale
     )
 
-    // When crop is applied, use CROP dimensions for image display frame
-    // This ensures the image frame fits within the background+padding area
-    let imgWidth: CGFloat
-    let imgHeight: CGFloat
-    if isCropApplied, let cropRect = state.cropRect {
-      imgWidth = cropRect.width * scale
-      imgHeight = cropRect.height * scale
-    } else {
-      imgWidth = state.imageWidth * scale
-      imgHeight = state.imageHeight * scale
-    }
-
-    // Image offset for alignment (relative to ZStack center)
-    let imageDisplaySize = CGSize(width: imgWidth, height: imgHeight)
-
-    // Calculate offset based on crop state
-    let offset: CGPoint
-    if isCropApplied {
-      // When crop is applied, image frame is already crop-sized, use normal alignment
-      offset = state.imageOffset(
-        for: CGSize(width: bgWidth, height: bgHeight),
-        imageDisplaySize: imageDisplaySize,
-        displayPadding: currentPadding * scale
-      )
-    } else {
-      // Normal alignment offset
-      offset = state.imageOffset(
-        for: CGSize(width: bgWidth, height: bgHeight),
-        imageDisplaySize: imageDisplaySize,
-        displayPadding: currentPadding * scale
-      )
-    }
-
-    // Calculate clipping rect for applied crop (in display coordinates, relative to full image frame)
-    // Used during crop EDITING to clip the drawing canvas
-    let fullImgWidth = state.imageWidth * scale
-    let fullImgHeight = state.imageHeight * scale
-    let clipRect: CGRect? = (state.isCropActive && state.cropRect != nil) ? state.cropRect.map { cropRect in
-      CGRect(
-        x: cropRect.origin.x * scale,
-        y: (state.imageHeight - cropRect.origin.y - cropRect.height) * scale,
-        width: cropRect.width * scale,
-        height: cropRect.height * scale
-      )
-    } : nil
+    let foregroundWidth = foregroundBounds.width * scale
+    let foregroundHeight = foregroundBounds.height * scale
+    let foregroundDisplaySize = CGSize(width: foregroundWidth, height: foregroundHeight)
+    let offset = state.imageOffset(
+      for: CGSize(width: bgWidth, height: bgHeight),
+      imageDisplaySize: foregroundDisplaySize,
+      displayPadding: currentPadding * scale
+    )
 
     return ZStack {
       // Scaled content group
@@ -295,57 +250,19 @@ struct AnnotateCanvasView: View {
 
         // GROUP: Image + Annotations (transformed together in mockup mode)
         Group {
-          // Image positioned within scaled padding area
-          // When crop is applied, render only the cropped portion
-          if isCropApplied, let cropRect = state.cropRect {
-            croppedImageLayer(
-              cropRect: cropRect,
-              scale: scale
-            )
-          } else {
-            imageLayer(width: imgWidth, height: imgHeight)
-          }
+          sourceImageLayer(visibleBounds: foregroundBounds, scale: scale)
 
-          // Drawing canvas matches image position
-          if isCropApplied, let cropRect = state.cropRect {
-            let cropOffset = cropDisplayOffset(for: cropRect, scale: scale)
-
-            // When crop is applied, clip drawing to crop dimensions
-            CanvasDrawingView(state: state, displayScale: scale)
-              .frame(width: fullImgWidth, height: fullImgHeight)
-              .offset(x: cropOffset.x, y: cropOffset.y)
-              .frame(width: imgWidth, height: imgHeight)
-              .clipped()
-          } else {
-            CanvasDrawingView(state: state, displayScale: scale)
-              .frame(width: imgWidth, height: imgHeight)
-              .clipShape(
-                CropClipShape(clipRect: clipRect, containerSize: CGSize(width: imgWidth, height: imgHeight))
-              )
-          }
+          CanvasDrawingView(state: state, displayScale: scale, canvasBounds: foregroundBounds)
+            .frame(width: foregroundWidth, height: foregroundHeight)
 
           // Text editing overlay (when editing a text annotation)
           if state.editingTextAnnotationId != nil {
-            if isCropApplied, let cropRect = state.cropRect {
-              let cropOffset = cropDisplayOffset(for: cropRect, scale: scale)
-
-              TextEditOverlay(
-                state: state,
-                scale: scale,
-                imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
-              )
-              .frame(width: fullImgWidth, height: fullImgHeight)
-              .offset(x: cropOffset.x, y: cropOffset.y)
-              .frame(width: imgWidth, height: imgHeight)
-              .clipped()
-            } else {
-              TextEditOverlay(
-                state: state,
-                scale: scale,
-                imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
-              )
-              .frame(width: imgWidth, height: imgHeight)
-            }
+            TextEditOverlay(
+              state: state,
+              scale: scale,
+              canvasBounds: foregroundBounds
+            )
+            .frame(width: foregroundWidth, height: foregroundHeight)
           }
         }
         .offset(x: offset.x, y: offset.y)
@@ -357,9 +274,9 @@ struct AnnotateCanvasView: View {
           CropOverlayView(
             state: state,
             scale: scale,
-            imageSize: CGSize(width: state.imageWidth, height: state.imageHeight)
+            canvasBounds: foregroundBounds
           )
-          .frame(width: fullImgWidth, height: fullImgHeight)
+          .frame(width: foregroundWidth, height: foregroundHeight)
           .offset(x: offset.x, y: offset.y)
         }
       }
@@ -380,6 +297,22 @@ struct AnnotateCanvasView: View {
         fitScale: newMetrics.fitScale
       )
     }
+  }
+
+  private func cropWorkspaceBounds(for imageBounds: CGRect, availableSize: CGSize, scale: CGFloat) -> CGRect {
+    let normalizedScale = max(scale, 0.0001)
+    let minimumZoom = max(AnnotateState.minimumZoomLevel, 0.0001)
+    let visibleWidthAtMinimumZoom = availableSize.width / (normalizedScale * minimumZoom)
+    let visibleHeightAtMinimumZoom = availableSize.height / (normalizedScale * minimumZoom)
+    let workspaceWidth = max(imageBounds.width * 3, visibleWidthAtMinimumZoom)
+    let workspaceHeight = max(imageBounds.height * 3, visibleHeightAtMinimumZoom)
+
+    return CGRect(
+      x: imageBounds.midX - workspaceWidth / 2,
+      y: imageBounds.midY - workspaceHeight / 2,
+      width: workspaceWidth,
+      height: workspaceHeight
+    ).standardized
   }
 
   // MARK: - Background Layer
@@ -467,51 +400,19 @@ struct AnnotateCanvasView: View {
   // MARK: - Image Layer
 
   @ViewBuilder
-  private func imageLayer(width: CGFloat, height: CGFloat) -> some View {
-    // Use effective values for smooth preview during slider drag
+  private func sourceImageLayer(visibleBounds: CGRect, scale: CGFloat) -> some View {
     let currentCornerRadius = state.effectiveCornerRadius
     let currentShadowIntensity = state.effectiveShadowIntensity
+    let imageBounds = state.sourceImageBounds
+    let imageOffset = displayOffset(for: imageBounds, in: visibleBounds, scale: scale)
 
     if let sourceImage = state.effectiveSourceImage {
       Image(nsImage: sourceImage)
         .resizable()
         .aspectRatio(contentMode: .fit)
-        .frame(width: width, height: height)
-        .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
-        .shadow(
-          color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
-          radius: 15,
-          x: 0,
-          y: 8
-        )
-    }
-  }
-
-  // MARK: - Cropped Image Layer
-
-  /// Renders only the cropped portion of the source image.
-  /// Uses offset + frame + clipped pattern to display just the crop region.
-  @ViewBuilder
-  private func croppedImageLayer(
-    cropRect: CGRect,
-    scale: CGFloat
-  ) -> some View {
-    let currentCornerRadius = state.effectiveCornerRadius
-    let currentShadowIntensity = state.effectiveShadowIntensity
-    let cropOffset = cropDisplayOffset(for: cropRect, scale: scale)
-    let cropWidth = cropRect.width * scale
-    let cropHeight = cropRect.height * scale
-    let fullImageWidth = state.imageWidth * scale
-    let fullImageHeight = state.imageHeight * scale
-
-    if let sourceImage = state.effectiveSourceImage {
-      // Render full image, offset so crop region is at top-left, then clip
-      Image(nsImage: sourceImage)
-        .resizable()
-        .aspectRatio(contentMode: .fit)
-        .frame(width: fullImageWidth, height: fullImageHeight)
-        .offset(x: cropOffset.x, y: cropOffset.y)
-        .frame(width: cropWidth, height: cropHeight)
+        .frame(width: imageBounds.width * scale, height: imageBounds.height * scale)
+        .offset(x: imageOffset.x, y: imageOffset.y)
+        .frame(width: visibleBounds.width * scale, height: visibleBounds.height * scale)
         .clipped()
         .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .shadow(
@@ -523,16 +424,10 @@ struct AnnotateCanvasView: View {
     }
   }
 
-  /// Aligns cropped content to the same visible crop window used by the image and canvas.
-  private func cropDisplayOffset(for cropRect: CGRect, scale: CGFloat) -> CGPoint {
-    let fullImageWidth = state.imageWidth * scale
-    let fullImageHeight = state.imageHeight * scale
-    let cropWidth = cropRect.width * scale
-    let cropHeight = cropRect.height * scale
-
+  private func displayOffset(for contentBounds: CGRect, in visibleBounds: CGRect, scale: CGFloat) -> CGPoint {
     return CGPoint(
-      x: (fullImageWidth - cropWidth) / 2 - (cropRect.origin.x * scale),
-      y: (fullImageHeight - cropHeight) / 2 - ((state.imageHeight - cropRect.origin.y - cropRect.height) * scale)
+      x: (contentBounds.midX - visibleBounds.midX) * scale,
+      y: (visibleBounds.midY - contentBounds.midY) * scale
     )
   }
 
@@ -734,24 +629,6 @@ final class KeyEventNSView: NSView {
   deinit {
     if let obs = windowObserver {
       NotificationCenter.default.removeObserver(obs)
-    }
-  }
-}
-
-// MARK: - Crop Clip Shape
-
-/// Shape that clips content to crop rect when applied, or shows full content when no crop
-struct CropClipShape: Shape {
-  let clipRect: CGRect?
-  let containerSize: CGSize
-
-  func path(in rect: CGRect) -> Path {
-    if let clipRect = clipRect {
-      // Clip to crop rect
-      return Path(clipRect)
-    } else {
-      // No clip - show full content
-      return Path(rect)
     }
   }
 }

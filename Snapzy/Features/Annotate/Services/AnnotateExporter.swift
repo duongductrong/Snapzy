@@ -286,8 +286,8 @@ final class AnnotateExporter {
 
     // Render at pixel resolution using NSBitmapImageRep for Retina quality
     let scale = sourceImageScale(sourceImage)
-    let pixelWidth = Int(totalSize.width * scale)
-    let pixelHeight = Int(totalSize.height * scale)
+    let pixelWidth = max(1, Int(ceil(totalSize.width * scale)))
+    let pixelHeight = max(1, Int(ceil(totalSize.height * scale)))
 
     guard let bitmapRep = NSBitmapImageRep(
       bitmapDataPlanes: nil,
@@ -353,28 +353,22 @@ final class AnnotateExporter {
       destY = 0
     }
 
-    // Draw cropped portion of source image
-    let destRect = NSRect(
-      x: destX,
-      y: destY,
-      width: effectiveBounds.width,
-      height: effectiveBounds.height
-    )
-
-    // Source rect in image coordinates (no Y-flip needed - cropRect already uses bottom-left origin like NSImage)
-    let sourceRect = NSRect(
-      x: effectiveBounds.origin.x,
-      y: effectiveBounds.origin.y,
-      width: effectiveBounds.width,
-      height: effectiveBounds.height
-    )
-
     if state.cornerRadius > 0 {
-      let path = NSBezierPath(roundedRect: destRect, xRadius: state.cornerRadius, yRadius: state.cornerRadius)
+      let clipRect = NSRect(
+        x: destX,
+        y: destY,
+        width: effectiveBounds.width,
+        height: effectiveBounds.height
+      )
+      let path = NSBezierPath(roundedRect: clipRect, xRadius: state.cornerRadius, yRadius: state.cornerRadius)
       path.addClip()
     }
 
-    sourceImage.draw(in: destRect, from: sourceRect, operation: .sourceOver, fraction: 1.0)
+    drawSourceImage(
+      sourceImage,
+      effectiveBounds: effectiveBounds,
+      destinationOrigin: CGPoint(x: destX, y: destY)
+    )
 
     // Reset clip
     context.resetClip()
@@ -409,6 +403,33 @@ final class AnnotateExporter {
     let image = NSImage(size: totalSize)
     image.addRepresentation(bitmapRep)
     return image
+  }
+
+  /// Draw only the source-image portion that intersects the requested canvas bounds.
+  /// Expanded crop areas outside the source image intentionally stay transparent/background-filled.
+  private static func drawSourceImage(
+    _ sourceImage: NSImage,
+    effectiveBounds: CGRect,
+    destinationOrigin: CGPoint
+  ) {
+    let sourceImageBounds = CGRect(origin: .zero, size: sourceImage.size)
+    let visibleSourceBounds = effectiveBounds.intersection(sourceImageBounds)
+    guard !visibleSourceBounds.isNull, !visibleSourceBounds.isEmpty else { return }
+
+    let destinationRect = NSRect(
+      x: destinationOrigin.x + visibleSourceBounds.minX - effectiveBounds.minX,
+      y: destinationOrigin.y + visibleSourceBounds.minY - effectiveBounds.minY,
+      width: visibleSourceBounds.width,
+      height: visibleSourceBounds.height
+    )
+    let sourceRect = NSRect(
+      x: visibleSourceBounds.minX,
+      y: visibleSourceBounds.minY,
+      width: visibleSourceBounds.width,
+      height: visibleSourceBounds.height
+    )
+
+    sourceImage.draw(in: destinationRect, from: sourceRect, operation: .sourceOver, fraction: 1.0)
   }
 
   /// Offset annotation for export, accounting for crop origin and alignment-based image position
@@ -630,8 +651,8 @@ final class AnnotateExporter {
 
     // Render at pixel resolution using NSBitmapImageRep for Retina quality
     let scale = sourceImageScale(sourceImage)
-    let pixelWidth = Int(effectiveBounds.width * scale)
-    let pixelHeight = Int(effectiveBounds.height * scale)
+    let pixelWidth = max(1, Int(ceil(effectiveBounds.width * scale)))
+    let pixelHeight = max(1, Int(ceil(effectiveBounds.height * scale)))
 
     guard let bitmapRep = NSBitmapImageRep(
       bitmapDataPlanes: nil,
@@ -653,16 +674,7 @@ final class AnnotateExporter {
 
     let context = graphicsContext.cgContext
 
-    // Draw cropped portion of source image
-    let destRect = NSRect(origin: .zero, size: effectiveBounds.size)
-    let sourceRect = NSRect(
-      x: effectiveBounds.origin.x,
-      y: effectiveBounds.origin.y,
-      width: effectiveBounds.width,
-      height: effectiveBounds.height
-    )
-
-    sourceImage.draw(in: destRect, from: sourceRect, operation: .sourceOver, fraction: 1.0)
+    drawSourceImage(sourceImage, effectiveBounds: effectiveBounds, destinationOrigin: .zero)
 
     // Draw annotations offset by crop origin
     let renderer = AnnotationRenderer(

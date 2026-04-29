@@ -7,6 +7,11 @@
 
 import SwiftUI
 
+private enum AnnotateToolbarActionRegistration: Equatable {
+  case annotateDefault
+  case crop
+}
+
 /// Top toolbar containing all annotation tools
 struct AnnotateToolbarView: View {
   @ObservedObject var state: AnnotateState
@@ -34,10 +39,11 @@ struct AnnotateToolbarView: View {
 
       Spacer()
 
-      actionButtons
+      registeredActionButtons
     }
     .windowTrafficLightsInset()
     .windowToolbarPadding()
+    .animation(.easeInOut(duration: 0.16), value: activeActionRegistration)
     .alert(
       L10n.AnnotateUI.backgroundCutoutTitle,
       isPresented: Binding(
@@ -145,7 +151,27 @@ struct AnnotateToolbarView: View {
     }
   }
 
-  private var actionButtons: some View {
+  private var activeActionRegistration: AnnotateToolbarActionRegistration {
+    if state.selectedTool == .crop && state.isCropActive {
+      return .crop
+    }
+
+    return .annotateDefault
+  }
+
+  @ViewBuilder
+  private var registeredActionButtons: some View {
+    switch activeActionRegistration {
+    case .annotateDefault:
+      annotateActionButtons
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    case .crop:
+      cropActionButtons
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    }
+  }
+
+  private var annotateActionButtons: some View {
     HStack(spacing: 8) {
       Button(L10n.Common.saveAs) {
         saveAs()
@@ -154,6 +180,27 @@ struct AnnotateToolbarView: View {
 
       Button(L10n.Common.done) {
         done()
+      }
+      .buttonStyle(.borderedProminent)
+      .tint(.blue)
+    }
+  }
+
+  private var cropActionButtons: some View {
+    HStack(spacing: 8) {
+      Button("\(L10n.Common.restore) \(L10n.Common.original)") {
+        state.revertCropToOriginalBounds()
+      }
+      .buttonStyle(.bordered)
+      .help("\(L10n.Common.restore) \(L10n.Common.original)")
+
+      Button(L10n.Common.cancel) {
+        state.cancelCrop()
+      }
+      .buttonStyle(.bordered)
+
+      Button(L10n.Common.apply) {
+        state.confirmCropInteraction()
       }
       .buttonStyle(.borderedProminent)
       .tint(.blue)
