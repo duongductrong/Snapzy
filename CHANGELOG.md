@@ -33,6 +33,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.0] - 2026-04-29
+
+### Features
+-  Improve annotation canvas and crop tool functionality (#128) (5665245)
+
+### Bug Fixes
+-  Implement recording save plan with processing directory management and update documentation (#126) (5819197)
+
+### Chore
+- chore: Add automated release notification workflow with Discord integration and update documentation (9eaf331)
+- refactor: Remove cache management from GeneralSettingsView and update PreferencesHistorySettingsView for capture storage handling (f579b40)
+- chore: update appcast, cask, and readme for v1.11.2 (9d85b27)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.11.2] - 2026-04-28
 
 ### Bug Fixes
