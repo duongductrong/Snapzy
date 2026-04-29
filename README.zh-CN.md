@@ -89,7 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install
 **注意：** Snapzy 目前尚未经过 Apple notarize，因此 macOS 可能会在首次启动时阻止应用打开。将 Snapzy 安装到 `/Applications` 后，请运行：
 
 ```bash
-sudo xattr -cr /Applications/Snapzy.app
+sudo xattr -rd com.apple.quarantine /Applications/Snapzy.app
 ```
 
 了解更多：[Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445)。

@@ -84,7 +84,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.12.0/instal
 **Note:** Snapzy is not notarized by Apple yet, so macOS may block it on first launch. After installing Snapzy to `/Applications`, run:
 
 ```bash
-sudo xattr -cr /Applications/Snapzy.app
+sudo xattr -rd com.apple.quarantine /Applications/Snapzy.app
 ```
 
 Learn more in [Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445).

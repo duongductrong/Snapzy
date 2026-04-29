@@ -89,7 +89,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install
 **Lưu ý:** Snapzy hiện chưa được Apple notarize, nên macOS có thể chặn app trong lần mở đầu tiên. Sau khi cài Snapzy vào `/Applications`, hãy chạy:
 
 ```bash
-sudo xattr -cr /Applications/Snapzy.app
+sudo xattr -rd com.apple.quarantine /Applications/Snapzy.app
 ```
 
 Tìm hiểu thêm tại [Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445).
