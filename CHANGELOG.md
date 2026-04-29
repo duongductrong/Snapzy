@@ -34,6 +34,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.1] - 2026-04-29
+
+### Bug Fixes
+-  Implement dynamic width measurement for bottom bar components and enhance drag handle functionality (c5d8ee6)
+-  Implement history item restoration through Quick Access for consistent session behavior (795d581)
+-  Update drawPath method to accept dynamic stroke width for improved rendering (2ec88c1)
+-  Enhance annotation resizing functionality and improve selection bounds calculation (913609a)
+-  Update quarantine attribute command in installation instructions for macOS (4127637)
+
+### Chore
+- refactor: Refactor video editor state management and enhance playback handling (7de8dc5)
+- chore: update appcast, cask, and readme for v1.12.0 (2b7c3e5)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.0] - 2026-04-29
 
 ### Features
