@@ -226,6 +226,27 @@ flowchart TD
 - Temp captures are intentionally stored in Application Support, not `/tmp`, so drag-and-drop remains stable.
 - Quick Access action labels and post-capture error states are localized.
 
+## Capture History Restore
+
+```mermaid
+flowchart TD
+    A["History item open"] --> B["HistoryWindowController"]
+    B --> C["QuickAccessManager.restoreHistoryItem()"]
+    C --> D{"Quick Access item exists?"}
+    D -->|Yes| E["Reuse existing card"]
+    D -->|No| F["Insert restored card with history thumbnail metadata"]
+    E --> G{"Capture type"}
+    F --> G
+    G -->|Screenshot| H["AnnotateManager.openAnnotation(for:)"]
+    G -->|Video / GIF| I["VideoEditorManager.openEditor(for:)"]
+```
+
+### Notes
+
+- Opening a capture from either history surface restores the item through Quick Access before opening the editor.
+- History restore reuses an existing Quick Access card for the same file when one is already present, so the editor keeps the same item-scoped session.
+- Screenshot, video, and GIF saves from restored history items follow the same Quick Access session behavior as fresh captures.
+
 ## Annotate and Cloud Re-Upload
 
 ```mermaid
@@ -300,6 +321,7 @@ flowchart TD
 | `Snapzy/Services/Capture/ScreenRecordingManager.swift` | Screen recording media pipeline and metadata persistence |
 | `Snapzy/Features/QuickAccess/QuickAccessManager.swift` | Floating stack state and countdown behavior |
 | `Snapzy/Features/QuickAccess/Components/QuickAccessCardView.swift` | Card-level actions including screenshot, video, and GIF cloud upload |
+| `Snapzy/Features/History/HistoryWindowController.swift` | History restore routing through Quick Access |
 | `Snapzy/Features/Annotate/AnnotateManager.swift` | Annotate window lifecycle and session caching |
 | `Snapzy/Features/Annotate/Services/AnnotateExporter.swift` | Final image render/export |
 | `Snapzy/Features/VideoEditor/VideoEditorManager.swift` | Video editor window lifecycle |

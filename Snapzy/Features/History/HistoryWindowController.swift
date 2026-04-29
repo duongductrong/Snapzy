@@ -122,23 +122,33 @@ final class HistoryWindowController {
 
     HistoryFloatingManager.shared.hide()
 
-    switch record.captureType {
-    case .screenshot:
-      DiagnosticLogger.shared.log(
-        .info,
-        .history,
-        "History opening screenshot in annotate",
-        context: ["fileName": record.fileName]
-      )
-      AnnotateManager.shared.openAnnotation(url: record.fileURL)
-    case .video, .gif:
-      DiagnosticLogger.shared.log(
-        .info,
-        .history,
-        "History opening media in editor",
-        context: ["fileName": record.fileName, "type": record.captureType.rawValue]
-      )
-      VideoEditorManager.shared.openEditor(for: record.fileURL)
+    Task { @MainActor in
+      guard let item = await QuickAccessManager.shared.restoreHistoryItem(record) else {
+        return
+      }
+
+      switch record.captureType {
+      case .screenshot:
+        DiagnosticLogger.shared.log(
+          .info,
+          .history,
+          "History opening screenshot through quick access",
+          context: ["fileName": record.fileName, "itemId": item.id.uuidString]
+        )
+        AnnotateManager.shared.openAnnotation(for: item)
+      case .video, .gif:
+        DiagnosticLogger.shared.log(
+          .info,
+          .history,
+          "History opening media through quick access",
+          context: [
+            "fileName": record.fileName,
+            "type": record.captureType.rawValue,
+            "itemId": item.id.uuidString,
+          ]
+        )
+        VideoEditorManager.shared.openEditor(for: item)
+      }
     }
   }
 

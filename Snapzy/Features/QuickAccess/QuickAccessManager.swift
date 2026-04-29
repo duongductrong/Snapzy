@@ -281,6 +281,94 @@ final class QuickAccessManager: ObservableObject {
     )
   }
 
+  /// Present a history record as a Quick Access card and return the session item.
+  /// This intentionally restores through Quick Access even for manually opened
+  /// history records, so editors get the same item-scoped save/session behavior
+  /// as fresh captures.
+  func restoreHistoryItem(_ record: CaptureHistoryRecord) async -> QuickAccessItem? {
+    let url = record.fileURL
+
+    if let existingItem = item(matching: url) {
+      showPanelIfNeeded()
+      DiagnosticLogger.shared.log(
+        .info,
+        .history,
+        "History restore reused quick access item",
+        context: [
+          "fileName": record.fileName,
+          "type": record.captureType.rawValue,
+          "itemId": existingItem.id.uuidString,
+        ]
+      )
+      return existingItem
+    }
+
+    let fileAccess = fileAccessManager.beginAccessingURL(url)
+    defer { fileAccess.stop() }
+
+    guard FileManager.default.fileExists(atPath: url.path) else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .history,
+        "History restore skipped; file missing",
+        context: ["fileName": record.fileName, "type": record.captureType.rawValue]
+      )
+      return nil
+    }
+
+    let result = await ThumbnailGenerator.generate(from: url)
+    let thumbnail: NSImage
+    let needsRetry: Bool
+    if let generated = result.thumbnail {
+      thumbnail = generated
+      needsRetry = false
+    } else {
+      thumbnail = ThumbnailGenerator.placeholderThumbnail()
+      needsRetry = true
+      DiagnosticLogger.shared.log(
+        .warning,
+        .ui,
+        "History restore thumbnail failed; using placeholder",
+        context: ["fileName": record.fileName, "type": record.captureType.rawValue]
+      )
+    }
+
+    let item: QuickAccessItem
+    switch record.captureType {
+    case .screenshot:
+      item = QuickAccessItem(
+        id: UUID(),
+        url: url,
+        thumbnail: thumbnail,
+        capturedAt: record.capturedAt,
+        itemType: .screenshot,
+        duration: nil
+      )
+    case .video, .gif:
+      item = QuickAccessItem(
+        id: UUID(),
+        url: url,
+        thumbnail: thumbnail,
+        capturedAt: record.capturedAt,
+        itemType: .video,
+        duration: record.duration ?? result.duration ?? 0
+      )
+    }
+
+    insertRestoredHistoryItem(item, needsRetry: needsRetry, retryURL: url)
+    DiagnosticLogger.shared.log(
+      .info,
+      .history,
+      "History restored into quick access",
+      context: [
+        "fileName": record.fileName,
+        "type": record.captureType.rawValue,
+        "itemId": item.id.uuidString,
+      ]
+    )
+    return item
+  }
+
   /// Remove an item (screenshot or video) from the stack
   func removeItem(id: UUID) {
     guard let item = items.first(where: { $0.id == id }) else {
@@ -786,6 +874,46 @@ final class QuickAccessManager: ObservableObject {
       "Quick access panel shown",
       context: ["itemCount": "\(items.count)"]
     )
+  }
+
+  private func showPanelIfNeeded() {
+    guard !panelController.isVisible else { return }
+    showPanel()
+  }
+
+  private func item(matching url: URL) -> QuickAccessItem? {
+    let standardizedURL = url.standardizedFileURL
+    return items.first { $0.url.standardizedFileURL == standardizedURL }
+  }
+
+  private func insertRestoredHistoryItem(
+    _ item: QuickAccessItem,
+    needsRetry: Bool,
+    retryURL: URL
+  ) {
+    withAnimation(QuickAccessAnimations.cardInsert) {
+      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
+        cancelDismissTimer(for: oldestId)
+        items.removeLast()
+        DiagnosticLogger.shared.log(
+          .debug,
+          .ui,
+          "Quick access trimmed oldest item for history restore",
+          context: ["maxVisibleItems": "\(maxVisibleItems)"]
+        )
+      }
+      items.insert(item, at: 0)
+    }
+
+    showPanelIfNeeded()
+
+    if autoDismissEnabled {
+      startDismissTimer(for: item.id)
+    }
+
+    if needsRetry {
+      scheduleThumbnailRetry(for: item.id, url: retryURL)
+    }
   }
 
   /// Fixed max-size panel — never resizes, prevents SwiftUI re-layout jitter
