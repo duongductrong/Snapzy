@@ -12,6 +12,35 @@ private enum AnnotateBottomActionRegistration: Equatable {
   case crop
 }
 
+private enum AnnotateBottomBarMeasuredSide: Hashable {
+  case left
+  case right
+}
+
+private struct AnnotateBottomBarWidthPreferenceKey: PreferenceKey {
+  static let defaultValue: [AnnotateBottomBarMeasuredSide: CGFloat] = [:]
+
+  static func reduce(
+    value: inout [AnnotateBottomBarMeasuredSide: CGFloat],
+    nextValue: () -> [AnnotateBottomBarMeasuredSide: CGFloat]
+  ) {
+    value.merge(nextValue(), uniquingKeysWith: { _, newValue in newValue })
+  }
+}
+
+private extension View {
+  func measuredBottomBarWidth(_ side: AnnotateBottomBarMeasuredSide) -> some View {
+    background(
+      GeometryReader { geometry in
+        Color.clear.preference(
+          key: AnnotateBottomBarWidthPreferenceKey.self,
+          value: [side: geometry.size.width]
+        )
+      }
+    )
+  }
+}
+
 /// Bottom bar containing zoom controls and action buttons
 struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
@@ -24,6 +53,13 @@ struct AnnotateBottomBarView: View {
   @State private var cloudUploadError: String?
   @State private var showCloudNotConfiguredAlert = false
   @State private var showOverwriteConfirmation = false
+  @State private var measuredLeftWidth: CGFloat = 0
+  @State private var measuredRightWidth: CGFloat = 0
+
+  private let centeredDragFullWidth: CGFloat = 160
+  private let centeredDragCompactWidth: CGFloat = 44
+  private let centeredDragHeight: CGFloat = 32
+  private let centeredDragSideGap: CGFloat = 12
 
   var body: some View {
     VStack(spacing: 0) {
@@ -33,26 +69,13 @@ struct AnnotateBottomBarView: View {
         Divider()
       }
 
-      // Balanced left — center — right layout
-      ZStack {
-        // Center: Drag handle (absolute center)
-        if state.hasImage && activeActionRegistration == .annotateDefault {
-          dragHandle
-        }
-
-        // Left + Right: overlay on top of center
-        HStack(spacing: 0) {
-          // Left section: zoom + mode toggle
-          leftSection
-
-          Spacer()
-
-          // Right section: registered action surface
-          registeredActionSurface
-        }
-      }
+      bottomBarContent
       .windowBottomBarPadding()
       .animation(.easeInOut(duration: 0.16), value: activeActionRegistration)
+      .onPreferenceChange(AnnotateBottomBarWidthPreferenceKey.self) { widths in
+        measuredLeftWidth = widths[.left] ?? 0
+        measuredRightWidth = widths[.right] ?? 0
+      }
 
       // Cloud upload progress bar (always present to avoid layout shift)
       ProgressView(value: cloudUploadProgress)
@@ -90,11 +113,63 @@ struct AnnotateBottomBarView: View {
 
   // MARK: - Left Section
 
+  private var bottomBarContent: some View {
+    GeometryReader { geometry in
+      let dragWidth = centeredDragWidth(for: geometry.size.width)
+
+      ZStack {
+        HStack(spacing: 0) {
+          // Left section: zoom + mode toggle
+          leftSection
+            .fixedSize(horizontal: true, vertical: false)
+            .measuredBottomBarWidth(.left)
+
+          Spacer(minLength: 0)
+
+          // Right section: registered action surface
+          registeredActionSurface
+            .fixedSize(horizontal: true, vertical: false)
+            .measuredBottomBarWidth(.right)
+        }
+
+        // Center: Drag handle pinned to true bar center. If the bar gets too
+        // tight, it compacts before hiding so side controls stay clickable.
+        if state.hasImage && activeActionRegistration == .annotateDefault && dragWidth > 0 {
+          dragHandle(
+            width: dragWidth,
+            isCompact: dragWidth < centeredDragFullWidth
+          )
+          .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
+        }
+      }
+    }
+    .frame(height: centeredDragHeight)
+  }
+
   private var leftSection: some View {
     HStack(spacing: 10) {
       zoomPicker
       modeToggle
     }
+  }
+
+  private func centeredDragWidth(for contentWidth: CGFloat) -> CGFloat {
+    guard contentWidth > 0 else { return centeredDragFullWidth }
+
+    let halfWidth = contentWidth / 2
+    let leftClearance = halfWidth - measuredLeftWidth - centeredDragSideGap
+    let rightClearance = halfWidth - measuredRightWidth - centeredDragSideGap
+    let availableCenteredWidth = max(0, min(leftClearance, rightClearance) * 2)
+
+    if availableCenteredWidth >= centeredDragFullWidth {
+      return centeredDragFullWidth
+    }
+
+    if availableCenteredWidth >= centeredDragCompactWidth {
+      return centeredDragCompactWidth
+    }
+
+    return 0
   }
 
   // MARK: - Zoom Picker
@@ -137,6 +212,7 @@ struct AnnotateBottomBarView: View {
       .cornerRadius(6)
     }
     .menuStyle(.borderlessButton)
+    .fixedSize(horizontal: true, vertical: false)
   }
 
   // MARK: - Mode Toggle
@@ -165,13 +241,13 @@ struct AnnotateBottomBarView: View {
 
   @State private var isDragHovering = false
 
-  private var dragHandle: some View {
+  private func dragHandle(width: CGFloat, isCompact: Bool) -> some View {
     let dragState = state.dragToAppPreparationState
 
     return AnnotateDragHandleView(state: state)
-      .frame(width: 160, height: 32)
+      .frame(width: width, height: centeredDragHeight)
       .overlay(
-        HStack(spacing: 6) {
+        HStack(spacing: isCompact ? 0 : 6) {
           if dragState == .preparing {
             ProgressView()
               .controlSize(.small)
@@ -183,9 +259,11 @@ struct AnnotateBottomBarView: View {
               .foregroundColor(isDragHovering ? .primary : .secondary)
           }
 
-          Text(L10n.AnnotateUI.dragToApp)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(dragLabelColor(for: dragState))
+          if !isCompact {
+            Text(L10n.AnnotateUI.dragToApp)
+              .font(.system(size: 12, weight: .medium))
+              .foregroundColor(dragLabelColor(for: dragState))
+          }
         }
         .allowsHitTesting(false)
       )
