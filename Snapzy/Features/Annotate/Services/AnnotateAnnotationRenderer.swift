@@ -79,7 +79,11 @@ struct AnnotationRenderer {
       context.strokePath()
 
     case .path(let points), .highlight(let points):
-      drawPath(points: points, isHighlight: annotation.type.isHighlight)
+      drawPath(
+        points: points,
+        isHighlight: annotation.type.isHighlight,
+        strokeWidth: annotation.properties.strokeWidth
+      )
 
     case .counter(let value):
       drawCounter(value: value, in: annotation.bounds, properties: annotation.properties)
@@ -194,11 +198,13 @@ struct AnnotationRenderer {
 
   // MARK: - Private Drawing Helpers
 
-  private func drawPath(points: [CGPoint], isHighlight: Bool, strokeWidth: CGFloat = 3) {
+  private func drawPath(points: [CGPoint], isHighlight: Bool, strokeWidth: CGFloat) {
     guard points.count > 1 else { return }
     if isHighlight {
       context.setAlpha(0.4)
       context.setLineWidth(strokeWidth * 3)
+    } else {
+      context.setLineWidth(strokeWidth)
     }
     context.move(to: points[0])
     for point in points.dropFirst() {
