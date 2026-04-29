@@ -475,23 +475,34 @@ struct AnnotationProperties: Equatable {
 // MARK: - Hit Testing
 
 extension AnnotationItem {
-  var selectionBounds: CGRect {
-    let baseBounds: CGRect
+  var supportsResize: Bool {
+    switch type {
+    case .path(let points), .highlight(let points):
+      return points.count > 1
+    default:
+      return true
+    }
+  }
+
+  var resizeBounds: CGRect {
     switch type {
     case .arrow(let geometry):
-      baseBounds = geometry.bounds()
+      return geometry.bounds()
     case .line(let start, let end):
-      baseBounds = Self.bounds(containing: [start, end]) ?? bounds
+      return Self.normalizedBounds(Self.bounds(containing: [start, end]) ?? bounds)
     case .path(let points), .highlight(let points):
-      baseBounds = Self.bounds(containing: points) ?? bounds
+      return Self.normalizedBounds(Self.bounds(containing: points) ?? bounds)
     case .counter:
-      baseBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
+      let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
+      return Self.normalizedBounds(counterBounds)
     default:
-      baseBounds = bounds
+      return Self.normalizedBounds(bounds)
     }
+  }
 
+  var selectionBounds: CGRect {
     let padding = max(6, properties.strokeWidth / 2)
-    return baseBounds.standardized.insetBy(dx: -padding, dy: -padding)
+    return resizeBounds.insetBy(dx: -padding, dy: -padding)
   }
 
   /// Check if point hits this annotation with appropriate tolerance
@@ -542,6 +553,22 @@ extension AnnotationItem {
     }
 
     return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY).standardized
+  }
+
+  private static func normalizedBounds(_ rect: CGRect, minimumDimension: CGFloat = 1) -> CGRect {
+    var normalized = rect.standardized
+
+    if normalized.width < minimumDimension {
+      normalized.origin.x -= (minimumDimension - normalized.width) / 2
+      normalized.size.width = minimumDimension
+    }
+
+    if normalized.height < minimumDimension {
+      normalized.origin.y -= (minimumDimension - normalized.height) / 2
+      normalized.size.height = minimumDimension
+    }
+
+    return normalized
   }
 
   private func pointInEllipse(_ point: CGPoint, in rect: CGRect) -> Bool {

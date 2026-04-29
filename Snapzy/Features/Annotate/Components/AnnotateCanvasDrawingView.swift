@@ -249,7 +249,7 @@ final class DrawingCanvasNSView: NSView {
   private func hitTestAnnotation(at point: CGPoint) -> AnnotationItem? {
     for annotation in state.annotations.reversed() {
       // Quick bounds check first (optimization)
-      let expandedBounds = annotation.bounds.insetBy(dx: -10, dy: -10)
+      let expandedBounds = annotation.selectionBounds.insetBy(dx: -10, dy: -10)
       guard expandedBounds.contains(point) else { continue }
 
       // Precise hit test
@@ -381,13 +381,14 @@ final class DrawingCanvasNSView: NSView {
 
     // Check if clicking on a selected annotation's handle (use display coords for handles)
     if let selectedId = state.selectedAnnotationId,
-       let annotation = state.annotations.first(where: { $0.id == selectedId }) {
-      let displayBounds = imageToDisplay(annotation.bounds)
+       let annotation = state.annotations.first(where: { $0.id == selectedId }),
+       annotation.supportsResize {
+      let displayBounds = imageToDisplay(annotation.resizeBounds)
       if let handle = hitTestHandle(at: displayPoint, for: displayBounds) {
         isResizingAnnotation = true
         resizingAnnotationId = selectedId
         activeResizeHandle = handle
-        originalBounds = annotation.bounds  // Store in image coords
+        originalBounds = annotation.resizeBounds  // Store in image coords
         return
       }
     }
@@ -459,15 +460,16 @@ final class DrawingCanvasNSView: NSView {
     isDraggingAnnotation = true
     draggingAnnotationId = annotation.id
     draggingAnnotationIds = activeIds
+    let anchorBounds = annotation.resizeBounds
     dragOffset = CGPoint(
-      x: imagePoint.x - annotation.bounds.origin.x,
-      y: imagePoint.y - annotation.bounds.origin.y
+      x: imagePoint.x - anchorBounds.origin.x,
+      y: imagePoint.y - anchorBounds.origin.y
     )
-    originalBounds = annotation.bounds
+    originalBounds = anchorBounds
     originalBoundsByAnnotationId = Dictionary(
       uniqueKeysWithValues: state.annotations
         .filter { activeIds.contains($0.id) }
-        .map { ($0.id, $0.bounds) }
+        .map { ($0.id, $0.resizeBounds) }
     )
     NSCursor.closedHand.set()
     needsDisplay = true
@@ -787,9 +789,9 @@ final class DrawingCanvasNSView: NSView {
       // Draw selection affordance if selected. Multi-selection shows outlines only.
       if state.isAnnotationSelected(annotation.id) {
         drawSelectionHandles(
-          for: annotation.bounds,
+          for: annotation.resizeBounds,
           in: context,
-          showsHandles: state.selectedAnnotationIds.count == 1
+          showsHandles: state.selectedAnnotationIds.count == 1 && annotation.supportsResize
         )
       }
     }
@@ -939,8 +941,9 @@ final class DrawingCanvasNSView: NSView {
     if state.selectedAnnotationIds.count == 1,
        let selectedId = state.selectedAnnotationIds.first,
        let annotation = state.annotations.first(where: { $0.id == selectedId }) {
-      let displayBounds = imageToDisplay(annotation.bounds)
-      if let handle = hitTestHandle(at: displayPoint, for: displayBounds) {
+      let displayBounds = imageToDisplay(annotation.resizeBounds)
+      if annotation.supportsResize,
+         let handle = hitTestHandle(at: displayPoint, for: displayBounds) {
         setCursorForHandle(handle)
         return
       }

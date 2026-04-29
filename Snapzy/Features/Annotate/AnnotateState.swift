@@ -1775,31 +1775,30 @@ final class AnnotateState: ObservableObject {
   func updateAnnotationBounds(id: UUID, bounds: CGRect) {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
 
-    let oldBounds = annotations[index].bounds
-    let dx = bounds.origin.x - oldBounds.origin.x
-    let dy = bounds.origin.y - oldBounds.origin.y
+    let oldBounds = annotations[index].resizeBounds
+    let normalizedBounds = bounds.standardized
 
-    annotations[index].bounds = bounds
+    annotations[index].bounds = normalizedBounds
 
     // Also update embedded coordinates for arrows/lines/paths
     switch annotations[index].type {
     case .arrow(let geometry):
-      let updated = geometry.remapped(from: oldBounds, to: bounds)
+      let updated = geometry.remapped(from: oldBounds, to: normalizedBounds)
       annotations[index].type = .arrow(updated)
       annotations[index].bounds = updated.bounds()
     case .line(let start, let end):
       annotations[index].type = .line(
-        start: remapPoint(start, from: oldBounds, to: bounds),
-        end: remapPoint(end, from: oldBounds, to: bounds)
+        start: remapPoint(start, from: oldBounds, to: normalizedBounds),
+        end: remapPoint(end, from: oldBounds, to: normalizedBounds)
       )
     case .path(let points):
-      annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+      annotations[index].type = .path(points.map { remapPoint($0, from: oldBounds, to: normalizedBounds) })
     case .highlight(let points):
-      annotations[index].type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+      annotations[index].type = .highlight(points.map { remapPoint($0, from: oldBounds, to: normalizedBounds) })
     case .counter:
-      let diameter = max(bounds.width, bounds.height)
-      let normalizedBounds = counterBounds(center: CGPoint(x: bounds.midX, y: bounds.midY), controlValue: AnnotationProperties.controlValue(forCounterDiameter: diameter))
-      annotations[index].bounds = normalizedBounds
+      let diameter = max(normalizedBounds.width, normalizedBounds.height)
+      let updatedCounterBounds = counterBounds(center: CGPoint(x: normalizedBounds.midX, y: normalizedBounds.midY), controlValue: AnnotationProperties.controlValue(forCounterDiameter: diameter))
+      annotations[index].bounds = updatedCounterBounds
       annotations[index].properties.strokeWidth = AnnotationProperties.controlValue(forCounterDiameter: diameter)
     default:
       break
