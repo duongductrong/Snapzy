@@ -27,6 +27,66 @@ enum EditorAction: Equatable {
   )
 }
 
+/// Tab selection for the video editor right sidebar.
+enum VideoEditorSidebarTab: CaseIterable, Hashable {
+  case background
+  case zoom
+
+  var icon: String {
+    switch self {
+    case .background: return "swatchpalette"
+    case .zoom: return "plus.magnifyingglass"
+    }
+  }
+
+  var title: String {
+    switch self {
+    case .background: return L10n.VideoEditor.backgroundTab
+    case .zoom: return L10n.VideoEditor.zoomTab
+    }
+  }
+}
+
+/// Playback state changes frequently, so it stays isolated from the broader editor model.
+@MainActor
+final class VideoEditorPlaybackState: ObservableObject {
+  @Published private(set) var currentTime: CMTime = .zero
+  @Published private(set) var isPlaying: Bool = false
+  @Published private(set) var isScrubbing: Bool = false
+
+  var formattedCurrentTime: String {
+    Self.formatTime(currentTime)
+  }
+
+  func setCurrentTime(_ time: CMTime) {
+    guard CMTimeCompare(currentTime, time) != 0 else { return }
+    currentTime = time
+  }
+
+  func setPlaying(_ value: Bool) {
+    guard isPlaying != value else { return }
+    isPlaying = value
+  }
+
+  func setScrubbing(_ value: Bool) {
+    guard isScrubbing != value else { return }
+    isScrubbing = value
+  }
+
+  private static func formatTime(_ time: CMTime) -> String {
+    let totalSeconds = Int(CMTimeGetSeconds(time))
+    let hours = totalSeconds / 3600
+    let minutes = (totalSeconds % 3600) / 60
+    let seconds = totalSeconds % 60
+
+    if hours > 0 {
+      return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+    }
+
+    return String(format: "%02d:%02d", minutes, seconds)
+  }
+}
+
 /// Observable state for video editor window
 @MainActor
 final class VideoEditorState: ObservableObject {
@@ -58,19 +118,17 @@ final class VideoEditorState: ObservableObject {
   private(set) var originalURL: URL
   let asset: AVAsset
   let player: AVPlayer
+  let playbackState = VideoEditorPlaybackState()
 
   // MARK: - Metadata
 
   @Published private(set) var duration: CMTime = .zero
   @Published private(set) var naturalSize: CGSize = .zero
-  @Published private(set) var currentTime: CMTime = .zero
-  @Published private(set) var isPlaying: Bool = false
 
   // MARK: - Trim Range
 
   @Published var trimStart: CMTime = .zero
   @Published var trimEnd: CMTime = .zero
-  @Published private(set) var isScrubbing: Bool = false
 
   // MARK: - Audio Control
 
@@ -99,6 +157,7 @@ final class VideoEditorState: ObservableObject {
   @Published var isZoomTrackVisible: Bool = true
   @Published var isVideoInfoSidebarVisible: Bool = false
   @Published var isRightSidebarVisible: Bool = false
+  @Published var selectedRightSidebarTab: VideoEditorSidebarTab = .background
   @Published var zoomTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration {
     didSet {
       let clamped = ZoomCalculator.clampTransitionDuration(zoomTransitionDuration)
@@ -205,6 +264,18 @@ final class VideoEditorState: ObservableObject {
 
   var hasAutoZoomSegments: Bool {
     autoZoomSegmentCount > 0
+  }
+
+  var currentTime: CMTime {
+    playbackState.currentTime
+  }
+
+  var isPlaying: Bool {
+    playbackState.isPlaying
+  }
+
+  var isScrubbing: Bool {
+    playbackState.isScrubbing
   }
 
   var isAutoZoomActiveAtCurrentTime: Bool {
@@ -363,12 +434,12 @@ final class VideoEditorState: ObservableObject {
 
   func play() {
     player.play()
-    isPlaying = true
+    playbackState.setPlaying(true)
   }
 
   func pause() {
     player.pause()
-    isPlaying = false
+    playbackState.setPlaying(false)
   }
 
   func togglePlayback() {
@@ -387,6 +458,7 @@ final class VideoEditorState: ObservableObject {
 
   func seek(to time: CMTime) {
     let clampedTime = clampTime(time)
+    playbackState.setCurrentTime(clampedTime)
     player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
   }
 
@@ -394,25 +466,25 @@ final class VideoEditorState: ObservableObject {
     let step = CMTime(seconds: seconds, preferredTimescale: 600)
     let steppedTime = CMTimeAdd(currentTime, step)
     let clampedTime = clampTime(steppedTime)
-    currentTime = clampedTime
+    playbackState.setCurrentTime(clampedTime)
     player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
   }
 
   // MARK: - Scrubbing
 
   func startScrubbing() {
-    isScrubbing = true
+    playbackState.setScrubbing(true)
     pause()
   }
 
   func scrub(to time: CMTime) {
     let clampedTime = clampTime(time)
-    currentTime = clampedTime
+    playbackState.setCurrentTime(clampedTime)
     player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
   }
 
   func endScrubbing() {
-    isScrubbing = false
+    playbackState.setScrubbing(false)
   }
 
   // MARK: - Trim Control
@@ -844,6 +916,14 @@ final class VideoEditorState: ObservableObject {
     selectedZoomId = id
   }
 
+  /// Select a zoom segment and open its configuration sidebar.
+  func openZoomConfiguration(id: UUID) {
+    guard zoomSegments.contains(where: { $0.id == id }) else { return }
+    selectedZoomId = id
+    selectedRightSidebarTab = .zoom
+    isRightSidebarVisible = true
+  }
+
   /// Toggle zoom enabled state
   func toggleZoomEnabled(id: UUID) {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
@@ -972,8 +1052,8 @@ final class VideoEditorState: ObservableObject {
       queue: .main
     ) { [weak self] time in
       MainActor.assumeIsolated {
-        guard let self = self, !self.isScrubbing else { return }
-        self.currentTime = time
+        guard let self = self, !self.playbackState.isScrubbing else { return }
+        self.playbackState.setCurrentTime(time)
 
         // Stop at trim end
         if CMTimeCompare(time, self.trimEnd) >= 0 {

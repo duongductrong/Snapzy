@@ -115,7 +115,6 @@ struct ZoomBlockView: View {
         .offset(x: 0)
         .gesture(startResizeGesture)
         .onHover { hovering in
-          print("🎯 [GestureDebug] LEFT HANDLE hover: \(hovering), segment: \(segment.id)")
           isHoveringLeftHandle = hovering
           updateCursor(hovering: hovering, isResize: true)
         }
@@ -125,7 +124,6 @@ struct ZoomBlockView: View {
         .offset(x: blockWidth - handleWidth)
         .gesture(endResizeGesture)
         .onHover { hovering in
-          print("🎯 [GestureDebug] RIGHT HANDLE hover: \(hovering), segment: \(segment.id)")
           isHoveringRightHandle = hovering
           updateCursor(hovering: hovering, isResize: true)
         }
@@ -137,7 +135,6 @@ struct ZoomBlockView: View {
     .animation(.easeOut(duration: 0.15), value: isDragging)
     .contentShape(Rectangle())
     .onTapGesture {
-      print("🎯 [GestureDebug] ZoomBlockView.onTapGesture fired - segment: \(segment.id)")
       onSelect()
     }
     .gesture(positionDragGesture)
@@ -214,83 +211,60 @@ struct ZoomBlockView: View {
   private var startResizeGesture: some Gesture {
     DragGesture(minimumDistance: 1)
       .onChanged { value in
-        print("🎯 [GestureDebug] startResizeGesture.onChanged - translation: \(value.translation), segment: \(segment.id)")
         if !isDraggingStart {
           // Capture initial state at drag start
           dragInitialStartTime = segment.startTime
           dragInitialEndTime = segment.endTime
           isDraggingStart = true
-          print("🔧 [ZoomDrag] Start resize began - initial: \(dragInitialStartTime)s")
-          print("🎯 [GestureDebug] startResizeGesture STATE: began - isDraggingStart=true")
         }
         let deltaSeconds = value.translation.width / pixelsPerSecond
         let newStart = dragInitialStartTime + deltaSeconds
         let clampedStart = max(0, min(newStart, dragInitialEndTime - ZoomSegment.minDuration))
-        print("🔧 [ZoomDrag] Start resize: delta=\(deltaSeconds)s, newStart=\(clampedStart)s")
         onStartDrag(clampedStart)
       }
       .onEnded { _ in
-        print("🎯 [GestureDebug] startResizeGesture.onEnded - segment: \(segment.id)")
-        print("🔧 [ZoomDrag] Start resize ended")
         isDraggingStart = false
-        print("🎯 [GestureDebug] startResizeGesture STATE: ended - isDraggingStart=false")
       }
   }
 
   private var endResizeGesture: some Gesture {
     DragGesture(minimumDistance: 1)
       .onChanged { value in
-        print("🎯 [GestureDebug] endResizeGesture.onChanged - translation: \(value.translation), segment: \(segment.id)")
         if !isDraggingEnd {
           // Capture initial state at drag start
           dragInitialStartTime = segment.startTime
           dragInitialEndTime = segment.endTime
           isDraggingEnd = true
-          print("🔧 [ZoomDrag] End resize began - initial end: \(dragInitialEndTime)s")
-          print("🎯 [GestureDebug] endResizeGesture STATE: began - isDraggingEnd=true")
         }
         let deltaSeconds = value.translation.width / pixelsPerSecond
         let newEnd = dragInitialEndTime + deltaSeconds
         let clampedEnd = max(dragInitialStartTime + ZoomSegment.minDuration, min(newEnd, videoDuration))
-        print("🔧 [ZoomDrag] End resize: delta=\(deltaSeconds)s, newEnd=\(clampedEnd)s")
         onEndDrag(clampedEnd)
       }
       .onEnded { _ in
-        print("🎯 [GestureDebug] endResizeGesture.onEnded - segment: \(segment.id)")
-        print("🔧 [ZoomDrag] End resize ended")
         isDraggingEnd = false
-        print("🎯 [GestureDebug] endResizeGesture STATE: ended - isDraggingEnd=false")
       }
   }
 
   private var positionDragGesture: some Gesture {
     DragGesture(minimumDistance: 5)
       .onChanged { value in
-        print("🎯 [GestureDebug] positionDragGesture.onChanged - translation: \(value.translation), segment: \(segment.id)")
-        print("🎯 [GestureDebug] positionDragGesture GUARD CHECK - isDraggingStart: \(isDraggingStart), isDraggingEnd: \(isDraggingEnd)")
         guard !isDraggingStart && !isDraggingEnd else {
-          print("🎯 [GestureDebug] positionDragGesture BLOCKED - resize gesture is active")
           return
         }
         if !isDraggingPosition {
           // Capture initial state at drag start
           dragInitialStartTime = segment.startTime
           isDraggingPosition = true
-          print("🔧 [ZoomDrag] Position drag began - initial: \(dragInitialStartTime)s")
-          print("🎯 [GestureDebug] positionDragGesture STATE: began - isDraggingPosition=true")
         }
         let deltaSeconds = value.translation.width / pixelsPerSecond
         let newStart = dragInitialStartTime + deltaSeconds
         let maxStart = videoDuration - segment.duration
         let clampedStart = max(0, min(newStart, maxStart))
-        print("🔧 [ZoomDrag] Position: delta=\(deltaSeconds)s, newStart=\(clampedStart)s")
         onPositionDrag(clampedStart)
       }
       .onEnded { _ in
-        print("🎯 [GestureDebug] positionDragGesture.onEnded - segment: \(segment.id)")
-        print("🔧 [ZoomDrag] Position drag ended")
         isDraggingPosition = false
-        print("🎯 [GestureDebug] positionDragGesture STATE: ended - isDraggingPosition=false")
       }
   }
 }

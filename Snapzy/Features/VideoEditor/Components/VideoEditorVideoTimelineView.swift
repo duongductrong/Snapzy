@@ -37,11 +37,12 @@ struct VideoTimelineView: View {
           VideoTrimHandlesView(state: state, timelineWidth: timelineWidth)
 
           // Playhead indicator (extends across both tracks)
-          Rectangle()
-            .fill(Color.red)
-            .frame(width: 2, height: totalHeight)
-            .offset(x: playheadOffset(in: timelineWidth) - 1)
-            .allowsHitTesting(false)
+          TimelinePlayheadView(
+            playbackState: state.playbackState,
+            duration: state.duration,
+            timelineWidth: timelineWidth,
+            totalHeight: totalHeight
+          )
         }
         .frame(height: frameStripHeight)
         .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -59,20 +60,12 @@ struct VideoTimelineView: View {
     .cornerRadius(6)
   }
 
-  // MARK: - Playhead Position
-
-  private func playheadOffset(in width: CGFloat) -> CGFloat {
-    guard CMTimeGetSeconds(state.duration) > 0 else { return 0 }
-    let progress = CMTimeGetSeconds(state.currentTime) / CMTimeGetSeconds(state.duration)
-    return CGFloat(progress) * width
-  }
-
   // MARK: - Scrub Gesture
 
   private func scrubGesture(timelineWidth: CGFloat) -> some Gesture {
     DragGesture(minimumDistance: 0)
       .onChanged { value in
-        if !state.isScrubbing {
+        if !state.playbackState.isScrubbing {
           state.startScrubbing()
         }
         let progress = max(0, min(value.location.x / timelineWidth, 1))
@@ -85,5 +78,27 @@ struct VideoTimelineView: View {
       .onEnded { _ in
         state.endScrubbing()
       }
+  }
+}
+
+private struct TimelinePlayheadView: View {
+  @ObservedObject var playbackState: VideoEditorPlaybackState
+  let duration: CMTime
+  let timelineWidth: CGFloat
+  let totalHeight: CGFloat
+
+  var body: some View {
+    Rectangle()
+      .fill(Color.red)
+      .frame(width: 2, height: totalHeight)
+      .offset(x: playheadOffset - 1)
+      .allowsHitTesting(false)
+  }
+
+  private var playheadOffset: CGFloat {
+    let durationSeconds = CMTimeGetSeconds(duration)
+    guard durationSeconds > 0 else { return 0 }
+    let progress = CMTimeGetSeconds(playbackState.currentTime) / durationSeconds
+    return CGFloat(progress) * timelineWidth
   }
 }

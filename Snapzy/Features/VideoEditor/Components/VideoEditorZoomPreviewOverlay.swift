@@ -11,9 +11,15 @@ import SwiftUI
 /// Wrapper view that applies zoom transforms and background to the video player
 struct ZoomableVideoPlayerSection: View {
   @ObservedObject var state: VideoEditorState
+  @ObservedObject private var playbackState: VideoEditorPlaybackState
 
   @State private var currentZoomLevel: CGFloat = 1.0
   @State private var currentZoomCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+
+  init(state: VideoEditorState) {
+    _state = ObservedObject(wrappedValue: state)
+    _playbackState = ObservedObject(wrappedValue: state.playbackState)
+  }
 
   var body: some View {
     GeometryReader { geometry in
@@ -56,17 +62,17 @@ struct ZoomableVideoPlayerSection: View {
       .frame(width: compositeSize.width, height: compositeSize.height)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignmentValue)
     }
-    .onReceive(state.$currentTime) { time in
+    .onReceive(playbackState.$currentTime) { time in
       updateZoomState(at: CMTimeGetSeconds(time))
     }
     .onChange(of: state.zoomSegments) { _ in
-      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
+      updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
     .onChange(of: state.autoFocusPaths) { _ in
-      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
+      updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
     .onChange(of: state.zoomTransitionDuration) { _ in
-      updateZoomState(at: CMTimeGetSeconds(state.currentTime))
+      updateZoomState(at: CMTimeGetSeconds(playbackState.currentTime))
     }
   }
 
@@ -295,16 +301,8 @@ struct ZoomableVideoPlayerSection: View {
 
   private func updateZoomState(at time: TimeInterval) {
     let cameraState = state.cameraState(at: time)
-    let shouldAnimate = !state.isScrubbing
-    if shouldAnimate {
-      withAnimation(.linear(duration: 1.0 / 60.0)) {
-        currentZoomLevel = cameraState.zoomLevel
-        currentZoomCenter = cameraState.center
-      }
-    } else {
-      currentZoomLevel = cameraState.zoomLevel
-      currentZoomCenter = cameraState.center
-    }
+    currentZoomLevel = cameraState.zoomLevel
+    currentZoomCenter = cameraState.center
   }
 }
 

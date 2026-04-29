@@ -84,7 +84,7 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
 
 // MARK: - Zoom Type
 
-enum ZoomType: String, Codable, CaseIterable {
+enum ZoomType: String, Codable, CaseIterable, Equatable {
   case auto    // follow recorded mouse path within the zoom item's range
   case manual  // user-defined camera framing
 

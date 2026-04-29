@@ -8,33 +8,11 @@
 
 import SwiftUI
 
-/// Tab selection for right sidebar
-enum VideoEditorSidebarTab: CaseIterable {
-  case background
-  case zoom
-
-  var icon: String {
-    switch self {
-    case .background: return "swatchpalette"
-    case .zoom: return "plus.magnifyingglass"
-    }
-  }
-
-  var title: String {
-    switch self {
-    case .background: return L10n.VideoEditor.backgroundTab
-    case .zoom: return L10n.VideoEditor.zoomTab
-    }
-  }
-}
-
 /// Tabbed right sidebar combining Zoom and Background settings
 /// Layout: [Content Area] | [Vertical Tab Bar]
 struct VideoEditorRightSidebar: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
-
-  @State private var selectedTab: VideoEditorSidebarTab = .background
 
   var body: some View {
     HStack(spacing: 0) {
@@ -44,7 +22,7 @@ struct VideoEditorRightSidebar: View {
       Divider()
 
       VerticalTabBar(
-        selection: $selectedTab,
+        selection: $state.selectedRightSidebarTab,
         tabs: VideoEditorSidebarTab.allCases
       ) { tab in
         (icon: tab.icon, title: tab.title)
@@ -55,7 +33,7 @@ struct VideoEditorRightSidebar: View {
     .onChange(of: state.selectedZoomId) { newValue in
       if newValue != nil {
         withAnimation(.easeInOut(duration: 0.15)) {
-          selectedTab = .zoom
+          state.selectedRightSidebarTab = .zoom
         }
       }
     }
@@ -63,7 +41,7 @@ struct VideoEditorRightSidebar: View {
 
   @ViewBuilder
   private var tabContent: some View {
-    switch selectedTab {
+    switch state.selectedRightSidebarTab {
     case .zoom:
       ZoomSettingsContent(state: state, previewImage: previewImage)
     case .background:
@@ -82,8 +60,31 @@ struct ZoomSettingsContent: View {
   @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
 
+  private struct LocalStateSnapshot: Equatable {
+    let id: UUID
+    let zoomType: ZoomType
+    let zoomLevel: CGFloat
+    let zoomCenter: CGPoint
+    let followSpeed: Double
+    let focusMargin: CGFloat
+    let transitionDuration: TimeInterval
+  }
+
   private var selectedSegment: ZoomSegment? {
     state.selectedZoomSegment
+  }
+
+  private var localStateSnapshot: LocalStateSnapshot? {
+    guard let segment = selectedSegment else { return nil }
+    return LocalStateSnapshot(
+      id: segment.id,
+      zoomType: segment.zoomType,
+      zoomLevel: segment.zoomLevel,
+      zoomCenter: segment.zoomCenter,
+      followSpeed: segment.followSpeed,
+      focusMargin: segment.focusMargin,
+      transitionDuration: state.zoomTransitionDuration
+    )
   }
 
   private var canSwitchSelectedSegmentToAuto: Bool {
@@ -123,13 +124,7 @@ struct ZoomSettingsContent: View {
     .onAppear {
       syncLocalState()
     }
-    .onChange(of: state.selectedZoomId) { _ in
-      syncLocalState()
-    }
-    .onChange(of: state.zoomSegments) { _ in
-      syncLocalState()
-    }
-    .onChange(of: state.zoomTransitionDuration) { _ in
+    .onChange(of: localStateSnapshot) { _ in
       syncLocalState()
     }
   }

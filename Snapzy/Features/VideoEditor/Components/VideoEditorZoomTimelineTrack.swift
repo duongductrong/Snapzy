@@ -16,6 +16,7 @@ struct ZoomTimelineTrack: View {
   private let trackHeight: CGFloat = 32
   private let handleWidth: CGFloat = 8
   private let minVisualBlockWidth: CGFloat = 64
+  private let dragModelUpdateInterval: TimeInterval = 1.0 / 30.0
 
   // MARK: - Drag State (Track-Level)
 
@@ -23,6 +24,8 @@ struct ZoomTimelineTrack: View {
   @State private var dragSegmentId: UUID?
   @State private var dragInitialStartTime: TimeInterval = 0
   @State private var dragInitialEndTime: TimeInterval = 0
+  @State private var dragPreviewSegment: ZoomSegment?
+  @State private var lastDragModelUpdateTime: TimeInterval = 0
 
   // MARK: - Hover State (Placeholder Preview)
 
@@ -109,9 +112,10 @@ struct ZoomTimelineTrack: View {
 
       // Zoom blocks (visual only - gestures handled at track level)
       ForEach(state.zoomSegments) { segment in
-        let segmentLayout = layout(for: segment)
+        let displaySegment = dragPreviewSegment?.id == segment.id ? dragPreviewSegment ?? segment : segment
+        let segmentLayout = layout(for: displaySegment)
         ZoomBlockVisual(
-          segment: segment,
+          segment: displaySegment,
           isSelected: state.selectedZoomId == segment.id,
           isDragging: dragSegmentId == segment.id,
           blockX: segmentLayout.visualStartX,
@@ -130,6 +134,9 @@ struct ZoomTimelineTrack: View {
     .frame(height: trackHeight)
     .contentShape(Rectangle())
     .gesture(unifiedDragGesture)
+    .onTapGesture(count: 2) { location in
+      handleDoubleTap(at: location)
+    }
     .onTapGesture { location in
       handleTap(at: location)
     }
@@ -176,16 +183,15 @@ struct ZoomTimelineTrack: View {
     dragSegmentId = segment.id
     dragInitialStartTime = segment.startTime
     dragInitialEndTime = segment.endTime
+    dragPreviewSegment = segment
+    lastDragModelUpdateTime = 0
 
     if location.x <= leftHandleEnd {
       dragMode = .startEdge
-      print("🎯 [Drag] Begin START EDGE drag for segment: \(segment.id)")
     } else if location.x >= rightHandleStart {
       dragMode = .endEdge
-      print("🎯 [Drag] Begin END EDGE drag for segment: \(segment.id)")
     } else {
       dragMode = .position
-      print("🎯 [Drag] Begin POSITION drag for segment: \(segment.id)")
     }
 
     // Select the segment being dragged
@@ -199,55 +205,84 @@ struct ZoomTimelineTrack: View {
     }
 
     let deltaSeconds = translation.width / pixelsPerSecond
+    let previewSegment = previewSegment(from: segment, deltaSeconds: deltaSeconds)
+    dragPreviewSegment = previewSegment
+    commitDragPreviewIfNeeded(previewSegment)
+  }
+
+  private func previewSegment(from segment: ZoomSegment, deltaSeconds: TimeInterval) -> ZoomSegment {
+    var preview = segment
+    let initialDuration = dragInitialEndTime - dragInitialStartTime
 
     switch dragMode {
     case .none:
-      break
+      return preview
 
     case .position:
       let newStart = dragInitialStartTime + deltaSeconds
-      let maxStart = videoDuration - segment.duration
+      let maxStart = max(0, videoDuration - initialDuration)
       let clampedStart = max(0, min(newStart, maxStart))
-      print("🎯 [Drag] Position: delta=\(deltaSeconds)s, newStart=\(clampedStart)s")
-      state.updateZoom(id: segmentId, startTime: clampedStart)
+      preview.startTime = clampedStart
+      preview.duration = initialDuration
 
     case .startEdge:
       let newStart = dragInitialStartTime + deltaSeconds
       let clampedStart = max(0, min(newStart, dragInitialEndTime - ZoomSegment.minDuration))
       let newDuration = dragInitialEndTime - clampedStart
-      print("🎯 [Drag] Start edge: newStart=\(clampedStart)s, newDuration=\(newDuration)s")
-      state.updateZoom(id: segmentId, startTime: clampedStart, duration: max(ZoomSegment.minDuration, newDuration))
+      preview.startTime = clampedStart
+      preview.duration = max(ZoomSegment.minDuration, newDuration)
 
     case .endEdge:
       let newEnd = dragInitialEndTime + deltaSeconds
       let clampedEnd = max(dragInitialStartTime + ZoomSegment.minDuration, min(newEnd, videoDuration))
       let newDuration = clampedEnd - dragInitialStartTime
-      print("🎯 [Drag] End edge: newEnd=\(clampedEnd)s, newDuration=\(newDuration)s")
-      state.updateZoom(id: segmentId, duration: max(ZoomSegment.minDuration, newDuration))
+      preview.startTime = dragInitialStartTime
+      preview.duration = max(ZoomSegment.minDuration, newDuration)
     }
+
+    return preview
+  }
+
+  private func commitDragPreviewIfNeeded(_ segment: ZoomSegment, force: Bool = false) {
+    let now = ProcessInfo.processInfo.systemUptime
+    guard force || now - lastDragModelUpdateTime >= dragModelUpdateInterval else { return }
+
+    state.updateZoom(
+      id: segment.id,
+      startTime: segment.startTime,
+      duration: segment.duration
+    )
+    lastDragModelUpdateTime = now
   }
 
   private func endDrag() {
-    print("🎯 [Drag] End drag - mode was: \(dragMode)")
+    if let dragPreviewSegment {
+      commitDragPreviewIfNeeded(dragPreviewSegment, force: true)
+    }
+
     dragMode = .none
     dragSegmentId = nil
+    dragPreviewSegment = nil
+    lastDragModelUpdateTime = 0
   }
 
   // MARK: - Tap Handling
 
   private func handleTap(at location: CGPoint) {
     let tappedTime = (location.x / timelineWidth) * videoDuration
-    print("🎯 [Tap] location: \(location), time: \(tappedTime)s")
 
     if let (segment, _) = interactionSegment(atX: location.x) {
       // Tapped on existing segment - select it
-      print("🎯 [Tap] Selected segment: \(segment.id) (enabled: \(segment.isEnabled))")
       state.selectZoom(id: segment.id)
     } else {
       // Tapped on empty area - add new zoom centered at tap position
-      print("🎯 [Tap] Adding zoom at: \(tappedTime)s")
       state.addZoom(at: tappedTime)
     }
+  }
+
+  private func handleDoubleTap(at location: CGPoint) {
+    guard let (segment, _) = interactionSegment(atX: location.x) else { return }
+    state.openZoomConfiguration(id: segment.id)
   }
 
   // MARK: - Context Menu

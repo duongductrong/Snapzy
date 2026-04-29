@@ -180,10 +180,16 @@ private extension View {
 /// Playback controls view with play/pause and time display
 struct VideoControlsView: View {
   @ObservedObject var state: VideoEditorState
+  @ObservedObject private var playbackState: VideoEditorPlaybackState
   private let stepIntervalSeconds: Double = 1.0
   @State private var leftSectionWidth: CGFloat = 0
   @State private var rightSectionWidth: CGFloat = 0
   @State private var containerWidth: CGFloat = 0
+
+  init(state: VideoEditorState) {
+    _state = ObservedObject(wrappedValue: state)
+    _playbackState = ObservedObject(wrappedValue: state.playbackState)
+  }
 
   var body: some View {
     HStack(spacing: controlsLayout.outerSpacing) {
@@ -217,7 +223,11 @@ struct VideoControlsView: View {
   }
 
   private var hasStatusMetadata: Bool {
-    !state.zoomSegments.isEmpty || state.isAutoZoomActiveAtCurrentTime || state.hasUnsavedChanges
+    !state.zoomSegments.isEmpty || isAutoZoomActiveAtCurrentTime || state.hasUnsavedChanges
+  }
+
+  private var isAutoZoomActiveAtCurrentTime: Bool {
+    state.activeZoomSegment(at: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
   }
 
   private var reservedSideWidth: CGFloat {
@@ -235,7 +245,7 @@ struct VideoControlsView: View {
 
   private var centerTransport: some View {
     HStack(spacing: controlsLayout.centerSpacing) {
-      timeLabel(state.formattedCurrentTime, alignment: .trailing)
+      timeLabel(playbackState.formattedCurrentTime, alignment: .trailing)
 
       transportButton(systemName: "backward.fill") {
         state.stepTimeline(by: -stepIntervalSeconds)
@@ -265,7 +275,7 @@ struct VideoControlsView: View {
 
   private var playPauseButton: some View {
     Button(action: { state.togglePlayback() }) {
-      Image(systemName: state.isPlaying ? "pause.fill" : "play.fill")
+      Image(systemName: playbackState.isPlaying ? "pause.fill" : "play.fill")
         .font(.system(size: controlsLayout.playIconSize, weight: .bold))
         .foregroundColor(.black.opacity(0.9))
         .frame(width: controlsLayout.playButtonSize, height: controlsLayout.playButtonSize)
@@ -315,7 +325,7 @@ struct VideoControlsView: View {
       .cornerRadius(4)
     }
 
-    if state.isAutoZoomActiveAtCurrentTime {
+    if isAutoZoomActiveAtCurrentTime {
       HStack(spacing: 4) {
         Image(systemName: "camera.metering.center.weighted")
           .font(.system(size: controlsLayout.badgeIconSize))
