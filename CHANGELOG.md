@@ -35,6 +35,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.2] - 2026-04-30
+
+### Features
+-  Enhance annotation resizing and selection handling for line annotations; add support for highlighter selection bounds (#125) (49cd986)
+
+### Bug Fixes
+-  Trim fully transparent capture fringe in window capture for improved output quality (dec0e79)
+-  Enhance drag-to-app functionality with lazy file promise and rendered file-URL fallback; ensure edits are saved after successful drag (#141) (b67bb09)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.12.1 (1c159da)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.1] - 2026-04-29
 
 ### Bug Fixes
