@@ -154,6 +154,29 @@ Snapzy/
       Generated/
       manifest.json
     *.lproj/
+
+SnapzyTests/
+  Services/
+    Capture/
+    Cloud/
+    Media/
+    Shortcuts/
+  Features/
+    Capture/
+    Annotate/
+    VideoEditor/
+    QuickAccess/
+  Shared/
+    Extensions/
+  Helpers/
+  Fixtures/
+
+SnapzyUITests/
+  Features/
+    Onboarding/
+    Preferences/
+    Annotate/
+    QuickAccess/
 ```
 
 ## Feature Roots
@@ -229,6 +252,39 @@ Snapzy/
 - `Resources/*/InfoPlist.strings` still own privacy permission text.
 - Keep brand names, file formats, key labels, MIME types, and other technical tokens verbatim unless product behavior explicitly changes.
 
+## Test Architecture
+
+No test targets exist yet. Two Xcode targets are planned:
+
+- **SnapzyTests** — Unit Testing Bundle (mirrors `Snapzy/` source tree)
+- **SnapzyUITests** — UI Testing Bundle (end-to-end user flows)
+
+Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTests.swift` tests `Snapzy/Services/Cloud/AWSV4Signer.swift`. Shared mocks and fixture assets live in `SnapzyTests/Helpers/` and `SnapzyTests/Fixtures/`.
+
+### Test Priority
+
+| Layer | Type | Priority | Notes |
+| --- | --- | --- | --- |
+| `Services/Cloud/AWSV4Signer` | Unit | **P0** | Pure crypto, zero deps |
+| `Services/Cloud/LifecycleXMLParser` | Unit | **P0** | Pure XML parsing |
+| `Services/Capture/CaptureOutputNaming` | Unit | **P0** | Template + sanitization |
+| `Shared/Extensions/` | Unit | **P0** | Pure utilities |
+| `Services/Media/` | Unit | **P1** | Vision/CoreImage, needs fixture images |
+| `Services/Capture/TempCaptureManager` | Unit | **P1** | File lifecycle, mock `FileManager` |
+| `Services/Capture/PostCaptureActionHandler` | Unit | **P1** | Routing logic, protocol DI |
+| `Services/Cloud/CloudManager` | Integration | **P2** | Facade, mock providers |
+| `Features/Capture/CaptureViewModel` | Unit | **P2** | State transitions only, high coupling |
+| `Features/Onboarding/`, `Features/Preferences/` | UI | **P3** | XCUITest |
+
+### Key Constraints
+
+- Test target needs its own entitlements (copy `Snapzy.entitlements`, drop Sparkle keys).
+- Use `UserDefaults(suiteName: "SnapzyTests")` to isolate test state.
+- `@MainActor` singletons (`TempCaptureManager.shared`) require `@MainActor` test methods.
+- `SCShareableContent`/`SCStream` cannot be mocked — test capture logic through `CaptureOutputNaming` and `PostCaptureActionHandler` instead.
+- OCR fixtures: bundle test images in `SnapzyTests/Fixtures/`, load via `Bundle(for: type(of: self))`.
+- CI: GitHub Actions macOS 14+ runners have Screen Recording permission. Older runners: `try XCTSkipUnless(CGPreflightScreenCaptureAccess())`.
+
 ## Agent Edit Guide
 
 | Task | Start here |
@@ -243,6 +299,9 @@ Snapzy/
 | Cloud upload/config transfer | `Services/Cloud/`, `Features/Preferences/Components/PreferencesCloudSettingsView.swift`, `Features/QuickAccess/Components/QuickAccessCardView.swift`, `Features/Annotate/Components/AnnotateBottomBarView.swift` |
 | Onboarding or app startup | `App/`, `Features/Splash/`, `Features/Onboarding/` |
 | Shortcuts and conflicts | `Services/Shortcuts/`, `Features/Shortcuts/` |
+| Unit tests for services | `SnapzyTests/Services/`, `SnapzyTests/Helpers/` |
+| UI tests for user flows | `SnapzyUITests/Features/` |
+| Test fixtures and mocks | `SnapzyTests/Helpers/`, `SnapzyTests/Fixtures/` |
 
 ## Current Behavior Clarifications
 
