@@ -88,6 +88,64 @@ enum VideoQuality: String, CaseIterable, Codable {
   }
 }
 
+enum RecordingVideoEncodingSettings {
+  static func preferredCodec(format: VideoFormat, quality: VideoQuality) -> AVVideoCodecType {
+    guard format == .mov else { return .h264 }
+    guard quality == .high else { return .h264 }
+    #if arch(arm64)
+      return .hevc
+    #else
+      return .h264
+    #endif
+  }
+
+  static func calculatedBitrate(
+    width: Int,
+    height: Int,
+    fps: Int,
+    quality: VideoQuality,
+    codec: AVVideoCodecType
+  ) -> Int {
+    let base = Double(width) * Double(height) * Double(fps) * quality.bitsPerPixelPerFrame
+    let codecAdjusted = codec == .hevc ? base * 0.90 : base
+    let clamped = min(max(codecAdjusted, Double(quality.minBitrate)), Double(quality.maxBitrate))
+    return Int(clamped.rounded())
+  }
+
+  static func makeVideoSettings(
+    width: Int,
+    height: Int,
+    fps: Int,
+    quality: VideoQuality,
+    codec: AVVideoCodecType,
+    bitrate: Int
+  ) -> [String: Any] {
+    var compression: [String: Any] = [
+      AVVideoAverageBitRateKey: bitrate,
+      AVVideoExpectedSourceFrameRateKey: fps,
+      AVVideoMaxKeyFrameIntervalKey: fps,
+    ]
+
+    if codec == .h264 {
+      compression[AVVideoProfileLevelKey] = quality.h264ProfileLevel
+    }
+
+    let colorProperties: [String: Any] = [
+      AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
+      AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
+      AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
+    ]
+
+    return [
+      AVVideoCodecKey: codec,
+      AVVideoWidthKey: width,
+      AVVideoHeightKey: height,
+      AVVideoCompressionPropertiesKey: compression,
+      AVVideoColorPropertiesKey: colorProperties,
+    ]
+  }
+}
+
 // MARK: - Recording State
 
 enum RecordingState: Equatable {
@@ -969,23 +1027,17 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   }
 
   private func preferredVideoCodec() -> AVVideoCodecType {
-    guard videoFormat == .mov else { return .h264 }
-    guard videoQuality == .high else { return .h264 }
-    // Use HEVC for high-quality MOV on Apple Silicon by default.
-    // Writer input creation still has a safe fallback to H.264.
-    #if arch(arm64)
-      return .hevc
-    #else
-      return .h264
-    #endif
+    RecordingVideoEncodingSettings.preferredCodec(format: videoFormat, quality: videoQuality)
   }
 
   private func calculatedVideoBitrate(width: Int, height: Int, codec: AVVideoCodecType) -> Int {
-    let base = Double(width) * Double(height) * Double(fps) * videoQuality.bitsPerPixelPerFrame
-    // HEVC is more efficient at equivalent quality, so we can trim bitrate a bit.
-    let codecAdjusted = codec == .hevc ? base * 0.90 : base
-    let clamped = min(max(codecAdjusted, Double(videoQuality.minBitrate)), Double(videoQuality.maxBitrate))
-    return Int(clamped.rounded())
+    RecordingVideoEncodingSettings.calculatedBitrate(
+      width: width,
+      height: height,
+      fps: fps,
+      quality: videoQuality,
+      codec: codec
+    )
   }
 
   private func makeVideoSettings(
@@ -994,29 +1046,14 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     codec: AVVideoCodecType,
     bitrate: Int
   ) -> [String: Any] {
-    var compression: [String: Any] = [
-      AVVideoAverageBitRateKey: bitrate,
-      AVVideoExpectedSourceFrameRateKey: fps,
-      AVVideoMaxKeyFrameIntervalKey: fps,
-    ]
-
-    if codec == .h264 {
-      compression[AVVideoProfileLevelKey] = videoQuality.h264ProfileLevel
-    }
-
-    let colorProperties: [String: Any] = [
-      AVVideoColorPrimariesKey: AVVideoColorPrimaries_ITU_R_709_2,
-      AVVideoTransferFunctionKey: AVVideoTransferFunction_ITU_R_709_2,
-      AVVideoYCbCrMatrixKey: AVVideoYCbCrMatrix_ITU_R_709_2,
-    ]
-
-    return [
-      AVVideoCodecKey: codec,
-      AVVideoWidthKey: width,
-      AVVideoHeightKey: height,
-      AVVideoCompressionPropertiesKey: compression,
-      AVVideoColorPropertiesKey: colorProperties,
-    ]
+    RecordingVideoEncodingSettings.makeVideoSettings(
+      width: width,
+      height: height,
+      fps: fps,
+      quality: videoQuality,
+      codec: codec,
+      bitrate: bitrate
+    )
   }
 
   private func resolveCaptureGeometry(

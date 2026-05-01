@@ -35,6 +35,51 @@ enum RecordingOutputMode: String, CaseIterable {
   }
 }
 
+enum RecordingToolbarPreferences {
+  static func selectedFormat(defaults: UserDefaults = .standard) -> VideoFormat {
+    guard let formatString = defaults.string(forKey: PreferencesKeys.recordingFormat),
+          let format = VideoFormat(rawValue: formatString)
+    else {
+      return .mov
+    }
+    return format
+  }
+
+  static func selectedQuality(defaults: UserDefaults = .standard) -> VideoQuality {
+    guard let qualityString = defaults.string(forKey: PreferencesKeys.recordingQuality),
+          let quality = VideoQuality(rawValue: qualityString)
+    else {
+      return .high
+    }
+    return quality
+  }
+
+  static func captureAudio(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingCaptureAudio) as? Bool ?? true
+  }
+
+  static func captureMicrophone(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingCaptureMicrophone) as? Bool ?? false
+  }
+
+  static func outputMode(defaults: UserDefaults = .standard) -> RecordingOutputMode {
+    guard let modeString = defaults.string(forKey: PreferencesKeys.recordingOutputMode),
+          let mode = RecordingOutputMode(rawValue: modeString)
+    else {
+      return .video
+    }
+    return mode
+  }
+
+  static func highlightClicks(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingHighlightClicks) as? Bool ?? false
+  }
+
+  static func showKeystrokes(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingShowKeystrokes) as? Bool ?? false
+  }
+}
+
 // MARK: - Observable State
 
 @MainActor
@@ -52,44 +97,14 @@ final class RecordingToolbarState: ObservableObject {
   var onCaptureModeChanged: ((RecordingCaptureMode) -> Void)?
 
   init() {
-    // Load format from preferences (default to mov if not set)
-    if let formatString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingFormat),
-       let format = VideoFormat(rawValue: formatString) {
-      self.selectedFormat = format
-    } else {
-      self.selectedFormat = .mov
-    }
-
-    // Load quality from preferences (default to high)
-    if let qualityString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingQuality),
-       let quality = VideoQuality(rawValue: qualityString) {
-      self.selectedQuality = quality
-    } else {
-      self.selectedQuality = .high
-    }
-
-    // Load audio preference (default to true)
-    self.captureAudio = UserDefaults.standard.object(forKey: PreferencesKeys.recordingCaptureAudio) as? Bool ?? true
-
-    // Load microphone preference (default to false)
-    self.captureMicrophone = UserDefaults.standard.object(forKey: PreferencesKeys.recordingCaptureMicrophone) as? Bool ?? false
-
-    // Default capture mode is area
+    self.selectedFormat = RecordingToolbarPreferences.selectedFormat()
+    self.selectedQuality = RecordingToolbarPreferences.selectedQuality()
+    self.captureAudio = RecordingToolbarPreferences.captureAudio()
+    self.captureMicrophone = RecordingToolbarPreferences.captureMicrophone()
     self.captureMode = .area
-
-    // Load output mode (default to video)
-    if let modeString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingOutputMode),
-       let mode = RecordingOutputMode(rawValue: modeString) {
-      self.outputMode = mode
-    } else {
-      self.outputMode = .video
-    }
-
-    // Load highlight clicks preference (default to true)
-    self.highlightClicks = UserDefaults.standard.object(forKey: PreferencesKeys.recordingHighlightClicks) as? Bool ?? false
-
-    // Load show keystrokes preference (default to false)
-    self.showKeystrokes = UserDefaults.standard.object(forKey: PreferencesKeys.recordingShowKeystrokes) as? Bool ?? false
+    self.outputMode = RecordingToolbarPreferences.outputMode()
+    self.highlightClicks = RecordingToolbarPreferences.highlightClicks()
+    self.showKeystrokes = RecordingToolbarPreferences.showKeystrokes()
   }
 }
 
