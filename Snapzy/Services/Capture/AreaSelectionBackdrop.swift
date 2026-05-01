@@ -10,18 +10,18 @@ import Foundation
 
 typealias AreaSelectionResultCompletion = (AreaSelectionResult?) -> Void
 
-enum AreaSelectionInteractionMode {
+nonisolated enum AreaSelectionInteractionMode {
   case manualRegion
   case applicationWindow
 }
 
-struct AreaSelectionBackdrop {
+nonisolated struct AreaSelectionBackdrop {
   let displayID: CGDirectDisplayID
   let image: CGImage
   let scaleFactor: CGFloat
 }
 
-struct WindowCaptureTarget: Equatable {
+nonisolated struct WindowCaptureTarget: Equatable {
   let windowID: CGWindowID
   let frame: CGRect
   let displayID: CGDirectDisplayID
@@ -29,7 +29,7 @@ struct WindowCaptureTarget: Equatable {
   let bundleIdentifier: String?
 }
 
-enum AreaSelectionTarget: Equatable {
+nonisolated enum AreaSelectionTarget: Equatable {
   case rect(CGRect)
   case window(WindowCaptureTarget)
 
@@ -52,12 +52,12 @@ enum AreaSelectionTarget: Equatable {
   }
 }
 
-struct AreaSelectionApplicationConfiguration {
+nonisolated struct AreaSelectionApplicationConfiguration {
   let prefetchedContentTask: ShareableContentPrefetchTask?
   let excludeOwnApplication: Bool
 }
 
-struct AreaSelectionResult {
+nonisolated struct AreaSelectionResult {
   let target: AreaSelectionTarget
   let displayID: CGDirectDisplayID
   let mode: SelectionMode

@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "file-access.bookmark-save-failed-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "file-access.bookmark-save-failed-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "file-access.choose-captures-folder-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "file-access.choose-folder-prompt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "file-access.desktop-pictures-access-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "file-access.grant-access-prompt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "permission-row.granted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "permission-row.optional" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "permission-row.required" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "preferences-permissions.intro" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

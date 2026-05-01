@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "crash-report.accessory-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "crash-report.alert-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "crash-report.alert-message-no-log-bundle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "crash-report.alert-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "crash-report.dismiss" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "crash-report.submit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

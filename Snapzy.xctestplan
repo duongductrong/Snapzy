@@ -1,0 +1,29 @@
+{
+  "configurations" : [
+    {
+      "id" : "D0011001-2F9F-4000-9000-000000000001",
+      "name" : "Default",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "targetForVariableExpansion" : {
+      "containerPath" : "container:Snapzy.xcodeproj",
+      "identifier" : "A36462A22F18EEDA0003453D",
+      "name" : "Snapzy"
+    }
+  },
+  "testTargets" : [
+    {
+      "parallelizable" : false,
+      "target" : {
+        "containerPath" : "container:Snapzy.xcodeproj",
+        "identifier" : "D00100072F9F000000000007",
+        "name" : "SnapzyTests"
+      }
+    }
+  ],
+  "version" : 1
+}

@@ -31,6 +31,18 @@ xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
 
 Output: `~/Library/Developer/Xcode/DerivedData/Snapzy-*/Build/Products/Debug/Snapzy.app`
 
+## Run tests
+
+Unit tests live in `SnapzyTests/`, a peer folder of `Snapzy/`. Keep XCTest files
+there so they belong to the `SnapzyTests` target instead of the app target.
+
+```bash
+xcodebuild test -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug
+```
+
+The shared `Snapzy` scheme uses `Snapzy.xctestplan`, which includes the
+`SnapzyTests` target for command-line runs and Xcode editor gutter test runs.
+
 ## Related docs
 
 - For archive, export, and DMG packaging commands, see [BUILD.md](BUILD.md).

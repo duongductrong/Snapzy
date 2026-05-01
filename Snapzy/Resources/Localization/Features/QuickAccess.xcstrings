@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "preferences-quick-access.auto-close-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "preferences-quick-access.close-after" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "preferences-quick-access.closes-after" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "preferences-quick-access.drag-and-drop-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "preferences-quick-access.drag-and-drop-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "preferences-quick-access.floating-overlay-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "preferences-quick-access.floating-overlay-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "preferences-quick-access.keep-open" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "preferences-quick-access.left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "preferences-quick-access.overlay-size-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +652,7 @@
       }
     },
     "preferences-quick-access.overlay-size-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +717,7 @@
       }
     },
     "preferences-quick-access.pause-on-hover-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +782,7 @@
       }
     },
     "preferences-quick-access.pause-on-hover-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +847,7 @@
       }
     },
     "preferences-quick-access.right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +912,7 @@
       }
     },
     "preferences-quick-access.screen-edge-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +977,7 @@
       }
     },
     "preferences-quick-access.screen-edge-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1042,7 @@
       }
     },
     "preferences-quick-access.section-appearance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1107,7 @@
       }
     },
     "preferences-quick-access.section-behaviors" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1172,7 @@
       }
     },
     "preferences-quick-access.section-position" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1237,7 @@
       }
     },
     "quick-access.edit-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

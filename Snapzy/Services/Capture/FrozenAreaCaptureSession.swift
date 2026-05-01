@@ -8,7 +8,7 @@
 import CoreGraphics
 import Foundation
 
-struct FrozenDisplaySnapshot {
+nonisolated struct FrozenDisplaySnapshot {
   let displayID: CGDirectDisplayID
   let screenFrame: CGRect
   let scaleFactor: CGFloat
@@ -16,13 +16,12 @@ struct FrozenDisplaySnapshot {
   let image: CGImage
 }
 
-struct FrozenAreaCropResult {
+nonisolated struct FrozenAreaCropResult {
   let image: CGImage
   let scaleFactor: CGFloat
 }
 
-@MainActor
-final class FrozenAreaCaptureSession {
+nonisolated final class FrozenAreaCaptureSession {
   private var snapshots: [CGDirectDisplayID: FrozenDisplaySnapshot]
 
   private init(snapshots: [CGDirectDisplayID: FrozenDisplaySnapshot]) {
@@ -33,6 +32,7 @@ final class FrozenAreaCaptureSession {
     FrozenAreaCaptureSession(snapshots: [snapshot.displayID: snapshot])
   }
 
+  @MainActor
   static func prepare(
     captureManager: ScreenCaptureManager? = nil,
     displayIDs: Set<CGDirectDisplayID>? = nil,

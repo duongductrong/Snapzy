@@ -58,6 +58,7 @@ flowchart TD
 ## Agent Reading Order
 
 - Capture, scrolling capture, recording: `STRUCTURE.md` -> `CAPTURE.md`
+- Tests: `STRUCTURE.md` -> `DEVELOPMENT.md`
 - Localization or user-facing copy: `STRUCTURE.md` -> `LOCALIZATION.md` -> `CAPTURE.md` when capture/editor UX is affected
 - Onboarding, menu bar, preferences: `STRUCTURE.md`
 - Cloud storage and upload UX: `STRUCTURE.md` + `CAPTURE.md`

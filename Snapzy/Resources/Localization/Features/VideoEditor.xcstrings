@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "video-editor-timeline.extracting-frames" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "video-editor.add-zoom-at-playhead" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -100,7 +102,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "플레이헤드에 확대\/축소 추가"
+            "value" : "플레이헤드에 확대/축소 추가"
           }
         },
         "ru" : {
@@ -130,6 +132,7 @@
       }
     },
     "video-editor.add-zoom-here" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -164,7 +167,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "여기에 확대\/축소 추가"
+            "value" : "여기에 확대/축소 추가"
           }
         },
         "ru" : {
@@ -194,6 +197,7 @@
       }
     },
     "video-editor.applying-effects" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "video-editor.aspect-ratio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -280,7 +285,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapport hauteur\/largeur"
+            "value" : "Rapport hauteur/largeur"
           }
         },
         "ja" : {
@@ -322,6 +327,7 @@
       }
     },
     "video-editor.auto" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "video-editor.auto-segments" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "video-editor.background-tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "video-editor.balanced" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "video-editor.bottom-left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +652,7 @@
       }
     },
     "video-editor.bottom-right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +717,7 @@
       }
     },
     "video-editor.browse-files" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +782,7 @@
       }
     },
     "video-editor.cannot-replace-original-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +847,7 @@
       }
     },
     "video-editor.cannot-replace-original-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +912,7 @@
       }
     },
     "video-editor.center" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +977,7 @@
       }
     },
     "video-editor.choose-where-to-save-edited-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1042,7 @@
       }
     },
     "video-editor.choose-where-to-save-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1107,7 @@
       }
     },
     "video-editor.click-to-add" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1172,7 @@
       }
     },
     "video-editor.completing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1237,7 @@
       }
     },
     "video-editor.convert" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1302,7 @@
       }
     },
     "video-editor.coord-space" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1367,7 @@
       }
     },
     "video-editor.could-not-read-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1410,6 +1432,7 @@
       }
     },
     "video-editor.custom-volume" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1497,7 @@
       }
     },
     "video-editor.delete-zoom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1562,7 @@
       }
     },
     "video-editor.disable-zoom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1572,7 +1597,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 비활성화"
+            "value" : "확대/축소 비활성화"
           }
         },
         "ru" : {
@@ -1602,6 +1627,7 @@
       }
     },
     "video-editor.dont-save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1692,7 @@
       }
     },
     "video-editor.drop-video-here-to-edit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1757,7 @@
       }
     },
     "video-editor.edit-zoom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1764,7 +1792,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 편집"
+            "value" : "확대/축소 편집"
           }
         },
         "ru" : {
@@ -1794,6 +1822,7 @@
       }
     },
     "video-editor.enable-zoom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1828,7 +1857,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 활성화"
+            "value" : "확대/축소 활성화"
           }
         },
         "ru" : {
@@ -1858,6 +1887,7 @@
       }
     },
     "video-editor.encoding-frames" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +1952,7 @@
       }
     },
     "video-editor.export-failed-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1986,6 +2017,7 @@
       }
     },
     "video-editor.exporting" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2050,6 +2082,7 @@
       }
     },
     "video-editor.exporting-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2114,6 +2147,7 @@
       }
     },
     "video-editor.failed-to-load-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2178,6 +2212,7 @@
       }
     },
     "video-editor.failed-to-prepare-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2242,6 +2277,7 @@
       }
     },
     "video-editor.fast" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2306,6 +2342,7 @@
       }
     },
     "video-editor.file-already-exists-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2370,6 +2407,7 @@
       }
     },
     "video-editor.file-already-exists-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2434,6 +2472,7 @@
       }
     },
     "video-editor.file-name-label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2498,6 +2537,7 @@
       }
     },
     "video-editor.file-not-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2562,6 +2602,7 @@
       }
     },
     "video-editor.filename-placeholder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2626,6 +2667,7 @@
       }
     },
     "video-editor.finalizing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2690,6 +2732,7 @@
       }
     },
     "video-editor.focus-margin" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2754,6 +2797,7 @@
       }
     },
     "video-editor.focus-margin-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2818,6 +2862,7 @@
       }
     },
     "video-editor.follow-mouse" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2882,6 +2927,7 @@
       }
     },
     "video-editor.follow-mouse-active-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2916,7 +2962,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "카메라 위치는 이 확대\/축소 항목이 활성화된 동안에만 기록된 마우스 경로를 따릅니다."
+            "value" : "카메라 위치는 이 확대/축소 항목이 활성화된 동안에만 기록된 마우스 경로를 따릅니다."
           }
         },
         "ru" : {
@@ -2946,6 +2992,7 @@
       }
     },
     "video-editor.follow-mouse-only-works-with-snapzy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3010,6 +3057,7 @@
       }
     },
     "video-editor.follow-speed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3074,6 +3122,7 @@
       }
     },
     "video-editor.follow-speed-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3138,6 +3187,7 @@
       }
     },
     "video-editor.frames-count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3202,6 +3252,7 @@
       }
     },
     "video-editor.gif-dimensions-not-changed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3266,6 +3317,7 @@
       }
     },
     "video-editor.gif-info" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3330,6 +3382,7 @@
       }
     },
     "video-editor.hide-sidebar-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3394,6 +3447,7 @@
       }
     },
     "video-editor.hide-video-info-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3458,6 +3512,7 @@
       }
     },
     "video-editor.invalid-file-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3522,6 +3577,7 @@
       }
     },
     "video-editor.keep-original" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3586,6 +3642,7 @@
       }
     },
     "video-editor.manual" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3650,6 +3707,7 @@
       }
     },
     "video-editor.manual-camera-control-only-in-manual-mode" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3714,6 +3772,7 @@
       }
     },
     "video-editor.manual-mode-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3748,7 +3807,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "수동 모드에서는 카메라 프레임이 고정된 상태로 유지됩니다. 이 확대\/축소 항목이 마우스를 따라야 하는 경우 자동으로 전환하세요."
+            "value" : "수동 모드에서는 카메라 프레임이 고정된 상태로 유지됩니다. 이 확대/축소 항목이 마우스를 따라야 하는 경우 자동으로 전환하세요."
           }
         },
         "ru" : {
@@ -3778,6 +3837,7 @@
       }
     },
     "video-editor.mouse-samples" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3842,6 +3902,7 @@
       }
     },
     "video-editor.mouse-tracking-data-unavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3906,6 +3967,7 @@
       }
     },
     "video-editor.mute" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3970,6 +4032,7 @@
       }
     },
     "video-editor.no-changes-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4034,6 +4097,7 @@
       }
     },
     "video-editor.no-zoom-selected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4068,7 +4132,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소가 선택되지 않음"
+            "value" : "확대/축소가 선택되지 않음"
           }
         },
         "ru" : {
@@ -4098,6 +4162,7 @@
       }
     },
     "video-editor.original-dimensions-label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4162,6 +4227,7 @@
       }
     },
     "video-editor.preparing-export" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4226,6 +4292,7 @@
       }
     },
     "video-editor.preparing-save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4290,6 +4357,7 @@
       }
     },
     "video-editor.press-z-to-add-zoom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4324,7 +4392,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "재생 헤드에 확대\/축소를 추가하려면 Z를 누르거나 타임라인에서 확대\/축소 항목을 클릭하세요."
+            "value" : "재생 헤드에 확대/축소를 추가하려면 Z를 누르거나 타임라인에서 확대/축소 항목을 클릭하세요."
           }
         },
         "ru" : {
@@ -4354,6 +4422,7 @@
       }
     },
     "video-editor.processing-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4418,6 +4487,7 @@
       }
     },
     "video-editor.redo-shortcut-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4482,6 +4552,7 @@
       }
     },
     "video-editor.remove-all-zooms" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4516,7 +4587,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "모든 확대\/축소 제거"
+            "value" : "모든 확대/축소 제거"
           }
         },
         "ru" : {
@@ -4546,6 +4617,7 @@
       }
     },
     "video-editor.replace-original" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4610,6 +4682,7 @@
       }
     },
     "video-editor.resize-gif-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4674,6 +4747,7 @@
       }
     },
     "video-editor.resizing-frames" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4738,6 +4812,7 @@
       }
     },
     "video-editor.resizing-gif" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4802,6 +4877,7 @@
       }
     },
     "video-editor.sample-rate" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4866,6 +4942,7 @@
       }
     },
     "video-editor.save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4930,6 +5007,7 @@
       }
     },
     "video-editor.save-as-copy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4994,6 +5072,7 @@
       }
     },
     "video-editor.save-edited-video-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5058,6 +5137,7 @@
       }
     },
     "video-editor.save-edited-video-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5122,6 +5202,7 @@
       }
     },
     "video-editor.save-gif-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5186,6 +5267,7 @@
       }
     },
     "video-editor.save-resized-gif-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5250,6 +5332,7 @@
       }
     },
     "video-editor.save-video-copy-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5314,6 +5397,7 @@
       }
     },
     "video-editor.save-video-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5378,6 +5462,7 @@
       }
     },
     "video-editor.segments" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5442,6 +5527,7 @@
       }
     },
     "video-editor.select-valid-video-or-gif-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5506,6 +5592,7 @@
       }
     },
     "video-editor.show-sidebar-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5570,6 +5657,7 @@
       }
     },
     "video-editor.show-video-info-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5634,6 +5722,7 @@
       }
     },
     "video-editor.smaller-file-size-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5698,6 +5787,7 @@
       }
     },
     "video-editor.smart-camera" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5762,6 +5852,7 @@
       }
     },
     "video-editor.smooth" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5826,6 +5917,7 @@
       }
     },
     "video-editor.supports-video-formats" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5890,6 +5982,7 @@
       }
     },
     "video-editor.top-left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5954,6 +6047,7 @@
       }
     },
     "video-editor.top-right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6018,6 +6112,7 @@
       }
     },
     "video-editor.transition-applies-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6052,7 +6147,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 편집기의 모든 확대\/축소 항목에 적용됩니다. 값이 높을수록 확대\/축소에 들어가거나 나갈 때 더 차분하게 느껴집니다."
+            "value" : "이 편집기의 모든 확대/축소 항목에 적용됩니다. 값이 높을수록 확대/축소에 들어가거나 나갈 때 더 차분하게 느껴집니다."
           }
         },
         "ru" : {
@@ -6082,6 +6177,7 @@
       }
     },
     "video-editor.transition-smoothness" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6146,6 +6242,7 @@
       }
     },
     "video-editor.undo-shortcut-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6210,6 +6307,7 @@
       }
     },
     "video-editor.unknown-tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6274,6 +6372,7 @@
       }
     },
     "video-editor.unsaved-changes-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6338,6 +6437,7 @@
       }
     },
     "video-editor.unsaved-changes-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6402,6 +6502,7 @@
       }
     },
     "video-editor.unsupported-file-type" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6466,6 +6567,7 @@
       }
     },
     "video-editor.video-details" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6530,6 +6632,7 @@
       }
     },
     "video-editor.zoom-center" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6594,6 +6697,7 @@
       }
     },
     "video-editor.zoom-effects" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6628,7 +6732,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 효과"
+            "value" : "확대/축소 효과"
           }
         },
         "ru" : {
@@ -6658,6 +6762,7 @@
       }
     },
     "video-editor.zoom-item" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6692,7 +6797,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 항목"
+            "value" : "확대/축소 항목"
           }
         },
         "ru" : {
@@ -6722,6 +6827,7 @@
       }
     },
     "video-editor.zoom-level" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6756,7 +6862,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 수준"
+            "value" : "확대/축소 수준"
           }
         },
         "ru" : {
@@ -6786,6 +6892,7 @@
       }
     },
     "video-editor.zoom-settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6820,7 +6927,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 설정"
+            "value" : "확대/축소 설정"
           }
         },
         "ru" : {
@@ -6850,6 +6957,7 @@
       }
     },
     "video-editor.zoom-tab" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6914,6 +7022,7 @@
       }
     },
     "video-editor.zooms" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6978,6 +7087,7 @@
       }
     },
     "video-export.export-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7042,6 +7152,7 @@
       }
     },
     "video-export.session-creation-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7106,6 +7217,7 @@
       }
     },
     "zoom-compositor.composition-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7140,7 +7252,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "확대\/축소 효과를 적용하지 못했습니다. 영상이 손상되었거나 지원되지 않는 형식일 수 있습니다."
+            "value" : "확대/축소 효과를 적용하지 못했습니다. 영상이 손상되었거나 지원되지 않는 형식일 수 있습니다."
           }
         },
         "ru" : {
@@ -7170,6 +7282,7 @@
       }
     },
     "zoom-compositor.no-video-track" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7234,6 +7347,7 @@
       }
     },
     "zoom-compositor.track-mismatch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

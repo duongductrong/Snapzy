@@ -14,6 +14,8 @@
 
 /* Begin PBXFileReference section */
 		A36462A32F18EEDA0003453D /* Snapzy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Snapzy.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00100012F9F000000000001 /* SnapzyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapzyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D00110022F9F000000000002 /* Snapzy.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = Snapzy.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -37,6 +39,11 @@
 			path = Snapzy;
 			sourceTree = "<group>";
 		};
+		D00100032F9F000000000003 /* SnapzyTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SnapzyTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -50,13 +57,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D00100042F9F000000000004 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		A364629A2F18EEDA0003453D = {
 			isa = PBXGroup;
 			children = (
+				D00110022F9F000000000002 /* Snapzy.xctestplan */,
 				A36462A52F18EEDA0003453D /* Snapzy */,
+				D00100032F9F000000000003 /* SnapzyTests */,
 				A36462A42F18EEDA0003453D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -65,6 +81,7 @@
 			isa = PBXGroup;
 			children = (
 				A36462A32F18EEDA0003453D /* Snapzy.app */,
+				D00100012F9F000000000001 /* SnapzyTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -97,7 +114,40 @@
 			productReference = A36462A32F18EEDA0003453D /* Snapzy.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D00100072F9F000000000007 /* SnapzyTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D001000C2F9F00000000000C /* Build configuration list for PBXNativeTarget "SnapzyTests" */;
+			buildPhases = (
+				D00100062F9F000000000006 /* Sources */,
+				D00100042F9F000000000004 /* Frameworks */,
+				D00100052F9F000000000005 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D00100092F9F000000000009 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				D00100032F9F000000000003 /* SnapzyTests */,
+			);
+			name = SnapzyTests;
+			packageProductDependencies = (
+			);
+			productName = SnapzyTests;
+			productReference = D00100012F9F000000000001 /* SnapzyTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXContainerItemProxy section */
+		D00100082F9F000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A364629B2F18EEDA0003453D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A36462A22F18EEDA0003453D;
+			remoteInfo = Snapzy;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXProject section */
 		A364629B2F18EEDA0003453D /* Project object */ = {
@@ -109,6 +159,10 @@
 				TargetAttributes = {
 					A36462A22F18EEDA0003453D = {
 						CreatedOnToolsVersion = 26.2;
+					};
+					D00100072F9F000000000007 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = A36462A22F18EEDA0003453D;
 					};
 				};
 			};
@@ -141,12 +195,20 @@
 			projectRoot = "";
 			targets = (
 				A36462A22F18EEDA0003453D /* Snapzy */,
+				D00100072F9F000000000007 /* SnapzyTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		A36462A12F18EEDA0003453D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D00100052F9F000000000005 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -163,7 +225,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D00100062F9F000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D00100092F9F000000000009 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A36462A22F18EEDA0003453D /* Snapzy */;
+			targetProxy = D00100082F9F000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A36462AE2F18EEDB0003453D /* Debug */ = {
@@ -364,6 +441,58 @@
 			};
 			name = Release;
 		};
+		D001000A2F9F00000000000A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 82;
+				DEVELOPMENT_TEAM = XMHV5GH2Z7;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.12.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Snapzy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Snapzy";
+			};
+			name = Debug;
+		};
+		D001000B2F9F00000000000B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 82;
+				DEVELOPMENT_TEAM = XMHV5GH2Z7;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 1.12.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Snapzy.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Snapzy";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -381,6 +510,15 @@
 			buildConfigurations = (
 				A36462B12F18EEDB0003453D /* Debug */,
 				A36462B22F18EEDB0003453D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D001000C2F9F00000000000C /* Build configuration list for PBXNativeTarget "SnapzyTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D001000A2F9F00000000000A /* Debug */,
+				D001000B2F9F00000000000B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

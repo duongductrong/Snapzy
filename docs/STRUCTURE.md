@@ -158,9 +158,7 @@ Snapzy/
 SnapzyTests/
   Services/
     Capture/
-    Cloud/
-    Media/
-    Shortcuts/
+      *Tests.swift
   Features/
     Capture/
     Annotate/
@@ -254,10 +252,25 @@ SnapzyUITests/
 
 ## Test Architecture
 
-No test targets exist yet. Two Xcode targets are planned:
+Snapzy uses peer test roots at the repository root so test code stays out of
+the app source folder and Xcode can bind each root to the correct target.
 
-- **SnapzyTests** — Unit Testing Bundle (mirrors `Snapzy/` source tree)
-- **SnapzyUITests** — UI Testing Bundle (end-to-end user flows)
+- **SnapzyTests** — Unit Testing Bundle. Mirrors the `Snapzy/` source tree by
+  domain, for example `SnapzyTests/Services/Capture/*Tests.swift` tests
+  `Snapzy/Services/Capture/*`.
+- **SnapzyUITests** — planned UI Testing Bundle for end-to-end user flows.
+
+Current Xcode project contract:
+
+- `Snapzy.xcodeproj` has a file-system synchronized root group for
+  `SnapzyTests/`.
+- The shared `Snapzy` scheme uses `Snapzy.xctestplan`, which includes
+  `SnapzyTests` in its Test action.
+- Test helpers live in `SnapzyTests/Helpers/`.
+- Fixtures, when needed, should live in `SnapzyTests/Fixtures/`.
+
+Do not place XCTest files under `Snapzy/`; that folder is synchronized into the
+app target.
 
 Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTests.swift` tests `Snapzy/Services/Cloud/AWSV4Signer.swift`. Shared mocks and fixture assets live in `SnapzyTests/Helpers/` and `SnapzyTests/Fixtures/`.
 

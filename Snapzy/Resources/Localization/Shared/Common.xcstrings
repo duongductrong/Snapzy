@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "action.capture-area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "action.capture-fullscreen" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "action.capture-subject" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "action.capture-text-ocr" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "action.cloud-uploads" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "action.open-annotate" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -385,7 +391,25 @@
         }
       }
     },
+    "action.open-history" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open History"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở lịch sử"
+          }
+        }
+      }
+    },
     "action.open-video-editor" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +474,7 @@
       }
     },
     "action.record-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +539,7 @@
       }
     },
     "action.scrolling-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +604,7 @@
       }
     },
     "action.show-quick-access-overlay" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +669,7 @@
       }
     },
     "action.show-shortcut-list" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +734,7 @@
       }
     },
     "app-identity.healthy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +799,7 @@
       }
     },
     "app-identity.invalid-signature" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,70 +864,72 @@
       }
     },
     "app-identity.outside-applications" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installieren Sie Snapzy in \/Applications, bevor Sie Berechtigungen erteilen. Aktueller Pfad: %@"
+            "value" : "Installieren Sie Snapzy in /Applications, bevor Sie Berechtigungen erteilen. Aktueller Pfad: %@"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Install Snapzy in \/Applications before granting permissions. Current path: %@"
+            "value" : "Install Snapzy in /Applications before granting permissions. Current path: %@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Instale Snapzy en \/Aplicaciones antes de otorgar permisos. Ruta actual: %@"
+            "value" : "Instale Snapzy en /Aplicaciones antes de otorgar permisos. Ruta actual: %@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Installez Snapzy dans \/Applications avant d'accorder les autorisations. Chemin actuel : %@"
+            "value" : "Installez Snapzy dans /Applications avant d'accorder les autorisations. Chemin actuel : %@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "権限を付与する前に、\/Applications に Snapzy をインストールします。現在のパス: %@"
+            "value" : "権限を付与する前に、/Applications に Snapzy をインストールします。現在のパス: %@"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "권한을 부여하기 전에 \/Applications에 Snapzy를 설치하세요. 현재 경로: %@"
+            "value" : "권한을 부여하기 전에 /Applications에 Snapzy를 설치하세요. 현재 경로: %@"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Прежде чем предоставлять разрешения, установите Snapzy в каталоге \/Applications. Текущий путь: %@"
+            "value" : "Прежде чем предоставлять разрешения, установите Snapzy в каталоге /Applications. Текущий путь: %@"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Hãy cài Snapzy trong \/Applications trước khi cấp quyền. Đường dẫn hiện tại: %@"
+            "value" : "Hãy cài Snapzy trong /Applications trước khi cấp quyền. Đường dẫn hiện tại: %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在授予权限之前，在 \/Applications 中安装 Snapzy。当前路径：%@"
+            "value" : "在授予权限之前，在 /Applications 中安装 Snapzy。当前路径：%@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在授予權限之前，在 \/Applications 中安裝 Snapzy。當前路徑：%@"
+            "value" : "在授予權限之前，在 /Applications 中安裝 Snapzy。當前路徑：%@"
           }
         }
       }
     },
     "app-identity.quarantined" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +994,7 @@
       }
     },
     "app-identity.unexpected-bundle-id" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1059,7 @@
       }
     },
     "appearance.dark" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1124,7 @@
       }
     },
     "appearance.light" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1189,7 @@
       }
     },
     "appearance.system" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1254,7 @@
       }
     },
     "common.active" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1319,7 @@
       }
     },
     "common.apply" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1384,7 @@
       }
     },
     "common.aspect-ratio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1368,7 +1407,7 @@
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Rapport hauteur\/largeur"
+            "value" : "Rapport hauteur/largeur"
           }
         },
         "ja" : {
@@ -1410,6 +1449,7 @@
       }
     },
     "common.audio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1514,7 @@
       }
     },
     "common.background" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1579,7 @@
       }
     },
     "common.cancel" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1602,6 +1644,7 @@
       }
     },
     "common.close" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1709,7 @@
       }
     },
     "common.color" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1774,7 @@
       }
     },
     "common.colors" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1794,6 +1839,7 @@
       }
     },
     "common.continue" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1857,7 +1903,73 @@
         }
       }
     },
+    "common.copied-to-clipboard" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In die Zwischenablage kopiert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copied to clipboard"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiado al portapapeles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copié dans le presse-papiers"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードにコピーしました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드에 복사됨"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировано в буфер обмена"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã sao chép vào clipboard"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已复制到剪贴板"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已複製到剪貼簿"
+          }
+        }
+      }
+    },
     "common.copy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +2034,7 @@
       }
     },
     "common.copy-to-clipboard" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1985,71 +2098,8 @@
         }
       }
     },
-    "common.copied-to-clipboard" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In die Zwischenablage kopiert"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copied to clipboard"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copiado al portapapeles"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Copié dans le presse-papiers"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "クリップボードにコピーしました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "클립보드에 복사됨"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Скопировано в буфер обмена"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã sao chép vào clipboard"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已复制到剪贴板"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已複製到剪貼簿"
-          }
-        }
-      }
-    },
     "common.corners" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2114,6 +2164,7 @@
       }
     },
     "common.created" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2178,6 +2229,7 @@
       }
     },
     "common.current-size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2242,6 +2294,7 @@
       }
     },
     "common.custom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2306,6 +2359,7 @@
       }
     },
     "common.dates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2370,6 +2424,7 @@
       }
     },
     "common.delete" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2434,6 +2489,7 @@
       }
     },
     "common.dimensions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2498,6 +2554,7 @@
       }
     },
     "common.disable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2562,6 +2619,7 @@
       }
     },
     "common.disabled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2626,6 +2684,7 @@
       }
     },
     "common.done" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2690,6 +2749,7 @@
       }
     },
     "common.duration" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2754,6 +2814,7 @@
       }
     },
     "common.enabled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2818,6 +2879,7 @@
       }
     },
     "common.estimated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2882,6 +2944,7 @@
       }
     },
     "common.estimated-size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2946,6 +3009,7 @@
       }
     },
     "common.export" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3010,6 +3074,7 @@
       }
     },
     "common.file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3074,6 +3139,7 @@
       }
     },
     "common.fill" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3138,6 +3204,7 @@
       }
     },
     "common.format" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3202,6 +3269,7 @@
       }
     },
     "common.free" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3266,6 +3334,7 @@
       }
     },
     "common.gradients" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3330,6 +3399,7 @@
       }
     },
     "common.height" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3394,6 +3464,7 @@
       }
     },
     "common.high" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3458,6 +3529,7 @@
       }
     },
     "common.import" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3522,6 +3594,7 @@
       }
     },
     "common.inset" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3586,6 +3659,7 @@
       }
     },
     "common.low" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3650,6 +3724,7 @@
       }
     },
     "common.medium" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3714,6 +3789,7 @@
       }
     },
     "common.modified" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3778,6 +3854,7 @@
       }
     },
     "common.more" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3842,6 +3919,7 @@
       }
     },
     "common.name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3906,6 +3984,7 @@
       }
     },
     "common.next" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3970,6 +4049,7 @@
       }
     },
     "common.none" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4034,6 +4114,7 @@
       }
     },
     "common.not-granted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4098,6 +4179,7 @@
       }
     },
     "common.off" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4162,6 +4244,7 @@
       }
     },
     "common.ok" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4226,6 +4309,7 @@
       }
     },
     "common.on" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4290,6 +4374,7 @@
       }
     },
     "common.open" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4354,6 +4439,7 @@
       }
     },
     "common.open-in-finder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4418,6 +4504,7 @@
       }
     },
     "common.open-settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4482,6 +4569,7 @@
       }
     },
     "common.open-system-settings" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4546,6 +4634,7 @@
       }
     },
     "common.original" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4610,6 +4699,7 @@
       }
     },
     "common.overwrite" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4674,6 +4764,7 @@
       }
     },
     "common.padding" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4738,6 +4829,7 @@
       }
     },
     "common.path" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4802,6 +4894,7 @@
       }
     },
     "common.perspective" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4866,6 +4959,7 @@
       }
     },
     "common.preferences" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4930,6 +5024,7 @@
       }
     },
     "common.preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4994,6 +5089,7 @@
       }
     },
     "common.quality" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5058,6 +5154,7 @@
       }
     },
     "common.ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5122,6 +5219,7 @@
       }
     },
     "common.redo" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5186,6 +5284,7 @@
       }
     },
     "common.refresh" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5250,6 +5349,7 @@
       }
     },
     "common.rename-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5314,6 +5414,7 @@
       }
     },
     "common.reset" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5378,6 +5479,7 @@
       }
     },
     "common.reset-to-default" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5442,6 +5544,7 @@
       }
     },
     "common.resolution" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5505,7 +5608,25 @@
         }
       }
     },
+    "common.restore" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restore"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khôi phục"
+          }
+        }
+      }
+    },
     "common.rotation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5570,6 +5691,7 @@
       }
     },
     "common.save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5634,6 +5756,7 @@
       }
     },
     "common.save-as" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5698,6 +5821,7 @@
       }
     },
     "common.shadow" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5762,6 +5886,7 @@
       }
     },
     "common.share" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5826,6 +5951,7 @@
       }
     },
     "common.size" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5890,6 +6016,7 @@
       }
     },
     "common.solid" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5954,6 +6081,7 @@
       }
     },
     "common.status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6018,6 +6146,7 @@
       }
     },
     "common.stroke" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6082,6 +6211,7 @@
       }
     },
     "common.style" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6146,6 +6276,7 @@
       }
     },
     "common.text" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6210,6 +6341,7 @@
       }
     },
     "common.undo" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6274,6 +6406,7 @@
       }
     },
     "common.unsaved" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6338,6 +6471,7 @@
       }
     },
     "common.video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6402,6 +6536,7 @@
       }
     },
     "common.wallpapers" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6466,6 +6601,7 @@
       }
     },
     "common.width" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6530,6 +6666,7 @@
       }
     },
     "common.with-shortcut" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6589,38 +6726,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ (%@)"
-          }
-        }
-      }
-    },
-    "action.open-history" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open History"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở lịch sử"
-          }
-        }
-      }
-    },
-    "common.restore" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restore"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khôi phục"
           }
         }
       }

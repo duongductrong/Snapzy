@@ -9,13 +9,13 @@ import AppKit
 import Foundation
 import Vision
 
-enum ScrollingCaptureMergeDirection {
+nonisolated enum ScrollingCaptureMergeDirection {
   case unresolved
   case appendFromBottom
   case appendFromTop
 }
 
-enum ScrollingCaptureStitchOutcome {
+nonisolated enum ScrollingCaptureStitchOutcome {
   case initialized
   case appended(deltaY: Int)
   case ignoredNoMovement
@@ -23,7 +23,7 @@ enum ScrollingCaptureStitchOutcome {
   case reachedHeightLimit
 }
 
-enum ScrollingCaptureAlignmentPath: String {
+nonisolated enum ScrollingCaptureAlignmentPath: String {
   case initialFrame = "initial-frame"
   case fastGuided = "fast-guided"
   case guidedVision = "guided-vision"
@@ -34,7 +34,7 @@ enum ScrollingCaptureAlignmentPath: String {
   case heightLimit = "height-limit"
 }
 
-struct ScrollingCaptureAlignmentDebugInfo {
+nonisolated struct ScrollingCaptureAlignmentDebugInfo {
   let path: ScrollingCaptureAlignmentPath
   let usedVisionEstimate: Bool
   let confidence: Double
@@ -44,7 +44,7 @@ struct ScrollingCaptureAlignmentDebugInfo {
   let visionAgreementCount: Int
 }
 
-struct ScrollingCaptureStitchUpdate {
+nonisolated struct ScrollingCaptureStitchUpdate {
   let outcome: ScrollingCaptureStitchOutcome
   let mergedImage: CGImage?
   let acceptedFrameCount: Int
@@ -55,7 +55,8 @@ struct ScrollingCaptureStitchUpdate {
   let alignmentDebug: ScrollingCaptureAlignmentDebugInfo?
 }
 
-final class ScrollingCaptureStitcher {
+// Instances are confined to the coordinator's serial processing queue during capture.
+nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private enum MatchSearchMode {
     case guided
     case recovery

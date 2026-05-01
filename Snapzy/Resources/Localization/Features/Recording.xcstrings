@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "gif.cannot-create-output-file" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "gif.cannot-read-source" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "gif.finalize-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "gif.finalize-resized-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "gif.invalid-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "gif.no-frames-from-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "gif.no-frames-in-gif" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "keystroke-position.bottom-center" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "keystroke-position.bottom-left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "keystroke-position.bottom-right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +652,7 @@
       }
     },
     "keystroke-position.top-center" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +717,7 @@
       }
     },
     "keystroke-position.top-left" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +782,7 @@
       }
     },
     "keystroke-position.top-right" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +847,7 @@
       }
     },
     "microphone.access-required-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +912,7 @@
       }
     },
     "microphone.continue-without-mic" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +977,7 @@
       }
     },
     "microphone.double-tap-toggle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1008,7 +1024,7 @@
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Nhấn hai lần để bật\/tắt"
+            "value" : "Nhấn hai lần để bật/tắt"
           }
         },
         "zh-Hans" : {
@@ -1026,6 +1042,7 @@
       }
     },
     "microphone.mute" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1107,7 @@
       }
     },
     "microphone.off" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1172,7 @@
       }
     },
     "microphone.on" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1237,7 @@
       }
     },
     "microphone.preferences-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1302,7 @@
       }
     },
     "microphone.recording-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1367,7 @@
       }
     },
     "microphone.unavailable-version" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1410,6 +1432,7 @@
       }
     },
     "microphone.unmute" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1497,7 @@
       }
     },
     "recording-annotation.auto-clear" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1562,7 @@
       }
     },
     "recording-annotation.last-count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1602,6 +1627,7 @@
       }
     },
     "recording-annotation.modifier-control" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1692,7 @@
       }
     },
     "recording-annotation.modifier-option" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1757,7 @@
       }
     },
     "recording-annotation.modifier-shift" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1794,6 +1822,7 @@
       }
     },
     "recording-annotation.persist" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1858,6 +1887,7 @@
       }
     },
     "recording-toolbar.area-selection" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +1952,7 @@
       }
     },
     "recording-toolbar.area-selection-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1986,6 +2017,7 @@
       }
     },
     "recording-toolbar.audio-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2050,6 +2082,7 @@
       }
     },
     "recording-toolbar.cancel-recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2114,6 +2147,7 @@
       }
     },
     "recording-toolbar.capture-screenshot" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2178,6 +2212,7 @@
       }
     },
     "recording-toolbar.delete-recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2242,6 +2277,7 @@
       }
     },
     "recording-toolbar.disable-annotations" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2306,6 +2342,7 @@
       }
     },
     "recording-toolbar.enable-annotations" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2370,6 +2407,7 @@
       }
     },
     "recording-toolbar.format-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2434,6 +2472,7 @@
       }
     },
     "recording-toolbar.fullscreen-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2498,6 +2537,7 @@
       }
     },
     "recording-toolbar.highlight-clicks" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2562,6 +2602,7 @@
       }
     },
     "recording-toolbar.options" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2626,6 +2667,7 @@
       }
     },
     "recording-toolbar.options-accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2690,6 +2732,7 @@
       }
     },
     "recording-toolbar.options-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2754,6 +2797,7 @@
       }
     },
     "recording-toolbar.output-gif" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2818,6 +2862,7 @@
       }
     },
     "recording-toolbar.output-mode-accessibility-prefix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2882,6 +2927,7 @@
       }
     },
     "recording-toolbar.output-mode-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2946,6 +2992,7 @@
       }
     },
     "recording-toolbar.output-video" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3010,6 +3057,7 @@
       }
     },
     "recording-toolbar.overlays-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3074,6 +3122,7 @@
       }
     },
     "recording-toolbar.pause-recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3138,6 +3187,7 @@
       }
     },
     "recording-toolbar.quality-high" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3202,6 +3252,7 @@
       }
     },
     "recording-toolbar.quality-low" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3266,6 +3317,7 @@
       }
     },
     "recording-toolbar.quality-medium" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3330,6 +3382,7 @@
       }
     },
     "recording-toolbar.quality-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3394,6 +3447,7 @@
       }
     },
     "recording-toolbar.record" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3458,6 +3512,7 @@
       }
     },
     "recording-toolbar.recording-in-progress" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3522,6 +3577,7 @@
       }
     },
     "recording-toolbar.recording-paused" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3586,6 +3642,7 @@
       }
     },
     "recording-toolbar.restart-recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3650,6 +3707,7 @@
       }
     },
     "recording-toolbar.resume-recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3714,6 +3772,7 @@
       }
     },
     "recording-toolbar.settings-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3778,6 +3837,7 @@
       }
     },
     "recording-toolbar.show-keystrokes" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3842,6 +3902,7 @@
       }
     },
     "recording-toolbar.start-recording-as" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3906,6 +3967,7 @@
       }
     },
     "recording-toolbar.start-recording-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3970,6 +4032,7 @@
       }
     },
     "recording-toolbar.status-bar-accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4034,6 +4097,7 @@
       }
     },
     "recording-toolbar.stop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4098,6 +4162,7 @@
       }
     },
     "recording-toolbar.stop-recording-accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4162,6 +4227,7 @@
       }
     },
     "recording-toolbar.stop-recording-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4226,6 +4292,7 @@
       }
     },
     "recording-toolbar.system-audio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4290,6 +4357,7 @@
       }
     },
     "recording-toolbar.toolbar-accessibility" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4354,6 +4422,7 @@
       }
     },
     "recording.choose-save-location-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4418,6 +4487,7 @@
       }
     },
     "recording.error.cancelled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4482,6 +4552,7 @@
       }
     },
     "recording.error.cannot-add-microphone-writer-input" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4546,6 +4617,7 @@
       }
     },
     "recording.error.cannot-add-system-audio-writer-input" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4610,6 +4682,7 @@
       }
     },
     "recording.error.cannot-add-video-writer-input" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4674,6 +4747,7 @@
       }
     },
     "recording.error.failed-to-start-writing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4738,6 +4812,7 @@
       }
     },
     "recording.error.microphone-permission-denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4802,6 +4877,7 @@
       }
     },
     "recording.error.no-display-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4866,6 +4942,7 @@
       }
     },
     "recording.error.no-output-url" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4930,6 +5007,7 @@
       }
     },
     "recording.error.screen-permission-denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4994,6 +5072,7 @@
       }
     },
     "recording.error.selection-outside-display-bounds" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5058,6 +5137,7 @@
       }
     },
     "recording.error.setup-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5122,6 +5202,7 @@
       }
     },
     "recording.error.shareable-content-load-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5186,6 +5267,7 @@
       }
     },
     "recording.error.write-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5250,6 +5332,7 @@
       }
     },
     "recording.failed-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5314,6 +5397,7 @@
       }
     },
     "recording.save-location-access-required-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5378,6 +5462,7 @@
       }
     },
     "recording.save-location-access-required-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5442,6 +5527,7 @@
       }
     },
     "recording.screenshot-failed-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

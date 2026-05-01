@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "after-capture.accessibility-label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "after-capture.cloud-alert-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "after-capture.cloud-alert-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "after-capture.copy-file-action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "after-capture.copy-file-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "after-capture.open-annotate-action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "after-capture.open-annotate-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "after-capture.save-action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "after-capture.save-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "after-capture.show-quick-access-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +652,7 @@
       }
     },
     "after-capture.upload-to-cloud-action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +717,7 @@
       }
     },
     "after-capture.upload-to-cloud-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +782,7 @@
       }
     },
     "capture-kind.recording" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +847,7 @@
       }
     },
     "capture-kind.screenshot" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +912,7 @@
       }
     },
     "capture-storage.empty" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +977,7 @@
       }
     },
     "capture-storage.operation-in-progress" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1042,7 @@
       }
     },
     "foreground-cutout.cutout-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1107,7 @@
       }
     },
     "foreground-cutout.generic-failure" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1172,7 @@
       }
     },
     "foreground-cutout.image-conversion-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1237,7 @@
       }
     },
     "foreground-cutout.no-subject-detected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1302,7 @@
       }
     },
     "foreground-cutout.no-subject-detected-try-tighter-area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1367,7 @@
       }
     },
     "foreground-cutout.unable-to-process-image-try-again" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1410,6 +1432,7 @@
       }
     },
     "foreground-cutout.unsupported-os" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1497,7 @@
       }
     },
     "ocr.extracting-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1562,7 @@
       }
     },
     "ocr.image-conversion-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1602,6 +1627,7 @@
       }
     },
     "ocr.no-text-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1692,7 @@
       }
     },
     "ocr.qr-codes-label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1757,7 @@
       }
     },
     "ocr.qr-text-only-unsupported" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1794,6 +1822,7 @@
       }
     },
     "ocr.recognition-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1858,6 +1887,7 @@
       }
     },
     "preferences-capture.animation-duration-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +1952,7 @@
       }
     },
     "preferences-capture.animation-duration-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1986,6 +2017,7 @@
       }
     },
     "preferences-capture.auto-crop-subject-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2050,6 +2082,7 @@
       }
     },
     "preferences-capture.auto-crop-subject-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2113,58 +2146,8 @@
         }
       }
     },
-    "preferences-capture.ocr-success-notification-description" : {
-      "comment" : "Capture preferences setting description",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show a toast when text is copied to clipboard"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiển thị thông báo khi văn bản được sao chép vào bộ nhớ tạm"
-          }
-        }
-      }
-    },
-    "preferences-capture.ocr-success-notification-title" : {
-      "comment" : "Capture preferences setting title",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Success Notification"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thông báo thành công"
-          }
-        }
-      }
-    },
-    "preferences-capture.section-ocr" : {
-      "comment" : "Capture preferences section title",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR (Text Extraction)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR (Trích xuất văn bản)"
-          }
-        }
-      }
-    },
     "preferences-capture.available-tokens" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2229,6 +2212,7 @@
       }
     },
     "preferences-capture.display-duration-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2293,6 +2277,7 @@
       }
     },
     "preferences-capture.display-duration-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2357,6 +2342,7 @@
       }
     },
     "preferences-capture.font-size-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2421,6 +2407,7 @@
       }
     },
     "preferences-capture.font-size-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2485,6 +2472,7 @@
       }
     },
     "preferences-capture.frame-rate-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2549,6 +2537,7 @@
       }
     },
     "preferences-capture.frame-rate-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2613,6 +2602,7 @@
       }
     },
     "preferences-capture.hide-desktop-icons-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2677,6 +2667,7 @@
       }
     },
     "preferences-capture.hide-desktop-icons-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2741,6 +2732,7 @@
       }
     },
     "preferences-capture.hide-desktop-widgets-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2805,6 +2797,7 @@
       }
     },
     "preferences-capture.hide-desktop-widgets-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2869,6 +2862,7 @@
       }
     },
     "preferences-capture.highlight-color-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2933,6 +2927,7 @@
       }
     },
     "preferences-capture.highlight-color-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2997,6 +2992,7 @@
       }
     },
     "preferences-capture.highlight-size-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3061,6 +3057,7 @@
       }
     },
     "preferences-capture.highlight-size-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3125,6 +3122,7 @@
       }
     },
     "preferences-capture.image-format-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3189,6 +3187,7 @@
       }
     },
     "preferences-capture.image-format-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3253,6 +3252,7 @@
       }
     },
     "preferences-capture.include-in-recordings-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3317,6 +3317,7 @@
       }
     },
     "preferences-capture.include-in-recordings-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3381,6 +3382,7 @@
       }
     },
     "preferences-capture.include-in-screenshots-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3445,6 +3447,7 @@
       }
     },
     "preferences-capture.include-in-screenshots-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3509,6 +3512,7 @@
       }
     },
     "preferences-capture.jpeg-cutout-note" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3573,6 +3577,7 @@
       }
     },
     "preferences-capture.microphone-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3637,6 +3642,7 @@
       }
     },
     "preferences-capture.microphone-requires-macos" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3700,7 +3706,44 @@
         }
       }
     },
+    "preferences-capture.ocr-success-notification-description" : {
+      "comment" : "Capture preferences setting description",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a toast when text is copied to clipboard"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị thông báo khi văn bản được sao chép vào bộ nhớ tạm"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-success-notification-title" : {
+      "comment" : "Capture preferences setting title",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Success Notification"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo thành công"
+          }
+        }
+      }
+    },
     "preferences-capture.opacity-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3765,6 +3808,7 @@
       }
     },
     "preferences-capture.opacity-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3829,6 +3873,7 @@
       }
     },
     "preferences-capture.position-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3893,6 +3938,7 @@
       }
     },
     "preferences-capture.position-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3957,6 +4003,7 @@
       }
     },
     "preferences-capture.quality-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4021,6 +4068,7 @@
       }
     },
     "preferences-capture.quality-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4085,6 +4133,7 @@
       }
     },
     "preferences-capture.recording-preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4149,6 +4198,7 @@
       }
     },
     "preferences-capture.recording-template-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4213,6 +4263,7 @@
       }
     },
     "preferences-capture.recording-template-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4277,6 +4328,7 @@
       }
     },
     "preferences-capture.remember-last-area-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4341,6 +4393,7 @@
       }
     },
     "preferences-capture.remember-last-area-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4405,6 +4458,7 @@
       }
     },
     "preferences-capture.remove-background" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4469,6 +4523,7 @@
       }
     },
     "preferences-capture.reset-naming-defaults" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4533,6 +4588,7 @@
       }
     },
     "preferences-capture.ripple-count-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4597,6 +4653,7 @@
       }
     },
     "preferences-capture.ripple-count-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4661,6 +4718,7 @@
       }
     },
     "preferences-capture.screenshot-preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4725,6 +4783,7 @@
       }
     },
     "preferences-capture.screenshot-template-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4789,6 +4848,7 @@
       }
     },
     "preferences-capture.screenshot-template-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4853,6 +4913,7 @@
       }
     },
     "preferences-capture.scrolling-capture-info" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4917,6 +4978,7 @@
       }
     },
     "preferences-capture.section-after-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4981,6 +5043,7 @@
       }
     },
     "preferences-capture.section-app-windows" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5045,6 +5108,7 @@
       }
     },
     "preferences-capture.section-audio" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5109,6 +5173,7 @@
       }
     },
     "preferences-capture.section-desktop" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5173,6 +5238,7 @@
       }
     },
     "preferences-capture.section-keystroke-overlay" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5237,6 +5303,7 @@
       }
     },
     "preferences-capture.section-mouse-highlight" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5300,7 +5367,26 @@
         }
       }
     },
+    "preferences-capture.section-ocr" : {
+      "comment" : "Capture preferences section title",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OCR (Text Extraction)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OCR (Trích xuất văn bản)"
+          }
+        }
+      }
+    },
     "preferences-capture.section-output-naming" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5365,6 +5451,7 @@
       }
     },
     "preferences-capture.section-recording-behavior" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5429,6 +5516,7 @@
       }
     },
     "preferences-capture.section-recording-format" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5493,6 +5581,7 @@
       }
     },
     "preferences-capture.section-recording-quality" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5557,6 +5646,7 @@
       }
     },
     "preferences-capture.section-screenshot-format" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5620,71 +5710,8 @@
         }
       }
     },
-    "preferences-capture.section-ocr" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "OCR"
-          }
-        }
-      }
-    },
     "preferences-capture.section-scrolling-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5749,6 +5776,7 @@
       }
     },
     "preferences-capture.show-cursor-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5813,6 +5841,7 @@
       }
     },
     "preferences-capture.show-cursor-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5877,6 +5906,7 @@
       }
     },
     "preferences-capture.show-session-hints-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5941,6 +5971,7 @@
       }
     },
     "preferences-capture.show-session-hints-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6005,6 +6036,7 @@
       }
     },
     "preferences-capture.system-audio-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6069,6 +6101,7 @@
       }
     },
     "preferences-capture.system-audio-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6133,6 +6166,7 @@
       }
     },
     "preferences-capture.video-format-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6197,6 +6231,7 @@
       }
     },
     "preferences-capture.video-format-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6261,6 +6296,7 @@
       }
     },
     "preferences-capture.webp-warning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6324,7 +6360,73 @@
         }
       }
     },
+    "screen-capture.application-mode-hint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drücke %@, um ein App-Fenster aufzunehmen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Press %@ to select an app window"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsa %@ para capturar una ventana de app"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuyez sur %@ pour capturer une fenêtre d’application"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ キーでアプリのウィンドウをキャプチャ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@를 눌러 앱 창 캡처"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите %@, чтобы захватить окно приложения"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nhấn %@ để chọn cửa sổ ứng dụng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 %@ 捕获应用窗口"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 %@ 捕獲應用程式視窗"
+          }
+        }
+      }
+    },
     "screen-capture.cancelled" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6389,6 +6491,7 @@
       }
     },
     "screen-capture.capture-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6453,6 +6556,7 @@
       }
     },
     "screen-capture.could-not-create-directory" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6517,6 +6621,7 @@
       }
     },
     "screen-capture.could-not-create-image-destination" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6581,6 +6686,7 @@
       }
     },
     "screen-capture.failed-to-create-image-from-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6644,71 +6750,8 @@
         }
       }
     },
-    "screen-capture.application-mode-hint" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drücke %@, um ein App-Fenster aufzunehmen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Press %@ to select an app window"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pulsa %@ para capturar una ventana de app"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appuyez sur %@ pour capturer une fenêtre d’application"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ キーでアプリのウィンドウをキャプチャ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@를 눌러 앱 창 캡처"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Нажмите %@, чтобы захватить окно приложения"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nhấn %@ để chọn cửa sổ ứng dụng"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按 %@ 捕获应用窗口"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按 %@ 捕獲應用程式視窗"
-          }
-        }
-      }
-    },
     "screen-capture.failed-to-crop-captured-image" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6773,6 +6816,7 @@
       }
     },
     "screen-capture.failed-to-write-image-to-disk" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6837,6 +6881,7 @@
       }
     },
     "screen-capture.file-write-verification-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6901,6 +6946,7 @@
       }
     },
     "screen-capture.manual-mode-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6965,6 +7011,7 @@
       }
     },
     "screen-capture.no-display-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7029,6 +7076,7 @@
       }
     },
     "screen-capture.permission-denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7093,6 +7141,7 @@
       }
     },
     "screen-capture.save-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7157,6 +7206,7 @@
       }
     },
     "screen-capture.save-location-permission-required" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7221,6 +7271,7 @@
       }
     },
     "screen-capture.selected-window-unavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7285,6 +7336,7 @@
       }
     },
     "screen-capture.selection-outside-display-bounds" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7349,6 +7401,7 @@
       }
     },
     "screen-capture.unable-to-capture-selected-area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7413,6 +7466,7 @@
       }
     },
     "screen-capture.webp-encoding-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7477,6 +7531,7 @@
       }
     },
     "scrolling-capture-status.adjust-region" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7541,6 +7596,7 @@
       }
     },
     "scrolling-capture-status.aligning-latest-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7605,6 +7661,7 @@
       }
     },
     "scrolling-capture-status.alignment-paused" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7669,6 +7726,7 @@
       }
     },
     "scrolling-capture-status.capturing-first-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7733,6 +7791,7 @@
       }
     },
     "scrolling-capture-status.couldnt-align-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7797,6 +7856,7 @@
       }
     },
     "scrolling-capture-status.couldnt-capture-last-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7861,6 +7921,7 @@
       }
     },
     "scrolling-capture-status.couldnt-refresh-last-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7925,6 +7986,7 @@
       }
     },
     "scrolling-capture-status.direction-changed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7989,6 +8051,7 @@
       }
     },
     "scrolling-capture-status.end-reached-no-new-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8053,6 +8116,7 @@
       }
     },
     "scrolling-capture-status.finalizing-couldnt-align-last-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8117,6 +8181,7 @@
       }
     },
     "scrolling-capture-status.finalizing-current-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8181,6 +8246,7 @@
       }
     },
     "scrolling-capture-status.finalizing-frames" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8245,6 +8311,7 @@
       }
     },
     "scrolling-capture-status.finalizing-height-limit-reached" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8309,6 +8376,7 @@
       }
     },
     "scrolling-capture-status.finalizing-no-new-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8373,6 +8441,7 @@
       }
     },
     "scrolling-capture-status.first-frame-locked" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8437,6 +8506,7 @@
       }
     },
     "scrolling-capture-status.height-limit-reached" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8501,6 +8571,7 @@
       }
     },
     "scrolling-capture-status.mixed-directions-detected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8565,6 +8636,7 @@
       }
     },
     "scrolling-capture-status.mixed-directions-finalizing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8629,6 +8701,7 @@
       }
     },
     "scrolling-capture-status.no-savable-result-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8693,6 +8766,7 @@
       }
     },
     "scrolling-capture-status.preview-refresh-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8757,6 +8831,7 @@
       }
     },
     "scrolling-capture-status.ready-hint-toast" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8821,6 +8896,7 @@
       }
     },
     "scrolling-capture-status.region-updated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8885,6 +8961,7 @@
       }
     },
     "scrolling-capture-status.release-to-lock-updated-region" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8949,6 +9026,7 @@
       }
     },
     "scrolling-capture-status.save-failed-result-still-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9013,6 +9091,7 @@
       }
     },
     "scrolling-capture-status.saving-stitched-image" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9077,6 +9156,7 @@
       }
     },
     "scrolling-capture-status.session-active" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9141,6 +9221,7 @@
       }
     },
     "scrolling-capture-status.unable-to-capture-area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9205,6 +9286,7 @@
       }
     },
     "scrolling-capture-status.unable-to-render-preview" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9269,6 +9351,7 @@
       }
     },
     "scrolling-capture-status.waiting-for-new-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9333,6 +9416,7 @@
       }
     },
     "scrolling-capture.badge-captured" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9397,6 +9481,7 @@
       }
     },
     "scrolling-capture.badge-finishing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9461,6 +9546,7 @@
       }
     },
     "scrolling-capture.badge-live" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9525,6 +9611,7 @@
       }
     },
     "scrolling-capture.badge-paused" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9589,6 +9676,7 @@
       }
     },
     "scrolling-capture.badge-saving" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9653,6 +9741,7 @@
       }
     },
     "scrolling-capture.badge-syncing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9717,6 +9806,7 @@
       }
     },
     "scrolling-capture.caption-final-frame-locked" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9781,6 +9871,7 @@
       }
     },
     "scrolling-capture.caption-finalizing-current-result-last-frame-skipped" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9845,6 +9936,7 @@
       }
     },
     "scrolling-capture.caption-finalizing-current-result-no-new-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9909,6 +10001,7 @@
       }
     },
     "scrolling-capture.caption-finalizing-frames-locked" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9973,6 +10066,7 @@
       }
     },
     "scrolling-capture.caption-finalizing-stitched-result" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10037,6 +10131,7 @@
       }
     },
     "scrolling-capture.caption-first-frame-locked" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10101,6 +10196,7 @@
       }
     },
     "scrolling-capture.caption-frames-stitched-delta" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10165,6 +10261,7 @@
       }
     },
     "scrolling-capture.caption-frames-stitched-height-limit-reached" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10229,6 +10326,7 @@
       }
     },
     "scrolling-capture.caption-frames-stitched-no-new-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10293,6 +10391,7 @@
       }
     },
     "scrolling-capture.caption-live-preview-running" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10357,6 +10456,7 @@
       }
     },
     "scrolling-capture.caption-no-savable-result-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10421,6 +10521,7 @@
       }
     },
     "scrolling-capture.caption-save-failed-result-still-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10485,6 +10586,7 @@
       }
     },
     "scrolling-capture.caption-saving-stitched-result" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10549,6 +10651,7 @@
       }
     },
     "scrolling-capture.caption-start-capture-to-lock-first-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10613,6 +10716,7 @@
       }
     },
     "scrolling-capture.guidance-area-updated" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10677,6 +10781,7 @@
       }
     },
     "scrolling-capture.guidance-continue-manually" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10741,6 +10846,7 @@
       }
     },
     "scrolling-capture.guidance-current-result-still-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10805,6 +10911,7 @@
       }
     },
     "scrolling-capture.guidance-current-stitched-result-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10869,6 +10976,7 @@
       }
     },
     "scrolling-capture.guidance-frame-only-scrolling-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10933,6 +11041,7 @@
       }
     },
     "scrolling-capture.guidance-height-limit-reached" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10997,6 +11106,7 @@
       }
     },
     "scrolling-capture.guidance-hold-steady" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11061,6 +11171,7 @@
       }
     },
     "scrolling-capture.guidance-keep-capturing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11125,6 +11236,7 @@
       }
     },
     "scrolling-capture.guidance-keep-one-direction" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11189,6 +11301,7 @@
       }
     },
     "scrolling-capture.guidance-keep-one-direction-for-clean-stitch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11253,6 +11366,7 @@
       }
     },
     "scrolling-capture.guidance-keep-one-direction-or-restart" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11317,6 +11431,7 @@
       }
     },
     "scrolling-capture.guidance-keep-one-direction-so-snapzy-can-realign" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11381,6 +11496,7 @@
       }
     },
     "scrolling-capture.guidance-keep-only-scrolling-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11445,6 +11561,7 @@
       }
     },
     "scrolling-capture.guidance-keep-scrolling-down" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11509,6 +11626,7 @@
       }
     },
     "scrolling-capture.guidance-keep-steadier-pace" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11573,6 +11691,7 @@
       }
     },
     "scrolling-capture.guidance-locking-current-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11637,6 +11756,7 @@
       }
     },
     "scrolling-capture.guidance-no-new-content-detected" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11701,6 +11821,7 @@
       }
     },
     "scrolling-capture.guidance-one-direction-steady-pace" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11765,6 +11886,7 @@
       }
     },
     "scrolling-capture.guidance-please-wait" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11829,6 +11951,7 @@
       }
     },
     "scrolling-capture.guidance-press-done-to-save" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11893,6 +12016,7 @@
       }
     },
     "scrolling-capture.guidance-press-done-when-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11957,6 +12081,7 @@
       }
     },
     "scrolling-capture.guidance-preview-needs-recovery" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12021,6 +12146,7 @@
       }
     },
     "scrolling-capture.guidance-release-to-lock-area" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12085,6 +12211,7 @@
       }
     },
     "scrolling-capture.guidance-reverse-scrolling-can-break-stitch" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12149,6 +12276,7 @@
       }
     },
     "scrolling-capture.guidance-saving-current-result" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12213,6 +12341,7 @@
       }
     },
     "scrolling-capture.guidance-saving-long-screenshot" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12277,6 +12406,7 @@
       }
     },
     "scrolling-capture.guidance-scroll-down-steadily" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12341,6 +12471,7 @@
       }
     },
     "scrolling-capture.guidance-slow-down" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12405,6 +12536,7 @@
       }
     },
     "scrolling-capture.guidance-snapzy-locking-first-frame" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12469,6 +12601,7 @@
       }
     },
     "scrolling-capture.guidance-snapzy-sealing-stitched-result" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12533,6 +12666,7 @@
       }
     },
     "scrolling-capture.guidance-stay-on-one-direction" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12597,6 +12731,7 @@
       }
     },
     "scrolling-capture.guidance-then-press-start-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12661,6 +12796,7 @@
       }
     },
     "scrolling-capture.guidance-then-try-done-again" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12725,6 +12861,7 @@
       }
     },
     "scrolling-capture.guidance-try-done-again" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12789,6 +12926,7 @@
       }
     },
     "scrolling-capture.preview-finishing-saving-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12853,6 +12991,7 @@
       }
     },
     "scrolling-capture.preview-matches-stitched-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12917,6 +13056,7 @@
       }
     },
     "scrolling-capture.preview-paused-scroll-slowly" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -12981,6 +13121,7 @@
       }
     },
     "scrolling-capture.preview-press-start-to-begin" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13045,6 +13186,7 @@
       }
     },
     "scrolling-capture.preview-saving-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13109,6 +13251,7 @@
       }
     },
     "scrolling-capture.preview-showing-latest-stitched-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13173,6 +13316,7 @@
       }
     },
     "scrolling-capture.preview-showing-latest-while-locking-newer-content" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13237,6 +13381,7 @@
       }
     },
     "scrolling-capture.runtime-capturing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13301,6 +13446,7 @@
       }
     },
     "scrolling-capture.runtime-finishing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13365,6 +13511,7 @@
       }
     },
     "scrolling-capture.runtime-live" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13429,6 +13576,7 @@
       }
     },
     "scrolling-capture.runtime-paused" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13493,6 +13641,7 @@
       }
     },
     "scrolling-capture.runtime-processing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13557,6 +13706,7 @@
       }
     },
     "scrolling-capture.runtime-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13621,6 +13771,7 @@
       }
     },
     "scrolling-capture.runtime-saving" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13685,6 +13836,7 @@
       }
     },
     "scrolling-capture.sections-captured" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13749,6 +13901,7 @@
       }
     },
     "scrolling-capture.start-capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13813,6 +13966,7 @@
       }
     },
     "scrolling-capture.toast-no-stitched-frame-ready" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13877,6 +14031,7 @@
       }
     },
     "scrolling-capture.toast-saved-stitched-image" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -13941,6 +14096,7 @@
       }
     },
     "scrolling-capture.toast-session-already-active" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {

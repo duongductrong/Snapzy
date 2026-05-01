@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct ScrollingCaptureSessionMetrics {
+nonisolated struct ScrollingCaptureSessionMetrics {
   private(set) var sessionStartedAt = ProcessInfo.processInfo.systemUptime
   private(set) var scrollEventCount = 0
   private(set) var totalScrollDistancePoints: CGFloat = 0

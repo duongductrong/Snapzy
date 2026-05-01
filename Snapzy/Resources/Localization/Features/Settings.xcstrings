@@ -1,7 +1,110 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "history-background-style.glass" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Glass"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kính mờ"
+          }
+        }
+      }
+    },
+    "history-background-style.gradient" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gradient"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chuyển sắc"
+          }
+        }
+      }
+    },
+    "history-background-style.hud" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HUD"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "HUD"
+          }
+        }
+      }
+    },
+    "history-background-style.solid" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solid"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Màu trơn"
+          }
+        }
+      }
+    },
+    "history-panel-position.bottom-center" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bottom Center"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữa phía dưới"
+          }
+        }
+      }
+    },
+    "history-panel-position.top-center" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Center"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữa phía trên"
+          }
+        }
+      }
+    },
     "preferences-about.app-subtitle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +169,7 @@
       }
     },
     "preferences-about.check-for-updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +234,7 @@
       }
     },
     "preferences-about.checked-label" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +299,7 @@
       }
     },
     "preferences-about.github" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +364,7 @@
       }
     },
     "preferences-about.report-bug" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +429,7 @@
       }
     },
     "preferences-about.report-problem" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +494,7 @@
       }
     },
     "preferences-about.support-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +559,7 @@
       }
     },
     "preferences-about.support-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +624,7 @@
       }
     },
     "preferences-about.version" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +689,7 @@
       }
     },
     "preferences-about.website" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +754,7 @@
       }
     },
     "preferences-general.access-not-granted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +819,7 @@
       }
     },
     "preferences-general.calculating" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +884,7 @@
       }
     },
     "preferences-general.check-automatically-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +949,7 @@
       }
     },
     "preferences-general.check-automatically-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +1014,7 @@
       }
     },
     "preferences-general.choose-button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +1079,7 @@
       }
     },
     "preferences-general.choose-save-location-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1144,7 @@
       }
     },
     "preferences-general.crash-logging-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1209,7 @@
       }
     },
     "preferences-general.crash-logging-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,70 +1274,72 @@
       }
     },
     "preferences-general.default-save-location" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desktop\/Snapzy"
+            "value" : "Desktop/Snapzy"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desktop\/Snapzy"
+            "value" : "Desktop/Snapzy"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Escritorio\/Snapzy"
+            "value" : "Escritorio/Snapzy"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bureau\/Snapzy"
+            "value" : "Bureau/Snapzy"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "デスクトップ\/スナップジー"
+            "value" : "デスクトップ/スナップジー"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "데스크탑\/Snapzy"
+            "value" : "데스크탑/Snapzy"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Рабочий стол \/ Snapzy"
+            "value" : "Рабочий стол / Snapzy"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desktop\/Snapzy"
+            "value" : "Desktop/Snapzy"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "桌面\/Snapzy"
+            "value" : "桌面/Snapzy"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "桌面\/Snapzy"
+            "value" : "桌面/Snapzy"
           }
         }
       }
     },
     "preferences-general.download-automatically-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1404,7 @@
       }
     },
     "preferences-general.download-automatically-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1469,7 @@
       }
     },
     "preferences-general.language-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1410,6 +1534,7 @@
       }
     },
     "preferences-general.language-relaunch-confirmation-action" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1599,7 @@
       }
     },
     "preferences-general.language-relaunch-confirmation-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1664,7 @@
       }
     },
     "preferences-general.language-relaunch-confirmation-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1602,6 +1729,7 @@
       }
     },
     "preferences-general.language-relaunch-error-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1794,7 @@
       }
     },
     "preferences-general.language-restart-hint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1859,7 @@
       }
     },
     "preferences-general.language-system" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1794,6 +1924,7 @@
       }
     },
     "preferences-general.language-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1858,6 +1989,7 @@
       }
     },
     "preferences-general.last-checked-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +2054,7 @@
       }
     },
     "preferences-general.log-files-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1986,6 +2119,7 @@
       }
     },
     "preferences-general.log-retention-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2050,6 +2184,7 @@
       }
     },
     "preferences-general.log-retention-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2114,6 +2249,7 @@
       }
     },
     "preferences-general.never" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2178,6 +2314,7 @@
       }
     },
     "preferences-general.no-logs" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2242,6 +2379,7 @@
       }
     },
     "preferences-general.open-folder-button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2306,6 +2444,7 @@
       }
     },
     "preferences-general.open-report-page-button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2370,6 +2509,7 @@
       }
     },
     "preferences-general.play-sounds-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2434,6 +2574,7 @@
       }
     },
     "preferences-general.play-sounds-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2497,71 +2638,8 @@
         }
       }
     },
-    "preferences-general.restart-button" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Starten Sie"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restart"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reiniciar"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Redémarrer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "再起動"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "다시 시작"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перезапустить"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khởi động lại"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新启动"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重新啓動"
-          }
-        }
-      }
-    },
     "preferences-general.report-issue-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2626,6 +2704,7 @@
       }
     },
     "preferences-general.report-issue-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2689,7 +2768,73 @@
         }
       }
     },
+    "preferences-general.restart-button" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Starten Sie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Restart"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reiniciar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Redémarrer"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再起動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 시작"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Перезапустить"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khởi động lại"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新启动"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重新啓動"
+          }
+        }
+      }
+    },
     "preferences-general.restart-onboarding-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2754,6 +2899,7 @@
       }
     },
     "preferences-general.restart-onboarding-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2818,6 +2964,7 @@
       }
     },
     "preferences-general.save-here-button" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2882,6 +3029,7 @@
       }
     },
     "preferences-general.save-location-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2946,6 +3094,7 @@
       }
     },
     "preferences-general.save-location-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3010,6 +3159,7 @@
       }
     },
     "preferences-general.section-appearance" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3074,6 +3224,7 @@
       }
     },
     "preferences-general.section-diagnostics" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3138,6 +3289,7 @@
       }
     },
     "preferences-general.section-help" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3202,6 +3354,7 @@
       }
     },
     "preferences-general.section-startup" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3266,6 +3419,7 @@
       }
     },
     "preferences-general.section-storage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3330,6 +3484,7 @@
       }
     },
     "preferences-general.section-updates" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3394,6 +3549,7 @@
       }
     },
     "preferences-general.start-at-login-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3458,6 +3614,7 @@
       }
     },
     "preferences-general.start-at-login-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3522,6 +3679,7 @@
       }
     },
     "preferences-general.theme-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3586,6 +3744,7 @@
       }
     },
     "preferences-general.theme-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3649,7 +3808,603 @@
         }
       }
     },
+    "preferences-history.background-style-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to the History window and floating panel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Áp dụng cho cửa sổ History và bảng nổi"
+          }
+        }
+      }
+    },
+    "preferences-history.background-style-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Background Style"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kiểu nền"
+          }
+        }
+      }
+    },
+    "preferences-history.capture-storage-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Capture Storage"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu trữ ảnh/video"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-alert-message" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This will move all capture files to Trash and remove them from History. This action cannot be undone in Snapzy."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thao tác này sẽ chuyển toàn bộ file capture vào Thùng rác và xóa khỏi History. Không thể hoàn tác trong Snapzy."
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-alert-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear All History?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ lịch sử?"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-button" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear History"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-confirm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move all captures to Trash and clear History"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chuyển toàn bộ capture vào Thùng rác và xóa History"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-history-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear All History"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa toàn bộ lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.clear-selection" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bỏ chọn"
+          }
+        }
+      }
+    },
+    "preferences-history.default-filter-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filter shown when opening the floating panel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bộ lọc hiển thị khi mở bảng nổi"
+          }
+        }
+      }
+    },
+    "preferences-history.default-filter-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Default Filter"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bộ lọc mặc định"
+          }
+        }
+      }
+    },
+    "preferences-history.delete-after-days" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete captures older than %d days"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa ảnh và video cũ hơn %d ngày"
+          }
+        }
+      }
+    },
+    "preferences-history.delete-selected-alert-message" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move %d selected capture item(s) to Trash and remove them from History."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chuyển %d mục đã chọn vào Thùng rác và xóa khỏi History."
+          }
+        }
+      }
+    },
+    "preferences-history.delete-selected-alert-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete Selected Captures?"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Xóa các mục đã chọn?"
+          }
+        }
+      }
+    },
+    "preferences-history.deleted-captures" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deleted %d capture item(s)"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã xóa %d mục"
+          }
+        }
+      }
+    },
+    "preferences-history.display-section" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Display"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị"
+          }
+        }
+      }
+    },
+    "preferences-history.floating-panel-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show a floating panel for quick access to recent captures"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hiển thị bảng nổi để truy cập nhanh các lần chụp và quay gần đây"
+          }
+        }
+      }
+    },
+    "preferences-history.floating-panel-section" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Floating Panel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bảng nổi"
+          }
+        }
+      }
+    },
+    "preferences-history.floating-panel-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enable Floating Panel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bật bảng nổi"
+          }
+        }
+      }
+    },
+    "preferences-history.keep-forever" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep captures forever"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Giữ lịch sử mãi mãi"
+          }
+        }
+      }
+    },
+    "preferences-history.max-count-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maximum number of captures stored in history"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số lượng ảnh và video tối đa được lưu trong lịch sử"
+          }
+        }
+      }
+    },
+    "preferences-history.max-count-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max Stored Items"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số mục lưu tối đa"
+          }
+        }
+      }
+    },
+    "preferences-history.max-items-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Maximum number of items shown in the floating panel"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số mục tối đa hiển thị trong bảng nổi"
+          }
+        }
+      }
+    },
+    "preferences-history.max-items-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Max Displayed Items"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Số mục hiển thị tối đa"
+          }
+        }
+      }
+    },
+    "preferences-history.open-capture-storage-button" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open Folder"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mở thư mục"
+          }
+        }
+      }
+    },
+    "preferences-history.panel-position-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose where the floating panel appears on screen"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn vị trí hiển thị của bảng nổi trên màn hình"
+          }
+        }
+      }
+    },
+    "preferences-history.panel-position-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel Position"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vị trí bảng"
+          }
+        }
+      }
+    },
+    "preferences-history.panel-size-description" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Resize the floating panel and its preview cards"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Điều chỉnh kích thước bảng nổi và các thẻ xem trước"
+          }
+        }
+      }
+    },
+    "preferences-history.panel-size-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Panel Size"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kích thước bảng"
+          }
+        }
+      }
+    },
+    "preferences-history.retention-days-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto-Clear After"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự xóa sau"
+          }
+        }
+      }
+    },
+    "preferences-history.retention-section" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retention"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu giữ"
+          }
+        }
+      }
+    },
+    "preferences-history.select-all" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select All"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn tất cả"
+          }
+        }
+      }
+    },
+    "preferences-history.selected-captures" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d selected"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d đã chọn"
+          }
+        }
+      }
+    },
+    "preferences-history.storage-section" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Storage"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu trữ"
+          }
+        }
+      }
+    },
     "preferences.tab.about" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3714,6 +4469,7 @@
       }
     },
     "preferences.tab.capture" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3778,6 +4534,7 @@
       }
     },
     "preferences.tab.cloud" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3842,6 +4599,7 @@
       }
     },
     "preferences.tab.general" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3905,7 +4663,25 @@
         }
       }
     },
+    "preferences.tab.history" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "History"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lịch sử"
+          }
+        }
+      }
+    },
     "preferences.tab.permissions" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3970,6 +4746,7 @@
       }
     },
     "preferences.tab.quick-access" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4034,6 +4811,7 @@
       }
     },
     "preferences.tab.shortcuts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4093,678 +4871,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "快捷方式"
-          }
-        }
-      }
-    },
-    "history-panel-position.bottom-center" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom Center"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữa phía dưới"
-          }
-        }
-      }
-    },
-    "history-panel-position.top-center" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top Center"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữa phía trên"
-          }
-        }
-      }
-    },
-    "history-background-style.glass" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glass"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kính mờ"
-          }
-        }
-      }
-    },
-    "history-background-style.gradient" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gradient"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chuyển sắc"
-          }
-        }
-      }
-    },
-    "history-background-style.hud" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HUD"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "HUD"
-          }
-        }
-      }
-    },
-    "history-background-style.solid" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Solid"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Màu trơn"
-          }
-        }
-      }
-    },
-    "preferences-history.capture-storage-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Capture Storage"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu trữ ảnh/video"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-alert-message" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "This will move all capture files to Trash and remove them from History. This action cannot be undone in Snapzy."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thao tác này sẽ chuyển toàn bộ file capture vào Thùng rác và xóa khỏi History. Không thể hoàn tác trong Snapzy."
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-alert-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear All History?"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa toàn bộ lịch sử?"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-button" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear History"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa lịch sử"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-confirm" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move all captures to Trash and clear History"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chuyển toàn bộ capture vào Thùng rác và xóa History"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-history-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear All History"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa toàn bộ lịch sử"
-          }
-        }
-      }
-    },
-    "preferences-history.clear-selection" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clear"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bỏ chọn"
-          }
-        }
-      }
-    },
-    "preferences-history.default-filter-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Filter shown when opening the floating panel"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bộ lọc hiển thị khi mở bảng nổi"
-          }
-        }
-      }
-    },
-    "preferences-history.default-filter-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Default Filter"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bộ lọc mặc định"
-          }
-        }
-      }
-    },
-    "preferences-history.delete-after-days" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete captures older than %d days"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa ảnh và video cũ hơn %d ngày"
-          }
-        }
-      }
-    },
-    "preferences-history.delete-selected-alert-message" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Move %d selected capture item(s) to Trash and remove them from History."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chuyển %d mục đã chọn vào Thùng rác và xóa khỏi History."
-          }
-        }
-      }
-    },
-    "preferences-history.delete-selected-alert-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Delete Selected Captures?"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xóa các mục đã chọn?"
-          }
-        }
-      }
-    },
-    "preferences-history.deleted-captures" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deleted %d capture item(s)"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã xóa %d mục"
-          }
-        }
-      }
-    },
-    "preferences-history.display-section" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Display"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiển thị"
-          }
-        }
-      }
-    },
-    "preferences-history.background-style-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Applies to the History window and floating panel"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Áp dụng cho cửa sổ History và bảng nổi"
-          }
-        }
-      }
-    },
-    "preferences-history.background-style-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Background Style"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kiểu nền"
-          }
-        }
-      }
-    },
-    "preferences-history.floating-panel-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show a floating panel for quick access to recent captures"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiển thị bảng nổi để truy cập nhanh các lần chụp và quay gần đây"
-          }
-        }
-      }
-    },
-    "preferences-history.floating-panel-section" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Floating Panel"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bảng nổi"
-          }
-        }
-      }
-    },
-    "preferences-history.floating-panel-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enable Floating Panel"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bật bảng nổi"
-          }
-        }
-      }
-    },
-    "preferences-history.keep-forever" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep captures forever"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữ lịch sử mãi mãi"
-          }
-        }
-      }
-    },
-    "preferences-history.max-count-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maximum number of captures stored in history"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Số lượng ảnh và video tối đa được lưu trong lịch sử"
-          }
-        }
-      }
-    },
-    "preferences-history.max-count-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Max Stored Items"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Số mục lưu tối đa"
-          }
-        }
-      }
-    },
-    "preferences-history.max-items-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Maximum number of items shown in the floating panel"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Số mục tối đa hiển thị trong bảng nổi"
-          }
-        }
-      }
-    },
-    "preferences-history.max-items-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Max Displayed Items"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Số mục hiển thị tối đa"
-          }
-        }
-      }
-    },
-    "preferences-history.open-capture-storage-button" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Open Folder"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở thư mục"
-          }
-        }
-      }
-    },
-    "preferences-history.panel-size-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Resize the floating panel and its preview cards"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Điều chỉnh kích thước bảng nổi và các thẻ xem trước"
-          }
-        }
-      }
-    },
-    "preferences-history.panel-size-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panel Size"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kích thước bảng"
-          }
-        }
-      }
-    },
-    "preferences-history.panel-position-description" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose where the floating panel appears on screen"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn vị trí hiển thị của bảng nổi trên màn hình"
-          }
-        }
-      }
-    },
-    "preferences-history.panel-position-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Panel Position"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vị trí bảng"
-          }
-        }
-      }
-    },
-    "preferences-history.retention-days-title" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auto-Clear After"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tự xóa sau"
-          }
-        }
-      }
-    },
-    "preferences-history.retention-section" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Retention"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu giữ"
-          }
-        }
-      }
-    },
-    "preferences-history.select-all" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select All"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn tất cả"
-          }
-        }
-      }
-    },
-    "preferences-history.selected-captures" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d selected"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d đã chọn"
-          }
-        }
-      }
-    },
-    "preferences-history.storage-section" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Storage"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu trữ"
-          }
-        }
-      }
-    },
-    "preferences.tab.history" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "History"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lịch sử"
           }
         }
       }

@@ -2,6 +2,7 @@
   "sourceLanguage" : "en",
   "strings" : {
     "cloud-expire.1-day" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -66,6 +67,7 @@
       }
     },
     "cloud-expire.3-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -130,6 +132,7 @@
       }
     },
     "cloud-expire.7-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -194,6 +197,7 @@
       }
     },
     "cloud-expire.14-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -258,6 +262,7 @@
       }
     },
     "cloud-expire.30-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -322,6 +327,7 @@
       }
     },
     "cloud-expire.60-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -386,6 +392,7 @@
       }
     },
     "cloud-expire.90-days" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -450,6 +457,7 @@
       }
     },
     "cloud-expire.permanent" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -514,6 +522,7 @@
       }
     },
     "cloud-operation.bucket-validation-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -578,6 +587,7 @@
       }
     },
     "cloud-operation.delete-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -642,6 +652,7 @@
       }
     },
     "cloud-operation.delete-lifecycle-config-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -706,6 +717,7 @@
       }
     },
     "cloud-operation.failed-to-construct-presigned-url" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -770,6 +782,7 @@
       }
     },
     "cloud-operation.failed-to-encode-keychain-value" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -834,6 +847,7 @@
       }
     },
     "cloud-operation.file-not-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -898,6 +912,7 @@
       }
     },
     "cloud-operation.get-lifecycle-config-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -962,6 +977,7 @@
       }
     },
     "cloud-operation.invalid-credentials" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1026,6 +1042,7 @@
       }
     },
     "cloud-operation.invalid-request-url-or-method" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1090,6 +1107,7 @@
       }
     },
     "cloud-operation.invalid-response" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1154,6 +1172,7 @@
       }
     },
     "cloud-operation.invalid-url-for-presigning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1218,6 +1237,7 @@
       }
     },
     "cloud-operation.keychain-error" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1282,6 +1302,7 @@
       }
     },
     "cloud-operation.network-error" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1346,6 +1367,7 @@
       }
     },
     "cloud-operation.not-configured" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1410,6 +1432,7 @@
       }
     },
     "cloud-operation.sec-item-add-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1474,6 +1497,7 @@
       }
     },
     "cloud-operation.sec-item-update-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1538,6 +1562,7 @@
       }
     },
     "cloud-operation.set-lifecycle-config-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1602,6 +1627,7 @@
       }
     },
     "cloud-operation.signing-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1666,6 +1692,7 @@
       }
     },
     "cloud-operation.upload-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1730,6 +1757,7 @@
       }
     },
     "cloud-password.couldnt-read-saved-password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1794,6 +1822,7 @@
       }
     },
     "cloud-password.keychain-access-denied" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1858,6 +1887,7 @@
       }
     },
     "cloud-password.keychain-interaction-unavailable" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1922,6 +1952,7 @@
       }
     },
     "cloud-password.not-configured" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1986,6 +2017,7 @@
       }
     },
     "cloud-provider.aws-s3" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2050,6 +2082,7 @@
       }
     },
     "cloud-provider.cloudflare-r2" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2114,6 +2147,7 @@
       }
     },
     "cloud-settings.access-key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2178,6 +2212,7 @@
       }
     },
     "cloud-settings.access-key-id" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2242,6 +2277,7 @@
       }
     },
     "cloud-settings.access-key-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2306,6 +2342,7 @@
       }
     },
     "cloud-settings.bucket-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2370,6 +2407,7 @@
       }
     },
     "cloud-settings.bucket-name" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2434,6 +2472,7 @@
       }
     },
     "cloud-settings.bucket-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2498,6 +2537,7 @@
       }
     },
     "cloud-settings.configuration-saved-password-setup-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2562,6 +2602,7 @@
       }
     },
     "cloud-settings.confirm-password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2626,6 +2667,7 @@
       }
     },
     "cloud-settings.confirm-password-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2690,6 +2732,7 @@
       }
     },
     "cloud-settings.connection-verified-successfully" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2754,6 +2797,7 @@
       }
     },
     "cloud-settings.credentials-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2818,6 +2862,7 @@
       }
     },
     "cloud-settings.custom-domain" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2882,6 +2927,7 @@
       }
     },
     "cloud-settings.custom-domain-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2946,6 +2992,7 @@
       }
     },
     "cloud-settings.edit" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3010,6 +3057,7 @@
       }
     },
     "cloud-settings.edit-credentials-password-prompt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3074,6 +3122,7 @@
       }
     },
     "cloud-settings.endpoint" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3138,6 +3187,7 @@
       }
     },
     "cloud-settings.endpoint-tooltip-r2" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3202,6 +3252,7 @@
       }
     },
     "cloud-settings.endpoint-tooltip-s3" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3266,6 +3317,7 @@
       }
     },
     "cloud-settings.expire-time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3330,6 +3382,7 @@
       }
     },
     "cloud-settings.export-credentials-password-prompt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3394,6 +3447,7 @@
       }
     },
     "cloud-settings.failed-to-save-password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3458,6 +3512,7 @@
       }
     },
     "cloud-settings.file-expiration-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3522,6 +3577,7 @@
       }
     },
     "cloud-settings.forgot-password-info" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3586,6 +3642,7 @@
       }
     },
     "cloud-settings.forgot-password-reset-configuration" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3650,6 +3707,7 @@
       }
     },
     "cloud-settings.import-credentials-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3714,6 +3772,7 @@
       }
     },
     "cloud-settings.import-credentials-password-prompt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3778,6 +3837,7 @@
       }
     },
     "cloud-settings.import-credentials-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3842,6 +3902,7 @@
       }
     },
     "cloud-settings.import-encrypted-archive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3906,6 +3967,7 @@
       }
     },
     "cloud-settings.import-encrypted-archive-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3970,6 +4032,7 @@
       }
     },
     "cloud-settings.incorrect-password-attempts" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4034,6 +4097,7 @@
       }
     },
     "cloud-settings.lifecycle-rule-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4098,6 +4162,7 @@
       }
     },
     "cloud-settings.lifecycle-rule-info" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4162,6 +4227,7 @@
       }
     },
     "cloud-settings.no-lifecycle-rule-warning" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4226,6 +4292,7 @@
       }
     },
     "cloud-settings.optional" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4290,6 +4357,7 @@
       }
     },
     "cloud-settings.password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4354,6 +4422,7 @@
       }
     },
     "cloud-settings.password-minimum-length" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4418,6 +4487,7 @@
       }
     },
     "cloud-settings.password-required-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4482,6 +4552,7 @@
       }
     },
     "cloud-settings.password-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4546,6 +4617,7 @@
       }
     },
     "cloud-settings.passwords-do-not-match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4610,6 +4682,7 @@
       }
     },
     "cloud-settings.proceed-without-password-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4674,6 +4747,7 @@
       }
     },
     "cloud-settings.proceed-without-password-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4738,6 +4812,7 @@
       }
     },
     "cloud-settings.protect-credentials-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4802,6 +4877,7 @@
       }
     },
     "cloud-settings.protect-credentials-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4866,6 +4942,7 @@
       }
     },
     "cloud-settings.protection-password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4930,6 +5007,7 @@
       }
     },
     "cloud-settings.protection-password-minimum-length" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4994,6 +5072,7 @@
       }
     },
     "cloud-settings.protection-password-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5058,6 +5137,7 @@
       }
     },
     "cloud-settings.protection-passwords-do-not-match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5122,6 +5202,7 @@
       }
     },
     "cloud-settings.protection-recommendation" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5186,6 +5267,7 @@
       }
     },
     "cloud-settings.provider" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5250,6 +5332,7 @@
       }
     },
     "cloud-settings.provider-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5314,6 +5397,7 @@
       }
     },
     "cloud-settings.provider-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5378,6 +5462,7 @@
       }
     },
     "cloud-settings.region" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5442,6 +5527,7 @@
       }
     },
     "cloud-settings.region-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5506,6 +5592,7 @@
       }
     },
     "cloud-settings.reset" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5570,6 +5657,7 @@
       }
     },
     "cloud-settings.reset-configuration-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5634,6 +5722,7 @@
       }
     },
     "cloud-settings.reset-configuration-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5698,6 +5787,7 @@
       }
     },
     "cloud-settings.save-and-test" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5762,6 +5852,7 @@
       }
     },
     "cloud-settings.secret-access-key" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5826,6 +5917,7 @@
       }
     },
     "cloud-settings.secret-key-tooltip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5890,6 +5982,7 @@
       }
     },
     "cloud-settings.set-password" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5954,6 +6047,7 @@
       }
     },
     "cloud-settings.skip" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6018,6 +6112,7 @@
       }
     },
     "cloud-settings.skip-for-now" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6082,6 +6177,7 @@
       }
     },
     "cloud-settings.skip-password-protection-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6146,6 +6242,7 @@
       }
     },
     "cloud-settings.skip-password-protection-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6210,6 +6307,7 @@
       }
     },
     "cloud-settings.storage-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6274,6 +6372,7 @@
       }
     },
     "cloud-settings.stored-securely-in-keychain" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6338,6 +6437,7 @@
       }
     },
     "cloud-settings.testing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6402,6 +6502,7 @@
       }
     },
     "cloud-settings.transfer-alert-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6466,6 +6567,7 @@
       }
     },
     "cloud-settings.transfer-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6530,6 +6632,7 @@
       }
     },
     "cloud-settings.uploads-window-position-bottom" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6594,6 +6697,7 @@
       }
     },
     "cloud-settings.uploads-window-position-center" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6658,6 +6762,7 @@
       }
     },
     "cloud-settings.uploads-window-position-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6722,6 +6827,7 @@
       }
     },
     "cloud-settings.uploads-window-position-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6786,6 +6892,7 @@
       }
     },
     "cloud-settings.uploads-window-position-top" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6850,6 +6957,7 @@
       }
     },
     "cloud-settings.uploads-window-section" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6914,6 +7022,7 @@
       }
     },
     "cloud-settings.verify" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6978,6 +7087,7 @@
       }
     },
     "cloud-transfer.archive-contents" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7042,6 +7152,7 @@
       }
     },
     "cloud-transfer.archive-contents-summary" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7106,6 +7217,7 @@
       }
     },
     "cloud-transfer.archive-passphrase" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7170,6 +7282,7 @@
       }
     },
     "cloud-transfer.archive-saved" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7234,6 +7347,7 @@
       }
     },
     "cloud-transfer.choose-destination" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7298,6 +7412,7 @@
       }
     },
     "cloud-transfer.chooser-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7362,6 +7477,7 @@
       }
     },
     "cloud-transfer.confirm-passphrase" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7426,6 +7542,7 @@
       }
     },
     "cloud-transfer.enter-archive-passphrase" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7490,6 +7607,7 @@
       }
     },
     "cloud-transfer.error.invalid-archive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7554,6 +7672,7 @@
       }
     },
     "cloud-transfer.error.passphrase-too-short-export" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7618,6 +7737,7 @@
       }
     },
     "cloud-transfer.error.randomization-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7682,6 +7802,7 @@
       }
     },
     "cloud-transfer.error.unlock-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7746,6 +7867,7 @@
       }
     },
     "cloud-transfer.error.unsupported-archive-format" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7810,6 +7932,7 @@
       }
     },
     "cloud-transfer.error.unsupported-schema-version" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7874,6 +7997,7 @@
       }
     },
     "cloud-transfer.export-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7938,6 +8062,7 @@
       }
     },
     "cloud-transfer.export-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8002,6 +8127,7 @@
       }
     },
     "cloud-transfer.import-description" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8066,6 +8192,7 @@
       }
     },
     "cloud-transfer.import-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8130,6 +8257,7 @@
       }
     },
     "cloud-transfer.imported-credentials-loaded" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8194,6 +8322,7 @@
       }
     },
     "cloud-transfer.minimum-passphrase" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8258,6 +8387,7 @@
       }
     },
     "cloud-transfer.passphrase-too-short" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8322,6 +8452,7 @@
       }
     },
     "cloud-transfer.passphrases-do-not-match" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8386,6 +8517,7 @@
       }
     },
     "cloud-transfer.reenter-passphrase" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8450,6 +8582,7 @@
       }
     },
     "cloud-transfer.save-panel-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8514,6 +8647,7 @@
       }
     },
     "cloud-transfer.selected-archive" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8578,6 +8712,7 @@
       }
     },
     "cloud-usage.ago-suffix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8642,6 +8777,7 @@
       }
     },
     "cloud-usage.cloud-status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8706,6 +8842,7 @@
       }
     },
     "cloud-usage.couldnt-refresh-showing-cached" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8770,6 +8907,7 @@
       }
     },
     "cloud-usage.days-expire" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8834,29 +8972,30 @@
       }
     },
     "cloud-usage.estimated-cost-per-month" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Schätzung: Kosten\/Monat"
+            "value" : "Schätzung: Kosten/Monat"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Est. Cost\/mo"
+            "value" : "Est. Cost/mo"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Est. Costo\/mes"
+            "value" : "Est. Costo/mes"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "HNE. Coût\/mois"
+            "value" : "HNE. Coût/mois"
           }
         },
         "ja" : {
@@ -8868,19 +9007,19 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "예상 비용\/월"
+            "value" : "예상 비용/월"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Стандартное восточное время. Стоимость\/мес"
+            "value" : "Стандартное восточное время. Стоимость/мес"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Chi phí ước tính\/tháng"
+            "value" : "Chi phí ước tính/tháng"
           }
         },
         "zh-Hans" : {
@@ -8898,6 +9037,7 @@
       }
     },
     "cloud-usage.free-tier" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -8962,6 +9102,7 @@
       }
     },
     "cloud-usage.lifecycle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9026,6 +9167,7 @@
       }
     },
     "cloud-usage.list-objects-failed" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9090,6 +9232,7 @@
       }
     },
     "cloud-usage.loading-stats" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9154,6 +9297,7 @@
       }
     },
     "cloud-usage.missing-bucket-list-permission" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9218,6 +9362,7 @@
       }
     },
     "cloud-usage.none" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9282,6 +9427,7 @@
       }
     },
     "cloud-usage.not-configured" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9346,6 +9492,7 @@
       }
     },
     "cloud-usage.objects" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9410,6 +9557,7 @@
       }
     },
     "cloud-usage.storage" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9474,6 +9622,7 @@
       }
     },
     "cloud-usage.unauthorized-generic" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9538,6 +9687,7 @@
       }
     },
     "cloud-usage.unauthorized-r2" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9602,6 +9752,7 @@
       }
     },
     "cloud-usage.updated-prefix" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9666,6 +9817,7 @@
       }
     },
     "preferences-cloud-history.clear-all-history" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9730,6 +9882,7 @@
       }
     },
     "preferences-cloud-history.clear-all-message" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9794,6 +9947,7 @@
       }
     },
     "preferences-cloud-history.clear-all-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9858,6 +10012,7 @@
       }
     },
     "preferences-cloud-history.clear-history-only" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9922,6 +10077,7 @@
       }
     },
     "preferences-cloud-history.copy-link" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9986,6 +10142,7 @@
       }
     },
     "preferences-cloud-history.delete-from-cloud-and-clear" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10050,6 +10207,7 @@
       }
     },
     "preferences-cloud-history.dismiss" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10114,6 +10272,7 @@
       }
     },
     "preferences-cloud-history.expire-time" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10178,6 +10337,7 @@
       }
     },
     "preferences-cloud-history.expired" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10242,6 +10402,7 @@
       }
     },
     "preferences-cloud-history.failed-to-delete" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10306,6 +10467,7 @@
       }
     },
     "preferences-cloud-history.filters" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10370,6 +10532,7 @@
       }
     },
     "preferences-cloud-history.largest-first" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10434,6 +10597,7 @@
       }
     },
     "preferences-cloud-history.newest-first" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10498,6 +10662,7 @@
       }
     },
     "preferences-cloud-history.no-results-found" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10562,6 +10727,7 @@
       }
     },
     "preferences-cloud-history.no-uploads-yet" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10626,6 +10792,7 @@
       }
     },
     "preferences-cloud-history.oldest-first" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10690,6 +10857,7 @@
       }
     },
     "preferences-cloud-history.open-in-browser" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10754,6 +10922,7 @@
       }
     },
     "preferences-cloud-history.provider" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10818,6 +10987,7 @@
       }
     },
     "preferences-cloud-history.remove-from-history" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10882,6 +11052,7 @@
       }
     },
     "preferences-cloud-history.reset-filters" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -10946,6 +11117,7 @@
       }
     },
     "preferences-cloud-history.search-uploads" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11010,6 +11182,7 @@
       }
     },
     "preferences-cloud-history.smallest-first" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11074,6 +11247,7 @@
       }
     },
     "preferences-cloud-history.some-files-could-not-be-deleted" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11138,6 +11312,7 @@
       }
     },
     "preferences-cloud-history.sort-by" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11202,6 +11377,7 @@
       }
     },
     "preferences-cloud-history.status" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11266,6 +11442,7 @@
       }
     },
     "preferences-cloud-history.status-active" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11330,6 +11507,7 @@
       }
     },
     "preferences-cloud-history.status-all" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11394,6 +11572,7 @@
       }
     },
     "preferences-cloud-history.status-expired" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11458,6 +11637,7 @@
       }
     },
     "preferences-cloud-history.uploads-count" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -11522,6 +11702,7 @@
       }
     },
     "preferences-cloud-history.window-title" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
