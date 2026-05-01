@@ -382,15 +382,58 @@ struct CloudSettingsView: View {
         }
         .padding(.vertical, 8)
       } else if let error = usageService.error, usageService.usageInfo == nil {
-        HStack(alignment: .top, spacing: 6) {
-          Image(systemName: "exclamationmark.triangle.fill")
-            .foregroundColor(.orange)
-            .font(.system(size: 12))
-          Text(error)
-            .font(.system(size: 11))
-            .foregroundColor(.orange)
+        // If cloud is configured but usage fetch failed, show error with config context
+        if cloudManager.isConfigured {
+          VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 6) {
+              Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.system(size: 12))
+              Text(error)
+                .font(.system(size: 11))
+                .foregroundColor(.orange)
+            }
+            // Still show stats grid with placeholder values
+            LazyVGrid(
+              columns: [
+                GridItem(.flexible(), spacing: 8),
+                GridItem(.flexible(), spacing: 8),
+              ],
+              spacing: 8
+            ) {
+              CloudStatCard(
+                icon: "externaldrive",
+                label: L10n.CloudUsage.storage,
+                value: "—"
+              )
+              CloudStatCard(
+                icon: "doc.on.doc",
+                label: L10n.CloudUsage.objects,
+                value: "—"
+              )
+              CloudStatCard(
+                icon: "clock.arrow.circlepath",
+                label: L10n.CloudUsage.lifecycle,
+                value: lifecycleShortLabel(nil)
+              )
+              CloudStatCard(
+                icon: "dollarsign.circle",
+                label: L10n.CloudUsage.estimatedCostPerMonth,
+                value: "—"
+              )
+            }
+          }
+        } else {
+          HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+              .foregroundColor(.orange)
+              .font(.system(size: 12))
+            Text(error)
+              .font(.system(size: 11))
+              .foregroundColor(.orange)
+          }
+          .padding(.vertical, 4)
         }
-        .padding(.vertical, 4)
       } else {
         let info = usageService.usageInfo
 
@@ -738,6 +781,7 @@ private struct CloudCredentialFormView: View {
   @State private var validationSuccess = false
   @State private var showSkipPasswordWarning = false
   @State private var hasExistingPassword = false
+  @State private var showLimitedPermissionWarning = false
 
   var body: some View {
     Group {
@@ -984,6 +1028,20 @@ private struct CloudCredentialFormView: View {
           }
         }
 
+        if showLimitedPermissionWarning {
+          HStack(alignment: .top, spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+              .foregroundColor(.orange)
+              .font(.system(size: 12))
+              .padding(.top, 1)
+            Text(L10n.CloudSettings.limitedPermissionsWarning)
+              .font(.system(size: 11))
+              .foregroundColor(.orange)
+              .fixedSize(horizontal: false, vertical: true)
+          }
+          .padding(.vertical, 4)
+        }
+
         HStack(spacing: 12) {
           Button(action: handleSave) {
             if isValidating {
@@ -1069,6 +1127,7 @@ private struct CloudCredentialFormView: View {
   private func saveAndTest() {
     validationError = nil
     validationSuccess = false
+    showLimitedPermissionWarning = false
     isValidating = true
 
     let config = CloudConfiguration(
@@ -1100,9 +1159,15 @@ private struct CloudCredentialFormView: View {
             secretKey: trimmedSecretKey
           )
         } catch {
-          validationError = L10n.CloudSettings.lifecycleRuleFailed(error.localizedDescription)
-          isValidating = false
-          return
+          // Lifecycle rules are optional; allow setup to succeed even if
+          // the account lacks lifecycle-management permissions.
+          showLimitedPermissionWarning = true
+          DiagnosticLogger.shared.log(
+            .warning,
+            .cloud,
+            "Cloud lifecycle rule update failed during setup; continuing without it",
+            context: ["error": error.localizedDescription]
+          )
         }
 
         try cloudManager.saveConfiguration(

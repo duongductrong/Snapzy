@@ -249,6 +249,10 @@ final class S3CloudProvider: CloudProvider {
 
     guard (200...299).contains(httpResponse.statusCode) else {
       let body = String(data: data, encoding: .utf8) ?? ""
+      if httpResponse.statusCode == 403 {
+        logger.warning("GET lifecycle denied (HTTP 403) — credentials lack lifecycle permissions; treating as empty")
+        return []
+      }
       logger.error("GET lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
@@ -294,6 +298,10 @@ final class S3CloudProvider: CloudProvider {
 
     guard (200...299).contains(httpResponse.statusCode) else {
       let body = String(data: data, encoding: .utf8) ?? ""
+      if httpResponse.statusCode == 403 {
+        logger.warning("PUT lifecycle denied (HTTP 403) — credentials lack lifecycle permissions; skipping rule update")
+        return
+      }
       logger.error("PUT lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,
@@ -324,6 +332,10 @@ final class S3CloudProvider: CloudProvider {
 
     guard (200...299).contains(httpResponse.statusCode) || httpResponse.statusCode == 404 else {
       let body = String(data: data, encoding: .utf8) ?? ""
+      if httpResponse.statusCode == 403 {
+        logger.warning("DELETE lifecycle denied (HTTP 403) — credentials lack lifecycle permissions; skipping removal")
+        return
+      }
       logger.error("DELETE lifecycle failed: HTTP \(httpResponse.statusCode) — \(body)")
       throw CloudError.uploadFailed(
         statusCode: httpResponse.statusCode,

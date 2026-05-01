@@ -3339,6 +3339,11 @@ enum L10n {
       defaultValue: "Connection verified successfully!",
       comment: "Success message shown after validating cloud credentials"
     )
+    static let limitedPermissionsWarning = string(
+      "cloud-settings.limited-permissions-warning",
+      defaultValue: "Connected with limited permissions. Auto-cleanup (lifecycle rules) is unavailable — files will remain until manually deleted.",
+      comment: "Warning shown when cloud credentials lack lifecycle management permissions"
+    )
     static let testing = string(
       "cloud-settings.testing",
       defaultValue: "Testing...",

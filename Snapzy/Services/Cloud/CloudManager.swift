@@ -243,7 +243,9 @@ final class CloudManager: ObservableObject {
       return "\(scheme)://\(maskedSub).\(domainSuffix)"
     }
 
-    return "••••••••"
+    // Single-part host (e.g. localhost) — show as-is, no masking needed
+    let scheme = url.scheme ?? "https"
+    return "\(scheme)://\(host)"
   }
 
   /// Load the full access key (for edit mode)

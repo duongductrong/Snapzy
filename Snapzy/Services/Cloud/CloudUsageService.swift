@@ -90,6 +90,10 @@ private actor CloudUsageWorker {
       else {
         let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
         let body = String(data: data, encoding: .utf8) ?? ""
+        if statusCode == 404 {
+          logger.warning("ListObjectsV2 returned 404 (prefix may not exist yet); treating as empty")
+          return (0, 0)
+        }
         logger.error(
           "ListObjectsV2 failed: status=\(statusCode), provider=\(config.providerType.rawValue), region=\(region), endpoint=\(endpoint), body=\(body)"
         )
