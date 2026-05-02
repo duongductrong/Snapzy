@@ -36,6 +36,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.3] - 2026-05-02
+
+### Bug Fixes
+-  Set sharingType to none for HUD and preview windows to prevent screen capture (dcd723b)
+-  Enhance cloud settings error handling and add graceful degradation for lifecycle permissions (9d942e7)
+
+### Chore
+- chore: Add localized warning for limited permissions in cloud settings (5c597e7)
+- docs: document test architecture and project structure for SnapzyTests and SnapzyUITests (7016ef8)
+- chore: update appcast, cask, and readme for v1.12.2 (ab11c2a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.2] - 2026-04-30
 
 ### Features
