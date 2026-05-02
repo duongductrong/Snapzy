@@ -31,6 +31,7 @@ final class ScrollingCaptureHUDWindow: NSPanel {
     level = .popUpMenu
     isOpaque = false
     backgroundColor = .clear
+    sharingType = .none
     hasShadow = true
     hidesOnDeactivate = false
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
