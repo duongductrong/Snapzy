@@ -37,6 +37,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.4] - 2026-05-02
+
+### Chore
+- refactor: Implement frame management and safety tracking in scrolling capture subsystem (cb24445)
+- chore: update appcast, cask, and readme for v1.12.3 (1d9dc2e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.3] - 2026-05-02
 
 ### Bug Fixes
