@@ -82,7 +82,7 @@ struct CaptureOverlayShortcut: Equatable, Codable {
     guard let character = event.charactersIgnoringModifiers?.lowercased().first else {
       return false
     }
-    return character.isLetter || character.isNumber
+    return character.isLetter || character.isNumber || character == " "
   }
 }
 
@@ -224,11 +224,12 @@ enum CaptureOverlayShortcutSettings {
 
   private static func normalizedLegacyShortcut(from rawValue: String?) -> Character? {
     guard let rawValue else { return nil }
+    if rawValue == " " { return " " }
     guard let shortcut = rawValue
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .lowercased()
       .first,
-      shortcut.isLetter
+      shortcut.isLetter || shortcut.isNumber
     else {
       return nil
     }
@@ -263,6 +264,7 @@ enum CaptureOverlayShortcutSettings {
     case "x": return UInt32(kVK_ANSI_X)
     case "y": return UInt32(kVK_ANSI_Y)
     case "z": return UInt32(kVK_ANSI_Z)
+    case " ": return UInt32(kVK_Space)
     default: return nil
     }
   }

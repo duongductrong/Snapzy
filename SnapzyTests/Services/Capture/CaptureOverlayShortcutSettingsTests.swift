@@ -233,4 +233,58 @@ final class CaptureOverlayShortcutSettingsTests: XCTestCase {
     XCTAssertFalse(CaptureOverlayShortcutKind.applicationCapture.displayName.isEmpty)
     XCTAssertFalse(CaptureOverlayShortcutKind.applicationRecording.displayName.isEmpty)
   }
+
+  // MARK: - Space Key Support
+
+  func testInitFromEvent_spaceKey_createsShortcut() {
+    let event = NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: " ",
+      charactersIgnoringModifiers: " ",
+      isARepeat: false,
+      keyCode: UInt16(kVK_Space)
+    )
+    XCTAssertNotNil(event)
+    let shortcut = CaptureOverlayShortcut(from: event!)
+    XCTAssertNotNil(shortcut)
+    XCTAssertEqual(shortcut?.keyCode, UInt32(kVK_Space))
+    XCTAssertEqual(shortcut?.modifiers, 0)
+  }
+
+  func testDisplayParts_spaceKey() {
+    let shortcut = CaptureOverlayShortcut(keyCode: UInt32(kVK_Space), modifiers: 0)
+    XCTAssertEqual(shortcut.displayParts, ["Space"])
+    XCTAssertEqual(shortcut.displayString, "Space")
+  }
+
+  func testSetAndReadShortcut_spaceKey_roundtrips() {
+    let shortcut = CaptureOverlayShortcut(keyCode: UInt32(kVK_Space), modifiers: 0)
+    CaptureOverlayShortcutSettings.setApplicationCaptureShortcut(shortcut)
+
+    let loaded = CaptureOverlayShortcutSettings.applicationCaptureShortcut
+    XCTAssertEqual(loaded.keyCode, UInt32(kVK_Space))
+    XCTAssertEqual(loaded.modifiers, 0)
+  }
+
+  func testLegacyStringMigration_space_migratesCorrectly() {
+    defaults.set(" ", forKey: PreferencesKeys.areaApplicationCaptureShortcut)
+
+    let shortcut = CaptureOverlayShortcutSettings.applicationCaptureShortcut
+    XCTAssertEqual(shortcut.keyCode, UInt32(kVK_Space))
+    XCTAssertEqual(shortcut.modifiers, 0)
+  }
+
+  func testSetAndReadShortcut_spaceKey_recording_roundtrips() {
+    let shortcut = CaptureOverlayShortcut(keyCode: UInt32(kVK_Space), modifiers: 0)
+    CaptureOverlayShortcutSettings.setRecordingApplicationCaptureShortcut(shortcut)
+
+    let loaded = CaptureOverlayShortcutSettings.recordingApplicationCaptureShortcut
+    XCTAssertEqual(loaded.keyCode, UInt32(kVK_Space))
+    XCTAssertEqual(loaded.modifiers, 0)
+  }
 }
