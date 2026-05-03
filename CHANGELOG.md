@@ -38,6 +38,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.5] - 2026-05-03
+
+### Features
+-  Add support for space key in CaptureOverlayShortcut and related tests (#148) (9dc9972)
+
+### Chore
+- ci: Improve test step by adding build directory creation and logging (33761ec)
+- ci: Add step to run tests in CI workflow (7dc205e)
+- chore: update appcast, cask, and readme for v1.12.4 (05f00aa)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.4] - 2026-05-02
 
 ### Chore
