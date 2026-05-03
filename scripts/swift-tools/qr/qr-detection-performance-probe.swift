@@ -1,13 +1,11 @@
 //
-//  qr_detection_performance_probe.swift
+//  qr-detection-performance-probe.swift
 //  Snapzy
 //
 //  Local Vision QR detector timing probe for OCR capture latency checks.
 //
 //  Run from repository root with:
-//  swiftc -parse-as-library -module-cache-path /tmp/snapzy-qr-probe-module-cache \
-//    -o /tmp/snapzy-qr-detection-probe scripts/qr_detection_performance_probe.swift
-//  /tmp/snapzy-qr-detection-probe
+//  ./scripts/run-qr-detection-performance-probe.sh
 //
 
 import CoreGraphics

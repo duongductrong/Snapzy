@@ -1,21 +1,11 @@
 //
-//  ocr_readme_benchmark.swift
+//  ocr-readme-benchmark.swift
 //  Snapzy
 //
 //  Reproducible OCR benchmark used for README transparency notes.
 //
 //  Run from repository root with:
-//  swiftc -o /tmp/snapzy-ocr-readme-benchmark \
-//    scripts/ocr_readme_benchmark.swift \
-//    Snapzy/Services/Media/OCRService.swift \
-//    Snapzy/Services/Media/OCR/OCRRequest.swift \
-//    Snapzy/Services/Media/OCR/OCRResult.swift \
-//    Snapzy/Services/Media/OCR/VisionOCRProfile.swift \
-//    Snapzy/Services/Media/OCR/OCRBenchmarkMetrics.swift \
-//    Snapzy/Services/Media/OCR/OCRBenchmarkHarness.swift \
-//    Snapzy/Shared/Localization/AppLanguageManager.swift
-//
-//  /tmp/snapzy-ocr-readme-benchmark
+//  ./scripts/run-ocr-readme-benchmark.sh
 //
 
 import AppKit

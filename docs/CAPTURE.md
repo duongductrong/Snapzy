@@ -318,7 +318,7 @@ flowchart TD
 | `Snapzy/Features/Capture/CaptureViewModel.swift` | Entry point for screenshot, scrolling capture, OCR, cutout, and recording launch |
 | `Snapzy/Services/Capture/OCRScanningOverlayWindow.swift` | Non-interactive scanning progress overlay for OCR area capture |
 | `Snapzy/Services/Media/QRCodeService.swift` | Local QR payload detection for OCR capture |
-| `scripts/qr_detection_performance_probe.swift` | Local Vision QR timing probe for OCR latency checks |
+| `scripts/run-qr-detection-performance-probe.sh` | Local Vision QR timing probe for OCR latency checks |
 | `Snapzy/Services/Capture/ScreenCaptureManager.swift` | Core screenshot engine, frozen snapshot capture, and file writing |
 | `Snapzy/Services/Capture/FrozenAreaCaptureSession.swift` | Frozen display snapshots used by area screenshot selection |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Quick Access, clipboard, and screenshot auto-open routing |

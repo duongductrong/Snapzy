@@ -189,7 +189,7 @@ Nếu bạn cần lệnh archive, export, hoặc đóng gói DMG, xem [docs/BUIL
 
 ### OCR
 
-Ngày benchmark: 19 tháng 4, 2026. Các con số OCR trong README được lấy từ runner có thể tái lập `scripts/ocr_readme_benchmark.swift`, chạy trên corpus sạch dạng UI/article text có xuống dòng với `12 mẫu / ngôn ngữ` trên `10 ngôn ngữ được hỗ trợ`. `Character accuracy` là chỉ số chính, `exact match` được tính rất chặt, và tỷ lệ `no-output` trên corpus này là `0%` cho toàn bộ bảng bên dưới.
+Ngày benchmark: 19 tháng 4, 2026. Các con số OCR trong README được lấy từ runner có thể tái lập `scripts/run-ocr-readme-benchmark.sh`, chạy trên corpus sạch dạng UI/article text có xuống dòng với `12 mẫu / ngôn ngữ` trên `10 ngôn ngữ được hỗ trợ`. `Character accuracy` là chỉ số chính, `exact match` được tính rất chặt, và tỷ lệ `no-output` trên corpus này là `0%` cho toàn bộ bảng bên dưới.
 
 | Ngôn ngữ            | Character Accuracy | Exact Match |
 | ------------------- | -----------------: | ----------: |

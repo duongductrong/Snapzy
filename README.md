@@ -172,7 +172,7 @@ If you need archive, export, or DMG packaging commands, see [docs/BUILD.md](docs
 
 ### OCR
 
-Benchmark date: April 19, 2026. Current OCR numbers come from `scripts/ocr_readme_benchmark.swift` on a clean synthetic wrapped UI/article-text corpus with `12 samples / language` across `10 supported languages`. `Character accuracy` is the primary signal, `exact match` is intentionally strict, and `no-output` on this corpus is `0%` for all languages below.
+Benchmark date: April 19, 2026. Current OCR numbers come from `scripts/run-ocr-readme-benchmark.sh` on a clean synthetic wrapped UI/article-text corpus with `12 samples / language` across `10 supported languages`. `Character accuracy` is the primary signal, `exact match` is intentionally strict, and `no-output` on this corpus is `0%` for all languages below.
 
 | Language            | Character Accuracy | Exact Match |
 | ------------------- | -----------------: | ----------: |
