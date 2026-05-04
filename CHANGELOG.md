@@ -39,6 +39,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.6] - 2026-05-04
+
+### Features
+-  Add crop orientation toggle and update aspect ratio handling (#151) (dee6414)
+-  Improve microphone capture and integrate with recording session (#150) (9761d9d)
+
+### Bug Fixes
+-  Enable microphone capture settings regardless of audio capture state (572584b)
+-  Improve history cleanup for Quick Access item deletions and add corresponding tests (b405215)
+
+### Chore
+- refactor: Refactor OCR and QR detection benchmarks (8832e33)
+- chore: update appcast, cask, and readme for v1.12.5 (af856ae)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.5] - 2026-05-03
 
 ### Features
