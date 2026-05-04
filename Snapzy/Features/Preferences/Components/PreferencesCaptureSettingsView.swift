@@ -514,7 +514,6 @@ struct CaptureSettingsView: View {
                 }
               ))
               .labelsHidden()
-              .disabled(!captureAudio)
             }
           }
           .alert(L10n.Microphone.accessRequiredTitle, isPresented: $showPermissionDeniedAlert) {
