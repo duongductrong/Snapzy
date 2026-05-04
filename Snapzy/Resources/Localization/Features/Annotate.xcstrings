@@ -4811,6 +4811,71 @@
         }
       }
     },
+    "annotate.toggle-crop-orientation" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Switch crop orientation"
+          }
+        }
+      }
+    },
     "annotate.toggle-sidebar" : {
       "extractionState" : "stale",
       "localizations" : {

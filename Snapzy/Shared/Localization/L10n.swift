@@ -3552,6 +3552,11 @@ enum L10n {
       defaultValue: "Toggle rule of thirds grid",
       comment: "Tooltip for showing or hiding the crop grid"
     )
+    static let toggleCropOrientation = string(
+      "annotate.toggle-crop-orientation",
+      defaultValue: "Switch crop orientation",
+      comment: "Tooltip for switching crop aspect ratio between landscape and portrait"
+    )
     static let unsavedChangesTitle = string(
       "annotate.unsaved-changes-title",
       defaultValue: "Unsaved Changes",

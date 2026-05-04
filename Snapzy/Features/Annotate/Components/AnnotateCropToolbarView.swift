@@ -31,12 +31,39 @@ struct CropToolbarView: View {
       ForEach(CropAspectRatio.allCases) { ratio in
         CropRatioButton(
           ratio: ratio,
-          isSelected: state.cropAspectRatio == ratio
+          isSelected: state.cropAspectRatio == ratio,
+          isPortrait: state.isCropPortraitOrientation
         ) {
           state.applyCropAspectRatio(ratio)
         }
       }
+
+      if state.cropAspectRatio != .free, state.cropAspectRatio != .square {
+        Divider()
+          .frame(height: 20)
+
+        orientationToggle
+      }
     }
+  }
+
+  // MARK: - Orientation Toggle
+
+  private var orientationToggle: some View {
+    Button {
+      state.toggleCropOrientation()
+    } label: {
+      Image(systemName: state.isCropPortraitOrientation ? "rectangle.portrait" : "rectangle")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(Color.accentColor)
+        .frame(width: 28, height: 28)
+        .background(
+          RoundedRectangle(cornerRadius: 6)
+            .fill(Color.accentColor.opacity(0.2))
+        )
+    }
+    .buttonStyle(.plain)
+    .help(L10n.AnnotateUI.toggleCropOrientation)
   }
 
   // MARK: - Grid Toggle
@@ -64,13 +91,14 @@ struct CropToolbarView: View {
 struct CropRatioButton: View {
   let ratio: CropAspectRatio
   let isSelected: Bool
+  let isPortrait: Bool
   let action: () -> Void
 
   @State private var isHovering = false
 
   var body: some View {
     Button(action: action) {
-      Text(ratio.displayName)
+      Text(displayName)
         .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
         .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
         .padding(.horizontal, 8)
@@ -82,6 +110,10 @@ struct CropRatioButton: View {
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }
+  }
+
+  private var displayName: String {
+    isSelected ? ratio.effectiveDisplayName(isPortrait: isPortrait) : ratio.displayName
   }
 
   private var backgroundColor: Color {

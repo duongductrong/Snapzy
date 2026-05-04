@@ -824,6 +824,8 @@ final class AnnotateState: ObservableObject {
   @Published var isCropActive: Bool = false
   /// Selected aspect ratio for crop
   @Published var cropAspectRatio: CropAspectRatio = .free
+  /// Whether crop aspect ratio is in portrait orientation
+  @Published var isCropPortraitOrientation: Bool = false
   /// Whether to show rule of thirds grid
   @Published var showCropGrid: Bool = true
   /// Whether currently resizing (for dimension display)
@@ -1630,6 +1632,7 @@ final class AnnotateState: ObservableObject {
     isCropActive = false
     clearCutoutAutoCropTracking()
     cropAspectRatio = .free
+    isCropPortraitOrientation = false
     isCropResizing = false
     isCropShiftLocked = false
   }
@@ -1643,6 +1646,7 @@ final class AnnotateState: ObservableObject {
     cropRect = fullImageRect
     originalCropRect = fullImageRect
     cropAspectRatio = .free
+    isCropPortraitOrientation = false
     isCropActive = true
     isCropResizing = false
     isCropShiftLocked = false
@@ -1656,7 +1660,7 @@ final class AnnotateState: ObservableObject {
     // Use original crop rect as base to prevent shrinking
     guard var rect = originalCropRect ?? cropRect, ratio != .free else { return }
 
-    let targetRatio = ratio.ratio
+    let targetRatio = ratio.effectiveRatio(isPortrait: isCropPortraitOrientation)
     let currentRatio = rect.width / rect.height
 
     if currentRatio > targetRatio {
@@ -1678,6 +1682,13 @@ final class AnnotateState: ObservableObject {
       clearCutoutAutoCropTracking()
     }
     cropRect = constrainedRect
+  }
+
+  /// Toggle crop orientation between landscape and portrait
+  func toggleCropOrientation() {
+    guard cropAspectRatio != .free, cropAspectRatio != .square else { return }
+    isCropPortraitOrientation.toggle()
+    applyCropAspectRatio(cropAspectRatio)
   }
 
   private func restoreContextAfterCropInteraction() {

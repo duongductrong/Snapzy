@@ -1227,7 +1227,7 @@ final class DrawingCanvasNSView: NSView {
       // Lock to current aspect ratio when Shift is held
       aspectRatio = originalCropRect.width / originalCropRect.height
     } else if state.cropAspectRatio != .free {
-      aspectRatio = state.cropAspectRatio.ratio
+      aspectRatio = state.cropAspectRatio.effectiveRatio(isPortrait: state.isCropPortraitOrientation)
     } else {
       aspectRatio = nil
     }

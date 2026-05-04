@@ -30,6 +30,13 @@ enum CropAspectRatio: String, CaseIterable, Identifiable {
     }
   }
 
+  /// Effective ratio accounting for portrait orientation.
+  func effectiveRatio(isPortrait: Bool) -> CGFloat {
+    let r = ratio
+    guard r > 0 else { return 0 }
+    return isPortrait ? 1.0 / r : r
+  }
+
   /// Display name for UI
   var displayName: String {
     switch self {
@@ -37,6 +44,24 @@ enum CropAspectRatio: String, CaseIterable, Identifiable {
       return L10n.Common.free
     default:
       return rawValue
+    }
+  }
+
+  /// Effective display name accounting for portrait orientation.
+  func effectiveDisplayName(isPortrait: Bool) -> String {
+    switch self {
+    case .free:
+      return L10n.Common.free
+    case .square:
+      return rawValue
+    case .ratio4x3:
+      return isPortrait ? "3:4" : rawValue
+    case .ratio3x2:
+      return isPortrait ? "2:3" : rawValue
+    case .ratio16x9:
+      return isPortrait ? "9:16" : rawValue
+    case .ratio21x9:
+      return isPortrait ? "9:21" : rawValue
     }
   }
 
