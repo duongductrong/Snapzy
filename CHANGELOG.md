@@ -40,6 +40,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.12.7] - 2026-05-06
+
+### Bug Fixes
+-  Enhance VisionOCRProfile with additional language support and improve OCRService for diacritic handling (148909b)
+
+### Chore
+- refactor: Introduce AnnotateCanvasDefaults for consistent corner radius usage (f4c714d)
+- chore: update appcast, cask, and readme for v1.12.6 (a74c443)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.12.6] - 2026-05-04
 
 ### Features
