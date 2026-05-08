@@ -38,6 +38,8 @@ struct SnapzyApp: App {
 class AppDelegate: NSObject, NSApplicationDelegate {
   private var coordinator: AppCoordinator?
   private var pendingDeepLinkURLs: [URL] = []
+  private var pendingOpenFileURLs: [URL] = []
+  private var didFinishLaunching = false
 
   func applicationWillFinishLaunching(_ notification: Notification) {
     NSAppleEventManager.shared().setEventHandler(
@@ -57,7 +59,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let coordinator = AppCoordinator(environment: AppEnvironment.live())
     self.coordinator = coordinator
     coordinator.applicationDidFinishLaunching()
+    didFinishLaunching = true
     flushPendingDeepLinks()
+    flushPendingOpenFileURLs()
   }
 
   func applicationWillTerminate(_ notification: Notification) {
@@ -94,5 +98,52 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let urls = pendingDeepLinkURLs
     pendingDeepLinkURLs.removeAll()
     urls.forEach { coordinator.handleDeepLink($0) }
+  }
+
+  // MARK: - Open With (Finder right-click → Open With → Snapzy)
+
+  /// Called when the user opens one or more image files with Snapzy from
+  /// Finder's "Open With" submenu, by double-clicking a file whose default
+  /// app is Snapzy, or by drag-dropping files onto the app icon in the Dock.
+  ///
+  /// Files declared in `CFBundleDocumentTypes` (PNG/JPEG/HEIC/HEIF/TIFF/GIF/
+  /// WebP/BMP) are routed straight into the annotation editor.
+  ///
+  /// Note: macOS 13+ prefers `application(_:open:)` over the legacy
+  /// `application(_:openFiles:)`, and the latter is silently skipped on
+  /// recent OS releases. We only act on file URLs here so that the existing
+  /// Apple Event handler for `snapzy://` deep links keeps working.
+  func application(_ application: NSApplication, open urls: [URL]) {
+    let fileURLs = urls.filter { $0.isFileURL }
+    guard !fileURLs.isEmpty else { return }
+
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Received open-file request",
+      context: ["count": "\(fileURLs.count)"]
+    )
+
+    if didFinishLaunching {
+      openImageURLs(fileURLs)
+    } else {
+      // Files arriving before launch finishes (e.g. a cold launch via "Open With")
+      // are queued and flushed once the coordinator is ready.
+      pendingOpenFileURLs.append(contentsOf: fileURLs)
+    }
+  }
+
+  private func openImageURLs(_ urls: [URL]) {
+    for url in urls {
+      AnnotateManager.shared.openAnnotation(url: url)
+    }
+  }
+
+  private func flushPendingOpenFileURLs() {
+    guard !pendingOpenFileURLs.isEmpty else { return }
+
+    let urls = pendingOpenFileURLs
+    pendingOpenFileURLs.removeAll()
+    openImageURLs(urls)
   }
 }
