@@ -329,10 +329,46 @@
     "preferences-shortcuts.application-recording-description" : {
       "extractionState" : "stale",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einzeltaste (A) koppelt mit „Bildschirm aufzeichnen“; Modifikator-Kombination (⇧⌘A)\nfunktioniert unabhängig."
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Single key (A) pairs with Record Screen; modifier combo (⇧⌘A)\nworks independently."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La tecla única (A) se empareja con Grabar pantalla; la combinación de modificadores (⇧⌘A)\nfunciona de forma independiente."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La touche unique (A) est associée à Enregistrer l’écran ; la combinaison de modificateurs (⇧⌘A)\nfonctionne indépendamment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "単一キー（A）は画面録画と連動します。修飾キーの組み合わせ（⇧⌘A）は\n独立して動作します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "단일 키(A)는 화면 녹화와 짝을 이룹니다. 조합 키(⇧⌘A)는\n독립적으로 동작합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Одиночная клавиша (A) сочетается с записью экрана; комбинация модификаторов (⇧⌘A)\nработает независимо."
           }
         },
         "vi" : {
@@ -340,22 +376,82 @@
             "state" : "translated",
             "value" : "Phím đơn (A) đi cùng Ghi màn hình; combo modifier (⇧⌘A)\nchạy độc lập."
           }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "单键 (A) 与「录制屏幕」联动；修饰键组合 (⇧⌘A)\n可独立使用。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "單鍵 (A) 與「錄製螢幕」連動；修飾鍵組合 (⇧⌘A)\n可獨立使用。"
+          }
         }
       }
     },
     "preferences-shortcuts.application-recording-title" : {
       "extractionState" : "stale",
       "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App-Aufzeichnung"
+          }
+        },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Application Recording"
           }
         },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grabación de aplicación"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrement d’application"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリの画面録画"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 화면 녹화"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Запись приложения"
+          }
+        },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ghi ứng dụng"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "应用录屏"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "應用程式錄製"
           }
         }
       }
