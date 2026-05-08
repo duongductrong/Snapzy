@@ -6016,6 +6016,26 @@ enum L10n {
       defaultValue: "Filter shown when opening the floating panel",
       comment: "History settings description for default filter"
     )
+    static let defaultFilterAll = string(
+      "preferences-history.default-filter-all",
+      defaultValue: "All",
+      comment: "History settings default filter option for all capture types"
+    )
+    static let defaultFilterScreenshots = string(
+      "preferences-history.default-filter-screenshots",
+      defaultValue: "Screenshots",
+      comment: "History settings default filter option for screenshots"
+    )
+    static let defaultFilterVideos = string(
+      "preferences-history.default-filter-videos",
+      defaultValue: "Videos",
+      comment: "History settings default filter option for videos"
+    )
+    static let defaultFilterGifs = string(
+      "preferences-history.default-filter-gifs",
+      defaultValue: "GIFs",
+      comment: "History settings default filter option for GIFs"
+    )
     static let maxItemsTitle = string(
       "preferences-history.max-items-title",
       defaultValue: "Max Displayed Items",
@@ -6030,6 +6050,16 @@ enum L10n {
       "preferences-history.panel-size-description",
       defaultValue: "Resize the floating panel and its preview cards",
       comment: "History settings description for floating panel size"
+    )
+    static let panelSizeSmall = string(
+      "preferences-history.panel-size-small",
+      defaultValue: "S",
+      comment: "History settings short label for the small end of the panel size slider"
+    )
+    static let panelSizeLarge = string(
+      "preferences-history.panel-size-large",
+      defaultValue: "L",
+      comment: "History settings short label for the large end of the panel size slider"
     )
     static let maxItemsDescription = string(
       "preferences-history.max-items-description",
@@ -6164,6 +6194,11 @@ enum L10n {
     static let bottomCenter = string(
       "history-panel-position.bottom-center",
       defaultValue: "Bottom Center",
+      comment: "History panel position option"
+    )
+    static let center = string(
+      "history-panel-position.center",
+      defaultValue: "Center",
       comment: "History panel position option"
     )
   }

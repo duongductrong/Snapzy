@@ -39,7 +39,7 @@ enum HistoryPanelPosition: String, Codable {
     switch self {
     case .topCenter: return L10n.HistoryPanelPosition.topCenter
     case .bottomCenter: return L10n.HistoryPanelPosition.bottomCenter
-    case .center: return "Center"
+    case .center: return L10n.HistoryPanelPosition.center
     }
   }
 }

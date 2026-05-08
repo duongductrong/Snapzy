@@ -51,10 +51,10 @@ struct HistorySettingsView: View {
           description: L10n.PreferencesHistory.defaultFilterDescription
         ) {
           Picker("", selection: $manager.defaultFilter) {
-            Text("All").tag(Optional<CaptureHistoryType>.none)
-            Text("Screenshots").tag(Optional<CaptureHistoryType>.some(.screenshot))
-            Text("Videos").tag(Optional<CaptureHistoryType>.some(.video))
-            Text("GIFs").tag(Optional<CaptureHistoryType>.some(.gif))
+            Text(L10n.PreferencesHistory.defaultFilterAll).tag(Optional<CaptureHistoryType>.none)
+            Text(L10n.PreferencesHistory.defaultFilterScreenshots).tag(Optional<CaptureHistoryType>.some(.screenshot))
+            Text(L10n.PreferencesHistory.defaultFilterVideos).tag(Optional<CaptureHistoryType>.some(.video))
+            Text(L10n.PreferencesHistory.defaultFilterGifs).tag(Optional<CaptureHistoryType>.some(.gif))
           }
           .labelsHidden()
           .pickerStyle(.menu)
@@ -77,12 +77,12 @@ struct HistorySettingsView: View {
           description: L10n.PreferencesHistory.panelSizeDescription
         ) {
           HStack(spacing: 8) {
-            Text(verbatim: "S")
+            Text(L10n.PreferencesHistory.panelSizeSmall)
               .font(.caption)
               .foregroundColor(.secondary)
             Slider(value: $manager.panelScale, in: HistoryFloatingLayout.scaleRange, step: 0.05)
               .frame(width: 120)
-            Text(verbatim: "L")
+            Text(L10n.PreferencesHistory.panelSizeLarge)
               .font(.caption)
               .foregroundColor(.secondary)
             Text("\(Int(manager.panelScale * 100))%")
