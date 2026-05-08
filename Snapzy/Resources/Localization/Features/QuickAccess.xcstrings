@@ -1225,13 +1225,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "职位"
+            "value" : "位置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "職位"
+            "value" : "位置"
           }
         }
       }
