@@ -445,13 +445,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 ⇧⌘3、⇧⌘4、⇧⌘5 随时捕捉"
+            "value" : "随时使用 ⇧⌘3、⇧⌘4、⇧⌘5 截取屏幕"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "使用 ⇧⌘3、⇧⌘4、⇧⌘5 隨時捕捉"
+            "value" : "隨時使用 ⇧⌘3、⇧⌘4、⇧⌘5 擷取螢幕"
           }
         }
       }
@@ -1355,13 +1355,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "选择 Snapzy 捕获的文件夹（默认：Desktop/Snapzy）"
+            "value" : "选择 Snapzy 文件的保存文件夹（默认：桌面/Snapzy）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "選擇 Snapzy 捕獲的檔案夾（預設：Desktop/Snapzy）"
+            "value" : "選擇儲存 Snapzy 檔案的檔案夾（預設：桌面/Snapzy）"
           }
         }
       }
@@ -2135,13 +2135,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要捕获、音频和保存位置的权限。"
+            "value" : "Snapzy 需要截屏、麦克风与存储位置等系统权限。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要捕獲、音頻和保存位置的權限。"
+            "value" : "Snapzy 需要截圖、麥克風與儲存位置等系統權限。"
           }
         }
       }
@@ -3760,13 +3760,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "注释和编辑捕获"
+            "value" : "标注与编辑截取内容"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "注釋和編輯捕獲"
+            "value" : "標註與編輯擷取內容"
           }
         }
       }
@@ -3825,13 +3825,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获区域或全屏屏幕截图"
+            "value" : "截取区域或全屏画面"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲區域或全屏螢幕截圖"
+            "value" : "擷取區域或全螢幕畫面"
           }
         }
       }

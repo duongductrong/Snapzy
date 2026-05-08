@@ -250,13 +250,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将捕获的内容拖动到其他应用程序"
+            "value" : "将截屏或录屏拖到其他应用中"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "將捕獲的內容拖動到其他應用程序"
+            "value" : "將截圖或錄製內容拖到其他 App"
           }
         }
       }
@@ -380,13 +380,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获后显示预览"
+            "value" : "截取完成后显示预览"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲後顯示預覽"
+            "value" : "擷取完成後顯示預覽"
           }
         }
       }

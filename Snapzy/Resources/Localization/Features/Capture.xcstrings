@@ -445,13 +445,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获后打开注释编辑器"
+            "value" : "截取后打开标注编辑器"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲後打開注釋編輯器"
+            "value" : "擷取後開啟標註編輯器"
           }
         }
       }
@@ -770,13 +770,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "将捕获内容上传到云端并复制链接"
+            "value" : "将截取的内容上传到云端并复制链接"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "將擷取內容上傳到雲端並複製連結"
+            "value" : "將擷取的內容上傳至雲端並複製連結"
           }
         }
       }
@@ -1030,13 +1030,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在进行捕捉或录制时无法清除缓存。"
+            "value" : "正在截屏或录制时无法清除缓存。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在進行捕捉或錄制時無法清除緩存。"
+            "value" : "截圖或錄製進行中時無法清除快取。"
           }
         }
       }
@@ -2070,13 +2070,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "适用于捕获和注释中的背景去除"
+            "value" : "在截屏与标注中用于去除背景"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "適用於捕獲和注釋中的背景去除"
+            "value" : "在截圖與標註中用來去除背景"
           }
         }
       }
@@ -2135,13 +2135,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自动裁剪主题"
+            "value" : "自动裁切主体"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自動裁剪主題"
+            "value" : "自動裁切主體"
           }
         }
       }
@@ -2655,13 +2655,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕获期间暂时隐藏图标"
+            "value" : "截屏或录屏时暂时隐藏桌面图标"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕獲期間暫時隱藏圖標"
+            "value" : "截圖或錄製時暫時隱藏桌面圖像"
           }
         }
       }
@@ -2785,13 +2785,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕获期间暂时隐藏小部件"
+            "value" : "截屏或录屏时暂时隐藏桌面小组件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕獲期間暫時隱藏小部件"
+            "value" : "截圖或錄製時暫時隱藏桌面小工具"
           }
         }
       }
@@ -3175,13 +3175,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获的屏幕截图的输出格式"
+            "value" : "屏幕截图的导出格式"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲的螢幕截圖的輸出格式"
+            "value" : "螢幕截圖的輸出格式"
           }
         }
       }
@@ -3305,13 +3305,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在录制的视频中显示 Snapzy 窗口，例如注释"
+            "value" : "在屏幕录制画面中显示 Snapzy 窗口（例如标注工具栏）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在錄制的影片中顯示 Snapzy 窗口，例如注釋"
+            "value" : "在螢幕錄製畫面中顯示 Snapzy 視窗（例如標註工具列）"
           }
         }
       }
@@ -3370,13 +3370,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "包含在录音中"
+            "value" : "在录屏画面中包含"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "包含在錄音中"
+            "value" : "錄製畫面中包含"
           }
         }
       }
@@ -3435,13 +3435,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕获的图像中显示 Snapzy 窗口，例如注释"
+            "value" : "在截图画面中显示 Snapzy 窗口（例如标注窗口）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕獲的圖像中顯示 Snapzy 窗口，例如注釋"
+            "value" : "在截圖中顯示 Snapzy 視窗（例如標註視窗）"
           }
         }
       }
@@ -3565,13 +3565,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "对象剪切捕捉需要透明度。即使选择 JPEG，Snapzy 也会将它们保存为 PNG。"
+            "value" : "主体抠图需要透明通道。若选择 JPEG，Snapzy 仍会保存为 PNG。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "對象剪切捕捉需要透明度。即使選擇 JPEG，Snapzy 也會將它們保存為 PNG。"
+            "value" : "主體去背需要透明資訊。即使選擇 JPEG，Snapzy 仍會以 PNG 格式儲存。"
           }
         }
       }
@@ -3630,13 +3630,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉你的声音"
+            "value" : "录制麦克风声音"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉你的聲音"
+            "value" : "錄製麥克風聲音"
           }
         }
       }
@@ -3926,13 +3926,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "记录区域中的徽章放置"
+            "value" : "提示角标在录制区域内的位置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記錄區域中的徽章放置"
+            "value" : "提示徽章在錄製區域中的位置"
           }
         }
       }
@@ -3991,13 +3991,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "职位"
+            "value" : "位置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "職位"
+            "value" : "位置"
           }
         }
       }
@@ -4381,13 +4381,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下次捕获时恢复先前的记录区域"
+            "value" : "下次截屏时沿用上次选择的区域"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "下次捕獲時恢復先前的記錄區域"
+            "value" : "下次截圖時沿用上次選擇的區域"
           }
         }
       }
@@ -5031,13 +5031,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获后"
+            "value" : "截取后"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲後"
+            "value" : "擷取後"
           }
         }
       }
@@ -5764,13 +5764,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滚动捕捉"
+            "value" : "滚动截屏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滾動捕捉"
+            "value" : "捲動截圖"
           }
         }
       }
@@ -5829,13 +5829,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕获的屏幕截图中包含鼠标指针"
+            "value" : "在截图中包含鼠标指针"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "在捕獲的螢幕截圖中包含鼠標指針"
+            "value" : "在截圖中包含滑鼠游標"
           }
         }
       }
@@ -5959,13 +5959,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启动滚动捕获会话时保持指导可见"
+            "value" : "开始滚动截屏会话时保持操作提示可见"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啓動滾動捕獲會話時保持指導可見"
+            "value" : "開始捲動截圖工作階段時維持操作提示可見"
           }
         }
       }
@@ -6089,13 +6089,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从应用程序捕获声音"
+            "value" : "从应用程序录制系统音频"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "從應用程序捕獲聲音"
+            "value" : "從應用程式錄製系統音訊"
           }
         }
       }
@@ -6349,13 +6349,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "WebP 编码比其他格式慢。为了获得更快的捕获速度，请考虑使用 PNG 或 JPEG。"
+            "value" : "WebP 编码比其他格式更慢。若想更快完成保存，建议使用 PNG 或 JPEG。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "WebP 編碼比其他格式慢。為了獲得更快的捕獲速度，請考慮使用 PNG 或 JPEG。"
+            "value" : "WebP 編碼比其他格式更慢。若想更快完成儲存，建議改用 PNG 或 JPEG。"
           }
         }
       }
@@ -6414,13 +6414,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 %@ 捕获应用窗口"
+            "value" : "按 %@ 截取应用窗口"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 %@ 捕獲應用程式視窗"
+            "value" : "按 %@ 擷取應用程式視窗"
           }
         }
       }
@@ -6479,13 +6479,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获已取消"
+            "value" : "已取消截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲已取消"
+            "value" : "已取消擷取"
           }
         }
       }
@@ -6544,13 +6544,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获失败：%@"
+            "value" : "截取失败：%@"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲失敗：%@"
+            "value" : "擷取失敗：%@"
           }
         }
       }
@@ -6739,13 +6739,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法从捕获的帧创建图像"
+            "value" : "无法从已截取的帧生成图像"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無法從捕獲的幀創建圖像"
+            "value" : "無法從已擷取的畫面建立影像"
           }
         }
       }
@@ -6804,13 +6804,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法裁剪捕获的图像"
+            "value" : "无法裁切截取的图像"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無法裁剪捕獲的圖像"
+            "value" : "無法裁切擷取的影像"
           }
         }
       }
@@ -6999,13 +6999,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 %@ 切回手动区域捕获"
+            "value" : "按 %@ 返回手动框选区域"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 %@ 切回手動區域捕獲"
+            "value" : "按 %@ 返回手動框選區域"
           }
         }
       }
@@ -7064,13 +7064,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "的文件写入验证失败找不到可捕获的显示器"
+            "value" : "找不到可用于截屏的显示器"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "的檔案寫入驗證失敗找不到可捕獲的顯示器"
+            "value" : "找不到可用來截圖的顯示器"
           }
         }
       }
@@ -7454,13 +7454,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法捕获所选区域。"
+            "value" : "无法截取所选区域。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無法捕獲所選區域。"
+            "value" : "無法擷取所選區域。"
           }
         }
       }
@@ -7584,13 +7584,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调整区域，以便仅移动的内容保留在内部，然后按“开始捕获”。按 Esc 键取消。"
+            "value" : "调整选区，使仅滚动的内容留在框内，然后点按「开始截取」。按 Esc 取消。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "調整區域，以便僅移動的內容保留在內部，然後按“開始捕獲”。按 Esc 鍵取消。"
+            "value" : "調整選區讓會捲動的內容保留在框內，再按「開始擷取」。按 Esc 取消。"
           }
         }
       }
@@ -7649,13 +7649,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获并对齐最新的可见内容..."
+            "value" : "正在截取并对齐最新可见内容…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲並對齊最新的可見內容..."
+            "value" : "正在擷取並對齊最新的可視內容…"
           }
         }
       }
@@ -7779,13 +7779,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获第一帧。之后，继续以稳定的速度向下滚动。"
+            "value" : "正在截取第一帧。随后请以稳定的速度向下滚动。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲第一幀。之後，繼續以穩定的速度向下滾動。"
+            "value" : "正在擷取第一個畫面。接著請以穩定的速度向下捲動。"
           }
         }
       }
@@ -7909,13 +7909,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法捕捉最后一帧。 Snapzy 将保存当前的拼接结果。"
+            "value" : "无法截取最后一帧。Snapzy 将保存当前拼接结果。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無法捕捉最後一幀。 Snapzy 將保存當前的拼接結果。"
+            "value" : "無法擷取最後一個畫面；Snapzy 會儲存目前的拼接結果。"
           }
         }
       }
@@ -8234,13 +8234,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完成当前捕获。 Snapzy 在保存之前锁定最新的缝合结果。"
+            "value" : "正在完成本次截取，保存前 Snapzy 会锁定最新拼接结果。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完成當前捕獲。 Snapzy 在保存之前鎖定最新的縫合結果。"
+            "value" : "正在完成本次擷取，儲存前會鎖定最新拼接結果。"
           }
         }
       }
@@ -8299,13 +8299,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "锁定当前捕获。 Snapzy 在保存之前正在密封 %d 个缝合帧。"
+            "value" : "正在完成本次截取，保存前 Snapzy 正在处理 %d 帧拼接结果。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鎖定當前捕獲。 Snapzy 在保存之前正在密封 %d 個縫合幀。"
+            "value" : "正在完成本次擷取，儲存前正在處理 %d 幀拼接結果。"
           }
         }
       }
@@ -8754,13 +8754,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 尚无法锁定可保存的拼接图像。您可以继续捕获、重试“完成”或“取消”。"
+            "value" : "尚无可以保存的拼接图像，可继续截取、再次尝试「完成」或「取消」。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 尚無法鎖定可保存的拼接圖像。您可以繼續捕獲、重試“完成”或“取消”。"
+            "value" : "尚無可儲存的拼接影像；可繼續擷取、再次按「完成」或「取消」。"
           }
         }
       }
@@ -8884,13 +8884,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "仅选择移动内容，按“开始捕获”，然后以稳定的速度朝一个方向滚动。"
+            "value" : "只框选滚动内容，点按「开始截取」，再以稳定速度沿一个方向滚动。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "僅選擇移動內容，按“開始捕獲”，然後以穩定的速度朝一個方向滾動。"
+            "value" : "只框選會捲動的內容，按「開始擷取」，再以穩定速度往單一向捲動。"
           }
         }
       }
@@ -8949,13 +8949,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区域已更新。仅保留移动的内容，然后按“开始捕获”。按 Esc 键取消。"
+            "value" : "区域已更新。仅保留会滚动的内容，然后点按「开始截取」。按 Esc 取消。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "區域已更新。僅保留移動的內容，然後按“開始捕獲”。按 Esc 鍵取消。"
+            "value" : "區域已更新；只保留會捲動的內容，再按「開始擷取」。按 Esc 取消。"
           }
         }
       }
@@ -9274,13 +9274,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "无法捕获所选区域。"
+            "value" : "无法截取所选区域。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無法捕獲所選區域。"
+            "value" : "無法擷取所選區域。"
           }
         }
       }
@@ -9469,13 +9469,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获"
+            "value" : "已截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲"
+            "value" : "已擷取"
           }
         }
       }
@@ -11224,13 +11224,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "继续捕捉"
+            "value" : "继续截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "繼續捕捉"
+            "value" : "繼續擷取"
           }
         }
       }
@@ -11744,13 +11744,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "锁定当前捕获"
+            "value" : "锁定本次截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "鎖定當前捕獲"
+            "value" : "鎖定本次擷取"
           }
         }
       }
@@ -12784,13 +12784,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "然后按开始捕获"
+            "value" : "然后点按「开始截取」"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "然後按開始捕獲"
+            "value" : "然後按「開始擷取」"
           }
         }
       }
@@ -12979,13 +12979,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完成 - 保存您的捕获。"
+            "value" : "完成 — 保存本次截取结果"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "完成 - 保存您的捕獲。"
+            "value" : "完成 — 儲存本次擷取結果"
           }
         }
       }
@@ -13044,13 +13044,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "预览与拼接的捕获相匹配。"
+            "value" : "预览与拼接结果一致。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "預覽與拼接的捕獲相匹配。"
+            "value" : "預覽與拼接結果一致。"
           }
         }
       }
@@ -13174,13 +13174,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按开始捕获开始。"
+            "value" : "点按「开始截取」以开始"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按開始捕獲開始。"
+            "value" : "按「開始擷取」以開始"
           }
         }
       }
@@ -13239,13 +13239,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存您的捕获..."
+            "value" : "正在保存本次截取…"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存您的捕獲..."
+            "value" : "正在儲存本次擷取…"
           }
         }
       }
@@ -13304,13 +13304,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示最新的拼接捕获。"
+            "value" : "正在显示最新的拼接截取结果"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示最新的拼接捕獲。"
+            "value" : "顯示最新的拼接擷取結果"
           }
         }
       }
@@ -13434,13 +13434,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获"
+            "value" : "截取中"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲"
+            "value" : "擷取中"
           }
         }
       }
@@ -13889,13 +13889,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已捕获 %d 个部分"
+            "value" : "已截取 %d 段"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已捕獲 %d 個部分"
+            "value" : "已擷取 %d 段"
           }
         }
       }
@@ -13954,13 +13954,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "开始捕捉"
+            "value" : "开始截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "開始捕捉"
+            "value" : "開始擷取"
           }
         }
       }
@@ -14084,13 +14084,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滚动捕获保存了拼接图像。"
+            "value" : "滚动截屏已保存拼接图像。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滾動捕獲保存了拼接圖像。"
+            "value" : "捲動截圖已儲存拼接影像。"
           }
         }
       }
@@ -14149,13 +14149,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滚动捕获会话已处于活动状态。"
+            "value" : "滚动截屏会话已在进行中。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滾動捕獲會話已處於活動狀態。"
+            "value" : "捲動截圖工作階段已在進行中。"
           }
         }
       }

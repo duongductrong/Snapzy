@@ -2005,13 +2005,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "区域选择捕获"
+            "value" : "区域截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "區域選擇捕獲"
+            "value" : "區域擷取"
           }
         }
       }
@@ -2330,13 +2330,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "禁用注释"
+            "value" : "关闭标注"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "禁用注釋"
+            "value" : "關閉標註"
           }
         }
       }
@@ -2395,13 +2395,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "启用注释"
+            "value" : "开启标注"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "啓用注釋"
+            "value" : "開啟標註"
           }
         }
       }
@@ -2525,13 +2525,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全屏捕捉"
+            "value" : "全屏截取"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "全屏捕捉"
+            "value" : "全螢幕擷取"
           }
         }
       }

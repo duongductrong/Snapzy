@@ -55,13 +55,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获区域"
+            "value" : "区域截屏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲區域"
+            "value" : "區域截圖"
           }
         }
       }
@@ -120,13 +120,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉全屏"
+            "value" : "全屏截屏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉全屏"
+            "value" : "全螢幕截圖"
           }
         }
       }
@@ -185,13 +185,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉主体"
+            "value" : "提取主体"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕捉主體"
+            "value" : "擷取主體"
           }
         }
       }
@@ -250,13 +250,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕获文本 (OCR)"
+            "value" : "识别文字（OCR）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "捕獲文本 (OCR)"
+            "value" : "辨識文字（OCR）"
           }
         }
       }
@@ -315,13 +315,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "云上传"
+            "value" : "上传到云端"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "雲上傳"
+            "value" : "上傳至雲端"
           }
         }
       }
@@ -380,13 +380,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开注释"
+            "value" : "打开标注"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開注釋"
+            "value" : "開啟標註"
           }
         }
       }
@@ -451,7 +451,7 @@
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開歷史記錄"
+            "value" : "打開歷史紀錄"
           }
         }
       }
@@ -575,13 +575,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "录制视频"
+            "value" : "屏幕录制"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "錄制影片"
+            "value" : "螢幕錄製"
           }
         }
       }
@@ -640,13 +640,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滚动捕捉"
+            "value" : "滚动截屏"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "滾動捕捉"
+            "value" : "捲動截圖"
           }
         }
       }
@@ -705,13 +705,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示快速访问叠加"
+            "value" : "显示快速访问浮层"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示快速訪問疊加"
+            "value" : "顯示快速存取浮層"
           }
         }
       }
@@ -770,13 +770,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示快捷方式列表"
+            "value" : "显示快捷键列表"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示快捷方式列表"
+            "value" : "顯示快速鍵列表"
           }
         }
       }

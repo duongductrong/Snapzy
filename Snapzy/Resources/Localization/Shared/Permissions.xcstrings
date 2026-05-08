@@ -640,13 +640,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要特定权限才能捕获您的屏幕和音频。"
+            "value" : "Snapzy 需要截屏、访问麦克风音频及文件等权限。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要特定權限才能捕獲您的螢幕和音頻。"
+            "value" : "Snapzy 需要擷取螢幕畫面、麥克風音訊與檔案等相關權限。"
           }
         }
       }

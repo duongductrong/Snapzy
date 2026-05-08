@@ -1225,13 +1225,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "寻找发布更新"
+            "value": "启动时检查更新"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "尋找發佈更新"
+            "value": "啟動時檢查更新"
           }
         }
       }
@@ -1420,13 +1420,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择 Snapzy 保存捕获的位置"
+            "value": "选择 Snapzy 保存截屏与录屏的位置"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇 Snapzy 保存捕獲的位置"
+            "value": "選擇 Snapzy 儲存截圖與錄製的位置"
           }
         }
       }
@@ -2590,13 +2590,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从来没有"
+            "value": "从不"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從來沒有"
+            "value": "永不"
           }
         }
       }
@@ -2850,13 +2850,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕获的音频反馈"
+            "value": "截屏与录屏完成时播放提示音"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕獲的音頻反饋"
+            "value": "截圖與錄製完成時播放提示音"
           }
         }
       }
@@ -3116,7 +3116,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新啓動"
+            "value": "重新啟動"
           }
         }
       }
@@ -3181,7 +3181,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "再次顯示歡迎教程"
+            "value": "再次顯示歡迎教學"
           }
         }
       }
@@ -3240,13 +3240,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新启动入职"
+            "value": "重新运行引导"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新啓動入職"
+            "value": "重新開始引導"
           }
         }
       }
@@ -3370,13 +3370,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy 商店捕获"
+            "value": "Snapzy 保存截屏与录屏的位置"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy 商店捕獲"
+            "value": "Snapzy 儲存截圖與錄製的位置"
           }
         }
       }
@@ -3441,7 +3441,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存位置"
+            "value": "儲存位置"
           }
         }
       }
@@ -3636,7 +3636,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "幫助"
+            "value": "說明"
           }
         }
       }
@@ -3701,7 +3701,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啓動"
+            "value": "啟動"
           }
         }
       }
@@ -3766,7 +3766,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "存儲"
+            "value": "儲存空間"
           }
         }
       }
@@ -3831,7 +3831,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "軟件更新"
+            "value": "軟體更新"
           }
         }
       }
@@ -3896,7 +3896,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "登錄時啓動 Snapzy"
+            "value": "登入時啟動 Snapzy"
           }
         }
       }
@@ -3955,13 +3955,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "从登录开始"
+            "value": "登录时启动"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "從登錄開始"
+            "value": "登入時啟動"
           }
         }
       }
@@ -4345,13 +4345,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有截屏和录屏文件将被移到废纸篓并从历史中移除。此操作在 Snapzy 中无法撤销。"
+            "value": "所有截屏与录屏文件将被移到废纸篓并从历史记录中移除。此操作在 Snapzy 中无法撤销。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "所有截圖與錄製檔案將移到垃圾桶並從歷史記錄中移除。此操作在 Snapzy 中無法還原。"
+            "value": "所有截圖與錄製檔案將移到垃圾桶並從歷史紀錄中移除。此操作在 Snapzy 中無法還原。"
           }
         }
       }
@@ -4410,13 +4410,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "确定清除全部历史？"
+            "value": "确定要清空全部历史记录？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "確定清除全部歷史記錄？"
+            "value": "確定要清空全部歷史紀錄？"
           }
         }
       }
@@ -4475,13 +4475,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除历史"
+            "value": "清空历史记录"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除歷史記錄"
+            "value": "清空歷史紀錄"
           }
         }
       }
@@ -4546,7 +4546,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除"
+            "value": "清空"
           }
         }
       }
@@ -4605,13 +4605,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "将所有截屏和录屏移到废纸篓并清空历史"
+            "value": "将所有截屏与录屏移到废纸篓并清空历史记录"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "將所有截圖與錄製移到垃圾桶並清空歷史記錄"
+            "value": "將所有截圖與錄製移到垃圾桶並清空歷史紀錄"
           }
         }
       }
@@ -4670,13 +4670,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除全部历史"
+            "value": "清空全部历史记录"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除全部歷史記錄"
+            "value": "清空全部歷史紀錄"
           }
         }
       }
@@ -4735,13 +4735,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除选择"
+            "value": "清除所选"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "清除選取"
+            "value": "清除所選項目"
           }
         }
       }
@@ -4995,13 +4995,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "将已选的 %d 项截屏或录屏移到废纸篓并从历史中移除。"
+            "value": "将已选的 %d 项移到废纸篓并从历史记录中移除。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "將所選的 %d 項截圖或錄製移到垃圾桶並從歷史記錄中移除。"
+            "value": "將所選的 %d 個項目移到垃圾桶並從歷史紀錄中移除。"
           }
         }
       }
@@ -5060,13 +5060,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除所选截屏和录屏？"
+            "value": "删除所选内容？"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "刪除所選截圖與錄製？"
+            "value": "刪除所選項目？"
           }
         }
       }
@@ -5580,13 +5580,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最大存储条目数"
+            "value": "历史记录最多保存条数"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "最大儲存項目數"
+            "value": "歷史紀錄最多可儲存的項目數"
           }
         }
       }
@@ -5710,13 +5710,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "最多显示项目数"
+            "value": "面板中最多显示条目数"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "最多顯示項目數"
+            "value": "面板中最多顯示的項目數"
           }
         }
       }
@@ -6100,13 +6100,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动清理"
+            "value": "自动删除"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動清除"
+            "value": "自動刪除"
           }
         }
       }
@@ -6165,13 +6165,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "保留"
+            "value": "保留时间"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "保留"
+            "value": "保留時間"
           }
         }
       }
@@ -6490,13 +6490,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕捉"
+            "value": "截屏"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕捉"
+            "value": "截圖"
           }
         }
       }
@@ -6620,7 +6620,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "一般"
+            "value": "通用"
           }
         },
         "zh-Hant": {
@@ -6685,13 +6685,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "历史"
+            "value": "历史记录"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "歷史"
+            "value": "歷史紀錄"
           }
         }
       }
@@ -6880,13 +6880,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "快捷方式"
+            "value": "键盘快捷键"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "快捷方式"
+            "value": "鍵盤快速鍵"
           }
         }
       }
