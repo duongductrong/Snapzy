@@ -1079,6 +1079,65 @@ final class AreaSelectionOverlayView: NSView {
     return NSCursor(image: image, hotSpot: .zero)
   }()
 
+  private static let applicationWindowCursor: NSCursor = {
+    let pointSize: CGFloat = 16
+    let baseConfig = NSImage.SymbolConfiguration(pointSize: pointSize, weight: .semibold)
+    let whiteConfig = baseConfig.applying(
+      NSImage.SymbolConfiguration(paletteColors: [.white])
+    )
+    let blackConfig = baseConfig.applying(
+      NSImage.SymbolConfiguration(paletteColors: [.black])
+    )
+
+    guard
+      let whiteSymbol = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: nil)?
+        .withSymbolConfiguration(whiteConfig),
+      let blackSymbol = NSImage(systemSymbolName: "camera.fill", accessibilityDescription: nil)?
+        .withSymbolConfiguration(blackConfig)
+    else {
+      return .pointingHand
+    }
+
+    let padding: CGFloat = 5
+    let canvasSize = NSSize(
+      width: whiteSymbol.size.width + padding * 2,
+      height: whiteSymbol.size.height + padding * 2
+    )
+    let composed = NSImage(size: canvasSize)
+    composed.lockFocus()
+
+    // Stamp the black symbol at 1px offsets around the center to form a dark
+    // outline halo. This guarantees contrast against both bright and dark
+    // window backgrounds without relying on a soft shadow that can wash out
+    // against pure white.
+    let haloOffsets: [(CGFloat, CGFloat)] = [
+      (-1, 0), (1, 0), (0, -1), (0, 1),
+      (-1, -1), (1, -1), (-1, 1), (1, 1),
+    ]
+    for (dx, dy) in haloOffsets {
+      blackSymbol.draw(
+        at: NSPoint(x: padding + dx, y: padding + dy),
+        from: .zero,
+        operation: .sourceOver,
+        fraction: 1.0
+      )
+    }
+
+    whiteSymbol.draw(
+      at: NSPoint(x: padding, y: padding),
+      from: .zero,
+      operation: .sourceOver,
+      fraction: 1.0
+    )
+
+    composed.unlockFocus()
+
+    return NSCursor(
+      image: composed,
+      hotSpot: NSPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+    )
+  }()
+
   // Appearance constants
   private let dimColor = NSColor.black.withAlphaComponent(0.4)
   private let crosshairColor = NSColor.white.withAlphaComponent(0.6)
@@ -1836,7 +1895,9 @@ final class AreaSelectionOverlayView: NSView {
 
   private var activeCursor: NSCursor {
     guard selectionEnabled else { return .arrow }
-    return interactionMode == .manualRegion ? Self.hiddenManualRegionCursor : .pointingHand
+    return interactionMode == .manualRegion
+      ? Self.hiddenManualRegionCursor
+      : Self.applicationWindowCursor
   }
 
   var isManualSelectionInProgress: Bool {
