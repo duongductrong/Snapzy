@@ -305,17 +305,13 @@ final class AppStatusBarController: ObservableObject {
 
     let applicationCaptureShortcut = CaptureOverlayShortcutSettings.applicationCaptureShortcut
     let applicationCaptureItem = NSMenuItem(
-      title: overlayMenuTitle(
-        base: L10n.PreferencesShortcuts.applicationCaptureTitle,
-        shortcut: applicationCaptureShortcut,
-        parentShortcut: shortcutManager.shortcut(for: .area),
-        isParentShortcutEnabled: shortcutManager.isShortcutEnabled(for: .area)
-      ),
+      title: L10n.PreferencesShortcuts.applicationCaptureTitle,
       action: #selector(captureApplicationAction),
       keyEquivalent: ""
     )
-    applyConfiguredOverlayShortcut(
+    configureOverlayMenuItem(
       applicationCaptureItem,
+      base: L10n.PreferencesShortcuts.applicationCaptureTitle,
       shortcut: applicationCaptureShortcut,
       parentKind: .area,
       using: shortcutManager
@@ -390,17 +386,13 @@ final class AppStatusBarController: ObservableObject {
 
     let applicationRecordingShortcut = CaptureOverlayShortcutSettings.recordingApplicationCaptureShortcut
     let applicationRecordingItem = NSMenuItem(
-      title: overlayMenuTitle(
-        base: L10n.PreferencesShortcuts.applicationRecordingTitle,
-        shortcut: applicationRecordingShortcut,
-        parentShortcut: shortcutManager.shortcut(for: .recording),
-        isParentShortcutEnabled: shortcutManager.isShortcutEnabled(for: .recording)
-      ),
+      title: L10n.PreferencesShortcuts.applicationRecordingTitle,
       action: #selector(recordApplicationAction),
       keyEquivalent: ""
     )
-    applyConfiguredOverlayShortcut(
+    configureOverlayMenuItem(
       applicationRecordingItem,
+      base: L10n.PreferencesShortcuts.applicationRecordingTitle,
       shortcut: applicationRecordingShortcut,
       parentKind: .recording,
       using: shortcutManager
@@ -763,36 +755,47 @@ final class AppStatusBarController: ObservableObject {
     item.keyEquivalentModifierMask = config.menuModifierFlags
   }
 
-  private func applyConfiguredOverlayShortcut(
+  private func configureOverlayMenuItem(
     _ item: NSMenuItem,
+    base: String,
     shortcut: CaptureOverlayShortcut?,
     parentKind: GlobalShortcutKind,
     using manager: KeyboardShortcutManager
   ) {
-    guard manager.isShortcutEnabled(for: parentKind),
-          let config = shortcut?.independentShortcutConfig,
-          let keyEquivalent = config.menuKeyEquivalent else {
+    guard let shortcut else {
+      item.title = base
       item.keyEquivalent = ""
       item.keyEquivalentModifierMask = []
       return
     }
 
-    item.keyEquivalent = keyEquivalent
-    item.keyEquivalentModifierMask = config.menuModifierFlags
-  }
+    if shortcut.isIndependent {
+      item.title = base
+      guard let config = shortcut.independentShortcutConfig,
+            let keyEquivalent = config.menuKeyEquivalent else {
+        item.keyEquivalent = ""
+        item.keyEquivalentModifierMask = []
+        return
+      }
 
-  private func overlayMenuTitle(
-    base: String,
-    shortcut: CaptureOverlayShortcut?,
-    parentShortcut: ShortcutConfig?,
-    isParentShortcutEnabled: Bool
-  ) -> String {
-    guard let shortcut, isParentShortcutEnabled, !shortcut.isIndependent, let parentShortcut else {
-      return base
+      item.keyEquivalent = keyEquivalent
+      item.keyEquivalentModifierMask = config.menuModifierFlags
+      return
     }
-    let parentDisplay = CaptureOverlayShortcut.inlineDisplay(parts: parentShortcut.displayParts)
+
     let childDisplay = CaptureOverlayShortcut.inlineDisplay(parts: shortcut.displayParts)
-    return "\(base) \(parentDisplay) \(childDisplay)"
+    guard manager.isShortcutEnabled(for: parentKind),
+          let parentConfig = manager.shortcut(for: parentKind),
+          let parentKeyEquivalent = parentConfig.menuKeyEquivalent else {
+      item.title = base
+      item.keyEquivalent = ""
+      item.keyEquivalentModifierMask = []
+      return
+    }
+
+    item.title = "\(base) \(childDisplay)"
+    item.keyEquivalent = parentKeyEquivalent
+    item.keyEquivalentModifierMask = parentConfig.menuModifierFlags
   }
 
   private func schedulePreferencesWindowTracking(excludingWindowNumbers existingWindowNumbers: Set<Int>) {
