@@ -4085,13 +4085,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加载之前导出的 Snapzy 云存档以预填写此表单。"
+            "value" : "加载之前导出的 Snapzy 云存档以预填充此表单。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加載之前導出的 Snapzy 雲存檔以預填寫此表單。"
+            "value" : "載入之前匯出的 Snapzy 雲端存檔以預填充此表單。"
           }
         }
       }
@@ -10325,13 +10325,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解雇"
+            "value" : "关闭"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "解雇"
+            "value" : "關閉"
           }
         }
       }
@@ -11560,13 +11560,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活跃"
+            "value" : "使用中"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活躍"
+            "value" : "使用中"
           }
         }
       }

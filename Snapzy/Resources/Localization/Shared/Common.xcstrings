@@ -1225,13 +1225,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "黑暗"
+            "value" : "深色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "黑暗"
+            "value" : "深色"
           }
         }
       }
@@ -1290,13 +1290,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光"
+            "value" : "浅色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光"
+            "value" : "淺色"
           }
         }
       }
@@ -1420,13 +1420,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活跃"
+            "value" : "启用"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "活躍"
+            "value" : "啟用"
           }
         }
       }
@@ -1485,13 +1485,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "申请"
+            "value" : "应用"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "申請"
+            "value" : "套用"
           }
         }
       }
@@ -2265,13 +2265,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角落"
+            "value" : "圆角"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角落"
+            "value" : "圓角"
           }
         }
       }
@@ -2460,13 +2460,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "定制"
+            "value" : "自定义"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "定制"
+            "value" : "自訂"
           }
         }
       }
@@ -3045,13 +3045,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "估计"
+            "value" : "预估"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "估計"
+            "value" : "預估"
           }
         }
       }
@@ -3175,13 +3175,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出口"
+            "value" : "导出"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "出口"
+            "value" : "匯出"
           }
         }
       }
@@ -3305,13 +3305,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "填写"
+            "value" : "填充"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "填寫"
+            "value" : "填充"
           }
         }
       }
@@ -3760,13 +3760,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "插图"
+            "value" : "内边距"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "插圖"
+            "value" : "內邊距"
           }
         }
       }
@@ -3890,13 +3890,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中等的"
+            "value" : "中等"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中等的"
+            "value" : "中等"
           }
         }
       }
@@ -3955,13 +3955,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "修改"
+            "value" : "已修改"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "修改"
+            "value" : "已修改"
           }
         }
       }
@@ -4150,13 +4150,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "姓名"
+            "value" : "名称"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "姓名"
+            "value" : "名稱"
           }
         }
       }
@@ -4410,13 +4410,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭"
+            "value" : "关"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "關閉"
+            "value" : "關"
           }
         }
       }
@@ -4540,13 +4540,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上"
+            "value" : "开"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "上"
+            "value" : "開"
           }
         }
       }
@@ -4865,13 +4865,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原创"
+            "value" : "原始"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "原創"
+            "value" : "原始"
           }
         }
       }
@@ -4995,13 +4995,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "填充"
+            "value" : "内边距"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "填充"
+            "value" : "內邊距"
           }
         }
       }
@@ -5125,13 +5125,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "观点"
+            "value" : "透视"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "觀點"
+            "value" : "透視"
           }
         }
       }
@@ -5190,13 +5190,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "偏好"
+            "value" : "设置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "偏好"
+            "value" : "設定"
           }
         }
       }
@@ -5385,13 +5385,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "准备好了"
+            "value" : "就绪"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "準備好了"
+            "value" : "就緒"
           }
         }
       }
@@ -6052,13 +6052,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "影子"
+            "value" : "阴影"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "影子"
+            "value" : "陰影"
           }
         }
       }
@@ -6247,13 +6247,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "固体"
+            "value" : "纯色"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "固體"
+            "value" : "純色"
           }
         }
       }
@@ -6377,13 +6377,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中风"
+            "value" : "描边"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "中風"
+            "value" : "描邊"
           }
         }
       }

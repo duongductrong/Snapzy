@@ -2200,13 +2200,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "坚持"
+            "value" : "保留标注"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "堅持"
+            "value" : "保留標註"
           }
         }
       }
@@ -3435,13 +3435,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆盖"
+            "value" : "浮层"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆蓋"
+            "value" : "浮層"
           }
         }
       }

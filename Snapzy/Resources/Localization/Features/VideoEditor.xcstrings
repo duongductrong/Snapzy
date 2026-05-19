@@ -3825,13 +3825,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持原创"
+            "value" : "保留原文件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持原創"
+            "value" : "保留原始檔案"
           }
         }
       }
@@ -5840,13 +5840,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "段"
+            "value" : "片段"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "段"
+            "value" : "片段"
           }
         }
       }

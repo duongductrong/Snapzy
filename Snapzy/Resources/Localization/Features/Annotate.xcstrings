@@ -1615,13 +1615,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "作物"
+            "value" : "裁剪"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "作物"
+            "value" : "裁剪"
           }
         }
       }
@@ -2590,13 +2590,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "弯头"
+            "value" : "折线"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "彎頭"
+            "value" : "折線"
           }
         }
       }
@@ -3175,13 +3175,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "样机"
+            "value" : "样机展示"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "樣機"
+            "value" : "樣機展示"
           }
         }
       }
@@ -3695,13 +3695,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "钉窗"
+            "value" : "固定窗口"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "釘窗"
+            "value" : "固定視窗"
           }
         }
       }
@@ -4475,13 +4475,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置样机"
+            "value" : "重置样机展示"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "重置樣機"
+            "value" : "重設樣機展示"
           }
         }
       }
@@ -5125,13 +5125,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "直"
+            "value" : "直线"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "直"
+            "value" : "直線"
           }
         }
       }
@@ -5840,13 +5840,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "柜台"
+            "value" : "计数器"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "櫃台"
+            "value" : "計數器"
           }
         }
       }
@@ -5905,13 +5905,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "作物"
+            "value" : "裁剪"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "作物"
+            "value" : "裁剪"
           }
         }
       }
@@ -6100,13 +6100,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "线"
+            "value" : "直线"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "線"
+            "value" : "直線"
           }
         }
       }
@@ -6165,13 +6165,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "样机"
+            "value" : "样机展示"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "樣機"
+            "value" : "樣機展示"
           }
         }
       }
@@ -7400,13 +7400,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "对角"
+            "value" : "对角线"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "對角"
+            "value" : "對角線"
           }
         }
       }

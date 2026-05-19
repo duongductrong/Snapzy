@@ -5421,13 +5421,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按键覆盖"
+            "value" : "按键显示浮层"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按鍵覆蓋"
+            "value" : "按鍵顯示浮層"
           }
         }
       }
@@ -9404,13 +9404,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "会话活跃。 %d 个帧拼接成 %d 像素。"
+            "value" : "会话进行中。已将 %d 帧拼接为 %d 像素。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "會話活躍。 %d 個幀拼接成 %d 像素。"
+            "value" : "工作階段進行中。已將 %d 個畫格拼接為 %d 像素。"
           }
         }
       }
@@ -12719,13 +12719,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "减速"
+            "value" : "请放慢滚动"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "減速"
+            "value" : "請放慢捲動"
           }
         }
       }
@@ -13954,13 +13954,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "准备好了"
+            "value" : "就绪"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "準備好了"
+            "value" : "就緒"
           }
         }
       }

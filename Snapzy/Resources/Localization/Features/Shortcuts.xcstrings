@@ -2263,13 +2263,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打开键盘快捷键覆盖"
+            "value" : "打开键盘快捷键浮层"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "打開鍵盤快捷鍵覆蓋"
+            "value" : "打開鍵盤快速鍵浮層"
           }
         }
       }

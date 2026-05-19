@@ -185,13 +185,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角落"
+            "value" : "角标"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "角落"
+            "value" : "角標"
           }
         }
       }
@@ -705,13 +705,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "浮动覆盖"
+            "value" : "浮动浮层"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "浮動覆蓋"
+            "value" : "浮動浮層"
           }
         }
       }
@@ -770,13 +770,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持覆盖打开直到关闭"
+            "value" : "保持浮层打开，直到关闭"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保持覆蓋打開直到關閉"
+            "value" : "保持浮層開啟，直到關閉"
           }
         }
       }
@@ -965,13 +965,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆盖尺寸"
+            "value" : "浮层尺寸"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆蓋尺寸"
+            "value" : "浮層尺寸"
           }
         }
       }
@@ -1420,13 +1420,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆盖层出现的位置"
+            "value" : "浮层出现的位置"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "覆蓋層出現的位置"
+            "value" : "浮層出現的位置"
           }
         }
       }
