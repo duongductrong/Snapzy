@@ -60,6 +60,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.20.0] - 2026-05-24
+
+### Features
+-  Implement TOML configuration import/export with auto-apply on startup (#213) (5bac89a)
+-  Implement TOML configuration export and import for user preferences (#213) (84b8665)
+
+### Chore
+- refactor: Update onboarding flow to keep user on access step until confirmation (8a0981a)
+- refactor: Implement SnapzyConfigurationSyncCoordinator for background sync of config.toml (#213) (af7dbd9)
+- refactor: Implement configuration sync feature with user confirmation for external changes and localization updates (#213) (f5db99a)
+- refactor: Enhance restore defaults functionality with confirmation and localization updates (1489b6b)
+- refactor: Add diagnostics settings to advanced preferences and localization updates (de7704e)
+- chore: update appcast, cask, and readme for v1.19.0 (ef580c5)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.19.0] - 2026-05-23
 
 ### Features
