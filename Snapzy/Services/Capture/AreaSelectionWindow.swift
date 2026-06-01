@@ -837,6 +837,25 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
     requestDisplayActivationIfNeeded(for: window)
   }
 
+  func areaSelectionWindowDidRequestImmediateManualSelection(_ window: AreaSelectionWindow) {
+    guard interactionMode == .manualRegion else { return }
+    guard let displayID = window.displayID else { return }
+    // If the backdrop has already arrived (or live-fallback is already on) the click was
+    // processed normally — no need to enable fallback. Otherwise switch to live capture so
+    // the pending click can be activated without waiting for the lazy snapshot.
+    guard selectionBackdrops[displayID] == nil,
+          !liveFallbackDisplayIDs.contains(displayID) else {
+      return
+    }
+    DiagnosticLogger.shared.log(
+      .info,
+      .capture,
+      "Area selection live fallback enabled by user click",
+      context: ["displayID": "\(displayID)"]
+    )
+    enableLiveFallbackSelection(for: displayID)
+  }
+
   func areaSelectionWindow(_ window: AreaSelectionWindow, manualSelectionBeganAt screenPoint: CGPoint) {
     beginManualSelection(at: screenPoint, from: window)
   }
@@ -859,6 +878,10 @@ protocol AreaSelectionWindowDelegate: AnyObject {
   func areaSelectionWindowDidBecomeActive(_ window: AreaSelectionWindow)
   func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool
   func areaSelectionWindowDidRequestDisplayActivation(_ window: AreaSelectionWindow)
+  /// User pressed inside the overlay before the per-display backdrop snapshot arrived. The
+  /// controller should enable live-fallback selection for the window's display so the click
+  /// is not dropped if the user releases before the snapshot completes.
+  func areaSelectionWindowDidRequestImmediateManualSelection(_ window: AreaSelectionWindow)
   func areaSelectionWindow(_ window: AreaSelectionWindow, manualSelectionBeganAt screenPoint: CGPoint)
   func areaSelectionWindow(_ window: AreaSelectionWindow, manualSelectionChangedTo screenPoint: CGPoint)
   func areaSelectionWindow(_ window: AreaSelectionWindow, manualSelectionEndedAt screenPoint: CGPoint)
@@ -972,6 +995,10 @@ extension AreaSelectionWindow: AreaSelectionOverlayViewDelegate {
     selectionDelegate?.areaSelectionWindowDidRequestDisplayActivation(self)
   }
 
+  func overlayViewDidRequestImmediateManualSelection(_ view: AreaSelectionOverlayView) {
+    selectionDelegate?.areaSelectionWindowDidRequestImmediateManualSelection(self)
+  }
+
   func overlayView(_ view: AreaSelectionOverlayView, manualSelectionBeganAt point: CGPoint) {
     selectionDelegate?.areaSelectionWindow(self, manualSelectionBeganAt: convertToScreenPoint(point))
   }
@@ -1012,6 +1039,10 @@ protocol AreaSelectionOverlayViewDelegate: AnyObject {
   func overlayView(_ view: AreaSelectionOverlayView, didSelectWindow target: WindowCaptureTarget)
   func overlayViewDidCancel(_ view: AreaSelectionOverlayView)
   func overlayViewDidRequestDisplayActivation(_ view: AreaSelectionOverlayView)
+  /// Signals that the user pressed inside the overlay before the per-display backdrop snapshot
+  /// was ready. The controller should enable live-fallback selection for the overlay's display
+  /// so the click is not silently dropped.
+  func overlayViewDidRequestImmediateManualSelection(_ view: AreaSelectionOverlayView)
   func overlayView(_ view: AreaSelectionOverlayView, manualSelectionBeganAt point: CGPoint)
   func overlayView(_ view: AreaSelectionOverlayView, manualSelectionChangedTo point: CGPoint)
   func overlayView(_ view: AreaSelectionOverlayView, manualSelectionEndedAt point: CGPoint)
@@ -1760,6 +1791,11 @@ final class AreaSelectionOverlayView: NSView {
     guard selectionEnabled else {
       if interactionMode == .manualRegion {
         pendingSelectionStartPoint = point
+        // Backdrop snapshot is still being prepared for this display. Ask the controller to
+        // enable live-fallback selection so the click isn't silently dropped if the user
+        // releases before the snapshot arrives. The lazy snapshot continues in the background
+        // and will replace the live view via applyBackdrop() once ready.
+        delegate?.overlayViewDidRequestImmediateManualSelection(self)
       }
       return
     }
