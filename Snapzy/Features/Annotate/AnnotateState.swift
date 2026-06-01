@@ -1874,6 +1874,21 @@ final class AnnotateState: ObservableObject {
     didCutoutAutoApplyCrop = snapshot.didCutoutAutoApplyCrop
     cutoutAutoAppliedCropRect = snapshot.cutoutAutoAppliedCropRect
 
+    // Rotation is gated on `!isCropActive` (see `canRotateImage`), so any rotation snapshot
+    // by definition represents a non-crop state. If the user enters crop mode and then
+    // undoes the rotation, we must clear the crop interaction so it doesn't keep editing
+    // against the differently-sized restored image with stale bounds.
+    if isCropActive {
+      isCropActive = false
+      isCropResizing = false
+      isCropShiftLocked = false
+      cropInteractionContext = nil
+      shouldRestoreSidebarAfterCropInteraction = false
+      if selectedTool == .crop {
+        selectedTool = .selection
+      }
+    }
+
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
 
