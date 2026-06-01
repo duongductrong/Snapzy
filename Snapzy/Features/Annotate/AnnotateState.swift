@@ -18,6 +18,29 @@ final class AnnotateState: ObservableObject {
     var embeddedImageAssets: [UUID: NSImage]
   }
 
+  /// Snapshot of every piece of state mutated by an image rotation. Used as a dedicated
+  /// undo entry so rotation undo never disturbs the annotation-only undo path.
+  private struct RotationSnapshot {
+    var sourceImage: NSImage?
+    var cutoutImage: NSImage?
+    var isCutoutApplied: Bool
+    var embeddedImageAssets: [UUID: NSImage]
+    var embeddedImageSourceData: [UUID: Data]
+    var embeddedImageSnapshotCacheData: [UUID: Data]
+    var annotations: [AnnotationItem]
+    var cropRect: CGRect?
+    var originalCropRect: CGRect?
+    var cropAspectRatio: CropAspectRatio
+    var isCropPortraitOrientation: Bool
+    var didCutoutAutoApplyCrop: Bool
+    var cutoutAutoAppliedCropRect: CGRect?
+  }
+
+  private enum UndoEntry {
+    case annotations(AnnotationSnapshot)
+    case rotation(RotationSnapshot)
+  }
+
   private struct TextEditingUndoTransaction {
     let annotationId: UUID
     let snapshotBeforeEdit: AnnotationSnapshot
@@ -1095,8 +1118,8 @@ final class AnnotateState: ObservableObject {
   @Published var canUndo: Bool = false
   @Published var canRedo: Bool = false
 
-  private var undoStack: [AnnotationSnapshot] = []
-  private var redoStack: [AnnotationSnapshot] = []
+  private var undoStack: [UndoEntry] = []
+  private var redoStack: [UndoEntry] = []
   private var textEditingUndoTransaction: TextEditingUndoTransaction?
 
   init(
@@ -1705,7 +1728,16 @@ final class AnnotateState: ObservableObject {
 
   private func pushUndoSnapshot(_ snapshot: AnnotationSnapshot, annotationCount: Int) {
     DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["annotations": "\(annotationCount)"])
-    undoStack.append(snapshot)
+    undoStack.append(.annotations(snapshot))
+    redoStack.removeAll()
+    canUndo = true
+    canRedo = false
+    hasUnsavedChanges = true
+  }
+
+  private func pushRotationUndo(_ snapshot: RotationSnapshot) {
+    DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["kind": "rotation"])
+    undoStack.append(.rotation(snapshot))
     redoStack.removeAll()
     canUndo = true
     canRedo = false
@@ -1718,8 +1750,14 @@ final class AnnotateState: ObservableObject {
     }
     DiagnosticLogger.shared.log(.debug, .annotate, "Undo", context: ["stackDepth": "\(undoStack.count)"])
     guard let previous = undoStack.popLast() else { return }
-    redoStack.append(currentSnapshot())
-    applySnapshot(previous)
+    switch previous {
+    case .annotations(let snapshot):
+      redoStack.append(.annotations(currentSnapshot()))
+      applySnapshot(snapshot)
+    case .rotation(let snapshot):
+      redoStack.append(.rotation(currentRotationSnapshot()))
+      applyRotationSnapshot(snapshot)
+    }
     canUndo = !undoStack.isEmpty
     canRedo = true
   }
@@ -1730,8 +1768,14 @@ final class AnnotateState: ObservableObject {
     }
     DiagnosticLogger.shared.log(.debug, .annotate, "Redo", context: ["stackDepth": "\(redoStack.count)"])
     guard let next = redoStack.popLast() else { return }
-    undoStack.append(currentSnapshot())
-    applySnapshot(next)
+    switch next {
+    case .annotations(let snapshot):
+      undoStack.append(.annotations(currentSnapshot()))
+      applySnapshot(snapshot)
+    case .rotation(let snapshot):
+      undoStack.append(.rotation(currentRotationSnapshot()))
+      applyRotationSnapshot(snapshot)
+    }
     canUndo = true
     canRedo = !redoStack.isEmpty
   }
@@ -1740,6 +1784,24 @@ final class AnnotateState: ObservableObject {
     AnnotationSnapshot(
       annotations: annotations,
       embeddedImageAssets: embeddedImageAssets
+    )
+  }
+
+  private func currentRotationSnapshot() -> RotationSnapshot {
+    RotationSnapshot(
+      sourceImage: sourceImage,
+      cutoutImage: cutoutImage,
+      isCutoutApplied: isCutoutApplied,
+      embeddedImageAssets: embeddedImageAssets,
+      embeddedImageSourceData: embeddedImageSourceData,
+      embeddedImageSnapshotCacheData: embeddedImageSnapshotCacheData,
+      annotations: annotations,
+      cropRect: cropRect,
+      originalCropRect: originalCropRect,
+      cropAspectRatio: cropAspectRatio,
+      isCropPortraitOrientation: isCropPortraitOrientation,
+      didCutoutAutoApplyCrop: didCutoutAutoApplyCrop,
+      cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect
     )
   }
 
@@ -1794,6 +1856,142 @@ final class AnnotateState: ObservableObject {
        !annotations.contains(where: { $0.id == editingTextAnnotationId }) {
       self.editingTextAnnotationId = nil
     }
+  }
+
+  private func applyRotationSnapshot(_ snapshot: RotationSnapshot) {
+    sourceImage = snapshot.sourceImage
+    cutoutImage = snapshot.cutoutImage
+    isCutoutApplied = snapshot.isCutoutApplied
+    embeddedImageAssets = snapshot.embeddedImageAssets
+    embeddedImageSourceData = snapshot.embeddedImageSourceData
+    embeddedImageSnapshotCacheData = snapshot.embeddedImageSnapshotCacheData
+    embeddedImageCGImageCache.removeAll()
+    annotations = snapshot.annotations
+    cropRect = snapshot.cropRect
+    originalCropRect = snapshot.originalCropRect
+    cropAspectRatio = snapshot.cropAspectRatio
+    isCropPortraitOrientation = snapshot.isCropPortraitOrientation
+    didCutoutAutoApplyCrop = snapshot.didCutoutAutoApplyCrop
+    cutoutAutoAppliedCropRect = snapshot.cutoutAutoAppliedCropRect
+
+    pruneUnusedEmbeddedAssets()
+    updateImportWarningIfNeeded()
+
+    let validAnnotationIds = Set(annotations.map(\.id))
+    setSelectedAnnotationIds(selectedAnnotationIds.intersection(validAnnotationIds))
+
+    if let editingTextAnnotationId,
+       !annotations.contains(where: { $0.id == editingTextAnnotationId }) {
+      self.editingTextAnnotationId = nil
+    }
+  }
+
+  // MARK: - Rotation
+
+  /// True when the user can rotate the source image 90°. Disabled while no image is loaded,
+  /// while crop is being actively edited, or while a background-cutout request is in flight.
+  var canRotateImage: Bool {
+    hasImage && !isCropActive && !isCutoutProcessing
+  }
+
+  /// Rotate the source image 90° clockwise (or counter-clockwise) and bring all annotations,
+  /// crop bounds, embedded image layers, and cutout state along for the ride. Pushes a
+  /// dedicated rotation undo entry so this transform can be reversed without touching the
+  /// annotation-only undo path.
+  func rotateImage(clockwise: Bool) {
+    guard canRotateImage,
+          let source = sourceImage,
+          let rotatedSource = source.rotated90(clockwise: clockwise) else {
+      return
+    }
+
+    if editingTextAnnotationId != nil {
+      commitTextEditing()
+    }
+
+    DiagnosticLogger.shared.log(.info, .annotate, "Image rotated", context: [
+      "direction": clockwise ? "clockwise" : "counterclockwise",
+      "oldSize": "\(Int(imageWidth))x\(Int(imageHeight))"
+    ])
+
+    let oldSize = CGSize(width: imageWidth, height: imageHeight)
+    pushRotationUndo(currentRotationSnapshot())
+
+    sourceImage = rotatedSource
+    if let cutoutImage {
+      self.cutoutImage = cutoutImage.rotated90(clockwise: clockwise)
+    }
+
+    // Rotate each embedded image asset so the rendered bitmap matches the rotated bounds, and
+    // invalidate the serialised data caches so persistence re-encodes from the rotated NSImage.
+    for (assetId, image) in embeddedImageAssets {
+      guard let rotatedAsset = image.rotated90(clockwise: clockwise) else { continue }
+      embeddedImageAssets[assetId] = rotatedAsset
+      embeddedImageSourceData.removeValue(forKey: assetId)
+      embeddedImageSnapshotCacheData.removeValue(forKey: assetId)
+    }
+    embeddedImageCGImageCache.removeAll()
+
+    annotations = annotations.map { rotateAnnotation($0, oldSize: oldSize, clockwise: clockwise) }
+
+    cropRect = cropRect.map { AnnotateImageRotation.rotateRect($0, oldSize: oldSize, clockwise: clockwise) }
+    originalCropRect = originalCropRect.map { AnnotateImageRotation.rotateRect($0, oldSize: oldSize, clockwise: clockwise) }
+    cutoutAutoAppliedCropRect = cutoutAutoAppliedCropRect.map {
+      AnnotateImageRotation.rotateRect($0, oldSize: oldSize, clockwise: clockwise)
+    }
+
+    // Aspect-ratio presets such as 16:9 keep their identity but the physical orientation flips.
+    if cropAspectRatio != .free, cropAspectRatio != .square {
+      isCropPortraitOrientation.toggle()
+    }
+
+    hasUnsavedChanges = true
+  }
+
+  private func rotateAnnotation(
+    _ annotation: AnnotationItem,
+    oldSize: CGSize,
+    clockwise: Bool
+  ) -> AnnotationItem {
+    var rotated = annotation
+    rotated.bounds = AnnotateImageRotation.rotateRect(annotation.bounds, oldSize: oldSize, clockwise: clockwise)
+
+    switch annotation.type {
+    case .arrow(let geometry):
+      let newStart = AnnotateImageRotation.rotatePoint(geometry.start, oldSize: oldSize, clockwise: clockwise)
+      let newEnd = AnnotateImageRotation.rotatePoint(geometry.end, oldSize: oldSize, clockwise: clockwise)
+      let newControl = geometry.resolvedControlPoint.map {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      }
+      let newGeometry = ArrowGeometry(start: newStart, end: newEnd, style: geometry.style, controlPoint: newControl)
+      rotated.type = .arrow(newGeometry)
+      rotated.bounds = newGeometry.bounds()
+
+    case .line(let start, let end):
+      let newStart = AnnotateImageRotation.rotatePoint(start, oldSize: oldSize, clockwise: clockwise)
+      let newEnd = AnnotateImageRotation.rotatePoint(end, oldSize: oldSize, clockwise: clockwise)
+      rotated.type = .line(start: newStart, end: newEnd)
+
+    case .path(let points):
+      rotated.type = .path(points.map {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      })
+
+    case .highlight(let points):
+      rotated.type = .highlight(points.map {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      })
+
+    case .rectangle, .filledRectangle, .oval, .text, .blur, .counter, .watermark, .embeddedImage:
+      // Bounds-only annotations: the rotated `bounds` above is the full transform we need.
+      // Per-annotation `rotationDegrees` (text/watermark) is clamped to ±45° so we deliberately
+      // leave it unchanged; the bounding box moves correctly but inner text orientation stays
+      // relative to the original canvas. Acceptable for v1 since rotation is typically applied
+      // before annotating.
+      break
+    }
+
+    return rotated
   }
 
   // MARK: - Counter

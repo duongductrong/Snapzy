@@ -7800,6 +7800,28 @@
           }
         }
       }
+    },
+    "annotate.rotate-left" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotate left 90°"
+          }
+        }
+      }
+    },
+    "annotate.rotate-right" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Rotate right 90°"
+          }
+        }
+      }
     }
   },
   "version" : "1.0"

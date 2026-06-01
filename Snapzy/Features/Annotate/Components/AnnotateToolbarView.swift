@@ -69,6 +69,20 @@ struct AnnotateToolbarView: View {
       }
       .help(L10n.AnnotateUI.crop)
 
+      ToolbarButton(icon: "rotate.left", isSelected: false) {
+        state.rotateImage(clockwise: false)
+      }
+      .help(L10n.AnnotateUI.rotateLeft)
+      .disabled(!state.canRotateImage)
+      .opacity(state.canRotateImage ? 1 : 0.4)
+
+      ToolbarButton(icon: "rotate.right", isSelected: false) {
+        state.rotateImage(clockwise: true)
+      }
+      .help(L10n.AnnotateUI.rotateRight)
+      .disabled(!state.canRotateImage)
+      .opacity(state.canRotateImage ? 1 : 0.4)
+
       ToolbarButton(
         icon: "rectangle.on.rectangle",
         isSelected: state.showSidebar,

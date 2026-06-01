@@ -3632,6 +3632,16 @@ enum L10n {
       defaultValue: "Crop",
       comment: "Tooltip for entering crop mode in annotate"
     )
+    static let rotateLeft = string(
+      "annotate.rotate-left",
+      defaultValue: "Rotate left 90°",
+      comment: "Tooltip for rotating the source image 90° counter-clockwise"
+    )
+    static let rotateRight = string(
+      "annotate.rotate-right",
+      defaultValue: "Rotate right 90°",
+      comment: "Tooltip for rotating the source image 90° clockwise"
+    )
     static let toggleSidebar = string(
       "annotate.toggle-sidebar",
       defaultValue: "Toggle sidebar",
