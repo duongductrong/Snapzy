@@ -7,7 +7,7 @@ cask "snapzy" do
   desc "Native macOS screenshots, recording, annotation, and editing from the menu bar"
   homepage "https://github.com/duongductrong/Snapzy"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "Snapzy.app"
 
