@@ -82,6 +82,12 @@ final class AreaSelectionController: NSObject {
   private var manualSelectionCurrentPoint: CGPoint?
   private weak var manualSelectionSourceWindow: AreaSelectionWindow?
   private var manualSelectionLocalMonitor: Any?
+  /// Observe-only global counterpart to `manualSelectionLocalMonitor`. The local monitor only
+  /// fires while Snapzy is the active app; on a `.nonactivatingPanel` shown via a global
+  /// shortcut (e.g. ⌘⇧4 while another app is frontmost) the first drag/up can land before the
+  /// app activates, so the local monitor never sees them and the selection silently resets.
+  /// A global monitor still receives those events, ensuring the first gesture commits.
+  private var manualSelectionGlobalMonitor: Any?
 
   /// Whether the overlay should be dismissed immediately after a selection is made.
   /// When `false`, the caller is responsible for calling `cancelSelection()` to dismiss.
@@ -339,6 +345,15 @@ final class AreaSelectionController: NSObject {
 
     // Activate pooled windows (instant show)
     activatePooledWindows()
+
+    // Bring Snapzy forward so the overlay's transparent crosshair cursor takes effect immediately.
+    // The overlay is a non-activating panel, so when the session is triggered from a global
+    // shortcut while another app is frontmost, macOS keeps showing the previous app's arrow cursor
+    // over our crosshair until the pointer moves and a `cursorUpdate` fires. Activating evaluates
+    // the overlay's cursor rects right away. The backdrop is a frozen snapshot, so there is no live
+    // window behind the overlay to blur.
+    NSApp.activate(ignoringOtherApps: true)
+
     startWindowSelectionPreparationIfNeeded()
 
     if keyboardOwnerDisplayID == nil {
@@ -692,12 +707,37 @@ final class AreaSelectionController: NSObject {
         return event
       }
     }
+
+    // Global monitor receives drag/up even while Snapzy is inactive (the first ⌘⇧4 gesture on a
+    // nonactivating overlay). The handlers are idempotent — `updateManualSelection` just records
+    // the current point and `endManualSelection` early-returns once the selection is torn down —
+    // so it is safe for both monitors to fire for the same event when the app is active.
+    guard manualSelectionGlobalMonitor == nil else { return }
+    manualSelectionGlobalMonitor = NSEvent.addGlobalMonitorForEvents(
+      matching: [.leftMouseDragged, .leftMouseUp]
+    ) { [weak self] event in
+      let mouseLocation = NSEvent.mouseLocation
+      MainActor.assumeIsolated {
+        switch event.type {
+        case .leftMouseDragged:
+          self?.updateManualSelection(to: mouseLocation)
+        case .leftMouseUp:
+          self?.endManualSelection(at: mouseLocation)
+        default:
+          break
+        }
+      }
+    }
   }
 
   private func removeManualSelectionMonitor() {
     if let monitor = manualSelectionLocalMonitor {
       NSEvent.removeMonitor(monitor)
       manualSelectionLocalMonitor = nil
+    }
+    if let monitor = manualSelectionGlobalMonitor {
+      NSEvent.removeMonitor(monitor)
+      manualSelectionGlobalMonitor = nil
     }
   }
 
