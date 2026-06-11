@@ -350,9 +350,16 @@ final class AreaSelectionController: NSObject {
     // The overlay is a non-activating panel, so when the session is triggered from a global
     // shortcut while another app is frontmost, macOS keeps showing the previous app's arrow cursor
     // over our crosshair until the pointer moves and a `cursorUpdate` fires. Activating evaluates
-    // the overlay's cursor rects right away. The backdrop is a frozen snapshot, so there is no live
-    // window behind the overlay to blur.
-    NSApp.activate(ignoringOtherApps: true)
+    // the overlay's cursor rects right away.
+    //
+    // Limit this to frozen-backdrop sessions (screenshot area capture), where a static snapshot
+    // sits behind the overlay so nothing live is dimmed. Backdrop-less sessions — recording-area
+    // selection and the legacy screenshot API — overlay the actual windows being captured, so
+    // activating would deactivate/dim them and leave Snapzy frontmost afterward; those keep the
+    // non-activating behavior this window class is built around.
+    if !selectionBackdrops.isEmpty {
+      NSApp.activate(ignoringOtherApps: true)
+    }
 
     startWindowSelectionPreparationIfNeeded()
 
