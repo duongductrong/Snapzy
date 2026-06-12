@@ -166,10 +166,11 @@ final class QuickAccessCoreTests: XCTestCase {
     let rightPanelPolicy = QuickAccessTrackpadSwipePolicy(dismissDirection: 1)
     let leftPanelPolicy = QuickAccessTrackpadSwipePolicy(dismissDirection: -1)
 
+    // Both horizontal directions are normalized to point toward the nearest edge
     XCTAssertEqual(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40), 40)
-    XCTAssertNil(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40))
+    XCTAssertEqual(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40), 40)
     XCTAssertEqual(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40), -40)
-    XCTAssertNil(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40))
+    XCTAssertEqual(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40), -40)
   }
 
   func testQuickAccessDragMonitorView_scopesScrollEventsToCardBounds() {
