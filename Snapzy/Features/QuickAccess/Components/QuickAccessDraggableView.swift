@@ -56,7 +56,8 @@ struct QuickAccessTrackpadSwipePolicy {
   func horizontalDelta(
     scrollingDeltaX deltaX: CGFloat,
     scrollingDeltaY deltaY: CGFloat,
-    hasPreciseScrollingDeltas: Bool
+    hasPreciseScrollingDeltas: Bool,
+    isDirectionInverted: Bool = false
   ) -> CGFloat? {
     guard hasPreciseScrollingDeltas,
           deltaX.isFinite,
@@ -64,23 +65,26 @@ struct QuickAccessTrackpadSwipePolicy {
       return nil
     }
 
-    let horizontalMagnitude = abs(deltaX)
+    // Natural scrolling inverts scrollingDeltaX sign, so normalize it
+    // so positive always means swipe right regardless of preference.
+    let normalizedDeltaX = isDirectionInverted ? -deltaX : deltaX
+
+    let horizontalMagnitude = abs(normalizedDeltaX)
     let verticalMagnitude = abs(deltaY)
     guard horizontalMagnitude >= Self.minimumHorizontalDelta,
           horizontalMagnitude > verticalMagnitude * Self.horizontalDominanceRatio else {
       return nil
     }
 
-    return deltaX * sensitivityMultiplier
+    return normalizedDeltaX * sensitivityMultiplier
   }
 
   func dismissTranslation(accumulatedHorizontalDelta deltaX: CGFloat) -> CGFloat? {
-    guard deltaX.isFinite,
-          deltaX * dismissDirection > 0 else {
-      return nil
-    }
+    guard deltaX.isFinite else { return nil }
 
-    return deltaX
+    // Normalize to always point toward the nearest edge (dismiss direction)
+    // so both left and right two-finger swipes trigger dismiss.
+    return abs(deltaX) * dismissDirection
   }
 }
 
@@ -329,7 +333,8 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     guard let deltaX = policy.horizontalDelta(
       scrollingDeltaX: event.scrollingDeltaX,
       scrollingDeltaY: event.scrollingDeltaY,
-      hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas
+      hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas,
+      isDirectionInverted: event.isDirectionInvertedFromDevice
     ) else {
       if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
         finishTrackpadSwipe(cancelled: event.phase.contains(.cancelled))
