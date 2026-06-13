@@ -21,6 +21,7 @@ struct QuickAccessCardView: View {
   @ObservedObject private var cloudManager = CloudManager.shared
   @State private var isHovering = false
   @State private var isDragging = false
+  @State private var isSwiping = false
   @State private var isDismissing = false
   @State private var swipeOffset: CGFloat = 0
   @State private var isCloudUploading = false
@@ -66,14 +67,15 @@ struct QuickAccessCardView: View {
           .transition(.opacity)
       }
 
-      // Hover overlay with staggered buttons
-      if isHovering && canPerformCardActions && hasVisibleOverlayActions {
+      // Hover overlay with staggered buttons (hidden while swiping so it does not
+      // visually fight the swipe gesture).
+      if isHovering && !isSwiping && canPerformCardActions && hasVisibleOverlayActions {
         hoverOverlay
           .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
       }
 
-      // Corner buttons (only visible on hover, hidden during cloud upload)
-      if isHovering && canPerformCardActions && !cornerOverlayActions.isEmpty {
+      // Corner buttons (only visible on hover, hidden during cloud upload and swipe).
+      if isHovering && !isSwiping && canPerformCardActions && !cornerOverlayActions.isEmpty {
         cornerButtons
       }
     }
@@ -223,8 +225,10 @@ struct QuickAccessCardView: View {
       onSwipeChanged: { translation in
         guard !reduceMotion else { return }
         swipeOffset = translation
+        isSwiping = true
       },
       onSwipeEnded: { translation, velocity in
+        isSwiping = false
         handleSwipeEnded(translation: translation, velocity: velocity)
       },
       swipeSensitivity: CGFloat(manager.swipeSensitivity)
