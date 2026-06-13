@@ -1,2929 +1,3377 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "preferences-quick-access.action-edit" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bearbeiten"
+  "sourceLanguage": "en",
+  "strings": {
+    "preferences-quick-access.action-edit": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bearbeiten"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifier"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "編集"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編集"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "편집"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "편집"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Редактировать"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактировать"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chỉnh sửa"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh sửa"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "編輯"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.action-save-or-open" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Speichern / Öffnen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Save / Open"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Guardar / Abrir"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Enregistrer / Ouvrir"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存 / 開く"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "저장 / 열기"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сохранить / открыть"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lưu / Mở"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存 / 打开"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "儲存 / 開啟"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯"
           }
         }
       }
     },
-    "preferences-quick-access.badge-corner" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ecke"
+    "preferences-quick-access.action-save-or-open": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speichern / Öffnen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Corner"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save / Open"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esquina"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar / Abrir"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Coin"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer / Ouvrir"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "角"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存 / 開く"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "모서리"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장 / 열기"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Угол"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сохранить / открыть"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Góc"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lưu / Mở"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "角标"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存 / 打开"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "角標"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.badge-primary" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primär"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Primary"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Principal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Principal"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メイン"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기본"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Основное"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chính"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主要"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "主要"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "儲存 / 開啟"
           }
         }
       }
     },
-    "preferences-quick-access.auto-close-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Automatisch schließen"
+    "preferences-quick-access.badge-corner": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ecke"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Auto-close"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corner"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cierre automático"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esquina"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fermeture automatique"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coin"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動で閉じる"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 종료"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모서리"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автозакрытие"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Угол"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tự đóng"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Góc"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动关闭"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角标"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動關閉"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.close-after" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schließen nach"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Close after"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cerrar después"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fermer après"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "次の時間で閉じる"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Закрыть после"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đóng sau"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : ""
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "角標"
           }
         }
       }
     },
-    "preferences-quick-access.closes-after" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schließt nach %d Sekunden"
+    "preferences-quick-access.badge-primary": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primär"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Closes after %d seconds"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primary"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se cierra después de %d segundos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Principal"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se ferme après %d secondes"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Principal"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%d 秒後に閉じます"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メイン"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이후 종료 %d초 후에 닫힙니다"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Закрывается через %d секунд"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Основное"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đóng sau %d giây"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chính"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "之后关闭%d 秒后关闭"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主要"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "之後關閉%d 秒後關閉"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.drag-and-drop-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ziehen Sie Aufnahmen in andere Apps"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag captures to other apps"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arrastra capturas a otras aplicaciones"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faites glisser les captures vers d'autres applications"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャプチャを他のアプリにドラッグ"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "캡처를 다른 앱으로 드래그"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перетащите снимки в другие приложения"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kéo ảnh và video sang ứng dụng khác"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将截屏或录屏拖到其他应用中"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將截圖或錄製內容拖到其他 App"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主要"
           }
         }
       }
     },
-    "preferences-quick-access.drag-and-drop-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag & Drop"
+    "preferences-quick-access.auto-close-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatisch schließen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag & Drop"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-close"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arrastrar y soltar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cierre automático"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Glisser-déposer"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermeture automatique"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ドラッグ＆ドロップ"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動で閉じる"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "드래그 앤 드롭"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 종료"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перетаскивание"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автозакрытие"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kéo & thả"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự đóng"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖放"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动关闭"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖放"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.swipe-sensitivity-description" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Passen Sie an, wie schnell die Karte Ihrer Trackpad-Wischbewegung folgt"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust how fast the card follows your trackpad swipe"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ajusta qué tan rápido la tarjeta sigue tu gesto en el trackpad"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Ajustez la vitesse de suivi de la carte lors du balayage sur le trackpad"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "トラックパッドのスワイプにカードが追従する速度を調整"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "트랙패드 스와이프에 카드가 따라가는 속도 조정"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Настройте скорость реакции карточки на свайп по трекпаду"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Điều chỉnh tốc độ thẻ di chuyển theo cử chỉ vuốt trên trackpad"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "调整卡片跟随触控板轻扫的速度"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "調整卡片跟隨觸控板滑動的速度"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動關閉"
           }
         }
       }
     },
-    "preferences-quick-access.swipe-sensitivity-title" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Wisch-Empfindlichkeit"
+    "preferences-quick-access.close-after": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließen nach"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Swipe Sensitivity"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close after"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sensibilidad de deslizamiento"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar después"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Sensibilité du balayage"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer après"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "スワイプ感度"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次の時間で閉じる"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "스와이프 감도"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Чувствительность свайпа"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрыть после"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "Độ nhạy vuốt"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng sau"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "轻扫灵敏度"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "needs_review",
-            "value" : "滑動靈敏度"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.two-finger-swipe-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wischen Sie horizontal über die Vorschau, um sie zu schließen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Swipe horizontally on the preview to close it"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desliza horizontalmente sobre la vista previa para cerrarla"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Balayez horizontalement sur l’aperçu pour le fermer"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビュー上で横にスワイプして閉じる"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "미리보기에서 가로로 스와이프하여 닫기"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Проведите по предпросмотру по горизонтали, чтобы закрыть его"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vuốt ngang trên bản xem trước để đóng"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在预览上水平轻扫即可关闭"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在預覽上水平滑動即可關閉"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
           }
         }
       }
     },
-    "preferences-quick-access.two-finger-swipe-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zwei-Finger-Wischen"
+    "preferences-quick-access.closes-after": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schließt nach %d Sekunden"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Two-finger Swipe"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closes after %d seconds"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Deslizar con dos dedos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se cierra después de %d segundos"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Balayage à deux doigts"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se ferme après %d secondes"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "2本指スワイプ"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d 秒後に閉じます"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "두 손가락 스와이프"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이후 종료 %d초 후에 닫힙니다"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Смахивание двумя пальцами"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрывается через %d секунд"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vuốt hai ngón"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng sau %d giây"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "双指轻扫"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之后关闭%d 秒后关闭"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "雙指滑動"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.floating-overlay-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorschau nach der Aufnahme anzeigen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Show preview after capture"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar vista previa después de la captura"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher l'aperçu après la capture"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キャプチャ後にプレビューを表示"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "캡처 후 미리보기 표시"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показать предварительный просмотр после захвата"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hiện xem trước sau khi chụp"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "截取完成后显示预览"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "擷取完成後顯示預覽"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之後關閉%d 秒後關閉"
           }
         }
       }
     },
-    "preferences-quick-access.floating-overlay-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schwebendes Overlay"
+    "preferences-quick-access.drag-and-drop-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehen Sie Aufnahmen in andere Apps"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Floating Overlay"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag captures to other apps"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Superposición flotante"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra capturas a otras aplicaciones"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Superposition flottante"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser les captures vers d'autres applications"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フローティングオーバーレイ"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャを他のアプリにドラッグ"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "플로팅 오버레이"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캡처를 다른 앱으로 드래그"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Плавающее наложение"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетащите снимки в другие приложения"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lớp phủ nổi"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kéo ảnh và video sang ứng dụng khác"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮动浮层"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将截屏或录屏拖到其他应用中"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮動浮層"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.keep-open" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lassen Sie das Overlay geöffnet, bis es geschlossen wird"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Keep overlay open until dismissed"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantener la superposición abierta hasta que se cierre"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Garder la superposition ouverte jusqu'à ce qu'elle soit rejetée"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "閉じるまでオーバーレイを表示したままにする"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "닫힐 때까지 오버레이를 열어두세요"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Оставлять наложение открытым до его закрытия"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữ mở cho đến khi đóng"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保持浮层打开，直到关闭"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保持浮層開啟，直到關閉"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將截圖或錄製內容拖到其他 App"
           }
         }
       }
     },
-    "preferences-quick-access.left" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Links"
+    "preferences-quick-access.drag-and-drop-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag & Drop"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Left"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag & Drop"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Izquierda"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastrar y soltar"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gauche"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Glisser-déposer"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ドラッグ＆ドロップ"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "왼쪽"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "드래그 앤 드롭"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Слева"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетаскивание"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trái"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kéo & thả"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖放"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.overlay-size-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Passen Sie die schwebende Vorschaugröße an"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Adjust the floating preview size"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajustar el tamaño de la vista previa flotante"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajuster la taille de l'aperçu flottant"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フローティングプレビューのサイズを調整"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "부동 미리보기 크기 조정"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Отрегулируйте размер плавающего предварительного просмотра"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Điều chỉnh kích thước khung xem trước nổi"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "调整浮动预览大小"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "調整浮動預覽大小"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖放"
           }
         }
       }
     },
-    "preferences-quick-access.overlay-size-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overlay-Größe"
+    "preferences-quick-access.swipe-sensitivity-description": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Passen Sie an, wie schnell die Karte Ihrer Trackpad-Wischbewegung folgt"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Overlay Size"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust how fast the card follows your trackpad swipe"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tamaño de superposición"
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ajusta qué tan rápido la tarjeta sigue tu gesto en el trackpad"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Taille de superposition"
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ajustez la vitesse de suivi de la carte lors du balayage sur le trackpad"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オーバーレイサイズ"
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "トラックパッドのスワイプにカードが追従する速度を調整"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오버레이 크기"
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "트랙패드 스와이프에 카드가 따라가는 속도 조정"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Размер наложения"
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Настройте скорость реакции карточки на свайп по трекпаду"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kích thước lớp phủ"
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Điều chỉnh tốc độ thẻ di chuyển theo cử chỉ vuốt trên trackpad"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮层尺寸"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "调整卡片跟随触控板轻扫的速度"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮層尺寸"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.pause-on-hover-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Countdown anhalten, wenn Sie mit der Maus über die Karte fahren"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause countdown when hovering over the card"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausar la cuenta regresiva al pasar el cursor sobre la tarjeta"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mettre le compte à rebours en pause lorsque vous survolez la carte"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カードにホバーしている間はカウントダウンを一時停止"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카드 위로 마우스를 가져가면 카운트다운이 일시 중지됩니다."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Приостановить обратный отсчет при наведении курсора на карточку"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tạm dừng đếm ngược khi rê chuột lên thẻ"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "将鼠标悬停在卡片上时暂停倒计时"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "將鼠標懸停在卡片上時暫停倒計時"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "調整卡片跟隨觸控板滑動的速度"
           }
         }
       }
     },
-    "preferences-quick-access.pause-on-hover-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beim Darüberfahren pausieren"
+    "preferences-quick-access.swipe-sensitivity-title": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wisch-Empfindlichkeit"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause on Hover"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Sensitivity"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pausa al pasar el cursor"
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sensibilidad de deslizamiento"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pause au survol"
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Sensibilité du balayage"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ホバーで一時停止"
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "スワイプ感度"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "마우스 오버 시 일시 중지"
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "스와이프 감도"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пауза при наведении"
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Чувствительность свайпа"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tạm dừng khi rê chuột"
+        "vi": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Độ nhạy vuốt"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "悬停时暂停"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "轻扫灵敏度"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "懸停時暫停"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.quick-actions-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ziehe Listenzeilen, um das Kontextmenü neu anzuordnen. Ziehe Aktionen auf die Vorschau, um Kartenpositionen festzulegen."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drag list rows to reorder the context menu. Drag actions onto the preview to set card positions."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Arrastra las filas de la lista para reordenar el menú contextual. Arrastra acciones a la vista previa para definir posiciones en la tarjeta."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Faites glisser les lignes de la liste pour réorganiser le menu contextuel. Faites glisser des actions sur l’aperçu pour définir les positions de la carte."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "リストの行をドラッグしてコンテキストメニューを並べ替えます。アクションをプレビューへドラッグしてカード上の位置を設定します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "목록 행을 드래그해 컨텍스트 메뉴 순서를 바꾸세요. 액션을 미리보기로 드래그해 카드 위치를 설정하세요."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Перетаскивайте строки списка, чтобы изменить порядок контекстного меню. Перетаскивайте действия на предпросмотр, чтобы задать позиции на карточке."
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kéo các dòng trong danh sách để sắp xếp lại menu ngữ cảnh. Kéo thao tác vào bản xem trước để đặt vị trí trên thẻ."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖动列表行以重新排列上下文菜单。将操作拖到预览上以设置卡片位置。"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "拖曳列表列以重新排列內容選單。將動作拖到預覽上以設定卡片位置。"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "滑動靈敏度"
           }
         }
       }
     },
-    "preferences-quick-access.not-on-card" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nicht auf Karte"
+    "preferences-quick-access.two-finger-swipe-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wischen Sie horizontal über die Vorschau, um sie zu schließen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Not on card"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe horizontally on the preview to close it"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No en la tarjeta"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desliza horizontalmente sobre la vista previa para cerrarla"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pas sur la carte"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balayez horizontalement sur l’aperçu pour le fermer"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カード外"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー上で横にスワイプして閉じる"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "카드에 없음"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미리보기에서 가로로 스와이프하여 닫기"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не на карточке"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Проведите по предпросмотру по горизонтали, чтобы закрыть его"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Không trên thẻ"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuốt ngang trên bản xem trước để đóng"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不在卡片上"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在预览上水平轻扫即可关闭"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不在卡片上"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.reset-actions" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktionen zurücksetzen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Reset Actions"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Restablecer acciones"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Réinitialiser les actions"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アクションをリセット"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "액션 재설정"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сбросить действия"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đặt lại thao tác"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置操作"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重設動作"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在預覽上水平滑動即可關閉"
           }
         }
       }
     },
-    "preferences-quick-access.right" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Rechts"
+    "preferences-quick-access.two-finger-swipe-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zwei-Finger-Wischen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Right"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-finger Swipe"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Derecha"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deslizar con dos dedos"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "À droite"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Balayage à deux doigts"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2本指スワイプ"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "그렇죠"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "두 손가락 스와이프"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Верно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Смахивание двумя пальцами"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Phải"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuốt hai ngón"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双指轻扫"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.screen-edge-description" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wo das Overlay erscheint"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Where the overlay appears"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Donde aparece la superposición"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Où la superposition apparaît"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オーバーレイの表示位置"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오버레이가 나타나는 위치"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Где появляется наложение"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nơi lớp phủ xuất hiện"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮层出现的位置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "浮層出現的位置"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "雙指滑動"
           }
         }
       }
     },
-    "preferences-quick-access.screen-edge-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bildschirmkante"
+    "preferences-quick-access.floating-overlay-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau nach der Aufnahme anzeigen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Screen Edge"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show preview after capture"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Borde de la pantalla"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar vista previa después de la captura"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bord de l'écran"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher l'aperçu après la capture"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "画面端"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ後にプレビューを表示"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "화면 가장자리"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캡처 후 미리보기 표시"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Край экрана"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показать предварительный просмотр после захвата"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cạnh màn hình"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện xem trước sau khi chụp"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "屏幕边缘"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截取完成后显示预览"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "螢幕邊緣"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.section-appearance" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aussehen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appearance"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apariencia"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apparence"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外観"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "외모"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Внешний вид"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giao diện"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外观"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "外觀"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "擷取完成後顯示預覽"
           }
         }
       }
     },
-    "preferences-quick-access.section-behaviors" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verhalten"
+    "preferences-quick-access.floating-overlay-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schwebendes Overlay"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Behaviors"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floating Overlay"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comportamientos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superposición flotante"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Comportements"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superposition flottante"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行動"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フローティングオーバーレイ"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "행동"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "플로팅 오버레이"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Поведение"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Плавающее наложение"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hành vi"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lớp phủ nổi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行为"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮动浮层"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "行為"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.section-position" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Position"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Position"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Posición"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Poste"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "위치"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Позиция"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vị trí"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "位置"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮動浮層"
           }
         }
       }
     },
-    "preferences-quick-access.section-preview" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorschau"
+    "preferences-quick-access.keep-open": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lassen Sie das Overlay geöffnet, bis es geschlossen wird"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Preview"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep overlay open until dismissed"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vista previa"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mantener la superposición abierta hasta que se cierre"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aperçu"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder la superposition ouverte jusqu'à ce qu'elle soit rejetée"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "プレビュー"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じるまでオーバーレイを表示したままにする"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "미리보기"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫힐 때까지 오버레이를 열어두세요"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Предпросмотр"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Оставлять наложение открытым до его закрытия"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Xem trước"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữ mở cho đến khi đóng"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "预览"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持浮层打开，直到关闭"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "預覽"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.section-quick-actions" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Schnellaktionen"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quick Actions"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acciones rápidas"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actions rapides"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "クイックアクション"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "빠른 액션"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Быстрые действия"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thao tác nhanh"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快速操作"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "快速動作"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保持浮層開啟，直到關閉"
           }
         }
       }
     },
-    "preferences-quick-access.slot-bottom-left" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unten links"
+    "preferences-quick-access.left": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom left"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inferior izquierda"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Izquierda"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bas gauche"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gauche"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左下"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "왼쪽 하단"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Снизу слева"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Слева"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dưới trái"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trái"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左下"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左下"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.slot-bottom-right" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unten rechts"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bottom right"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Inferior derecha"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bas droit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右下"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오른쪽 하단"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Снизу справа"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dưới phải"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右下"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右下"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左"
           }
         }
       }
     },
-    "preferences-quick-access.slot-center-bottom" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mitte unten"
+    "preferences-quick-access.overlay-size-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passen Sie die schwebende Vorschaugröße an"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Center bottom"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adjust the floating preview size"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Centro inferior"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustar el tamaño de la vista previa flotante"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Centre bas"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuster la taille de l'aperçu flottant"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下中央"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フローティングプレビューのサイズを調整"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "하단 중앙"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "부동 미리보기 크기 조정"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "По центру снизу"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отрегулируйте размер плавающего предварительного просмотра"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữa dưới"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Điều chỉnh kích thước khung xem trước nổi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "底部居中"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "调整浮动预览大小"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "底部置中"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.slot-center-top" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mitte oben"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Center top"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Centro superior"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Centre haut"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "上中央"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "상단 중앙"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "По центру сверху"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Giữa trên"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "顶部居中"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "頂部置中"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "調整浮動預覽大小"
           }
         }
       }
     },
-    "preferences-quick-access.slot-top-left" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oben links"
+    "preferences-quick-access.overlay-size-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overlay-Größe"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top left"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overlay Size"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Superior izquierda"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamaño de superposición"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Haut gauche"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Taille de superposition"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左上"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーバーレイサイズ"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "왼쪽 상단"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오버레이 크기"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сверху слева"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Размер наложения"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trên trái"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kích thước lớp phủ"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左上"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮层尺寸"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "左上"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.slot-top-right" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Oben rechts"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Top right"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Superior derecha"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Haut droit"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右上"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "오른쪽 상단"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сверху справа"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Trên phải"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右上"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "右上"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮層尺寸"
           }
         }
       }
     },
-    "quick-access.edit-video" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Video bearbeiten"
+    "preferences-quick-access.pause-on-hover-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Countdown anhalten, wenn Sie mit der Maus über die Karte fahren"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Edit Video"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause countdown when hovering over the card"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar vídeo"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausar la cuenta regresiva al pasar el cursor sobre la tarjeta"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifier la vidéo"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre le compte à rebours en pause lorsque vous survolez la carte"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ビデオを編集"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カードにホバーしている間はカウントダウンを一時停止"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "비디오 편집"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 위로 마우스를 가져가면 카운트다운이 일시 중지됩니다."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Редактировать видео"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приостановить обратный отсчет при наведении курсора на карточку"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chỉnh sửa video"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tạm dừng đếm ngược khi rê chuột lên thẻ"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑视频"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将鼠标悬停在卡片上时暂停倒计时"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "編輯影片"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將鼠標懸停在卡片上時暫停倒計時"
           }
         }
       }
     },
-    "quick-access.pin-window.fit" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Einpassen"
+    "preferences-quick-access.pause-on-hover-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beim Darüberfahren pausieren"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fit"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause on Hover"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajustar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausa al pasar el cursor"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajuster"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause au survol"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フィット"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ホバーで一時停止"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "맞춤"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마우스 오버 시 일시 중지"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "По размеру"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Пауза при наведении"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vừa khít"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tạm dừng khi rê chuột"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "适合"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停时暂停"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "適合"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "懸停時暫停"
           }
         }
       }
     },
-    "quick-access.pin-window.lock" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sperren und beim Überfahren ausblenden"
+    "preferences-quick-access.quick-actions-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ziehe Listenzeilen, um das Kontextmenü neu anzuordnen. Ziehe Aktionen auf die Vorschau, um Kartenpositionen festzulegen."
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lock and hide on mouse over"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag list rows to reorder the context menu. Drag actions onto the preview to set card positions."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bloquear y ocultar al pasar el cursor"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrastra las filas de la lista para reordenar el menú contextual. Arrastra acciones a la vista previa para definir posiciones en la tarjeta."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Verrouiller et masquer au survol"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Faites glisser les lignes de la liste pour réorganiser le menu contextuel. Faites glisser des actions sur l’aperçu pour définir les positions de la carte."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "マウスオーバー時にロックして隠す"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "リストの行をドラッグしてコンテキストメニューを並べ替えます。アクションをプレビューへドラッグしてカード上の位置を設定します。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "마우스를 올리면 잠그고 숨기기"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 행을 드래그해 컨텍스트 메뉴 순서를 바꾸세요. 액션을 미리보기로 드래그해 카드 위치를 설정하세요."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Заблокировать и скрывать при наведении"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перетаскивайте строки списка, чтобы изменить порядок контекстного меню. Перетаскивайте действия на предпросмотр, чтобы задать позиции на карточке."
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Khóa và ẩn khi rê chuột lên"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kéo các dòng trong danh sách để sắp xếp lại menu ngữ cảnh. Kéo thao tác vào bản xem trước để đặt vị trí trên thẻ."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "锁定并在鼠标悬停时隐藏"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖动列表行以重新排列上下文菜单。将操作拖到预览上以设置卡片位置。"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "鎖定並在滑鼠懸停時隱藏"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拖曳列表列以重新排列內容選單。將動作拖到預覽上以設定卡片位置。"
           }
         }
       }
     },
-    "quick-access.pin-window.unlock" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angepinntes Fenster entsperren"
+    "preferences-quick-access.not-on-card": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht auf Karte"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unlock pinned window"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not on card"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desbloquear ventana fijada"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No en la tarjeta"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Déverrouiller la fenêtre épinglée"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas sur la carte"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "固定ウィンドウのロックを解除"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カード外"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "고정된 창 잠금 해제"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드에 없음"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Разблокировать закрепленное окно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Не на карточке"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mở khóa cửa sổ đã ghim"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không trên thẻ"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解锁固定窗口"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在卡片上"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "解鎖固定視窗"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不在卡片上"
           }
         }
       }
     },
-    "quick-access.pin-window.zoom" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Angepinntes Fenster zoomen"
+    "preferences-quick-access.reset-actions": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktionen zurücksetzen"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoom pinned window"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset Actions"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ajustar zoom de la ventana fijada"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restablecer acciones"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zoomer la fenêtre épinglée"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réinitialiser les actions"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "固定ウィンドウをズーム"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクションをリセット"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "고정된 창 확대/축소"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액션 재설정"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Масштабировать закрепленное окно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сбросить действия"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Thu phóng cửa sổ đã ghim"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đặt lại thao tác"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "缩放固定窗口"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重置操作"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "縮放固定視窗"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重設動作"
           }
         }
       }
     },
-    "preferences-quick-access.action-pin-to-screen" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "An Bildschirm anheften"
+    "preferences-quick-access.right": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechts"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pin to Screen"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fijar en pantalla"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derecha"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Épingler à l'écran"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À droite"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "画面にピン留め"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "화면에 고정"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그렇죠"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Закрепить на экране"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Верно"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ghim lên màn hình"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phải"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "固定到屏幕"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "固定到螢幕"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右"
           }
         }
       }
     },
-    "preferences-quick-access.action-unpin" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lösen"
+    "preferences-quick-access.screen-edge-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wo das Overlay erscheint"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Unpin"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where the overlay appears"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Desfijar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Donde aparece la superposición"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Désépingler"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Où la superposition apparaît"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ピン留めを解除"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オーバーレイの表示位置"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "고정 해제"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오버레이가 나타나는 위치"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Открепить"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Где появляется наложение"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bỏ ghim"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nơi lớp phủ xuất hiện"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消固定"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮层出现的位置"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "取消固定"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮層出現的位置"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.screen-edge-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirmkante"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen Edge"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Borde de la pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bord de l'écran"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面端"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 가장자리"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Край экрана"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cạnh màn hình"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "屏幕边缘"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "螢幕邊緣"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-appearance": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aussehen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apariencia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外観"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "외모"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Внешний вид"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giao diện"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外观"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "外觀"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-behaviors": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verhalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Behaviors"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comportamientos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comportements"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行動"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "행동"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Поведение"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hành vi"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行为"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "行為"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-position": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Posición"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poste"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위치"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Позиция"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vị trí"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-preview": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschau"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preview"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vista previa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プレビュー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미리보기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Предпросмотр"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xem trước"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "预览"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "預覽"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-quick-actions": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellaktionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Actions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones rápidas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions rapides"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイックアクション"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 액션"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Быстрые действия"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thao tác nhanh"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速動作"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-bottom-left": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unten links"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottom left"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inferior izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bas gauche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左下"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 하단"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снизу слева"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dưới trái"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左下"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左下"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-bottom-right": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unten rechts"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottom right"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inferior derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bas droit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右下"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 하단"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Снизу справа"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dưới phải"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右下"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右下"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-center-bottom": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitte unten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Center bottom"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro inferior"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centre bas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下中央"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하단 중앙"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По центру снизу"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữa dưới"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "底部居中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "底部置中"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-center-top": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitte oben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Center top"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centro superior"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Centre haut"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上中央"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상단 중앙"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По центру сверху"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Giữa trên"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顶部居中"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "頂部置中"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-top-left": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oben links"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top left"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superior izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haut gauche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽 상단"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сверху слева"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trên trái"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左上"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.slot-top-right": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oben rechts"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Top right"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Superior derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haut droit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右上"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 상단"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сверху справа"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trên phải"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右上"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右上"
+          }
+        }
+      }
+    },
+    "quick-access.edit-video": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video bearbeiten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Video"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar vídeo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier la vidéo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ビデオを編集"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "비디오 편집"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Редактировать видео"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉnh sửa video"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "编辑视频"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "編輯影片"
+          }
+        }
+      }
+    },
+    "quick-access.pin-window.fit": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einpassen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajuster"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フィット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞춤"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "По размеру"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vừa khít"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适合"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "適合"
+          }
+        }
+      }
+    },
+    "quick-access.pin-window.lock": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sperren und beim Überfahren ausblenden"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock and hide on mouse over"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloquear y ocultar al pasar el cursor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouiller et masquer au survol"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マウスオーバー時にロックして隠す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마우스를 올리면 잠그고 숨기기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Заблокировать и скрывать при наведении"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Khóa và ẩn khi rê chuột lên"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "锁定并在鼠标悬停时隐藏"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "鎖定並在滑鼠懸停時隱藏"
+          }
+        }
+      }
+    },
+    "quick-access.pin-window.unlock": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angepinntes Fenster entsperren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock pinned window"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquear ventana fijada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouiller la fenêtre épinglée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "固定ウィンドウのロックを解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정된 창 잠금 해제"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разблокировать закрепленное окно"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở khóa cửa sổ đã ghim"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解锁固定窗口"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解鎖固定視窗"
+          }
+        }
+      }
+    },
+    "quick-access.pin-window.zoom": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angepinntes Fenster zoomen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom pinned window"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustar zoom de la ventana fijada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoomer la fenêtre épinglée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "固定ウィンドウをズーム"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정된 창 확대/축소"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Масштабировать закрепленное окно"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thu phóng cửa sổ đã ghim"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩放固定窗口"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "縮放固定視窗"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.action-pin-to-screen": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Bildschirm anheften"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin to Screen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fijar en pantalla"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Épingler à l'écran"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面にピン留め"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면에 고정"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Закрепить на экране"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghim lên màn hình"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "固定到屏幕"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "固定到螢幕"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.action-unpin": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lösen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpin"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desfijar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désépingler"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ピン留めを解除"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고정 해제"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открепить"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bỏ ghim"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消固定"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消固定"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.section-swipe-gestures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Gestures"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cử chỉ vuốt"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wischgesten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gestos de deslizamiento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Gestes de balayage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "スワイプジェスチャ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "스와이프 제스처"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Жесты смахивания"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "滑动手势"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "滑動手勢"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-direction-left": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Left"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuốt sang trái"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nach links wischen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Deslizar a la izquierda"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Balayage vers la gauche"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "左にスワイプ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "왼쪽으로 스와이프"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Смахнуть влево"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "向左滑动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "向左滑動"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-direction-right": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe Right"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuốt sang phải"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nach rechts wischen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Deslizar a la derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Balayage vers la droite"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "右にスワイプ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "오른쪽으로 스와이프"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Смахнуть вправо"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "向右滑动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "向右滑動"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-behavior-none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do Nothing"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không làm gì"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Nichts tun"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "No hacer nada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ne rien faire"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "何もしない"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "아무것도 하지 않음"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Ничего не делать"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不执行任何操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "不執行任何操作"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-behavior-dismiss": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đóng"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Schließen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Descartar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Fermer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "閉じる"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "닫기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Закрыть"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "关闭"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "關閉"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-behavior-drag-to-app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drag to App"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kéo sang ứng dụng"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Zur App ziehen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Arrastrar a app"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Glisser vers l'app"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "アプリにドラッグ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "앱으로 드래그"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Перетащить в приложение"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拖放到应用"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "拖放到應用"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.swipe-gestures-description": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose what happens when you swipe left or right on a card"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn hành động khi vuốt trái hoặc phải trên thẻ"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Wähle aus, was passiert, wenn du eine Karte nach links oder rechts wischst"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Elige qué ocurre al deslizar una tarjeta hacia la izquierda o la derecha"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Choisissez ce qui se passe lorsque vous balayez une carte vers la gauche ou la droite"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "カードを左右にスワイプしたときの動作を選択してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "카드를 왼쪽이나 오른쪽으로 스와이프할 때 수행할 동작을 선택하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "Выберите, что происходит при смахивании карточки влево или вправо"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "选择左右滑动卡片时执行的操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "needs_review",
+            "value": "選擇左右滑動卡片時執行的操作"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

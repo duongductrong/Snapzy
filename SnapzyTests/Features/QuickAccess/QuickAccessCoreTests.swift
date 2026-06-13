@@ -52,7 +52,10 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessCardDragPolicy_classifiesRightPanelDirections() {
-    let policy = QuickAccessCardDragPolicy(dismissDirection: 1)
+    let policy = QuickAccessCardDragPolicy(
+      leftSwipeBehavior: .dragToApp,
+      rightSwipeBehavior: .dismiss
+    )
 
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 30), .undetermined)
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 31), .swipeToDismiss)
@@ -60,14 +63,20 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessCardDragPolicy_classifiesLeftPanelDirections() {
-    let policy = QuickAccessCardDragPolicy(dismissDirection: -1)
+    let policy = QuickAccessCardDragPolicy(
+      leftSwipeBehavior: .dismiss,
+      rightSwipeBehavior: .dragToApp
+    )
 
     XCTAssertEqual(policy.intent(forHorizontalTranslation: -31), .swipeToDismiss)
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 31), .dragToApp)
   }
 
   func testQuickAccessCardDragPolicy_dismissesByDistanceOrVelocity() {
-    let policy = QuickAccessCardDragPolicy(dismissDirection: 1)
+    let policy = QuickAccessCardDragPolicy(
+      leftSwipeBehavior: .dragToApp,
+      rightSwipeBehavior: .dismiss
+    )
 
     XCTAssertFalse(policy.shouldDismiss(horizontalTranslation: 80, horizontalVelocity: 300))
     XCTAssertTrue(policy.shouldDismiss(horizontalTranslation: 81, horizontalVelocity: 0))
@@ -77,7 +86,10 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessTrackpadSwipePolicy_requiresPreciseDominantHorizontalScroll() {
-    let policy = QuickAccessTrackpadSwipePolicy(dismissDirection: 1)
+    let policy = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss
+    )
 
     XCTAssertEqual(
       policy.horizontalDelta(
@@ -118,9 +130,21 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessTrackpadSwipePolicy_sensitivityMultiplierAmplifiesDelta() {
-    let precise = QuickAccessTrackpadSwipePolicy(dismissDirection: 1, sensitivityMultiplier: 0.5)
-    let fast = QuickAccessTrackpadSwipePolicy(dismissDirection: 1, sensitivityMultiplier: 3.0)
-    let unity = QuickAccessTrackpadSwipePolicy(dismissDirection: 1, sensitivityMultiplier: 1.0)
+    let precise = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss,
+      sensitivityMultiplier: 0.5
+    )
+    let fast = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss,
+      sensitivityMultiplier: 3.0
+    )
+    let unity = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss,
+      sensitivityMultiplier: 1.0
+    )
 
     // 0.5× sensitivity: delta is halved
     XCTAssertEqual(
@@ -163,14 +187,59 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessTrackpadSwipePolicy_mapsDismissDirectionToPanelSide() {
-    let rightPanelPolicy = QuickAccessTrackpadSwipePolicy(dismissDirection: 1)
-    let leftPanelPolicy = QuickAccessTrackpadSwipePolicy(dismissDirection: -1)
+    let rightPanelPolicy = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss
+    )
+    let leftPanelPolicy = QuickAccessTrackpadSwipePolicy(
+      leftSwipeBehavior: .dismiss,
+      rightSwipeBehavior: .none
+    )
 
-    // Both horizontal directions are normalized to point toward the nearest edge
+    // Only swipes toward the configured dismiss direction trigger dismiss;
+    // opposite swipes follow the finger but snap back without dismissing.
     XCTAssertEqual(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40), 40)
-    XCTAssertEqual(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40), 40)
+    XCTAssertNil(rightPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40))
     XCTAssertEqual(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: -40), -40)
-    XCTAssertEqual(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40), -40)
+    XCTAssertNil(leftPanelPolicy.dismissTranslation(accumulatedHorizontalDelta: 40))
+  }
+
+  func testQuickAccessSwipeConfigurationStore_persistsDirectionalBehaviors() {
+    let defaults = UserDefaults(suiteName: #function)!
+    defaults.removePersistentDomain(forName: #function)
+    defer { defaults.removePersistentDomain(forName: #function) }
+
+    let store = QuickAccessSwipeConfigurationStore(defaults: defaults)
+
+    // Defaults should be position-aware: for a right-side panel, right dismisses.
+    XCTAssertEqual(store.leftBehavior, .none)
+    XCTAssertEqual(store.rightBehavior, .dismiss)
+
+    store.setBehavior(.dragToApp, for: .left)
+    store.setBehavior(.none, for: .right)
+
+    XCTAssertEqual(store.leftBehavior, .dragToApp)
+    XCTAssertEqual(store.rightBehavior, .none)
+
+    // Re-create store from the same defaults and verify persistence.
+    let reloadedStore = QuickAccessSwipeConfigurationStore(defaults: defaults)
+    XCTAssertEqual(reloadedStore.behavior(for: .left), .dragToApp)
+    XCTAssertEqual(reloadedStore.behavior(for: .right), .none)
+  }
+
+  func testQuickAccessSwipeConfigurationStore_resetToDefaults() {
+    let defaults = UserDefaults(suiteName: #function)!
+    defaults.removePersistentDomain(forName: #function)
+    defer { defaults.removePersistentDomain(forName: #function) }
+
+    let store = QuickAccessSwipeConfigurationStore(defaults: defaults)
+    store.setBehavior(.dragToApp, for: .left)
+    store.setBehavior(.dragToApp, for: .right)
+
+    store.resetToDefaults()
+
+    XCTAssertEqual(store.leftBehavior, .none)
+    XCTAssertEqual(store.rightBehavior, .dismiss)
   }
 
   func testQuickAccessDragMonitorView_scopesScrollEventsToCardBounds() {
@@ -196,6 +265,8 @@ final class QuickAccessCoreTests: XCTestCase {
       dismissDirection: 1,
       dragDropEnabled: true,
       twoFingerSwipeToDismissEnabled: true,
+      leftSwipeBehavior: .none,
+      rightSwipeBehavior: .dismiss,
       swipeSensitivity: 1.0,
       onDragStarted: {},
       onDragEnded: { _ in },

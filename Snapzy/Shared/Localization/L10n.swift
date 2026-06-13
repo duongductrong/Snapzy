@@ -2141,6 +2141,41 @@ enum L10n {
       defaultValue: "Adjust how fast the card follows your trackpad swipe",
       comment: "Quick access preferences setting description"
     )
+    static let swipeGesturesSection = string(
+      "preferences-quick-access.section-swipe-gestures",
+      defaultValue: "Swipe Gestures",
+      comment: "Quick access swipe gestures preferences section title"
+    )
+    static let swipeDirectionLeft = string(
+      "preferences-quick-access.swipe-direction-left",
+      defaultValue: "Swipe Left",
+      comment: "Quick access swipe direction label"
+    )
+    static let swipeDirectionRight = string(
+      "preferences-quick-access.swipe-direction-right",
+      defaultValue: "Swipe Right",
+      comment: "Quick access swipe direction label"
+    )
+    static let swipeBehaviorNone = string(
+      "preferences-quick-access.swipe-behavior-none",
+      defaultValue: "Do Nothing",
+      comment: "Quick access swipe behavior option"
+    )
+    static let swipeBehaviorDismiss = string(
+      "preferences-quick-access.swipe-behavior-dismiss",
+      defaultValue: "Dismiss",
+      comment: "Quick access swipe behavior option"
+    )
+    static let swipeBehaviorDragToApp = string(
+      "preferences-quick-access.swipe-behavior-drag-to-app",
+      defaultValue: "Drag to App",
+      comment: "Quick access swipe behavior option"
+    )
+    static let swipeGesturesDescription = string(
+      "preferences-quick-access.swipe-gestures-description",
+      defaultValue: "Choose what happens when you swipe left or right on a card",
+      comment: "Quick access swipe gestures section description"
+    )
     static func closesAfter(_ seconds: Int) -> String {
       format(
         "preferences-quick-access.closes-after",

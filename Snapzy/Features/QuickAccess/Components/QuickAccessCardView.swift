@@ -17,6 +17,7 @@ struct QuickAccessCardView: View {
 
   @ObservedObject private var preferencesManager = PreferencesManager.shared
   @ObservedObject private var actionConfiguration = QuickAccessActionConfigurationStore.shared
+  @ObservedObject private var swipeConfiguration = QuickAccessSwipeConfigurationStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
   @State private var isHovering = false
   @State private var isDragging = false
@@ -207,6 +208,8 @@ struct QuickAccessCardView: View {
       dismissDirection: dismissDirection,
       dragDropEnabled: manager.dragDropEnabled,
       twoFingerSwipeToDismissEnabled: manager.twoFingerSwipeToDismissEnabled,
+      leftSwipeBehavior: swipeConfiguration.leftBehavior,
+      rightSwipeBehavior: swipeConfiguration.rightBehavior,
       onDragStarted: {
         isDragging = true
       },
@@ -230,7 +233,10 @@ struct QuickAccessCardView: View {
   }
 
   private func handleSwipeEnded(translation: CGFloat, velocity: CGFloat) {
-    let policy = QuickAccessCardDragPolicy(dismissDirection: dismissDirection)
+    let policy = QuickAccessCardDragPolicy(
+      leftSwipeBehavior: swipeConfiguration.leftBehavior,
+      rightSwipeBehavior: swipeConfiguration.rightBehavior
+    )
 
     if policy.shouldDismiss(horizontalTranslation: translation, horizontalVelocity: velocity) {
       swipeOffset = 0
