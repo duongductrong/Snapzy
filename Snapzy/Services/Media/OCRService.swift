@@ -45,9 +45,63 @@ final class OCRService {
 
   private init() {}
 
+  // MARK: - Image Normalization
+
+  /// Draw the image into a standard sRGB bitmap so Vision can read it.
+  /// This fixes `TextRecognition.CRImageReaderError` on images produced by
+  /// `SCScreenshotManager` and other IOSurface-backed sources.
+  private func normalizedImageForVision(_ image: CGImage) -> CGImage {
+    let width = image.width
+    let height = image.height
+    let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? image.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+    let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
+
+    guard let context = CGContext(
+      data: nil,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: 0,
+      space: colorSpace,
+      bitmapInfo: bitmapInfo
+    ) else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .ocr,
+        "OCR image normalization failed; using original image",
+        context: ["width": "\(width)", "height": "\(height)"]
+      )
+      return image
+    }
+
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+    guard let normalized = context.makeImage() else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .ocr,
+        "OCR image normalization produced no output; using original image",
+        context: ["width": "\(width)", "height": "\(height)"]
+      )
+      return image
+    }
+
+    return normalized
+  }
+
   // MARK: - Public API
 
   func recognize(_ request: OCRRequest) async throws -> OCRResult {
+    // ScreenCaptureKit images are sometimes backed by IOSurfaces or use color
+    // spaces that Vision cannot read directly, producing CRImageReaderError.
+    // Normalize to a standard sRGB bitmap before recognition to avoid that.
+    let normalizedImage = normalizedImageForVision(request.image)
+    let request = OCRRequest(
+      image: normalizedImage,
+      preferredLanguageIdentifier: request.preferredLanguageIdentifier,
+      contentType: request.contentType
+    )
+
     let profile = VisionOCRProfile.resolve(for: request)
     let languageContext = request.preferredLanguageIdentifier ?? "auto"
     let primaryProfiles = uniqueProfiles([profile] + VisionOCRProfile.recoveryProfiles(for: request, primary: profile))
