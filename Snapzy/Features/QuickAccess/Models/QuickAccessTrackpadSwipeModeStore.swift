@@ -8,7 +8,6 @@
 import Combine
 import Foundation
 
-@MainActor
 final class QuickAccessTrackpadSwipeModeStore: ObservableObject {
   static let shared = QuickAccessTrackpadSwipeModeStore()
 

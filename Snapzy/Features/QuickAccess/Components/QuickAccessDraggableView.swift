@@ -41,7 +41,7 @@ struct QuickAccessCardDragPolicy {
   }
 }
 
-enum QuickAccessTrackpadSwipeHelpers {
+nonisolated enum QuickAccessTrackpadSwipeHelpers {
   static let minimumHorizontalDelta: CGFloat = 0.5
   static let horizontalDominanceRatio: CGFloat = 1.35
   static let dismissDistanceThreshold: CGFloat = 80
