@@ -2166,11 +2166,6 @@ enum L10n {
       defaultValue: "Dismiss",
       comment: "Quick access swipe behavior option"
     )
-    static let swipeBehaviorDragToApp = string(
-      "preferences-quick-access.swipe-behavior-drag-to-app",
-      defaultValue: "Drag to App",
-      comment: "Quick access swipe behavior option"
-    )
     static let swipeGesturesDescription = string(
       "preferences-quick-access.swipe-gestures-description",
       defaultValue: "Choose what happens when you swipe left or right on a card",

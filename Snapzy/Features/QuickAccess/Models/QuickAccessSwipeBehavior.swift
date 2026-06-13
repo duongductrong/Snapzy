@@ -11,7 +11,6 @@ import Foundation
 enum QuickAccessSwipeBehavior: String, CaseIterable, Codable, Identifiable {
   case none
   case dismiss
-  case dragToApp
 
   var id: String { rawValue }
 
@@ -21,8 +20,6 @@ enum QuickAccessSwipeBehavior: String, CaseIterable, Codable, Identifiable {
       return L10n.PreferencesQuickAccess.swipeBehaviorNone
     case .dismiss:
       return L10n.PreferencesQuickAccess.swipeBehaviorDismiss
-    case .dragToApp:
-      return L10n.PreferencesQuickAccess.swipeBehaviorDragToApp
     }
   }
 }

@@ -19,33 +19,23 @@ struct QuickAccessCardDragPolicy {
   static let dismissDistanceThreshold: CGFloat = 80
   static let dismissVelocityThreshold: CGFloat = 300
 
-  let leftSwipeBehavior: QuickAccessSwipeBehavior
-  let rightSwipeBehavior: QuickAccessSwipeBehavior
-
-  private func behavior(for translation: CGFloat) -> QuickAccessSwipeBehavior {
-    translation > 0 ? rightSwipeBehavior : leftSwipeBehavior
-  }
+  let dismissDirection: CGFloat
 
   func intent(forHorizontalTranslation translation: CGFloat) -> QuickAccessCardDragIntent {
     guard abs(translation) > Self.directionThreshold else {
       return .undetermined
     }
 
-    switch behavior(for: translation) {
-    case .dismiss:
-      return .swipeToDismiss
-    case .dragToApp:
-      return .dragToApp
-    case .none:
-      return .undetermined
-    }
+    return translation * dismissDirection > 0 ? .swipeToDismiss : .dragToApp
   }
 
   func shouldDismiss(
     horizontalTranslation translation: CGFloat,
     horizontalVelocity velocity: CGFloat
   ) -> Bool {
-    guard behavior(for: translation) == .dismiss else { return false }
+    let hasDismissDirection =
+      translation * dismissDirection > 0 || velocity * dismissDirection > 0
+    guard hasDismissDirection else { return false }
 
     return abs(translation) > Self.dismissDistanceThreshold || abs(velocity) > Self.dismissVelocityThreshold
   }
@@ -294,10 +284,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     let translation = location.x - mouseDownLocation.x
     updateVelocity(translation: translation, timestamp: event.timestamp)
 
-    let policy = QuickAccessCardDragPolicy(
-      leftSwipeBehavior: leftSwipeBehavior,
-      rightSwipeBehavior: rightSwipeBehavior
-    )
+    let policy = QuickAccessCardDragPolicy(dismissDirection: dismissDirection)
     if gestureIntent == .undetermined {
       gestureIntent = policy.intent(forHorizontalTranslation: translation)
 

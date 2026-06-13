@@ -18,13 +18,16 @@ final class QuickAccessSwipeConfigurationStore: ObservableObject {
 
   private let defaults: UserDefaults
 
-  init(defaults: UserDefaults = .standard) {
+  init(
+    defaults: UserDefaults = .standard,
+    panelIsLeftSide: Bool? = nil
+  ) {
     self.defaults = defaults
 
     // Default toward the nearest screen edge to dismiss and the opposite
     // direction to do nothing. The default is based on the current panel side
     // so first-time users get the expected "swipe toward edge" behavior.
-    let isLeftSide = QuickAccessManager.shared.position.isLeftSide
+    let isLeftSide = panelIsLeftSide ?? QuickAccessManager.shared.position.isLeftSide
     let defaultLeftBehavior: QuickAccessSwipeBehavior = isLeftSide ? .dismiss : .none
     let defaultRightBehavior: QuickAccessSwipeBehavior = isLeftSide ? .none : .dismiss
 
@@ -57,8 +60,8 @@ final class QuickAccessSwipeConfigurationStore: ObservableObject {
     save()
   }
 
-  func resetToDefaults() {
-    let isLeftSide = QuickAccessManager.shared.position.isLeftSide
+  func resetToDefaults(panelIsLeftSide: Bool? = nil) {
+    let isLeftSide = panelIsLeftSide ?? QuickAccessManager.shared.position.isLeftSide
     leftBehavior = isLeftSide ? .dismiss : .none
     rightBehavior = isLeftSide ? .none : .dismiss
     save()

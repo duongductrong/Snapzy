@@ -52,10 +52,7 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessCardDragPolicy_classifiesRightPanelDirections() {
-    let policy = QuickAccessCardDragPolicy(
-      leftSwipeBehavior: .dragToApp,
-      rightSwipeBehavior: .dismiss
-    )
+    let policy = QuickAccessCardDragPolicy(dismissDirection: 1)
 
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 30), .undetermined)
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 31), .swipeToDismiss)
@@ -63,20 +60,14 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessCardDragPolicy_classifiesLeftPanelDirections() {
-    let policy = QuickAccessCardDragPolicy(
-      leftSwipeBehavior: .dismiss,
-      rightSwipeBehavior: .dragToApp
-    )
+    let policy = QuickAccessCardDragPolicy(dismissDirection: -1)
 
     XCTAssertEqual(policy.intent(forHorizontalTranslation: -31), .swipeToDismiss)
     XCTAssertEqual(policy.intent(forHorizontalTranslation: 31), .dragToApp)
   }
 
   func testQuickAccessCardDragPolicy_dismissesByDistanceOrVelocity() {
-    let policy = QuickAccessCardDragPolicy(
-      leftSwipeBehavior: .dragToApp,
-      rightSwipeBehavior: .dismiss
-    )
+    let policy = QuickAccessCardDragPolicy(dismissDirection: 1)
 
     XCTAssertFalse(policy.shouldDismiss(horizontalTranslation: 80, horizontalVelocity: 300))
     XCTAssertTrue(policy.shouldDismiss(horizontalTranslation: 81, horizontalVelocity: 0))
@@ -209,21 +200,21 @@ final class QuickAccessCoreTests: XCTestCase {
     defaults.removePersistentDomain(forName: #function)
     defer { defaults.removePersistentDomain(forName: #function) }
 
-    let store = QuickAccessSwipeConfigurationStore(defaults: defaults)
+    // Use a right-side panel so defaults are: left = none, right = dismiss.
+    let store = QuickAccessSwipeConfigurationStore(defaults: defaults, panelIsLeftSide: false)
 
-    // Defaults should be position-aware: for a right-side panel, right dismisses.
     XCTAssertEqual(store.leftBehavior, .none)
     XCTAssertEqual(store.rightBehavior, .dismiss)
 
-    store.setBehavior(.dragToApp, for: .left)
+    store.setBehavior(.dismiss, for: .left)
     store.setBehavior(.none, for: .right)
 
-    XCTAssertEqual(store.leftBehavior, .dragToApp)
+    XCTAssertEqual(store.leftBehavior, .dismiss)
     XCTAssertEqual(store.rightBehavior, .none)
 
     // Re-create store from the same defaults and verify persistence.
-    let reloadedStore = QuickAccessSwipeConfigurationStore(defaults: defaults)
-    XCTAssertEqual(reloadedStore.behavior(for: .left), .dragToApp)
+    let reloadedStore = QuickAccessSwipeConfigurationStore(defaults: defaults, panelIsLeftSide: false)
+    XCTAssertEqual(reloadedStore.behavior(for: .left), .dismiss)
     XCTAssertEqual(reloadedStore.behavior(for: .right), .none)
   }
 
@@ -232,11 +223,11 @@ final class QuickAccessCoreTests: XCTestCase {
     defaults.removePersistentDomain(forName: #function)
     defer { defaults.removePersistentDomain(forName: #function) }
 
-    let store = QuickAccessSwipeConfigurationStore(defaults: defaults)
-    store.setBehavior(.dragToApp, for: .left)
-    store.setBehavior(.dragToApp, for: .right)
+    let store = QuickAccessSwipeConfigurationStore(defaults: defaults, panelIsLeftSide: false)
+    store.setBehavior(.dismiss, for: .left)
+    store.setBehavior(.dismiss, for: .right)
 
-    store.resetToDefaults()
+    store.resetToDefaults(panelIsLeftSide: false)
 
     XCTAssertEqual(store.leftBehavior, .none)
     XCTAssertEqual(store.rightBehavior, .dismiss)

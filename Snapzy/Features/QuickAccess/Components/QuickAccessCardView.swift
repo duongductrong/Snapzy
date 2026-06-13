@@ -233,10 +233,7 @@ struct QuickAccessCardView: View {
   }
 
   private func handleSwipeEnded(translation: CGFloat, velocity: CGFloat) {
-    let policy = QuickAccessCardDragPolicy(
-      leftSwipeBehavior: swipeConfiguration.leftBehavior,
-      rightSwipeBehavior: swipeConfiguration.rightBehavior
-    )
+    let policy = QuickAccessCardDragPolicy(dismissDirection: dismissDirection)
 
     if policy.shouldDismiss(horizontalTranslation: translation, horizontalVelocity: velocity) {
       swipeOffset = 0
