@@ -171,9 +171,7 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessTrackpadSwipeModeStore_persistsMode() {
-    let defaults = UserDefaults(suiteName: #function)!
-    defaults.removePersistentDomain(forName: #function)
-    defer { defaults.removePersistentDomain(forName: #function) }
+    let defaults = makeIsolatedDefaults()
 
     let store = QuickAccessTrackpadSwipeModeStore(defaults: defaults)
     XCTAssertEqual(store.mode, .natural)
@@ -186,9 +184,7 @@ final class QuickAccessCoreTests: XCTestCase {
   }
 
   func testQuickAccessTrackpadSwipeModeStore_resetToDefault() {
-    let defaults = UserDefaults(suiteName: #function)!
-    defaults.removePersistentDomain(forName: #function)
-    defer { defaults.removePersistentDomain(forName: #function) }
+    let defaults = makeIsolatedDefaults()
 
     let store = QuickAccessTrackpadSwipeModeStore(defaults: defaults)
     store.setMode(.inverted)
