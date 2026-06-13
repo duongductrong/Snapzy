@@ -2924,386 +2924,258 @@
         }
       }
     },
-    "preferences-quick-access.section-swipe-gestures": {
+    "preferences-quick-access.trackpad-swipe-mode-title": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe Gestures"
+            "value": "Trackpad Swipe Direction"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cử chỉ vuốt"
+            "value": "Hướng vuốt trackpad"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Wischgesten"
+            "value": "Trackpad-Wischrichtung"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Gestos de deslizamiento"
+            "value": "Dirección de deslizamiento del trackpad"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Gestes de balayage"
+            "value": "Direction du balayage trackpad"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "スワイプジェスチャ"
+            "value": "トラックパッドのスワイプ方向"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "스와이프 제스처"
+            "value": "트랙패드 스와이프 방향"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Жесты смахивания"
+            "value": "Направление смахивания трекпада"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "滑动手势"
+            "value": "触控板滑动方向"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "滑動手勢"
+            "value": "觸控板滑動方向"
           }
         }
       }
     },
-    "preferences-quick-access.swipe-direction-left": {
+    "preferences-quick-access.trackpad-swipe-mode-description": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe Left"
+            "value": "Choose whether the card follows your finger or moves in the opposite direction"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuốt sang trái"
+            "value": "Chọn thẻ di chuyển theo ngón tay hay ngược lại"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nach links wischen"
+            "value": "Wähle, ob die Karte dem Finger folgt oder in die entgegengesetzte Richtung bewegt wird"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Deslizar a la izquierda"
+            "value": "Elige si la tarjeta sigue tu dedo o se mueve en dirección opuesta"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Balayage vers la gauche"
+            "value": "Choisissez si la carte suit votre doigt ou se déplace dans la direction opposée"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "左にスワイプ"
+            "value": "カードが指に追従するか、逆方向に移動するかを選択してください"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "왼쪽으로 스와이프"
+            "value": "카드가 손가락을 따를지 반대 방향으로 이동할지 선택하세요"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Смахнуть влево"
+            "value": "Выберите, следует ли карта за пальцем или движется в противоположном направлении"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "向左滑动"
+            "value": "选择卡片是跟随手指移动还是向相反方向移动"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "向左滑動"
+            "value": "選擇卡片是跟隨手指移動還是向相反方向移動"
           }
         }
       }
     },
-    "preferences-quick-access.swipe-direction-right": {
+    "preferences-quick-access.trackpad-swipe-mode-natural": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Swipe Right"
+            "value": "Natural (follow finger)"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vuốt sang phải"
+            "value": "Tự nhiên (theo ngón tay)"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nach rechts wischen"
+            "value": "Natürlich (Finger folgen)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Deslizar a la derecha"
+            "value": "Natural (seguir dedo)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Balayage vers la droite"
+            "value": "Naturel (suivre le doigt)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "右にスワイプ"
+            "value": "自然（指に追従）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "오른쪽으로 스와이프"
+            "value": "자연스러움 (손가락 따라)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Смахнуть вправо"
+            "value": "Естественное (следовать за пальцем)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "向右滑动"
+            "value": "自然（跟随手指）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "向右滑動"
+            "value": "自然（跟隨手指）"
           }
         }
       }
     },
-    "preferences-quick-access.swipe-behavior-none": {
+    "preferences-quick-access.trackpad-swipe-mode-inverted": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Do Nothing"
+            "value": "Inverted (follow scroll)"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Không làm gì"
+            "value": "Ngược (theo cuộn)"
           }
         },
         "de": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Nichts tun"
+            "value": "Invertiert (Scrollen folgen)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "No hacer nada"
+            "value": "Invertido (seguir desplazamiento)"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ne rien faire"
+            "value": "Inversé (suivre le défilement)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "何もしない"
+            "value": "反転（スクロールに追従）"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "아무것도 하지 않음"
+            "value": "반전 (스크롤 따라)"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "Ничего не делать"
+            "value": "Инвертированное (следовать за прокруткой)"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "不执行任何操作"
+            "value": "反转（跟随滚动）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "needs_review",
-            "value": "不執行任何操作"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.swipe-behavior-dismiss": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dismiss"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Đóng"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Schließen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Descartar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Fermer"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "閉じる"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "닫기"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Закрыть"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "关闭"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "關閉"
-          }
-        }
-      }
-    },
-    "preferences-quick-access.swipe-gestures-description": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose what happens when you swipe left or right on a card"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chọn hành động khi vuốt trái hoặc phải trên thẻ"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Wähle aus, was passiert, wenn du eine Karte nach links oder rechts wischst"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Elige qué ocurre al deslizar una tarjeta hacia la izquierda o la derecha"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Choisissez ce qui se passe lorsque vous balayez une carte vers la gauche ou la droite"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "カードを左右にスワイプしたときの動作を選択してください"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "카드를 왼쪽이나 오른쪽으로 스와이프할 때 수행할 동작을 선택하세요"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "Выберите, что происходит при смахивании карточки влево или вправо"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "选择左右滑动卡片时执行的操作"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "needs_review",
-            "value": "選擇左右滑動卡片時執行的操作"
+            "value": "反轉（跟隨滾動）"
           }
         }
       }

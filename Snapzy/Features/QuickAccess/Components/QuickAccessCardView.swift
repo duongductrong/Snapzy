@@ -17,7 +17,7 @@ struct QuickAccessCardView: View {
 
   @ObservedObject private var preferencesManager = PreferencesManager.shared
   @ObservedObject private var actionConfiguration = QuickAccessActionConfigurationStore.shared
-  @ObservedObject private var swipeConfiguration = QuickAccessSwipeConfigurationStore.shared
+  @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
   @State private var isHovering = false
   @State private var isDragging = false
@@ -208,8 +208,7 @@ struct QuickAccessCardView: View {
       dismissDirection: dismissDirection,
       dragDropEnabled: manager.dragDropEnabled,
       twoFingerSwipeToDismissEnabled: manager.twoFingerSwipeToDismissEnabled,
-      leftSwipeBehavior: swipeConfiguration.leftBehavior,
-      rightSwipeBehavior: swipeConfiguration.rightBehavior,
+      swipeMode: trackpadSwipeModeStore.mode,
       onDragStarted: {
         isDragging = true
       },
@@ -233,9 +232,10 @@ struct QuickAccessCardView: View {
   }
 
   private func handleSwipeEnded(translation: CGFloat, velocity: CGFloat) {
-    let policy = QuickAccessCardDragPolicy(dismissDirection: dismissDirection)
+    let distanceThreshold = QuickAccessCardDragPolicy.dismissDistanceThreshold
+    let velocityThreshold = QuickAccessCardDragPolicy.dismissVelocityThreshold
 
-    if policy.shouldDismiss(horizontalTranslation: translation, horizontalVelocity: velocity) {
+    if abs(translation) > distanceThreshold || abs(velocity) > velocityThreshold {
       swipeOffset = 0
       isDismissing = true
       QuickAccessSound.dismiss.play(reduceMotion: reduceMotion)

@@ -41,29 +41,17 @@ struct QuickAccessCardDragPolicy {
   }
 }
 
-struct QuickAccessTrackpadSwipePolicy {
+enum QuickAccessTrackpadSwipeHelpers {
   static let minimumHorizontalDelta: CGFloat = 0.5
   static let horizontalDominanceRatio: CGFloat = 1.35
+  static let dismissDistanceThreshold: CGFloat = 80
+  static let dismissVelocityThreshold: CGFloat = 300
 
-  let leftSwipeBehavior: QuickAccessSwipeBehavior
-  let rightSwipeBehavior: QuickAccessSwipeBehavior
-  let sensitivityMultiplier: CGFloat
-
-  init(
-    leftSwipeBehavior: QuickAccessSwipeBehavior,
-    rightSwipeBehavior: QuickAccessSwipeBehavior,
-    sensitivityMultiplier: CGFloat = 1.0
-  ) {
-    self.leftSwipeBehavior = leftSwipeBehavior
-    self.rightSwipeBehavior = rightSwipeBehavior
-    self.sensitivityMultiplier = sensitivityMultiplier
-  }
-
-  func horizontalDelta(
+  static func horizontalDelta(
     scrollingDeltaX deltaX: CGFloat,
     scrollingDeltaY deltaY: CGFloat,
     hasPreciseScrollingDeltas: Bool,
-    isDirectionInverted: Bool = false
+    sensitivityMultiplier: CGFloat
   ) -> CGFloat? {
     guard hasPreciseScrollingDeltas,
           deltaX.isFinite,
@@ -71,31 +59,21 @@ struct QuickAccessTrackpadSwipePolicy {
       return nil
     }
 
-    // Natural scrolling inverts scrollingDeltaX sign, so normalize it
-    // so positive always means swipe right regardless of preference.
-    let normalizedDeltaX = isDirectionInverted ? -deltaX : deltaX
-
-    let horizontalMagnitude = abs(normalizedDeltaX)
+    let horizontalMagnitude = abs(deltaX)
     let verticalMagnitude = abs(deltaY)
     guard horizontalMagnitude >= Self.minimumHorizontalDelta,
           horizontalMagnitude > verticalMagnitude * Self.horizontalDominanceRatio else {
       return nil
     }
 
-    return normalizedDeltaX * sensitivityMultiplier
+    return deltaX * sensitivityMultiplier
   }
 
-  func behavior(for deltaX: CGFloat) -> QuickAccessSwipeBehavior {
-    deltaX > 0 ? rightSwipeBehavior : leftSwipeBehavior
-  }
-
-  func dismissTranslation(accumulatedHorizontalDelta deltaX: CGFloat) -> CGFloat? {
-    guard deltaX.isFinite,
-          behavior(for: deltaX) == .dismiss else {
-      return nil
-    }
-
-    return deltaX
+  static func shouldDismiss(
+    horizontalTranslation translation: CGFloat,
+    horizontalVelocity velocity: CGFloat
+  ) -> Bool {
+    abs(translation) > Self.dismissDistanceThreshold || abs(velocity) > Self.dismissVelocityThreshold
   }
 }
 
@@ -107,8 +85,7 @@ struct QuickAccessDraggableView: NSViewRepresentable {
   let dismissDirection: CGFloat
   let dragDropEnabled: Bool
   let twoFingerSwipeToDismissEnabled: Bool
-  let leftSwipeBehavior: QuickAccessSwipeBehavior
-  let rightSwipeBehavior: QuickAccessSwipeBehavior
+  let swipeMode: QuickAccessTrackpadSwipeMode
   let onDragStarted: () -> Void
   let onDragEnded: (Bool) -> Void
   let onSwipeChanged: (CGFloat) -> Void
@@ -122,8 +99,7 @@ struct QuickAccessDraggableView: NSViewRepresentable {
       dismissDirection: dismissDirection,
       dragDropEnabled: dragDropEnabled,
       twoFingerSwipeToDismissEnabled: twoFingerSwipeToDismissEnabled,
-      leftSwipeBehavior: leftSwipeBehavior,
-      rightSwipeBehavior: rightSwipeBehavior,
+      swipeMode: swipeMode,
       swipeSensitivity: swipeSensitivity,
       onDragStarted: onDragStarted,
       onDragEnded: onDragEnded,
@@ -138,8 +114,7 @@ struct QuickAccessDraggableView: NSViewRepresentable {
     nsView.dismissDirection = dismissDirection
     nsView.dragDropEnabled = dragDropEnabled
     nsView.twoFingerSwipeToDismissEnabled = twoFingerSwipeToDismissEnabled
-    nsView.leftSwipeBehavior = leftSwipeBehavior
-    nsView.rightSwipeBehavior = rightSwipeBehavior
+    nsView.swipeMode = swipeMode
     nsView.swipeSensitivity = swipeSensitivity
     nsView.onDragStarted = onDragStarted
     nsView.onDragEnded = onDragEnded
@@ -154,8 +129,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
   var dismissDirection: CGFloat
   var dragDropEnabled: Bool
   var twoFingerSwipeToDismissEnabled: Bool
-  var leftSwipeBehavior: QuickAccessSwipeBehavior
-  var rightSwipeBehavior: QuickAccessSwipeBehavior
+  var swipeMode: QuickAccessTrackpadSwipeMode
   var swipeSensitivity: CGFloat
   var onDragStarted: () -> Void
   var onDragEnded: (Bool) -> Void
@@ -180,8 +154,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     dismissDirection: CGFloat,
     dragDropEnabled: Bool,
     twoFingerSwipeToDismissEnabled: Bool,
-    leftSwipeBehavior: QuickAccessSwipeBehavior,
-    rightSwipeBehavior: QuickAccessSwipeBehavior,
+    swipeMode: QuickAccessTrackpadSwipeMode,
     swipeSensitivity: CGFloat,
     onDragStarted: @escaping () -> Void,
     onDragEnded: @escaping (Bool) -> Void,
@@ -193,8 +166,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     self.dismissDirection = dismissDirection
     self.dragDropEnabled = dragDropEnabled
     self.twoFingerSwipeToDismissEnabled = twoFingerSwipeToDismissEnabled
-    self.leftSwipeBehavior = leftSwipeBehavior
-    self.rightSwipeBehavior = rightSwipeBehavior
+    self.swipeMode = swipeMode
     self.swipeSensitivity = swipeSensitivity
     self.onDragStarted = onDragStarted
     self.onDragEnded = onDragEnded
@@ -349,22 +321,19 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
       resetTrackpadSwipe()
     }
 
-    let policy = QuickAccessTrackpadSwipePolicy(
-      leftSwipeBehavior: leftSwipeBehavior,
-      rightSwipeBehavior: rightSwipeBehavior,
-      sensitivityMultiplier: swipeSensitivity
-    )
-    guard let deltaX = policy.horizontalDelta(
+    guard let rawDeltaX = QuickAccessTrackpadSwipeHelpers.horizontalDelta(
       scrollingDeltaX: event.scrollingDeltaX,
       scrollingDeltaY: event.scrollingDeltaY,
       hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas,
-      isDirectionInverted: event.isDirectionInvertedFromDevice
+      sensitivityMultiplier: swipeSensitivity
     ) else {
       if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
         finishTrackpadSwipe(cancelled: event.phase.contains(.cancelled))
       }
       return
     }
+
+    let deltaX = rawDeltaX * swipeMode.translationMultiplier
 
     if !isTrackpadSwipeTracking {
       isTrackpadSwipeTracking = true
@@ -397,20 +366,16 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     defer { resetTrackpadSwipe() }
     guard isTrackpadSwipeTracking else { return }
 
-    let policy = QuickAccessTrackpadSwipePolicy(
-      leftSwipeBehavior: leftSwipeBehavior,
-      rightSwipeBehavior: rightSwipeBehavior,
-      sensitivityMultiplier: swipeSensitivity
-    )
     guard !cancelled,
-          let translation = policy.dismissTranslation(
-            accumulatedHorizontalDelta: accumulatedTrackpadSwipeX
+          QuickAccessTrackpadSwipeHelpers.shouldDismiss(
+            horizontalTranslation: accumulatedTrackpadSwipeX,
+            horizontalVelocity: latestTrackpadSwipeVelocity
           ) else {
       onSwipeEnded(0, 0)
       return
     }
 
-    onSwipeEnded(translation, latestTrackpadSwipeVelocity)
+    onSwipeEnded(accumulatedTrackpadSwipeX, latestTrackpadSwipeVelocity)
   }
 
   private func resetTrackpadSwipe() {

@@ -9,7 +9,7 @@ import SwiftUI
 
 struct QuickAccessSettingsView: View {
   @ObservedObject private var manager = QuickAccessManager.shared
-  @ObservedObject private var swipeConfiguration = QuickAccessSwipeConfigurationStore.shared
+  @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
 
   @State private var positionIsLeft: Bool = false
 
@@ -111,24 +111,27 @@ struct QuickAccessSettingsView: View {
         }
       }
 
-      Section(L10n.PreferencesQuickAccess.swipeGesturesSection) {
-        swipeBehaviorRow(
-          icon: "arrow.left",
-          direction: .left,
-          behavior: Binding(
-            get: { swipeConfiguration.leftBehavior },
-            set: { swipeConfiguration.setBehavior($0, for: .left) }
-          )
-        )
-
-        swipeBehaviorRow(
-          icon: "arrow.right",
-          direction: .right,
-          behavior: Binding(
-            get: { swipeConfiguration.rightBehavior },
-            set: { swipeConfiguration.setBehavior($0, for: .right) }
-          )
-        )
+      if manager.twoFingerSwipeToDismissEnabled {
+        Section(L10n.PreferencesQuickAccess.trackpadSwipeModeTitle) {
+          SettingRow(
+            icon: "arrow.left.arrow.right",
+            title: L10n.PreferencesQuickAccess.trackpadSwipeModeTitle,
+            description: L10n.PreferencesQuickAccess.trackpadSwipeModeDescription
+          ) {
+            Picker("", selection: Binding(
+              get: { trackpadSwipeModeStore.mode },
+              set: { trackpadSwipeModeStore.setMode($0) }
+            )) {
+              ForEach(QuickAccessTrackpadSwipeMode.allCases) { mode in
+                Text(mode.displayName).tag(mode)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .frame(width: 200, alignment: .trailing)
+          }
+        }
       }
     }
     .formStyle(.grouped)
@@ -144,28 +147,6 @@ struct QuickAccessSettingsView: View {
       return L10n.PreferencesQuickAccess.closesAfter(Int(manager.autoDismissDelay))
     }
     return L10n.PreferencesQuickAccess.keepOpenUntilDismissed
-  }
-
-  private func swipeBehaviorRow(
-    icon: String,
-    direction: QuickAccessSwipeDirection,
-    behavior: Binding<QuickAccessSwipeBehavior>
-  ) -> some View {
-    SettingRow(
-      icon: icon,
-      title: direction.displayName,
-      description: nil
-    ) {
-      Picker("", selection: behavior) {
-        ForEach(QuickAccessSwipeBehavior.allCases) { behavior in
-          Text(behavior.displayName).tag(behavior)
-        }
-      }
-      .labelsHidden()
-      .pickerStyle(.menu)
-      .fixedSize()
-      .frame(width: 160, alignment: .trailing)
-    }
   }
 }
 
