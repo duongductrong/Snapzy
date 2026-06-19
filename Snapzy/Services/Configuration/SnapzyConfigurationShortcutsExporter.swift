@@ -116,6 +116,7 @@ extension GlobalShortcutKind {
     case .fullscreen: return "fullscreen"
     case .area: return "area"
     case .areaAnnotate: return "area_annotate"
+    case .activeWindow: return "active_window"
     case .scrollingCapture: return "scrolling_capture"
     case .recording: return "recording"
     case .annotate: return "annotate"

@@ -333,6 +333,18 @@ final class AppStatusBarController: ObservableObject {
     captureFullscreenItem.isEnabled = viewModel.hasPermission
     menu?.addItem(captureFullscreenItem)
 
+    let captureActiveWindowItem = NSMenuItem(
+      title: L10n.Actions.captureActiveWindow,
+      action: #selector(captureActiveWindowAction),
+      keyEquivalent: ""
+    )
+    applyConfiguredShortcut(captureActiveWindowItem, for: .activeWindow, using: shortcutManager)
+    captureActiveWindowItem.target = self
+    captureActiveWindowItem.image = NSImage(
+      systemSymbolName: "macwindow.on.rectangle", accessibilityDescription: nil)
+    captureActiveWindowItem.isEnabled = viewModel.hasPermission
+    menu?.addItem(captureActiveWindowItem)
+
     let scrollingCaptureItem = NSMenuItem(
       title: L10n.Actions.scrollingCapture,
       action: #selector(captureScrollingAction),
@@ -547,6 +559,11 @@ final class AppStatusBarController: ObservableObject {
   @objc private func captureFullscreenAction() {
     logMenuAction("captureFullscreen")
     viewModel?.captureFullscreen()
+  }
+
+  @objc private func captureActiveWindowAction() {
+    logMenuAction("captureActiveWindow")
+    viewModel?.captureActiveWindow()
   }
 
   @objc private func captureScrollingAction() {

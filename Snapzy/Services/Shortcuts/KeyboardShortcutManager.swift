@@ -61,6 +61,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Cmd + Shift + 9
+  static let defaultActiveWindowCapture = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_9),
+    modifiers: UInt32(cmdKey | shiftKey)
+  )
+
   /// Cmd + Shift + A
   static let defaultAnnotate = ShortcutConfig(
     keyCode: UInt32(kVK_ANSI_A),
@@ -396,6 +402,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case fullscreen
   case area
   case areaAnnotate
+  case activeWindow
   case scrollingCapture
   case recording
   case annotate
@@ -425,6 +432,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.captureArea
     case .areaAnnotate:
       return L10n.Actions.captureAreaAnnotate
+    case .activeWindow:
+      return L10n.Actions.captureActiveWindow
     case .scrollingCapture:
       return L10n.Actions.scrollingCapture
     case .recording:
@@ -453,6 +462,7 @@ enum ShortcutAction {
   case captureArea
   case captureAreaAnnotate
   case captureApplication
+  case captureActiveWindow
   case captureScrolling
   case captureOCR
   case captureObjectCutout
@@ -490,6 +500,7 @@ final class KeyboardShortcutManager {
   private(set) var ocrShortcut: ShortcutConfig
   private(set) var objectCutoutShortcut: ShortcutConfig
   private(set) var historyShortcut: ShortcutConfig
+  private(set) var activeWindowShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var clearedShortcuts: Set<GlobalShortcutKind> = []
@@ -509,6 +520,7 @@ final class KeyboardShortcutManager {
   private var ocrHotkeyRef: EventHotKeyRef?
   private var objectCutoutHotkeyRef: EventHotKeyRef?
   private var historyHotkeyRef: EventHotKeyRef?
+  private var activeWindowHotkeyRef: EventHotKeyRef?
 
   // Hotkey IDs
   private let fullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4631), id: 1)  // "ZSF1"
@@ -525,6 +537,7 @@ final class KeyboardShortcutManager {
   private let applicationCaptureHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4643), id: 12)  // "ZSFC"
   private let applicationRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4644), id: 13)  // "ZSFD"
   private let areaAnnotateHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4645), id: 14)  // "ZSFE"
+  private let activeWindowHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4646), id: 15)  // "ZSFF"
 
   private var eventHandler: EventHandlerRef?
 
@@ -541,6 +554,7 @@ final class KeyboardShortcutManager {
   private let ocrShortcutKey = "ocrShortcut"
   private let objectCutoutShortcutKey = "objectCutoutShortcut"
   private let historyShortcutKey = "historyShortcut"
+  private let activeWindowShortcutKey = "activeWindowShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
   private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
   private let clearedShortcutsKey = PreferencesKeys.clearedGlobalShortcuts
@@ -558,6 +572,7 @@ final class KeyboardShortcutManager {
     ocrShortcut = .defaultOCR
     objectCutoutShortcut = .defaultObjectCutout
     historyShortcut = .defaultHistory
+    activeWindowShortcut = .defaultActiveWindowCapture
     loadShortcuts()
     loadDisabledShortcuts()
     loadClearedShortcuts()
@@ -623,6 +638,7 @@ final class KeyboardShortcutManager {
     case .fullscreen: return fullscreenShortcut
     case .area: return areaShortcut
     case .areaAnnotate: return areaAnnotateShortcut
+    case .activeWindow: return activeWindowShortcut
     case .scrollingCapture: return scrollingCaptureShortcut
     case .recording: return recordingShortcut
     case .annotate: return annotateShortcut
@@ -678,6 +694,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .areaAnnotate) {
         areaAnnotateShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update active window capture shortcut
+  func setActiveWindowShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .activeWindow) {
+        activeWindowShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -833,6 +860,9 @@ final class KeyboardShortcutManager {
     if let objectCutoutData = try? encoder.encode(objectCutoutShortcut) {
       UserDefaults.standard.set(objectCutoutData, forKey: objectCutoutShortcutKey)
     }
+    if let activeWindowData = try? encoder.encode(activeWindowShortcut) {
+      UserDefaults.standard.set(activeWindowData, forKey: activeWindowShortcutKey)
+    }
     if let historyData = try? encoder.encode(historyShortcut) {
       UserDefaults.standard.set(historyData, forKey: historyShortcutKey)
     }
@@ -899,6 +929,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: historyData)
     {
       historyShortcut = config
+    }
+    if let activeWindowData = UserDefaults.standard.data(forKey: activeWindowShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: activeWindowData)
+    {
+      activeWindowShortcut = config
     }
   }
 
@@ -987,6 +1022,9 @@ final class KeyboardShortcutManager {
     case areaAnnotateHotkeyID.id:
       actionName = "area-annotate"
       action = .captureAreaAnnotate
+    case activeWindowHotkeyID.id:
+      actionName = "active-window"
+      action = .captureActiveWindow
     case applicationCaptureHotkeyID.id:
       actionName = "application-capture"
       action = .captureApplication
@@ -1054,6 +1092,12 @@ final class KeyboardShortcutManager {
       config: shortcut(for: .areaAnnotate),
       hotkeyID: areaAnnotateHotkeyID,
       ref: &areaAnnotateHotkeyRef
+    )
+    registerShortcutIfNeeded(
+      kind: .activeWindow,
+      config: shortcut(for: .activeWindow),
+      hotkeyID: activeWindowHotkeyID,
+      ref: &activeWindowHotkeyRef
     )
     registerShortcutIfNeeded(
       kind: .scrollingCapture,
@@ -1196,6 +1240,10 @@ final class KeyboardShortcutManager {
     if let ref = areaAnnotateHotkeyRef {
       UnregisterEventHotKey(ref)
       areaAnnotateHotkeyRef = nil
+    }
+    if let ref = activeWindowHotkeyRef {
+      UnregisterEventHotKey(ref)
+      activeWindowHotkeyRef = nil
     }
     if let ref = scrollingCaptureHotkeyRef {
       UnregisterEventHotKey(ref)

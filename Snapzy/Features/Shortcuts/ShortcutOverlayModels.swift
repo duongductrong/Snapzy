@@ -135,6 +135,7 @@ enum ShortcutOverlayContentBuilder {
         display: areaConfig.map { .keycaps($0.displayParts) } ?? .text(L10n.Common.none)
       ),
       globalItem(kind: .areaAnnotate, icon: "pencil.and.scribble", manager: manager),
+      globalItem(kind: .activeWindow, icon: "macwindow", manager: manager),
       globalItem(kind: .scrollingCapture, icon: "arrow.up.and.down", manager: manager),
     ]
 

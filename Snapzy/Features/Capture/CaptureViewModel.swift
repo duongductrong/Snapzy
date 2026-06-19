@@ -310,6 +310,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureAreaAnnotate()
     case .captureApplication:
       captureApplication()
+    case .captureActiveWindow:
+      captureActiveWindow()
     case .captureScrolling:
       captureScrolling()
     case .captureOCR:
@@ -413,6 +415,59 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       if !result.savedURLs.isEmpty {
         SoundManager.playScreenshotCapture()
         await postCaptureHandler.handleScreenshotCaptures(urls: result.savedURLs)
+      }
+    }
+  }
+
+  func captureActiveWindow() {
+    Task {
+      guard
+        let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+          promptMessage: L10n.Recording.chooseSaveLocationMessage)
+      else {
+        lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+        DiagnosticLogger.shared.log(.error, .capture, "Active window capture aborted: no save location")
+        return
+      }
+      saveDirectory = resolvedSaveDirectory
+
+      isCapturing = true
+      DiagnosticLogger.shared.log(.info, .capture, "Active window capture flow started", context: [
+        "format": resolvedFormat.fileExtension,
+      ])
+
+      let prefetchedContentTask = captureManager.prefetchShareableContent(includeDesktopWindows: false)
+      guard let target = await ActiveWindowResolver.resolveActiveWindowTarget(
+        prefetchedContentTask: prefetchedContentTask
+      ) else {
+        isCapturing = false
+        lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.failedToCropCapturedImage))
+        DiagnosticLogger.shared.log(.error, .capture, "Active window capture failed: no resolvable window")
+        return
+      }
+
+      let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+        for: .screenshot,
+        exportDirectory: resolvedSaveDirectory
+      )
+
+      let result = await captureManager.captureWindow(
+        target: target,
+        saveDirectory: actualSaveDirectory,
+        format: resolvedFormat,
+        showCursor: showsCursorInScreenshots,
+        excludeDesktopIcons: DesktopIconManager.shared.isIconHidingEnabled,
+        excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
+        excludeOwnApplication: false,
+        prefetchedContentTask: prefetchedContentTask
+      )
+
+      isCapturing = false
+      lastCaptureResult = result
+
+      if case .success(let url) = result {
+        SoundManager.playScreenshotCapture()
+        await postCaptureHandler.handleScreenshotCaptures(urls: [url])
       }
     }
   }

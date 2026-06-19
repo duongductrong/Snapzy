@@ -13,6 +13,7 @@ struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig?
   @State private var areaShortcut: ShortcutConfig?
   @State private var areaAnnotateShortcut: ShortcutConfig?
+  @State private var activeWindowShortcut: ShortcutConfig?
   @State private var areaApplicationCaptureShortcut: CaptureOverlayShortcut?
   @State private var recordingApplicationCaptureShortcut: CaptureOverlayShortcut?
   @State private var scrollingCaptureShortcut: ShortcutConfig?
@@ -49,6 +50,7 @@ struct ShortcutsSettingsView: View {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .fullscreen))
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .area))
     _areaAnnotateShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .areaAnnotate))
+    _activeWindowShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .activeWindow))
     _areaApplicationCaptureShortcut = State(
       initialValue: CaptureOverlayShortcutSettings.applicationCaptureShortcut
     )
@@ -315,6 +317,17 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
+            label: L10n.Actions.captureActiveWindow,
+            icon: "macwindow",
+            description: L10n.PreferencesShortcuts.captureActiveWindowDescription,
+            shortcut: $activeWindowShortcut,
+            defaultShortcut: .defaultActiveWindowCapture,
+            isEnabled: globalEnabledBinding(for: .activeWindow),
+            validationIssue: globalValidationIssues[.activeWindow],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .activeWindow) }
+          )
+
+          ShortcutRecorderView(
             label: GlobalShortcutKind.scrollingCapture.displayName,
             icon: "arrow.up.and.down",
             description: "Guided session for long screenshots",
@@ -558,6 +571,7 @@ struct ShortcutsSettingsView: View {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
     areaAnnotateShortcut = .defaultAreaAnnotate
+    activeWindowShortcut = .defaultActiveWindowCapture
     areaApplicationCaptureShortcut = CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut
     recordingApplicationCaptureShortcut =
       CaptureOverlayShortcutSettings.defaultRecordingApplicationCaptureShortcut
@@ -589,6 +603,7 @@ struct ShortcutsSettingsView: View {
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
     manager.setAreaAnnotateShortcut(.defaultAreaAnnotate)
+    manager.setActiveWindowShortcut(.defaultActiveWindowCapture)
     manager.setScrollingCaptureShortcut(.defaultScrollingCapture)
     manager.setObjectCutoutShortcut(.defaultObjectCutout)
     manager.setOCRShortcut(.defaultOCR)
@@ -721,6 +736,9 @@ struct ShortcutsSettingsView: View {
       case .areaAnnotate:
         areaAnnotateShortcut = config
         manager.setAreaAnnotateShortcut(config)
+      case .activeWindow:
+        activeWindowShortcut = config
+        manager.setActiveWindowShortcut(config)
       case .scrollingCapture:
         scrollingCaptureShortcut = config
         manager.setScrollingCaptureShortcut(config)

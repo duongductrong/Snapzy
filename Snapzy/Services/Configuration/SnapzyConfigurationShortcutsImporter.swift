@@ -273,6 +273,8 @@ private extension KeyboardShortcutManager {
       setAreaShortcut(config)
     case .areaAnnotate:
       setAreaAnnotateShortcut(config)
+    case .activeWindow:
+      setActiveWindowShortcut(config)
     case .scrollingCapture:
       setScrollingCaptureShortcut(config)
     case .recording:

@@ -521,6 +521,71 @@
         }
       }
     },
+    "preferences-shortcuts.capture-active-window-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfasst das fokussierte Fenster sofort, ohne Auswahlschritt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instantly captures the focused window, no selection step"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Captura al instante la ventana activa, sin paso de selección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture instantanément la fenêtre active, sans étape de sélection"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選択操作なしでフォーカスされたウィンドウを即座にキャプチャします"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 단계 없이 포커스된 창을 즉시 캡처합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Мгновенно захватывает активное окно без шага выбора"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chụp ngay cửa sổ đang được focus, không cần bước chọn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即捕获当前聚焦的窗口，无需选择步骤"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即擷取目前聚焦的視窗，無需選取步驟"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.capture-area-annotate-description": {
       "extractionState": "stale",
       "localizations": {

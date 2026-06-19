@@ -582,6 +582,11 @@ enum L10n {
       defaultValue: "Capture Fullscreen",
       comment: "Action title for fullscreen screenshot capture"
     )
+    static let captureActiveWindow = string(
+      "action.capture-active-window",
+      defaultValue: "Capture Active Window",
+      comment: "Action title for instant active-window screenshot capture"
+    )
     static let scrollingCapture = string(
       "action.scrolling-capture",
       defaultValue: "Scrolling Capture",
@@ -2861,6 +2866,11 @@ enum L10n {
       "preferences-shortcuts.capture-area-annotate-description",
       defaultValue: "Select a region, annotate in place, then finish with ⌘S or Enter",
       comment: "Description for inline area annotate capture shortcut"
+    )
+    static let captureActiveWindowDescription = string(
+      "preferences-shortcuts.capture-active-window-description",
+      defaultValue: "Instantly captures the focused window, no selection step",
+      comment: "Description for instant active-window capture shortcut"
     )
     static let applicationCaptureTitle = string(
       "preferences-shortcuts.application-capture-title",
