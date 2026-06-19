@@ -465,9 +465,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       isCapturing = false
       lastCaptureResult = result
 
-      if case .success(let url) = result {
+      if case .success = result {
         SoundManager.playScreenshotCapture()
-        await postCaptureHandler.handleScreenshotCaptures(urls: [url])
       }
     }
   }
