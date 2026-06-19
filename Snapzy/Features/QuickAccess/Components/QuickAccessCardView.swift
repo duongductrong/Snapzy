@@ -383,7 +383,10 @@ struct QuickAccessCardView: View {
   }
 
   private func openAnnotation() {
-    AnnotateManager.shared.openAnnotation(for: item)
+    Task { @MainActor in
+      await Task.yield()
+      AnnotateManager.shared.openAnnotation(for: item)
+    }
   }
 
   private func openVideoEditor() {

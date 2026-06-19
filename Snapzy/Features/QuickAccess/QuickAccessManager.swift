@@ -416,11 +416,50 @@ final class QuickAccessManager: ObservableObject {
       return
     }
 
-    // Auto-delete temp files on dismiss (unsaved captures)
-    // Skip deletion if history is enabled and the file has a history record —
-    // the retention service will clean it up when the record ages out.
-    if tempCaptureManager.isTempFile(item.url) {
-      let url = item.url
+    let url = item.url
+    let isTempFile = tempCaptureManager.isTempFile(url)
+
+    cancelDismissTimer(for: id)
+    pinWindowManager.close(id: id)
+    editingItemIds.remove(id)
+    activityHoldItemIds.remove(id)
+    // Clear annotation session cache for this item
+    AnnotateManager.shared.clearSessionData(for: id)
+    // Fast animation (0.15s) for immediate perceived response
+    withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
+      items.removeAll { $0.id == id }
+    }
+
+    if items.isEmpty {
+      panelController.hide()
+    }
+
+    scheduleDismissCleanup(for: url, isTempFile: isTempFile)
+  }
+
+  /// Remove a screenshot from the stack (backward compatible alias)
+  func removeScreenshot(id: UUID) {
+    removeItem(id: id)
+  }
+
+  private func scheduleDismissCleanup(for url: URL, isTempFile: Bool) {
+    guard isTempFile else {
+      DiagnosticLogger.shared.log(
+        .info,
+        .action,
+        "Quick access item dismissed; saved file retained",
+        context: ["fileName": url.lastPathComponent]
+      )
+      return
+    }
+
+    // Let SwiftUI commit the card removal before checking history or touching disk.
+    Task { @MainActor in
+      await Task.yield()
+
+      // Auto-delete temp files on dismiss (unsaved captures).
+      // Skip deletion if history is enabled and the file has a history record —
+      // the retention service will clean it up when the record ages out.
       let historyEnabled = UserDefaults.standard.bool(forKey: PreferencesKeys.historyEnabled)
       let hasHistoryRecord = historyEnabled && CaptureHistoryStore.shared.hasRecord(forFilePath: url.path)
 
@@ -439,38 +478,9 @@ final class QuickAccessManager: ObservableObject {
           context: ["fileName": url.lastPathComponent]
         )
         AnnotationSessionStore.shared.deleteSession(for: url)
-        Task { @MainActor in
-          tempCaptureManager.deleteTempFile(at: url)
-        }
+        tempCaptureManager.deleteTempFile(at: url)
       }
-    } else {
-      DiagnosticLogger.shared.log(
-        .info,
-        .action,
-        "Quick access item dismissed; saved file retained",
-        context: ["fileName": item.url.lastPathComponent]
-      )
     }
-
-    cancelDismissTimer(for: id)
-    pinWindowManager.close(id: id)
-    editingItemIds.remove(id)
-    activityHoldItemIds.remove(id)
-    // Clear annotation session cache for this item
-    AnnotateManager.shared.clearSessionData(for: id)
-    // Fast animation (0.15s) for immediate perceived response
-    withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
-      items.removeAll { $0.id == id }
-    }
-
-    if items.isEmpty {
-      panelController.hide()
-    }
-  }
-
-  /// Remove a screenshot from the stack (backward compatible alias)
-  func removeScreenshot(id: UUID) {
-    removeItem(id: id)
   }
 
   /// Remove card from UI only — does NOT delete the underlying file.
