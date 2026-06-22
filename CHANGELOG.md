@@ -76,6 +76,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.24.0] - 2026-06-22
+
+### Features
+-  Introduce feature onboarding with "What's New" campaigns and localization support (a68f13e)
+-  Enhance Quick Access integration with video editor window management (61eb236)
+-  Smart element capture (#260) (dbc0dc5)
+-  Add quick access settings for hiding cards when windows are open and animation style selection (#224) (a45b2ce)
+
+### Bug Fixes
+-  Update app sandbox entitlement check in release publish workflow (b5f4b16)
+
+### Chore
+- chore: bump version to v1.24.0 (#265) (cc27a3c)
+- chore: add missing localization strings and fix empty values (353585e)
+- chore: update appcast, cask, and readme for v1.23.0 (3a1237b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.23.0] - 2026-06-20
 
 ### Features
