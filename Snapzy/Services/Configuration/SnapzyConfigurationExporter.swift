@@ -34,7 +34,7 @@ enum SnapzyConfigurationExporter {
     writer.value("appearance", appearance(defaults: defaults))
     writer.value("play_sounds", defaults.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true)
     writer.value("start_at_login", LoginItemManager.isEnabled)
-    writer.value("export_location", SandboxFileAccessManager.shared.exportLocationPath)
+    writer.value("export_location", SnapzyConfigurationPaths.collapsingHomePath(SandboxFileAccessManager.shared.exportLocationPath))
 
     writer.section("updates")
     let updater = UpdaterManager.shared.updater

@@ -27,6 +27,23 @@ final class SnapzyConfigurationPathsTests: XCTestCase {
     XCTAssertEqual(url.path, "/Users/example/.config/snapzy")
   }
 
+  func testCollapsingHomePathConvertsAbsolutePathToTilde() {
+    let home = URL(fileURLWithPath: "/Users/example", isDirectory: true)
+
+    XCTAssertEqual(
+      SnapzyConfigurationPaths.collapsingHomePath("/Users/example/Desktop", homeDirectory: home),
+      "~/Desktop"
+    )
+    XCTAssertEqual(
+      SnapzyConfigurationPaths.collapsingHomePath("/Users/example", homeDirectory: home),
+      "~"
+    )
+    XCTAssertEqual(
+      SnapzyConfigurationPaths.collapsingHomePath("/tmp/snapzy", homeDirectory: home),
+      "/tmp/snapzy"
+    )
+  }
+
   func testExpandedUserPathUsesProvidedHomeDirectory() {
     let home = URL(fileURLWithPath: "/Users/example", isDirectory: true)
 

@@ -44,6 +44,21 @@ nonisolated enum SnapzyConfigurationPaths {
       .appendingPathComponent("snapzy", isDirectory: true)
   }
 
+  static func collapsingHomePath(_ path: String) -> String {
+    collapsingHomePath(path, homeDirectory: userHomeDirectory)
+  }
+
+  static func collapsingHomePath(_ path: String, homeDirectory: URL) -> String {
+    let home = homeDirectory.path
+    if path == home {
+      return "~"
+    }
+    if path.hasPrefix(home + "/") {
+      return "~/" + String(path.dropFirst(home.count + 1))
+    }
+    return path
+  }
+
   static func expandedUserPath(_ path: String, homeDirectory: URL) -> String {
     guard path.hasPrefix("~/") else { return path }
     return homeDirectory
