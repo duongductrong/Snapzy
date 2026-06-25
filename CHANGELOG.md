@@ -77,6 +77,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.25.0] - 2026-06-25
+
+### Features
+-  Implement dry-run release script for local signing and verification (4140af8)
+-  Welcome Apple Notarization updates (b51ebb5)
+-  add optional global shortcuts for active recording toolbar features (4eb5528)
+
+### Bug Fixes
+- : prevent launch blocking on macOS 27 sandbox migration error (#277) (195d775)
+-  normalize export_location to tilde-relative path on export (#278) (24b34f6)
+
+### Chore
+- chore: Add localization for pause/resume recording shortcuts and update related tests (#273) (fda0eae)
+- chore: update appcast, cask, and readme for v1.24.0 (1be5ec1)
+- chore: bump version to v1.24.0 (#269) (6a55d58)
+- ci: Enhance release notes handling by saving to a file and updating appcast.xml with new variables (51bbe43)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @st1020
+
 ## [1.24.0] - 2026-06-22
 
 ### Features
