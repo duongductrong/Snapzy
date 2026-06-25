@@ -1546,17 +1546,24 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     // Set flag BEFORE delay to close the race window
     isAreaSelectionActive = true
     DiagnosticLogger.shared.log(.info, .ocr, "OCR capture flow started")
+    let targetDisplayID = ScreenUtility.activeDisplayID()
+    // OCR has never honored the "show cursor" preference; keep that behavior
+    // when reusing the frozen snapshot pipeline.
+    let showCursor = false
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
     let prefetchedContentTask = captureManager.prefetchShareableContent(
       includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
     )
 
     // Hide only normal-level app windows (not overlay panels)
-    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
 
-    // Minimal delay to ensure window is hidden when we actually hid one.
-    DispatchQueue.main.asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
+    // Give WindowServer enough time to fully remove hidden app windows before
+    // the frozen backdrop is prepared.
+    let snapshotDelay = hiddenWindowSession.didHideWindows ? frozenSnapshotWindowHideSettleDelay : 0
+    DispatchQueue.main.asyncAfter(deadline: .now() + snapshotDelay) { [weak self] in
       guard let self = self else {
         DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR: self deallocated")
         hiddenWindowSession.restore()
@@ -1564,43 +1571,195 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         return
       }
 
-
-
-      AreaSelectionController.shared.startSelection { [weak self] rect in
-        guard let self = self else {
-          DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR completion: self deallocated")
-          hiddenWindowSession.restore()
-          return
-        }
-
-        guard let selectedRect = rect else {
-          self.isAreaSelectionActive = false
-          hiddenWindowSession.restore()
-          DiagnosticLogger.shared.log(.info, .ocr, "OCR capture cancelled")
-          return
-        }
-
-        DiagnosticLogger.shared.log(.info, .ocr, "OCR area selected", context: ["rect": "\(Int(selectedRect.width))x\(Int(selectedRect.height))"])
-        Task { @MainActor in
-          defer {
-            self.isAreaSelectionActive = false
-            hiddenWindowSession.restore()
-          }
-          await Task.yield()
-
-          do {
-            let operationStartTime = CFAbsoluteTimeGetCurrent()
-
-            // Show menubar spinner for processing feedback
-            AppStatusBarController.shared.setProcessing(true)
-
-            // Capture the screen region
-            let captureStartTime = CFAbsoluteTimeGetCurrent()
-            guard let image = try await self.captureManager.captureAreaAsImage(
-              rect: selectedRect,
+      Task { @MainActor in
+        let frozenSession: FrozenAreaCaptureSession
+        do {
+          self.isCapturing = true
+          let snapshotStartedAt = Date()
+          let captureMode: String
+          if let fastSnapshot = self.captureManager.captureFastDisplaySnapshot(
+            displayID: targetDisplayID,
+            showCursor: showCursor,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets,
+            excludeOwnApplication: excludeOwnApplication
+          ) {
+            frozenSession = FrozenAreaCaptureSession.fromSnapshot(fastSnapshot)
+            captureMode = "coregraphics"
+          } else {
+            let shareableContentTask = prefetchedContentTask ?? self.captureManager.prefetchShareableContent(
+              includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
+            )
+            frozenSession = try await FrozenAreaCaptureSession.prepare(
+              displayIDs: [targetDisplayID],
+              showCursor: showCursor,
               excludeDesktopIcons: excludeDesktopIcons,
               excludeDesktopWidgets: excludeDesktopWidgets,
-              excludeOwnApplication: !self.includesOwnAppInScreenshots,
+              excludeOwnApplication: excludeOwnApplication,
+              prefetchedContentTask: shareableContentTask
+            )
+            captureMode = "screencapturekit"
+          }
+          let snapshotDurationMs = Int(Date().timeIntervalSince(snapshotStartedAt) * 1000)
+          DiagnosticLogger.shared.log(
+            .info,
+            .ocr,
+            "OCR frozen area snapshot prepared",
+            context: [
+              "displayID": "\(targetDisplayID)",
+              "duration_ms": "\(snapshotDurationMs)",
+              "mode": captureMode,
+            ]
+          )
+          self.isCapturing = false
+        } catch let error as CaptureError {
+          self.isCapturing = false
+          self.isAreaSelectionActive = false
+          hiddenWindowSession.restore()
+          DiagnosticLogger.shared.log(.error, .ocr, "OCR frozen area capture setup failed: \(error.localizedDescription)")
+          AppToastManager.shared.show(
+            message: error.localizedDescription,
+            style: .error,
+            position: .bottomCenter
+          )
+          QuickAccessSound.failed.play()
+          return
+        } catch {
+          self.isCapturing = false
+          self.isAreaSelectionActive = false
+          hiddenWindowSession.restore()
+          DiagnosticLogger.shared.log(.error, .ocr, "OCR frozen area capture setup failed: \(error.localizedDescription)")
+          AppToastManager.shared.show(
+            message: error.localizedDescription,
+            style: .error,
+            position: .bottomCenter
+          )
+          QuickAccessSound.failed.play()
+          return
+        }
+
+        self.startFrozenOCRAreaSelection(
+          with: frozenSession,
+          prefetchedContentTask: prefetchedContentTask,
+          showCursor: showCursor,
+          excludeDesktopIcons: excludeDesktopIcons,
+          excludeDesktopWidgets: excludeDesktopWidgets,
+          excludeOwnApplication: excludeOwnApplication,
+          hiddenWindowSession: hiddenWindowSession
+        )
+      }
+    }
+  }
+
+  private func startFrozenOCRAreaSelection(
+    with frozenSession: FrozenAreaCaptureSession,
+    prefetchedContentTask: ShareableContentPrefetchTask?,
+    showCursor: Bool,
+    excludeDesktopIcons: Bool,
+    excludeDesktopWidgets: Bool,
+    excludeOwnApplication: Bool,
+    hiddenWindowSession: HiddenWindowSession
+  ) {
+    cancelLazyAreaSnapshotTasks()
+    let sessionID = UUID()
+    activeAreaSelectionSessionID = sessionID
+
+    AreaSelectionController.shared.startSelection(
+      mode: .screenshot,
+      backdrops: frozenSession.backdrops,
+      applicationConfiguration: nil,
+      onDisplayActivationRequested: { [weak self] displayID in
+        self?.prepareLazyFrozenDisplay(
+          displayID,
+          sessionID: sessionID,
+          frozenSession: frozenSession,
+          prefetchedContentTask: prefetchedContentTask,
+          showCursor: showCursor,
+          excludeDesktopIcons: excludeDesktopIcons,
+          excludeDesktopWidgets: excludeDesktopWidgets,
+          excludeOwnApplication: excludeOwnApplication
+        )
+      }
+    ) { [weak self] selection in
+      guard let self = self else {
+        DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR completion: self deallocated")
+        frozenSession.invalidate()
+        hiddenWindowSession.restore()
+        return
+      }
+      guard let selection else {
+        self.cancelLazyAreaSnapshotTasks()
+        frozenSession.invalidate()
+        hiddenWindowSession.restore()
+        self.isAreaSelectionActive = false
+        DiagnosticLogger.shared.log(.info, .ocr, "OCR capture cancelled")
+        return
+      }
+
+      self.cancelLazyAreaSnapshotTasks(clearFailures: false)
+
+      guard case .rect = selection.target else {
+        self.lazyAreaSnapshotFailedDisplayIDs.removeAll()
+        frozenSession.invalidate()
+        hiddenWindowSession.restore()
+        self.isAreaSelectionActive = false
+        DiagnosticLogger.shared.log(.error, .ocr, "OCR selection produced unsupported window target")
+        return
+      }
+
+      DiagnosticLogger.shared.log(
+        .info,
+        .ocr,
+        "OCR area selected from frozen snapshot",
+        context: ["rect": "\(Int(selection.rect.width))x\(Int(selection.rect.height))"]
+      )
+
+      Task { @MainActor in
+        defer {
+          self.lazyAreaSnapshotFailedDisplayIDs.removeAll()
+          frozenSession.invalidate()
+          hiddenWindowSession.restore()
+          self.isAreaSelectionActive = false
+        }
+
+        let operationStartTime = CFAbsoluteTimeGetCurrent()
+
+        // Show menubar spinner for processing feedback
+        AppStatusBarController.shared.setProcessing(true)
+        await Task.yield()
+
+        do {
+          let captureStartTime = CFAbsoluteTimeGetCurrent()
+          let image: CGImage
+
+          if selection.spansMultipleDisplays || frozenSession.containsSnapshot(for: selection.displayID) {
+            if selection.spansMultipleDisplays {
+              try await self.ensureFrozenSnapshots(
+                for: selection.displayIDs,
+                frozenSession: frozenSession,
+                prefetchedContentTask: prefetchedContentTask,
+                showCursor: showCursor,
+                excludeDesktopIcons: excludeDesktopIcons,
+                excludeDesktopWidgets: excludeDesktopWidgets,
+                excludeOwnApplication: excludeOwnApplication
+              )
+            }
+            let cropResult = selection.spansMultipleDisplays
+              ? try frozenSession.cropCompositeImage(for: selection)
+              : try frozenSession.cropImage(for: selection)
+            image = cropResult.image
+          } else if self.lazyAreaSnapshotFailedDisplayIDs.contains(selection.displayID) {
+            DiagnosticLogger.shared.log(
+              .info,
+              .ocr,
+              "Using live OCR capture fallback after lazy snapshot failure",
+              context: ["displayID": "\(selection.displayID)"]
+            )
+            guard let fallbackImage = try await self.captureManager.captureAreaAsImage(
+              rect: selection.rect,
+              excludeDesktopIcons: excludeDesktopIcons,
+              excludeDesktopWidgets: excludeDesktopWidgets,
+              excludeOwnApplication: excludeOwnApplication,
               prefetchedContentTask: prefetchedContentTask
             ) else {
               AppStatusBarController.shared.setProcessing(false)
@@ -1612,82 +1771,109 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               QuickAccessSound.failed.play()
               return
             }
-            let captureDurationMs = Self.elapsedMilliseconds(since: captureStartTime)
-
-            let processingStartTime = CFAbsoluteTimeGetCurrent()
-            async let qrResultTask = self.detectQRCodes(in: image)
-            async let recognizedTextTask = self.recognizeOCRText(in: image)
-            let (qrResult, recognizedText) = await (qrResultTask, recognizedTextTask)
-            let processingDurationMs = Self.elapsedMilliseconds(since: processingStartTime)
-            let totalDurationMs = Self.elapsedMilliseconds(since: operationStartTime)
-
-            let clipboardText = OCRQRPayloadComposer.compose(
-              recognizedText: recognizedText,
-              qrDetections: qrResult.detections,
-              qrSectionTitle: L10n.OCR.qrCodesLabel
-            )
-            let performanceContext = [
-              "captureMs": captureDurationMs,
-              "processingMs": processingDurationMs,
-              "totalMs": totalDurationMs
-            ]
-
+            image = fallbackImage
+          } else {
             AppStatusBarController.shared.setProcessing(false)
-
-            guard let clipboardText else {
-              if qrResult.unsupportedPayloadCount > 0 {
-                var context = performanceContext
-                context["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
-                DiagnosticLogger.shared.log(.warning, .ocr, "OCR QR capture found unsupported QR payloads", context: context)
-                AppToastManager.shared.show(
-                  message: L10n.OCR.qrTextOnlyUnsupported,
-                  style: .warning,
-                  position: .bottomCenter
-                )
-              } else {
-                DiagnosticLogger.shared.log(.warning, .ocr, "OCR capture failed: no text or QR payload found", context: performanceContext)
-                AppToastManager.shared.show(
-                  message: L10n.OCR.noTextFound,
-                  style: .warning,
-                  position: .bottomCenter
-                )
-              }
-              QuickAccessSound.failed.play()
-              return
-            }
-
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.setString(clipboardText, forType: .string)
-
-            var successContext = performanceContext
-            successContext["chars"] = "\(clipboardText.count)"
-            successContext["qrCount"] = "\(qrResult.detections.count)"
-            successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
-            DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
-            let showOCRNotification = UserDefaults.standard.object(forKey: PreferencesKeys.ocrSuccessNotificationEnabled) as? Bool ?? false
-            if showOCRNotification {
-              AppToastManager.shared.show(
-                message: L10n.Common.copiedToClipboard,
-                style: .success,
-                position: .bottomCenter
-              )
-              QuickAccessSound.complete.play()
-            }
-
-          } catch {
-            // Error feedback
-            AppStatusBarController.shared.setProcessing(false)
-            DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
             AppToastManager.shared.show(
-              message: error.localizedDescription,
+              message: L10n.ScreenCapture.selectionOutsideDisplayBounds,
               style: .error,
               position: .bottomCenter
             )
             QuickAccessSound.failed.play()
+            DiagnosticLogger.shared.log(
+              .error,
+              .ocr,
+              "OCR area selection completed without a frozen snapshot",
+              context: ["displayID": "\(selection.displayID)"]
+            )
+            return
           }
+
+          let captureDurationMs = Self.elapsedMilliseconds(since: captureStartTime)
+          await self.processOCRCapturedImage(
+            image,
+            operationStartTime: operationStartTime,
+            captureDurationMs: captureDurationMs
+          )
+        } catch {
+          // Error feedback
+          AppStatusBarController.shared.setProcessing(false)
+          DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
+          AppToastManager.shared.show(
+            message: error.localizedDescription,
+            style: .error,
+            position: .bottomCenter
+          )
+          QuickAccessSound.failed.play()
         }
       }
+    }
+  }
+
+  private func processOCRCapturedImage(
+    _ image: CGImage,
+    operationStartTime: CFAbsoluteTime,
+    captureDurationMs: String
+  ) async {
+    let processingStartTime = CFAbsoluteTimeGetCurrent()
+    async let qrResultTask = detectQRCodes(in: image)
+    async let recognizedTextTask = recognizeOCRText(in: image)
+    let (qrResult, recognizedText) = await (qrResultTask, recognizedTextTask)
+    let processingDurationMs = Self.elapsedMilliseconds(since: processingStartTime)
+    let totalDurationMs = Self.elapsedMilliseconds(since: operationStartTime)
+
+    let clipboardText = OCRQRPayloadComposer.compose(
+      recognizedText: recognizedText,
+      qrDetections: qrResult.detections,
+      qrSectionTitle: L10n.OCR.qrCodesLabel
+    )
+    let performanceContext = [
+      "captureMs": captureDurationMs,
+      "processingMs": processingDurationMs,
+      "totalMs": totalDurationMs
+    ]
+
+    AppStatusBarController.shared.setProcessing(false)
+
+    guard let clipboardText else {
+      if qrResult.unsupportedPayloadCount > 0 {
+        var context = performanceContext
+        context["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
+        DiagnosticLogger.shared.log(.warning, .ocr, "OCR QR capture found unsupported QR payloads", context: context)
+        AppToastManager.shared.show(
+          message: L10n.OCR.qrTextOnlyUnsupported,
+          style: .warning,
+          position: .bottomCenter
+        )
+      } else {
+        DiagnosticLogger.shared.log(.warning, .ocr, "OCR capture failed: no text or QR payload found", context: performanceContext)
+        AppToastManager.shared.show(
+          message: L10n.OCR.noTextFound,
+          style: .warning,
+          position: .bottomCenter
+        )
+      }
+      QuickAccessSound.failed.play()
+      return
+    }
+
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString(clipboardText, forType: .string)
+
+    var successContext = performanceContext
+    successContext["chars"] = "\(clipboardText.count)"
+    successContext["qrCount"] = "\(qrResult.detections.count)"
+    successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
+    DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
+    let showOCRNotification = UserDefaults.standard.object(forKey: PreferencesKeys.ocrSuccessNotificationEnabled) as? Bool ?? false
+    if showOCRNotification {
+      AppToastManager.shared.show(
+        message: L10n.Common.copiedToClipboard,
+        style: .success,
+        position: .bottomCenter
+      )
+      QuickAccessSound.complete.play()
     }
   }
 
