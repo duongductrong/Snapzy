@@ -88,6 +88,10 @@ final class AreaSelectionController: NSObject {
   /// app activates, so the local monitor never sees them and the selection silently resets.
   /// A global monitor still receives those events, ensuring the first gesture commits.
   private var manualSelectionGlobalMonitor: Any?
+  private var manualSelectionKeyLocalMonitor: Any?
+  private var manualSelectionKeyGlobalMonitor: Any?
+  private var isMovingManualSelection = false
+  private var manualSelectionLastPointerLocation: CGPoint?
   private var previouslyActiveApplication: NSRunningApplication?
 
   /// Whether the overlay should be dismissed immediately after a selection is made.
@@ -702,6 +706,8 @@ final class AreaSelectionController: NSObject {
     manualSelectionCurrentPoint = screenPoint
     manualSelectionSourceWindow = window
     activeWindow = window
+    isMovingManualSelection = false
+    manualSelectionLastPointerLocation = screenPoint
     installManualSelectionMonitorIfNeeded()
     requestDisplayActivationForManualSelection()
     renderManualSelectionIfNeeded()
@@ -709,10 +715,41 @@ final class AreaSelectionController: NSObject {
 
   private func updateManualSelection(to screenPoint: CGPoint) {
     guard manualSelectionStartPoint != nil else { return }
-    guard screenPoint != manualSelectionCurrentPoint else { return }
-    manualSelectionCurrentPoint = screenPoint
+    defer { manualSelectionLastPointerLocation = screenPoint }
+
+    if isMovingManualSelection {
+      guard let last = manualSelectionLastPointerLocation else { return }
+      let dx = screenPoint.x - last.x
+      let dy = screenPoint.y - last.y
+      guard dx != 0 || dy != 0 else { return }
+      manualSelectionStartPoint?.x += dx
+      manualSelectionStartPoint?.y += dy
+      manualSelectionCurrentPoint?.x += dx
+      manualSelectionCurrentPoint?.y += dy
+    } else {
+      guard screenPoint != manualSelectionCurrentPoint else { return }
+      manualSelectionCurrentPoint = screenPoint
+    }
+
     requestDisplayActivationForManualSelection()
     renderManualSelectionIfNeeded()
+  }
+
+  private func handleManualSelectionSpaceEvent(_ event: NSEvent) -> Bool {
+    guard event.keyCode == 49 else { return false }
+    guard manualSelectionStartPoint != nil else { return false }
+    switch event.type {
+    case .keyDown:
+      if !isMovingManualSelection {
+        manualSelectionLastPointerLocation = NSEvent.mouseLocation
+        isMovingManualSelection = true
+      }
+    case .keyUp:
+      isMovingManualSelection = false
+    default:
+      return false
+    }
+    return true
   }
 
   private func endManualSelection(at screenPoint: CGPoint) {
@@ -776,6 +813,27 @@ final class AreaSelectionController: NSObject {
       }
     }
 
+    if manualSelectionKeyLocalMonitor == nil {
+      manualSelectionKeyLocalMonitor = NSEvent.addLocalMonitorForEvents(
+        matching: [.keyDown, .keyUp]
+      ) { [weak self] event in
+        var handled = false
+        MainActor.assumeIsolated {
+          handled = self?.handleManualSelectionSpaceEvent(event) ?? false
+        }
+        return handled ? nil : event
+      }
+    }
+    if manualSelectionKeyGlobalMonitor == nil {
+      manualSelectionKeyGlobalMonitor = NSEvent.addGlobalMonitorForEvents(
+        matching: [.keyDown, .keyUp]
+      ) { [weak self] event in
+        MainActor.assumeIsolated {
+          _ = self?.handleManualSelectionSpaceEvent(event)
+        }
+      }
+    }
+
     // Global monitor receives drag/up even while Snapzy is inactive (the first ⌘⇧4 gesture on a
     // nonactivating overlay). The handlers are idempotent — `updateManualSelection` just records
     // the current point and `endManualSelection` early-returns once the selection is torn down —
@@ -807,6 +865,16 @@ final class AreaSelectionController: NSObject {
       NSEvent.removeMonitor(monitor)
       manualSelectionGlobalMonitor = nil
     }
+    if let monitor = manualSelectionKeyLocalMonitor {
+      NSEvent.removeMonitor(monitor)
+      manualSelectionKeyLocalMonitor = nil
+    }
+    if let monitor = manualSelectionKeyGlobalMonitor {
+      NSEvent.removeMonitor(monitor)
+      manualSelectionKeyGlobalMonitor = nil
+    }
+    isMovingManualSelection = false
+    manualSelectionLastPointerLocation = nil
   }
 
   private func clearManualSelectionTracking(render: Bool) {
