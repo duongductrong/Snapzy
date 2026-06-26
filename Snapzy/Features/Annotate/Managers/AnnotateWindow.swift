@@ -33,6 +33,9 @@ extension Notification.Name {
 /// Custom NSWindow for annotation editing with dark mode appearance
 class AnnotateWindow: NSWindow {
   weak var interactionState: AnnotateState?
+  /// Invoked when Esc is pressed while not editing text or cropping. Returns true if it handled the
+  /// key (e.g. discarded the capture and closed the window), in which case the event is consumed.
+  var onEscape: (() -> Bool)?
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private var restingLevel: NSWindow.Level = .normal
 
@@ -276,9 +279,12 @@ class AnnotateWindow: NSWindow {
   override func sendEvent(_ event: NSEvent) {
     switch event.type {
     case .keyDown where event.keyCode == 53:
-      guard !isTextInputActive, interactionState?.isCropInteractionActive == true else { break }
-      interactionState?.cancelCrop()
-      return
+      if isTextInputActive { break }
+      if interactionState?.isCropInteractionActive == true {
+        interactionState?.cancelCrop()
+        return
+      }
+      if onEscape?() == true { return }
 
     case .keyDown where event.keyCode == 36 || event.keyCode == 76:
       guard !isTextInputActive, interactionState?.isCropInteractionActive == true else { break }

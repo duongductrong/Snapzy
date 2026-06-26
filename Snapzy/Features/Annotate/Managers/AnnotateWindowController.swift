@@ -218,6 +218,25 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     let capturedState = self.state
     let mainView = AnnotateMainView(state: capturedState)
     window?.contentView = NSHostingView(rootView: mainView)
+    (window as? AnnotateWindow)?.onEscape = { [weak self] in
+      self?.discardCaptureAndClose() ?? false
+    }
+  }
+
+  /// Esc with no active text/crop edit discards the capture: delete the backing image and close.
+  /// Only applies to windows opened for a Quick Access item; URL/empty editors keep the default
+  /// (non-destructive) behavior.
+  private func discardCaptureAndClose() -> Bool {
+    guard let quickAccessItemId else { return false }
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Annotate window discarded capture via Esc",
+      context: ["itemId": quickAccessItemId.uuidString]
+    )
+    QuickAccessManager.shared.deleteItem(id: quickAccessItemId)
+    window?.close()
+    return true
   }
 
 
