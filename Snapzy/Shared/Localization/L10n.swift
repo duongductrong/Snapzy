@@ -3019,6 +3019,26 @@ enum L10n {
       defaultValue: "Open keyboard shortcuts overlay",
       comment: "Description for shortcut list shortcut"
     )
+    static let quickAccessSection = string(
+      "preferences-shortcuts.quick-access-section",
+      defaultValue: "Quick Access",
+      comment: "Shortcuts preferences section title for Quick Access preview actions"
+    )
+    static let quickAccessSectionDescription = string(
+      "preferences-shortcuts.quick-access-section-description",
+      defaultValue: "Shortcuts active while a Quick Access preview is on screen.",
+      comment: "Description for the Quick Access shortcuts section"
+    )
+    static let editLatestCapture = string(
+      "preferences-shortcuts.edit-latest-capture",
+      defaultValue: "Edit latest capture",
+      comment: "Label for the shortcut that opens the editor for the most recent capture"
+    )
+    static let editLatestCaptureDescription = string(
+      "preferences-shortcuts.edit-latest-capture-description",
+      defaultValue: "Open the editor for the most recent capture while its preview is showing",
+      comment: "Description for the edit latest capture shortcut"
+    )
     static let recorderHint = string(
       "preferences-shortcuts.recorder-hint",
       defaultValue: "Click a shortcut button to record new keys. Use Backspace/Delete while recording to clear keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.",

@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Combine
 import Foundation
 import os.log
@@ -105,6 +106,15 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.set(pauseCountdownOnHover, forKey: Keys.pauseCountdownOnHover)
     }
   }
+  /// Configurable shortcut that opens the editor for the newest capture while its preview is shown.
+  @Published private(set) var openEditorShortcut: ShortcutConfig?
+
+  /// Default: ⌘↩
+  static let defaultOpenEditorShortcut = ShortcutConfig(
+    keyCode: UInt32(kVK_Return),
+    modifiers: UInt32(cmdKey)
+  )
+
   // MARK: - Configuration
 
   let maxVisibleItems = 5
@@ -120,6 +130,8 @@ final class QuickAccessManager: ObservableObject {
   private var editingItemIds: Set<UUID> = []
   /// Tracks items doing async work, such as GIF conversion or cloud upload.
   private var activityHoldItemIds: Set<UUID> = []
+  private var editShortcutLocalMonitor: Any?
+  private var editShortcutGlobalMonitor: Any?
 
   // MARK: - UserDefaults Keys (preserved for backward compatibility)
 
@@ -135,7 +147,11 @@ final class QuickAccessManager: ObservableObject {
     static let twoFingerSwipeToDismissEnabled = "floatingScreenshot.twoFingerSwipeToDismissEnabled"
     static let swipeSensitivity = "floatingScreenshot.swipeSensitivity"
     static let pauseCountdownOnHover = "floatingScreenshot.pauseCountdownOnHover"
+    static let openEditorShortcut = "quickAccess.openEditorShortcut"
   }
+
+  /// Marker persisted when the user explicitly clears the shortcut, distinguishing it from "never set".
+  private let explicitEmptyShortcutData = Data("null".utf8)
 
   // MARK: - Init
 
@@ -175,6 +191,7 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.swipeSensitivity) as? Double ?? 1.0
     pauseCountdownOnHover =
       UserDefaults.standard.object(forKey: Keys.pauseCountdownOnHover) as? Bool ?? true
+    loadOpenEditorShortcut()
     DiagnosticLogger.shared.log(
       .debug,
       .ui,
@@ -467,7 +484,7 @@ final class QuickAccessManager: ObservableObject {
     }
 
     if items.isEmpty {
-      panelController.hide()
+      hidePanel()
     }
 
     scheduleDismissCleanup(for: url, isTempFile: isTempFile)
@@ -539,7 +556,7 @@ final class QuickAccessManager: ObservableObject {
       items.removeAll { $0.id == id }
     }
     if items.isEmpty {
-      panelController.hide()
+      hidePanel()
     }
   }
 
@@ -855,7 +872,7 @@ final class QuickAccessManager: ObservableObject {
     items.removeAll()
     editingItemIds.removeAll()
     activityHoldItemIds.removeAll()
-    panelController.hide()
+    hidePanel()
     DiagnosticLogger.shared.log(
       .info,
       .action,
@@ -1044,7 +1061,7 @@ final class QuickAccessManager: ObservableObject {
       items.removeAll { $0.id == id }
     }
     if items.isEmpty {
-      panelController.hide()
+      hidePanel()
     }
 
     // Move file from temp to export location
@@ -1111,6 +1128,7 @@ final class QuickAccessManager: ObservableObject {
       itemCount: visiblePanelItemCount,
       scale: CGFloat(overlayScale)
     )
+    installEditShortcutMonitorIfNeeded()
     DiagnosticLogger.shared.log(
       .debug,
       .ui,
@@ -1122,6 +1140,91 @@ final class QuickAccessManager: ObservableObject {
   private func showPanelIfNeeded() {
     guard !panelController.isVisible else { return }
     showPanel()
+  }
+
+  private func hidePanel() {
+    removeEditShortcutMonitor()
+    panelController.hide()
+  }
+
+  /// Opens the editor for the most recently captured item while its preview is on screen, letting
+  /// the editor be reached from the keyboard without moving the mouse.
+  @discardableResult
+  func openEditorForNewestItem() -> Bool {
+    guard isEnabled, panelController.isVisible, let item = items.first else { return false }
+    if item.isVideo {
+      VideoEditorManager.shared.openEditor(for: item)
+    } else {
+      AnnotateManager.shared.openAnnotation(for: item)
+    }
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Quick access editor opened via keyboard shortcut",
+      context: ["itemId": item.id.uuidString, "isVideo": item.isVideo ? "true" : "false"]
+    )
+    return true
+  }
+
+  /// Watches for the configured shortcut only while the preview is on screen, so the combo is never
+  /// captured the rest of the time. A global monitor is required because the non-activating preview
+  /// panel can't become key — right after a capture another app still holds focus. The local monitor
+  /// consumes the matched event to avoid a system beep when Snapzy itself is frontmost.
+  private func installEditShortcutMonitorIfNeeded() {
+    if editShortcutLocalMonitor == nil {
+      editShortcutLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        let handled = MainActor.assumeIsolated { self?.handleEditShortcut(event) ?? false }
+        return handled ? nil : event
+      }
+    }
+    if editShortcutGlobalMonitor == nil {
+      editShortcutGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+        MainActor.assumeIsolated { _ = self?.handleEditShortcut(event) }
+      }
+    }
+  }
+
+  private func removeEditShortcutMonitor() {
+    if let editShortcutLocalMonitor {
+      NSEvent.removeMonitor(editShortcutLocalMonitor)
+      self.editShortcutLocalMonitor = nil
+    }
+    if let editShortcutGlobalMonitor {
+      NSEvent.removeMonitor(editShortcutGlobalMonitor)
+      self.editShortcutGlobalMonitor = nil
+    }
+  }
+
+  private func handleEditShortcut(_ event: NSEvent) -> Bool {
+    guard matchesOpenEditorShortcut(event) else { return false }
+    return openEditorForNewestItem()
+  }
+
+  func setOpenEditorShortcut(_ config: ShortcutConfig?) {
+    openEditorShortcut = config
+    if let config, let data = try? JSONEncoder().encode(config) {
+      UserDefaults.standard.set(data, forKey: Keys.openEditorShortcut)
+    } else {
+      UserDefaults.standard.set(explicitEmptyShortcutData, forKey: Keys.openEditorShortcut)
+    }
+  }
+
+  private func loadOpenEditorShortcut() {
+    guard let data = UserDefaults.standard.data(forKey: Keys.openEditorShortcut) else {
+      openEditorShortcut = Self.defaultOpenEditorShortcut
+      return
+    }
+    if data == explicitEmptyShortcutData {
+      openEditorShortcut = nil
+      return
+    }
+    openEditorShortcut =
+      (try? JSONDecoder().decode(ShortcutConfig.self, from: data)) ?? Self.defaultOpenEditorShortcut
+  }
+
+  private func matchesOpenEditorShortcut(_ event: NSEvent) -> Bool {
+    guard let openEditorShortcut, let pressed = ShortcutConfig(from: event) else { return false }
+    return pressed == openEditorShortcut
   }
 
   private var visiblePanelItemCount: Int {

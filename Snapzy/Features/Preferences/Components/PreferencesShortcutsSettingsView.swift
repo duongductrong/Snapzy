@@ -30,6 +30,7 @@ struct ShortcutsSettingsView: View {
   @State private var cloudUploadsShortcut: ShortcutConfig?
   @State private var shortcutListShortcut: ShortcutConfig?
   @State private var historyShortcut: ShortcutConfig?
+  @State private var openEditorShortcut: ShortcutConfig?
   @State private var copyAndCloseShortcut: ShortcutConfig?
   @State private var toggleSidebarShortcut: ShortcutConfig?
   @State private var togglePinShortcut: ShortcutConfig?
@@ -84,6 +85,7 @@ struct ShortcutsSettingsView: View {
     _cloudUploadsShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .cloudUploads))
     _shortcutListShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .shortcutList))
     _historyShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .history))
+    _openEditorShortcut = State(initialValue: QuickAccessManager.shared.openEditorShortcut)
     _copyAndCloseShortcut = State(initialValue: AnnotateShortcutManager.shared.copyAndCloseShortcut)
     _toggleSidebarShortcut = State(initialValue: AnnotateShortcutManager.shared.toggleSidebarShortcut)
     _togglePinShortcut = State(initialValue: AnnotateShortcutManager.shared.togglePinShortcut)
@@ -554,6 +556,34 @@ struct ShortcutsSettingsView: View {
         }
 
         Section {
+          Text(L10n.PreferencesShortcuts.quickAccessSectionDescription)
+            .font(.caption)
+            .foregroundColor(.secondary)
+
+          ShortcutRecorderView(
+            label: L10n.PreferencesShortcuts.editLatestCapture,
+            icon: "pencil.tip.crop.circle",
+            description: L10n.PreferencesShortcuts.editLatestCaptureDescription,
+            shortcut: $openEditorShortcut,
+            defaultShortcut: QuickAccessManager.defaultOpenEditorShortcut,
+            onShortcutChanged: { config in
+              QuickAccessManager.shared.setOpenEditorShortcut(config)
+              return true
+            }
+          )
+        } header: {
+          HStack {
+            Text(L10n.PreferencesShortcuts.quickAccessSection)
+            Spacer()
+            Button(L10n.Common.reset) {
+              resetQuickAccessSection()
+            }
+            .buttonStyle(.borderless)
+            .font(.caption)
+          }
+        }
+
+        Section {
           Text(L10n.PreferencesShortcuts.annotateActionsDescription)
             .font(.caption)
             .foregroundColor(.secondary)
@@ -793,6 +823,11 @@ struct ShortcutsSettingsView: View {
     }
   }
 
+  private func resetQuickAccessSection() {
+    openEditorShortcut = QuickAccessManager.defaultOpenEditorShortcut
+    QuickAccessManager.shared.setOpenEditorShortcut(QuickAccessManager.defaultOpenEditorShortcut)
+  }
+
   private func resetAnnotateActionsSection() {
     copyAndCloseShortcut = AnnotateShortcutManager.defaultCopyAndClose
     toggleSidebarShortcut = AnnotateShortcutManager.defaultToggleSidebar
@@ -825,6 +860,7 @@ struct ShortcutsSettingsView: View {
     resetCaptureSection(refresh: false)
     resetRecordingSection(refresh: false)
     resetToolsSection(refresh: false)
+    resetQuickAccessSection()
     resetAnnotateActionsSection()
     resetAnnotateToolKeysSection()
 
