@@ -138,6 +138,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     UserDefaults.standard.object(forKey: PreferencesKeys.screenshotShowCursor) as? Bool ?? false
   }
 
+  /// When enabled (default), area capture selects against a frozen snapshot of the screen. When
+  /// disabled, the screen stays live during selection (e.g. video keeps playing) and the region is
+  /// captured at the moment selection completes.
+  private var freezesAreaCapture: Bool {
+    UserDefaults.standard.object(forKey: PreferencesKeys.screenshotFreezeArea) as? Bool ?? true
+  }
+
   private var isBackgroundCutoutAutoCropEnabled: Bool {
     UserDefaults.standard.object(forKey: PreferencesKeys.backgroundCutoutAutoCropEnabled) as? Bool ?? true
   }
@@ -540,6 +547,22 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     // Hide only normal-level app windows (not overlay panels) to avoid hiding pooled overlay windows
     let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(shouldHideOwnWindows)
+
+    // Live mode: skip the frozen snapshot so on-screen content keeps playing during selection,
+    // then capture the chosen region at completion time.
+    if !freezesAreaCapture {
+      startLiveAreaSelection(
+        saveDirectory: resolvedSaveDirectory,
+        prefetchedContentTask: prefetchedContentTask,
+        showCursor: showCursor,
+        excludeDesktopIcons: excludeDesktopIcons,
+        excludeDesktopWidgets: excludeDesktopWidgets,
+        excludeOwnApplication: excludeOwnApplication,
+        initialInteractionMode: initialInteractionMode,
+        hiddenWindowSession: hiddenWindowSession
+      )
+      return
+    }
 
     // Give WindowServer enough time to fully remove hidden app windows before
     // the frozen backdrop is prepared.
@@ -976,6 +999,93 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           if case .success = result {
             SoundManager.playScreenshotCapture()
           }
+        }
+      }
+    }
+  }
+
+  /// Area selection without a frozen backdrop: the overlay sits over the live screen (excluded from
+  /// capture via its `.none` sharing type), and the region is captured when the user commits.
+  private func startLiveAreaSelection(
+    saveDirectory resolvedSaveDirectory: URL,
+    prefetchedContentTask: ShareableContentPrefetchTask?,
+    showCursor: Bool,
+    excludeDesktopIcons: Bool,
+    excludeDesktopWidgets: Bool,
+    excludeOwnApplication: Bool,
+    initialInteractionMode: AreaSelectionInteractionMode,
+    hiddenWindowSession: HiddenWindowSession
+  ) {
+    activeAreaSelectionSessionID = UUID()
+
+    AreaSelectionController.shared.startSelection(
+      mode: .screenshot,
+      backdrops: [:],
+      applicationConfiguration: AreaSelectionApplicationConfiguration(
+        prefetchedContentTask: prefetchedContentTask,
+        excludeOwnApplication: excludeOwnApplication
+      ),
+      initialInteractionMode: initialInteractionMode
+    ) { [weak self] selection in
+      guard let self = self else {
+        hiddenWindowSession.restore()
+        return
+      }
+      defer { self.isAreaSelectionActive = false }
+
+      guard let selection else {
+        hiddenWindowSession.restore()
+        DiagnosticLogger.shared.log(.info, .capture, "Live area capture cancelled by user")
+        self.lastCaptureResult = .failure(.cancelled)
+        return
+      }
+
+      Task { @MainActor in
+        defer { hiddenWindowSession.restore() }
+        self.isCapturing = true
+        await Task.yield()
+
+        let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+          for: .screenshot,
+          exportDirectory: resolvedSaveDirectory
+        )
+
+        let result: CaptureResult
+        switch selection.target {
+        case .rect:
+          DiagnosticLogger.shared.log(
+            .info,
+            .capture,
+            "Area captured live",
+            context: ["rect": "\(Int(selection.rect.width))x\(Int(selection.rect.height))"]
+          )
+          result = await self.captureManager.captureArea(
+            rect: selection.rect,
+            saveDirectory: actualSaveDirectory,
+            format: self.resolvedFormat,
+            showCursor: showCursor,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets,
+            excludeOwnApplication: excludeOwnApplication,
+            prefetchedContentTask: prefetchedContentTask
+          )
+        case .window(let target):
+          result = await self.captureManager.captureWindow(
+            target: target,
+            saveDirectory: actualSaveDirectory,
+            format: self.resolvedFormat,
+            showCursor: showCursor,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets,
+            excludeOwnApplication: excludeOwnApplication,
+            prefetchedContentTask: prefetchedContentTask
+          )
+        }
+
+        self.isCapturing = false
+        self.lastCaptureResult = result
+        if case .success = result {
+          SoundManager.playScreenshotCapture()
         }
       }
     }

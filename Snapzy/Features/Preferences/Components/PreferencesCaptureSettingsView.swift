@@ -33,6 +33,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @AppStorage(PreferencesKeys.screenshotIncludeOwnApp) private var includeOwnAppInScreenshots = false
   @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
+  @AppStorage(PreferencesKeys.screenshotFreezeArea) private var freezeAreaCapture = true
 
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
@@ -167,6 +168,15 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.showCursorDescription
             ) {
               Toggle("", isOn: $screenshotShowCursor)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "snowflake",
+              title: L10n.PreferencesCapture.freezeAreaTitle,
+              description: L10n.PreferencesCapture.freezeAreaDescription
+            ) {
+              Toggle("", isOn: $freezeAreaCapture)
                 .labelsHidden()
             }
 

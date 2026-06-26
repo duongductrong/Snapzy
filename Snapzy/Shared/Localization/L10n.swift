@@ -2481,6 +2481,16 @@ enum L10n {
       defaultValue: "Include mouse pointer in captured screenshots",
       comment: "Capture preferences setting description"
     )
+    static let freezeAreaTitle = string(
+      "preferences-capture.freeze-area-title",
+      defaultValue: "Freeze screen during area capture",
+      comment: "Capture preferences setting title"
+    )
+    static let freezeAreaDescription = string(
+      "preferences-capture.freeze-area-description",
+      defaultValue: "Hold a still snapshot while selecting. Turn off to keep content like videos playing; the region is captured when you release.",
+      comment: "Capture preferences setting description"
+    )
     static let recordingShowCursorDescription = string(
       "preferences-capture.recording-show-cursor-description",
       defaultValue: "Include mouse pointer in recorded videos and GIFs",
