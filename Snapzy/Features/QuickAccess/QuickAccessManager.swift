@@ -106,10 +106,8 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.set(pauseCountdownOnHover, forKey: Keys.pauseCountdownOnHover)
     }
   }
-  /// Configurable shortcut that opens the editor for the newest capture while its preview is shown.
   @Published private(set) var openEditorShortcut: ShortcutConfig?
 
-  /// Default: ⌘↩
   static let defaultOpenEditorShortcut = ShortcutConfig(
     keyCode: UInt32(kVK_Return),
     modifiers: UInt32(cmdKey)
@@ -150,7 +148,6 @@ final class QuickAccessManager: ObservableObject {
     static let openEditorShortcut = "quickAccess.openEditorShortcut"
   }
 
-  /// Marker persisted when the user explicitly clears the shortcut, distinguishing it from "never set".
   private let explicitEmptyShortcutData = Data("null".utf8)
 
   // MARK: - Init
@@ -1032,7 +1029,6 @@ final class QuickAccessManager: ObservableObject {
     }
   }
 
-  /// Save a temp capture file to the permanent export location, then reveal in Finder
   func saveItem(id: UUID, revealInFinder: Bool = true) {
     guard let item = items.first(where: { $0.id == id }) else {
       DiagnosticLogger.shared.log(
@@ -1149,8 +1145,6 @@ final class QuickAccessManager: ObservableObject {
     panelController.hide()
   }
 
-  /// Opens the editor for the most recently captured item while its preview is on screen, letting
-  /// the editor be reached from the keyboard without moving the mouse.
   @discardableResult
   func openEditorForNewestItem() -> Bool {
     guard isEnabled, panelController.isVisible, let item = items.first else { return false }
@@ -1168,10 +1162,8 @@ final class QuickAccessManager: ObservableObject {
     return true
   }
 
-  /// Watches for the configured shortcut only while the preview is on screen, so the combo is never
-  /// captured the rest of the time. A global monitor is required because the non-activating preview
-  /// panel can't become key — right after a capture another app still holds focus. The local monitor
-  /// consumes the matched event to avoid a system beep when Snapzy itself is frontmost.
+  // The preview panel is non-activating, so the foreground app can still own key focus after capture.
+  // Keep both monitors scoped to the panel lifetime; the local monitor consumes matches when Snapzy is frontmost.
   private func installEditShortcutMonitorIfNeeded() {
     if editShortcutLocalMonitor == nil {
       editShortcutLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in

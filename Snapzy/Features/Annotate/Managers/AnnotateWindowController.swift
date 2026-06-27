@@ -223,9 +223,6 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     }
   }
 
-  /// Esc with no active text/crop edit discards the capture: delete the backing image and close.
-  /// Only applies to windows opened for a Quick Access item; URL/empty editors keep the default
-  /// (non-destructive) behavior.
   private func discardCaptureAndClose() -> Bool {
     guard let quickAccessItemId else { return false }
     DiagnosticLogger.shared.log(
@@ -819,8 +816,6 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   private func executeSave() {
     guard state.hasImage else { return }
 
-    // Quick Access temp capture: bake in the annotations, move the file into the default screenshot
-    // folder, dismiss the preview popup, and close the editor.
     if let sourceURL = state.sourceURL,
        let itemId = quickAccessItemId,
        TempCaptureManager.shared.isTempFile(sourceURL) {
