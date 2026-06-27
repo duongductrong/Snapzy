@@ -1867,6 +1867,16 @@ enum L10n {
       defaultValue: "Audio feedback for captures",
       comment: "General preferences setting description"
     )
+    static let menuBarIconTitle = string(
+      "preferences-general.menu-bar-icon-title",
+      defaultValue: "Show menu bar icon",
+      comment: "General preferences setting title"
+    )
+    static let menuBarIconDescription = string(
+      "preferences-general.menu-bar-icon-description",
+      defaultValue: "Access Snapzy from the menu bar. When hidden, open Snapzy again to show settings.",
+      comment: "General preferences setting description"
+    )
     static let themeTitle = string(
       "preferences-general.theme-title",
       defaultValue: "Theme",

@@ -4463,6 +4463,28 @@
         }
       }
     },
+    "preferences-general.menu-bar-icon-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Access Snapzy from the menu bar. When hidden, open Snapzy again to show settings."
+          }
+        }
+      }
+    },
+    "preferences-general.menu-bar-icon-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show menu bar icon"
+          }
+        }
+      }
+    },
     "preferences-general.play-sounds-description": {
       "extractionState": "stale",
       "localizations": {

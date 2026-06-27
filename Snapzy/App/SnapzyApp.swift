@@ -129,6 +129,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     coordinator?.applicationWillTerminate()
   }
 
+  func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    guard didFinishLaunching else { return true }
+    let showsMenuBarIcon = UserDefaults.standard.object(forKey: PreferencesKeys.showMenuBarIcon) as? Bool ?? true
+    guard !showsMenuBarIcon else { return true }
+
+    AppStatusBarController.shared.openPreferencesWindow(tab: .general)
+    return false
+  }
+
   private enum DatabaseLaunchRecoveryAction {
     case repair
     case reset

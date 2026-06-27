@@ -52,7 +52,7 @@ final class AppStatusBarController: ObservableObject {
     self.updater = updater
     self.didDetectCrash = didCrash
 
-    setupStatusItem()
+    syncStatusItemVisibility()
     buildMenu()
     observeRecordingState()
 
@@ -118,7 +118,31 @@ final class AppStatusBarController: ObservableObject {
 
   // MARK: - Private Setup
 
+  func setMenuBarIconVisible(_ visible: Bool) {
+    UserDefaults.standard.set(visible, forKey: PreferencesKeys.showMenuBarIcon)
+    syncStatusItemVisibility()
+  }
+
+  var isMenuBarIconVisible: Bool {
+    statusItem != nil
+  }
+
+  private func syncStatusItemVisibility() {
+    let shouldShow = UserDefaults.standard.object(forKey: PreferencesKeys.showMenuBarIcon) as? Bool ?? true
+
+    if shouldShow {
+      setupStatusItem()
+    } else {
+      removeStatusItem()
+    }
+  }
+
   private func setupStatusItem() {
+    guard statusItem == nil else {
+      renderStatusItem()
+      return
+    }
+
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
     if let button = statusItem?.button {
@@ -128,6 +152,16 @@ final class AppStatusBarController: ObservableObject {
       button.sendAction(on: [.leftMouseUp, .rightMouseUp])
       renderStatusItem()
     }
+  }
+
+  private func removeStatusItem() {
+    guard let statusItem else { return }
+    processingSpinner?.stopAnimation(nil)
+    processingSpinner?.removeFromSuperview()
+    processingSpinner = nil
+    isProcessing = false
+    NSStatusBar.system.removeStatusItem(statusItem)
+    self.statusItem = nil
   }
 
   @objc private func statusBarButtonClicked(_ sender: NSStatusBarButton) {

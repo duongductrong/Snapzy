@@ -10,6 +10,7 @@ import Sparkle
 
 struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
+  @AppStorage(PreferencesKeys.showMenuBarIcon) private var showMenuBarIcon = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
   @Environment(\.openWindow) private var openWindow
   @ObservedObject private var themeManager = ThemeManager.shared
@@ -35,6 +36,14 @@ struct GeneralSettingsView: View {
         SettingRow(icon: "speaker.wave.2", title: L10n.PreferencesGeneral.playSoundsTitle, description: L10n.PreferencesGeneral.playSoundsDescription) {
           Toggle("", isOn: $playSounds)
             .labelsHidden()
+        }
+
+        SettingRow(icon: "menubar.rectangle", title: L10n.PreferencesGeneral.menuBarIconTitle, description: L10n.PreferencesGeneral.menuBarIconDescription) {
+          Toggle("", isOn: $showMenuBarIcon)
+            .labelsHidden()
+            .onChange(of: showMenuBarIcon) { newValue in
+              AppStatusBarController.shared.setMenuBarIconVisible(newValue)
+            }
         }
       }
 
