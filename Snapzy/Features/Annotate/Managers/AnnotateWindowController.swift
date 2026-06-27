@@ -819,6 +819,22 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   private func executeSave() {
     guard state.hasImage else { return }
 
+    // Quick Access temp capture: bake in the annotations, move the file into the default screenshot
+    // folder, dismiss the preview popup, and close the editor.
+    if let sourceURL = state.sourceURL,
+       let itemId = quickAccessItemId,
+       TempCaptureManager.shared.isTempFile(sourceURL) {
+      guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: state, targetURL: sourceURL) else {
+        return
+      }
+      saveSessionCache(makeSessionSnapshot())
+      state.markAsSaved()
+      AnnotateExporter.saveToOriginal(state: state)
+      QuickAccessManager.shared.saveItem(id: itemId)
+      forceClose()
+      return
+    }
+
     if state.sourceURL != nil {
       if let targetURL = state.sourceURL {
         guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: state, targetURL: targetURL) else {
