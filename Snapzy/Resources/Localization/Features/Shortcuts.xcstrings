@@ -1236,6 +1236,28 @@
         }
       }
     },
+    "preferences-shortcuts.edit-latest-capture": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit latest capture"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.edit-latest-capture-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the editor for the most recent capture while its preview is showing"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.enable-shortcuts-description": {
       "extractionState": "stale",
       "localizations": {
@@ -1882,6 +1904,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "打開影片編輯工具"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.quick-access-section": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Access"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.quick-access-section-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts active while a Quick Access preview is on screen."
           }
         }
       }
