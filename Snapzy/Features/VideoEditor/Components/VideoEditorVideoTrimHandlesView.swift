@@ -15,9 +15,12 @@ struct VideoTrimHandlesView: View {
 
   @State private var isDraggingStart = false
   @State private var isDraggingEnd = false
+  @State private var startDragPlayheadTime: CMTime?
+  @State private var endDragPlayheadTime: CMTime?
 
   private let handleWidth: CGFloat = 14
   private let handleHeight: CGFloat = 60
+  private let playheadSnapThreshold: CGFloat = 10
 
   var body: some View {
     ZStack(alignment: .leading) {
@@ -75,35 +78,80 @@ struct VideoTrimHandlesView: View {
   private var startHandleGesture: some Gesture {
     DragGesture()
       .onChanged { value in
+        if !isDraggingStart {
+          startDragPlayheadTime = state.currentTime
+        }
         isDraggingStart = true
-        let newOffset = max(0, min(value.location.x, timelineWidth))
-        let progress = newOffset / timelineWidth
-        let newTime = CMTime(
-          seconds: progress * CMTimeGetSeconds(state.duration),
-          preferredTimescale: 600
+        let newOffset = snappedTimelineOffset(
+          clampedTimelineOffset(value.location.x),
+          to: startDragPlayheadTime
         )
+        let newTime = time(atTimelineOffset: newOffset)
         state.setTrimStart(newTime)
       }
       .onEnded { _ in
         isDraggingStart = false
+        startDragPlayheadTime = nil
       }
   }
 
   private var endHandleGesture: some Gesture {
     DragGesture()
       .onChanged { value in
+        if !isDraggingEnd {
+          endDragPlayheadTime = state.currentTime
+        }
         isDraggingEnd = true
-        let newOffset = max(0, min(value.location.x, timelineWidth))
-        let progress = newOffset / timelineWidth
-        let newTime = CMTime(
-          seconds: progress * CMTimeGetSeconds(state.duration),
-          preferredTimescale: 600
+        let newOffset = snappedTimelineOffset(
+          clampedTimelineOffset(value.location.x),
+          to: endDragPlayheadTime
         )
+        let newTime = time(atTimelineOffset: newOffset)
         state.setTrimEnd(newTime)
       }
       .onEnded { _ in
         isDraggingEnd = false
+        endDragPlayheadTime = nil
       }
+  }
+
+  private func clampedTimelineOffset(_ offset: CGFloat) -> CGFloat {
+    max(0, min(offset, timelineWidth))
+  }
+
+  private func snappedTimelineOffset(_ offset: CGFloat, to snapTime: CMTime?) -> CGFloat {
+    guard let snapTime else { return offset }
+
+    let durationSeconds = CMTimeGetSeconds(state.duration)
+    let snapSeconds = CMTimeGetSeconds(snapTime)
+    guard timelineWidth > 0,
+          durationSeconds > 0,
+          durationSeconds.isFinite,
+          snapSeconds.isFinite
+    else {
+      return offset
+    }
+
+    let snapProgress = max(0, min(snapSeconds / durationSeconds, 1))
+    let snapOffset = CGFloat(snapProgress) * timelineWidth
+    guard abs(offset - snapOffset) <= playheadSnapThreshold else { return offset }
+    return snapOffset
+  }
+
+  private func time(atTimelineOffset offset: CGFloat) -> CMTime {
+    let durationSeconds = CMTimeGetSeconds(state.duration)
+    guard timelineWidth > 0,
+          durationSeconds > 0,
+          durationSeconds.isFinite
+    else {
+      return .zero
+    }
+
+    let progress = clampedTimelineOffset(offset) / timelineWidth
+    return CMTime(
+      seconds: progress * durationSeconds,
+      preferredTimescale: 600
+    )
   }
 }
 
