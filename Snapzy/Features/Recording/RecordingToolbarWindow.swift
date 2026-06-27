@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Combine
 import SwiftUI
 
@@ -150,7 +151,7 @@ final class RecordingToolbarState: ObservableObject {
 // MARK: - Toolbar Window
 
 @MainActor
-final class RecordingToolbarWindow: NSWindow {
+final class RecordingToolbarWindow: NSPanel {
 
   private var anchorRect: CGRect
   private var mode: RecordingToolbarMode = .preRecord
@@ -217,7 +218,7 @@ final class RecordingToolbarWindow: NSWindow {
 
     super.init(
       contentRect: .zero,
-      styleMask: [.borderless],
+      styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: false
     )
@@ -234,7 +235,9 @@ final class RecordingToolbarWindow: NSWindow {
     level = .popUpMenu
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     hasShadow = true
+    isFloatingPanel = true
     isReleasedWhenClosed = false
+    hidesOnDeactivate = false
 
     // Apply theme appearance at window level (mirrors AnnotateWindow.applyTheme)
     appearance = ThemeManager.shared.nsAppearance
@@ -340,9 +343,32 @@ final class RecordingToolbarWindow: NSWindow {
   private func showBelowRect(_ rect: CGRect) {
     positionBelowRect(rect)
     orderFrontRegardless()
+    makeKey()
+    if let contentView {
+      makeFirstResponder(contentView)
+    }
   }
 
   override var canBecomeKey: Bool { true }
+  override var canBecomeMain: Bool { false }
+
+  override func keyDown(with event: NSEvent) {
+    guard mode == .preRecord, event.keyCode == UInt16(kVK_Escape) else {
+      super.keyDown(with: event)
+      return
+    }
+
+    onCancel?()
+  }
+
+  override func cancelOperation(_ sender: Any?) {
+    guard mode == .preRecord else {
+      super.cancelOperation(sender)
+      return
+    }
+
+    onCancel?()
+  }
 
   func updateAnchorRect(_ rect: CGRect) {
     anchorRect = rect
