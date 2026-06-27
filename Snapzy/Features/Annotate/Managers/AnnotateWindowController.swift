@@ -830,7 +830,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       saveSessionCache(makeSessionSnapshot())
       state.markAsSaved()
       AnnotateExporter.saveToOriginal(state: state)
-      QuickAccessManager.shared.saveItem(id: itemId)
+      QuickAccessManager.shared.saveItem(id: itemId, revealInFinder: false)
       forceClose()
       return
     }

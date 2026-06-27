@@ -1033,7 +1033,7 @@ final class QuickAccessManager: ObservableObject {
   }
 
   /// Save a temp capture file to the permanent export location, then reveal in Finder
-  func saveItem(id: UUID) {
+  func saveItem(id: UUID, revealInFinder: Bool = true) {
     guard let item = items.first(where: { $0.id == id }) else {
       DiagnosticLogger.shared.log(
         .warning,
@@ -1087,7 +1087,9 @@ final class QuickAccessManager: ObservableObject {
 
         let fileAccess = fileAccessManager.beginAccessingURL(savedURL)
         defer { fileAccess.stop() }
-        NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
+        if revealInFinder {
+          NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
+        }
         DiagnosticLogger.shared.log(
           .info,
           .action,
