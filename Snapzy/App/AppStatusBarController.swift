@@ -229,11 +229,25 @@ final class AppStatusBarController: ObservableObject {
   private func makeIdleStatusImage() -> NSImage? {
     guard let appIcon = NSImage(named: "MenubarIcon") else { return nil }
 
-    let size = NSSize(width: 18, height: 18)
-    let resizedIcon = NSImage(size: size)
+    let canvasSize = NSSize(width: 18, height: 18)
+    let targetVisibleOccupancy: CGFloat = 0.89
+    // Current MenubarIcon PNG alpha bounds occupy 75.28% of its transparent canvas.
+    let sourceVisibleOccupancy: CGFloat = 0.7528
+    let drawSize = NSSize(
+      width: canvasSize.width * targetVisibleOccupancy / sourceVisibleOccupancy,
+      height: canvasSize.height * targetVisibleOccupancy / sourceVisibleOccupancy
+    )
+    let drawRect = NSRect(
+      x: (canvasSize.width - drawSize.width) / 2,
+      y: (canvasSize.height - drawSize.height) / 2,
+      width: drawSize.width,
+      height: drawSize.height
+    )
+
+    let resizedIcon = NSImage(size: canvasSize)
     resizedIcon.lockFocus()
     appIcon.draw(
-      in: NSRect(origin: .zero, size: size),
+      in: drawRect,
       from: NSRect(origin: .zero, size: appIcon.size),
       operation: .copy,
       fraction: 1.0
