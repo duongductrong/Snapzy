@@ -13,6 +13,10 @@ struct ShortcutConfig: Equatable, Codable {
   let keyCode: UInt32
   let modifiers: UInt32
 
+  /// Custom bit used to store the Fn modifier flag.
+  /// Carbon does not provide a native Fn constant, so we use an otherwise-unused bit internally.
+  static let functionCarbonModifier: UInt32 = 0x2000
+
   /// Memberwise initializer
   init(keyCode: UInt32, modifiers: UInt32) {
     self.keyCode = keyCode
@@ -116,6 +120,7 @@ struct ShortcutConfig: Equatable, Codable {
     if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
     if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
     if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
+    if modifiers & Self.functionCarbonModifier != 0 { parts.append("fn") }
 
     let keyChar = Self.keyCodeToDisplayString(keyCode)
 
@@ -130,6 +135,7 @@ struct ShortcutConfig: Equatable, Codable {
     if modifiers & UInt32(shiftKey) != 0 { parts.append("⇧") }
     if modifiers & UInt32(optionKey) != 0 { parts.append("⌥") }
     if modifiers & UInt32(controlKey) != 0 { parts.append("⌃") }
+    if modifiers & Self.functionCarbonModifier != 0 { parts.append("fn") }
     parts.append(Self.keyCodeToDisplayString(keyCode))
     return parts
   }
@@ -144,6 +150,9 @@ struct ShortcutConfig: Equatable, Codable {
     if event.modifierFlags.contains(.shift) { carbonModifiers |= UInt32(shiftKey) }
     if event.modifierFlags.contains(.option) { carbonModifiers |= UInt32(optionKey) }
     if event.modifierFlags.contains(.control) { carbonModifiers |= UInt32(controlKey) }
+    if event.modifierFlags.contains(.function) {
+      carbonModifiers |= Self.functionCarbonModifier
+    }
 
     // Require at least one modifier
     guard carbonModifiers != 0 else { return nil }
@@ -248,6 +257,7 @@ struct ShortcutConfig: Equatable, Codable {
     case kVK_End: return "↘"
     case kVK_PageUp: return "⇞"
     case kVK_PageDown: return "⇟"
+    case 0x3F: return "fn"
     default: return "?"
     }
   }
@@ -1421,9 +1431,15 @@ final class KeyboardShortcutManager {
   ) {
     guard isShortcutEnabled(for: kind), let config else { return }
 
+    // Carbon does not support the Fn modifier, so strip it.
+    // If Fn was the only modifier, skip registration entirely since
+    // a modifier-less hotkey would fire on every key press.
+    let cleanModifiers = config.modifiers & ~ShortcutConfig.functionCarbonModifier
+    guard cleanModifiers != 0 else { return }
+
     let status = RegisterEventHotKey(
       config.keyCode,
-      config.modifiers,
+      cleanModifiers,
       hotkeyID,
       GetApplicationEventTarget(),
       0,
@@ -1451,9 +1467,14 @@ final class KeyboardShortcutManager {
   ) {
     guard isShortcutEnabled(for: parentKind), let config else { return }
 
+    // Carbon does not support the Fn modifier, so strip it.
+    // If Fn was the only modifier, skip registration entirely.
+    let cleanModifiers = config.modifiers & ~ShortcutConfig.functionCarbonModifier
+    guard cleanModifiers != 0 else { return }
+
     let status = RegisterEventHotKey(
       config.keyCode,
-      config.modifiers,
+      cleanModifiers,
       hotkeyID,
       GetApplicationEventTarget(),
       0,

@@ -347,6 +347,7 @@ final class AnnotateShortcutManager: ObservableObject {
     if config.modifiers & UInt32(shiftKey) != 0 { expected.insert(.shift) }
     if config.modifiers & UInt32(optionKey) != 0 { expected.insert(.option) }
     if config.modifiers & UInt32(controlKey) != 0 { expected.insert(.control) }
+    if config.modifiers & ShortcutConfig.functionCarbonModifier != 0 { expected.insert(.function) }
     return flags == expected
   }
 }

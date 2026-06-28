@@ -55,7 +55,6 @@ struct CaptureOverlayShortcut: Equatable, Codable {
   }
 
   func matches(_ event: NSEvent) -> Bool {
-    guard !event.modifierFlags.contains(.function) else { return false }
     guard UInt32(event.keyCode) == keyCode else { return false }
     return Self.carbonModifiers(from: event) == modifiers
   }
@@ -76,7 +75,7 @@ struct CaptureOverlayShortcut: Equatable, Codable {
   }
 
   private static func isAllowedSingleKey(_ event: NSEvent) -> Bool {
-    guard event.modifierFlags.intersection([.command, .control, .option, .shift, .function]).isEmpty else {
+    guard event.modifierFlags.intersection([.command, .control, .option, .shift]).isEmpty else {
       return false
     }
     guard let character = event.charactersIgnoringModifiers?.lowercased().first else {
