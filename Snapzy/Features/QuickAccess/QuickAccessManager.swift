@@ -128,8 +128,9 @@ final class QuickAccessManager: ObservableObject {
   private var editingItemIds: Set<UUID> = []
   /// Tracks items doing async work, such as GIF conversion or cloud upload.
   private var activityHoldItemIds: Set<UUID> = []
-  private var editShortcutLocalMonitor: Any?
-  private var editShortcutGlobalMonitor: Any?
+  private var editHotKeyRef: EventHotKeyRef?
+  private var editHotKeyHandler: EventHandlerRef?
+  fileprivate let editHotKeyID = EventHotKeyID(signature: OSType(0x5A51_4145), id: 1)
 
   // MARK: - UserDefaults Keys (preserved for backward compatibility)
 
@@ -1126,7 +1127,7 @@ final class QuickAccessManager: ObservableObject {
       itemCount: visiblePanelItemCount,
       scale: CGFloat(overlayScale)
     )
-    installEditShortcutMonitorIfNeeded()
+    installEditHotKeyIfNeeded()
     DiagnosticLogger.shared.log(
       .debug,
       .ui,
@@ -1141,7 +1142,7 @@ final class QuickAccessManager: ObservableObject {
   }
 
   private func hidePanel() {
-    removeEditShortcutMonitor()
+    removeEditHotKey()
     panelController.hide()
   }
 
@@ -1162,36 +1163,60 @@ final class QuickAccessManager: ObservableObject {
     return true
   }
 
-  // The preview panel is non-activating, so the foreground app can still own key focus after capture.
-  // Keep both monitors scoped to the panel lifetime; the local monitor consumes matches when Snapzy is frontmost.
-  private func installEditShortcutMonitorIfNeeded() {
-    if editShortcutLocalMonitor == nil {
-      editShortcutLocalMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-        let handled = MainActor.assumeIsolated { self?.handleEditShortcut(event) ?? false }
-        return handled ? nil : event
+  private func installEditHotKeyIfNeeded() {
+    guard editHotKeyRef == nil, let shortcut = openEditorShortcut else { return }
+
+    if editHotKeyHandler == nil {
+      var spec = EventTypeSpec(
+        eventClass: OSType(kEventClassKeyboard),
+        eventKind: OSType(kEventHotKeyPressed)
+      )
+      let callback: EventHandlerUPP = { _, event, userData in
+        guard let userData, let event else { return OSStatus(eventNotHandledErr) }
+        var hotKeyID = EventHotKeyID()
+        GetEventParameter(
+          event,
+          EventParamName(kEventParamDirectObject),
+          EventParamType(typeEventHotKeyID),
+          nil,
+          MemoryLayout<EventHotKeyID>.size,
+          nil,
+          &hotKeyID
+        )
+        let manager = Unmanaged<QuickAccessManager>.fromOpaque(userData).takeUnretainedValue()
+        guard hotKeyID.signature == manager.editHotKeyID.signature else {
+          return OSStatus(eventNotHandledErr)
+        }
+        DispatchQueue.main.async {
+          MainActor.assumeIsolated { _ = manager.openEditorForNewestItem() }
+        }
+        return noErr
       }
+      InstallEventHandler(
+        GetApplicationEventTarget(),
+        callback,
+        1,
+        &spec,
+        Unmanaged.passUnretained(self).toOpaque(),
+        &editHotKeyHandler
+      )
     }
-    if editShortcutGlobalMonitor == nil {
-      editShortcutGlobalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-        MainActor.assumeIsolated { _ = self?.handleEditShortcut(event) }
-      }
-    }
+
+    RegisterEventHotKey(
+      shortcut.keyCode,
+      shortcut.modifiers,
+      editHotKeyID,
+      GetApplicationEventTarget(),
+      0,
+      &editHotKeyRef
+    )
   }
 
-  private func removeEditShortcutMonitor() {
-    if let editShortcutLocalMonitor {
-      NSEvent.removeMonitor(editShortcutLocalMonitor)
-      self.editShortcutLocalMonitor = nil
+  private func removeEditHotKey() {
+    if let editHotKeyRef {
+      UnregisterEventHotKey(editHotKeyRef)
+      self.editHotKeyRef = nil
     }
-    if let editShortcutGlobalMonitor {
-      NSEvent.removeMonitor(editShortcutGlobalMonitor)
-      self.editShortcutGlobalMonitor = nil
-    }
-  }
-
-  private func handleEditShortcut(_ event: NSEvent) -> Bool {
-    guard matchesOpenEditorShortcut(event) else { return false }
-    return openEditorForNewestItem()
   }
 
   func setOpenEditorShortcut(_ config: ShortcutConfig?) {
@@ -1200,6 +1225,10 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.set(data, forKey: Keys.openEditorShortcut)
     } else {
       UserDefaults.standard.set(explicitEmptyShortcutData, forKey: Keys.openEditorShortcut)
+    }
+    if editHotKeyRef != nil {
+      removeEditHotKey()
+      installEditHotKeyIfNeeded()
     }
   }
 
@@ -1214,11 +1243,6 @@ final class QuickAccessManager: ObservableObject {
     }
     openEditorShortcut =
       (try? JSONDecoder().decode(ShortcutConfig.self, from: data)) ?? Self.defaultOpenEditorShortcut
-  }
-
-  private func matchesOpenEditorShortcut(_ event: NSEvent) -> Bool {
-    guard let openEditorShortcut, let pressed = ShortcutConfig(from: event) else { return false }
-    return pressed == openEditorShortcut
   }
 
   private var visiblePanelItemCount: Int {
@@ -1375,11 +1399,11 @@ final class QuickAccessManager: ObservableObject {
     )
 
     if let editIndex = items.firstIndex(where: { $0.id == id }) {
-      // Item still exists — resume it + items at lower indices (newer)
+      // Item still exists — restart it + items at lower indices (newer) with a fresh countdown
       for i in 0...editIndex {
         let itemId = items[i].id
         guard !isItemCountdownHeld(itemId) else { continue }
-        dismissTimers[itemId]?.resume()
+        dismissTimers[itemId]?.restart(duration: autoDismissDelay)
       }
     } else {
       // Edited item was already removed (swiped/dismissed during editing).

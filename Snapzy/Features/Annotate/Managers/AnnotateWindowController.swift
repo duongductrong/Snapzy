@@ -219,20 +219,19 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     let mainView = AnnotateMainView(state: capturedState)
     window?.contentView = NSHostingView(rootView: mainView)
     (window as? AnnotateWindow)?.onEscape = { [weak self] in
-      self?.discardCaptureAndClose() ?? false
+      self?.discardEditsAndClose() ?? false
     }
   }
 
-  private func discardCaptureAndClose() -> Bool {
+  private func discardEditsAndClose() -> Bool {
     guard let quickAccessItemId else { return false }
     DiagnosticLogger.shared.log(
       .info,
       .action,
-      "Annotate window discarded capture via Esc",
+      "Annotate window closed via Esc, discarding edits",
       context: ["itemId": quickAccessItemId.uuidString]
     )
-    QuickAccessManager.shared.deleteItem(id: quickAccessItemId)
-    window?.close()
+    forceClose()
     return true
   }
 

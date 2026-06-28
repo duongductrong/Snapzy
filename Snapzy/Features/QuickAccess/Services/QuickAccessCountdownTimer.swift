@@ -92,6 +92,13 @@ final class QuickAccessCountdownTimer {
     scheduleTask()
   }
 
+  /// Restart the countdown from the full duration.
+  func restart(duration: TimeInterval) {
+    isPaused = false
+    remainingTime = duration
+    scheduleTask()
+  }
+
   /// Cancel the countdown entirely
   func cancel() {
     isPaused = false
