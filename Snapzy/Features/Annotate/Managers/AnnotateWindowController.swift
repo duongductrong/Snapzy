@@ -815,20 +815,6 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   private func executeSave() {
     guard state.hasImage else { return }
 
-    if let sourceURL = state.sourceURL,
-       let itemId = quickAccessItemId,
-       TempCaptureManager.shared.isTempFile(sourceURL) {
-      guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: state, targetURL: sourceURL) else {
-        return
-      }
-      saveSessionCache(makeSessionSnapshot())
-      state.markAsSaved()
-      AnnotateExporter.saveToOriginal(state: state)
-      QuickAccessManager.shared.saveItem(id: itemId, revealInFinder: false)
-      forceClose()
-      return
-    }
-
     if state.sourceURL != nil {
       if let targetURL = state.sourceURL {
         guard AnnotateExporter.confirmTransparencyLossIfNeeded(state: state, targetURL: targetURL) else {

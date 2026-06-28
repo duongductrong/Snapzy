@@ -1030,7 +1030,7 @@ final class QuickAccessManager: ObservableObject {
     }
   }
 
-  func saveItem(id: UUID, revealInFinder: Bool = true) {
+  func saveItem(id: UUID) {
     guard let item = items.first(where: { $0.id == id }) else {
       DiagnosticLogger.shared.log(
         .warning,
@@ -1084,9 +1084,7 @@ final class QuickAccessManager: ObservableObject {
 
         let fileAccess = fileAccessManager.beginAccessingURL(savedURL)
         defer { fileAccess.stop() }
-        if revealInFinder {
-          NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
-        }
+        NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
         DiagnosticLogger.shared.log(
           .info,
           .action,
