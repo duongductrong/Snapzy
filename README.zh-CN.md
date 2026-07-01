@@ -79,7 +79,6 @@
 ### Homebrew
 
 ```bash
-brew tap duongductrong/snapzy https://github.com/duongductrong/Snapzy
 brew install --cask snapzy
 ```
 
