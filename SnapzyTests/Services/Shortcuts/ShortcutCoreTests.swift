@@ -36,9 +36,27 @@ final class ShortcutCoreTests: XCTestCase {
     XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_ANSI_A)), "A")
     XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_ANSI_0)), "0")
     XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_F12)), "F12")
+    XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_F13)), "F13")
+    XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_F14)), "F14")
+    XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_F20)), "F20")
     XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_LeftArrow)), "\u{2190}")
     XCTAssertEqual(ShortcutConfig.keyCodeToString(UInt32(kVK_ANSI_Slash)), "/")
     XCTAssertEqual(ShortcutConfig.keyCodeToString(9999), "?")
+  }
+
+  func testShortcutConfigDisplayParts_includeFnWithExtendedFunctionKeys() {
+    let f13 = ShortcutConfig(
+      keyCode: UInt32(kVK_F13),
+      modifiers: ShortcutConfig.functionCarbonModifier
+    )
+    let f14 = ShortcutConfig(
+      keyCode: UInt32(kVK_F14),
+      modifiers: ShortcutConfig.functionCarbonModifier
+    )
+
+    XCTAssertEqual(f13.displayParts, ["fn", "F13"])
+    XCTAssertEqual(f13.displayString, "fn F13")
+    XCTAssertEqual(f14.displayParts, ["fn", "F14"])
   }
 
   func testShortcutConfigMenuKeyEquivalent_mapsSpecialKeys() {
@@ -47,6 +65,8 @@ final class ShortcutCoreTests: XCTestCase {
     XCTAssertEqual(ShortcutConfig(keyCode: UInt32(kVK_Tab), modifiers: 0).menuKeyEquivalent, "\t")
     XCTAssertEqual(ShortcutConfig(keyCode: UInt32(kVK_Escape), modifiers: 0).menuKeyEquivalent, "\u{1B}")
     XCTAssertNotNil(ShortcutConfig(keyCode: UInt32(kVK_F1), modifiers: 0).menuKeyEquivalent)
+    XCTAssertNotNil(ShortcutConfig(keyCode: UInt32(kVK_F13), modifiers: 0).menuKeyEquivalent)
+    XCTAssertNotNil(ShortcutConfig(keyCode: UInt32(kVK_F20), modifiers: 0).menuKeyEquivalent)
   }
 
   func testShortcutConfigMenuModifierFlags_convertCarbonModifiers() {

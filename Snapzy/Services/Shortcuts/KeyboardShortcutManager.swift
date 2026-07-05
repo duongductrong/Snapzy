@@ -212,6 +212,14 @@ struct ShortcutConfig: Equatable, Codable {
     case kVK_F10: return "F10"
     case kVK_F11: return "F11"
     case kVK_F12: return "F12"
+    case kVK_F13: return "F13"
+    case kVK_F14: return "F14"
+    case kVK_F15: return "F15"
+    case kVK_F16: return "F16"
+    case kVK_F17: return "F17"
+    case kVK_F18: return "F18"
+    case kVK_F19: return "F19"
+    case kVK_F20: return "F20"
     case kVK_Space: return "Space"
     case kVK_Return: return "↩"
     case kVK_Tab: return "⇥"
@@ -319,6 +327,22 @@ extension ShortcutConfig {
       return Self.unicodeScalarString(Int(NSF11FunctionKey))
     case kVK_F12:
       return Self.unicodeScalarString(Int(NSF12FunctionKey))
+    case kVK_F13:
+      return Self.unicodeScalarString(Int(NSF13FunctionKey))
+    case kVK_F14:
+      return Self.unicodeScalarString(Int(NSF14FunctionKey))
+    case kVK_F15:
+      return Self.unicodeScalarString(Int(NSF15FunctionKey))
+    case kVK_F16:
+      return Self.unicodeScalarString(Int(NSF16FunctionKey))
+    case kVK_F17:
+      return Self.unicodeScalarString(Int(NSF17FunctionKey))
+    case kVK_F18:
+      return Self.unicodeScalarString(Int(NSF18FunctionKey))
+    case kVK_F19:
+      return Self.unicodeScalarString(Int(NSF19FunctionKey))
+    case kVK_F20:
+      return Self.unicodeScalarString(Int(NSF20FunctionKey))
     case kVK_ForwardDelete:
       return Self.unicodeScalarString(Int(NSDeleteFunctionKey))
     case kVK_Home:
