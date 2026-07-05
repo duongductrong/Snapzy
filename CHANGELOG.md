@@ -83,6 +83,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.28.1] - 2026-07-05
+
+### Bug Fixes
+-  Introduce RecaptureReason enum and update recapture logic for area selection (9957125)
+-  Simplify coordinate text generation in AreaSelectionOverlayView for improved readability (32e43ad)
+-  Update size indicator appearance and positioning for better visibility (caed9ee)
+-  Simplify coordinate indicator updates by removing selectionEnabled checks in AreaSelectionOverlayView (f7507c3)
+-  Enhance cursor handling for inactive application panels by posting synthetic mouse events (9585952)
+-  Ensure proper cursor rect evaluation by posting synthetic mouse-moved events for inactive application panels (97e9cb6)
+-  Implement pointer tracking for non-activated live sessions to enhance cross-display cursor behavior (7240d0c)
+-  Update area selection capture logic to use CGDisplayBounds for accurate coordinate space handling (f821e6c)
+
+### Chore
+- chore: update appcast, cask, and readme for v1.28.0 (ecfccec)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.28.0] - 2026-07-04
 
 ### Features
