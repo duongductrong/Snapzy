@@ -102,8 +102,8 @@ final class AreaSelectionController: NSObject {
   /// a non-key overlay of an inactive app during idle hover. This lightweight timer polls the
   /// pointer location (no permission required, unlike a `CGEventTap`) and moves keyboard/key
   /// ownership to the overlay under the pointer, so that overlay's own cursor rects render the
-  /// crosshair — exactly replicating the working active-display behavior on every display. Frozen
-  /// sessions activate the app and don't need this.
+  /// crosshair — exactly replicating the working active-display behavior on every display without
+  /// making Snapzy the foreground application.
   private var pointerTrackingTimer: Timer?
   private var requestedDisplayActivationIDs = Set<CGDirectDisplayID>()
   private var deferredBackdropDisplayIDs = Set<CGDirectDisplayID>()
@@ -128,7 +128,6 @@ final class AreaSelectionController: NSObject {
   private var lumaRecapturingTask: Task<Void, Never>?
   private var isMovingManualSelection = false
   private var manualSelectionLastPointerLocation: CGPoint?
-  private var previouslyActiveApplication: NSRunningApplication?
 
   /// Whether the overlay should be dismissed immediately after a selection is made.
   /// When `false`, the caller is responsible for calling `cancelSelection()` to dismiss.
@@ -452,47 +451,13 @@ final class AreaSelectionController: NSObject {
     // Activate pooled windows (instant show)
     activatePooledWindows()
 
-    // Bring Snapzy forward so the overlay's transparent crosshair cursor takes effect immediately.
-    // The overlay is a non-activating panel, so when the session is triggered from a global
-    // shortcut while another app is frontmost, macOS keeps showing the previous app's arrow cursor
-    // over our crosshair until the pointer moves and a `cursorUpdate` fires. Activating evaluates
-    // the overlay's cursor rects right away.
-    //
-    // Limit this to frozen-backdrop sessions (screenshot area capture), where a static snapshot
-    // sits behind the overlay so nothing live is dimmed. Backdrop-less sessions — recording-area
-    // selection and the legacy screenshot API — overlay the actual windows being captured, so
-    // activating would deactivate/dim them and leave Snapzy frontmost afterward; those keep the
-    // non-activating behavior this window class is built around.
-    if !selectionBackdrops.isEmpty {
-      previouslyActiveApplication = NSWorkspace.shared.frontmostApplication
-      NSApp.activate(ignoringOtherApps: true)
-
-      // When a normal-level window (e.g., Settings) was recently hidden, macOS may
-      // not immediately assign key focus to the overlay panel. Schedule a follow-up
-      // key assignment after the activation takes effect.
-      if let keyboardDisplay = keyboardOwnerDisplayID,
-         let keyWindow = windowPool[keyboardDisplay] {
-        DispatchQueue.main.async { [weak keyWindow] in
-          guard let keyWindow, keyWindow.isVisible else { return }
-          keyWindow.makeKey()
-          keyWindow.makeFirstResponder(keyWindow.overlayView)
-        }
-      }
-    } else {
-      previouslyActiveApplication = nil
-      // For non-frozen sessions (recording, OCR, cutout) we cannot activate
-      // the app without dimming live windows. Force cursor rect evaluation
-      // on pooled windows as a best-effort hint — this prompts macOS to
-      // apply the overlay's cursor rects sooner than waiting for the next
-      // mouse-move event.
-      for (_, window) in windowPool {
-        window.invalidateCursorRects(for: window.overlayView)
-      }
-      // The app stays inactive here, so macOS only routes mouse-moved / cursor-rect handling to the
-      // key overlay. Track the pointer and move key ownership to whichever display it is over, so
-      // the crosshair follows across every display during the idle (pre-selection) phase.
-      startPointerTrackingIfNeeded()
+    // Keep the overlay non-activating so foreground-window capture still observes the app that was
+    // frontmost when the capture started. Cursor rect refresh plus pointer tracking gives the
+    // crosshair ownership without making Snapzy the active app.
+    for (_, window) in windowPool {
+      window.invalidateCursorRects(for: window.overlayView)
     }
+    startPointerTrackingIfNeeded()
 
     startWindowSelectionPreparationIfNeeded()
 
@@ -770,11 +735,6 @@ final class AreaSelectionController: NSObject {
       ]
     )
 
-    // Reactivate Snapzy so that cursor rects and key events work correctly
-    if !NSApp.isActive {
-      NSApp.activate(ignoringOtherApps: true)
-    }
-
     // Restore key focus to the keyboard owner window
     if let keyboardDisplay = keyboardOwnerDisplayID,
        let keyWindow = windowPool[keyboardDisplay] {
@@ -909,10 +869,7 @@ final class AreaSelectionController: NSObject {
     } else {
       completionWithResult?(nil)
     }
-    
-    previouslyActiveApplication?.activate(options: [])
-    previouslyActiveApplication = nil
-    
+
     resetCallbacks()
     dismissesAfterSelection = true
     forceCursorReset()
@@ -959,10 +916,7 @@ final class AreaSelectionController: NSObject {
     completion?(nil)
     completionWithMode?(nil, selectionMode)
     completionWithResult?(nil)
-    
-    previouslyActiveApplication?.activate(options: [])
-    previouslyActiveApplication = nil
-    
+
     resetCallbacks()
     forceCursorReset()
   }
