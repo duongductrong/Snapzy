@@ -15,7 +15,7 @@ final class OCRLinkPromptManager {
   static let shared = OCRLinkPromptManager()
 
   private static let autoDismissDelay: TimeInterval = 10
-  private static let panelWidth: CGFloat = 380
+  fileprivate static let panelWidth: CGFloat = 380
   /// Sits above the bottom-center toast slot so a "Copied to Clipboard"
   /// success toast and this prompt never overlap.
   private static let bottomMargin: CGFloat = 100
@@ -100,9 +100,12 @@ final class OCRLinkPromptManager {
   private func scheduleAutoDismiss(presentationID: UUID) {
     dismissTask?.cancel()
     dismissTask = Task { [weak self] in
-      try? await Task.sleep(nanoseconds: UInt64(Self.autoDismissDelay * 1_000_000_000))
-      guard !Task.isCancelled else { return }
-      self?.dismiss(presentationID: presentationID)
+      do {
+        try await Task.sleep(nanoseconds: UInt64(Self.autoDismissDelay * 1_000_000_000))
+        self?.dismiss(presentationID: presentationID)
+      } catch {
+        // Cancelled — a newer presentation or hover pause took over.
+      }
     }
   }
 
@@ -186,7 +189,7 @@ private struct OCRLinkPromptView: View {
     }
     .padding(.horizontal, 16)
     .padding(.vertical, 12)
-    .frame(width: 380, alignment: .leading)
+    .frame(width: OCRLinkPromptManager.panelWidth, alignment: .leading)
     .background(
       RoundedRectangle(cornerRadius: 10, style: .continuous)
         .fill(Color(nsColor: AppToastStyle.info.backgroundColor))
