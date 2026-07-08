@@ -451,13 +451,16 @@ final class AreaSelectionController: NSObject {
     // Activate pooled windows (instant show)
     activatePooledWindows()
 
-    // Keep the overlay non-activating so foreground-window capture still observes the app that was
-    // frontmost when the capture started. Cursor rect refresh plus pointer tracking gives the
-    // crosshair ownership without making Snapzy the active app.
+    // Keep live overlay sessions non-activating so foreground-window capture still observes the app
+    // that was frontmost when the capture started. Cursor rect refresh plus pointer tracking gives
+    // backdrop-less sessions crosshair ownership without making Snapzy the active app. Frozen
+    // sessions already render over a captured backdrop and do not need this key-window churn.
     for (_, window) in windowPool {
       window.invalidateCursorRects(for: window.overlayView)
     }
-    startPointerTrackingIfNeeded()
+    if selectionBackdrops.isEmpty {
+      startPointerTrackingIfNeeded()
+    }
 
     startWindowSelectionPreparationIfNeeded()
 
