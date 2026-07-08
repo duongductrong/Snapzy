@@ -43,7 +43,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Проверьте наличие обновлений..."
+            "value" : "Проверить обновления"
           }
         },
         "vi" : {
@@ -303,7 +303,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Предпочтения..."
+            "value" : "Настройки"
           }
         },
         "vi" : {
@@ -433,7 +433,7 @@
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Экран записи"
+            "value" : "Запись экрана"
           }
         },
         "vi" : {
