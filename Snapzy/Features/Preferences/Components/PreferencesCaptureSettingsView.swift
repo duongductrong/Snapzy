@@ -43,6 +43,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
   @AppStorage(PreferencesKeys.backgroundCutoutAutoCropEnabled) private var backgroundCutoutAutoCropEnabled = true
   @AppStorage(PreferencesKeys.ocrSuccessNotificationEnabled) private var ocrSuccessNotification = false
+  @AppStorage(PreferencesKeys.ocrLinkDetectionEnabled) private var ocrLinkDetection = true
   @AppStorage(PreferencesKeys.screenshotFileNameTemplate)
   private var screenshotFileNameTemplate = CaptureOutputKind.screenshot.defaultTemplate
 
@@ -291,6 +292,15 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.ocrSuccessNotificationDescription
             ) {
               Toggle("", isOn: $ocrSuccessNotification)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "link",
+              title: L10n.PreferencesCapture.ocrLinkDetectionTitle,
+              description: L10n.PreferencesCapture.ocrLinkDetectionDescription
+            ) {
+              Toggle("", isOn: $ocrLinkDetection)
                 .labelsHidden()
             }
           }

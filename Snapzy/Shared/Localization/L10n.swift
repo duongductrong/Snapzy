@@ -2838,6 +2838,16 @@ enum L10n {
       defaultValue: "Show a toast when text is copied to clipboard",
       comment: "Capture preferences setting description"
     )
+    static let ocrLinkDetectionTitle = string(
+      "preferences-capture.ocr-link-detection-title",
+      defaultValue: "Detect Links",
+      comment: "Capture preferences setting title"
+    )
+    static let ocrLinkDetectionDescription = string(
+      "preferences-capture.ocr-link-detection-description",
+      defaultValue: "Offer to open web links found in captured text",
+      comment: "Capture preferences setting description"
+    )
   }
 
   enum PreferencesAnnotate {
@@ -6977,6 +6987,27 @@ enum L10n {
         defaultValue: "OCR recognition failed: %@",
         comment: "Error shown when OCR recognition fails. %@ is the underlying error message.",
         message
+      )
+    }
+    static let linkDetectedTitle = string(
+      "ocr.link-detected-title",
+      defaultValue: "Link detected",
+      comment: "Title of the prompt shown when OCR capture finds one web link in the recognized text"
+    )
+    static func linksDetectedTitle(_ count: Int) -> String {
+      format(
+        "ocr.links-detected-title",
+        defaultValue: "%d links detected",
+        comment: "Title of the prompt shown when OCR capture finds multiple web links. %d is the link count.",
+        count
+      )
+    }
+    static func openLinkAccessibility(_ link: String) -> String {
+      format(
+        "ocr.open-link-accessibility",
+        defaultValue: "Open %@",
+        comment: "Accessibility label for a button that opens a web link detected in OCR text. %@ is the link.",
+        link
       )
     }
   }

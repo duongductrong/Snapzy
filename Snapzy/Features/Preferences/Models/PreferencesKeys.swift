@@ -73,6 +73,7 @@ enum PreferencesKeys {
   static let annotateCustomColors = "annotate.customColors.v1"
   static let annotateFavoriteColors = "annotate.favoriteColors.v1"
   static let ocrSuccessNotificationEnabled = "ocr.successNotificationEnabled"
+  static let ocrLinkDetectionEnabled = "ocr.linkDetectionEnabled"
 
   // Floating Screenshot (Quick Access)
   static let floatingEnabled = "floatingScreenshot.enabled"

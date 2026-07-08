@@ -2010,6 +2010,15 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 QuickAccessSound.complete.play()
               }
 
+              let linkDetectionEnabled = UserDefaults.standard
+                .object(forKey: PreferencesKeys.ocrLinkDetectionEnabled) as? Bool ?? true
+              if linkDetectionEnabled {
+                let detectedLinks = OCRLinkDetector.detectWebLinks(in: clipboardText)
+                if !detectedLinks.isEmpty {
+                  OCRLinkPromptManager.shared.show(links: detectedLinks)
+                }
+              }
+
             } catch {
               // Error feedback
               AppStatusBarController.shared.setProcessing(false)
