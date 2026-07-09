@@ -2,9 +2,9 @@
 //  OCRLinkPromptManager.swift
 //  Snapzy
 //
-//  Floating prompt shown after OCR capture when the recognized text contains
-//  web links, offering to open them (CleanShot-style). Unlike AppToastManager
-//  the panel accepts mouse input so the links are clickable.
+//  Floating prompt shown after OCR capture when the recognized text is a
+//  web link, offering to open it (CleanShot-style). Unlike AppToastManager
+//  the panel accepts mouse input so the link is clickable.
 //
 
 import AppKit
@@ -26,8 +26,8 @@ final class OCRLinkPromptManager {
 
   private init() {}
 
-  func show(links: [URL]) {
-    guard !links.isEmpty, let screen = targetScreen() else { return }
+  func show(link: URL) {
+    guard let screen = targetScreen() else { return }
 
     dismissTask?.cancel()
     dismissTask = nil
@@ -38,7 +38,7 @@ final class OCRLinkPromptManager {
     activePresentationID = presentationID
 
     let content = OCRLinkPromptView(
-      links: links,
+      link: link,
       onOpen: { [weak self] url in
         NSWorkspace.shared.open(url)
         DiagnosticLogger.shared.log(.info, .ocr, "OCR link prompt opened link", context: ["host": url.host ?? ""])
@@ -93,7 +93,7 @@ final class OCRLinkPromptManager {
       .info,
       .ocr,
       "OCR link prompt shown",
-      context: ["linkCount": "\(links.count)"]
+      context: ["host": link.host ?? ""]
     )
   }
 
@@ -146,7 +146,7 @@ final class OCRLinkPromptManager {
 // MARK: - View
 
 private struct OCRLinkPromptView: View {
-  let links: [URL]
+  let link: URL
   let onOpen: (URL) -> Void
   let onClose: () -> Void
   let onHoverChange: (Bool) -> Void
@@ -165,14 +165,12 @@ private struct OCRLinkPromptView: View {
         .frame(width: 23, height: 23)
 
       VStack(alignment: .leading, spacing: 6) {
-        Text(title)
+        Text(L10n.OCR.linkDetectedTitle)
           .font(.system(size: 13, weight: .semibold))
           .foregroundColor(Color(nsColor: AppToastStyle.info.textColor))
 
-        ForEach(links, id: \.absoluteString) { link in
-          OCRLinkRowButton(link: link) {
-            onOpen(link)
-          }
+        OCRLinkRowButton(link: link) {
+          onOpen(link)
         }
       }
       .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,12 +197,6 @@ private struct OCRLinkPromptView: View {
         .stroke(Color(nsColor: AppToastStyle.info.borderColor), lineWidth: 0.5)
     )
     .onHover(perform: onHoverChange)
-  }
-
-  private var title: String {
-    links.count == 1
-      ? L10n.OCR.linkDetectedTitle
-      : L10n.OCR.linksDetectedTitle(links.count)
   }
 }
 
