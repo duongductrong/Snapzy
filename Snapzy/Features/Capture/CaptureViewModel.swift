@@ -2012,8 +2012,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
               let linkDetectionEnabled = UserDefaults.standard
                 .object(forKey: PreferencesKeys.ocrLinkDetectionEnabled) as? Bool ?? true
-              if linkDetectionEnabled, let link = OCRLinkDetector.exclusiveWebLink(in: clipboardText) {
-                OCRLinkPromptManager.shared.show(link: link)
+              if linkDetectionEnabled {
+                let detectedLinks = OCRLinkDetector.detectWebLinks(in: clipboardText)
+                if !detectedLinks.isEmpty {
+                  OCRLinkPromptManager.shared.show(links: detectedLinks)
+                }
               }
 
             } catch {

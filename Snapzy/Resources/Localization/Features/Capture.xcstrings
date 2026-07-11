@@ -1691,6 +1691,71 @@
         }
       }
     },
+    "ocr.links-detected-title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d Links erkannt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d links detected"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d enlaces detectados"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d liens détectés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%d件のリンクを検出しました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "링크 %d개 감지됨"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Обнаружено ссылок: %d"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đã phát hiện %d liên kết"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检测到 %d 个链接"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "偵測到 %d 個連結"
+          }
+        }
+      }
+    },
     "ocr.no-text-found" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -4817,61 +4882,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Anbieten, den Link zu öffnen, wenn der erfasste Text eine Webadresse ist"
+            "value" : "Anbieten, in erfasstem Text gefundene Weblinks zu öffnen"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Offer to open the link when the captured text is a web address"
+            "value" : "Offer to open web links found in captured text"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ofrecer abrir el enlace cuando el texto capturado es una dirección web"
+            "value" : "Ofrecer abrir los enlaces web encontrados en el texto capturado"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Proposer d'ouvrir le lien lorsque le texte capturé est une adresse web"
+            "value" : "Proposer d'ouvrir les liens web trouvés dans le texte capturé"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キャプチャしたテキストがWebアドレスの場合にリンクを開くよう提案します"
+            "value" : "キャプチャしたテキスト内のWebリンクを開くよう提案します"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캡처한 텍스트가 웹 주소인 경우 링크 열기를 제안합니다"
+            "value" : "캡처한 텍스트에서 발견된 웹 링크 열기를 제안합니다"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Предлагать открыть ссылку, если захваченный текст является веб-адресом"
+            "value" : "Предлагать открыть веб-ссылки, найденные в захваченном тексте"
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Đề xuất mở liên kết khi văn bản đã chụp là một địa chỉ web"
+            "value" : "Đề xuất mở các liên kết web tìm thấy trong văn bản đã chụp"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "当捕获的文本是网址时，提示打开链接"
+            "value" : "提示打开捕获文本中发现的网页链接"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "當擷取的文字是網址時，提示開啟連結"
+            "value" : "提示開啟擷取文字中發現的網頁連結"
           }
         }
       }

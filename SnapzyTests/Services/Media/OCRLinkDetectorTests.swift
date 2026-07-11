@@ -2,7 +2,7 @@
 //  OCRLinkDetectorTests.swift
 //  SnapzyTests
 //
-//  Unit tests for exclusive web link detection in OCR-captured text.
+//  Unit tests for web link detection in OCR-captured text.
 //
 
 import XCTest
@@ -10,59 +10,71 @@ import XCTest
 
 final class OCRLinkDetectorTests: XCTestCase {
 
-  func testDetectsTextThatIsExactlyAWebURL() {
-    let link = OCRLinkDetector.exclusiveWebLink(in: "https://example.com/docs")
+  func testDetectsExplicitWebURL() {
+    let links = OCRLinkDetector.detectWebLinks(in: "Visit https://example.com/docs for details")
 
-    XCTAssertEqual(link?.absoluteString, "https://example.com/docs")
-  }
-
-  func testTrimsSurroundingWhitespaceAndNewlines() {
-    let link = OCRLinkDetector.exclusiveWebLink(in: "  \n https://example.com/docs \n ")
-
-    XCTAssertEqual(link?.absoluteString, "https://example.com/docs")
+    XCTAssertEqual(links.map(\.absoluteString), ["https://example.com/docs"])
   }
 
   func testPromotesBareDomainToHTTP() {
-    let link = OCRLinkDetector.exclusiveWebLink(in: "example.com")
+    let links = OCRLinkDetector.detectWebLinks(in: "Docs live at example.com today")
 
-    XCTAssertEqual(link?.scheme, "http")
-    XCTAssertEqual(link?.host, "example.com")
+    XCTAssertEqual(links.count, 1)
+    XCTAssertEqual(links.first?.scheme, "http")
+    XCTAssertEqual(links.first?.host, "example.com")
   }
 
-  func testRejectsURLEmbeddedInLargerText() {
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "Visit https://example.com for details"))
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "https://example.com is great"))
-    XCTAssertNil(
-      OCRLinkDetector.exclusiveWebLink(
-        in: """
-        Meeting notes
-        https://zoom.us/rec/share/abc123
-        """
-      )
-    )
+  func testIgnoresEmailAddressesAndCustomSchemes() {
+    let text = "Contact hello@example.com or launch snapzy://capture/area"
+    let links = OCRLinkDetector.detectWebLinks(in: text)
+
+    XCTAssertTrue(links.isEmpty)
   }
 
-  func testRejectsMultipleURLs() {
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "https://first.com https://second.com"))
-    XCTAssertNil(
-      OCRLinkDetector.exclusiveWebLink(
-        in: """
-        https://first.com
-        https://second.com
-        """
-      )
-    )
+  func testDeduplicatesRepeatedLinks() {
+    let text = """
+    https://example.com/page
+    HTTPS://EXAMPLE.COM/page
+    https://example.com/page/
+    """
+    let links = OCRLinkDetector.detectWebLinks(in: text)
+
+    XCTAssertEqual(links.count, 1)
   }
 
-  func testRejectsEmailAddressesAndCustomSchemes() {
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "hello@example.com"))
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "snapzy://capture/area"))
+  func testKeepsLinksThatDifferOnlyByPathCase() {
+    let text = "https://example.com/Foo and https://example.com/foo"
+    let links = OCRLinkDetector.detectWebLinks(in: text)
+
+    XCTAssertEqual(links.count, 2)
   }
 
-  func testRejectsEmptyAndPlainText() {
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: ""))
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "   \n  "))
-    XCTAssertNil(OCRLinkDetector.exclusiveWebLink(in: "No links in this sentence."))
+  func testPreservesOrderAndRespectsLimit() {
+    let text = "https://first.com then https://second.com then https://third.com then https://fourth.com"
+    let links = OCRLinkDetector.detectWebLinks(in: text)
+
+    XCTAssertEqual(links.count, OCRLinkDetector.maxDetectedLinks)
+    XCTAssertEqual(links.first?.host, "first.com")
+
+    let limited = OCRLinkDetector.detectWebLinks(in: text, limit: 1)
+    XCTAssertEqual(limited.map(\.host), ["first.com"])
+  }
+
+  func testEmptyAndPlainTextYieldNoLinks() {
+    XCTAssertTrue(OCRLinkDetector.detectWebLinks(in: "").isEmpty)
+    XCTAssertTrue(OCRLinkDetector.detectWebLinks(in: "No links in this sentence.").isEmpty)
+  }
+
+  func testDetectsLinkInsideMultilineOCROutput() {
+    let text = """
+    Meeting notes
+    Agenda: review roadmap
+    Recording: https://zoom.us/rec/share/abc123
+    Attendees: 5
+    """
+    let links = OCRLinkDetector.detectWebLinks(in: text)
+
+    XCTAssertEqual(links.map(\.absoluteString), ["https://zoom.us/rec/share/abc123"])
   }
 
   func testDisplayStringStripsSchemeAndTrailingSlash() {

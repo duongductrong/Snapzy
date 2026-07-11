@@ -2,38 +2,49 @@
 //  OCRLinkDetector.swift
 //  Snapzy
 //
-//  Detects when OCR-captured text is exactly one openable web link so the
-//  capture flow can offer to open it. Detection is passive: nothing is opened
-//  without an explicit user action on the prompt.
+//  Detects openable web links inside OCR-captured text so the capture flow can
+//  offer to open them. Detection is passive: nothing is opened without an
+//  explicit user action on the prompt.
 //
 
 import Foundation
 
 nonisolated enum OCRLinkDetector {
-  /// Returns the web link (http/https, including bare domains promoted by
-  /// NSDataDetector) when the trimmed `text` consists of nothing but that
-  /// link. Text that merely contains a URL among other content returns nil.
-  static func exclusiveWebLink(in text: String) -> URL? {
-    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+  /// Upper bound on links surfaced in the post-capture prompt; keeps the
+  /// prompt compact when a capture contains a wall of URLs.
+  static let maxDetectedLinks = 3
+
+  /// Returns unique web links (http/https, including bare domains promoted by
+  /// NSDataDetector) found in `text`, in order of appearance.
+  static func detectWebLinks(in text: String, limit: Int = maxDetectedLinks) -> [URL] {
     guard
-      !trimmed.isEmpty,
+      limit > 0,
+      !text.isEmpty,
       let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
     else {
-      return nil
+      return []
     }
 
-    let fullRange = NSRange(trimmed.startIndex..<trimmed.endIndex, in: trimmed)
-    let matches = detector.matches(in: trimmed, options: [], range: fullRange)
-    guard
-      matches.count == 1,
-      let match = matches.first,
-      match.range == fullRange,
-      let url = match.url
-    else {
-      return nil
+    let fullRange = NSRange(text.startIndex..<text.endIndex, in: text)
+    var seenKeys = Set<String>()
+    var links: [URL] = []
+
+    detector.enumerateMatches(in: text, options: [], range: fullRange) { match, _, stop in
+      guard
+        let url = match?.url,
+        let webURL = webURL(from: url),
+        seenKeys.insert(dedupeKey(for: webURL)).inserted
+      else {
+        return
+      }
+
+      links.append(webURL)
+      if links.count >= limit {
+        stop.pointee = true
+      }
     }
 
-    return webURL(from: url)
+    return links
   }
 
   /// Compact representation for UI display: scheme stripped, no trailing slash.
@@ -58,5 +69,19 @@ nonisolated enum OCRLinkDetector {
       return nil
     }
     return url
+  }
+
+  /// Scheme and host are case-insensitive; path, query, and fragment are not.
+  private static func dedupeKey(for url: URL) -> String {
+    var key = url.absoluteString
+    if var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+      components.scheme = components.scheme?.lowercased()
+      components.host = components.host?.lowercased()
+      key = components.url?.absoluteString ?? key
+    }
+    if key.hasSuffix("/") {
+      key.removeLast()
+    }
+    return key
   }
 }

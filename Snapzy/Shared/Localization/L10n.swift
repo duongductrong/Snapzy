@@ -2845,7 +2845,7 @@ enum L10n {
     )
     static let ocrLinkDetectionDescription = string(
       "preferences-capture.ocr-link-detection-description",
-      defaultValue: "Offer to open the link when the captured text is a web address",
+      defaultValue: "Offer to open web links found in captured text",
       comment: "Capture preferences setting description"
     )
   }
@@ -6992,8 +6992,16 @@ enum L10n {
     static let linkDetectedTitle = string(
       "ocr.link-detected-title",
       defaultValue: "Link detected",
-      comment: "Title of the prompt shown when OCR capture recognizes text that is a web link"
+      comment: "Title of the prompt shown when OCR capture finds one web link in the recognized text"
     )
+    static func linksDetectedTitle(_ count: Int) -> String {
+      format(
+        "ocr.links-detected-title",
+        defaultValue: "%d links detected",
+        comment: "Title of the prompt shown when OCR capture finds multiple web links. %d is the link count.",
+        count
+      )
+    }
     static func openLinkAccessibility(_ link: String) -> String {
       format(
         "ocr.open-link-accessibility",
