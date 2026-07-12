@@ -23,6 +23,7 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("snapzy://record/screen", .recordScreen),
       ("snapzy://record/application", .recordApplication),
       ("snapzy://open/annotate", .openAnnotate),
+      ("snapzy://open/combine", .openCombine([])),
       ("snapzy://open/video-editor", .openVideoEditor),
       ("snapzy://open/cloud-uploads", .openCloudUploads),
       ("snapzy://open/history", .openHistory),
@@ -34,6 +35,37 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       let url = try XCTUnwrap(URL(string: urlString))
       XCTAssertEqual(SnapzyDeepLinkAction(url: url), expectedAction, urlString)
     }
+  }
+
+  func testCombineAliasesParseExpectedAction() throws {
+    let aliases = [
+      "snapzy://combine",
+      "snapzy://combine-images",
+      "snapzy://open-combine",
+    ]
+
+    for urlString in aliases {
+      let url = try XCTUnwrap(URL(string: urlString))
+      XCTAssertEqual(SnapzyDeepLinkAction(url: url), .openCombine([]), urlString)
+    }
+  }
+
+  func testCombineRouteParsesRepeatedFileParameters() throws {
+    var components = try XCTUnwrap(URLComponents(string: "snapzy://open/combine"))
+    components.queryItems = [
+      URLQueryItem(name: "file", value: "/tmp/first image.png"),
+      URLQueryItem(name: "file", value: "file:///tmp/second.jpg"),
+      URLQueryItem(name: "ignored", value: "/tmp/not-used.png"),
+    ]
+
+    let url = try XCTUnwrap(components.url)
+    XCTAssertEqual(
+      SnapzyDeepLinkAction(url: url),
+      .openCombine([
+        URL(fileURLWithPath: "/tmp/first image.png"),
+        URL(fileURLWithPath: "/tmp/second.jpg"),
+      ])
+    )
   }
 
   func testApplicationCaptureAliasesParseExpectedAction() throws {

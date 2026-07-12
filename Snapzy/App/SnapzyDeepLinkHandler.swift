@@ -74,6 +74,13 @@ struct SnapzyDeepLinkHandler {
     case .openAnnotate:
       AnnotateManager.shared.openEmptyAnnotation()
       NSApp.activate(ignoringOtherApps: true)
+    case .openCombine(let fileURLs):
+      if fileURLs.count >= 2 {
+        AnnotateManager.shared.openCombineImages(urls: fileURLs)
+      } else {
+        CombineImagesCoordinator.shared.presentPicker()
+      }
+      NSApp.activate(ignoringOtherApps: true)
     case .openVideoEditor:
       VideoEditorManager.shared.openEmptyEditor()
       NSApp.activate(ignoringOtherApps: true)
@@ -104,6 +111,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case recordScreen
   case recordApplication
   case openAnnotate
+  case openCombine([URL])
   case openVideoEditor
   case openCloudUploads
   case openHistory
@@ -145,6 +153,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .recordApplication
     case "open/annotate", "annotate", "open-annotate":
       self = .openAnnotate
+    case "open/combine", "combine", "combine-images", "open-combine":
+      self = .openCombine(Self.combineFileURLs(from: components))
     case "open/video-editor", "video-editor", "edit-video", "open-video-editor":
       self = .openVideoEditor
     case "open/cloud-uploads", "cloud-uploads", "uploads", "open-uploads":
@@ -178,12 +188,25 @@ enum SnapzyDeepLinkAction: Equatable {
     case .recordScreen: return "recordScreen"
     case .recordApplication: return "recordApplication"
     case .openAnnotate: return "openAnnotate"
+    case .openCombine(let fileURLs): return "openCombine(\(fileURLs.count))"
     case .openVideoEditor: return "openVideoEditor"
     case .openCloudUploads: return "openCloudUploads"
     case .openHistory: return "openHistory"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
     }
+  }
+
+  private static func combineFileURLs(from components: URLComponents?) -> [URL] {
+    components?.queryItems?
+      .filter { $0.name.lowercased() == "file" }
+      .compactMap { item in
+        guard let value = item.value, !value.isEmpty else { return nil }
+        if let url = URL(string: value), url.isFileURL {
+          return url.standardizedFileURL
+        }
+        return URL(fileURLWithPath: (value as NSString).expandingTildeInPath).standardizedFileURL
+      } ?? []
   }
 
   private static func preferencesTab(from components: URLComponents?, pathParts: [String]) -> PreferencesTab? {

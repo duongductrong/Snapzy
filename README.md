@@ -163,12 +163,21 @@ Snapzy registers the `snapzy://` URL scheme so launchers and automation tools ca
 | Screen recording      | `snapzy://record/screen`          |
 | Application recording | `snapzy://record/application`     |
 | Open Annotate         | `snapzy://open/annotate`          |
+| Combine images        | `snapzy://open/combine`           |
 | Open Video Editor     | `snapzy://open/video-editor`      |
 | Open Cloud Uploads    | `snapzy://open/cloud-uploads`     |
 | Open Capture History  | `snapzy://open/history`           |
 | Show shortcuts list   | `snapzy://show/shortcuts`         |
 | Open Settings         | `snapzy://settings`               |
 | Open Settings tab     | `snapzy://settings?tab=annotate`  |
+
+`snapzy://open/combine` opens the image picker. Automation tools can skip the
+picker by passing two or more URL-encoded local paths as repeated `file`
+parameters:
+
+```bash
+open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
+```
 
 ## Development
 
