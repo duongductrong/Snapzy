@@ -10,7 +10,7 @@ import Foundation
 enum L10n {
   private nonisolated static let tableMappings: [(prefix: String, tableName: String)] = [
     ("action.", "Common"),
-    ("combine.", "Common"),
+    ("combine.", "Combine"),
     ("menu.", "Menubar"),
     ("common.", "Common"),
     ("whats-new.", "WhatsNew"),
