@@ -188,10 +188,13 @@ struct AnnotateCanvasView: View {
     let alignmentSpace: CGFloat = state.imageAlignment != .center ? 40 : 0
 
     let imageBounds = state.sourceImageBounds
+    let combineBounds = state.effectiveContentBounds
     let cropBounds = state.cropRect?.standardized
 
     let fitBounds: CGRect
-    if let cropBounds, !state.isCropActive {
+    if state.isCombineMode {
+      fitBounds = combineBounds
+    } else if let cropBounds, !state.isCropActive {
       fitBounds = cropBounds
     } else {
       fitBounds = imageBounds
@@ -199,18 +202,22 @@ struct AnnotateCanvasView: View {
 
     // Scale is tied to the currently fitted image/crop, not to the live crop rect.
     // This keeps crop dimensions predictable while users drag handles outward.
-    let fitLogicalCanvasSize = state.aspectRatio.canvasSize(
-      for: fitBounds.size,
-      padding: currentPadding,
-      alignmentSpace: alignmentSpace,
-      orientation: state.aspectRatioOrientation
-    )
+    let fitLogicalCanvasSize = state.isCombineMode
+      ? CGSize(width: fitBounds.width + currentPadding * 2, height: fitBounds.height + currentPadding * 2)
+      : state.aspectRatio.canvasSize(
+        for: fitBounds.size,
+        padding: currentPadding,
+        alignmentSpace: alignmentSpace,
+        orientation: state.aspectRatioOrientation
+      )
     let scaleX = availableWidth / fitLogicalCanvasSize.width
     let scaleY = availableHeight / fitLogicalCanvasSize.height
     let scale = min(scaleX, scaleY, 1.0)
 
     let foregroundBounds: CGRect
-    if let cropBounds {
+    if state.isCombineMode {
+      foregroundBounds = combineBounds
+    } else if let cropBounds {
       if state.isCropActive {
         foregroundBounds = cropWorkspaceBounds(
           for: imageBounds,
@@ -224,12 +231,14 @@ struct AnnotateCanvasView: View {
       foregroundBounds = imageBounds
     }
 
-    let logicalCanvasSize = state.aspectRatio.canvasSize(
-      for: foregroundBounds.size,
-      padding: currentPadding,
-      alignmentSpace: alignmentSpace,
-      orientation: state.aspectRatioOrientation
-    )
+    let logicalCanvasSize = state.isCombineMode
+      ? CGSize(width: foregroundBounds.width + currentPadding * 2, height: foregroundBounds.height + currentPadding * 2)
+      : state.aspectRatio.canvasSize(
+        for: foregroundBounds.size,
+        padding: currentPadding,
+        alignmentSpace: alignmentSpace,
+        orientation: state.aspectRatioOrientation
+      )
 
     // Background = logical canvas * scale (includes padding + alignment space)
     let bgWidth = logicalCanvasSize.width * scale
@@ -243,7 +252,7 @@ struct AnnotateCanvasView: View {
     let foregroundWidth = foregroundBounds.width * scale
     let foregroundHeight = foregroundBounds.height * scale
     let foregroundDisplaySize = CGSize(width: foregroundWidth, height: foregroundHeight)
-    let offset = state.imageOffset(
+    let offset = state.isCombineMode ? .zero : state.imageOffset(
       for: CGSize(width: bgWidth, height: bgHeight),
       imageDisplaySize: foregroundDisplaySize,
       displayPadding: currentPadding * scale
@@ -288,6 +297,10 @@ struct AnnotateCanvasView: View {
           .offset(x: offset.x, y: offset.y)
         }
       }
+      .modifier(CombineCanvasClipModifier(
+        isEnabled: state.isCombineMode,
+        cornerRadius: state.effectiveCornerRadius * scale
+      ))
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
     }
@@ -579,6 +592,20 @@ struct AnnotateCanvasView: View {
       return false
     }
     return supportedImageTypes.contains { type.conforms(to: $0) }
+  }
+}
+
+private struct CombineCanvasClipModifier: ViewModifier {
+  let isEnabled: Bool
+  let cornerRadius: CGFloat
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    if isEnabled {
+      content.clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+    } else {
+      content
+    }
   }
 }
 

@@ -16,6 +16,7 @@ extension Notification.Name {
   static let annotateCloudUpload = Notification.Name("annotateCloudUpload")
   static let annotateAutoRedactSensitiveData = Notification.Name("annotateAutoRedactSensitiveData")
   static let annotatePasteImage = Notification.Name("annotatePasteImage")
+  static let annotateAddImage = Notification.Name("annotateAddImage")
   static let annotateTogglePin = Notification.Name("annotateTogglePin")
   static let annotateDragStarted = Notification.Name("annotateDragStarted")
   static let annotateDragEnded = Notification.Name("annotateDragEnded")

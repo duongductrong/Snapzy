@@ -10,6 +10,7 @@ import Foundation
 enum L10n {
   private nonisolated static let tableMappings: [(prefix: String, tableName: String)] = [
     ("action.", "Common"),
+    ("combine.", "Common"),
     ("menu.", "Menubar"),
     ("common.", "Common"),
     ("whats-new.", "WhatsNew"),
@@ -725,6 +726,32 @@ enum L10n {
       defaultValue: "Quit Snapzy",
       comment: "Status bar menu item title for quitting the app"
     )
+  }
+
+  enum Combine {
+    static let mode = string("combine.mode", defaultValue: "Combine mode", comment: "Label for combine mode picker")
+    static let autoStitch = string("combine.auto-stitch", defaultValue: "Auto Stitch", comment: "Automatic image stitching mode")
+    static let freeCanvas = string("combine.free-canvas", defaultValue: "Free Canvas", comment: "Free image arrangement mode")
+    static let arrangement = string("combine.arrangement", defaultValue: "Arrangement", comment: "Combine arrangement section title")
+    static let spacing = string("combine.spacing", defaultValue: "Spacing", comment: "Combine spacing section title")
+    static let imageGap = string("combine.image-gap", defaultValue: "Image Gap", comment: "Gap between combined images")
+    static let images = string("combine.images", defaultValue: "Images", comment: "Combined image list title")
+    static func image(_ index: Int) -> String {
+      format("combine.image-index", defaultValue: "Image %d", comment: "Combined image list item", index)
+    }
+    static let moveEarlier = string("combine.move-earlier", defaultValue: "Move Earlier", comment: "Move combined image earlier")
+    static let moveLater = string("combine.move-later", defaultValue: "Move Later", comment: "Move combined image later")
+    static let smart = string("combine.smart", defaultValue: "Smart", comment: "Smart combine direction")
+    static let horizontal = string("combine.horizontal", defaultValue: "Horizontal", comment: "Horizontal combine direction")
+    static let vertical = string("combine.vertical", defaultValue: "Vertical", comment: "Vertical combine direction")
+    static let open = string("combine.open", defaultValue: "Combine Images", comment: "Open combine images action")
+    static let pickerTitle = string("combine.picker-title", defaultValue: "Choose Images to Combine", comment: "Combine image picker title")
+    static let pickerMessage = string("combine.picker-message", defaultValue: "Select two or more images.", comment: "Combine image picker message")
+    static let pickerConfirm = string("combine.picker-confirm", defaultValue: "Combine", comment: "Combine image picker confirmation")
+    static let saveTitle = string("combine.save-title", defaultValue: "Save Combined Image", comment: "Combine save dialog title")
+    static let saveMessage = string("combine.save-message", defaultValue: "Choose how to export the stitched result.", comment: "Combine save dialog message")
+    static let saveToFile = string("combine.save-to-file", defaultValue: "Save to File…", comment: "Save combined image to file")
+    static let copyToClipboard = string("combine.copy-to-clipboard", defaultValue: "Copy to Clipboard", comment: "Copy combined image to clipboard")
   }
 
   enum Common {

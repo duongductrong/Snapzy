@@ -106,6 +106,55 @@ final class AnnotateImageOpsTests: XCTestCase {
     }
     XCTAssertEqual(state.selectedTool, .selection)
     XCTAssertTrue(state.hasUnsavedChanges)
+    XCTAssertTrue(state.isCombineMode)
+  }
+
+  func testCombineImportPlacesSecondImageFlushRightInHorizontalMode() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 200, height: 100))
+    state.setCombineDirection(.horizontal)
+
+    let imported = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(imported.bounds.minX, 400, accuracy: 0.001)
+    XCTAssertEqual(imported.bounds.minY, 0, accuracy: 0.001)
+    XCTAssertEqual(imported.bounds.height, 300, accuracy: 0.001)
+    XCTAssertEqual(state.combineContentBounds.width, 1000, accuracy: 0.001)
+  }
+
+  func testCombineModeSwitchRestoresFreeCanvasBounds() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 200, height: 100))
+    state.setCombineMode(.freeCanvas)
+
+    let importedID = try XCTUnwrap(state.annotations.first?.id)
+    let freeBounds = CGRect(x: 90, y: -40, width: 240, height: 120)
+    state.updateAnnotationBounds(id: importedID, bounds: freeBounds)
+    state.setCombineMode(.autoStitch)
+    XCTAssertNotEqual(state.annotations.first?.bounds, freeBounds)
+
+    state.setCombineMode(.freeCanvas)
+    XCTAssertEqual(state.annotations.first?.bounds, freeBounds)
+  }
+
+  func testCombineImageOrderCanMoveImportedImageBeforeBase() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 200, height: 100))
+
+    state.moveCombineImage(at: 1, by: -1)
+
+    XCTAssertEqual(state.sourceImage?.size, NSSize(width: 200, height: 100))
+    guard case .embeddedImage(let assetID) = try XCTUnwrap(state.annotations.first).type else {
+      return XCTFail("Expected imported image layer")
+    }
+    XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 400, height: 300))
+    XCTAssertEqual(state.combineImageCount, 2)
+
+    state.undo()
+    XCTAssertEqual(state.sourceImage?.size, NSSize(width: 400, height: 300))
+    XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 200, height: 100))
   }
 
   // MARK: - addImportedImage size guard

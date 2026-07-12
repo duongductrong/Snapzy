@@ -143,6 +143,16 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     setupSourceURLObservation()
   }
 
+  convenience init(combineImageURLs: [URL]) {
+    self.init()
+    guard let firstURL = combineImageURLs.first,
+          state.importImage(from: firstURL) else { return }
+    for url in combineImageURLs.dropFirst() {
+      _ = state.importImage(from: url)
+    }
+    state.activateCombineMode(preferredMode: .autoStitch)
+  }
+
   /// URL-only initializer for post-capture auto-open flow
   init(url: URL, sessionData: AnnotationSessionData? = nil) {
     self.quickAccessItemId = nil
@@ -639,6 +649,16 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     }
 
     NotificationCenter.default.addObserver(
+      forName: .annotateAddImage,
+      object: window,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.performAddImages()
+      }
+    }
+
+    NotificationCenter.default.addObserver(
       forName: .annotateAutoRedactSensitiveData,
       object: window,
       queue: .main
@@ -799,6 +819,22 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     return false
   }
 
+  private func performAddImages() {
+    guard let window else { return }
+    let panel = NSOpenPanel()
+    panel.title = L10n.Combine.pickerTitle
+    panel.prompt = L10n.Combine.pickerConfirm
+    panel.allowedContentTypes = [.png, .jpeg, .webP, .gif, .tiff, .heic]
+    panel.allowsMultipleSelection = true
+    panel.canChooseDirectories = false
+    panel.beginSheetModal(for: window) { [weak self] response in
+      guard response == .OK, let self else { return }
+      for url in panel.urls {
+        _ = self.state.importImage(from: url)
+      }
+    }
+  }
+
   private func importPasteboardImage(_ candidate: PasteboardImageCandidate) -> Bool {
     switch candidate {
     case .file(let url):
@@ -814,6 +850,11 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   /// If previously uploaded to cloud, gate behind overwrite confirmation.
   private func performSave() {
     guard state.hasImage else { return }
+
+    if state.isCombineMode {
+      performCombineSave()
+      return
+    }
 
     // Cloud gate: if the rendered output differs from the uploaded file, require overwrite confirmation.
     if requiresCloudOverwriteConfirmation {
@@ -884,6 +925,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       }
       if AnnotateExporter.save(state: self.state, to: url) {
         self.state.markAsSaved()
+        SoundManager.play("Pop")
         // Dismiss Quick Access card if present
         if let itemId = self.quickAccessItemId {
           QuickAccessManager.shared.dismissCard(id: itemId)
@@ -908,11 +950,38 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func generateFileName() -> String {
+    if state.isCombineMode {
+      let formatter = DateFormatter()
+      formatter.dateFormat = "yyyyMMdd-HHmmss"
+      return "combined-\(formatter.string(from: Date())).png"
+    }
     guard let url = state.sourceURL else { return L10n.AnnotateUI.defaultAnnotatedFileName }
     let baseName = url.deletingPathExtension().lastPathComponent
     // Use the source file's extension so the default matches the configured format
     let ext = url.pathExtension.isEmpty ? "png" : url.pathExtension
     return "\(baseName)_annotated.\(ext)"
+  }
+
+  private func performCombineSave() {
+    guard let window else { return }
+    let alert = NSAlert()
+    alert.messageText = L10n.Combine.saveTitle
+    alert.informativeText = L10n.Combine.saveMessage
+    alert.alertStyle = .informational
+    alert.addButton(withTitle: L10n.Combine.saveToFile)
+    alert.addButton(withTitle: L10n.Combine.copyToClipboard)
+    alert.addButton(withTitle: L10n.Common.cancel)
+    alert.beginSheetModal(for: window) { [weak self] response in
+      guard let self else { return }
+      switch response {
+      case .alertFirstButtonReturn:
+        self.performSaveAs()
+      case .alertSecondButtonReturn:
+        self.executeCopy()
+      default:
+        break
+      }
+    }
   }
 
   /// Copy = render once, copy to clipboard, update thumbnail, close, save in background.

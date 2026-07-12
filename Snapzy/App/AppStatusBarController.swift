@@ -492,6 +492,17 @@ final class AppStatusBarController: ObservableObject {
     annotateItem.isEnabled = true
     menu?.addItem(annotateItem)
 
+    let combineImagesItem = NSMenuItem(
+      title: L10n.Combine.open,
+      action: #selector(openCombineImagesAction),
+      keyEquivalent: ""
+    )
+    combineImagesItem.target = self
+    combineImagesItem.image = NSImage(
+      systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
+    combineImagesItem.isEnabled = true
+    menu?.addItem(combineImagesItem)
+
     let editVideoItem = NSMenuItem(
       title: L10n.Menu.editVideo,
       action: #selector(editVideoAction),
@@ -675,6 +686,11 @@ final class AppStatusBarController: ObservableObject {
   @objc private func openAnnotateAction() {
     logMenuAction("openAnnotate")
     AnnotateManager.shared.openEmptyAnnotation()
+  }
+
+  @objc private func openCombineImagesAction() {
+    logMenuAction("openCombineImages")
+    CombineImagesCoordinator.shared.presentPicker()
   }
 
   @objc private func editVideoAction() {

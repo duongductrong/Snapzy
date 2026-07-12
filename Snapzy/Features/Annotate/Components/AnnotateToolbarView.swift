@@ -37,6 +37,17 @@ struct AnnotateToolbarView: View {
 
       ToolbarDivider()
 
+      if state.isCombineMode {
+        ToolbarButton(icon: "photo.badge.plus", isSelected: false) {
+          guard let window = NSApp.keyWindow else { return }
+          NotificationCenter.default.post(name: .annotateAddImage, object: window)
+        }
+        .help(L10n.Combine.pickerTitle)
+
+        AnnotateCombineModePicker(state: state)
+        ToolbarDivider()
+      }
+
       Spacer()
 
       registeredActionButtons
@@ -230,7 +241,12 @@ struct AnnotateToolbarView: View {
   // MARK: - Actions
 
   private func saveAs() {
-    AnnotateExporter.saveAs(state: state, closeWindow: true)
+    if state.isCombineMode {
+      guard let window = NSApp.keyWindow else { return }
+      NotificationCenter.default.post(name: .annotateSave, object: window)
+    } else {
+      AnnotateExporter.saveAs(state: state, closeWindow: true)
+    }
   }
 
   private func done() {

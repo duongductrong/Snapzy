@@ -229,6 +229,30 @@ final class AnnotateManager {
     controller.handleManualOpenClipboardImageBehavior()
   }
 
+  func openCombineImages(urls: [URL]) {
+    guard urls.count >= 2, NSScreen.screens.isEmpty == false else { return }
+    becomeRegularApp()
+
+    let controller = AnnotateWindowController(combineImageURLs: urls)
+    let controllerID = UUID()
+    manualWindowControllers[controllerID] = controller
+
+    if let window = controller.window {
+      NotificationCenter.default.addObserver(
+        forName: NSWindow.willCloseNotification,
+        object: window,
+        queue: .main
+      ) { [weak self] _ in
+        MainActor.assumeIsolated {
+          self?.manualWindowControllers.removeValue(forKey: controllerID)
+          self?.becomeAccessoryAppIfNeeded()
+        }
+      }
+    }
+
+    controller.showWindow()
+  }
+
   // MARK: - Session Cache
 
   /// Save annotation session data for re-editing

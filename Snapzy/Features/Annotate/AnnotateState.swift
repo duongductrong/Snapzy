@@ -230,6 +230,120 @@ final class AnnotateState: ObservableObject {
   @Published var isPinned: Bool = false
   @Published private(set) var dragToAppPreparationState: DragToAppPreparationState
 
+  // MARK: - Combine Images
+
+  static let combineBaseLayerID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+
+  @Published private(set) var isCombineMode = false
+  @Published private(set) var combineMode: CombineImagesMode = .autoStitch
+  @Published private(set) var combineDirection: CombineImagesDirection = .smart
+  @Published private(set) var combineResolvedDirection: CombineImagesDirection = .horizontal
+  @Published private(set) var combineGap: CGFloat = 0
+  @Published private(set) var combineContentBounds: CGRect = .zero
+  @Published var frozenCombineContentBounds: CGRect?
+  let combineSnapTolerance: CGFloat = 14
+
+  private var freeCombineBoundsByAnnotationID: [UUID: CGRect] = [:]
+
+  var effectiveContentBounds: CGRect {
+    guard isCombineMode else { return sourceImageBounds }
+    return frozenCombineContentBounds ?? combineContentBounds
+  }
+
+  var combineImageCount: Int {
+    1 + annotations.reduce(into: 0) { count, annotation in
+      if case .embeddedImage = annotation.type { count += 1 }
+    }
+  }
+
+  func moveCombineImage(at index: Int, by offset: Int) {
+    guard isCombineMode, offset != 0, let sourceImage else { return }
+    let slots = annotations.compactMap { annotation -> UUID? in
+      guard case .embeddedImage(let assetID) = annotation.type else { return nil }
+      return assetID
+    }
+    var orderedImages = [sourceImage] + slots.compactMap { embeddedImageAssets[$0] }
+    guard orderedImages.count == slots.count + 1,
+          orderedImages.indices.contains(index) else { return }
+    let destination = index + offset
+    guard orderedImages.indices.contains(destination) else { return }
+
+    pushRotationUndo(currentRotationSnapshot())
+    let moved = orderedImages.remove(at: index)
+    orderedImages.insert(moved, at: destination)
+    self.sourceImage = orderedImages[0]
+    for (slotIndex, assetID) in slots.enumerated() {
+      embeddedImageAssets[assetID] = orderedImages[slotIndex + 1]
+      embeddedImageSourceData.removeValue(forKey: assetID)
+      embeddedImageSnapshotCacheData.removeValue(forKey: assetID)
+      embeddedImageCGImageCache.removeValue(forKey: assetID)
+    }
+    hasUnsavedChanges = true
+    refreshCombineLayout()
+  }
+
+  func activateCombineMode(preferredMode: CombineImagesMode = .autoStitch) {
+    guard hasImage else { return }
+    if !isCombineMode {
+      isCombineMode = true
+      showSidebar = true
+      selectedTool = .selection
+      captureCurrentFreeCombineBounds()
+    }
+    setCombineMode(preferredMode)
+  }
+
+  func deactivateCombineMode() {
+    guard isCombineMode else { return }
+    isCombineMode = false
+    combineContentBounds = sourceImageBounds
+    frozenCombineContentBounds = nil
+  }
+
+  func setCombineMode(_ mode: CombineImagesMode) {
+    guard isCombineMode else { return }
+    guard combineMode != mode else {
+      refreshCombineLayout()
+      return
+    }
+
+    if combineMode == .freeCanvas {
+      captureCurrentFreeCombineBounds()
+    }
+    combineMode = mode
+    switch mode {
+    case .autoStitch:
+      applyAutomaticCombineLayout()
+    case .freeCanvas:
+      restoreFreeCombineBounds()
+    }
+  }
+
+  func setCombineDirection(_ direction: CombineImagesDirection) {
+    combineDirection = direction
+    if isCombineMode, combineMode == .autoStitch {
+      applyAutomaticCombineLayout()
+    }
+  }
+
+  func setCombineGap(_ gap: CGFloat) {
+    combineGap = max(0, gap)
+    if isCombineMode, combineMode == .autoStitch {
+      applyAutomaticCombineLayout()
+    } else if isCombineMode {
+      updateCombineContentBounds()
+    }
+  }
+
+  func refreshCombineLayout() {
+    guard isCombineMode else { return }
+    if combineMode == .autoStitch {
+      applyAutomaticCombineLayout()
+    } else {
+      updateCombineContentBounds()
+    }
+  }
+
   static let minimumZoomLevel: CGFloat = 0.25
   static let defaultMaximumZoomLevel: CGFloat = 4.0
   static let hardMaximumZoomLevel: CGFloat = 16.0
@@ -1318,6 +1432,8 @@ final class AnnotateState: ObservableObject {
     let imageSize = normalizedCanvasImageSize(for: image)
     guard imageSize.width > 0, imageSize.height > 0 else { return }
 
+    activateCombineMode(preferredMode: combineMode)
+
     let placementBounds = importedImagePlacementBounds(for: imageSize)
     let assetId = UUID()
 
@@ -1334,6 +1450,8 @@ final class AnnotateState: ObservableObject {
       properties: AnnotationProperties(strokeColor: .clear, fillColor: .clear, strokeWidth: 1)
     )
     annotations.append(item)
+    freeCombineBoundsByAnnotationID[item.id] = placementBounds
+    refreshCombineLayout()
     selectedAnnotationId = item.id
     editingTextAnnotationId = nil
     selectedTool = .selection
@@ -1435,6 +1553,14 @@ final class AnnotateState: ObservableObject {
     embeddedImageSourceData.removeAll()
     embeddedImageSnapshotCacheData.removeAll()
     embeddedImageCGImageCache.removeAll()
+    isCombineMode = false
+    combineMode = .autoStitch
+    combineDirection = .smart
+    combineResolvedDirection = .horizontal
+    combineGap = 0
+    combineContentBounds = CGRect(origin: .zero, size: image.size)
+    frozenCombineContentBounds = nil
+    freeCombineBoundsByAnnotationID.removeAll()
     selectedAnnotationId = nil
     editingTextAnnotationId = nil
     undoStack.removeAll()
@@ -1885,7 +2011,81 @@ final class AnnotateState: ObservableObject {
     return CGSize(width: rep.pixelsWide, height: rep.pixelsHigh)
   }
 
+  private func combineLayoutItems() -> [CombineImagesLayoutItem] {
+    var items = [
+      CombineImagesLayoutItem(
+        id: Self.combineBaseLayerID,
+        size: CGSize(width: imageWidth, height: imageHeight)
+      )
+    ]
+    for annotation in annotations {
+      guard case .embeddedImage(let assetID) = annotation.type,
+            let image = embeddedImageAssets[assetID] else { continue }
+      let size = normalizedCanvasImageSize(for: image)
+      guard size.width > 0, size.height > 0 else { continue }
+      items.append(CombineImagesLayoutItem(id: annotation.id, size: size))
+    }
+    return items
+  }
+
+  private func applyAutomaticCombineLayout() {
+    guard isCombineMode, hasImage else { return }
+    let result = CombineImagesLayout.layout(
+      items: combineLayoutItems(),
+      direction: combineDirection,
+      gap: combineGap
+    )
+    combineResolvedDirection = result.direction
+    for index in annotations.indices {
+      guard case .embeddedImage = annotations[index].type,
+            let bounds = result.boundsByID[annotations[index].id] else { continue }
+      annotations[index].bounds = bounds
+    }
+    combineContentBounds = result.contentBounds.isEmpty ? sourceImageBounds : result.contentBounds
+  }
+
+  private func captureCurrentFreeCombineBounds() {
+    for annotation in annotations {
+      guard case .embeddedImage = annotation.type else { continue }
+      freeCombineBoundsByAnnotationID[annotation.id] = annotation.bounds
+    }
+  }
+
+  private func restoreFreeCombineBounds() {
+    for index in annotations.indices {
+      guard case .embeddedImage = annotations[index].type else { continue }
+      if let bounds = freeCombineBoundsByAnnotationID[annotations[index].id] {
+        annotations[index].bounds = bounds
+      } else {
+        freeCombineBoundsByAnnotationID[annotations[index].id] = annotations[index].bounds
+      }
+    }
+    updateCombineContentBounds()
+  }
+
+  private func updateCombineContentBounds() {
+    guard isCombineMode else {
+      combineContentBounds = sourceImageBounds
+      return
+    }
+    let imageBounds = annotations.compactMap { annotation -> CGRect? in
+      guard case .embeddedImage = annotation.type else { return nil }
+      return annotation.bounds
+    }
+    combineContentBounds = imageBounds.reduce(sourceImageBounds) { $0.union($1) }
+  }
+
   private func importedImagePlacementBounds(for imageSize: CGSize) -> CGRect {
+    if isCombineMode {
+      let baseHeight = max(imageHeight, 1)
+      let scale = baseHeight / max(imageSize.height, 1)
+      let targetSize = CGSize(width: imageSize.width * scale, height: baseHeight)
+      return CGRect(
+        origin: CGPoint(x: combineContentBounds.maxX + combineGap, y: combineContentBounds.minY),
+        size: targetSize
+      )
+    }
+
     let drawingBounds: CGRect
     if let cropRect = cropRect, !isCropActive {
       drawingBounds = cropRect
@@ -2057,6 +2257,7 @@ final class AnnotateState: ObservableObject {
        !annotations.contains(where: { $0.id == editingTextAnnotationId }) {
       self.editingTextAnnotationId = nil
     }
+    refreshCombineLayout()
   }
 
   private func applyRotationSnapshot(_ snapshot: RotationSnapshot) {
@@ -2528,6 +2729,12 @@ final class AnnotateState: ObservableObject {
       annotations[index].properties.strokeWidth = AnnotationProperties.controlValue(forCounterDiameter: diameter)
     default:
       break
+    }
+
+    if isCombineMode, combineMode == .freeCanvas,
+       case .embeddedImage = annotations[index].type {
+      freeCombineBoundsByAnnotationID[id] = annotations[index].bounds
+      updateCombineContentBounds()
     }
   }
 
@@ -4153,8 +4360,10 @@ final class AnnotateState: ObservableObject {
     ])
     saveState()
     annotations.removeAll { selectedIds.contains($0.id) }
+    selectedIds.forEach { freeCombineBoundsByAnnotationID.removeValue(forKey: $0) }
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
+    refreshCombineLayout()
     deselectAnnotation()
   }
 

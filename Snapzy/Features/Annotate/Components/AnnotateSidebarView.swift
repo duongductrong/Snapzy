@@ -26,6 +26,11 @@ private struct AnnotateSidebarSnapshot: Equatable {
   let selectedCanvasPresetId: UUID?
   let isSelectedCanvasPresetDirty: Bool
   let defaultCanvasPresetId: UUID?
+  let isCombineMode: Bool
+  let combineMode: CombineImagesMode
+  let combineDirection: CombineImagesDirection
+  let combineResolvedDirection: CombineImagesDirection
+  let combineGap: CGFloat
 
   init(state: AnnotateState) {
     editorMode = state.editorMode
@@ -45,6 +50,11 @@ private struct AnnotateSidebarSnapshot: Equatable {
     selectedCanvasPresetId = state.selectedCanvasPresetId
     isSelectedCanvasPresetDirty = state.isSelectedCanvasPresetDirty
     defaultCanvasPresetId = state.defaultCanvasPresetId
+    isCombineMode = state.isCombineMode
+    combineMode = state.combineMode
+    combineDirection = state.combineDirection
+    combineResolvedDirection = state.combineResolvedDirection
+    combineGap = state.combineGap
   }
 }
 
@@ -66,6 +76,10 @@ struct AnnotateSidebarView: View, Equatable {
   var body: some View {
     ScrollView(.vertical, showsIndicators: true) {
       VStack(alignment: .leading, spacing: Spacing.md) {
+        if state.isCombineMode {
+          AnnotateCombineControlsView(state: state)
+        }
+
         presetControlsSection
 
         // Compact gradient section
@@ -86,10 +100,14 @@ struct AnnotateSidebarView: View, Equatable {
         slidersSection
 
         // Ratio section
-        ratioSection
+        if !state.isCombineMode {
+          ratioSection
+        }
 
         // Alignment section
-        alignmentSection
+        if !state.isCombineMode {
+          alignmentSection
+        }
 
         // Mockup section (shown when mockup mode is active)
         if state.editorMode == .mockup {

@@ -378,7 +378,9 @@ final class DrawingCanvasNSView: NSView {
 
   /// Clamp point to the active drawing bounds. Applied expanded crops become drawable canvas.
   private func clampToCanvasBounds(_ point: CGPoint) -> CGPoint {
-    let bounds = state.activeAnnotationBounds.standardized
+    let bounds = state.isCombineMode
+      ? state.effectiveContentBounds.standardized
+      : state.activeAnnotationBounds.standardized
     return CGPoint(
       x: max(bounds.minX, min(point.x, bounds.maxX)),
       y: max(bounds.minY, min(point.y, bounds.maxY))
@@ -394,6 +396,9 @@ final class DrawingCanvasNSView: NSView {
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
+    if state.isCombineMode {
+      state.frozenCombineContentBounds = state.combineContentBounds
+    }
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
     dragStart = imagePoint // Store in image coords
@@ -424,7 +429,8 @@ final class DrawingCanvasNSView: NSView {
     // Check if clicking on a selected annotation's handle (use display coords for handles)
     if let selectedId = state.selectedAnnotationId,
        let annotation = state.annotations.first(where: { $0.id == selectedId }),
-       annotation.supportsResize {
+       annotation.supportsResize,
+       canResizeAnnotation(annotation) {
       if let handle = hitTestHandle(at: displayPoint, for: annotation, inDisplayCoordinates: true) {
         isResizingAnnotation = true
         resizingAnnotationId = selectedId
@@ -497,6 +503,13 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
+    if state.isCombineMode, state.combineMode == .autoStitch,
+       case .embeddedImage = annotation.type {
+      state.setSelectedAnnotationIds([annotation.id])
+      needsDisplay = true
+      return
+    }
+
     let activeIds: Set<UUID> = if state.isAnnotationSelected(annotation.id), !state.selectedAnnotationIds.isEmpty {
       state.selectedAnnotationIds
     } else {
@@ -519,6 +532,12 @@ final class DrawingCanvasNSView: NSView {
     )
     NSCursor.closedHand.set()
     needsDisplay = true
+  }
+
+  private func canResizeAnnotation(_ annotation: AnnotationItem) -> Bool {
+    guard state.isCombineMode, state.combineMode == .autoStitch else { return true }
+    if case .embeddedImage = annotation.type { return false }
+    return true
   }
 
   private func beginAreaSelection(at imagePoint: CGPoint) {
@@ -576,7 +595,17 @@ final class DrawingCanvasNSView: NSView {
         case .lineEnd:
           state.updateLineEndpoint(id: resizeId, end: imagePoint)
         default:
-          let newBounds = calculateResizedBounds(handle: handle, currentPoint: imagePoint)
+          let isEmbeddedImage = state.annotations.first(where: { $0.id == resizeId }).map {
+            if case .embeddedImage = $0.type { return true }
+            return false
+          } ?? false
+          let proportional = event.modifierFlags.contains(.shift)
+            || (state.isCombineMode && isEmbeddedImage)
+          let newBounds = calculateResizedBounds(
+            handle: handle,
+            currentPoint: imagePoint,
+            proportional: proportional
+          )
           state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
         }
       }
@@ -629,6 +658,26 @@ final class DrawingCanvasNSView: NSView {
           )
           state.updateAnnotationBounds(id: id, bounds: newBounds)
         }
+
+        if state.isCombineMode,
+           state.combineMode == .freeCanvas,
+           activeIds.count == 1,
+           let draggedID = activeIds.first,
+           let dragged = state.annotations.first(where: { $0.id == draggedID }),
+           case .embeddedImage = dragged.type {
+          let candidates = [state.sourceImageBounds] + state.annotations.compactMap { annotation -> CGRect? in
+            guard annotation.id != draggedID, case .embeddedImage = annotation.type else { return nil }
+            return annotation.bounds
+          }
+          if let snapped = CombineSnapping.resolve(
+            draggedBounds: dragged.bounds,
+            candidateBounds: candidates,
+            gap: state.combineGap,
+            tolerance: state.combineSnapTolerance
+          ) {
+            state.updateAnnotationBounds(id: draggedID, bounds: snapped)
+          }
+        }
       }
       needsDisplay = true
       return
@@ -656,6 +705,9 @@ final class DrawingCanvasNSView: NSView {
   }
 
   override func mouseUp(with event: NSEvent) {
+    if state.isCombineMode {
+      state.frozenCombineContentBounds = nil
+    }
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
 
@@ -737,7 +789,11 @@ final class DrawingCanvasNSView: NSView {
     needsDisplay = true
   }
 
-  private func calculateResizedBounds(handle: ResizeHandle, currentPoint: CGPoint) -> CGRect {
+  private func calculateResizedBounds(
+    handle: ResizeHandle,
+    currentPoint: CGPoint,
+    proportional: Bool = false
+  ) -> CGRect {
     let minSize: CGFloat = 20
     var newBounds = originalBounds
 
@@ -772,7 +828,34 @@ final class DrawingCanvasNSView: NSView {
       break
     }
 
-    return newBounds
+    guard proportional, originalBounds.width > 0, originalBounds.height > 0 else {
+      return newBounds
+    }
+
+    let aspectRatio = originalBounds.width / originalBounds.height
+    if newBounds.width / max(newBounds.height, 1) > aspectRatio {
+      newBounds.size.width = newBounds.height * aspectRatio
+    } else {
+      newBounds.size.height = newBounds.width / aspectRatio
+    }
+
+    switch handle {
+    case .topLeft:
+      newBounds.origin.x = originalBounds.maxX - newBounds.width
+      newBounds.origin.y = originalBounds.minY
+    case .topRight:
+      newBounds.origin.x = originalBounds.minX
+      newBounds.origin.y = originalBounds.minY
+    case .bottomLeft:
+      newBounds.origin.x = originalBounds.maxX - newBounds.width
+      newBounds.origin.y = originalBounds.maxY - newBounds.height
+    case .bottomRight:
+      newBounds.origin.x = originalBounds.minX
+      newBounds.origin.y = originalBounds.maxY - newBounds.height
+    default:
+      break
+    }
+    return newBounds.standardized
   }
 
   // MARK: - Annotation Creation

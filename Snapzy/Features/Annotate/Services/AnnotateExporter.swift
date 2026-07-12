@@ -375,23 +375,27 @@ final class AnnotateExporter {
 
     // Determine effective bounds (crop or full image)
     let effectiveBounds: CGRect
-    if let cropRect = state.cropRect {
+    if state.isCombineMode {
+      effectiveBounds = state.effectiveContentBounds
+    } else if let cropRect = state.cropRect {
       effectiveBounds = cropRect
     } else {
       effectiveBounds = CGRect(origin: .zero, size: sourceImage.size)
     }
 
-    let padding = state.backgroundStyle != .none ? state.padding : 0
+    let padding = state.isCombineMode ? state.padding : (state.backgroundStyle != .none ? state.padding : 0)
 
     // Add alignment space for non-center alignments (matches preview)
     let alignmentSpace: CGFloat = state.imageAlignment != .center ? 40 : 0
 
-    let totalSize: NSSize = state.aspectRatio.canvasSize(
-      for: effectiveBounds.size,
-      padding: padding,
-      alignmentSpace: alignmentSpace,
-      orientation: state.aspectRatioOrientation
-    )
+    let totalSize: NSSize = state.isCombineMode
+      ? NSSize(width: effectiveBounds.width + padding * 2, height: effectiveBounds.height + padding * 2)
+      : state.aspectRatio.canvasSize(
+        for: effectiveBounds.size,
+        padding: padding,
+        alignmentSpace: alignmentSpace,
+        orientation: state.aspectRatioOrientation
+      )
     outputSizeDescription = "\(Int(totalSize.width))x\(Int(totalSize.height))"
 
     // Render at pixel resolution using NSBitmapImageRep for Retina quality
@@ -433,7 +437,7 @@ final class AnnotateExporter {
     let destX: CGFloat
     let destY: CGFloat
 
-    switch state.imageAlignment {
+    switch state.isCombineMode ? ImageAlignment.center : state.imageAlignment {
     case .center:
       destX = totalExtraWidth / 2
       destY = totalExtraHeight / 2
@@ -481,8 +485,9 @@ final class AnnotateExporter {
       in: context
     )
 
-    // Reset clip
-    context.resetClip()
+    if !state.isCombineMode {
+      context.resetClip()
+    }
 
     // Unified Spotlight overlay pass (drawn below other annotations, above base image).
     // Opacity sourced from per-item properties so exported image matches the on-screen appearance.
@@ -527,6 +532,10 @@ final class AnnotateExporter {
         imageY: destY
       )
       renderer.draw(offsetAnnotation)
+    }
+
+    if state.isCombineMode {
+      context.resetClip()
     }
 
     NSGraphicsContext.restoreGraphicsState()
