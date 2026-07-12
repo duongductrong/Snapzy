@@ -14,6 +14,50 @@ private struct AnnotateViewportMetrics: Equatable {
   let fitScale: CGFloat
 }
 
+struct AnnotateDroppedImage {
+  let image: NSImage
+  let data: Data?
+}
+
+enum AnnotateImageDropLoader {
+  @discardableResult
+  static func load(
+    from provider: NSItemProvider,
+    completion: @escaping (AnnotateDroppedImage?) -> Void
+  ) -> Bool {
+    if provider.canLoadObject(ofClass: NSImage.self) {
+      provider.loadObject(ofClass: NSImage.self) { object, _ in
+        guard let image = object as? NSImage else {
+          completion(nil)
+          return
+        }
+        completion(AnnotateDroppedImage(image: image, data: image.tiffRepresentation))
+      }
+      return true
+    }
+
+    guard provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) else {
+      return false
+    }
+
+    provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, error in
+      guard error == nil, let url else {
+        completion(nil)
+        return
+      }
+
+      defer { try? FileManager.default.removeItem(at: url) }
+      guard let data = try? Data(contentsOf: url),
+            let image = NSImage(data: data) else {
+        completion(nil)
+        return
+      }
+      completion(AnnotateDroppedImage(image: image, data: data))
+    }
+    return true
+  }
+}
+
 /// Canvas view for displaying and annotating the image
 struct AnnotateCanvasView: View {
   @ObservedObject var state: AnnotateState
@@ -529,56 +573,26 @@ struct AnnotateCanvasView: View {
   /// Handle dropped image files
   private func handleDrop(providers: [NSItemProvider]) -> Bool {
     for provider in providers {
-      // Try file URL first
-      if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-        provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, error in
-          guard error == nil,
-                let data = item as? Data,
-                let url = URL(dataRepresentation: data, relativeTo: nil) else {
-            Task { @MainActor in
-              showError("Failed to load file")
-            }
-            return
-          }
-
-          // Validate file type
-          guard Self.isValidImageFile(url: url) else {
-            Task { @MainActor in
-              showError("Unsupported format. Use PNG, JPG, GIF, TIFF, BMP, or HEIC")
-            }
-            return
-          }
-
+      let didAccept = AnnotateImageDropLoader.load(from: provider) { droppedImage in
+        guard let droppedImage else {
           Task { @MainActor in
-            if !state.importImage(from: url) {
-              showError("Failed to import image")
-            }
+            showError("Failed to load image data")
+          }
+          return
+        }
+
+        Task { @MainActor in
+          if !state.importImage(
+            droppedImage.image,
+            sourceURL: nil,
+            sourceData: droppedImage.data
+          ) {
+            showError("Failed to import image")
           }
         }
-        return true
+        return
       }
-
-      // Try loading image data directly
-      for imageType in Self.supportedImageTypes {
-        if provider.hasItemConformingToTypeIdentifier(imageType.identifier) {
-          provider.loadDataRepresentation(forTypeIdentifier: imageType.identifier) { data, error in
-            guard let data = data,
-                  let image = NSImage(data: data) else {
-              Task { @MainActor in
-                showError("Failed to load image data")
-              }
-              return
-            }
-
-            Task { @MainActor in
-              if !state.importImage(image, sourceURL: nil, sourceData: data) {
-                showError("Failed to import image")
-              }
-            }
-          }
-          return true
-        }
-      }
+      if didAccept { return true }
     }
 
     // No valid provider found
