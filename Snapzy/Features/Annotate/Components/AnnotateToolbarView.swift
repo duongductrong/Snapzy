@@ -44,7 +44,6 @@ struct AnnotateToolbarView: View {
         }
         .help(L10n.Combine.pickerTitle)
 
-        AnnotateCombineModePicker(state: state)
         ToolbarDivider()
       }
 

@@ -16,7 +16,7 @@ struct AnnotateCombineModePicker: View {
     }
     .pickerStyle(.segmented)
     .labelsHidden()
-    .frame(width: 210)
+    .frame(maxWidth: .infinity)
   }
 }
 
@@ -25,6 +25,13 @@ struct AnnotateCombineControlsView: View {
 
   var body: some View {
     VStack(alignment: .leading, spacing: Spacing.md) {
+      VStack(alignment: .leading, spacing: Spacing.sm) {
+        SidebarSectionHeader(title: L10n.Combine.mode)
+        AnnotateCombineModePicker(state: state)
+      }
+
+      Divider().background(Color(nsColor: .separatorColor))
+
       directionSection
 
       Divider().background(Color(nsColor: .separatorColor))
