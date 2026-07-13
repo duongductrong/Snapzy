@@ -575,13 +575,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "必填"
+            "value" : "必需"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "必填"
+            "value" : "必要"
           }
         }
       }

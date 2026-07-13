@@ -380,13 +380,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volume"
+            "value" : "音量"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volume"
+            "value" : "音量"
           }
         }
       }
@@ -3370,13 +3370,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "较低的值让人感觉更平静。当光标改变方向时，值越高反应越快。"
+            "value" : "数值较低时，镜头跟随更平缓；数值较高时，光标转向后跟随更快。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "較低的值讓人感覺更平靜。當光標改變方向時，值越高反應越快。"
+            "value" : "數值較低時，鏡頭跟隨更平緩；數值較高時，游標轉向後跟隨更快。"
           }
         }
       }
@@ -4148,13 +4148,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "小鼠样品"
+            "value" : "鼠标采样点"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "小鼠樣品"
+            "value" : "滑鼠取樣點"
           }
         }
       }
@@ -4278,13 +4278,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Microphone"
+            "value" : "麦克风"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Microphone"
+            "value" : "麥克風"
           }
         }
       }
@@ -4343,13 +4343,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mic"
+            "value" : "麦克风"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mic"
+            "value" : "麥克風"
           }
         }
       }
@@ -4798,13 +4798,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 Z 在播放头处添加缩放，或单击时间线中的缩放项目。"
+            "value" : "按 Z 可在播放头位置添加缩放，或点按时间线中的缩放片段。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "按 Z 在播放頭處添加縮放，或單擊時間線中的縮放項目。"
+            "value" : "按 Z 可在播放頭位置加入縮放，或點按時間軸中的縮放片段。"
           }
         }
       }
@@ -5058,13 +5058,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替换原来的"
+            "value" : "替换原文件"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "替換原來的"
+            "value" : "取代原始檔案"
           }
         }
       }
@@ -5188,13 +5188,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "调整框架大小..."
+            "value" : "正在调整画面尺寸..."
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "調整框架大小..."
+            "value" : "正在調整畫面尺寸..."
           }
         }
       }
@@ -6161,13 +6161,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "显示视频信息（一）"
+            "value" : "显示视频信息（I）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "顯示影片信息（一）"
+            "value" : "顯示影片資訊（I）"
           }
         }
       }
@@ -6356,13 +6356,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光滑的"
+            "value" : "平滑"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "光滑的"
+            "value" : "平滑"
           }
         }
       }
@@ -6486,13 +6486,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System Audio"
+            "value" : "系统音频"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System Audio"
+            "value" : "系統音訊"
           }
         }
       }
@@ -6551,13 +6551,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sys"
+            "value" : "系统"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sys"
+            "value" : "系統"
           }
         }
       }
@@ -6746,13 +6746,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "适用于该编辑器中的所有缩放项目。进入或离开变焦时，较高的值会让人感觉更平静。"
+            "value" : "此设置会应用到编辑器中的所有缩放片段。数值越高，进入或退出缩放时的过渡越平缓。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "適用於該編輯器中的所有縮放項目。進入或離開變焦時，較高的值會讓人感覺更平靜。"
+            "value" : "此設定會套用到編輯器中的所有縮放片段。數值越高，進入或退出縮放時的轉場越平緩。"
           }
         }
       }
@@ -7396,13 +7396,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "缩放项目"
+            "value" : "缩放片段"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "縮放項目"
+            "value" : "縮放片段"
           }
         }
       }
@@ -8566,13 +8566,13 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加速或减速某一区域（延时）"
+            "value" : "加速或减速一段画面（延时摄影）"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "加速或減速某一區域（縮時）"
+            "value" : "加速或減速一段畫面（縮時）"
           }
         }
       }

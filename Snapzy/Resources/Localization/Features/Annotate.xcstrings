@@ -510,13 +510,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "注释"
+            "value": "标注"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釋"
+            "value": "標註"
           }
         }
       }
@@ -1875,13 +1875,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "或截屏进行注释"
+            "value": "或截取截图后标注"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "或截屏進行注釋"
+            "value": "或擷取螢幕截圖後標註"
           }
         }
       }
@@ -2359,13 +2359,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "结晶"
+            "value": "星点胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "結晶"
+            "value": "星點膠帶"
           }
         },
         "es": {
@@ -2424,13 +2424,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用结晶图案效果遮盖敏感信息"
+            "value": "薰衣草色星点纸胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用結晶圖案效果遮蓋敏感資訊"
+            "value": "薰衣草色星點紙膠帶"
           }
         },
         "es": {
@@ -3565,13 +3565,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "适合 (%@)"
+            "value": "适合画布（%@）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "適合 (%@)"
+            "value": "符合畫布（%@）"
           }
         }
       }
@@ -3789,13 +3789,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "半色调"
+            "value": "格纹胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "半色調"
+            "value": "格紋膠帶"
           }
         },
         "es": {
@@ -3854,13 +3854,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用经典漫画书风格半色调圆点遮盖敏感信息"
+            "value": "奶油色格纹纸胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用經典漫畫書風格半色調圓點遮蓋敏感資訊"
+            "value": "奶油色格紋紙膠帶"
           }
         },
         "es": {
@@ -4150,13 +4150,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "该图像使用透明背景剪切。保存为 JPEG 会将透明度拼合为不透明背景。使用 PNG 或 WebP 来保持透明度。"
+            "value": "此图片已移除背景并保留透明区域。保存为 JPEG 会把透明区域填充为不透明背景。请使用 PNG 或 WebP 保留透明背景。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "該圖像使用透明背景剪切。保存為 JPEG 會將透明度拼合為不透明背景。使用 PNG 或 WebP 來保持透明度。"
+            "value": "此圖片已移除背景並保留透明區域。儲存為 JPEG 會將透明區域填滿為不透明背景。請使用 PNG 或 WebP 保留透明背景。"
           }
         }
       }
@@ -4215,13 +4215,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "JPEG 删除透明度"
+            "value": "JPEG 不支持透明背景"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "JPEG 刪除透明度"
+            "value": "JPEG 不支援透明背景"
           }
         }
       }
@@ -4410,13 +4410,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "注释"
+            "value": "标注"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釋"
+            "value": "標註"
           }
         }
       }
@@ -4605,13 +4605,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "移动所选区域 (Space + 鼠标拖动)"
+            "value": "移动选区（空格键 + 拖动鼠标）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "移動所選區域 (Space + 滑鼠拖動)"
+            "value": "移動選取範圍（空白鍵 + 拖曳滑鼠）"
           }
         }
       }
@@ -4865,13 +4865,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "打开侧边栏以获取更多注释控件"
+            "value": "打开侧边栏，查看更多标注工具"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "打開側邊欄以獲取更多注釋控件"
+            "value": "打開側邊欄，查看更多標註工具"
           }
         }
       }
@@ -5255,13 +5255,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "用于编辑敏感内容的像素化模糊"
+            "value": "用像素化模糊遮挡敏感内容"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "用於編輯敏感內容的像素化模糊"
+            "value": "用像素化模糊遮擋敏感內容"
           }
         }
       }
@@ -5284,13 +5284,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点彩画法"
+            "value": "网格胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "點彩畫法"
+            "value": "網格膠帶"
           }
         },
         "es": {
@@ -5349,13 +5349,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用由微小圆点组成的艺术点彩画法效果遮盖敏感内容"
+            "value": "蜜桃色网格纸胶带"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用由微小圓點組成的藝術點彩畫法效果遮蓋敏感內容"
+            "value": "蜜桃色網格紙膠帶"
           }
         },
         "es": {
@@ -5710,13 +5710,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除背景（在设置中禁用自动裁剪）"
+            "value": "移除背景（已在“设置”中关闭自动裁剪）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "刪除背景（在設置中禁用自動裁剪）"
+            "value": "移除背景（已在「設定」中關閉自動裁切）"
           }
         }
       }
@@ -5775,13 +5775,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "删除背景（安全时自动裁剪）"
+            "value": "移除背景（适合时自动裁剪）"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "刪除背景（安全時自動裁剪）"
+            "value": "移除背景（適合時自動裁切）"
           }
         }
       }

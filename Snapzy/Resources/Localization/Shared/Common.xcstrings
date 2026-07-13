@@ -55,13 +55,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕获活动窗口"
+            "value": "截取当前窗口"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "擷取使用中的視窗"
+            "value": "擷取目前視窗"
           }
         }
       }
@@ -185,13 +185,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "标记截屏"
+            "value": "截图并标注"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "標記截圖"
+            "value": "截圖並標註"
           }
         }
       }
@@ -250,7 +250,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "全屏截屏"
+            "value": "全屏截图"
           }
         },
         "zh-Hant": {
@@ -279,13 +279,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "智能元素截图"
+            "value": "智能元素截取"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "智慧元素截圖"
+            "value": "智慧元素擷取"
           }
         },
         "es": {
@@ -900,13 +900,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "显示快速访问浮层"
+            "value": "显示快速访问面板"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "顯示快速存取浮層"
+            "value": "顯示快速取用面板"
           }
         }
       }
@@ -1030,13 +1030,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "应用程序身份是健康的。"
+            "value": "应用身份正常。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "應用程序身份是健康的。"
+            "value": "App 身分正常。"
           }
         }
       }
@@ -1160,13 +1160,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "在授予权限之前，在 /Applications 中安装 Snapzy。当前路径：%@"
+            "value": "请先将 Snapzy 安装到 /Applications，再授予权限。当前路径：%@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "在授予權限之前，在 /Applications 中安裝 Snapzy。當前路徑：%@"
+            "value": "請先將 Snapzy 安裝到 /Applications，再授予權限。目前路徑：%@"
           }
         }
       }
@@ -1225,13 +1225,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "此应用程序仍然具有 macOS 隔离标志。使用安装程序脚本重新安装或在授予权限之前删除隔离区。"
+            "value": "此应用仍带有 macOS 隔离标记。请重新运行安装脚本，或先移除隔离标记再授予权限。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "此應用程序仍然具有 macOS 隔離標誌。使用安裝程序腳本重新安裝或在授予權限之前刪除隔離區。"
+            "value": "此 App 仍帶有 macOS 隔離標記。請重新執行安裝腳本，或先移除隔離標記再授予權限。"
           }
         }
       }
@@ -1680,13 +1680,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "纵横比"
+            "value": "宽高比"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "縱橫比"
+            "value": "寬高比"
           }
         }
       }
@@ -2850,13 +2850,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "禁用"
+            "value": "停用"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "禁用"
+            "value": "停用"
           }
         }
       }
@@ -3695,13 +3695,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "免费"
+            "value": "自由"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "免費"
+            "value": "自由"
           }
         }
       }
@@ -5001,7 +5001,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "打開設置"
+            "value": "開啟設定"
           }
         }
       }
@@ -6236,7 +6236,7 @@
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存"
+            "value": "儲存"
           }
         }
       }
@@ -7400,13 +7400,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新录制 / Restart"
+            "value": "重新录制 / 重新开始"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "重新錄製 / Restart"
+            "value": "重新錄製 / 重新開始"
           }
         }
       }

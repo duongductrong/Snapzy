@@ -5060,13 +5060,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法添加麦克风写入器输入"
+            "value": "无法添加麦克风音频输入"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法添加麥克風寫入器輸入"
+            "value": "無法加入麥克風音訊輸入"
           }
         }
       }
@@ -5125,13 +5125,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法添加系统音频编写器输入"
+            "value": "无法添加系统音频输入"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法添加系統音頻編寫器輸入"
+            "value": "無法加入系統音訊輸入"
           }
         }
       }
@@ -5190,13 +5190,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法添加视频编写器输入"
+            "value": "无法添加视频输入"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "無法添加影片編寫器輸入"
+            "value": "無法加入影片輸入"
           }
         }
       }
@@ -5385,13 +5385,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到显示"
+            "value": "未找到显示器"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "找不到顯示"
+            "value": "找不到顯示器"
           }
         }
       }
@@ -5645,13 +5645,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "安装失败：%@"
+            "value": "初始化失败：%@"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "安裝失敗：%@"
+            "value": "初始化失敗：%@"
           }
         }
       }
@@ -5905,13 +5905,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy 需要保存文件夹权限才能继续。请在入门中选择一个文件夹或立即授予它。"
+            "value": "Snapzy 需要访问保存文件夹才能继续。请在引导中选择文件夹，或现在授予访问权限。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy 需要保存檔案夾權限才能繼續。請在入門中選擇一個檔案夾或立即授予它。"
+            "value": "Snapzy 需要存取儲存資料夾才能繼續。請在引導流程中選擇資料夾，或立即授予存取權限。"
           }
         }
       }
@@ -5970,13 +5970,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要保存位置访问权限"
+            "value": "需要访问保存位置"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "需要保存位置訪問權限"
+            "value": "需要存取儲存位置"
           }
         }
       }

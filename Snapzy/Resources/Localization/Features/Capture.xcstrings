@@ -2525,13 +2525,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功拖放到 other 应用后自动关闭 标注 编辑器"
+            "value": "成功拖放到其他应用后，自动关闭标注编辑器"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功拖放到其他 App 後自動關閉 標註 編輯器"
+            "value": "成功拖放到其他 App 後，自動關閉標註編輯器"
           }
         }
       }
@@ -12212,13 +12212,13 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "启动Capture锁定第一帧"
+            "value": "开始截取以锁定第一帧"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "啓動Capture鎖定第一幀"
+            "value": "開始擷取以鎖定第一個畫面"
           }
         }
       }
