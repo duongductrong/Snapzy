@@ -9,6 +9,7 @@ import AppKit
 import ApplicationServices
 import Combine
 import Foundation
+import ScreenCaptureKit
 
 @MainActor
 final class ScrollingCaptureCoordinator {
@@ -910,7 +911,7 @@ final class ScrollingCaptureCoordinator {
 
         guard !Task.isCancelled else { return }
         self.preparedCaptureContext = context
-        self.captureScaleFactor = context.scaleFactor
+        self.captureScaleFactor = max(context.scaleFactor, context.minimumOutputScaleFactor)
       } catch {
         if error is CancellationError { return }
         DiagnosticLogger.shared.log(
@@ -948,7 +949,7 @@ final class ScrollingCaptureCoordinator {
       prefetchedContentTask: prefetchedContentTask
     )
     preparedCaptureContext = context
-    captureScaleFactor = context.scaleFactor
+    captureScaleFactor = max(context.scaleFactor, context.minimumOutputScaleFactor)
     return context
   }
 
@@ -973,6 +974,7 @@ final class ScrollingCaptureCoordinator {
   }
 
   private func captureFrameForCommit() async throws -> CommitFrame? {
+    let context = try await ensurePreparedCaptureContext()
     let streamFrame: ScrollingCaptureFrame?
     if let lastCommittedSequenceNumber = liveFrameRing.lastCommittedSequenceNumber {
       streamFrame = liveFrameRing.latestFrame(after: lastCommittedSequenceNumber)
@@ -980,7 +982,8 @@ final class ScrollingCaptureCoordinator {
       streamFrame = liveFrameRing.latest
     }
 
-    if let streamFrame {
+    if let streamFrame,
+       let normalizedImage = normalizeCommitFrame(streamFrame.image, context: context) {
       let now = ProcessInfo.processInfo.systemUptime
       let isDuplicate = liveFrameRing.lastCommittedSequenceNumber
         .map { streamFrame.sequenceNumber <= $0 } ?? false
@@ -991,7 +994,7 @@ final class ScrollingCaptureCoordinator {
         isDuplicateFrame: isDuplicate
       )
       let commitFrame = CommitFrame(
-        image: streamFrame.image,
+        image: normalizedImage,
         sequenceNumber: streamFrame.sequenceNumber,
         source: .stream,
         frameAgeMs: frameAgeMs,
@@ -999,6 +1002,19 @@ final class ScrollingCaptureCoordinator {
       )
       logScrollingCaptureCommitFrameSelected(commitFrame)
       return commitFrame
+    }
+
+    if let streamFrame {
+      logScrollingCaptureDebug(
+        "commit-frame-normalization-failed",
+        context: [
+          "source": "stream",
+          "inputSize": "\(streamFrame.image.width)x\(streamFrame.image.height)",
+          "logicalSize": "\(Int(context.logicalCropSize.width))x\(Int(context.logicalCropSize.height))",
+          "sourceScale": Self.formattedDebugDouble(Double(context.scaleFactor)),
+          "outputScale": Self.formattedDebugDouble(Double(captureScaleFactor))
+        ]
+      )
     }
 
     guard let capturedImage = try await capturePreparedAreaForSession() else {
@@ -1012,13 +1028,26 @@ final class ScrollingCaptureCoordinator {
       )
       return nil
     }
+    guard let normalizedImage = normalizeCommitFrame(capturedImage, context: context) else {
+      logScrollingCaptureDebug(
+        "commit-frame-normalization-failed",
+        context: [
+          "source": "still-fallback",
+          "inputSize": "\(capturedImage.width)x\(capturedImage.height)",
+          "logicalSize": "\(Int(context.logicalCropSize.width))x\(Int(context.logicalCropSize.height))",
+          "sourceScale": Self.formattedDebugDouble(Double(context.scaleFactor)),
+          "outputScale": Self.formattedDebugDouble(Double(captureScaleFactor))
+        ]
+      )
+      return nil
+    }
     sessionMetrics.recordCommitFrameSelected(
       source: .stillFallback,
       frameAgeMs: nil,
       isDuplicateFrame: false
     )
     let commitFrame = CommitFrame(
-      image: capturedImage,
+      image: normalizedImage,
       sequenceNumber: nil,
       source: .stillFallback,
       frameAgeMs: nil,
@@ -1026,6 +1055,19 @@ final class ScrollingCaptureCoordinator {
     )
     logScrollingCaptureCommitFrameSelected(commitFrame)
     return commitFrame
+  }
+
+  private func normalizeCommitFrame(
+    _ image: CGImage,
+    context: ScreenCaptureManager.PreparedAreaCaptureContext
+  ) -> CGImage? {
+    ScrollingCaptureCommitFrameNormalizer.normalize(
+      image,
+      logicalSize: context.logicalCropSize,
+      sourceScaleFactor: context.scaleFactor,
+      minimumOutputScaleFactor: context.minimumOutputScaleFactor,
+      colorSpaceName: context.configuration.colorSpaceName
+    )
   }
 
   private func startLiveRefreshLoopIfNeeded() {
@@ -1107,7 +1149,8 @@ final class ScrollingCaptureCoordinator {
         context: [
           "sourceRect": "\(Int(context.sourceRect.width))x\(Int(context.sourceRect.height))",
           "outputSize": "\(context.outputWidth)x\(context.outputHeight)",
-          "scale": Self.formattedDebugDouble(Double(captureScaleFactor)),
+          "streamScale": Self.formattedDebugDouble(Double(context.scaleFactor)),
+          "commitScale": Self.formattedDebugDouble(Double(captureScaleFactor)),
           "ringFrames": "\(liveFrameRing.frames.count)"
         ]
       )

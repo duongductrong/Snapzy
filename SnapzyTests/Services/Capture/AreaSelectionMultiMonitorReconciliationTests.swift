@@ -157,6 +157,49 @@ final class AreaSelectionMultiMonitorReconciliationTests: AreaSelectionOverlayTe
     )
   }
 
+  func testScrollingSelection_firstPhysicalMouseDownStartsManualSelection() throws {
+    let controller = AreaSelectionController.shared
+    controller.startSelection(mode: .scrollingCapture) { _, _ in }
+    defer { controller.cancelSelection() }
+
+    let timer = try XCTUnwrap(pointerTrackingTimer(of: controller))
+    timer.fire()
+
+    let windowPool = try XCTUnwrap(
+      Mirror(reflecting: controller).children
+        .first(where: { $0.label == "windowPool" })?.value
+        as? [CGDirectDisplayID: AreaSelectionWindow]
+    )
+    let mouseLocation = NSEvent.mouseLocation
+    let pointerWindow = try XCTUnwrap(
+      windowPool.values.first(where: { $0.frame.contains(mouseLocation) })
+    )
+    let overlayView = pointerWindow.overlayView
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    overlayView.resetSelection()
+
+    let mouseDown = try XCTUnwrap(
+      NSEvent.mouseEvent(
+        with: .leftMouseDown,
+        location: CGPoint(x: 120, y: 120),
+        modifierFlags: [],
+        timestamp: ProcessInfo.processInfo.systemUptime,
+        windowNumber: pointerWindow.windowNumber,
+        context: nil,
+        eventNumber: 1,
+        clickCount: 1,
+        pressure: 1
+      )
+    )
+    overlayView.mouseDown(with: mouseDown)
+
+    XCTAssertTrue(
+      overlayView.isManualSelectionInProgress,
+      "Pointer promotion must not reserve and swallow the user's first real mouse-down"
+    )
+  }
+
   /// Frozen sessions (non-empty `selectionBackdrops`) activate the app, which already routes cursor
   /// handling across displays, so the pointer-tracking timer must NOT be installed — avoiding
   /// redundant key churn.

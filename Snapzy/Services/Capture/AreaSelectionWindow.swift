@@ -1041,25 +1041,6 @@ final class AreaSelectionController: NSObject {
     // Invalidate cursor rects before the next event
     window.overlayView.refreshCursor()
     
-    // WindowServer fundamentally refuses to assign native cursor ownership to a newly-key window
-    // of an inactive application unless a hardware click occurs. We bypass this by posting a
-    // synthetic hardware click via CGEvent exactly at the current mouse position.
-    window.overlayView.ignoreNextSyntheticClick = true
-    window.overlayView.ignoreNextSyntheticMouseUp = true
-    
-    if let source = CGEventSource(stateID: .hidSystemState),
-       let currentEvent = CGEvent(source: nil) {
-      let cgMousePos = currentEvent.location
-      
-      let mouseDown = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: cgMousePos, mouseButton: .left)
-      let mouseUp = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: cgMousePos, mouseButton: .left)
-      
-      DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-        mouseDown?.post(tap: .cghidEventTap)
-        mouseUp?.post(tap: .cghidEventTap)
-      }
-    }
-
     DiagnosticLogger.shared.log(
       .debug,
       .capture,
@@ -1075,6 +1056,7 @@ final class AreaSelectionController: NSObject {
 
   private func resetCallbacks() {
     isPresenting = false
+    dismissesAfterSelection = true
     stopPointerTracking()
     lumaRecapturingTask?.cancel()
     lumaRecapturingTask = nil
@@ -2873,14 +2855,7 @@ final class AreaSelectionOverlayView: NSView {
 
   // MARK: - Mouse Events
 
-  var ignoreNextSyntheticClick = false
-
   override func mouseDown(with event: NSEvent) {
-    if ignoreNextSyntheticClick {
-      ignoreNextSyntheticClick = false
-      return
-    }
-    
     let point = convert(event.locationInWindow, from: nil)
     currentMousePosition = point
     if let areaWindow = self.window as? AreaSelectionWindow {
@@ -2940,14 +2915,7 @@ final class AreaSelectionOverlayView: NSView {
   }
 
 
-  var ignoreNextSyntheticMouseUp = false
-
   override func mouseUp(with event: NSEvent) {
-    if ignoreNextSyntheticMouseUp {
-      ignoreNextSyntheticMouseUp = false
-      return
-    }
-    
     let point = convert(event.locationInWindow, from: nil)
     currentMousePosition = point
     delegate?.overlayViewDidRequestDisplayActivation(self)

@@ -169,6 +169,20 @@ final class AreaSelectionControllerTests: XCTestCase {
     XCTAssertFalse(controller.isPresenting, "cancelSelection must clear isPresenting via resetCallbacks")
   }
 
+  func testCancelSelection_restoresDismissesAfterSelectionDefault() {
+    let controller = AreaSelectionController.shared
+    controller.startSelection(mode: .recording, backdrops: [:]) { _ in }
+    controller.setDismissesAfterSelection(false)
+    defer { controller.setDismissesAfterSelection(true) }
+
+    controller.cancelSelection()
+
+    XCTAssertTrue(
+      controller.dismissesAfterSelection,
+      "a cancelled live selection must not leak its dismiss policy into the next capture session"
+    )
+  }
+
   func testIsPresenting_falseAfterCompletion() throws {
     // completeSelection funnels through the same resetCallbacks teardown. Drive it with a REAL
     // pooled overlay window (the production success path) so the flag is verified on completion
