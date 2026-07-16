@@ -81,7 +81,8 @@ final class AnnotateBlurCacheManagerTests: XCTestCase {
     )
     XCTAssertNil(immediate)
 
-    wait(for: [expectation], timeout: 2.0)
+    // The async render shares CI resources with the rest of the test suite.
+    wait(for: [expectation], timeout: 10.0)
     XCTAssertTrue(cache.hasCachedBlur(for: id))
   }
 
