@@ -1698,7 +1698,7 @@ private struct InlineAreaPropertiesBar: View {
               items: BlurType.allCases,
               selection: state.quickBlurTypeBinding,
               icon: { $0.icon },
-              label: \.displayName
+              tooltip: \.displayName
             )
           }
 
@@ -1709,16 +1709,16 @@ private struct InlineAreaPropertiesBar: View {
               selection: state.quickArrowStyleBinding,
               icon: { $0.icon },
               isFlipped: { $0 == .curvedRight },
-              label: \.displayName
+              tooltip: \.displayName
             )
 
             InlineAreaSegmentedPicker(
               title: L10n.Common.display,
               items: ArrowType.allCases,
               selection: state.quickArrowTypeBinding,
-              icon: { $0.icon(for: state.arrowStyle) },
+              icon: { $0.icon },
               isFlipped: { _ in state.arrowStyle == .curvedRight },
-              label: \.displayName
+              tooltip: \.displayName
             )
 
             if state.quickPropertiesSupportsArrowBendDirection {
@@ -1736,7 +1736,7 @@ private struct InlineAreaPropertiesBar: View {
               items: WatermarkStyle.allCases,
               selection: state.quickWatermarkStyleBinding,
               icon: { $0.icon },
-              label: \.displayName
+              tooltip: \.displayName
             )
           }
 
@@ -2530,7 +2530,7 @@ private struct InlineAreaSegmentedPicker<Item: Identifiable & Equatable>: View {
   @Binding var selection: Item
   let icon: (Item) -> String
   var isFlipped: ((Item) -> Bool)? = nil
-  let label: KeyPath<Item, String>
+  let tooltip: KeyPath<Item, String>
 
   var body: some View {
     InlineAreaPropertyGroup(title: title) {
@@ -2554,7 +2554,7 @@ private struct InlineAreaSegmentedPicker<Item: Identifiable & Equatable>: View {
               )
           }
           .buttonStyle(.plain)
-          .help(item[keyPath: label])
+          .help(item[keyPath: tooltip])
         }
       }
     }
