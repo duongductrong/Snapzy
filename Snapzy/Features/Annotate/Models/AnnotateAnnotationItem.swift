@@ -442,6 +442,29 @@ enum ArrowType: String, Codable, CaseIterable, Identifiable {
     case .outlined: return "arrowshape.turn.up.right.fill"
     }
   }
+
+  func icon(for style: ArrowStyle) -> String {
+    switch style {
+    case .straight:
+      switch self {
+      case .classic: return "arrow.up.right"
+      case .tapered: return "arrowshape.turn.up.right"
+      case .outlined: return "arrowshape.turn.up.right.fill"
+      }
+    case .curvedRight:
+      switch self {
+      case .classic: return "arrow.turn.up.right"
+      case .tapered: return "arrowshape.turn.up.right"
+      case .outlined: return "arrowshape.turn.up.right.fill"
+      }
+    case .curvedLeft:
+      switch self {
+      case .classic: return "arrow.turn.up.left"
+      case .tapered: return "arrowshape.turn.up.left"
+      case .outlined: return "arrowshape.turn.up.left.fill"
+      }
+    }
+  }
 }
 
 struct ArrowGeometry: Equatable {
@@ -450,6 +473,66 @@ struct ArrowGeometry: Equatable {
   var style: ArrowStyle
   var controlPoint: CGPoint?
   var arrowType: ArrowType
+
+  struct TaperedArrowMetrics: Equatable {
+    /// Shaft width at the tail (start).
+    let shaftBaseWidth: CGFloat
+    /// Shaft width where it meets the head (neck).
+    let shaftNeckWidth: CGFloat
+    /// Full width of the triangular head.
+    let headWidth: CGFloat
+    /// Length of the head along the centerline.
+    let headLength: CGFloat
+    /// Visible outer outline thickness for `.outlined` (true outside edge).
+    let outlineWidth: CGFloat
+    /// How far the head base is pulled back along the tangent (barb depth).
+    let sweepBack: CGFloat
+
+    /// Max half-width used for hit testing / selection padding.
+    var maxHalfWidth: CGFloat {
+      max(shaftBaseWidth, headWidth) / 2
+    }
+  }
+
+  /// Shared dimension model so geometry, rendering, and hit-testing stay in sync.
+  /// Same presentation silhouette (thin tail widening to the neck, ~2× head, shallow
+  /// shoulders, white border); neck width tracks strokeWidth so visual weight matches
+  /// other tools (e.g. rectangle).
+  static func taperedMetrics(strokeWidth: CGFloat, chordLength: CGFloat) -> TaperedArrowMetrics {
+    let safeStroke = max(strokeWidth, 1)
+    // Mild length scale only — avoid oversized bodies on long drags.
+    let scale = min(1.08, max(0.75, chordLength / 180))
+
+    // Neck (just behind the head) carries the visual weight ≈ other annotate tools' stroke.
+    let shaftNeck = (2.6 + safeStroke * 1.75) * scale
+    // Shaft widens from a thin tail up to the neck: narrow at the tail → wide at
+    // the head, so the body fans out toward the arrowhead (never thin at the tip).
+    let shaftBase = shaftNeck * 0.5
+    // Head ~2× the neck width with clear but shallow shoulders.
+    let headWidth = max(shaftNeck * 2.0, shaftNeck + 5.5 * scale)
+    let idealHeadLength = (9.0 + safeStroke * 2.2) * scale
+    // Cap head so short arrows still keep a visible shaft.
+    let headLength = min(max(idealHeadLength, shaftNeck * 1.1), chordLength * 0.32)
+    // Outline scales with stroke; stays readable without overpowering thin bodies.
+    let outlineWidth = max(1.5, 1.1 + safeStroke * 0.32)
+    // Shallow sweep — soft shoulders, not deep barbs.
+    let sweepBack = headLength * 0.10
+
+    return TaperedArrowMetrics(
+      shaftBaseWidth: shaftBase,
+      shaftNeckWidth: shaftNeck,
+      headWidth: headWidth,
+      headLength: headLength,
+      outlineWidth: outlineWidth,
+      sweepBack: sweepBack
+    )
+  }
+
+  func taperedMetrics(strokeWidth: CGFloat) -> TaperedArrowMetrics {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    return Self.taperedMetrics(strokeWidth: strokeWidth, chordLength: hypot(dx, dy))
+  }
 
   init(
     start: CGPoint,
@@ -523,6 +606,8 @@ struct ArrowGeometry: Equatable {
     return path
   }
 
+  /// Closed filled path for tapered / outlined arrow display types.
+  /// Shape: thin rounded tail → shaft widening toward the neck → triangular head with slight barbs.
   func taperedArrowPath(strokeWidth: CGFloat) -> CGPath {
     let path = CGMutablePath()
 
@@ -531,18 +616,18 @@ struct ArrowGeometry: Equatable {
     let chordLength = hypot(dx, dy)
     guard chordLength > 1 else { return path }
 
-    // Width and length parameters scaling with user strokeWidth and chordLength (clamped)
-    let scale = min(1.2, max(0.4, chordLength / 100.0))
-    let wStart = (3.2 + strokeWidth * 2.0) * scale
-    let wEnd = (1.0 + strokeWidth * 0.5) * scale
-    let wHead = (16.0 + strokeWidth * 5.5) * scale
-    let headLength = (12.0 + strokeWidth * 3.5) * scale
-    let resolvedHeadLength = min(headLength, chordLength * 0.8)
+    let metrics = Self.taperedMetrics(strokeWidth: strokeWidth, chordLength: chordLength)
+    let wStart = metrics.shaftBaseWidth
+    let wEnd = metrics.shaftNeckWidth
+    let wHead = metrics.headWidth
+    let resolvedHeadLength = metrics.headLength
 
-    // Sample centerline points and tangents
-    let steps = 32
+    // Sample centerline points and unit tangents (supports straight + quadratic curves).
+    let steps = 48
     var points: [CGPoint] = []
     var tangents: [CGPoint] = []
+    points.reserveCapacity(steps + 1)
+    tangents.reserveCapacity(steps + 1)
 
     for i in 0...steps {
       let t = CGFloat(i) / CGFloat(steps)
@@ -550,7 +635,6 @@ struct ArrowGeometry: Equatable {
       let tangent: CGPoint
 
       if style != .straight, let control = resolvedControlPoint {
-        // Quadratic Bezier
         let oneMinusT = 1.0 - t
         p = CGPoint(
           x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
@@ -560,11 +644,7 @@ struct ArrowGeometry: Equatable {
         let ty = 2 * oneMinusT * (control.y - start.y) + 2 * t * (end.y - control.y)
         tangent = CGPoint(x: tx, y: ty)
       } else {
-        // Straight line
-        p = CGPoint(
-          x: start.x + t * dx,
-          y: start.y + t * dy
-        )
+        p = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
         tangent = CGPoint(x: dx, y: dy)
       }
 
@@ -573,96 +653,84 @@ struct ArrowGeometry: Equatable {
       let len = hypot(tangent.x, tangent.y)
       if len > 0.0001 {
         tangents.append(CGPoint(x: tangent.x / len, y: tangent.y / len))
+      } else if let lastTangent = tangents.last {
+        tangents.append(lastTangent)
       } else {
-        if let lastTangent = tangents.last {
-          tangents.append(lastTangent)
-        } else {
-          let fallbackDx = dx / max(chordLength, 1)
-          let fallbackDy = dy / max(chordLength, 1)
-          tangents.append(CGPoint(x: fallbackDx, y: fallbackDy))
-        }
+        tangents.append(CGPoint(x: dx / max(chordLength, 1), y: dy / max(chordLength, 1)))
       }
     }
 
-    // Find neck index/parameter where arrowhead meets the shaft
+    // Neck = point on the centerline one headLength back from the tip.
     var neckIndex = steps
     var accumulatedDistance: CGFloat = 0
     for i in stride(from: steps, to: 0, by: -1) {
-      let d = hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y)
-      accumulatedDistance += d
+      accumulatedDistance += hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y)
       if accumulatedDistance >= resolvedHeadLength {
-        neckIndex = i - 1
+        neckIndex = max(i - 1, 1)
         break
       }
     }
-
-    if neckIndex < 1 {
-      neckIndex = 1
-    }
+    if neckIndex < 1 { neckIndex = 1 }
 
     let neckPoint = points[neckIndex]
     let neckTangent = tangents[neckIndex]
     let neckNormal = CGPoint(x: -neckTangent.y, y: neckTangent.x)
 
-    // Sweepback for a sleeker arrowhead
-    let sweepBack = resolvedHeadLength * 0.20
+    // Head base is swept slightly behind the neck so the shaft forms clear shoulders.
     let arrowheadBaseCenter = CGPoint(
-      x: neckPoint.x - neckTangent.x * sweepBack,
-      y: neckPoint.y - neckTangent.y * sweepBack
+      x: neckPoint.x - neckTangent.x * metrics.sweepBack,
+      y: neckPoint.y - neckTangent.y * metrics.sweepBack
     )
-
     let headLeft = CGPoint(
       x: arrowheadBaseCenter.x + neckNormal.x * (wHead / 2),
       y: arrowheadBaseCenter.y + neckNormal.y * (wHead / 2)
     )
-
     let headRight = CGPoint(
       x: arrowheadBaseCenter.x - neckNormal.x * (wHead / 2),
       y: arrowheadBaseCenter.y - neckNormal.y * (wHead / 2)
     )
 
-    // Left and right shaft points up to neckIndex
-    var leftShaftPoints: [CGPoint] = []
-    var rightShaftPoints: [CGPoint] = []
-
-    for i in 0...neckIndex {
-      let t = CGFloat(i) / CGFloat(neckIndex)
-      let w = wStart + t * (wEnd - wStart)
-      let p = points[i]
-      let norm = CGPoint(x: -tangents[i].y, y: tangents[i].x)
-
-      leftShaftPoints.append(CGPoint(x: p.x + norm.x * (w / 2), y: p.y + norm.y * (w / 2)))
-      rightShaftPoints.append(CGPoint(x: p.x - norm.x * (w / 2), y: p.y - norm.y * (w / 2)))
+    // Smooth ease for shaft taper (matches solid presentation look, not a linear wedge).
+    func shaftWidth(progress: CGFloat) -> CGFloat {
+      let eased = progress * progress * (3 - 2 * progress) // smoothstep
+      return wStart + (wEnd - wStart) * eased
     }
 
-    // Build the tapered closed path
+    var leftShaftPoints: [CGPoint] = []
+    var rightShaftPoints: [CGPoint] = []
+    leftShaftPoints.reserveCapacity(neckIndex + 1)
+    rightShaftPoints.reserveCapacity(neckIndex + 1)
+
+    for i in 0...neckIndex {
+      let progress = CGFloat(i) / CGFloat(neckIndex)
+      let halfW = shaftWidth(progress: progress) / 2
+      let p = points[i]
+      let norm = CGPoint(x: -tangents[i].y, y: tangents[i].x)
+      leftShaftPoints.append(CGPoint(x: p.x + norm.x * halfW, y: p.y + norm.y * halfW))
+      rightShaftPoints.append(CGPoint(x: p.x - norm.x * halfW, y: p.y - norm.y * halfW))
+    }
+
+    // Closed outline: tip → left wing → left shaft → rounded tail → right shaft → right wing → tip
     path.move(to: end)
     path.addLine(to: headLeft)
     path.addLine(to: leftShaftPoints[neckIndex])
-
     for i in stride(from: neckIndex - 1, through: 0, by: -1) {
       path.addLine(to: leftShaftPoints[i])
     }
 
-    // Rounded tail at the start
-    let tailCenter = start
-    let tailTangent = tangents[0]
-    let tailNormal = CGPoint(x: -tailTangent.y, y: tailTangent.x)
+    let tailNormal = CGPoint(x: -tangents[0].y, y: tangents[0].x)
     let startAngle = atan2(tailNormal.y, tailNormal.x)
-    let endAngle = startAngle + .pi
-
     path.addArc(
-      center: tailCenter,
+      center: start,
       radius: wStart / 2,
       startAngle: startAngle,
-      endAngle: endAngle,
+      endAngle: startAngle + .pi,
       clockwise: false
     )
 
     for i in 0...neckIndex {
       path.addLine(to: rightShaftPoints[i])
     }
-
     path.addLine(to: headRight)
     path.closeSubpath()
 

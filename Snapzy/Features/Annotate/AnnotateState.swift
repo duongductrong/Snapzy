@@ -63,6 +63,9 @@ final class AnnotateState: ObservableObject {
     var watermarkOpacity: CGFloat?
     var watermarkRotationDegrees: CGFloat?
     var spotlightCornerRadius: CGFloat?
+    var arrowStyle: String?
+    var arrowType: String?
+    var arrowBendDirection: String?
   }
 
   private struct PersistedAnnotationProperties: Codable {
@@ -3197,6 +3200,10 @@ final class AnnotateState: ObservableObject {
   }
 
   func setActiveArrowStyle(_ style: ArrowStyle) {
+    arrowStyle = style
+    sharedAnnotationParameterDefaults.arrowStyle = style.rawValue
+    persistSharedAnnotationParameterDefaults()
+
     let arrowAnnotations = selectedArrowAnnotations
     if !arrowAnnotations.isEmpty {
       if arrowAnnotations.contains(where: {
@@ -3220,6 +3227,10 @@ final class AnnotateState: ObservableObject {
   }
 
   func setActiveArrowType(_ type: ArrowType) {
+    arrowType = type
+    sharedAnnotationParameterDefaults.arrowType = type.rawValue
+    persistSharedAnnotationParameterDefaults()
+
     let arrowAnnotations = selectedArrowAnnotations
     if !arrowAnnotations.isEmpty {
       if arrowAnnotations.contains(where: {
@@ -3243,6 +3254,10 @@ final class AnnotateState: ObservableObject {
   }
 
   func setActiveArrowBendDirection(_ bendDirection: ArrowBendDirection) {
+    arrowBendDirection = bendDirection
+    sharedAnnotationParameterDefaults.arrowBendDirection = bendDirection.rawValue
+    persistSharedAnnotationParameterDefaults()
+
     let arrowAnnotations = selectedArrowAnnotations
     if !arrowAnnotations.isEmpty {
       if arrowAnnotations.contains(where: {
@@ -3327,6 +3342,19 @@ final class AnnotateState: ObservableObject {
     else { return }
 
     sharedAnnotationParameterDefaults = sanitizedSharedAnnotationParameterDefaults(decoded)
+
+    if let savedStyleRaw = sharedAnnotationParameterDefaults.arrowStyle,
+       let savedStyle = ArrowStyle(rawValue: savedStyleRaw) {
+      arrowStyle = savedStyle
+    }
+    if let savedTypeRaw = sharedAnnotationParameterDefaults.arrowType,
+       let savedType = ArrowType(rawValue: savedTypeRaw) {
+      arrowType = savedType
+    }
+    if let savedBendRaw = sharedAnnotationParameterDefaults.arrowBendDirection,
+       let savedBend = ArrowBendDirection(rawValue: savedBendRaw) {
+      arrowBendDirection = savedBend
+    }
   }
 
   private func persistSharedAnnotationParameterDefaults() {
@@ -3343,7 +3371,10 @@ final class AnnotateState: ObservableObject {
       fontSize: defaults.fontSize.map { min(max($0, 12), 72) },
       watermarkOpacity: defaults.watermarkOpacity.map(AnnotationProperties.clampedOpacity(_:)),
       watermarkRotationDegrees: defaults.watermarkRotationDegrees.map(AnnotationProperties.clampedRotationDegrees(_:)),
-      spotlightCornerRadius: defaults.spotlightCornerRadius.map { max(0, $0) }
+      spotlightCornerRadius: defaults.spotlightCornerRadius.map { max(0, $0) },
+      arrowStyle: defaults.arrowStyle,
+      arrowType: defaults.arrowType,
+      arrowBendDirection: defaults.arrowBendDirection
     )
   }
 
