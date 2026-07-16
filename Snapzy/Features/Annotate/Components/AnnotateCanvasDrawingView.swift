@@ -42,6 +42,7 @@ enum ResizeHandle: Equatable {
   case topLeft, topRight, bottomLeft, bottomRight
   case top, bottom, left, right
   case lineStart, lineEnd
+  case textCalloutTail
 }
 
 /// NSView subclass handling mouse events and drawing
@@ -307,6 +308,21 @@ final class DrawingCanvasNSView: NSView {
         (.lineEnd, handleRect(at: endPoint)),
       ]
 
+    case .text:
+      let bounds = inDisplayCoordinates ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
+      var handles: [(ResizeHandle, CGRect)] = [
+        (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY))),
+        (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY))),
+        (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY))),
+        (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY))),
+      ]
+      if annotation.properties.textPresentation == .callout,
+         let tailTarget = annotation.properties.calloutTailTarget {
+        let point = inDisplayCoordinates ? imageToDisplay(tailTarget) : tailTarget
+        handles.append((.textCalloutTail, handleRect(at: point)))
+      }
+      return handles
+
     default:
       let bounds = inDisplayCoordinates ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
       return [
@@ -465,9 +481,12 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
-    // Allow move/resize of existing annotations when clicking on them
-    // even in non-selection tool modes (acts like selection for that item)
-    if state.selectedTool != .crop, let annotation = hitTestAnnotation(at: imagePoint) {
+    // A combined image is a canvas surface while a markup tool is active.
+    // Only the selection tool may claim its clicks for layer manipulation;
+    // otherwise secondary images would block drawing on every image but the base.
+    if state.selectedTool != .crop,
+       let annotation = hitTestAnnotation(at: imagePoint),
+       !Self.shouldPrioritizeCanvasMarkup(over: annotation, selectedTool: state.selectedTool) {
       // Set local tracking synchronously to avoid race condition with mouseDragged
       beginAnnotationDrag(anchor: annotation, at: imagePoint)
       // Update state asynchronously (for UI reflection)
@@ -500,6 +519,17 @@ final class DrawingCanvasNSView: NSView {
     default:
       break
     }
+  }
+
+  /// Secondary images are movable layers in selection mode, but behave like
+  /// the base image when the user is adding a markup annotation.
+  static func shouldPrioritizeCanvasMarkup(
+    over annotation: AnnotationItem,
+    selectedTool: AnnotationToolType
+  ) -> Bool {
+    guard selectedTool != .selection else { return false }
+    if case .embeddedImage = annotation.type { return true }
+    return false
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
@@ -588,26 +618,26 @@ final class DrawingCanvasNSView: NSView {
     // Handle resizing (in image coordinates)
     if isResizingAnnotation, let handle = activeResizeHandle,
        let resizeId = resizingAnnotationId {
-      Task { @MainActor in
-        switch handle {
-        case .lineStart:
-          state.updateLineEndpoint(id: resizeId, start: imagePoint)
-        case .lineEnd:
-          state.updateLineEndpoint(id: resizeId, end: imagePoint)
-        default:
-          let isEmbeddedImage = state.annotations.first(where: { $0.id == resizeId }).map {
-            if case .embeddedImage = $0.type { return true }
-            return false
-          } ?? false
-          let proportional = event.modifierFlags.contains(.shift)
-            || (state.isCombineMode && isEmbeddedImage)
-          let newBounds = calculateResizedBounds(
-            handle: handle,
-            currentPoint: imagePoint,
-            proportional: proportional
-          )
-          state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
-        }
+      switch handle {
+      case .lineStart:
+        state.updateLineEndpoint(id: resizeId, start: imagePoint)
+      case .lineEnd:
+        state.updateLineEndpoint(id: resizeId, end: imagePoint)
+      case .textCalloutTail:
+        state.updateTextCalloutTail(id: resizeId, target: imagePoint)
+      default:
+        let isEmbeddedImage = state.annotations.first(where: { $0.id == resizeId }).map {
+          if case .embeddedImage = $0.type { return true }
+          return false
+        } ?? false
+        let proportional = event.modifierFlags.contains(.shift)
+          || (state.isCombineMode && isEmbeddedImage)
+        let newBounds = calculateResizedBounds(
+          handle: handle,
+          currentPoint: imagePoint,
+          proportional: proportional
+        )
+        state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
       }
       needsDisplay = true
       return
@@ -914,7 +944,8 @@ final class DrawingCanvasNSView: NSView {
       text: "",
       font: AnnotateTextLayout.font(size: properties.fontSize, fontName: properties.fontName),
       origin: .zero,
-      constrainedWidth: AnnotateTextLayout.defaultInitialWidth
+      constrainedWidth: AnnotateTextLayout.minWidth,
+      presentation: properties.textPresentation
     )
     let bounds = CGRect(
       x: point.x,
@@ -925,6 +956,8 @@ final class DrawingCanvasNSView: NSView {
     // Start with empty text - user will type in the overlay
     let item = AnnotationItem(type: .text(""), bounds: bounds, properties: properties)
     state.annotations.append(item)
+    state.useAutomaticTextWidth(for: item.id)
+    state.prepareTextCalloutTail(for: item.id)
     state.selectedAnnotationId = item.id
     state.beginTextEditing(id: item.id, recordsUndo: false) // Enter edit mode immediately
   }
@@ -1227,7 +1260,7 @@ final class DrawingCanvasNSView: NSView {
 
   private func setCursorForHandle(_ handle: ResizeHandle) {
     switch handle {
-    case .topLeft, .bottomRight, .lineStart, .lineEnd:
+    case .topLeft, .bottomRight, .lineStart, .lineEnd, .textCalloutTail:
       NSCursor.crosshair.set()
     case .topRight, .bottomLeft:
       NSCursor.crosshair.set()

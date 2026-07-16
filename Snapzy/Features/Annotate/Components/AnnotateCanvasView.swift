@@ -149,7 +149,7 @@ struct AnnotateCanvasView: View {
       state.isSpacePanning = false
     }
     .onReceive(NotificationCenter.default.publisher(for: .annotatePanDrag)) { notification in
-      guard state.isSpacePanning,
+      guard state.isSpacePanning || state.isCanvasPanningMode,
             let dx = notification.userInfo?["deltaX"] as? CGFloat,
             let dy = notification.userInfo?["deltaY"] as? CGFloat else { return }
       state.pan(by: CGSize(width: dx, height: dy))

@@ -149,6 +149,7 @@ struct AnnotateBottomBarView: View {
   private var leftSection: some View {
     HStack(spacing: 10) {
       zoomPicker
+      canvasPanButton
       modeToggle
     }
   }
@@ -173,6 +174,22 @@ struct AnnotateBottomBarView: View {
   }
 
   // MARK: - Zoom Picker
+
+  private var canvasPanButton: some View {
+    Button {
+      state.isCanvasPanningMode.toggle()
+    } label: {
+      Image(systemName: state.isCanvasPanningMode ? "hand.draw.fill" : "hand.draw")
+        .font(.system(size: 13, weight: .medium))
+        .frame(width: 28, height: 28)
+    }
+    .buttonStyle(.plain)
+    .foregroundColor(state.isCanvasPanningMode ? .accentColor : .secondary)
+    .background(state.isCanvasPanningMode ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.08))
+    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+    .help("Move canvas")
+    .disabled(!state.canPanInteractively)
+  }
 
   private var zoomPicker: some View {
     Menu {

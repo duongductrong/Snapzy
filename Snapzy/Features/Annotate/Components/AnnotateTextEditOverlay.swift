@@ -34,26 +34,49 @@ struct TextEditOverlay: View {
         )
         let fieldWidth = max(displayBounds.width, minTextFieldWidth)
         let fieldHeight = max(displayBounds.height, 1)
-        let textContainerInset = AnnotateTextLayout.textEditorInset(scale: scale)
-
-        InlineAnnotationTextEditor(
-          editingId: editingId,
-          text: $editingText,
-          font: displayFont,
-          textContainerInset: textContainerInset,
-          textColor: NSColor(annotation.properties.strokeColor),
-          onCommit: { commitEdit(id: editingId) },
-          onCancel: cancelEdit,
-          onUndo: { state.undo() },
-          onRedo: { state.redo() }
+        let textContainerInset = AnnotateTextLayout.textEditorInset(
+          scale: scale,
+          presentation: annotation.properties.textPresentation,
+          fontSize: annotation.properties.fontSize
         )
+        let tailTarget = annotation.properties.calloutTailTarget.map {
+          TextBubbleGeometry.resolvedTailTarget(
+            in: annotation.bounds,
+            requestedTarget: $0,
+            fontSize: annotation.properties.fontSize
+          )
+        }.map(calculateDisplayPoint)
+        let relativeTailTarget = tailTarget.map {
+          CGPoint(x: $0.x - displayBounds.minX, y: $0.y - displayBounds.minY)
+        }
+
+        ZStack(alignment: .topLeading) {
+          if annotation.properties.textPresentation != .plain {
+            TextBubbleShape(
+              tailTarget: annotation.properties.textPresentation == .callout ? relativeTailTarget : nil,
+              fontSize: displayFont.pointSize,
+              cornerRadius: annotation.properties.cornerRadius * scale
+            )
+              .fill(annotation.properties.fillColor)
+          }
+
+          InlineAnnotationTextEditor(
+            editingId: editingId,
+            text: $editingText,
+            font: displayFont,
+            textContainerInset: textContainerInset,
+            textColor: NSColor(annotation.properties.strokeColor),
+            onCommit: { commitEdit(id: editingId) },
+            onCancel: cancelEdit,
+            onUndo: { state.undo() },
+            onRedo: { state.redo() }
+          )
+        }
           .frame(
             width: fieldWidth,
             height: fieldHeight,
             alignment: .topLeading
           )
-          .background(Color.clear)
-          .clipped()
           .position(
             x: displayBounds.minX + fieldWidth / 2,
             y: displayBounds.minY + fieldHeight / 2
@@ -95,6 +118,13 @@ struct TextEditOverlay: View {
     )
   }
 
+  private func calculateDisplayPoint(_ imagePoint: CGPoint) -> CGPoint {
+    CGPoint(
+      x: (imagePoint.x - canvasBounds.minX) * scale,
+      y: (canvasBounds.maxY - imagePoint.y) * scale
+    )
+  }
+
   private func commitEdit(id: UUID) {
     if state.editingTextAnnotationId == id {
       state.updateAnnotationText(id: id, text: editingText)
@@ -112,6 +142,26 @@ struct TextEditOverlay: View {
       state.selectedAnnotationId = nil
     }
     state.finishTextEditing()
+  }
+}
+
+private struct TextBubbleShape: Shape {
+  let tailTarget: CGPoint?
+  let fontSize: CGFloat
+  let cornerRadius: CGFloat
+
+  func path(in rect: CGRect) -> Path {
+    let resolvedCornerRadius = cornerRadius > 0
+      ? min(cornerRadius, min(rect.width, rect.height) * 0.46)
+      : TextBubbleGeometry.cornerRadius(in: rect, fontSize: fontSize)
+    return Path(
+      TextBubbleGeometry.bubblePath(
+        in: rect,
+        cornerRadius: resolvedCornerRadius,
+        tailTarget: tailTarget,
+        fontSize: fontSize
+      )
+    )
   }
 }
 
@@ -187,6 +237,12 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
       context.coordinator.focusedEditingId = editingId
       textView.requestInitialFocus()
     }
+
+    // The annotation can grow or move while an IME composition is active.
+    // Tell AppKit to ask for the caret rectangle again after this layout pass,
+    // so its candidate window follows the current character rather than an
+    // earlier position in the text.
+    textView.refreshInputMethodPlacement()
   }
 
   static func dismantleNSView(_ textView: UndoIsolatedTextView, coordinator: Coordinator) {
@@ -213,6 +269,10 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
       text.wrappedValue = textView.string
     }
 
+    func textViewDidChangeSelection(_ notification: Notification) {
+      (notification.object as? UndoIsolatedTextView)?.refreshInputMethodPlacement()
+    }
+
     func textDidEndEditing(_ notification: Notification) {
       guard let textView = notification.object as? UndoIsolatedTextView else { return }
       textView.onCommit?()
@@ -225,9 +285,32 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
     private var wantsInitialFocus = false
+    private var hasPendingInputMethodPlacementRefresh = false
 
     override var undoManager: UndoManager? { nil }
     override var acceptsFirstResponder: Bool { true }
+
+    override func didChangeText() {
+      super.didChangeText()
+      refreshInputMethodPlacement()
+    }
+
+    /// Inline annotation text changes its frame as the user types. Input
+    /// methods cache character coordinates, so refresh them on the next run
+    /// loop after AppKit has applied the new frame and layout.
+    func refreshInputMethodPlacement() {
+      guard !hasPendingInputMethodPlacementRefresh else { return }
+      hasPendingInputMethodPlacementRefresh = true
+
+      DispatchQueue.main.async { [weak self] in
+        guard let self else { return }
+        self.hasPendingInputMethodPlacementRefresh = false
+        if let textContainer = self.textContainer {
+          self.layoutManager?.ensureLayout(for: textContainer)
+        }
+        self.inputContext?.invalidateCharacterCoordinates()
+      }
+    }
 
     func requestInitialFocus() {
       wantsInitialFocus = true
@@ -284,6 +367,11 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     }
 
     override func keyDown(with event: NSEvent) {
+      let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+      if (event.keyCode == 36 || event.keyCode == 76), flags == .command {
+        onCommit?()
+        return
+      }
       if event.keyCode == 53 {
         onCancel?()
         return

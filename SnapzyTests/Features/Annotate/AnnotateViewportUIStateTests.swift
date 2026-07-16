@@ -152,6 +152,21 @@ final class AnnotateViewportUIStateTests: XCTestCase {
     XCTAssertEqual(state.panOffset.height, 0, accuracy: 0.0001)
   }
 
+  @MainActor
+  func testResetPanIfNeededLeavesHandModeAvailableWhileCanvasOverflows() {
+    let state = makeAnnotateState()
+    state.updateViewportMetrics(
+      containerSize: CGSize(width: 200, height: 200),
+      baseCanvasSize: CGSize(width: 1000, height: 1000),
+      fitScale: 1.0
+    )
+    state.isCanvasPanningMode = true
+
+    state.resetPanIfNeeded()
+
+    XCTAssertTrue(state.isCanvasPanningMode)
+  }
+
   // MARK: - Viewport metrics
 
   @MainActor

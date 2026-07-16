@@ -157,6 +157,38 @@ final class AnnotateImageOpsTests: XCTestCase {
     XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 200, height: 100))
   }
 
+  func testMarkupToolsTreatCombinedImageLayersAsCanvas() throws {
+    let embeddedLayer = AnnotationItem(
+      type: .embeddedImage(UUID()),
+      bounds: CGRect(x: 300, y: 0, width: 200, height: 300),
+      properties: AnnotationProperties()
+    )
+    let rectangle = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 40, height: 40),
+      properties: AnnotationProperties()
+    )
+
+    XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .rectangle))
+    XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .text))
+    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .selection))
+    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: rectangle, selectedTool: .rectangle))
+  }
+
+  func testActivatingMarkupToolClearsCombinedImageSelection() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 200, height: 100))
+    let importedID = try XCTUnwrap(state.annotations.first?.id)
+    state.setSelectedAnnotationIds([importedID])
+
+    state.activateTool(.rectangle)
+
+    XCTAssertNil(state.selectedAnnotationId)
+    XCTAssertTrue(state.selectedAnnotationIds.isEmpty)
+    XCTAssertEqual(state.selectedTool, .rectangle)
+  }
+
   // MARK: - addImportedImage size guard
 
   // Characterization: there is NO oversized-pixel rejection. The only guard is

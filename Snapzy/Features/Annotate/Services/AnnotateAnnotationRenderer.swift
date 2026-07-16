@@ -299,39 +299,31 @@ struct AnnotationRenderer {
       context.restoreGState()
 
     case .tapered, .outlined:
-      let metrics = geometry.taperedMetrics(strokeWidth: strokeWidth)
       let arrowPath = geometry.taperedArrowPath(strokeWidth: strokeWidth)
-      let fillColor = NSColor(strokeColor).cgColor
 
       context.saveGState()
-      context.setLineJoin(.round)
-      context.setLineCap(.round)
 
-      // Soft solid-body shadow (both display types share the same silhouette).
+      // 1. Set up a subtle drop shadow
       context.setShadow(
-        offset: CGSize(width: 0, height: -1.5),
-        blur: 3.5,
-        color: NSColor.black.withAlphaComponent(geometry.arrowType == .outlined ? 0.22 : 0.25).cgColor
+        offset: CGSize(width: 0, height: -2.0),
+        blur: 4.5,
+        color: NSColor.black.withAlphaComponent(0.30).cgColor
       )
-      context.addPath(arrowPath)
-      context.setFillColor(fillColor)
-      context.fillPath()
 
       if geometry.arrowType == .outlined {
-        // Reference style: thick white outer border around the filled body.
-        // Stroke at 2× outlineWidth so the second fill covers the inner half and
-        // the visible outer rim equals metrics.outlineWidth exactly.
-        context.setShadow(offset: .zero, blur: 0, color: nil)
+        // 2. Draw the white outline
         context.addPath(arrowPath)
         context.setStrokeColor(NSColor.white.cgColor)
-        context.setLineWidth(metrics.outlineWidth * 2)
+        context.setLineWidth(1.8 + strokeWidth * 0.3)
+        context.setLineJoin(.round)
+        context.setLineCap(.round)
         context.strokePath()
-
-        // Re-fill body so the outline sits cleanly outside the color.
-        context.addPath(arrowPath)
-        context.setFillColor(fillColor)
-        context.fillPath()
       }
+
+      // 3. Draw the solid body filled with the arrow's main color
+      context.addPath(arrowPath)
+      context.setFillColor(NSColor(strokeColor).cgColor)
+      context.fillPath()
 
       context.restoreGState()
     }
@@ -367,16 +359,23 @@ struct AnnotationRenderer {
     let displayText = content.isEmpty ? "" : content
     let font = AnnotateTextLayout.font(size: properties.fontSize, fontName: properties.fontName)
 
-    // Draw background if fillColor is not clear
-    if properties.fillColor != .clear {
+    // The text bounds are the bubble itself, so the surface grows in lockstep
+    // with the text instead of leaving a separate, fixed-size background behind.
+    if properties.textPresentation != .plain, properties.fillColor != .clear {
       context.setFillColor(NSColor(properties.fillColor).cgColor)
-      let bgRect = CGRect(
-        x: bounds.origin.x - AnnotateTextLayout.horizontalPadding,
-        y: bounds.origin.y - AnnotateTextLayout.verticalPadding,
-        width: bounds.width + AnnotateTextLayout.horizontalPadding * 2,
-        height: bounds.height + AnnotateTextLayout.verticalPadding * 2
+      let bgRect = bounds.standardized
+      let cornerRadius = properties.cornerRadius > 0
+        ? min(properties.cornerRadius, min(bgRect.width, bgRect.height) * 0.46)
+        : TextBubbleGeometry.cornerRadius(in: bgRect, fontSize: font.pointSize)
+      context.addPath(
+        TextBubbleGeometry.bubblePath(
+          in: bgRect,
+          cornerRadius: cornerRadius,
+          tailTarget: properties.textPresentation == .callout ? properties.calloutTailTarget : nil,
+          fontSize: font.pointSize
+        )
       )
-      context.fill(bgRect)
+      context.fillPath()
     }
 
     // Draw text with word wrapping within bounds
@@ -390,7 +389,12 @@ struct AnnotationRenderer {
     ]
 
     let textBounds = bounds.standardized
-    let textRect = AnnotateTextLayout.textRect(for: content, font: font, in: textBounds)
+    let textRect = AnnotateTextLayout.textRect(
+      for: content,
+      font: font,
+      in: textBounds,
+      presentation: properties.textPresentation
+    )
     let text = displayText as NSString
     context.saveGState()
     context.clip(to: textBounds)

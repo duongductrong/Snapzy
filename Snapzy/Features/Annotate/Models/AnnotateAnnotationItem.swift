@@ -84,6 +84,261 @@ enum WatermarkStyle: String, CaseIterable, Identifiable, Equatable {
   }
 }
 
+enum TextPresentation: String, CaseIterable, Identifiable, Equatable {
+  case plain
+  case label
+  case callout
+
+  var id: String { rawValue }
+
+  var icon: String {
+    switch self {
+    case .plain: "textformat"
+    case .label: "rectangle.fill"
+    case .callout: "text.bubble.fill"
+    }
+  }
+
+  var helpText: String {
+    switch self {
+    case .plain: "Transparent text"
+    case .label: "Text label"
+    case .callout: "Callout label"
+    }
+  }
+}
+
+/// Shared proportions for label and callout text. Keeping these in one place
+/// makes the editing overlay, on-canvas preview, and exported image agree.
+enum TextBubbleGeometry {
+  private enum TailSide {
+    case minX
+    case maxX
+    case minY
+    case maxY
+  }
+
+  private struct TailGeometry {
+    let side: TailSide
+    let target: CGPoint
+    let entry: CGPoint
+    let exit: CGPoint
+    let tangent: CGPoint
+    let rootHalfWidth: CGFloat
+  }
+
+  static func contentInsets(for presentation: TextPresentation, fontSize: CGFloat) -> CGSize {
+    guard presentation != .plain else { return CGSize(width: 4, height: 4) }
+    return CGSize(
+      width: max(9, min(fontSize * 0.55, 18)),
+      height: max(5, min(fontSize * 0.32, 10))
+    )
+  }
+
+  static func cornerRadius(in bounds: CGRect, fontSize: CGFloat) -> CGFloat {
+    min(max(4, fontSize * 0.16), min(bounds.width, bounds.height) * 0.12)
+  }
+
+  static func defaultTailTarget(for bounds: CGRect, fontSize: CGFloat) -> CGPoint {
+    CGPoint(
+      x: bounds.minX + bounds.width * 0.795,
+      y: bounds.minY - bounds.height * 0.35
+    )
+  }
+
+  static func isDefaultTail(_ target: CGPoint, for bounds: CGRect, fontSize: CGFloat) -> Bool {
+    let expected = defaultTailTarget(for: bounds, fontSize: fontSize)
+    return hypot(target.x - expected.x, target.y - expected.y) < 1
+  }
+
+  static func resolvedTailTarget(in rect: CGRect, requestedTarget: CGPoint, fontSize: CGFloat) -> CGPoint {
+    guard requestedTarget.x.isFinite, requestedTarget.y.isFinite else {
+      return defaultTailTarget(for: rect, fontSize: fontSize)
+    }
+    return requestedTarget
+  }
+
+  static func bubblePath(
+    in rect: CGRect,
+    cornerRadius: CGFloat,
+    tailTarget: CGPoint?,
+    fontSize: CGFloat
+  ) -> CGPath {
+    let rect = rect.standardized
+    guard rect.width > 0, rect.height > 0 else { return CGMutablePath() }
+    guard let tailTarget,
+          let tail = tailGeometry(in: rect, requestedTarget: tailTarget, fontSize: fontSize) else {
+      return CGPath(roundedRect: rect, cornerWidth: cornerRadius * 2, cornerHeight: cornerRadius * 2, transform: nil)
+    }
+
+    let radius = min(max(0, cornerRadius), min(rect.width, rect.height) / 2)
+    let path = CGMutablePath()
+
+    let topLeft = CGPoint(x: rect.minX + radius, y: rect.maxY)
+    let topRight = CGPoint(x: rect.maxX - radius, y: rect.maxY)
+    let rightTop = CGPoint(x: rect.maxX, y: rect.maxY - radius)
+    let rightBottom = CGPoint(x: rect.maxX, y: rect.minY + radius)
+    let bottomRight = CGPoint(x: rect.maxX - radius, y: rect.minY)
+    let bottomLeft = CGPoint(x: rect.minX + radius, y: rect.minY)
+    let leftBottom = CGPoint(x: rect.minX, y: rect.minY + radius)
+    let leftTop = CGPoint(x: rect.minX, y: rect.maxY - radius)
+
+    path.move(to: topLeft)
+    appendEdge(from: topLeft, to: topRight, side: .maxY, tail: tail, path: path)
+    path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius), radius: radius, startAngle: .pi / 2, endAngle: 0, clockwise: true)
+    appendEdge(from: rightTop, to: rightBottom, side: .maxX, tail: tail, path: path)
+    path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.minY + radius), radius: radius, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
+    appendEdge(from: bottomRight, to: bottomLeft, side: .minY, tail: tail, path: path)
+    path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.minY + radius), radius: radius, startAngle: -.pi / 2, endAngle: -.pi, clockwise: true)
+    appendEdge(from: leftBottom, to: leftTop, side: .minX, tail: tail, path: path)
+    path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.maxY - radius), radius: radius, startAngle: .pi, endAngle: .pi / 2, clockwise: true)
+    path.closeSubpath()
+    return path
+  }
+
+  static func tailPath(in rect: CGRect, to requestedTarget: CGPoint, fontSize: CGFloat) -> CGPath {
+    let rect = rect.standardized
+    guard let tail = tailGeometry(in: rect, requestedTarget: requestedTarget, fontSize: fontSize) else {
+      return CGMutablePath()
+    }
+
+    let path = CGMutablePath()
+    path.move(to: tail.entry)
+    appendTail(tail, to: path)
+    path.closeSubpath()
+    return path
+  }
+
+  private static func tailGeometry(
+    in rect: CGRect,
+    requestedTarget: CGPoint,
+    fontSize: CGFloat
+  ) -> TailGeometry? {
+    guard rect.width > 0, rect.height > 0 else { return nil }
+
+    let target = resolvedTailTarget(in: rect, requestedTarget: requestedTarget, fontSize: fontSize)
+    // Bringing the target into the label restores the plain rounded rectangle.
+    guard !rect.contains(target) else { return nil }
+    let side = attachmentSide(for: target, in: rect)
+    let baseHalfWidth = max(5, min(fontSize * 0.44, min(rect.width, rect.height) * 0.2))
+    let anchor = attachmentPoint(for: target, on: side, in: rect, baseHalfWidth: baseHalfWidth)
+    let basis = basis(for: side)
+    let distance = hypot(target.x - anchor.x, target.y - anchor.y)
+    guard distance > 1 else { return nil }
+
+    // The root width stays compact while dragging; the visual transition from
+    // short label point to long guide comes from the same pair of Bezier walls.
+    let shortTailLimit = max(fontSize * 1.25, min(rect.width, rect.height) * 0.55)
+    let rootHalfWidth = baseHalfWidth * (distance > shortTailLimit ? 1.1 : 1)
+    return TailGeometry(
+      side: side,
+      target: target,
+      entry: anchor - basis.tangent * rootHalfWidth,
+      exit: anchor + basis.tangent * rootHalfWidth,
+      tangent: basis.tangent,
+      rootHalfWidth: rootHalfWidth
+    )
+  }
+
+  private static func appendEdge(
+    from start: CGPoint,
+    to end: CGPoint,
+    side: TailSide,
+    tail: TailGeometry,
+    path: CGMutablePath
+  ) {
+    guard tail.side == side else {
+      path.addLine(to: end)
+      return
+    }
+    path.addLine(to: tail.entry)
+    appendTail(tail, to: path)
+    path.addLine(to: end)
+  }
+
+  private static func appendTail(_ tail: TailGeometry, to path: CGMutablePath) {
+    let intoTip = normalized(tail.target - tail.entry)
+    let outOfTip = normalized(tail.exit - tail.target)
+    let tipInset = min(
+      max(tail.rootHalfWidth * 0.7, 2),
+      hypot(tail.target.x - tail.entry.x, tail.target.y - tail.entry.y) * 0.24
+    )
+    let rootControl = min(
+      tail.rootHalfWidth * 0.9,
+      hypot(tail.target.x - tail.entry.x, tail.target.y - tail.entry.y) * 0.3
+    )
+
+    path.addCurve(
+      to: tail.target,
+      control1: tail.entry + tail.tangent * rootControl,
+      control2: tail.target - intoTip * tipInset
+    )
+    path.addCurve(
+      to: tail.exit,
+      control1: tail.target + outOfTip * tipInset,
+      control2: tail.exit - tail.tangent * rootControl
+    )
+  }
+
+  private static func attachmentSide(for target: CGPoint, in rect: CGRect) -> TailSide {
+    let normalizedX = (target.x - rect.midX) / max(rect.width / 2, 1)
+    let normalizedY = (target.y - rect.midY) / max(rect.height / 2, 1)
+    if abs(normalizedX) > abs(normalizedY) {
+      return normalizedX < 0 ? .minX : .maxX
+    }
+    return normalizedY < 0 ? .minY : .maxY
+  }
+
+  private static func attachmentPoint(
+    for target: CGPoint,
+    on side: TailSide,
+    in rect: CGRect,
+    baseHalfWidth: CGFloat
+  ) -> CGPoint {
+    let inset = min(
+      max(baseHalfWidth + 2, cornerRadius(in: rect, fontSize: baseHalfWidth * 2)),
+      min(rect.width, rect.height) * 0.42
+    )
+    switch side {
+    case .minX:
+      return CGPoint(x: rect.minX, y: min(max(target.y, rect.minY + inset), rect.maxY - inset))
+    case .maxX:
+      return CGPoint(x: rect.maxX, y: min(max(target.y, rect.minY + inset), rect.maxY - inset))
+    case .minY:
+      return CGPoint(x: min(max(target.x, rect.minX + inset), rect.maxX - inset), y: rect.minY)
+    case .maxY:
+      return CGPoint(x: min(max(target.x, rect.minX + inset), rect.maxX - inset), y: rect.maxY)
+    }
+  }
+
+  private static func basis(for side: TailSide) -> (outward: CGPoint, tangent: CGPoint) {
+    switch side {
+    case .minX: (CGPoint(x: -1, y: 0), CGPoint(x: 0, y: 1))
+    case .maxX: (CGPoint(x: 1, y: 0), CGPoint(x: 0, y: -1))
+    case .minY: (CGPoint(x: 0, y: -1), CGPoint(x: -1, y: 0))
+    case .maxY: (CGPoint(x: 0, y: 1), CGPoint(x: 1, y: 0))
+    }
+  }
+}
+
+private func + (lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+  CGPoint(x: lhs.x + rhs.x, y: lhs.y + rhs.y)
+}
+
+private func - (lhs: CGPoint, rhs: CGPoint) -> CGPoint {
+  CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y)
+}
+
+private func * (lhs: CGPoint, rhs: CGFloat) -> CGPoint {
+  CGPoint(x: lhs.x * rhs, y: lhs.y * rhs)
+}
+
+private func normalized(_ point: CGPoint) -> CGPoint {
+  let length = hypot(point.x, point.y)
+  guard length > 0.0001 else { return .zero }
+  return point * (1 / length)
+}
+
 enum ArrowStyle: String, CaseIterable, Identifiable, Equatable {
   case straight
   case curvedRight
@@ -187,29 +442,6 @@ enum ArrowType: String, Codable, CaseIterable, Identifiable {
     case .outlined: return "arrowshape.turn.up.right.fill"
     }
   }
-
-  func icon(for style: ArrowStyle) -> String {
-    switch style {
-    case .straight:
-      switch self {
-      case .classic: return "arrow.up.right"
-      case .tapered: return "arrowshape.turn.up.right"
-      case .outlined: return "arrowshape.turn.up.right.fill"
-      }
-    case .curvedRight:
-      switch self {
-      case .classic: return "arrow.turn.up.right"
-      case .tapered: return "arrowshape.turn.up.right"
-      case .outlined: return "arrowshape.turn.up.right.fill"
-      }
-    case .curvedLeft:
-      switch self {
-      case .classic: return "arrow.turn.up.left"
-      case .tapered: return "arrowshape.turn.up.left"
-      case .outlined: return "arrowshape.turn.up.left.fill"
-      }
-    }
-  }
 }
 
 struct ArrowGeometry: Equatable {
@@ -291,69 +523,6 @@ struct ArrowGeometry: Equatable {
     return path
   }
 
-  /// Metrics for tapered / outlined filled arrows (reference: solid red body + white border).
-  struct TaperedArrowMetrics: Equatable {
-    /// Shaft width at the tail (start).
-    let shaftBaseWidth: CGFloat
-    /// Shaft width where it meets the head (neck).
-    let shaftNeckWidth: CGFloat
-    /// Full width of the triangular head.
-    let headWidth: CGFloat
-    /// Length of the head along the centerline.
-    let headLength: CGFloat
-    /// Visible outer outline thickness for `.outlined` (true outside edge).
-    let outlineWidth: CGFloat
-    /// How far the head base is pulled back along the tangent (barb depth).
-    let sweepBack: CGFloat
-
-    /// Max half-width used for hit testing / selection padding.
-    var maxHalfWidth: CGFloat {
-      max(shaftBaseWidth, headWidth) / 2
-    }
-  }
-
-  /// Shared dimension model so geometry, rendering, and hit-testing stay in sync.
-  /// Same presentation silhouette (thin tail widening to the neck, ~2× head, shallow
-  /// shoulders, white border); neck width tracks strokeWidth so visual weight matches
-  /// other tools (e.g. rectangle).
-  static func taperedMetrics(strokeWidth: CGFloat, chordLength: CGFloat) -> TaperedArrowMetrics {
-    let safeStroke = max(strokeWidth, 1)
-    // Mild length scale only — avoid oversized bodies on long drags.
-    let scale = min(1.08, max(0.75, chordLength / 180))
-
-    // Neck (just behind the head) carries the visual weight ≈ other annotate tools' stroke.
-    let shaftNeck = (2.6 + safeStroke * 1.75) * scale
-    // Shaft widens from a thin tail up to the neck: narrow at the tail → wide at
-    // the head, so the body fans out toward the arrowhead (never thin at the tip).
-    let shaftBase = shaftNeck * 0.5
-    // Head ~2× the neck width with clear but shallow shoulders.
-    let headWidth = max(shaftNeck * 2.0, shaftNeck + 5.5 * scale)
-    let idealHeadLength = (9.0 + safeStroke * 2.2) * scale
-    // Cap head so short arrows still keep a visible shaft.
-    let headLength = min(max(idealHeadLength, shaftNeck * 1.1), chordLength * 0.32)
-    // Outline scales with stroke; stays readable without overpowering thin bodies.
-    let outlineWidth = max(1.5, 1.1 + safeStroke * 0.32)
-    // Shallow sweep — soft shoulders, not deep barbs.
-    let sweepBack = headLength * 0.10
-
-    return TaperedArrowMetrics(
-      shaftBaseWidth: shaftBase,
-      shaftNeckWidth: shaftNeck,
-      headWidth: headWidth,
-      headLength: headLength,
-      outlineWidth: outlineWidth,
-      sweepBack: sweepBack
-    )
-  }
-
-  func taperedMetrics(strokeWidth: CGFloat) -> TaperedArrowMetrics {
-    let dx = end.x - start.x
-    let dy = end.y - start.y
-    return Self.taperedMetrics(strokeWidth: strokeWidth, chordLength: hypot(dx, dy))
-  }
-
-  /// Closed filled path for tapered / outlined arrow display types.
-  /// Shape: thin rounded tail → shaft widening toward the neck → triangular head with slight barbs.
   func taperedArrowPath(strokeWidth: CGFloat) -> CGPath {
     let path = CGMutablePath()
 
@@ -362,18 +531,18 @@ struct ArrowGeometry: Equatable {
     let chordLength = hypot(dx, dy)
     guard chordLength > 1 else { return path }
 
-    let metrics = Self.taperedMetrics(strokeWidth: strokeWidth, chordLength: chordLength)
-    let wStart = metrics.shaftBaseWidth
-    let wEnd = metrics.shaftNeckWidth
-    let wHead = metrics.headWidth
-    let resolvedHeadLength = metrics.headLength
+    // Width and length parameters scaling with user strokeWidth and chordLength (clamped)
+    let scale = min(1.2, max(0.4, chordLength / 100.0))
+    let wStart = (3.2 + strokeWidth * 2.0) * scale
+    let wEnd = (1.0 + strokeWidth * 0.5) * scale
+    let wHead = (16.0 + strokeWidth * 5.5) * scale
+    let headLength = (12.0 + strokeWidth * 3.5) * scale
+    let resolvedHeadLength = min(headLength, chordLength * 0.8)
 
-    // Sample centerline points and unit tangents (supports straight + quadratic curves).
-    let steps = 48
+    // Sample centerline points and tangents
+    let steps = 32
     var points: [CGPoint] = []
     var tangents: [CGPoint] = []
-    points.reserveCapacity(steps + 1)
-    tangents.reserveCapacity(steps + 1)
 
     for i in 0...steps {
       let t = CGFloat(i) / CGFloat(steps)
@@ -381,6 +550,7 @@ struct ArrowGeometry: Equatable {
       let tangent: CGPoint
 
       if style != .straight, let control = resolvedControlPoint {
+        // Quadratic Bezier
         let oneMinusT = 1.0 - t
         p = CGPoint(
           x: oneMinusT * oneMinusT * start.x + 2 * oneMinusT * t * control.x + t * t * end.x,
@@ -390,7 +560,11 @@ struct ArrowGeometry: Equatable {
         let ty = 2 * oneMinusT * (control.y - start.y) + 2 * t * (end.y - control.y)
         tangent = CGPoint(x: tx, y: ty)
       } else {
-        p = CGPoint(x: start.x + t * dx, y: start.y + t * dy)
+        // Straight line
+        p = CGPoint(
+          x: start.x + t * dx,
+          y: start.y + t * dy
+        )
         tangent = CGPoint(x: dx, y: dy)
       }
 
@@ -399,84 +573,96 @@ struct ArrowGeometry: Equatable {
       let len = hypot(tangent.x, tangent.y)
       if len > 0.0001 {
         tangents.append(CGPoint(x: tangent.x / len, y: tangent.y / len))
-      } else if let lastTangent = tangents.last {
-        tangents.append(lastTangent)
       } else {
-        tangents.append(CGPoint(x: dx / max(chordLength, 1), y: dy / max(chordLength, 1)))
+        if let lastTangent = tangents.last {
+          tangents.append(lastTangent)
+        } else {
+          let fallbackDx = dx / max(chordLength, 1)
+          let fallbackDy = dy / max(chordLength, 1)
+          tangents.append(CGPoint(x: fallbackDx, y: fallbackDy))
+        }
       }
     }
 
-    // Neck = point on the centerline one headLength back from the tip.
+    // Find neck index/parameter where arrowhead meets the shaft
     var neckIndex = steps
     var accumulatedDistance: CGFloat = 0
     for i in stride(from: steps, to: 0, by: -1) {
-      accumulatedDistance += hypot(points[i].x - points[i - 1].x, points[i].y - points[i - 1].y)
+      let d = hypot(points[i].x - points[i-1].x, points[i].y - points[i-1].y)
+      accumulatedDistance += d
       if accumulatedDistance >= resolvedHeadLength {
-        neckIndex = max(i - 1, 1)
+        neckIndex = i - 1
         break
       }
     }
-    if neckIndex < 1 { neckIndex = 1 }
+
+    if neckIndex < 1 {
+      neckIndex = 1
+    }
 
     let neckPoint = points[neckIndex]
     let neckTangent = tangents[neckIndex]
     let neckNormal = CGPoint(x: -neckTangent.y, y: neckTangent.x)
 
-    // Head base is swept slightly behind the neck so the shaft forms clear shoulders.
+    // Sweepback for a sleeker arrowhead
+    let sweepBack = resolvedHeadLength * 0.20
     let arrowheadBaseCenter = CGPoint(
-      x: neckPoint.x - neckTangent.x * metrics.sweepBack,
-      y: neckPoint.y - neckTangent.y * metrics.sweepBack
+      x: neckPoint.x - neckTangent.x * sweepBack,
+      y: neckPoint.y - neckTangent.y * sweepBack
     )
+
     let headLeft = CGPoint(
       x: arrowheadBaseCenter.x + neckNormal.x * (wHead / 2),
       y: arrowheadBaseCenter.y + neckNormal.y * (wHead / 2)
     )
+
     let headRight = CGPoint(
       x: arrowheadBaseCenter.x - neckNormal.x * (wHead / 2),
       y: arrowheadBaseCenter.y - neckNormal.y * (wHead / 2)
     )
 
-    // Smooth ease for shaft taper (matches solid presentation look, not a linear wedge).
-    func shaftWidth(progress: CGFloat) -> CGFloat {
-      let eased = progress * progress * (3 - 2 * progress) // smoothstep
-      return wStart + (wEnd - wStart) * eased
-    }
-
+    // Left and right shaft points up to neckIndex
     var leftShaftPoints: [CGPoint] = []
     var rightShaftPoints: [CGPoint] = []
-    leftShaftPoints.reserveCapacity(neckIndex + 1)
-    rightShaftPoints.reserveCapacity(neckIndex + 1)
 
     for i in 0...neckIndex {
-      let progress = CGFloat(i) / CGFloat(neckIndex)
-      let halfW = shaftWidth(progress: progress) / 2
+      let t = CGFloat(i) / CGFloat(neckIndex)
+      let w = wStart + t * (wEnd - wStart)
       let p = points[i]
       let norm = CGPoint(x: -tangents[i].y, y: tangents[i].x)
-      leftShaftPoints.append(CGPoint(x: p.x + norm.x * halfW, y: p.y + norm.y * halfW))
-      rightShaftPoints.append(CGPoint(x: p.x - norm.x * halfW, y: p.y - norm.y * halfW))
+
+      leftShaftPoints.append(CGPoint(x: p.x + norm.x * (w / 2), y: p.y + norm.y * (w / 2)))
+      rightShaftPoints.append(CGPoint(x: p.x - norm.x * (w / 2), y: p.y - norm.y * (w / 2)))
     }
 
-    // Closed outline: tip → left wing → left shaft → rounded tail → right shaft → right wing → tip
+    // Build the tapered closed path
     path.move(to: end)
     path.addLine(to: headLeft)
     path.addLine(to: leftShaftPoints[neckIndex])
+
     for i in stride(from: neckIndex - 1, through: 0, by: -1) {
       path.addLine(to: leftShaftPoints[i])
     }
 
-    let tailNormal = CGPoint(x: -tangents[0].y, y: tangents[0].x)
+    // Rounded tail at the start
+    let tailCenter = start
+    let tailTangent = tangents[0]
+    let tailNormal = CGPoint(x: -tailTangent.y, y: tailTangent.x)
     let startAngle = atan2(tailNormal.y, tailNormal.x)
+    let endAngle = startAngle + .pi
+
     path.addArc(
-      center: start,
+      center: tailCenter,
       radius: wStart / 2,
       startAngle: startAngle,
-      endAngle: startAngle + .pi,
+      endAngle: endAngle,
       clockwise: false
     )
 
     for i in 0...neckIndex {
       path.addLine(to: rightShaftPoints[i])
     }
+
     path.addLine(to: headRight)
     path.closeSubpath()
 
@@ -845,6 +1031,8 @@ struct AnnotationProperties: Equatable {
   var rotationDegrees: CGFloat
   var watermarkStyle: WatermarkStyle
   var spotlightOpacity: CGFloat
+  var textPresentation: TextPresentation
+  var calloutTailTarget: CGPoint?
 
   init(
     strokeColor: Color = .red,
@@ -856,7 +1044,9 @@ struct AnnotationProperties: Equatable {
     opacity: CGFloat = 1,
     rotationDegrees: CGFloat = 0,
     watermarkStyle: WatermarkStyle = .single,
-    spotlightOpacity: CGFloat = 0.5
+    spotlightOpacity: CGFloat = 0.5,
+    textPresentation: TextPresentation = .plain,
+    calloutTailTarget: CGPoint? = nil
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -868,6 +1058,8 @@ struct AnnotationProperties: Equatable {
     self.rotationDegrees = rotationDegrees
     self.watermarkStyle = watermarkStyle
     self.spotlightOpacity = spotlightOpacity
+    self.textPresentation = textPresentation
+    self.calloutTailTarget = calloutTailTarget
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -966,7 +1158,20 @@ extension AnnotationItem {
     } else {
       padding = max(6, properties.strokeWidth / 2)
     }
-    return resizeBounds.insetBy(dx: -padding, dy: -padding)
+    var result = resizeBounds.insetBy(dx: -padding, dy: -padding)
+    if case .text = type,
+       properties.textPresentation == .callout,
+       let tailTarget = properties.calloutTailTarget {
+      let tailBounds = TextBubbleGeometry.tailPath(
+        in: bounds,
+        to: tailTarget,
+        fontSize: properties.fontSize
+      ).boundingBoxOfPath
+      if !tailBounds.isNull {
+        result = result.union(tailBounds.insetBy(dx: -padding, dy: -padding))
+      }
+    }
+    return result
   }
 
   var selectionDecorationBounds: CGRect {
@@ -994,16 +1199,9 @@ extension AnnotationItem {
       return pointInEllipse(point, in: bounds)
 
     case .arrow(let geometry):
-      switch geometry.arrowType {
-      case .classic:
-        let arrowTolerance = baseTolerance + properties.strokeWidth / 2
-        return distanceToPolyline(point, points: geometry.sampledPoints()) <= arrowTolerance
-      case .tapered, .outlined:
-        let metrics = geometry.taperedMetrics(strokeWidth: properties.strokeWidth)
-        let outlinePad = geometry.arrowType == .outlined ? metrics.outlineWidth : 0
-        let arrowTolerance = baseTolerance + metrics.maxHalfWidth + outlinePad
-        return distanceToPolyline(point, points: geometry.sampledPoints()) <= arrowTolerance
-      }
+      let maxArrowWidth = (3.2 + properties.strokeWidth * 2.0) * 1.2
+      let arrowTolerance = baseTolerance + maxArrowWidth / 2
+      return distanceToPolyline(point, points: geometry.sampledPoints()) <= arrowTolerance
 
     case .line(let start, let end):
       return distanceToSegment(point, from: start, to: end) <= tolerance
@@ -1013,7 +1211,18 @@ extension AnnotationItem {
       return distanceToPolyline(point, points: points) <= adjustedTolerance
 
     case .text:
-      return bounds.contains(point)
+      if bounds.contains(point) { return true }
+      if properties.textPresentation == .callout,
+         let tailTarget = properties.calloutTailTarget {
+        return bounds.union(
+          TextBubbleGeometry.tailPath(
+            in: bounds,
+            to: tailTarget,
+            fontSize: properties.fontSize
+          ).boundingBoxOfPath.insetBy(dx: -tolerance, dy: -tolerance)
+        ).contains(point)
+      }
+      return false
 
     case .counter:
       let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds

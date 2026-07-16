@@ -154,9 +154,9 @@ enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickCornerRadius: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .spotlight:
+    case .rectangle, .filledRectangle, .text, .spotlight:
       return true
-    case .selection, .crop, .oval, .arrow, .line, .text, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
+    case .selection, .crop, .oval, .arrow, .line, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
       return false
     }
   }

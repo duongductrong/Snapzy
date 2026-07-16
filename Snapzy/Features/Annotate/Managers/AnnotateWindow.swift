@@ -346,8 +346,8 @@ class AnnotateWindow: NSWindow {
       }
       return
 
-    case .leftMouseDragged where isSpaceHeld:
-      // Mouse drag while Space held → pan
+    case .leftMouseDragged where isSpaceHeld || (interactionState?.isCanvasPanningMode == true && !isTextInputActive):
+      // Mouse drag while the hand tool is active → pan.
       NSCursor.closedHand.set()
       let dx = event.deltaX
       let dy = event.deltaY
@@ -358,13 +358,17 @@ class AnnotateWindow: NSWindow {
       )
       return  // Consume — don't forward to drawing canvas
 
-    case .leftMouseDown where isSpaceHeld:
-      // Consume mouse-down during pan to prevent drawing
+    case .leftMouseDown where isSpaceHeld || (interactionState?.isCanvasPanningMode == true && !isTextInputActive):
+      // Consume mouse-down during pan to prevent drawing.
       return
 
-    case .leftMouseUp where isSpaceHeld:
-      // Consume mouse-up during pan, restore open-hand cursor
-      NSCursor.openHand.set()
+    case .leftMouseUp where isSpaceHeld || interactionState?.isCanvasPanningMode == true:
+      // Consume mouse-up during pan, restore the appropriate hand cursor.
+      if interactionState?.isCanvasPanningMode == true {
+        NSCursor.openHand.set()
+      } else {
+        NSCursor.arrow.set()
+      }
       return
 
     default:
