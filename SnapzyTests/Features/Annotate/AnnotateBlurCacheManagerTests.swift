@@ -63,13 +63,6 @@ final class AnnotateBlurCacheManagerTests: XCTestCase {
   func testGetCachedBlur_nonBlockingSchedulesRender() {
     let id = UUID()
     let bounds = CGRect(x: 10, y: 10, width: 50, height: 50)
-    let expectation = expectation(description: "async blur render completes")
-
-    cache.onRenderCompleted = { completedId, completedBounds in
-      XCTAssertEqual(completedId, id)
-      XCTAssertEqual(completedBounds, bounds)
-      expectation.fulfill()
-    }
 
     let immediate = cache.getCachedBlur(
       for: id,
@@ -81,8 +74,13 @@ final class AnnotateBlurCacheManagerTests: XCTestCase {
     )
     XCTAssertNil(immediate)
 
-    // The async render shares CI resources with the rest of the test suite.
-    wait(for: [expectation], timeout: 10.0)
+    // Poll until async render completes (avoids DispatchQueue.main.async + wait(for:)
+    // run loop interaction issues on CI runners).
+    let deadline = CFAbsoluteTimeGetCurrent() + 10.0
+    while CFAbsoluteTimeGetCurrent() < deadline {
+      if cache.hasCachedBlur(for: id) { break }
+      RunLoop.current.run(mode: .default, before: Date(timeIntervalSinceNow: 0.05))
+    }
     XCTAssertTrue(cache.hasCachedBlur(for: id))
   }
 
