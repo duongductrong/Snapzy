@@ -34,6 +34,7 @@ final class RecordingSession: @unchecked Sendable {
   private var _sessionStarted = false
   private var _isCapturing = false
   private var _firstTimestamp: CMTime?  // Track first video timestamp for timeline alignment
+  private var _pauseOffsetAccumulator: CMTime = .zero
   private var _onFirstVideoFrame: (() -> Void)?
   private var _videoFramesReceived = 0
   private var _videoFramesAppended = 0
@@ -122,6 +123,39 @@ final class RecordingSession: @unchecked Sendable {
     }
   }
 
+  /// Set the total accumulated pause duration for PTS adjustment.
+  /// Called by ScreenRecordingManager on each resume.
+  func setAccumulatedPauseOffset(_ offset: CMTime) {
+    lock.withLock {
+      _pauseOffsetAccumulator = offset
+    }
+  }
+
+  /// Create a copy of the audio sample buffer with PTS adjusted for pause offset.
+  /// Returns nil if the copy fails or if the adjustment is invalid.
+  private func adjustedAudioSampleBuffer(_ sampleBuffer: CMSampleBuffer, offset: CMTime) -> CMSampleBuffer? {
+    guard offset.isNumeric, offset > .zero else { return sampleBuffer }
+
+    var timingInfo = CMSampleTimingInfo()
+    let status = CMSampleBufferGetSampleTimingInfo(sampleBuffer, at: 0, timingInfoOut: &timingInfo)
+    guard status == noErr else { return nil }
+
+    timingInfo.presentationTimeStamp = CMTimeSubtract(timingInfo.presentationTimeStamp, offset)
+    if timingInfo.decodeTimeStamp.isValid {
+      timingInfo.decodeTimeStamp = CMTimeSubtract(timingInfo.decodeTimeStamp, offset)
+    }
+
+    var adjustedBuffer: CMSampleBuffer?
+    let copyStatus = CMSampleBufferCreateCopyWithNewTiming(
+      allocator: kCFAllocatorDefault,
+      sampleBuffer: sampleBuffer,
+      sampleTimingEntryCount: 1,
+      sampleTimingArray: &timingInfo,
+      sampleBufferOut: &adjustedBuffer
+    )
+    return copyStatus == noErr ? adjustedBuffer : nil
+  }
+
   /// Thread-safe video frame write with lazy session start
   /// Uses pixel buffer adaptor for BGRA format from ScreenCaptureKit
   func appendVideoSample(_ sampleBuffer: CMSampleBuffer) {
@@ -152,59 +186,69 @@ final class RecordingSession: @unchecked Sendable {
       return
     }
 
-    let pixelWidth = CVPixelBufferGetWidth(pixelBuffer)
-    let pixelHeight = CVPixelBufferGetHeight(pixelBuffer)
-    let expectedDimensions = lock.withLock { (_expectedVideoWidth, _expectedVideoHeight, _didLogFrameDimensionMismatch) }
-    if let expectedWidth = expectedDimensions.0,
-       let expectedHeight = expectedDimensions.1,
-       (pixelWidth != expectedWidth || pixelHeight != expectedHeight),
-       !expectedDimensions.2 {
-      lock.withLock { _didLogFrameDimensionMismatch = true }
+    let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+    guard timestamp.isValid else { return }
+
+    // Consolidate locks and read dimensions/offset in one acquisition
+    var shouldLogDimensionMismatch = false
+    let (writer, videoInput, adaptor, shouldStartSession, onFirstVideoFrame, offset, expectedWidth, expectedHeight, pixelWidth, pixelHeight): (
+      AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool, (() -> Void)?, CMTime, Int?, Int?, Int, Int
+    ) = lock.withLock {
+      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
+        return (nil, nil, nil, false, nil, .zero, nil, nil, 0, 0)
+      }
+
+      let w = CVPixelBufferGetWidth(pixelBuffer)
+      let h = CVPixelBufferGetHeight(pixelBuffer)
+      if let expectedWidth = _expectedVideoWidth,
+         let expectedHeight = _expectedVideoHeight,
+         (w != expectedWidth || h != expectedHeight),
+         !_didLogFrameDimensionMismatch {
+        _didLogFrameDimensionMismatch = true
+        shouldLogDimensionMismatch = true
+      }
+
+      let offset = _pauseOffsetAccumulator
+      let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
+
+      var needsSessionStart = false
+      if !_sessionStarted {
+        _sessionStarted = true
+        _firstTimestamp = adjustedTimestamp
+        needsSessionStart = true
+      }
+
+      _videoFramesReceived += 1
+
+      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart, _onFirstVideoFrame, offset, _expectedVideoWidth, _expectedVideoHeight, w, h)
+    }
+
+    if shouldLogDimensionMismatch, let expectedWidth = expectedWidth, let expectedHeight = expectedHeight {
       DiagnosticLogger.shared.log(.warning, .recording, "Recording frame dimension mismatch", context: [
         "expected": "\(expectedWidth)x\(expectedHeight)",
         "actual": "\(pixelWidth)x\(pixelHeight)",
       ])
     }
 
-    let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
-    guard timestamp.isValid else { return }
-
-    let (writer, videoInput, adaptor, shouldStartSession, onFirstVideoFrame): (
-      AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool, (() -> Void)?
-    ) = lock.withLock {
-      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil, false, nil)
-      }
-
-      var needsSessionStart = false
-      if !_sessionStarted {
-        _sessionStarted = true
-        _firstTimestamp = timestamp
-        needsSessionStart = true
-      }
-
-      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart, _onFirstVideoFrame)
-    }
-
     guard let writer = writer,
           let videoInput = videoInput,
           let adaptor = adaptor else { return }
 
+    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
+
     // Lazy start session at first video timestamp.
     // This avoids rewriting every audio sample (large per-buffer allocations).
     if shouldStartSession {
-      writer.startSession(atSourceTime: timestamp)
+      writer.startSession(atSourceTime: adjustedTimestamp)
       DiagnosticLogger.shared.log(.debug, .recording, "Recording writer session started", context: [
-        "firstFrameTimestampSeconds": String(format: "%.3f", timestamp.seconds)
+        "firstFrameTimestampSeconds": String(format: "%.3f", adjustedTimestamp.seconds)
       ])
       onFirstVideoFrame?()
     }
 
-    lock.withLock { _videoFramesReceived += 1 }
-
     // Append pixel buffer with calculated presentation time
     if videoInput.isReadyForMoreMediaData {
-      let success = adaptor.append(pixelBuffer, withPresentationTime: timestamp)
+      let success = adaptor.append(pixelBuffer, withPresentationTime: adjustedTimestamp)
       if !success {
         let shouldLog = lock.withLock {
           _videoFramesFailedAppend += 1
@@ -216,7 +260,7 @@ final class RecordingSession: @unchecked Sendable {
           logWriterIssue(
             "Failed to append recording video frame",
             writer: writer,
-            context: ["timestampSeconds": String(format: "%.3f", timestamp.seconds)]
+            context: ["timestampSeconds": String(format: "%.3f", adjustedTimestamp.seconds)]
           )
         }
       } else {
@@ -234,11 +278,11 @@ final class RecordingSession: @unchecked Sendable {
     guard timestamp.isValid else { return }
     logAudioSampleFormatIfNeeded(sampleBuffer, role: .systemAudio)
 
-    let (writer, audioInput, firstTs): (AVAssetWriter?, AVAssetWriterInput?, CMTime?) = lock.withLock {
+    let (writer, audioInput, firstTs, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime) = lock.withLock {
       guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil)
+        return (nil, nil, nil, .zero)
       }
-      return (writer, _audioInput, _firstTimestamp)
+      return (writer, _audioInput, _firstTimestamp, _pauseOffsetAccumulator)
     }
 
     guard let writer = writer, writer.status == .writing else { return }
@@ -246,12 +290,14 @@ final class RecordingSession: @unchecked Sendable {
     // Skip audio until video has started the session
     guard let firstTs = firstTs else { return }
 
-    // Skip audio samples that arrived before video start
-    guard CMTimeCompare(timestamp, firstTs) >= 0 else { return }
+    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
 
-    // Session starts at first video timestamp, so original timestamps are valid.
+    // Skip audio samples that arrived before video start
+    guard CMTimeCompare(adjustedTimestamp, firstTs) >= 0 else { return }
+
     if audioInput.isReadyForMoreMediaData {
-      let success = audioInput.append(sampleBuffer)
+      guard let bufferToAppend = adjustedAudioSampleBuffer(sampleBuffer, offset: offset) else { return }
+      let success = audioInput.append(bufferToAppend)
       if !success {
         let shouldLog = lock.withLock {
           if _didLogAudioAppendFailure { return false }
@@ -262,7 +308,7 @@ final class RecordingSession: @unchecked Sendable {
           logWriterIssue(
             "Failed to append recording system audio sample",
             writer: writer,
-            context: ["timestampSeconds": String(format: "%.3f", timestamp.seconds)]
+            context: ["timestampSeconds": String(format: "%.3f", adjustedTimestamp.seconds)]
           )
         }
       }
@@ -276,11 +322,11 @@ final class RecordingSession: @unchecked Sendable {
     guard timestamp.isValid else { return }
     logAudioSampleFormatIfNeeded(sampleBuffer, role: .microphone)
 
-    let (writer, microphoneInput, firstTs): (AVAssetWriter?, AVAssetWriterInput?, CMTime?) = lock.withLock {
+    let (writer, microphoneInput, firstTs, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime) = lock.withLock {
       guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil)
+        return (nil, nil, nil, .zero)
       }
-      return (writer, _microphoneInput, _firstTimestamp)
+      return (writer, _microphoneInput, _firstTimestamp, _pauseOffsetAccumulator)
     }
 
     guard let writer = writer, writer.status == .writing else { return }
@@ -288,14 +334,16 @@ final class RecordingSession: @unchecked Sendable {
     // Skip mic audio until video has started the session
     guard let firstTs = firstTs else { return }
 
+    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
+
     // Skip mic samples that arrived before video start
-    guard CMTimeCompare(timestamp, firstTs) >= 0 else { return }
+    guard CMTimeCompare(adjustedTimestamp, firstTs) >= 0 else { return }
 
     lock.withLock { _microphoneSamplesReceived += 1 }
 
-    // Session starts at first video timestamp, so original timestamps are valid.
     if microphoneInput.isReadyForMoreMediaData {
-      let success = microphoneInput.append(sampleBuffer)
+      guard let bufferToAppend = adjustedAudioSampleBuffer(sampleBuffer, offset: offset) else { return }
+      let success = microphoneInput.append(bufferToAppend)
       if success {
         lock.withLock { _microphoneSamplesAppended += 1 }
       } else {
@@ -308,7 +356,7 @@ final class RecordingSession: @unchecked Sendable {
           logWriterIssue(
             "Failed to append recording microphone sample",
             writer: writer,
-            context: ["timestampSeconds": String(format: "%.3f", timestamp.seconds)]
+            context: ["timestampSeconds": String(format: "%.3f", adjustedTimestamp.seconds)]
           )
         }
       }
@@ -368,6 +416,7 @@ final class RecordingSession: @unchecked Sendable {
       _sessionStarted = false
       _isCapturing = false
       _firstTimestamp = nil
+      _pauseOffsetAccumulator = .zero
       _onFirstVideoFrame = nil
       _videoFramesReceived = 0
       _videoFramesAppended = 0

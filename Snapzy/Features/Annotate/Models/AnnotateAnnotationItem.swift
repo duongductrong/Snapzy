@@ -467,12 +467,40 @@ enum ArrowType: String, Codable, CaseIterable, Identifiable {
   }
 }
 
+/// Decoration drawn at a single arrow endpoint (start or end).
+/// Applies to the `.classic` display type; tapered/outlined bake their head into the body.
+enum ArrowEndpointStyle: String, CaseIterable, Identifiable, Equatable {
+  case none
+  case arrow
+  case circle
+
+  var id: String { rawValue }
+
+  var displayName: String {
+    switch self {
+    case .none: L10n.AnnotateUI.arrowHeadNone
+    case .arrow: L10n.AnnotateUI.arrowHeadArrow
+    case .circle: L10n.AnnotateUI.arrowHeadCircle
+    }
+  }
+
+  var icon: String {
+    switch self {
+    case .none: "minus"
+    case .arrow: "arrowtriangle.right.fill"
+    case .circle: "circle.fill"
+    }
+  }
+}
+
 struct ArrowGeometry: Equatable {
   var start: CGPoint
   var end: CGPoint
   var style: ArrowStyle
   var controlPoint: CGPoint?
   var arrowType: ArrowType
+  var startHead: ArrowEndpointStyle
+  var endHead: ArrowEndpointStyle
 
   struct TaperedArrowMetrics: Equatable {
     /// Shaft width at the tail (start).
@@ -540,13 +568,17 @@ struct ArrowGeometry: Equatable {
     style: ArrowStyle,
     bendDirection: ArrowBendDirection = .primary,
     controlPoint: CGPoint? = nil,
-    arrowType: ArrowType = .tapered
+    arrowType: ArrowType = .tapered,
+    startHead: ArrowEndpointStyle = .none,
+    endHead: ArrowEndpointStyle = .arrow
   ) {
     self.start = start
     self.end = end
     self.style = style
     self.arrowType = arrowType
-    
+    self.startHead = startHead
+    self.endHead = endHead
+
     // Calculate resolvedDirection for normalizedControlPoint:
     let resolvedDirection: ArrowBendDirection = (style == .curvedLeft) ? .primary : .alternate
     
@@ -777,6 +809,20 @@ struct ArrowGeometry: Equatable {
     }
   }
 
+  /// Outward tangent angle at the start point (pointing away from the arrow body).
+  func tangentAngleAtStart() -> CGFloat {
+    switch style {
+    case .straight:
+      return atan2(start.y - end.y, start.x - end.x)
+
+    case .curvedRight, .curvedLeft:
+      if let control = resolvedControlPoint, control != start {
+        return atan2(start.y - control.y, start.x - control.x)
+      }
+      return atan2(start.y - end.y, start.x - end.x)
+    }
+  }
+
   func bounds() -> CGRect {
     let points = sampledPoints()
     guard let first = points.first else { return CGRect(x: start.x, y: start.y, width: 1, height: 1) }
@@ -811,7 +857,9 @@ struct ArrowGeometry: Equatable {
       end: CGPoint(x: end.x + dx, y: end.y + dy),
       style: style,
       controlPoint: resolvedControlPoint.map { CGPoint(x: $0.x + dx, y: $0.y + dy) },
-      arrowType: arrowType
+      arrowType: arrowType,
+      startHead: startHead,
+      endHead: endHead
     )
   }
 
@@ -821,7 +869,9 @@ struct ArrowGeometry: Equatable {
       end: Self.remap(point: end, from: oldBounds, to: newBounds),
       style: style,
       controlPoint: resolvedControlPoint.map { Self.remap(point: $0, from: oldBounds, to: newBounds) },
-      arrowType: arrowType
+      arrowType: arrowType,
+      startHead: startHead,
+      endHead: endHead
     )
   }
 
@@ -847,7 +897,9 @@ struct ArrowGeometry: Equatable {
       style: newStyle,
       bendDirection: resolvedDirection,
       controlPoint: newControlPoint,
-      arrowType: arrowType
+      arrowType: arrowType,
+      startHead: startHead,
+      endHead: endHead
     )
   }
 
@@ -867,11 +919,19 @@ struct ArrowGeometry: Equatable {
     let newControlPoint = resolvedControlPoint
       .map { Self.mirroredControlPoint($0, start: start, end: end) }
       ?? Self.defaultCurveControlPoint(start: start, end: end, bendDirection: resolvedDirection)
-    return ArrowGeometry(start: start, end: end, style: newStyle, bendDirection: resolvedDirection, controlPoint: newControlPoint, arrowType: arrowType)
+    return ArrowGeometry(start: start, end: end, style: newStyle, bendDirection: resolvedDirection, controlPoint: newControlPoint, arrowType: arrowType, startHead: startHead, endHead: endHead)
   }
 
   func withArrowType(_ newType: ArrowType) -> ArrowGeometry {
-    ArrowGeometry(start: start, end: end, style: style, bendDirection: bendDirection, controlPoint: controlPoint, arrowType: newType)
+    ArrowGeometry(start: start, end: end, style: style, bendDirection: bendDirection, controlPoint: controlPoint, arrowType: newType, startHead: startHead, endHead: endHead)
+  }
+
+  func withStartHead(_ newHead: ArrowEndpointStyle) -> ArrowGeometry {
+    ArrowGeometry(start: start, end: end, style: style, bendDirection: bendDirection, controlPoint: controlPoint, arrowType: arrowType, startHead: newHead, endHead: endHead)
+  }
+
+  func withEndHead(_ newHead: ArrowEndpointStyle) -> ArrowGeometry {
+    ArrowGeometry(start: start, end: end, style: style, bendDirection: bendDirection, controlPoint: controlPoint, arrowType: arrowType, startHead: startHead, endHead: newHead)
   }
 
   private static func normalizedControlPoint(

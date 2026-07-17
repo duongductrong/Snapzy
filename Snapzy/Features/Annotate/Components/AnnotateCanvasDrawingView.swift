@@ -323,6 +323,15 @@ final class DrawingCanvasNSView: NSView {
       }
       return handles
 
+    case .arrow(let geometry):
+      // Figma-style endpoint editing: two draggable endpoints instead of a bounding box.
+      let startPoint = inDisplayCoordinates ? imageToDisplay(geometry.start) : geometry.start
+      let endPoint = inDisplayCoordinates ? imageToDisplay(geometry.end) : geometry.end
+      return [
+        (.lineStart, handleRect(at: startPoint)),
+        (.lineEnd, handleRect(at: endPoint)),
+      ]
+
     default:
       let bounds = inDisplayCoordinates ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
       return [
@@ -618,26 +627,40 @@ final class DrawingCanvasNSView: NSView {
     // Handle resizing (in image coordinates)
     if isResizingAnnotation, let handle = activeResizeHandle,
        let resizeId = resizingAnnotationId {
-      switch handle {
-      case .lineStart:
-        state.updateLineEndpoint(id: resizeId, start: imagePoint)
-      case .lineEnd:
-        state.updateLineEndpoint(id: resizeId, end: imagePoint)
-      case .textCalloutTail:
-        state.updateTextCalloutTail(id: resizeId, target: imagePoint)
-      default:
-        let isEmbeddedImage = state.annotations.first(where: { $0.id == resizeId }).map {
-          if case .embeddedImage = $0.type { return true }
+      Task { @MainActor in
+        let isArrow: Bool = {
+          if case .arrow = state.annotations.first(where: { $0.id == resizeId })?.type { return true }
           return false
-        } ?? false
-        let proportional = event.modifierFlags.contains(.shift)
-          || (state.isCombineMode && isEmbeddedImage)
-        let newBounds = calculateResizedBounds(
-          handle: handle,
-          currentPoint: imagePoint,
-          proportional: proportional
-        )
-        state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
+        }()
+        switch handle {
+        case .lineStart:
+          if isArrow {
+            state.updateArrowEndpoint(id: resizeId, start: imagePoint)
+          } else {
+            state.updateLineEndpoint(id: resizeId, start: imagePoint)
+          }
+        case .lineEnd:
+          if isArrow {
+            state.updateArrowEndpoint(id: resizeId, end: imagePoint)
+          } else {
+            state.updateLineEndpoint(id: resizeId, end: imagePoint)
+          }
+        case .textCalloutTail:
+          state.updateTextCalloutTail(id: resizeId, target: imagePoint)
+        default:
+          let isEmbeddedImage = state.annotations.first(where: { $0.id == resizeId }).map {
+            if case .embeddedImage = $0.type { return true }
+            return false
+          } ?? false
+          let proportional = event.modifierFlags.contains(.shift)
+            || (state.isCombineMode && isEmbeddedImage)
+          let newBounds = calculateResizedBounds(
+            handle: handle,
+            currentPoint: imagePoint,
+            proportional: proportional
+          )
+          state.updateAnnotationBounds(id: resizeId, bounds: newBounds)
+        }
       }
       needsDisplay = true
       return
@@ -1026,6 +1049,12 @@ final class DrawingCanvasNSView: NSView {
     )
 
     for annotation in state.annotations {
+      // Freeform strokes show selection as a soft glow painted *beneath* the body,
+      // so the highlight frames the ink without a line or box crossing over it.
+      if state.isAnnotationSelected(annotation.id) {
+        drawSelectionUnderlay(for: annotation, in: context)
+      }
+
       renderer.draw(annotation)
 
       // Draw selection affordance if selected. Single selections can also show resize handles.
@@ -1063,6 +1092,8 @@ final class DrawingCanvasNSView: NSView {
           arrowStyle: state.arrowStyle,
           arrowType: state.arrowType,
           arrowBendDirection: state.arrowBendDirection,
+          arrowStartHead: state.arrowStartHead,
+          arrowEndHead: state.arrowEndHead,
           rectangleCornerRadius: previewProperties.cornerRadius,
           watermarkText: state.watermarkText,
           watermarkStyle: previewProperties.watermarkStyle,
@@ -1115,11 +1146,21 @@ final class DrawingCanvasNSView: NSView {
 
   private func drawSelectionAffordance(for annotation: AnnotationItem, in context: CGContext, showsHandles: Bool) {
     switch annotation.type {
-    case .line(let start, let end):
-      drawSelectionCenterline(points: [start, end], in: context)
-    case .path(let points), .highlight(let points):
-      drawSelectionCenterline(points: points, in: context)
+    case .line, .arrow:
+      // Endpoint-editable items: a single selection is indicated purely by its
+      // draggable endpoint grips (drawn below), so nothing is painted over the
+      // body. Multi-selection falls back to a bounding box so the item still
+      // reads as part of the group.
+      if !showsHandles {
+        drawSelectionBounds(annotation.selectionDecorationBounds, in: context)
+      }
+    case .path, .highlight:
+      // Freeform strokes are indicated by the glow underlay only (drawn beneath
+      // the body); nothing is painted over or boxed around the stroke here.
+      break
     default:
+      // Every other type reads as selected via a bounding box that frames the
+      // annotation instead of overlapping its body.
       drawSelectionBounds(annotation.selectionDecorationBounds, in: context)
     }
 
@@ -1135,27 +1176,34 @@ final class DrawingCanvasNSView: NSView {
     context.setLineDash(phase: 0, lengths: [])
   }
 
-  private func drawSelectionCenterline(points: [CGPoint], in context: CGContext) {
+  /// Selection underlay for freeform strokes: a soft accent-colored glow painted
+  /// beneath the annotation body so the body sits on top untouched. The glow is
+  /// wider than the ink, so it reads as a halo hugging the stroke's silhouette
+  /// rather than a line through it or a box around it.
+  private func drawSelectionUnderlay(for annotation: AnnotationItem, in context: CGContext) {
+    switch annotation.type {
+    case .path(let points):
+      drawSelectionGlow(points: points, bodyWidth: annotation.properties.strokeWidth, in: context)
+    case .highlight(let points):
+      // Highlighter renders at 3× stroke width; match it so the halo hugs the bar.
+      drawSelectionGlow(points: points, bodyWidth: annotation.properties.strokeWidth * 3, in: context)
+    default:
+      break
+    }
+  }
+
+  private func drawSelectionGlow(points: [CGPoint], bodyWidth: CGFloat, in context: CGContext) {
     guard points.count > 1 else { return }
 
-    let scale = max(displayScale, 0.0001)
-    let lineWidth = 1 / scale
-    let dashLength = 4 / scale
+    // Constant ~4pt halo ring in screen space regardless of zoom.
+    let haloRing = 4 / max(displayScale, 0.0001)
 
     context.saveGState()
     context.setLineCap(.round)
     context.setLineJoin(.round)
-
-    context.setStrokeColor(NSColor.white.withAlphaComponent(0.85).cgColor)
-    context.setLineWidth(lineWidth * 3)
-    context.setLineDash(phase: 0, lengths: [])
+    context.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.85).cgColor)
+    context.setLineWidth(bodyWidth + haloRing * 2)
     strokePolyline(points, in: context)
-
-    context.setStrokeColor(NSColor.systemBlue.cgColor)
-    context.setLineWidth(lineWidth)
-    context.setLineDash(phase: 0, lengths: [dashLength, dashLength])
-    strokePolyline(points, in: context)
-    context.setLineDash(phase: 0, lengths: [])
     context.restoreGState()
   }
 
@@ -1175,9 +1223,16 @@ final class DrawingCanvasNSView: NSView {
     context.setStrokeColor(NSColor.systemBlue.cgColor)
     context.setLineWidth(1)
 
-    for (_, rect) in resizeHandleRects(for: annotation, inDisplayCoordinates: false) {
-      context.fill(rect)
-      context.stroke(rect)
+    for (handle, rect) in resizeHandleRects(for: annotation, inDisplayCoordinates: false) {
+      switch handle {
+      case .lineStart, .lineEnd:
+        // Circular endpoint grips for line/arrow endpoint editing.
+        context.fillEllipse(in: rect)
+        context.strokeEllipse(in: rect)
+      default:
+        context.fill(rect)
+        context.stroke(rect)
+      }
     }
   }
 

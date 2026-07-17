@@ -452,4 +452,95 @@ final class ArrowGeometryTests: XCTestCase {
       }
     }
   }
+
+  // MARK: - endpoint heads (start / end)
+
+  func testEndpointHeads_defaultToNoneStartArrowEnd() {
+    let geo = ArrowGeometry(start: .zero, end: CGPoint(x: 100, y: 0), style: .straight)
+    XCTAssertEqual(geo.startHead, .none)
+    XCTAssertEqual(geo.endHead, .arrow)
+  }
+
+  func testWithStartHead_andEndHead() {
+    let geo = ArrowGeometry(start: .zero, end: CGPoint(x: 100, y: 0), style: .straight)
+
+    let bothArrows = geo.withStartHead(.arrow)
+    XCTAssertEqual(bothArrows.startHead, .arrow)
+    XCTAssertEqual(bothArrows.endHead, .arrow)
+
+    let circleEnd = geo.withEndHead(.circle)
+    XCTAssertEqual(circleEnd.startHead, .none)
+    XCTAssertEqual(circleEnd.endHead, .circle)
+  }
+
+  func testEndpointHeads_preservedAcrossTransforms() {
+    let geo = ArrowGeometry(
+      start: .zero,
+      end: CGPoint(x: 100, y: 40),
+      style: .curvedRight,
+      startHead: .circle,
+      endHead: .none
+    )
+
+    let translated = geo.translatedBy(dx: 10, dy: 10)
+    XCTAssertEqual(translated.startHead, .circle)
+    XCTAssertEqual(translated.endHead, .none)
+
+    let remapped = geo.remapped(
+      from: CGRect(x: 0, y: 0, width: 100, height: 40),
+      to: CGRect(x: 0, y: 0, width: 200, height: 80)
+    )
+    XCTAssertEqual(remapped.startHead, .circle)
+    XCTAssertEqual(remapped.endHead, .none)
+
+    let restyled = geo.withStyle(.straight)
+    XCTAssertEqual(restyled.startHead, .circle)
+    XCTAssertEqual(restyled.endHead, .none)
+
+    let retyped = geo.withArrowType(.classic)
+    XCTAssertEqual(retyped.startHead, .circle)
+    XCTAssertEqual(retyped.endHead, .none)
+  }
+
+  func testTangentAngleAtStart_straight_pointsAwayFromEnd() {
+    let geo = ArrowGeometry(start: CGPoint(x: 100, y: 0), end: CGPoint(x: 0, y: 0), style: .straight)
+    // Start is to the right of the end, so the outward tangent points +x (angle 0).
+    XCTAssertEqual(geo.tangentAngleAtStart(), 0, accuracy: 0.001)
+  }
+
+  func testEndpointHeads_persistence_roundtrips() {
+    let geo = ArrowGeometry(
+      start: .zero,
+      end: CGPoint(x: 100, y: 0),
+      style: .straight,
+      arrowType: .classic,
+      startHead: .arrow,
+      endHead: .circle
+    )
+    let persisted = PersistedArrowGeometry(geometry: geo)
+    XCTAssertEqual(persisted.startHead, "arrow")
+    XCTAssertEqual(persisted.endHead, "circle")
+
+    let restored = persisted.arrowGeometry
+    XCTAssertEqual(restored.startHead, .arrow)
+    XCTAssertEqual(restored.endHead, .circle)
+  }
+
+  func testEndpointHeads_persistence_backwardCompatibility() {
+    // Older saves have no startHead/endHead → keep the historical single-headed arrow.
+    let persisted = PersistedArrowGeometry(geometry: ArrowGeometry(start: .zero, end: .zero, style: .straight))
+    var dict = try! JSONSerialization.jsonObject(
+      with: JSONEncoder().encode(persisted), options: []
+    ) as! [String: Any]
+    dict.removeValue(forKey: "startHead")
+    dict.removeValue(forKey: "endHead")
+
+    let data = try! JSONSerialization.data(withJSONObject: dict, options: [])
+    let decoded = try! JSONDecoder().decode(PersistedArrowGeometry.self, from: data)
+
+    XCTAssertNil(decoded.startHead)
+    XCTAssertNil(decoded.endHead)
+    XCTAssertEqual(decoded.arrowGeometry.startHead, .none)
+    XCTAssertEqual(decoded.arrowGeometry.endHead, .arrow)
+  }
 }

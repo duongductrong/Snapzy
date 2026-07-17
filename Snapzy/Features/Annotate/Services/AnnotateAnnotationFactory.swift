@@ -15,6 +15,8 @@ enum AnnotationFactory {
     var arrowStyle: ArrowStyle
     var arrowType: ArrowType = .tapered
     var arrowBendDirection: ArrowBendDirection = .primary
+    var arrowStartHead: ArrowEndpointStyle = .none
+    var arrowEndHead: ArrowEndpointStyle = .arrow
     var blurType: BlurType
     var counterValue: Int
     var watermarkText: String
@@ -38,6 +40,8 @@ enum AnnotationFactory {
         arrowStyle: state.arrowStyle,
         arrowType: state.arrowType,
         arrowBendDirection: state.arrowBendDirection,
+        arrowStartHead: state.arrowStartHead,
+        arrowEndHead: state.arrowEndHead,
         blurType: state.blurType,
         counterValue: state.nextCounterValue(),
         watermarkText: state.watermarkText,
@@ -88,7 +92,9 @@ enum AnnotationFactory {
         end: end,
         style: resolvedStyle,
         bendDirection: resolvedDirection,
-        arrowType: context.arrowType
+        arrowType: context.arrowType,
+        startHead: context.arrowStartHead,
+        endHead: context.arrowEndHead
       ))
 
     case .line:

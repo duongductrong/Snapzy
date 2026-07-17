@@ -5170,6 +5170,31 @@ enum L10n {
       defaultValue: "Outlined",
       comment: "Label for the outlined tapered arrow type"
     )
+    static let arrowStartHead = string(
+      "annotate.arrow-start-head",
+      defaultValue: "Start",
+      comment: "Label for the arrow start endpoint style picker"
+    )
+    static let arrowEndHead = string(
+      "annotate.arrow-end-head",
+      defaultValue: "End",
+      comment: "Label for the arrow end endpoint style picker"
+    )
+    static let arrowHeadNone = string(
+      "annotate.arrow-head-none",
+      defaultValue: "None",
+      comment: "Arrow endpoint style with no decoration"
+    )
+    static let arrowHeadArrow = string(
+      "annotate.arrow-head-arrow",
+      defaultValue: "Arrow",
+      comment: "Arrow endpoint style drawn as an arrowhead"
+    )
+    static let arrowHeadCircle = string(
+      "annotate.arrow-head-circle",
+      defaultValue: "Circle",
+      comment: "Arrow endpoint style drawn as a filled circle"
+    )
     static let xAxis = string(
       "annotate.x-axis",
       defaultValue: "X Axis",

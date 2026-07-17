@@ -91,6 +91,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+
+## [1.30.0-beta.4] - 2026-07-17
+
+### Features
+-  Implement endpoint editing for arrows and lines; update selection affordances (22766cb)
+-  Add double-sided arrow in the mark-up (#368) (b299bad)
+
+### Bug Fixes
+-  Fixed pause offset handling in RecordingSession and update ScreenRecordingManager and tests (#322) (70f7f36)
+
+### Chore
+- chore: update appcast for v1.30.0-beta.3 (4885f57)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.30.0-beta.3] - 2026-07-15
+
+### Features
+-  Enhance arrow features with new styles, types, and bend directions; update rendering and testing (#363) (7be2e80)
+-  Introduce arrow types and integrate into annotation features (#363) (ff259de)
+-  Update arrow styles to curvedRight and curvedLeft, enhancing annotation flexibility (#363) (edf0975)
+
+### Bug Fixes
+-  Modify scrolling capture to resolve scrolling capture fails on an external display (#374) (048389b)
+-  Update localization strings for various actions and add new entries (a88af01)
+
+### Chore
+- chore: update appcast for v1.30.0-beta.2 (486424c)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @motoish
+
 ## [1.30.0-beta.2] - 2026-07-14
 
 ### Features

@@ -125,6 +125,8 @@ struct AnnotationRenderer {
     arrowStyle: ArrowStyle = .straight,
     arrowType: ArrowType = .tapered,
     arrowBendDirection: ArrowBendDirection = .primary,
+    arrowStartHead: ArrowEndpointStyle = .none,
+    arrowEndHead: ArrowEndpointStyle = .arrow,
     rectangleCornerRadius: CGFloat = 0,
     watermarkText: String = "Snapzy",
     watermarkStyle: WatermarkStyle = .diagonal,
@@ -198,7 +200,9 @@ struct AnnotationRenderer {
           end: currentPoint,
           style: resolvedStyle,
           bendDirection: resolvedDirection,
-          arrowType: arrowType
+          arrowType: arrowType,
+          startHead: arrowStartHead,
+          endHead: arrowEndHead
         ),
         strokeWidth: strokeWidth,
         strokeColor: strokeColor
@@ -263,39 +267,35 @@ struct AnnotationRenderer {
 
     switch geometry.arrowType {
     case .classic:
+      let cgStrokeColor = NSColor(strokeColor).cgColor
       context.saveGState()
       context.setShadow(
         offset: CGSize(width: 0, height: -1.0),
         blur: 2.0,
         color: NSColor.black.withAlphaComponent(0.20).cgColor
       )
-      context.setStrokeColor(NSColor(strokeColor).cgColor)
+      context.setStrokeColor(cgStrokeColor)
+      context.setFillColor(cgStrokeColor)
       context.setLineWidth(strokeWidth)
       context.setLineJoin(.round)
       context.setLineCap(.round)
-      
+
       context.addPath(geometry.path())
       context.strokePath()
-      
-      let angle = geometry.tangentAngleAtEnd()
-      let arrowLength = min(max(strokeWidth * 3.5, 12), 24)
-      let arrowAngle: CGFloat = .pi / 6
-      let end = geometry.end
 
-      let point1 = CGPoint(
-        x: end.x - arrowLength * cos(angle - arrowAngle),
-        y: end.y - arrowLength * sin(angle - arrowAngle)
+      // Independent endpoint decorations (None / Arrow / Circle) at each tip.
+      drawArrowEndpoint(
+        geometry.endHead,
+        at: geometry.end,
+        outwardAngle: geometry.tangentAngleAtEnd(),
+        strokeWidth: strokeWidth
       )
-      let point2 = CGPoint(
-        x: end.x - arrowLength * cos(angle + arrowAngle),
-        y: end.y - arrowLength * sin(angle + arrowAngle)
+      drawArrowEndpoint(
+        geometry.startHead,
+        at: geometry.start,
+        outwardAngle: geometry.tangentAngleAtStart(),
+        strokeWidth: strokeWidth
       )
-
-      context.move(to: end)
-      context.addLine(to: point1)
-      context.move(to: end)
-      context.addLine(to: point2)
-      context.strokePath()
       context.restoreGState()
 
     case .tapered, .outlined:
@@ -326,6 +326,50 @@ struct AnnotationRenderer {
       context.fillPath()
 
       context.restoreGState()
+    }
+  }
+
+  /// Draws a classic-arrow endpoint decoration at `tip`.
+  /// `outwardAngle` points away from the arrow body so the V head opens outward.
+  /// Assumes stroke + fill colors, line width, caps and joins are already configured.
+  private func drawArrowEndpoint(
+    _ style: ArrowEndpointStyle,
+    at tip: CGPoint,
+    outwardAngle angle: CGFloat,
+    strokeWidth: CGFloat
+  ) {
+    switch style {
+    case .none:
+      break
+
+    case .arrow:
+      let arrowLength = min(max(strokeWidth * 3.5, 12), 24)
+      let arrowAngle: CGFloat = .pi / 6
+
+      let point1 = CGPoint(
+        x: tip.x - arrowLength * cos(angle - arrowAngle),
+        y: tip.y - arrowLength * sin(angle - arrowAngle)
+      )
+      let point2 = CGPoint(
+        x: tip.x - arrowLength * cos(angle + arrowAngle),
+        y: tip.y - arrowLength * sin(angle + arrowAngle)
+      )
+
+      context.move(to: tip)
+      context.addLine(to: point1)
+      context.move(to: tip)
+      context.addLine(to: point2)
+      context.strokePath()
+
+    case .circle:
+      let radius = min(max(strokeWidth * 1.9, 5), 14)
+      let rect = CGRect(
+        x: tip.x - radius,
+        y: tip.y - radius,
+        width: radius * 2,
+        height: radius * 2
+      )
+      context.fillEllipse(in: rect)
     }
   }
 

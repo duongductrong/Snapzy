@@ -15,6 +15,8 @@ struct PersistedArrowGeometry: Codable, Equatable {
   var style: String
   var controlPoint: CGPoint?
   var arrowType: String?
+  var startHead: String?
+  var endHead: String?
 
   init(geometry: ArrowGeometry) {
     start = geometry.start
@@ -22,6 +24,8 @@ struct PersistedArrowGeometry: Codable, Equatable {
     style = geometry.style.rawValue
     controlPoint = geometry.resolvedControlPoint
     arrowType = geometry.arrowType.rawValue
+    startHead = geometry.startHead.rawValue
+    endHead = geometry.endHead.rawValue
   }
 
   var arrowGeometry: ArrowGeometry {
@@ -30,7 +34,10 @@ struct PersistedArrowGeometry: Codable, Equatable {
       end: end,
       style: ArrowStyle(rawValue: style) ?? .straight,
       controlPoint: controlPoint,
-      arrowType: arrowType.flatMap(ArrowType.init(rawValue:)) ?? .outlined
+      arrowType: arrowType.flatMap(ArrowType.init(rawValue:)) ?? .outlined,
+      // Older saves have no endpoint fields → keep the historical single-headed arrow.
+      startHead: startHead.flatMap(ArrowEndpointStyle.init(rawValue:)) ?? .none,
+      endHead: endHead.flatMap(ArrowEndpointStyle.init(rawValue:)) ?? .arrow
     )
   }
 }

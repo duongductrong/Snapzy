@@ -117,13 +117,6 @@ private enum QuickPropertiesDensity {
     }
   }
 
-  var arrowControlWidth: CGFloat {
-    switch self {
-    case .regular: return 318
-    case .compact: return 265
-    }
-  }
-
   var toolPickerWidth: CGFloat {
     switch self {
     case .regular: return 148
@@ -443,13 +436,16 @@ struct AnnotateQuickPropertiesBar: View {
         isVisible: showArrowStyle,
         isEnabled: state.quickPropertiesSupportsArrowStyle,
         showsLeadingDivider: hasBeforeArrowStyle,
-        width: density.arrowControlWidth
+        width: nil
       ) {
         QuickArrowStyleControl(
           selectedStyle: state.quickArrowStyleBinding,
           selectedType: state.quickArrowTypeBinding,
           bendDirection: state.quickArrowBendDirectionBinding,
+          startHead: state.quickArrowStartHeadBinding,
+          endHead: state.quickArrowEndHeadBinding,
           showsBendDirection: state.quickPropertiesSupportsArrowBendDirection,
+          showsEndpoints: state.quickPropertiesSupportsArrowEndpoints,
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
@@ -1704,7 +1700,10 @@ private struct QuickArrowStyleControl: View {
   @Binding var selectedStyle: ArrowStyle
   @Binding var selectedType: ArrowType
   @Binding var bendDirection: ArrowBendDirection
+  @Binding var startHead: ArrowEndpointStyle
+  @Binding var endHead: ArrowEndpointStyle
   let showsBendDirection: Bool
+  let showsEndpoints: Bool
   let buttonWidth: CGFloat
   let groupSpacing: CGFloat
 
@@ -1798,6 +1797,46 @@ private struct QuickArrowStyleControl: View {
             .buttonStyle(.plain)
             .help(type.displayName)
           }
+        }
+      }
+
+      if showsEndpoints {
+        Rectangle()
+          .fill(Color(nsColor: .separatorColor))
+          .frame(width: 1, height: 22)
+          .padding(.horizontal, 2)
+
+        endpointPicker(title: L10n.AnnotateUI.arrowStartHead, selection: $startHead)
+        endpointPicker(title: L10n.AnnotateUI.arrowEndHead, selection: $endHead)
+      }
+    }
+  }
+
+  private func endpointPicker(title: String, selection: Binding<ArrowEndpointStyle>) -> some View {
+    QuickPropertiesGroup(title: title, spacing: groupSpacing) {
+      HStack(spacing: 5) {
+        ForEach(ArrowEndpointStyle.allCases) { head in
+          Button {
+            selection.wrappedValue = head
+          } label: {
+            Image(systemName: head.icon)
+              .font(.system(size: 12, weight: .semibold))
+              .foregroundColor(selection.wrappedValue == head ? .accentColor : .secondary)
+              .frame(width: buttonWidth, height: 24)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(selection.wrappedValue == head ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                  .stroke(
+                    selection.wrappedValue == head ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
+                    lineWidth: 1
+                  )
+              )
+          }
+          .buttonStyle(.plain)
+          .help(head.displayName)
         }
       }
     }

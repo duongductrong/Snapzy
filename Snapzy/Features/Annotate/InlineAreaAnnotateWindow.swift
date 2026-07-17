@@ -1726,6 +1726,24 @@ private struct InlineAreaPropertiesBar: View {
                 bendDirection: state.quickArrowBendDirectionBinding
               )
             }
+
+            if state.quickPropertiesSupportsArrowEndpoints {
+              InlineAreaSegmentedPicker(
+                title: L10n.AnnotateUI.arrowStartHead,
+                items: ArrowEndpointStyle.allCases,
+                selection: state.quickArrowStartHeadBinding,
+                icon: { $0.icon },
+                tooltip: \.displayName
+              )
+
+              InlineAreaSegmentedPicker(
+                title: L10n.AnnotateUI.arrowEndHead,
+                items: ArrowEndpointStyle.allCases,
+                selection: state.quickArrowEndHeadBinding,
+                icon: { $0.icon },
+                tooltip: \.displayName
+              )
+            }
           }
 
           if state.quickPropertiesSupportsWatermark {

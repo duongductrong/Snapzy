@@ -1058,11 +1058,18 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
     pausedDuration += Date().timeIntervalSince(pauseStart)
     pauseStartTime = nil
+
+    // Set accumulated pause offset in CoreMedia time before resuming capture
+    let offset = CMTime(seconds: pausedDuration, preferredTimescale: 1_000_000)
+    session.setAccumulatedPauseOffset(offset)
+
     session.isCapturing = true
     mouseTracker?.resume()
     audioLevelMeter.unfreeze()
     state = .recording
-    DiagnosticLogger.shared.log(.info, .recording, "Recording resumed")
+    DiagnosticLogger.shared.log(.info, .recording, "Recording resumed", context: [
+      "pauseOffsetSeconds": String(format: "%.3f", pausedDuration)
+    ])
   }
 
   /// Toggle pause/resume

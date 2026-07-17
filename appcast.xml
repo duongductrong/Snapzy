@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.30.0-beta.3</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>139</sparkle:version>
+      <sparkle:shortVersionString>1.30.0-beta.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Thu, 16 Jul 2026 01:19:59 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Enhance arrow features with new styles, types, and bend directions; update rendering and testing</li><li>Introduce arrow types and integrate into annotation features</li><li>Update arrow styles to curvedRight and curvedLeft, enhancing annotation flexibility</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Modify scrolling capture to resolve scrolling capture fails on an external display</li><li>Update localization strings for various actions and add new entries</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.30.0-beta.3/Snapzy-v1.30.0-beta.3.dmg"
+        sparkle:edSignature="1+kfdftZrVlE2PoUpeOhdvPEskBfzedSTbp/u5u0fh9Em69IVfyMjoH9kyvwieFXv3wC/tMD0PVBh0WatNJ2AQ=="
+        length="46861256"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.30.0-beta.2</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>138</sparkle:version>

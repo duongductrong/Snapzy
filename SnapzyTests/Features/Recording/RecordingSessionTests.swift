@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import CoreMedia
 @testable import Snapzy
 
 final class RecordingSessionTests: XCTestCase {
@@ -61,5 +62,16 @@ final class RecordingSessionTests: XCTestCase {
 
   func testConfigureExpectedVideoDimensions_doesNotCrash() {
     session.configureExpectedVideoDimensions(width: 1920, height: 1080)
+  }
+
+  func testSetAccumulatedPauseOffset_doesNotCrash() {
+    let offset = CMTime(seconds: 5.0, preferredTimescale: 1_000_000)
+    session.setAccumulatedPauseOffset(offset)
+  }
+
+  func testReset_clearsPauseOffset() {
+    let offset = CMTime(seconds: 5.0, preferredTimescale: 1_000_000)
+    session.setAccumulatedPauseOffset(offset)
+    session.reset()
   }
 }
