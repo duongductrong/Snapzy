@@ -101,6 +101,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.30.0-beta.13] - 2026-07-21
+
+### Bug Fixes
+-  Optimized rendering and undo management for annotation properties and status items (#335) (4fb0eff)
+
+### Chore
+- chore: update appcast for v1.30.0-beta.12 (8c7e639)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.30.0-beta.12] - 2026-07-20
 
 ### Features
