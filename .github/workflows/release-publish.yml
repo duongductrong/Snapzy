@@ -616,18 +616,25 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           sed -i '' "s|/Snapzy/v[0-9][0-9.]*\/install.sh|/Snapzy/v${VERSION}/install.sh|g" README.md
 
+      - name: Update docs version stamps
+        run: |
+          chmod +x scripts/update-docs-version-stamps.sh
+          ./scripts/update-docs-version-stamps.sh \
+            "${{ steps.version.outputs.version }}" \
+            "${{ steps.build.outputs.number }}"
+
       - name: Commit appcast and cask update
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add appcast.xml Casks/snapzy.rb README.md
+          git add appcast.xml Casks/snapzy.rb README.md docs/*.md
           if git diff --cached --quiet; then
-            echo "No appcast/cask/readme changes to commit"
+            echo "No appcast/cask/readme/docs changes to commit"
             exit 0
           fi
           if [ "${{ steps.version.outputs.is_beta }}" = "true" ]; then
-            git commit -m "chore: update appcast for v${{ steps.version.outputs.version }}"
+            git commit -m "chore: update appcast and docs for v${{ steps.version.outputs.version }}"
           else
-            git commit -m "chore: update appcast, cask, and readme for v${{ steps.version.outputs.version }}"
+            git commit -m "chore: update appcast, cask, readme, and docs for v${{ steps.version.outputs.version }}"
           fi
           git push origin master

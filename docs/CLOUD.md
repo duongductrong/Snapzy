@@ -2,7 +2,7 @@
 
 Bring-your-own-storage cloud uploads for captures: AWS S3, Cloudflare R2, Google Drive. No Snapzy servers, no telemetry — files go straight from the Mac to the user's bucket/drive.
 
-Verified against `Snapzy/Services/Cloud/`, `Snapzy/Features/Preferences/Components/PreferencesCloud*.swift`, and upload call sites at HEAD (`v1.30.0-beta.4`).
+Verified against `Snapzy/Services/Cloud/`, `Snapzy/Features/Preferences/Components/PreferencesCloud*.swift`, and upload call sites at HEAD (`v1.30.0-beta.14`).
 
 ## Current state (as of `dd4ccd5`)
 
