@@ -106,6 +106,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.30.1] - 2026-07-26
+
+### Features
+-  add scroll wheel magnifier zoom in live passthrough mode (d386a49)
+-  polish detected links floating prompt with native macOS material UI, copy actions, and window dragging (6500ddc)
+
+### Bug Fixes
+-  enable window drag and position persistence for visible toolbar (23dc9cf)
+-  add missing OCR link localization entries to Capture.xcstrings (a75c6cd)
+
+### Chore
+- style: elevate toast notifications with native macOS regularMaterial, continuous rounded corners, and spring animations (bafb0fd)
+- chore: update appcast, cask, readme, and docs for v1.30.0 (05425b9)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.30.0] - 2026-07-25
 
 ### Features
