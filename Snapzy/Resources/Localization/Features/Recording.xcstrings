@@ -5231,7 +5231,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "書き込みの開始に失敗しました: %@"
+            "value": "書き込みの開始に失敗しました"
           }
         },
         "ko": {
@@ -5296,7 +5296,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "書き込みの開始に失敗しました。マイクの許可が拒否されました"
+            "value": "マイクの権限が拒否されました"
           }
         },
         "ko": {

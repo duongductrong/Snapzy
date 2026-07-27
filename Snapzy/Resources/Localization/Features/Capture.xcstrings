@@ -6405,7 +6405,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "リップル数​​"
+            "value": "リップル数"
           }
         },
         "ko": {
@@ -14335,7 +14335,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "準備ができたら [完了] を押してください。プレビューには回復が必要です"
+            "value": "プレビューの復帰が必要です"
           }
         },
         "ko": {

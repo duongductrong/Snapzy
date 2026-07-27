@@ -811,7 +811,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "署名付き URL の構築に失敗しました。キーチェーン値のエンコードに失敗しました"
+            "value": "キーチェーン値のエンコードに失敗しました"
           }
         },
         "ko": {
@@ -1266,7 +1266,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "署名用の URL が無効です。キーチェーン エラー: %@"
+            "value": "キーチェーンエラー: %@"
           }
         },
         "ko": {
@@ -9311,7 +9311,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "EST（東部基準時。月あたりの費用"
+            "value": "推定コスト/月"
           }
         },
         "ko": {

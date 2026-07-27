@@ -3188,7 +3188,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "発売時に最新情報を確認してください"
+            "value": "起動時にアップデートを確認します"
           }
         },
         "ko": {
@@ -12702,7 +12702,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "snapzy:// URLを介した外部トリガーを许可する"
+            "value": "snapzy:// URL による外部からの呼び出しを許可します"
           }
         },
         "ko": {

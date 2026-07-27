@@ -3338,7 +3338,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "」を開きます。 macOS ショートカットの重複を解決"
+            "value" : "macOS ショートカットの重複を解決"
           }
         },
         "ko" : {
@@ -4573,7 +4573,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enter ↵"
+            "value" : "Enter ↵ を押してください"
           }
         },
         "ko" : {
@@ -4638,7 +4638,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "を押してください。スクリーンショットと記録、簡略化。"
+            "value" : "スクリーンショットと録画を、シンプルに。"
           }
         },
         "ko" : {
