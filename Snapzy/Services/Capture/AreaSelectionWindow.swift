@@ -85,6 +85,7 @@ final class AreaSelectionController: NSObject {
   private var transitionRecaptureHandler: AreaSelectionTransitionRecaptureHandler?
   private var windowSelectionSnapshot: WindowSelectionSnapshot?
   private var windowSelectionTask: Task<Void, Never>?
+  private var retainedPopoverVisibilityRefreshTask: Task<Void, Never>?
   private var selectionSessionID = UUID()
   private var activeWindow: AreaSelectionWindow?
   private var keyboardOwnerDisplayID: CGDirectDisplayID?
@@ -332,6 +333,9 @@ final class AreaSelectionController: NSObject {
     window.orderFrontRegardless()
     window.overlayView.setAllowsApplicationWindowSelection(allowsApplicationWindowSelection)
     window.overlayView.setWindowSelectionSnapshot(windowSelectionSnapshot)
+    window.overlayView.setRetainedMenuBarPopoverCaptures(
+      applicationConfiguration?.immediateMenuBarPopoverCaptures ?? []
+    )
     window.overlayView.setInteractionMode(interactionMode, resetSelection: false)
     window.overlayView.setSelectionEnabled(selectionEnabled(for: displayID))
     window.overlayView.resetSelection()
@@ -468,6 +472,7 @@ final class AreaSelectionController: NSObject {
     stopPointerTracking()
     clearManualSelectionTracking(render: false)
     cancelWindowSelectionTask()
+    cancelRetainedPopoverVisibilityRefresh()
     DiagnosticLogger.shared.log(
       .info,
       .capture,
@@ -549,6 +554,7 @@ final class AreaSelectionController: NSObject {
 
     // Activate pooled windows (instant show)
     activatePooledWindows()
+    scheduleRetainedMenuBarPopoverVisibilityRefresh()
 
     // Keep live overlay sessions non-activating so foreground-window capture still observes the app
     // that was frontmost when the capture started. Cursor rect refresh plus pointer tracking gives
@@ -668,6 +674,41 @@ final class AreaSelectionController: NSObject {
     }
   }
 
+  /// Menu extras may close after Snapzy's nonactivating selection panels are already visible.
+  /// Check only the initially retained IDs for a short, bounded period, then stop as soon as
+  /// they have all disappeared. This stays off the pointer/hover path and avoids double-rendering
+  /// panels that remain alive (for example, application-defined status-item popovers).
+  private func scheduleRetainedMenuBarPopoverVisibilityRefresh() {
+    guard let captures = applicationConfiguration?.immediateMenuBarPopoverCaptures, !captures.isEmpty else {
+      return
+    }
+    cancelRetainedPopoverVisibilityRefresh()
+    let sessionID = selectionSessionID
+    let targets = captures.map(\.target)
+    var remainingVisibleWindowIDs = Set(targets.map(\.windowID))
+    retainedPopoverVisibilityRefreshTask = Task { [weak self] in
+      for attempt in 0..<10 {
+        guard let self, self.isPresenting, self.selectionSessionID == sessionID else { return }
+        let sampledVisibleWindowIDs = await Task.detached(priority: .utility) {
+          WindowSelectionQueryService.visibleWindowIDs(for: targets)
+        }.value
+        guard self.isPresenting, self.selectionSessionID == sessionID else { return }
+        // Once a source has disappeared, keep its retained image visible for this session even
+        // if a later WindowServer sample transiently reports that ID again.
+        remainingVisibleWindowIDs.formIntersection(sampledVisibleWindowIDs)
+        for (_, window) in self.windowPool {
+          window.overlayView.setRetainedMenuBarPopoverWindowIDsStillOnScreen(remainingVisibleWindowIDs)
+        }
+        guard !remainingVisibleWindowIDs.isEmpty, attempt < 9 else { return }
+        do {
+          try await Task.sleep(for: .milliseconds(100))
+        } catch {
+          return
+        }
+      }
+    }
+  }
+
   private func resolvedKeyboardOwnerDisplayID() -> CGDirectDisplayID? {
     guard selectionMode == .screenshot else { return nil }
 
@@ -761,6 +802,11 @@ final class AreaSelectionController: NSObject {
   private func cancelWindowSelectionTask() {
     windowSelectionTask?.cancel()
     windowSelectionTask = nil
+  }
+
+  private func cancelRetainedPopoverVisibilityRefresh() {
+    retainedPopoverVisibilityRefreshTask?.cancel()
+    retainedPopoverVisibilityRefreshTask = nil
   }
 
   func applyBackdrop(_ backdrop: AreaSelectionBackdrop, for displayID: CGDirectDisplayID, animated: Bool = false) {
@@ -1418,6 +1464,7 @@ final class AreaSelectionController: NSObject {
     stopLivePassthroughInput()
     lumaRecapturingTask?.cancel()
     lumaRecapturingTask = nil
+    cancelRetainedPopoverVisibilityRefresh()
     if let observer = sessionSpaceChangeObserver {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
       sessionSpaceChangeObserver = nil
@@ -2137,10 +2184,13 @@ final class AreaSelectionOverlayView: NSView {
   private var currentMousePosition: CGPoint = .zero
   private var windowSelectionSnapshot: WindowSelectionSnapshot?
   private var hoveredWindowCandidate: WindowSelectionCandidate?
+  private var retainedMenuBarPopoverCaptures: [CGWindowID: ImmediateMenuBarPopoverCapture] = [:]
+  private var retainedMenuBarPopoverWindowIDsStillOnScreen = Set<CGWindowID>()
 
   // MARK: - CALayer-based Rendering (Phase 2 Optimization)
 
   private var snapshotLayer: CALayer!
+  private var retainedMenuBarPopoverLayers: [CGWindowID: CALayer] = [:]
   var dimLayer: CALayer!
   var insideSelectionOverlayLayer: CAShapeLayer!
   private var showSelectionAreaOverlay = true
@@ -2254,6 +2304,10 @@ final class AreaSelectionOverlayView: NSView {
     snapshotLayer.actions = disabledActions
     snapshotLayer.isHidden = true
     rootLayer.addSublayer(snapshotLayer)
+
+    // Local retained popover images sit above any full-display backdrop but below the dim
+    // layer, so the existing application-window cutout makes them look like live content.
+    // They remain absent while the matching WindowServer window is still on screen.
 
     // Dim overlay layer (full screen semi-transparent)
     dimLayer = CALayer()
@@ -2942,6 +2996,7 @@ final class AreaSelectionOverlayView: NSView {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     snapshotLayer.frame = bounds
+    updateRetainedMenuBarPopoverLayers()
     dimLayer.frame = bounds
     refreshCoordinateIndicatorAfterPassiveUpdate()
     CATransaction.commit()
@@ -2976,6 +3031,7 @@ final class AreaSelectionOverlayView: NSView {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     snapshotLayer.frame = bounds
+    updateRetainedMenuBarPopoverLayers()
     dimLayer.frame = bounds
     insideSelectionOverlayLayer.frame = bounds
     refreshCoordinateIndicatorAfterPassiveUpdate()
@@ -3387,6 +3443,57 @@ final class AreaSelectionOverlayView: NSView {
     if interactionMode == .applicationWindow {
       refreshInteractionState()
     }
+  }
+
+  func setRetainedMenuBarPopoverCaptures(_ captures: [ImmediateMenuBarPopoverCapture]) {
+    retainedMenuBarPopoverCaptures = Dictionary(
+      uniqueKeysWithValues: captures.map { ($0.target.windowID, $0) }
+    )
+    // Hide every retained crop until the controller has performed its post-activation
+    // WindowServer liveness check.
+    retainedMenuBarPopoverWindowIDsStillOnScreen = Set(retainedMenuBarPopoverCaptures.keys)
+    updateRetainedMenuBarPopoverLayers()
+  }
+
+  func setRetainedMenuBarPopoverWindowIDsStillOnScreen(_ windowIDs: Set<CGWindowID>) {
+    retainedMenuBarPopoverWindowIDsStillOnScreen = windowIDs
+    updateRetainedMenuBarPopoverLayers()
+  }
+
+  private func updateRetainedMenuBarPopoverLayers() {
+    guard let rootLayer = layer, let window, let displayID = window.screen?.displayID else { return }
+
+    let capturesForDisplay = retainedMenuBarPopoverCaptures.values.filter {
+      $0.target.displayID == displayID
+    }
+    let captureIDs = Set(capturesForDisplay.map { $0.target.windowID })
+    for windowID in retainedMenuBarPopoverLayers.keys.filter({ !captureIDs.contains($0) }) {
+      retainedMenuBarPopoverLayers[windowID]?.removeFromSuperlayer()
+      retainedMenuBarPopoverLayers[windowID] = nil
+    }
+
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    for capture in capturesForDisplay {
+      let popoverLayer: CALayer
+      if let existing = retainedMenuBarPopoverLayers[capture.target.windowID] {
+        popoverLayer = existing
+      } else {
+        let created = CALayer()
+        created.contentsGravity = .resize
+        created.actions = disabledActions
+        rootLayer.insertSublayer(created, above: snapshotLayer)
+        retainedMenuBarPopoverLayers[capture.target.windowID] = created
+        popoverLayer = created
+      }
+      popoverLayer.frame = convertToLocalRect(capture.target.frame).intersection(bounds)
+      popoverLayer.contents = capture.image
+      popoverLayer.contentsScale = capture.scaleFactor
+      popoverLayer.isHidden = !WindowCaptureSelectionPolicy.shouldShowRetainedMenuBarPopover(
+        isWindowStillOnScreen: retainedMenuBarPopoverWindowIDsStillOnScreen.contains(capture.target.windowID)
+      )
+    }
+    CATransaction.commit()
   }
 
   private func refreshInteractionState() {
