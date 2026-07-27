@@ -4358,7 +4358,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ログ ファイル"
+            "value": "ログファイル"
           }
         },
         "ko": {
@@ -4683,7 +4683,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フォルダーを開く"
+            "value": "フォルダを開く"
           }
         },
         "ko": {
@@ -9363,7 +9363,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クイック アクセス"
+            "value": "クイックアクセス"
           }
         },
         "ko": {
@@ -10651,7 +10651,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定フォルダーへのアクセスが必要"
+            "value": "設定フォルダへのアクセスが必要"
           }
         },
         "ko": {
@@ -10843,7 +10843,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "先に設定フォルダーへのアクセスを許可してください。"
+            "value": "先に設定フォルダへのアクセスを許可してください。"
           }
         },
         "ko": {
@@ -11483,7 +11483,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定フォルダーへのアクセスを許可"
+            "value": "設定フォルダへのアクセスを許可"
           }
         },
         "ko": {
@@ -11547,7 +11547,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ へのアクセスを許可してください。フォルダーがない場合、Snapzy が自動的に作成します。"
+            "value": "%@ へのアクセスを許可してください。フォルダがない場合、Snapzy が自動的に作成します。"
           }
         },
         "ko": {
@@ -11931,7 +11931,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定フォルダーへのアクセスを許可しました。config.toml は %@ で準備できました"
+            "value": "設定フォルダへのアクセスを許可しました。config.toml は %@ で準備できました"
           }
         },
         "ko": {

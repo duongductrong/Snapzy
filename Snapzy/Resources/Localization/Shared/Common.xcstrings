@@ -96,7 +96,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャエリア"
+            "value": "領域キャプチャ"
           }
         },
         "ko": {
@@ -1006,7 +1006,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクロール キャプチャ"
+            "value": "スクロールキャプチャ"
           }
         },
         "ko": {
@@ -1071,7 +1071,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クイック アクセス オーバーレイを表示"
+            "value": "クイックアクセスオーバーレイを表示"
           }
         },
         "ko": {
@@ -1136,7 +1136,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ショートカット リストを表示"
+            "value": "ショートカットリストを表示"
           }
         },
         "ko": {
@@ -1201,7 +1201,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ペン/アノテーション切り替え"
+            "value": "ペン/注釈切り替え"
           }
         },
         "ko": {
@@ -1331,7 +1331,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このアプリ バンドルは macOS コード署名の検証に合格しません。"
+            "value": "このアプリバンドルは macOS コード署名の検証に合格しません。"
           }
         },
         "ko": {
@@ -1461,7 +1461,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このアプリには macOS 隔離フラグがまだあります。インストーラー スクリプトを使用して再インストールするか、権限を付与する前に隔離を削除してください。"
+            "value": "このアプリには macOS 隔離フラグがまだあります。インストーラースクリプトを使用して再インストールするか、権限を付与する前に隔離を削除してください。"
           }
         },
         "ko": {

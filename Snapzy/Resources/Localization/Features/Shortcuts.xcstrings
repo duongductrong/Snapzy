@@ -161,7 +161,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈エディターでツールを切り替えるための単一キーのショートカット。"
+            "value": "注釈エディタでツールを切り替えるための単一キーのショートカット。"
           }
         },
         "ko": {
@@ -226,7 +226,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単一キー（A）はキャプチャエリアと連動します。修飾キーの組み合わせ（⇧⌘A）は\n独立して動作します。"
+            "value": "単一キー（A）は「領域キャプチャ」と連動します。修飾キーの組み合わせ（⇧⌘A）は\n独立して動作します。"
           }
         },
         "ko": {
@@ -681,7 +681,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャする領域を選択してください"
+            "value": "領域を選択してキャプチャ"
           }
         },
         "ko": {
@@ -811,7 +811,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ ショートカット"
+            "value": "キャプチャショートカット"
           }
         },
         "ko": {
@@ -1591,7 +1591,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "グローバル ショートカット"
+            "value": "グローバルショートカット"
           }
         },
         "ko": {
@@ -1656,7 +1656,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キーボード ショートカットを使用して、どこからでもキャプチャできます。"
+            "value": "キーボードショートカットを使用して、どこからでもキャプチャできます。"
           }
         },
         "ko": {
@@ -2176,7 +2176,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "動画編集ツールを開く"
+            "value": "ビデオ編集ツールを開く"
           }
         },
         "ko": {
@@ -2241,7 +2241,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クイック アクセス"
+            "value": "クイックアクセス"
           }
         },
         "ko": {
@@ -4189,7 +4189,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈エディターの内部"
+            "value": "注釈エディタの内部"
           }
         },
         "ko": {
@@ -4969,7 +4969,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キーボード ショートカット"
+            "value": "キーボードショートカット"
           }
         },
         "ko": {

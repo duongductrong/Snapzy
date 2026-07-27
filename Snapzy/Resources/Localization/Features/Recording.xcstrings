@@ -291,7 +291,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "無効または空のビデオ ファイル"
+            "value": "無効または空のビデオファイル"
           }
         },
         "ko": {
@@ -2241,7 +2241,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "エリア選択"
+            "value": "領域選択"
           }
         },
         "ko": {
@@ -2306,7 +2306,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "エリア選択キャプチャ"
+            "value": "領域選択キャプチャ"
           }
         },
         "ko": {
@@ -5036,7 +5036,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "マイク ライター入力を追加できません"
+            "value": "マイクライター入力を追加できません"
           }
         },
         "ko": {
@@ -5101,7 +5101,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "システム オーディオ ライター入力を追加できません"
+            "value": "システムオーディオライター入力を追加できません"
           }
         },
         "ko": {
@@ -5166,7 +5166,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオ ライター入力を追加できません"
+            "value": "ビデオライター入力を追加できません"
           }
         },
         "ko": {

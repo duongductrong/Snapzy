@@ -3478,7 +3478,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バッジのテキスト サイズ (%dpt)"
+            "value": "バッジのテキストサイズ (%dpt)"
           }
         },
         "ko": {
@@ -3543,7 +3543,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フォント サイズ"
+            "value": "フォントサイズ"
           }
         },
         "ko": {
@@ -3673,7 +3673,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フレーム レート"
+            "value": "フレームレート"
           }
         },
         "ko": {
@@ -3933,7 +3933,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "デスクトップ ウィジェットを非表示にする"
+            "value": "デスクトップウィジェットを非表示にする"
           }
         },
         "ko": {
@@ -5690,7 +5690,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "品質が高い = ファイル サイズが大きくなる"
+            "value": "品質が高い = ファイルサイズが大きくなる"
           }
         },
         "ko": {
@@ -5885,7 +5885,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録画したビデオとGIFにマウス ポインタを含める"
+            "value": "録画したビデオとGIFにマウスポインタを含める"
           }
         },
         "ko": {
@@ -6145,7 +6145,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最後のエリアを記憶"
+            "value": "最後の領域を記憶"
           }
         },
         "ko": {
@@ -6600,7 +6600,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクリーンショット テンプレート"
+            "value": "スクリーンショットテンプレート"
           }
         },
         "ko": {
@@ -7055,7 +7055,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キーストローク オーバーレイ"
+            "value": "キーストロークオーバーレイ"
           }
         },
         "ko": {
@@ -7640,7 +7640,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクロール キャプチャ"
+            "value": "スクロールキャプチャ"
           }
         },
         "ko": {
@@ -7705,7 +7705,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャしたスクリーンショットにマウス ポインタを含める"
+            "value": "キャプチャしたスクリーンショットにマウスポインタを含める"
           }
         },
         "ko": {
@@ -7835,7 +7835,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクロール キャプチャ セッションを開始するときにガイダンスを表示したままにする"
+            "value": "スクロールキャプチャセッションを開始するときにガイダンスを表示したままにする"
           }
         },
         "ko": {
@@ -12580,7 +12580,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy がステッチされたフレームをロックしている間、ライブ プレビューが実行されます。"
+            "value": "Snapzy がステッチされたフレームをロックしている間、ライブプレビューが実行されます。"
           }
         },
         "ko": {
@@ -16480,7 +16480,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクロール キャプチャ セッションはすでにアクティブです。"
+            "value": "スクロールキャプチャセッションはすでにアクティブです。"
           }
         },
         "ko": {
@@ -16675,7 +16675,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択エリアのオーバーレイを表示"
+            "value": "選択領域のオーバーレイを表示"
           }
         },
         "ko": {
@@ -16740,7 +16740,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ中に選択エリア外の背景を暗くします"
+            "value": "キャプチャ中に選択領域外の背景を暗くします"
           }
         },
         "ko": {
