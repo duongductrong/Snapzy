@@ -171,6 +171,8 @@ max_count = 500
 
 [annotate]
 clipboard_image_open_behavior = "ask"
+default_tool = "selection"
+remember_last_tool = false
 close_after_drag = true
 bring_forward_after_drag = false
 quick_properties_sync = true

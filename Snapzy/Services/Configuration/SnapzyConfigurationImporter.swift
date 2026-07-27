@@ -439,6 +439,12 @@ enum SnapzyConfigurationImporter {
     collectEnumString(&reader, "annotate", "clipboard_image_open_behavior", allowed: AnnotateClipboardImageBehavior.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateClipboardImageOpenBehavior)
     }
+    collectEnumString(&reader, "annotate", "default_tool", allowed: AnnotationToolType.inlineAnnotateTools.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateDefaultTool)
+    }
+    collectBool(&reader, "annotate", "remember_last_tool", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateRememberLastTool)
+    }
     collectBool(&reader, "annotate", "close_after_drag", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateCloseAfterDrag)
     }

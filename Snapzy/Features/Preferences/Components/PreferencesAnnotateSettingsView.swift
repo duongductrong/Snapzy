@@ -10,6 +10,10 @@ import SwiftUI
 struct AnnotateSettingsView: View {
   @AppStorage(PreferencesKeys.annotateClipboardImageOpenBehavior)
   private var annotateClipboardImageOpenBehavior = AnnotateClipboardImageBehavior.ask.rawValue
+  @AppStorage(PreferencesKeys.annotateDefaultTool)
+  private var annotateDefaultTool = AnnotationToolType.selection.rawValue
+  @AppStorage(PreferencesKeys.annotateRememberLastTool)
+  private var annotateRememberLastTool = false
   @AppStorage(PreferencesKeys.annotateCloseAfterDrag) private var annotateCloseAfterDrag = true
   @AppStorage(PreferencesKeys.annotateBringForwardAfterDrag)
   private var annotateBringForwardAfterDrag = false
@@ -21,6 +25,31 @@ struct AnnotateSettingsView: View {
   var body: some View {
     Form {
       Section(L10n.PreferencesAnnotate.behaviorSection) {
+        SettingRow(
+          icon: "cursorarrow",
+          title: L10n.PreferencesAnnotate.defaultToolTitle,
+          description: L10n.PreferencesAnnotate.defaultToolDescription
+        ) {
+          Picker("", selection: $annotateDefaultTool) {
+            ForEach(AnnotationToolType.inlineAnnotateTools) { tool in
+              Label(tool.displayName, systemImage: tool.icon).tag(tool.rawValue)
+            }
+          }
+          .labelsHidden()
+          .pickerStyle(.menu)
+          .fixedSize()
+          .frame(width: 180, alignment: .trailing)
+        }
+
+        SettingRow(
+          icon: "clock.arrow.circlepath",
+          title: L10n.PreferencesAnnotate.rememberLastToolTitle,
+          description: L10n.PreferencesAnnotate.rememberLastToolDescription
+        ) {
+          Toggle("", isOn: $annotateRememberLastTool)
+            .labelsHidden()
+        }
+
         SettingRow(
           icon: "slider.horizontal.3",
           title: L10n.PreferencesAnnotate.quickPropertiesSyncTitle,

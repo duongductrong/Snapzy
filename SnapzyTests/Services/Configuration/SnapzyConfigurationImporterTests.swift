@@ -319,6 +319,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     [annotate]
     combine_save_as_edit = false
+    default_tool = "arrow"
+    remember_last_tool = true
 
     [quick_access]
     trackpad_swipe_mode = "natural"
@@ -345,6 +347,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     // annotate
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.annotateCombineSaveAsEdit) as? Bool, false)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.annotateDefaultTool), "arrow")
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.annotateRememberLastTool) as? Bool, true)
     
     // quick access
     XCTAssertEqual(QuickAccessTrackpadSwipeModeStore.shared.mode, .natural)

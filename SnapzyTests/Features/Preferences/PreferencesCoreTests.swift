@@ -57,6 +57,35 @@ final class PreferencesCoreTests: XCTestCase {
     XCTAssertTrue(AnnotateQuickPropertiesSyncPreference.isEnabled(userDefaults: defaults))
   }
 
+  func testAnnotateToolPreference_usesDefaultAndOptionalLastTool() throws {
+    let defaults = try makeDefaults()
+    XCTAssertEqual(AnnotateToolPreference.defaultTool(userDefaults: defaults), .selection)
+    XCTAssertEqual(AnnotateToolPreference.initialTool(userDefaults: defaults), .selection)
+
+    defaults.set(AnnotationToolType.arrow.rawValue, forKey: PreferencesKeys.annotateDefaultTool)
+    XCTAssertEqual(AnnotateToolPreference.initialTool(userDefaults: defaults), .arrow)
+
+    defaults.set(true, forKey: PreferencesKeys.annotateRememberLastTool)
+    XCTAssertEqual(AnnotateToolPreference.initialTool(userDefaults: defaults), .arrow)
+
+    AnnotateToolPreference.remember(.text, userDefaults: defaults)
+    XCTAssertEqual(AnnotateToolPreference.initialTool(userDefaults: defaults), .text)
+  }
+
+  func testAnnotateToolPreference_rejectsUnsupportedAndInvalidValues() throws {
+    let defaults = try makeDefaults()
+    defaults.set(AnnotationToolType.crop.rawValue, forKey: PreferencesKeys.annotateDefaultTool)
+    XCTAssertEqual(AnnotateToolPreference.defaultTool(userDefaults: defaults), .selection)
+
+    defaults.set(AnnotationToolType.arrow.rawValue, forKey: PreferencesKeys.annotateDefaultTool)
+    defaults.set(true, forKey: PreferencesKeys.annotateRememberLastTool)
+    defaults.set("invalid", forKey: PreferencesKeys.annotateLastUsedTool)
+    XCTAssertEqual(AnnotateToolPreference.initialTool(userDefaults: defaults), .arrow)
+
+    AnnotateToolPreference.remember(.crop, userDefaults: defaults)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.annotateLastUsedTool), "invalid")
+  }
+
   func testCombineSaveAsEditPreference_defaultsToEnabled() throws {
     let defaults = try makeDefaults()
     XCTAssertTrue(CombineSaveAsEditPreference.isEnabled(userDefaults: defaults))

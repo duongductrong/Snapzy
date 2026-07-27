@@ -186,6 +186,7 @@ final class AnnotateState: ObservableObject {
       syncActiveToolProperties()
     }
   }
+  var onToolActivated: ((AnnotationToolType) -> Void)?
   @Published var strokeWidth: CGFloat = 3
   @Published var strokeColor: Color = .red
   @Published var fillColor: Color = .clear
@@ -4868,6 +4869,7 @@ final class AnnotateState: ObservableObject {
       deselectAnnotation()
     }
     selectedTool = tool
+    onToolActivated?(tool)
   }
 
   func deleteSelectedAnnotation() {

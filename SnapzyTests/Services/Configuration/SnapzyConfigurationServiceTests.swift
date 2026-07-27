@@ -321,6 +321,8 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     defaults.set(true, forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection)
     defaults.set(0.65, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
     defaults.set(false, forKey: PreferencesKeys.annotateCombineSaveAsEdit)
+    defaults.set(AnnotationToolType.arrow.rawValue, forKey: PreferencesKeys.annotateDefaultTool)
+    defaults.set(true, forKey: PreferencesKeys.annotateRememberLastTool)
 
     let manager = QuickAccessManager.shared
     let originalHide = manager.hideCardWhenWindowOpen
@@ -352,6 +354,8 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "capture", "screenshot", "reverse_magnifier_zoom_direction")?.boolValue, true)
     XCTAssertEqual(document.value(at: "recording", "video_editor_zoom_transition_duration")?.doubleValue, 0.65)
     XCTAssertEqual(document.value(at: "annotate", "combine_save_as_edit")?.boolValue, false)
+    XCTAssertEqual(document.value(at: "annotate", "default_tool")?.stringValue, "arrow")
+    XCTAssertEqual(document.value(at: "annotate", "remember_last_tool")?.boolValue, true)
     XCTAssertEqual(document.value(at: "quick_access", "trackpad_swipe_mode")?.stringValue, "natural")
     XCTAssertEqual(document.value(at: "quick_access", "swipe_left_action")?.stringValue, "pinToScreen")
     XCTAssertEqual(document.value(at: "quick_access", "swipe_right_action")?.stringValue, "none")

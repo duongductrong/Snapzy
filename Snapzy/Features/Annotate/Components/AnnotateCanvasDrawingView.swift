@@ -405,7 +405,7 @@ final class DrawingCanvasNSView: NSView {
             }
             // Deselect active annotation when switching tools
             state.deselectAnnotation()
-            state.selectedTool = matchedTool
+            state.activateTool(matchedTool)
           }
         }
         invalidateDrawing()

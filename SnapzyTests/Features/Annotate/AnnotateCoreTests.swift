@@ -449,6 +449,19 @@ final class AnnotateCoreTests: XCTestCase {
     XCTAssertEqual(state.quickStrokeWidthBinding.wrappedValue, 6)
   }
 
+  @MainActor
+  func testActivateToolNotifiesOnlyForExplicitActivation() {
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    var activatedTools: [AnnotationToolType] = []
+    state.onToolActivated = { activatedTools.append($0) }
+
+    state.activateTool(.arrow)
+    state.selectedTool = .text
+
+    XCTAssertEqual(state.selectedTool, .text)
+    XCTAssertEqual(activatedTools, [.arrow])
+  }
+
   func testInlineAreaControls_nearFullscreenSelectionUsesBottomInnerPlacement() {
     let containerSize = CGSize(width: 1512, height: 982)
     let rect = CGRect(origin: .zero, size: containerSize)

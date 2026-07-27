@@ -566,7 +566,7 @@ struct AnnotateCanvasView: View {
 
       // Deselect active annotation when switching tools
       state.selectedAnnotationId = nil
-      state.selectedTool = tool
+      state.activateTool(tool)
     }
   }
 

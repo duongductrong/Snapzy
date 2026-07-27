@@ -165,6 +165,8 @@ enum SnapzyConfigurationDefaultDocument {
   private static func writeAnnotate(_ writer: inout SimpleTOMLWriter) {
     writer.section("annotate")
     writer.value("clipboard_image_open_behavior", AnnotateClipboardImageBehavior.ask.rawValue)
+    writer.value("default_tool", AnnotateToolPreference.fallbackTool.rawValue)
+    writer.value("remember_last_tool", false)
     writer.value("close_after_drag", true)
     writer.value("bring_forward_after_drag", false)
     writer.value("quick_properties_sync", true)

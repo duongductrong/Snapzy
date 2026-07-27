@@ -50,7 +50,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
   @Published var selectionRect: CGRect?
   @Published var isMoveModifierActive = false
 
-  let state = AnnotateState(appliesDefaultCanvasPresetOnNewImages: false)
+  let state: AnnotateState
   let desktopFrame: CGRect
   let displays: [InlineAreaAnnotateDisplay]
 
@@ -59,6 +59,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
   private let frozenSession: FrozenAreaCaptureSession
   private let saveDirectory: URL
   private let outputFormat: ImageFormat
+  private let defaults: UserDefaults
   private let context: CaptureContext
   private let onComplete: (CaptureResult) -> Void
   private let windows = NSHashTable<NSWindow>.weakObjects()
@@ -76,6 +77,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     frozenSession: FrozenAreaCaptureSession,
     saveDirectory: URL,
     outputFormat: ImageFormat,
+    defaults: UserDefaults = .standard,
     context: CaptureContext = .empty,
     onComplete: @escaping (CaptureResult) -> Void
   ) {
@@ -88,8 +90,16 @@ final class InlineAreaAnnotateSession: ObservableObject {
     self.frozenSession = frozenSession
     self.saveDirectory = saveDirectory
     self.outputFormat = outputFormat
+    self.defaults = defaults
     self.context = context
     self.onComplete = onComplete
+    self.state = AnnotateState(
+      defaults: defaults,
+      appliesDefaultCanvasPresetOnNewImages: false
+    )
+    self.state.onToolActivated = { tool in
+      AnnotateToolPreference.remember(tool, userDefaults: defaults)
+    }
     self.stateChangeCancellable = state.objectWillChange.sink { [weak self] _ in
       Task { @MainActor in
         self?.objectWillChange.send()
@@ -153,7 +163,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
     selectionRect = crop.localRect
     state.loadImage(crop.image, url: nil)
-    state.selectedTool = .selection
+    state.selectedTool = AnnotateToolPreference.initialTool(userDefaults: defaults)
     phase = .annotating
   }
 

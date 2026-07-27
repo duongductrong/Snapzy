@@ -78,6 +78,42 @@ enum AnnotateQuickPropertiesSyncPreference {
   }
 }
 
+enum AnnotateToolPreference {
+  static let fallbackTool: AnnotationToolType = .selection
+
+  static func defaultTool(userDefaults: UserDefaults = .standard) -> AnnotationToolType {
+    storedTool(forKey: PreferencesKeys.annotateDefaultTool, userDefaults: userDefaults) ?? fallbackTool
+  }
+
+  static func remembersLastTool(userDefaults: UserDefaults = .standard) -> Bool {
+    userDefaults.object(forKey: PreferencesKeys.annotateRememberLastTool) as? Bool ?? false
+  }
+
+  static func initialTool(userDefaults: UserDefaults = .standard) -> AnnotationToolType {
+    guard remembersLastTool(userDefaults: userDefaults) else {
+      return defaultTool(userDefaults: userDefaults)
+    }
+    return storedTool(forKey: PreferencesKeys.annotateLastUsedTool, userDefaults: userDefaults)
+      ?? defaultTool(userDefaults: userDefaults)
+  }
+
+  static func remember(_ tool: AnnotationToolType, userDefaults: UserDefaults = .standard) {
+    guard remembersLastTool(userDefaults: userDefaults),
+          AnnotationToolType.inlineAnnotateTools.contains(tool) else { return }
+    userDefaults.set(tool.rawValue, forKey: PreferencesKeys.annotateLastUsedTool)
+  }
+
+  private static func storedTool(
+    forKey key: String,
+    userDefaults: UserDefaults
+  ) -> AnnotationToolType? {
+    guard let rawValue = userDefaults.string(forKey: key),
+          let tool = AnnotationToolType(rawValue: rawValue),
+          AnnotationToolType.inlineAnnotateTools.contains(tool) else { return nil }
+    return tool
+  }
+}
+
 /// When enabled (default), stitching extra images into a capture-origin annotate session
 /// saves the combined render as a normal edit of the current image (silent, no dialog).
 /// When disabled, the "Save Combined Image" confirmation dialog is shown instead.
