@@ -1958,7 +1958,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アップデートをチェックする"
+            "value": "アップデートを確認"
           }
         },
         "ko": {
@@ -3058,7 +3058,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ (アクセスは許可されていません)"
+            "value": "%@（未許可）"
           }
         },
         "ko": {
@@ -3253,7 +3253,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動的にチェックします"
+            "value": "自動的に確認"
           }
         },
         "ko": {
@@ -3318,7 +3318,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択してください..."
+            "value": "選択..."
           }
         },
         "ko": {
@@ -5008,7 +5008,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サウンドを再生する"
+            "value": "サウンドを再生"
           }
         },
         "ko": {

@@ -2696,7 +2696,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パスワードを確認してください"
+            "value": "パスワードの確認"
           }
         },
         "ko": {
@@ -4241,7 +4241,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "暗号化されたアーカイブをインポートします"
+            "value": "暗号化アーカイブをインポート"
           }
         },
         "ko": {
@@ -6451,7 +6451,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今はスキップしてください"
+            "value": "今はスキップ"
           }
         },
         "ko": {
@@ -7361,7 +7361,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "確認する"
+            "value": "確認"
           }
         },
         "ko": {
@@ -7816,7 +7816,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パスフレーズを確認します"
+            "value": "パスフレーズの確認"
           }
         },
         "ko": {
@@ -7881,7 +7881,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アーカイブのパスフレーズを入力してください"
+            "value": "アーカイブのパスフレーズを入力"
           }
         },
         "ko": {
@@ -8856,7 +8856,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アーカイブ パスフレーズを再入力してください"
+            "value": "アーカイブのパスフレーズを再入力"
           }
         },
         "ko": {

@@ -1916,7 +1916,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "背景が削除されました (クリックして復元します)"
+            "value": "背景を削除しました（クリックで復元）"
           }
         },
         "ko": {
@@ -4776,7 +4776,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈を付ける"
+            "value": "注釈"
           }
         },
         "ko": {
@@ -6206,7 +6206,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カスタム壁紙を削除する"
+            "value": "カスタム壁紙を削除"
           }
         },
         "ko": {

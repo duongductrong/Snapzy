@@ -12905,7 +12905,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "エリアが更新されました"
+            "value": "領域を更新"
           }
         },
         "ko": {
@@ -13295,7 +13295,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "そのままにしておいてください"
+            "value": "そのまま保持"
           }
         },
         "ko": {
@@ -14595,7 +14595,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在の結果を保存します"
+            "value": "現在の結果を保存中"
           }
         },
         "ko": {
@@ -14725,7 +14725,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "着実に下にスクロールします"
+            "value": "一定の速度で下にスクロール"
           }
         },
         "ko": {

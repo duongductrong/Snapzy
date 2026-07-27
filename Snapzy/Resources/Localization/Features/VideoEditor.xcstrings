@@ -1331,7 +1331,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "クリックして追加します"
+            "value" : "クリックして追加"
           }
         },
         "ko" : {
@@ -1851,7 +1851,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存しないでください"
+            "value" : "保存しない"
           }
         },
         "ko" : {

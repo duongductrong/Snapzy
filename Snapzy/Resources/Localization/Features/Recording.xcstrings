@@ -486,7 +486,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "中央下"
+            "value": "下中央"
           }
         },
         "ko": {
@@ -681,7 +681,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "中央上部"
+            "value": "上中央"
           }
         },
         "ko": {
@@ -3541,7 +3541,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "高い"
+            "value": "高"
           }
         },
         "ko": {
@@ -3606,7 +3606,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "低い"
+            "value": "低"
           }
         },
         "ko": {

@@ -5359,7 +5359,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ によって使用されます"
+            "value": "%@ が使用中"
           }
         },
         "ko": {

@@ -31,7 +31,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデートをチェックしてください..."
+            "value" : "アップデートを確認..."
           }
         },
         "ko" : {
@@ -161,7 +161,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "許可を与えます..."
+            "value" : "権限を付与..."
           }
         },
         "ko" : {

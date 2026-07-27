@@ -1396,7 +1396,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アクセスを許可する"
+            "value" : "アクセスを許可"
           }
         },
         "ko" : {
@@ -2883,7 +2883,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "はい、ショートカットを有効にします"
+            "value" : "はい、ショートカットを有効にする"
           }
         },
         "ko" : {
