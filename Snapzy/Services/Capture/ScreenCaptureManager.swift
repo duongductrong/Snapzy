@@ -1062,6 +1062,7 @@ final class ScreenCaptureManager: ObservableObject {
     excludeDesktopWidgets: Bool = false,
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil,
+    immediateMenuBarPopoverCapture: ImmediateMenuBarPopoverCapture? = nil,
     context: CaptureContext = .empty
   ) async -> CaptureResult {
     if let unavailableError = await ensureCaptureAvailability() {
@@ -1077,64 +1078,121 @@ final class ScreenCaptureManager: ObservableObject {
       context: ["windowID": "\(target.windowID)"]
     )
 
-    guard
-      let shareableWindow = await WindowSelectionQueryService.resolveWindow(
-        windowID: target.windowID,
-        prefetchedContentTask: prefetchedContentTask
+    let shareableWindow = await WindowSelectionQueryService.resolveWindow(
+      windowID: target.windowID,
+      prefetchedContentTask: prefetchedContentTask
+    )
+    let imagePath = WindowCaptureImagePath.resolve(
+      targetKind: target.kind,
+      hasShareableWindow: shareableWindow != nil,
+      hasRetainedMenuBarPopover: immediateMenuBarPopoverCapture != nil
+    )
+
+    switch imagePath {
+    case .screenCaptureKit:
+      guard let shareableWindow else {
+        assertionFailure("ScreenCaptureKit path selected without a shareable window")
+        return .failure(.captureFailed(L10n.ScreenCapture.failedToCropCapturedImage))
+      }
+
+      do {
+        let windowImage = try await captureWindowImage(
+          shareableWindow,
+          fallbackTarget: target,
+          showCursor: showCursor
+        )
+        return await saveImage(
+          windowImage.image,
+          to: saveDirectory,
+          fileName: fileName,
+          format: format,
+          scaleFactor: windowImage.scaleFactor,
+          context: context
+        )
+      } catch {
+        DiagnosticLogger.shared.logError(
+          .capture,
+          error,
+          "Exact window capture failed; falling back to rect capture"
+        )
+      }
+
+    case .retainedMenuBarPopover:
+      guard let immediateMenuBarPopoverCapture else {
+        assertionFailure("Retained popover path selected without an image")
+        return .failure(.captureFailed(L10n.ScreenCapture.failedToCropCapturedImage))
+      }
+      return await saveImage(
+        immediateMenuBarPopoverCapture.image,
+        to: saveDirectory,
+        fileName: fileName,
+        format: format,
+        scaleFactor: immediateMenuBarPopoverCapture.scaleFactor,
+        context: context
       )
-    else {
+
+    case .coreGraphicsWindow:
+      if let windowImage = await captureMenuBarPopoverImage(target: target) {
+        return await saveImage(
+          windowImage.image,
+          to: saveDirectory,
+          fileName: fileName,
+          format: format,
+          scaleFactor: windowImage.scaleFactor,
+          context: context
+        )
+      }
+      DiagnosticLogger.shared.log(
+        .info,
+        .capture,
+        "Menu bar popover Core Graphics capture failed; falling back to area capture",
+        context: ["windowID": "\(target.windowID)"]
+      )
+
+    case .areaFallback:
       DiagnosticLogger.shared.log(
         .info,
         .capture,
         "Window missing from shareable content; falling back to area capture",
         context: ["windowID": "\(target.windowID)"]
       )
-      return await captureArea(
-        rect: target.frame,
-        saveDirectory: saveDirectory,
-        fileName: fileName,
-        format: format,
-        showCursor: showCursor,
-        excludeDesktopIcons: excludeDesktopIcons,
-        excludeDesktopWidgets: excludeDesktopWidgets,
-        excludeOwnApplication: excludeOwnApplication,
-        prefetchedContentTask: prefetchedContentTask,
-        context: context
-      )
     }
 
-    do {
-      let windowImage = try await captureWindowImage(
-        shareableWindow,
-        fallbackTarget: target,
-        showCursor: showCursor
+    return await captureArea(
+      rect: target.frame,
+      saveDirectory: saveDirectory,
+      fileName: fileName,
+      format: format,
+      showCursor: showCursor,
+      excludeDesktopIcons: excludeDesktopIcons,
+      excludeDesktopWidgets: excludeDesktopWidgets,
+      excludeOwnApplication: excludeOwnApplication,
+      prefetchedContentTask: prefetchedContentTask,
+      context: context
+    )
+  }
+
+  private func captureMenuBarPopoverImage(
+    target: WindowCaptureTarget
+  ) async -> (image: CGImage, scaleFactor: CGFloat)? {
+    let image = await Task.detached(priority: .userInitiated) {
+      CGImage(
+        windowListFromArrayScreenBounds: .null,
+        windowArray: [target.windowID] as CFArray,
+        imageOption: [.bestResolution]
       )
-      return await saveImage(
-        windowImage.image,
-        to: saveDirectory,
-        fileName: fileName,
-        format: format,
-        scaleFactor: windowImage.scaleFactor,
-        context: context
-      )
-    } catch {
-      DiagnosticLogger.shared.logError(
-        .capture,
-        error,
-        "Exact window capture failed; falling back to rect capture"
-      )
-      return await captureArea(
-        rect: target.frame,
-        saveDirectory: saveDirectory,
-        fileName: fileName,
-        format: format,
-        showCursor: showCursor,
-        excludeDesktopIcons: excludeDesktopIcons,
-        excludeDesktopWidgets: excludeDesktopWidgets,
-        excludeOwnApplication: excludeOwnApplication,
-        prefetchedContentTask: prefetchedContentTask
-      )
-    }
+    }.value
+
+    guard let image else { return nil }
+    let scaleFactor = max(
+      Self.imageScaleFactor(
+        for: image,
+        screenFrame: target.frame,
+        fallback: preferredScreenshotOutputScaleFactor
+      ),
+      preferredScreenshotOutputScaleFactor
+    )
+    return (image, scaleFactor)
   }
 
   // MARK: - Image Saving
@@ -2444,5 +2502,3 @@ enum ImageFormat {
     }
   }
 }
-
-

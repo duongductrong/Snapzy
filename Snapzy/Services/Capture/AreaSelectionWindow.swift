@@ -492,7 +492,17 @@ final class AreaSelectionController: NSObject {
     deferredBackdropDisplayIDs.removeAll()
     allowsApplicationWindowSelection = applicationConfiguration != nil
     interactionMode = applicationConfiguration == nil ? .manualRegion : initialInteractionMode
-    windowSelectionSnapshot = nil
+    windowSelectionSnapshot = applicationConfiguration.map { configuration in
+      WindowSelectionSnapshot(
+        orderedCandidates: configuration.immediateMenuBarPopoverCaptures.map { capture in
+          WindowSelectionCandidate(
+            target: capture.target,
+            ownerName: "",
+            windowLayer: 1
+          )
+        }
+      )
+    }
     selectionSessionID = UUID()
     keyboardOwnerDisplayID = resolvedKeyboardOwnerDisplayID()
     isPresenting = true
@@ -731,6 +741,7 @@ final class AreaSelectionController: NSObject {
 
   private func startWindowSelectionPreparationIfNeeded() {
     guard let applicationConfiguration else { return }
+    let immediateSnapshot = windowSelectionSnapshot
     let sessionID = selectionSessionID
     windowSelectionTask = Task { [weak self] in
       let snapshot = await WindowSelectionQueryService.prepareSnapshot(
@@ -739,9 +750,9 @@ final class AreaSelectionController: NSObject {
       )
       await MainActor.run {
         guard let self, self.selectionSessionID == sessionID else { return }
-        self.windowSelectionSnapshot = snapshot
+        self.windowSelectionSnapshot = immediateSnapshot?.merging(snapshot) ?? snapshot
         for (_, window) in self.windowPool {
-          window.overlayView.setWindowSelectionSnapshot(snapshot)
+          window.overlayView.setWindowSelectionSnapshot(self.windowSelectionSnapshot)
         }
       }
     }

@@ -572,6 +572,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
     let excludeOwnApplication = !includesOwnAppInScreenshots
+    let immediateMenuBarPopoverCaptures = freezesAreaCapture
+      ? []
+      : WindowSelectionQueryService.captureImmediateMenuBarPopoverCaptures(
+        excludeOwnApplication: excludeOwnApplication
+      )
     let prefetchedContentTask = captureManager.prefetchShareableContent(
       includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
     )
@@ -590,6 +595,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         excludeDesktopIcons: excludeDesktopIcons,
         excludeDesktopWidgets: excludeDesktopWidgets,
         excludeOwnApplication: excludeOwnApplication,
+        immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures,
         initialInteractionMode: initialInteractionMode,
         hiddenWindowSession: hiddenWindowSession,
         context: captureContext
@@ -1158,6 +1164,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     excludeDesktopIcons: Bool,
     excludeDesktopWidgets: Bool,
     excludeOwnApplication: Bool,
+    immediateMenuBarPopoverCaptures: [ImmediateMenuBarPopoverCapture],
     initialInteractionMode: AreaSelectionInteractionMode,
     hiddenWindowSession: HiddenWindowSession,
     context: CaptureContext = .empty
@@ -1173,7 +1180,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       backdrops: [:],
       applicationConfiguration: AreaSelectionApplicationConfiguration(
         prefetchedContentTask: prefetchedContentTask,
-        excludeOwnApplication: excludeOwnApplication
+        excludeOwnApplication: excludeOwnApplication,
+        immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
       ),
       initialInteractionMode: initialInteractionMode,
       dismissesAfterSelection: false
@@ -1253,6 +1261,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             excludeDesktopWidgets: excludeDesktopWidgets,
             excludeOwnApplication: excludeOwnApplication,
             prefetchedContentTask: prefetchedContentTask,
+            immediateMenuBarPopoverCapture: immediateMenuBarPopoverCaptures.first {
+              $0.target.windowID == target.windowID
+            },
             context: selectionContext
           )
         }
