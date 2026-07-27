@@ -3413,7 +3413,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "表示期間"
+            "value": "表示時間"
           }
         },
         "ko": {
@@ -4518,7 +4518,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャした画像に注釈を付けるなどの Snapzy ウィンドウを表示する"
+            "value": "キャプチャした画像に注釈などの Snapzy ウィンドウを表示する"
           }
         },
         "ko": {
@@ -6730,7 +6730,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕獲後"
+            "value": "キャプチャ後"
           }
         },
         "ko": {
@@ -10370,7 +10370,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在のキャプチャをロックしています。 Snapzy は、保存する前に %d 個のステッチされたフレームをシールしています。"
+            "value": "現在のキャプチャをロックしています。Snapzy は、保存する前に %d 個のステッチされたフレームを確定しています。"
           }
         },
         "ko": {
@@ -11020,7 +11020,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "地域が更新されました。移動するコンテンツのみを内部に残し、「キャプチャ開始」を押します。キャンセルするには Esc を押してください。"
+            "value": "領域を更新しました。移動するコンテンツのみを内側に残し、「キャプチャ開始」を押します。キャンセルするには Esc を押してください。"
           }
         },
         "ko": {
@@ -11605,7 +11605,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "捕獲されました"
+            "value": "キャプチャ済み"
           }
         },
         "ko": {
@@ -12710,7 +12710,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保存に失敗しました。ステッチされた結果はまだ準備ができています"
+            "value": "保存に失敗しました • ステッチ結果は保持されています"
           }
         },
         "ko": {
@@ -13035,7 +13035,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在の結果はまだ準備中です"
+            "value": "現在の結果は保存できます"
           }
         },
         "ko": {
@@ -14400,7 +14400,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ロック領域に放します"
+            "value": "放して領域を確定"
           }
         },
         "ko": {
@@ -14920,7 +14920,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy はステッチ結果を封印しています"
+            "value": "Snapzy がステッチ結果を確定しています"
           }
         },
         "ko": {
@@ -15180,7 +15180,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "もう一度試してください 完了"
+            "value": "もう一度「完了」を押してください"
           }
         },
         "ko": {

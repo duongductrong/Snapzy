@@ -746,7 +746,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "次の時間で閉じる"
+            "value": "閉じるまでの時間"
           }
         },
         "ko": {
@@ -2111,7 +2111,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "行動"
+            "value": "動作"
           }
         },
         "ko": {
@@ -2891,7 +2891,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "円形の swipe ターゲットにアクションをドラッグして、2本指でスワイプした後に実行する操作を選択します。"
+            "value": "円形のスワイプターゲットにアクションをドラッグして、2本指でスワイプした後に実行する操作を選択します。"
           }
         },
         "ko": {

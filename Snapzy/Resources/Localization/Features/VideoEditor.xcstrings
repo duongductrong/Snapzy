@@ -746,7 +746,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "バランスの取れた"
+            "value" : "バランス"
           }
         },
         "ko" : {
@@ -1071,7 +1071,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オリジナルを置き換えることはできません"
+            "value" : "元のファイルを置き換えられません"
           }
         },
         "ko" : {
@@ -1656,7 +1656,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "カスタム ボリューム"
+            "value" : "カスタム音量"
           }
         },
         "ko" : {
@@ -3086,7 +3086,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マウスに従ってください"
+            "value" : "マウスに追従"
           }
         },
         "ko" : {
@@ -3151,7 +3151,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このズーム項目がアクティブな間のみ、カメラの位置は記録されたマウス パスに従います。"
+            "value" : "このズーム項目がアクティブな間のみ、カメラの位置が記録されたマウスの軌跡に追従します。"
           }
         },
         "ko" : {
@@ -3281,7 +3281,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "スピードに従う"
+            "value" : "追従速度"
           }
         },
         "ko" : {
@@ -3864,7 +3864,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オリジナルを維持"
+            "value" : "元のファイルを保持"
           }
         },
         "ko" : {
@@ -3929,7 +3929,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マニュアル"
+            "value" : "手動"
           }
         },
         "ko" : {
@@ -3994,7 +3994,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "手動カメラ制御はマニュアルモードでのみ使用できます。"
+            "value" : "手動カメラ制御は手動モードでのみ使用できます。"
           }
         },
         "ko" : {
@@ -4059,7 +4059,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マニュアルモードでは、カメラのフレーミングが固定されます。このズーム項目がマウスに追従する必要がある場合は、「自動」に切り替えます。"
+            "value" : "手動モードでは、カメラのフレーミングが固定されます。このズーム項目がマウスに追従する必要がある場合は、「自動」に切り替えます。"
           }
         },
         "ko" : {
@@ -5034,7 +5034,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オリジナルを交換"
+            "value" : "元のファイルを置き換え"
           }
         },
         "ko" : {
@@ -7242,7 +7242,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ズームセンター"
+            "value" : "ズームの中心"
           }
         },
         "ko" : {

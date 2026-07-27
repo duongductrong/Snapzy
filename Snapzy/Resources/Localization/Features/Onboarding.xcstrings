@@ -1656,7 +1656,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "グローバル ショートカットのオプション"
+            "value" : "グローバルショートカットに使用"
           }
         },
         "ko" : {
@@ -1721,7 +1721,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声録音の場合はオプション"
+            "value" : "音声の録音に使用"
           }
         },
         "ko" : {
@@ -1786,7 +1786,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "やめる"
+            "value" : "終了"
           }
         },
         "ko" : {
@@ -2111,7 +2111,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy には、キャプチャ、オーディオ、および場所の保存に対する権限が必要です。"
+            "value" : "Snapzy にはキャプチャ、オーディオ、保存先へのアクセス権限が必要です。"
           }
         },
         "ko" : {
@@ -3208,7 +3208,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "いいえ、ありがとう"
+            "value" : "いいえ、結構です"
           }
         },
         "ko" : {
@@ -4053,7 +4053,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サポートはオプションです。 Snapzy はスポンサーなしでも引き続き完全に使用できます。"
+            "value" : "支援は任意です。Snapzy はスポンサーなしでも引き続き完全に使用できます。"
           }
         },
         "ko" : {
@@ -4118,7 +4118,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "著者のスポンサー"
+            "value" : "作者を支援する"
           }
         },
         "ko" : {

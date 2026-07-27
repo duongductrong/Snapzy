@@ -3344,7 +3344,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクションに注釈を付ける"
+            "value": "注釈アクション"
           }
         },
         "ko": {
@@ -3409,7 +3409,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "参照に注釈を付ける"
+            "value": "注釈のリファレンス"
           }
         },
         "ko": {
@@ -3474,7 +3474,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ツール キーに注釈を付ける"
+            "value": "注釈ツールのキー"
           }
         },
         "ko": {
@@ -3929,7 +3929,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トリミングを確認"
+            "value": "切り抜きを確定"
           }
         },
         "ko": {
@@ -4319,7 +4319,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈をナッジする"
+            "value": "注釈を微調整"
           }
         },
         "ko": {
@@ -5034,7 +5034,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "トグルピン"
+            "value": "固定の切り替え"
           }
         },
         "ko": {
@@ -5554,7 +5554,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ に一致します。 macOSが勝つかもしれない。"
+            "value": "%@ に一致します。macOS が優先される場合があります。"
           }
         },
         "ko": {
@@ -5944,7 +5944,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "描画ツールバーとオーバーレイを切り替えます。オプション。"
+            "value": "描画ツールバーとオーバーレイを切り替えます（任意）"
           }
         },
         "ko": {
@@ -6009,7 +6009,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最初から再録画します。オプション。"
+            "value": "最初から録り直します（任意）"
           }
         },
         "ko": {
@@ -6074,7 +6074,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティブな録画を削除してキャンセルします。オプション。"
+            "value": "アクティブな録画を削除してキャンセルします（任意）"
           }
         },
         "ko": {
@@ -6139,7 +6139,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティブな録画を一時停止または再開します。オプション。推奨：⌘⇧Space。"
+            "value": "アクティブな録画を一時停止または再開します（任意）。推奨: ⌘⇧Space"
           }
         },
         "ko": {

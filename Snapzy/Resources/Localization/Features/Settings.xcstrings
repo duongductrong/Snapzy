@@ -2478,7 +2478,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy はオープンソースです。ワークフローに役立つ場合は、進行中の開発を支援します。"
+            "value": "Snapzy はオープンソースです。ワークフローに役立っているなら、スポンサーとしてご支援ください。"
           }
         },
         "ko": {
@@ -4293,7 +4293,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最終チェック日"
+            "value": "最終確認"
           }
         },
         "ko": {
@@ -4553,7 +4553,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "決して"
+            "value": "なし"
           }
         },
         "ko": {
@@ -5528,7 +5528,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "場所を保存"
+            "value": "保存先"
           }
         },
         "ko": {

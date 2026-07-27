@@ -421,7 +421,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "確かに"
+            "value" : "許可済み"
           }
         },
         "ko" : {
@@ -486,7 +486,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オプション"
+            "value" : "任意"
           }
         },
         "ko" : {

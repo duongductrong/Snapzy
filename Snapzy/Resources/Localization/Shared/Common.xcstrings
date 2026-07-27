@@ -2696,7 +2696,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "作成されました"
+            "value": "作成日"
           }
         },
         "ko": {
@@ -2956,7 +2956,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "消去"
+            "value": "削除"
           }
         },
         "ko": {
@@ -3021,7 +3021,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "寸法"
+            "value": "サイズ"
           }
         },
         "ko": {
@@ -3411,7 +3411,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "期間"
+            "value": "長さ"
           }
         },
         "ko": {
@@ -3866,7 +3866,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "埋める"
+            "value": "塗りつぶし"
           }
         },
         "ko": {
@@ -3996,7 +3996,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "無料"
+            "value": "自由"
           }
         },
         "ko": {
@@ -4126,7 +4126,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "身長"
+            "value": "高さ"
           }
         },
         "ko": {
@@ -4321,7 +4321,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "挿入図"
+            "value": "インセット"
           }
         },
         "ko": {
@@ -4451,7 +4451,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "中くらい"
+            "value": "中"
           }
         },
         "ko": {
@@ -4516,7 +4516,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "変更されました"
+            "value": "更新日"
           }
         },
         "ko": {
@@ -4906,7 +4906,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "許可されません"
+            "value": "未許可"
           }
         },
         "ko": {
@@ -5686,7 +5686,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "視点"
+            "value": "遠近感"
           }
         },
         "ko": {
@@ -6076,7 +6076,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "リフレッシュ"
+            "value": "更新"
           }
         },
         "ko": {
@@ -6726,7 +6726,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "シェア"
+            "value": "共有"
           }
         },
         "ko": {
@@ -6856,7 +6856,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "固体"
+            "value": "単色"
           }
         },
         "ko": {
@@ -6986,7 +6986,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "脳卒中"
+            "value": "線幅"
           }
         },
         "ko": {

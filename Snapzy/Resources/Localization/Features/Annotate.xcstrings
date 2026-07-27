@@ -616,7 +616,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "曲がり"
+            "value": "湾曲"
           }
         },
         "ko": {
@@ -3996,7 +3996,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "曲がりを反転"
+            "value": "湾曲を反転"
           }
         },
         "ko": {
@@ -5556,7 +5556,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ピクセル化された"
+            "value": "ピクセル化"
           }
         },
         "ko": {

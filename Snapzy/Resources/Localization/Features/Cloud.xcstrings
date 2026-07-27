@@ -2956,7 +2956,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "資格情報"
+            "value": "認証情報"
           }
         },
         "ko": {
@@ -3086,7 +3086,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パブリック アクセス ドメイン (オプション)"
+            "value": "パブリックアクセスドメイン（任意）"
           }
         },
         "ko": {
@@ -3411,7 +3411,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "LocalStack またはその他の S3 互換ストレージ用のオプションのカスタム S3 エンドポイント"
+            "value": "LocalStack などの S3 互換ストレージ用のカスタム S3 エンドポイント（任意）"
           }
         },
         "ko": {
@@ -4111,7 +4111,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "保護パスワードを入力して、現在のクラウド設定に資格情報をインポートします。"
+            "value": "保護パスワードを入力して、現在のクラウド設定に認証情報をインポートします。"
           }
         },
         "ko": {
@@ -4436,7 +4436,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ライフサイクル ルールが失敗しました: %@。資格情報にライフサイクル管理権限があることを確認してください。"
+            "value": "ライフサイクル ルールが失敗しました: %@。認証情報にライフサイクル管理権限があることを確認してください。"
           }
         },
         "ko": {
@@ -4631,7 +4631,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オプション"
+            "value": "任意"
           }
         },
         "ko": {
@@ -4891,7 +4891,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "資格情報を不正アクセスから保護するためのオプションのパスワード"
+            "value": "認証情報を不正アクセスから保護するためのパスワード（任意）"
           }
         },
         "ko": {
@@ -5151,7 +5151,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パスワードを設定して、クラウド構成への不正アクセスを防止します。このパスワードは、資格情報を表示または編集するために必要になります。"
+            "value": "パスワードを設定して、クラウド構成への不正アクセスを防止します。このパスワードは、認証情報を表示または編集するために必要になります。"
           }
         },
         "ko": {
@@ -5801,7 +5801,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "地域"
+            "value": "リージョン"
           }
         },
         "ko": {
@@ -6256,7 +6256,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クラウド プロバイダーの秘密キー"
+            "value": "クラウドプロバイダーのシークレットキー"
           }
         },
         "ko": {
@@ -7686,7 +7686,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "目的地を選択"
+            "value": "保存先を選択"
           }
         },
         "ko": {
@@ -9246,7 +9246,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%dd の有効期限が切れます"
+            "value": "あと %dd で期限切れ"
           }
         },
         "ko": {
@@ -10091,7 +10091,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "更新されました"
+            "value": "更新"
           }
         },
         "ko": {
@@ -10546,7 +10546,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "却下"
+            "value": "閉じる"
           }
         },
         "ko": {
