@@ -8,8 +8,6 @@
 import SwiftUI
 
 struct AnnotateSettingsView: View {
-  private static let rememberLastToolSelection = "__remember_last_tool__"
-
   @AppStorage(PreferencesKeys.annotateClipboardImageOpenBehavior)
   private var annotateClipboardImageOpenBehavior = AnnotateClipboardImageBehavior.ask.rawValue
   @AppStorage(PreferencesKeys.annotateDefaultTool)
@@ -24,44 +22,15 @@ struct AnnotateSettingsView: View {
   @AppStorage(PreferencesKeys.annotateCombineSaveAsEdit)
   private var annotateCombineSaveAsEdit = true
 
-  private var initialToolSelection: Binding<String> {
-    Binding(
-      get: {
-        if annotateRememberLastTool {
-          return Self.rememberLastToolSelection
-        }
-        return AnnotationToolType.inlineAnnotateTools.contains { $0.rawValue == annotateDefaultTool }
-          ? annotateDefaultTool
-          : AnnotationToolType.selection.rawValue
-      },
-      set: { selection in
-        if selection == Self.rememberLastToolSelection {
-          annotateRememberLastTool = true
-        } else {
-          annotateDefaultTool = selection
-          annotateRememberLastTool = false
-        }
-      }
-    )
-  }
-
   var body: some View {
     Form {
       Section(L10n.PreferencesAnnotate.behaviorSection) {
         SettingRow(
           icon: "cursorarrow",
-          title: L10n.PreferencesAnnotate.startToolTitle,
-          description: L10n.PreferencesAnnotate.startToolDescription
+          title: L10n.PreferencesAnnotate.defaultToolTitle,
+          description: L10n.PreferencesAnnotate.defaultToolDescription
         ) {
-          Picker("", selection: initialToolSelection) {
-            Label(
-              L10n.PreferencesAnnotate.rememberLastToolTitle,
-              systemImage: "clock.arrow.circlepath"
-            )
-            .tag(Self.rememberLastToolSelection)
-
-            Divider()
-
+          Picker("", selection: $annotateDefaultTool) {
             ForEach(AnnotationToolType.inlineAnnotateTools) { tool in
               Label(tool.displayName, systemImage: tool.icon).tag(tool.rawValue)
             }
@@ -70,6 +39,17 @@ struct AnnotateSettingsView: View {
           .pickerStyle(.menu)
           .fixedSize()
           .frame(width: 180, alignment: .trailing)
+        }
+        .disabled(annotateRememberLastTool)
+        .opacity(annotateRememberLastTool ? 0.5 : 1)
+
+        SettingRow(
+          icon: "clock.arrow.circlepath",
+          title: L10n.PreferencesAnnotate.rememberLastToolTitle,
+          description: L10n.PreferencesAnnotate.rememberLastToolDescription
+        ) {
+          Toggle("", isOn: $annotateRememberLastTool)
+            .labelsHidden()
         }
 
         SettingRow(

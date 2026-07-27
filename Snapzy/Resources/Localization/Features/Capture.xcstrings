@@ -2731,134 +2731,134 @@
         }
       }
     },
-    "preferences-capture.annotate-start-tool-description": {
-      "comment": "Annotate preferences setting description for choosing how screenshot annotation starts",
+    "preferences-capture.annotate-default-tool-description": {
+      "comment": "Annotate preferences setting description for the initial screenshot annotation tool",
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ein bestimmtes Werkzeug oder das zuletzt ausgewählte Werkzeug verwenden"
+            "value": "Werkzeug, das verwendet wird, wenn „Letztes Werkzeug merken“ deaktiviert ist"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use a specific tool or the last tool you selected"
+            "value": "Tool selected when remembering the last tool is turned off"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usa una herramienta específica o la última que seleccionaste"
+            "value": "Herramienta seleccionada cuando recordar la última herramienta está desactivado"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Utiliser un outil spécifique ou le dernier outil sélectionné"
+            "value": "Outil sélectionné lorsque la mémorisation du dernier outil est désactivée"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "特定のツールまたは最後に選択したツールを使用します"
+            "value": "最後のツールを記憶する設定がオフのときに選択されるツール"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "특정 도구 또는 마지막으로 선택한 도구를 사용합니다"
+            "value": "마지막 도구 기억이 꺼져 있을 때 선택되는 도구"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Использовать указанный или последний выбранный инструмент"
+            "value": "Инструмент, выбираемый, когда запоминание последнего инструмента отключено"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sử dụng một công cụ cụ thể hoặc công cụ bạn chọn gần nhất"
+            "value": "Công cụ được chọn khi tính năng ghi nhớ công cụ gần nhất bị tắt"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用指定工具，或上次选择的工具"
+            "value": "关闭记住上次工具时使用的工具"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "使用指定工具，或上次選擇的工具"
+            "value": "關閉記住上次工具時使用的工具"
           }
         }
       }
     },
-    "preferences-capture.annotate-start-tool-title": {
-      "comment": "Annotate preferences setting title for choosing how screenshot annotation starts",
+    "preferences-capture.annotate-default-tool-title": {
+      "comment": "Annotate preferences setting title for the initial screenshot annotation tool",
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Beginnen mit"
+            "value": "Standardwerkzeug"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start With"
+            "value": "Default Tool"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Comenzar con"
+            "value": "Herramienta predeterminada"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Commencer avec"
+            "value": "Outil par défaut"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始時に使用"
+            "value": "デフォルトツール"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시작 도구"
+            "value": "기본 도구"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Начинать с"
+            "value": "Инструмент по умолчанию"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bắt đầu với"
+            "value": "Công cụ mặc định"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "开始时使用"
+            "value": "默认工具"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "開始時使用"
+            "value": "預設工具"
           }
         }
       }
@@ -3057,6 +3057,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "Beim Zusammenfügen von Bildern im Editor aktualisiert das Speichern den aktuellen Screenshot, statt den Export eines neuen kombinierten Bildes abzufragen."
+          }
+        }
+      }
+    },
+    "preferences-capture.annotate-remember-last-tool-description": {
+      "comment": "Annotate preferences setting description for remembering the last screenshot annotation tool",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jede Screenshot-Anmerkung mit dem zuletzt ausgewählten Werkzeug starten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start each screenshot annotation with the last tool you chose"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inicia cada anotación de captura con la última herramienta elegida"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Commencer chaque annotation de capture avec le dernier outil choisi"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "各スクリーンショットの注釈を最後に選んだツールで開始します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "각 스크린샷 주석을 마지막으로 선택한 도구로 시작합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начинать каждую аннотацию снимка экрана с последнего выбранного инструмента"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt đầu mỗi lần chú thích ảnh chụp bằng công cụ bạn chọn gần nhất"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次开始截图标注时使用上次选择的工具"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每次開始截圖標註時使用上次選取的工具"
           }
         }
       }

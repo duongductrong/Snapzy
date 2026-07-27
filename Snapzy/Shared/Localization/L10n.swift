@@ -2938,20 +2938,25 @@ nonisolated enum L10n {
       defaultValue: "Behavior",
       comment: "Annotate preferences section title"
     )
-    static let startToolTitle = string(
-      "preferences-capture.annotate-start-tool-title",
-      defaultValue: "Start With",
-      comment: "Annotate preferences setting title for choosing how screenshot annotation starts"
+    static let defaultToolTitle = string(
+      "preferences-capture.annotate-default-tool-title",
+      defaultValue: "Default Tool",
+      comment: "Annotate preferences setting title for the initial screenshot annotation tool"
     )
-    static let startToolDescription = string(
-      "preferences-capture.annotate-start-tool-description",
-      defaultValue: "Use a specific tool or the last tool you selected",
-      comment: "Annotate preferences setting description for choosing how screenshot annotation starts"
+    static let defaultToolDescription = string(
+      "preferences-capture.annotate-default-tool-description",
+      defaultValue: "Tool selected when remembering the last tool is turned off",
+      comment: "Annotate preferences setting description for the initial screenshot annotation tool"
     )
     static let rememberLastToolTitle = string(
       "preferences-capture.annotate-remember-last-tool-title",
       defaultValue: "Remember Last Tool",
       comment: "Annotate preferences setting title for remembering the last screenshot annotation tool"
+    )
+    static let rememberLastToolDescription = string(
+      "preferences-capture.annotate-remember-last-tool-description",
+      defaultValue: "Start each screenshot annotation with the last tool you chose",
+      comment: "Annotate preferences setting description for remembering the last screenshot annotation tool"
     )
     static let quickPropertiesSyncTitle = string(
       "preferences-capture.annotate-quick-properties-sync-title",
