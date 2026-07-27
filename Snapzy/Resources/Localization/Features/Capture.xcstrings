@@ -746,7 +746,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャまたは記録の進行中はキャッシュをクリアできません。"
+            "value": "キャプチャまたは録画の進行中はキャッシュをクリアできません。"
           }
         },
         "ko": {
@@ -5560,7 +5560,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録領域へのバッジの配置"
+            "value": "録画領域内のバッジの配置"
           }
         },
         "ko": {
@@ -6015,7 +6015,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録テンプレート"
+            "value": "録画テンプレート"
           }
         },
         "ko": {
@@ -6080,7 +6080,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "次のキャプチャ時に以前の記録領域を復元します"
+            "value": "次のキャプチャ時に以前の録画領域を復元します"
           }
         },
         "ko": {
@@ -7316,7 +7316,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音動作"
+            "value": "録画の動作"
           }
         },
         "ko": {
@@ -7381,7 +7381,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "記録フォーマット"
+            "value": "録画フォーマット"
           }
         },
         "ko": {
@@ -7446,7 +7446,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音品質"
+            "value": "録画品質"
           }
         },
         "ko": {

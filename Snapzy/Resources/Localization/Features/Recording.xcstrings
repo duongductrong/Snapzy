@@ -2436,7 +2436,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音をキャンセル"
+            "value": "録画をキャンセル"
           }
         },
         "ko": {
@@ -2566,7 +2566,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を削除"
+            "value": "録画を削除"
           }
         },
         "ko": {
@@ -3021,7 +3021,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音オプション"
+            "value": "録画オプション"
           }
         },
         "ko": {
@@ -3476,7 +3476,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を一時停止します"
+            "value": "録画を一時停止"
           }
         },
         "ko": {
@@ -3866,7 +3866,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音中"
+            "value": "録画中"
           }
         },
         "ko": {
@@ -3931,7 +3931,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音が一時停止されました"
+            "value": "録画を一時停止中"
           }
         },
         "ko": {
@@ -3996,7 +3996,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を再開します"
+            "value": "録画をやり直す"
           }
         },
         "ko": {
@@ -4061,7 +4061,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を再開する"
+            "value": "録画を再開"
           }
         },
         "ko": {
@@ -4126,7 +4126,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音設定"
+            "value": "録画設定"
           }
         },
         "ko": {
@@ -4321,7 +4321,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ として記録を開始します"
+            "value": "%@ として録画を開始"
           }
         },
         "ko": {
@@ -4451,7 +4451,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音ステータス バー"
+            "value": "録画ステータスバー"
           }
         },
         "ko": {
@@ -4581,7 +4581,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を停止 - 期間: %@"
+            "value": "録画を停止 - 時間: %@"
           }
         },
         "ko": {
@@ -4646,7 +4646,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音を停止して保存します"
+            "value": "録画を停止して保存します"
           }
         },
         "ko": {
@@ -4841,7 +4841,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音ツールバー"
+            "value": "録画ツールバー"
           }
         },
         "ko": {
@@ -4971,7 +4971,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録音がキャンセルされました"
+            "value": "録画をキャンセルしました"
           }
         },
         "ko": {

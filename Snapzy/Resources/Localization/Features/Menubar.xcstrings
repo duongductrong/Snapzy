@@ -421,7 +421,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録画画面"
+            "value" : "画面を録画"
           }
         },
         "ko" : {
@@ -486,7 +486,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "記録を停止 (%@)"
+            "value" : "録画を停止 (%@)"
           }
         },
         "ko" : {
