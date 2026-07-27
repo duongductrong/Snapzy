@@ -25,6 +25,16 @@ struct WindowSelectionSnapshot: Sendable {
   func hitTest(at point: CGPoint) -> WindowSelectionCandidate? {
     orderedCandidates.first { $0.contains(point) }
   }
+
+  func merging(_ laterSnapshot: WindowSelectionSnapshot?) -> WindowSelectionSnapshot {
+    guard let laterSnapshot else { return self }
+    var seenWindowIDs = Set(orderedCandidates.map(\.target.windowID))
+    return WindowSelectionSnapshot(
+      orderedCandidates: orderedCandidates + laterSnapshot.orderedCandidates.filter {
+        seenWindowIDs.insert($0.target.windowID).inserted
+      }
+    )
+  }
 }
 
 @MainActor
@@ -97,8 +107,6 @@ enum WindowSelectionQueryService {
         let shareableWindow = shareableWindowsByID[windowID]
         
         let windowLayer = info.layer ?? shareableWindow?.windowLayer ?? 0
-        guard windowLayer == 0 else { continue }
-        
         guard let quartzBounds = info.quartzBounds else { continue }
         let frame = appKitGlobalRect(fromQuartzGlobalRect: quartzBounds).integral
         guard frame.width > 32, frame.height > 32 else { continue }
@@ -108,7 +116,8 @@ enum WindowSelectionQueryService {
         let bundleIdentifier = shareableWindow?.owningApplication?.bundleIdentifier
           ?? info.ownerPID.flatMap { NSRunningApplication(processIdentifier: $0)?.bundleIdentifier }
         
-        if excludeOwnApplication, bundleIdentifier == ownBundleIdentifier {
+        let isOwnApplication = bundleIdentifier == ownBundleIdentifier
+        if excludeOwnApplication, isOwnApplication {
           continue
         }
 
@@ -116,6 +125,22 @@ enum WindowSelectionQueryService {
         let ownerNameVal = (shareableWindow?.owningApplication?.applicationName.isEmpty == false
           ? shareableWindow?.owningApplication?.applicationName
           : nil) ?? info.ownerName ?? ""
+        let targetKind = WindowCaptureSelectionPolicy.targetKind(
+          windowLayer: windowLayer,
+          frame: frame,
+          visibleFrame: NSScreen.screens.first(where: { $0.displayID == displayID })?.visibleFrame,
+          alpha: info.alpha,
+          isOwnApplication: isOwnApplication,
+          isSystemOwned: WindowCaptureSelectionPolicy.isSystemOwned(
+            bundleIdentifier: bundleIdentifier,
+            ownerName: ownerNameVal
+          )
+        )
+        guard let targetKind else { continue }
+        // Nonzero-layer popovers are intentionally accepted only by the synchronous
+        // pre-overlay collector. Adding them from this later live query would broaden the
+        // feature beyond UI that was already visible when capture began.
+        guard targetKind != .menuBarPopover else { continue }
 
         orderedCandidates.append(
           WindowSelectionCandidate(
@@ -125,7 +150,8 @@ enum WindowSelectionQueryService {
               displayID: displayID,
               title: title,
               bundleIdentifier: bundleIdentifier,
-              ownerPID: info.ownerPID
+              ownerPID: info.ownerPID,
+              kind: targetKind
             ),
             ownerName: ownerNameVal,
             windowLayer: windowLayer
@@ -142,6 +168,93 @@ enum WindowSelectionQueryService {
       )
       return nil
     }
+  }
+
+  /// Retain a visible third-party menu-bar popover before Snapzy creates selection windows.
+  /// Menu extras may close as a side effect of global-hotkey handling, so a later async query
+  /// cannot reliably discover or capture them.
+  static func captureImmediateMenuBarPopoverCaptures(
+    excludeOwnApplication: Bool
+  ) -> [ImmediateMenuBarPopoverCapture] {
+    let ownBundleIdentifier = Bundle.main.bundleIdentifier
+    var captures: [ImmediateMenuBarPopoverCapture] = []
+    var displaySnapshots: [CGDirectDisplayID: CGImage] = [:]
+
+    for info in rawWindowInfoList() {
+      let windowLayer = info.layer ?? 0
+      guard windowLayer != 0, let quartzBounds = info.quartzBounds else { continue }
+
+      let frame = appKitGlobalRect(fromQuartzGlobalRect: quartzBounds).integral
+      guard frame.width > 32, frame.height > 32, info.alpha > 0 else { continue }
+      guard let displayID = displayID(for: frame) else { continue }
+      guard let display = NSScreen.screens.first(where: { $0.displayID == displayID }) else { continue }
+
+      let bundleIdentifier = info.ownerPID.flatMap {
+        NSRunningApplication(processIdentifier: $0)?.bundleIdentifier
+      }
+      let isOwnApplication = bundleIdentifier == ownBundleIdentifier
+      if excludeOwnApplication, isOwnApplication { continue }
+
+      let ownerName = info.ownerName ?? ""
+      guard WindowCaptureSelectionPolicy.targetKind(
+        windowLayer: windowLayer,
+        frame: frame,
+        visibleFrame: display.visibleFrame,
+        alpha: info.alpha,
+        isOwnApplication: isOwnApplication,
+        isSystemOwned: WindowCaptureSelectionPolicy.isSystemOwned(
+          bundleIdentifier: bundleIdentifier,
+          ownerName: ownerName
+        )
+      ) == .menuBarPopover else {
+        continue
+      }
+
+      // These transient WindowServer windows can be enumerated but cannot always be
+      // independently rendered by Core Graphics. Capture the containing display before
+      // Snapzy presents any overlay, then retain only this popover's already-visible pixels.
+      let displayImage: CGImage
+      if let snapshot = displaySnapshots[displayID] {
+        displayImage = snapshot
+      } else if let snapshot = CGDisplayCreateImage(displayID) {
+        displaySnapshots[displayID] = snapshot
+        displayImage = snapshot
+      } else {
+        continue
+      }
+      guard let cropRect = WindowCaptureSelectionPolicy.displaySnapshotCropRect(
+        frame: frame,
+        displayFrame: display.frame,
+        imagePixelWidth: displayImage.width,
+        imagePixelHeight: displayImage.height
+      ), let croppedImage = displayImage.cropping(to: cropRect) else {
+        continue
+      }
+
+      let target = WindowCaptureTarget(
+        windowID: info.windowID,
+        frame: frame,
+        displayID: displayID,
+        title: info.title,
+        bundleIdentifier: bundleIdentifier,
+        ownerPID: info.ownerPID,
+        kind: .menuBarPopover
+      )
+      let scaleFactor = max(
+        CGFloat(croppedImage.width) / max(frame.width, 1),
+        CGFloat(croppedImage.height) / max(frame.height, 1),
+        1
+      )
+      guard let image = WindowCaptureSelectionPolicy.alphaMaskedMenuBarPopoverImage(
+        croppedImage,
+        scaleFactor: scaleFactor
+      ) else {
+        continue
+      }
+      captures.append(ImmediateMenuBarPopoverCapture(target: target, image: image, scaleFactor: scaleFactor))
+    }
+
+    return captures
   }
 
   static func resolveWindow(
@@ -164,6 +277,21 @@ enum WindowSelectionQueryService {
       )
       return nil
     }
+  }
+
+  /// Uses WindowServer's raw list rather than ScreenCaptureKit: eligible menu-bar popovers
+  /// are frequently not shareable even while they remain visible.
+  nonisolated static func visibleWindowIDs(for targets: [WindowCaptureTarget]) -> Set<CGWindowID> {
+    let infosByID = Dictionary(uniqueKeysWithValues: rawWindowInfoList().map { ($0.windowID, $0) })
+    return Set(targets.compactMap { target in
+      guard let info = infosByID[target.windowID] else { return nil }
+      guard info.alpha > 0, info.quartzBounds?.isEmpty == false else { return nil }
+      if let expectedOwnerPID = target.ownerPID, let actualOwnerPID = info.ownerPID,
+         expectedOwnerPID != actualOwnerPID {
+        return nil
+      }
+      return target.windowID
+    })
   }
 
   private static func loadShareableContent(
@@ -204,5 +332,31 @@ enum WindowSelectionQueryService {
       width: rect.width,
       height: rect.height
     )
+  }
+
+  nonisolated private static func rawWindowInfoList() -> [RawWindowInfo] {
+    guard
+      let rawWindowInfo = CGWindowListCopyWindowInfo(
+        [.optionOnScreenOnly, .excludeDesktopElements],
+        kCGNullWindowID
+      ) as? [[String: Any]]
+    else {
+      return []
+    }
+
+    return rawWindowInfo.compactMap { windowInfo in
+      guard let number = windowInfo[kCGWindowNumber as String] as? NSNumber else { return nil }
+      let quartzBounds = (windowInfo[kCGWindowBounds as String] as? NSDictionary)
+        .flatMap { CGRect(dictionaryRepresentation: $0)?.standardized }
+      return RawWindowInfo(
+        windowID: CGWindowID(number.uint32Value),
+        layer: (windowInfo[kCGWindowLayer as String] as? NSNumber)?.intValue,
+        quartzBounds: quartzBounds,
+        alpha: (windowInfo[kCGWindowAlpha as String] as? NSNumber)?.doubleValue ?? 1.0,
+        ownerPID: (windowInfo[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value,
+        ownerName: windowInfo[kCGWindowOwnerName as String] as? String,
+        title: windowInfo[kCGWindowName as String] as? String
+      )
+    }
   }
 }
