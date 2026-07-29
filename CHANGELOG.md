@@ -107,6 +107,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.31.0-beta.1] - 2026-07-29
+
+### Features
+-  apply startup tool preference in standalone editor windows (eb181f2)
+-  Add default and remembered annotation tools (#429) (fe8c99a)
+-  Extend live capture passthrough to menu bar popovers (#430) (ea9fc3e)
+-  Add Raycast integration and update documentation for automation tools (a6f8edf)
+
+### Bug Fixes
+-  Fixed ja localization (#432) (2c285f7)
+
+### Chore
+- fix: Fixed ja localization (#432) (2c285f7)
+- chore: update appcast, cask, readme, and docs for v1.30.1 (384331e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @kawarimidoll
+- @lcopilot
+- @tukuyomil032
+
 ## [1.30.1] - 2026-07-26
 
 ### Features
