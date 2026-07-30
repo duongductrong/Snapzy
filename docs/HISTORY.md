@@ -61,7 +61,7 @@ flowchart TD
 ## Temp File Interplay
 
 - Launch `TempCaptureManager.cleanupOrphanedFiles` skips files referenced by active history records and keeps recent temp files while history is enabled (retention window); retention owns their eventual deletion.
-- Quick Access dismiss deletes the temp file unless a history record exists; Quick Access delete removes the record first so the temp file actually goes away.
+- Quick Access dismiss deletes the temp file unless a history record exists or the general pasteboard still references it (`ClipboardHelper.isReferencedByGeneralPasteboard`, changeCount-matched); Quick Access delete removes the record first so the temp file actually goes away.
 
 ## Preferences Surface
 

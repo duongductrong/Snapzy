@@ -19,7 +19,6 @@ extension Notification.Name {
 /// Manages persistent storage of capture history records using SQLite via GRDB
 @MainActor
 final class CaptureHistoryStore: ObservableObject {
-
   static let shared = CaptureHistoryStore()
 
   @Published private(set) var records: [CaptureHistoryRecord] = []
@@ -93,7 +92,7 @@ final class CaptureHistoryStore: ObservableObject {
   func add(_ record: CaptureHistoryRecord) {
     guard let dbPool = requireDatabase(for: "add capture history record") else { return }
 
-    guard userDefaults.bool(forKey: PreferencesKeys.historyEnabled) else {
+    guard userDefaults.snapzyHistoryEnabled else {
       logger.debug("History disabled, skipping record for \(record.fileName)")
       DiagnosticLogger.shared.log(
         .debug,

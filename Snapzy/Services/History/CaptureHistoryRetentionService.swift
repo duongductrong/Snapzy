@@ -13,7 +13,6 @@ private let logger = Logger(subsystem: "Snapzy", category: "CaptureHistoryRetent
 /// Enforces retention policies for capture history records
 @MainActor
 final class CaptureHistoryRetentionService {
-
   static let shared = CaptureHistoryRetentionService()
 
   private var timer: Timer?
@@ -48,7 +47,7 @@ final class CaptureHistoryRetentionService {
   /// Perform a single retention sweep based on current preferences
   func sweep() async {
     // Only sweep if history is enabled
-    guard userDefaults.bool(forKey: PreferencesKeys.historyEnabled) else {
+    guard userDefaults.snapzyHistoryEnabled else {
       DiagnosticLogger.shared.log(.debug, .history, "Capture history retention sweep skipped; history disabled")
       return
     }
@@ -141,7 +140,7 @@ final class CaptureHistoryRetentionService {
         let excess = allRecords.count - maxCount
         let oldestRecords = allRecords.suffix(excess)
         for record in oldestRecords {
-          if tempManager.isTempFile(record.fileURL) && !pathsToDelete.contains(record.filePath) {
+          if tempManager.isTempFile(record.fileURL), !pathsToDelete.contains(record.filePath) {
             pathsToDelete.append(record.filePath)
           }
         }

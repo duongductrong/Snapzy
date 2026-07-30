@@ -9,10 +9,10 @@
 
 import AppKit
 import Foundation
-import UniformTypeIdentifiers
 import os.log
+import UniformTypeIdentifiers
 
-nonisolated private let logger = Logger(subsystem: "Snapzy", category: "ClipboardHelper")
+private nonisolated let logger = Logger(subsystem: "Snapzy", category: "ClipboardHelper")
 
 /// Centralized helper for copying images to clipboard while respecting the configured format.
 ///
@@ -24,7 +24,6 @@ nonisolated private let logger = Logger(subsystem: "Snapzy", category: "Clipboar
 /// Temp files must NOT be deleted immediately — the receiving app needs them at paste time.
 /// Orphaned temp files are cleaned up on next launch by `TempCaptureManager.cleanupOrphanedFiles()`.
 enum ClipboardHelper {
-
   // MARK: - File-based copy
 
   /// Copy one or more file URLs to the clipboard.
@@ -36,7 +35,18 @@ enum ClipboardHelper {
 
     let pasteboard = NSPasteboard.general
     pasteboard.clearContents()
-    pasteboard.writeObjects(urls.map { $0 as NSURL })
+    let didWrite = pasteboard.writeObjects(urls.map { $0 as NSURL })
+    if didWrite {
+      PasteboardReferenceTracker.record(urls: urls, changeCount: pasteboard.changeCount)
+    } else {
+      logger.error("Clipboard: failed to write \(urls.count) file url(s)")
+      DiagnosticLogger.shared.log(
+        .warning,
+        .clipboard,
+        "File URLs clipboard write failed",
+        context: ["count": "\(urls.count)"]
+      )
+    }
 
     logger.info("Clipboard: copied \(urls.count) file url(s)")
     DiagnosticLogger.shared.log(
@@ -68,6 +78,9 @@ enum ClipboardHelper {
     pasteboard.clearContents()
     let didWrite = pasteboard.writeObjects([url as NSURL])
     addFileURLFallbackRepresentations(to: pasteboard, fileURL: url)
+    if didWrite {
+      PasteboardReferenceTracker.record(urls: [url], changeCount: pasteboard.changeCount)
+    }
 
     let readbackCount = (pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL])?.count ?? 0
     DiagnosticLogger.shared.log(
@@ -123,7 +136,12 @@ enum ClipboardHelper {
       // Fallback: file exists but NSImage can't decode it (e.g. WebP on macOS 13).
       // The pasteboard item still exposes the file URL and original encoded data.
       logger.warning("ClipboardHelper: could not decode image, file/data-only clipboard for \(url.lastPathComponent)")
-      DiagnosticLogger.shared.log(.warning, .clipboard, "Image decode failed, file/data-only", context: ["file": url.lastPathComponent])
+      DiagnosticLogger.shared.log(
+        .warning,
+        .clipboard,
+        "Image decode failed, file/data-only",
+        context: ["file": url.lastPathComponent]
+      )
     }
 
     logger.info("Clipboard: copied file \(url.lastPathComponent)")
@@ -136,7 +154,12 @@ enum ClipboardHelper {
   /// security scope is needed for the read — the scoped-access token is acquired
   /// on main for parity with the main-thread variant.
   nonisolated static func copyImageOffMain(from url: URL) async {
-    DiagnosticLogger.shared.log(.info, .clipboard, "Copy image from file (off-main)", context: ["file": url.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .clipboard,
+      "Copy image from file (off-main)",
+      context: ["file": url.lastPathComponent]
+    )
 
     guard FileManager.default.fileExists(atPath: url.path) else {
       logger.error("ClipboardHelper: file not found \(url.lastPathComponent)")
@@ -167,7 +190,12 @@ enum ClipboardHelper {
 
       if image == nil {
         logger.warning("ClipboardHelper: could not decode image, file/data-only clipboard for \(url.lastPathComponent)")
-        DiagnosticLogger.shared.log(.warning, .clipboard, "Image decode failed, file/data-only", context: ["file": url.lastPathComponent])
+        DiagnosticLogger.shared.log(
+          .warning,
+          .clipboard,
+          "Image decode failed, file/data-only",
+          context: ["file": url.lastPathComponent]
+        )
       }
     }
 
@@ -181,13 +209,23 @@ enum ClipboardHelper {
   ///
   /// Used by Annotate / Mockup copy where the image is rendered on-the-fly.
   static func copyImage(_ image: NSImage, format: ImageFormatOption? = nil) {
-    DiagnosticLogger.shared.log(.info, .clipboard, "Copy rendered image", context: ["format": (format ?? currentFormat()).rawValue])
+    DiagnosticLogger.shared.log(
+      .info,
+      .clipboard,
+      "Copy rendered image",
+      context: ["format": (format ?? currentFormat()).rawValue]
+    )
     let resolvedFormat = format ?? currentFormat()
     let ext = resolvedFormat.format.fileExtension
 
     guard let data = AnnotateExporter.imageData(from: image, for: ext) else {
       logger.error("ClipboardHelper: failed to encode image as \(resolvedFormat.rawValue)")
-      DiagnosticLogger.shared.log(.error, .clipboard, "Image encode failed", context: ["format": resolvedFormat.rawValue])
+      DiagnosticLogger.shared.log(
+        .error,
+        .clipboard,
+        "Image encode failed",
+        context: ["format": resolvedFormat.rawValue]
+      )
       // Fallback: write NSImage directly (will produce PNG but at least something lands)
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
@@ -241,7 +279,7 @@ enum ClipboardHelper {
     // to the receiving app. NSPasteboardItem.setString(url, forType: .fileURL)
     // does NOT grant sandbox extensions — this was the root cause of Area
     // Capture's "auto copy" failing in sandboxed builds.
-    pasteboard.writeObjects([fileURL as NSURL])
+    let didWriteURL = pasteboard.writeObjects([fileURL as NSURL])
 
     // Augment the first pasteboard item with image data representations so
     // image-consuming apps (Telegram, Slack, etc.) can paste inline images
@@ -254,15 +292,42 @@ enum ClipboardHelper {
       extraTypes.append(.tiff)
     }
 
+    var didWriteRepresentations = true
     if !extraTypes.isEmpty {
-      pasteboard.addTypes(extraTypes, owner: nil)
+      let declaredChangeCount = pasteboard.addTypes(extraTypes, owner: nil)
+      if declaredChangeCount == 0 {
+        didWriteRepresentations = false
+      }
 
       if let encodedData, let encodedType {
-        pasteboard.setData(encodedData, forType: encodedType)
+        didWriteRepresentations = pasteboard.setData(encodedData, forType: encodedType) && didWriteRepresentations
       }
       if let tiffData {
-        pasteboard.setData(tiffData, forType: .tiff)
+        didWriteRepresentations = pasteboard.setData(tiffData, forType: .tiff) && didWriteRepresentations
       }
+    }
+
+    if didWriteURL, didWriteRepresentations {
+      PasteboardReferenceTracker.record(urls: [fileURL], changeCount: pasteboard.changeCount)
+    } else {
+      // A silent failure here leaves the pasteboard holding older content —
+      // log loudly so diagnostic bundles can tell "never copied" apart from
+      // "copied, then the referenced file was deleted".
+      logger
+        .error(
+          "Clipboard: pasteboard write incomplete for \(fileURL.lastPathComponent) (url: \(didWriteURL), representations: \(didWriteRepresentations))"
+        )
+      DiagnosticLogger.shared.log(
+        .warning,
+        .clipboard,
+        "Clipboard image write incomplete",
+        context: [
+          "file": fileURL.lastPathComponent,
+          "writeObjects": didWriteURL ? "true" : "false",
+          "representations": didWriteRepresentations ? "true" : "false",
+          "types": pasteboard.types?.map(\.rawValue).joined(separator: ",") ?? "none",
+        ]
+      )
     }
   }
 
@@ -275,7 +340,7 @@ enum ClipboardHelper {
     pasteboard.setString(fileURL.path, forType: .string)
   }
 
-  nonisolated private static func pasteboardImageType(for fileExtension: String) -> NSPasteboard.PasteboardType? {
+  private nonisolated static func pasteboardImageType(for fileExtension: String) -> NSPasteboard.PasteboardType? {
     let ext = fileExtension.lowercased()
     switch ext {
     case "png":
@@ -301,5 +366,52 @@ enum ClipboardHelper {
       return option
     }
     return .png
+  }
+
+  // MARK: - Pasteboard reference tracking
+
+  /// `true` when the general pasteboard still holds exactly what Snapzy last
+  /// copied and that content references `url` — i.e. nothing has been copied
+  /// since, so receivers may still read the file at paste time.
+  ///
+  /// Temp-file cleanup uses this to avoid deleting a file the pasteboard still
+  /// references: receivers (Slack, Messenger, Finder, ...) resolve the file URL
+  /// at paste time, so deleting the file breaks the paste.
+  static func isReferencedByGeneralPasteboard(_ url: URL) -> Bool {
+    PasteboardReferenceTracker.contains(url, changeCount: NSPasteboard.general.changeCount)
+  }
+
+  /// Clears the pasteboard reference record. Used by tests.
+  static func resetPasteboardReferenceTracking() {
+    PasteboardReferenceTracker.reset()
+  }
+
+  /// Remembers the file URL(s) Snapzy most recently wrote to the general
+  /// pasteboard, together with the pasteboard's change count after the write.
+  /// Comparing by `changeCount` means any newer clipboard content (copied in
+  /// any app) automatically releases the file for deletion — no pasteboard
+  /// content reads (and no paste-consent prompts) required.
+  private enum PasteboardReferenceTracker {
+    private static let lock = NSLock()
+    private static var lastWrite: (urls: Set<URL>, changeCount: Int)?
+
+    static func record(urls: [URL], changeCount: Int) {
+      lock.lock()
+      lastWrite = (Set(urls.map(\.standardizedFileURL)), changeCount)
+      lock.unlock()
+    }
+
+    static func contains(_ url: URL, changeCount: Int) -> Bool {
+      lock.lock()
+      defer { lock.unlock() }
+      guard let lastWrite, lastWrite.changeCount == changeCount else { return false }
+      return lastWrite.urls.contains(url.standardizedFileURL)
+    }
+
+    static func reset() {
+      lock.lock()
+      lastWrite = nil
+      lock.unlock()
+    }
   }
 }

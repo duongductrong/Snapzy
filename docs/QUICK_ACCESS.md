@@ -29,7 +29,7 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | --- | --- |
 | `copy` | Clipboard copy + dismiss; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
 | `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + sidecar move. Saved: reveal in Finder |
-| `dismiss` | Card removed; temp file deleted unless a history record exists |
+| `dismiss` | Card removed; temp file deleted unless a history record exists or the general pasteboard still references the file (#234 paste-integrity guard) |
 | `delete` | Removes history record + annotation sidecar, deletes temp or trashes saved file, deletes recording metadata for videos |
 | `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown |
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |

@@ -21,7 +21,6 @@ struct RecordingSavePlan {
 /// Manages lifecycle of temporary capture files when auto-save is disabled
 @MainActor
 final class TempCaptureManager {
-
   static let shared = TempCaptureManager()
 
   private let preferences: PreferencesProviding
@@ -282,7 +281,7 @@ final class TempCaptureManager {
       return
     }
 
-    let historyEnabled = defaults.object(forKey: PreferencesKeys.historyEnabled) as? Bool ?? true
+    let historyEnabled = defaults.snapzyHistoryEnabled
     let historyStore = CaptureHistoryStore.shared
     let canCheckHistoryRecords = historyStore.isDatabaseAvailable
     var count = 0

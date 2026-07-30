@@ -211,7 +211,7 @@ final class AnnotationSessionStore {
   }
 
   func shouldPersist(for sourceURL: URL) -> Bool {
-    let historyEnabled = CaptureHistoryStore.shared.userDefaults.bool(forKey: PreferencesKeys.historyEnabled)
+    let historyEnabled = CaptureHistoryStore.shared.userDefaults.snapzyHistoryEnabled
     return historyEnabled || CaptureHistoryStore.shared.hasRecord(forFilePath: sourceURL.path)
   }
 
@@ -228,7 +228,7 @@ final class AnnotationSessionStore {
     return digest.map { String(format: "%02x", $0) }.joined()
   }
 
-  nonisolated private static func defaultRootDirectory() -> URL {
+  private nonisolated static func defaultRootDirectory() -> URL {
     let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
     return appSupport
       .appendingPathComponent("Snapzy", isDirectory: true)
@@ -276,11 +276,17 @@ final class AnnotationSessionStore {
     to directory: URL
   ) throws {
     try ensureRootDirectory()
-    let tempDirectory = rootDirectory.appendingPathComponent(".\(directory.lastPathComponent).\(UUID().uuidString)", isDirectory: true)
+    let tempDirectory = rootDirectory.appendingPathComponent(
+      ".\(directory.lastPathComponent).\(UUID().uuidString)",
+      isDirectory: true
+    )
     let assetsDirectory = tempDirectory.appendingPathComponent("assets", isDirectory: true)
     try FileManager.default.createDirectory(at: assetsDirectory, withIntermediateDirectories: true)
     do {
-      try sessionData.originalImageData.write(to: tempDirectory.appendingPathComponent(manifest.originalFileName), options: .atomic)
+      try sessionData.originalImageData.write(
+        to: tempDirectory.appendingPathComponent(manifest.originalFileName),
+        options: .atomic
+      )
       if let cutoutFileName = manifest.cutoutFileName, let cutoutImageData = sessionData.cutoutImageData {
         try cutoutImageData.write(to: tempDirectory.appendingPathComponent(cutoutFileName), options: .atomic)
       }

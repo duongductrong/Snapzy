@@ -18,12 +18,14 @@ enum QuickAccessAnimationStyle: String, CaseIterable, Identifiable {
   case slide
   case scale
 
-  var id: String { rawValue }
+  var id: String {
+    rawValue
+  }
 
   var displayName: String {
     switch self {
-    case .slide: return L10n.PreferencesQuickAccess.animationStyleSlide
-    case .scale: return L10n.PreferencesQuickAccess.animationStyleScale
+    case .slide: L10n.PreferencesQuickAccess.animationStyleSlide
+    case .scale: L10n.PreferencesQuickAccess.animationStyleScale
     }
   }
 }
@@ -31,7 +33,6 @@ enum QuickAccessAnimationStyle: String, CaseIterable, Identifiable {
 /// Manages the quick access screenshot preview stack
 @MainActor
 final class QuickAccessManager: ObservableObject {
-
   static let shared = QuickAccessManager()
 
   // MARK: - Published State
@@ -41,12 +42,14 @@ final class QuickAccessManager: ObservableObject {
       refreshPanelInteractionMetrics()
     }
   }
+
   @Published var position: QuickAccessPosition = .bottomRight {
     didSet {
       UserDefaults.standard.set(position.rawValue, forKey: Keys.position)
       panelController.updatePosition(position)
     }
   }
+
   @Published var isEnabled: Bool = true {
     didSet {
       UserDefaults.standard.set(isEnabled, forKey: Keys.enabled)
@@ -55,27 +58,32 @@ final class QuickAccessManager: ObservableObject {
       }
     }
   }
+
   @Published var autoDismissEnabled: Bool = true {
     didSet {
       UserDefaults.standard.set(autoDismissEnabled, forKey: Keys.autoDismissEnabled)
     }
   }
+
   @Published var hideCardWhenWindowOpen: Bool = true {
     didSet {
       UserDefaults.standard.set(hideCardWhenWindowOpen, forKey: Keys.hideCardWhenWindowOpen)
       refreshPanelInteractionMetrics()
     }
   }
+
   @Published var animationStyle: QuickAccessAnimationStyle = .slide {
     didSet {
       UserDefaults.standard.set(animationStyle.rawValue, forKey: Keys.quickAccessAnimationStyle)
     }
   }
+
   @Published var autoDismissDelay: TimeInterval = 10 {
     didSet {
       UserDefaults.standard.set(autoDismissDelay, forKey: Keys.autoDismissDelay)
     }
   }
+
   @Published var overlayScale: Double = 1.0 {
     didSet {
       UserDefaults.standard.set(overlayScale, forKey: Keys.overlayScale)
@@ -86,26 +94,31 @@ final class QuickAccessManager: ObservableObject {
       refreshPanelInteractionMetrics()
     }
   }
+
   @Published var dragDropEnabled: Bool = true {
     didSet {
       UserDefaults.standard.set(dragDropEnabled, forKey: Keys.dragDropEnabled)
     }
   }
+
   @Published var twoFingerSwipeToDismissEnabled: Bool = true {
     didSet {
       UserDefaults.standard.set(twoFingerSwipeToDismissEnabled, forKey: Keys.twoFingerSwipeToDismissEnabled)
     }
   }
+
   @Published var swipeSensitivity: Double = 1.0 {
     didSet {
       UserDefaults.standard.set(swipeSensitivity, forKey: Keys.swipeSensitivity)
     }
   }
+
   @Published var pauseCountdownOnHover: Bool = true {
     didSet {
       UserDefaults.standard.set(pauseCountdownOnHover, forKey: Keys.pauseCountdownOnHover)
     }
   }
+
   @Published private(set) var openEditorShortcut: ShortcutConfig?
   @Published var openEditorShortcutEnabled: Bool = false {
     didSet {
@@ -177,8 +190,7 @@ final class QuickAccessManager: ObservableObject {
     isEnabled = UserDefaults.standard.object(forKey: Keys.enabled) as? Bool ?? true
 
     if let positionRaw = UserDefaults.standard.string(forKey: Keys.position),
-      let savedPosition = QuickAccessPosition(rawValue: positionRaw)
-    {
+       let savedPosition = QuickAccessPosition(rawValue: positionRaw) {
       position = savedPosition
     }
 
@@ -186,13 +198,12 @@ final class QuickAccessManager: ObservableObject {
       UserDefaults.standard.object(forKey: Keys.autoDismissEnabled) as? Bool ?? true
     hideCardWhenWindowOpen =
       UserDefaults.standard.object(forKey: Keys.hideCardWhenWindowOpen) as? Bool ?? true
-    
+
     if let savedAnimStyle = UserDefaults.standard.string(forKey: Keys.quickAccessAnimationStyle),
-       let style = QuickAccessAnimationStyle(rawValue: savedAnimStyle)
-    {
+       let style = QuickAccessAnimationStyle(rawValue: savedAnimStyle) {
       animationStyle = style
     }
-    
+
     autoDismissDelay =
       UserDefaults.standard.object(forKey: Keys.autoDismissDelay) as? Double ?? 10
     overlayScale =
@@ -431,10 +442,9 @@ final class QuickAccessManager: ObservableObject {
       )
     }
 
-    let item: QuickAccessItem
-    switch record.captureType {
+    let item = switch record.captureType {
     case .screenshot:
-      item = QuickAccessItem(
+      QuickAccessItem(
         id: UUID(),
         url: url,
         thumbnail: thumbnail,
@@ -443,7 +453,7 @@ final class QuickAccessManager: ObservableObject {
         duration: nil
       )
     case .video, .gif:
-      item = QuickAccessItem(
+      QuickAccessItem(
         id: UUID(),
         url: url,
         thumbnail: thumbnail,
@@ -526,7 +536,7 @@ final class QuickAccessManager: ObservableObject {
       // Auto-delete temp files on dismiss (unsaved captures).
       // Skip deletion if history is enabled and the file has a history record —
       // the retention service will clean it up when the record ages out.
-      let historyEnabled = UserDefaults.standard.bool(forKey: PreferencesKeys.historyEnabled)
+      let historyEnabled = UserDefaults.standard.snapzyHistoryEnabled
       let hasHistoryRecord = historyEnabled && CaptureHistoryStore.shared.hasRecord(forFilePath: url.path)
 
       if hasHistoryRecord {
@@ -534,6 +544,17 @@ final class QuickAccessManager: ObservableObject {
           .info,
           .action,
           "Quick access item dismissed; temp file preserved for history",
+          context: ["fileName": url.lastPathComponent]
+        )
+      } else if ClipboardHelper.isReferencedByGeneralPasteboard(url) {
+        // The capture was auto-copied to the clipboard and nothing has been
+        // copied since: receivers resolve the file URL at paste time, so
+        // deleting it now would break the paste (#234). Leave reclamation to
+        // launch-time orphan cleanup.
+        DiagnosticLogger.shared.log(
+          .info,
+          .action,
+          "Quick access item dismissed; temp file preserved while referenced by pasteboard",
           context: ["fileName": url.lastPathComponent]
         )
       } else {
@@ -878,15 +899,14 @@ final class QuickAccessManager: ObservableObject {
 
   /// Scale image to thumbnail size (synchronous, no file I/O)
   private func scaleThumbnail(_ image: NSImage, maxSize: CGFloat) -> NSImage {
-    return PerfSignpost.measure("scaleThumbnailInner") {
+    PerfSignpost.measure("scaleThumbnailInner") {
       let originalSize = image.size
       guard originalSize.width > 0, originalSize.height > 0 else { return image }
 
-      let scale: CGFloat
-      if originalSize.width > originalSize.height {
-        scale = min(maxSize / originalSize.width, 1.0)
+      let scale: CGFloat = if originalSize.width > originalSize.height {
+        min(maxSize / originalSize.width, 1.0)
       } else {
-        scale = min(maxSize / originalSize.height, 1.0)
+        min(maxSize / originalSize.height, 1.0)
       }
       if scale >= 1.0 { return image }
 
@@ -1410,8 +1430,8 @@ final class QuickAccessManager: ObservableObject {
     let cardH = QuickAccessLayout.scaledCardHeight(scale)
     let height =
       CGFloat(itemCount) * cardH
-      + CGFloat(itemCount - 1) * QuickAccessLayout.cardSpacing
-      + QuickAccessLayout.containerPadding * 2
+        + CGFloat(itemCount - 1) * QuickAccessLayout.cardSpacing
+        + QuickAccessLayout.containerPadding * 2
     let width = cardW + QuickAccessLayout.containerPadding * 2
     return CGSize(width: width, height: height)
   }
@@ -1492,7 +1512,7 @@ final class QuickAccessManager: ObservableObject {
     )
 
     // Pause the edited item + items at lower indices (captured after, newer)
-    for i in 0...editIndex {
+    for i in 0 ... editIndex {
       dismissTimers[items[i].id]?.pause()
     }
   }
@@ -1509,7 +1529,7 @@ final class QuickAccessManager: ObservableObject {
 
     if let editIndex = items.firstIndex(where: { $0.id == id }) {
       // Item still exists — restart it + items at lower indices (newer) with a fresh countdown
-      for i in 0...editIndex {
+      for i in 0 ... editIndex {
         let itemId = items[i].id
         guard !isItemCountdownHeld(itemId) else { continue }
         dismissTimers[itemId]?.restart(duration: autoDismissDelay)
