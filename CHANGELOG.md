@@ -108,6 +108,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.31.0-beta.2] - 2026-07-30
+
+### Bug Fixes
+-  Preserve copied temp files on quick access dismiss and refine history defaults (#439) (4fbf4ff)
+
+### Chore
+- ci: skip HotkeyUnregistrationTests on headless CI runners (01b09dc)
+- chore: update appcast and docs for v1.31.0-beta.1 (96ae0ca)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.1] - 2026-07-29
 
 ### Features
