@@ -51,10 +51,9 @@ final class AreaSelectionMultiMonitorReconciliationTests: AreaSelectionOverlayTe
     // GIVEN: a selection session starts with EMPTY backdrops (backdrop-less / lazy-backdrop mode,
     // e.g. recording-area selection), so every display's `selectionEnabled(for:)` starts out `true`
     // via the `selectionBackdrops.isEmpty` branch.
-    let startExpectation = XCTestExpectation(description: "Session started and pool populated")
     controller.startSelection(mode: .recording) { _, _ in }
-    DispatchQueue.main.async { startExpectation.fulfill() }
-    wait(for: [startExpectation], timeout: 2.0)
+    // Window-pool setup is synchronous. Do not yield here: the live-session luma task may
+    // apply a backdrop on the next main-actor turn and invalidate this initial-state precondition.
 
     let mirror = Mirror(reflecting: controller)
     guard let windowPool = mirror.children.first(where: { $0.label == "windowPool" })?.value
