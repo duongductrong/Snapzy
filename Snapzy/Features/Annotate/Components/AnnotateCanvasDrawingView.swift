@@ -14,9 +14,10 @@ struct CanvasDrawingView: NSViewRepresentable {
   let state: AnnotateState
   var displayScale: CGFloat = 1.0
   var canvasBounds: CGRect
+  var acceptsFirstMouse = false
 
   func makeNSView(context _: Context) -> DrawingCanvasNSView {
-    let view = DrawingCanvasNSView(state: state)
+    let view = DrawingCanvasNSView(state: state, acceptsFirstMouse: acceptsFirstMouse)
     view.displayScale = displayScale
     view.canvasBounds = canvasBounds
     return view
@@ -34,6 +35,7 @@ struct CanvasDrawingView: NSViewRepresentable {
       nsView.canvasBounds = canvasBounds
       nsView.invalidateDrawing()
     }
+    nsView.acceptsInactiveWindowMouse = acceptsFirstMouse
   }
 }
 
@@ -90,6 +92,7 @@ final class DrawingCanvasNSView: NSView {
 
   var displayScale: CGFloat = 1.0
   var canvasBounds: CGRect = .zero
+  var acceptsInactiveWindowMouse: Bool
   private let shortcutManager = AnnotateShortcutManager.shared
   private var currentPath: [CGPoint] = []
   private var isDrawing = false
@@ -155,8 +158,9 @@ final class DrawingCanvasNSView: NSView {
 
   private var stateObservers = Set<AnyCancellable>()
 
-  init(state: AnnotateState) {
+  init(state: AnnotateState, acceptsFirstMouse: Bool = false) {
     self.state = state
+    self.acceptsInactiveWindowMouse = acceptsFirstMouse
     super.init(frame: .zero)
     setupView()
     observeStateChanges()
@@ -308,6 +312,10 @@ final class DrawingCanvasNSView: NSView {
 
   override var acceptsFirstResponder: Bool {
     true
+  }
+
+  override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
+    acceptsInactiveWindowMouse
   }
 
   override func keyDown(with event: NSEvent) {

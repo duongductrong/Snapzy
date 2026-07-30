@@ -352,7 +352,8 @@ private struct InlineAreaAnnotateRootView: View {
       CanvasDrawingView(
         state: session.state,
         displayScale: displayScale,
-        canvasBounds: CGRect(origin: .zero, size: imageSize)
+        canvasBounds: CGRect(origin: .zero, size: imageSize),
+        acceptsFirstMouse: true
       )
       .frame(width: rect.width, height: rect.height)
 
