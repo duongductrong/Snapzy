@@ -35,27 +35,39 @@ NEW_ENTRY="## [${VERSION}] - ${DATE}
 
 ${CONTENT}"
 
-# Find the line number of the first "## " heading (previous entry) or end of file
-# We insert after the file header (first 5 lines: title + blank + description + blank + format line)
+# Print lines without trailing blank lines (used for the file header).
+print_without_trailing_blanks() {
+  awk '
+    { lines[NR] = $0 }
+    END {
+      end = NR
+      while (end > 0 && lines[end] == "") end--
+      for (i = 1; i <= end; i++) print lines[i]
+    }
+  '
+}
+
+# Find the first version entry (Keep a Changelog "## [x.y.z]" heading).
 HEADER_END=$(awk '/^## \[/ { print NR; exit }' "$CHANGELOG_FILE")
 
-if [ -n "$HEADER_END" ]; then
-  # Insert before the first existing version entry
-  {
-    head -n $((HEADER_END - 1)) "$CHANGELOG_FILE"
-    echo ""
-    echo "$NEW_ENTRY"
+{
+  if [ -n "$HEADER_END" ]; then
+    # Keep the preamble only; drop any blank lines that accumulated before
+    # the first version heading, then insert the new entry.
+    head -n $((HEADER_END - 1)) "$CHANGELOG_FILE" | print_without_trailing_blanks
+  else
+    # No existing entries — keep the whole file, minus trailing blanks.
+    print_without_trailing_blanks < "$CHANGELOG_FILE"
+  fi
+
+  echo ""
+  printf '%s\n' "$NEW_ENTRY"
+
+  if [ -n "$HEADER_END" ]; then
     echo ""
     tail -n +$((HEADER_END)) "$CHANGELOG_FILE"
-  } > "${CHANGELOG_FILE}.tmp"
-else
-  # No existing entries — append after the entire file
-  {
-    cat "$CHANGELOG_FILE"
-    echo ""
-    echo "$NEW_ENTRY"
-  } > "${CHANGELOG_FILE}.tmp"
-fi
+  fi
+} > "${CHANGELOG_FILE}.tmp"
 
 mv "${CHANGELOG_FILE}.tmp" "$CHANGELOG_FILE"
 
