@@ -110,6 +110,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.31.0-beta.4] - 2026-07-31
+
+### Features
+-  Gate recording session shortcuts to active recording sessions (5627a52)
+-  support line dash styles for stroke annotations (#444) (0d1b1d1)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.3 (e845d26)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.3] - 2026-07-31
 
 ### Features
