@@ -457,6 +457,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "annotate", "combine_save_as_edit", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateCombineSaveAsEdit)
     }
+    collectBool(&reader, "annotate", "crop_snap_to_edges", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled)
+    }
   }
 
   private static func collectAfterCapture(

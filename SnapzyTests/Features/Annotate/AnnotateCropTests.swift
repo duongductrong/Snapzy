@@ -334,4 +334,125 @@ final class AnnotateCropTests: XCTestCase {
     state.toggleCropOrientation()
     XCTAssertFalse(state.isCropPortraitOrientation)
   }
+
+  // MARK: - Snap-to-edges preference
+
+  @MainActor
+  func testCropEdgeSnappingEnabledDefaultsToTrueWhenUnset() {
+    let state = AnnotateState(defaults: UserDefaultsFactory.make())
+    Self.retainedAnnotateStates.append(state)
+
+    XCTAssertTrue(state.isCropEdgeSnappingEnabled)
+  }
+
+  @MainActor
+  func testCropEdgeSnappingEnabledPersistsToDefaultsAndReadsBack() {
+    let defaults = UserDefaultsFactory.make()
+    let state = AnnotateState(defaults: defaults)
+    Self.retainedAnnotateStates.append(state)
+
+    state.isCropEdgeSnappingEnabled = false
+
+    XCTAssertEqual(
+      defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool,
+      false
+    )
+    // A fresh state over the same defaults reads the persisted value back.
+    let fresh = AnnotateState(defaults: defaults)
+    Self.retainedAnnotateStates.append(fresh)
+    XCTAssertFalse(fresh.isCropEdgeSnappingEnabled)
+  }
+
+  // MARK: - Auto-crop to content
+
+  /// Loaded state whose NSImage point size equals the fixture's pixel size, so
+  /// top-left-origin pixel rects map to bottom-left points as y' = H - y.
+  @MainActor
+  private func makeLoadedState(cgImage: CGImage, pointWidth: Int, pointHeight: Int) -> AnnotateState {
+    let state = makeAnnotateState()
+    state.loadImage(NSImage(cgImage: cgImage, size: NSSize(width: pointWidth, height: pointHeight)))
+    return state
+  }
+
+  @MainActor
+  func testAutoCropToContentTightensRoughRectToContentBorders() async throws {
+    // 800x600 light-gray (0.95) background with one dark 200x150 rect at
+    // top-left pixels (300, 200) -> bottom-left points (300, 250, 200, 150).
+    let cgImage = try XCTUnwrap(TestImageFactory.solidWithRects(
+      width: 800,
+      height: 600,
+      backgroundGray: 242,
+      rects: [(CGRect(x: 300, y: 200, width: 200, height: 150), 40)]
+    ))
+    let state = makeLoadedState(cgImage: cgImage, pointWidth: 800, pointHeight: 600)
+    state.beginCropInteraction()
+    // Rough rect ~40pt outside the dark rect on every side.
+    state.updateCropRect(CGRect(x: 260, y: 210, width: 280, height: 230))
+
+    await state.autoCropToContent()
+
+    let rect = try XCTUnwrap(state.cropRect)
+    XCTAssertEqual(rect.origin.x, 300, accuracy: 3)
+    XCTAssertEqual(rect.origin.y, 250, accuracy: 3)
+    XCTAssertEqual(rect.width, 200, accuracy: 3)
+    XCTAssertEqual(rect.height, 150, accuracy: 3)
+    // Auto-crop never leaves crop mode.
+    XCTAssertTrue(state.isCropActive)
+  }
+
+  @MainActor
+  func testAutoCropToContentWithUniformImageLeavesRectUnchanged() async throws {
+    let state = try makeLoadedState()  // 400x300 uniform solid, no content borders
+    state.beginCropInteraction()
+    let rough = CGRect(x: 40, y: 30, width: 200, height: 150)
+    state.updateCropRect(rough)
+
+    await state.autoCropToContent()
+
+    XCTAssertEqual(state.cropRect, rough)
+    XCTAssertTrue(state.isCropActive)
+  }
+
+  @MainActor
+  func testAutoCropToContentVisionFallbackTightensAroundSoftSubject() async throws {
+    try XCTSkipUnless(
+      ProcessInfo.processInfo.isOperatingSystemAtLeast(
+        .init(majorVersion: 14, minorVersion: 0, patchVersion: 0)
+      ),
+      "Vision foreground cutout requires macOS 14+"
+    )
+    // Soft-edged dark blob: gradients stay below the edge detector's noise
+    // floor, so the deterministic edge path finds nothing and the Vision
+    // fallback must produce the tightening. Blob center (top-left px)
+    // (400, 300) -> bottom-left points (400, 300).
+    let cgImage = try XCTUnwrap(TestImageFactory.softRadialBlob(
+      width: 800,
+      height: 600,
+      center: CGPoint(x: 400, y: 300),
+      radius: 120
+    ))
+    let state = makeLoadedState(cgImage: cgImage, pointWidth: 800, pointHeight: 600)
+    state.beginCropInteraction()
+    let rough = CGRect(x: 200, y: 150, width: 400, height: 300)
+    state.updateCropRect(rough)
+
+    await state.autoCropToContent()
+
+    // Guard the premise: the edge profile holds only the image-bounds edges,
+    // so contentBounds returned nil and the Vision path did the work.
+    let profile = try XCTUnwrap(state.cropEdgeProfile)
+    XCTAssertEqual(profile.verticalEdges, [0, 800])
+    XCTAssertEqual(profile.horizontalEdges, [0, 600])
+
+    let rect = try XCTUnwrap(state.cropRect)
+    // Meaningfully tighter than the rough selection, roughly on the blob
+    // (expected diameter ~240pt); tolerances are loose on purpose — the exact
+    // subject bounds are Vision's call.
+    XCTAssertLessThan(rect.width * rect.height, rough.width * rough.height * 0.9)
+    XCTAssertEqual(rect.midX, 400, accuracy: 80)
+    XCTAssertEqual(rect.midY, 300, accuracy: 80)
+    XCTAssertEqual(rect.width, 240, accuracy: 140)
+    XCTAssertEqual(rect.height, 240, accuracy: 140)
+    XCTAssertTrue(state.isCropActive)
+  }
 }

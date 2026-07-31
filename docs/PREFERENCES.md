@@ -54,6 +54,7 @@ Segmented into three panes (`CaptureSettingsPane`): General / Screenshot / Recor
 - Behavior section only:
   - Sync Tool Defaults / quick-properties sync (`annotate.quickPropertiesSyncEnabled`, default on).
   - Combine Save-as-Edit (`annotate.combineSaveAsEdit`, default on).
+  - Crop Snap to Edges (`annotate.cropSnapToEdgesEnabled`, default on; also togglable from the crop toolbar; ⌘ held during a drag temporarily bypasses).
   - Clipboard image open behavior (`annotate.clipboardImageOpenBehavior`): `ask` (default) / `loadAutomatically` / `doNothing` (`AnnotateClipboardImageBehavior`).
   - Close After Drag (`annotate.closeAfterDrag`, default on).
   - Bring Forward After Drag (`annotate.bringForwardAfterDrag`, default off; disabled when Close After Drag is on).

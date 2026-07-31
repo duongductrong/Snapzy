@@ -128,10 +128,16 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Source Image
 
-  @Published var sourceImage: NSImage?
+  @Published var sourceImage: NSImage? {
+    didSet { invalidateCropEdgeProfile() }
+  }
   @Published var sourceURL: URL?
-  @Published private(set) var cutoutImage: NSImage?
-  @Published private(set) var isCutoutApplied: Bool = false
+  @Published private(set) var cutoutImage: NSImage? {
+    didSet { invalidateCropEdgeProfile() }
+  }
+  @Published private(set) var isCutoutApplied: Bool = false {
+    didSet { invalidateCropEdgeProfile() }
+  }
   @Published private(set) var isCutoutProcessing: Bool = false
   @Published var cutoutErrorMessage: String?
   private var activeCutoutOperationID: UUID?
@@ -1334,6 +1340,20 @@ final class AnnotateState: ObservableObject {
   private var didCutoutAutoApplyCrop: Bool = false
   /// Tracks the exact crop rect auto-applied by background cutout for safe revert behavior.
   private var cutoutAutoAppliedCropRect: CGRect?
+  /// Whether crop handle drags snap to detected content borders (CleanShot X style).
+  /// Persisted; defaults to true when the preference was never set.
+  @Published var isCropEdgeSnappingEnabled: Bool = true {
+    didSet {
+      defaults.set(isCropEdgeSnappingEnabled, forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled)
+    }
+  }
+  /// Detected content borders of the current effective source image, in image
+  /// points (cropRect space). Computed lazily by `prepareCropEdgeProfileIfNeeded()`;
+  /// nilled whenever the effective image changes (load/cutout/rotation/...).
+  private(set) var cropEdgeProfile: CropEdgeProfile?
+  /// Identity of the NSImage the profile (or its in-flight computation) belongs
+  /// to; guards against stale async results and repeat computation.
+  private var cropEdgeProfileImageID: ObjectIdentifier?
 
   // MARK: - Mockup State
 
@@ -1412,6 +1432,8 @@ final class AnnotateState: ObservableObject {
     self.cloudKey = cloudKey
     self.isCloudStale = isCloudStale
     self.dragToAppPreparationState = .ready
+    self.isCropEdgeSnappingEnabled =
+      defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -1434,6 +1456,8 @@ final class AnnotateState: ObservableObject {
     self.cloudURL = nil
     self.cloudKey = nil
     self.dragToAppPreparationState = .unavailable
+    self.isCropEdgeSnappingEnabled =
+      defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -2655,6 +2679,8 @@ final class AnnotateState: ObservableObject {
 
     isCropResizing = false
     isCropShiftLocked = false
+
+    prepareCropEdgeProfileIfNeeded()
   }
 
   /// Initialize crop to full image bounds
@@ -2813,6 +2839,171 @@ final class AnnotateState: ObservableObject {
     if constrained.height < minSize { constrained.size.height = minSize }
 
     return constrained
+  }
+
+  // MARK: - Crop Edge Profile (border snapping / auto-crop)
+
+  /// Clear the cached edge profile. Called automatically via didSet whenever
+  /// the effective source image changes (load / cutout / rotation / undo);
+  /// `prepareCropEdgeProfileIfNeeded()` recomputes on demand.
+  private func invalidateCropEdgeProfile() {
+    cropEdgeProfile = nil
+    cropEdgeProfileImageID = nil
+  }
+
+  /// Kick off content-border detection for the current image unless a profile
+  /// is already computed (or in flight) for it. The result lands in
+  /// `cropEdgeProfile` and backs border snapping and auto-crop.
+  func prepareCropEdgeProfileIfNeeded() {
+    guard hasImage,
+          let image = effectiveSourceImage,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+    let imageID = ObjectIdentifier(image)
+    guard cropEdgeProfileImageID != imageID else { return }
+    cropEdgeProfile = nil
+    let imagePointSize = image.size
+    Task { [weak self] in
+      let profile = await Self.detectCropEdgeProfile(cgImage: cgImage, imagePointSize: imagePointSize)
+      // Bail when the effective image changed mid-compute. The ID is set only
+      // on a non-nil profile — on failure a later prepare retries this image.
+      guard let self, let profile,
+            self.effectiveSourceImage.map({ ObjectIdentifier($0) }) == imageID else { return }
+      self.cropEdgeProfile = profile
+      self.cropEdgeProfileImageID = imageID
+      DiagnosticLogger.shared.log(.info, .annotate, "Crop edge profile computed", context: [
+        "verticalEdges": "\(profile.verticalEdges.count)",
+        "horizontalEdges": "\(profile.horizontalEdges.count)"
+      ])
+    }
+  }
+
+  /// Edge detection off the main actor; shared by
+  /// `prepareCropEdgeProfileIfNeeded` and `autoCropToContent`.
+  private nonisolated static func detectCropEdgeProfile(
+    cgImage: CGImage,
+    imagePointSize: CGSize
+  ) async -> CropEdgeProfile? {
+    await Task.detached(priority: .userInitiated) {
+      CropContentAnalyzer.edgeProfile(for: cgImage, imagePointSize: imagePointSize)
+    }.value
+  }
+
+  /// Auto-crop the active crop rect to the detected content (Shottr-style `A`
+  /// shortcut). Tries deterministic edge-profile tightening first; on macOS 14+
+  /// falls back to the Vision foreground-subject heuristic. Shows an info toast
+  /// and leaves the rect untouched when neither finds content. Stays in crop
+  /// mode and does not touch the undo stacks (Esc still restores).
+  func autoCropToContent() async {
+    guard isCropActive, hasImage, !isCropResizing,
+          let image = effectiveSourceImage,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+    if cropRect == nil {
+      initializeCrop()
+    }
+    guard let selection = cropRect else { return }
+
+    // Direct invocations (A key, tests) can race the prepare task kicked off in
+    // beginCropInteraction; compute inline when no profile is ready yet.
+    if cropEdgeProfile == nil {
+      let profile = await Self.detectCropEdgeProfile(cgImage: cgImage, imagePointSize: image.size)
+      // Bail when the effective image changed mid-compute — the stale profile
+      // must not be applied. Set the ID only on a non-nil profile so a failure
+      // does not block prepare from retrying this image.
+      guard effectiveSourceImage.map({ ObjectIdentifier($0) }) == ObjectIdentifier(image) else { return }
+      if let profile {
+        cropEdgeProfile = profile
+        cropEdgeProfileImageID = ObjectIdentifier(image)
+      }
+    }
+
+    if let profile = cropEdgeProfile,
+       let tightened = CropContentAnalyzer.contentBounds(in: selection, profile: profile) {
+      DiagnosticLogger.shared.log(.info, .annotate, "Auto-crop to content (edge profile)", context: [
+        "from": "\(selection)", "to": "\(tightened)"
+      ])
+      withAnimation(.easeInOut(duration: 0.15)) {
+        updateCropRect(tightened)
+      }
+      return
+    }
+
+    if canUseBackgroundCutout,
+       let tightened = await visionSuggestedAutoCropRect(in: selection, image: image, cgImage: cgImage) {
+      // The Vision pass can take ~1s; bail when the image changed or the user
+      // kept dragging meanwhile — don't clobber their current rect.
+      guard effectiveSourceImage.map({ ObjectIdentifier($0) }) == ObjectIdentifier(image),
+            let currentCropRect = cropRect,
+            Self.rectApproximatelyEqual(currentCropRect, selection) else { return }
+      DiagnosticLogger.shared.log(.info, .annotate, "Auto-crop to content (Vision fallback)", context: [
+        "from": "\(selection)", "to": "\(tightened)"
+      ])
+      withAnimation(.easeInOut(duration: 0.15)) {
+        updateCropRect(tightened)
+      }
+      return
+    }
+
+    AppToastManager.shared.show(message: L10n.AnnotateUI.autoCropNoContent, style: .info)
+  }
+
+  /// Vision fallback for auto-crop: run foreground-subject detection on the
+  /// selected region and convert its suggested crop back to image points.
+  /// Returns nil on any failure (caller falls through to the no-content toast).
+  private func visionSuggestedAutoCropRect(
+    in selection: CGRect,
+    image: NSImage,
+    cgImage: CGImage
+  ) async -> CGRect? {
+    let selection = selection.standardized
+    let pointSize = image.size
+    guard selection.width > 0, selection.height > 0,
+          pointSize.width > 0, pointSize.height > 0 else { return nil }
+
+    // Selection (image points, bottom-left) -> backing pixels (top-left);
+    // inverse of convertAutoCropRectToImageCoordinates.
+    let scaleX = CGFloat(cgImage.width) / pointSize.width
+    let scaleY = CGFloat(cgImage.height) / pointSize.height
+    let pixelRect = CGRect(
+      x: selection.minX * scaleX,
+      y: (pointSize.height - selection.maxY) * scaleY,
+      width: selection.width * scaleX,
+      height: selection.height * scaleY
+    ).integral.intersection(CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+    guard !pixelRect.isNull, pixelRect.width >= 1, pixelRect.height >= 1,
+          let subImage = cgImage.cropping(to: pixelRect) else { return nil }
+
+    guard let result = try? await ForegroundCutoutService.shared.extractForegroundResult(from: subImage),
+          result.autoCropDecision == .suggested,
+          let suggestedPixelRect = result.suggestedAutoCropRect else { return nil }
+
+    // The sub-image's rect in image points: exact inverse of the pixel mapping
+    // above, so this stays correct even when the selection extended beyond the
+    // image and got clamped (crop expansion outside the source is allowed).
+    let subPointRect = CGRect(
+      x: pixelRect.minX / scaleX,
+      y: pointSize.height - pixelRect.maxY / scaleY,
+      width: pixelRect.width / scaleX,
+      height: pixelRect.height / scaleY
+    )
+    // Suggested rect (sub-image pixels, top-left) -> sub-image points
+    // (bottom-left), then offset into the full image's point space.
+    let converted = Self.convertAutoCropRectToImageCoordinates(
+      pixelRectTopLeft: suggestedPixelRect,
+      sourceImageSize: subPointRect.size,
+      sourcePixelSize: CGSize(width: subImage.width, height: subImage.height)
+    )
+    let tightened = converted
+      .offsetBy(dx: subPointRect.minX, dy: subPointRect.minY)
+      .standardized
+      .intersection(selection)
+    // Same acceptance rules as CropContentAnalyzer.contentBounds: non-empty,
+    // >= 20pt per side, and a >= 5% area reduction.
+    guard !tightened.isNull,
+          tightened.width >= 20,
+          tightened.height >= 20 else { return nil }
+    let areaReduction = 1 - (tightened.width * tightened.height) / (selection.width * selection.height)
+    guard areaReduction >= 0.05 else { return nil }
+    return tightened
   }
 
   // MARK: - Annotation Selection

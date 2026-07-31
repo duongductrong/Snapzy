@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+/// SF Symbol names shared by the crop toolbar and annotate preferences.
+enum CropToolbarSymbols {
+  /// `magnet` is SF Symbols 5 (macOS 14+); fall back on macOS 13.
+  static let snapToEdges =
+    NSImage(systemSymbolName: "magnet", accessibilityDescription: nil) != nil ? "magnet" : "square.dashed"
+}
+
 /// Bottom control surface displayed while crop mode owns the shared bottom action slot.
 struct CropToolbarView: View {
   @ObservedObject var state: AnnotateState
@@ -21,6 +28,12 @@ struct CropToolbarView: View {
 
       // Grid toggle
       gridToggle
+
+      // Snap-to-edges toggle
+      snapToggle
+
+      // Auto-crop to content (same as the `A` shortcut)
+      autoCropButton
     }
   }
 
@@ -83,6 +96,42 @@ struct CropToolbarView: View {
     }
     .buttonStyle(.plain)
     .help(L10n.AnnotateUI.toggleRuleOfThirdsGrid)
+  }
+
+  // MARK: - Snap Toggle
+
+  private var snapToggle: some View {
+    Button {
+      state.isCropEdgeSnappingEnabled.toggle()
+    } label: {
+      Image(systemName: CropToolbarSymbols.snapToEdges)
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(state.isCropEdgeSnappingEnabled ? Color.accentColor : Color.primary)
+        .frame(width: 28, height: 28)
+        .background(
+          RoundedRectangle(cornerRadius: 6)
+            .fill(state.isCropEdgeSnappingEnabled ? Color.accentColor.opacity(0.2) : Color.clear)
+        )
+    }
+    .buttonStyle(.plain)
+    .help("\(L10n.AnnotateUI.cropSnapToEdges) — \(L10n.AnnotateUI.cropSnapToEdgesHint)")
+  }
+
+  // MARK: - Auto-Crop Button
+
+  private var autoCropButton: some View {
+    Button {
+      Task { @MainActor in
+        await state.autoCropToContent()
+      }
+    } label: {
+      Image(systemName: "arrow.up.left.and.arrow.down.right")
+        .font(.system(size: 14, weight: .medium))
+        .foregroundStyle(Color.primary)
+        .frame(width: 28, height: 28)
+    }
+    .buttonStyle(.plain)
+    .help(L10n.AnnotateUI.autoCropToContent)
   }
 }
 

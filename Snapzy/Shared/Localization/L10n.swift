@@ -4819,6 +4819,31 @@ nonisolated enum L10n {
       defaultValue: "Switch crop orientation",
       comment: "Tooltip for switching crop aspect ratio between landscape and portrait"
     )
+    static let cropSnapToEdges = string(
+      "annotate.crop-snap-to-edges",
+      defaultValue: "Snap to Edges",
+      comment: "Tooltip and settings title for snapping crop edges to content borders while dragging"
+    )
+    static let cropSnapToEdgesHint = string(
+      "annotate.crop-snap-to-edges-hint",
+      defaultValue: "Hold ⌘ to temporarily disable snapping",
+      comment: "Hint appended to the snap-to-edges tooltip"
+    )
+    static let cropSnapToEdgesDescription = string(
+      "annotate.crop-snap-to-edges-description",
+      defaultValue: "Snap crop edges to content borders while dragging. Hold ⌘ to temporarily disable.",
+      comment: "Settings description for snapping crop edges to content borders"
+    )
+    static let autoCropToContent = string(
+      "annotate.auto-crop-to-content",
+      defaultValue: "Auto-Crop to Content",
+      comment: "Tooltip for the auto-crop button that tightens the crop rect to detected content"
+    )
+    static let autoCropNoContent = string(
+      "annotate.auto-crop-no-content",
+      defaultValue: "No content detected to crop to",
+      comment: "Toast shown when auto-crop finds no content borders or subject inside the crop selection"
+    )
     static let toggleAspectRatioOrientation = string(
       "annotate.toggle-aspect-ratio-orientation",
       defaultValue: "Switch aspect ratio orientation",

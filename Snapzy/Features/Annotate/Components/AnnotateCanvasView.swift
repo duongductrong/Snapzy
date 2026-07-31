@@ -553,6 +553,15 @@ struct AnnotateCanvasView: View {
 
     let lowered = Character(String(char).lowercased())
 
+    // Crop mode owns `A` (auto-crop to content) even if the user bound it to a
+    // tool — mirrors the keyDown path in AnnotateCanvasDrawingView.
+    if state.isCropInteractionActive, lowered == "a" {
+      Task { @MainActor in
+        await state.autoCropToContent()
+      }
+      return
+    }
+
     // Look up tool for this key
     guard let tool = AnnotateShortcutManager.shared.tool(for: lowered) else { return }
 
@@ -714,7 +723,9 @@ final class KeyEventNSView: NSView {
   }
 
   override func keyDown(with event: NSEvent) {
-    guard let chars = event.charactersIgnoringModifiers, let char = chars.first else {
+    // Bare keys only — ⌘ combos are handled by AnnotateWindow.performKeyEquivalent.
+    guard !event.modifierFlags.contains(.command),
+          let chars = event.charactersIgnoringModifiers, let char = chars.first else {
       super.keyDown(with: event)
       return
     }

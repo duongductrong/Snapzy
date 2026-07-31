@@ -35,6 +35,47 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a solid grayscale background with additional grayscale-filled
+  /// rects. Rects use pixel coordinates with a top-left origin (row 0 = top
+  /// row) and are clipped to the image; later fills paint over earlier ones.
+  static func solidWithRects(
+    width: Int,
+    height: Int,
+    backgroundGray: UInt8 = 255,
+    rects: [(rect: CGRect, gray: UInt8)]
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for i in 0..<(width * height) {
+      let offset = i * 4
+      pixels[offset] = backgroundGray
+      pixels[offset + 1] = backgroundGray
+      pixels[offset + 2] = backgroundGray
+      pixels[offset + 3] = 255
+    }
+
+    for entry in rects {
+      let minX = max(0, Int(entry.rect.minX.rounded(.down)))
+      let minY = max(0, Int(entry.rect.minY.rounded(.down)))
+      let maxX = min(width, Int(entry.rect.maxX.rounded(.up)))
+      let maxY = min(height, Int(entry.rect.maxY.rounded(.up)))
+      guard minX < maxX, minY < maxY else { continue }
+
+      for y in minY..<maxY {
+        for x in minX..<maxX {
+          let offset = y * bytesPerRow + x * 4
+          pixels[offset] = entry.gray
+          pixels[offset + 1] = entry.gray
+          pixels[offset + 2] = entry.gray
+          pixels[offset + 3] = 255
+        }
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// Create a vertical gradient image.
   /// Top row starts at `topGray`, bottom row ends at `bottomGray`.
   static func verticalGradient(
@@ -143,6 +184,39 @@ enum TestImageFactory {
         pixels[offset] = r
         pixels[offset + 1] = g
         pixels[offset + 2] = b
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// Create a soft-edged dark radial blob on a uniform background. The edge
+  /// falloff is wide enough that per-pixel-pair gradients stay below the edge
+  /// detector's noise floor, so `CropContentAnalyzer` finds no content borders
+  /// (used to force the Vision fallback path in auto-crop tests). `center` is
+  /// in pixel coordinates with a top-left origin (row 0 = top row).
+  static func softRadialBlob(
+    width: Int,
+    height: Int,
+    backgroundGray: UInt8 = 242,
+    blobGray: UInt8 = 40,
+    center: CGPoint,
+    radius: Double,
+    falloff: Double = 40
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let distance = hypot(Double(x) - Double(center.x), Double(y) - Double(center.y))
+        let f = min(max((radius - distance) / falloff, 0), 1)
+        let gray = UInt8((Double(backgroundGray) + (Double(blobGray) - Double(backgroundGray)) * f).rounded())
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = gray
+        pixels[offset + 1] = gray
+        pixels[offset + 2] = gray
         pixels[offset + 3] = 255
       }
     }

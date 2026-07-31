@@ -21,6 +21,8 @@ struct AnnotateSettingsView: View {
   private var annotateQuickPropertiesSyncEnabled = true
   @AppStorage(PreferencesKeys.annotateCombineSaveAsEdit)
   private var annotateCombineSaveAsEdit = true
+  @AppStorage(PreferencesKeys.annotateCropSnapToEdgesEnabled)
+  private var annotateCropSnapToEdgesEnabled = true
 
   var body: some View {
     Form {
@@ -67,6 +69,15 @@ struct AnnotateSettingsView: View {
           description: L10n.PreferencesAnnotate.combineSaveAsEditDescription
         ) {
           Toggle("", isOn: $annotateCombineSaveAsEdit)
+            .labelsHidden()
+        }
+
+        SettingRow(
+          icon: CropToolbarSymbols.snapToEdges,
+          title: L10n.AnnotateUI.cropSnapToEdges,
+          description: L10n.AnnotateUI.cropSnapToEdgesDescription
+        ) {
+          Toggle("", isOn: $annotateCropSnapToEdgesEnabled)
             .labelsHidden()
         }
 

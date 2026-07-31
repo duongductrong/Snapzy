@@ -391,6 +391,16 @@ final class DrawingCanvasNSView: NSView {
       }
 
     default:
+      // Crop mode owns `A` (auto-crop to content) even if the user bound it to
+      // a tool — same precedence as Enter/Esc while cropping.
+      if state.isCropInteractionActive, !event.modifierFlags.contains(.command),
+         event.characters?.lowercased().first == "a" {
+        Task { @MainActor in
+          await state.autoCropToContent()
+        }
+        invalidateDrawing()
+        return
+      }
       // Tool shortcuts — use configured shortcuts from AnnotateShortcutManager
       if !event.modifierFlags.contains(.command),
          let char = event.characters?.lowercased().first,
@@ -795,7 +805,8 @@ final class DrawingCanvasNSView: NSView {
     // Handle crop resizing
     if isCropResizing, let handle = activeCropHandle {
       let shiftHeld = event.modifierFlags.contains(.shift)
-      handleCropResize(handle: handle, currentPoint: imagePoint, shiftHeld: shiftHeld)
+      let commandHeld = event.modifierFlags.contains(.command)
+      handleCropResize(handle: handle, currentPoint: imagePoint, shiftHeld: shiftHeld, commandHeld: commandHeld)
       Task { @MainActor in
         state.isCropResizing = true
         state.isCropShiftLocked = shiftHeld
@@ -1831,7 +1842,7 @@ final class DrawingCanvasNSView: NSView {
     return nil
   }
 
-  private func handleCropResize(handle: CropHandle, currentPoint: CGPoint, shiftHeld: Bool = false) {
+  private func handleCropResize(handle: CropHandle, currentPoint: CGPoint, shiftHeld: Bool = false, commandHeld: Bool = false) {
     var newRect = originalCropRect
 
     let minSize: CGFloat = 20
@@ -1892,6 +1903,25 @@ final class DrawingCanvasNSView: NSView {
     // Apply aspect ratio constraint if needed
     if let ratio = aspectRatio, handle != .body {
       newRect = applyAspectRatio(ratio, to: newRect, handle: handle, original: originalCropRect)
+    }
+
+    // Snap the moving edge(s) to detected content borders (CleanShot X style).
+    // Skipped while ⌘ is held (temporary override), while ⇧ aspect-lock is
+    // active, or when a fixed aspect ratio owns the rect geometry.
+    if state.isCropEdgeSnappingEnabled, !commandHeld, !shiftHeld,
+       state.cropAspectRatio == .free, let profile = state.cropEdgeProfile {
+      // Tolerance for ~10 screen px, in image points. The canvas NSView renders
+      // 1 image point as `displayScale` view px (AnnotateCanvasView passes the
+      // fit scale), and `.scaleEffect(state.zoomLevel)` is applied to the
+      // ZStack *outside* the NSView — so screen px per image point is
+      // displayScale × zoomLevel, and image points per screen px its inverse.
+      let snapTolerance = 10 / max(displayScale * state.zoomLevel, 0.0001)
+      newRect = CropEdgeSnapping.resolve(
+        handle: handle,
+        proposed: newRect,
+        targets: profile,
+        tolerance: snapTolerance
+      )
     }
 
     Task { @MainActor in
