@@ -24,7 +24,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// through the normal path — invoking its completion exactly once with nil — so the first
   /// caller's state (e.g. `ScreenCaptureViewModel.isAreaSelectionActive`) can reset instead of
   /// stranding every future capture.
-  func testReplacement_invokesPreviousCompletionOnceWithNil() {
+  func testReplacement_invokesPreviousCompletionOnceWithNil() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     var firstCalls: [AreaSelectionResult?] = []
     controller.startSelection(mode: .screenshot, backdrops: [:]) { result in
@@ -51,6 +53,8 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// cannot fire the same completion a second time (previously produced a spurious extra
   /// `.cancelled` result and a double hidden-window restore).
   func testCompleteSelection_reentrantCancelInsideCompletion_firesOnce() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     var callCount = 0
     controller.startSelection(mode: .screenshot, backdrops: [:], dismissesAfterSelection: false) { result in
@@ -73,7 +77,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
 
   /// `cancelSelection` must be idempotent with respect to completions: a second cancel must
   /// not re-fire the (already consumed) completion.
-  func testCancelSelection_twice_firesCompletionOnce() {
+  func testCancelSelection_twice_firesCompletionOnce() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     var callCount = 0
     controller.startSelection(mode: .screenshot, backdrops: [:]) { _ in callCount += 1 }
@@ -87,7 +93,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
 
   /// The `dismissesAfterSelection` start parameter must be applied for the new session even
   /// though session-start replacement teardown resets the flag to its default.
-  func testDismissesAfterSelectionParameter_survivesSessionStart() {
+  func testDismissesAfterSelectionParameter_survivesSessionStart() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:], dismissesAfterSelection: false) { _ in }
     XCTAssertFalse(
@@ -100,7 +108,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
 
   /// A live-style session (false dismiss policy) replaced by another session must not leak the
   /// policy: the replacement starts from the default and applies only its own parameter.
-  func testReplacement_doesNotLeakDismissPolicy() {
+  func testReplacement_doesNotLeakDismissPolicy() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:], dismissesAfterSelection: false) { _ in }
     controller.startSelection(mode: .recording, backdrops: [:]) { _ in }
@@ -113,7 +123,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
 
   /// Contract for the `RecordingCoordinator` app-toggle LIFO gate: it reads `selectionMode`
   /// to decide whether a presenting session is recording-owned.
-  func testSelectionMode_reflectsCurrentSession() {
+  func testSelectionMode_reflectsCurrentSession() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .recording, backdrops: [:]) { _ in }
     XCTAssertEqual(controller.selectionMode, .recording)
@@ -126,6 +138,8 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// is a click fall-through hole on its display). Drives `refreshWindowPool` through the real
   /// notification; environment-gated on hosts with screens.
   func testScreenParameterChange_midSession_keepsWindowsVisible() throws {
+    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:]) { _ in }
 

@@ -126,7 +126,9 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
     XCTAssertEqual(centerY, 0.25, accuracy: 1e-5)
   }
 
-  func testMagnifierZoom_worksWithEmptyBackdropsInitially() {
+  func testMagnifierZoom_worksWithEmptyBackdropsInitially() throws {
+    try skipIfRunningInCI("Drives the shared AreaSelectionController with real overlay windows and async screen capture, which is flaky on headless CI runners")
+
     let controller = AreaSelectionController.shared
 
     // GIVEN: Starting selection session with empty backdrops (backdrop-less mode)

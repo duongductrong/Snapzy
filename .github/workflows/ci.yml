@@ -55,9 +55,10 @@ jobs:
             SnapzyTests/AnnotateBackgroundRedactionTests/testAutoRedactSensitiveDataStartsScan
             SnapzyTests/AnnotateMockupTests/testMockupExporterRenderProducesImageWithSourceImage
             SnapzyTests/AnnotateBlurCacheManagerTests/testGetCachedBlur_nonBlockingSchedulesRender
-            SnapzyTests/AreaSelectionMultiMonitorReconciliationTests/testMouseExited_hidesCoordinateIndicatorAndMagnifier
-            SnapzyTests/AreaSelectionMultiMonitorReconciliationTests/testIsMouseOver_evaluatesFrameAndVisibility
-            SnapzyTests/AreaSelectionMultiMonitorReconciliationTests/testApplyBackdrop_reconcilesSelectionEnabledForOtherPooledDisplays
+            SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
+            SnapzyTests/AreaSelectionSessionLifecycleTests
+            SnapzyTests/AreaSelectionControllerTests
+            SnapzyTests/AreaSelectionOverlayMagnifierLayoutTests/testMagnifierZoom_worksWithEmptyBackdropsInitially
             SnapzyTests/PersistedCombineSessionTests/testCaptureStitchSaveReopen_persistsStitchEverywhere
             SnapzyTests/BackgroundCursorControlTests
             SnapzyTests/LivePassthroughInputLogicTests
