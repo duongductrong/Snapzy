@@ -109,6 +109,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 
+
+## [1.31.0-beta.3] - 2026-07-31
+
+### Features
+- : add crop edge snapping and auto-crop to content (#437) (#442) (7b861db)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.2 (4b6f434)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.2] - 2026-07-30
 
 ### Bug Fixes
