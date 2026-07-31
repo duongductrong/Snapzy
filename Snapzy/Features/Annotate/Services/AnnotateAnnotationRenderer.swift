@@ -69,22 +69,28 @@ nonisolated struct AnnotationRenderer {
     switch annotation.type {
     case .rectangle:
       context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
-      context.strokePath()
+      strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth)
 
     case .filledRectangle:
       context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
-      context.drawPath(using: .fillStroke)
+      strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth, mode: .fillStroke)
 
     case .oval:
-      context.strokeEllipse(in: annotation.bounds)
+      context.addEllipse(in: annotation.bounds)
+      strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth)
 
     case .arrow(let geometry):
-      drawArrow(geometry, strokeWidth: annotation.properties.strokeWidth, strokeColor: annotation.properties.strokeColor)
+      drawArrow(
+        geometry,
+        strokeWidth: annotation.properties.strokeWidth,
+        strokeColor: annotation.properties.strokeColor,
+        lineStyle: annotation.properties.lineStyle
+      )
 
     case .line(let start, let end):
       context.move(to: start)
       context.addLine(to: end)
-      context.strokePath()
+      strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth)
 
     case .path(let points), .highlight(let points):
       drawPath(
@@ -131,6 +137,7 @@ nonisolated struct AnnotationRenderer {
     arrowBendDirection: ArrowBendDirection = .primary,
     arrowStartHead: ArrowEndpointStyle = .none,
     arrowEndHead: ArrowEndpointStyle = .arrow,
+    lineStyle: LineDashStyle = .solid,
     rectangleCornerRadius: CGFloat = 0,
     watermarkText: String = "Snapzy",
     watermarkStyle: WatermarkStyle = .diagonal,
@@ -160,7 +167,7 @@ nonisolated struct AnnotationRenderer {
       let currentPoint = currentPath.last ?? start
       let rect = makeRect(from: start, to: currentPoint)
       context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
-      context.strokePath()
+      strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth)
 
     case .filledRectangle:
       let currentPoint = currentPath.last ?? start
@@ -168,19 +175,20 @@ nonisolated struct AnnotationRenderer {
       let resolvedFillColor = fillColor == .clear ? strokeColor.opacity(1) : fillColor
       context.setFillColor(NSColor(resolvedFillColor).cgColor)
       context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
-      context.drawPath(using: .fillStroke)
+      strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth, mode: .fillStroke)
       context.setFillColor(NSColor.clear.cgColor)
 
     case .oval:
       let currentPoint = currentPath.last ?? start
       let rect = makeRect(from: start, to: currentPoint)
-      context.strokeEllipse(in: rect)
+      context.addEllipse(in: rect)
+      strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth)
 
     case .line:
       let currentPoint = currentPath.last ?? start
       context.move(to: start)
       context.addLine(to: currentPoint)
-      context.strokePath()
+      strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth)
 
     case .arrow:
       let currentPoint = currentPath.last ?? start
@@ -209,7 +217,8 @@ nonisolated struct AnnotationRenderer {
           endHead: arrowEndHead
         ),
         strokeWidth: strokeWidth,
-        strokeColor: strokeColor
+        strokeColor: strokeColor,
+        lineStyle: lineStyle
       )
 
     case .watermark:
@@ -266,7 +275,24 @@ nonisolated struct AnnotationRenderer {
     )
   }
 
-  private func drawArrow(_ geometry: ArrowGeometry, strokeWidth: CGFloat, strokeColor: Color) {
+  /// Strokes the current path, applying the dash pattern for `lineStyle`.
+  /// Dash state is always reset so later drawing (counter, text, blur) stays solid.
+  private func strokeCurrentPath(
+    lineStyle: LineDashStyle,
+    strokeWidth: CGFloat,
+    mode: CGPathDrawingMode = .stroke
+  ) {
+    context.setLineDash(phase: 0, lengths: lineStyle.dashLengths(for: strokeWidth))
+    context.drawPath(using: mode)
+    context.setLineDash(phase: 0, lengths: [])
+  }
+
+  private func drawArrow(
+    _ geometry: ArrowGeometry,
+    strokeWidth: CGFloat,
+    strokeColor: Color,
+    lineStyle: LineDashStyle = .solid
+  ) {
     guard geometry.isRenderable else { return }
 
     switch geometry.arrowType {
@@ -284,8 +310,11 @@ nonisolated struct AnnotationRenderer {
       context.setLineJoin(.round)
       context.setLineCap(.round)
 
+      context.setLineDash(phase: 0, lengths: lineStyle.dashLengths(for: strokeWidth))
       context.addPath(geometry.path())
       context.strokePath()
+      // Endpoint decorations (arrowhead, circle) always stay solid.
+      context.setLineDash(phase: 0, lengths: [])
 
       // Independent endpoint decorations (None / Arrow / Circle) at each tip.
       drawArrowEndpoint(

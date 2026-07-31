@@ -1467,6 +1467,7 @@ final class DrawingCanvasNSView: NSView {
         arrowBendDirection: state.arrowBendDirection,
         arrowStartHead: state.arrowStartHead,
         arrowEndHead: state.arrowEndHead,
+        lineStyle: previewProperties.lineStyle,
         rectangleCornerRadius: previewProperties.cornerRadius,
         watermarkText: state.watermarkText,
         watermarkStyle: previewProperties.watermarkStyle,

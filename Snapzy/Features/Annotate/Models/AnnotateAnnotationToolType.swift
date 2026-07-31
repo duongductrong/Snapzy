@@ -160,4 +160,13 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
       return false
     }
   }
+
+  var supportsQuickLineStyle: Bool {
+    switch self {
+    case .rectangle, .filledRectangle, .oval, .arrow, .line:
+      return true
+    case .selection, .crop, .text, .highlighter, .blur, .counter, .watermark, .pencil, .spotlight, .mockup:
+      return false
+    }
+  }
 }

@@ -1794,6 +1794,10 @@ private struct InlineAreaPropertiesBar: View {
             )
           }
 
+          if state.quickPropertiesSupportsLineStyle {
+            InlineAreaLineStylePicker(selection: state.quickLineStyleBinding)
+          }
+
           if state.quickPropertiesSupportsWatermark {
             InlineAreaSliderControl(
               title: L10n.AnnotateUI.watermarkOpacity,
@@ -2604,6 +2608,36 @@ private struct InlineAreaArrowBendControl: View {
       .buttonStyle(.plain)
       .help("\(L10n.AnnotateUI.flipArrowBend): \(bendDirection.displayName)")
       .accessibilityLabel(L10n.AnnotateUI.flipArrowBend)
+    }
+  }
+}
+
+private struct InlineAreaLineStylePicker: View {
+  @Binding var selection: LineDashStyle
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.lineStyle) {
+      HStack(spacing: 4) {
+        ForEach(LineDashStyle.allCases) { style in
+          Button {
+            selection = style
+          } label: {
+            LineStyleIcon(style: style)
+              .foregroundColor(selection == style ? InlineAreaChrome.itemSelectedForeground : InlineAreaChrome.secondaryText)
+              .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
+              .background(
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .fill(selection == style ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .stroke(selection == style ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder, lineWidth: 1)
+              )
+          }
+          .buttonStyle(.plain)
+          .help(style.displayName)
+        }
+      }
     }
   }
 }

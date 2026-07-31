@@ -64,6 +64,7 @@ final class AnnotationSessionStoreTests: XCTestCase {
     }
     XCTAssertEqual(geometry.style, .curvedRight)
     XCTAssertEqual(geometry.bendDirection, .alternate)
+    XCTAssertEqual(loaded.annotations[1].properties.lineStyle, .dashed)
     guard case .blur(.gaussian) = loaded.annotations[2].type else {
       return XCTFail("Expected gaussian blur annotation")
     }
@@ -164,7 +165,7 @@ final class AnnotationSessionStoreTests: XCTestCase {
           id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
           type: .arrow(arrowGeometry),
           bounds: arrowGeometry.bounds(),
-          properties: AnnotationProperties(strokeColor: .red, strokeWidth: 5)
+          properties: AnnotationProperties(strokeColor: .red, strokeWidth: 5, lineStyle: .dashed)
         ),
         AnnotationItem(
           id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,

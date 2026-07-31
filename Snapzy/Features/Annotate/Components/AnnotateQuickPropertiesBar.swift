@@ -176,6 +176,7 @@ struct AnnotateQuickPropertiesBar: View {
     let showBlurType = state.quickPropertiesSupportsBlurType
     let showStrokeWidth = state.quickPropertiesSupportsStrokeWidth
     let showCornerRadius = state.quickPropertiesSupportsCornerRadius
+    let showLineStyle = state.quickPropertiesSupportsLineStyle
     let showArrowStyle = state.quickPropertiesSupportsArrowStyle
     let hasEditableStyleControls = showStrokeColor
       || showFill
@@ -185,6 +186,7 @@ struct AnnotateQuickPropertiesBar: View {
       || showBlurType
       || showStrokeWidth
       || showCornerRadius
+      || showLineStyle
       || showArrowStyle
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
@@ -199,7 +201,8 @@ struct AnnotateQuickPropertiesBar: View {
     let hasBeforeSpotlightOpacity = hasBeforeBlurType || showBlurType
     let hasBeforeStrokeWidth = hasBeforeSpotlightOpacity || state.quickPropertiesSupportsSpotlightOpacity
     let hasBeforeCornerRadius = hasBeforeStrokeWidth || showStrokeWidth
-    let hasBeforeArrowStyle = hasBeforeCornerRadius || showCornerRadius
+    let hasBeforeLineStyle = hasBeforeCornerRadius || showCornerRadius
+    let hasBeforeArrowStyle = hasBeforeLineStyle || showLineStyle
 
     return HStack(spacing: density.rowSpacing) {
       contextChip(density: density)
@@ -428,6 +431,19 @@ struct AnnotateQuickPropertiesBar: View {
         QuickCornerRadiusControl(
           value: state.quickCornerRadiusBinding,
           sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showLineStyle,
+        isEnabled: state.quickPropertiesSupportsLineStyle,
+        showsLeadingDivider: hasBeforeLineStyle,
+        width: nil
+      ) {
+        QuickLineStyleControl(
+          selectedStyle: state.quickLineStyleBinding,
+          buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
       }
@@ -1837,6 +1853,41 @@ private struct QuickArrowStyleControl: View {
           }
           .buttonStyle(.plain)
           .help(head.displayName)
+        }
+      }
+    }
+  }
+}
+
+private struct QuickLineStyleControl: View {
+  @Binding var selectedStyle: LineDashStyle
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.lineStyle, spacing: groupSpacing) {
+      HStack(spacing: 5) {
+        ForEach(LineDashStyle.allCases) { style in
+          Button {
+            selectedStyle = style
+          } label: {
+            LineStyleIcon(style: style)
+              .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+              .frame(width: buttonWidth, height: 24)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: 7)
+                  .stroke(
+                    selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
+                    lineWidth: 1
+                  )
+              )
+          }
+          .buttonStyle(.plain)
+          .help(style.displayName)
         }
       }
     }

@@ -1675,6 +1675,60 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   @MainActor
+  func testLineStyleDefaultAppliesAcrossLineStyleTools() {
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    state.activateTool(.rectangle)
+
+    state.quickLineStyleBinding.wrappedValue = .dashed
+
+    XCTAssertEqual(state.annotationCreationProperties(for: .rectangle).lineStyle, .dashed)
+    XCTAssertEqual(state.annotationCreationProperties(for: .filledRectangle).lineStyle, .dashed)
+    XCTAssertEqual(state.annotationCreationProperties(for: .oval).lineStyle, .dashed)
+    XCTAssertEqual(state.annotationCreationProperties(for: .line).lineStyle, .dashed)
+    XCTAssertEqual(state.annotationCreationProperties(for: .arrow).lineStyle, .dashed)
+    // Freehand tools are not stroked geometry and stay solid.
+    XCTAssertEqual(state.annotationCreationProperties(for: .pencil).lineStyle, .solid)
+
+    state.activateTool(.line)
+    XCTAssertEqual(state.quickLineStyleBinding.wrappedValue, .dashed)
+  }
+
+  @MainActor
+  func testLineStyleBindingAppliesToSelectedShapeWithUndo() throws {
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    let annotation = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 0, y: 0, width: 80, height: 40),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [annotation]
+    state.setSelectedAnnotationIds([annotation.id])
+
+    state.quickLineStyleBinding.wrappedValue = .dotted
+
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first).properties.lineStyle, .dotted)
+    XCTAssertTrue(state.canUndo)
+
+    state.undo()
+
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first).properties.lineStyle, .solid)
+  }
+
+  @MainActor
+  func testLineStyleControlHiddenForNonClassicArrowTool() {
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    state.activateTool(.rectangle)
+    XCTAssertTrue(state.quickPropertiesSupportsLineStyle)
+
+    state.activateTool(.arrow)
+    state.setActiveArrowType(.tapered)
+    XCTAssertFalse(state.quickPropertiesSupportsLineStyle)
+
+    state.setActiveArrowType(.classic)
+    XCTAssertTrue(state.quickPropertiesSupportsLineStyle)
+  }
+
+  @MainActor
   func testFontSizeDefaultAppliesAcrossTextAndWatermarkTools() {
     let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
     state.activateTool(.text)

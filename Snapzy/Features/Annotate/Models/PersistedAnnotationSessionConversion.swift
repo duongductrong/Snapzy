@@ -55,6 +55,7 @@ struct PersistedAnnotationProperties: Codable, Equatable {
   var spotlightOpacity: CGFloat?
   var textPresentation: String?
   var calloutTailTarget: CGPoint?
+  var lineStyle: String?
 
   init(properties: AnnotationProperties) {
     strokeColor = RGBAColor(color: properties.strokeColor) ?? RGBAColor(red: 1, green: 0, blue: 0, alpha: 1)
@@ -69,6 +70,7 @@ struct PersistedAnnotationProperties: Codable, Equatable {
     spotlightOpacity = properties.spotlightOpacity
     textPresentation = properties.textPresentation.rawValue
     calloutTailTarget = properties.calloutTailTarget
+    lineStyle = properties.lineStyle.rawValue
   }
 
   var annotationProperties: AnnotationProperties {
@@ -76,6 +78,7 @@ struct PersistedAnnotationProperties: Codable, Equatable {
       strokeColor: strokeColor.color,
       fillColor: fillColor.color,
       strokeWidth: strokeWidth,
+      lineStyle: lineStyle.flatMap(LineDashStyle.init(rawValue:)) ?? .solid,
       cornerRadius: cornerRadius,
       fontSize: fontSize,
       fontName: fontName,

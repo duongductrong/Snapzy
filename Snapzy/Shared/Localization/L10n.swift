@@ -5270,6 +5270,26 @@ nonisolated enum L10n {
       defaultValue: "Circle",
       comment: "Arrow endpoint style drawn as a filled circle"
     )
+    static let lineStyle = string(
+      "annotate.line-style",
+      defaultValue: "Line Style",
+      comment: "Title for the line dash style picker"
+    )
+    static let lineStyleSolid = string(
+      "annotate.line-style-solid",
+      defaultValue: "Solid",
+      comment: "Line style drawn as a continuous stroke"
+    )
+    static let lineStyleDashed = string(
+      "annotate.line-style-dashed",
+      defaultValue: "Dashed",
+      comment: "Line style drawn as dashes"
+    )
+    static let lineStyleDotted = string(
+      "annotate.line-style-dotted",
+      defaultValue: "Dotted",
+      comment: "Line style drawn as dots"
+    )
     static let xAxis = string(
       "annotate.x-axis",
       defaultValue: "X Axis",

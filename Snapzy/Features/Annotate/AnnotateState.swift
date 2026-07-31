@@ -68,6 +68,7 @@ final class AnnotateState: ObservableObject {
     var arrowBendDirection: String?
     var arrowStartHead: String?
     var arrowEndHead: String?
+    var lineStyle: String?
   }
 
   private struct PersistedAnnotationProperties: Codable {
@@ -81,6 +82,7 @@ final class AnnotateState: ObservableObject {
     var rotationDegrees: CGFloat
     var watermarkStyle: String
     var spotlightOpacity: CGFloat?
+    var lineStyle: String?
 
     init?(_ properties: AnnotationProperties) {
       guard let strokeColor = RGBAColor(color: properties.strokeColor),
@@ -98,6 +100,7 @@ final class AnnotateState: ObservableObject {
       self.rotationDegrees = properties.rotationDegrees
       self.watermarkStyle = properties.watermarkStyle.rawValue
       self.spotlightOpacity = properties.spotlightOpacity
+      self.lineStyle = properties.lineStyle.rawValue
     }
 
     var annotationProperties: AnnotationProperties {
@@ -105,6 +108,7 @@ final class AnnotateState: ObservableObject {
         strokeColor: strokeColor.color,
         fillColor: fillColor.color,
         strokeWidth: strokeWidth,
+        lineStyle: lineStyle.flatMap(LineDashStyle.init(rawValue:)) ?? .solid,
         cornerRadius: cornerRadius,
         fontSize: fontSize,
         fontName: fontName,
@@ -3237,6 +3241,7 @@ final class AnnotateState: ObservableObject {
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
+    lineStyle: LineDashStyle? = nil,
     recordsUndo: Bool = false
   ) {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
@@ -3256,7 +3261,8 @@ final class AnnotateState: ObservableObject {
       opacity: opacity,
       rotationDegrees: rotationDegrees,
       watermarkStyle: watermarkStyle,
-      spotlightOpacity: spotlightOpacity
+      spotlightOpacity: spotlightOpacity,
+      lineStyle: lineStyle
     ) else { return }
 
     if recordsUndo {
@@ -3315,6 +3321,9 @@ final class AnnotateState: ObservableObject {
     if let spotlightOpacity = spotlightOpacity {
       annotations[index].properties.spotlightOpacity = AnnotationProperties.clampedSpotlightOpacity(spotlightOpacity)
     }
+    if let lineStyle = lineStyle {
+      annotations[index].properties.lineStyle = lineStyle
+    }
 
     // Spotlight dimming paints the full canvas — its opacity edits need a full
     // redraw; everything else is scoped to the edited annotation's bounds.
@@ -3364,7 +3373,8 @@ final class AnnotateState: ObservableObject {
     opacity: CGFloat? = nil,
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
-    spotlightOpacity: CGFloat? = nil
+    spotlightOpacity: CGFloat? = nil,
+    lineStyle: LineDashStyle? = nil
   ) -> Bool {
     let properties = annotation.properties
     let colorUpdate = normalizedColorUpdate(
@@ -3407,6 +3417,10 @@ final class AnnotateState: ObservableObject {
     }
     if let spotlightOpacity,
        properties.spotlightOpacity != AnnotationProperties.clampedSpotlightOpacity(spotlightOpacity) {
+      return true
+    }
+    if let lineStyle,
+       properties.lineStyle != lineStyle {
       return true
     }
     return false
@@ -3911,6 +3925,26 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  private func rememberSharedAnnotationLineStyle(_ lineStyle: LineDashStyle) {
+    sharedAnnotationParameterDefaults.lineStyle = lineStyle.rawValue
+    persistSharedAnnotationParameterDefaults()
+
+    for tool in AnnotationToolType.allCases where tool.supportsQuickLineStyle {
+      updateDefaultAnnotationProperties(for: tool, lineStyle: lineStyle)
+    }
+  }
+
+  private func rememberAnnotationLineStyle(_ lineStyle: LineDashStyle, for tool: AnnotationToolType?) {
+    guard !isQuickPropertiesSyncEnabled else {
+      rememberSharedAnnotationLineStyle(lineStyle)
+      return
+    }
+
+    if let tool, tool.supportsQuickLineStyle {
+      updateDefaultAnnotationProperties(for: tool, lineStyle: lineStyle)
+    }
+  }
+
   private func rememberAnnotationFontSize(_ fontSize: CGFloat, for tool: AnnotationToolType?) {
     guard !isQuickPropertiesSyncEnabled else {
       rememberSharedAnnotationFontSize(fontSize)
@@ -4041,6 +4075,10 @@ final class AnnotateState: ObservableObject {
       properties.cornerRadius = sharedProperties.cornerRadius
     }
 
+    if tool.supportsQuickLineStyle {
+      properties.lineStyle = sharedProperties.lineStyle
+    }
+
     if tool == .text || tool == .watermark {
       properties.fontSize = sharedProperties.fontSize
     }
@@ -4091,6 +4129,11 @@ final class AnnotateState: ObservableObject {
         properties.rotationDegrees = watermarkRotationDegrees
       }
     }
+
+    if tool == nil || tool?.supportsQuickLineStyle == true,
+       let lineStyle = defaults.lineStyle.flatMap(LineDashStyle.init(rawValue:)) {
+      properties.lineStyle = lineStyle
+    }
   }
 
   func annotationCreationProperties(for tool: AnnotationToolType) -> AnnotationProperties {
@@ -4129,7 +4172,8 @@ final class AnnotateState: ObservableObject {
     opacity: CGFloat? = nil,
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
-    spotlightOpacity: CGFloat? = nil
+    spotlightOpacity: CGFloat? = nil,
+    lineStyle: LineDashStyle? = nil
   ) {
     var properties = defaultAnnotationProperties(for: tool)
 
@@ -4168,6 +4212,9 @@ final class AnnotateState: ObservableObject {
     }
     if let spotlightOpacity = spotlightOpacity {
       properties.spotlightOpacity = AnnotationProperties.clampedSpotlightOpacity(spotlightOpacity)
+    }
+    if let lineStyle = lineStyle {
+      properties.lineStyle = lineStyle
     }
 
     let sanitized = sanitizedAnnotationProperties(properties, for: tool)
@@ -4281,6 +4328,7 @@ final class AnnotateState: ObservableObject {
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
+    lineStyle: LineDashStyle? = nil,
     recordsUndo: Bool = false,
     matching predicate: ((AnnotationType) -> Bool)? = nil
   ) -> Bool {
@@ -4300,7 +4348,8 @@ final class AnnotateState: ObservableObject {
         opacity: opacity,
         rotationDegrees: rotationDegrees,
         watermarkStyle: watermarkStyle,
-        spotlightOpacity: spotlightOpacity
+        spotlightOpacity: spotlightOpacity,
+        lineStyle: lineStyle
       )
     })
 
@@ -4324,7 +4373,8 @@ final class AnnotateState: ObservableObject {
         opacity: opacity,
         rotationDegrees: rotationDegrees,
         watermarkStyle: watermarkStyle,
-        spotlightOpacity: spotlightOpacity
+        spotlightOpacity: spotlightOpacity,
+        lineStyle: lineStyle
       )
     }
     return true
@@ -4850,6 +4900,16 @@ final class AnnotateState: ObservableObject {
     return quickPropertiesTool?.supportsQuickStrokeWidth ?? false
   }
 
+  /// Dash styles apply to stroked geometry only; the arrow tool qualifies just
+  /// for the classic (stroked) display type.
+  var quickPropertiesSupportsLineStyle: Bool {
+    if !quickPropertiesSelectionAnnotations.isEmpty {
+      return quickSelectionAnySupport { $0.supportsQuickLineStyle }
+    }
+    guard let tool = quickPropertiesTool, tool.supportsQuickLineStyle else { return false }
+    return tool != .arrow || activeArrowType == .classic
+  }
+
   var quickStrokeWidthLabel: String {
     quickStrokeWidthUsesSizeLabel ? L10n.Common.size : L10n.Common.stroke
   }
@@ -5016,6 +5076,26 @@ final class AnnotateState: ObservableObject {
           matching: { $0.toolType.supportsQuickCornerRadius }
         ) {
           self.rememberAnnotationCornerRadius(clampedRadius, for: self.quickPropertiesTool)
+        }
+      }
+    )
+  }
+
+  var quickLineStyleBinding: Binding<LineDashStyle> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return .solid }
+        return self.quickSelectionTargets(matching: { $0.supportsQuickLineStyle }).first?.properties.lineStyle
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).lineStyle
+      },
+      set: { [weak self] newStyle in
+        guard let self else { return }
+        if !self.updateQuickSelectionProperties(
+          lineStyle: newStyle,
+          recordsUndo: true,
+          matching: { $0.supportsQuickLineStyle }
+        ) {
+          self.rememberAnnotationLineStyle(newStyle, for: self.quickPropertiesTool)
         }
       }
     )

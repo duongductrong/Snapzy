@@ -493,6 +493,43 @@ nonisolated enum ArrowEndpointStyle: String, CaseIterable, Identifiable, Equatab
   }
 }
 
+/// Stroke dash pattern for line-based annotations (shapes, lines, classic arrows).
+nonisolated enum LineDashStyle: String, CaseIterable, Identifiable, Equatable, Codable {
+  case solid
+  case dashed
+  case dotted
+
+  var id: String { rawValue }
+
+  var displayName: String {
+    switch self {
+    case .solid: L10n.AnnotateUI.lineStyleSolid
+    case .dashed: L10n.AnnotateUI.lineStyleDashed
+    case .dotted: L10n.AnnotateUI.lineStyleDotted
+    }
+  }
+
+  /// Dash segment lengths scaled to the annotation's stroke width.
+  /// Empty means solid; a zero-length segment with round caps renders as a dot.
+  func dashLengths(for strokeWidth: CGFloat) -> [CGFloat] {
+    let width = max(strokeWidth, 1)
+    switch self {
+    case .solid: return []
+    case .dashed: return [width * 3, width * 2]
+    case .dotted: return [0, width * 2]
+    }
+  }
+
+  /// Fixed-size dash pattern used by toolbar icons.
+  var iconDash: [CGFloat] {
+    switch self {
+    case .solid: []
+    case .dashed: [4, 2.5]
+    case .dotted: [0.1, 3]
+    }
+  }
+}
+
 nonisolated struct ArrowGeometry: Equatable {
   var start: CGPoint
   var end: CGPoint
@@ -1253,6 +1290,19 @@ nonisolated enum AnnotationType: Equatable {
   var supportsQuickStrokeWidth: Bool {
     supportsQuickPropertiesBar && toolType.supportsQuickStrokeWidth
   }
+
+  /// Dash styles apply to stroked geometry; tapered/outlined arrows are filled
+  /// silhouettes, so only the classic arrow qualifies.
+  var supportsQuickLineStyle: Bool {
+    switch self {
+    case .rectangle, .filledRectangle, .oval, .line:
+      return true
+    case .arrow(let geometry):
+      return geometry.arrowType == .classic
+    default:
+      return false
+    }
+  }
 }
 
 /// Visual properties for an annotation
@@ -1262,6 +1312,7 @@ nonisolated struct AnnotationProperties: Equatable {
   var strokeColor: Color
   var fillColor: Color
   var strokeWidth: CGFloat
+  var lineStyle: LineDashStyle
   var cornerRadius: CGFloat
   var fontSize: CGFloat
   var fontName: String
@@ -1276,6 +1327,7 @@ nonisolated struct AnnotationProperties: Equatable {
     strokeColor: Color = .red,
     fillColor: Color = .clear,
     strokeWidth: CGFloat = 3,
+    lineStyle: LineDashStyle = .solid,
     cornerRadius: CGFloat = 0,
     fontSize: CGFloat = 16,
     fontName: String = "SF Pro",
@@ -1289,6 +1341,7 @@ nonisolated struct AnnotationProperties: Equatable {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
     self.strokeWidth = strokeWidth
+    self.lineStyle = lineStyle
     self.cornerRadius = cornerRadius
     self.fontSize = fontSize
     self.fontName = fontName
