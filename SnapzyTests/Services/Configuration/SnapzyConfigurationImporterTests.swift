@@ -448,4 +448,153 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertTrue(result.hasErrors)
     XCTAssertEqual(store.iconStyle, originalStyle)
   }
+
+  // MARK: - Custom OCR models
+
+  func testImportAppliesCustomOCRModelsAndClearsAPIKeyFlag() throws {
+    let defaults = UserDefaultsFactory.make()
+    let keychain = FakeOCRKeychainStore()
+    let id = UUID().uuidString
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "[{\\"id\\":\\"\(id)\\",\\"name\\":\\"My API\\",\\"baseURL\\":\\"https://api.example.com\\",\\"modelIdentifier\\":\\"test-model\\",\\"hasAPIKey\\":true}]"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults, keychainStore: keychain)
+
+    XCTAssertFalse(result.hasErrors)
+    let data = try XCTUnwrap(defaults.data(forKey: PreferencesKeys.ocrCustomModels))
+    let models = try JSONDecoder().decode([CustomOCRModel].self, from: data)
+    XCTAssertEqual(models.count, 1)
+    XCTAssertEqual(models.first?.id.uuidString, id)
+    XCTAssertEqual(models.first?.name, "My API")
+    XCTAssertEqual(models.first?.baseURL, "https://api.example.com")
+    XCTAssertEqual(models.first?.modelIdentifier, "test-model")
+    // API keys never travel in config files.
+    XCTAssertEqual(models.first?.hasAPIKey, false)
+  }
+
+  func testImportCustomOCRModelsReplacesExistingList() throws {
+    let defaults = UserDefaultsFactory.make()
+    let keychain = FakeOCRKeychainStore()
+    let existing = CustomOCRModel(name: "Old", baseURL: "https://old.test", modelIdentifier: "old")
+    defaults.set(try JSONEncoder().encode([existing]), forKey: PreferencesKeys.ocrCustomModels)
+    let id = UUID().uuidString
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "[{\\"id\\":\\"\(id)\\",\\"name\\":\\"New\\",\\"baseURL\\":\\"https://new.test\\",\\"modelIdentifier\\":\\"new\\"}]"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults, keychainStore: keychain)
+
+    XCTAssertFalse(result.hasErrors)
+    let data = try XCTUnwrap(defaults.data(forKey: PreferencesKeys.ocrCustomModels))
+    let models = try JSONDecoder().decode([CustomOCRModel].self, from: data)
+    XCTAssertEqual(models.map(\.name), ["New"])
+  }
+
+  func testImportCustomOCRModelsDeletesKeychainKeysForDroppedModels() throws {
+    let defaults = UserDefaultsFactory.make()
+    let keychain = FakeOCRKeychainStore()
+    let dropped = CustomOCRModel(name: "Old", baseURL: "https://old.test", modelIdentifier: "old")
+    defaults.set(try JSONEncoder().encode([dropped]), forKey: PreferencesKeys.ocrCustomModels)
+    keychain.seedKey("sk-old", for: dropped.id)
+    let id = UUID().uuidString
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "[{\\"id\\":\\"\(id)\\",\\"name\\":\\"New\\",\\"baseURL\\":\\"https://new.test\\",\\"modelIdentifier\\":\\"new\\"}]"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults, keychainStore: keychain)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(keychain.deletedIDs, [dropped.id])
+    XCTAssertNil(keychain.readKey(for: dropped.id))
+  }
+
+  func testImportCustomOCRModelsReconcilesAPIKeyFlagWithKeychain() throws {
+    let defaults = UserDefaultsFactory.make()
+    let keychain = FakeOCRKeychainStore()
+    // The kept id survives the replace and already has a key on this machine.
+    let keptID = UUID()
+    keychain.seedKey("sk-kept", for: keptID)
+    let freshID = UUID()
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "[{\\"id\\":\\"\(keptID.uuidString)\\",\\"name\\":\\"Kept\\",\\"baseURL\\":\\"https://k.test\\",\\"modelIdentifier\\":\\"k\\"},{\\"id\\":\\"\(freshID.uuidString)\\",\\"name\\":\\"Fresh\\",\\"baseURL\\":\\"https://f.test\\",\\"modelIdentifier\\":\\"f\\",\\"hasAPIKey\\":true}]"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults, keychainStore: keychain)
+
+    XCTAssertFalse(result.hasErrors)
+    let data = try XCTUnwrap(defaults.data(forKey: PreferencesKeys.ocrCustomModels))
+    let models = try JSONDecoder().decode([CustomOCRModel].self, from: data)
+    XCTAssertEqual(models.first { $0.id == keptID }?.hasAPIKey, true)
+    // "hasAPIKey":true in the file does not import — no key exists locally.
+    XCTAssertEqual(models.first { $0.id == freshID }?.hasAPIKey, false)
+  }
+
+  func testImportRejectsMalformedCustomOCRModelsJSON() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "not json"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(result.appliedChangeCount, 0)
+    XCTAssertNil(defaults.data(forKey: PreferencesKeys.ocrCustomModels))
+  }
+
+  func testImportRejectsCustomOCRModelWithEmptyFields() {
+    let defaults = UserDefaultsFactory.make()
+    let id = UUID().uuidString
+    let source = """
+    schema_version = 1
+
+    [capture.ocr]
+    custom_models = "[{\\"id\\":\\"\(id)\\",\\"name\\":\\"My API\\",\\"baseURL\\":\\"\\",\\"modelIdentifier\\":\\"test-model\\"}]"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(result.appliedChangeCount, 0)
+    XCTAssertNil(defaults.data(forKey: PreferencesKeys.ocrCustomModels))
+  }
+
+  func testExportIncludesCustomOCRModelsAsJSON() throws {
+    let defaults = UserDefaultsFactory.make()
+    let model = CustomOCRModel(
+      name: "My API",
+      baseURL: "https://api.example.com",
+      modelIdentifier: "test-model",
+      prompt: "Read text",
+      hasAPIKey: true
+    )
+    defaults.set(try JSONEncoder().encode([model]), forKey: PreferencesKeys.ocrCustomModels)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+
+    let json = try XCTUnwrap(document.value(at: "capture", "ocr", "custom_models")?.stringValue)
+    let exported = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(json.utf8)) as? [[String: Any]])
+    XCTAssertEqual(exported.count, 1)
+    XCTAssertEqual(exported.first?["id"] as? String, model.id.uuidString)
+    XCTAssertEqual(exported.first?["name"] as? String, "My API")
+    // The exported payload is model metadata only — never key material.
+    XCTAssertNil(exported.first?["apiKey"])
+  }
 }

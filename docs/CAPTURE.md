@@ -76,7 +76,7 @@ flowchart TD
     N --> O["saveImage()/saveProcessedImage()"]
     O --> P["PostCaptureActionHandler"]
 
-    L --> Q0["Show OCR effect"]
+    L --> Q0["Show menu bar processing spinner"]
     Q0 --> Q["QRCodeService.detect() + OCRService.recognizeText()"]
     Q --> R["Copy recognized text / QR payloads to NSPasteboard as plain text"]
 
@@ -129,10 +129,12 @@ flowchart TD
 
 ### OCR and QR notes
 
-- OCR is the only capture path that does not create a file; it captures a `CGImage`, optionally shows a lightweight OCR effect while Vision work runs, then copies text/QR payloads to the pasteboard as plain text.
-- The engine is Vision `VNRecognizeTextRequest` only (`OCREngine.vision`, `.accurate` level). `OCRService` runs per-language profiles (`VisionOCRProfile`: en, vi, es, ru, fr, de, ja, ko, zh-Hans, zh-Hant, plus code/dense-document/recovery profiles), then contrast-enhanced and vertical-CJK recovery passes, picking the best candidate by confidence (diacritic-aware for Vietnamese).
+- OCR is the only capture path that does not create a file; it captures a `CGImage`, shows a menu bar processing spinner (`AppStatusBarController.setProcessing`) while recognition runs, then copies text/QR payloads to the pasteboard as plain text.
+- Recognition is routed by `OCRModelResolver` (from the persisted selection, `ocr.selectedModel`) to an `OCRProvider` for the active model: `VisionOCRProvider` (built-in Apple Vision, default), `PPOCRProvider` (downloaded PP-OCRv6 model running det+rec inference on ONNX Runtime), or `RemoteOCRProvider` (custom OpenAI-compatible chat-completions endpoint, base64 JPEG, 60s timeout). `OCREngine` is `vision` / `ppOCR` / `remote`.
+- The built-in engine is Vision `VNRecognizeTextRequest` (`OCREngine.vision`, `.accurate` level). `OCRService` runs per-language profiles (`VisionOCRProfile`: en, vi, es, ru, fr, de, ja, ko, zh-Hans, zh-Hant, plus code/dense-document/recovery profiles), then contrast-enhanced and vertical-CJK recovery passes, picking the best candidate by confidence (diacritic-aware for Vietnamese).
 - Narrow vertical CJK OCR uses a constrained recovery path inside `OCRService`: if normal Vision profiles and contrast recovery find no usable text, upright CJK glyph rows are normalized into a horizontal recovery image (`VerticalCJKTextNormalizer`) before retrying Vision. This keeps horizontal OCR unchanged while improving traditional vertical text layouts.
-- The OCR effect is controlled by `PreferencesKeys.ocrScanningOverlayEnabled` from Capture → Screenshot → OCR and is enabled by default.
+- Models are managed under Settings → Capture → OCR → OCR Model (see [`PREFERENCES.md`](PREFERENCES.md)). Downloadable PP-OCRv6 Tiny/Small/Medium install on demand from the official PaddleOCR repos (ONNX files from HuggingFace, dictionary from GitHub) into `Application Support/Snapzy/OCRModels/<id>/` — not bundled, so the default install size is unchanged; ONNX files are sha256-verified and downloads support progress/cancel/retry/remove. Custom endpoints (name, base URL, model identifier, optional prompt) are JSON-persisted in `ocr.customModels`; the optional API key lives in the macOS Keychain (service `com.trongduong.snapzy.ocr`) and is never exported.
+- Only one model is active, and uninstalled models are not selectable. An unavailable or removed selection resolves to built-in Vision and is persisted back (`OCRModelResolver`); at launch `OCRModelStore.validateInstalledModelsOnLaunch()` additionally prunes persisted installs whose files are missing on disk and resets the selection when it referenced a pruned model. If model files disappear mid-session, the router catches `PPOCRError.modelFilesMissing`, marks the model not-installed (`OCRModelStore.markMissing`), persists built-in, and retries the recognition via Vision.
 - QR detection (`QRCodeService`, `VNDetectBarcodesRequest`) runs as local Vision work alongside OCR where possible, with capture/processing duration logged for latency checks. `OCRQRPayloadComposer` merges deduped QR payloads into the clipboard text, skipping payloads already contained in the OCR text.
 - QR payload handling is passive by design: Snapzy does not open decoded URLs, perform network requests, load WebViews, execute processes, or write QR payloads as file URL pasteboard items.
 - Detected web links (NSDataDetector, max 3, http/https only) optionally surface in a floating clickable `OCRLinkPromptManager` panel (10s auto-dismiss) — pref `ocrLinkDetectionEnabled`, default on.
@@ -170,7 +172,8 @@ flowchart TD
 | `Snapzy/Services/Capture/ActiveWindowResolver.swift` | AX focused-window resolution for active-window capture |
 | `Snapzy/Services/Capture/SmartElement/` | Standalone Smart Element overlay session, query service seams, capture performer |
 | `Snapzy/Services/Capture/AXElementInspector.swift` | AX role allow/deny lists, parent-chain walk to the meaningful element, coordinate flip |
-| `Snapzy/Services/Media/OCRService.swift` | Vision OCR orchestration: normalization, multi-profile passes, recovery paths, scoring |
+| `Snapzy/Services/Media/OCRService.swift` | OCR routing via `OCRModelResolver` + Vision orchestration: normalization, multi-profile passes, recovery paths, scoring |
+| `Snapzy/Services/Media/OCR/` | `OCRProvider` engines (Vision, PP-OCR det+rec on ONNX Runtime, remote OpenAI-compatible), downloadable model catalog/store/download (`OCR/Models/`), custom endpoint persistence |
 | `Snapzy/Services/Media/QRCodeService.swift` | Local QR payload detection for OCR capture |
 | `Snapzy/Services/Media/ForegroundCutoutService.swift` | Vision subject-mask cutout + safe auto-crop policy |
 | `Snapzy/Services/Wallpaper/DesktopIconManager.swift` | SCK content-filter exclusion to hide desktop icons/widgets at capture |

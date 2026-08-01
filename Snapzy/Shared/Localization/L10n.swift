@@ -3049,6 +3049,244 @@ nonisolated enum L10n {
       defaultValue: "Offer to open web links found in captured text",
       comment: "Capture preferences setting description"
     )
+
+    // MARK: - OCR Model
+
+    static let ocrModelSection = string(
+      "preferences-capture.ocr-model-section",
+      defaultValue: "OCR Model",
+      comment: "Capture preferences section title for OCR model selection and management"
+    )
+    static let ocrModelBuiltinTitle = string(
+      "preferences-capture.ocr-model-builtin-title",
+      defaultValue: "Built-in OCR",
+      comment: "OCR model list row title for the Apple Vision model bundled with macOS"
+    )
+    static let ocrModelBuiltinDescription = string(
+      "preferences-capture.ocr-model-builtin-description",
+      defaultValue: "Apple Vision on-device recognition",
+      comment: "OCR model list row subtitle describing the built-in Apple Vision model"
+    )
+    static let ocrModelDefaultBadge = string(
+      "preferences-capture.ocr-model-default-badge",
+      defaultValue: "Default",
+      comment: "Badge shown on the built-in OCR model row marking it as the default"
+    )
+    static let ocrModelCustomBadge = string(
+      "preferences-capture.ocr-model-custom-badge",
+      defaultValue: "Custom",
+      comment: "Badge shown on user-added custom OCR endpoint rows"
+    )
+    static func ocrModelParams(_ parameterCount: String) -> String {
+      format(
+        "preferences-capture.ocr-model-params",
+        defaultValue: "%@ params",
+        comment: "OCR model parameter count label. %@ is a compact count like 1.5M.",
+        parameterCount
+      )
+    }
+    static func ocrModelSizes(_ fp32: String, _ int8: String) -> String {
+      format(
+        "preferences-capture.ocr-model-sizes",
+        defaultValue: "FP32 %@ · INT8 %@",
+        comment: "OCR model size labels. First %@ is the FP32 size range, second %@ the INT8 size range.",
+        fp32,
+        int8
+      )
+    }
+    static func ocrModelCharset(_ scripts: String) -> String {
+      format(
+        "preferences-capture.ocr-model-charset",
+        defaultValue: "Charset: %@",
+        comment: "Scripts an OCR model's character dictionary can spell. %@ is a comma-separated script list.",
+        scripts
+      )
+    }
+    static func ocrModelCharsetIncomplete(_ scripts: String) -> String {
+      format(
+        "preferences-capture.ocr-model-charset-incomplete",
+        defaultValue: "Incomplete %@ — some characters are dropped",
+        comment: "Warning that an OCR model only partly covers a script. %@ is a comma-separated script list.",
+        scripts
+      )
+    }
+    static let ocrScriptLatin = string(
+      "preferences-capture.ocr-script-latin",
+      defaultValue: "Latin",
+      comment: "Name of the Latin writing system in the OCR model charset list"
+    )
+    static let ocrScriptVietnamese = string(
+      "preferences-capture.ocr-script-vietnamese",
+      defaultValue: "Vietnamese",
+      comment: "Name of the Vietnamese writing system in the OCR model charset list"
+    )
+    static let ocrScriptChinese = string(
+      "preferences-capture.ocr-script-chinese",
+      defaultValue: "Chinese",
+      comment: "Name of the Chinese writing system in the OCR model charset list"
+    )
+    static let ocrScriptJapanese = string(
+      "preferences-capture.ocr-script-japanese",
+      defaultValue: "Japanese",
+      comment: "Name of the Japanese writing system in the OCR model charset list"
+    )
+    static let ocrScriptKorean = string(
+      "preferences-capture.ocr-script-korean",
+      defaultValue: "Korean",
+      comment: "Name of the Korean writing system in the OCR model charset list"
+    )
+    static let ocrScriptCyrillic = string(
+      "preferences-capture.ocr-script-cyrillic",
+      defaultValue: "Cyrillic",
+      comment: "Name of the Cyrillic writing system in the OCR model charset list"
+    )
+    static let ocrScriptArabic = string(
+      "preferences-capture.ocr-script-arabic",
+      defaultValue: "Arabic",
+      comment: "Name of the Arabic writing system in the OCR model charset list"
+    )
+    static let ocrScriptThai = string(
+      "preferences-capture.ocr-script-thai",
+      defaultValue: "Thai",
+      comment: "Name of the Thai writing system in the OCR model charset list"
+    )
+    static let ocrScriptDevanagari = string(
+      "preferences-capture.ocr-script-devanagari",
+      defaultValue: "Devanagari",
+      comment: "Name of the Devanagari writing system in the OCR model charset list"
+    )
+    static func ocrModelDownload(_ size: String) -> String {
+      format(
+        "preferences-capture.ocr-model-download",
+        defaultValue: "Download (%@)",
+        comment: "Button title that downloads an OCR model. %@ is the total download size.",
+        size
+      )
+    }
+    static let ocrModelVerifying = string(
+      "preferences-capture.ocr-model-verifying",
+      defaultValue: "Verifying…",
+      comment: "Status label shown while a downloaded OCR model is being verified"
+    )
+    static let ocrModelRetry = string(
+      "preferences-capture.ocr-model-retry",
+      defaultValue: "Retry",
+      comment: "Button title that retries a failed OCR model download"
+    )
+    static let ocrModelRemove = string(
+      "preferences-capture.ocr-model-remove",
+      defaultValue: "Remove",
+      comment: "Button or menu item title that removes an OCR model"
+    )
+    static let ocrModelRemoveDownloadTitle = string(
+      "preferences-capture.ocr-model-remove-download-title",
+      defaultValue: "Remove OCR Model?",
+      comment: "Confirmation alert title shown before removing a downloaded OCR model"
+    )
+    static func ocrModelRemoveDownloadMessage(_ modelName: String) -> String {
+      format(
+        "preferences-capture.ocr-model-remove-download-message",
+        defaultValue: "%@ will be deleted from this Mac. You can download it again at any time.",
+        comment: "Confirmation alert message shown before removing a downloaded OCR model. %@ is the model name.",
+        modelName
+      )
+    }
+    static let ocrModelRemoveCustomTitle = string(
+      "preferences-capture.ocr-model-remove-custom-title",
+      defaultValue: "Remove Custom Model?",
+      comment: "Confirmation alert title shown before removing a custom OCR endpoint"
+    )
+    static func ocrModelRemoveCustomMessage(_ modelName: String) -> String {
+      format(
+        "preferences-capture.ocr-model-remove-custom-message",
+        defaultValue: "“%@” and its stored API key will be deleted.",
+        comment: "Confirmation alert message shown before removing a custom OCR endpoint. %@ is the model name.",
+        modelName
+      )
+    }
+    static let ocrModelDownloadFailedTitle = string(
+      "preferences-capture.ocr-model-download-failed-title",
+      defaultValue: "Download Failed",
+      comment: "Alert title shown when an OCR model download fails"
+    )
+    static let ocrModelAddCustom = string(
+      "preferences-capture.ocr-model-add-custom",
+      defaultValue: "Add Custom Model…",
+      comment: "Button title that opens the sheet to add a custom OCR endpoint"
+    )
+    static let ocrModelEdit = string(
+      "preferences-capture.ocr-model-edit",
+      defaultValue: "Edit",
+      comment: "Menu item title that opens the edit sheet for a custom OCR endpoint"
+    )
+    static let ocrModelTestConnection = string(
+      "preferences-capture.ocr-model-test-connection",
+      defaultValue: "Test Connection",
+      comment: "Button or menu item title that probes a custom OCR endpoint"
+    )
+    static let ocrModelTestSuccessTitle = string(
+      "preferences-capture.ocr-model-test-success-title",
+      defaultValue: "Connection Successful",
+      comment: "Alert title shown when a custom OCR endpoint test succeeds"
+    )
+    static let ocrModelTestFailedTitle = string(
+      "preferences-capture.ocr-model-test-failed-title",
+      defaultValue: "Connection Failed",
+      comment: "Alert title shown when a custom OCR endpoint test fails"
+    )
+    static func ocrModelTestSuccessLatency(_ milliseconds: Int) -> String {
+      format(
+        "preferences-capture.ocr-model-test-success-latency",
+        defaultValue: "Connected (%d ms)",
+        comment: "Message shown when a custom OCR endpoint test succeeds. %d is the latency in milliseconds.",
+        milliseconds
+      )
+    }
+    static let ocrModelSheetAddTitle = string(
+      "preferences-capture.ocr-model-sheet-add-title",
+      defaultValue: "Add Custom Model",
+      comment: "Title of the sheet that adds a custom OCR endpoint"
+    )
+    static let ocrModelSheetEditTitle = string(
+      "preferences-capture.ocr-model-sheet-edit-title",
+      defaultValue: "Edit Custom Model",
+      comment: "Title of the sheet that edits a custom OCR endpoint"
+    )
+    static let ocrModelSheetDescription = string(
+      "preferences-capture.ocr-model-sheet-description",
+      defaultValue: "Connect an OpenAI-compatible endpoint — LLM APIs, Ollama, vLLM, or LM Studio.",
+      comment: "Description text at the top of the custom OCR endpoint sheet"
+    )
+    static let ocrModelSheetName = string(
+      "preferences-capture.ocr-model-sheet-name",
+      defaultValue: "Name",
+      comment: "Field label for the custom OCR endpoint display name"
+    )
+    static let ocrModelSheetBaseURL = string(
+      "preferences-capture.ocr-model-sheet-base-url",
+      defaultValue: "Server / API Base URL",
+      comment: "Field label for the custom OCR endpoint base URL"
+    )
+    static let ocrModelSheetModelIdentifier = string(
+      "preferences-capture.ocr-model-sheet-model-identifier",
+      defaultValue: "Model Identifier",
+      comment: "Field label for the provider-side model name of a custom OCR endpoint"
+    )
+    static let ocrModelSheetAPIKey = string(
+      "preferences-capture.ocr-model-sheet-api-key",
+      defaultValue: "API Key (optional)",
+      comment: "Field label for the custom OCR endpoint API key"
+    )
+    static let ocrModelSheetAPIKeyKeepHint = string(
+      "preferences-capture.ocr-model-sheet-api-key-keep-hint",
+      defaultValue: "Leave blank to keep the existing key.",
+      comment: "Hint shown when editing a custom OCR endpoint that already has an API key"
+    )
+    static let ocrModelSheetPrompt = string(
+      "preferences-capture.ocr-model-sheet-prompt",
+      defaultValue: "Prompt (optional)",
+      comment: "Field label for the custom OCR endpoint prompt override"
+    )
   }
 
   enum PreferencesAnnotate {
@@ -7444,6 +7682,42 @@ nonisolated enum L10n {
       defaultValue: "Link copied to clipboard",
       comment: "Toast message shown when a detected link is copied to the clipboard"
     )
+    static let remoteErrorInvalidBaseURL = string(
+      "ocr.remote-error-invalid-base-url",
+      defaultValue: "The custom OCR endpoint URL is invalid",
+      comment: "Error shown when the custom OCR endpoint URL cannot be parsed"
+    )
+    static let remoteErrorImageEncodingFailed = string(
+      "ocr.remote-error-image-encoding-failed",
+      defaultValue: "Failed to encode the image for the OCR request",
+      comment: "Error shown when the image cannot be encoded for a custom OCR endpoint request"
+    )
+    static let remoteErrorUnauthorized = string(
+      "ocr.remote-error-unauthorized",
+      defaultValue: "The custom OCR endpoint rejected the request — check the API key",
+      comment: "Error shown when the custom OCR endpoint answers with HTTP 401 or 403"
+    )
+    static func remoteErrorHTTPStatus(_ statusCode: Int) -> String {
+      format(
+        "ocr.remote-error-http-status",
+        defaultValue: "The custom OCR endpoint returned an error (HTTP %d)",
+        comment: "Error shown when the custom OCR endpoint answers with an HTTP error. %d is the status code.",
+        statusCode
+      )
+    }
+    static let remoteErrorInvalidResponse = string(
+      "ocr.remote-error-invalid-response",
+      defaultValue: "The custom OCR endpoint returned an unreadable or empty response",
+      comment: "Error shown when the custom OCR endpoint response cannot be decoded"
+    )
+    static func remoteErrorUnreachable(_ description: String) -> String {
+      format(
+        "ocr.remote-error-unreachable",
+        defaultValue: "The custom OCR endpoint could not be reached: %@",
+        comment: "Error shown when the custom OCR endpoint is unreachable. %@ is the system network error.",
+        description
+      )
+    }
   }
 
   enum GIF {

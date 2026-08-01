@@ -42,6 +42,7 @@ final class OCRService {
   }
 
   private let ciContext = CIContext(options: [.cacheIntermediates: false])
+  private let modelResolver = OCRModelResolver()
 
   private init() {}
 
@@ -89,9 +90,47 @@ final class OCRService {
     return normalized
   }
 
-  // MARK: - Public API
+  // MARK: - Engine Routing
 
+  /// Route the request through the provider for the persisted model selection.
+  /// Unavailable selections fall back to built-in Vision via `OCRModelResolver`.
   func recognize(_ request: OCRRequest) async throws -> OCRResult {
+    let resolution = modelResolver.resolveStoredSelection()
+    do {
+      return try await resolution.provider.recognize(request)
+    } catch let error as PPOCRError {
+      return try await recoverFromMissingModelFiles(error, resolution: resolution, request: request)
+    }
+  }
+
+  /// The selected PP-OCR model lost its files on disk after launch validation:
+  /// mark it not installed, fall the selection back to built-in (persisted via
+  /// the resolver's fallback), and retry the request with Vision.
+  private func recoverFromMissingModelFiles(
+    _ error: PPOCRError,
+    resolution: OCRModelResolution,
+    request: OCRRequest
+  ) async throws -> OCRResult {
+    guard case .modelFilesMissing(let modelID, let file) = error,
+          case .downloadable(let selectedID) = resolution.selection,
+          selectedID == modelID
+    else { throw error }
+
+    OCRModelStore.shared.markMissing(modelID: modelID)
+    DiagnosticLogger.shared.log(
+      .warning,
+      .ocr,
+      "Downloaded OCR model files missing; retrying with built-in",
+      context: ["model": modelID, "file": file]
+    )
+    return try await modelResolver.resolve(.downloadable(modelID)).provider.recognize(request)
+  }
+
+  // MARK: - Vision Pipeline
+
+  /// Built-in Apple Vision recognition with profile/language recovery passes.
+  /// Kept intact for `VisionOCRProvider`; other engines plug in via `OCRProvider`.
+  func recognizeWithVision(_ request: OCRRequest) async throws -> OCRResult {
     // ScreenCaptureKit images are sometimes backed by IOSurfaces or use color
     // spaces that Vision cannot read directly, producing CRImageReaderError.
     // Normalize to a standard sRGB bitmap before recognition to avoid that.
