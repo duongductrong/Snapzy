@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.7] - 2026-08-01
+
+### Features
+-  add OCR result notification popup after text recognition (#450) (b5846ca)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.6 (ae61500)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.6] - 2026-08-01
 
 ### Bug Fixes
