@@ -42,6 +42,15 @@ jobs:
             SnapzyTests/QuickAccessCoreTests/testQuickAccessTrackpadSwipeModeStore_persistsMode
             SnapzyTests/QuickAccessCoreTests/testQuickAccessTrackpadSwipeModeStore_resetToDefault
             SnapzyTests/OCRRecognitionTests
+            SnapzyTests/CustomOCRModelStoreTests
+            SnapzyTests/OCRUserCatalogStoreTests
+            SnapzyTests/OCRModelStoreTests
+            SnapzyTests/OCRModelDownloadServiceTests
+            SnapzyTests/OCRModelSelectionTests
+            SnapzyTests/PreferencesOCRModelSelectionTests
+            SnapzyTests/OCRDynamicCatalogIntegrationTests
+            SnapzyTests/PPOCRIntegrationTests
+            SnapzyTests/OCRKeychainStoreTests
             SnapzyTests/SmartElementCaptureControllerTests
             SnapzyTests/SmartElementWindowOwnerResolverTests
             SnapzyTests/SmartElementQueryServiceTests
