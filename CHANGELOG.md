@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.6] - 2026-08-01
+
+### Bug Fixes
+-  support layout-aware Settings menu item lookup for non-US keyboards (#311) (385ea09)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.5 (ceb0ae8)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.5] - 2026-08-01
 
 ### Features
