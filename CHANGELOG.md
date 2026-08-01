@@ -4,112 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+## [1.31.0-beta.5] - 2026-08-01
+
+### Features
+-  add customizable menu bar menu and menu bar icon (#446) (bde6e57)
+
+### Chore
+- ci: fail release workflow on empty EdDSA signature (699322f)
+- chore: update changelog shell (#441) (edf5c15)
+- chore: update appcast and docs for v1.31.0-beta.4 (3bf067b)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @motoish
 
 ## [1.31.0-beta.4] - 2026-07-31
 
