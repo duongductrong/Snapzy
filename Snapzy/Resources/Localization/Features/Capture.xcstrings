@@ -5539,61 +5539,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Eine Benachrichtigung anzeigen, wenn Text in die Zwischenablage kopiert wird"
+            "value": "Nach der OCR eine Systembenachrichtigung mit dem erkannten Text anzeigen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show a toast when text is copied to clipboard"
+            "value": "Show a system notification with the recognized text after OCR"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mostrar un aviso cuando el texto se copia al portapapeles"
+            "value": "Mostrar una notificación del sistema con el texto reconocido tras el OCR"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afficher une notification lorsque le texte est copié dans le presse-papiers"
+            "value": "Afficher une notification système avec le texte reconnu après l’OCR"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "テキストがクリップボードにコピーされたときにトーストを表示する"
+            "value": "OCR 後に認識したテキストをシステム通知で表示する"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "텍스트가 클립보드에 복사되었을 때 알림 표시"
+            "value": "OCR 후 인식된 텍스트를 시스템 알림으로 표시"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Показывать уведомление при копировании текста в буфер обмена"
+            "value": "Показывать системное уведомление с распознанным текстом после OCR"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hiển thị thông báo khi văn bản được sao chép vào bộ nhớ tạm"
+            "value": "Hiển thị thông báo hệ thống kèm văn bản nhận dạng được sau khi OCR"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当文本复制到剪贴板时显示提示"
+            "value": "OCR 完成后显示包含识别文本的系统通知"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "當文字複製到剪貼簿時顯示提示"
+            "value": "OCR 完成後顯示包含辨識文字的系統通知"
           }
         }
       }
@@ -5605,61 +5605,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Erfolgsbenachrichtigung"
+            "value": "OCR-Benachrichtigungen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Success Notification"
+            "value": "OCR Notifications"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notificación de éxito"
+            "value": "Notificaciones de OCR"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notification de succès"
+            "value": "Notifications OCR"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功通知"
+            "value": "OCR 通知"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "성공 알림"
+            "value": "OCR 알림"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Уведомление об успехе"
+            "value": "Уведомления OCR"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Thông báo thành công"
+            "value": "Thông báo OCR"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功通知"
+            "value": "OCR 通知"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "成功通知"
+            "value": "OCR 通知"
           }
         }
       }
@@ -7415,72 +7415,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "鼠標高亮"
-          }
-        }
-      }
-    },
-    "preferences-capture.section-ocr": {
-      "comment": "Capture preferences section title",
-      "extractionState": "stale",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Textextraktion)"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Text Extraction)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Extracción de texto)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Extraction de texte)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (テキスト抽出)"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (텍스트 추출)"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Распознавание текста)"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (Trích xuất văn bản)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (文本识别)"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OCR (文字識別)"
           }
         }
       }
@@ -17748,6 +17682,721 @@
           "stringUnit": {
             "state": "translated",
             "value": "錄製時將錄製區域以外的所有內容調暗，使擷取區域更加突出。關閉後，錄製期間其他視窗仍可完全顯示與使用。"
+          }
+        }
+      }
+    },
+    "ocr.notification-copied-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text wurde kopiert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text has been copied"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texto copiado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texte copié"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストをコピーしました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트가 복사되었습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст скопирован"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã sao chép văn bản"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本已复制"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字已複製"
+          }
+        }
+      }
+    },
+    "ocr.notification-no-text-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Text erkannt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Text Detected"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se detectó texto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun texte détecté"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキストが検出されませんでした"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트가 감지되지 않음"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Текст не обнаружен"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Không phát hiện văn bản"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未检测到文本"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未偵測到文字"
+          }
+        }
+      }
+    },
+    "ocr.notification-no-text-body": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy konnte im ausgewählten Bereich keinen lesbaren Text finden."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy could not find readable text in the selected area."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy no encontró texto legible en el área seleccionada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy n’a trouvé aucun texte lisible dans la zone sélectionnée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy は選択した領域から読み取れるテキストを見つけられませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 선택한 영역에서 읽을 수 있는 텍스트를 찾지 못했습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy не нашёл читаемый текст в выбранной области."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy không tìm thấy văn bản đọc được trong vùng đã chọn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 在所选区域中找不到可识别的文本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 在所選區域中找不到可辨識的文字。"
+          }
+        }
+      }
+    },
+    "ocr.notification-failed-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR fehlgeschlagen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR Failed"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error de OCR"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échec de l’OCR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR に失敗しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 실패"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ошибка OCR"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR thất bại"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 识别失败"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 辨識失敗"
+          }
+        }
+      }
+    },
+    "ocr.notification-failed-body": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy konnte im ausgewählten Bereich keinen Text erkennen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy could not recognize text from the selected area."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy no pudo reconocer texto en el área seleccionada."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy n’a pas pu reconnaître de texte dans la zone sélectionnée."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy は選択した領域のテキストを認識できませんでした。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 선택한 영역의 텍스트를 인식하지 못했습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy не смог распознать текст в выбранной области."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy không thể nhận dạng văn bản từ vùng đã chọn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 无法识别所选区域中的文本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 無法辨識所選區域中的文字。"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-tab": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-notifications-section": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notificaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомления"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thông báo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-text-actions-section": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Textaktionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text Actions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones de texto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions sur le texte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "テキスト操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 동작"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Действия с текстом"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hành động với văn bản"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文字操作"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-notification-allow-hint": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlaube Benachrichtigungen, damit Snapzy dir den erkannten Text zeigen kann."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow notifications so Snapzy can show you the recognized text."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite las notificaciones para que Snapzy pueda mostrarte el texto reconocido."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autorisez les notifications pour que Snapzy puisse vous montrer le texte reconnu."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "認識したテキストを表示できるように、通知を許可してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 인식된 텍스트를 보여줄 수 있도록 알림을 허용하세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешите уведомления, чтобы Snapzy показывал распознанный текст."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cho phép thông báo để Snapzy hiển thị văn bản đã nhận dạng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许通知，Snapzy 才能向你展示识别出的文本。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許通知，Snapzy 才能向你顯示辨識出的文字。"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-notification-allow-action": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlauben"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permitir"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autoriser"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешить"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cho phép"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-notification-denied-hint": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen für Snapzy sind in den Systemeinstellungen deaktiviert. Die OCR funktioniert weiterhin und kopiert Text in die Zwischenablage."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are turned off for Snapzy in System Settings. OCR still works and copies text to the clipboard."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las notificaciones de Snapzy están desactivadas en Ajustes del Sistema. El OCR sigue funcionando y copia el texto al portapapeles."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les notifications de Snapzy sont désactivées dans Réglages Système. L’OCR fonctionne toujours et copie le texte dans le presse-papiers."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "システム設定で Snapzy の通知がオフになっています。OCR は引き続き動作し、テキストをクリップボードにコピーします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시스템 설정에서 Snapzy 알림이 꺼져 있습니다. OCR은 계속 작동하며 텍스트를 클립보드에 복사합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Уведомления Snapzy отключены в Системных настройках. OCR продолжает работать и копирует текст в буфер обмена."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thông báo cho Snapzy đang tắt trong Cài đặt hệ thống. OCR vẫn hoạt động và sao chép văn bản vào clipboard."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系统设置中已关闭 Snapzy 的通知。OCR 仍可正常使用，并会将文本复制到剪贴板。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "系統設定中已關閉 Snapzy 的通知。OCR 仍可正常使用，並會將文字複製到剪貼簿。"
           }
         }
       }

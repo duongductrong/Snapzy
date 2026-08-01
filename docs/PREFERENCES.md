@@ -33,7 +33,7 @@ Reference for the Settings window: tab structure, every section, and how prefere
 
 ### Capture (`PreferencesCaptureSettingsView.swift`)
 
-Segmented into three panes (`CaptureSettingsPane`): General / Screenshot / Recording.
+Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Recording / OCR.
 
 - **General pane**:
   - App Windows: Include Snapzy windows in screenshots (`screenshot.includeOwnApp`) / in recordings (`recording.includeOwnApp`).
@@ -46,7 +46,6 @@ Segmented into three panes (`CaptureSettingsPane`): General / Screenshot / Recor
   - Format: Show Cursor (`screenshot.showCursor`), Freeze Area (`screenshot.freezeArea`), Hover Passthrough (`screenshot.livePassthrough`, requires Accessibility), Image Format (`screenshot.format`, `ImageFormatOption`; WebP shows a warning, JPEG a cutout note).
   - Preset: default annotate canvas preset (`PreferencesScreenshotDefaultPresetPicker`).
   - Scrolling Capture: Show Session Hints (`scrollingCapture.showHints`) + info note.
-  - OCR: Success Notification (`ocr.successNotificationEnabled`), Link Detection (`ocr.linkDetectionEnabled`).
 - **Recording pane**:
   - Format: MOV / MP4 (`recording.format`).
   - Quality: Frame Rate 30/60 (`recording.fps`), Quality (`recording.quality`, `VideoQuality`).
@@ -55,6 +54,9 @@ Segmented into three panes (`CaptureSettingsPane`): General / Screenshot / Recor
   - Mouse Highlight: size 30–100, animation 0.3–2.0 s, ripple count 1–5, color (archived `NSColor` in `recording.mouseHighlight.color`), opacity 0.2–1.0; reset-to-default.
   - Keystroke Overlay: font size 12–32, position (`KeystrokeOverlayPosition`), display duration 0.5–5.0 s; reset-to-default.
   - Audio: System Audio (`recording.captureAudio`), Microphone (`recording.captureMicrophone`, runs `AVCaptureDevice` authorization flow with System Settings fallback), Mic Input device picker (`recording.microphoneDeviceID`).
+- **OCR pane**:
+  - Notifications: OCR Notifications (`ocr.successNotificationEnabled`, default on — posts a native macOS notification with a preview of the recognized text; falls back to an in-app toast when notifications are unavailable). When the toggle is on, an inline row surfaces the macOS-level permission only when it would block delivery: `notDetermined` shows an "Allow" button that triggers the system prompt in place, `denied` shows an orange hint plus "Open Settings". A granted (or unavailable) state renders nothing, so a healthy setup stays uncluttered. The row refreshes on `NSApplication.didBecomeActiveNotification`, so returning from System Settings updates it.
+  - Text Actions: Link Detection (`ocr.linkDetectionEnabled`).
 
 ### Annotate (`PreferencesAnnotateSettingsView.swift`)
 

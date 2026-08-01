@@ -178,6 +178,9 @@ Snapzy/
     Diagnostics/
     FileAccess/
     Media/
+    Notifications/
+      OCRNotificationContent.swift
+      SystemNotificationService.swift
     Shortcuts/
     Updates/
     Wallpaper/
@@ -253,6 +256,7 @@ SnapzyUITests/
 | `Services/Configuration/` | TOML export/import facade, focused TOML parser/writer, schema validation, preference mutation helpers, debounced config.toml sync coordinator |
 | `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
 | `Services/Media/` | OCR, QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
+| `Services/Notifications/` | Native macOS notification delivery (`UserNotifications`) and OCR notification title/body/preview formatting |
 | `Services/Shortcuts/` | Global shortcuts, conflict detection, system shortcut checks |
 | `Services/Diagnostics/` | Crash sentinel, logs, toasts, cleanup |
 | `Services/Updates/` | Sparkle updater bootstrap |
@@ -383,6 +387,7 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 | Localization, String Catalog, alert copy, translated display labels | `Resources/Localization/manifest.json`, `tools/localization/CatalogTool.swift`, `Shared/Localization/L10n.swift`, `docs/LOCALIZATION.md` |
 | New screenshot mode or capture behavior | `Features/Capture/CaptureViewModel.swift`, `Services/Capture/AreaSelectionWindow.swift`, `Services/Capture/SmartElement/`, `Services/Capture/ScreenCaptureManager.swift`, `Services/Capture/WindowSelectionQueryService.swift`, `docs/CAPTURE.md` |
 | Scrolling capture UX or stitching | `Services/Capture/ScrollingCapture/`, `docs/SCROLLING_CAPTURE.md` |
+| OCR result feedback or native notifications | `Features/Capture/OCRResultNotifier.swift`, `Services/Notifications/`, `docs/CAPTURE.md` |
 | Recording toolbar, overlays, GIF flow | `Features/Recording/`, `Services/Capture/ScreenRecordingManager.swift`, `docs/RECORDING.md` |
 | Post-capture actions or temp-file logic | `Features/Preferences/PreferencesManager.swift`, `Services/Capture/PostCaptureActionHandler.swift`, `Services/Capture/TempCaptureManager.swift`, `Features/QuickAccess/`, `docs/POST_CAPTURE.md`, `docs/QUICK_ACCESS.md` |
 | Annotate editor (full + inline) | `Features/Annotate/`, `docs/ANNOTATE.md` |

@@ -48,7 +48,7 @@ The TOML file covers portable app preferences:
 - General settings: language, appearance, sounds, URL scheme integration, show menu bar icon, login item, export folder path.
 - Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
-- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification, object cutout auto-crop.
+- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots.

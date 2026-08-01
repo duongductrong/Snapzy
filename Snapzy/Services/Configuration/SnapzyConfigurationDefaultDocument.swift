@@ -67,7 +67,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("show_hints", true)
 
     writer.section("capture.ocr")
-    writer.value("success_notification", false)
+    writer.value("success_notification", true)
 
     writer.section("capture.object_cutout")
     writer.value("auto_crop", true)

@@ -74,6 +74,25 @@ Microphone access first, then run:
 SNAPZY_RUN_MICROPHONE_INTEGRATION=1 xcodebuild test -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug -only-testing:SnapzyTests/MicrophoneAudioCapturerTests/testMicrophoneAudioCapturerStartStopRealMicrophoneIntegration
 ```
 
+## Render SwiftUI components to a PNG
+
+`PermissionRowSnapshotRenderTests` renders the real `PermissionRow` states through
+`ImageRenderer` and writes `/tmp/snapzy-permission-rows.png`. It is useful for checking
+layout of an onboarding component without launching the app (handy when a debug instance is
+already running and a second one would contend for global shortcuts).
+
+Note `xcodebuild` does not forward shell environment variables to the test process — the
+`TEST_RUNNER_` prefix is required:
+
+```bash
+TEST_RUNNER_SNAPZY_RENDER_PERMISSION_ROWS=1 xcodebuild test -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug -only-testing:SnapzyTests/PermissionRowSnapshotRenderTests
+```
+
+It is skipped without that variable, and it asserts nothing — it is a visual-inspection
+tool, not a regression test. Colors are not faithful: `ImageRenderer` does not resolve the
+dynamic `NSColor`s in `VSDesignSystem.Colors` to their dark-appearance values, so treat the
+output as a geometry and layout check only.
+
 ## Related docs
 
 - For archive, export, and DMG packaging commands, see [BUILD.md](BUILD.md).

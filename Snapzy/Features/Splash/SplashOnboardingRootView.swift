@@ -137,11 +137,15 @@ struct SplashOnboardingRootView: View {
             ForEach(0..<onboardingSteps.count, id: \.self) { index in
               Circle()
                 .fill(index == currentStepIndex ? VSDesignSystem.Colors.primary : VSDesignSystem.Colors.quaternary)
-                .frame(width: 7, height: 7)
+                .frame(
+                  width: VSDesignSystem.Metrics.pageIndicatorDot,
+                  height: VSDesignSystem.Metrics.pageIndicatorDot
+                )
                 .animation(.easeInOut(duration: 0.3), value: currentStepIndex)
             }
           }
-          .padding(.bottom, 32)
+          // `OnboardingStepContainer` reserves `Metrics.pageIndicatorArea` for this row.
+          .padding(.bottom, VSDesignSystem.Metrics.pageIndicatorBottomPadding)
         }
         .opacity(contentOpacity)
         .transition(.opacity)

@@ -80,7 +80,8 @@ Unified flow: `SplashWindowController` (`Snapzy/Features/Splash/SplashWindow.swi
 State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when `sponsorPromptSeen` is false) → `permissions` → `configAccess` → `shortcuts` → `diagnostics` → `completion`. Default onboarding steps: `[language, permissions, configAccess, shortcuts, diagnostics, completion]`.
 
 - `hasCompletedOnboarding` = UserDefaults `onboardingCompleted` (`OnboardingFlowView` in `Snapzy/Features/Onboarding/OnboardingFlowView.swift`).
-- Permissions step (`Snapzy/Features/Onboarding/Components/OnboardingPermissionsView.swift`): screen recording / microphone / accessibility rows.
+- Permissions step (`Snapzy/Features/Onboarding/Components/OnboardingPermissionsView.swift`): screen recording / save folder (both required) then microphone / accessibility / notifications (all optional). Only screen recording and save folder gate the Next button.
+  - The notifications row reads `SystemNotificationService.authorizationStatus()`. `notDetermined` shows "Grant Access" and triggers the `UserNotifications` prompt in place — no System Settings trip. `denied` becomes a `.blocked` row ("Turned Off" + "Open Settings") because only the user can reverse a denial. Status re-reads on `NSApplication.didBecomeActiveNotification` along with the other rows.
 - `configAccess` step: grant folder access for `~/.config/snapzy` (holds `config.toml`; see `SnapzyConfigurationPaths` in `Snapzy/Services/Configuration/`).
 - Shortcuts step: Accept calls `KeyboardShortcutManager.shared.enable()`; Decline just advances.
 - Diagnostics step: toggle for `diagnostics.enabled` (default on).

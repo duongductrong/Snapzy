@@ -84,7 +84,7 @@ enum SnapzyConfigurationExporter {
     writer.value("show_hints", defaults.boolValue(PreferencesKeys.scrollingCaptureShowHints, default: true))
 
     writer.section("capture.ocr")
-    writer.value("success_notification", defaults.boolValue(PreferencesKeys.ocrSuccessNotificationEnabled, default: false))
+    writer.value("success_notification", defaults.boolValue(PreferencesKeys.ocrSuccessNotificationEnabled, default: true))
 
     writer.section("capture.object_cutout")
     writer.value("auto_crop", defaults.boolValue(PreferencesKeys.backgroundCutoutAutoCropEnabled, default: true))

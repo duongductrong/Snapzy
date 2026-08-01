@@ -12,6 +12,7 @@ private enum CaptureSettingsPane: CaseIterable, Hashable, Identifiable {
   case general
   case screenshot
   case recording
+  case ocr
 
   var id: Self {
     self
@@ -25,6 +26,8 @@ private enum CaptureSettingsPane: CaseIterable, Hashable, Identifiable {
       CaptureType.screenshot.displayName
     case .recording:
       CaptureType.recording.displayName
+    case .ocr:
+      L10n.PreferencesCapture.ocrTab
     }
   }
 }
@@ -44,8 +47,10 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
   @AppStorage(PreferencesKeys.backgroundCutoutAutoCropEnabled) private var backgroundCutoutAutoCropEnabled = true
-  @AppStorage(PreferencesKeys.ocrSuccessNotificationEnabled) private var ocrSuccessNotification = false
+  @AppStorage(PreferencesKeys.ocrSuccessNotificationEnabled) private var ocrSuccessNotification = true
   @AppStorage(PreferencesKeys.ocrLinkDetectionEnabled) private var ocrLinkDetection = true
+  /// Starts as `.authorized` so the hint never flashes before the async check resolves.
+  @State private var notificationAuthorization: SystemNotificationAuthorization = .authorized
   @AppStorage(PreferencesKeys.screenshotFileNameTemplate)
   private var screenshotFileNameTemplate = CaptureOutputKind.screenshot.defaultTemplate
 
@@ -323,8 +328,8 @@ struct CaptureSettingsView: View {
 
         // MARK: - OCR
 
-        if selectedPane == .screenshot {
-          Section(L10n.PreferencesCapture.ocrSection) {
+        if selectedPane == .ocr {
+          Section(L10n.PreferencesCapture.ocrNotificationsSection) {
             SettingRow(
               icon: "bell.badge",
               title: L10n.PreferencesCapture.ocrSuccessNotificationTitle,
@@ -334,6 +339,12 @@ struct CaptureSettingsView: View {
                 .labelsHidden()
             }
 
+            if ocrSuccessNotification {
+              ocrNotificationPermissionHint
+            }
+          }
+
+          Section(L10n.PreferencesCapture.ocrTextActionsSection) {
             SettingRow(
               icon: "link",
               title: L10n.PreferencesCapture.ocrLinkDetectionTitle,
@@ -699,6 +710,76 @@ struct CaptureSettingsView: View {
       .formStyle(.grouped)
     }
     .onAppear(perform: refreshMicrophoneDevices)
+    .task {
+      await refreshNotificationAuthorization()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+      // Picks up the change after the user flips the switch in System Settings.
+      Task { await refreshNotificationAuthorization() }
+    }
+  }
+
+  // MARK: - OCR notification permission
+
+  /// Surfaces the macOS-level notification permission only when it would actually block
+  /// the feature the user just turned on, so a healthy setup shows no clutter.
+  @ViewBuilder
+  private var ocrNotificationPermissionHint: some View {
+    switch notificationAuthorization {
+    case .notDetermined:
+      permissionHintRow(
+        icon: "bell.badge.circle.fill",
+        iconColor: .accentColor,
+        textColor: .secondary,
+        message: L10n.PreferencesCapture.ocrNotificationAllowHint,
+        actionTitle: L10n.PreferencesCapture.ocrNotificationAllowAction
+      ) {
+        Task {
+          await SystemNotificationService.shared.requestAuthorization()
+          await refreshNotificationAuthorization()
+        }
+      }
+    case .denied:
+      permissionHintRow(
+        icon: "exclamationmark.triangle.fill",
+        iconColor: .orange,
+        textColor: .orange,
+        message: L10n.PreferencesCapture.ocrNotificationDeniedHint,
+        actionTitle: L10n.Common.openSettings
+      ) {
+        SystemNotificationService.shared.openSystemSettings()
+      }
+    case .authorized, .unavailable:
+      EmptyView()
+    }
+  }
+
+  private func permissionHintRow(
+    icon: String,
+    iconColor: Color,
+    textColor: Color,
+    message: String,
+    actionTitle: String,
+    action: @escaping () -> Void
+  ) -> some View {
+    HStack(alignment: .top, spacing: 6) {
+      Image(systemName: icon)
+        .foregroundColor(iconColor)
+        .font(.system(size: 12))
+        .padding(.top, 1)
+      Text(message)
+        .font(.system(size: 11))
+        .foregroundColor(textColor)
+        .fixedSize(horizontal: false, vertical: true)
+      Spacer()
+      Button(actionTitle, action: action)
+        .controlSize(.small)
+    }
+    .padding(.vertical, 4)
+  }
+
+  private func refreshNotificationAuthorization() async {
+    notificationAuthorization = await SystemNotificationService.shared.authorizationStatus()
   }
 
   // MARK: - Helpers

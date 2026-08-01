@@ -2265,11 +2265,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                     "OCR QR capture found unsupported QR payloads",
                     context: context
                   )
-                  AppToastManager.shared.show(
-                    message: L10n.OCR.qrTextOnlyUnsupported,
-                    style: .warning,
-                    position: .bottomCenter
-                  )
+                  OCRResultNotifier.shared.report(.qrTextOnlyUnsupported)
                 } else {
                   DiagnosticLogger.shared.log(
                     .warning,
@@ -2277,11 +2273,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                     "OCR capture failed: no text or QR payload found",
                     context: performanceContext
                   )
-                  AppToastManager.shared.show(
-                    message: L10n.OCR.noTextFound,
-                    style: .warning,
-                    position: .bottomCenter
-                  )
+                  OCRResultNotifier.shared.report(.noText)
                 }
                 QuickAccessSound.failed.play()
                 return
@@ -2296,14 +2288,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               successContext["qrCount"] = "\(qrResult.detections.count)"
               successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
               DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
-              let showOCRNotification = UserDefaults.standard
-                .object(forKey: PreferencesKeys.ocrSuccessNotificationEnabled) as? Bool ?? false
-              if showOCRNotification {
-                AppToastManager.shared.show(
-                  message: L10n.Common.copiedToClipboard,
-                  style: .success,
-                  position: .bottomCenter
-                )
+              OCRResultNotifier.shared.report(.copied(clipboardText))
+              if OCRResultNotifier.isEnabled() {
                 QuickAccessSound.complete.play()
               }
 
@@ -2320,11 +2306,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               // Error feedback
               AppStatusBarController.shared.setProcessing(false)
               DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
-              AppToastManager.shared.show(
-                message: error.localizedDescription,
-                style: .error,
-                position: .bottomCenter
-              )
+              OCRResultNotifier.shared.report(.failed(errorDescription: error.localizedDescription))
               QuickAccessSound.failed.play()
             }
           }

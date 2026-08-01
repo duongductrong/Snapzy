@@ -131,6 +131,29 @@ struct VSDesignSystem {
     static let bodyColor = Colors.secondary
   }
 
+  // MARK: - Metrics
+
+  struct Metrics {
+    /// Diameter of a single page-indicator dot.
+    static let pageIndicatorDot: CGFloat = 7
+    /// Gap between the page-indicator row and the bottom of the window.
+    static let pageIndicatorBottomPadding: CGFloat = 32
+    /// Breathing room between the last piece of step content and the indicator row.
+    static let pageIndicatorContentGap: CGFloat = 16
+
+    /// Vertical space the page indicator occupies at the bottom of the window.
+    ///
+    /// The indicator is drawn as an overlay in `SplashOnboardingRootView`, so it reserves
+    /// no space of its own. `OnboardingStepContainer` subtracts this from the height it
+    /// centers content in and pads by the same amount, which is what keeps a scrolled
+    /// step's primary button from sliding underneath the dots.
+    ///
+    /// Both sides read this value — keep them wired together so restyling the indicator
+    /// cannot silently reintroduce the overlap.
+    static let pageIndicatorArea: CGFloat =
+      pageIndicatorDot + pageIndicatorBottomPadding + pageIndicatorContentGap
+  }
+
   // MARK: - Primary Button Style
 
   struct PrimaryButtonStyle: ButtonStyle {

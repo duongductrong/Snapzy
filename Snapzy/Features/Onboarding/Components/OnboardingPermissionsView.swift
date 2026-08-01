@@ -19,6 +19,7 @@ struct PermissionsView: View {
   @State private var microphoneGranted = false
   @State private var accessibilityGranted = false
   @State private var exportFolderGranted = false
+  @State private var notificationAuthorization: SystemNotificationAuthorization = .notDetermined
   private let fileAccessManager = SandboxFileAccessManager.shared
 
   /// System Settings URLs
@@ -101,6 +102,18 @@ struct PermissionsView: View {
           isRequired: false,
           onGrant: {
             requestAccessibilityPermission()
+          }
+        )
+
+        // Notifications - Optional
+        PermissionRow(
+          icon: "bell.badge.fill",
+          title: notificationsTitle,
+          description: optionalForNotificationsTitle,
+          status: notificationsStatus,
+          isRequired: false,
+          onGrant: {
+            requestNotificationPermission()
           }
         )
       }
@@ -189,6 +202,20 @@ struct PermissionsView: View {
     }
   }
 
+  private var notificationsStatus: PermissionRowStatus {
+    switch notificationAuthorization {
+    case .authorized:
+      .granted
+    case .notDetermined:
+      .needsAction(buttonTitle: grantAccessTitle)
+    case .denied:
+      // Only the user can reverse a denial, so send them to System Settings.
+      .blocked(label: turnedOffTitle, buttonTitle: openSettingsTitle)
+    case .unavailable:
+      .blocked(label: unavailableTitle, buttonTitle: refreshStatusTitle)
+    }
+  }
+
   private func refreshPermissions() async {
     fileAccessManager.ensureExportLocationInitialized()
     AppIdentityManager.shared.refresh()
@@ -196,6 +223,7 @@ struct PermissionsView: View {
     checkMicrophonePermission()
     checkAccessibilityPermission()
     checkExportFolderPermission()
+    notificationAuthorization = await SystemNotificationService.shared.authorizationStatus()
   }
 
   private func requestExportFolderPermission() {
@@ -212,6 +240,22 @@ struct PermissionsView: View {
       DispatchQueue.main.async {
         microphoneGranted = granted
       }
+    }
+  }
+
+  private func requestNotificationPermission() {
+    Task {
+      switch notificationAuthorization {
+      case .notDetermined:
+        // In-app prompt, no System Settings trip needed.
+        await SystemNotificationService.shared.requestAuthorization()
+      case .denied:
+        SystemNotificationService.shared.openSystemSettings()
+      case .authorized, .unavailable:
+        // Authorized rows show no button; `unavailable` only offers a status refresh.
+        break
+      }
+      notificationAuthorization = await SystemNotificationService.shared.authorizationStatus()
     }
   }
 
@@ -277,7 +321,7 @@ struct PermissionsView: View {
   private var permissionsSubtitle: String {
     onboardingLocalization.string(
       "onboarding.permissions.subtitle",
-      defaultValue: "Snapzy needs permissions for capture, audio, and save location.",
+      defaultValue: "Snapzy needs permissions for capture, audio, notifications, and save location.",
       comment: "Onboarding permissions step subtitle"
     )
   }
@@ -335,6 +379,38 @@ struct PermissionsView: View {
       "onboarding.permissions.optional-global-shortcuts",
       defaultValue: "Optional for global shortcuts",
       comment: "Permission description for accessibility access"
+    )
+  }
+
+  private var notificationsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.permissions.notifications",
+      defaultValue: "Notifications",
+      comment: "Notifications permission label"
+    )
+  }
+
+  private var optionalForNotificationsTitle: String {
+    onboardingLocalization.string(
+      "onboarding.permissions.optional-notifications",
+      defaultValue: "Optional for OCR results and capture alerts",
+      comment: "Permission description for notification access"
+    )
+  }
+
+  private var turnedOffTitle: String {
+    onboardingLocalization.string(
+      "onboarding.permissions.turned-off",
+      defaultValue: "Turned Off",
+      comment: "Badge shown when notifications are switched off for Snapzy in System Settings"
+    )
+  }
+
+  private var openSettingsTitle: String {
+    onboardingLocalization.string(
+      "common.open-settings",
+      defaultValue: "Open Settings",
+      comment: "Generic button title to open System Settings"
     )
   }
 

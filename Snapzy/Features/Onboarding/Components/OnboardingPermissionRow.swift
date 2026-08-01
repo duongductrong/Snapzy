@@ -13,6 +13,26 @@ enum PermissionRowStatus {
   case blocked(label: String, buttonTitle: String)
 }
 
+/// Warning glyph pinned to the corner of a permission row's icon.
+///
+/// Replaces the "Turned Off" / "Unavailable" text pill. The wording is not dropped — it
+/// stays reachable as a tooltip and as the accessibility label, since the glyph alone
+/// cannot say *why* the permission is blocked.
+private struct BlockedBadge: View {
+  let label: String
+
+  var body: some View {
+    Image(systemName: "exclamationmark.triangle.fill")
+      .font(.system(size: 10, weight: .bold))
+      .foregroundColor(.orange)
+      .padding(3)
+      // Matches the row fill so the badge reads as punched out of the icon tile.
+      .background(Circle().fill(VSDesignSystem.Colors.cardFill))
+      .help(label)
+      .accessibilityLabel(label)
+  }
+}
+
 struct PermissionRow: View {
   let icon: String
   let title: String
@@ -25,7 +45,8 @@ struct PermissionRow: View {
 
   var body: some View {
     HStack(spacing: 16) {
-      // Icon
+      // Icon, with a corner badge instead of a text pill when the permission is blocked —
+      // the row already carries an action button, and a pill beside it reads as redundant.
       Image(systemName: icon)
         .font(.system(size: 24))
         .foregroundColor(VSDesignSystem.Colors.primary)
@@ -34,6 +55,12 @@ struct PermissionRow: View {
           RoundedRectangle(cornerRadius: 10)
             .fill(VSDesignSystem.Colors.secondaryButtonFill)
         )
+        .overlay(alignment: .topTrailing) {
+          if let blockedLabel {
+            BlockedBadge(label: blockedLabel)
+              .offset(x: 5, y: -5)
+          }
+        }
 
       // Title and Description
       VStack(alignment: .leading, spacing: 4) {
@@ -104,15 +131,20 @@ struct PermissionRow: View {
     )
   }
 
+  /// Only states without an action button get a text pill, so a row never shows a status
+  /// pill and a button side by side. `.blocked` surfaces through `blockedLabel` instead.
   private var badge: (label: String, color: Color, icon: String)? {
     switch status {
     case .granted:
       return (grantedLabel, .green, "checkmark.circle.fill")
-    case .needsAction:
+    case .needsAction, .blocked:
       return nil
-    case .blocked(let label, _):
-      return (label, .orange, "exclamationmark.triangle.fill")
     }
+  }
+
+  private var blockedLabel: String? {
+    guard case .blocked(let label, _) = status else { return nil }
+    return label
   }
 
   private var actionTitle: String? {
@@ -164,6 +196,14 @@ struct PermissionRow: View {
       title: "Microphone",
       description: "Optional for voice recording",
       status: .granted,
+      isRequired: false,
+      onGrant: {}
+    )
+    PermissionRow(
+      icon: "bell.badge.fill",
+      title: "Notifications",
+      description: "Optional for OCR results and capture alerts",
+      status: .blocked(label: "Turned Off", buttonTitle: "Open Settings"),
       isRequired: false,
       onGrant: {}
     )

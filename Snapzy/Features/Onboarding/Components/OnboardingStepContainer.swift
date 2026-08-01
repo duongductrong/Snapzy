@@ -19,14 +19,21 @@ struct OnboardingStepContainer<Content: View>: View {
             content()
           }
           .frame(maxWidth: 480)
-          .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+          // Center within the area the page indicator does not cover, and pad by the same
+          // amount so tall steps scroll to a stop above the dots instead of under them.
+          .frame(
+            maxWidth: .infinity,
+            minHeight: max(0, proxy.size.height - VSDesignSystem.Metrics.pageIndicatorArea)
+          )
           .padding(.horizontal, 40)
+          .padding(.bottom, VSDesignSystem.Metrics.pageIndicatorArea)
         }
       }
 
-      // Back button — fixed at center-left, doesn't scroll
-      // Offset upward by titlebar height (28pt) to visually center
-      // within the content area below the transparent titlebar
+      // Back button — fixed at center-left, doesn't scroll.
+      // Offset upward by titlebar height (28pt) to visually center within the content area
+      // below the transparent titlebar, plus the indicator area so it centers in the same
+      // region as the content above and keeps its tuned offset from that content's center.
       if let onBack {
         VStack {
           Spacer()
@@ -37,7 +44,7 @@ struct OnboardingStepContainer<Content: View>: View {
           }
           Spacer()
         }
-        .padding(.bottom, 28)
+        .padding(.bottom, 28 + VSDesignSystem.Metrics.pageIndicatorArea)
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

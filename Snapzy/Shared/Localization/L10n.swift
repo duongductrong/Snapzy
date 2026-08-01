@@ -1447,7 +1447,7 @@ nonisolated enum L10n {
     )
     static let permissionsSubtitle = string(
       "onboarding.permissions.subtitle",
-      defaultValue: "Snapzy needs permissions for capture, audio, and save location.",
+      defaultValue: "Snapzy needs permissions for capture, audio, notifications, and save location.",
       comment: "Onboarding permissions step subtitle"
     )
     static let screenRecording = string(
@@ -1484,6 +1484,21 @@ nonisolated enum L10n {
       "onboarding.permissions.optional-global-shortcuts",
       defaultValue: "Optional for global shortcuts",
       comment: "Permission description for accessibility access"
+    )
+    static let notifications = string(
+      "onboarding.permissions.notifications",
+      defaultValue: "Notifications",
+      comment: "Notifications permission label"
+    )
+    static let optionalForNotifications = string(
+      "onboarding.permissions.optional-notifications",
+      defaultValue: "Optional for OCR results and capture alerts",
+      comment: "Permission description for notification access"
+    )
+    static let turnedOff = string(
+      "onboarding.permissions.turned-off",
+      defaultValue: "Turned Off",
+      comment: "Badge shown when notifications are switched off for Snapzy in System Settings"
     )
     static let grantAccess = string(
       "onboarding.permissions.grant-access",
@@ -2984,19 +2999,44 @@ nonisolated enum L10n {
       defaultValue: "Applies to background removal in capture and Annotate",
       comment: "Capture preferences setting description"
     )
-    static let ocrSection = string(
-      "preferences-capture.section-ocr",
-      defaultValue: "OCR (Text Extraction)",
-      comment: "Capture preferences section title"
+    static let ocrTab = string(
+      "preferences-capture.ocr-tab",
+      defaultValue: "OCR",
+      comment: "Capture preferences pane title for the OCR (text extraction) tab"
+    )
+    static let ocrNotificationsSection = string(
+      "preferences-capture.ocr-notifications-section",
+      defaultValue: "Notifications",
+      comment: "Capture preferences section title grouping OCR notification settings"
+    )
+    static let ocrTextActionsSection = string(
+      "preferences-capture.ocr-text-actions-section",
+      defaultValue: "Text Actions",
+      comment: "Capture preferences section title grouping actions performed on recognized OCR text"
+    )
+    static let ocrNotificationAllowHint = string(
+      "preferences-capture.ocr-notification-allow-hint",
+      defaultValue: "Allow notifications so Snapzy can show you the recognized text.",
+      comment: "Hint shown in OCR preferences when macOS notification permission has not been requested yet"
+    )
+    static let ocrNotificationAllowAction = string(
+      "preferences-capture.ocr-notification-allow-action",
+      defaultValue: "Allow",
+      comment: "Button title that asks macOS for notification permission"
+    )
+    static let ocrNotificationDeniedHint = string(
+      "preferences-capture.ocr-notification-denied-hint",
+      defaultValue: "Notifications are turned off for Snapzy in System Settings. OCR still works and copies text to the clipboard.",
+      comment: "Hint shown in OCR preferences when macOS notification permission is denied"
     )
     static let ocrSuccessNotificationTitle = string(
       "preferences-capture.ocr-success-notification-title",
-      defaultValue: "Success Notification",
+      defaultValue: "OCR Notifications",
       comment: "Capture preferences setting title"
     )
     static let ocrSuccessNotificationDescription = string(
       "preferences-capture.ocr-success-notification-description",
-      defaultValue: "Show a toast when text is copied to clipboard",
+      defaultValue: "Show a system notification with the recognized text after OCR",
       comment: "Capture preferences setting description"
     )
     static let ocrLinkDetectionTitle = string(
@@ -7324,6 +7364,31 @@ nonisolated enum L10n {
       "ocr.no-text-found",
       defaultValue: "No text found in the selected area",
       comment: "Error shown when OCR cannot detect text in the selected area"
+    )
+    static let notificationCopiedTitle = string(
+      "ocr.notification-copied-title",
+      defaultValue: "Text has been copied",
+      comment: "System notification title shown when OCR copies recognized text to the clipboard"
+    )
+    static let notificationNoTextTitle = string(
+      "ocr.notification-no-text-title",
+      defaultValue: "No Text Detected",
+      comment: "System notification title shown when OCR finds no readable text"
+    )
+    static let notificationNoTextBody = string(
+      "ocr.notification-no-text-body",
+      defaultValue: "Snapzy could not find readable text in the selected area.",
+      comment: "System notification body shown when OCR finds no readable text"
+    )
+    static let notificationFailedTitle = string(
+      "ocr.notification-failed-title",
+      defaultValue: "OCR Failed",
+      comment: "System notification title shown when OCR recognition fails"
+    )
+    static let notificationFailedBody = string(
+      "ocr.notification-failed-body",
+      defaultValue: "Snapzy could not recognize text from the selected area.",
+      comment: "System notification body shown when OCR recognition fails"
     )
     static let qrCodesLabel = string(
       "ocr.qr-codes-label",

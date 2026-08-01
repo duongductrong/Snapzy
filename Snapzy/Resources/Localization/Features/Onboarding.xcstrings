@@ -2087,61 +2087,61 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy benötigt Berechtigungen für Aufnahme, Audio und Speicherort."
+            "value" : "Snapzy benötigt Berechtigungen für Aufnahme, Audio, Benachrichtigungen und Speicherort."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy needs permissions for capture, audio, and save location."
+            "value" : "Snapzy needs permissions for capture, audio, notifications, and save location."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy necesita permisos para capturar, audio y guardar ubicación."
+            "value" : "Snapzy necesita permisos para captura, audio, notificaciones y ubicación de guardado."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy a besoin d'autorisations pour la capture, l'audio et l'emplacement de sauvegarde."
+            "value" : "Snapzy a besoin d’autorisations pour la capture, l’audio, les notifications et le dossier d’enregistrement."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy にはキャプチャ、オーディオ、保存先へのアクセス権限が必要です。"
+            "value" : "Snapzy はキャプチャ、オーディオ、通知、保存先の権限が必要です。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy에는 캡처, 오디오, 위치 저장에 대한 권한이 필요합니다."
+            "value" : "Snapzy는 캡처, 오디오, 알림, 저장 위치에 대한 권한이 필요합니다."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy требуются разрешения для захвата, аудио и сохранения местоположения."
+            "value" : "Snapzy нужны разрешения для захвата, звука, уведомлений и папки сохранения."
           }
         },
         "vi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy cần quyền để chụp, ghi âm và lưu tệp."
+            "value" : "Snapzy cần quyền để chụp màn hình, âm thanh, thông báo và nơi lưu tệp."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要截屏、麦克风与存储位置等系统权限。"
+            "value" : "Snapzy 需要截图、音频、通知和保存位置的权限。"
           }
         },
         "zh-Hant" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy 需要截圖、麥克風與儲存位置等系統權限。"
+            "value" : "Snapzy 需要截圖、音訊、通知和儲存位置的權限。"
           }
         }
       }
@@ -4929,6 +4929,201 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "經常性支持"
+          }
+        }
+      }
+    },
+    "onboarding.permissions.notifications" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Benachrichtigungen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notificaciones"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Notifications"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "알림"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Уведомления"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông báo"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "通知"
+          }
+        }
+      }
+    },
+    "onboarding.permissions.optional-notifications" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional für OCR-Ergebnisse und Aufnahme-Hinweise"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional for OCR results and capture alerts"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional para resultados de OCR y avisos de captura"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif pour les résultats OCR et les alertes de capture"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OCR の結果とキャプチャ通知に使用（任意）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "OCR 결과 및 캡처 알림용 (선택)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Дополнительно для результатов OCR и уведомлений о снимках"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tùy chọn cho kết quả OCR và thông báo chụp ảnh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可选，用于 OCR 结果和截图提醒"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選用，用於 OCR 結果和截圖提醒"
+          }
+        }
+      }
+    },
+    "onboarding.permissions.turned-off" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deaktiviert"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turned Off"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Desactivado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Désactivé"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "オフ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "꺼짐"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отключено"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Đang tắt"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已關閉"
           }
         }
       }
