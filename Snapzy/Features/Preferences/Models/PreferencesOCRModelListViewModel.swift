@@ -22,6 +22,12 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
     let editing: CustomOCRModel?
   }
 
+  /// Add/edit payload for a user-defined downloadable OCR model.
+  struct CatalogSheetRequest: Identifiable {
+    let id = UUID()
+    let editing: OCRModelManifest?
+  }
+
   /// Identifiable payload for the download-failure alert.
   struct DownloadFailure: Identifiable {
     let id = UUID()
@@ -37,12 +43,21 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
     let message: String
   }
 
+  struct CatalogOperationResult: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+  }
+
   @Published private(set) var selection: OCRModelSelection
   @Published var sheetRequest: SheetRequest?
+  @Published var catalogSheetRequest: CatalogSheetRequest?
   @Published var downloadFailure: DownloadFailure?
   @Published var removeDownloadableCandidate: OCRModelDefinition?
+  @Published var removeUserCatalogCandidate: OCRModelCatalogEntry?
   @Published var removeCustomCandidate: CustomOCRModel?
   @Published var connectionTestResult: ConnectionTestResult?
+  @Published var catalogOperationResult: CatalogOperationResult?
   @Published private(set) var testingConnectionModelID: UUID?
   /// Script coverage of each installed catalog model's `dict.txt`, loaded
   /// lazily by the row that displays it.
@@ -50,31 +65,47 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
 
   let modelStore: OCRModelStore
   let customModelStore: CustomOCRModelStore
+  let userCatalogStore: OCRUserCatalogStore
+  let catalog: OCRModelCatalog
   private let defaults: UserDefaults
   private var cancellables: Set<AnyCancellable> = []
 
   init(
     defaults: UserDefaults = .standard,
-    modelStore: OCRModelStore = .shared,
-    customModelStore: CustomOCRModelStore = .shared
+    modelStore: OCRModelStore? = nil,
+    customModelStore: CustomOCRModelStore? = nil,
+    userCatalogStore: OCRUserCatalogStore? = nil,
+    catalog: OCRModelCatalog? = nil
   ) {
     self.defaults = defaults
-    self.modelStore = modelStore
-    self.customModelStore = customModelStore
+    self.modelStore = modelStore ?? .shared
+    self.customModelStore = customModelStore ?? .shared
+    self.userCatalogStore = userCatalogStore ?? .shared
+    self.catalog = catalog ?? .shared
     selection = Self.storedSelection(defaults: defaults)
 
     // Forward store changes so the single @StateObject in the view re-renders.
-    modelStore.objectWillChange
+    self.modelStore.objectWillChange
       .sink { [weak self] in self?.objectWillChange.send() }
       .store(in: &cancellables)
-    customModelStore.objectWillChange
+    self.customModelStore.objectWillChange
+      .sink { [weak self] in self?.objectWillChange.send() }
+      .store(in: &cancellables)
+    self.catalog.objectWillChange
       .sink { [weak self] in self?.objectWillChange.send() }
       .store(in: &cancellables)
     // Store-side selection resets (e.g. config import, custom model removal)
     // land in UserDefaults; mirror them into the published selection.
-    customModelStore.$models
+    self.customModelStore.$models
       .dropFirst()
       .sink { [weak self] _ in self?.refreshSelection() }
+      .store(in: &cancellables)
+    self.userCatalogStore.$models
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.coverage.removeAll()
+        self?.refreshSelection()
+      }
       .store(in: &cancellables)
   }
 
@@ -99,11 +130,11 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
   func isSelectable(_ selection: OCRModelSelection) -> Bool {
     switch selection {
     case .builtIn:
-      return true
+      true
     case .downloadable(let id):
-      return modelStore.state(for: id) == .installed
+      modelStore.state(for: id) == .installed
     case .custom(let id):
-      return customModelStore.model(for: id) != nil
+      customModelStore.model(for: id) != nil
     }
   }
 
@@ -144,10 +175,10 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
     let task = modelStore.download(modelID: modelID)
     Task { [weak self] in
       await task.value
-      guard let self, case .failed(let reason) = self.modelStore.state(for: modelID) else { return }
-      self.downloadFailure = DownloadFailure(
+      guard let self, case .failed(let reason) = modelStore.state(for: modelID) else { return }
+      downloadFailure = DownloadFailure(
         modelID: modelID,
-        modelName: OCRModelCatalog.definition(for: modelID)?.displayName ?? modelID,
+        modelName: catalog.definition(for: modelID)?.displayName ?? modelID,
         reason: reason
       )
     }
@@ -178,6 +209,42 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
     refreshSelection()
   }
 
+  func removeUserCatalogModel(_ entry: OCRModelCatalogEntry) {
+    guard entry.source == .user else { return }
+    userCatalogStore.remove(id: entry.id)
+    coverage[entry.id] = nil
+    refreshSelection()
+  }
+
+  // MARK: - User Catalog Import / Export
+
+  @discardableResult
+  func importCatalog(_ data: Data, fileExtension: String) throws -> Int {
+    let document = try OCRCatalogManifestCodec.decode(data, fileExtension: fileExtension)
+    return try importCatalog(document)
+  }
+
+  @discardableResult
+  func importCatalog(from url: URL) throws -> Int {
+    try importCatalog(OCRCatalogManifestCodec.decode(contentsOf: url))
+  }
+
+  private func importCatalog(_ document: OCRModelManifestDocument) throws -> Int {
+    let imported = try OCRCatalogManifestValidator.validate(document)
+    try userCatalogStore.merge(imported)
+    refreshSelection()
+    return imported.count
+  }
+
+  func exportCatalog(
+    format: OCRModelManifestFormat,
+    model: OCRModelManifest? = nil
+  ) throws -> Data {
+    let document = model.map(OCRModelManifestDocument.singleModel)
+      ?? userCatalogStore.exportDocument()
+    return try OCRCatalogManifestCodec.encode(document, format: format)
+  }
+
   // MARK: - Connection Test (row menu)
 
   func testConnection(for model: CustomOCRModel) {
@@ -186,15 +253,15 @@ final class PreferencesOCRModelListViewModel: ObservableObject {
     Task { [weak self] in
       let result = await RemoteOCRProvider(model: model).testConnection()
       guard let self else { return }
-      self.testingConnectionModelID = nil
+      testingConnectionModelID = nil
       switch result {
       case .success(let latency):
-        self.connectionTestResult = ConnectionTestResult(
+        connectionTestResult = ConnectionTestResult(
           title: L10n.PreferencesCapture.ocrModelTestSuccessTitle,
           message: L10n.PreferencesCapture.ocrModelTestSuccessLatency(Int(latency * 1000))
         )
       case .failure(let error):
-        self.connectionTestResult = ConnectionTestResult(
+        connectionTestResult = ConnectionTestResult(
           title: L10n.PreferencesCapture.ocrModelTestFailedTitle,
           message: (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
         )

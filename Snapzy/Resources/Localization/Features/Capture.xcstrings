@@ -20568,6 +20568,435 @@
         }
       }
     },
+    "preferences-capture.ocr-catalog-add-downloadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Downloadable Model…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-add-menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Model…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-add-endpoint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add API Endpoint…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-import": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import Model…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-export": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export Models"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-export-yaml": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export as YAML…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-export-json": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export as JSON…"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-user-badge": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "User"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Model Definition"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-delete-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Downloadable Model?"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-delete-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” and its downloaded files will be removed from this Mac."
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-operation-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR Model Catalog"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-imported": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported %d downloadable model(s)."
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-exported": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The OCR model manifest was exported."
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-sheet-add-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Downloadable Model"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-sheet-edit-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit Downloadable Model"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-sheet-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Define a compatible PP-OCR detector, recognizer, and dictionary from HTTPS or Hugging Face."
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-metadata-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model Information"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-model-id": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model ID"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-display-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display Name"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-parameter-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parameters"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-fp32-size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FP32 Size"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-int8-size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "INT8 Size"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-adapter": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Runtime Adapter"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-adapter-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compatible adapter: ppocr-db-ctc-v1"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-detector": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detector (det.onnx)"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-recognizer": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognizer (rec.onnx)"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-dictionary": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary (dict.txt)"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-source": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-direct-url": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Direct URL"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-hugging-face": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hugging Face"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-url": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS URL"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-repository": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repository"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-revision": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Revision"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-file": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repository File"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-expected-bytes": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expected Bytes"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-expected-bytes-optional": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expected Bytes (optional)"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-sha256": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SHA-256"
+          }
+        }
+      }
+    },
+    "preferences-capture.ocr-catalog-sha256-optional": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SHA-256 (optional)"
+          }
+        }
+      }
+    },
     "preferences-capture.ocr-model-add-custom": {
       "comment": "Button title that opens the sheet to add a custom OCR endpoint",
       "extractionState": "manual",

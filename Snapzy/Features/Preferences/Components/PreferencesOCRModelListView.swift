@@ -5,7 +5,9 @@
 //  OCR model picker list: built-in default, downloadable PP-OCR models, custom endpoints.
 //
 
+import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// Content of the "OCR Model" section in Capture → OCR preferences.
 struct PreferencesOCRModelListView: View {
@@ -16,9 +18,9 @@ struct PreferencesOCRModelListView: View {
       VStack(spacing: 0) {
         builtInRow
 
-        ForEach(OCRModelCatalog.all, id: \.id) { definition in
+        ForEach(viewModel.catalog.entries) { entry in
           Divider()
-          downloadableRow(definition)
+          downloadableRow(entry)
         }
 
         ForEach(viewModel.customModelStore.models) { model in
@@ -29,8 +31,29 @@ struct PreferencesOCRModelListView: View {
 
       HStack {
         Spacer()
-        Button(L10n.PreferencesCapture.ocrModelAddCustom) {
-          viewModel.sheetRequest = .init(editing: nil)
+        Button(L10n.PreferencesCapture.ocrCatalogImport) {
+          importCatalog()
+        }
+        .controlSize(.small)
+
+        Menu(L10n.PreferencesCapture.ocrCatalogExport) {
+          Button(L10n.PreferencesCapture.ocrCatalogExportYAML) {
+            exportCatalog(format: .yaml)
+          }
+          Button(L10n.PreferencesCapture.ocrCatalogExportJSON) {
+            exportCatalog(format: .json)
+          }
+        }
+        .controlSize(.small)
+        .disabled(viewModel.userCatalogStore.models.isEmpty)
+
+        Menu(L10n.PreferencesCapture.ocrCatalogAddMenu) {
+          Button(L10n.PreferencesCapture.ocrCatalogAddDownloadable) {
+            viewModel.catalogSheetRequest = .init(editing: nil)
+          }
+          Button(L10n.PreferencesCapture.ocrCatalogAddEndpoint) {
+            viewModel.sheetRequest = .init(editing: nil)
+          }
         }
         .controlSize(.small)
       }
@@ -40,6 +63,13 @@ struct PreferencesOCRModelListView: View {
         store: viewModel.customModelStore,
         editing: request.editing,
         onDismiss: { viewModel.sheetRequest = nil }
+      )
+    }
+    .sheet(item: $viewModel.catalogSheetRequest) { request in
+      PreferencesOCRCatalogModelSheet(
+        store: viewModel.userCatalogStore,
+        editing: request.editing,
+        onDismiss: { viewModel.catalogSheetRequest = nil }
       )
     }
     .alert(
@@ -104,6 +134,27 @@ struct PreferencesOCRModelListView: View {
       ))
     }
     .alert(
+      L10n.PreferencesCapture.ocrCatalogDeleteTitle,
+      isPresented: Binding(
+        get: { viewModel.removeUserCatalogCandidate != nil },
+        set: { if !$0 { viewModel.removeUserCatalogCandidate = nil } }
+      )
+    ) {
+      Button(L10n.PreferencesCapture.ocrCatalogDelete, role: .destructive) {
+        if let candidate = viewModel.removeUserCatalogCandidate {
+          viewModel.removeUserCatalogModel(candidate)
+        }
+        viewModel.removeUserCatalogCandidate = nil
+      }
+      Button(L10n.Common.cancel, role: .cancel) {
+        viewModel.removeUserCatalogCandidate = nil
+      }
+    } message: {
+      Text(L10n.PreferencesCapture.ocrCatalogDeleteMessage(
+        viewModel.removeUserCatalogCandidate?.definition.displayName ?? ""
+      ))
+    }
+    .alert(
       viewModel.connectionTestResult?.title ?? "",
       isPresented: Binding(
         get: { viewModel.connectionTestResult != nil },
@@ -115,6 +166,19 @@ struct PreferencesOCRModelListView: View {
       }
     } message: {
       Text(viewModel.connectionTestResult?.message ?? "")
+    }
+    .alert(
+      viewModel.catalogOperationResult?.title ?? "",
+      isPresented: Binding(
+        get: { viewModel.catalogOperationResult != nil },
+        set: { if !$0 { viewModel.catalogOperationResult = nil } }
+      )
+    ) {
+      Button(L10n.Common.ok, role: .cancel) {
+        viewModel.catalogOperationResult = nil
+      }
+    } message: {
+      Text(viewModel.catalogOperationResult?.message ?? "")
     }
   }
 
@@ -147,7 +211,8 @@ struct PreferencesOCRModelListView: View {
 
   // MARK: - Downloadable Rows
 
-  private func downloadableRow(_ definition: OCRModelDefinition) -> some View {
+  private func downloadableRow(_ entry: OCRModelCatalogEntry) -> some View {
+    let definition = entry.definition
     let selection = OCRModelSelection.downloadable(definition.id)
     let state = viewModel.modelStore.state(for: definition.id)
     let isSelectable = viewModel.isSelectable(selection)
@@ -160,11 +225,14 @@ struct PreferencesOCRModelListView: View {
           Text(L10n.PreferencesCapture.ocrModelParams(definition.parameterCountLabel))
             .font(.caption)
             .foregroundColor(.secondary)
+          if entry.source == .user {
+            badge(L10n.PreferencesCapture.ocrCatalogUserBadge)
+          }
         }
         Text(L10n.PreferencesCapture.ocrModelSizes(definition.fp32SizeLabel, definition.int8SizeLabel))
           .font(.caption)
           .foregroundColor(.secondary)
-        if let coverage = viewModel.coverage[definition.id] {
+        if state == .installed, let coverage = viewModel.coverage[definition.id] {
           charsetLines(coverage)
         }
       }
@@ -172,7 +240,7 @@ struct PreferencesOCRModelListView: View {
 
       Spacer()
 
-      downloadableTrailing(definition: definition, state: state, isSelected: viewModel.isSelected(selection))
+      downloadableTrailing(entry: entry, state: state, isSelected: viewModel.isSelected(selection))
     }
     .padding(.vertical, 6)
     .contentShape(Rectangle())
@@ -215,20 +283,39 @@ struct PreferencesOCRModelListView: View {
 
   private static func displayName(_ script: OCRScript) -> String {
     switch script {
-    case .latin: return L10n.PreferencesCapture.ocrScriptLatin
-    case .vietnamese: return L10n.PreferencesCapture.ocrScriptVietnamese
-    case .chinese: return L10n.PreferencesCapture.ocrScriptChinese
-    case .japanese: return L10n.PreferencesCapture.ocrScriptJapanese
-    case .korean: return L10n.PreferencesCapture.ocrScriptKorean
-    case .cyrillic: return L10n.PreferencesCapture.ocrScriptCyrillic
-    case .arabic: return L10n.PreferencesCapture.ocrScriptArabic
-    case .thai: return L10n.PreferencesCapture.ocrScriptThai
-    case .devanagari: return L10n.PreferencesCapture.ocrScriptDevanagari
+    case .latin: L10n.PreferencesCapture.ocrScriptLatin
+    case .vietnamese: L10n.PreferencesCapture.ocrScriptVietnamese
+    case .chinese: L10n.PreferencesCapture.ocrScriptChinese
+    case .japanese: L10n.PreferencesCapture.ocrScriptJapanese
+    case .korean: L10n.PreferencesCapture.ocrScriptKorean
+    case .cyrillic: L10n.PreferencesCapture.ocrScriptCyrillic
+    case .arabic: L10n.PreferencesCapture.ocrScriptArabic
+    case .thai: L10n.PreferencesCapture.ocrScriptThai
+    case .devanagari: L10n.PreferencesCapture.ocrScriptDevanagari
     }
   }
 
   @ViewBuilder
   private func downloadableTrailing(
+    entry: OCRModelCatalogEntry,
+    state: OCRModelInstallState,
+    isSelected: Bool
+  ) -> some View {
+    let definition = entry.definition
+    HStack(spacing: 10) {
+      downloadableInstallControl(
+        definition: definition,
+        state: state,
+        isSelected: isSelected
+      )
+      if entry.source == .user {
+        userCatalogMenu(entry)
+      }
+    }
+  }
+
+  @ViewBuilder
+  private func downloadableInstallControl(
     definition: OCRModelDefinition,
     state: OCRModelInstallState,
     isSelected: Bool
@@ -295,6 +382,32 @@ struct PreferencesOCRModelListView: View {
         .controlSize(.small)
       }
     }
+  }
+
+  private func userCatalogMenu(_ entry: OCRModelCatalogEntry) -> some View {
+    Menu {
+      Button(L10n.PreferencesCapture.ocrModelEdit) {
+        viewModel.catalogSheetRequest = .init(editing: entry.manifest)
+      }
+      Menu(L10n.PreferencesCapture.ocrCatalogExport) {
+        Button(L10n.PreferencesCapture.ocrCatalogExportYAML) {
+          exportCatalog(format: .yaml, model: entry.manifest)
+        }
+        Button(L10n.PreferencesCapture.ocrCatalogExportJSON) {
+          exportCatalog(format: .json, model: entry.manifest)
+        }
+      }
+      Divider()
+      Button(L10n.PreferencesCapture.ocrCatalogDelete, role: .destructive) {
+        viewModel.removeUserCatalogCandidate = entry
+      }
+    } label: {
+      Image(systemName: "ellipsis.circle")
+        .foregroundColor(.secondary)
+    }
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .frame(width: 20)
   }
 
   // MARK: - Custom Rows
@@ -371,6 +484,70 @@ struct PreferencesOCRModelListView: View {
 
   private static func downloadSizeLabel(for definition: OCRModelDefinition) -> String {
     ByteCountFormatter.string(fromByteCount: definition.totalDownloadBytes, countStyle: .file)
+  }
+
+  // MARK: - Manifest Files
+
+  private func importCatalog() {
+    let panel = NSOpenPanel()
+    panel.title = L10n.PreferencesCapture.ocrCatalogImport
+    panel.allowsMultipleSelection = false
+    panel.canChooseDirectories = false
+    panel.allowedContentTypes = Self.manifestContentTypes
+
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+    let accessed = url.startAccessingSecurityScopedResource()
+    defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+    do {
+      let count = try viewModel.importCatalog(from: url)
+      viewModel.catalogOperationResult = .init(
+        title: L10n.PreferencesCapture.ocrCatalogOperationTitle,
+        message: L10n.PreferencesCapture.ocrCatalogImported(count)
+      )
+    } catch {
+      viewModel.catalogOperationResult = .init(
+        title: L10n.PreferencesCapture.ocrCatalogOperationTitle,
+        message: error.localizedDescription
+      )
+    }
+  }
+
+  private func exportCatalog(
+    format: OCRModelManifestFormat,
+    model: OCRModelManifest? = nil
+  ) {
+    let fileExtension = format == .json ? "json" : "yaml"
+    let panel = NSSavePanel()
+    panel.title = L10n.PreferencesCapture.ocrCatalogExport
+    panel.canCreateDirectories = true
+    panel.nameFieldStringValue = "snapzy-ocr-\(model?.id ?? "catalog").\(fileExtension)"
+    panel.allowedContentTypes = [Self.contentType(for: fileExtension)]
+
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+    do {
+      try viewModel.exportCatalog(format: format, model: model).write(to: url, options: .atomic)
+      viewModel.catalogOperationResult = .init(
+        title: L10n.PreferencesCapture.ocrCatalogOperationTitle,
+        message: L10n.PreferencesCapture.ocrCatalogExported
+      )
+    } catch {
+      viewModel.catalogOperationResult = .init(
+        title: L10n.PreferencesCapture.ocrCatalogOperationTitle,
+        message: error.localizedDescription
+      )
+    }
+  }
+
+  private static var manifestContentTypes: [UTType] {
+    [
+      .json,
+      contentType(for: "yaml"),
+      contentType(for: "yml"),
+    ]
+  }
+
+  private static func contentType(for fileExtension: String) -> UTType {
+    UTType(filenameExtension: fileExtension) ?? .plainText
   }
 }
 

@@ -11,6 +11,7 @@
 		B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */ = {isa = PBXBuildFile; productRef = B42DE1A12FA1B90000WEBP01 /* WebP */; };
 		C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C73DB2A12FA3GRDB00GRDB01 /* GRDB */; };
 		E84FC1A22FA7ORT0000ORT01 /* onnxruntime in Frameworks */ = {isa = PBXBuildFile; productRef = E84FC1A12FA7ORT0000ORT01 /* onnxruntime */; };
+		F19A00032FA8000000000003 /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = F19A00022FA8000000000002 /* Yams */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +68,7 @@
 				B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */,
 				C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */,
 				E84FC1A22FA7ORT0000ORT01 /* onnxruntime in Frameworks */,
+				F19A00032FA8000000000003 /* Yams in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -124,6 +126,7 @@
 				B42DE1A12FA1B90000WEBP01 /* WebP */,
 				C73DB2A12FA3GRDB00GRDB01 /* GRDB */,
 				E84FC1A12FA7ORT0000ORT01 /* onnxruntime */,
+				F19A00022FA8000000000002 /* Yams */,
 			);
 			productName = Snapzy;
 			productReference = A36462A32F18EEDA0003453D /* Snapzy Debug.app */;
@@ -194,6 +197,7 @@
 				B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "Swift-WebP" */,
 				C73DB19F2FA3GRDB00GRDB01 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				E84FC1A02FA7ORT0000ORT01 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */,
+				F19A00012FA8000000000001 /* XCRemoteSwiftPackageReference "Yams" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A36462A42F18EEDA0003453D /* Products */;
@@ -589,6 +593,14 @@
 				version = 1.20.0;
 			};
 		};
+		F19A00012FA8000000000001 /* XCRemoteSwiftPackageReference "Yams" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/jpsim/Yams.git";
+			requirement = {
+				kind = exactVersion;
+				version = 6.2.2;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -611,6 +623,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E84FC1A02FA7ORT0000ORT01 /* XCRemoteSwiftPackageReference "onnxruntime-swift-package-manager" */;
 			productName = onnxruntime;
+		};
+		F19A00022FA8000000000002 /* Yams */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F19A00012FA8000000000001 /* XCRemoteSwiftPackageReference "Yams" */;
+			productName = Yams;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

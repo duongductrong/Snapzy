@@ -29,6 +29,8 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
   private var installRoot: URL!
   private var modelStore: OCRModelStore!
   private var customStore: CustomOCRModelStore!
+  private var userCatalogStore: OCRUserCatalogStore!
+  private var catalog: OCRModelCatalog!
   private var viewModel: PreferencesOCRModelListViewModel!
 
   override func setUp() {
@@ -36,16 +38,23 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
     defaults = UserDefaultsFactory.make()
     installRoot = FileManager.default.temporaryDirectory
       .appendingPathComponent("PreferencesOCRModelSelectionTests-\(UUID().uuidString)", isDirectory: true)
+    customStore = CustomOCRModelStore(defaults: defaults, keychainStore: FakeOCRKeychainStore())
+    userCatalogStore = OCRUserCatalogStore(defaults: defaults) { [weak self] ids in
+      self?.modelStore?.invalidateCatalogModels(modelIDs: ids)
+    }
+    catalog = OCRModelCatalog(userStore: userCatalogStore)
     modelStore = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
-      downloadService: FakeOCRModelDownloader()
+      downloadService: FakeOCRModelDownloader(),
+      catalog: catalog
     )
-    customStore = CustomOCRModelStore(defaults: defaults, keychainStore: FakeOCRKeychainStore())
     viewModel = PreferencesOCRModelListViewModel(
       defaults: defaults,
       modelStore: modelStore,
-      customModelStore: customStore
+      customModelStore: customStore,
+      userCatalogStore: userCatalogStore,
+      catalog: catalog
     )
   }
 
@@ -159,5 +168,98 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
     XCTAssertEqual(viewModel.selection, .builtIn)
     XCTAssertEqual(persistedSelection(), OCRModelSelection.builtIn.persistedValue)
     XCTAssertNil(customStore.model(for: model.id))
+  }
+
+  // MARK: - User Downloadable Catalog
+
+  func testBundledCatalogEntriesRemainReadOnlyBySource() {
+    XCTAssertFalse(catalog.entries.isEmpty)
+    XCTAssertTrue(catalog.entries.allSatisfy { $0.source == .bundled })
+  }
+
+  func testImportYAMLAddsUserDownloadableModelAndExportsJSON() throws {
+    let manifest = makeUserCatalogManifest(id: "community-model")
+    let yaml = try OCRCatalogManifestCodec.encode(.singleModel(manifest), format: .yaml)
+
+    XCTAssertEqual(try viewModel.importCatalog(yaml, fileExtension: "yml"), 1)
+    XCTAssertEqual(userCatalogStore.models, [manifest])
+    XCTAssertEqual(catalog.entry(for: manifest.id)?.source, .user)
+
+    let exported = try viewModel.exportCatalog(format: .json)
+    let document = try OCRCatalogManifestCodec.decode(exported, fileExtension: "json")
+    XCTAssertEqual(document.models, [manifest])
+  }
+
+  func testRemoveUserDownloadableModelDeletesInstallAndResetsSelection() async throws {
+    let manifest = makeUserCatalogManifest(id: "community-model")
+    try userCatalogStore.add(manifest)
+    await modelStore.download(modelID: manifest.id).value
+    viewModel.select(.downloadable(manifest.id))
+    let entry = try XCTUnwrap(catalog.entry(for: manifest.id))
+
+    viewModel.removeUserCatalogModel(entry)
+
+    XCTAssertNil(userCatalogStore.model(for: manifest.id))
+    XCTAssertNil(catalog.entry(for: manifest.id))
+    XCTAssertEqual(modelStore.state(for: manifest.id), .notInstalled)
+    XCTAssertEqual(viewModel.selection, .builtIn)
+    XCTAssertEqual(persistedSelection(), "builtin")
+    XCTAssertFalse(FileManager.default.fileExists(
+      atPath: installRoot.appendingPathComponent(manifest.id).path
+    ))
+  }
+
+  func testEditingUserDefinitionInvalidatesPreviouslyInstalledArtifacts() async throws {
+    let manifest = makeUserCatalogManifest(id: "community-model", displayName: "Old")
+    try userCatalogStore.add(manifest)
+    await modelStore.download(modelID: manifest.id).value
+
+    try userCatalogStore.update(makeUserCatalogManifest(
+      id: manifest.id,
+      displayName: "Updated"
+    ))
+
+    XCTAssertEqual(catalog.entry(for: manifest.id)?.definition.displayName, "Updated")
+    XCTAssertEqual(modelStore.state(for: manifest.id), .notInstalled)
+    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
+  }
+
+  private func makeUserCatalogManifest(
+    id: String,
+    displayName: String = "Community Model"
+  ) -> OCRModelManifest {
+    let hash = String(repeating: "d", count: 64)
+    func artifact(
+      _ role: OCRModelArtifactRole,
+      _ path: String,
+      _ bytes: Int64?,
+      _ hash: String?
+    ) -> OCRModelArtifactManifest {
+      OCRModelArtifactManifest(
+        role: role,
+        source: OCRModelArtifactSourceManifest(
+          type: .url,
+          url: "https://example.com/\(path)",
+          repository: nil,
+          revision: nil,
+          file: nil
+        ),
+        expectedBytes: bytes,
+        sha256: hash
+      )
+    }
+    return OCRModelManifest(
+      id: id,
+      displayName: displayName,
+      parameterCountLabel: "2M",
+      fp32SizeLabel: "12 MB",
+      int8SizeLabel: "4 MB",
+      adapter: .ppocrDBCTCV1,
+      artifacts: [
+        artifact(.detector, "det.onnx", 100, hash),
+        artifact(.recognizer, "rec.onnx", 200, hash),
+        artifact(.dictionary, "dict.txt", nil, nil),
+      ]
+    )
   }
 }

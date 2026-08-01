@@ -1,0 +1,74 @@
+format: snapzy-ocr-catalog
+schema_version: 1
+models:
+  - id: ppocrv6-tiny
+    display_name: PP-OCRv6 Tiny
+    parameter_count_label: 1.5M
+    fp32_size_label: 6–8 MB
+    int8_size_label: 2–4 MB
+    adapter: ppocr-db-ctc-v1
+    artifacts:
+      - role: detector
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx"
+        expected_bytes: 1780590
+        sha256: "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
+      - role: recognizer
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx"
+        expected_bytes: 4462639
+        sha256: "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
+      - role: dictionary
+        source:
+          type: url
+          url: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_tiny_dict.txt"
+
+  - id: ppocrv6-small
+    display_name: PP-OCRv6 Small
+    parameter_count_label: 7.7M
+    fp32_size_label: 31–40 MB
+    int8_size_label: 8–15 MB
+    adapter: ppocr-db-ctc-v1
+    artifacts:
+      - role: detector
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx"
+        expected_bytes: 9880512
+        sha256: "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
+      - role: recognizer
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx"
+        expected_bytes: 21159378
+        sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
+      - role: dictionary
+        source:
+          type: url
+          url: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_dict.txt"
+
+  - id: ppocrv6-medium
+    display_name: PP-OCRv6 Medium
+    parameter_count_label: 34.5M
+    fp32_size_label: 138–160 MB
+    int8_size_label: 35–55 MB
+    adapter: ppocr-db-ctc-v1
+    artifacts:
+      - role: detector
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx"
+        expected_bytes: 62032837
+        sha256: "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
+      - role: recognizer
+        source:
+          type: url
+          url: "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx"
+        expected_bytes: 76554979
+        sha256: "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
+      - role: dictionary
+        source:
+          type: url
+          url: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_dict.txt"

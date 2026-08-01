@@ -21,18 +21,21 @@ final class OCRModelStore: ObservableObject {
   private let fileManager: FileManager
   private let installRootURL: URL?
   private let downloadService: OCRModelDownloading
+  private let catalog: OCRModelCatalog
   private var activeDownloads: [String: (task: Task<Void, Never>, token: UUID)] = [:]
 
   init(
     defaults: UserDefaults = .standard,
     fileManager: FileManager = .default,
     installRootURL: URL? = nil,
-    downloadService: OCRModelDownloading = OCRModelDownloadService()
+    downloadService: OCRModelDownloading = OCRModelDownloadService(),
+    catalog: OCRModelCatalog? = nil
   ) {
     self.defaults = defaults
     self.fileManager = fileManager
     self.installRootURL = installRootURL ?? Self.defaultInstallRootURL(fileManager: fileManager)
     self.downloadService = downloadService
+    self.catalog = catalog ?? .shared
     for id in installedIDs { states[id] = .installed }
   }
 
@@ -75,7 +78,7 @@ final class OCRModelStore: ObservableObject {
     defer {
       if activeDownloads[modelID]?.token == token { activeDownloads[modelID] = nil }
     }
-    guard let definition = OCRModelCatalog.definition(for: modelID) else {
+    guard let definition = catalog.definition(for: modelID) else {
       states[modelID] = .failed(reason: "Unknown OCR model.")
       return
     }
@@ -120,6 +123,14 @@ final class OCRModelStore: ObservableObject {
       }
     }
     markMissing(modelID: modelID)
+    resetSelectionIfNeeded(modelIDs: [modelID])
+  }
+
+  /// Removes installs invalidated by a user-catalog delete or metadata change.
+  func invalidateCatalogModels(modelIDs: [String]) {
+    for id in modelIDs {
+      removeModel(modelID: id)
+    }
   }
 
   /// Prunes a model from persisted installs without touching its files.
@@ -141,6 +152,14 @@ final class OCRModelStore: ObservableObject {
   /// Prunes persisted installs whose files are missing on disk; resets the
   /// persisted selection to built-in when it referenced a pruned model.
   func validateInstalledModelsOnLaunch() {
+    guard catalog.isAuthoritative else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .ocr,
+        "Skipped OCR install pruning because the model catalog is unavailable"
+      )
+      return
+    }
     var validIDs: [String] = []
     var prunedIDs: [String] = []
     var seen = Set<String>()
@@ -190,10 +209,18 @@ final class OCRModelStore: ObservableObject {
   }
 
   private func isInstallComplete(modelID: String) -> Bool {
-    guard let definition = OCRModelCatalog.definition(for: modelID),
+    guard let definition = catalog.definition(for: modelID),
           let directory = installDirectory(for: modelID) else { return false }
     return definition.files.allSatisfy {
       fileManager.fileExists(atPath: directory.appendingPathComponent($0.name).path)
     }
+  }
+
+  private func resetSelectionIfNeeded(modelIDs: [String]) {
+    let rawSelection = defaults.string(forKey: PreferencesKeys.ocrSelectedModel) ?? ""
+    guard case .downloadable(let selectedID) = OCRModelSelection(persistedValue: rawSelection),
+          modelIDs.contains(selectedID)
+    else { return }
+    defaults.set(OCRModelSelection.builtIn.persistedValue, forKey: PreferencesKeys.ocrSelectedModel)
   }
 }

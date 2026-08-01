@@ -31,8 +31,28 @@ struct OCRModelDefinition: Equatable {
   let fp32SizeLabel: String
   /// INT8 size range label (e.g. `2–4 MB`); labels only, INT8 not published.
   let int8SizeLabel: String
+  /// Versioned runtime contract used to execute this model.
+  let adapterID: OCRModelAdapterID
   /// Files to download, verified and installed in order.
   let files: [OCRModelFile]
+
+  init(
+    id: String,
+    displayName: String,
+    parameterCountLabel: String,
+    fp32SizeLabel: String,
+    int8SizeLabel: String,
+    adapterID: OCRModelAdapterID = .ppocrDBCTCV1,
+    files: [OCRModelFile]
+  ) {
+    self.id = id
+    self.displayName = displayName
+    self.parameterCountLabel = parameterCountLabel
+    self.fp32SizeLabel = fp32SizeLabel
+    self.int8SizeLabel = int8SizeLabel
+    self.adapterID = adapterID
+    self.files = files
+  }
 
   /// Sum of known file sizes; files without `expectedBytes` count as zero.
   var totalDownloadBytes: Int64 {

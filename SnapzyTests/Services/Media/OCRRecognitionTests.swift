@@ -5,13 +5,12 @@
 //  Regression coverage for language-aware Vision OCR routing.
 //
 
+@testable import Snapzy
 import Vision
 import XCTest
-@testable import Snapzy
 
 @MainActor
 final class OCRRecognitionTests: XCTestCase {
-
   func testVisionOCRProfile_routesReadmeSupportedLanguages() throws {
     let cases: [(language: String, primaryVisionLanguage: String?, profileID: String)] = [
       ("en", nil, "default-interface"),
@@ -27,9 +26,9 @@ final class OCRRecognitionTests: XCTestCase {
     ]
 
     for testCase in cases {
-      let profile = VisionOCRProfile.resolve(
+      let profile = try VisionOCRProfile.resolve(
         for: OCRRequest(
-          image: try OCRTestImageRenderer.renderImage(text: "Snapzy OCR"),
+          image: OCRTestImageRenderer.renderImage(text: "Snapzy OCR"),
           preferredLanguageIdentifier: testCase.language
         )
       )
@@ -44,9 +43,9 @@ final class OCRRecognitionTests: XCTestCase {
   func testVietnameseOCR_preservesDiacriticsForShortIssuePhrase() async throws {
     try XCTSkipIf(!supportedVisionLanguages().contains("vi-VT"), "Vision Vietnamese OCR unavailable")
 
-    let result = try await OCRService.shared.recognize(
+    let result = try await OCRService.shared.recognizeWithVision(
       OCRRequest(
-        image: try OCRTestImageRenderer.renderImage(text: "Tài sản"),
+        image: OCRTestImageRenderer.renderImage(text: "Tài sản"),
         preferredLanguageIdentifier: "vi",
         contentType: .interfaceText
       )
@@ -66,13 +65,13 @@ final class OCRRecognitionTests: XCTestCase {
       "Đường dẫn đã sao chép",
       "Ưu đãi đặc biệt",
       "Chỉnh sửa thủ công",
-      "Cộng hòa xã hội"
+      "Cộng hòa xã hội",
     ]
 
     for phrase in phrases {
-      let result = try await OCRService.shared.recognize(
+      let result = try await OCRService.shared.recognizeWithVision(
         OCRRequest(
-          image: try OCRTestImageRenderer.renderImage(text: phrase),
+          image: OCRTestImageRenderer.renderImage(text: phrase),
           preferredLanguageIdentifier: "vi",
           contentType: .interfaceText
         )
@@ -88,9 +87,9 @@ final class OCRRecognitionTests: XCTestCase {
   func testVietnameseOCR_reflowsSameRowWordFragments() async throws {
     try XCTSkipIf(!supportedVisionLanguages().contains("vi-VT"), "Vision Vietnamese OCR unavailable")
 
-    let result = try await OCRService.shared.recognize(
+    let result = try await OCRService.shared.recognizeWithVision(
       OCRRequest(
-        image: try OCRTestImageRenderer.renderImage(textChunks: ["Ưu đãi", "đặc", "biệt"], horizontalGap: 100),
+        image: OCRTestImageRenderer.renderImage(textChunks: ["Ưu đãi", "đặc", "biệt"], horizontalGap: 100),
         preferredLanguageIdentifier: "vi",
         contentType: .interfaceText
       )
@@ -118,11 +117,14 @@ final class OCRRecognitionTests: XCTestCase {
     let supportedLanguages = try supportedVisionLanguages()
 
     for testCase in cases {
-      try XCTSkipIf(!supportedLanguages.contains(testCase.visionLanguage), "Vision OCR language \(testCase.visionLanguage) unavailable")
+      try XCTSkipIf(
+        !supportedLanguages.contains(testCase.visionLanguage),
+        "Vision OCR language \(testCase.visionLanguage) unavailable"
+      )
 
-      let result = try await OCRService.shared.recognize(
+      let result = try await OCRService.shared.recognizeWithVision(
         OCRRequest(
-          image: try OCRTestImageRenderer.renderImage(text: testCase.text),
+          image: OCRTestImageRenderer.renderImage(text: testCase.text),
           preferredLanguageIdentifier: testCase.language,
           contentType: .interfaceText
         )
@@ -138,9 +140,9 @@ final class OCRRecognitionTests: XCTestCase {
   func testSimplifiedChineseOCR_recognizesVerticalStreetSignText() async throws {
     try XCTSkipIf(!supportedVisionLanguages().contains("zh-Hans"), "Vision Simplified Chinese OCR unavailable")
 
-    let result = try await OCRService.shared.recognize(
+    let result = try await OCRService.shared.recognizeWithVision(
       OCRRequest(
-        image: try OCRTestImageRenderer.renderVerticalCJKImage(text: "龙沄路"),
+        image: OCRTestImageRenderer.renderVerticalCJKImage(text: "龙沄路"),
         preferredLanguageIdentifier: "zh-Hans",
         contentType: .interfaceText
       )
@@ -153,7 +155,7 @@ final class OCRRecognitionTests: XCTestCase {
   }
 
   private func supportedVisionLanguages() throws -> Set<String> {
-    Set(try VNRecognizeTextRequest().supportedRecognitionLanguages())
+    try Set(VNRecognizeTextRequest().supportedRecognitionLanguages())
   }
 
   private func normalizedForDiacriticRegression(_ text: String) -> String {
@@ -163,5 +165,4 @@ final class OCRRecognitionTests: XCTestCase {
   private func normalizedForCJKRegression(_ text: String) -> String {
     OCRBenchmarkMetrics.normalized(text).filter { !$0.isWhitespace }
   }
-
 }

@@ -48,7 +48,7 @@ The TOML file covers portable app preferences:
 - General settings: language, appearance, sounds, URL scheme integration, show menu bar icon, login item, export folder path.
 - Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
-- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR model selection (`[capture.ocr] selected_model`: `"builtin"`, `"dl:<id>"`, or `"custom:<uuid>"`), custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array of name/base URL/model identifier/optional prompt objects, imported with replace semantics — Keychain entries for dropped ids are deleted and `hasAPIKey` is reconciled against the local Keychain since API keys are never exported), object cutout auto-crop.
+- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR model selection (`[capture.ocr] selected_model`: `"builtin"`, `"dl:<id>"`, or `"custom:<uuid>"`), custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), user-defined downloadable model metadata (`[capture.ocr] catalog_models`: strict `snapzy-ocr-catalog` JSON document), object cutout auto-crop. Both model lists import with replace semantics.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots.
@@ -62,6 +62,8 @@ The export intentionally excludes secrets and machine-private state:
 - Cloud access key and secret key are not exported. They remain in Keychain.
 - Custom OCR endpoint API keys are not exported. They remain in Keychain
   (`capture.ocr.custom_models` carries endpoint metadata only).
+- Downloaded OCR artifact bytes, local install ids, and paths are not exported.
+  `capture.ocr.catalog_models` carries validated portable source metadata only.
 - Cloud credential archive transfer stays in the existing encrypted cloud
   import/export flow.
 - Cloud configured/password-protection state is not exported because it depends
@@ -95,6 +97,56 @@ are also accepted as aliases.
 `{appName}` resolves to the captured application's name (or frontmost app name
 for fullscreen/area captures). It resolves to an empty string when the context
 is not available.
+
+## Downloadable OCR model manifests
+
+Settings → Capture → OCR can import `.json`, `.yaml`, or `.yml`. Both formats
+use the same versioned schema and strict validation: unknown/duplicate keys,
+duplicate/reserved model ids, non-HTTPS direct URLs, unsafe Hugging Face paths,
+missing ONNX byte counts/checksums, and unsupported adapters are rejected before
+metadata is persisted. Import does not start a network request.
+
+Catalog files use `format: snapzy-ocr-catalog` with `models`; a single-row
+export uses `format: snapzy-ocr-model` with `model`. The only current adapter is
+`ppocr-db-ctc-v1`, which means Snapzy's fixed DB detector + CTC recognizer
+contract. Example YAML:
+
+```yaml
+format: snapzy-ocr-model
+schema_version: 1
+model:
+  id: my-ppocr-model
+  display_name: My PP-OCR Model
+  parameter_count_label: 8M
+  fp32_size_label: 32 MB
+  int8_size_label: 9 MB
+  adapter: ppocr-db-ctc-v1
+  artifacts:
+    - role: detector
+      source:
+        type: hugging_face
+        repository: owner/model-repo
+        revision: main
+        file: onnx/det.onnx
+      expected_bytes: 12345678
+      sha256: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    - role: recognizer
+      source:
+        type: url
+        url: https://models.example.com/rec.onnx
+      expected_bytes: 23456789
+      sha256: fedcba9876543210fedcba9876543210fedcba9876543210fedcba9876543210
+    - role: dictionary
+      source:
+        type: url
+        url: https://models.example.com/dict.txt
+```
+
+UI file import merges by stable id; matching user ids are updated in place and
+new ids append. `capture.ocr.catalog_models` in TOML is a JSON catalog document
+and uses replace semantics, matching other list-like app configuration. A
+changed or dropped definition invalidates its old local install; the destination
+Mac must explicitly download imported models.
 
 ## Example
 
@@ -136,6 +188,12 @@ show_cursor = false
 freeze_area = false
 show_selection_area_overlay = true
 reverse_magnifier_zoom_direction = false
+
+[capture.ocr]
+success_notification = true
+selected_model = "builtin"
+custom_models = "[]"
+catalog_models = "{\"format\":\"snapzy-ocr-catalog\",\"models\":[],\"schema_version\":1}"
 
 [capture.after.screenshot]
 save = true

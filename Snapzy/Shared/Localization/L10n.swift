@@ -3214,6 +3214,207 @@ nonisolated enum L10n {
       defaultValue: "Add Custom Model…",
       comment: "Button title that opens the sheet to add a custom OCR endpoint"
     )
+    static let ocrCatalogAddDownloadable = string(
+      "preferences-capture.ocr-catalog-add-downloadable",
+      defaultValue: "Add Downloadable Model…",
+      comment: "Menu item that adds a user-defined downloadable OCR model"
+    )
+    static let ocrCatalogAddMenu = string(
+      "preferences-capture.ocr-catalog-add-menu",
+      defaultValue: "Add Model…",
+      comment: "Menu title for adding either a downloadable OCR model or API endpoint"
+    )
+    static let ocrCatalogAddEndpoint = string(
+      "preferences-capture.ocr-catalog-add-endpoint",
+      defaultValue: "Add API Endpoint…",
+      comment: "Menu item that adds a remote OCR API endpoint"
+    )
+    static let ocrCatalogImport = string(
+      "preferences-capture.ocr-catalog-import",
+      defaultValue: "Import Model…",
+      comment: "Button or menu item that imports an OCR model YAML or JSON manifest"
+    )
+    static let ocrCatalogExport = string(
+      "preferences-capture.ocr-catalog-export",
+      defaultValue: "Export Models",
+      comment: "Menu title for exporting user-defined downloadable OCR models"
+    )
+    static let ocrCatalogExportYAML = string(
+      "preferences-capture.ocr-catalog-export-yaml",
+      defaultValue: "Export as YAML…",
+      comment: "Menu item that exports OCR model metadata as YAML"
+    )
+    static let ocrCatalogExportJSON = string(
+      "preferences-capture.ocr-catalog-export-json",
+      defaultValue: "Export as JSON…",
+      comment: "Menu item that exports OCR model metadata as JSON"
+    )
+    static let ocrCatalogUserBadge = string(
+      "preferences-capture.ocr-catalog-user-badge",
+      defaultValue: "User",
+      comment: "Badge identifying a user-defined downloadable OCR model"
+    )
+    static let ocrCatalogDelete = string(
+      "preferences-capture.ocr-catalog-delete",
+      defaultValue: "Delete Model Definition",
+      comment: "Destructive menu item that deletes a user-defined downloadable OCR model"
+    )
+    static let ocrCatalogDeleteTitle = string(
+      "preferences-capture.ocr-catalog-delete-title",
+      defaultValue: "Delete Downloadable Model?",
+      comment: "Confirmation title before deleting a user-defined downloadable OCR model"
+    )
+    static func ocrCatalogDeleteMessage(_ modelName: String) -> String {
+      format(
+        "preferences-capture.ocr-catalog-delete-message",
+        defaultValue: "“%@” and its downloaded files will be removed from this Mac.",
+        comment: "Confirmation message before deleting a user-defined downloadable OCR model. %@ is its name.",
+        modelName
+      )
+    }
+    static let ocrCatalogOperationTitle = string(
+      "preferences-capture.ocr-catalog-operation-title",
+      defaultValue: "OCR Model Catalog",
+      comment: "Alert title for OCR model manifest import and export results"
+    )
+    static func ocrCatalogImported(_ count: Int) -> String {
+      format(
+        "preferences-capture.ocr-catalog-imported",
+        defaultValue: "Imported %d downloadable model(s).",
+        comment: "Import success message. %d is the number of OCR model definitions imported.",
+        count
+      )
+    }
+    static let ocrCatalogExported = string(
+      "preferences-capture.ocr-catalog-exported",
+      defaultValue: "The OCR model manifest was exported.",
+      comment: "Success message after exporting downloadable OCR model metadata"
+    )
+    static let ocrCatalogSheetAddTitle = string(
+      "preferences-capture.ocr-catalog-sheet-add-title",
+      defaultValue: "Add Downloadable Model",
+      comment: "Title of the sheet for defining a downloadable OCR model"
+    )
+    static let ocrCatalogSheetEditTitle = string(
+      "preferences-capture.ocr-catalog-sheet-edit-title",
+      defaultValue: "Edit Downloadable Model",
+      comment: "Title of the sheet for editing a user-defined downloadable OCR model"
+    )
+    static let ocrCatalogSheetDescription = string(
+      "preferences-capture.ocr-catalog-sheet-description",
+      defaultValue: "Define a compatible PP-OCR detector, recognizer, and dictionary from HTTPS or Hugging Face.",
+      comment: "Description at the top of the downloadable OCR model editor"
+    )
+    static let ocrCatalogMetadataSection = string(
+      "preferences-capture.ocr-catalog-metadata-section",
+      defaultValue: "Model Information",
+      comment: "Section title for downloadable OCR model metadata"
+    )
+    static let ocrCatalogModelID = string(
+      "preferences-capture.ocr-catalog-model-id",
+      defaultValue: "Model ID",
+      comment: "Field label for a downloadable OCR model's stable identifier"
+    )
+    static let ocrCatalogDisplayName = string(
+      "preferences-capture.ocr-catalog-display-name",
+      defaultValue: "Display Name",
+      comment: "Field label for a downloadable OCR model's display name"
+    )
+    static let ocrCatalogParameterCount = string(
+      "preferences-capture.ocr-catalog-parameter-count",
+      defaultValue: "Parameters",
+      comment: "Field label for an OCR model parameter-count label"
+    )
+    static let ocrCatalogFP32Size = string(
+      "preferences-capture.ocr-catalog-fp32-size",
+      defaultValue: "FP32 Size",
+      comment: "Field label for an OCR model FP32 size label"
+    )
+    static let ocrCatalogINT8Size = string(
+      "preferences-capture.ocr-catalog-int8-size",
+      defaultValue: "INT8 Size",
+      comment: "Field label for an OCR model INT8 size label"
+    )
+    static let ocrCatalogAdapter = string(
+      "preferences-capture.ocr-catalog-adapter",
+      defaultValue: "Runtime Adapter",
+      comment: "Label for the OCR runtime adapter identifier"
+    )
+    static let ocrCatalogAdapterHint = string(
+      "preferences-capture.ocr-catalog-adapter-hint",
+      defaultValue: "Compatible adapter: ppocr-db-ctc-v1",
+      comment: "Footer explaining the supported downloadable OCR runtime adapter"
+    )
+    static let ocrCatalogDetector = string(
+      "preferences-capture.ocr-catalog-detector",
+      defaultValue: "Detector (det.onnx)",
+      comment: "Section title for an OCR detector artifact"
+    )
+    static let ocrCatalogRecognizer = string(
+      "preferences-capture.ocr-catalog-recognizer",
+      defaultValue: "Recognizer (rec.onnx)",
+      comment: "Section title for an OCR recognizer artifact"
+    )
+    static let ocrCatalogDictionary = string(
+      "preferences-capture.ocr-catalog-dictionary",
+      defaultValue: "Dictionary (dict.txt)",
+      comment: "Section title for an OCR dictionary artifact"
+    )
+    static let ocrCatalogSource = string(
+      "preferences-capture.ocr-catalog-source",
+      defaultValue: "Source",
+      comment: "Picker label for an OCR artifact source type"
+    )
+    static let ocrCatalogDirectURL = string(
+      "preferences-capture.ocr-catalog-direct-url",
+      defaultValue: "Direct URL",
+      comment: "OCR artifact source option for a direct HTTPS URL"
+    )
+    static let ocrCatalogHuggingFace = string(
+      "preferences-capture.ocr-catalog-hugging-face",
+      defaultValue: "Hugging Face",
+      comment: "OCR artifact source option for a Hugging Face repository file"
+    )
+    static let ocrCatalogURL = string(
+      "preferences-capture.ocr-catalog-url",
+      defaultValue: "HTTPS URL",
+      comment: "Field label for a downloadable OCR artifact URL"
+    )
+    static let ocrCatalogRepository = string(
+      "preferences-capture.ocr-catalog-repository",
+      defaultValue: "Repository",
+      comment: "Field label for a Hugging Face owner/repository"
+    )
+    static let ocrCatalogRevision = string(
+      "preferences-capture.ocr-catalog-revision",
+      defaultValue: "Revision",
+      comment: "Field label for a Hugging Face branch, tag, or commit"
+    )
+    static let ocrCatalogFile = string(
+      "preferences-capture.ocr-catalog-file",
+      defaultValue: "Repository File",
+      comment: "Field label for an artifact file path within a Hugging Face repository"
+    )
+    static let ocrCatalogExpectedBytes = string(
+      "preferences-capture.ocr-catalog-expected-bytes",
+      defaultValue: "Expected Bytes",
+      comment: "Required artifact byte-count field label"
+    )
+    static let ocrCatalogExpectedBytesOptional = string(
+      "preferences-capture.ocr-catalog-expected-bytes-optional",
+      defaultValue: "Expected Bytes (optional)",
+      comment: "Optional dictionary byte-count field label"
+    )
+    static let ocrCatalogSHA256 = string(
+      "preferences-capture.ocr-catalog-sha256",
+      defaultValue: "SHA-256",
+      comment: "Required artifact SHA-256 checksum field label"
+    )
+    static let ocrCatalogSHA256Optional = string(
+      "preferences-capture.ocr-catalog-sha256-optional",
+      defaultValue: "SHA-256 (optional)",
+      comment: "Optional dictionary SHA-256 checksum field label"
+    )
     static let ocrModelEdit = string(
       "preferences-capture.ocr-model-edit",
       defaultValue: "Edit",

@@ -5,14 +5,28 @@
 //  Catalog shape, URLs, and size accounting coverage.
 //
 
-import XCTest
 @testable import Snapzy
+import XCTest
 
 final class OCRModelCatalogTests: XCTestCase {
+  func testBundledYAMLCatalogLoadsSuccessfully() {
+    XCTAssertTrue(
+      OCRModelCatalog.isBundledCatalogAvailable,
+      OCRModelCatalog.bundledCatalogError ?? "Bundled catalog unavailable"
+    )
+    XCTAssertEqual(OCRModelCatalog.bundledDefinitions.count, 3)
+  }
 
   func testCatalogContainsThreeModelsInOrder() {
     XCTAssertEqual(
-      OCRModelCatalog.all.map(\.id),
+      OCRModelCatalog.bundledDefinitions.map(\.id),
+      ["ppocrv6-tiny", "ppocrv6-small", "ppocrv6-medium"]
+    )
+  }
+
+  func testPersistentBuiltInIDsRemainProtectedIfCatalogLoadingFails() {
+    XCTAssertEqual(
+      OCRModelCatalog.protectedBuiltInModelIDs,
       ["ppocrv6-tiny", "ppocrv6-small", "ppocrv6-medium"]
     )
   }
@@ -38,13 +52,26 @@ final class OCRModelCatalogTests: XCTestCase {
   }
 
   func testEveryModelShipsDetRecAndDictFiles() {
-    for definition in OCRModelCatalog.all {
+    for definition in OCRModelCatalog.bundledDefinitions {
       XCTAssertEqual(definition.files.map(\.name), ["det.onnx", "rec.onnx", "dict.txt"], definition.id)
+      XCTAssertEqual(definition.adapterID, .ppocrDBCTCV1, definition.id)
     }
   }
 
+  func testInvalidCatalogFailsClosedWithoutPartialDefinitions() {
+    let result = OCRModelCatalog.load(
+      Data("format: snapzy-ocr-catalog\nschema_version: 1\nmodels: []".utf8),
+      fileExtension: "yaml"
+    )
+
+    XCTAssertFalse(result.isAvailable)
+    XCTAssertTrue(result.definitions.isEmpty)
+    XCTAssertTrue(result.manifests.isEmpty)
+    XCTAssertNotNil(result.errorDescription)
+  }
+
   func testAllFileURLsUseHTTPS() {
-    for definition in OCRModelCatalog.all {
+    for definition in OCRModelCatalog.bundledDefinitions {
       for file in definition.files {
         XCTAssertEqual(file.url.scheme, "https", "\(definition.id)/\(file.name)")
       }
@@ -52,7 +79,7 @@ final class OCRModelCatalogTests: XCTestCase {
   }
 
   func testONNXFilesDeclareSHA256AndByteSize() {
-    for definition in OCRModelCatalog.all {
+    for definition in OCRModelCatalog.bundledDefinitions {
       for file in definition.files where file.name.hasSuffix(".onnx") {
         XCTAssertEqual(file.sha256?.count, 64, "\(definition.id)/\(file.name)")
         XCTAssertNotNil(file.expectedBytes, "\(definition.id)/\(file.name)")
@@ -61,7 +88,7 @@ final class OCRModelCatalogTests: XCTestCase {
   }
 
   func testDictFilesHaveNoChecksum() {
-    for definition in OCRModelCatalog.all {
+    for definition in OCRModelCatalog.bundledDefinitions {
       let dict = definition.files.first { $0.name == "dict.txt" }
       XCTAssertNotNil(dict, definition.id)
       XCTAssertNil(dict?.sha256, definition.id)

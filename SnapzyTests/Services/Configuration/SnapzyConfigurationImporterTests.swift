@@ -597,4 +597,151 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     // The exported payload is model metadata only — never key material.
     XCTAssertNil(exported.first?["apiKey"])
   }
+
+  // MARK: - Downloadable OCR catalog models
+
+  func testImportAppliesStrictDownloadableOCRCatalog() throws {
+    let defaults = UserDefaultsFactory.make()
+    let model = makeCatalogManifest(id: "community-model")
+    let source = try catalogTOML(models: [model])
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors, result.issues.map(\.message).joined(separator: "\n"))
+    let data = try XCTUnwrap(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
+    XCTAssertEqual(
+      try OCRUserCatalogStore.decodePersistedData(
+        data,
+        reservedModelIDs: OCRModelCatalog.bundledModelIDs
+      ),
+      [model]
+    )
+  }
+
+  func testImportDownloadableOCRCatalogUsesReplaceSemantics() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(
+      try OCRUserCatalogStore.encodedData(for: [makeCatalogManifest(id: "old-model")]),
+      forKey: PreferencesKeys.ocrUserCatalogModels
+    )
+
+    let result = SnapzyConfigurationImporter.importTOML(
+      try catalogTOML(models: [makeCatalogManifest(id: "new-model")]),
+      defaults: defaults
+    )
+
+    XCTAssertFalse(result.hasErrors)
+    let data = try XCTUnwrap(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
+    let models = try OCRUserCatalogStore.decodePersistedData(
+      data,
+      reservedModelIDs: OCRModelCatalog.bundledModelIDs
+    )
+    XCTAssertEqual(models.map(\.id), ["new-model"])
+  }
+
+  func testImportEmptyDownloadableOCRCatalogClearsStoredMetadata() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(
+      try OCRUserCatalogStore.encodedData(for: [makeCatalogManifest(id: "old-model")]),
+      forKey: PreferencesKeys.ocrUserCatalogModels
+    )
+
+    let result = SnapzyConfigurationImporter.importTOML(
+      try catalogTOML(models: []),
+      defaults: defaults
+    )
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertNil(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
+  }
+
+  func testImportRejectsReservedOrInvalidDownloadableOCRCatalog() throws {
+    let defaults = UserDefaultsFactory.make()
+    let reserved = makeCatalogManifest(id: "ppocrv6-tiny")
+    let reservedResult = SnapzyConfigurationImporter.importTOML(
+      try catalogTOML(models: [reserved]),
+      defaults: defaults
+    )
+    XCTAssertTrue(reservedResult.hasErrors)
+
+    let validJSON = try manifestJSONString(models: [makeCatalogManifest(id: "community-model")])
+    var writer = SimpleTOMLWriter()
+    writer.root("schema_version", 1)
+    writer.section("capture.ocr")
+    writer.value("catalog_models", validJSON.replacingOccurrences(
+      of: String(repeating: "c", count: 64),
+      with: "invalid-hash"
+    ))
+    let invalidResult = SnapzyConfigurationImporter.importTOML(writer.output, defaults: defaults)
+
+    XCTAssertTrue(invalidResult.hasErrors)
+    XCTAssertNil(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
+  }
+
+  func testExportIncludesDownloadableCatalogMetadataButNotInstallState() throws {
+    let defaults = UserDefaultsFactory.make()
+    let model = makeCatalogManifest(id: "community-model")
+    defaults.set(
+      try OCRUserCatalogStore.encodedData(for: [model]),
+      forKey: PreferencesKeys.ocrUserCatalogModels
+    )
+    defaults.set([model.id], forKey: PreferencesKeys.ocrInstalledModels)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+    let json = try XCTUnwrap(document.value(at: "capture", "ocr", "catalog_models")?.stringValue)
+    let exported = try OCRCatalogManifestCodec.decode(Data(json.utf8), fileExtension: "json")
+
+    XCTAssertEqual(exported.models, [model])
+    XCTAssertFalse(json.contains("installedModels"))
+    XCTAssertFalse(json.contains("Application Support"))
+  }
+
+  private func catalogTOML(models: [OCRModelManifest]) throws -> String {
+    var writer = SimpleTOMLWriter()
+    writer.root("schema_version", 1)
+    writer.section("capture.ocr")
+    writer.value("catalog_models", try manifestJSONString(models: models))
+    return writer.output
+  }
+
+  private func manifestJSONString(models: [OCRModelManifest]) throws -> String {
+    String(decoding: try OCRCatalogManifestCodec.encode(.catalog(models), format: .json), as: UTF8.self)
+  }
+
+  private func makeCatalogManifest(id: String) -> OCRModelManifest {
+    let hash = String(repeating: "c", count: 64)
+    func artifact(
+      _ role: OCRModelArtifactRole,
+      _ path: String,
+      _ bytes: Int64?,
+      _ hash: String?
+    ) -> OCRModelArtifactManifest {
+      OCRModelArtifactManifest(
+        role: role,
+        source: OCRModelArtifactSourceManifest(
+          type: .url,
+          url: "https://example.com/\(path)",
+          repository: nil,
+          revision: nil,
+          file: nil
+        ),
+        expectedBytes: bytes,
+        sha256: hash
+      )
+    }
+    return OCRModelManifest(
+      id: id,
+      displayName: "Community Model",
+      parameterCountLabel: "2M",
+      fp32SizeLabel: "12 MB",
+      int8SizeLabel: "4 MB",
+      adapter: .ppocrDBCTCV1,
+      artifacts: [
+        artifact(.detector, "det.onnx", 100, hash),
+        artifact(.recognizer, "rec.onnx", 200, hash),
+        artifact(.dictionary, "dict.txt", nil, nil),
+      ]
+    )
+  }
 }

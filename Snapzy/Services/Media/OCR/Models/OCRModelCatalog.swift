@@ -2,109 +2,229 @@
 //  OCRModelCatalog.swift
 //  Snapzy
 //
-//  Static catalog of downloadable PP-OCRv6 models.
+//  Merged, data-driven catalog of bundled and user-defined OCR models.
 //
 
+import Combine
 import Foundation
 
-/// Downloadable OCR models: official PaddleOCR HuggingFace FP32 ONNX artifacts
-/// (det + rec) plus the character dictionary from the PaddleOCR repository.
-///
-/// Installed model directories contain `det.onnx`, `rec.onnx` and `dict.txt`.
-enum OCRModelCatalog {
-  static let all: [OCRModelDefinition] = [tiny, small, medium]
+struct OCRModelCatalogLoadResult {
+  let manifests: [OCRModelManifest]
+  let definitions: [OCRModelDefinition]
+  let errorDescription: String?
 
-  static func definition(for id: String) -> OCRModelDefinition? {
-    all.first { $0.id == id }
+  var isAvailable: Bool {
+    errorDescription == nil
+  }
+}
+
+enum OCRModelCatalogEntrySource: Equatable {
+  case bundled
+  case user
+}
+
+struct OCRModelCatalogEntry: Identifiable, Equatable {
+  let manifest: OCRModelManifest
+  let definition: OCRModelDefinition
+  let source: OCRModelCatalogEntrySource
+
+  var id: String {
+    definition.id
+  }
+}
+
+/// Observable facade over the signed bundled catalog and the user's validated
+/// downloadable model records. Bundled entries always come first and retain
+/// their YAML order; user entries follow in persisted order.
+@MainActor
+final class OCRModelCatalog: ObservableObject {
+  /// Persistent ids shipped before the catalog became data-driven. Keeping
+  /// this small compatibility guard independent of YAML prevents a corrupt or
+  /// missing bundle resource from making those install directories claimable
+  /// by user manifests. All display/download metadata still comes from YAML.
+  static let protectedBuiltInModelIDs: Set<String> = [
+    "ppocrv6-tiny",
+    "ppocrv6-small",
+    "ppocrv6-medium",
+  ]
+
+  private static let bundledResult = loadBundledCatalog()
+
+  static let shared = OCRModelCatalog(userStore: .shared)
+
+  /// Compatibility surface used by existing download/UI call sites.
+  static var all: [OCRModelDefinition] {
+    shared.definitions
   }
 
-  // MARK: - PP-OCRv6 Tiny
+  static var manifests: [OCRModelManifest] {
+    shared.entries.map(\.manifest)
+  }
 
-  private static let tiny = OCRModelDefinition(
-    id: "ppocrv6-tiny",
-    displayName: "PP-OCRv6 Tiny",
-    parameterCountLabel: "1.5M",
-    fp32SizeLabel: "6–8 MB",
-    int8SizeLabel: "2–4 MB",
-    files: [
-      OCRModelFile(
-        name: "det.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_det_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 1_780_590,
-        sha256: "193bab7a04fca699a6c82e6abb5b81bdb28177f0abd4062552b04908dafb19f8"
-      ),
-      OCRModelFile(
-        name: "rec.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_tiny_rec_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 4_462_639,
-        sha256: "9ef676d6ed3c88256a2d92c640c44f25b0c40947e111b14b8be8f594091563e6"
-      ),
-      OCRModelFile(
-        name: "dict.txt",
-        url: URL(string: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_tiny_dict.txt")!,
-        expectedBytes: nil,
-        sha256: nil
-      ),
-    ]
-  )
+  static var isBundledCatalogAvailable: Bool {
+    bundledResult.isAvailable
+  }
 
-  // MARK: - PP-OCRv6 Small
+  static var bundledCatalogError: String? {
+    bundledResult.errorDescription
+  }
 
-  private static let small = OCRModelDefinition(
-    id: "ppocrv6-small",
-    displayName: "PP-OCRv6 Small",
-    parameterCountLabel: "7.7M",
-    fp32SizeLabel: "31–40 MB",
-    int8SizeLabel: "8–15 MB",
-    files: [
-      OCRModelFile(
-        name: "det.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 9_880_512,
-        sha256: "d73e0058b7a8086bbd57f3d10b8bcd4ff95363f67e06e2762b5e814fe9c9410e"
-      ),
-      OCRModelFile(
-        name: "rec.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 21_159_378,
-        sha256: "5435fd747c9e0efe15a96d0b378d5bd157e9492ed8fd80edf08f30d02fa24634"
-      ),
-      OCRModelFile(
-        name: "dict.txt",
-        url: URL(string: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_dict.txt")!,
-        expectedBytes: nil,
-        sha256: nil
-      ),
-    ]
-  )
+  static var bundledModelIDs: Set<String> {
+    protectedBuiltInModelIDs.union(bundledResult.definitions.map(\.id))
+  }
 
-  // MARK: - PP-OCRv6 Medium
+  static var bundledDefinitions: [OCRModelDefinition] {
+    bundledResult.definitions
+  }
 
-  private static let medium = OCRModelDefinition(
-    id: "ppocrv6-medium",
-    displayName: "PP-OCRv6 Medium",
-    parameterCountLabel: "34.5M",
-    fp32SizeLabel: "138–160 MB",
-    int8SizeLabel: "35–55 MB",
-    files: [
-      OCRModelFile(
-        name: "det.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_det_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 62_032_837,
-        sha256: "eb13b44b25bb36f89528b68720af8a61d9cf381176107f465db1757b65d086e1"
-      ),
-      OCRModelFile(
-        name: "rec.onnx",
-        url: URL(string: "https://huggingface.co/PaddlePaddle/PP-OCRv6_medium_rec_onnx/resolve/main/inference.onnx")!,
-        expectedBytes: 76_554_979,
-        sha256: "9c09abf0957f7968c7586464b7397b84ad2387a0497a351af40e9acc71b673ba"
-      ),
-      OCRModelFile(
-        name: "dict.txt",
-        url: URL(string: "https://raw.githubusercontent.com/PaddlePaddle/PaddleOCR/main/ppocr/utils/dict/ppocrv6_dict.txt")!,
-        expectedBytes: nil,
-        sha256: nil
-      ),
-    ]
-  )
+  @Published private(set) var entries: [OCRModelCatalogEntry] = []
+  @Published private(set) var mergeErrorDescription: String?
+
+  var definitions: [OCRModelDefinition] {
+    entries.map(\.definition)
+  }
+
+  var isAuthoritative: Bool {
+    bundledLoadResult.isAvailable
+      && userStore.loadErrorDescription == nil
+      && mergeErrorDescription == nil
+  }
+
+  private let bundledLoadResult: OCRModelCatalogLoadResult
+  private let userStore: OCRUserCatalogStore
+  private var cancellables: Set<AnyCancellable> = []
+
+  init(
+    bundledLoadResult: OCRModelCatalogLoadResult? = nil,
+    userStore: OCRUserCatalogStore
+  ) {
+    self.bundledLoadResult = bundledLoadResult ?? OCRModelCatalog.bundledResult
+    self.userStore = userStore
+    rebuild(userModels: userStore.models)
+
+    userStore.$models
+      .dropFirst()
+      .sink { [weak self] models in
+        self?.rebuild(userModels: models)
+      }
+      .store(in: &cancellables)
+
+    userStore.$loadErrorDescription
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.objectWillChange.send()
+      }
+      .store(in: &cancellables)
+  }
+
+  func definition(for id: String) -> OCRModelDefinition? {
+    entries.first { $0.id == id }?.definition
+  }
+
+  func entry(for id: String) -> OCRModelCatalogEntry? {
+    entries.first { $0.id == id }
+  }
+
+  func isUserDefined(modelID: String) -> Bool {
+    entry(for: modelID)?.source == .user
+  }
+
+  static func definition(for id: String) -> OCRModelDefinition? {
+    shared.definition(for: id)
+  }
+
+  static func load(_ data: Data, fileExtension: String) -> OCRModelCatalogLoadResult {
+    do {
+      let document = try OCRCatalogManifestCodec.decode(data, fileExtension: fileExtension)
+      guard document.format == OCRModelManifestDocument.catalogFormat else {
+        throw OCRModelManifestError.invalid("the bundled resource must be a catalog document")
+      }
+      let manifests = try OCRCatalogManifestValidator.validate(document)
+      guard !manifests.isEmpty else {
+        throw OCRModelManifestError.invalid("the bundled catalog cannot be empty")
+      }
+      let definitions = try manifests.map {
+        try OCRCatalogManifestValidator.definition(from: $0)
+      }
+      return OCRModelCatalogLoadResult(
+        manifests: manifests,
+        definitions: definitions,
+        errorDescription: nil
+      )
+    } catch {
+      return OCRModelCatalogLoadResult(
+        manifests: [],
+        definitions: [],
+        errorDescription: error.localizedDescription
+      )
+    }
+  }
+
+  private func rebuild(userModels: [OCRModelManifest]) {
+    do {
+      let bundledIDs = Set(bundledLoadResult.manifests.map(\.id))
+      if let collision = userModels.first(where: { bundledIDs.contains($0.id) }) {
+        throw OCRUserCatalogStoreError.reservedModelID(collision.id)
+      }
+
+      let bundledEntries = zip(
+        bundledLoadResult.manifests,
+        bundledLoadResult.definitions
+      ).map {
+        OCRModelCatalogEntry(manifest: $0.0, definition: $0.1, source: .bundled)
+      }
+      let userEntries = try userModels.map { manifest in
+        try OCRModelCatalogEntry(
+          manifest: manifest,
+          definition: OCRCatalogManifestValidator.definition(from: manifest),
+          source: .user
+        )
+      }
+      entries = bundledEntries + userEntries
+      mergeErrorDescription = nil
+    } catch {
+      entries = zip(
+        bundledLoadResult.manifests,
+        bundledLoadResult.definitions
+      ).map {
+        OCRModelCatalogEntry(manifest: $0.0, definition: $0.1, source: .bundled)
+      }
+      mergeErrorDescription = error.localizedDescription
+      DiagnosticLogger.shared.logError(.ocr, error, "User OCR catalog merge failed")
+    }
+  }
+
+  private static func loadBundledCatalog() -> OCRModelCatalogLoadResult {
+    guard let url = Bundle.main.url(forResource: "ocr-model-catalog", withExtension: "yaml") else {
+      let result = OCRModelCatalogLoadResult(
+        manifests: [],
+        definitions: [],
+        errorDescription: "Bundled ocr-model-catalog.yaml is missing."
+      )
+      logLoadFailure(result.errorDescription)
+      return result
+    }
+    do {
+      let result = try load(Data(contentsOf: url), fileExtension: url.pathExtension)
+      if !result.isAvailable { logLoadFailure(result.errorDescription) }
+      return result
+    } catch {
+      let result = OCRModelCatalogLoadResult(
+        manifests: [],
+        definitions: [],
+        errorDescription: error.localizedDescription
+      )
+      logLoadFailure(result.errorDescription)
+      return result
+    }
+  }
+
+  private static func logLoadFailure(_ message: String?) {
+    DiagnosticLogger.shared.log(
+      .error,
+      .ocr,
+      "Bundled OCR model catalog unavailable",
+      context: ["reason": message ?? "unknown"]
+    )
+  }
 }

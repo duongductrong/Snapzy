@@ -43,6 +43,7 @@ enum SnapzyConfigurationImporter {
     // when tests import into isolated defaults.
     if defaults == UserDefaults.standard {
       CustomOCRModelStore.shared.reloadFromDefaults()
+      OCRUserCatalogStore.shared.reloadFromDefaults()
       OCRModelStore.shared.reloadFromDefaults()
     }
     defaults.synchronize()
@@ -227,6 +228,7 @@ enum SnapzyConfigurationImporter {
       defaults.set($0, forKey: PreferencesKeys.ocrSelectedModel)
     }
     collectCustomOCRModels(&reader, defaults: defaults, keychainStore: keychainStore, mutations: &mutations)
+    collectUserOCRCatalog(&reader, defaults: defaults, mutations: &mutations)
     collectBool(&reader, "capture", "object_cutout", "auto_crop", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.backgroundCutoutAutoCropEnabled)
     }
@@ -557,6 +559,41 @@ enum SnapzyConfigurationImporter {
       }
       guard let encoded = try? JSONEncoder().encode(reconciled) else { return }
       defaults.set(encoded, forKey: PreferencesKeys.ocrCustomModels)
+    }
+  }
+
+  /// Imports validated downloadable model metadata as a whole. Artifact files
+  /// and install ids remain local; the shared store reconciles changed/dropped
+  /// definitions after standard-defaults imports are applied.
+  private static func collectUserOCRCatalog(
+    _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
+    mutations: inout [() -> Void]
+  ) {
+    guard let json = reader.string("capture", "ocr", "catalog_models") else { return }
+    guard let data = json.data(using: .utf8) else {
+      reader.error("capture.ocr.catalog_models must be a UTF-8 OCR catalog manifest")
+      return
+    }
+    do {
+      let document = try OCRCatalogManifestCodec.decode(data, fileExtension: "json")
+      guard document.format == OCRModelManifestDocument.catalogFormat else {
+        throw OCRModelManifestError.invalid("catalog_models must use snapzy-ocr-catalog format")
+      }
+      let models = try OCRCatalogManifestValidator.validate(document)
+      if let collision = models.first(where: { OCRModelCatalog.bundledModelIDs.contains($0.id) }) {
+        throw OCRUserCatalogStoreError.reservedModelID(collision.id)
+      }
+      let canonical = models.isEmpty ? nil : try OCRUserCatalogStore.encodedData(for: models)
+      mutations.append {
+        if let canonical {
+          defaults.set(canonical, forKey: PreferencesKeys.ocrUserCatalogModels)
+        } else {
+          defaults.removeObject(forKey: PreferencesKeys.ocrUserCatalogModels)
+        }
+      }
+    } catch {
+      reader.error("capture.ocr.catalog_models: \(error.localizedDescription)")
     }
   }
 
