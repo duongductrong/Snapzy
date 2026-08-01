@@ -159,7 +159,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   }
 
   private var preferredScreenshotOutputScaleFactor: CGFloat {
-    max(NSScreen.screens.map(\.backingScaleFactor).max() ?? 2.0, 2.0)
+    // Let crop/composite use each display's native density. Mixed-DPI selections
+    // still promote low-density slices to the highest native scale in the selection.
+    1.0
   }
 
   private var includesOwnAppInRecordings: Bool {

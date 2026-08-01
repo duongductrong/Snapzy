@@ -166,10 +166,27 @@ final class ScreenCaptureAreaCropTests: XCTestCase {
     XCTAssertFalse(result.pixelCrop.isEmpty)
   }
 
-  // MARK: - Promotion: low-density 1× promoted to 2× baseline
+  // MARK: - Promotion: native density pass-through; explicit higher min still promotes
 
-  func test_promotion_mixed1xPromotedTo2x() throws {
-    // After reconciliation, suppose actualScale = 1.0 and a 200×150 cropped image.
+  func test_promotion_native1xPassesThroughWhenMinimumIs1x() throws {
+    let cropped = try XCTUnwrap(
+      TestImageFactory.solidColor(width: 200, height: 150, red: 50, green: 100, blue: 200)
+    )
+    let promoted = FrozenAreaCaptureSession.imageByPromotingScaleIfNeeded(
+      cropped,
+      logicalSize: CGSize(width: 200, height: 150),
+      sourceScaleFactor: 1.0,
+      minimumOutputScaleFactor: 1.0,
+      colorSpaceName: nil
+    )
+
+    XCTAssertEqual(promoted.scaleFactor, 1.0, accuracy: 0.001,
+                   "non-Retina captures must keep native 1× output (issue #414)")
+    XCTAssertEqual(promoted.image.width, 200)
+    XCTAssertEqual(promoted.image.height, 150)
+  }
+
+  func test_promotion_promotesWhenCallerRequestsHigherOutputScale() throws {
     let cropped = try XCTUnwrap(
       TestImageFactory.solidColor(width: 200, height: 150, red: 50, green: 100, blue: 200)
     )
@@ -181,8 +198,7 @@ final class ScreenCaptureAreaCropTests: XCTestCase {
       colorSpaceName: nil
     )
 
-    XCTAssertEqual(promoted.scaleFactor, 2.0, accuracy: 0.001,
-                   "low-density input must be promoted up to the min 2× output baseline")
+    XCTAssertEqual(promoted.scaleFactor, 2.0, accuracy: 0.001)
     XCTAssertEqual(promoted.image.width, 400)
     XCTAssertEqual(promoted.image.height, 300)
   }
@@ -195,7 +211,7 @@ final class ScreenCaptureAreaCropTests: XCTestCase {
       native,
       logicalSize: CGSize(width: 200, height: 150),
       sourceScaleFactor: 2.0,
-      minimumOutputScaleFactor: 2.0,
+      minimumOutputScaleFactor: 1.0,
       colorSpaceName: nil
     )
 
@@ -290,24 +306,23 @@ final class ScreenCaptureAreaCropTests: XCTestCase {
     XCTAssertEqual(result.pixelCrop, CGRect(x: 100, y: 100, width: 800, height: 600))
   }
 
-  func test_reconcile_nativeScaleConfig_promotesToOutputScale() throws {
+  func test_reconcile_nativeScaleConfig_keepsNativeOutputScale() throws {
     // Cropped native image at 1x: 800 × 600 pixels.
     let cropped = try XCTUnwrap(
       TestImageFactory.solidColor(width: 800, height: 600, red: 50, green: 100, blue: 200)
     )
-    
-    // Promote to minimum output scale 2.0.
+
     let promoted = FrozenAreaCaptureSession.imageByPromotingScaleIfNeeded(
       cropped,
       logicalSize: CGSize(width: 800, height: 600),
       sourceScaleFactor: 1.0,
-      minimumOutputScaleFactor: 2.0,
+      minimumOutputScaleFactor: 1.0,
       colorSpaceName: nil
     )
 
-    XCTAssertEqual(promoted.scaleFactor, 2.0, accuracy: 0.001)
-    XCTAssertEqual(promoted.image.width, 1600)
-    XCTAssertEqual(promoted.image.height, 1200)
+    XCTAssertEqual(promoted.scaleFactor, 1.0, accuracy: 0.001)
+    XCTAssertEqual(promoted.image.width, 800)
+    XCTAssertEqual(promoted.image.height, 600)
   }
 
   // MARK: - Helpers

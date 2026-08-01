@@ -85,7 +85,7 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 - `ImageFormat` (`Snapzy/Services/Capture/ScreenCaptureManager.swift`): `.png`, `.jpeg(quality:)`, `.webp`; extensions `png` / `jpg` / `webp`.
 - PNG/JPEG write through `CGImageDestination` with DPI metadata set to `scaleFactor × 72` (PNG also gets pixels-per-meter); JPEG carries `kCGImageDestinationLossyCompressionQuality`.
 - WebP writes through `WebPEncoderService` (`Snapzy/Services/WebPEncoder.swift`, libwebp via Swift-WebP): `.photo` preset, `method = 1`, multithreaded, atomic file write.
-- All screenshot outputs use a **minimum 2x pixel-density baseline** (`minimumScreenshotOutputScaleFactor`); low-density external-display captures are promoted before saving so fullscreen, area, scrolling, cutout, and inline-annotated screenshots match Retina output.
+- Screenshot outputs use each display's **native** pixel density (`minimumScreenshotOutputScaleFactor` floor is 1.0). Non-Retina external-display captures stay at 1×; mixed-DPI composites may still promote low-density slices to the highest native scale in the selection.
 - Naming goes through `CaptureOutputNaming` (`Snapzy/Services/Capture/CaptureOutputNaming.swift`):
   - Default templates: `Snapzy_{datetime}_{ms}` (screenshot), `Snapzy_Recording_{datetime}` (recording), overridable per kind in Settings.
   - Tokens: `{datetime}`, `{date}`, `{year}`, `{yearShort}`, `{month}`, `{monthName}`, `{monthShort}`, `{day}`, `{time}`, `{ms}`, `{timestamp}`, `{type}`, `{appName}` plus snake/short aliases; `{appName}` resolves from the captured app (or frontmost app for fullscreen/area) and is empty when unavailable.
@@ -120,7 +120,7 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 | --- | --- |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | Post-capture action execution, ordering, batch handling, history records |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination, recording save plan, temp lifecycle, orphan cleanup |
-| `Snapzy/Services/Capture/ScreenCaptureManager.swift` | `captureCompletedPublisher`, `ImageFormat`, file writing, 2x output baseline |
+| `Snapzy/Services/Capture/ScreenCaptureManager.swift` | `captureCompletedPublisher`, `ImageFormat`, file writing, native output scale |
 | `Snapzy/Services/Capture/CaptureOutputNaming.swift` | Naming templates, context tokens, sanitization, unique dedupe |
 | `Snapzy/Services/Capture/ScreenshotPresetAutoApplier.swift` | Default Annotate canvas preset bake-in during routing |
 | `Snapzy/Services/WebPEncoder.swift` | libwebp-backed WebP encoding |

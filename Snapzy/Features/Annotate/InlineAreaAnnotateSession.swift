@@ -456,7 +456,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   private static var preferredOutputScaleFactor: CGFloat {
-    max(NSScreen.screens.map(\.backingScaleFactor).max() ?? 2.0, 2.0)
+    // Native density per display; mixed composites promote to the highest native scale.
+    1.0
   }
 
   nonisolated static func matchesCommandSaveShortcut(_ event: NSEvent) -> Bool {

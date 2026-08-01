@@ -57,7 +57,7 @@ flowchart TD
 - **Shared timeline**: every published frame is appended to `ScrollingCaptureFrameRing` (capacity 8). Preview rendering and commit selection read the same ring, so the two lanes never diverge on different frame histories. `markCommitted(sequenceNumber:)` tracks progress.
 - **Commit lane**: `ScrollingCaptureCommitScheduler` serializes stitch work and coalesces requests — only the latest pending request survives (`onRequestCoalesced` feeds metrics). `refreshPreview(reason:)` picks the newest ring frame after the last committed sequence number.
 - **Still fallback**: when the ring has no usable new frame (stream not started, failed, or starved), the commit falls back to a still capture through the prewarmed context (`capturePreparedArea`). Commit frame source is logged as `stream` vs `still-fallback`.
-- `ScrollingCaptureCommitFrameNormalizer` keeps every frame submitted to the stitcher at one pixel scale: it clamps the output scale to `max(sourceScaleFactor, minimumOutputScaleFactor)` and reuses `FrozenAreaCaptureSession.imageByPromotingScaleIfNeeded`, so region frames honor the same minimum 2x screenshot baseline as other modes — long screenshots from non-Retina displays do not save as 1x output.
+- `ScrollingCaptureCommitFrameNormalizer` keeps every frame submitted to the stitcher at one pixel scale: it clamps the output scale to `max(sourceScaleFactor, minimumOutputScaleFactor)` and reuses `FrozenAreaCaptureSession.imageByPromotingScaleIfNeeded`. The session output scale is the capture region's native `backingScaleFactor` (no forced 2× floor), so long screenshots from non-Retina displays save at 1× like other screenshot modes (issue #414). Mixed-DPI sessions still promote frames up to the session's higher native scale when needed.
 - Stitching runs off the main actor on a serial `processingQueue` (`com.snapzy.scrolling-capture.processing`, `.userInitiated`); the full merged image render is skipped while the live preview is the visible surface.
 
 ## Scroll Detection
@@ -119,7 +119,7 @@ flowchart TD
 1. `finish()` stops auto scroll, enters `.finalizing`, and waits for the commit lane to go idle (`commitScheduler.waitForIdle()` plus in-flight refresh).
 2. If significant scroll remains uncommitted (`|pendingScrollDistancePoints| > 2`), or no frame was ever captured, a final `refreshPreview` runs to seal the visible content.
 3. The live stream stops, `stitcher.mergedImage()` becomes the final image, and the model enters `.saving`.
-4. `ScreenCaptureManager.saveProcessedImage(_:to:format:scaleFactor:)` writes the file (minimum 2x output baseline for non-Retina displays) and emits `captureCompletedPublisher`.
+4. `ScreenCaptureManager.saveProcessedImage(_:to:format:scaleFactor:)` writes the file at the session's native output scale and emits `captureCompletedPublisher`.
 5. `ScreenCaptureViewModel`'s single subscription routes the URL into `PostCaptureActionHandler.handleScreenshotCapture(url:)` — Quick Access, clipboard, auto-open, and history behave identically to a standard screenshot. See [`POST_CAPTURE.md`](POST_CAPTURE.md).
 6. Empty results return the session to `.capturing`/`.paused` with recovery guidance instead of saving; save failures surface an error toast and keep the stitched result for another Done attempt.
 
