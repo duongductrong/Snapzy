@@ -23,6 +23,7 @@ nonisolated enum L10n {
     ("sponsor.", "Onboarding"),
     ("preferences.tab.", "Settings"),
     ("preferences-general.", "Settings"),
+    ("preferences-menubar.", "Settings"),
     ("preferences-capture.", "Capture"),
     ("preferences-shortcuts.", "Shortcuts"),
     ("preferences-cloud-history.", "Cloud"),
@@ -154,6 +155,11 @@ nonisolated enum L10n {
       defaultValue: "Capture",
       comment: "Preferences tab title"
     )
+    static let menuBarTab = string(
+      "preferences.tab.menu-bar",
+      defaultValue: "Menu Bar",
+      comment: "Preferences tab title"
+    )
     static let annotateTab = string(
       "preferences.tab.annotate",
       defaultValue: "Annotate",
@@ -193,6 +199,79 @@ nonisolated enum L10n {
       "preferences.tab.about",
       defaultValue: "About",
       comment: "Preferences tab title"
+    )
+  }
+
+  enum PreferencesMenuBar {
+    static let iconSection = string(
+      "preferences-menubar.icon-section",
+      defaultValue: "Menu Bar Icon",
+      comment: "Menu Bar preferences icon customization section title"
+    )
+    static let iconSectionDescription = string(
+      "preferences-menubar.icon-section-description",
+      defaultValue: "Choose a built-in icon, or click + or drop a PNG to add your own (18×18 recommended). Icons render as monochrome templates in the menu bar.",
+      comment: "Menu Bar preferences icon customization section description"
+    )
+    static let iconDefault = string(
+      "preferences-menubar.icon-default",
+      defaultValue: "Default",
+      comment: "Menu Bar preferences default icon choice label"
+    )
+    static let iconCustom = string(
+      "preferences-menubar.icon-custom",
+      defaultValue: "Custom",
+      comment: "Menu Bar preferences custom icon choice label"
+    )
+    static let importButton = string(
+      "preferences-menubar.import-button",
+      defaultValue: "Import PNG…",
+      comment: "Menu Bar preferences import custom icon button title"
+    )
+    static let importFailedTitle = string(
+      "preferences-menubar.import-failed-title",
+      defaultValue: "Import Failed",
+      comment: "Menu Bar preferences custom icon import failure alert title"
+    )
+    static let importFailedMessage = string(
+      "preferences-menubar.import-failed-message",
+      defaultValue: "The selected file could not be read. Please choose a valid PNG image.",
+      comment: "Menu Bar preferences custom icon import failure alert message"
+    )
+    static let removeCustomButton = string(
+      "preferences-menubar.remove-custom-button",
+      defaultValue: "Remove",
+      comment: "Menu Bar preferences remove custom icon button title"
+    )
+    static let captureSection = string(
+      "preferences-menubar.capture-section",
+      defaultValue: "Capture",
+      comment: "Menu Bar preferences capture items section title"
+    )
+    static let recordingSection = string(
+      "preferences-menubar.recording-section",
+      defaultValue: "Recording",
+      comment: "Menu Bar preferences recording items section title"
+    )
+    static let toolsSection = string(
+      "preferences-menubar.tools-section",
+      defaultValue: "Tools",
+      comment: "Menu Bar preferences tools items section title"
+    )
+    static let appSection = string(
+      "preferences-menubar.app-section",
+      defaultValue: "App",
+      comment: "Menu Bar preferences app items section title"
+    )
+    static let itemsDescription = string(
+      "preferences-menubar.items-description",
+      defaultValue: "Toggle items to show or hide them in the menu bar. Drag the handle to reorder within a section. Hidden features remain available via keyboard shortcuts.",
+      comment: "Menu Bar preferences menu items customization description"
+    )
+    static let resetButton = string(
+      "preferences-menubar.reset-button",
+      defaultValue: "Reset to Defaults",
+      comment: "Menu Bar preferences reset customization button title"
     )
   }
 

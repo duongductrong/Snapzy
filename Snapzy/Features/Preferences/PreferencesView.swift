@@ -17,6 +17,10 @@ struct PreferencesView: View {
         .tabItem { Label(L10n.Preferences.generalTab, systemImage: "gearshape.fill") }
         .tag(PreferencesTab.general)
 
+      LazyView(MenuBarSettingsView())
+        .tabItem { Label(L10n.Preferences.menuBarTab, systemImage: "menubar.rectangle") }
+        .tag(PreferencesTab.menuBar)
+
       LazyView(CaptureSettingsView())
         .tabItem { Label(L10n.Preferences.captureTab, systemImage: "camera.fill") }
         .tag(PreferencesTab.capture)

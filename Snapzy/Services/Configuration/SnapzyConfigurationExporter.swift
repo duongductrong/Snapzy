@@ -17,6 +17,7 @@ enum SnapzyConfigurationExporter {
     writer.root("snapzy_min_version", Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.20.0")
 
     writeGeneral(&writer, defaults: defaults)
+    writeMenuBar(&writer)
     writeCapture(&writer, defaults: defaults)
     writeRecording(&writer, defaults: defaults)
     writeQuickAccess(&writer)
@@ -51,6 +52,15 @@ enum SnapzyConfigurationExporter {
       defaults.object(forKey: PreferencesKeys.diagnosticsRetentionDays) as? Int
         ?? LogCleanupScheduler.defaultRetentionDays
     )
+  }
+
+  private static func writeMenuBar(_ writer: inout SimpleTOMLWriter) {
+    let store = MenuBarCustomizationStore.shared
+
+    writer.section("menu_bar")
+    writer.value("icon_style", store.iconStyle.rawValue)
+    writer.stringArray("item_order", store.itemOrder.map(\.rawValue))
+    writer.stringArray("hidden_items", store.hiddenItems.map(\.rawValue).sorted())
   }
 
   private static func writeCapture(_ writer: inout SimpleTOMLWriter, defaults: UserDefaults) {

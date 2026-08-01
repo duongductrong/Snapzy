@@ -399,4 +399,53 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     let result3 = SnapzyConfigurationImporter.importTOML(sourceInvalidAnim, defaults: defaults)
     XCTAssertTrue(result3.hasErrors)
   }
+
+  func testImportAppliesMenuBarCustomization() {
+    let defaults = UserDefaultsFactory.make()
+    let store = MenuBarCustomizationStore.shared
+    let originalOrder = store.itemOrder
+    let originalHidden = store.hiddenItems
+    let originalStyle = store.iconStyle
+    defer {
+      store.applyConfiguration(
+        order: originalOrder,
+        hiddenItems: originalHidden,
+        iconStyle: originalStyle
+      )
+    }
+    let source = """
+    schema_version = 1
+
+    [menu_bar]
+    icon_style = "cameraFill"
+    item_order = ["shortcutList", "captureOCR"]
+    hidden_items = ["openHistory"]
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(store.iconStyle, .cameraFill)
+    XCTAssertEqual(store.orderedItems(for: .tools).first, .shortcutList)
+    XCTAssertEqual(store.orderedItems(for: .capture).first, .captureOCR)
+    XCTAssertTrue(store.isHidden(.openHistory))
+  }
+
+  func testImportRejectsInvalidMenuBarIconStyle() {
+    let defaults = UserDefaultsFactory.make()
+    let store = MenuBarCustomizationStore.shared
+    let originalStyle = store.iconStyle
+    defer { store.setIconStyle(originalStyle) }
+    let source = """
+    schema_version = 1
+
+    [menu_bar]
+    icon_style = "invalid_style"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertEqual(store.iconStyle, originalStyle)
+  }
 }

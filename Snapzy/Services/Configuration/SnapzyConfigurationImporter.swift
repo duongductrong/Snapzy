@@ -54,6 +54,7 @@ enum SnapzyConfigurationImporter {
 
     validateSchema(&reader)
     collectGeneral(&reader, defaults: defaults, mutations: &mutations)
+    collectMenuBar(&reader, mutations: &mutations)
     collectCapture(&reader, defaults: defaults, mutations: &mutations)
     collectRecording(&reader, defaults: defaults, mutations: &mutations)
     collectQuickAccess(&reader, mutations: &mutations)
@@ -124,6 +125,36 @@ enum SnapzyConfigurationImporter {
     }
     collectInt(&reader, "diagnostics", "retention_days", range: LogCleanupScheduler.retentionDaysRange, mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.diagnosticsRetentionDays)
+    }
+  }
+
+  private static func collectMenuBar(
+    _ reader: inout SnapzyConfigurationReader,
+    mutations: inout [() -> Void]
+  ) {
+    if let iconStyleStr = reader.string("menu_bar", "icon_style") {
+      guard let style = MenuBarIconStyle(rawValue: iconStyleStr) else {
+        reader.error("menu_bar.icon_style is invalid")
+        return
+      }
+      mutations.append {
+        // The custom PNG file is not portable across machines; fall back to
+        // the bundled default when no custom icon exists locally.
+        let resolved = (style == .custom && !MenuBarIconRenderer.shared.hasCustomIcon) ? .default : style
+        MenuBarCustomizationStore.shared.setIconStyle(resolved)
+      }
+    }
+
+    let order = reader.stringArray("menu_bar", "item_order")?.compactMap(MenuBarItemKind.init(rawValue:))
+    let hidden = reader.stringArray("menu_bar", "hidden_items")?.compactMap(MenuBarItemKind.init(rawValue:))
+    if order != nil || hidden != nil {
+      mutations.append {
+        MenuBarCustomizationStore.shared.applyConfiguration(
+          order: order,
+          hiddenItems: hidden.map(Set.init),
+          iconStyle: nil
+        )
+      }
     }
   }
 

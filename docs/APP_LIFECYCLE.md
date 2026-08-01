@@ -94,7 +94,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
 
 ## Menu bar
 
-`AppStatusBarController` (`Snapzy/App/AppStatusBarController.swift`) — singleton owning the `NSStatusItem` (variable length, template `MenubarIcon` rescaled to 18 pt).
+`AppStatusBarController` (`Snapzy/App/AppStatusBarController.swift`) — singleton owning the `NSStatusItem` (variable length, template icon rendered at 18 pt by `MenuBarIconRenderer`).
 
 - Click behavior: button `sendAction(on: [.leftMouseUp, .rightMouseUp])` — both left and right click rebuild and open the same menu (`buildMenu()` runs on every open to refresh state).
 - Menu structure (verified in `buildMenu()`):
@@ -105,6 +105,8 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
   - Conditional: **Grant Permission** (when screen permission missing), **What's New** (pending `FeatureIntroManager` campaign).
   - Check for Updates, Preferences `⌘,`, Quit `⌘Q`.
   - Configured shortcut key equivalents are attached to menu items via `applyConfiguredShortcut(_:for:using:)`; overlay shortcuts (Application Capture/Recording) render as child-key suffixes (see [SHORTCUTS.md](SHORTCUTS.md)).
+- Menu customization (`MenuBarCustomizationStore`, Preferences → Menu Bar): capture/recording/tools items can be hidden and reordered within their group (`menuBar.itemOrder`, `menuBar.hiddenItems`); `buildMenu()` filters via `orderedVisibleItems(for:)`, renders separators only between non-empty groups, and keeps Check for Updates/Preferences/Quit pinned (Check for Updates is hideable). Hidden actions still work via shortcuts and the URL scheme.
+- Icon customization (`MenuBarIconRenderer` + `MenuBarIconStyle`, `menuBar.iconStyle`): bundled default (occupancy-normalized), SF Symbol alternates, or custom PNG from `Application Support/Snapzy/MenuBarIcon/custom.png` (alpha-bounds normalized, template-rendered monochrome). The cached idle image invalidates on style or custom-file change.
 - Recording state rendering: while recording, the title shows a monospaced-digit timer (`recorder.formattedDuration`); when paused it is prefixed with `|| `; tooltip mirrors state. `setProcessing(_:)` swaps the icon for an `NSProgressIndicator` spinner (used e.g. during OCR) on Core Animation so it keeps animating.
 - Visibility: `showMenuBarIcon` pref toggles the status item (`syncStatusItemVisibility`).
 - Preferences activation-policy dance (`presentPreferencesWindow`): elevates `.accessory` → `.regular` so Snapzy appears in the app menu/Cmd+Tab, triggers the Settings scene (synthesized `⌘,` key equivalent on macOS 14+, `showSettingsWindow:` before), tracks the window (12 retry passes), and reverts to `.accessory` in `windowDidClose` when no other normal windows remain. While recording, the tracked Preferences window is added to the recorder's runtime exclusion list so Snapzy's own window isn't captured.

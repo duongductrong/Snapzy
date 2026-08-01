@@ -32,6 +32,11 @@ enum PreferencesKeys {
   static let wallpaperDirectoryBookmark = "wallpaper.directoryBookmark"
   static let customWallpaperBookmarks = "wallpaper.customBookmarks"
 
+  // Menu Bar
+  static let menuBarItemOrder = "menuBar.itemOrder"
+  static let menuBarHiddenItems = "menuBar.hiddenItems"
+  static let menuBarIconStyle = "menuBar.iconStyle"
+
   /// Appearance
   static let appearanceMode = "appearanceMode"
 

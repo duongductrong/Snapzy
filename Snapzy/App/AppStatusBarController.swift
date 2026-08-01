@@ -20,7 +20,11 @@ final class AppStatusBarController: ObservableObject {
   private var statusItem: NSStatusItem?
   private var cancellables = Set<AnyCancellable>()
   private let recorder = ScreenRecordingManager.shared
-  private lazy var idleStatusImage = makeIdleStatusImage()
+  private let menuBarCustomizationStore = MenuBarCustomizationStore.shared
+  private let menuBarIconRenderer = MenuBarIconRenderer.shared
+  private var cachedIdleStatusImage: NSImage?
+  private var cachedIdleStatusStyle: MenuBarIconStyle?
+  private var cachedCustomIconDate: Date?
   private lazy var recordingStopImage = makeRecordingStopImage()
   private var menu: NSMenu?
   private var didDetectCrash = false
@@ -328,36 +332,23 @@ final class AppStatusBarController: ObservableObject {
     }
   }
 
-  private func makeIdleStatusImage() -> NSImage? {
-    guard let appIcon = NSImage(named: "MenubarIcon") else { return nil }
+  /// Idle menu bar icon for the configured style. Cached per style + custom
+  /// icon file date; recomputed when the user changes icon preferences.
+  private var idleStatusImage: NSImage? {
+    let style = menuBarCustomizationStore.iconStyle
+    let customDate = style == .custom ? menuBarIconRenderer.customIconModificationDate : nil
 
-    let canvasSize = NSSize(width: 18, height: 18)
-    let targetVisibleOccupancy: CGFloat = 0.89
-    // Current MenubarIcon PNG alpha bounds occupy 75.28% of its transparent canvas.
-    let sourceVisibleOccupancy: CGFloat = 0.7528
-    let drawSize = NSSize(
-      width: canvasSize.width * targetVisibleOccupancy / sourceVisibleOccupancy,
-      height: canvasSize.height * targetVisibleOccupancy / sourceVisibleOccupancy
-    )
-    let drawRect = NSRect(
-      x: (canvasSize.width - drawSize.width) / 2,
-      y: (canvasSize.height - drawSize.height) / 2,
-      width: drawSize.width,
-      height: drawSize.height
-    )
+    if let cachedIdleStatusImage,
+       cachedIdleStatusStyle == style,
+       cachedCustomIconDate == customDate {
+      return cachedIdleStatusImage
+    }
 
-    let resizedIcon = NSImage(size: canvasSize)
-    resizedIcon.lockFocus()
-    appIcon.draw(
-      in: drawRect,
-      from: NSRect(origin: .zero, size: appIcon.size),
-      operation: .copy,
-      fraction: 1.0
-    )
-    resizedIcon.unlockFocus()
-    // Template images let AppKit adapt the glyph color to the current menu bar material.
-    resizedIcon.isTemplate = true
-    return resizedIcon
+    let image = menuBarIconRenderer.statusImage(for: style)
+    cachedIdleStatusImage = image
+    cachedIdleStatusStyle = style
+    cachedCustomIconDate = customDate
+    return image
   }
 
   /// Distinct "stop" glyph shown on the menu bar item while recording with the hover bar hidden.
@@ -413,222 +404,16 @@ final class AppStatusBarController: ObservableObject {
       menu?.addItem(NSMenuItem.separator())
     }
 
-    // Capture Actions
-    let captureAreaItem = NSMenuItem(
-      title: L10n.Actions.captureArea,
-      action: #selector(captureAreaAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureAreaItem, for: .area, using: shortcutManager)
-    captureAreaItem.target = self
-    captureAreaItem.image = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
-    captureAreaItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureAreaItem)
-
-    let captureAreaAnnotateItem = NSMenuItem(
-      title: L10n.Actions.captureAreaAnnotate,
-      action: #selector(captureAreaAnnotateAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureAreaAnnotateItem, for: .areaAnnotate, using: shortcutManager)
-    captureAreaAnnotateItem.target = self
-    captureAreaAnnotateItem.image = NSImage(systemSymbolName: "pencil.and.scribble", accessibilityDescription: nil)
-    captureAreaAnnotateItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureAreaAnnotateItem)
-
-    let applicationCaptureShortcut = CaptureOverlayShortcutSettings.applicationCaptureShortcut
-    let applicationCaptureItem = NSMenuItem(
-      title: L10n.PreferencesShortcuts.applicationCaptureTitle,
-      action: #selector(captureApplicationAction),
-      keyEquivalent: ""
-    )
-    configureOverlayMenuItem(
-      applicationCaptureItem,
-      base: L10n.PreferencesShortcuts.applicationCaptureTitle,
-      shortcut: applicationCaptureShortcut,
-      parentKind: .area,
-      using: shortcutManager
-    )
-    applicationCaptureItem.target = self
-    applicationCaptureItem.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
-    applicationCaptureItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(applicationCaptureItem)
-
-    let captureFullscreenItem = NSMenuItem(
-      title: L10n.Actions.captureFullscreen,
-      action: #selector(captureFullscreenAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureFullscreenItem, for: .fullscreen, using: shortcutManager)
-    captureFullscreenItem.target = self
-    captureFullscreenItem.image = NSImage(
-      systemSymbolName: "rectangle.dashed", accessibilityDescription: nil)
-    captureFullscreenItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureFullscreenItem)
-
-    let captureActiveWindowItem = NSMenuItem(
-      title: L10n.Actions.captureActiveWindow,
-      action: #selector(captureActiveWindowAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureActiveWindowItem, for: .activeWindow, using: shortcutManager)
-    captureActiveWindowItem.target = self
-    captureActiveWindowItem.image = NSImage(
-      systemSymbolName: "macwindow.on.rectangle", accessibilityDescription: nil)
-    captureActiveWindowItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureActiveWindowItem)
-
-    let scrollingCaptureItem = NSMenuItem(
-      title: L10n.Actions.scrollingCapture,
-      action: #selector(captureScrollingAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(scrollingCaptureItem, for: .scrollingCapture, using: shortcutManager)
-    scrollingCaptureItem.target = self
-    scrollingCaptureItem.image = NSImage(systemSymbolName: "arrow.up.and.down", accessibilityDescription: nil)
-    scrollingCaptureItem.isEnabled = viewModel.hasPermission && !ScrollingCaptureCoordinator.shared.isActive
-    menu?.addItem(scrollingCaptureItem)
-
-    let captureOCRItem = NSMenuItem(
-      title: L10n.Actions.captureTextOCR,
-      action: #selector(captureOCRAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureOCRItem, for: .ocr, using: shortcutManager)
-    captureOCRItem.target = self
-    captureOCRItem.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
-    captureOCRItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureOCRItem)
-
-    let captureSmartElementItem = NSMenuItem(
-      title: L10n.Actions.captureSmartElement,
-      action: #selector(captureSmartElementAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureSmartElementItem, for: .smartElement, using: shortcutManager)
-    captureSmartElementItem.target = self
-    captureSmartElementItem.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: nil)
-    captureSmartElementItem.isEnabled = viewModel.hasPermission
-    menu?.addItem(captureSmartElementItem)
-
-    let captureObjectCutoutItem = NSMenuItem(
-      title: GlobalShortcutKind.objectCutout.displayName,
-      action: #selector(captureObjectCutoutAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(captureObjectCutoutItem, for: .objectCutout, using: shortcutManager)
-    captureObjectCutoutItem.target = self
-    captureObjectCutoutItem.image = NSImage(systemSymbolName: "person.crop.rectangle", accessibilityDescription: nil)
-    if #available(macOS 14.0, *) {
-      captureObjectCutoutItem.isEnabled = viewModel.hasPermission
-    } else {
-      captureObjectCutoutItem.isEnabled = false
+    // Customizable groups (Capture → Recording → Tools): user-ordered, hidden
+    // items filtered out, separators only between non-empty groups.
+    for group in MenuBarItemGroup.allCases {
+      let groupItems = menuBarCustomizationStore.orderedVisibleItems(for: group).map {
+        makeMenuItem(for: $0, viewModel: viewModel, shortcutManager: shortcutManager)
+      }
+      guard !groupItems.isEmpty else { continue }
+      groupItems.forEach { menu?.addItem($0) }
+      menu?.addItem(NSMenuItem.separator())
     }
-    menu?.addItem(captureObjectCutoutItem)
-
-    menu?.addItem(NSMenuItem.separator())
-
-    // Recording
-    let recordItem = NSMenuItem(
-      title: L10n.Menu.recordScreen,
-      action: #selector(recordScreenAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(recordItem, for: .recording, using: shortcutManager)
-    recordItem.target = self
-    recordItem.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: nil)
-    recordItem.isEnabled = viewModel.hasPermission && !recorder.isActive
-    menu?.addItem(recordItem)
-
-    let applicationRecordingShortcut = CaptureOverlayShortcutSettings.recordingApplicationCaptureShortcut
-    let applicationRecordingItem = NSMenuItem(
-      title: L10n.PreferencesShortcuts.applicationRecordingTitle,
-      action: #selector(recordApplicationAction),
-      keyEquivalent: ""
-    )
-    configureOverlayMenuItem(
-      applicationRecordingItem,
-      base: L10n.PreferencesShortcuts.applicationRecordingTitle,
-      shortcut: applicationRecordingShortcut,
-      parentKind: .recording,
-      using: shortcutManager
-    )
-    applicationRecordingItem.target = self
-    applicationRecordingItem.image = NSImage(systemSymbolName: "square.on.square", accessibilityDescription: nil)
-    applicationRecordingItem.isEnabled = viewModel.hasPermission && !recorder.isActive
-    menu?.addItem(applicationRecordingItem)
-
-    menu?.addItem(NSMenuItem.separator())
-
-    // Tools
-    let annotateItem = NSMenuItem(
-      title: L10n.Actions.openAnnotate,
-      action: #selector(openAnnotateAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(annotateItem, for: .annotate, using: shortcutManager)
-    annotateItem.target = self
-    annotateItem.image = NSImage(
-      systemSymbolName: "pencil.and.outline", accessibilityDescription: nil)
-    annotateItem.isEnabled = true
-    menu?.addItem(annotateItem)
-
-    let combineImagesItem = NSMenuItem(
-      title: L10n.Combine.open,
-      action: #selector(openCombineImagesAction),
-      keyEquivalent: ""
-    )
-    combineImagesItem.target = self
-    combineImagesItem.image = NSImage(
-      systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
-    combineImagesItem.isEnabled = true
-    menu?.addItem(combineImagesItem)
-
-    let editVideoItem = NSMenuItem(
-      title: L10n.Menu.editVideo,
-      action: #selector(editVideoAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(editVideoItem, for: .videoEditor, using: shortcutManager)
-    editVideoItem.target = self
-    editVideoItem.image = NSImage(systemSymbolName: "film", accessibilityDescription: nil)
-    editVideoItem.isEnabled = true
-    menu?.addItem(editVideoItem)
-
-    let cloudUploadsItem = NSMenuItem(
-      title: L10n.Actions.cloudUploads,
-      action: #selector(openCloudUploadsAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(cloudUploadsItem, for: .cloudUploads, using: shortcutManager)
-    cloudUploadsItem.target = self
-    cloudUploadsItem.image = NSImage(systemSymbolName: "icloud.and.arrow.up", accessibilityDescription: nil)
-    cloudUploadsItem.isEnabled = CloudManager.shared.isConfigured
-    menu?.addItem(cloudUploadsItem)
-
-    let historyItem = NSMenuItem(
-      title: L10n.Actions.openHistory,
-      action: #selector(openHistoryAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(historyItem, for: .history, using: shortcutManager)
-    historyItem.target = self
-    historyItem.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
-    historyItem.isEnabled = true
-    menu?.addItem(historyItem)
-
-    let shortcutListItem = NSMenuItem(
-      title: L10n.Menu.keyboardShortcuts,
-      action: #selector(showShortcutListAction),
-      keyEquivalent: ""
-    )
-    applyConfiguredShortcut(shortcutListItem, for: .shortcutList, using: shortcutManager)
-    shortcutListItem.target = self
-    shortcutListItem.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: nil)
-    shortcutListItem.isEnabled = true
-    menu?.addItem(shortcutListItem)
-
-    menu?.addItem(NSMenuItem.separator())
 
     // Permission (if not granted)
     if !viewModel.hasPermission {
@@ -658,17 +443,10 @@ final class AppStatusBarController: ObservableObject {
       menu?.addItem(whatsNewItem)
     }
 
-    // Check for Updates
-    let updateItem = NSMenuItem(
-      title: L10n.Menu.checkForUpdates,
-      action: #selector(checkForUpdatesAction),
-      keyEquivalent: ""
-    )
-    updateItem.target = self
-    updateItem.image = NSImage(
-      systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
-    updateItem.isEnabled = true
-    menu?.addItem(updateItem)
+    // Check for Updates (hideable, fixed position)
+    if !menuBarCustomizationStore.isHidden(.checkForUpdates) {
+      menu?.addItem(makeMenuItem(for: .checkForUpdates, viewModel: viewModel, shortcutManager: shortcutManager))
+    }
 
     // Preferences
     let prefsItem = NSMenuItem(
@@ -695,6 +473,254 @@ final class AppStatusBarController: ObservableObject {
     quitItem.image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
     quitItem.isEnabled = true
     menu?.addItem(quitItem)
+  }
+
+  // MARK: - Menu Item Factory
+
+  /// Builds a configured menu entry for a customizable item. Titles, icons,
+  /// actions, shortcuts, and enabled states are identical to the original
+  /// fixed menu regardless of user ordering or visibility.
+  private func makeMenuItem(
+    for kind: MenuBarItemKind,
+    viewModel: ScreenCaptureViewModel,
+    shortcutManager: KeyboardShortcutManager
+  ) -> NSMenuItem {
+    switch kind {
+    case .captureArea:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureArea,
+        action: #selector(captureAreaAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .area, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureAreaAnnotate:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureAreaAnnotate,
+        action: #selector(captureAreaAnnotateAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .areaAnnotate, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "pencil.and.scribble", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureApplication:
+      let item = NSMenuItem(
+        title: L10n.PreferencesShortcuts.applicationCaptureTitle,
+        action: #selector(captureApplicationAction),
+        keyEquivalent: ""
+      )
+      configureOverlayMenuItem(
+        item,
+        base: L10n.PreferencesShortcuts.applicationCaptureTitle,
+        shortcut: CaptureOverlayShortcutSettings.applicationCaptureShortcut,
+        parentKind: .area,
+        using: shortcutManager
+      )
+      item.target = self
+      item.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureFullscreen:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureFullscreen,
+        action: #selector(captureFullscreenAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .fullscreen, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(
+        systemSymbolName: "rectangle.dashed", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureActiveWindow:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureActiveWindow,
+        action: #selector(captureActiveWindowAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .activeWindow, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(
+        systemSymbolName: "macwindow.on.rectangle", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .scrollingCapture:
+      let item = NSMenuItem(
+        title: L10n.Actions.scrollingCapture,
+        action: #selector(captureScrollingAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .scrollingCapture, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "arrow.up.and.down", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission && !ScrollingCaptureCoordinator.shared.isActive
+      return item
+
+    case .captureOCR:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureTextOCR,
+        action: #selector(captureOCRAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .ocr, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureSmartElement:
+      let item = NSMenuItem(
+        title: L10n.Actions.captureSmartElement,
+        action: #selector(captureSmartElementAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .smartElement, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "dot.viewfinder", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureObjectCutout:
+      let item = NSMenuItem(
+        title: GlobalShortcutKind.objectCutout.displayName,
+        action: #selector(captureObjectCutoutAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .objectCutout, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "person.crop.rectangle", accessibilityDescription: nil)
+      if #available(macOS 14.0, *) {
+        item.isEnabled = viewModel.hasPermission
+      } else {
+        item.isEnabled = false
+      }
+      return item
+
+    case .recordScreen:
+      let item = NSMenuItem(
+        title: L10n.Menu.recordScreen,
+        action: #selector(recordScreenAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .recording, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "record.circle", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission && !recorder.isActive
+      return item
+
+    case .recordApplication:
+      let item = NSMenuItem(
+        title: L10n.PreferencesShortcuts.applicationRecordingTitle,
+        action: #selector(recordApplicationAction),
+        keyEquivalent: ""
+      )
+      configureOverlayMenuItem(
+        item,
+        base: L10n.PreferencesShortcuts.applicationRecordingTitle,
+        shortcut: CaptureOverlayShortcutSettings.recordingApplicationCaptureShortcut,
+        parentKind: .recording,
+        using: shortcutManager
+      )
+      item.target = self
+      item.image = NSImage(systemSymbolName: "square.on.square", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission && !recorder.isActive
+      return item
+
+    case .openAnnotate:
+      let item = NSMenuItem(
+        title: L10n.Actions.openAnnotate,
+        action: #selector(openAnnotateAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .annotate, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(
+        systemSymbolName: "pencil.and.outline", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+
+    case .combineImages:
+      let item = NSMenuItem(
+        title: L10n.Combine.open,
+        action: #selector(openCombineImagesAction),
+        keyEquivalent: ""
+      )
+      item.target = self
+      item.image = NSImage(
+        systemSymbolName: "rectangle.3.group", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+
+    case .editVideo:
+      let item = NSMenuItem(
+        title: L10n.Menu.editVideo,
+        action: #selector(editVideoAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .videoEditor, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "film", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+
+    case .cloudUploads:
+      let item = NSMenuItem(
+        title: L10n.Actions.cloudUploads,
+        action: #selector(openCloudUploadsAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .cloudUploads, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "icloud.and.arrow.up", accessibilityDescription: nil)
+      item.isEnabled = CloudManager.shared.isConfigured
+      return item
+
+    case .openHistory:
+      let item = NSMenuItem(
+        title: L10n.Actions.openHistory,
+        action: #selector(openHistoryAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .history, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+
+    case .shortcutList:
+      let item = NSMenuItem(
+        title: L10n.Menu.keyboardShortcuts,
+        action: #selector(showShortcutListAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .shortcutList, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+
+    case .checkForUpdates:
+      let item = NSMenuItem(
+        title: L10n.Menu.checkForUpdates,
+        action: #selector(checkForUpdatesAction),
+        keyEquivalent: ""
+      )
+      item.target = self
+      item.image = NSImage(
+        systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
+      item.isEnabled = true
+      return item
+    }
   }
 
   // MARK: - Menu Actions

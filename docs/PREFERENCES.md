@@ -24,6 +24,13 @@ Reference for the Settings window: tab structure, every section, and how prefere
 - **Updates**: Check Automatically / Download Automatically (bound to `SPUUpdater`), Last Checked — see [UPDATES.md](UPDATES.md).
 - **Help**: Restart Onboarding (`OnboardingFlowView.resetOnboarding()` + `.showOnboarding`), Report Issue (opens bug-report page; full bundle flow in [UPDATES.md](UPDATES.md)).
 
+### Menu Bar (`PreferencesMenuBarSettingsView.swift`)
+
+- **Menu Bar Icon**: label-less tile picker for the status item icon — bundled default, built-in SF Symbol alternates (`camera.viewfinder`, `camera.fill`, `scissors`, `photo.on.rectangle`), or a custom PNG. The custom slot is a dashed "+" add tile: click opens an `NSOpenPanel`, or drop a PNG onto it; the file is validated, copied to `Application Support/Snapzy/MenuBarIcon/custom.png`, alpha-bounds normalized, and rendered as a monochrome template. Replace/Remove controls appear while custom is selected. Backed by `MenuBarIconStyle` + `MenuBarIconRenderer` (`menuBar.iconStyle`).
+- **Capture / Recording / Tools**: per-item visibility toggles and drag-to-reorder within each section, backed by `MenuBarCustomizationStore` (`menuBar.itemOrder`, `menuBar.hiddenItems`). Hidden features remain available via keyboard shortcuts and the `snapzy://` URL scheme; group order and separators are fixed (separators render only between non-empty groups).
+- **App**: Check for Updates visibility toggle (fixed position; Preferences and Quit are pinned and not customizable).
+- **Reset to Defaults** restores order, visibility, and the bundled icon.
+
 ### Capture (`PreferencesCaptureSettingsView.swift`)
 
 Segmented into three panes (`CaptureSettingsPane`): General / Screenshot / Recording.
