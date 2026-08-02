@@ -893,7 +893,19 @@ final class DrawingCanvasNSView: NSView {
       currentPath.append(imagePoint)
       invalidateLiveLayers()
     default:
-      currentPath = [imagePoint]
+      guard let dragStart else {
+        currentPath = [imagePoint]
+        invalidateLiveLayers()
+        return
+      }
+      let constrainedEndPoint = AnnotationDragConstraint.constrainedEndPoint(
+        tool: state.selectedTool,
+        arrowStyle: state.arrowStyle,
+        start: dragStart,
+        end: imagePoint,
+        shiftHeld: event.modifierFlags.contains(.shift)
+      )
+      currentPath = [constrainedEndPoint]
       invalidateLiveLayers()
     }
   }
@@ -1083,12 +1095,19 @@ final class DrawingCanvasNSView: NSView {
     // Capture path before clearing to avoid race condition
     let tool = state.selectedTool
     let pathToSave = currentPath
+    let endPoint: CGPoint
+    switch tool {
+    case .pencil, .highlighter:
+      endPoint = imagePoint
+    default:
+      endPoint = pathToSave.last ?? imagePoint
+    }
 
-    if shouldCommitDrawing(tool: tool, start: start, end: imagePoint, path: pathToSave) {
+    if shouldCommitDrawing(tool: tool, start: start, end: endPoint, path: pathToSave) {
       // Commit synchronously: deferring to a Task lets a frame render where the
       // stroke preview is already gone but the annotation is not yet appended,
       // which reads as a flicker on completion.
-      createAnnotation(tool: tool, from: start, to: imagePoint, path: pathToSave)
+      createAnnotation(tool: tool, from: start, to: endPoint, path: pathToSave)
     }
 
     resetDrawingInteraction()
