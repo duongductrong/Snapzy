@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.8] - 2026-08-02
+
+### Features
+-  add downloadable PP-OCR models and custom OCR endpoint support (#453) (1b0f52f)
+
+### Chore
+- refactor: remove downloadable PP-OCR models and custom OCR catalog (193f677)
+- chore: bump version to v1.31.0-beta.8 (#454) (b48c7af)
+- chore: update appcast and docs for v1.31.0-beta.7 (230ded1)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.7] - 2026-08-01
 
 ### Features
