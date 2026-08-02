@@ -655,15 +655,23 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertNil(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
   }
 
-  func testImportRejectsReservedOrInvalidDownloadableOCRCatalog() throws {
+  /// The bundled catalog ships empty, so no model id is reserved by default and
+  /// any valid user id imports cleanly.
+  func testImportAcceptsAnyModelIDWhileBundledCatalogIsEmpty() throws {
     let defaults = UserDefaultsFactory.make()
-    let reserved = makeCatalogManifest(id: "ppocrv6-tiny")
-    let reservedResult = SnapzyConfigurationImporter.importTOML(
-      try catalogTOML(models: [reserved]),
+    XCTAssertTrue(OCRModelCatalog.bundledModelIDs.isEmpty)
+
+    let result = SnapzyConfigurationImporter.importTOML(
+      try catalogTOML(models: [makeCatalogManifest(id: "ppocrv6-tiny")]),
       defaults: defaults
     )
-    XCTAssertTrue(reservedResult.hasErrors)
 
+    XCTAssertFalse(result.hasErrors, result.issues.map(\.message).joined(separator: "\n"))
+    XCTAssertNotNil(defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels))
+  }
+
+  func testImportRejectsInvalidDownloadableOCRCatalog() throws {
+    let defaults = UserDefaultsFactory.make()
     let validJSON = try manifestJSONString(models: [makeCatalogManifest(id: "community-model")])
     var writer = SimpleTOMLWriter()
     writer.root("schema_version", 1)

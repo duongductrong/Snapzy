@@ -33,21 +33,14 @@ struct OCRModelCatalogEntry: Identifiable, Equatable {
   }
 }
 
-/// Observable facade over the signed bundled catalog and the user's validated
+/// Observable facade over the bundled catalog and the user's validated
 /// downloadable model records. Bundled entries always come first and retain
 /// their YAML order; user entries follow in persisted order.
+///
+/// Snapzy ships an empty bundled catalog: no model vendor is baked into the
+/// app, so every downloadable model comes from a manifest the user supplies.
 @MainActor
 final class OCRModelCatalog: ObservableObject {
-  /// Persistent ids shipped before the catalog became data-driven. Keeping
-  /// this small compatibility guard independent of YAML prevents a corrupt or
-  /// missing bundle resource from making those install directories claimable
-  /// by user manifests. All display/download metadata still comes from YAML.
-  static let protectedBuiltInModelIDs: Set<String> = [
-    "ppocrv6-tiny",
-    "ppocrv6-small",
-    "ppocrv6-medium",
-  ]
-
   private static let bundledResult = loadBundledCatalog()
 
   static let shared = OCRModelCatalog(userStore: .shared)
@@ -69,8 +62,11 @@ final class OCRModelCatalog: ObservableObject {
     bundledResult.errorDescription
   }
 
+  /// Ids owned by the bundled catalog, and therefore not claimable by user
+  /// manifests. Empty in stock builds; non-empty only when a build ships its
+  /// own `ocr-model-catalog.yaml` entries.
   static var bundledModelIDs: Set<String> {
-    protectedBuiltInModelIDs.union(bundledResult.definitions.map(\.id))
+    Set(bundledResult.definitions.map(\.id))
   }
 
   static var bundledDefinitions: [OCRModelDefinition] {
@@ -139,10 +135,9 @@ final class OCRModelCatalog: ObservableObject {
       guard document.format == OCRModelManifestDocument.catalogFormat else {
         throw OCRModelManifestError.invalid("the bundled resource must be a catalog document")
       }
+      // An empty `models:` list is the shipped default, not a failure: it means
+      // the build offers no downloadable models until the user adds one.
       let manifests = try OCRCatalogManifestValidator.validate(document)
-      guard !manifests.isEmpty else {
-        throw OCRModelManifestError.invalid("the bundled catalog cannot be empty")
-      }
       let definitions = try manifests.map {
         try OCRCatalogManifestValidator.definition(from: $0)
       }

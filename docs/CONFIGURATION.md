@@ -100,6 +100,13 @@ is not available.
 
 ## Downloadable OCR model manifests
 
+Snapzy bundles no OCR models: `Snapzy/Resources/ocr-model-catalog.yaml` ships
+with an empty `models:` list, and the built-in Apple Vision engine is the only
+engine available out of the box. Every downloadable model comes from a manifest
+you supply — added in Settings, imported as a file, or set through
+`capture.ocr.catalog_models` below. You are responsible for the license and
+terms of any model you add.
+
 Settings → Capture → OCR can import `.json`, `.yaml`, or `.yml`. Both formats
 use the same versioned schema and strict validation: unknown/duplicate keys,
 duplicate/reserved model ids, non-HTTPS direct URLs, unsafe Hugging Face paths,

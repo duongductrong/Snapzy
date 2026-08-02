@@ -74,11 +74,15 @@ private final class CallbackOCRModelDownloader: OCRModelDownloading, @unchecked 
   }
 }
 
+private let primaryID = OCRCatalogFixtures.primaryModelID
+private let secondaryID = OCRCatalogFixtures.secondaryModelID
+
 @MainActor
 final class OCRModelStoreTests: XCTestCase {
   private var defaults: UserDefaults!
   private var installRoot: URL!
   private var downloader: FakeOCRModelDownloader!
+  private var catalog: OCRModelCatalog!
   private var store: OCRModelStore!
 
   override func setUp() {
@@ -87,10 +91,13 @@ final class OCRModelStoreTests: XCTestCase {
     installRoot = FileManager.default.temporaryDirectory
       .appendingPathComponent("OCRModelStoreTests-\(UUID().uuidString)", isDirectory: true)
     downloader = FakeOCRModelDownloader()
+    // The bundled catalog ships empty, so these tests supply their own models.
+    catalog = OCRCatalogFixtures.catalog(defaults: defaults)
     store = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
-      downloadService: downloader
+      downloadService: downloader,
+      catalog: catalog
     )
   }
 
@@ -102,16 +109,16 @@ final class OCRModelStoreTests: XCTestCase {
   // MARK: - Download
 
   func testInitialStateIsNotInstalled() {
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
   }
 
   func testDownloadInstallsModelAndPersistsInstalledID() async {
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .installed)
-    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), ["ppocrv6-tiny"])
+    XCTAssertEqual(store.state(for: primaryID), .installed)
+    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), [primaryID])
     for file in ["det.onnx", "rec.onnx", "dict.txt"] {
-      let url = installRoot.appendingPathComponent("ppocrv6-tiny/\(file)")
+      let url = installRoot.appendingPathComponent("\(primaryID)/\(file)")
       XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), file)
     }
   }
@@ -119,9 +126,9 @@ final class OCRModelStoreTests: XCTestCase {
   func testFailedDownloadStoresFailureState() async {
     downloader.error = OCRModelDownloadError.network("offline")
 
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
 
-    guard case .failed = store.state(for: "ppocrv6-tiny") else {
+    guard case .failed = store.state(for: primaryID) else {
       return XCTFail("expected failed state")
     }
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
@@ -130,9 +137,9 @@ final class OCRModelStoreTests: XCTestCase {
   func testCancelledDownloadResetsToNotInstalled() async {
     downloader.error = OCRModelDownloadError.cancelled
 
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
   }
 
@@ -143,16 +150,17 @@ final class OCRModelStoreTests: XCTestCase {
     let countingStore = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
-      downloadService: counting
+      downloadService: counting,
+      catalog: catalog
     )
 
-    let first = countingStore.download(modelID: "ppocrv6-tiny")
-    let second = countingStore.download(modelID: "ppocrv6-tiny")
+    let first = countingStore.download(modelID: primaryID)
+    let second = countingStore.download(modelID: primaryID)
     await first.value
     await second.value
 
     XCTAssertEqual(counting.downloadCount, 1)
-    XCTAssertEqual(countingStore.state(for: "ppocrv6-tiny"), .installed)
+    XCTAssertEqual(countingStore.state(for: primaryID), .installed)
   }
 
   func testRemoveDuringFinalizeWinsOverMarkInstalled() async {
@@ -160,44 +168,45 @@ final class OCRModelStoreTests: XCTestCase {
     let callbackStore = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
-      downloadService: callback
+      downloadService: callback,
+      catalog: catalog
     )
     callback.beforeReturn = { @MainActor in
-      callbackStore.removeModel(modelID: "ppocrv6-tiny")
+      callbackStore.removeModel(modelID: primaryID)
     }
 
-    await callbackStore.download(modelID: "ppocrv6-tiny").value
+    await callbackStore.download(modelID: primaryID).value
 
-    XCTAssertEqual(callbackStore.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(callbackStore.state(for: primaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
     XCTAssertFalse(
-      FileManager.default.fileExists(atPath: installRoot.appendingPathComponent("ppocrv6-tiny").path)
+      FileManager.default.fileExists(atPath: installRoot.appendingPathComponent(primaryID).path)
     )
   }
 
   // MARK: - Removal
 
   func testRemoveModelDeletesDirectoryAndUpdatesState() async {
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
 
-    store.removeModel(modelID: "ppocrv6-tiny")
+    store.removeModel(modelID: primaryID)
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
     XCTAssertFalse(
-      FileManager.default.fileExists(atPath: installRoot.appendingPathComponent("ppocrv6-tiny").path)
+      FileManager.default.fileExists(atPath: installRoot.appendingPathComponent(primaryID).path)
     )
   }
 
   // MARK: - Launch Validation
 
   func testValidateOnLaunchPrunesMissingInstallAndResetsSelection() {
-    defaults.set(["ppocrv6-tiny"], forKey: PreferencesKeys.ocrInstalledModels)
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    defaults.set([primaryID], forKey: PreferencesKeys.ocrInstalledModels)
+    defaults.set("dl:\(primaryID)", forKey: PreferencesKeys.ocrSelectedModel)
 
     store.validateInstalledModelsOnLaunch()
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
     XCTAssertEqual(
       defaults.string(forKey: PreferencesKeys.ocrSelectedModel),
@@ -206,26 +215,26 @@ final class OCRModelStoreTests: XCTestCase {
   }
 
   func testValidateOnLaunchKeepsCompleteInstallAndSelection() async {
-    await store.download(modelID: "ppocrv6-tiny").value
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    await store.download(modelID: primaryID).value
+    defaults.set("dl:\(primaryID)", forKey: PreferencesKeys.ocrSelectedModel)
 
     store.validateInstalledModelsOnLaunch()
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .installed)
-    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), ["ppocrv6-tiny"])
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:ppocrv6-tiny")
+    XCTAssertEqual(store.state(for: primaryID), .installed)
+    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), [primaryID])
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:\(primaryID)")
   }
 
   func testValidateOnLaunchPrunesPartiallyDownloadedInstall() throws {
-    let directory = installRoot.appendingPathComponent("ppocrv6-tiny", isDirectory: true)
+    let directory = installRoot.appendingPathComponent(primaryID, isDirectory: true)
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     try Data("partial".utf8).write(to: directory.appendingPathComponent("det.onnx"))
-    defaults.set(["ppocrv6-tiny"], forKey: PreferencesKeys.ocrInstalledModels)
+    defaults.set([primaryID], forKey: PreferencesKeys.ocrInstalledModels)
 
     store.validateInstalledModelsOnLaunch()
 
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
   }
 
   func testValidateOnLaunchPrunesUnknownCatalogIDs() {
@@ -237,14 +246,14 @@ final class OCRModelStoreTests: XCTestCase {
   }
 
   func testValidateOnLaunchPrunesOnlyIncompleteInstalls() async {
-    await store.download(modelID: "ppocrv6-tiny").value
-    defaults.set(["ppocrv6-tiny", "ppocrv6-small"], forKey: PreferencesKeys.ocrInstalledModels)
+    await store.download(modelID: primaryID).value
+    defaults.set([primaryID, secondaryID], forKey: PreferencesKeys.ocrInstalledModels)
 
     store.validateInstalledModelsOnLaunch()
 
-    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), ["ppocrv6-tiny"])
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .installed)
-    XCTAssertEqual(store.state(for: "ppocrv6-small"), .notInstalled)
+    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), [primaryID])
+    XCTAssertEqual(store.state(for: primaryID), .installed)
+    XCTAssertEqual(store.state(for: secondaryID), .notInstalled)
   }
 
   // MARK: - Missing Files Recovery
@@ -252,14 +261,14 @@ final class OCRModelStoreTests: XCTestCase {
   /// Pins the recognition-time fallback path: `OCRService` marks the failed
   /// model missing, then the resolver falls the selection back to built-in.
   func testMarkMissingPrunesInstallAndResolvesFallbackToBuiltIn() async {
-    await store.download(modelID: "ppocrv6-tiny").value
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    await store.download(modelID: primaryID).value
+    defaults.set("dl:\(primaryID)", forKey: PreferencesKeys.ocrSelectedModel)
 
-    store.markMissing(modelID: "ppocrv6-tiny")
+    store.markMissing(modelID: primaryID)
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
-    let resolution = OCRModelResolver(defaults: defaults).resolve(.downloadable("ppocrv6-tiny"))
+    let resolution = OCRModelResolver(defaults: defaults).resolve(.downloadable(primaryID))
     XCTAssertEqual(resolution.selection, .builtIn)
     XCTAssertEqual(resolution.provider.engine, .vision)
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
@@ -268,33 +277,34 @@ final class OCRModelStoreTests: XCTestCase {
   // MARK: - External Reload
 
   func testReloadFromDefaultsSyncsStatesAndPrunesMissingInstalls() async {
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
     // External rewrite (config import): drops tiny, adds small (not on disk).
-    defaults.set(["ppocrv6-small"], forKey: PreferencesKeys.ocrInstalledModels)
+    defaults.set([secondaryID], forKey: PreferencesKeys.ocrInstalledModels)
 
     store.reloadFromDefaults()
 
-    XCTAssertEqual(store.state(for: "ppocrv6-tiny"), .notInstalled)
-    XCTAssertEqual(store.state(for: "ppocrv6-small"), .notInstalled)
+    XCTAssertEqual(store.state(for: primaryID), .notInstalled)
+    XCTAssertEqual(store.state(for: secondaryID), .notInstalled)
     XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels) ?? [], [])
   }
 
   func testReloadFromDefaultsMarksExternallyInstalledModels() async {
-    await store.download(modelID: "ppocrv6-tiny").value
+    await store.download(modelID: primaryID).value
     // A store created while defaults hold no installs starts with empty state.
     defaults.removeObject(forKey: PreferencesKeys.ocrInstalledModels)
     let freshStore = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
-      downloadService: downloader
+      downloadService: downloader,
+      catalog: catalog
     )
-    XCTAssertEqual(freshStore.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(freshStore.state(for: primaryID), .notInstalled)
 
     // External write (config import) restores the id; files are still on disk.
-    defaults.set(["ppocrv6-tiny"], forKey: PreferencesKeys.ocrInstalledModels)
+    defaults.set([primaryID], forKey: PreferencesKeys.ocrInstalledModels)
     freshStore.reloadFromDefaults()
 
-    XCTAssertEqual(freshStore.state(for: "ppocrv6-tiny"), .installed)
-    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), ["ppocrv6-tiny"])
+    XCTAssertEqual(freshStore.state(for: primaryID), .installed)
+    XCTAssertEqual(defaults.stringArray(forKey: PreferencesKeys.ocrInstalledModels), [primaryID])
   }
 }

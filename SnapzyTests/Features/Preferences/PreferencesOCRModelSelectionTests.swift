@@ -23,6 +23,8 @@ private final class FakeOCRModelDownloader: OCRModelDownloading, @unchecked Send
   }
 }
 
+private let primaryID = OCRCatalogFixtures.primaryModelID
+
 @MainActor
 final class PreferencesOCRModelSelectionTests: XCTestCase {
   private var defaults: UserDefaults!
@@ -42,7 +44,8 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
     userCatalogStore = OCRUserCatalogStore(defaults: defaults) { [weak self] ids in
       self?.modelStore?.invalidateCatalogModels(modelIDs: ids)
     }
-    catalog = OCRModelCatalog(userStore: userCatalogStore)
+    // The bundled catalog ships empty, so these tests supply their own models.
+    catalog = OCRCatalogFixtures.catalog(userStore: userCatalogStore)
     modelStore = OCRModelStore(
       defaults: defaults,
       installRootURL: installRoot,
@@ -106,18 +109,18 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
   }
 
   func testSelectDownloadableWhileUninstalledIsNotPersisted() {
-    viewModel.select(.downloadable("ppocrv6-tiny"))
+    viewModel.select(.downloadable(primaryID))
     XCTAssertEqual(viewModel.selection, .builtIn)
     XCTAssertNil(persistedSelection())
   }
 
   func testSelectDownloadableOnceInstalledIsPersisted() async {
-    await modelStore.download(modelID: "ppocrv6-tiny").value
+    await modelStore.download(modelID: primaryID).value
 
-    viewModel.select(.downloadable("ppocrv6-tiny"))
+    viewModel.select(.downloadable(primaryID))
 
-    XCTAssertEqual(viewModel.selection, .downloadable("ppocrv6-tiny"))
-    XCTAssertEqual(persistedSelection(), "dl:ppocrv6-tiny")
+    XCTAssertEqual(viewModel.selection, .downloadable(primaryID))
+    XCTAssertEqual(persistedSelection(), "dl:\(primaryID)")
   }
 
   func testSelectCustomModelIsPersisted() {
@@ -138,20 +141,20 @@ final class PreferencesOCRModelSelectionTests: XCTestCase {
   // MARK: - Removal of the Active Model
 
   func testRemoveActiveDownloadableResetsSelectionToBuiltIn() async throws {
-    await modelStore.download(modelID: "ppocrv6-tiny").value
-    viewModel.select(.downloadable("ppocrv6-tiny"))
-    let definition = try XCTUnwrap(OCRModelCatalog.definition(for: "ppocrv6-tiny"))
+    await modelStore.download(modelID: primaryID).value
+    viewModel.select(.downloadable(primaryID))
+    let definition = try XCTUnwrap(catalog.definition(for: primaryID))
 
     viewModel.removeDownloadable(definition)
 
     XCTAssertEqual(viewModel.selection, .builtIn)
     XCTAssertEqual(persistedSelection(), OCRModelSelection.builtIn.persistedValue)
-    XCTAssertEqual(modelStore.state(for: "ppocrv6-tiny"), .notInstalled)
+    XCTAssertEqual(modelStore.state(for: primaryID), .notInstalled)
   }
 
   func testRemoveInactiveDownloadableKeepsSelection() async throws {
-    await modelStore.download(modelID: "ppocrv6-tiny").value
-    let definition = try XCTUnwrap(OCRModelCatalog.definition(for: "ppocrv6-tiny"))
+    await modelStore.download(modelID: primaryID).value
+    let definition = try XCTUnwrap(catalog.definition(for: primaryID))
 
     viewModel.removeDownloadable(definition)
 

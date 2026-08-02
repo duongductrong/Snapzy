@@ -15,7 +15,7 @@ final class OCRModelSelectionTests: XCTestCase {
 
   func testPersistedValueUsesStableFormats() {
     XCTAssertEqual(OCRModelSelection.builtIn.persistedValue, "builtin")
-    XCTAssertEqual(OCRModelSelection.downloadable("ppocrv6-tiny").persistedValue, "dl:ppocrv6-tiny")
+    XCTAssertEqual(OCRModelSelection.downloadable("demo-model").persistedValue, "dl:demo-model")
     let id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     XCTAssertEqual(OCRModelSelection.custom(id).persistedValue, "custom:00000000-0000-0000-0000-000000000001")
   }
@@ -24,7 +24,7 @@ final class OCRModelSelectionTests: XCTestCase {
     let id = UUID()
     let cases: [OCRModelSelection] = [
       .builtIn,
-      .downloadable("ppocrv6-small"),
+      .downloadable("other-model"),
       .custom(id),
     ]
 
@@ -42,9 +42,9 @@ final class OCRModelSelectionTests: XCTestCase {
   }
 
   func testCodableRoundTripUsesPersistedString() throws {
-    let selection = OCRModelSelection.downloadable("ppocrv6-medium")
+    let selection = OCRModelSelection.downloadable("other-model")
     let data = try JSONEncoder().encode(selection)
-    XCTAssertEqual(String(data: data, encoding: .utf8), "\"dl:ppocrv6-medium\"")
+    XCTAssertEqual(String(data: data, encoding: .utf8), "\"dl:other-model\"")
     XCTAssertEqual(try JSONDecoder().decode(OCRModelSelection.self, from: data), selection)
   }
 
@@ -70,18 +70,18 @@ final class OCRModelSelectionTests: XCTestCase {
 
   func testDownloadableSelectionResolvesWhenModelInstalled() {
     let defaults = UserDefaultsFactory.make()
-    defaults.set(["ppocrv6-tiny"], forKey: PreferencesKeys.ocrInstalledModels)
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    defaults.set(["demo-model"], forKey: PreferencesKeys.ocrInstalledModels)
+    defaults.set("dl:demo-model", forKey: PreferencesKeys.ocrSelectedModel)
 
     let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
 
-    XCTAssertEqual(resolution.selection, .downloadable("ppocrv6-tiny"))
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:ppocrv6-tiny")
+    XCTAssertEqual(resolution.selection, .downloadable("demo-model"))
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:demo-model")
   }
 
   func testDownloadableSelectionFallsBackAndPersistsBuiltInWhenNotInstalled() {
     let defaults = UserDefaultsFactory.make()
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    defaults.set("dl:demo-model", forKey: PreferencesKeys.ocrSelectedModel)
 
     let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
 

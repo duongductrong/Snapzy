@@ -201,7 +201,7 @@ Snapzy/
 
   Config/
   Resources/
-    ocr-model-catalog.yaml
+    ocr-model-catalog.yaml       # downloadable OCR model catalog; ships empty, documents the manifest schema
     Localization/
       Shared/
         *.xcstrings
@@ -290,7 +290,7 @@ SnapzyUITests/
       assets/
         <uuid>.bin               # optional embedded image assets
   OCRModels/
-    <catalog id>/                # downloaded PP-OCRv6 model files (det.onnx, rec.onnx, dict.txt)
+    <catalog id>/                # downloaded model files (det.onnx, rec.onnx, dict.txt)
   snapzy.db
   DatabaseRecovery-<yyyyMMdd-HHmmss>[-N]/   # database files archived by launch recovery
     snapzy.db
@@ -307,7 +307,7 @@ SnapzyUITests/
 | `Keychain` | Cloud access key, secret key, optional cloud protection password, custom OCR endpoint API keys |
 | `Application Support/Snapzy/Captures/` | Temp captures, per-session recording processing files, and recording metadata sidecars |
 | `Application Support/Snapzy/AnnotationSessions/` | Sidecar packages for committed editable screenshot annotation sessions |
-| `Application Support/Snapzy/OCRModels/` | On-demand downloaded bundled or user-defined PP-OCR model files, one subdirectory per catalog id; not bundled with the app or exported in configuration |
+| `Application Support/Snapzy/OCRModels/` | On-demand downloaded user-defined OCR model files, one subdirectory per catalog id; not bundled with the app or exported in configuration |
 | `Application Support/Snapzy/snapzy.db` | Capture history and cloud upload history via GRDB |
 | `~/.config/snapzy/config.toml` | User-managed TOML preferences file, created from the onboarding config access step or Settings -> Advanced after user-confirmed folder access, replaced by explicit Import/Restore defaults actions, auto-applied on launch when changed, and synced from current settings before Open config.toml when safe |
 

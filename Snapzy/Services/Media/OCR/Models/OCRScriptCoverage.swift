@@ -15,7 +15,7 @@ import Foundation
 /// know. That makes an incomplete dictionary look like an accuracy problem
 /// rather than a capability one, which is what this analysis exists to expose.
 ///
-/// The catalog's PP-OCRv6 dictionaries are the motivating case: they omit
+/// The published PP-OCRv6 dictionaries are the motivating case: they omit
 /// almost all of the Vietnamese precomposed tone block (U+1EA0–U+1EF9), so
 /// "Kết luận" comes back as "Kêt luân" with no error anywhere in the pipeline.
 ///
@@ -37,7 +37,7 @@ extension OCRScript {
   /// these the dictionary can emit.
   ///
   /// Vietnamese is probed with its full tone inventory rather than a sample,
-  /// because the tone marks are precisely what the PP-OCRv6 dictionaries drop.
+  /// because the tone marks are precisely what some PP-OCR dictionaries drop.
   /// Latin folds in the accented European letters, which every dictionary that
   /// carries basic Latin has so far also carried.
   static let probes: [OCRScript: Set<Character>] = probeTexts.mapValues(Set.init)

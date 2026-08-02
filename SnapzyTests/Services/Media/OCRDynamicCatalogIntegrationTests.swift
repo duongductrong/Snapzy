@@ -29,8 +29,9 @@ private final class DynamicCatalogDownloader: OCRModelDownloading, @unchecked Se
 final class OCRDynamicCatalogIntegrationTests: XCTestCase {
   func testUserModelMergesAfterBundledModelsAndDownloadsThroughExistingStore() async throws {
     let defaults = UserDefaultsFactory.make()
-    let userStore = OCRUserCatalogStore(defaults: defaults)
-    let catalog = OCRModelCatalog(userStore: userStore)
+    let userStore = OCRUserCatalogStore(defaults: defaults, reservedModelIDs: [])
+    // Stock builds bundle no models; this fixture pins bundled-before-user order.
+    let catalog = OCRCatalogFixtures.catalog(userStore: userStore)
     let downloader = DynamicCatalogDownloader()
     let installRoot = FileManager.default.temporaryDirectory
       .appendingPathComponent("OCRDynamicCatalogIntegrationTests-\(UUID().uuidString)")
@@ -39,6 +40,7 @@ final class OCRDynamicCatalogIntegrationTests: XCTestCase {
     let manifest = makeManifest(id: "community-model")
     try userStore.add(manifest)
 
+    XCTAssertEqual(catalog.entries.first?.source, .bundled)
     XCTAssertEqual(catalog.entries.last?.id, "community-model")
     XCTAssertEqual(catalog.entries.last?.source, .user)
     let modelStore = OCRModelStore(

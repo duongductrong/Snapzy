@@ -100,11 +100,11 @@ final class CustomOCRModelStoreTests: XCTestCase {
   func testRemoveKeepsSelectionWhenOtherModelIsActive() {
     let model = makeModel()
     store.add(model)
-    defaults.set("dl:ppocrv6-tiny", forKey: PreferencesKeys.ocrSelectedModel)
+    defaults.set("dl:demo-model", forKey: PreferencesKeys.ocrSelectedModel)
 
     store.remove(id: model.id)
 
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:ppocrv6-tiny")
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:demo-model")
   }
 
   // MARK: - Persistence

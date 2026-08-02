@@ -21,7 +21,7 @@ struct OCRModelFile: Equatable {
 
 /// A downloadable OCR model entry from the catalog.
 struct OCRModelDefinition: Equatable {
-  /// Stable catalog identifier (e.g. `ppocrv6-tiny`); used on disk and in prefs.
+  /// Stable catalog identifier (e.g. `my-model`); used on disk and in prefs.
   let id: String
   /// Human-readable model name shown in Settings.
   let displayName: String

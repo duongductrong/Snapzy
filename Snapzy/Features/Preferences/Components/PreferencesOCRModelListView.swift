@@ -2,7 +2,7 @@
 //  PreferencesOCRModelListView.swift
 //  Snapzy
 //
-//  OCR model picker list: built-in default, downloadable PP-OCR models, custom endpoints.
+//  OCR model picker list: built-in default, user-supplied downloadable models, custom endpoints.
 //
 
 import AppKit
