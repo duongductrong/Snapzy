@@ -4,6 +4,16 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.9] - 2026-08-03
+
+### Chore
+- refactor: extract area selection presentation logic and add watchdog tests (819d1dc)
+- chore: update appcast and docs for v1.31.0-beta.8 (f447b0d)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.8] - 2026-08-02
 
 ### Features
