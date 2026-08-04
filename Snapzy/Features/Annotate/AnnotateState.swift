@@ -16,6 +16,32 @@ final class AnnotateState: ObservableObject {
   private struct AnnotationSnapshot {
     var annotations: [AnnotationItem]
     var embeddedImageAssets: [UUID: NSImage]
+    var embeddedImageSourceData: [UUID: Data]
+    var embeddedImageSnapshotCacheData: [UUID: Data]
+    var autoSizingTextAnnotationIDs: Set<UUID>
+    var freeCombineBoundsByAnnotationID: [UUID: CGRect]
+    var selectedAnnotationIds: Set<UUID>
+  }
+
+  private struct AnnotationCloneResult {
+    var annotations: [AnnotationItem] = []
+    var embeddedImageAssets: [UUID: NSImage] = [:]
+    var embeddedImageData: [UUID: Data] = [:]
+    var autoSizingTextAnnotationIDs: Set<UUID> = []
+  }
+
+  private struct AnnotationClipboardPayload {
+    let items: [PersistedAnnotationItem]
+    let embeddedImageData: [UUID: Data]
+
+    init(items: [AnnotationItem], embeddedImageData: [UUID: Data]) {
+      self.items = items.map(PersistedAnnotationItem.init)
+      self.embeddedImageData = embeddedImageData
+    }
+
+    var annotationItems: [AnnotationItem] {
+      items.compactMap(\.annotationItem)
+    }
   }
 
   /// Snapshot of every piece of state mutated by an image rotation. Used as a dedicated
@@ -125,6 +151,7 @@ final class AnnotateState: ObservableObject {
   private static let importedImageCountWarningThreshold: Int = 8
   private static let importedImagePixelBudgetWarningThreshold: Int64 = 40_000_000
   private static let canvasPresetLimit: Int = 20
+  static let annotationDuplicationOffset = CGSize(width: 10, height: -10)
   private let canvasPresetStore: AnnotateCanvasPresetStore
   private let defaults: UserDefaults
   private let appliesDefaultCanvasPresetOnNewImages: Bool
@@ -225,6 +252,12 @@ final class AnnotateState: ObservableObject {
   /// New text starts as a natural-width line. Resizing it switches that item
   /// to a fixed width so deliberate wrapping is never overwritten while typing.
   private var autoSizingTextAnnotationIDs: Set<UUID> = []
+  private var annotationClipboardPayload: AnnotationClipboardPayload?
+  private var annotationPasteCount = 0
+  /// Most recent pointer location over the canvas, in image coordinates. This
+  /// is intentionally not published: mouse movement should not invalidate the
+  /// SwiftUI annotation surface.
+  private var canvasMouseLocation: CGPoint?
 
   // MARK: - Editor Mode
 
@@ -2398,7 +2431,12 @@ final class AnnotateState: ObservableObject {
   private func currentSnapshot() -> AnnotationSnapshot {
     AnnotationSnapshot(
       annotations: annotations,
-      embeddedImageAssets: embeddedImageAssets
+      embeddedImageAssets: embeddedImageAssets,
+      embeddedImageSourceData: embeddedImageSourceData,
+      embeddedImageSnapshotCacheData: embeddedImageSnapshotCacheData,
+      autoSizingTextAnnotationIDs: autoSizingTextAnnotationIDs,
+      freeCombineBoundsByAnnotationID: freeCombineBoundsByAnnotationID,
+      selectedAnnotationIds: selectedAnnotationIds
     )
   }
 
@@ -2467,11 +2505,16 @@ final class AnnotateState: ObservableObject {
   private func applySnapshot(_ snapshot: AnnotationSnapshot) {
     annotations = snapshot.annotations
     embeddedImageAssets = snapshot.embeddedImageAssets
+    embeddedImageSourceData = snapshot.embeddedImageSourceData
+    embeddedImageSnapshotCacheData = snapshot.embeddedImageSnapshotCacheData
+    embeddedImageCGImageCache.removeAll()
+    autoSizingTextAnnotationIDs = snapshot.autoSizingTextAnnotationIDs
+    freeCombineBoundsByAnnotationID = snapshot.freeCombineBoundsByAnnotationID
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
 
     let validAnnotationIds = Set(annotations.map(\.id))
-    setSelectedAnnotationIds(selectedAnnotationIds.intersection(validAnnotationIds))
+    setSelectedAnnotationIds(snapshot.selectedAnnotationIds.intersection(validAnnotationIds))
 
     if let editingTextAnnotationId,
        !annotations.contains(where: { $0.id == editingTextAnnotationId }) {
@@ -3078,6 +3121,124 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Annotation Selection
 
+  @discardableResult
+  func copySelectedAnnotations() -> Bool {
+    guard editingTextAnnotationId == nil else { return false }
+
+    var copyableItems: [AnnotationItem] = []
+    var embeddedDataByAssetId: [UUID: Data] = [:]
+    for annotation in selectedAnnotations {
+      if case .embeddedImage(let assetId) = annotation.type {
+        guard let data = embeddedImageData(for: assetId) else { continue }
+        embeddedDataByAssetId[assetId] = data
+      }
+      copyableItems.append(annotation)
+    }
+    guard !copyableItems.isEmpty else { return false }
+
+    let payload = AnnotationClipboardPayload(
+      items: copyableItems,
+      embeddedImageData: embeddedDataByAssetId
+    )
+    annotationClipboardPayload = payload
+    annotationPasteCount = 0
+    return true
+  }
+
+  /// Updates the pointer location used to place pasted annotations. The canvas
+  /// owns the coordinate conversion and clears this when the pointer leaves it.
+  func updateCanvasMouseLocation(_ point: CGPoint?) {
+    canvasMouseLocation = point
+  }
+
+  @discardableResult
+  func pasteAnnotationsFromClipboard() -> Bool {
+    guard editingTextAnnotationId == nil,
+          let payload = annotationClipboardPayload else {
+      return false
+    }
+
+    let sourceItems = payload.annotationItems
+    guard !sourceItems.isEmpty else { return false }
+
+    let pasteIndex = annotationPasteCount + 1
+    let proposedOffset = pasteOffset(for: sourceItems, pasteIndex: pasteIndex)
+    let offset = clampedAnnotationOffset(
+      for: sourceItems,
+      proposedOffset: proposedOffset
+    )
+    let result = cloneAnnotations(
+      sourceItems,
+      offset: offset,
+      embeddedImageData: payload.embeddedImageData
+    )
+    guard !result.annotations.isEmpty else { return false }
+
+    annotationPasteCount = pasteIndex
+    appendClonedAnnotations(result)
+    return true
+  }
+
+  private func pasteOffset(
+    for annotations: [AnnotationItem],
+    pasteIndex: Int
+  ) -> CGSize {
+    let repeatedOffset = CGSize(
+      width: Self.annotationDuplicationOffset.width * CGFloat(max(pasteIndex - 1, 0)),
+      height: Self.annotationDuplicationOffset.height * CGFloat(max(pasteIndex - 1, 0))
+    )
+
+    guard let canvasMouseLocation else {
+      // Preserve the existing source-relative behavior when paste is invoked
+      // without a current canvas pointer (for example, from a non-canvas test
+      // or after the pointer has left the editor).
+      return CGSize(
+        width: Self.annotationDuplicationOffset.width * CGFloat(pasteIndex),
+        height: Self.annotationDuplicationOffset.height * CGFloat(pasteIndex)
+      )
+    }
+
+    let selectionBounds = annotations
+      .map(\.selectionBounds)
+      .reduce(CGRect.null) { $0.union($1) }
+    guard !selectionBounds.isNull, !selectionBounds.isEmpty else {
+      return repeatedOffset
+    }
+
+    // Center the complete selection under the pointer. This matches the
+    // cursor-centered affordance used when dragging an annotation group.
+    return CGSize(
+      width: canvasMouseLocation.x - selectionBounds.midX + repeatedOffset.width,
+      height: canvasMouseLocation.y - selectionBounds.midY + repeatedOffset.height
+    )
+  }
+
+  @discardableResult
+  func duplicateSelectedAnnotations() -> Bool {
+    guard editingTextAnnotationId == nil,
+          !selectedAnnotations.isEmpty else { return false }
+
+    let sourceItems = selectedAnnotations
+    let sourceAssetData: [UUID: Data] = Dictionary(uniqueKeysWithValues: sourceItems.compactMap { annotation in
+      guard case .embeddedImage(let assetId) = annotation.type,
+            let data = embeddedImageData(for: assetId) else { return nil }
+      return (assetId, data)
+    })
+    let offset = clampedAnnotationOffset(
+      for: sourceItems,
+      proposedOffset: Self.annotationDuplicationOffset
+    )
+    let result = cloneAnnotations(
+      sourceItems,
+      offset: offset,
+      embeddedImageData: sourceAssetData
+    )
+    guard !result.annotations.isEmpty else { return false }
+
+    appendClonedAnnotations(result)
+    return true
+  }
+
   var selectedAnnotations: [AnnotationItem] {
     annotations.filter { selectedAnnotationIds.contains($0.id) }
   }
@@ -3088,6 +3249,104 @@ final class AnnotateState: ObservableObject {
 
   func isAnnotationSelected(_ id: UUID) -> Bool {
     selectedAnnotationIds.contains(id)
+  }
+
+  private func cloneAnnotations(
+    _ sourceItems: [AnnotationItem],
+    offset: CGSize,
+    embeddedImageData: [UUID: Data]
+  ) -> AnnotationCloneResult {
+    var result = AnnotationCloneResult()
+
+    for source in sourceItems {
+      var clone = source.duplicatedBy(dx: offset.width, dy: offset.height)
+      if autoSizingTextAnnotationIDs.contains(source.id) {
+        result.autoSizingTextAnnotationIDs.insert(clone.id)
+      }
+
+      if case .embeddedImage(let sourceAssetId) = source.type {
+        guard let data = embeddedImageData[sourceAssetId],
+              let image = NSImage(data: data) else {
+          continue
+        }
+        let clonedAssetId = UUID()
+        clone.type = .embeddedImage(clonedAssetId)
+        result.embeddedImageAssets[clonedAssetId] = image
+        result.embeddedImageData[clonedAssetId] = data
+      }
+
+      result.annotations.append(clone)
+    }
+
+    return result
+  }
+
+  private func appendClonedAnnotations(_ result: AnnotationCloneResult) {
+    saveState()
+
+    embeddedImageAssets.merge(result.embeddedImageAssets) { _, new in new }
+    embeddedImageSourceData.merge(result.embeddedImageData) { _, new in new }
+    embeddedImageSnapshotCacheData.merge(result.embeddedImageData) { _, new in new }
+    annotations.append(contentsOf: result.annotations)
+    autoSizingTextAnnotationIDs.formUnion(result.autoSizingTextAnnotationIDs)
+
+    if isCombineMode, combineMode == .freeCanvas {
+      for annotation in result.annotations {
+        if case .embeddedImage = annotation.type {
+          freeCombineBoundsByAnnotationID[annotation.id] = annotation.bounds
+        }
+      }
+    }
+
+    refreshCombineLayout()
+    selectedTool = .selection
+    setSelectedAnnotationIds(Set(result.annotations.map(\.id)))
+    editingTextAnnotationId = nil
+    hasUnsavedChanges = true
+    updateImportWarningIfNeeded()
+  }
+
+  private func embeddedImageData(for assetId: UUID) -> Data? {
+    if let sourceData = embeddedImageSourceData[assetId] {
+      return sourceData
+    }
+    if let cachedData = embeddedImageSnapshotCacheData[assetId] {
+      return cachedData
+    }
+    guard let image = embeddedImageAssets[assetId] else { return nil }
+    if let tiffData = image.tiffRepresentation {
+      embeddedImageSnapshotCacheData[assetId] = tiffData
+      return tiffData
+    }
+    guard let pngData = Self.pngData(from: image) else { return nil }
+    embeddedImageSnapshotCacheData[assetId] = pngData
+    return pngData
+  }
+
+  private func clampedAnnotationOffset(
+    for annotations: [AnnotationItem],
+    proposedOffset: CGSize
+  ) -> CGSize {
+    guard !annotations.isEmpty else { return .zero }
+    let canvasBounds = (isCombineMode ? effectiveContentBounds : activeAnnotationBounds).standardized
+    let selectionBounds = annotations
+      .map(\.selectionBounds)
+      .reduce(CGRect.null) { $0.union($1) }
+    guard !canvasBounds.isEmpty, !selectionBounds.isNull, !selectionBounds.isEmpty else {
+      return proposedOffset
+    }
+
+    let minimumDX = canvasBounds.minX - selectionBounds.minX
+    let maximumDX = canvasBounds.maxX - selectionBounds.maxX
+    let minimumDY = canvasBounds.minY - selectionBounds.minY
+    let maximumDY = canvasBounds.maxY - selectionBounds.maxY
+    let dx = minimumDX <= maximumDX
+      ? min(max(proposedOffset.width, minimumDX), maximumDX)
+      : 0
+    let dy = minimumDY <= maximumDY
+      ? min(max(proposedOffset.height, minimumDY), maximumDY)
+      : 0
+    return CGSize(width: dx, height: dy)
   }
 
   func selectAnnotation(at point: CGPoint) -> AnnotationItem? {
@@ -5283,26 +5542,7 @@ final class AnnotateState: ObservableObject {
   }
 
   private func translateAnnotation(at index: Int, dx: CGFloat, dy: CGFloat) {
-    annotations[index].bounds.origin.x += dx
-    annotations[index].bounds.origin.y += dy
-
-    switch annotations[index].type {
-    case .arrow(let geometry):
-      let updated = geometry.translatedBy(dx: dx, dy: dy)
-      annotations[index].type = .arrow(updated)
-      annotations[index].bounds = updated.bounds()
-    case .line(let start, let end):
-      annotations[index].type = .line(
-        start: CGPoint(x: start.x + dx, y: start.y + dy),
-        end: CGPoint(x: end.x + dx, y: end.y + dy)
-      )
-    case .path(let points):
-      annotations[index].type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
-    case .highlight(let points):
-      annotations[index].type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
-    default:
-      break
-    }
+    annotations[index] = annotations[index].translatedBy(dx: dx, dy: dy)
   }
 }
 

@@ -11,6 +11,7 @@
 //  here we only assert the resulting selection set and mutated model state.
 //
 
+import AppKit
 import CoreGraphics
 import SwiftUI
 import XCTest
@@ -51,6 +52,16 @@ final class AnnotateSelectionEditingTests: XCTestCase {
   private func makeArrow(start: CGPoint, end: CGPoint, style: ArrowStyle) -> AnnotationItem {
     let geometry = ArrowGeometry(start: start, end: end, style: style)
     return AnnotationItem(type: .arrow(geometry), bounds: geometry.bounds(), properties: AnnotationProperties())
+  }
+
+  @MainActor
+  private func makeImage(size: CGSize = CGSize(width: 120, height: 80)) -> NSImage {
+    let image = NSImage(size: size)
+    image.lockFocus()
+    NSColor.systemBlue.setFill()
+    NSBezierPath(rect: CGRect(origin: .zero, size: size)).fill()
+    image.unlockFocus()
+    return image
   }
 
   // MARK: - Hit selection
@@ -115,6 +126,195 @@ final class AnnotateSelectionEditingTests: XCTestCase {
 
     XCTAssertTrue(selected.isEmpty)
     XCTAssertTrue(state.selectedAnnotationIds.isEmpty)
+  }
+
+  // MARK: - Copy, paste + duplicate
+
+  @MainActor
+  func testDuplicateSelectedAnnotationsPreservesPropertiesGeometryAndLayerOrder() throws {
+    let state = makeAnnotateState()
+    var properties = AnnotationProperties(
+      strokeColor: .blue,
+      fillColor: .yellow,
+      strokeWidth: 7,
+      lineStyle: .dashed,
+      cornerRadius: 8,
+      fontSize: 24,
+      fontName: "Helvetica",
+      opacity: 0.6,
+      rotationDegrees: 15,
+      watermarkStyle: .tiled,
+      spotlightOpacity: 0.7,
+      textPresentation: .callout,
+      calloutTailTarget: CGPoint(x: 285, y: 90)
+    )
+    let rectangle = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 100, y: 100, width: 80, height: 50),
+      properties: properties
+    )
+    let text = AnnotationItem(
+      type: .text("original"),
+      bounds: CGRect(x: 200, y: 100, width: 80, height: 40),
+      properties: properties
+    )
+    let arrowGeometry = ArrowGeometry(
+      start: CGPoint(x: 100, y: 220),
+      end: CGPoint(x: 180, y: 260),
+      style: .curvedRight,
+      controlPoint: CGPoint(x: 150, y: 280),
+      arrowType: .classic,
+      startHead: .circle,
+      endHead: .arrow
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(arrowGeometry),
+      bounds: arrowGeometry.bounds(),
+      properties: properties
+    )
+    state.annotations = [rectangle, text, arrow]
+    state.setSelectedAnnotationIds([rectangle.id, text.id, arrow.id])
+
+    XCTAssertTrue(state.duplicateSelectedAnnotations())
+    XCTAssertEqual(state.annotations.count, 6)
+
+    let sources = [rectangle, text, arrow]
+    let clones = Array(state.annotations.suffix(3))
+    XCTAssertEqual(clones.map(\.type.toolType), sources.map(\.type.toolType))
+    XCTAssertEqual(Set(clones.map(\.id)).intersection(Set(sources.map(\.id))).count, 0)
+    XCTAssertEqual(state.selectedAnnotationIds, Set(clones.map(\.id)))
+
+    for (source, clone) in zip(sources, clones) {
+      let expected = source.translatedBy(
+        dx: AnnotateState.annotationDuplicationOffset.width,
+        dy: AnnotateState.annotationDuplicationOffset.height
+      )
+      XCTAssertEqual(clone.bounds, expected.bounds)
+      XCTAssertEqual(clone.type, expected.type)
+      XCTAssertEqual(clone.properties, expected.properties)
+    }
+
+    guard let textClone = clones.first(where: { $0.id != text.id && $0.type.toolType == .text }) else {
+      return XCTFail("Expected duplicated text annotation")
+    }
+    state.updateAnnotationProperties(id: textClone.id, fontSize: 32)
+    state.updateAnnotationText(id: textClone.id, text: "changed")
+    let originalText = try XCTUnwrap(state.annotations.first { $0.id == text.id })
+    let updatedTextClone = try XCTUnwrap(state.annotations.first { $0.id == textClone.id })
+    XCTAssertEqual(originalText.type, .text("original"))
+    XCTAssertEqual(originalText.properties.fontSize, properties.fontSize)
+    XCTAssertEqual(updatedTextClone.type, .text("changed"))
+    XCTAssertEqual(updatedTextClone.properties.fontSize, 32)
+  }
+
+  @MainActor
+  func testCopyPasteSelectsFreshItemsAndUsesPredictableRepeatedOffsets() throws {
+    let state = makeAnnotateState()
+    let source = makeRectangle(CGRect(x: 100, y: 100, width: 40, height: 40))
+    state.annotations = [source]
+    state.setSelectedAnnotationIds([source.id])
+
+    XCTAssertTrue(state.copySelectedAnnotations())
+    state.setSelectedAnnotationIds([])
+
+    XCTAssertTrue(state.pasteAnnotationsFromClipboard())
+    let firstClone = try XCTUnwrap(state.annotations.first { $0.id != source.id })
+    XCTAssertEqual(firstClone.bounds.origin, CGPoint(x: 110, y: 90))
+    XCTAssertEqual(state.selectedAnnotationIds, [firstClone.id])
+
+    XCTAssertTrue(state.pasteAnnotationsFromClipboard())
+    let secondClone = try XCTUnwrap(state.annotations.last)
+    XCTAssertNotEqual(secondClone.id, firstClone.id)
+    XCTAssertEqual(secondClone.bounds.origin, CGPoint(x: 120, y: 80))
+    XCTAssertEqual(state.selectedAnnotationIds, [secondClone.id])
+  }
+
+  @MainActor
+  func testPasteUsesCanvasMouseLocationAndCentersSelectionWithRepeatedOffset() throws {
+    let state = makeAnnotateState()
+    let source = makeRectangle(CGRect(x: 100, y: 100, width: 40, height: 40))
+    state.annotations = [source]
+    state.setSelectedAnnotationIds([source.id])
+
+    XCTAssertTrue(state.copySelectedAnnotations())
+    state.updateCanvasMouseLocation(CGPoint(x: 300, y: 200))
+
+    XCTAssertTrue(state.pasteAnnotationsFromClipboard())
+    let firstClone = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(firstClone.selectionBounds.midX, 300, accuracy: 0.001)
+    XCTAssertEqual(firstClone.selectionBounds.midY, 200, accuracy: 0.001)
+    XCTAssertEqual(state.selectedAnnotationIds, [firstClone.id])
+
+    XCTAssertTrue(state.pasteAnnotationsFromClipboard())
+    let secondClone = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(secondClone.selectionBounds.midX, 310, accuracy: 0.001)
+    XCTAssertEqual(secondClone.selectionBounds.midY, 190, accuracy: 0.001)
+    XCTAssertEqual(state.selectedAnnotationIds, [secondClone.id])
+  }
+
+  @MainActor
+  func testPasteClampsOffsetToEditableCanvasWhenSourceFits() throws {
+    let state = makeAnnotateState()
+    let source = makeRectangle(CGRect(x: 360, y: 100, width: 30, height: 30))
+    state.annotations = [source]
+    state.setSelectedAnnotationIds([source.id])
+
+    XCTAssertTrue(state.copySelectedAnnotations())
+    XCTAssertTrue(state.pasteAnnotationsFromClipboard())
+
+    let clone = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(clone.bounds.origin.x, 364, accuracy: 0.001)
+    XCTAssertLessThanOrEqual(clone.selectionBounds.maxX, state.activeAnnotationBounds.maxX)
+  }
+
+  @MainActor
+  func testDuplicateEmbeddedImageCreatesIndependentAssetAndItemIdentity() throws {
+    let state = makeAnnotateState()
+    state.loadImage(makeImage(size: CGSize(width: 400, height: 300)))
+    state.addImportedImage(makeImage())
+    state.setCombineMode(.freeCanvas)
+
+    let source = try XCTUnwrap(state.annotations.first)
+    guard case .embeddedImage(let sourceAssetId) = source.type else {
+      return XCTFail("Expected imported image annotation")
+    }
+    let sourceImage = try XCTUnwrap(state.embeddedImage(for: sourceAssetId))
+    state.setSelectedAnnotationIds([source.id])
+
+    XCTAssertTrue(state.duplicateSelectedAnnotations())
+    let clone = try XCTUnwrap(state.annotations.last)
+    guard case .embeddedImage(let cloneAssetId) = clone.type else {
+      return XCTFail("Expected duplicated image annotation")
+    }
+    let cloneImage = try XCTUnwrap(state.embeddedImage(for: cloneAssetId))
+    XCTAssertNotEqual(clone.id, source.id)
+    XCTAssertNotEqual(cloneAssetId, sourceAssetId)
+    XCTAssertNotEqual(ObjectIdentifier(cloneImage), ObjectIdentifier(sourceImage))
+
+    state.updateAnnotationBounds(id: clone.id, bounds: clone.bounds.offsetBy(dx: 20, dy: 0))
+    XCTAssertNotEqual(clone.bounds, state.annotations.first { $0.id == clone.id }?.bounds)
+    XCTAssertEqual(source.bounds, state.annotations.first { $0.id == source.id }?.bounds)
+  }
+
+  @MainActor
+  func testObjectCommandsAreNoOpWhileTextAnnotationIsBeingEditedOrUnselected() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("text"),
+      bounds: CGRect(x: 100, y: 100, width: 50, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+
+    XCTAssertFalse(state.copySelectedAnnotations())
+    XCTAssertFalse(state.pasteAnnotationsFromClipboard())
+    XCTAssertFalse(state.duplicateSelectedAnnotations())
+
+    state.setSelectedAnnotationIds([text.id])
+    state.editingTextAnnotationId = text.id
+    XCTAssertFalse(state.copySelectedAnnotations())
+    XCTAssertFalse(state.pasteAnnotationsFromClipboard())
+    XCTAssertFalse(state.duplicateSelectedAnnotations())
   }
 
   // MARK: - Delete + undo

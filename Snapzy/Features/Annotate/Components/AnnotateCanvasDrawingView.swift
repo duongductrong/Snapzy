@@ -202,7 +202,7 @@ final class DrawingCanvasNSView: NSView {
     // Enable mouse tracking for cursor updates
     let trackingArea = NSTrackingArea(
       rect: .zero,
-      options: [.activeInKeyWindow, .inVisibleRect, .mouseMoved],
+      options: [.activeInKeyWindow, .inVisibleRect, .mouseMoved, .mouseEnteredAndExited],
       owner: self,
       userInfo: nil
     )
@@ -602,6 +602,7 @@ final class DrawingCanvasNSView: NSView {
       state.frozenCombineContentBounds = state.combineContentBounds
     }
     let displayPoint = convert(event.locationInWindow, from: nil)
+    updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
     dragStart = imagePoint // Store in image coords
 
@@ -813,6 +814,7 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseDragged(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
+    updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
 
     // Handle resizing (in image coordinates). Mutates only the gesture-local
@@ -1763,8 +1765,25 @@ final class DrawingCanvasNSView: NSView {
 
   // MARK: - Cursor Management
 
-  override func mouseMoved(with event: NSEvent) {
+  override func mouseEntered(with event: NSEvent) {
+    let displayPoint = convert(event.locationInWindow, from: nil)
+    updateCanvasMouseLocation(for: displayPoint)
     updateCursor(for: event)
+  }
+
+  override func mouseExited(with _: NSEvent) {
+    state.updateCanvasMouseLocation(nil)
+    NSCursor.arrow.set()
+  }
+
+  override func mouseMoved(with event: NSEvent) {
+    let displayPoint = convert(event.locationInWindow, from: nil)
+    updateCanvasMouseLocation(for: displayPoint)
+    updateCursor(for: event)
+  }
+
+  private func updateCanvasMouseLocation(for displayPoint: CGPoint) {
+    state.updateCanvasMouseLocation(displayToImage(displayPoint))
   }
 
   private func updateCursor(for event: NSEvent) {

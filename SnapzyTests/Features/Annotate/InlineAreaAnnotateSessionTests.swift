@@ -174,6 +174,49 @@ final class InlineAreaAnnotateSessionTests: XCTestCase {
     )
   }
 
+  func testAnnotateObjectShortcutsRouteOnlyPlainCommandKeyDown() throws {
+    let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: .command)
+    let layoutAwareCopy = try makeKeyEvent(keyCode: 99, characters: "c", flags: .command)
+    let keyCodeFallbackCopy = try makeKeyEvent(keyCode: 8, characters: "", flags: .command)
+    let mismatchedKeyCode = try makeKeyEvent(keyCode: 8, characters: "x", flags: .command)
+    let paste = try makeKeyEvent(keyCode: 9, characters: "v", flags: .command)
+    let duplicate = try makeKeyEvent(keyCode: 2, characters: "d", flags: .command)
+    let shiftCopy = try makeKeyEvent(keyCode: 8, characters: "C", flags: [.command, .shift])
+    let keyUp = try makeKeyEvent(type: .keyUp, keyCode: 8, characters: "c", flags: .command)
+
+    XCTAssertEqual(AnnotateWindow.annotationObjectShortcut(for: copy, isTextInputActive: false), .copy)
+    XCTAssertEqual(AnnotateWindow.annotationObjectShortcut(for: layoutAwareCopy, isTextInputActive: false), .copy)
+    XCTAssertEqual(AnnotateWindow.annotationObjectShortcut(for: keyCodeFallbackCopy, isTextInputActive: false), .copy)
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: mismatchedKeyCode, isTextInputActive: false))
+    XCTAssertEqual(AnnotateWindow.annotationObjectShortcut(for: paste, isTextInputActive: false), .paste)
+    XCTAssertEqual(AnnotateWindow.annotationObjectShortcut(for: duplicate, isTextInputActive: false), .duplicate)
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: shiftCopy, isTextInputActive: false))
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: keyUp, isTextInputActive: false))
+  }
+
+  func testAnnotateObjectShortcutsKeepTextAndInputFieldCommandsNative() throws {
+    let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: .command)
+    let paste = try makeKeyEvent(keyCode: 9, characters: "v", flags: .command)
+    let duplicate = try makeKeyEvent(keyCode: 2, characters: "d", flags: .command)
+
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: copy, isTextInputActive: true))
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: paste, isTextInputActive: true))
+    XCTAssertNil(AnnotateWindow.annotationObjectShortcut(for: duplicate, isTextInputActive: true))
+  }
+
+  @MainActor
+  func testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected() throws {
+    let state = AnnotateState()
+    let window = AnnotateWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600))
+    window.interactionState = state
+    let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: .command)
+    let duplicate = try makeKeyEvent(keyCode: 2, characters: "d", flags: .command)
+
+    XCTAssertTrue(window.performKeyEquivalent(with: copy))
+    XCTAssertTrue(window.performKeyEquivalent(with: duplicate))
+    XCTAssertFalse(state.canUndo)
+  }
+
   func testInlineKeyActionGatesGlobalCopyByKeyWindow() throws {
     let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: .command)
 

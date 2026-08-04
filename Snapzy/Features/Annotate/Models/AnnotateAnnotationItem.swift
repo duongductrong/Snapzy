@@ -1123,6 +1123,51 @@ struct AnnotationItem: Identifiable, Equatable {
 // MARK: - Bounds Remapping
 
 extension AnnotationItem {
+  /// Returns a translated copy while preserving the item's geometry and
+  /// tool-specific metadata. The identity is retained for in-place movement.
+  func translatedBy(dx: CGFloat, dy: CGFloat) -> AnnotationItem {
+    var translated = self
+    translated.bounds.origin.x += dx
+    translated.bounds.origin.y += dy
+
+    if let tailTarget = translated.properties.calloutTailTarget {
+      translated.properties.calloutTailTarget = CGPoint(
+        x: tailTarget.x + dx,
+        y: tailTarget.y + dy
+      )
+    }
+
+    switch translated.type {
+    case .arrow(let geometry):
+      let updated = geometry.translatedBy(dx: dx, dy: dy)
+      translated.type = .arrow(updated)
+      translated.bounds = updated.bounds()
+    case .line(let start, let end):
+      translated.type = .line(
+        start: CGPoint(x: start.x + dx, y: start.y + dy),
+        end: CGPoint(x: end.x + dx, y: end.y + dy)
+      )
+    case .path(let points):
+      translated.type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    case .highlight(let points):
+      translated.type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    default:
+      break
+    }
+
+    return translated
+  }
+
+  /// Returns a translated copy with a fresh annotation identity.
+  func duplicatedBy(dx: CGFloat, dy: CGFloat) -> AnnotationItem {
+    let translated = translatedBy(dx: dx, dy: dy)
+    return AnnotationItem(
+      type: translated.type,
+      bounds: translated.bounds,
+      properties: translated.properties
+    )
+  }
+
   /// Returns a copy resized/moved to `newBounds`, remapping embedded geometry
   /// (arrow/line/path/highlight points, counter diameter, callout tail) exactly
   /// as an interactive bounds change would. Pure: no side effects, so the canvas

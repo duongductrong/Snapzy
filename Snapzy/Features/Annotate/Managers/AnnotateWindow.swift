@@ -31,6 +31,12 @@ extension Notification.Name {
   static let annotatePanScroll = Notification.Name("annotatePanScroll")
 }
 
+enum AnnotateObjectShortcut: Equatable {
+  case copy
+  case paste
+  case duplicate
+}
+
 /// Custom NSWindow for annotation editing with dark mode appearance
 class AnnotateWindow: NSWindow {
   weak var interactionState: AnnotateState?
@@ -107,12 +113,41 @@ class AnnotateWindow: NSWindow {
     layoutTrafficLights()
   }
 
+  nonisolated static func annotationObjectShortcut(
+    for event: NSEvent,
+    isTextInputActive: Bool
+  ) -> AnnotateObjectShortcut? {
+    guard !isTextInputActive, event.type == .keyDown else { return nil }
+    let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    guard flags.contains(.command),
+          !flags.contains(.control),
+          !flags.contains(.option),
+          !flags.contains(.shift) else { return nil }
+
+    if let characters = event.charactersIgnoringModifiers?.lowercased(), !characters.isEmpty {
+      switch characters {
+      case "c": return .copy
+      case "v": return .paste
+      case "d": return .duplicate
+      default: return nil
+      }
+    }
+
+    switch event.keyCode {
+    case 8: return .copy
+    case 9: return .paste
+    case 2: return .duplicate
+    default: return nil
+    }
+  }
+
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     guard event.type == .keyDown else {
       return super.performKeyEquivalent(with: event)
     }
 
     let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+    let textInputActive = isTextInputActive || interactionState?.editingTextAnnotationId != nil
 
     // Own Annotate undo/redo at the window boundary so Cmd+Z never falls
     // through to stale AppKit text-system undo actions from inline editing.
@@ -180,10 +215,30 @@ class AnnotateWindow: NSWindow {
       return true
     }
 
+    if let objectShortcut = Self.annotationObjectShortcut(
+      for: event,
+      isTextInputActive: textInputActive
+    ) {
+      switch objectShortcut {
+      case .copy:
+        interactionState?.copySelectedAnnotations()
+        return true
+      case .paste:
+        if interactionState?.pasteAnnotationsFromClipboard() == true {
+          return true
+        }
+        NotificationCenter.default.post(name: .annotatePasteImage, object: self)
+        return true
+      case .duplicate:
+        interactionState?.duplicateSelectedAnnotations()
+        return true
+      }
+    }
+
     // Cmd+V - Paste image into current annotate canvas.
     if event.keyCode == 9 && flags == .command {
       // Allow normal text paste while editing text annotations.
-      if isTextInputActive {
+      if textInputActive {
         return super.performKeyEquivalent(with: event)
       }
       NotificationCenter.default.post(name: .annotatePasteImage, object: self)

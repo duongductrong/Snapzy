@@ -131,4 +131,34 @@ final class AnnotateUndoRedoTests: XCTestCase {
     XCTAssertTrue(state.annotations.isEmpty)
     XCTAssertFalse(state.canUndo)
   }
+
+  @MainActor
+  func testDuplicateSelectionIsAtomicAndUndoRedoRestoresSelection() {
+    let state = makeAnnotateState()
+    let first = makeRectangle()
+    let second = AnnotationItem(
+      type: .oval,
+      bounds: CGRect(x: 80, y: 80, width: 30, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [first, second]
+    state.setSelectedAnnotationIds([first.id, second.id])
+
+    XCTAssertTrue(state.duplicateSelectedAnnotations())
+    let duplicatedIds = Set(state.annotations.suffix(2).map(\.id))
+    XCTAssertEqual(state.annotations.count, 4)
+    XCTAssertEqual(state.selectedAnnotationIds, duplicatedIds)
+
+    state.undo()
+    XCTAssertEqual(state.annotations.map(\.id), [first.id, second.id])
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id, second.id])
+    XCTAssertFalse(state.canUndo)
+    XCTAssertTrue(state.canRedo)
+
+    state.redo()
+    XCTAssertEqual(state.annotations.count, 4)
+    XCTAssertEqual(state.selectedAnnotationIds, duplicatedIds)
+    XCTAssertTrue(state.canUndo)
+    XCTAssertFalse(state.canRedo)
+  }
 }
