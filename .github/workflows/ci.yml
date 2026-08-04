@@ -60,6 +60,7 @@ jobs:
             SnapzyTests/AnnotateMockupTests/testMockupExporterRenderProducesImageWithSourceImage
             SnapzyTests/AnnotateTextSnappingTests/testDetectorReportsTextNearTheImageTopWithAHighY
             SnapzyTests/AnnotateBlurCacheManagerTests/testGetCachedBlur_nonBlockingSchedulesRender
+            SnapzyTests/InlineAreaAnnotateSessionTests/testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected
             SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
             SnapzyTests/AreaSelectionSessionLifecycleTests
             SnapzyTests/AreaSelectionControllerTests

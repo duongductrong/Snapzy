@@ -206,6 +206,9 @@ final class InlineAreaAnnotateSessionTests: XCTestCase {
 
   @MainActor
   func testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected() throws {
+    try skipIfRunningInCI(
+      "Exercises NSWindow key-equivalent routing, which is unreliable on headless CI runners"
+    )
     let state = AnnotateState()
     let window = AnnotateWindow(contentRect: CGRect(x: 0, y: 0, width: 800, height: 600))
     window.interactionState = state
