@@ -949,6 +949,128 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   @MainActor
+  func testCanvasMouseDownMakesCanvasFirstResponder() {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    let window = makeWindowHostingCanvas(canvas)
+    defer { window.contentView = nil }
+
+    XCTAssertFalse(window.firstResponder === canvas)
+
+    canvas.mouseDown(with: makeMouseEvent(
+      type: .leftMouseDown,
+      location: CGPoint(x: 100, y: 100),
+      windowNumber: window.windowNumber
+    ))
+
+    XCTAssertTrue(window.firstResponder === canvas)
+  }
+
+  @MainActor
+  func testCanvasPressingShiftWhilePointerIsStationaryUpdatesRectanglePreviewBeforeCommit() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+    let window = makeWindowHostingCanvas(canvas)
+    defer { window.contentView = nil }
+
+    canvas.mouseDown(with: makeMouseEvent(
+      type: .leftMouseDown,
+      location: CGPoint(x: 100, y: 100),
+      windowNumber: window.windowNumber
+    ))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: CGPoint(x: 140, y: 120)))
+    window.sendEvent(makeFlagsChangedEvent(modifierFlags: .shift, windowNumber: window.windowNumber))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 170, y: 110)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(annotation.bounds, CGRect(x: 100, y: 100, width: 40, height: 40))
+  }
+
+  @MainActor
+  func testCanvasReleasingShiftWhilePointerIsStationaryRestoresRawRectangleBeforeCommit() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+    let window = makeWindowHostingCanvas(canvas)
+    defer { window.contentView = nil }
+
+    canvas.mouseDown(with: makeMouseEvent(
+      type: .leftMouseDown,
+      location: CGPoint(x: 100, y: 100),
+      windowNumber: window.windowNumber
+    ))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 140, y: 120),
+      modifierFlags: .shift
+    ))
+    window.sendEvent(makeFlagsChangedEvent(modifierFlags: [], windowNumber: window.windowNumber))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 170, y: 110)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(annotation.bounds, CGRect(x: 100, y: 100, width: 40, height: 20))
+  }
+
+  @MainActor
+  func testCanvasShiftRectangleAtBoundaryCommitsSquareInsideDrawingBounds() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 395, y: 100)))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 395, y: 140),
+      modifierFlags: .shift
+    ))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 350, y: 200)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    guard case .rectangle = annotation.type else {
+      return XCTFail("Expected rectangle annotation, got \(annotation.type)")
+    }
+    XCTAssertEqual(annotation.bounds, CGRect(x: 395, y: 100, width: 5, height: 5))
+    XCTAssertLessThanOrEqual(annotation.bounds.maxX, state.activeAnnotationBounds.maxX)
+    XCTAssertLessThanOrEqual(annotation.bounds.maxY, state.activeAnnotationBounds.maxY)
+  }
+
+  @MainActor
+  func testCanvasShiftRectangleStartingAtBoundaryDoesNotCommitZeroSizeAnnotation() {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 400, y: 100)))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 400, y: 140),
+      modifierFlags: .shift
+    ))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 350, y: 200)))
+
+    XCTAssertTrue(state.annotations.isEmpty)
+  }
+
+  @MainActor
   func testCanvasShiftLineDragSnapsAndCommitsPreviewEndpoint() throws {
     enum ExpectedDirection {
       case horizontal
@@ -1027,6 +1149,105 @@ final class AnnotateCoreTests: XCTestCase {
         XCTAssertEqual(abs(end.x - start.x), abs(end.y - start.y), accuracy: 0.0001, "\(testCase.name) endpoint")
       }
     }
+  }
+
+  @MainActor
+  func testCanvasShiftLineAtBoundaryCommitsClippedDiagonal() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .line
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let startPoint = CGPoint(x: 395, y: 100)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: startPoint))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 400, y: 108),
+      modifierFlags: .shift
+    ))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 350, y: 200)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    guard case .line(let start, let end) = annotation.type else {
+      return XCTFail("Expected line annotation, got \(annotation.type)")
+    }
+    XCTAssertEqual(start, startPoint)
+    XCTAssertEqual(end.x, 400, accuracy: 0.0001)
+    XCTAssertEqual(end.y, 105, accuracy: 0.0001)
+    XCTAssertEqual(abs(end.x - start.x), abs(end.y - start.y), accuracy: 0.0001)
+    XCTAssertLessThanOrEqual(end.x, state.activeAnnotationBounds.maxX)
+    XCTAssertLessThanOrEqual(end.y, state.activeAnnotationBounds.maxY)
+  }
+
+  @MainActor
+  func testCanvasShiftStraightArrowAtBoundaryCommitsClippedDiagonal() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let startPoint = CGPoint(x: 395, y: 100)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: startPoint))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 400, y: 108),
+      modifierFlags: .shift
+    ))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 350, y: 200)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    guard case .arrow(let geometry) = annotation.type else {
+      return XCTFail("Expected arrow annotation, got \(annotation.type)")
+    }
+    XCTAssertEqual(geometry.start, startPoint)
+    XCTAssertEqual(geometry.end.x, 400, accuracy: 0.0001)
+    XCTAssertEqual(geometry.end.y, 105, accuracy: 0.0001)
+    XCTAssertEqual(
+      abs(geometry.end.x - geometry.start.x),
+      abs(geometry.end.y - geometry.start.y),
+      accuracy: 0.0001
+    )
+    XCTAssertLessThanOrEqual(geometry.end.x, state.activeAnnotationBounds.maxX)
+    XCTAssertLessThanOrEqual(geometry.end.y, state.activeAnnotationBounds.maxY)
+  }
+
+  @MainActor
+  func testCanvasShiftConstraintUsesCombineContentBoundsInsteadOfCropBounds() throws {
+    let state = makeAnnotateState()
+    state.loadImage(NSImage(size: CGSize(width: 400, height: 300)))
+    state.cropRect = CGRect(x: 0, y: 0, width: 200, height: 300)
+    state.activateCombineMode()
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 195, y: 100)))
+    canvas.mouseDragged(with: makeMouseEvent(
+      type: .leftMouseDragged,
+      location: CGPoint(x: 230, y: 120),
+      modifierFlags: .shift
+    ))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 350, y: 200)))
+
+    let annotation = try XCTUnwrap(state.annotations.last)
+    guard case .rectangle = annotation.type else {
+      return XCTFail("Expected rectangle annotation, got \(annotation.type)")
+    }
+    XCTAssertEqual(state.activeAnnotationBounds.maxX, 200)
+    XCTAssertEqual(state.effectiveContentBounds.maxX, 400)
+    XCTAssertEqual(annotation.bounds, CGRect(x: 195, y: 100, width: 35, height: 35))
+    XCTAssertGreaterThan(annotation.bounds.maxX, state.activeAnnotationBounds.maxX)
+    XCTAssertLessThanOrEqual(annotation.bounds.maxX, state.effectiveContentBounds.maxX)
   }
 
   func testAnnotationFactory_normalizesNearlyHorizontalHighlighterStroke() throws {
@@ -2195,19 +2416,50 @@ final class AnnotateCoreTests: XCTestCase {
   private func makeMouseEvent(
     type: NSEvent.EventType,
     location: CGPoint,
-    modifierFlags: NSEvent.ModifierFlags = []
+    modifierFlags: NSEvent.ModifierFlags = [],
+    windowNumber: Int = 0
   ) -> NSEvent {
     NSEvent.mouseEvent(
       with: type,
       location: location,
       modifierFlags: modifierFlags,
       timestamp: 0,
-      windowNumber: 0,
+      windowNumber: windowNumber,
       context: nil,
       eventNumber: 0,
       clickCount: 1,
       pressure: 1
     )!
+  }
+
+  private func makeFlagsChangedEvent(
+    modifierFlags: NSEvent.ModifierFlags,
+    windowNumber: Int = 0
+  ) -> NSEvent {
+    NSEvent.keyEvent(
+      with: .flagsChanged,
+      location: .zero,
+      modifierFlags: modifierFlags,
+      timestamp: 0,
+      windowNumber: windowNumber,
+      context: nil,
+      characters: "",
+      charactersIgnoringModifiers: "",
+      isARepeat: false,
+      keyCode: 56
+    )!
+  }
+
+  @MainActor
+  private func makeWindowHostingCanvas(_ canvas: DrawingCanvasNSView) -> NSWindow {
+    let window = NSWindow(
+      contentRect: CGRect(x: 0, y: 0, width: 400, height: 300),
+      styleMask: .borderless,
+      backing: .buffered,
+      defer: false
+    )
+    window.contentView = canvas
+    return window
   }
 
   private func makeRetinaPixelPatternImage(

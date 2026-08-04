@@ -94,6 +94,7 @@ final class DrawingCanvasNSView: NSView {
   private var currentPath: [CGPoint] = []
   private var isDrawing = false
   private var dragStart: CGPoint?
+  private var drawingRawEndPoint: CGPoint?
   private var drawingStartDisplayPoint: CGPoint?
   private var drawingDragDistance: CGFloat = 0
 
@@ -561,11 +562,15 @@ final class DrawingCanvasNSView: NSView {
     return canvasBounds.standardized
   }
 
-  /// Clamp point to the active drawing bounds. Applied expanded crops become drawable canvas.
-  private func clampToCanvasBounds(_ point: CGPoint) -> CGPoint {
-    let bounds = state.isCombineMode
+  private var activeDrawingBounds: CGRect {
+    state.isCombineMode
       ? state.effectiveContentBounds.standardized
       : state.activeAnnotationBounds.standardized
+  }
+
+  /// Clamp point to the active drawing bounds. Applied expanded crops become drawable canvas.
+  private func clampToCanvasBounds(_ point: CGPoint) -> CGPoint {
+    let bounds = activeDrawingBounds
     return CGPoint(
       x: max(bounds.minX, min(point.x, bounds.maxX)),
       y: max(bounds.minY, min(point.y, bounds.maxY))
@@ -581,6 +586,7 @@ final class DrawingCanvasNSView: NSView {
   // MARK: - Mouse Events
 
   override func mouseDown(with event: NSEvent) {
+    window?.makeFirstResponder(self)
     if state.isCombineMode {
       state.frozenCombineContentBounds = state.combineContentBounds
     }
@@ -691,7 +697,7 @@ final class DrawingCanvasNSView: NSView {
       }
       resetDrawingInteraction()
     default:
-      break
+      drawingRawEndPoint = imagePoint
     }
   }
 
@@ -893,21 +899,36 @@ final class DrawingCanvasNSView: NSView {
       currentPath.append(imagePoint)
       invalidateLiveLayers()
     default:
-      guard let dragStart else {
-        currentPath = [imagePoint]
-        invalidateLiveLayers()
-        return
-      }
-      let constrainedEndPoint = AnnotationDragConstraint.constrainedEndPoint(
-        tool: state.selectedTool,
-        arrowStyle: state.arrowStyle,
-        start: dragStart,
-        end: imagePoint,
-        shiftHeld: event.modifierFlags.contains(.shift)
-      )
-      currentPath = [constrainedEndPoint]
-      invalidateLiveLayers()
+      drawingRawEndPoint = imagePoint
+      updateConstrainedDrawingPreview(shiftHeld: event.modifierFlags.contains(.shift))
     }
+  }
+
+  override func flagsChanged(with event: NSEvent) {
+    guard isDrawing, dragStart != nil, drawingRawEndPoint != nil else {
+      super.flagsChanged(with: event)
+      return
+    }
+    switch state.selectedTool {
+    case .pencil, .highlighter:
+      super.flagsChanged(with: event)
+    default:
+      updateConstrainedDrawingPreview(shiftHeld: event.modifierFlags.contains(.shift))
+    }
+  }
+
+  private func updateConstrainedDrawingPreview(shiftHeld: Bool) {
+    guard let dragStart, let drawingRawEndPoint else { return }
+    let constrainedEndPoint = AnnotationDragConstraint.constrainedEndPoint(
+      tool: state.selectedTool,
+      arrowStyle: state.arrowStyle,
+      start: dragStart,
+      end: drawingRawEndPoint,
+      shiftHeld: shiftHeld,
+      bounds: activeDrawingBounds
+    )
+    currentPath = [constrainedEndPoint]
+    invalidateLiveLayers()
   }
 
   /// Applies a resize gesture to the gesture-local copy only. Mirrors the
@@ -1192,6 +1213,10 @@ final class DrawingCanvasNSView: NSView {
     path: [CGPoint]
   ) -> Bool {
     guard tool.requiresDragToCreateAnnotation else { return true }
+    let constrainedPoints = path + [end]
+    guard constrainedPoints.contains(where: { point in
+      hypot(point.x - start.x, point.y - start.y) > 0
+    }) else { return false }
     return maxDrawingDistance(from: start, to: end, path: path) >= Self.drawingCommitDragThreshold
   }
 
@@ -1208,6 +1233,7 @@ final class DrawingCanvasNSView: NSView {
   private func resetDrawingInteraction() {
     isDrawing = false
     dragStart = nil
+    drawingRawEndPoint = nil
     drawingStartDisplayPoint = nil
     drawingDragDistance = 0
     currentPath = []
