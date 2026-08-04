@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.10] - 2026-08-04
+
+### Bug Fixes
+-  verify area selection presentation via WindowServer and reassert space membership (05074a1)
+-  invalidate static drawing layers before item resize gesture (c34e1f0)
+-  handle first mouse in inline annotation canvas (ac27a33)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.9 (de5d440)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @lcopilot
+
 ## [1.31.0-beta.9] - 2026-08-03
 
 ### Chore
