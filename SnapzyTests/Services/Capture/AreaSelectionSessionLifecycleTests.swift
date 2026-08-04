@@ -9,11 +9,10 @@
 //
 
 import CoreGraphics
-import XCTest
 @testable import Snapzy
+import XCTest
 
 final class AreaSelectionSessionLifecycleTests: XCTestCase {
-
   override func tearDown() {
     // Never leak a presented overlay across tests.
     AreaSelectionController.shared.cancelSelection()
@@ -25,7 +24,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// caller's state (e.g. `ScreenCaptureViewModel.isAreaSelectionActive`) can reset instead of
   /// stranding every future capture.
   func testReplacement_invokesPreviousCompletionOnceWithNil() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     var firstCalls: [AreaSelectionResult?] = []
@@ -53,7 +54,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// cannot fire the same completion a second time (previously produced a spurious extra
   /// `.cancelled` result and a double hidden-window restore).
   func testCompleteSelection_reentrantCancelInsideCompletion_firesOnce() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     var callCount = 0
@@ -78,7 +81,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// `cancelSelection` must be idempotent with respect to completions: a second cancel must
   /// not re-fire the (already consumed) completion.
   func testCancelSelection_twice_firesCompletionOnce() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     var callCount = 0
@@ -94,7 +99,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// The `dismissesAfterSelection` start parameter must be applied for the new session even
   /// though session-start replacement teardown resets the flag to its default.
   func testDismissesAfterSelectionParameter_survivesSessionStart() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:], dismissesAfterSelection: false) { _ in }
@@ -109,7 +116,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// A live-style session (false dismiss policy) replaced by another session must not leak the
   /// policy: the replacement starts from the default and applies only its own parameter.
   func testReplacement_doesNotLeakDismissPolicy() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:], dismissesAfterSelection: false) { _ in }
@@ -124,7 +133,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// Contract for the `RecordingCoordinator` app-toggle LIFO gate: it reads `selectionMode`
   /// to decide whether a presenting session is recording-owned.
   func testSelectionMode_reflectsCurrentSession() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .recording, backdrops: [:]) { _ in }
@@ -138,7 +149,9 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
   /// is a click fall-through hole on its display). Drives `refreshWindowPool` through the real
   /// notification; environment-gated on hosts with screens.
   func testScreenParameterChange_midSession_keepsWindowsVisible() throws {
-    try skipIfRunningInCI("Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners")
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
 
     let controller = AreaSelectionController.shared
     controller.startSelection(mode: .screenshot, backdrops: [:]) { _ in }
@@ -159,6 +172,28 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
     controller.cancelSelection()
   }
 
+  /// The presentation watchdog must be armed when a session starts and torn down with it —
+  /// a leaked timer would keep re-asserting `orderFrontRegardless` for a dead session and
+  /// could resurrect hidden pooled windows.
+  func testPresentationWatchdog_armedOnStart_invalidatedOnCancel() throws {
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
+
+    let controller = AreaSelectionController.shared
+    controller.startSelection(mode: .screenshot, backdrops: [:]) { _ in }
+    XCTAssertNotNil(
+      presentationWatchdogTimer(),
+      "session start must arm the presentation watchdog"
+    )
+
+    controller.cancelSelection()
+    XCTAssertNil(
+      presentationWatchdogTimer(),
+      "teardown must invalidate the presentation watchdog"
+    )
+  }
+
   // MARK: - Helpers
 
   /// Resolve a real pooled overlay window (populated lazily by `startSelection`) to drive
@@ -174,5 +209,12 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
 
   private func pooledWindow() -> AreaSelectionWindow? {
     pooledWindows().first
+  }
+
+  /// Read the controller's private presentation-watchdog timer for lifecycle assertions.
+  private func presentationWatchdogTimer() -> Timer? {
+    let mirror = Mirror(reflecting: AreaSelectionController.shared)
+    return mirror.children.first(where: { $0.label == "sessionPresentationWatchdogTimer" })?.value
+      as? Timer
   }
 }

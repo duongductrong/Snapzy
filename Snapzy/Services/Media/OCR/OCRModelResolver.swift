@@ -7,28 +7,21 @@
 
 import Foundation
 
-/// Availability lookups for non-built-in OCR models.
+/// Availability lookups for custom OCR models.
 ///
-/// Keeps the resolver testable; the default implementation reads UserDefaults
-/// so Phase 2 (downloadable catalog) and Phase 4 (custom endpoints) only need
-/// to persist their keys.
+/// Keeps the resolver testable while the default implementation reads
+/// UserDefaults.
 protocol OCRModelAvailabilityChecking {
-  func isDownloadableModelInstalled(id: String) -> Bool
   func customModelExists(id: UUID) -> Bool
 }
 
-/// Default availability backed by UserDefaults:
-/// - `ocr.installedModels`: String array of installed catalog model ids.
-/// - `ocr.customModels`: JSON array of custom model objects (each with `id`).
+/// Default availability backed by the JSON array of custom model objects in
+/// UserDefaults.
 struct UserDefaultsOCRModelAvailability: OCRModelAvailabilityChecking {
   private let defaults: UserDefaults
 
   init(defaults: UserDefaults = .standard) {
     self.defaults = defaults
-  }
-
-  func isDownloadableModelInstalled(id: String) -> Bool {
-    (defaults.array(forKey: PreferencesKeys.ocrInstalledModels) as? [String])?.contains(id) ?? false
   }
 
   func customModelExists(id: UUID) -> Bool {
@@ -37,7 +30,8 @@ struct UserDefaultsOCRModelAvailability: OCRModelAvailabilityChecking {
     return models?.contains { $0.id == id } ?? false
   }
 
-  /// Minimal decode shape — the full `CustomOCRModel` arrives in Phase 4.
+  /// Minimal decode shape — the full `CustomOCRModel` is loaded by the
+  /// provider only after availability has been confirmed.
   private struct StoredCustomModel: Decodable {
     let id: UUID
   }
@@ -52,7 +46,7 @@ struct OCRModelResolution {
 
 /// Routes the persisted OCR model selection to a concrete provider.
 ///
-/// Fallback rule: an unavailable selection (model uninstalled or removed)
+/// Fallback rule: an unavailable custom selection (model removed)
 /// resolves to `.builtIn`, persists `.builtIn` back, and logs to `.ocr`.
 @MainActor
 struct OCRModelResolver {
@@ -72,7 +66,14 @@ struct OCRModelResolver {
     guard let rawValue = defaults.string(forKey: PreferencesKeys.ocrSelectedModel) else {
       return .builtIn
     }
-    return OCRModelSelection(persistedValue: rawValue)
+    let selection = OCRModelSelection(persistedValue: rawValue)
+    // `dl:<id>` was the persisted format for the removed downloadable
+    // provider. Canonicalize it (and other invalid values) so an old install
+    // cannot keep advertising a provider that no longer exists.
+    if selection == .builtIn, rawValue != OCRModelSelection.builtIn.persistedValue {
+      defaults.set(OCRModelSelection.builtIn.persistedValue, forKey: PreferencesKeys.ocrSelectedModel)
+    }
+    return selection
   }
 
   func resolveStoredSelection() -> OCRModelResolution {
@@ -88,11 +89,6 @@ struct OCRModelResolver {
     switch selection {
     case .builtIn:
       return .builtIn
-    case .downloadable(let id):
-      guard availability.isDownloadableModelInstalled(id: id) else {
-        return fallBackToBuiltIn(from: selection, reason: "downloadable model not installed")
-      }
-      return selection
     case .custom(let id):
       guard availability.customModelExists(id: id) else {
         return fallBackToBuiltIn(from: selection, reason: "custom model missing")
@@ -116,12 +112,6 @@ struct OCRModelResolver {
     switch selection {
     case .builtIn:
       return VisionOCRProvider()
-    case .downloadable(let id):
-      return PPOCRProvider(
-        modelID: id,
-        modelDirectory: OCRModelStore.defaultInstallRootURL()?
-          .appendingPathComponent(id, isDirectory: true)
-      )
     case .custom(let id):
       guard let model = loadCustomModel(id: id) else {
         // Availability already confirmed the id exists; a decode failure here

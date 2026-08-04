@@ -244,6 +244,18 @@ nonisolated struct AnnotationRenderer {
     }
   }
 
+  /// Live preview of text-snapped highlighter bars. Routed through the same
+  /// path drawing the committed annotations use, so the preview is pixel
+  /// identical to what `mouseUp` creates.
+  func drawSnappedHighlightPreview(segments: [AnnotateTextSnapSegment], strokeColor: Color) {
+    guard !segments.isEmpty else { return }
+    context.setStrokeColor(NSColor(strokeColor).cgColor)
+    context.setLineCap(.round)
+    for segment in segments {
+      drawPath(points: segment.highlightPoints, isHighlight: true, strokeWidth: segment.strokeWidth)
+    }
+  }
+
   // MARK: - Private Drawing Helpers
 
   private func drawPath(points: [CGPoint], isHighlight: Bool, strokeWidth: CGFloat) {

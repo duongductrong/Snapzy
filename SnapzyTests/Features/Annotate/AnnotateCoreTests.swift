@@ -893,6 +893,16 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   @MainActor
+  func testCanvasFirstMouseHandlingIsOptIn() {
+    let state = makeAnnotateState()
+    let editorCanvas = DrawingCanvasNSView(state: state)
+    let inlineCanvas = DrawingCanvasNSView(state: state, acceptsFirstMouse: true)
+
+    XCTAssertFalse(editorCanvas.acceptsFirstMouse(for: nil))
+    XCTAssertTrue(inlineCanvas.acceptsFirstMouse(for: nil))
+  }
+
+  @MainActor
   func testCanvasBlankClickWithActiveShapeToolDeselectsItemButKeepsTool() {
     let state = makeAnnotateState()
     let annotation = AnnotationItem(

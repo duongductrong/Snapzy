@@ -133,14 +133,14 @@ final class AnnotateState: ObservableObject {
   // MARK: - Source Image
 
   @Published var sourceImage: NSImage? {
-    didSet { invalidateCropEdgeProfile() }
+    didSet { invalidateImageAnalysisProfiles() }
   }
   @Published var sourceURL: URL?
   @Published private(set) var cutoutImage: NSImage? {
-    didSet { invalidateCropEdgeProfile() }
+    didSet { invalidateImageAnalysisProfiles() }
   }
   @Published private(set) var isCutoutApplied: Bool = false {
-    didSet { invalidateCropEdgeProfile() }
+    didSet { invalidateImageAnalysisProfiles() }
   }
   @Published private(set) var isCutoutProcessing: Bool = false
   @Published var cutoutErrorMessage: String?
@@ -192,6 +192,10 @@ final class AnnotateState: ObservableObject {
       // If user leaves crop by switching tool, restore sidebar if crop had auto-collapsed it.
       if oldValue == .crop, selectedTool != .crop {
         restoreSidebarAfterCropInteractionIfNeeded()
+      }
+      // Text snapping needs the line profile ready before the first drag.
+      if selectedTool == .highlighter {
+        prepareTextLineProfileIfNeeded()
       }
       syncActiveToolProperties()
     }
@@ -1358,6 +1362,23 @@ final class AnnotateState: ObservableObject {
   /// Identity of the NSImage the profile (or its in-flight computation) belongs
   /// to; guards against stale async results and repeat computation.
   private var cropEdgeProfileImageID: ObjectIdentifier?
+  /// Whether highlighter drags snap to detected text lines (CleanShot X style).
+  /// Persisted; defaults to true when the preference was never set.
+  @Published var isHighlighterTextSnappingEnabled: Bool = true {
+    didSet {
+      defaults.set(isHighlighterTextSnappingEnabled, forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled)
+      if isHighlighterTextSnappingEnabled, selectedTool == .highlighter {
+        prepareTextLineProfileIfNeeded()
+      }
+    }
+  }
+  /// Detected text lines of the current effective source image, in image points
+  /// (annotation space). Computed lazily by `prepareTextLineProfileIfNeeded()`;
+  /// nilled whenever the effective image changes (load/cutout/rotation/...).
+  private(set) var textLineProfile: AnnotateTextLineProfile?
+  /// Identity of the NSImage the text profile (or its in-flight computation)
+  /// belongs to; guards against stale async results and repeat computation.
+  private var textLineProfileImageID: ObjectIdentifier?
 
   // MARK: - Mockup State
 
@@ -1438,6 +1459,8 @@ final class AnnotateState: ObservableObject {
     self.dragToAppPreparationState = .ready
     self.isCropEdgeSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
+    self.isHighlighterTextSnappingEnabled =
+      defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -1462,6 +1485,8 @@ final class AnnotateState: ObservableObject {
     self.dragToAppPreparationState = .unavailable
     self.isCropEdgeSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
+    self.isHighlighterTextSnappingEnabled =
+      defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -2847,12 +2872,20 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Crop Edge Profile (border snapping / auto-crop)
 
-  /// Clear the cached edge profile. Called automatically via didSet whenever
-  /// the effective source image changes (load / cutout / rotation / undo);
-  /// `prepareCropEdgeProfileIfNeeded()` recomputes on demand.
-  private func invalidateCropEdgeProfile() {
+  /// Clear the cached image-analysis profiles (crop borders, text lines).
+  /// Called automatically via didSet whenever the effective source image
+  /// changes (load / cutout / rotation / undo); the matching
+  /// `prepare…IfNeeded()` recomputes on demand.
+  private func invalidateImageAnalysisProfiles() {
     cropEdgeProfile = nil
     cropEdgeProfileImageID = nil
+    textLineProfile = nil
+    textLineProfileImageID = nil
+    // The highlighter can already be active when the image arrives (remembered
+    // tool, rotation, cutout), and the tool didSet has no second chance to run.
+    if selectedTool == .highlighter {
+      prepareTextLineProfileIfNeeded()
+    }
   }
 
   /// Kick off content-border detection for the current image unless a profile
@@ -2877,6 +2910,39 @@ final class AnnotateState: ObservableObject {
       DiagnosticLogger.shared.log(.info, .annotate, "Crop edge profile computed", context: [
         "verticalEdges": "\(profile.verticalEdges.count)",
         "horizontalEdges": "\(profile.horizontalEdges.count)"
+      ])
+    }
+  }
+
+  // MARK: - Text Line Profile (highlighter text snapping)
+
+  /// Kick off text-line detection for the current image unless a profile is
+  /// already computed (or in flight) for it. The result lands in
+  /// `textLineProfile` and backs highlighter text snapping. Called when the
+  /// highlighter becomes the active tool, so images the user never highlights
+  /// on never pay for a Vision pass.
+  func prepareTextLineProfileIfNeeded() {
+    guard isHighlighterTextSnappingEnabled,
+          hasImage,
+          let image = effectiveSourceImage,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+    let imageID = ObjectIdentifier(image)
+    guard textLineProfileImageID != imageID else { return }
+    textLineProfile = nil
+    textLineProfileImageID = imageID
+    let imagePointSize = image.size
+
+    Task { [weak self] in
+      let profile = await Task.detached(priority: .userInitiated) {
+        AnnotateTextSnapDetector.detectLines(in: cgImage, imagePointSize: imagePointSize)
+      }.value
+      // Bail when the effective image changed mid-compute.
+      guard let self,
+            self.effectiveSourceImage.map({ ObjectIdentifier($0) }) == imageID,
+            self.textLineProfileImageID == imageID else { return }
+      self.textLineProfile = profile
+      DiagnosticLogger.shared.log(.info, .annotate, "Text line profile computed", context: [
+        "lines": "\(profile.lines.count)"
       ])
     }
   }
@@ -4908,6 +4974,20 @@ final class AnnotateState: ObservableObject {
     }
     guard let tool = quickPropertiesTool, tool.supportsQuickLineStyle else { return false }
     return tool != .arrow || activeArrowType == .classic
+  }
+
+  /// Text snapping shapes new strokes, so it belongs to the highlighter's
+  /// defaults context — a committed highlight's geometry is already fixed, and
+  /// every control in the selected-item context edits that item.
+  var quickPropertiesSupportsHighlighterTextSnapping: Bool {
+    quickPropertiesMode == .toolDefaults && quickPropertiesTool == .highlighter
+  }
+
+  var quickHighlighterTextSnappingBinding: Binding<Bool> {
+    Binding(
+      get: { [weak self] in self?.isHighlighterTextSnappingEnabled ?? true },
+      set: { [weak self] isEnabled in self?.isHighlighterTextSnappingEnabled = isEnabled }
+    )
   }
 
   var quickStrokeWidthLabel: String {

@@ -43,13 +43,8 @@ jobs:
             SnapzyTests/QuickAccessCoreTests/testQuickAccessTrackpadSwipeModeStore_resetToDefault
             SnapzyTests/OCRRecognitionTests
             SnapzyTests/CustomOCRModelStoreTests
-            SnapzyTests/OCRUserCatalogStoreTests
-            SnapzyTests/OCRModelStoreTests
-            SnapzyTests/OCRModelDownloadServiceTests
             SnapzyTests/OCRModelSelectionTests
             SnapzyTests/PreferencesOCRModelSelectionTests
-            SnapzyTests/OCRDynamicCatalogIntegrationTests
-            SnapzyTests/PPOCRIntegrationTests
             SnapzyTests/OCRKeychainStoreTests
             SnapzyTests/SmartElementCaptureControllerTests
             SnapzyTests/SmartElementWindowOwnerResolverTests
@@ -63,6 +58,7 @@ jobs:
             SnapzyTests/AnnotateBackgroundRedactionTests/testApplyBackgroundCutoutStartsProcessingOnSupportedOS
             SnapzyTests/AnnotateBackgroundRedactionTests/testAutoRedactSensitiveDataStartsScan
             SnapzyTests/AnnotateMockupTests/testMockupExporterRenderProducesImageWithSourceImage
+            SnapzyTests/AnnotateTextSnappingTests/testDetectorReportsTextNearTheImageTopWithAHighY
             SnapzyTests/AnnotateBlurCacheManagerTests/testGetCachedBlur_nonBlockingSchedulesRender
             SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
             SnapzyTests/AreaSelectionSessionLifecycleTests

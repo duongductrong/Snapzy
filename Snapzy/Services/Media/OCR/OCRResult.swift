@@ -9,7 +9,6 @@ import CoreGraphics
 
 enum OCREngine: String {
   case vision
-  case ppOCR
   case remote
 }
 

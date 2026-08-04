@@ -7,9 +7,9 @@
 
 /// An OCR engine capable of recognizing text for an `OCRRequest`.
 ///
-/// Implementations: `VisionOCRProvider` (built-in Apple Vision). PP-OCR
-/// (Phase 3) and remote OpenAI-compatible endpoints (Phase 4) plug in behind
-/// the same seam. Sendability/isolation is left to each implementation —
+/// Implementations: `VisionOCRProvider` (built-in Apple Vision) and
+/// `RemoteOCRProvider` (custom OpenAI-compatible endpoints) plug in behind the
+/// same seam. Sendability/isolation is left to each implementation —
 /// `VisionOCRProvider` is `@MainActor` like `OCRService`.
 protocol OCRProvider {
   /// Engine identity stamped on produced `OCRResult`s.

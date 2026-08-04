@@ -23,6 +23,8 @@ struct AnnotateSettingsView: View {
   private var annotateCombineSaveAsEdit = true
   @AppStorage(PreferencesKeys.annotateCropSnapToEdgesEnabled)
   private var annotateCropSnapToEdgesEnabled = true
+  @AppStorage(PreferencesKeys.annotateHighlighterTextSnappingEnabled)
+  private var annotateHighlighterTextSnappingEnabled = true
 
   var body: some View {
     Form {
@@ -78,6 +80,15 @@ struct AnnotateSettingsView: View {
           description: L10n.AnnotateUI.cropSnapToEdgesDescription
         ) {
           Toggle("", isOn: $annotateCropSnapToEdgesEnabled)
+            .labelsHidden()
+        }
+
+        SettingRow(
+          icon: "highlighter",
+          title: L10n.AnnotateUI.highlighterTextSnapping,
+          description: L10n.AnnotateUI.highlighterTextSnappingDescription
+        ) {
+          Toggle("", isOn: $annotateHighlighterTextSnappingEnabled)
             .labelsHidden()
         }
 

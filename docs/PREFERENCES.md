@@ -1,6 +1,6 @@
 # Preferences
 
-Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v1.31.0-beta.7`).
+Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v1.31.0-beta.10`).
 
 ## Root
 
@@ -55,13 +55,10 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Keystroke Overlay: font size 12–32, position (`KeystrokeOverlayPosition`), display duration 0.5–5.0 s; reset-to-default.
   - Audio: System Audio (`recording.captureAudio`), Microphone (`recording.captureMicrophone`, runs `AVCaptureDevice` authorization flow with System Settings fallback), Mic Input device picker (`recording.microphoneDeviceID`).
 - **OCR pane**:
-  - OCR Model: active recognition model (`PreferencesOCRModelListView` + `Models/PreferencesOCRModelListViewModel`; selection persisted in `ocr.selectedModel` as `builtin` | `dl:<id>` | `custom:<uuid>`).
+  - OCR Model: active recognition provider (`PreferencesOCRModelListView` + `Models/PreferencesOCRModelListViewModel`; selection persisted in `ocr.selectedModel` as `builtin` | `custom:<uuid>`).
     - Built-in OCR is Apple Vision (default, always available).
-    - The bundled downloadable catalog is loaded from `Resources/ocr-model-catalog.yaml`, not hard-coded Swift. It ships **empty** (`models: []`): Snapzy references no third-party OCR weights by default, so the downloadable list is empty until the user adds or imports a manifest. Binaries install on demand into `Application Support/Snapzy/OCRModels/<id>/`. Because no ids are bundled, no model id is reserved and users are free to name their models anything valid.
-    - Add Model → Add Downloadable Model opens `PreferencesOCRCatalogModelSheet`. A user can define the id/display labels, fixed `ppocr-db-ctc-v1` adapter, detector/recognizer/dictionary artifacts, expected byte counts, and SHA-256 checksums. Each artifact accepts a direct HTTPS URL or Hugging Face repository/revision/file source.
-    - Import Model accepts strict `.json`, `.yaml`, and `.yml` manifests. Export Models writes the user catalog as JSON or YAML; a row menu can export one model. Import stores validated metadata only and does not download anything. User definitions live separately in `ocr.userCatalogModels`; editing/replacing a definition removes stale installed files, and deleting a definition removes its files and resets an active selection to Built-in OCR.
-    - Remote OpenAI-compatible endpoints remain a separate Add Model → Add API Endpoint flow using `PreferencesCustomOCRModelSheet` (name, base URL, model identifier, optional prompt, optional API key stored in the macOS Keychain — service `com.trongduong.snapzy.ocr`; Test Connection; edit/rename/test/remove; metadata JSON in `ocr.customModels`).
-    - Only one model is active and uninstalled models are not selectable. ONNX downloads require and verify SHA-256 checksums. An unavailable or removed active model falls back to Built-in OCR (`OCRModelResolver`). If either persisted catalog cannot be parsed, launch validation preserves installed ids instead of treating an unavailable catalog as authority to prune them.
+    - Add Custom Model opens `PreferencesCustomOCRModelSheet` (name, base URL, model identifier, optional prompt, optional API key stored in the macOS Keychain — service `com.trongduong.snapzy.ocr`; Test Connection; edit/rename/test/remove; metadata JSON in `ocr.customModels`).
+    - A removed or unavailable custom endpoint falls back to Built-in OCR (`OCRModelResolver`). Legacy downloadable selections are treated as Built-in OCR.
   - Notifications: OCR Notifications (`ocr.successNotificationEnabled`, default on — posts a native macOS notification with a preview of the recognized text; falls back to an in-app toast when notifications are unavailable). When the toggle is on, an inline row surfaces the macOS-level permission only when it would block delivery: `notDetermined` shows an "Allow" button that triggers the system prompt in place, `denied` shows an orange hint plus "Open Settings". A granted (or unavailable) state renders nothing, so a healthy setup stays uncluttered. The row refreshes on `NSApplication.didBecomeActiveNotification`, so returning from System Settings updates it.
   - Text Actions: Link Detection (`ocr.linkDetectionEnabled`).
 
@@ -71,6 +68,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Sync Tool Defaults / quick-properties sync (`annotate.quickPropertiesSyncEnabled`, default on).
   - Combine Save-as-Edit (`annotate.combineSaveAsEdit`, default on).
   - Crop Snap to Edges (`annotate.cropSnapToEdgesEnabled`, default on; also togglable from the crop toolbar; ⌘ held during a drag temporarily bypasses).
+  - Snap Highlight to Text (`annotate.highlighterTextSnappingEnabled`, default on; also togglable from the highlighter quick-properties bar; aligns highlighter drags to detected text lines, ⌘ held during a drag temporarily bypasses).
   - Clipboard image open behavior (`annotate.clipboardImageOpenBehavior`): `ask` (default) / `loadAutomatically` / `doNothing` (`AnnotateClipboardImageBehavior`).
   - Close After Drag (`annotate.closeAfterDrag`, default on).
   - Bring Forward After Drag (`annotate.bringForwardAfterDrag`, default off; disabled when Close After Drag is on).

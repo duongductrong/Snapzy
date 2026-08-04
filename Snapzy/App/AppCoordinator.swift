@@ -69,7 +69,6 @@ final class AppCoordinator {
     LogCleanupScheduler.shared.start()
     RecordingMetadataCleanupScheduler.shared.start()
     CaptureHistoryRetentionService.shared.start()
-    OCRModelStore.shared.validateInstalledModelsOnLaunch()
     DiagnosticLogger.shared.log(.debug, .lifecycle, "Background schedulers started")
 
     AppStatusBarController.shared.setup(

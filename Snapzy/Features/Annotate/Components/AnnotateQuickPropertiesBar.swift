@@ -178,6 +178,7 @@ struct AnnotateQuickPropertiesBar: View {
     let showCornerRadius = state.quickPropertiesSupportsCornerRadius
     let showLineStyle = state.quickPropertiesSupportsLineStyle
     let showArrowStyle = state.quickPropertiesSupportsArrowStyle
+    let showTextSnap = state.quickPropertiesSupportsHighlighterTextSnapping
     let hasEditableStyleControls = showStrokeColor
       || showFill
       || showTextBackground
@@ -203,6 +204,7 @@ struct AnnotateQuickPropertiesBar: View {
     let hasBeforeCornerRadius = hasBeforeStrokeWidth || showStrokeWidth
     let hasBeforeLineStyle = hasBeforeCornerRadius || showCornerRadius
     let hasBeforeArrowStyle = hasBeforeLineStyle || showLineStyle
+    let hasBeforeTextSnap = hasBeforeArrowStyle || showArrowStyle
 
     return HStack(spacing: density.rowSpacing) {
       contextChip(density: density)
@@ -462,6 +464,19 @@ struct AnnotateQuickPropertiesBar: View {
           endHead: state.quickArrowEndHeadBinding,
           showsBendDirection: state.quickPropertiesSupportsArrowBendDirection,
           showsEndpoints: state.quickPropertiesSupportsArrowEndpoints,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showTextSnap,
+        isEnabled: true,
+        showsLeadingDivider: hasBeforeTextSnap,
+        width: nil
+      ) {
+        QuickTextSnapControl(
+          isEnabled: state.quickHighlighterTextSnappingBinding,
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
@@ -1468,6 +1483,39 @@ private struct QuickTextPresentationControl: View {
           .help(presentation.helpText)
         }
       }
+    }
+  }
+}
+
+/// Highlighter text-snapping toggle. Uses the app's shared snapping glyph so it
+/// reads the same as the crop toolbar's edge-snapping toggle.
+private struct QuickTextSnapControl: View {
+  @Binding var isEnabled: Bool
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.textSnap, spacing: groupSpacing) {
+      Button {
+        isEnabled.toggle()
+      } label: {
+        Image(systemName: CropToolbarSymbols.snapToEdges)
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(isEnabled ? .accentColor : .secondary)
+          .frame(width: buttonWidth, height: 24)
+          .background(
+            RoundedRectangle(cornerRadius: 7)
+              .fill(isEnabled ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: 7)
+              .stroke(isEnabled ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.highlighterTextSnappingDescription)
+      .accessibilityLabel(L10n.AnnotateUI.highlighterTextSnapping)
+      .accessibilityValue(isEnabled ? L10n.Common.on : L10n.Common.off)
     }
   }
 }

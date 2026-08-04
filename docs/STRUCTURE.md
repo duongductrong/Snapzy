@@ -179,8 +179,6 @@ Snapzy/
     FileAccess/
     Media/
       OCR/
-        Models/
-        PPOCR/
     Notifications/
       OCRNotificationContent.swift
       SystemNotificationService.swift
@@ -201,7 +199,6 @@ Snapzy/
 
   Config/
   Resources/
-    ocr-model-catalog.yaml       # downloadable OCR model catalog; ships empty, documents the manifest schema
     Localization/
       Shared/
         *.xcstrings
@@ -260,7 +257,7 @@ SnapzyUITests/
 | `Services/Cloud/` | S3/R2/Google Drive providers, upload orchestration, GRDB history, Keychain credentials, encrypted transfer, OAuth service |
 | `Services/Configuration/` | TOML export/import facade, focused TOML parser/writer, schema validation, preference mutation helpers, debounced config.toml sync coordinator |
 | `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
-| `Services/Media/` | OCR provider routing (`OCRProvider`: built-in Vision, PP-OCR det+rec pipeline in `Media/OCR/PPOCR/` on ONNX Runtime — SPM `onnxruntime` pinned to exact 1.20.0 because 1.24.x requires macOS 14 while Snapzy targets 13, remote OpenAI-compatible endpoints), strict JSON/YAML catalog codec + bundled/user catalog stores + model download/install (`Media/OCR/Models/`; Yams 6.2.2), QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
+| `Services/Media/` | OCR provider routing (`OCRProvider`: built-in Vision and remote OpenAI-compatible endpoints), OCR profiles/results, QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
 | `Services/Notifications/` | Native macOS notification delivery (`UserNotifications`) and OCR notification title/body/preview formatting |
 | `Services/Security/` | Keychain storage for custom OCR endpoint API keys (`OCRKeychainStore`) |
 | `Services/Shortcuts/` | Global shortcuts, conflict detection, system shortcut checks |
@@ -289,8 +286,6 @@ SnapzyUITests/
       cutout.png                 # optional
       assets/
         <uuid>.bin               # optional embedded image assets
-  OCRModels/
-    <catalog id>/                # downloaded model files (det.onnx, rec.onnx, dict.txt)
   snapzy.db
   DatabaseRecovery-<yyyyMMdd-HHmmss>[-N]/   # database files archived by launch recovery
     snapzy.db
@@ -303,11 +298,10 @@ SnapzyUITests/
 
 | Store | Used for |
 | --- | --- |
-| `UserDefaults` | Preferences, shortcut configs, onboarding flags, feature toggles, user downloadable OCR manifest metadata (`ocr.userCatalogModels`) |
+| `UserDefaults` | Preferences, shortcut configs, onboarding flags, feature toggles, selected OCR provider and custom endpoint metadata (`ocr.selectedModel`, `ocr.customModels`) |
 | `Keychain` | Cloud access key, secret key, optional cloud protection password, custom OCR endpoint API keys |
 | `Application Support/Snapzy/Captures/` | Temp captures, per-session recording processing files, and recording metadata sidecars |
 | `Application Support/Snapzy/AnnotationSessions/` | Sidecar packages for committed editable screenshot annotation sessions |
-| `Application Support/Snapzy/OCRModels/` | On-demand downloaded user-defined OCR model files, one subdirectory per catalog id; not bundled with the app or exported in configuration |
 | `Application Support/Snapzy/snapzy.db` | Capture history and cloud upload history via GRDB |
 | `~/.config/snapzy/config.toml` | User-managed TOML preferences file, created from the onboarding config access step or Settings -> Advanced after user-confirmed folder access, replaced by explicit Import/Restore defaults actions, auto-applied on launch when changed, and synced from current settings before Open config.toml when safe |
 

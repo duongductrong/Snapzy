@@ -7,13 +7,11 @@
 
 import Foundation
 
-/// Which OCR model the user selected in Settings.
+/// Which OCR provider the user selected in Settings.
 enum OCRModelSelection: Equatable, Codable {
   /// Apple Vision OCR bundled with macOS — always available, and the fallback.
   case builtIn
-  /// Downloadable PP-OCR model, identified by its catalog id (Phase 2).
-  case downloadable(String)
-  /// User-added custom endpoint, identified by its model UUID (Phase 4).
+  /// User-added custom endpoint, identified by its model UUID.
   case custom(UUID)
 
   // MARK: - String Persistence
@@ -23,8 +21,6 @@ enum OCRModelSelection: Equatable, Codable {
     switch self {
     case .builtIn:
       return "builtin"
-    case .downloadable(let id):
-      return "dl:\(id)"
     case .custom(let id):
       return "custom:\(id.uuidString)"
     }
@@ -35,9 +31,6 @@ enum OCRModelSelection: Equatable, Codable {
   init(persistedValue: String) {
     if persistedValue == "builtin" {
       self = .builtIn
-    } else if persistedValue.hasPrefix("dl:") {
-      let id = String(persistedValue.dropFirst(3))
-      self = id.isEmpty ? .builtIn : .downloadable(id)
     } else if persistedValue.hasPrefix("custom:"),
               let id = UUID(uuidString: String(persistedValue.dropFirst(7))) {
       self = .custom(id)

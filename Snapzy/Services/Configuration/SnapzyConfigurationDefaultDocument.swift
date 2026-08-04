@@ -70,10 +70,6 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("success_notification", true)
     writer.value("selected_model", OCRModelSelection.builtIn.persistedValue)
     writer.value("custom_models", "[]")
-    writer.value(
-      "catalog_models",
-      "{\"format\":\"snapzy-ocr-catalog\",\"models\":[],\"schema_version\":1}"
-    )
 
     writer.section("capture.object_cutout")
     writer.value("auto_crop", true)
@@ -178,6 +174,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("quick_properties_sync", true)
     writer.value("combine_save_as_edit", true)
     writer.value("crop_snap_to_edges", true)
+    writer.value("highlighter_text_snapping", true)
   }
 
   private static func writeShortcuts(_ writer: inout SimpleTOMLWriter) {

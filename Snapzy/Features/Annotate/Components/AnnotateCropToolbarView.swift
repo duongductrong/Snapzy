@@ -7,7 +7,8 @@
 
 import SwiftUI
 
-/// SF Symbol names shared by the crop toolbar and annotate preferences.
+/// Shared snapping glyph: crop toolbar, highlighter quick properties, and
+/// annotate preferences all use it so "snapping" reads the same everywhere.
 enum CropToolbarSymbols {
   /// `magnet` is SF Symbols 5 (macOS 14+); fall back on macOS 13.
   static let snapToEdges =

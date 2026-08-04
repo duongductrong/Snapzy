@@ -10,45 +10,31 @@ import XCTest
 
 @MainActor
 final class OCRModelSelectionTests: XCTestCase {
-
-  // MARK: - String persistence
-
   func testPersistedValueUsesStableFormats() {
     XCTAssertEqual(OCRModelSelection.builtIn.persistedValue, "builtin")
-    XCTAssertEqual(OCRModelSelection.downloadable("demo-model").persistedValue, "dl:demo-model")
     let id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
     XCTAssertEqual(OCRModelSelection.custom(id).persistedValue, "custom:00000000-0000-0000-0000-000000000001")
   }
 
-  func testPersistedValueRoundTripsAllCases() {
-    let id = UUID()
-    let cases: [OCRModelSelection] = [
-      .builtIn,
-      .downloadable("other-model"),
-      .custom(id),
-    ]
-
-    for selection in cases {
-      XCTAssertEqual(OCRModelSelection(persistedValue: selection.persistedValue), selection)
-    }
+  func testCustomPersistedValueRoundTrips() {
+    let selection = OCRModelSelection.custom(UUID())
+    XCTAssertEqual(OCRModelSelection(persistedValue: selection.persistedValue), selection)
   }
 
-  func testCorruptPersistedValueFallsBackToBuiltIn() {
-    let corruptValues = ["", "vision", "dl", "dl:", "custom", "custom:", "custom:not-a-uuid", "unknown:value"]
+  func testLegacyDownloadableAndCorruptValuesFallBackToBuiltIn() {
+    let values = ["", "vision", "dl", "dl:", "dl:old-model", "custom", "custom:", "custom:not-a-uuid", "unknown:value"]
 
-    for rawValue in corruptValues {
-      XCTAssertEqual(OCRModelSelection(persistedValue: rawValue), .builtIn, rawValue)
+    for value in values {
+      XCTAssertEqual(OCRModelSelection(persistedValue: value), .builtIn, value)
     }
   }
 
   func testCodableRoundTripUsesPersistedString() throws {
-    let selection = OCRModelSelection.downloadable("other-model")
+    let selection = OCRModelSelection.custom(UUID(uuidString: "00000000-0000-0000-0000-000000000001")!)
     let data = try JSONEncoder().encode(selection)
-    XCTAssertEqual(String(data: data, encoding: .utf8), "\"dl:other-model\"")
+    XCTAssertEqual(String(data: data, encoding: .utf8), "\"custom:00000000-0000-0000-0000-000000000001\"")
     XCTAssertEqual(try JSONDecoder().decode(OCRModelSelection.self, from: data), selection)
   }
-
-  // MARK: - Resolution
 
   func testResolverReturnsBuiltInWhenNothingPersisted() {
     let defaults = UserDefaultsFactory.make()
@@ -56,6 +42,17 @@ final class OCRModelSelectionTests: XCTestCase {
 
     XCTAssertEqual(resolution.selection, .builtIn)
     XCTAssertEqual(resolution.provider.engine, .vision)
+  }
+
+  func testResolverCanonicalizesLegacyDownloadableSelection() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set("dl:old-model", forKey: PreferencesKeys.ocrSelectedModel)
+
+    let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
+
+    XCTAssertEqual(resolution.selection, .builtIn)
+    XCTAssertEqual(resolution.provider.engine, .vision)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
   }
 
   func testResolverReturnsBuiltInForCorruptPersistedValue() {
@@ -66,74 +63,29 @@ final class OCRModelSelectionTests: XCTestCase {
 
     XCTAssertEqual(resolution.selection, .builtIn)
     XCTAssertEqual(resolution.provider.engine, .vision)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
   }
 
-  func testDownloadableSelectionResolvesWhenModelInstalled() {
+  func testCustomSelectionResolvesToRemoteProviderWhenModelExists() throws {
     let defaults = UserDefaultsFactory.make()
-    defaults.set(["demo-model"], forKey: PreferencesKeys.ocrInstalledModels)
-    defaults.set("dl:demo-model", forKey: PreferencesKeys.ocrSelectedModel)
+    let model = CustomOCRModel(name: "Local", baseURL: "http://localhost:11434", modelIdentifier: "vision")
+    defaults.set(try JSONEncoder().encode([model]), forKey: PreferencesKeys.ocrCustomModels)
+    defaults.set(OCRModelSelection.custom(model.id).persistedValue, forKey: PreferencesKeys.ocrSelectedModel)
 
     let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
 
-    XCTAssertEqual(resolution.selection, .downloadable("demo-model"))
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "dl:demo-model")
+    XCTAssertEqual(resolution.selection, .custom(model.id))
+    XCTAssertEqual(resolution.provider.engine, .remote)
   }
 
-  func testDownloadableSelectionFallsBackAndPersistsBuiltInWhenNotInstalled() {
+  func testMissingCustomSelectionFallsBackAndPersistsBuiltIn() {
     let defaults = UserDefaultsFactory.make()
-    defaults.set("dl:demo-model", forKey: PreferencesKeys.ocrSelectedModel)
+    defaults.set(OCRModelSelection.custom(UUID()).persistedValue, forKey: PreferencesKeys.ocrSelectedModel)
 
     let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
 
     XCTAssertEqual(resolution.selection, .builtIn)
     XCTAssertEqual(resolution.provider.engine, .vision)
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
-  }
-
-  func testCustomSelectionResolvesWhenModelExists() throws {
-    let defaults = UserDefaultsFactory.make()
-    let id = UUID()
-    let data = try JSONSerialization.data(withJSONObject: [["id": id.uuidString]])
-    defaults.set(data, forKey: PreferencesKeys.ocrCustomModels)
-    defaults.set("custom:\(id.uuidString)", forKey: PreferencesKeys.ocrSelectedModel)
-
-    let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
-
-    XCTAssertEqual(resolution.selection, .custom(id))
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "custom:\(id.uuidString)")
-  }
-
-  func testCustomSelectionFallsBackAndPersistsBuiltInWhenModelMissing() {
-    let defaults = UserDefaultsFactory.make()
-    let id = UUID()
-    defaults.set("custom:\(id.uuidString)", forKey: PreferencesKeys.ocrSelectedModel)
-
-    let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
-
-    XCTAssertEqual(resolution.selection, .builtIn)
-    XCTAssertEqual(resolution.provider.engine, .vision)
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
-  }
-
-  func testCustomSelectionFallsBackWhenStoredModelsAreCorrupt() {
-    let defaults = UserDefaultsFactory.make()
-    let id = UUID()
-    defaults.set(Data("not json".utf8), forKey: PreferencesKeys.ocrCustomModels)
-    defaults.set("custom:\(id.uuidString)", forKey: PreferencesKeys.ocrSelectedModel)
-
-    let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
-
-    XCTAssertEqual(resolution.selection, .builtIn)
-    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
-  }
-
-  func testBuiltInSelectionResolvesWithoutRewritingDefaults() {
-    let defaults = UserDefaultsFactory.make()
-    defaults.set("builtin", forKey: PreferencesKeys.ocrSelectedModel)
-
-    let resolution = OCRModelResolver(defaults: defaults).resolveStoredSelection()
-
-    XCTAssertEqual(resolution.selection, .builtIn)
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
   }
 }

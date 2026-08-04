@@ -87,7 +87,6 @@ enum SnapzyConfigurationExporter {
     writer.value("success_notification", defaults.boolValue(PreferencesKeys.ocrSuccessNotificationEnabled, default: true))
     writer.value("selected_model", defaults.string(forKey: PreferencesKeys.ocrSelectedModel) ?? OCRModelSelection.builtIn.persistedValue)
     writer.value("custom_models", customModelsJSON(defaults: defaults))
-    writer.value("catalog_models", catalogModelsJSON(defaults: defaults))
 
     writer.section("capture.object_cutout")
     writer.value("auto_crop", defaults.boolValue(PreferencesKeys.backgroundCutoutAutoCropEnabled, default: true))
@@ -208,6 +207,10 @@ enum SnapzyConfigurationExporter {
     writer.value("quick_properties_sync", AnnotateQuickPropertiesSyncPreference.isEnabled(userDefaults: defaults))
     writer.value("combine_save_as_edit", CombineSaveAsEditPreference.isEnabled(userDefaults: defaults))
     writer.value("crop_snap_to_edges", defaults.boolValue(PreferencesKeys.annotateCropSnapToEdgesEnabled, default: true))
+    writer.value(
+      "highlighter_text_snapping",
+      defaults.boolValue(PreferencesKeys.annotateHighlighterTextSnappingEnabled, default: true)
+    )
   }
 
   private static func language(defaults: UserDefaults) -> String {
@@ -252,25 +255,6 @@ enum SnapzyConfigurationExporter {
       return "[]"
     }
     return json
-  }
-
-  /// Strict manifest document for user-defined downloadable models. Installed
-  /// binaries and machine-local install state are intentionally excluded.
-  private static func catalogModelsJSON(defaults: UserDefaults) -> String {
-    let models: [OCRModelManifest]
-    if let data = defaults.data(forKey: PreferencesKeys.ocrUserCatalogModels),
-       let decoded = try? OCRUserCatalogStore.decodePersistedData(
-         data,
-         reservedModelIDs: OCRModelCatalog.bundledModelIDs
-       ) {
-      models = decoded
-    } else {
-      models = []
-    }
-    guard let encoded = try? OCRCatalogManifestCodec.encode(.catalog(models), format: .json) else {
-      return "{\"format\":\"snapzy-ocr-catalog\",\"models\":[],\"schema_version\":1}"
-    }
-    return String(decoding: encoded, as: UTF8.self)
   }
 
   private static func storedMouseColor(defaults: UserDefaults) -> NSColor {

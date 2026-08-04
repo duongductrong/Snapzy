@@ -169,6 +169,32 @@ enum AnnotationFactory {
     return AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
   }
 
+  /// Build one highlight per snapped text-line segment. The bar height is
+  /// carried by `strokeWidth` (highlights render at 3× stroke width), so these
+  /// stay ordinary `.highlight` items — resize, undo, persistence, and export
+  /// behave exactly like a freehand highlight.
+  static func createTextSnappedHighlights(
+    segments: [AnnotateTextSnapSegment],
+    context: CreationContext
+  ) -> [AnnotationItem] {
+    segments.compactMap { segment in
+      var properties = context.properties
+      properties.strokeWidth = segment.strokeWidth
+      var segmentContext = context
+      segmentContext.properties = properties
+
+      let points = segment.highlightPoints
+      guard let start = points.first, let end = points.last else { return nil }
+      return createAnnotation(
+        tool: .highlighter,
+        from: start,
+        to: end,
+        path: points,
+        context: segmentContext
+      )
+    }
+  }
+
   private static func watermarkBounds(
     drawnBounds: CGRect,
     center: CGPoint,

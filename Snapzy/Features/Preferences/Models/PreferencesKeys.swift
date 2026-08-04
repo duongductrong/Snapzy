@@ -80,15 +80,14 @@ enum PreferencesKeys {
   static let annotateToolParameterDefaults = "annotate.toolParameterDefaults.v1"
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
+  static let annotateHighlighterTextSnappingEnabled = "annotate.highlighterTextSnappingEnabled"
   static let annotateCombineSaveAsEdit = "annotate.combineSaveAsEdit"
   static let annotateCustomColors = "annotate.customColors.v1"
   static let annotateFavoriteColors = "annotate.favoriteColors.v1"
   static let ocrSuccessNotificationEnabled = "ocr.successNotificationEnabled"
   static let ocrLinkDetectionEnabled = "ocr.linkDetectionEnabled"
   static let ocrSelectedModel = "ocr.selectedModel"
-  static let ocrInstalledModels = "ocr.installedModels"
   static let ocrCustomModels = "ocr.customModels"
-  static let ocrUserCatalogModels = "ocr.userCatalogModels"
 
   // Floating Screenshot (Quick Access)
   static let floatingEnabled = "floatingScreenshot.enabled"
