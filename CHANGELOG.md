@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.11] - 2026-08-04
+
+### Features
+-  support copy, paste, and duplicate for annotation objects (#463) (4822255)
+-  Add Shift drawing constraints (#455) (815f742)
+-  add text snapping for highlighter in annotate editor (#410) (938f46b)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.10 (cb83605)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @tukuyomil032
+
 ## [1.31.0-beta.10] - 2026-08-04
 
 ### Bug Fixes
