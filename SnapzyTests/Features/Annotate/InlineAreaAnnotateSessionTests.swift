@@ -245,6 +245,53 @@ final class InlineAreaAnnotateSessionTests: XCTestCase {
     )
   }
 
+  func testInlineKeyAction_plainCDuringSelecting_returnsCopyMagnifierColor() throws {
+    let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: [])
+
+    XCTAssertEqual(
+      InlineAreaAnnotateSession.keyAction(
+        for: copy,
+        source: .local,
+        phase: .selecting,
+        hasTextResponder: false,
+        hasKeyWindow: true
+      ),
+      .copyMagnifierColor
+    )
+  }
+
+  func testInlineKeyAction_modifiedCDuringSelecting_passesThrough() throws {
+    let commandC = try makeKeyEvent(keyCode: 8, characters: "c", flags: .command)
+
+    XCTAssertEqual(
+      InlineAreaAnnotateSession.keyAction(
+        for: commandC,
+        source: .local,
+        phase: .selecting,
+        hasTextResponder: false,
+        hasKeyWindow: true
+      ),
+      .passThrough
+    )
+  }
+
+  func testInlineKeyAction_plainCDuringAnnotating_isUnaffected() throws {
+    // The magnifier only exists during `.selecting`; once annotating, plain "C" must not be
+    // swallowed (it still falls through to `.passThrough` as before this feature existed).
+    let copy = try makeKeyEvent(keyCode: 8, characters: "c", flags: [])
+
+    XCTAssertEqual(
+      InlineAreaAnnotateSession.keyAction(
+        for: copy,
+        source: .local,
+        phase: .annotating,
+        hasTextResponder: false,
+        hasKeyWindow: true
+      ),
+      .passThrough
+    )
+  }
+
   func testInlineKeyActionKeepsSaveWhileTextEditing() throws {
     let save = try makeKeyEvent(keyCode: 1, characters: "s", flags: .command)
 

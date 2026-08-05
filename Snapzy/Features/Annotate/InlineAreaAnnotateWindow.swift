@@ -56,7 +56,8 @@ final class InlineAreaAnnotateCoordinator {
         screenFrame: screen.frame,
         localFrame: InlineAreaAnnotateSession.localFrame(for: screen.frame, in: desktopFrame),
         controlInsets: InlineAreaControlInsets(screen: screen),
-        backdropImage: NSImage(cgImage: backdrop.image, size: screen.frame.size)
+        backdropImage: NSImage(cgImage: backdrop.image, size: screen.frame.size),
+        backdropCGImage: backdrop.image
       )
     }
     guard !displays.isEmpty else {
@@ -270,6 +271,19 @@ private struct InlineAreaAnnotateRootView: View {
         if showsCursorIndicator, let cursorIndicatorPoint {
           InlineAreaCursorIndicator(point: cursorIndicatorPoint)
         }
+
+        if session.phase == .selecting {
+          InlineAreaMagnifierOverlay(
+            backdropImage: display.backdropCGImage,
+            point: cursorIndicatorPoint.map { appKitLocalPoint(fromViewportPoint: $0, viewportHeight: geometry.size.height) },
+            showsByDefault: session.showsMagnifierByDefault,
+            onHostViewReady: { hostView in
+              session.registerMagnifierHostView(hostView, for: display.displayID)
+            }
+          )
+          .frame(width: geometry.size.width, height: geometry.size.height)
+          .allowsHitTesting(false)
+        }
       }
       .coordinateSpace(name: InlineAreaCoordinateSpace.root)
       .onContinuousHover(coordinateSpace: .named(InlineAreaCoordinateSpace.root)) { phase in
@@ -325,6 +339,12 @@ private struct InlineAreaAnnotateRootView: View {
       x: viewportPoint.x + display.localFrame.minX,
       y: viewportPoint.y + display.localFrame.minY
     )
+  }
+
+  /// `AreaSelectionMagnifier` expects AppKit-convention points (bottom-left origin, matching
+  /// the `NSView` it was built for); SwiftUI's viewport coordinate space is top-left origin.
+  private func appKitLocalPoint(fromViewportPoint point: CGPoint, viewportHeight: CGFloat) -> CGPoint {
+    CGPoint(x: point.x, y: viewportHeight - point.y)
   }
 
   private func selectionDimLayer(size: CGSize, rect: CGRect?) -> some View {
@@ -606,6 +626,34 @@ private struct InlineAreaAnnotateRootView: View {
 
 private enum InlineAreaCoordinateSpace {
   static let root = "inline-area-annotate-root"
+}
+
+/// Bridges the shared `AreaSelectionMagnifier` (an AppKit/CALayer component) into this
+/// SwiftUI-based selection view so screenshot-and-annotate shows the identical magnifier used
+/// by plain area screenshot capture, instead of a second reimplementation. `point` is already
+/// converted to AppKit-local coordinates by the caller; nil hides the magnifier without
+/// tearing down the host view (which would drop the session's registration of it).
+private struct InlineAreaMagnifierOverlay: NSViewRepresentable {
+  let backdropImage: CGImage?
+  let point: CGPoint?
+  let showsByDefault: Bool
+  let onHostViewReady: (InlineAreaMagnifierHostView) -> Void
+
+  func makeNSView(context: Context) -> InlineAreaMagnifierHostView {
+    let view = InlineAreaMagnifierHostView()
+    view.magnifier.resetZoom(showByDefault: showsByDefault)
+    onHostViewReady(view)
+    return view
+  }
+
+  func updateNSView(_ nsView: InlineAreaMagnifierHostView, context: Context) {
+    nsView.backdropImage = backdropImage
+    if let point {
+      nsView.update(at: point)
+    } else {
+      nsView.hide()
+    }
+  }
 }
 
 private struct InlineAreaCursorIndicator: View {

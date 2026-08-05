@@ -16,6 +16,9 @@ struct InlineAreaAnnotateDisplay: Identifiable {
   let localFrame: CGRect
   let controlInsets: InlineAreaControlInsets
   let backdropImage: NSImage
+  /// Same content as `backdropImage`, kept as a `CGImage` for the magnifier — which reads raw
+  /// pixels on every mouse move and would otherwise pay `NSImage` overhead each time.
+  let backdropCGImage: CGImage
 
   var id: CGDirectDisplayID { displayID }
 }
@@ -35,8 +38,18 @@ enum InlineAreaKeyAction: Equatable {
   case cancel
   case finish
   case copyCurrentImage
+  case copyMagnifierColor
   case setMoveModifierActive(Bool)
   case resetMoveModifierAndPassThrough
+}
+
+/// Weakly holds a per-display magnifier host view so the session can reach it for
+/// scroll-wheel zoom and the "C" copy shortcut without retaining the view.
+private final class InlineAreaMagnifierHostViewBox {
+  weak var view: InlineAreaMagnifierHostView?
+  init(_ view: InlineAreaMagnifierHostView) {
+    self.view = view
+  }
 }
 
 @MainActor
@@ -66,6 +79,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
   private var localKeyMonitor: Any?
   private var globalKeyMonitor: Any?
   private var selectionLocalMonitor: Any?
+  private var magnifierScrollMonitor: Any?
+  private var magnifierHostViewBoxes: [CGDirectDisplayID: InlineAreaMagnifierHostViewBox] = [:]
   private var selectionStartPoint: CGPoint?
   private var stateChangeCancellable: AnyCancellable?
   private var didComplete = false
@@ -112,6 +127,20 @@ final class InlineAreaAnnotateSession: ObservableObject {
     if localKeyMonitor == nil, globalKeyMonitor == nil {
       installKeyMonitors()
     }
+    installMagnifierScrollMonitorIfNeeded()
+  }
+
+  /// The "show magnifier by default" preference (see `PreferencesCaptureSettingsView`) —
+  /// shared with plain area screenshot capture so both entry points behave identically.
+  var showsMagnifierByDefault: Bool {
+    defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool ?? false
+  }
+
+  /// Registers the per-display magnifier host view created by `InlineAreaMagnifierOverlay` so
+  /// scroll-wheel zoom and the "C" copy shortcut (handled at the session level, since key
+  /// events arrive via `handleKeyEvent`, not through the host view itself) can reach it.
+  func registerMagnifierHostView(_ view: InlineAreaMagnifierHostView, for displayID: CGDirectDisplayID) {
+    magnifierHostViewBoxes[displayID] = InlineAreaMagnifierHostViewBox(view)
   }
 
   func refreshCursor() {
@@ -223,6 +252,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
     case .copyCurrentImage:
       copyCurrentImage()
       return true
+    case .copyMagnifierColor:
+      // Only claim the key when the magnifier was actually active — otherwise this falls
+      // through as `.passThrough` would have, so plain "C" typing elsewhere is unaffected.
+      return copyMagnifierColorForKeyWindow(event)
     case .setMoveModifierActive(let active):
       isMoveModifierActive = active
       return true
@@ -374,6 +407,44 @@ final class InlineAreaAnnotateSession: ObservableObject {
       NSEvent.removeMonitor(globalKeyMonitor)
       self.globalKeyMonitor = nil
     }
+    removeMagnifierScrollMonitor()
+  }
+
+  /// ⌘+scroll zoom for the magnifier. The host view itself never receives scroll events (it's
+  /// excluded from hit-testing so the selection drag gesture underneath works), so this mirrors
+  /// `AreaSelectionOverlayView.scrollWheel` at the session level instead, routed to whichever
+  /// display's host view the event's window belongs to.
+  private func installMagnifierScrollMonitorIfNeeded() {
+    guard magnifierScrollMonitor == nil else { return }
+    magnifierScrollMonitor = NSEvent.addLocalMonitorForEvents(matching: [.scrollWheel]) { [weak self] event in
+      guard let self, self.phase == .selecting, event.modifierFlags.contains(.command),
+            let displayID = (event.window as? InlineAreaAnnotatePanel)?.displayID,
+            let hostView = self.magnifierHostViewBoxes[displayID]?.view else {
+        return event
+      }
+      let delta = event.scrollingDeltaY != 0 ? event.scrollingDeltaY : event.deltaY
+      guard delta != 0 else { return event }
+      hostView.applyScroll(delta: delta, hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas)
+      return nil
+    }
+  }
+
+  private func removeMagnifierScrollMonitor() {
+    if let magnifierScrollMonitor {
+      NSEvent.removeMonitor(magnifierScrollMonitor)
+      self.magnifierScrollMonitor = nil
+    }
+  }
+
+  /// Copies the sampled color from whichever display's magnifier is under the key window.
+  /// Falls back to the first key window when the triggering event carries no window (e.g. a
+  /// global-monitor event from another app).
+  @discardableResult
+  private func copyMagnifierColorForKeyWindow(_ event: NSEvent) -> Bool {
+    let displayID = (event.window as? InlineAreaAnnotatePanel)?.displayID
+      ?? windows.allObjects.compactMap { $0 as? InlineAreaAnnotatePanel }.first(where: \.isKeyWindow)?.displayID
+    guard let displayID, let hostView = magnifierHostViewBoxes[displayID]?.view else { return false }
+    return hostView.magnifier.copyColorToClipboard()
   }
 
   private func installSelectionMonitorIfNeeded() {
@@ -495,7 +566,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
     hasKeyWindow: Bool
   ) -> InlineAreaKeyAction {
     guard phase == .annotating else {
-      return matchesCancelShortcut(event) ? .cancel : .passThrough
+      if matchesCancelShortcut(event) {
+        return .cancel
+      }
+      return matchesMagnifierCopyColorShortcut(event) ? .copyMagnifierColor : .passThrough
     }
 
     if matchesCommandSaveShortcut(event) {
@@ -538,6 +612,12 @@ final class InlineAreaAnnotateSession: ObservableObject {
   nonisolated static func matchesCancelShortcut(_ event: NSEvent) -> Bool {
     guard event.type == .keyDown else { return false }
     return event.keyCode == 53
+  }
+
+  /// Plain "C" (no modifiers), matching `AreaSelectionOverlayView.copyMagnifierColorIfActive`.
+  nonisolated static func matchesMagnifierCopyColorShortcut(_ event: NSEvent) -> Bool {
+    guard event.type == .keyDown, event.keyCode == 8 else { return false } // kVK_ANSI_C
+    return event.modifierFlags.intersection([.command, .option, .control]).isEmpty
   }
 
   nonisolated static func matchesMoveModifierKey(_ event: NSEvent) -> Bool {

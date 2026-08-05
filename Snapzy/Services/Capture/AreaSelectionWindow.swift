@@ -341,6 +341,10 @@ final class AreaSelectionController: NSObject {
     } else {
       window.overlayView.clearBackdrop()
     }
+    // Applies regardless of which branch above ran — a frozen session (e.g.
+    // screenshot-and-annotate) already has its backdrop ready and never touches
+    // `clearBackdrop`, so the "show magnifier by default" preference must be applied here too.
+    window.overlayView.resetMagnifierZoomForNewSession()
     window.selectionDelegate = self
     window.orderFrontRegardless()
     window.overlayView.setAllowsApplicationWindowSelection(allowsApplicationWindowSelection)
@@ -1977,6 +1981,9 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
 
   func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool {
     guard window.displayID == keyboardOwnerDisplayID else { return false }
+    if window.overlayView.copyMagnifierColorIfActive(for: event) {
+      return true
+    }
     return handleSessionKeyEvent(event)
   }
 
@@ -2977,6 +2984,17 @@ final class AreaSelectionOverlayView: NSView {
     magnifier.zoom = 1.0
   }
 
+  /// Applies the "show magnifier by default" preference to a window newly entering a
+  /// selection session. Called from `configureSessionWindow` — shared by session start and
+  /// mid-session display attach — rather than from `applyBackdrop`/`clearBackdrop` directly,
+  /// since a frozen session (e.g. screenshot-and-annotate) already has its backdrop ready and
+  /// takes the `applyBackdrop` path, which must not reset zoom on every reapplication.
+  func resetMagnifierZoomForNewSession() {
+    let showsMagnifierByDefault = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool ?? false
+    magnifier.resetZoom(showByDefault: showsMagnifierByDefault)
+  }
+
   // MARK: - Magnifying Glass Zoom Implementation
 
   private func updateMagnifier(at point: CGPoint) {
@@ -3046,6 +3064,51 @@ final class AreaSelectionOverlayView: NSView {
 
     var testMagnifierImageLayer: CALayer? {
       magnifier.imageLayer
+    }
+
+    var testMagnifierGridLayer: CAShapeLayer? {
+      magnifier.gridLayer
+    }
+
+    var testMagnifierCrosshairLayer: CAShapeLayer? {
+      magnifier.crosshairLayer
+    }
+
+    var testMagnifierPanelLayer: CALayer? {
+      magnifier.panelLayer
+    }
+
+    var testMagnifierCoordinateTextLayer: CATextLayer? {
+      magnifier.coordinateTextLayer
+    }
+
+    var testMagnifierColorTextLayer: CATextLayer? {
+      magnifier.colorTextLayer
+    }
+
+    var testMagnifierHintPrefixTextLayer: CATextLayer? {
+      magnifier.hintPrefixTextLayer
+    }
+
+    var testMagnifierHintTextLayer: CATextLayer? {
+      magnifier.hintTextLayer
+    }
+
+    var testMagnifierKeyCapBackgroundLayer: CALayer? {
+      magnifier.hintKeyCapBackgroundLayer
+    }
+
+    var testMagnifierTotalHeight: CGFloat {
+      magnifier.totalHeight
+    }
+
+    var testMagnifierLastHexColor: String? {
+      magnifier.lastHexColor
+    }
+
+    @discardableResult
+    func testCopyMagnifierColor() -> Bool {
+      magnifier.copyColorToClipboard()
     }
 
     var testReverseMagnifierZoomDirection: Bool {
@@ -3306,6 +3369,16 @@ final class AreaSelectionOverlayView: NSView {
 
   func hideMagnifier() {
     magnifier.removeLayers()
+  }
+
+  /// Copies the magnifier's currently sampled pixel color to the clipboard if the plain "C"
+  /// key (no modifiers) was pressed while the magnifier is active. Returns false — and leaves
+  /// the event unhandled — for any other key or when the magnifier is inactive, so normal
+  /// typing (e.g. future shortcuts sharing this key) is never swallowed.
+  func copyMagnifierColorIfActive(for event: NSEvent) -> Bool {
+    guard event.keyCode == 8 else { return false } // kVK_ANSI_C
+    guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty else { return false }
+    return magnifier.copyColorToClipboard()
   }
 
   /// Hide the drawn cursor proxy (pointer left this display, session ended, or

@@ -216,6 +216,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "capture", "screenshot", "reverse_magnifier_zoom_direction", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection)
     }
+    collectBool(&reader, "capture", "screenshot", "show_magnifier_by_default", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    }
     collectBool(&reader, "capture", "scrolling", "show_hints", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.scrollingCaptureShowHints)
     }
