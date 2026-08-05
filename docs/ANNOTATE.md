@@ -121,6 +121,15 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - Creates editable pixelated blur annotations in one undo checkpoint; recognized text never persisted; pixels bake only at export.
 - Triggered from the blur tool's quick-properties bar; action shortcut `.autoRedactSensitiveData` ships unbound (`AnnotateShortcutManager`).
 
+## Extract Text
+
+In the normal Annotate mode, right-click the underlying image and choose **Extract Text**.
+Snapzy runs the configured OCR provider from Capture → OCR, copies the recognized text to
+the general pasteboard, and reports the result through the existing OCR notification/toast
+flow. The action does not modify annotations, crop state, or saved files. It is disabled in
+Combine, Mockup, and Preview modes because those modes do not identify one unambiguous OCR
+source image.
+
 ## Combine Images
 
 - `CombineImagesCoordinator` (`Features/Annotate/CombineImagesCoordinator.swift`) — picker entry from status bar menu or `snapzy://open/combine?file=...`; requires ≥2 images.

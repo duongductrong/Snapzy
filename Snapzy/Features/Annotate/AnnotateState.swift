@@ -175,6 +175,9 @@ final class AnnotateState: ObservableObject {
   @Published private(set) var isSensitiveRedactionScanning: Bool = false
   private var activeSensitiveRedactionOperationID: UUID?
   private var sensitiveRedactionToast: AppToastHandle?
+  @Published private(set) var isOCRProcessing: Bool = false
+  private var activeOCROperationID: UUID?
+  private var ocrToast: AppToastHandle?
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?
@@ -195,6 +198,10 @@ final class AnnotateState: ObservableObject {
       return cutoutImage ?? sourceImage
     }
     return sourceImage
+  }
+
+  var canExtractText: Bool {
+    !isOCRProcessing && editorMode == .annotate && !isCombineMode && effectiveSourceImage != nil
   }
 
   var canUseBackgroundCutout: Bool {
@@ -1822,6 +1829,81 @@ final class AnnotateState: ObservableObject {
 
   // MARK: - Background Cutout
 
+  func extractText() {
+    guard canExtractText, let image = effectiveSourceImage else { return }
+
+    let operationID = UUID()
+    let imageID = ObjectIdentifier(image)
+    activeOCROperationID = operationID
+    isOCRProcessing = true
+    ocrToast = AppToastManager.shared.show(
+      message: L10n.OCR.extractingContent,
+      style: .info,
+      duration: nil,
+      variant: .compact,
+      iconMode: .spinner
+    )
+    DiagnosticLogger.shared.log(.info, .ocr, "Annotate OCR started", context: [
+      "width": "\(Int(image.size.width))",
+      "height": "\(Int(image.size.height))"
+    ])
+
+    Task { [weak self] in
+      do {
+        let text = try await OCRService.shared.recognizeText(
+          from: image,
+          preferredLanguageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier,
+          contentType: .interfaceText
+        )
+
+        guard let self, self.finishOCRExtraction(operationID: operationID, imageID: imageID) else { return }
+        let trimmedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedText.isEmpty else {
+          DiagnosticLogger.shared.log(.warning, .ocr, "Annotate OCR found no text")
+          OCRResultNotifier.shared.report(.noText)
+          return
+        }
+
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        DiagnosticLogger.shared.log(.info, .ocr, "Annotate OCR text copied to clipboard", context: [
+          "chars": "\(text.count)"
+        ])
+        OCRResultNotifier.shared.report(.copied(text))
+      } catch OCRError.noTextFound {
+        guard let self, self.finishOCRExtraction(operationID: operationID, imageID: imageID) else { return }
+        DiagnosticLogger.shared.log(.warning, .ocr, "Annotate OCR found no text")
+        OCRResultNotifier.shared.report(.noText)
+      } catch {
+        guard let self, self.finishOCRExtraction(operationID: operationID, imageID: imageID) else { return }
+        DiagnosticLogger.shared.logError(.ocr, error, "Annotate OCR failed")
+        OCRResultNotifier.shared.report(.failed(errorDescription: error.localizedDescription))
+      }
+    }
+  }
+
+  private func finishOCRExtraction(operationID: UUID, imageID: ObjectIdentifier) -> Bool {
+    guard activeOCROperationID == operationID,
+          effectiveSourceImage.map({ ObjectIdentifier($0) }) == imageID else { return false }
+    activeOCROperationID = nil
+    isOCRProcessing = false
+    if let ocrToast {
+      AppToastManager.shared.dismiss(ocrToast)
+      self.ocrToast = nil
+    }
+    return true
+  }
+
+  private func cancelOCRExtraction() {
+    activeOCROperationID = nil
+    isOCRProcessing = false
+    if let ocrToast {
+      AppToastManager.shared.dismiss(ocrToast)
+      self.ocrToast = nil
+    }
+  }
+
   func autoRedactSensitiveData() {
     guard !isSensitiveRedactionScanning else { return }
     guard let image = effectiveSourceImage else {
@@ -2920,6 +3002,7 @@ final class AnnotateState: ObservableObject {
   /// changes (load / cutout / rotation / undo); the matching
   /// `prepare…IfNeeded()` recomputes on demand.
   private func invalidateImageAnalysisProfiles() {
+    cancelOCRExtraction()
     cropEdgeProfile = nil
     cropEdgeProfileImageID = nil
     textLineProfile = nil

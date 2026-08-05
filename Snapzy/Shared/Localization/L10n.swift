@@ -4886,6 +4886,11 @@ nonisolated enum L10n {
       defaultValue: "Drag this to another app to share the annotated image",
       comment: "Tooltip shown for the annotate drag handle"
     )
+    static let extractText = string(
+      "annotate.extract-text",
+      defaultValue: "Extract Text",
+      comment: "Context-menu action that extracts text from the underlying annotate image"
+    )
     static let newWindow = string(
       "annotate.new-window",
       defaultValue: "New Annotate Window",
