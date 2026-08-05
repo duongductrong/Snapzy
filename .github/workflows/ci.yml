@@ -53,6 +53,7 @@ jobs:
             SnapzyTests/AppStatusBarControllerTests
             SnapzyTests/RecordingAudioLevelMeterTests
             SnapzyTests/CaptureViewModelTests/testHiddenWindowSession_restore_postsSyntheticMouseMovedEvent
+            SnapzyTests/AnnotateCreationTests/testCanExtractTextRequiresNormalAnnotateSourceImage
             SnapzyTests/AnnotateExportSaveTests/testCopyToClipboardRunsWithoutCrashing
             SnapzyTests/AnnotateExportSaveTests/testSaveAsIsCoveredByManualInteractionOnly
             SnapzyTests/AnnotateBackgroundRedactionTests/testApplyBackgroundCutoutStartsProcessingOnSupportedOS
