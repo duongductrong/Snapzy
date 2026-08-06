@@ -2984,15 +2984,18 @@ final class AreaSelectionOverlayView: NSView {
     magnifier.zoom = 1.0
   }
 
-  /// Applies the "show magnifier by default" preference to a window newly entering a
-  /// selection session. Called from `configureSessionWindow` — shared by session start and
-  /// mid-session display attach — rather than from `applyBackdrop`/`clearBackdrop` directly,
-  /// since a frozen session (e.g. screenshot-and-annotate) already has its backdrop ready and
-  /// takes the `applyBackdrop` path, which must not reset zoom on every reapplication.
+  /// Applies the magnifier's session-start preferences ("show magnifier by default", "show
+  /// color picker panel") to a window newly entering a selection session. Called from
+  /// `configureSessionWindow` — shared by session start and mid-session display attach —
+  /// rather than from `applyBackdrop`/`clearBackdrop` directly, since a frozen session (e.g.
+  /// screenshot-and-annotate) already has its backdrop ready and takes the `applyBackdrop`
+  /// path, which must not reset these on every reapplication.
   func resetMagnifierZoomForNewSession() {
     let showsMagnifierByDefault = UserDefaults.standard
       .object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool ?? false
     magnifier.resetZoom(showByDefault: showsMagnifierByDefault)
+    magnifier.showsColorPanel = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotShowMagnifierColorPanel) as? Bool ?? true
   }
 
   // MARK: - Magnifying Glass Zoom Implementation
@@ -3078,12 +3081,17 @@ final class AreaSelectionOverlayView: NSView {
       magnifier.panelLayer
     }
 
-    var testMagnifierCoordinateTextLayer: CATextLayer? {
-      magnifier.coordinateTextLayer
-    }
-
     var testMagnifierColorTextLayer: CATextLayer? {
       magnifier.colorTextLayer
+    }
+
+    var testMagnifierImageOuterBorderLayer: CALayer? {
+      magnifier.imageOuterBorderLayer
+    }
+
+    var testMagnifierShowsColorPanel: Bool {
+      get { magnifier.showsColorPanel }
+      set { magnifier.showsColorPanel = newValue }
     }
 
     var testMagnifierHintPrefixTextLayer: CATextLayer? {

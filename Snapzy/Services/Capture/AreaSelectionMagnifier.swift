@@ -27,37 +27,51 @@ final class AreaSelectionMagnifier {
   private let keyCapSize: CGFloat = 16.0
   private let keyCapTextGap: CGFloat = 6.0
 
-  private var coordLineHeight: CGFloat {
-    "0".size(withAttributes: [.font: overlayFont]).height
-  }
+  /// Cached font metrics: fonts here are fixed for the object's lifetime, so measuring them
+  /// via `NSString.size(withAttributes:)` on every access (as computed properties previously
+  /// did) was pure waste — `update(at:...)` reads several of these per call, and a single
+  /// ⌘+scroll tick calls `update` once, so this matters under rapid scrolling. `lazy` computes
+  /// each exactly once.
+  private lazy var hexLineHeight: CGFloat = "0".size(withAttributes: [.font: overlayFont]).height
+  private lazy var hintLineHeight: CGFloat = "0".size(withAttributes: [.font: hintFont]).height
+  private lazy var keyCapTextHeight: CGFloat = "C".size(withAttributes: [.font: keyCapFont]).height
+  private lazy var hintPrefixWidth: CGFloat = {
+    let text = copyHintPrefixText
+    return text.isEmpty ? 0 : text.size(withAttributes: [.font: hintFont]).width
+  }()
 
-  private var hintLineHeight: CGFloat {
-    "0".size(withAttributes: [.font: hintFont]).height
-  }
-
-  private var colorRowHeight: CGFloat { max(coordLineHeight, swatchSize) }
+  private var colorRowHeight: CGFloat { max(hexLineHeight, swatchSize) }
   private var hintRowHeight: CGFloat { max(keyCapSize, hintLineHeight) }
 
+  /// Whether the color-picker panel (swatch, hex value, copy hint) shows below the preview —
+  /// the "Show color picker panel" preference. When off, the magnifier is just the pixel
+  /// grid/crosshair preview, matching its footprint before this panel existed.
+  var showsColorPanel = true
+
   private var panelHeight: CGFloat {
-    panelVerticalPadding * 2
-      + coordLineHeight + panelRowGap
+    guard showsColorPanel else { return 0 }
+    return panelVerticalPadding * 2
       + colorRowHeight + panelRowGap
       + hintRowHeight
   }
 
-  /// Full container height (preview square + gap + info panel). Internal rather than private
-  /// so tests can derive expected layout positions from it instead of hardcoding a value that
-  /// silently drifts whenever a font or row size here changes.
-  var totalHeight: CGFloat { magnifierSize + panelGap + panelHeight }
+  /// Full container height (preview square, plus gap + info panel when `showsColorPanel`).
+  /// Internal rather than private so tests can derive expected layout positions from it
+  /// instead of hardcoding a value that silently drifts whenever a row size here changes.
+  var totalHeight: CGFloat {
+    showsColorPanel ? magnifierSize + panelGap + panelHeight : magnifierSize
+  }
 
   // The layers managed by this magnifier
   private(set) var containerLayer: CALayer?
+  /// Sits behind `imageLayer`, slightly larger — a dark ring visible against light content,
+  /// since `imageLayer`'s own light border can blend into a light backdrop underneath it.
+  private(set) var imageOuterBorderLayer: CALayer?
   private(set) var imageLayer: CALayer?
   private(set) var gridLayer: CAShapeLayer?
   private(set) var crosshairLayer: CAShapeLayer?
   private(set) var centerPixelLayer: CAShapeLayer?
   private(set) var panelLayer: CALayer?
-  private(set) var coordinateTextLayer: CATextLayer?
   private(set) var colorSwatchLayer: CALayer?
   private(set) var colorTextLayer: CATextLayer?
   private(set) var hintPrefixTextLayer: CATextLayer?
@@ -124,9 +138,26 @@ final class AreaSelectionMagnifier {
     rootLayer.addSublayer(container)
     self.containerLayer = container
 
+    let imageOriginY = showsColorPanel ? panelHeight + panelGap : 0
+
+    // Outer border: a dark ring behind the preview, slightly larger than it. `imageLayer`'s
+    // own border is light (to read against dark content); on light content that light border
+    // all but disappears, so this dark ring guarantees a visible edge either way.
+    let outerBorderWidth: CGFloat = 2.0
+    let imageOuterBorder = CALayer()
+    imageOuterBorder.frame = CGRect(
+      x: -outerBorderWidth, y: imageOriginY - outerBorderWidth,
+      width: magnifierSize + outerBorderWidth * 2, height: magnifierSize + outerBorderWidth * 2
+    )
+    imageOuterBorder.backgroundColor = NSColor.black.withAlphaComponent(0.55).cgColor
+    imageOuterBorder.cornerRadius = 12 + outerBorderWidth
+    imageOuterBorder.actions = disabledActions
+    container.addSublayer(imageOuterBorder)
+    self.imageOuterBorderLayer = imageOuterBorder
+
     // Image layer: displays nearest-neighbor pixelated zoom, occupies the top square
     let imgLayer = CALayer()
-    imgLayer.frame = CGRect(x: 0, y: panelHeight + panelGap, width: magnifierSize, height: magnifierSize)
+    imgLayer.frame = CGRect(x: 0, y: imageOriginY, width: magnifierSize, height: magnifierSize)
     imgLayer.cornerRadius = 12
     imgLayer.masksToBounds = true
     imgLayer.magnificationFilter = .nearest
@@ -184,11 +215,6 @@ final class AreaSelectionMagnifier {
     panel.isHidden = true
     container.addSublayer(panel)
     self.panelLayer = panel
-
-    let coordText = CATextLayer()
-    configureTextLayer(coordText, font: overlayFont, color: .white, contentsScale: contentsScale)
-    panel.addSublayer(coordText)
-    self.coordinateTextLayer = coordText
 
     let swatch = CALayer()
     swatch.cornerRadius = 4
@@ -253,12 +279,12 @@ final class AreaSelectionMagnifier {
     CATransaction.setDisableActions(true)
     containerLayer?.removeFromSuperlayer()
     containerLayer = nil
+    imageOuterBorderLayer = nil
     imageLayer = nil
     gridLayer = nil
     crosshairLayer = nil
     centerPixelLayer = nil
     panelLayer = nil
-    coordinateTextLayer = nil
     colorSwatchLayer = nil
     colorTextLayer = nil
     hintPrefixTextLayer = nil
@@ -304,7 +330,6 @@ final class AreaSelectionMagnifier {
           let crosshair = crosshairLayer,
           let centerIndicator = centerPixelLayer,
           let panel = panelLayer,
-          let coordText = coordinateTextLayer,
           let swatch = colorSwatchLayer,
           let colorText = colorTextLayer,
           let hintPrefixText = hintPrefixTextLayer,
@@ -335,7 +360,7 @@ final class AreaSelectionMagnifier {
 
     container.frame = CGRect(x: originX, y: originY, width: magnifierSize, height: totalHeight)
     container.isHidden = false
-    panel.isHidden = false
+    panel.isHidden = !showsColorPanel
 
     // Set cropped and scaled image contents via contentsRect (nearest-neighbor)
     imgLayer.contents = backdropImage
@@ -380,29 +405,25 @@ final class AreaSelectionMagnifier {
     let hex = hexColor(at: point, bounds: bounds, image: backdropImage)
     lastHexColor = hex
 
-    let localX = Int(point.x)
-    let localY = Int(bounds.height - point.y)
-    coordText.string = "\(localX), \(localY)"
-
     let hexDisplay = hex ?? "--------"
     colorText.string = hexDisplay
     swatch.backgroundColor = (hex.flatMap(NSColor.init(magnifierHex:)) ?? NSColor.black).cgColor
 
-    layoutPanel(
-      coordText: coordText,
-      swatch: swatch,
-      colorText: colorText,
-      hintPrefixText: hintPrefixText,
-      keyCapBackground: keyCapBackground,
-      keyCapText: keyCapText,
-      hintText: hintText
-    )
+    if showsColorPanel {
+      layoutPanel(
+        swatch: swatch,
+        colorText: colorText,
+        hintPrefixText: hintPrefixText,
+        keyCapBackground: keyCapBackground,
+        keyCapText: keyCapText,
+        hintText: hintText
+      )
+    }
 
     CATransaction.commit()
   }
 
   private func layoutPanel(
-    coordText: CATextLayer,
     swatch: CALayer,
     colorText: CATextLayer,
     hintPrefixText: CATextLayer,
@@ -410,18 +431,15 @@ final class AreaSelectionMagnifier {
     keyCapText: CATextLayer,
     hintText: CATextLayer
   ) {
-    let keyCapTextHeight = "C".size(withAttributes: [.font: keyCapFont]).height
-    let prefixString = copyHintPrefixText
-    let prefixWidth = prefixString.isEmpty ? 0 : prefixString.size(withAttributes: [.font: hintFont]).width
-    let prefixTrailingGap: CGFloat = prefixString.isEmpty ? 0 : keyCapTextGap
+    let prefixTrailingGap: CGFloat = hintPrefixWidth > 0 ? keyCapTextGap : 0
 
     // Bottom row: "[prefix] [C] [suffix]", e.g. "按 [C] 复制色值" / "[C] キーでコピー"
     let hintRowY = panelVerticalPadding
     hintPrefixText.frame = CGRect(
       x: panelHorizontalPadding, y: hintRowY + (hintRowHeight - hintLineHeight) / 2.0,
-      width: prefixWidth, height: hintLineHeight
+      width: hintPrefixWidth, height: hintLineHeight
     )
-    let keyCapX = panelHorizontalPadding + prefixWidth + prefixTrailingGap
+    let keyCapX = panelHorizontalPadding + hintPrefixWidth + prefixTrailingGap
     keyCapBackground.frame = CGRect(
       x: keyCapX, y: hintRowY + (hintRowHeight - keyCapSize) / 2.0,
       width: keyCapSize, height: keyCapSize
@@ -437,22 +455,15 @@ final class AreaSelectionMagnifier {
       width: max(0, magnifierSize - panelHorizontalPadding - suffixX), height: hintLineHeight
     )
 
-    // Middle row: color swatch + hex value
+    // Top row: color swatch + hex value
     let colorRowY = hintRowY + hintRowHeight + panelRowGap
     swatch.frame = CGRect(
-      x: panelHorizontalPadding, y: colorRowY + (coordLineHeight - swatchSize) / 2.0,
+      x: panelHorizontalPadding, y: colorRowY + (hexLineHeight - swatchSize) / 2.0,
       width: swatchSize, height: swatchSize
     )
     colorText.frame = CGRect(
       x: panelHorizontalPadding + swatchSize + swatchTextGap, y: colorRowY,
-      width: magnifierSize - panelHorizontalPadding * 2 - swatchSize - swatchTextGap, height: coordLineHeight
-    )
-
-    // Top row: coordinates
-    let coordRowY = colorRowY + coordLineHeight + panelRowGap
-    coordText.frame = CGRect(
-      x: panelHorizontalPadding, y: coordRowY,
-      width: magnifierSize - panelHorizontalPadding * 2, height: coordLineHeight
+      width: magnifierSize - panelHorizontalPadding * 2 - swatchSize - swatchTextGap, height: hexLineHeight
     )
   }
 
@@ -516,7 +527,7 @@ final class AreaSelectionMagnifier {
   /// confirmation in place of the copy hint. Returns false if the magnifier isn't active.
   @discardableResult
   func copyColorToClipboard() -> Bool {
-    guard zoom > 1.0, let hex = lastHexColor,
+    guard showsColorPanel, zoom > 1.0, let hex = lastHexColor,
           let hintPrefixText = hintPrefixTextLayer,
           let keyCapBackground = hintKeyCapBackgroundLayer,
           let keyCapText = hintKeyCapTextLayer,
@@ -544,7 +555,6 @@ final class AreaSelectionMagnifier {
 
     let workItem = DispatchWorkItem { [weak self] in
       guard let self,
-            let coordText = self.coordinateTextLayer,
             let swatch = self.colorSwatchLayer,
             let colorText = self.colorTextLayer,
             let hintPrefixText = self.hintPrefixTextLayer,
@@ -558,7 +568,6 @@ final class AreaSelectionMagnifier {
       keyCapText.isHidden = false
       hintText.string = self.copyHintText
       self.layoutPanel(
-        coordText: coordText,
         swatch: swatch,
         colorText: colorText,
         hintPrefixText: hintPrefixText,

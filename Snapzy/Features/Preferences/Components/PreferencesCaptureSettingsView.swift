@@ -44,6 +44,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.screenshotShowSelectionAreaOverlay) private var showSelectionAreaOverlay = true
   @AppStorage(PreferencesKeys.screenshotReverseMagnifierZoomDirection) private var reverseMagnifierZoomDirection = false
   @AppStorage(PreferencesKeys.screenshotShowMagnifierByDefault) private var showMagnifierByDefault = false
+  @AppStorage(PreferencesKeys.screenshotShowMagnifierColorPanel) private var showMagnifierColorPanel = true
 
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
@@ -200,6 +201,15 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.reverseMagnifierZoomDirectionDescription
             ) {
               Toggle("", isOn: $reverseMagnifierZoomDirection)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "eyedropper",
+              title: L10n.PreferencesCapture.showMagnifierColorPanelTitle,
+              description: L10n.PreferencesCapture.showMagnifierColorPanelDescription
+            ) {
+              Toggle("", isOn: $showMagnifierColorPanel)
                 .labelsHidden()
             }
           }

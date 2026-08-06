@@ -20639,6 +20639,136 @@
           }
         }
       }
+    },
+    "preferences-capture.show-magnifier-color-panel-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbwähler-Panel anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show color picker panel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar panel del selector de color"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher le panneau du sélecteur de couleur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラーピッカーパネルを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "색상 선택 패널 표시"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать панель выбора цвета"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị bảng chọn màu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示取色面板"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示取色面板"
+          }
+        }
+      }
+    },
+    "preferences-capture.show-magnifier-color-panel-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt Farbmuster und Hex-Wert unterhalb der Lupenvorschau; deaktivieren, um nur Pixelraster und Fadenkreuz zu behalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the color swatch and hex value below the magnifier preview; turn off to keep only the pixel grid and crosshair"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra la muestra de color y el valor hexadecimal debajo de la vista previa de la lupa; desactívalo para conservar solo la cuadrícula de píxeles y la mira"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche la nuance de couleur et la valeur hexadécimale sous l'aperçu de la loupe ; désactivez pour ne conserver que la grille de pixels et le réticule"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーペのプレビュー下にカラースウォッチと16進値を表示します。オフにするとピクセルグリッドと十字線のみになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "돋보기 미리보기 아래에 색상 견본과 16진수 값을 표시합니다. 끄면 픽셀 그리드와 십자선만 남습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать образец цвета и hex-значение под превью лупы; отключите, чтобы оставить только пиксельную сетку и перекрестие"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị mẫu màu và giá trị hex bên dưới bản xem trước kính lúp; tắt để chỉ giữ lưới pixel và dấu thập"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在放大镜预览下方显示色块和十六进制色值；关闭后只保留像素网格和十字准星"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在放大鏡預覽下方顯示色塊和十六進位色值；關閉後只保留像素網格和十字準星"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -187,13 +187,12 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
     XCTAssertFalse(path.isEmpty)
   }
 
-  func testMagnifierPanel_showsCoordinatesAndSampledColor() {
+  func testMagnifierPanel_showsSampledColor() {
     let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
     let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
     overlayView.applyBackdrop(backdrop)
 
     overlayView.testMagnifierZoom = 5.0
-    // Overlay bounds are 800x600 (top-left origin reporting flips y: 600 - 150 = 450)
     overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
 
     guard let panelLayer = overlayView.testMagnifierPanelLayer else {
@@ -201,9 +200,48 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
       return
     }
     XCTAssertFalse(panelLayer.isHidden)
-    XCTAssertEqual(overlayView.testMagnifierCoordinateTextLayer?.string as? String, "200, 450")
     XCTAssertEqual(overlayView.testMagnifierColorTextLayer?.string as? String, "#000000")
     XCTAssertEqual(overlayView.testMagnifierLastHexColor, "#000000")
+  }
+
+  func testMagnifierPanel_hiddenWhenColorPanelPreferenceOff() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    overlayView.testMagnifierShowsColorPanel = false
+
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    guard let panelLayer = overlayView.testMagnifierPanelLayer,
+          let containerLayer = overlayView.testMagnifierContainerLayer else {
+      XCTFail("magnifier layers not found")
+      return
+    }
+    // The magnifier itself (grid/crosshair preview) still shows...
+    XCTAssertFalse(containerLayer.isHidden)
+    // ...but the color picker panel underneath does not, and the container shrinks to just
+    // the preview square (no panel, no gap).
+    XCTAssertTrue(panelLayer.isHidden)
+    XCTAssertEqual(containerLayer.frame.height, overlayView.testMagnifierTotalHeight)
+  }
+
+  func testMagnifierImageOuterBorder_visibleWhenActive() {
+    let image = createSolidColorImage(color: .white, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    // A dark outer ring behind the preview keeps its edge visible against light backdrops,
+    // where the preview's own light border would otherwise blend in.
+    guard let outerBorder = overlayView.testMagnifierImageOuterBorderLayer else {
+      XCTFail("magnifierImageOuterBorderLayer not found")
+      return
+    }
+    XCTAssertFalse(outerBorder.isHidden)
+    XCTAssertNotNil(outerBorder.backgroundColor)
   }
 
   func testMagnifierZoom_worksWithEmptyBackdropsInitially() throws {

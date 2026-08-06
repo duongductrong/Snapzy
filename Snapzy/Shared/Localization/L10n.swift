@@ -2657,6 +2657,16 @@ nonisolated enum L10n {
       defaultValue: "Start area selection with the magnifier already active, instead of requiring ⌘+scroll",
       comment: "Capture preferences setting description"
     )
+    static let showMagnifierColorPanelTitle = string(
+      "preferences-capture.show-magnifier-color-panel-title",
+      defaultValue: "Show color picker panel",
+      comment: "Capture preferences setting title"
+    )
+    static let showMagnifierColorPanelDescription = string(
+      "preferences-capture.show-magnifier-color-panel-description",
+      defaultValue: "Show the color swatch and hex value below the magnifier preview; turn off to keep only the pixel grid and crosshair",
+      comment: "Capture preferences setting description"
+    )
     static let overlaySection = string(
       "preferences-capture.overlay-section",
       defaultValue: "Overlay",

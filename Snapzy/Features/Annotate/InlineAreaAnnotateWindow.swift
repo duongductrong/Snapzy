@@ -277,6 +277,7 @@ private struct InlineAreaAnnotateRootView: View {
             backdropImage: display.backdropCGImage,
             point: cursorIndicatorPoint.map { appKitLocalPoint(fromViewportPoint: $0, viewportHeight: geometry.size.height) },
             showsByDefault: session.showsMagnifierByDefault,
+            showsColorPanel: session.showsMagnifierColorPanel,
             onHostViewReady: { hostView in
               session.registerMagnifierHostView(hostView, for: display.displayID)
             }
@@ -637,10 +638,12 @@ private struct InlineAreaMagnifierOverlay: NSViewRepresentable {
   let backdropImage: CGImage?
   let point: CGPoint?
   let showsByDefault: Bool
+  let showsColorPanel: Bool
   let onHostViewReady: (InlineAreaMagnifierHostView) -> Void
 
   func makeNSView(context: Context) -> InlineAreaMagnifierHostView {
     let view = InlineAreaMagnifierHostView()
+    view.magnifier.showsColorPanel = showsColorPanel
     view.magnifier.resetZoom(showByDefault: showsByDefault)
     onHostViewReady(view)
     return view
