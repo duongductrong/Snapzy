@@ -48,11 +48,24 @@ final class AreaSelectionMagnifier {
   /// grid/crosshair preview, matching its footprint before this panel existed.
   var showsColorPanel = true
 
+  /// Whether the panel also shows a coordinates row. Plain area-screenshot capture leaves
+  /// this off — it has its own coordinate indicator elsewhere in the same overlay, and
+  /// showing both was redundant. Screenshot-and-annotate (the SwiftUI-based flow bridging in
+  /// this same magnifier) has no such indicator of its own, so it turns this on — without it,
+  /// that flow would show no coordinates anywhere.
+  var showsCoordinatesInPanel = false
+
+  private var coordRowHeight: CGFloat { hexLineHeight }
+
   private var panelHeight: CGFloat {
     guard showsColorPanel else { return 0 }
-    return panelVerticalPadding * 2
+    var height = panelVerticalPadding * 2
       + colorRowHeight + panelRowGap
       + hintRowHeight
+    if showsCoordinatesInPanel {
+      height += coordRowHeight + panelRowGap
+    }
+    return height
   }
 
   /// Full container height (preview square, plus gap + info panel when `showsColorPanel`).
@@ -72,6 +85,7 @@ final class AreaSelectionMagnifier {
   private(set) var crosshairLayer: CAShapeLayer?
   private(set) var centerPixelLayer: CAShapeLayer?
   private(set) var panelLayer: CALayer?
+  private(set) var coordinateTextLayer: CATextLayer?
   private(set) var colorSwatchLayer: CALayer?
   private(set) var colorTextLayer: CATextLayer?
   private(set) var hintPrefixTextLayer: CATextLayer?
@@ -216,6 +230,13 @@ final class AreaSelectionMagnifier {
     container.addSublayer(panel)
     self.panelLayer = panel
 
+    if showsCoordinatesInPanel {
+      let coordText = CATextLayer()
+      configureTextLayer(coordText, font: overlayFont, color: .white, contentsScale: contentsScale)
+      panel.addSublayer(coordText)
+      self.coordinateTextLayer = coordText
+    }
+
     let swatch = CALayer()
     swatch.cornerRadius = 4
     swatch.borderColor = NSColor.white.withAlphaComponent(0.3).cgColor
@@ -285,6 +306,7 @@ final class AreaSelectionMagnifier {
     crosshairLayer = nil
     centerPixelLayer = nil
     panelLayer = nil
+    coordinateTextLayer = nil
     colorSwatchLayer = nil
     colorTextLayer = nil
     hintPrefixTextLayer = nil
@@ -409,8 +431,15 @@ final class AreaSelectionMagnifier {
     colorText.string = hexDisplay
     swatch.backgroundColor = (hex.flatMap(NSColor.init(magnifierHex:)) ?? NSColor.black).cgColor
 
+    if let coordText = coordinateTextLayer {
+      let localX = Int(point.x)
+      let localY = Int(bounds.height - point.y)
+      coordText.string = "\(localX), \(localY)"
+    }
+
     if showsColorPanel {
       layoutPanel(
+        coordText: coordinateTextLayer,
         swatch: swatch,
         colorText: colorText,
         hintPrefixText: hintPrefixText,
@@ -424,6 +453,7 @@ final class AreaSelectionMagnifier {
   }
 
   private func layoutPanel(
+    coordText: CATextLayer?,
     swatch: CALayer,
     colorText: CATextLayer,
     hintPrefixText: CATextLayer,
@@ -455,7 +485,7 @@ final class AreaSelectionMagnifier {
       width: max(0, magnifierSize - panelHorizontalPadding - suffixX), height: hintLineHeight
     )
 
-    // Top row: color swatch + hex value
+    // Middle row: color swatch + hex value
     let colorRowY = hintRowY + hintRowHeight + panelRowGap
     swatch.frame = CGRect(
       x: panelHorizontalPadding, y: colorRowY + (hexLineHeight - swatchSize) / 2.0,
@@ -465,6 +495,16 @@ final class AreaSelectionMagnifier {
       x: panelHorizontalPadding + swatchSize + swatchTextGap, y: colorRowY,
       width: magnifierSize - panelHorizontalPadding * 2 - swatchSize - swatchTextGap, height: hexLineHeight
     )
+
+    // Top row: coordinates — only present (see `showsCoordinatesInPanel`) where this magnifier
+    // is the only source of cursor position, e.g. screenshot-and-annotate.
+    if let coordText {
+      let coordRowY = colorRowY + hexLineHeight + panelRowGap
+      coordText.frame = CGRect(
+        x: panelHorizontalPadding, y: coordRowY,
+        width: magnifierSize - panelHorizontalPadding * 2, height: coordRowHeight
+      )
+    }
   }
 
   /// Builds a path outlining every source-pixel boundary visible within the preview, anchored
@@ -568,6 +608,7 @@ final class AreaSelectionMagnifier {
       keyCapText.isHidden = false
       hintText.string = self.copyHintText
       self.layoutPanel(
+        coordText: self.coordinateTextLayer,
         swatch: swatch,
         colorText: colorText,
         hintPrefixText: hintPrefixText,

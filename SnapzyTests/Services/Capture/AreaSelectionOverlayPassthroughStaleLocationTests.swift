@@ -94,7 +94,7 @@ final class AreaSelectionOverlayPassthroughStaleLocationTests: AreaSelectionOver
     )
     XCTAssertEqual(
       overlayView.testSizeIndicatorTextLayer.string as? String,
-      "50\n540",
+      "50, 540",
       "coordinate indicator must show the tap point (local 50,60 → label 50,540)"
     )
     XCTAssertFalse(

@@ -202,6 +202,27 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
     XCTAssertFalse(panelLayer.isHidden)
     XCTAssertEqual(overlayView.testMagnifierColorTextLayer?.string as? String, "#000000")
     XCTAssertEqual(overlayView.testMagnifierLastHexColor, "#000000")
+    // `showsCoordinatesInPanel` defaults to false on a freshly-constructed magnifier (this
+    // test drives zoom/update directly, bypassing `resetMagnifierZoomForNewSession`, which is
+    // what actually turns it on for a real session — see
+    // `testResetMagnifierZoomForNewSession_enablesPanelCoordinates`).
+    XCTAssertNil(overlayView.testMagnifierCoordinateTextLayer)
+  }
+
+  func testMagnifierPanel_showsCoordinatesWhenEnabled() {
+    // Screenshot-and-annotate has no coordinate indicator of its own (see
+    // `InlineAreaMagnifierOverlay`), so it opts into this — otherwise that flow would show no
+    // coordinates anywhere.
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    overlayView.testMagnifierShowsCoordinatesInPanel = true
+
+    overlayView.testMagnifierZoom = 5.0
+    // Overlay bounds are 800x600 (top-left origin reporting flips y: 600 - 150 = 450)
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    XCTAssertEqual(overlayView.testMagnifierCoordinateTextLayer?.string as? String, "200, 450")
   }
 
   func testMagnifierPanel_hiddenWhenColorPanelPreferenceOff() {
@@ -224,6 +245,65 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
     // the preview square (no panel, no gap).
     XCTAssertTrue(panelLayer.isHidden)
     XCTAssertEqual(containerLayer.frame.height, overlayView.testMagnifierTotalHeight)
+  }
+
+  func testCoordinateIndicator_visibleWhileMagnifierInactive() {
+    let image = createSolidColorImage(color: .white, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    // Magnifier stays at its default (inactive) zoom — no ⌘+scroll here.
+
+    overlayView.mouseMoved(with: NSEvent.mouseEvent(
+      with: .mouseMoved,
+      location: CGPoint(x: 200, y: 150),
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      eventNumber: 0,
+      clickCount: 0,
+      pressure: 0
+    )!)
+
+    // With the magnifier inactive there's no panel to show coordinates in, so this indicator
+    // is the only source and must be visible.
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertFalse(overlayView.testSizeIndicatorBackgroundLayer.isHidden)
+  }
+
+  func testCoordinateIndicator_hidesOnceMagnifierBecomesActive() {
+    // Once the magnifier activates, its own panel takes over showing coordinates (see
+    // `AreaSelectionMagnifier.showsCoordinatesInPanel`) so this indicator doesn't duplicate
+    // it — both entry points (plain screenshot and screenshot-and-annotate) show coordinates
+    // in exactly one place, the panel, once a magnifier is on screen.
+    let image = createSolidColorImage(color: .white, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    overlayView.testMagnifierZoom = 7.0
+
+    overlayView.mouseMoved(with: NSEvent.mouseEvent(
+      with: .mouseMoved,
+      location: CGPoint(x: 200, y: 150),
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      eventNumber: 0,
+      clickCount: 0,
+      pressure: 0
+    )!)
+
+    XCTAssertTrue(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertTrue(overlayView.testSizeIndicatorBackgroundLayer.isHidden)
+  }
+
+  func testCoordinateIndicator_rendersAboveMagnifierLayerWise() {
+    // Structural guard: even though the two are mutually exclusive at runtime (see above),
+    // the indicator layers must still be configured to render above the magnifier's — added
+    // to the same parent layer well after them — so a future change to that exclusivity can't
+    // silently let the magnifier's later-in-z-order layers paint over this indicator again.
+    XCTAssertGreaterThan(overlayView.testSizeIndicatorTextLayer.zPosition, 0)
+    XCTAssertGreaterThan(overlayView.testSizeIndicatorBackgroundLayer.zPosition, 0)
   }
 
   func testMagnifierImageOuterBorder_visibleWhenActive() {

@@ -155,7 +155,6 @@ final class InlineAreaAnnotatePanel: NSPanel {
     )
     .preferredColorScheme(ThemeManager.shared.systemAppearance)
     let hostingView = InlineAreaHostingView(rootView: rootView)
-    hostingView.session = session
     contentView = hostingView
   }
 
@@ -193,8 +192,6 @@ final class InlineAreaAnnotatePanel: NSPanel {
 }
 
 private final class InlineAreaHostingView: NSHostingView<AnyView> {
-  var session: InlineAreaAnnotateSession?
-
   convenience init<Content: View>(rootView: Content) {
     self.init(rootView: AnyView(rootView))
   }
@@ -210,14 +207,6 @@ private final class InlineAreaHostingView: NSHostingView<AnyView> {
 
   override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
     true
-  }
-
-  override func resetCursorRects() {
-    if let session, session.phase == .selecting {
-      addCursorRect(bounds, cursor: NSCursor.vectorScreenshotCrosshairLight)
-    } else {
-      super.resetCursorRects()
-    }
   }
 }
 
@@ -275,15 +264,29 @@ private struct InlineAreaAnnotateRootView: View {
         if session.phase == .selecting {
           InlineAreaMagnifierOverlay(
             backdropImage: display.backdropCGImage,
-            point: cursorIndicatorPoint.map { appKitLocalPoint(fromViewportPoint: $0, viewportHeight: geometry.size.height) },
+            point: cursorIndicatorPoint.map { appKitLocalPoint(fromViewportPoint: $0) },
+            hostSize: display.localFrame.size,
             showsByDefault: session.showsMagnifierByDefault,
             showsColorPanel: session.showsMagnifierColorPanel,
             onHostViewReady: { hostView in
               session.registerMagnifierHostView(hostView, for: display.displayID)
             }
           )
-          .frame(width: geometry.size.width, height: geometry.size.height)
+          // `display.localFrame.size`, not `geometry.size` — the latter isn't reliably
+          // settled on the first frame this view appears (see `appKitLocalPoint`), and this
+          // display's true size is already known without needing SwiftUI to measure it.
+          .frame(width: display.localFrame.width, height: display.localFrame.height)
           .allowsHitTesting(false)
+
+          // The real system cursor is hidden for the whole `.selecting` phase
+          // (`InlineAreaAnnotateSession.cursorHider`) — draw the same crosshair image
+          // ourselves instead, mirroring plain area screenshot's `cursorProxyLayer`. Native
+          // `NSCursor.set()` is not used here: on this `.nonactivatingPanel` configuration the
+          // WindowServer can silently stop rendering it after roughly a second of no new mouse
+          // events, even though the app's own cursor bookkeeping stays correct the whole time.
+          if let cursorIndicatorPoint {
+            InlineAreaSystemCrosshairProxy(point: cursorIndicatorPoint)
+          }
         }
       }
       .coordinateSpace(name: InlineAreaCoordinateSpace.root)
@@ -301,14 +304,17 @@ private struct InlineAreaAnnotateRootView: View {
     }
     .ignoresSafeArea()
     .onAppear {
-      if session.phase == .selecting {
-        session.refreshCursor()
-        DispatchQueue.main.async {
-          session.refreshCursor()
-          DispatchQueue.main.async {
-            session.refreshCursor()
-          }
-        }
+      guard session.phase == .selecting, cursorIndicatorPoint == nil else { return }
+      // `onContinuousHover` only reports a position once AppKit delivers an actual hover
+      // event, which isn't guaranteed to happen immediately for a window that just appeared
+      // under an already-stationary pointer — without this, the magnifier/drawn crosshair can
+      // stay invisible until the user moves the mouse. Seed it from the real system location
+      // instead, same as a real hover would report.
+      let candidate = viewportPoint(for: session.currentDesktopMouseLocation)
+      let inBounds = (0 ... display.localFrame.width).contains(candidate.x)
+        && (0 ... display.localFrame.height).contains(candidate.y)
+      if inBounds {
+        cursorIndicatorPoint = candidate
       }
     }
   }
@@ -342,10 +348,24 @@ private struct InlineAreaAnnotateRootView: View {
     )
   }
 
+  /// Inverse of `desktopPoint(for:)` — used only to seed `cursorIndicatorPoint` from the real
+  /// system mouse location on first appearance (see `.onAppear`); the normal per-frame path
+  /// gets viewport points directly from SwiftUI's own hover/drag gesture callbacks.
+  private func viewportPoint(for desktopPoint: CGPoint) -> CGPoint {
+    CGPoint(
+      x: desktopPoint.x - display.localFrame.minX,
+      y: desktopPoint.y - display.localFrame.minY
+    )
+  }
+
   /// `AreaSelectionMagnifier` expects AppKit-convention points (bottom-left origin, matching
   /// the `NSView` it was built for); SwiftUI's viewport coordinate space is top-left origin.
-  private func appKitLocalPoint(fromViewportPoint point: CGPoint, viewportHeight: CGFloat) -> CGPoint {
-    CGPoint(x: point.x, y: viewportHeight - point.y)
+  /// Flips against `display.localFrame.height` — the display's actual, already-known size —
+  /// rather than a `GeometryReader` measurement, which isn't reliably settled on the very
+  /// first frame this view appears and previously produced a wrong (bottom-left-of-screen)
+  /// position for the magnifier until the first real pointer move corrected it.
+  private func appKitLocalPoint(fromViewportPoint point: CGPoint) -> CGPoint {
+    CGPoint(x: point.x, y: display.localFrame.height - point.y)
   }
 
   private func selectionDimLayer(size: CGSize, rect: CGRect?) -> some View {
@@ -614,10 +634,13 @@ private struct InlineAreaAnnotateRootView: View {
     return min(max(value, minValue), maxValue)
   }
 
+  /// Only relevant to `.annotating`-phase moving (`InlineAreaCursorIndicator`) — during
+  /// `.selecting` the real cursor is already hidden for the whole phase
+  /// (`InlineAreaAnnotateSession.cursorHider`) and `InlineAreaSystemCrosshairProxy` draws the
+  /// crosshair instead, so there's nothing for this to do there.
   private func updateNativeCursorForIndicator(_ isIndicatorVisible: Bool) {
-    if session.phase == .selecting {
-      NSCursor.vectorScreenshotCrosshairLight.set()
-    } else if isIndicatorVisible {
+    guard session.phase != .selecting else { return }
+    if isIndicatorVisible {
       InlineAreaNativeCursor.hide()
     } else {
       InlineAreaNativeCursor.restoreArrow()
@@ -637,19 +660,30 @@ private enum InlineAreaCoordinateSpace {
 private struct InlineAreaMagnifierOverlay: NSViewRepresentable {
   let backdropImage: CGImage?
   let point: CGPoint?
+  let hostSize: CGSize
   let showsByDefault: Bool
   let showsColorPanel: Bool
   let onHostViewReady: (InlineAreaMagnifierHostView) -> Void
 
   func makeNSView(context: Context) -> InlineAreaMagnifierHostView {
-    let view = InlineAreaMagnifierHostView()
+    let view = InlineAreaMagnifierHostView(frame: CGRect(origin: .zero, size: hostSize))
+    view.displayBounds = CGRect(origin: .zero, size: hostSize)
     view.magnifier.showsColorPanel = showsColorPanel
+    // Mirrors plain area screenshot capture: coordinates live in the magnifier panel while
+    // it's active, and in `InlineAreaMagnifierHostView`'s own bubble (its equivalent of
+    // `updateCoordinateIndicator`) while it's inactive — never both at once.
+    view.magnifier.showsCoordinatesInPanel = true
     view.magnifier.resetZoom(showByDefault: showsByDefault)
     onHostViewReady(view)
     return view
   }
 
   func updateNSView(_ nsView: InlineAreaMagnifierHostView, context: Context) {
+    // Set explicitly rather than read off `nsView.bounds`: AppKit only applies the frame from
+    // this view's `.frame(width:height:)` SwiftUI modifier once its own layout pass runs, which
+    // isn't guaranteed to have happened by the time `update(at:)` first fires — see
+    // `InlineAreaMagnifierHostView.displayBounds`.
+    nsView.displayBounds = CGRect(origin: .zero, size: hostSize)
     nsView.backdropImage = backdropImage
     if let point {
       nsView.update(at: point)
@@ -680,6 +714,22 @@ private struct InlineAreaCursorIndicator: View {
     .frame(width: frameSize, height: frameSize)
     .position(point)
     .allowsHitTesting(false)
+  }
+}
+
+/// Drawn replacement for the real system cursor during `.selecting`, mirroring plain area
+/// screenshot's `cursorProxyLayer`: draws the exact same crosshair image
+/// (`NSCursor.vectorScreenshotCrosshairLight`) the real cursor would otherwise use, so the two
+/// entry points look pixel-identical, while sidestepping the WindowServer's tendency to stop
+/// rendering a native `NSCursor.set()` cursor on this `.nonactivatingPanel` configuration after
+/// a period of no new mouse events (see `InlineAreaAnnotateSession.cursorHider`).
+private struct InlineAreaSystemCrosshairProxy: View {
+  let point: CGPoint
+
+  var body: some View {
+    Image(nsImage: NSCursor.vectorScreenshotCrosshairLight.image)
+      .position(point)
+      .allowsHitTesting(false)
   }
 }
 

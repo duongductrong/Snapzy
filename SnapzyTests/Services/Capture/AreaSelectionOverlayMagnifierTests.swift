@@ -149,6 +149,16 @@ final class AreaSelectionOverlayMagnifierTests: AreaSelectionOverlayTestCase {
     XCTAssertGreaterThan(overlayView.testMagnifierZoom, 1.0)
   }
 
+  func testResetMagnifierZoomForNewSession_enablesPanelCoordinates() {
+    // Plain area screenshot has its own `updateCoordinateIndicator` bubble, but that bubble
+    // stands down once the magnifier activates (see the comment there) — so the panel must be
+    // the one showing coordinates from session start, same as screenshot-and-annotate (which
+    // has no bubble of its own at all).
+    overlayView.testMagnifierShowsCoordinatesInPanel = false
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertTrue(overlayView.testMagnifierShowsCoordinatesInPanel)
+  }
+
   func testCopyMagnifierColorIfActive_ignoresOtherKeysAndModifiedC() {
     let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
     let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)

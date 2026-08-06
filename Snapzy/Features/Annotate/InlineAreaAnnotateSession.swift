@@ -84,6 +84,17 @@ final class InlineAreaAnnotateSession: ObservableObject {
   private var selectionStartPoint: CGPoint?
   private var stateChangeCancellable: AnyCancellable?
   private var didComplete = false
+  /// The system cursor is hidden for the whole `.selecting` phase — `InlineAreaAnnotateWindow`
+  /// draws the crosshair itself (the same image/positioning as plain area screenshot's
+  /// `cursorProxyLayer`) instead of relying on a native `NSCursor.set()`, which this
+  /// `.nonactivatingPanel` configuration can silently stop rendering after roughly a second of
+  /// no new mouse events even though the app's own cursor bookkeeping stays correct throughout
+  /// (confirmed by direct instrumentation) — a WindowServer-level quirk, not a state bug, so
+  /// no amount of re-asserting the same `NSCursor` fixes it. `CGDisplayHideCursor`/`Show` are a
+  /// different, lower-level mechanism unaffected by that quirk. Session activates the app via
+  /// `NSApp.activate` at start, so — unlike live-passthrough capture — this doesn't need
+  /// `BackgroundCursorControl`'s background-cursor-control workaround.
+  private var cursorHider = LivePassthroughCursorHider()
 
   init(
     primaryDisplayID: CGDirectDisplayID,
@@ -120,6 +131,9 @@ final class InlineAreaAnnotateSession: ObservableObject {
         self?.objectWillChange.send()
       }
     }
+    // Session always starts in `.selecting` — hide the real cursor for every display up
+    // front; `beginAnnotating(with:)` shows it again once selection ends.
+    cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
   }
 
   func attach(window: NSWindow) {
@@ -146,17 +160,6 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// events arrive via `handleKeyEvent`, not through the host view itself) can reach it.
   func registerMagnifierHostView(_ view: InlineAreaMagnifierHostView, for displayID: CGDirectDisplayID) {
     magnifierHostViewBoxes[displayID] = InlineAreaMagnifierHostViewBox(view)
-  }
-
-  func refreshCursor() {
-    if phase == .selecting {
-      NSCursor.vectorScreenshotCrosshairLight.set()
-    }
-    for window in windows.allObjects {
-      if let hostingView = window.contentView {
-        window.invalidateCursorRects(for: hostingView)
-      }
-    }
   }
 
   func beginSelection(at localPoint: CGPoint) {
@@ -199,6 +202,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     state.loadImage(crop.image, url: nil)
     state.selectedTool = AnnotateToolPreference.initialTool(userDefaults: defaults)
     phase = .annotating
+    cursorHider.showAll()
   }
 
   func moveSelection(to localRect: CGRect, refreshImage: Bool) {
@@ -490,6 +494,16 @@ final class InlineAreaAnnotateSession: ObservableObject {
     )
   }
 
+  /// The real system mouse location, in this session's desktop coordinate space. Used to seed
+  /// `InlineAreaAnnotateRootView`'s `cursorIndicatorPoint` on first appearance: SwiftUI's
+  /// `onContinuousHover` only reports a position once it observes an actual hover event, which
+  /// is not guaranteed to fire immediately for a window that just appeared under an already-
+  /// stationary pointer — without seeding, the magnifier/crosshair can stay invisible until the
+  /// user moves the mouse.
+  var currentDesktopMouseLocation: CGPoint {
+    localDesktopPoint(for: NSEvent.mouseLocation)
+  }
+
   private func complete(_ result: CaptureResult, closeWindow: Bool = true) {
     guard !didComplete else { return }
     didComplete = true
@@ -500,7 +514,9 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
     // Restore cursor before closing windows — the inline overlay uses a
     // transparent 1×1 cursor that could persist if window closure does not
-    // trigger cursor rect re-evaluation.
+    // trigger cursor rect re-evaluation. `showAll()` is a no-op if
+    // `beginAnnotating(with:)` already restored it.
+    cursorHider.showAll()
     NSCursor.arrow.set()
 
     if closeWindow {
