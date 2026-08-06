@@ -20314,6 +20314,136 @@
           }
         }
       }
+    },
+    "preferences-capture.auto-detect-window-under-cursor-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenster unter dem Cursor automatisch erkennen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically detect window under cursor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectar automáticamente la ventana bajo el cursor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détecter automatiquement la fenêtre sous le curseur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーソル下のウィンドウを自動検出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "커서 아래 창 자동 감지"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически определять окно под курсором"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động phát hiện cửa sổ dưới con trỏ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动检测光标所在窗口"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動偵測游標所在視窗"
+          }
+        }
+      }
+    },
+    "preferences-capture.auto-detect-window-under-cursor-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebt das Fenster unter dem Cursor hervor und wählt es aus, ohne dass zuerst eine Taste gedrückt werden muss; ziehen Sie stattdessen, um eine manuelle Auswahl zu zeichnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight and select the window under the cursor without pressing a key first; drag to draw a manual selection instead"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resalta y selecciona la ventana bajo el cursor sin necesidad de pulsar una tecla antes; arrastra para dibujar una selección manual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Met en surbrillance et sélectionne la fenêtre sous le curseur sans appuyer sur une touche au préalable ; faites glisser pour dessiner une sélection manuelle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーを押さなくてもカーソル下のウィンドウをハイライトして選択します。ドラッグすると手動選択になります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키를 누르지 않아도 커서 아래 창을 강조 표시하고 선택합니다. 드래그하면 수동 선택으로 전환됩니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выделяет и выбирает окно под курсором без предварительного нажатия клавиши; перетащите, чтобы выделить область вручную"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Làm nổi bật và chọn cửa sổ dưới con trỏ mà không cần nhấn phím trước; kéo để vẽ vùng chọn thủ công"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需按键，鼠标悬停即可高亮并选中光标下的窗口；拖动鼠标则改为手动框选"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不需按鍵，滑鼠移到視窗上即可高亮並選取該視窗；拖曳滑鼠則改為手動框選"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

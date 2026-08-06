@@ -2320,6 +2320,15 @@ final class AreaSelectionOverlayView: NSView {
   /// owns the size indicator layers — mirroring native macOS / CleanShot X behavior.
   private var hasVisibleSelectionRect = false
   private var pendingSelectionStartPoint: CGPoint?
+  /// "Show window under cursor automatically" preference (see `PreferencesCaptureSettingsView`):
+  /// while on, hovering in manual-region mode previews whatever window is under the cursor —
+  /// the ⇧A toggle to `.applicationWindow` mode is no longer needed to see it.
+  private var autoDetectWindowUnderCursor = false
+  /// Set on mouseDown in manual-region mode when the press landed on a hovered window and
+  /// auto-detection is on — the gesture hasn't yet been classified as a click (select the
+  /// window) or a drag (fall through to manual region selection). Cleared by whichever happens.
+  private var pendingWindowDetectionStartPoint: CGPoint?
+  private let windowDetectionDragThreshold: CGFloat = 4.0
   private var currentMousePosition: CGPoint = .zero
   private var windowSelectionSnapshot: WindowSelectionSnapshot?
   private var hoveredWindowCandidate: WindowSelectionCandidate?
@@ -2675,6 +2684,9 @@ final class AreaSelectionOverlayView: NSView {
       .object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool ?? true
     magnifier.reverseZoomDirection = UserDefaults.standard
       .object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool ?? false
+    autoDetectWindowUnderCursor = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotAutoDetectWindowUnderCursor) as? Bool ?? false
+    pendingWindowDetectionStartPoint = nil
     dimLayer.backgroundColor = showSelectionAreaOverlay ? dimColor.cgColor : nil
     dimLayer.mask = nil
     dimLayer.frame = bounds
@@ -3843,8 +3855,15 @@ final class AreaSelectionOverlayView: NSView {
     applyActiveCursor()
     switch interactionMode {
     case .manualRegion:
-      isSelecting = true
-      delegate?.overlayView(self, manualSelectionBeganAt: point)
+      if isAutoWindowDetectionActive, hoveredWindowCandidate != nil {
+        // Don't commit to a manual drag yet — the gesture might turn out to be a click on the
+        // hovered window instead. `handlePrimaryMouseDragged` resolves it once it clears the
+        // drag threshold; `handlePrimaryMouseUp` resolves it if it never does.
+        pendingWindowDetectionStartPoint = point
+      } else {
+        isSelecting = true
+        delegate?.overlayView(self, manualSelectionBeganAt: point)
+      }
     case .applicationWindow:
       updateWindowHover(at: point)
     }
@@ -3862,6 +3881,25 @@ final class AreaSelectionOverlayView: NSView {
     applyActiveCursor()
     switch interactionMode {
     case .manualRegion:
+      if let pendingStart = pendingWindowDetectionStartPoint {
+        let distance = hypot(point.x - pendingStart.x, point.y - pendingStart.y)
+        guard distance >= windowDetectionDragThreshold else {
+          // Still within the click/drag ambiguity window — keep tracking whatever window is
+          // under the cursor so the highlight follows the (still not-yet-a-drag) pointer.
+          updateWindowHover(at: point)
+          updateApplicationSelectionLayers()
+          return
+        }
+        // Crossed the threshold: this is a drag, not a click. Replay it as a manual selection
+        // starting from the original mouseDown point so the drawn rect matches what the user
+        // actually dragged.
+        pendingWindowDetectionStartPoint = nil
+        isSelecting = true
+        delegate?.overlayView(self, manualSelectionBeganAt: pendingStart)
+        delegate?.overlayView(self, manualSelectionChangedTo: point)
+        updateMagnifier(at: point)
+        return
+      }
       guard isSelecting else { return }
       delegate?.overlayView(self, manualSelectionChangedTo: point)
       updateMagnifier(at: point)
@@ -3880,6 +3918,16 @@ final class AreaSelectionOverlayView: NSView {
 
     switch interactionMode {
     case .manualRegion:
+      if pendingWindowDetectionStartPoint != nil {
+        // Released before crossing the drag threshold: treat it as a click on the hovered
+        // window rather than an (empty, sub-threshold) manual region.
+        pendingWindowDetectionStartPoint = nil
+        updateWindowHover(at: point)
+        if let hoveredWindowCandidate {
+          delegate?.overlayView(self, didSelectWindow: hoveredWindowCandidate.target)
+        }
+        return
+      }
       guard isSelecting else { return }
       isSelecting = false
 
@@ -3902,8 +3950,17 @@ final class AreaSelectionOverlayView: NSView {
     switch interactionMode {
     case .manualRegion:
       if !isSelecting {
-        updateCrosshairLayers()
         updateMagnifier(at: point)
+        if isAutoWindowDetectionActive {
+          updateWindowHover(at: point)
+          if hoveredWindowCandidate != nil {
+            updateApplicationSelectionLayers()
+          } else {
+            updateCrosshairLayers()
+          }
+        } else {
+          updateCrosshairLayers()
+        }
       }
     case .applicationWindow:
       updateWindowHover(at: point)
@@ -3919,6 +3976,13 @@ final class AreaSelectionOverlayView: NSView {
       guard selectionEnabled else { return .arrow }
       return NSCursor.applicationWindowCursor
     }
+  }
+
+  /// Whether hovering in `.manualRegion` mode should preview the window under the cursor —
+  /// the preference is meaningless unless this session actually has window-selection data to
+  /// hit-test against (`allowsApplicationWindowSelection`, set from `applicationConfiguration`).
+  private var isAutoWindowDetectionActive: Bool {
+    autoDetectWindowUnderCursor && allowsApplicationWindowSelection
   }
 
   var isManualSelectionInProgress: Bool {

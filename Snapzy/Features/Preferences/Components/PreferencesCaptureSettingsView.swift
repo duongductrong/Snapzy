@@ -43,6 +43,7 @@ struct CaptureSettingsView: View {
   @State private var livePassthroughAccessibilityGranted = AXIsProcessTrusted()
   @AppStorage(PreferencesKeys.screenshotShowSelectionAreaOverlay) private var showSelectionAreaOverlay = true
   @AppStorage(PreferencesKeys.screenshotReverseMagnifierZoomDirection) private var reverseMagnifierZoomDirection = false
+  @AppStorage(PreferencesKeys.screenshotAutoDetectWindowUnderCursor) private var autoDetectWindowUnderCursor = false
 
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
@@ -179,6 +180,15 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.showSelectionAreaOverlayDescription
             ) {
               Toggle("", isOn: $showSelectionAreaOverlay)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "viewfinder",
+              title: L10n.PreferencesCapture.autoDetectWindowUnderCursorTitle,
+              description: L10n.PreferencesCapture.autoDetectWindowUnderCursorDescription
+            ) {
+              Toggle("", isOn: $autoDetectWindowUnderCursor)
                 .labelsHidden()
             }
           }

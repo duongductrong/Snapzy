@@ -2637,6 +2637,16 @@ nonisolated enum L10n {
       defaultValue: "Dim the background outside the selection area during capture",
       comment: "Capture preferences setting description"
     )
+    static let autoDetectWindowUnderCursorTitle = string(
+      "preferences-capture.auto-detect-window-under-cursor-title",
+      defaultValue: "Automatically detect window under cursor",
+      comment: "Capture preferences setting title"
+    )
+    static let autoDetectWindowUnderCursorDescription = string(
+      "preferences-capture.auto-detect-window-under-cursor-description",
+      defaultValue: "Highlight and select the window under the cursor without pressing a key first; drag to draw a manual selection instead",
+      comment: "Capture preferences setting description"
+    )
     static let reverseMagnifierZoomDirectionTitle = string(
       "preferences-capture.reverse-magnifier-zoom-direction-title",
       defaultValue: "Reverse magnifier zoom direction",
