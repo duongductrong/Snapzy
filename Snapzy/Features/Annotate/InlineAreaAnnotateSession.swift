@@ -62,6 +62,11 @@ final class InlineAreaAnnotateSession: ObservableObject {
   @Published var phase: InlineAreaAnnotatePhase = .selecting
   @Published var selectionRect: CGRect?
   @Published var isMoveModifierActive = false
+  /// The window currently under the cursor while "automatically detect window under cursor"
+  /// is on (see `autoDetectWindowUnderCursor`) — mirrors plain area screenshot's
+  /// `hoveredWindowCandidate`, but shared at the session level since any of the per-display
+  /// views may need to render the highlight for a window on another display.
+  @Published var hoveredWindowCandidate: WindowSelectionCandidate?
 
   let state: AnnotateState
   let desktopFrame: CGRect
@@ -84,6 +89,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
   private var selectionStartPoint: CGPoint?
   private var stateChangeCancellable: AnyCancellable?
   private var didComplete = false
+  /// Populated asynchronously in `init` (see `startWindowSelectionQuery`) — nil until the
+  /// query resolves, so hover hit-testing simply has nothing to match until then.
+  private var windowSelectionSnapshot: WindowSelectionSnapshot?
+  private var windowSelectionTask: Task<Void, Never>?
   /// The system cursor is hidden for the whole `.selecting` phase — `InlineAreaAnnotateWindow`
   /// draws the crosshair itself (the same image/positioning as plain area screenshot's
   /// `cursorProxyLayer`) instead of relying on a native `NSCursor.set()`, which this
@@ -105,6 +114,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
     outputFormat: ImageFormat,
     defaults: UserDefaults = .standard,
     context: CaptureContext = .empty,
+    prefetchedContentTask: ShareableContentPrefetchTask? = nil,
+    excludeOwnApplication: Bool = false,
     onComplete: @escaping (CaptureResult) -> Void
   ) {
     self.primaryDisplayID = primaryDisplayID
@@ -134,6 +145,53 @@ final class InlineAreaAnnotateSession: ObservableObject {
     // Session always starts in `.selecting` — hide the real cursor for every display up
     // front; `beginAnnotating(with:)` shows it again once selection ends.
     cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
+    startWindowSelectionQuery(prefetchedContentTask: prefetchedContentTask, excludeOwnApplication: excludeOwnApplication)
+  }
+
+  deinit {
+    windowSelectionTask?.cancel()
+  }
+
+  /// The "automatically detect window under cursor" preference (see
+  /// `PreferencesCaptureSettingsView`) — shares its key with plain area screenshot capture so
+  /// both entry points behave identically.
+  var autoDetectWindowUnderCursor: Bool {
+    defaults.object(forKey: PreferencesKeys.screenshotAutoDetectWindowUnderCursor) as? Bool ?? false
+  }
+
+  /// Kicks off the same window enumeration plain area screenshot uses for its "A" toggle mode
+  /// (`WindowSelectionQueryService`), reusing the shareable-content prefetch already started
+  /// for the frozen backdrop capture rather than issuing a second query. Only worth doing when
+  /// the preference is on — window enumeration briefly activates the Screen Recording prompt
+  /// path on first use, which shouldn't happen for users who never enabled this.
+  private func startWindowSelectionQuery(
+    prefetchedContentTask: ShareableContentPrefetchTask?,
+    excludeOwnApplication: Bool
+  ) {
+    guard autoDetectWindowUnderCursor else { return }
+    windowSelectionTask = Task { [weak self] in
+      let snapshot = await WindowSelectionQueryService.prepareSnapshot(
+        prefetchedContentTask: prefetchedContentTask,
+        excludeOwnApplication: excludeOwnApplication
+      )
+      guard !Task.isCancelled else { return }
+      self?.windowSelectionSnapshot = snapshot
+    }
+  }
+
+  /// Hit-tests the hovered window at a real screen point, mirroring plain area screenshot's
+  /// `updateWindowHover`. `point` is in the same coordinate space as `WindowCaptureTarget.frame`
+  /// (AppKit global screen coordinates, bottom-left origin).
+  func updateHoveredWindow(atScreenPoint point: CGPoint) {
+    hoveredWindowCandidate = autoDetectWindowUnderCursor ? windowSelectionSnapshot?.hitTest(at: point) : nil
+  }
+
+  /// Crops the backdrop to the selected window and jumps straight to `.annotating`, the same
+  /// end state a manual drag reaches via `endSelection(at:)`.
+  func selectWindow(_ candidate: WindowSelectionCandidate) {
+    guard phase == .selecting else { return }
+    hoveredWindowCandidate = nil
+    beginAnnotating(with: Self.localFrame(for: candidate.target.frame, in: desktopFrame))
   }
 
   func attach(window: NSWindow) {

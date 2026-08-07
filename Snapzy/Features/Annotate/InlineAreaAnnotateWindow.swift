@@ -22,6 +22,8 @@ final class InlineAreaAnnotateCoordinator {
     saveDirectory: URL,
     outputFormat: ImageFormat,
     context: CaptureContext = .empty,
+    prefetchedContentTask: ShareableContentPrefetchTask? = nil,
+    excludeOwnApplication: Bool = false,
     onComplete: @escaping (CaptureResult) -> Void
   ) {
     closeActiveWindows()
@@ -73,6 +75,8 @@ final class InlineAreaAnnotateCoordinator {
       saveDirectory: saveDirectory,
       outputFormat: outputFormat,
       context: context,
+      prefetchedContentTask: prefetchedContentTask,
+      excludeOwnApplication: excludeOwnApplication,
       onComplete: wrappedOnComplete
     )
 
@@ -221,10 +225,18 @@ private struct InlineAreaAnnotateRootView: View {
   @State private var activeResizeHandle: InlineAreaResizeHandle?
   @State private var cursorIndicatorPoint: CGPoint?
   @State private var propertiesContentWidth: CGFloat = 0
+  /// Viewport point where a gesture began on a hovered window, while it's still ambiguous
+  /// whether this will resolve as a click (select the window) or a drag (manual region
+  /// selection) — mirrors plain area screenshot's `pendingWindowDetectionStartPoint`.
+  @State private var pendingWindowSelectionStart: CGPoint?
+  private let windowDetectionDragThreshold: CGFloat = 4.0
 
   var body: some View {
     GeometryReader { geometry in
-      let desktopRect = resizePreviewRect ?? movingPreviewRect ?? session.selectionRect
+      let hoveredWindowDesktopRect = session.hoveredWindowCandidate.map {
+        InlineAreaAnnotateSession.localFrame(for: $0.target.frame, in: session.desktopFrame)
+      }
+      let desktopRect = resizePreviewRect ?? movingPreviewRect ?? session.selectionRect ?? hoveredWindowDesktopRect
       let viewportRect = desktopRect.map(rectInViewport)
       let isSelectionPreviewing = resizePreviewRect != nil || movingPreviewRect != nil
       let showsCursorIndicator = movingPreviewRect != nil
@@ -295,9 +307,13 @@ private struct InlineAreaAnnotateRootView: View {
         case let .active(location):
           cursorIndicatorPoint = location
           updateNativeCursorForIndicator(showsCursorIndicator)
+          if session.phase == .selecting {
+            session.updateHoveredWindow(atScreenPoint: screenPoint(fromDesktopPoint: desktopPoint(for: location)))
+          }
         case .ended:
           cursorIndicatorPoint = nil
           InlineAreaNativeCursor.restoreArrow()
+          session.hoveredWindowCandidate = nil
         }
       }
       .inlineAreaSelectionGesture(selectionGesture, isEnabled: session.phase == .selecting)
@@ -315,6 +331,7 @@ private struct InlineAreaAnnotateRootView: View {
         && (0 ... display.localFrame.height).contains(candidate.y)
       if inBounds {
         cursorIndicatorPoint = candidate
+        session.updateHoveredWindow(atScreenPoint: screenPoint(fromDesktopPoint: session.currentDesktopMouseLocation))
       }
     }
   }
@@ -323,6 +340,34 @@ private struct InlineAreaAnnotateRootView: View {
     DragGesture(minimumDistance: 0, coordinateSpace: .named(InlineAreaCoordinateSpace.root))
       .onChanged { value in
         guard session.phase == .selecting else { return }
+
+        if pendingWindowSelectionStart == nil, session.selectionRect == nil,
+           session.hoveredWindowCandidate != nil {
+          // Don't commit to a manual drag yet — the gesture might resolve as a click on the
+          // hovered window instead; crossing the threshold below promotes it to a real drag.
+          pendingWindowSelectionStart = value.startLocation
+        }
+
+        if let pendingStart = pendingWindowSelectionStart {
+          let distance = hypot(value.location.x - pendingStart.x, value.location.y - pendingStart.y)
+          guard distance >= windowDetectionDragThreshold else {
+            // Still within the click/drag ambiguity window — keep tracking whatever window is
+            // under the (still not-yet-a-drag) pointer.
+            cursorIndicatorPoint = value.location
+            session.updateHoveredWindow(atScreenPoint: screenPoint(fromDesktopPoint: desktopPoint(for: value.location)))
+            return
+          }
+          // Crossed the threshold: this is a drag, not a click. Replay it as a manual selection
+          // starting from the original point so the drawn rect matches what was dragged.
+          pendingWindowSelectionStart = nil
+          session.hoveredWindowCandidate = nil
+          cursorIndicatorPoint = value.location
+          updateNativeCursorForIndicator(true)
+          session.beginSelection(at: desktopPoint(for: pendingStart))
+          session.updateSelection(to: desktopPoint(for: value.location))
+          return
+        }
+
         let currentLocation = desktopPoint(for: value.location)
         cursorIndicatorPoint = value.location
         updateNativeCursorForIndicator(true)
@@ -331,6 +376,19 @@ private struct InlineAreaAnnotateRootView: View {
       }
       .onEnded { value in
         guard session.phase == .selecting else { return }
+
+        if pendingWindowSelectionStart != nil {
+          // Released before crossing the drag threshold: treat it as a click on the hovered
+          // window rather than an (empty, sub-threshold) manual region.
+          pendingWindowSelectionStart = nil
+          if let candidate = session.hoveredWindowCandidate {
+            session.selectWindow(candidate)
+          }
+          cursorIndicatorPoint = nil
+          InlineAreaNativeCursor.restoreArrow()
+          return
+        }
+
         session.endSelection(at: desktopPoint(for: value.location))
         cursorIndicatorPoint = nil
         InlineAreaNativeCursor.restoreArrow()
@@ -356,6 +414,13 @@ private struct InlineAreaAnnotateRootView: View {
       x: desktopPoint.x - display.localFrame.minX,
       y: desktopPoint.y - display.localFrame.minY
     )
+  }
+
+  /// Inverse of `InlineAreaAnnotateSession.localDesktopPoint(for:)` — converts this session's
+  /// desktop coordinate space back to real AppKit global screen coordinates, the space
+  /// `WindowCaptureTarget.frame` (and so `WindowSelectionSnapshot.hitTest(at:)`) uses.
+  private func screenPoint(fromDesktopPoint point: CGPoint) -> CGPoint {
+    CGPoint(x: point.x + session.desktopFrame.minX, y: session.desktopFrame.maxY - point.y)
   }
 
   /// `AreaSelectionMagnifier` expects AppKit-convention points (bottom-left origin, matching

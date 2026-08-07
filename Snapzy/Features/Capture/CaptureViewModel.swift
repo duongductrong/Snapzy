@@ -835,7 +835,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           frozenSession: frozenSession,
           saveDirectory: actualSaveDirectory,
           outputFormat: self.resolvedFormat,
-          context: captureContext
+          context: captureContext,
+          prefetchedContentTask: prefetchedContentTask,
+          excludeOwnApplication: excludeOwnApplication
         ) { [weak self] result in
           guard let self else {
             hiddenWindowSession.restore()
