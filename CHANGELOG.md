@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.13] - 2026-08-07
+
+### Bug Fixes
+-  retain hover states and transient UI in object cutout capture #422 (b7385ac)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.12 (2308d49)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.12] - 2026-08-07
 
 ### Features
