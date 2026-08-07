@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.12] - 2026-08-07
+
+### Features
+-  Add OCR text extraction (#468) (53f91ee)
+
+### Chore
+- chore: bump version to v1.31.0-beta.12 (#469) (ac6b3db)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.11] - 2026-08-04
 
 ### Features
