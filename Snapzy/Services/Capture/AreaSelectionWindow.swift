@@ -3857,19 +3857,34 @@ final class AreaSelectionOverlayView: NSView {
     updateWindowHover(at: localPoint)
   }
 
+  /// AppKit global screen coordinates (bottom-left origin) to Quartz global coordinates
+  /// (top-left origin, what `CGEvent.location` and `SmartElementQueryService.updateLocation`
+  /// use) — a self-inverse flip against the main display's height.
+  private func quartzGlobalPoint(fromAppKitScreenPoint point: CGPoint) -> CGPoint {
+    let mainScreenHeight = NSScreen.screens.first(where: { $0.displayID == CGMainDisplayID() })?.frame.height
+      ?? CGDisplayBounds(CGMainDisplayID()).height
+    return CGPoint(x: point.x, y: mainScreenHeight - point.y)
+  }
+
   private func updateWindowHover(at point: CGPoint) {
     currentMousePosition = point
-    guard window != nil else {
+    guard let window else {
       hoveredWindowCandidate = nil
       if interactionMode == .applicationWindow {
         updateApplicationSelectionLayers()
       }
       return
     }
+    // Convert the already-live `point` the caller just measured, rather than re-reading
+    // `NSEvent.mouseLocation` independently: live-passthrough capture's `CGEvent` tap consumes
+    // every mouse-moved event for its own hover tracking, so `NSEvent.mouseLocation` stops
+    // advancing while it's active and stays frozen at the session-start position — `point` is
+    // always live because it comes from whichever source (a real mouse-moved event, or the
+    // tap's own tracked position under passthrough) the caller already resolved correctly.
     #if DEBUG
-      let screenPoint = testMouseLocationOverride ?? NSEvent.mouseLocation
+      let screenPoint = testMouseLocationOverride ?? window.convertPoint(toScreen: convert(point, to: nil))
     #else
-      let screenPoint = NSEvent.mouseLocation
+      let screenPoint = window.convertPoint(toScreen: convert(point, to: nil))
     #endif
     hoveredWindowCandidate = windowSelectionSnapshot?.hitTest(at: screenPoint)
     // Auto-detection also layers in element-level detection (a button, a popup, an element
@@ -3878,7 +3893,15 @@ final class AreaSelectionOverlayView: NSView {
     // `smartElementCancellable` and re-renders once it does. Scoped to auto-detection only:
     // the explicit "A" toggle mode is for selecting a whole window on purpose.
     if isAutoElementDetectionActive, interactionMode == .manualRegion {
-      SmartElementQueryService.shared.updateMouseLocation(pid: hoveredWindowCandidate?.target.ownerPID)
+      // `updateLocation(_:pid:)`, not `updateMouseLocation(pid:)`: the latter internally
+      // re-reads `CGEvent(source: nil)?.location`, which goes stale under live-passthrough
+      // capture (see its doc comment) — `screenPoint` above is already the correct, live
+      // position (it's what window-level hit-testing uses), just in AppKit's bottom-left
+      // origin instead of the top-left origin `CGEvent.location` uses.
+      SmartElementQueryService.shared.updateLocation(
+        quartzGlobalPoint(fromAppKitScreenPoint: screenPoint),
+        pid: hoveredWindowCandidate?.target.ownerPID
+      )
     }
     if interactionMode == .applicationWindow {
       updateApplicationSelectionLayers()

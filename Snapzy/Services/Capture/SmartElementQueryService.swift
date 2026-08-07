@@ -77,9 +77,26 @@ final class SmartElementQueryService {
   // MARK: - Public API
 
   /// Push the current cursor location (read here so callers never have to fetch it).
+  ///
+  /// Only safe when nothing else is intercepting mouse-moved events system-wide. Plain area
+  /// screenshot's live-passthrough capture installs a `CGEvent` tap that consumes every
+  /// mouse-moved event for its own hover tracking — with that tap active, `CGEvent(source:
+  /// nil)?.location` stops advancing (it reflects the last event actually delivered through
+  /// the normal dispatch path, which the tap intercepts first) and stays frozen at wherever the
+  /// cursor was when the tap engaged, even though the pointer keeps moving. Callers in that
+  /// situation already have a live, correct point from their own tap callback and should use
+  /// `updateLocation(_:pid:)` instead.
   func updateMouseLocation(pid: Int32? = nil) {
     guard let location = CGEvent(source: nil)?.location else { return }
     inputSubject.send((location, pid))
+  }
+
+  /// Push an explicit screen point (Quartz global coordinates, top-left origin — the same
+  /// space `CGEvent.location` uses) through the debounced input pipeline, for callers that
+  /// already have a live, correct cursor position and can't rely on `updateMouseLocation`'s
+  /// internal re-read — see its doc comment for why that can go stale.
+  func updateLocation(_ point: CGPoint, pid: Int32? = nil) {
+    inputSubject.send((point, pid))
   }
 
   /// Push an explicit point through the debounced input pipeline.

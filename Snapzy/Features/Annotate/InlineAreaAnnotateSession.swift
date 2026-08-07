@@ -220,7 +220,15 @@ final class InlineAreaAnnotateSession: ObservableObject {
     // result arrives later via `subscribeToSmartElementHighlights` and updates
     // `hoveredSmartElementRect` once it does.
     guard autoDetectElementUnderCursor else { return }
-    SmartElementQueryService.shared.updateMouseLocation(pid: hoveredWindowCandidate?.target.ownerPID)
+    // `updateLocation(_:pid:)`, not `updateMouseLocation(pid:)`: the latter internally
+    // re-reads `CGEvent(source: nil)?.location`, which can go stale if anything else is
+    // consuming mouse-moved events system-wide — `point` above is already a live, correct
+    // position, just in AppKit's bottom-left origin instead of the top-left origin
+    // `CGEvent.location` uses.
+    let mainScreenHeight = NSScreen.screens.first(where: { $0.displayID == CGMainDisplayID() })?.frame.height
+      ?? CGDisplayBounds(CGMainDisplayID()).height
+    let quartzPoint = CGPoint(x: point.x, y: mainScreenHeight - point.y)
+    SmartElementQueryService.shared.updateLocation(quartzPoint, pid: hoveredWindowCandidate?.target.ownerPID)
   }
 
   /// Crops the backdrop to the selected window and jumps straight to `.annotating`, the same
