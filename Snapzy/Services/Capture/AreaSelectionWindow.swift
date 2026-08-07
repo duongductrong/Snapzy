@@ -341,6 +341,10 @@ final class AreaSelectionController: NSObject {
     } else {
       window.overlayView.clearBackdrop()
     }
+    // Applies regardless of which branch above ran — a frozen session (e.g.
+    // screenshot-and-annotate) already has its backdrop ready and never touches
+    // `clearBackdrop`, so the "show magnifier by default" preference must be applied here too.
+    window.overlayView.resetMagnifierZoomForNewSession()
     window.selectionDelegate = self
     window.orderFrontRegardless()
     window.overlayView.setAllowsApplicationWindowSelection(allowsApplicationWindowSelection)
@@ -1977,6 +1981,9 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
 
   func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool {
     guard window.displayID == keyboardOwnerDisplayID else { return false }
+    if window.overlayView.copyMagnifierColorIfActive(for: event) {
+      return true
+    }
     return handleSessionKeyEvent(event)
   }
 
@@ -2522,24 +2529,24 @@ final class AreaSelectionOverlayView: NSView {
     rootLayer.addSublayer(cursorProxyLayer)
 
     sizeIndicatorBackgroundLayer = CALayer()
-    sizeIndicatorBackgroundLayer.backgroundColor = NSColor.clear.cgColor
-    sizeIndicatorBackgroundLayer.cornerRadius = 4
+    sizeIndicatorBackgroundLayer.backgroundColor = CoordinateBubbleStyle.backgroundColor.cgColor
+    sizeIndicatorBackgroundLayer.cornerRadius = CoordinateBubbleStyle.cornerRadius
     sizeIndicatorBackgroundLayer.actions = disabledActions
     sizeIndicatorBackgroundLayer.isHidden = true
+    // The magnifier's own layers are added lazily, well after this one, and would otherwise
+    // stack on top of (and fully hide) this indicator whenever the two overlap on screen —
+    // easy to hit, since the magnifier grew considerably and now near screen edges/corners
+    // (exactly where users lean on this indicator most) it can flip to the same side as this
+    // label. Pin both indicator layers above the magnifier's default z-position (0).
+    sizeIndicatorBackgroundLayer.zPosition = 10
     rootLayer.addSublayer(sizeIndicatorBackgroundLayer)
 
     sizeIndicatorTextLayer = CATextLayer()
     configureOverlayTextLayer(sizeIndicatorTextLayer)
     sizeIndicatorTextLayer.font = coordinateIndicatorFont as CTFont
     sizeIndicatorTextLayer.fontSize = coordinateIndicatorFont.pointSize
-    sizeIndicatorTextLayer.foregroundColor = NSColor(white: 0.05, alpha: 1.0).cgColor
-    configureShadow(
-      for: sizeIndicatorTextLayer,
-      color: .white,
-      offset: CGSize(width: 0.5, height: -0.5),
-      radius: 0.1,
-      opacity: 1.0
-    )
+    sizeIndicatorTextLayer.foregroundColor = CoordinateBubbleStyle.textColor.cgColor
+    sizeIndicatorTextLayer.zPosition = 10
     rootLayer.addSublayer(sizeIndicatorTextLayer)
 
     modeHintBackgroundLayer = CALayer()
@@ -2989,6 +2996,23 @@ final class AreaSelectionOverlayView: NSView {
     magnifier.zoom = 1.0
   }
 
+  /// Applies the magnifier's session-start preferences ("show magnifier by default", "show
+  /// color picker panel") to a window newly entering a selection session. Called from
+  /// `configureSessionWindow` — shared by session start and mid-session display attach —
+  /// rather than from `applyBackdrop`/`clearBackdrop` directly, since a frozen session (e.g.
+  /// screenshot-and-annotate) already has its backdrop ready and takes the `applyBackdrop`
+  /// path, which must not reset these on every reapplication.
+  func resetMagnifierZoomForNewSession() {
+    let showsMagnifierByDefault = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool ?? false
+    magnifier.resetZoom(showByDefault: showsMagnifierByDefault)
+    magnifier.showsColorPanel = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotShowMagnifierColorPanel) as? Bool ?? true
+    // Coordinates live in the panel, not the separate `updateCoordinateIndicator` bubble, once
+    // the magnifier is active — see the comment there. Same behavior as screenshot-and-annotate.
+    magnifier.showsCoordinatesInPanel = true
+  }
+
   // MARK: - Magnifying Glass Zoom Implementation
 
   private func updateMagnifier(at point: CGPoint) {
@@ -3058,6 +3082,65 @@ final class AreaSelectionOverlayView: NSView {
 
     var testMagnifierImageLayer: CALayer? {
       magnifier.imageLayer
+    }
+
+    var testMagnifierGridLayer: CAShapeLayer? {
+      magnifier.gridLayer
+    }
+
+    var testMagnifierCrosshairLayer: CAShapeLayer? {
+      magnifier.crosshairLayer
+    }
+
+    var testMagnifierPanelLayer: CALayer? {
+      magnifier.panelLayer
+    }
+
+    var testMagnifierColorTextLayer: CATextLayer? {
+      magnifier.colorTextLayer
+    }
+
+    var testMagnifierCoordinateTextLayer: CATextLayer? {
+      magnifier.coordinateTextLayer
+    }
+
+    var testMagnifierImageOuterBorderLayer: CALayer? {
+      magnifier.imageOuterBorderLayer
+    }
+
+    var testMagnifierShowsColorPanel: Bool {
+      get { magnifier.showsColorPanel }
+      set { magnifier.showsColorPanel = newValue }
+    }
+
+    var testMagnifierShowsCoordinatesInPanel: Bool {
+      get { magnifier.showsCoordinatesInPanel }
+      set { magnifier.showsCoordinatesInPanel = newValue }
+    }
+
+    var testMagnifierHintPrefixTextLayer: CATextLayer? {
+      magnifier.hintPrefixTextLayer
+    }
+
+    var testMagnifierHintTextLayer: CATextLayer? {
+      magnifier.hintTextLayer
+    }
+
+    var testMagnifierKeyCapBackgroundLayer: CALayer? {
+      magnifier.hintKeyCapBackgroundLayer
+    }
+
+    var testMagnifierTotalHeight: CGFloat {
+      magnifier.totalHeight
+    }
+
+    var testMagnifierLastHexColor: String? {
+      magnifier.lastHexColor
+    }
+
+    @discardableResult
+    func testCopyMagnifierColor() -> Bool {
+      magnifier.copyColorToClipboard()
     }
 
     var testReverseMagnifierZoomDirection: Bool {
@@ -3274,12 +3357,12 @@ final class AreaSelectionOverlayView: NSView {
     ]
   }
 
-  private let coordinateIndicatorFont = NSFont.systemFont(ofSize: 10, weight: .medium)
+  private let coordinateIndicatorFont = CoordinateBubbleStyle.font
 
   private var coordinateTextAttributes: [NSAttributedString.Key: Any] {
     [
       .font: coordinateIndicatorFont,
-      .foregroundColor: NSColor(white: 0.15, alpha: 1.0),
+      .foregroundColor: CoordinateBubbleStyle.textColor,
     ]
   }
 
@@ -3330,6 +3413,16 @@ final class AreaSelectionOverlayView: NSView {
 
   func hideMagnifier() {
     magnifier.removeLayers()
+  }
+
+  /// Copies the magnifier's currently sampled pixel color to the clipboard if the plain "C"
+  /// key (no modifiers) was pressed while the magnifier is active. Returns false — and leaves
+  /// the event unhandled — for any other key or when the magnifier is inactive, so normal
+  /// typing (e.g. future shortcuts sharing this key) is never swallowed.
+  func copyMagnifierColorIfActive(for event: NSEvent) -> Bool {
+    guard event.keyCode == 8 else { return false } // kVK_ANSI_C
+    guard event.modifierFlags.intersection([.command, .option, .control]).isEmpty else { return false }
+    return magnifier.copyColorToClipboard()
   }
 
   /// Hide the drawn cursor proxy (pointer left this display, session ended, or
@@ -3437,14 +3530,22 @@ final class AreaSelectionOverlayView: NSView {
   }
 
   private func updateCoordinateIndicator(at point: CGPoint) {
-    guard isMouseOver, interactionMode == .manualRegion, !hasVisibleSelectionRect else {
+    // While the magnifier is active, its own panel shows coordinates (see
+    // `AreaSelectionMagnifier.showsCoordinatesInPanel`) — matching screenshot-and-annotate,
+    // which has no indicator of its own and relies on that panel exclusively. Showing this
+    // indicator too would just duplicate it, so this one stands down and leaves the panel as
+    // the single source once the magnifier takes over.
+    guard isMouseOver, interactionMode == .manualRegion, !hasVisibleSelectionRect,
+          magnifier.zoom <= 1.0 else {
       hideSizeIndicator()
       return
     }
 
     let localX = Int(point.x)
     let localY = Int(bounds.height - point.y)
-    let text = "\(localX)\n\(localY)"
+    // Single line — matches the coordinate bubble in the screenshot-and-annotate flow
+    // (`InlineAreaMagnifierHostView`), which stands in for this indicator there.
+    let text = "\(localX), \(localY)"
 
     let attributes = coordinateTextAttributes
     let textSize: CGSize

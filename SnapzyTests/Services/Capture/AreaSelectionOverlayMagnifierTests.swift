@@ -64,4 +64,136 @@ final class AreaSelectionOverlayMagnifierTests: AreaSelectionOverlayTestCase {
     // Zoom should increase (1.0 + 1.0 = 2.0)
     XCTAssertEqual(overlayView.testMagnifierZoom, 2.0)
   }
+
+  func testCopyColorToClipboard_copiesSampledHexWhenActive() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString("unchanged", forType: .string)
+
+    XCTAssertTrue(overlayView.testCopyMagnifierColor())
+    XCTAssertEqual(pasteboard.string(forType: .string), "#000000")
+  }
+
+  func testCopyColorToClipboard_returnsFalseWhenInactive() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+
+    // Magnifier never activated (zoom stays at 1.0) — nothing to copy
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString("unchanged", forType: .string)
+
+    XCTAssertFalse(overlayView.testCopyMagnifierColor())
+    XCTAssertEqual(pasteboard.string(forType: .string), "unchanged")
+  }
+
+  func testCopyMagnifierColorIfActive_plainCKeyCopiesColor() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    pasteboard.setString("unchanged", forType: .string)
+
+    let event = try! XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "c",
+      charactersIgnoringModifiers: "c",
+      isARepeat: false,
+      keyCode: 8 // kVK_ANSI_C
+    ))
+
+    XCTAssertTrue(overlayView.copyMagnifierColorIfActive(for: event))
+    XCTAssertEqual(pasteboard.string(forType: .string), "#000000")
+  }
+
+  func testResetMagnifierZoomForNewSession_respectsShowByDefaultPreference() {
+    let originalValue = UserDefaults.standard.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    defer {
+      if let originalValue {
+        UserDefaults.standard.set(originalValue, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+      } else {
+        UserDefaults.standard.removeObject(forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+      }
+    }
+
+    // GIVEN: The preference is off (the default) — a window newly entering a session
+    // (whether via `clearBackdrop` or, for a frozen session, `applyBackdrop`) starts deactivated
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertEqual(overlayView.testMagnifierZoom, 1.0)
+
+    // WHEN: The preference is turned on and a new session starts
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    overlayView.resetMagnifierZoomForNewSession()
+
+    // THEN: The magnifier starts already active — this must hold even for a frozen session
+    // (e.g. screenshot-and-annotate) whose backdrop is already prepared before the window
+    // shows, so this can't rely on `clearBackdrop` ever running.
+    XCTAssertGreaterThan(overlayView.testMagnifierZoom, 1.0)
+  }
+
+  func testResetMagnifierZoomForNewSession_enablesPanelCoordinates() {
+    // Plain area screenshot has its own `updateCoordinateIndicator` bubble, but that bubble
+    // stands down once the magnifier activates (see the comment there) — so the panel must be
+    // the one showing coordinates from session start, same as screenshot-and-annotate (which
+    // has no bubble of its own at all).
+    overlayView.testMagnifierShowsCoordinatesInPanel = false
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertTrue(overlayView.testMagnifierShowsCoordinatesInPanel)
+  }
+
+  func testCopyMagnifierColorIfActive_ignoresOtherKeysAndModifiedC() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)
+    overlayView.applyBackdrop(backdrop)
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    // A different key entirely
+    let otherKeyEvent = try! XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "v",
+      charactersIgnoringModifiers: "v",
+      isARepeat: false,
+      keyCode: 9 // kVK_ANSI_V
+    ))
+    XCTAssertFalse(overlayView.copyMagnifierColorIfActive(for: otherKeyEvent))
+
+    // Cmd+C should be left alone (e.g. so system copy semantics elsewhere aren't shadowed)
+    let commandCEvent = try! XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [.command],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "c",
+      charactersIgnoringModifiers: "c",
+      isARepeat: false,
+      keyCode: 8
+    ))
+    XCTAssertFalse(overlayView.copyMagnifierColorIfActive(for: commandCEvent))
+  }
 }

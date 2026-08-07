@@ -313,6 +313,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     freeze_area = true
     show_selection_area_overlay = false
     reverse_magnifier_zoom_direction = true
+    show_magnifier_by_default = true
 
     [recording]
     video_editor_zoom_transition_duration = 0.55
@@ -341,6 +342,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotFreezeArea) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, true)
     
     // recording
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.videoEditorZoomTransitionDuration) as? Double, 0.55)

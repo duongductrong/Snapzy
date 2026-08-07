@@ -2657,6 +2657,26 @@ nonisolated enum L10n {
       defaultValue: "Invert the scroll wheel zoom direction (scroll down to zoom in)",
       comment: "Capture preferences setting description"
     )
+    static let showMagnifierByDefaultTitle = string(
+      "preferences-capture.show-magnifier-by-default-title",
+      defaultValue: "Show magnifier by default",
+      comment: "Capture preferences setting title"
+    )
+    static let showMagnifierByDefaultDescription = string(
+      "preferences-capture.show-magnifier-by-default-description",
+      defaultValue: "Start area selection with the magnifier already active, instead of requiring ⌘+scroll",
+      comment: "Capture preferences setting description"
+    )
+    static let showMagnifierColorPanelTitle = string(
+      "preferences-capture.show-magnifier-color-panel-title",
+      defaultValue: "Show color picker panel",
+      comment: "Capture preferences setting title"
+    )
+    static let showMagnifierColorPanelDescription = string(
+      "preferences-capture.show-magnifier-color-panel-description",
+      defaultValue: "Show the color swatch and hex value below the magnifier preview; turn off to keep only the pixel grid and crosshair",
+      comment: "Capture preferences setting description"
+    )
     static let overlaySection = string(
       "preferences-capture.overlay-section",
       defaultValue: "Overlay",
@@ -7475,6 +7495,25 @@ nonisolated enum L10n {
         shortcut
       )
     }
+    /// Text shown before the "C" key cap in the screenshot magnifier's color panel, e.g. the
+    /// "Press" in "Press [C] to Copy". Empty for languages where the natural phrasing puts
+    /// nothing before the key (e.g. Japanese "[C] キーでコピー").
+    static let magnifierCopyColorHintPrefix = string(
+      "screen-capture.magnifier-copy-color-hint-prefix",
+      defaultValue: "Press",
+      comment: "Text shown before the \"C\" key cap in the screenshot magnifier's color panel, e.g. \"Press [C] to Copy\". Can be empty if the language's phrasing has nothing before the key."
+    )
+    /// Text shown after the "C" key cap, e.g. the "to Copy" in "Press [C] to Copy".
+    static let magnifierCopyColorHintSuffix = string(
+      "screen-capture.magnifier-copy-color-hint-suffix",
+      defaultValue: "to Copy",
+      comment: "Text shown after the \"C\" key cap in the screenshot magnifier's color panel, e.g. \"Press [C] to Copy\""
+    )
+    static let magnifierColorCopiedFeedback = string(
+      "screen-capture.magnifier-color-copied-feedback",
+      defaultValue: "Copied",
+      comment: "Brief confirmation shown in the screenshot magnifier's color panel after the sampled color is copied to the clipboard"
+    )
     static func captureFailed(_ reason: String) -> String {
       format(
         "screen-capture.capture-failed",

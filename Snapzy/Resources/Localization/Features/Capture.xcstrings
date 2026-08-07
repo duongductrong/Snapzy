@@ -17103,6 +17103,136 @@
         }
       }
     },
+    "preferences-capture.auto-detect-window-under-cursor-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenster unter dem Cursor automatisch erkennen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatically detect window under cursor"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detectar automáticamente la ventana bajo el cursor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détecter automatiquement la fenêtre sous le curseur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カーソル下のウィンドウを自動検出"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "커서 아래 창 자동 감지"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Автоматически определять окно под курсором"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tự động phát hiện cửa sổ dưới con trỏ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自动检测光标所在窗口"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動偵測游標所在視窗"
+          }
+        }
+      }
+    },
+    "preferences-capture.auto-detect-window-under-cursor-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hebt das Fenster unter dem Cursor hervor und wählt es aus, ohne dass zuerst eine Taste gedrückt werden muss; ziehen Sie stattdessen, um eine manuelle Auswahl zu zeichnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight and select the window under the cursor without pressing a key first; drag to draw a manual selection instead"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resalta y selecciona la ventana bajo el cursor sin necesidad de pulsar una tecla antes; arrastra para dibujar una selección manual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Met en surbrillance et sélectionne la fenêtre sous le curseur sans appuyer sur une touche au préalable ; faites glisser pour dessiner une sélection manuelle"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーを押さなくてもカーソル下のウィンドウをハイライトして選択します。ドラッグすると手動選択になります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "키를 누르지 않아도 커서 아래 창을 강조 표시하고 선택합니다. 드래그하면 수동 선택으로 전환됩니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выделяет и выбирает окно под курсором без предварительного нажатия клавиши; перетащите, чтобы выделить область вручную"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Làm nổi bật và chọn cửa sổ dưới con trỏ mà không cần nhấn phím trước; kéo để vẽ vùng chọn thủ công"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需按键，鼠标悬停即可高亮并选中光标下的窗口；拖动鼠标则改为手动框选"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不需按鍵，滑鼠移到視窗上即可高亮並選取該視窗；拖曳滑鼠則改為手動框選"
+          }
+        }
+      }
+    },
     "preferences-capture.overlay-section": {
       "extractionState": "manual",
       "localizations": {
@@ -20315,132 +20445,457 @@
         }
       }
     },
-    "preferences-capture.auto-detect-window-under-cursor-title": {
+    "screen-capture.magnifier-color-copied-feedback": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fenster unter dem Cursor automatisch erkennen"
+            "value": "Kopiert"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatically detect window under cursor"
+            "value": "Copied"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Detectar automáticamente la ventana bajo el cursor"
+            "value": "Copiado"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Détecter automatiquement la fenêtre sous le curseur"
+            "value": "Copié"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "カーソル下のウィンドウを自動検出"
+            "value": "コピーしました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "커서 아래 창 자동 감지"
+            "value": "복사됨"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Автоматически определять окно под курсором"
+            "value": "Скопировано"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tự động phát hiện cửa sổ dưới con trỏ"
+            "value": "Đã sao chép"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "自动检测光标所在窗口"
+            "value": "已复制"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動偵測游標所在視窗"
+            "value": "已複製"
           }
         }
       }
     },
-    "preferences-capture.auto-detect-window-under-cursor-description": {
+    "preferences-capture.show-magnifier-by-default-title": {
       "extractionState": "manual",
       "localizations": {
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hebt das Fenster unter dem Cursor hervor und wählt es aus, ohne dass zuerst eine Taste gedrückt werden muss; ziehen Sie stattdessen, um eine manuelle Auswahl zu zeichnen"
+            "value": "Lupe standardmäßig anzeigen"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Highlight and select the window under the cursor without pressing a key first; drag to draw a manual selection instead"
+            "value": "Show magnifier by default"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resalta y selecciona la ventana bajo el cursor sin necesidad de pulsar una tecla antes; arrastra para dibujar una selección manual"
+            "value": "Mostrar lupa de forma predeterminada"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Met en surbrillance et sélectionne la fenêtre sous le curseur sans appuyer sur une touche au préalable ; faites glisser pour dessiner une sélection manuelle"
+            "value": "Afficher la loupe par défaut"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キーを押さなくてもカーソル下のウィンドウをハイライトして選択します。ドラッグすると手動選択になります"
+            "value": "デフォルトでルーペを表示"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "키를 누르지 않아도 커서 아래 창을 강조 표시하고 선택합니다. 드래그하면 수동 선택으로 전환됩니다"
+            "value": "기본적으로 돋보기 표시"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Выделяет и выбирает окно под курсором без предварительного нажатия клавиши; перетащите, чтобы выделить область вручную"
+            "value": "Показывать лупу по умолчанию"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Làm nổi bật và chọn cửa sổ dưới con trỏ mà không cần nhấn phím trước; kéo để vẽ vùng chọn thủ công"
+            "value": "Hiển thị kính lúp theo mặc định"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无需按键，鼠标悬停即可高亮并选中光标下的窗口；拖动鼠标则改为手动框选"
+            "value": "默认显示放大镜"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "不需按鍵，滑鼠移到視窗上即可高亮並選取該視窗；拖曳滑鼠則改為手動框選"
+            "value": "預設顯示放大鏡"
+          }
+        }
+      }
+    },
+    "preferences-capture.show-magnifier-by-default-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bereichsauswahl mit bereits aktiver Lupe starten, statt ⌘+Scrollen zu erfordern"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start area selection with the magnifier already active, instead of requiring ⌘+scroll"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iniciar la selección de área con la lupa ya activa, en lugar de requerir ⌘+desplazamiento"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Démarrer la sélection de zone avec la loupe déjà active, au lieu de nécessiter ⌘+molette"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘+スクロールを必要とせず、範囲選択の開始時からルーペを有効にする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘+스크롤 없이 영역 선택을 시작할 때부터 돋보기를 활성화합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Начинать выделение области с уже активной лупой, без необходимости ⌘+прокрутки"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt đầu chọn vùng với kính lúp đã hoạt động sẵn, thay vì yêu cầu ⌘+cuộn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "开始区域选择时默认激活放大镜,无需按住 ⌘ 滚动"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "開始區域選取時預設啟用放大鏡,不需按住 ⌘ 捲動"
+          }
+        }
+      }
+    },
+    "screen-capture.magnifier-copy-color-hint-prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drücke"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsa"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appuyez sur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нажмите"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nhấn"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按"
+          }
+        }
+      }
+    },
+    "screen-capture.magnifier-copy-color-hint-suffix": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "zum Kopieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "to Copy"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "para copiar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pour copier"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キーでコピー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "를 눌러 복사"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", чтобы скопировать"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "để sao chép"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制色值"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複製色值"
+          }
+        }
+      }
+    },
+    "preferences-capture.show-magnifier-color-panel-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Farbwähler-Panel anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show color picker panel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar panel del selector de color"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher le panneau du sélecteur de couleur"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カラーピッカーパネルを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "색상 선택 패널 표시"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать панель выбора цвета"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị bảng chọn màu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示取色面板"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示取色面板"
+          }
+        }
+      }
+    },
+    "preferences-capture.show-magnifier-color-panel-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeigt Farbmuster und Hex-Wert unterhalb der Lupenvorschau; deaktivieren, um nur Pixelraster und Fadenkreuz zu behalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the color swatch and hex value below the magnifier preview; turn off to keep only the pixel grid and crosshair"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Muestra la muestra de color y el valor hexadecimal debajo de la vista previa de la lupa; desactívalo para conservar solo la cuadrícula de píxeles y la mira"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Affiche la nuance de couleur et la valeur hexadécimale sous l'aperçu de la loupe ; désactivez pour ne conserver que la grille de pixels et le réticule"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ルーペのプレビュー下にカラースウォッチと16進値を表示します。オフにするとピクセルグリッドと十字線のみになります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "돋보기 미리보기 아래에 색상 견본과 16진수 값을 표시합니다. 끄면 픽셀 그리드와 십자선만 남습니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать образец цвета и hex-значение под превью лупы; отключите, чтобы оставить только пиксельную сетку и перекрестие"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị mẫu màu và giá trị hex bên dưới bản xem trước kính lúp; tắt để chỉ giữ lưới pixel và dấu thập"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在放大镜预览下方显示色块和十六进制色值；关闭后只保留像素网格和十字准星"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在放大鏡預覽下方顯示色塊和十六進位色值；關閉後只保留像素網格和十字準星"
           }
         }
       }
