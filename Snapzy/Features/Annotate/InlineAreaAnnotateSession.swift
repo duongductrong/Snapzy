@@ -67,6 +67,11 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// `hoveredWindowCandidate`, but shared at the session level since any of the per-display
   /// views may need to render the highlight for a window on another display.
   @Published var hoveredWindowCandidate: WindowSelectionCandidate?
+  /// The AX element under the cursor (`SmartElementQueryService`), in AppKit global screen
+  /// coordinates — same space as `hoveredWindowCandidate.target.frame`. When present it takes
+  /// priority over the whole-window highlight, mirroring plain area screenshot's
+  /// `hoveredSmartElementRect`. Arrives asynchronously — see `subscribeToSmartElementHighlights`.
+  @Published var hoveredSmartElementRect: CGRect?
 
   let state: AnnotateState
   let desktopFrame: CGRect
@@ -93,6 +98,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// query resolves, so hover hit-testing simply has nothing to match until then.
   private var windowSelectionSnapshot: WindowSelectionSnapshot?
   private var windowSelectionTask: Task<Void, Never>?
+  private var smartElementCancellable: AnyCancellable?
   /// The system cursor is hidden for the whole `.selecting` phase — `InlineAreaAnnotateWindow`
   /// draws the crosshair itself (the same image/positioning as plain area screenshot's
   /// `cursorProxyLayer`) instead of relying on a native `NSCursor.set()`, which this
@@ -146,10 +152,24 @@ final class InlineAreaAnnotateSession: ObservableObject {
     // front; `beginAnnotating(with:)` shows it again once selection ends.
     cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
     startWindowSelectionQuery(prefetchedContentTask: prefetchedContentTask, excludeOwnApplication: excludeOwnApplication)
+    if autoDetectWindowUnderCursor {
+      SmartElementQueryService.shared.ensureAccessibilityPermission()
+    }
+    subscribeToSmartElementHighlights()
   }
 
   deinit {
     windowSelectionTask?.cancel()
+    SmartElementQueryService.shared.cancelPendingQueries()
+  }
+
+  private func subscribeToSmartElementHighlights() {
+    smartElementCancellable = SmartElementQueryService.shared.elementDetectedPublisher
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] rect in
+        guard let self, autoDetectWindowUnderCursor, phase == .selecting else { return }
+        hoveredSmartElementRect = rect
+      }
   }
 
   /// The "automatically detect window under cursor" preference (see
@@ -183,7 +203,15 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// `updateWindowHover`. `point` is in the same coordinate space as `WindowCaptureTarget.frame`
   /// (AppKit global screen coordinates, bottom-left origin).
   func updateHoveredWindow(atScreenPoint point: CGPoint) {
-    hoveredWindowCandidate = autoDetectWindowUnderCursor ? windowSelectionSnapshot?.hitTest(at: point) : nil
+    guard autoDetectWindowUnderCursor else {
+      hoveredWindowCandidate = nil
+      return
+    }
+    hoveredWindowCandidate = windowSelectionSnapshot?.hitTest(at: point)
+    // Also layers in element-level detection (a button, a popup, an element inside a browser
+    // page) on top of the whole-window highlight — the result arrives later via
+    // `subscribeToSmartElementHighlights` and updates `hoveredSmartElementRect` once it does.
+    SmartElementQueryService.shared.updateMouseLocation(pid: hoveredWindowCandidate?.target.ownerPID)
   }
 
   /// Crops the backdrop to the selected window and jumps straight to `.annotating`, the same
@@ -191,7 +219,18 @@ final class InlineAreaAnnotateSession: ObservableObject {
   func selectWindow(_ candidate: WindowSelectionCandidate) {
     guard phase == .selecting else { return }
     hoveredWindowCandidate = nil
+    hoveredSmartElementRect = nil
     beginAnnotating(with: Self.localFrame(for: candidate.target.frame, in: desktopFrame))
+  }
+
+  /// Crops the backdrop to the detected AX element rect and jumps straight to `.annotating` —
+  /// same idea as `selectWindow(_:)`, but for the finer-grained element-level highlight.
+  /// `screenRect` is in the same coordinate space as `WindowCaptureTarget.frame`.
+  func selectElement(atScreenRect screenRect: CGRect) {
+    guard phase == .selecting else { return }
+    hoveredWindowCandidate = nil
+    hoveredSmartElementRect = nil
+    beginAnnotating(with: Self.localFrame(for: screenRect, in: desktopFrame))
   }
 
   func attach(window: NSWindow) {

@@ -233,8 +233,11 @@ private struct InlineAreaAnnotateRootView: View {
 
   var body: some View {
     GeometryReader { geometry in
-      let hoveredWindowDesktopRect = session.hoveredWindowCandidate.map {
-        InlineAreaAnnotateSession.localFrame(for: $0.target.frame, in: session.desktopFrame)
+      // The finer-grained AX element highlight (a button, a popup, an element inside a browser
+      // page) takes priority over the whole-window highlight when both are present.
+      let hoveredHighlightScreenRect = session.hoveredSmartElementRect ?? session.hoveredWindowCandidate?.target.frame
+      let hoveredWindowDesktopRect = hoveredHighlightScreenRect.map {
+        InlineAreaAnnotateSession.localFrame(for: $0, in: session.desktopFrame)
       }
       let desktopRect = resizePreviewRect ?? movingPreviewRect ?? session.selectionRect ?? hoveredWindowDesktopRect
       let viewportRect = desktopRect.map(rectInViewport)
@@ -314,6 +317,7 @@ private struct InlineAreaAnnotateRootView: View {
           cursorIndicatorPoint = nil
           InlineAreaNativeCursor.restoreArrow()
           session.hoveredWindowCandidate = nil
+          session.hoveredSmartElementRect = nil
         }
       }
       .inlineAreaSelectionGesture(selectionGesture, isEnabled: session.phase == .selecting)
@@ -361,6 +365,7 @@ private struct InlineAreaAnnotateRootView: View {
           // starting from the original point so the drawn rect matches what was dragged.
           pendingWindowSelectionStart = nil
           session.hoveredWindowCandidate = nil
+          session.hoveredSmartElementRect = nil
           cursorIndicatorPoint = value.location
           updateNativeCursorForIndicator(true)
           session.beginSelection(at: desktopPoint(for: pendingStart))
@@ -379,9 +384,12 @@ private struct InlineAreaAnnotateRootView: View {
 
         if pendingWindowSelectionStart != nil {
           // Released before crossing the drag threshold: treat it as a click on the hovered
-          // window rather than an (empty, sub-threshold) manual region.
+          // window (or, if a finer element was detected, that element) rather than an (empty,
+          // sub-threshold) manual region.
           pendingWindowSelectionStart = nil
-          if let candidate = session.hoveredWindowCandidate {
+          if let smartElementRect = session.hoveredSmartElementRect {
+            session.selectElement(atScreenRect: smartElementRect)
+          } else if let candidate = session.hoveredWindowCandidate {
             session.selectWindow(candidate)
           }
           cursorIndicatorPoint = nil
