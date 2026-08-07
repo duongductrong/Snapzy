@@ -152,7 +152,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     // front; `beginAnnotating(with:)` shows it again once selection ends.
     cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
     startWindowSelectionQuery(prefetchedContentTask: prefetchedContentTask, excludeOwnApplication: excludeOwnApplication)
-    if autoDetectWindowUnderCursor {
+    if autoDetectElementUnderCursor {
       SmartElementQueryService.shared.ensureAccessibilityPermission()
     }
     subscribeToSmartElementHighlights()
@@ -167,7 +167,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     smartElementCancellable = SmartElementQueryService.shared.elementDetectedPublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] rect in
-        guard let self, autoDetectWindowUnderCursor, phase == .selecting else { return }
+        guard let self, autoDetectElementUnderCursor, phase == .selecting else { return }
         hoveredSmartElementRect = rect
       }
   }
@@ -177,6 +177,13 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// both entry points behave identically.
   var autoDetectWindowUnderCursor: Bool {
     defaults.object(forKey: PreferencesKeys.screenshotAutoDetectWindowUnderCursor) as? Bool ?? false
+  }
+
+  /// The "also detect specific elements" preference, layered on top of the window-level one —
+  /// only meaningful (and only exposed as enabled in Preferences) once that one is also on.
+  var autoDetectElementUnderCursor: Bool {
+    autoDetectWindowUnderCursor
+      && (defaults.object(forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor) as? Bool ?? false)
   }
 
   /// Kicks off the same window enumeration plain area screenshot uses for its "A" toggle mode
@@ -209,8 +216,10 @@ final class InlineAreaAnnotateSession: ObservableObject {
     }
     hoveredWindowCandidate = windowSelectionSnapshot?.hitTest(at: point)
     // Also layers in element-level detection (a button, a popup, an element inside a browser
-    // page) on top of the whole-window highlight — the result arrives later via
-    // `subscribeToSmartElementHighlights` and updates `hoveredSmartElementRect` once it does.
+    // page) on top of the whole-window highlight, when that's separately turned on — the
+    // result arrives later via `subscribeToSmartElementHighlights` and updates
+    // `hoveredSmartElementRect` once it does.
+    guard autoDetectElementUnderCursor else { return }
     SmartElementQueryService.shared.updateMouseLocation(pid: hoveredWindowCandidate?.target.ownerPID)
   }
 

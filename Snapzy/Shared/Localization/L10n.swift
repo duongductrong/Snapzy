@@ -2647,6 +2647,16 @@ nonisolated enum L10n {
       defaultValue: "Highlight and select the window under the cursor without pressing a key first; drag to draw a manual selection instead",
       comment: "Capture preferences setting description"
     )
+    static let autoDetectElementUnderCursorTitle = string(
+      "preferences-capture.auto-detect-element-under-cursor-title",
+      defaultValue: "Also detect specific elements, not just windows",
+      comment: "Capture preferences setting title"
+    )
+    static let autoDetectElementUnderCursorDescription = string(
+      "preferences-capture.auto-detect-element-under-cursor-description",
+      defaultValue: "Highlight a specific button, popup, or webpage element when hovering, instead of the whole window. Requires the setting above.",
+      comment: "Capture preferences setting description"
+    )
     static let reverseMagnifierZoomDirectionTitle = string(
       "preferences-capture.reverse-magnifier-zoom-direction-title",
       defaultValue: "Reverse magnifier zoom direction",

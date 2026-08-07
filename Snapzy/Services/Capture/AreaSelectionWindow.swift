@@ -2332,6 +2332,9 @@ final class AreaSelectionOverlayView: NSView {
   /// while on, hovering in manual-region mode previews whatever window is under the cursor —
   /// the ⇧A toggle to `.applicationWindow` mode is no longer needed to see it.
   private var autoDetectWindowUnderCursor = false
+  /// "Also detect specific elements" preference — layered on top of the one above, only
+  /// meaningful (and only exposed as enabled in Preferences) once that one is also on.
+  private var autoDetectElementUnderCursor = false
   /// Set on mouseDown in manual-region mode when the press landed on a hovered window and
   /// auto-detection is on — the gesture hasn't yet been classified as a click (select the
   /// window) or a drag (fall through to manual region selection). Cleared by whichever happens.
@@ -2458,7 +2461,7 @@ final class AreaSelectionOverlayView: NSView {
     smartElementCancellable = SmartElementQueryService.shared.elementDetectedPublisher
       .receive(on: DispatchQueue.main)
       .sink { [weak self] rect in
-        guard let self, isAutoWindowDetectionActive, interactionMode == .manualRegion, !isSelecting else { return }
+        guard let self, isAutoElementDetectionActive, interactionMode == .manualRegion, !isSelecting else { return }
         hoveredSmartElementRect = rect
         updateApplicationSelectionLayers()
       }
@@ -2718,11 +2721,13 @@ final class AreaSelectionOverlayView: NSView {
       .object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool ?? false
     autoDetectWindowUnderCursor = UserDefaults.standard
       .object(forKey: PreferencesKeys.screenshotAutoDetectWindowUnderCursor) as? Bool ?? false
+    autoDetectElementUnderCursor = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor) as? Bool ?? false
     pendingWindowDetectionStartPoint = nil
     // Drop any rect left over from a previous session/hover — this pooled view is about to be
     // reused, and a stale finer-grained highlight must not flash before the first real hover.
     hoveredSmartElementRect = nil
-    if autoDetectWindowUnderCursor {
+    if isAutoElementDetectionActive {
       SmartElementQueryService.shared.ensureAccessibilityPermission()
     } else {
       SmartElementQueryService.shared.cancelPendingQueries()
@@ -3872,7 +3877,7 @@ final class AreaSelectionOverlayView: NSView {
     // (debounced, backgrounded) AX query here; the result arrives later via
     // `smartElementCancellable` and re-renders once it does. Scoped to auto-detection only:
     // the explicit "A" toggle mode is for selecting a whole window on purpose.
-    if isAutoWindowDetectionActive, interactionMode == .manualRegion {
+    if isAutoElementDetectionActive, interactionMode == .manualRegion {
       SmartElementQueryService.shared.updateMouseLocation(pid: hoveredWindowCandidate?.target.ownerPID)
     }
     if interactionMode == .applicationWindow {
@@ -3889,7 +3894,7 @@ final class AreaSelectionOverlayView: NSView {
     verticalCrosshairLayer.isHidden = true
     hideSizeIndicator()
 
-    let highlightScreenRect: CGRect? = (isAutoWindowDetectionActive ? hoveredSmartElementRect : nil)
+    let highlightScreenRect: CGRect? = (isAutoElementDetectionActive ? hoveredSmartElementRect : nil)
       ?? hoveredWindowCandidate?.target.frame
     if let highlightScreenRect {
       let localRect = convertToLocalRect(highlightScreenRect).intersection(bounds)
@@ -4092,7 +4097,7 @@ final class AreaSelectionOverlayView: NSView {
         // sub-threshold) manual region.
         pendingWindowDetectionStartPoint = nil
         updateWindowHover(at: point)
-        if isAutoWindowDetectionActive, let hoveredSmartElementRect {
+        if isAutoElementDetectionActive, let hoveredSmartElementRect {
           delegate?.overlayView(self, didSelectRect: convertToLocalRect(hoveredSmartElementRect))
         } else if let hoveredWindowCandidate {
           delegate?.overlayView(self, didSelectWindow: hoveredWindowCandidate.target)
@@ -4154,6 +4159,12 @@ final class AreaSelectionOverlayView: NSView {
   /// hit-test against (`allowsApplicationWindowSelection`, set from `applicationConfiguration`).
   private var isAutoWindowDetectionActive: Bool {
     autoDetectWindowUnderCursor && allowsApplicationWindowSelection
+  }
+
+  /// Whether the finer-grained AX element highlight (see `hoveredSmartElementRect`) should
+  /// layer on top of the whole-window one above.
+  private var isAutoElementDetectionActive: Bool {
+    isAutoWindowDetectionActive && autoDetectElementUnderCursor
   }
 
   var isManualSelectionInProgress: Bool {
