@@ -3092,6 +3092,18 @@ final class AreaSelectionOverlayView: NSView {
     var testCursorProxyLayer: CALayer {
       cursorProxyLayer
     }
+
+    var testSelectionBorderLayer: CAShapeLayer {
+      selectionBorderLayer
+    }
+
+    var testHoveredWindowCandidate: WindowSelectionCandidate? {
+      hoveredWindowCandidate
+    }
+
+    var testIsAutoWindowDetectionActive: Bool {
+      isAutoWindowDetectionActive
+    }
   #endif
 
   /// Initialize crosshair at current mouse position (called on activation)
@@ -3475,6 +3487,14 @@ final class AreaSelectionOverlayView: NSView {
       return
     }
 
+    // Auto-detection already surfaces window selection via hover — the "press A" prompt would
+    // be misleading now that the shortcut isn't needed to see it.
+    if interactionMode == .manualRegion, isAutoWindowDetectionActive {
+      modeHintBackgroundLayer.isHidden = true
+      modeHintTextLayer.isHidden = true
+      return
+    }
+
     let shortcut: CaptureOverlayShortcut? = switch selectionMode {
     case .screenshot, .scrollingCapture:
       CaptureOverlayShortcutSettings.applicationCaptureShortcut
@@ -3707,7 +3727,11 @@ final class AreaSelectionOverlayView: NSView {
       }
       return
     }
-    let screenPoint = NSEvent.mouseLocation
+    #if DEBUG
+      let screenPoint = testMouseLocationOverride ?? NSEvent.mouseLocation
+    #else
+      let screenPoint = NSEvent.mouseLocation
+    #endif
     hoveredWindowCandidate = windowSelectionSnapshot?.hitTest(at: screenPoint)
     if interactionMode == .applicationWindow {
       updateApplicationSelectionLayers()
