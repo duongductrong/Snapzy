@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.15] - 2026-08-08
+
+### Bug Fixes
+-  pin Quick Access panel to capture screen on multi-display setups #467 (#479) (1f884f2d)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.14 (e964bfc6)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.14] - 2026-08-08
 
 ### Features
