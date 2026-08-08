@@ -9303,6 +9303,71 @@
         }
       }
     },
+    "screen-capture.repeat-area-no-previous-selection": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein vorheriger Bereich — wählen Sie zuerst mit ⇧⌘4 einen Bereich"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No previous area — select an area with ⇧⌘4 first"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay un área previa — seleccione un área con ⇧⌘4 primero"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune zone précédente — sélectionnez d'abord une zone avec ⇧⌘4"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の領域がありません — まず ⇧⌘4 で領域を選択してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 영역 없음 — ⇧⌘4로 먼저 영역을 선택하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Нет предыдущей области — сначала выберите область с помощью ⇧⌘4"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa có vùng nào — hãy chọn vùng bằng ⇧⌘4 trước"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可重复截取的区域 — 请先使用 ⇧⌘4 选择区域"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "沒有可重複擷取的區域 — 請先使用 ⇧⌘4 選擇區域"
+          }
+        }
+      }
+    },
     "screen-capture.save-failed": {
       "extractionState": "stale",
       "localizations": {

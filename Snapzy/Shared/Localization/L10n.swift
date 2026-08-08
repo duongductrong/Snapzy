@@ -668,6 +668,11 @@ nonisolated enum L10n {
       defaultValue: "Capture Area",
       comment: "Action title for area screenshot capture"
     )
+    static let captureRepeatArea = string(
+      "action.capture-repeat-area",
+      defaultValue: "Repeat Area Screenshot",
+      comment: "Action title for repeating the last area screenshot"
+    )
     static let captureAreaAnnotate = string(
       "action.capture-area-annotate",
       defaultValue: "Capture Markup",
@@ -3358,6 +3363,11 @@ nonisolated enum L10n {
       "preferences-shortcuts.capture-area-description",
       defaultValue: "Select a region to capture",
       comment: "Description for area capture shortcut"
+    )
+    static let captureRepeatAreaDescription = string(
+      "preferences-shortcuts.capture-repeat-area-description",
+      defaultValue: "Capture the previously selected area again",
+      comment: "Description for repeat area capture shortcut"
     )
     static let captureAreaAnnotateDescription = string(
       "preferences-shortcuts.capture-area-annotate-description",
@@ -7387,6 +7397,11 @@ nonisolated enum L10n {
       "screen-capture.no-display-found",
       defaultValue: "No display found to capture",
       comment: "Error shown when no display matches the selected screenshot target"
+    )
+    static let repeatAreaNoPreviousSelection = string(
+      "screen-capture.repeat-area-no-previous-selection",
+      defaultValue: "No previous area — select an area with ⇧⌘4 first",
+      comment: "Toast shown when repeat area capture is triggered before any area selection exists"
     )
     nonisolated static let saveLocationPermissionRequired = string(
       "screen-capture.save-location-permission-required",

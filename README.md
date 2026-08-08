@@ -143,6 +143,7 @@ Control Snapzy directly from Raycast using the official extension:
 | Fullscreen screenshot                                   | `⇧⌘3`    |
 | Area screenshot                                         | `⇧⌘4`    |
 | ↳ Toggle manual/app window mode (`Application Capture`) | `A`      |
+| Repeat last area screenshot                             | `⌃⌘⇧4`   |
 | Area screenshot + inline annotate                       | `⇧⌘7`    |
 | Scrolling screenshot                                    | `⇧⌘6`    |
 | Screen recording (start/stop toggle)                    | `⇧⌘5`    |
@@ -163,6 +164,7 @@ Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (s
 | --------------------- | --------------------------------- |
 | Fullscreen screenshot | `snapzy://capture/fullscreen`     |
 | Area screenshot       | `snapzy://capture/area`           |
+| Repeat area screenshot | `snapzy://capture/repeat-area`   |
 | Application window    | `snapzy://capture/application`    |
 | Active window         | `snapzy://capture/active-window`  |
 | Area annotate         | `snapzy://capture/area-annotate`  |

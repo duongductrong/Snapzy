@@ -188,6 +188,11 @@ final class AreaSelectionController: NSObject {
     dismissesAfterSelection = value
   }
 
+  /// Whether pressing Return during this session instantly completes with the last
+  /// stored area-screenshot rect. Opt-in per session so OCR/cutout selections
+  /// (which share `.screenshot` mode) are unaffected.
+  private var allowsRepeatAreaCompletion = false
+
   // MARK: - Initialization
 
   override private init() {
@@ -433,6 +438,7 @@ final class AreaSelectionController: NSObject {
     dismissesAfterSelection: Bool = true,
     onDisplayActivationRequested: AreaSelectionDisplayActivationHandler? = nil,
     onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil,
+    allowsRepeatAreaCompletion: Bool = false,
     completion: @escaping AreaSelectionResultCompletion
   ) {
     startSelectionSession(
@@ -443,7 +449,8 @@ final class AreaSelectionController: NSObject {
       dismissesAfterSelection: dismissesAfterSelection,
       completionWithResult: completion,
       onDisplayActivationRequested: onDisplayActivationRequested,
-      onTransitionRecapture: onTransitionRecapture
+      onTransitionRecapture: onTransitionRecapture,
+      allowsRepeatAreaCompletion: allowsRepeatAreaCompletion
     )
   }
 
@@ -457,7 +464,8 @@ final class AreaSelectionController: NSObject {
     completionWithMode: AreaSelectionCompletionWithMode? = nil,
     completionWithResult: AreaSelectionResultCompletion? = nil,
     onDisplayActivationRequested: AreaSelectionDisplayActivationHandler? = nil,
-    onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil
+    onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil,
+    allowsRepeatAreaCompletion: Bool = false
   ) {
     // Atomic replacement: a presenting session must be torn down through the normal cancel
     // path — never silently dropped. This runs BEFORE the new completion is stored (below), so
@@ -505,6 +513,7 @@ final class AreaSelectionController: NSObject {
     self.completionWithResult = completionWithResult
     displayActivationHandler = onDisplayActivationRequested
     transitionRecaptureHandler = onTransitionRecapture
+    self.allowsRepeatAreaCompletion = allowsRepeatAreaCompletion
     requestedDisplayActivationIDs.removeAll()
     deferredBackdropDisplayIDs.removeAll()
     // Per-session recovery memory for the presentation watchdog (kept across mid-session
@@ -846,7 +855,7 @@ final class AreaSelectionController: NSObject {
   }
 
   private func isSessionKeyEvent(_ event: NSEvent) -> Bool {
-    event.keyCode == 53 || isApplicationToggleEvent(event)
+    event.keyCode == 53 || isApplicationToggleEvent(event) || isRepeatAreaEvent(event)
   }
 
   private func handleSessionKeyEvent(_ event: NSEvent) -> Bool {
@@ -855,8 +864,31 @@ final class AreaSelectionController: NSObject {
       return true
     }
 
+    if isRepeatAreaEvent(event) {
+      return completeWithLastAreaSelection()
+    }
+
     guard isApplicationToggleEvent(event) else { return false }
     toggleInteractionMode()
+    return true
+  }
+
+  /// Return key repeats the last area-screenshot selection instantly, reusing the
+  /// normal completion pipeline. Gated on the per-session opt-in so OCR/cutout
+  /// selections (same `.screenshot` mode) keep their default Return behavior.
+  private func isRepeatAreaEvent(_ event: NSEvent) -> Bool {
+    event.keyCode == 36 && allowsRepeatAreaCompletion // Return key
+  }
+
+  private func completeWithLastAreaSelection() -> Bool {
+    guard manualSelectionStartPoint == nil,
+          !windowPool.values.contains(where: \.overlayView.isManualSelectionInProgress),
+          let rect = ScreenshotLastAreaStore.load() else {
+      return false
+    }
+    let center = CGPoint(x: rect.midX, y: rect.midY)
+    guard let sourceWindow = window(containing: center) ?? activeWindow else { return false }
+    completeSelection(target: .rect(rect), from: sourceWindow)
     return true
   }
 

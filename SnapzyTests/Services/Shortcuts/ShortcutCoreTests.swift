@@ -15,6 +15,7 @@ final class ShortcutCoreTests: XCTestCase {
   func testDefaultGlobalShortcuts_matchDocumentedKeys() {
     XCTAssertEqual(ShortcutConfig.defaultFullscreen.keyCode, UInt32(kVK_ANSI_3))
     XCTAssertEqual(ShortcutConfig.defaultArea.keyCode, UInt32(kVK_ANSI_4))
+    XCTAssertEqual(ShortcutConfig.defaultRepeatArea.keyCode, UInt32(kVK_ANSI_4))
     XCTAssertEqual(ShortcutConfig.defaultAreaAnnotate.keyCode, UInt32(kVK_ANSI_7))
     XCTAssertEqual(ShortcutConfig.defaultRecording.keyCode, UInt32(kVK_ANSI_5))
     XCTAssertEqual(ShortcutConfig.defaultScrollingCapture.keyCode, UInt32(kVK_ANSI_6))
@@ -27,6 +28,7 @@ final class ShortcutCoreTests: XCTestCase {
     XCTAssertEqual(ShortcutConfig.defaultHistory.keyCode, UInt32(kVK_ANSI_H))
 
     let expectedModifiers = UInt32(cmdKey | shiftKey)
+    XCTAssertEqual(ShortcutConfig.defaultRepeatArea.modifiers, UInt32(controlKey | cmdKey | shiftKey))
     XCTAssertEqual(ShortcutConfig.defaultFullscreen.modifiers, expectedModifiers)
     XCTAssertEqual(ShortcutConfig.defaultAreaAnnotate.modifiers, expectedModifiers)
     XCTAssertEqual(ShortcutConfig.defaultHistory.modifiers, expectedModifiers)
@@ -65,7 +67,7 @@ final class ShortcutCoreTests: XCTestCase {
   func testGlobalShortcutKindSystemConflictRelevance_isLimitedToSystemScreenshotDefaults() {
     let relevant = Set(GlobalShortcutKind.allCases.filter(\.isSystemConflictRelevant))
 
-    XCTAssertEqual(relevant, [.fullscreen, .area, .recording])
+    XCTAssertEqual(relevant, [.fullscreen, .area, .repeatArea, .recording])
   }
 
   func testAreaAnnotateDefaultEnabledUnlessPersistedDisabled() {

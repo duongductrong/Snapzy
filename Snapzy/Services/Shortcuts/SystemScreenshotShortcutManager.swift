@@ -292,6 +292,8 @@ final class SystemScreenshotShortcutManager {
       return [.saveScreenToFile, .copyScreenToClipboard]
     case .area:
       return [.saveAreaToFile, .copyAreaToClipboard]
+    case .repeatArea:
+      return [.copyAreaToClipboard]
     case .recording:
       return [.screenshotOptions]
     default:

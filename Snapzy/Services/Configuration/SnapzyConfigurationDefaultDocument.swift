@@ -257,6 +257,7 @@ enum SnapzyConfigurationDefaultDocument {
     switch kind {
     case .fullscreen: return .defaultFullscreen
     case .area: return .defaultArea
+    case .repeatArea: return .defaultRepeatArea
     case .areaAnnotate: return .defaultAreaAnnotate
     case .activeWindow: return .defaultActiveWindowCapture
     case .scrollingCapture: return .defaultScrollingCapture

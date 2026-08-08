@@ -18,7 +18,7 @@ flowchart TD
     F --> G["dispatch to capture / record / open actions"]
 ```
 
-- Engine: `KeyboardShortcutManager.shared` (`Snapzy/Services/Shortcuts/KeyboardShortcutManager.swift`) — Carbon `RegisterEventHotKey` / `UnregisterEventHotKey`; hotkey IDs use signatures `ZSF1`…`ZSFK` (`0x5A53_46xx`).
+- Engine: `KeyboardShortcutManager.shared` (`Snapzy/Services/Shortcuts/KeyboardShortcutManager.swift`) — Carbon `RegisterEventHotKey` / `UnregisterEventHotKey`; hotkey IDs use signatures `ZSF1`…`ZSFL` (`0x5A53_46xx`).
 - Config model: `ShortcutConfig { keyCode: UInt32, modifiers: UInt32 }` (Carbon modifiers), persisted as JSON in UserDefaults under per-shortcut keys (`fullscreenShortcut`, `areaShortcut`, `recordingShortcut`, …).
 - Fn modifier: custom bit `ShortcutConfig.functionCarbonModifier = 0x2000`. Carbon `RegisterEventHotKey` cannot express Fn, so Fn-containing configs are **not** Carbon-registered — they are collected into `fnBindings` and dispatched via global+local `NSEvent` keyDown monitors (`updateFnMonitors()` / `handleFnKeyDown`), matched exactly (keyCode + full modifier set incl. Fn) by `ShortcutConfig.matches(event:)`. Fn-only combos (e.g. `fn+F3`) and Fn+modifier combos (e.g. `fn+⌘+F3`) both fire; the non-Fn sibling combo is never hijacked.
   - Requires Accessibility permission (global key monitors silently deliver nothing without it) — the Shortcuts settings tab shows a hint row when an Fn binding exists but `AXIsProcessTrusted()` is false (`KeyboardShortcutManager.hasFnBoundShortcuts`).
@@ -33,12 +33,13 @@ flowchart TD
 
 ## Global shortcut table
 
-All 18 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
+All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
 
 | Kind | Action | Default |
 | --- | --- | --- |
 | `fullscreen` | Capture Fullscreen | ⌘⇧3 |
 | `area` | Capture Area | ⌘⇧4 |
+| `repeatArea`| Repeat Area Screenshot| ⌃⌘⇧4|
 | `areaAnnotate` | Capture Area & Annotate | ⌘⇧7 |
 | `activeWindow` | Capture Active Window | ⌘⇧9 |
 | `scrollingCapture` | Scrolling Capture | ⌘⇧6 |
@@ -67,6 +68,7 @@ All 18 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 - Child mode (modifiers == 0): pressed *inside* the area-selection / recording overlay to switch to application-window mode. Menu bar items show it as a suffix of the parent shortcut.
 - Independent mode (modifiers ≠ 0): registered as its own global hotkey (`applicationCaptureHotkeyRef` / `applicationRecordingHotkeyRef`) firing `.captureApplication` / `.recordApplication`.
 - Keys: `shortcuts.area.applicationCapture`, `shortcuts.recording.applicationCapture`.
+- During an area-screenshot selection, **Return** instantly completes with the last selected area (per-session opt-in `allowsRepeatAreaCompletion`; OCR/cutout selections are unaffected). See [CAPTURE.md](CAPTURE.md).
 
 ## Recording-behavior notes
 
@@ -98,7 +100,7 @@ All 18 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 
 - Cross-namespace duplicate checks (global ↔ annotate action ↔ independent overlay ↔ annotate tool): duplicate → `.reject` with `.error` severity, blocks assignment.
 - System screenshot conflicts: `SystemScreenshotShortcutManager` reads `com.apple.symbolichotkeys` via `UserDefaults(suiteName:)` (requires the shared-preference entitlement — see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)). Symbolic hotkey IDs: 28 (save area), 29 (copy area), 30 (save screen), 31 (copy screen), 184 (screenshot options).
-- Only `fullscreen`, `area`, `recording` are `isSystemConflictRelevant`; conflicts surface as `.warning` (accepted, non-blocking).
+- Only `fullscreen`, `area`, `repeatArea`, `recording` are `isSystemConflictRelevant`; conflicts surface as `.warning` (accepted, non-blocking). `repeatArea` ships as ⌃⌘⇧4, which collides with macOS symbolic hotkey 29 (copy area to clipboard) on default systems — the warning UI covers it.
 - Prompt-once flow: `systemShortcutsDisablePromptSeen` UserDefaults flag gates the "disable macOS shortcuts" prompt; unreadable plist → assume no conflict (no nag).
 
 ## Shortcut cheat sheet overlay
@@ -121,6 +123,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | --- | --- |
 | `snapzy://capture/fullscreen` | Capture fullscreen |
 | `snapzy://capture/area` | Capture area |
+| `snapzy://capture/repeat-area`| Repeat last area capture|
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |

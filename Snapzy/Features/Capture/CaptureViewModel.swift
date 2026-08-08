@@ -350,6 +350,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureFullscreen()
     case .captureArea:
       captureArea()
+    case .captureRepeatArea:
+      captureRepeatArea()
     case .captureAreaAnnotate:
       captureAreaAnnotate()
     case .captureApplication:
@@ -541,6 +543,93 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   func captureAreaAnnotate() {
     startInlineAreaAnnotateCapture()
+  }
+
+
+  /// Re-capture the most recently selected area screenshot rect without
+  /// re-entering selection mode. Never opens the selection flow: when no
+  /// previous area is stored (or it is no longer visible on any display), the
+  /// user is asked to capture an area first — via a native notification,
+  /// falling back to an in-app toast when notifications are unavailable.
+  func captureRepeatArea() {
+    // Prevent repeat capture while a selection overlay is active
+    if isAreaSelectionActive {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureRepeatArea blocked: already active")
+      return
+    }
+
+    guard let lastRect = ScreenshotLastAreaStore.load() else {
+      // No previous area stored — repeat must never enter the selection flow.
+      // Prefer a native notification; fall back to an in-app toast when
+      // notifications are unavailable or denied (mirrors OCRResultNotifier).
+      DiagnosticLogger.shared.log(.info, .capture, "Repeat area capture skipped: no stored area")
+      Task { @MainActor in
+        let delivered = await SystemNotificationService.shared.post(
+          title: L10n.Actions.captureRepeatArea,
+          body: L10n.ScreenCapture.repeatAreaNoPreviousSelection
+        )
+        if !delivered {
+          AppToastManager.shared.show(
+            message: L10n.ScreenCapture.repeatAreaNoPreviousSelection,
+            style: .warning
+          )
+        }
+      }
+      return
+    }
+
+    guard
+      let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+        promptMessage: L10n.Recording.chooseSaveLocationMessage
+      )
+    else {
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      return
+    }
+    saveDirectory = resolvedSaveDirectory
+
+    let captureContext = CaptureContext.fromFrontmostApp()
+    let showCursor = showsCursorInScreenshots
+    let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
+    let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
+    let prefetchedContentTask = captureManager.prefetchShareableContent(
+      includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
+    )
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
+
+    DiagnosticLogger.shared.log(.info, .capture, "Repeat area capture started", context: [
+      "rect": "\(Int(lastRect.width))x\(Int(lastRect.height))",
+    ])
+
+    Task { @MainActor in
+      defer { hiddenWindowSession.restore() }
+      self.isCapturing = true
+      await Task.yield()
+
+      let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+        for: .screenshot,
+        exportDirectory: resolvedSaveDirectory
+      )
+
+      let result = await self.captureManager.captureArea(
+        rect: lastRect,
+        saveDirectory: actualSaveDirectory,
+        format: self.resolvedFormat,
+        showCursor: showCursor,
+        excludeDesktopIcons: excludeDesktopIcons,
+        excludeDesktopWidgets: excludeDesktopWidgets,
+        excludeOwnApplication: excludeOwnApplication,
+        prefetchedContentTask: prefetchedContentTask,
+        context: captureContext
+      )
+
+      self.isCapturing = false
+      self.lastCaptureResult = result
+      if case .success = result {
+        SoundManager.playScreenshotCapture()
+      }
+    }
   }
 
   private func startAreaCapture(initialInteractionMode: AreaSelectionInteractionMode) {
@@ -962,7 +1051,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           excludeDesktopWidgets: excludeDesktopWidgets,
           excludeOwnApplication: excludeOwnApplication
         )
-      }
+      },
+      allowsRepeatAreaCompletion: true
     ) { [weak self] selection in
       guard let self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureArea completion: self deallocated")
@@ -981,6 +1071,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         DiagnosticLogger.shared.log(.info, .capture, "Area capture cancelled by user")
         lastCaptureResult = .failure(.cancelled)
         return
+      }
+
+      // Remember the manual area selection for instant repeat capture
+      if case .rect(let rect) = selection.target {
+        ScreenshotLastAreaStore.save(rect)
       }
 
       let selectionContext: CaptureContext = switch selection.target {
@@ -1184,7 +1279,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
       ),
       initialInteractionMode: initialInteractionMode,
-      dismissesAfterSelection: false
+      dismissesAfterSelection: false,
+      allowsRepeatAreaCompletion: true
     ) { [weak self] selection in
       guard let self else {
         hiddenWindowSession.restore()
@@ -1197,6 +1293,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         DiagnosticLogger.shared.log(.info, .capture, "Live area capture cancelled by user")
         lastCaptureResult = .failure(.cancelled)
         return
+      }
+
+      // Remember the manual area selection for instant repeat capture
+      if case .rect(let rect) = selection.target {
+        ScreenshotLastAreaStore.save(rect)
       }
 
       let selectionContext: CaptureContext = switch selection.target {

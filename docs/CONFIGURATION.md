@@ -210,6 +210,11 @@ key = "3"
 modifiers = ["command", "shift"]
 enabled = true
 
+[shortcuts.global.repeat_area]
+key = "4"
+modifiers = ["control", "command", "shift"]
+enabled = true
+
 [shortcuts.annotate_actions.auto_redact_sensitive_data]
 enabled = true
 key = ""

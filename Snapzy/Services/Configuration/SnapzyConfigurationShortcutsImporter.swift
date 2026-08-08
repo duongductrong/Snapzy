@@ -326,6 +326,8 @@ private extension KeyboardShortcutManager {
       setFullscreenShortcut(config)
     case .area:
       setAreaShortcut(config)
+    case .repeatArea:
+      setRepeatAreaShortcut(config)
     case .areaAnnotate:
       setAreaAnnotateShortcut(config)
     case .activeWindow:
