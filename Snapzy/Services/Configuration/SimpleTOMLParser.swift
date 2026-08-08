@@ -171,11 +171,41 @@ enum SimpleTOMLParser {
     return result
   }
 
+  /// Decodes TOML escape sequences in a single left-to-right pass.
+  ///
+  /// Each `\` is consumed together with the character that follows it, so a
+  /// pass can never re-process output produced by an earlier pass. This is the
+  /// exact inverse of `SimpleTOMLWriter.quote`, which makes export/import
+  /// lossless — a value containing a backslash followed by `n`/`t` (e.g.
+  /// `a\nb`) survives the round-trip instead of being turned into a real
+  /// newline/tab. Unknown escapes (`\x`) and a trailing backslash are kept
+  /// literal.
   private static func unescape(_ value: String) -> String {
-    value
-      .replacingOccurrences(of: "\\\"", with: "\"")
-      .replacingOccurrences(of: "\\\\", with: "\\")
-      .replacingOccurrences(of: "\\n", with: "\n")
-      .replacingOccurrences(of: "\\t", with: "\t")
+    var result = ""
+    result.reserveCapacity(value.count)
+    var index = value.startIndex
+    while index < value.endIndex {
+      if value[index] == "\\" {
+        let next = value.index(after: index)
+        guard next < value.endIndex else {
+          result.append("\\")
+          break
+        }
+        switch value[next] {
+        case "\"": result.append("\"")
+        case "\\": result.append("\\")
+        case "n": result.append("\n")
+        case "t": result.append("\t")
+        default:
+          result.append("\\")
+          result.append(value[next])
+        }
+        index = value.index(after: next)
+      } else {
+        result.append(value[index])
+        index = value.index(after: index)
+      }
+    }
+    return result
   }
 }
