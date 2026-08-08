@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.16] - 2026-08-08
+
+### Features
+-  Add "Include window shadow in Application Capture" preference (#433) (#474) (c4986601)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.15 (aa6b4a28)
+
+### Contributors
+- @YuriNachos
+- @github-actions[bot]
+
 ## [1.31.0-beta.15] - 2026-08-08
 
 ### Bug Fixes
