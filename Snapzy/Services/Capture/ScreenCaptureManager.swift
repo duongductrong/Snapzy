@@ -497,7 +497,8 @@ final class ScreenCaptureManager: ObservableObject {
       let outputScaleFactor = max(nativeScaleFactor, preferredScreenshotOutputScaleFactor)
 
       let config = SCStreamConfiguration()
-      if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
+      let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
+      if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow) }
       if #available(macOS 14.2, *) { config.captureResolution = .best }
       let captureFrame = matchedScreen?.frame ?? display.frame
       config.width = max(1, Int((captureFrame.width * nativeScaleFactor).rounded()))
@@ -1693,8 +1694,9 @@ final class ScreenCaptureManager: ObservableObject {
       value: 1,
       timescale: CMTimeScale(max(1, maximumFrameRate))
     )
+    let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
     if #available(macOS 14.0, *) {
-      configuration.ignoreShadowsSingleWindow = false
+      configuration.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow)
     }
     if #available(macOS 14.2, *) {
       configuration.captureResolution = .best
@@ -1800,7 +1802,8 @@ final class ScreenCaptureManager: ObservableObject {
     let fullCaptureHeight = max(1, Int((screenFrame.height * captureScale).rounded()))
 
     let config = SCStreamConfiguration()
-    if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = false }
+    let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
+    if #available(macOS 14.0, *) { config.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow) }
     if #available(macOS 14.2, *) { config.captureResolution = .best }
     config.width = fullCaptureWidth
     config.height = fullCaptureHeight
@@ -1870,7 +1873,8 @@ final class ScreenCaptureManager: ObservableObject {
     }
 
     let configuration = SCStreamConfiguration()
-    if #available(macOS 14.0, *) { configuration.ignoreShadowsSingleWindow = false }
+    let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
+    if #available(macOS 14.0, *) { configuration.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow) }
     if #available(macOS 14.2, *) { configuration.captureResolution = .best }
     configuration.width = max(1, Int((contentRect.width * scaleFactor).rounded()))
     configuration.height = max(1, Int((contentRect.height * scaleFactor).rounded()))
@@ -2237,7 +2241,8 @@ final class ScreenCaptureManager: ObservableObject {
     showsCursor: Bool
   ) -> SCStreamConfiguration {
     let configuration = SCStreamConfiguration()
-    if #available(macOS 14.0, *) { configuration.ignoreShadowsSingleWindow = false }
+    let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
+    if #available(macOS 14.0, *) { configuration.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow) }
     if #available(macOS 14.2, *) { configuration.captureResolution = .best }
     configuration.width = max(1, Int((screen.frame.width * scaleFactor).rounded()))
     configuration.height = max(1, Int((screen.frame.height * scaleFactor).rounded()))

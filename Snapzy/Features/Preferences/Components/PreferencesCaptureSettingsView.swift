@@ -38,6 +38,7 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.hideDesktopWidgets) private var hideDesktopWidgets = false
   @AppStorage(PreferencesKeys.screenshotIncludeOwnApp) private var includeOwnAppInScreenshots = false
   @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
+  @AppStorage(PreferencesKeys.captureIncludeWindowShadow) private var captureIncludeWindowShadow = true
   @AppStorage(PreferencesKeys.screenshotFreezeArea) private var freezeAreaCapture = false
   @AppStorage(PreferencesKeys.screenshotLivePassthrough) private var livePassthrough = true
   @State private var livePassthroughAccessibilityGranted = AXIsProcessTrusted()
@@ -205,6 +206,15 @@ struct CaptureSettingsView: View {
               description: L10n.PreferencesCapture.showCursorDescription
             ) {
               Toggle("", isOn: $screenshotShowCursor)
+                .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "shadow",
+              title: L10n.PreferencesCapture.includeWindowShadowTitle,
+              description: L10n.PreferencesCapture.includeWindowShadowDescription
+            ) {
+              Toggle("", isOn: $captureIncludeWindowShadow)
                 .labelsHidden()
             }
 

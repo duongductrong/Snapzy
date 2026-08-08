@@ -2672,6 +2672,16 @@ nonisolated enum L10n {
       defaultValue: "Include mouse pointer in captured screenshots",
       comment: "Capture preferences setting description"
     )
+    static let includeWindowShadowTitle = string(
+      "preferences-capture.include-window-shadow-title",
+      defaultValue: "Include window shadow",
+      comment: "Capture preferences setting title"
+    )
+    static let includeWindowShadowDescription = string(
+      "preferences-capture.include-window-shadow-description",
+      defaultValue: "Show the window drop shadow in Application Capture",
+      comment: "Capture preferences setting description"
+    )
     static let freezeAreaTitle = string(
       "preferences-capture.freeze-area-title",
       defaultValue: "Freeze screen",

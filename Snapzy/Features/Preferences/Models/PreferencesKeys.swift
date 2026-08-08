@@ -61,6 +61,7 @@ enum PreferencesKeys {
   static let screenshotFileNameTemplate = "screenshot.fileNameTemplate"
   static let screenshotIncludeOwnApp = "screenshot.includeOwnApp"
   static let screenshotShowCursor = "screenshot.showCursor"
+  static let captureIncludeWindowShadow = "capture.includeWindowShadow"
   static let screenshotFreezeArea = "screenshot.freezeArea"
   static let screenshotLivePassthrough = "screenshot.livePassthrough"
   static let screenshotShowSelectionAreaOverlay = "screenshot.showSelectionAreaOverlay"
