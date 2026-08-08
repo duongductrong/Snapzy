@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.14] - 2026-08-08
+
+### Features
+-  add repeat last area screenshot shortcut #460 (#475) (804c4e58)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.13 (158bd04e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.13] - 2026-08-07
 
 ### Bug Fixes
