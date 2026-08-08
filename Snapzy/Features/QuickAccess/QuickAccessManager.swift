@@ -1264,9 +1264,15 @@ final class QuickAccessManager: ObservableObject {
     )
   }
 
+  /// Ensure a panel exists for the capture that just landed, on the display that
+  /// capture happened on. A panel already sliding out is not reusable — it would
+  /// finish closing and swallow the new card — so that case gets a fresh show.
   private func showPanelIfNeeded() {
-    guard !panelController.isVisible else { return }
-    showPanel()
+    guard panelController.isVisible, !panelController.isDismissing else {
+      showPanel()
+      return
+    }
+    panelController.moveToActiveScreenIfNeeded()
   }
 
   private func hidePanel() {

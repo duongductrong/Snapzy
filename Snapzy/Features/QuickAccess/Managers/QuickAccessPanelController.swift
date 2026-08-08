@@ -31,7 +31,14 @@ final class QuickAccessPanelController {
   private var transitionToken: UInt64 = 0
   private var visibleItemCount = 0
   private var overlayScale: CGFloat = 1
+  /// Display the visible panel is pinned to; see `QuickAccessScreenAnchor`.
+  private var screenAnchor = QuickAccessScreenAnchor()
+  /// Screen the panel is currently positioned against.
+  var anchoredScreen: NSScreen { screenAnchor.screen }
   private var isAnimating: Bool { activeTransition != nil }
+  /// True while the panel is sliding/fading out. Callers must not reposition a
+  /// dying panel — they need a fresh `show()` instead.
+  var isDismissing: Bool { activeTransition == .exiting }
   private var reduceMotion: Bool {
     NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
   }
@@ -48,6 +55,7 @@ final class QuickAccessPanelController {
     overlayScale = scale
 
     let screen = ScreenUtility.activeScreen()
+    screenAnchor.anchor(to: screen)
     let targetOrigin = position.calculateOrigin(for: size, on: screen, padding: padding)
     let targetFrame = NSRect(origin: targetOrigin, size: size)
 
@@ -69,33 +77,65 @@ final class QuickAccessPanelController {
         panel.animator().alphaValue = 1
       }
     } else {
-      // Slide-in from off-screen
-      let offscreenOrigin = position.offscreenOrigin(for: size, on: screen, padding: padding)
-      let offscreenFrame = NSRect(origin: offscreenOrigin, size: size)
-
-      panel.setFrame(offscreenFrame, display: false)
-      panel.alphaValue = 1
-      panel.orderFrontRegardless()
-
-      runTransition(
-        .entering,
-        duration: QuickAccessAnimations.panelEnterDuration,
-        animations: { context in
-          context.timingFunction = CAMediaTimingFunction(
-            controlPoints: 0.22, 1.0, 0.36, 1.0  // Custom spring-like curve
-          )
-          panel.animator().setFrame(targetFrame, display: true)
-        },
-        completion: { [weak self] in
-          panel.updatePassthroughRegion(
-            itemCount: self?.visibleItemCount ?? 0,
-            scale: self?.overlayScale ?? 1
-          )
-        }
-      )
+      slideIn(panel, onto: screen, size: size)
     }
 
     QuickAccessSound.appear.play(reduceMotion: reduceMotion)
+  }
+
+  /// Re-anchor a visible panel to the display the user is capturing on.
+  ///
+  /// The panel is only positioned when it first appears, so a capture taken on
+  /// another display used to leave Quick Access stranded on the previous one
+  /// (#467). No-op when the cursor is still on the anchored display.
+  func moveToActiveScreenIfNeeded() {
+    guard let panel, !isDismissing, screenAnchor.anchorToActiveScreen() else { return }
+
+    let screen = screenAnchor.screen
+    let size = panel.frame.size
+
+    // Any in-flight enter belongs to the old display — supersede it so its
+    // completion/watchdog can't drag the panel back.
+    transitionToken &+= 1
+    activeTransition = nil
+
+    guard !reduceMotion else {
+      let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
+      panel.setFrame(NSRect(origin: origin, size: size), display: true)
+      panel.updatePassthroughRegion(itemCount: visibleItemCount, scale: overlayScale)
+      return
+    }
+
+    // Replay the entrance on the new display instead of flying the panel across
+    // the desktop — it reads as arriving with the capture.
+    slideIn(panel, onto: screen, size: size)
+  }
+
+  /// Park the panel off the edge of `screen` and slide it into its corner.
+  private func slideIn(_ panel: QuickAccessPanel, onto screen: NSScreen, size: CGSize) {
+    let targetOrigin = position.calculateOrigin(for: size, on: screen, padding: padding)
+    let offscreenOrigin = position.offscreenOrigin(for: size, on: screen, padding: padding)
+
+    panel.setFrame(NSRect(origin: offscreenOrigin, size: size), display: false)
+    panel.alphaValue = 1
+    panel.orderFrontRegardless()
+
+    runTransition(
+      .entering,
+      duration: QuickAccessAnimations.panelEnterDuration,
+      animations: { context in
+        context.timingFunction = CAMediaTimingFunction(
+          controlPoints: 0.22, 1.0, 0.36, 1.0  // Custom spring-like curve
+        )
+        panel.animator().setFrame(NSRect(origin: targetOrigin, size: size), display: true)
+      },
+      completion: { [weak self] in
+        panel.updatePassthroughRegion(
+          itemCount: self?.visibleItemCount ?? 0,
+          scale: self?.overlayScale ?? 1
+        )
+      }
+    )
   }
 
   /// Update panel content with new SwiftUI view
@@ -122,8 +162,7 @@ final class QuickAccessPanelController {
   /// Resize panel and reposition instantly to avoid fighting SwiftUI card animations
   func updateSize(_ size: CGSize) {
     guard let panel = panel, !isAnimating else { return }
-    let screen = ScreenUtility.activeScreen()
-    let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
+    let origin = position.calculateOrigin(for: size, on: screenAnchor.screen, padding: padding)
     let targetFrame = NSRect(origin: origin, size: size)
     panel.setFrame(targetFrame, display: true, animate: false)
     panel.updatePassthroughRegion(itemCount: visibleItemCount, scale: overlayScale)
@@ -151,22 +190,28 @@ final class QuickAccessPanelController {
     }
 
     if reduceMotion {
-      // Simple fade-out for reduced motion
-      NSAnimationContext.runAnimationGroup({ context in
-        context.duration = QuickAccessAnimations.panelExitDuration
-        context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-        panel.animator().alphaValue = 0
-      }, completionHandler: { [weak self] in
-        MainActor.assumeIsolated {
+      // Simple fade-out for reduced motion. Tracked as a transition so the panel
+      // still counts as dismissing while it fades (no reposition, no wedge).
+      runTransition(
+        .exiting,
+        duration: QuickAccessAnimations.panelExitDuration,
+        animations: { context in
+          context.timingFunction = CAMediaTimingFunction(name: .easeIn)
+          panel.animator().alphaValue = 0
+        },
+        completion: { [weak self] in
           panel.close()
           if self?.panel === panel { self?.panel = nil }
         }
-      })
+      )
     } else {
-      // Slide-out to off-screen
-      let screen = ScreenUtility.activeScreen()
+      // Slide-out to off-screen, on the display the panel actually lives on
       let size = panel.frame.size
-      let offscreenOrigin = position.offscreenOrigin(for: size, on: screen, padding: padding)
+      let offscreenOrigin = position.offscreenOrigin(
+        for: size,
+        on: screenAnchor.screen,
+        padding: padding
+      )
       let offscreenFrame = NSRect(origin: offscreenOrigin, size: size)
 
       runTransition(
@@ -207,8 +252,7 @@ final class QuickAccessPanelController {
   private func repositionPanel() {
     guard let panel = panel, !isAnimating else { return }
     let size = panel.frame.size
-    let screen = ScreenUtility.activeScreen()
-    let origin = position.calculateOrigin(for: size, on: screen, padding: padding)
+    let origin = position.calculateOrigin(for: size, on: screenAnchor.screen, padding: padding)
 
     if reduceMotion {
       panel.setFrameOrigin(origin)

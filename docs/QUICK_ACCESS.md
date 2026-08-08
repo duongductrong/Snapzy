@@ -11,6 +11,7 @@ Floating post-capture card stack: appears after every screenshot/video/GIF when 
 - Slide-in animation: spring 0.4s (`QuickAccessAnimations.panelEnter`, damping 0.75); falls back to fade under reduceMotion. Appear sound via `QuickAccessSound`.
 - Card hide/reappear (editor open/close) is driven by a SINGLE animation source: `QuickAccessStackView.animation(value: visibleItems.count)` — `QuickAccessManager.setWindowOpen` deliberately does NOT wrap its mutation in `withAnimation` (two compounding springs caused reappear jank).
 - Position: 4-corner model `QuickAccessPosition`; prefs UI exposes left/right (bottom corners). Overlay scale 0.75–1.5 step 0.25 (`overlayScale`, scales `QuickAccessLayout` 180×112 base). Animation style slide/scale (`quickAccess.animationStyle`).
+- Multi-display (#467): the panel is pinned to the display it appeared on (`QuickAccessScreenAnchor`, resolved by `CGDirectDisplayID`), and every later reposition — corner change, overlay resize, slide-out — targets that anchored screen, so moving the cursor to another display never teleports a visible panel. Each new capture re-anchors it: `showPanelIfNeeded` calls `moveToActiveScreenIfNeeded()`, which replays the slide-in on the capture display when the cursor has moved to a different one (instant jump under reduceMotion). Anchor falls back to the active screen if the display is unplugged. A panel mid slide-out is not reusable (`isDismissing`) — that path gets a fresh `showPanel()` instead, so a capture landing during the exit is never swallowed.
 
 ## Card Anatomy
 
