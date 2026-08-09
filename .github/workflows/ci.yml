@@ -64,6 +64,7 @@ jobs:
             SnapzyTests/InlineAreaAnnotateSessionTests/testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected
             SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
             SnapzyTests/AreaSelectionSessionLifecycleTests
+            SnapzyTests/AreaSelectionHoverPerformanceTests
             SnapzyTests/AreaSelectionControllerTests
             SnapzyTests/AreaSelectionOverlayMagnifierLayoutTests/testMagnifierZoom_worksWithEmptyBackdropsInitially
             SnapzyTests/PersistedCombineSessionTests/testCaptureStitchSaveReopen_persistsStitchEverywhere

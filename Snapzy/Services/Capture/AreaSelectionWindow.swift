@@ -172,6 +172,9 @@ final class AreaSelectionController: NSObject {
   /// Uptime of the last hover UI update that actually ran; drives the display-rate gate.
   private var lastLivePassthroughHoverProcessTime: TimeInterval = 0
   private var lastProcessedLivePassthroughDisplayID: CGDirectDisplayID?
+  /// Uptime of the last overlay-event-driven inactive session recovery; drives the
+  /// coalescing gate in `areaSelectionWindowDidRequestDisplayActivation`.
+  private var lastEventDrivenSessionRecoveryTime: TimeInterval = 0
   /// Last raw pointer location (global Quartz, top-left origin) the capture event tap
   /// reported this session. On teardown the cursor is warped here before it is revealed:
   /// while the consuming tap runs, the WindowServer's tracked cursor position goes stale, so
@@ -1537,17 +1540,24 @@ final class AreaSelectionController: NSObject {
     processLivePassthroughHover(at: point)
   }
 
-  /// Minimum spacing between hover UI updates. Follows the display's refresh rate,
-  /// capped at 60Hz: on 120Hz+ screens hover UI updates every other frame, which is
-  /// indistinguishable for pointer-following chrome (crosshair, size indicator,
-  /// magnifier) — while a 120Hz mouse still drives half as many updates and a 1kHz
-  /// gaming mouse is capped hard instead of scheduling ~1000 updates/sec. Only
-  /// passive hover UI is gated; the selection rect during a drag renders per event.
+  /// Minimum spacing between hover UI updates. Follows the fastest display's refresh
+  /// rate so pointer-following chrome (crosshair proxy, size indicator, magnifier) can
+  /// land on every frame the screen can actually show — capping below the display rate
+  /// reads as a trailing crosshair on high-refresh screens, where the hidden system
+  /// cursor is replaced by this drawn proxy. A mouse reporting faster than the display
+  /// is still coalesced down to one update per frame. Only passive hover UI is gated;
+  /// the selection rect during a drag renders per event.
   private static var livePassthroughHoverMinInterval: TimeInterval {
     let fps = NSScreen.screens.map(\.maximumFramesPerSecond).max() ?? 60
-    let displayInterval = 1.0 / Double(max(fps, 1))
-    return max(displayInterval, 1.0 / 60.0)
+    return 1.0 / Double(max(fps, 1))
   }
+
+  /// Minimum spacing between overlay-event-driven inactive session recoveries. The
+  /// session observers react to real space/activation changes instantly; this is only
+  /// a low-rate safety net for state changes that produce no notification, so 2Hz is
+  /// plenty — the previous per-pointer-tick behavior (60-120Hz) cost multiple ms of
+  /// main-thread time per mouse event (see `areaSelectionWindowDidRequestDisplayActivation`).
+  private static let eventDrivenSessionRecoveryMinInterval: TimeInterval = 0.5
 
   private func processLivePassthroughHover(at screenPoint: CGPoint) {
     guard isPresenting, isLivePassthroughInputActive else { return }
@@ -1677,6 +1687,7 @@ final class AreaSelectionController: NSObject {
     interactionMode = .manualRegion
     windowSelectionSnapshot = nil
     keyboardOwnerDisplayID = nil
+    lastEventDrivenSessionRecoveryTime = 0
   }
 
   private func beginManualSelection(at screenPoint: CGPoint, from window: AreaSelectionWindow) {
@@ -2043,9 +2054,23 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
   }
 
   func areaSelectionWindowDidRequestDisplayActivation(_ window: AreaSelectionWindow) {
+    // Overlay pointer events (hover AND drag, 60-120Hz) all land here, but the
+    // recovery below only matters on real space/activation changes — which the
+    // session observers already deliver immediately. While the app is inactive
+    // (every live session), running it per pointer tick put a WindowServer
+    // window-list query (watchdog re-arm), a per-window orderFront + cursor-rect
+    // invalidation + refreshCursor + needsDisplay pass, a log write, and a
+    // debounced-task cancel/create on EVERY mouse event — several ms of
+    // main-thread work per tick, starving the crosshair/coordinate updates that
+    // share that thread. Coalesce event-driven recoveries to a low-rate safety
+    // net; observer-driven recoveries stay immediate.
     if !NSApp.isActive {
-      handleSessionSpaceOrActivationChange()
-      recaptureBackdropsForLuma()
+      let now = ProcessInfo.processInfo.systemUptime
+      if now - lastEventDrivenSessionRecoveryTime >= Self.eventDrivenSessionRecoveryMinInterval {
+        lastEventDrivenSessionRecoveryTime = now
+        handleSessionSpaceOrActivationChange()
+        recaptureBackdropsForLuma()
+      }
     }
     requestDisplayActivationIfNeeded(for: window)
   }
@@ -2424,6 +2449,11 @@ final class AreaSelectionOverlayView: NSView {
   /// `NSCursor`; the system cursor itself stays where it is, since no public API can
   /// hide it from a background agent — see `LivePassthroughCursorHider`).
   private var cursorProxyLayer: CALayer!
+  /// Source image currently assigned to `cursorProxyLayer.contents`. Assigning an
+  /// NSImage forces Core Animation to re-render it into a texture, so the per-tick
+  /// hover update only re-assigns when the cursor image actually changes (identity)
+  /// and otherwise moves the layer via `frame` alone.
+  private var cursorProxySourceImage: NSImage?
   private var sizeIndicatorBackgroundLayer: CALayer!
   private var sizeIndicatorTextLayer: CATextLayer!
   private var lastSizeIndicatorText: String?
@@ -3393,7 +3423,10 @@ final class AreaSelectionOverlayView: NSView {
     let hotSpot = cursor.hotSpot
     CATransaction.begin()
     CATransaction.setDisableActions(true)
-    cursorProxyLayer.contents = image
+    if image !== cursorProxySourceImage {
+      cursorProxyLayer.contents = image
+      cursorProxySourceImage = image
+    }
     cursorProxyLayer.frame = CGRect(
       x: currentMousePosition.x - hotSpot.x,
       y: currentMousePosition.y - (image.size.height - hotSpot.y),
@@ -3441,12 +3474,15 @@ final class AreaSelectionOverlayView: NSView {
     let sizeText = "\(Int(displayedSize.width))\n\(Int(displayedSize.height))"
     let attributes = coordinateTextAttributes
     let textSize: CGSize
-    if sizeText == lastSizeIndicatorText {
-      textSize = lastSizeIndicatorTextSize
-    } else {
+    // Assigning `CATextLayer.string` re-rasterizes the text even when unchanged, and
+    // this runs per pointer tick — so measure and re-assign only on actual changes.
+    let textChanged = sizeText != lastSizeIndicatorText
+    if textChanged {
       textSize = multiLineTextSize(sizeText, attributes: attributes)
       lastSizeIndicatorText = sizeText
       lastSizeIndicatorTextSize = textSize
+    } else {
+      textSize = lastSizeIndicatorTextSize
     }
 
     let point = currentMousePosition
@@ -3469,7 +3505,9 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
     sizeIndicatorBackgroundLayer.isHidden = false
 
-    sizeIndicatorTextLayer.string = sizeText
+    if textChanged {
+      sizeIndicatorTextLayer.string = sizeText
+    }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
   }
@@ -3486,12 +3524,14 @@ final class AreaSelectionOverlayView: NSView {
 
     let attributes = coordinateTextAttributes
     let textSize: CGSize
-    if text == lastSizeIndicatorText {
-      textSize = lastSizeIndicatorTextSize
-    } else {
+    // Same per-tick re-raster guard as `updateSizeIndicator` (shared layer + cache).
+    let textChanged = text != lastSizeIndicatorText
+    if textChanged {
       textSize = multiLineTextSize(text, attributes: attributes)
       lastSizeIndicatorText = text
       lastSizeIndicatorTextSize = textSize
+    } else {
+      textSize = lastSizeIndicatorTextSize
     }
 
     let offset: CGFloat = 12
@@ -3513,7 +3553,9 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
     sizeIndicatorBackgroundLayer.isHidden = false
 
-    sizeIndicatorTextLayer.string = text
+    if textChanged {
+      sizeIndicatorTextLayer.string = text
+    }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
   }
