@@ -169,6 +169,8 @@ final class AreaSelectionController: NSObject {
   private var pendingLivePassthroughHoverPoint: CGPoint?
   private var isLivePassthroughHoverUpdateScheduled = false
   private var lastProcessedLivePassthroughHoverPoint: CGPoint?
+  /// Uptime of the last hover UI update that actually ran; drives the display-rate gate.
+  private var lastLivePassthroughHoverProcessTime: TimeInterval = 0
   private var lastProcessedLivePassthroughDisplayID: CGDirectDisplayID?
   /// Last raw pointer location (global Quartz, top-left origin) the capture event tap
   /// reported this session. On teardown the cursor is warped here before it is revealed:
@@ -1500,23 +1502,51 @@ final class AreaSelectionController: NSObject {
   }
 
   /// Route an observed-then-consumed hover position into the overlay under the pointer.
-  /// Coalesced: only the latest point is kept and at most one UI update is enqueued per
-  /// run-loop pass — CALayer commits already batch per pass, so this just prevents
-  /// redundant hit-tests/layout when a high-frequency mouse floods the tap.
+  /// Coalesced twice: only the latest point is kept, and updates are gated to the
+  /// display's refresh rate — rendering hover UI faster than the screen can show is
+  /// pure main-thread waste when a high-frequency mouse floods the tap (a 1kHz mouse
+  /// would otherwise schedule ~1000 updates/sec). Between ticks the leading edge runs
+  /// immediately, so a slowly-moving pointer sees no added latency.
   private func handleLivePassthroughHover(at screenPoint: CGPoint) {
     guard isPresenting, isLivePassthroughInputActive else { return }
     pendingLivePassthroughHoverPoint = screenPoint
     guard !isLivePassthroughHoverUpdateScheduled else { return }
+
+    let now = ProcessInfo.processInfo.systemUptime
+    let interval = Self.livePassthroughHoverMinInterval
+    let elapsed = now - lastLivePassthroughHoverProcessTime
+    guard elapsed < interval else {
+      flushLivePassthroughHover()
+      return
+    }
+
     isLivePassthroughHoverUpdateScheduled = true
-    DispatchQueue.main.async { [weak self] in
+    DispatchQueue.main.asyncAfter(deadline: .now() + (interval - elapsed)) { [weak self] in
       MainActor.assumeIsolated {
         guard let self else { return }
         self.isLivePassthroughHoverUpdateScheduled = false
-        guard let point = self.pendingLivePassthroughHoverPoint else { return }
-        self.pendingLivePassthroughHoverPoint = nil
-        self.processLivePassthroughHover(at: point)
+        self.flushLivePassthroughHover()
       }
     }
+  }
+
+  private func flushLivePassthroughHover() {
+    guard let point = pendingLivePassthroughHoverPoint else { return }
+    pendingLivePassthroughHoverPoint = nil
+    lastLivePassthroughHoverProcessTime = ProcessInfo.processInfo.systemUptime
+    processLivePassthroughHover(at: point)
+  }
+
+  /// Minimum spacing between hover UI updates. Follows the display's refresh rate,
+  /// capped at 60Hz: on 120Hz+ screens hover UI updates every other frame, which is
+  /// indistinguishable for pointer-following chrome (crosshair, size indicator,
+  /// magnifier) — while a 120Hz mouse still drives half as many updates and a 1kHz
+  /// gaming mouse is capped hard instead of scheduling ~1000 updates/sec. Only
+  /// passive hover UI is gated; the selection rect during a drag renders per event.
+  private static var livePassthroughHoverMinInterval: TimeInterval {
+    let fps = NSScreen.screens.map(\.maximumFramesPerSecond).max() ?? 60
+    let displayInterval = 1.0 / Double(max(fps, 1))
+    return max(displayInterval, 1.0 / 60.0)
   }
 
   private func processLivePassthroughHover(at screenPoint: CGPoint) {
