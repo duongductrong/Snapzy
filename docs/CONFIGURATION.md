@@ -338,6 +338,10 @@ log section.
   responsive. All managed `config.toml` reads/writes use a shared serial queue
   so manual actions, Open config.toml, Import/Restore, and background sync do
   not write the file concurrently.
+- While an area capture session is presenting, the debounced sync re-arms
+  instead of exporting, so the main-thread TOML export never lands mid-drag
+  during rapid repeated captures; the postponed sync runs once the flow settles
+  (and `flushPendingSync` still covers app termination).
 - Only the latest managed config operation may update Snapzy's
   `configuration.lastAppliedSignature`, which prevents an older background sync
   from marking stale contents after a newer Import/Restore/manual sync.
