@@ -36,6 +36,8 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
 
+Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘⌫ delete, ⌘W dismiss). Bindings are Carbon hotkeys registered only while `QuickAccessManager.hoveredItemID` is set, and the trigger routes back into `performAction` so keyboard and click share one path. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
+
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
 
 ## Gestures

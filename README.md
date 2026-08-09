@@ -61,7 +61,7 @@
 - **Annotation Editor**: shapes, arrows, text, watermarks, filled rectangles, blur/pixelate, automatic local sensitive-data redaction, OCR text extraction from the image context menu, counters, highlighter with text snapping (⌘ to bypass), crop with edge-snapping (⌘ to bypass) and one-key auto-crop to content (`A`), remove background with crop-aware auto-crop support, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app with optional keep-editing and editor reactivation behavior, configurable tool/action shortcuts
 - **After Capture Settings**: per-mode action matrix for save, Quick Access, clipboard copy, and annotate plus a separate global remove-background auto-crop toggle (enabled by default)
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
-- **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, two-finger swipe dismiss, open, and delete actions
+- **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, two-finger swipe dismiss, open, and delete actions, plus configurable keyboard shortcuts that fire on the card you are hovering
 - **Capture History**: floating history panel + full browser for recent screenshots, videos, and GIFs with type/time filters, filename search, quick copy/open/delete actions, one-click reopen in Annotate or Video Editor, editable annotation restore for committed screenshot edits, configurable panel layout, and retention policies
 - **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools, with per-shortcut on/off control and system conflict detection
 - **Onboarding**: splash screen, first-run language selection, guided permissions setup, and shortcut configuration for first-time users
@@ -155,6 +155,20 @@ Control Snapzy directly from Raycast using the official extension:
 | Open Video Editor                                       | `⇧⌘E`    |
 | Open Cloud Uploads                                      | `⇧⌘L`    |
 | Show shortcuts list                                     | `⇧⌘K`    |
+
+### Quick Access card actions
+
+Hover a Quick Access card, then press the key. Active only while the pointer is over a card.
+
+| Action | Shortcut |
+| ------ | -------- |
+| Copy | `⌘C` |
+| Save / Open | `⌘S` |
+| Edit | `⌘E` |
+| Upload to cloud | `⌘U` |
+| Pin to screen | `⌘P` |
+| Delete | `⌘⌫` |
+| Close | `⌘W` |
 
 ## Automation
 

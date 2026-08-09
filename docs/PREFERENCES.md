@@ -92,7 +92,8 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 ### Shortcuts (`PreferencesShortcutsSettingsView.swift`)
 
 - Master toggle (`shortcutsEnabled`).
-- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Annotate Actions, Annotate Tool Keys; Reset to Defaults (all).
+- Grouped recorders with per-shortcut enable toggles and per-section Reset: Capture, Recording, Tools, History, Quick Access, Quick Access Card Actions, Annotate Actions, Annotate Tool Keys; Reset to Defaults (all).
+- Quick Access Card Actions (`PreferencesQuickAccessActionShortcutsSection.swift`): master toggle plus one recorder per card action, active only while a card is hovered.
 - System-conflict guidance via `SystemScreenshotShortcutManager`.
 - Full mechanics and default bindings: [SHORTCUTS.md](SHORTCUTS.md).
 

@@ -196,8 +196,10 @@ enum ShortcutOverlayContentBuilder {
   private static func quickAccessItems() -> [ShortcutOverlayItem] {
     let quickAccess = QuickAccessManager.shared
     let shortcut = quickAccess.openEditorShortcut
+    let cardShortcuts = QuickAccessActionShortcutStore.shared
+    let cardActions = QuickAccessActionConfigurationStore.shared
 
-    return [
+    var items: [ShortcutOverlayItem] = [
       ShortcutOverlayItem(
         id: "quick-access-edit-latest",
         icon: "pencil.tip.crop.circle",
@@ -207,6 +209,22 @@ enum ShortcutOverlayContentBuilder {
         display: shortcut.map { .keycaps($0.displayParts) } ?? .text(L10n.Common.none)
       )
     ]
+
+    items.append(contentsOf: QuickAccessActionKind.defaultOrder.map { action in
+      let config = cardShortcuts.shortcut(for: action)
+      return ShortcutOverlayItem(
+        id: "quick-access-card-\(action.rawValue)",
+        icon: action.systemImage,
+        title: action.settingsTitle,
+        subtitle: L10n.PreferencesShortcuts.cardActionsHoverFootnote,
+        isEnabled: cardShortcuts.isEnabled
+          && cardShortcuts.isEnabled(for: action)
+          && cardActions.isEnabled(action),
+        display: config.map { .keycaps($0.displayParts) } ?? .text(L10n.Common.none)
+      )
+    })
+
+    return items
   }
 
   private static func annotateActionMetadata(_ kind: AnnotateActionShortcutKind) -> (title: String, icon: String) {

@@ -113,6 +113,16 @@ enum SnapzyConfigurationShortcutCodec {
     case "F19": return UInt32(kVK_F19)
     case "F20": return UInt32(kVK_F20)
     case "SPACE": return UInt32(kVK_Space)
+    // Named keys. Both the exported symbol and a readable word are accepted so a
+    // hand-written config stays legible and export/import still round-trips.
+    case "⌫", "DELETE", "BACKSPACE": return UInt32(kVK_Delete)
+    case "↩", "RETURN", "ENTER": return UInt32(kVK_Return)
+    case "⎋", "ESC", "ESCAPE": return UInt32(kVK_Escape)
+    case "⇥", "TAB": return UInt32(kVK_Tab)
+    case "←", "LEFT": return UInt32(kVK_LeftArrow)
+    case "→", "RIGHT": return UInt32(kVK_RightArrow)
+    case "↑", "UP": return UInt32(kVK_UpArrow)
+    case "↓", "DOWN": return UInt32(kVK_DownArrow)
     default: return nil
     }
   }

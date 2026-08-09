@@ -39,6 +39,7 @@ extension SnapzyConfigurationImporter {
     }
 
     collectQuickAccessShortcut(&reader, mutations: &mutations)
+    collectQuickAccessCardActionShortcuts(&reader, mutations: &mutations)
     collectAnnotateTools(&reader, mutations: &mutations)
     collectAnnotateActions(&reader, mutations: &mutations)
   }
@@ -78,6 +79,59 @@ extension SnapzyConfigurationImporter {
       }
       mutations.append {
         QuickAccessManager.shared.setOpenEditorShortcut(shortcut)
+      }
+    }
+  }
+
+  private static func collectQuickAccessCardActionShortcuts(
+    _ reader: inout SnapzyConfigurationReader,
+    mutations: inout [() -> Void]
+  ) {
+    let root = ["shortcuts", "quick_access", "card_actions"]
+
+    if let masterEnabled = reader.bool(root + ["enabled"]) {
+      mutations.append {
+        QuickAccessActionShortcutStore.shared.isEnabled = masterEnabled
+      }
+    }
+
+    for action in QuickAccessActionKind.defaultOrder {
+      let path = root + [action.configKey]
+      let enabled = reader.bool(path + ["enabled"])
+      let key = reader.string(path + ["key"])
+      let modifiers = reader.stringArray(path + ["modifiers"])
+      guard enabled != nil || key != nil || modifiers != nil else { continue }
+
+      if let enabled {
+        mutations.append {
+          QuickAccessActionShortcutStore.shared.setEnabled(enabled, for: action)
+        }
+      }
+
+      guard let key else { continue }
+
+      if key.isEmpty {
+        mutations.append {
+          QuickAccessActionShortcutStore.shared.setShortcut(nil, for: action)
+        }
+        continue
+      }
+
+      // Card shortcuts consume the keystroke while a card is hovered, so a
+      // modifier is mandatory and fn cannot be expressed as a Carbon hotkey.
+      guard let shortcut = SnapzyConfigurationShortcutCodec.shortcut(
+        key: key,
+        modifiers: modifiers ?? [],
+        requireModifier: true
+      ), QuickAccessActionShortcutStore.hasRequiredModifier(shortcut) else {
+        reader.error(
+          "shortcuts.quick_access.card_actions.\(action.configKey) has an invalid shortcut"
+        )
+        continue
+      }
+
+      mutations.append {
+        QuickAccessActionShortcutStore.shared.setShortcut(shortcut, for: action)
       }
     }
   }

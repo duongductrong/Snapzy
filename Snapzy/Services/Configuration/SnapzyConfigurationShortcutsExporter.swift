@@ -30,8 +30,27 @@ extension SnapzyConfigurationExporter {
     )
 
     writeQuickAccessShortcut(&writer)
+    writeQuickAccessCardActionShortcuts(&writer)
     writeAnnotateToolShortcuts(&writer)
     writeAnnotateActionShortcuts(&writer)
+  }
+
+  private static func writeQuickAccessCardActionShortcuts(_ writer: inout SimpleTOMLWriter) {
+    let store = QuickAccessActionShortcutStore.shared
+    writer.section("shortcuts.quick_access.card_actions")
+    writer.value("enabled", store.isEnabled)
+
+    for action in QuickAccessActionKind.defaultOrder {
+      writer.section("shortcuts.quick_access.card_actions.\(action.configKey)")
+      writer.value("enabled", store.isEnabled(for: action))
+      guard let shortcut = store.shortcut(for: action) else {
+        writer.value("key", "")
+        writer.stringArray("modifiers", [])
+        continue
+      }
+      writer.value("key", SnapzyConfigurationShortcutCodec.exportKey(shortcut))
+      writer.stringArray("modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(shortcut))
+    }
   }
 
   private static func writeQuickAccessShortcut(_ writer: inout SimpleTOMLWriter) {
@@ -146,6 +165,20 @@ extension GlobalShortcutKind {
     case .smartElement: return "smart_element"
     case .objectCutout: return "object_cutout"
     case .history: return "history"
+    }
+  }
+}
+
+extension QuickAccessActionKind {
+  var configKey: String {
+    switch self {
+    case .copy: return "copy"
+    case .saveOrOpen: return "save_or_open"
+    case .dismiss: return "dismiss"
+    case .delete: return "delete"
+    case .edit: return "edit"
+    case .uploadToCloud: return "upload_to_cloud"
+    case .pinToScreen: return "pin_to_screen"
     }
   }
 }

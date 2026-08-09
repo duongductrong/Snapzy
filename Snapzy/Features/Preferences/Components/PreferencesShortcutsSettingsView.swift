@@ -670,6 +670,8 @@ struct ShortcutsSettingsView: View {
           }
         }
 
+        QuickAccessActionShortcutsSection()
+
         Section {
           Text(L10n.PreferencesShortcuts.annotateActionsDescription)
             .font(.caption)
@@ -954,6 +956,7 @@ struct ShortcutsSettingsView: View {
     QuickAccessManager.shared.setOpenEditorShortcut(QuickAccessManager.defaultOpenEditorShortcut)
     openEditorShortcutEnabled = false
     QuickAccessManager.shared.openEditorShortcutEnabled = false
+    QuickAccessActionShortcutStore.shared.resetToDefaults()
   }
 
   private func resetAnnotateActionsSection() {

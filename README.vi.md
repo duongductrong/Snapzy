@@ -168,6 +168,20 @@ Hoặc nếu bạn đã clone repo:
 | Mở Cloud Uploads                                                  | `⇧⌘L`    |
 | Hiện danh sách shortcut                                           | `⇧⌘K`    |
 
+### Hành động thẻ Quick Access
+
+Di chuột lên thẻ Quick Access rồi nhấn phím. Chỉ hoạt động khi con trỏ đang ở trên thẻ.
+
+| Hành động | Phím tắt |
+| --------- | -------- |
+| Sao chép | `⌘C` |
+| Lưu / Mở | `⌘S` |
+| Chỉnh sửa | `⌘E` |
+| Tải lên cloud | `⌘U` |
+| Ghim lên màn hình | `⌘P` |
+| Xóa | `⌘⌫` |
+| Đóng | `⌘W` |
+
 <a id="automation"></a>
 
 ## Tự động hóa

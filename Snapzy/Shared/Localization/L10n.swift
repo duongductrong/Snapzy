@@ -1960,6 +1960,27 @@ nonisolated enum L10n {
         displayName
       )
     }
+
+    static let quickAccessModifierRequired = string(
+      "shortcut-validation.quick-access-modifier-required",
+      defaultValue: "Add ⌘, ⌥, or ⌃. Card shortcuts capture the key while you hover.",
+      comment: "Validation error when a Quick Access card shortcut has no command, option, or control modifier"
+    )
+
+    static let quickAccessFnUnsupported = string(
+      "shortcut-validation.quick-access-fn-unsupported",
+      defaultValue: "The fn key is not supported for card shortcuts.",
+      comment: "Validation error when a Quick Access card shortcut uses the fn modifier"
+    )
+
+    static func quickAccessShadowsGlobal(_ displayName: String) -> String {
+      format(
+        "shortcut-validation.quick-access-shadows-global",
+        defaultValue: "Overrides %@ while you hover a card.",
+        comment: "Validation warning when a Quick Access card shortcut matches a global shortcut. %@ is the global action name.",
+        displayName
+      )
+    }
   }
 
   enum PreferencesGeneral {
@@ -2228,6 +2249,11 @@ nonisolated enum L10n {
   }
 
   enum PreferencesQuickAccess {
+    static let actionDisabledFootnote = string(
+      "preferences-quick-access.action-disabled-footnote",
+      defaultValue: "Turned off in Quick Access settings",
+      comment: "Footnote shown when a card action shortcut points at an action the user removed from the card"
+    )
     static let positionSection = string(
       "preferences-quick-access.section-position",
       defaultValue: "Position",
@@ -3513,6 +3539,31 @@ nonisolated enum L10n {
       "preferences-shortcuts.edit-latest-capture-description",
       defaultValue: "Open the editor for the most recent capture while its preview is showing",
       comment: "Description for the edit latest capture shortcut"
+    )
+    static let cardActionsSection = string(
+      "preferences-shortcuts.card-actions-section",
+      defaultValue: "Quick Access Card Actions",
+      comment: "Shortcuts preferences section title for hover-activated Quick Access card actions"
+    )
+    static let cardActionsSectionDescription = string(
+      "preferences-shortcuts.card-actions-section-description",
+      defaultValue: "Hover a Quick Access card, then press a shortcut to run that action. These keys only work while the pointer is over a card.",
+      comment: "Description for the Quick Access card action shortcuts section"
+    )
+    static let cardActionsEnableTitle = string(
+      "preferences-shortcuts.card-actions-enable-title",
+      defaultValue: "Card action shortcuts",
+      comment: "Title for the master toggle of Quick Access card action shortcuts"
+    )
+    static let cardActionsEnableDescription = string(
+      "preferences-shortcuts.card-actions-enable-description",
+      defaultValue: "Turn every card shortcut on or off at once",
+      comment: "Description for the master toggle of Quick Access card action shortcuts"
+    )
+    static let cardActionsHoverFootnote = string(
+      "preferences-shortcuts.card-actions-hover-footnote",
+      defaultValue: "Active only while hovering a card",
+      comment: "Footnote shown on each Quick Access card action shortcut row"
     )
     static let recorderHint = string(
       "preferences-shortcuts.recorder-hint",

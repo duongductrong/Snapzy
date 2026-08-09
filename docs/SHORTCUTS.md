@@ -76,6 +76,31 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 - `pauseResumeRecording` no-ops unless a recording is active (`state.isPauseResumeEligible` guard, logged when ignored).
 - `togglePenRecording` no-ops unless `RecordingCoordinator.shared.isActive`.
 
+## Quick Access card action shortcuts (hover-scoped)
+
+`QuickAccessActionShortcutStore` (`Snapzy/Features/QuickAccess/Models/QuickAccessActionShortcutStore.swift`) +
+`QuickAccessHoverShortcutRegistry` (`Snapzy/Features/QuickAccess/Services/QuickAccessHoverShortcutRegistry.swift`).
+
+Hover a Quick Access card, press the key, the card runs that action. All seven `QuickAccessActionKind`s are bound:
+
+| Action | Default | Key |
+| --- | --- | --- |
+| `copy` | ⌘C | `quickAccess.action.shortcut.copy` |
+| `saveOrOpen` | ⌘S | `quickAccess.action.shortcut.saveOrOpen` |
+| `edit` | ⌘E | `quickAccess.action.shortcut.edit` |
+| `uploadToCloud` | ⌘U | `quickAccess.action.shortcut.uploadToCloud` |
+| `pinToScreen` | ⌘P | `quickAccess.action.shortcut.pinToScreen` |
+| `delete` | ⌘⌫ | `quickAccess.action.shortcut.delete` |
+| `dismiss` | ⌘W | `quickAccess.action.shortcut.dismiss` |
+
+- Master toggle `quickAccess.action.shortcuts.enabled` (default on); per-action disable set `quickAccess.action.shortcuts.disabled`. Cleared bindings persist the `"null"` sentinel so they do not fall back to the default on reload.
+- **Delivery**: Carbon `RegisterEventHotKey` under signature `ZQHS` (`0x5A51_4853`), registered when the first card is hovered and unregistered 250ms after hover ends (coalesced, so moving between cards costs no unregister/register round-trip — that per-crossing IPC on the main thread was a measurable regression). The panel is a `.nonactivatingPanel` with `canBecomeKey == false`, so keyboard events never reach it — the frontmost app owns the keyboard. Carbon was chosen over a global `NSEvent` monitor because it needs no Accessibility permission and **consumes** the keystroke, so ⌘C does not also copy in the app underneath.
+- **Because these shadow the frontmost app while registered, teardown is mandatory** on every path: hover exit, card `onDisappear`, panel hide (`hidePanel`), `suspendForCapture()`, and item removal (`items` didSet → `invalidateHoverIfItemGone`, covering cards pulled out from under the pointer by the countdown or an opening editor). `QuickAccessManager.setHoveredItem` is the single writer of `hoveredItemID`.
+- **Dispatch**: the registry never executes actions. It publishes `(itemID, action)` through `QuickAccessManager.cardShortcutTrigger`; `QuickAccessCardView` receives it and calls its existing `performAction`, so keyboard, click, context menu, and swipe share one path and one set of availability rules (cloud configured, upload in flight, video vs screenshot).
+- **Validation** (`ShortcutValidationService.validateQuickAccessActionShortcut`): requires one of ⌘/⌥/⌃ (reject); rejects Fn (Carbon cannot express it, and the passive monitor fallback would double-fire); rejects duplicates inside this namespace; **warns** on collision with an enabled global shortcut, which the card binding shadows during hover. Collisions with Annotate keys are allowed — the two are never simultaneously active.
+- Card tooltips append the binding (`actionHelpText`), and the ⇧⌘K cheat sheet lists all seven rows.
+- Separate from `quickAccess.openEditorShortcut` ("Edit latest capture", ⌘↩, off by default), which is panel-scoped and targets the newest card regardless of hover.
+
 ## Annotate editor shortcuts
 
 `AnnotateShortcutManager` (`Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`):

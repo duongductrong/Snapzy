@@ -60,6 +60,36 @@ final class SnapzyConfigurationShortcutCodecTests: XCTestCase {
     XCTAssertEqual(roundTrip(commandSpace), commandSpace)
   }
 
+  func testRoundTrip_namedKeys_preserveReturnDeleteAndFriends() {
+    // The exporter emits symbols (⌫, ↩, ⎋) for these key codes. Before the parser
+    // learned them, ⌘↩ (the "Edit latest capture" default) and ⌘⌫ (the Quick Access
+    // delete card action) were rejected on import.
+    let keyCodes = [
+      kVK_Return, kVK_Delete, kVK_Escape, kVK_Tab,
+      kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow,
+    ]
+
+    for keyCode in keyCodes {
+      let original = ShortcutConfig(keyCode: UInt32(keyCode), modifiers: UInt32(cmdKey))
+      XCTAssertEqual(roundTrip(original), original, "Key code \(keyCode) did not round-trip")
+    }
+  }
+
+  func testShortcut_parsesReadableAliasesForNamedKeys() {
+    XCTAssertEqual(
+      SnapzyConfigurationShortcutCodec.shortcut(key: "delete", modifiers: ["command"], requireModifier: true),
+      ShortcutConfig(keyCode: UInt32(kVK_Delete), modifiers: UInt32(cmdKey))
+    )
+    XCTAssertEqual(
+      SnapzyConfigurationShortcutCodec.shortcut(key: "Return", modifiers: ["command"], requireModifier: true),
+      ShortcutConfig(keyCode: UInt32(kVK_Return), modifiers: UInt32(cmdKey))
+    )
+    XCTAssertEqual(
+      SnapzyConfigurationShortcutCodec.shortcut(key: "esc", modifiers: ["control"], requireModifier: true),
+      ShortcutConfig(keyCode: UInt32(kVK_Escape), modifiers: UInt32(controlKey))
+    )
+  }
+
   func testRoundTrip_overlayFunctionKey_usesSameParserAsGlobalShortcuts() {
     // Capture-overlay shortcuts flow through a distinct codec entry point
     // (overlayShortcut) that shares keyCode(for:) with the global-shortcut path.

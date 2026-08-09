@@ -202,6 +202,20 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("key", SnapzyConfigurationShortcutCodec.exportKey(defaultEditorShortcut))
     writer.stringArray("modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(defaultEditorShortcut))
 
+    writer.section("shortcuts.quick_access.card_actions")
+    writer.value("enabled", true)
+    for action in QuickAccessActionKind.defaultOrder {
+      writer.section("shortcuts.quick_access.card_actions.\(action.configKey)")
+      writer.value("enabled", true)
+      guard let shortcut = QuickAccessActionShortcutStore.defaultShortcuts[action] else {
+        writer.value("key", "")
+        writer.stringArray("modifiers", [])
+        continue
+      }
+      writer.value("key", SnapzyConfigurationShortcutCodec.exportKey(shortcut))
+      writer.stringArray("modifiers", SnapzyConfigurationShortcutCodec.exportModifiers(shortcut))
+    }
+
     writer.section("shortcuts.annotate_tools")
     writer.stringArray("disabled", [])
     for tool in AnnotateShortcutManager.configurableTools {
