@@ -500,8 +500,9 @@ final class CaptureOutputNamingTests: XCTestCase {
       defaults: defaults
     )
 
-    // Fallback format: "Snapzy_{yyyy-MM-dd_HH-mm-ss-SSS}"
-    XCTAssertTrue(result.hasPrefix("Snapzy_"), "Expected fallback name, got: \(result)")
+    // Fallback format: "Snapzy_{yyyy-MM-dd_HH-mm-ss-SSS}" — also pin the Gregorian
+    // year so the fallback path (which routes through `format`) is covered too.
+    XCTAssertTrue(result.hasPrefix("Snapzy_2026"), "Expected fallback name with Gregorian year 2026, got: \(result)")
   }
 
   // MARK: - App Name Tokens
@@ -548,5 +549,87 @@ final class CaptureOutputNamingTests: XCTestCase {
     // When appName is missing, it should resolve to empty string
     // Resulting in App_
     XCTAssertEqual(result, "App_")
+  }
+
+  // MARK: - Locale / Gregorian Calendar
+
+  /// Regression test for the system-calendar locale bug: a `DateFormatter` that
+  /// adopts the user's locale renders the Buddhist year under a Thai (`th_TH`)
+  /// locale (e.g. 2569 for the Gregorian year 2026). Snapzy must always emit the
+  /// Gregorian year in filenames regardless of the user's system calendar.
+  ///
+  /// Note: the process locale cannot be swapped at runtime (`Locale.current` is
+  /// cached for the XCTest host process), so this test cannot deterministically
+  /// fail pre-fix on a Gregorian CI runner. Instead it (1) proves the Buddhist
+  /// calendar actually shifts the year for the reference date, and (2) pins the
+  /// Gregorian contract for Snapzy's output. It WILL fail on a Buddhist-locale
+  /// machine if the `en_US_POSIX` locale on the internal formatter is reverted.
+  func testYearToken_alwaysGregorian_notBuddhistCalendarYear() {
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = TimeZone(secondsFromGMT: 0)!
+    let date = gregorian.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+    // Premise guard (not a regression guard): under a Thai (Buddhist) locale the
+    // bare `yyyy` year differs from the Gregorian year for this date. This only
+    // protects the test's assumption against future Foundation locale-data drift;
+    // it cannot detect a fix regression on its own (see the note above).
+    let buddhist = DateFormatter()
+    buddhist.locale = Locale(identifier: "th_TH")
+    buddhist.dateFormat = "yyyy"
+    let buddhistYear = buddhist.string(from: date)
+    let gregorianYear = String(gregorian.component(.year, from: date))
+    XCTAssertNotEqual(
+      buddhistYear, gregorianYear,
+      "Precondition: th_TH must render a Buddhist year (\(buddhistYear)) that differs " +
+      "from the Gregorian year (\(gregorianYear)) for this date."
+    )
+
+    defaults.set("{year}", forKey: PreferencesKeys.screenshotFileNameTemplate)
+
+    let result = CaptureOutputNaming.resolveBaseName(
+      customName: nil,
+      kind: .screenshot,
+      date: date,
+      defaults: defaults
+    )
+
+    XCTAssertEqual(
+      result, "2026",
+      "Filename year must be Gregorian (2026), not the Buddhist year (\(buddhistYear))."
+    )
+  }
+
+  /// End-to-end guard over the default screenshot template: the generated name
+  /// must start with the Gregorian year, never a Buddhist-calendar year, even on
+  /// systems whose calendar is non-Gregorian.
+  ///
+  /// Same runtime-locale caveat as `testYearToken_alwaysGregorian_notBuddhistCalendarYear`:
+  /// this cannot deterministically fail pre-fix on a Gregorian CI runner (the
+  /// process locale is cached), but it pins the Gregorian contract and will fail
+  /// on a Buddhist-locale machine if the `en_US_POSIX` locale is reverted.
+  func testDefaultTemplate_startsGregorianYear_notBuddhistYear() {
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = TimeZone(secondsFromGMT: 0)!
+    let date = gregorian.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+    // Reference: Buddhist year for this date.
+    let buddhist = DateFormatter()
+    buddhist.locale = Locale(identifier: "th_TH")
+    buddhist.dateFormat = "yyyy"
+    let buddhistYear = buddhist.string(from: date)
+
+    // Default template: "Snapzy_{datetime}_{ms}"
+    let result = CaptureOutputNaming.resolveBaseName(
+      customName: nil,
+      kind: .screenshot,
+      date: date,
+      defaults: defaults
+    )
+
+    XCTAssertTrue(result.hasPrefix("Snapzy_2026-"), "Default name must start with Gregorian year, got: \(result)")
+    XCTAssertFalse(
+      result.hasPrefix("Snapzy_\(buddhistYear)-"),
+      "Default name must not use the Buddhist year \(buddhistYear), got: \(result)"
+    )
   }
 }
