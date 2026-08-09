@@ -4,6 +4,23 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.17] - 2026-08-09
+
+### Features
+-  Add hover card action shortcuts and vsync hover performance optimizations (#485) (#487) (d66156fc)
+
+### Bug Fixes
+- : round-trip function-key shortcuts through export/import (#484) (368f30be)
+- : correct TOML string unescape so backslash+n/t round-trips on import (#481) (684b8353)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.16 (47a79f9f)
+
+### Contributors
+- @YuriNachos
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.16] - 2026-08-08
 
 ### Features
