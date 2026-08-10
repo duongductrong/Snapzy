@@ -120,7 +120,14 @@ enum AWSV4Signer {
     let credentialScope = "\(dateStamp)/\(region)/\(service)/aws4_request"
     let credential = "\(accessKey)/\(credentialScope)"
 
-    let canonicalURI = url.path.isEmpty ? "/" : url.path
+    // Percent-encode the path the same way `sign()` does: `url.path` returns the
+    // DECODED path on Apple platforms, so a key containing a space or other
+    // non-`urlPathAllowed` character would otherwise leak into both the canonical
+    // request (causing an AWS signature mismatch) and the final URL string (where
+    // the raw character makes `URL(string:)` return nil and the call throw).
+    let canonicalURI = url.path.isEmpty
+      ? "/"
+      : url.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? url.path
 
     // Build query parameters for presigning
     var queryItems: [(String, String)] = [

@@ -73,6 +73,38 @@ final class CloudCoreTests: XCTestCase {
     XCTAssertNotNil(items["X-Amz-Signature"]?.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression))
   }
 
+  func testAWSV4SignerPresignURL_percentEncodesSpacesInObjectKey() throws {
+    // Reproduces the bug where an S3/R2 object key containing a space (e.g. a
+    // custom filename template that yields "Snapzy 2024 shot.png") made
+    // `presignURL` embed a raw space in the canonical URI and the final URL
+    // string, so `URL(string:)` returned nil and the call threw. The canonical
+    // URI must be percent-encoded exactly like `sign()` does.
+    let inputURL = try XCTUnwrap(
+      URL(string: "https://example-bucket.s3.us-east-1.amazonaws.com/snapzy/My%20File.png")
+    )
+
+    let presignedURL = try AWSV4Signer.presignURL(
+      url: inputURL,
+      accessKey: "AKIATEST",
+      secretKey: "SECRET",
+      region: "us-east-1",
+      expireSeconds: 900
+    )
+
+    // The returned URL must stay valid and keep the space encoded (no raw
+    // whitespace), matching the canonical URI the signature was computed over.
+    let components = try XCTUnwrap(URLComponents(url: presignedURL, resolvingAgainstBaseURL: false))
+    XCTAssertEqual(components.percentEncodedPath, "/snapzy/My%20File.png")
+    XCTAssertFalse(components.percentEncodedPath.contains(" "))
+
+    let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+      item.value.map { (item.name, $0) }
+    })
+    XCTAssertEqual(items["X-Amz-Algorithm"], "AWS4-HMAC-SHA256")
+    XCTAssertEqual(items["X-Amz-Expires"], "900")
+    XCTAssertNotNil(items["X-Amz-Signature"]?.range(of: #"^[0-9a-f]{64}$"#, options: .regularExpression))
+  }
+
   func testCloudCredentialTransfer_roundTripsEncryptedPayload() throws {
     let payload = makeTransferPayload()
 
