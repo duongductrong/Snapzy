@@ -47,9 +47,9 @@ final class InlineAreaMagnifierHostViewTests: XCTestCase {
 
     XCTAssertFalse(view.coordinateBubbleBackgroundLayer?.isHidden ?? true)
     XCTAssertFalse(view.coordinateBubbleTextLayer?.isHidden ?? true)
-    // Same single-line "x, y" format and solid-pill style (`CoordinateBubbleStyle`) as plain
+    // Same two-line "x\ny" format and near-native style (`CoordinateBubbleStyle`) as plain
     // area screenshot's coordinate indicator (top-left origin reporting: 600 - 150 = 450).
-    XCTAssertEqual(view.coordinateBubbleTextLayer?.string as? String, "200, 450")
+    XCTAssertEqual(view.coordinateBubbleTextLayer?.string as? String, "200\n450")
     XCTAssertEqual(view.coordinateBubbleBackgroundLayer?.backgroundColor, CoordinateBubbleStyle.backgroundColor.cgColor)
   }
 

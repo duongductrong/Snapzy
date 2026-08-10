@@ -194,6 +194,11 @@ struct CaptureSettingsView: View {
             ) {
               Toggle("", isOn: $showMagnifierByDefault)
                 .labelsHidden()
+                .onChange(of: showMagnifierByDefault) { isOn in
+                  if !isOn {
+                    showMagnifierColorPanel = false
+                  }
+                }
             }
 
             SettingRow(
@@ -212,6 +217,7 @@ struct CaptureSettingsView: View {
             ) {
               Toggle("", isOn: $showMagnifierColorPanel)
                 .labelsHidden()
+                .disabled(!showMagnifierByDefault)
             }
           }
         }

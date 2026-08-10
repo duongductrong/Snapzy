@@ -2629,6 +2629,13 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorTextLayer.font = coordinateIndicatorFont as CTFont
     sizeIndicatorTextLayer.fontSize = coordinateIndicatorFont.pointSize
     sizeIndicatorTextLayer.foregroundColor = CoordinateBubbleStyle.textColor.cgColor
+    configureShadow(
+      for: sizeIndicatorTextLayer,
+      color: CoordinateBubbleStyle.shadowColor,
+      offset: CoordinateBubbleStyle.shadowOffset,
+      radius: CoordinateBubbleStyle.shadowRadius,
+      opacity: CoordinateBubbleStyle.shadowOpacity
+    )
     sizeIndicatorTextLayer.zPosition = 10
     rootLayer.addSublayer(sizeIndicatorTextLayer)
 
@@ -3619,9 +3626,7 @@ final class AreaSelectionOverlayView: NSView {
 
     let localX = Int(point.x)
     let localY = Int(bounds.height - point.y)
-    // Single line — matches the coordinate bubble in the screenshot-and-annotate flow
-    // (`InlineAreaMagnifierHostView`), which stands in for this indicator there.
-    let text = "\(localX), \(localY)"
+    let text = "\(localX)\n\(localY)"
 
     let attributes = coordinateTextAttributes
     let textSize: CGSize
