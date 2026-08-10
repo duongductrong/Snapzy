@@ -104,13 +104,18 @@ struct QuickAccessItem: Identifiable, Equatable {
     itemType == .video
   }
 
-  /// Formatted duration string for display (e.g., "01:30s")
+  /// Formatted duration string for display (e.g., "01:30s", "1:01:01s")
   var formattedDuration: String? {
     guard let duration = duration, duration.isFinite, duration >= 0 else {
       return nil
     }
-    let mins = Int(duration) / 60
-    let secs = Int(duration) % 60
+    let totalSeconds = Int(duration)
+    let hours = totalSeconds / 3600
+    let mins = (totalSeconds % 3600) / 60
+    let secs = totalSeconds % 60
+    if hours > 0 {
+      return String(format: "%d:%02d:%02ds", hours, mins, secs)
+    }
     return String(format: "%02d:%02ds", mins, secs)
   }
 }

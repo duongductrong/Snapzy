@@ -16,6 +16,13 @@ final class CaptureHistoryRecordTests: XCTestCase {
     XCTAssertEqual(makeRecord(duration: 0).formattedDuration, "00:00s")
   }
 
+  func testFormattedDuration_surfacesHoursInsteadOfOverflowingMinutes() {
+    XCTAssertEqual(makeRecord(duration: 3661).formattedDuration, "1:01:01s")
+    XCTAssertEqual(makeRecord(duration: 3600).formattedDuration, "1:00:00s")
+    // Sub-hour durations are byte-identical to the legacy minute-only format.
+    XCTAssertEqual(makeRecord(duration: 3599.9).formattedDuration, "59:59s")
+  }
+
   func testFormattedDuration_omitsInvalidDurations() {
     XCTAssertNil(makeRecord(duration: nil).formattedDuration)
     XCTAssertNil(makeRecord(duration: -1).formattedDuration)

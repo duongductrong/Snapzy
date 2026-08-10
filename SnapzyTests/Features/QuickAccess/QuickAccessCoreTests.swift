@@ -38,6 +38,13 @@ final class QuickAccessCoreTests: XCTestCase {
 
     XCTAssertTrue(video.isVideo)
     XCTAssertEqual(video.formattedDuration, "01:30s")
+    // Durations >= 1 hour surface the hours field instead of overflowing minutes.
+    let hourLongVideo = QuickAccessItem(
+      url: URL(fileURLWithPath: "/tmp/long.mov"),
+      thumbnail: thumbnail,
+      duration: 3661
+    )
+    XCTAssertEqual(hourLongVideo.formattedDuration, "1:01:01s")
     XCTAssertNil(invalidVideo.formattedDuration)
     XCTAssertFalse(screenshot.isVideo)
     XCTAssertNil(screenshot.formattedDuration)
