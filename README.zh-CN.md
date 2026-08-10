@@ -46,7 +46,7 @@
   <p>
     <a href="https://deepwiki.com/duongductrong/Snapzy"><img alt="询问 DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
     <a href="https://discord.gg/xkWDAuJkZu"><img alt="加入 Discord 社区" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&amp;logo=discord&amp;logoColor=white" /></a>
-    <a href="https://www.raycast.com/chk/snapzy"><img alt="Raycast 插件" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
+    <a href="https://www.raycast.com/chkzz/snapzy"><img alt="Raycast 插件" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
     <a href="#featured-on"><img alt="已收录平台" src="https://img.shields.io/badge/Featured%20On-Product%20Hunt%20%2B%20Unikorn-111827?style=flat&amp;logo=producthunt&amp;logoColor=white" /></a>
   </p>
   <p>
@@ -168,11 +168,25 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | 打开云上传                                           | `⇧⌘L`  |
 | 显示快捷键列表                                       | `⇧⌘K`  |
 
+### 快速访问卡片操作
+
+将指针悬停在快速访问卡片上，然后按下按键。仅在指针位于卡片上时生效。
+
+| 操作 | 快捷键 |
+| ---- | ------ |
+| 复制 | `⌘C` |
+| 保存 / 打开 | `⌘S` |
+| 编辑 | `⌘E` |
+| 上传到云端 | `⌘U` |
+| 钉在屏幕上 | `⌘P` |
+| 删除 | `⌘⌫` |
+| 关闭 | `⌘W` |
+
 <a id="automation"></a>
 
 ## 自动化
 
-Snapzy 注册了 `snapzy://` URL scheme，因此 launcher 和自动化工具（如 [Raycast 插件](https://www.raycast.com/chk/snapzy)、Alfred 或自定义脚本）可以直接触发各类捕获动作。此集成选项可以在 **设置 -> 高级 -> URL Scheme 集成** 中开启或关闭。
+Snapzy 注册了 `snapzy://` URL scheme，因此 launcher 和自动化工具（如 [Raycast 插件](https://www.raycast.com/chkzz/snapzy)、Alfred 或自定义脚本）可以直接触发各类捕获动作。此集成选项可以在 **设置 -> 高级 -> URL Scheme 集成** 中开启或关闭。
 
 | 操作           | URL                               |
 | -------------- | --------------------------------- |

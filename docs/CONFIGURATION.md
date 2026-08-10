@@ -51,7 +51,7 @@ The TOML file covers portable app preferences:
 - Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
-- Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots.
+- Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, and upload window position.
 - Annotate preferences.
@@ -210,6 +210,11 @@ key = "3"
 modifiers = ["command", "shift"]
 enabled = true
 
+[shortcuts.global.repeat_area]
+key = "4"
+modifiers = ["control", "command", "shift"]
+enabled = true
+
 [shortcuts.annotate_actions.auto_redact_sensitive_data]
 enabled = true
 key = ""
@@ -219,7 +224,26 @@ modifiers = []
 enabled = false
 key = "return"
 modifiers = ["command"]
+
+[shortcuts.quick_access.card_actions]
+enabled = true
+
+[shortcuts.quick_access.card_actions.copy]
+enabled = true
+key = "C"
+modifiers = ["command"]
+
+[shortcuts.quick_access.card_actions.delete]
+enabled = true
+key = "delete"
+modifiers = ["command"]
 ```
+
+`card_actions` covers all seven Quick Access card actions (`copy`, `save_or_open`,
+`dismiss`, `delete`, `edit`, `upload_to_cloud`, `pin_to_screen`). Each entry needs
+`⌘`, `⌥`, or `⌃` in `modifiers` — bare and shift-only combos are rejected on import,
+as is `fn`. `key = ""` clears a binding. Named keys accept either the exported symbol
+or a readable word (`"delete"`/`"⌫"`, `"return"`/`"↩"`, `"esc"`/`"⎋"`, `"tab"`, arrows).
 
 ## Manual Testing
 
@@ -314,6 +338,10 @@ log section.
   responsive. All managed `config.toml` reads/writes use a shared serial queue
   so manual actions, Open config.toml, Import/Restore, and background sync do
   not write the file concurrently.
+- While an area capture session is presenting, the debounced sync re-arms
+  instead of exporting, so the main-thread TOML export never lands mid-drag
+  during rapid repeated captures; the postponed sync runs once the flow settles
+  (and `flushPendingSync` still covers app termination).
 - Only the latest managed config operation may update Snapzy's
   `configuration.lastAppliedSignature`, which prevents an older background sync
   from marking stale contents after a newer Import/Restore/manual sync.

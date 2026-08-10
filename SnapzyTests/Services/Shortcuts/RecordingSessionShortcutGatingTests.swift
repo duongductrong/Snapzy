@@ -359,6 +359,7 @@ private extension KeyboardShortcutManager {
     switch kind {
     case .fullscreen: setFullscreenShortcut(config)
     case .area: setAreaShortcut(config)
+    case .repeatArea: setRepeatAreaShortcut(config)
     case .areaAnnotate: setAreaAnnotateShortcut(config)
     case .activeWindow: setActiveWindowShortcut(config)
     case .scrollingCapture: setScrollingCaptureShortcut(config)

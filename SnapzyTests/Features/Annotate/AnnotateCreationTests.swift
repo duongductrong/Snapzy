@@ -106,4 +106,26 @@ final class AnnotateCreationTests: XCTestCase {
 
     XCTAssertEqual(state.nextCounterValue(), 4)
   }
+
+  @MainActor
+  func testCanExtractTextRequiresNormalAnnotateSourceImage() {
+    let state = AnnotateState(
+      image: NSImage(size: CGSize(width: 120, height: 80)),
+      url: URL(fileURLWithPath: "/tmp/annotate-ocr-test.png"),
+      appliesDefaultCanvasPresetOnNewImages: false
+    )
+
+    XCTAssertTrue(state.canExtractText)
+
+    state.activateCombineMode()
+    XCTAssertFalse(state.canExtractText)
+
+    state.deactivateCombineMode()
+    state.editorMode = .mockup
+    XCTAssertFalse(state.canExtractText)
+
+    state.editorMode = .annotate
+    state.sourceImage = nil
+    XCTAssertFalse(state.canExtractText)
+  }
 }

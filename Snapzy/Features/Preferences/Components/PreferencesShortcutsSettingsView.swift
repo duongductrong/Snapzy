@@ -12,6 +12,7 @@ import SwiftUI
 struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig?
   @State private var areaShortcut: ShortcutConfig?
+  @State private var repeatAreaShortcut: ShortcutConfig?
   @State private var areaAnnotateShortcut: ShortcutConfig?
   @State private var activeWindowShortcut: ShortcutConfig?
   @State private var areaApplicationCaptureShortcut: CaptureOverlayShortcut?
@@ -58,6 +59,7 @@ struct ShortcutsSettingsView: View {
   init() {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .fullscreen))
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .area))
+    _repeatAreaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .repeatArea))
     _areaAnnotateShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .areaAnnotate))
     _activeWindowShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .activeWindow))
     _areaApplicationCaptureShortcut = State(
@@ -356,6 +358,17 @@ struct ShortcutsSettingsView: View {
             }
           }
           .padding(.vertical, 2)
+
+          ShortcutRecorderView(
+            label: L10n.Actions.captureRepeatArea,
+            icon: "arrow.clockwise",
+            description: L10n.PreferencesShortcuts.captureRepeatAreaDescription,
+            shortcut: $repeatAreaShortcut,
+            defaultShortcut: .defaultRepeatArea,
+            isEnabled: globalEnabledBinding(for: .repeatArea),
+            validationIssue: globalValidationIssues[.repeatArea],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .repeatArea) }
+          )
 
           ShortcutRecorderView(
             label: L10n.Actions.captureAreaAnnotate,
@@ -657,6 +670,8 @@ struct ShortcutsSettingsView: View {
           }
         }
 
+        QuickAccessActionShortcutsSection()
+
         Section {
           Text(L10n.PreferencesShortcuts.annotateActionsDescription)
             .font(.caption)
@@ -821,6 +836,7 @@ struct ShortcutsSettingsView: View {
   private func resetCaptureSection(refresh: Bool = true) {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
+    repeatAreaShortcut = .defaultRepeatArea
     areaAnnotateShortcut = .defaultAreaAnnotate
     activeWindowShortcut = .defaultActiveWindowCapture
     areaApplicationCaptureShortcut = CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut
@@ -830,7 +846,7 @@ struct ShortcutsSettingsView: View {
     smartElementShortcut = .defaultSmartElement
 
     let captureKinds: [GlobalShortcutKind] = [
-      .fullscreen, .area, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr, .smartElement,
+      .fullscreen, .area, .repeatArea, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr, .smartElement,
     ]
     for kind in captureKinds {
       globalShortcutEnabled[kind] = true
@@ -841,6 +857,7 @@ struct ShortcutsSettingsView: View {
 
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
+    manager.setRepeatAreaShortcut(.defaultRepeatArea)
     manager.setAreaAnnotateShortcut(.defaultAreaAnnotate)
     manager.setActiveWindowShortcut(.defaultActiveWindowCapture)
     manager.setScrollingCaptureShortcut(.defaultScrollingCapture)
@@ -939,6 +956,7 @@ struct ShortcutsSettingsView: View {
     QuickAccessManager.shared.setOpenEditorShortcut(QuickAccessManager.defaultOpenEditorShortcut)
     openEditorShortcutEnabled = false
     QuickAccessManager.shared.openEditorShortcutEnabled = false
+    QuickAccessActionShortcutStore.shared.resetToDefaults()
   }
 
   private func resetAnnotateActionsSection() {
@@ -1089,6 +1107,9 @@ struct ShortcutsSettingsView: View {
       case .area:
         areaShortcut = config
         manager.setAreaShortcut(config)
+      case .repeatArea:
+        repeatAreaShortcut = config
+        manager.setRepeatAreaShortcut(config)
       case .areaAnnotate:
         areaAnnotateShortcut = config
         manager.setAreaAnnotateShortcut(config)

@@ -4,6 +4,83 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.17] - 2026-08-09
+
+### Features
+-  Add hover card action shortcuts and vsync hover performance optimizations (#485) (#487) (d66156fc)
+
+### Bug Fixes
+- : round-trip function-key shortcuts through export/import (#484) (368f30be)
+- : correct TOML string unescape so backslash+n/t round-trips on import (#481) (684b8353)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.16 (47a79f9f)
+
+### Contributors
+- @YuriNachos
+- @duongductrong
+- @github-actions[bot]
+
+## [1.31.0-beta.16] - 2026-08-08
+
+### Features
+-  Add "Include window shadow in Application Capture" preference (#433) (#474) (c4986601)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.15 (aa6b4a28)
+
+### Contributors
+- @YuriNachos
+- @github-actions[bot]
+
+## [1.31.0-beta.15] - 2026-08-08
+
+### Bug Fixes
+-  pin Quick Access panel to capture screen on multi-display setups #467 (#479) (1f884f2d)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.14 (e964bfc6)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.31.0-beta.14] - 2026-08-08
+
+### Features
+-  add repeat last area screenshot shortcut #460 (#475) (804c4e58)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.13 (158bd04e)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.31.0-beta.13] - 2026-08-07
+
+### Bug Fixes
+-  retain hover states and transient UI in object cutout capture #422 (b7385ac)
+
+### Chore
+- chore: update appcast and docs for v1.31.0-beta.12 (2308d49)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.31.0-beta.12] - 2026-08-07
+
+### Features
+-  Add OCR text extraction (#468) (53f91ee)
+
+### Chore
+- chore: bump version to v1.31.0-beta.12 (#469) (ac6b3db)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0-beta.11] - 2026-08-04
 
 ### Features

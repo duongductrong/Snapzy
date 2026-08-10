@@ -296,6 +296,11 @@ final class AreaSelectionMagnifier {
     copiedFeedbackWorkItem?.cancel()
     copiedFeedbackWorkItem = nil
 
+    // No-op cheaply when nothing is attached — the hover path calls this on every
+    // pointer move while the magnifier is inactive, and an unconditional
+    // CATransaction pair per tick is pure churn.
+    guard containerLayer != nil else { return }
+
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     containerLayer?.removeFromSuperlayer()

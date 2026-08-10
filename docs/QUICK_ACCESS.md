@@ -11,6 +11,7 @@ Floating post-capture card stack: appears after every screenshot/video/GIF when 
 - Slide-in animation: spring 0.4s (`QuickAccessAnimations.panelEnter`, damping 0.75); falls back to fade under reduceMotion. Appear sound via `QuickAccessSound`.
 - Card hide/reappear (editor open/close) is driven by a SINGLE animation source: `QuickAccessStackView.animation(value: visibleItems.count)` — `QuickAccessManager.setWindowOpen` deliberately does NOT wrap its mutation in `withAnimation` (two compounding springs caused reappear jank).
 - Position: 4-corner model `QuickAccessPosition`; prefs UI exposes left/right (bottom corners). Overlay scale 0.75–1.5 step 0.25 (`overlayScale`, scales `QuickAccessLayout` 180×112 base). Animation style slide/scale (`quickAccess.animationStyle`).
+- Multi-display (#467): the panel is pinned to the display it appeared on (`QuickAccessScreenAnchor`, resolved by `CGDirectDisplayID`), and every later reposition — corner change, overlay resize, slide-out — targets that anchored screen, so moving the cursor to another display never teleports a visible panel. Each new capture re-anchors it: `showPanelIfNeeded` calls `moveToActiveScreenIfNeeded()`, which replays the slide-in on the capture display when the cursor has moved to a different one (instant jump under reduceMotion). Anchor falls back to the active screen if the display is unplugged. A panel mid slide-out is not reusable (`isDismissing`) — that path gets a fresh `showPanel()` instead, so a capture landing during the exit is never swallowed.
 
 ## Card Anatomy
 
@@ -34,6 +35,8 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown |
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
+
+Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘⌫ delete, ⌘W dismiss). Bindings are Carbon hotkeys registered only while `QuickAccessManager.hoveredItemID` is set, and the trigger routes back into `performAction` so keyboard and click share one path. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
 
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
 

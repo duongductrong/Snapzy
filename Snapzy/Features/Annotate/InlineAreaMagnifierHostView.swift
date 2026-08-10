@@ -111,6 +111,10 @@ final class InlineAreaMagnifierHostView: NSView {
       newLayer.font = CoordinateBubbleStyle.font as CTFont
       newLayer.fontSize = CoordinateBubbleStyle.font.pointSize
       newLayer.foregroundColor = CoordinateBubbleStyle.textColor.cgColor
+      newLayer.shadowColor = CoordinateBubbleStyle.shadowColor.cgColor
+      newLayer.shadowOffset = CoordinateBubbleStyle.shadowOffset
+      newLayer.shadowRadius = CoordinateBubbleStyle.shadowRadius
+      newLayer.shadowOpacity = CoordinateBubbleStyle.shadowOpacity
       newLayer.alignmentMode = .left
       newLayer.contentsScale = window?.backingScaleFactor ?? 2.0
       newLayer.truncationMode = .none
@@ -122,8 +126,8 @@ final class InlineAreaMagnifierHostView: NSView {
 
     let localX = Int(point.x)
     let localY = Int(displayBounds.height - point.y)
-    let string = "\(localX), \(localY)"
-    let textSize = string.size(withAttributes: [.font: CoordinateBubbleStyle.font])
+    let string = "\(localX)\n\(localY)"
+    let textSize = multiLineTextSize(string, font: CoordinateBubbleStyle.font)
     let offset: CGFloat = 12.0
     let hInset = CoordinateBubbleStyle.horizontalInset
     let vInset = CoordinateBubbleStyle.verticalInset
@@ -145,5 +149,17 @@ final class InlineAreaMagnifierHostView: NSView {
     text.frame = textRect
     text.isHidden = false
     CATransaction.commit()
+  }
+
+  /// `NSString.size(withAttributes:)` ignores embedded newlines (measures as a single line) —
+  /// this measures the two-line "x\ny" coordinate string properly. Mirrors
+  /// `AreaSelectionOverlayView.multiLineTextSize`.
+  private func multiLineTextSize(_ text: String, font: NSFont) -> CGSize {
+    let attributes: [NSAttributedString.Key: Any] = [.font: font]
+    let lines = text.components(separatedBy: "\n")
+    let maxWidth = lines.map { $0.size(withAttributes: attributes).width }.max() ?? 0
+    let lineHeight = "0".size(withAttributes: attributes).height
+    let totalHeight = lineHeight * CGFloat(lines.count) + 2.0
+    return CGSize(width: maxWidth, height: totalHeight)
   }
 }

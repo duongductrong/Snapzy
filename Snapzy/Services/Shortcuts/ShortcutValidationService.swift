@@ -85,6 +85,46 @@ final class ShortcutValidationService {
     return .accept(issue: nil)
   }
 
+  /// Quick Access card actions live in their own namespace: they are only
+  /// registered while a card is hovered, so they may reuse Annotate keys. They do
+  /// shadow global shortcuts during hover, which is a warning rather than a block.
+  func validateQuickAccessActionShortcut(
+    _ config: ShortcutConfig?,
+    for action: QuickAccessActionKind
+  ) -> ShortcutValidationDecision {
+    guard let config else { return .accept(issue: nil) }
+
+    if QuickAccessActionShortcutStore.containsFunctionModifier(config) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.quickAccessFnUnsupported
+      ))
+    }
+
+    guard QuickAccessActionShortcutStore.hasRequiredModifier(config) else {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.quickAccessModifierRequired
+      ))
+    }
+
+    if let conflictAction = conflictingQuickAccessActionShortcut(for: config, excluding: action) {
+      return .reject(issue: ShortcutValidationIssue(
+        severity: .error,
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictAction.settingsTitle)
+      ))
+    }
+
+    if let conflictKind = conflictingGlobalShortcut(for: config, excluding: nil) {
+      return .accept(issue: ShortcutValidationIssue(
+        severity: .warning,
+        message: L10n.ShortcutValidation.quickAccessShadowsGlobal(conflictKind.displayName)
+      ))
+    }
+
+    return .accept(issue: nil)
+  }
+
   func validateAnnotateToolShortcut(
     _ key: Character,
     for tool: AnnotationToolType
@@ -163,6 +203,17 @@ final class ShortcutValidationService {
       $0 != excludedKind
         && AnnotateShortcutManager.shared.isActionShortcutEnabled(for: $0)
         && AnnotateShortcutManager.shared.shortcut(for: $0) == config
+    })
+  }
+
+  private func conflictingQuickAccessActionShortcut(
+    for config: ShortcutConfig,
+    excluding excludedAction: QuickAccessActionKind
+  ) -> QuickAccessActionKind? {
+    QuickAccessActionKind.allCases.first(where: {
+      $0 != excludedAction
+        && QuickAccessActionShortcutStore.shared.isEnabled(for: $0)
+        && QuickAccessActionShortcutStore.shared.shortcut(for: $0) == config
     })
   }
 

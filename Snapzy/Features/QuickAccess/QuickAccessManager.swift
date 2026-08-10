@@ -40,6 +40,7 @@ final class QuickAccessManager: ObservableObject {
   @Published private(set) var items: [QuickAccessItem] = [] {
     didSet {
       refreshPanelInteractionMetrics()
+      invalidateHoverIfItemGone()
     }
   }
 
@@ -138,6 +139,19 @@ final class QuickAccessManager: ObservableObject {
     modifiers: UInt32(cmdKey)
   )
 
+  /// Card the pointer is currently over. Card action shortcuts are only live
+  /// while this is non-nil, so it must be cleared on every path that ends a hover.
+  ///
+  /// Deliberately NOT `@Published`: only this manager reads it (shortcut
+  /// targeting), and publishing it would invalidate every manager observer —
+  /// including `QuickAccessStackView` and all visible cards — on every hover
+  /// enter/exit, re-rendering the stack without changing anything visible.
+  private(set) var hoveredItemID: UUID?
+
+  /// Emits when a card action shortcut fires, targeted at the hovered card.
+  /// `QuickAccessCardView` owns the availability rules, so it runs the action.
+  let cardShortcutTrigger = PassthroughSubject<QuickAccessCardShortcutTrigger, Never>()
+
   // MARK: - Configuration
 
   let maxVisibleItems = 5
@@ -156,6 +170,7 @@ final class QuickAccessManager: ObservableObject {
   private var editingItemIds: Set<UUID> = []
   /// Tracks items doing async work, such as GIF conversion or cloud upload.
   private var activityHoldItemIds: Set<UUID> = []
+  private let hoverShortcutRegistry = QuickAccessHoverShortcutRegistry()
   private var editHotKeyRef: EventHotKeyRef?
   private var editHotKeyHandler: EventHandlerRef?
   fileprivate let editHotKeyID = EventHotKeyID(signature: OSType(0x5A51_4145), id: 1)
@@ -184,6 +199,9 @@ final class QuickAccessManager: ObservableObject {
 
   private init() {
     loadSettings()
+    hoverShortcutRegistry.onTrigger = { [weak self] action in
+      self?.handleCardShortcut(action)
+    }
   }
 
   private func loadSettings() {
@@ -978,7 +996,52 @@ final class QuickAccessManager: ObservableObject {
     )
   }
 
+  // MARK: - Card Action Shortcuts
+
+  /// Single writer for hover state. Card action shortcuts shadow the frontmost
+  /// app's keyboard while registered, so hover-exit must always reach here.
+  func setHoveredItem(id: UUID, hovering: Bool) {
+    if hovering {
+      guard items.contains(where: { $0.id == id }) else { return }
+      hoveredItemID = id
+    } else {
+      guard hoveredItemID == id else { return }
+      hoveredItemID = nil
+    }
+    hoverShortcutRegistry.setHoverActive(hoveredItemID != nil)
+  }
+
+  func clearHoveredItem() {
+    guard hoveredItemID != nil else { return }
+    hoveredItemID = nil
+    hoverShortcutRegistry.setHoverActive(false)
+  }
+
+  /// A card can vanish under the pointer (countdown, delete, editor open) without
+  /// SwiftUI reporting hover-exit, which would leave the bindings registered.
+  private func invalidateHoverIfItemGone() {
+    guard let hoveredItemID else { return }
+    guard !items.contains(where: { $0.id == hoveredItemID }) else { return }
+    clearHoveredItem()
+  }
+
+  private func handleCardShortcut(_ action: QuickAccessActionKind) {
+    guard let hoveredItemID, items.contains(where: { $0.id == hoveredItemID }) else { return }
+    guard QuickAccessActionConfigurationStore.shared.isEnabled(action) else { return }
+
+    cardShortcutTrigger.send(
+      QuickAccessCardShortcutTrigger(itemID: hoveredItemID, action: action)
+    )
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "Quick access card action triggered via shortcut",
+      context: ["itemId": hoveredItemID.uuidString, "action": action.rawValue]
+    )
+  }
+
   func suspendForCapture() {
+    clearHoveredItem()
     panelController.suspendMouseMonitors()
     pinWindowManager.suspendAllMouseMonitors()
   }
@@ -1264,12 +1327,19 @@ final class QuickAccessManager: ObservableObject {
     )
   }
 
+  /// Ensure a panel exists for the capture that just landed, on the display that
+  /// capture happened on. A panel already sliding out is not reusable — it would
+  /// finish closing and swallow the new card — so that case gets a fresh show.
   private func showPanelIfNeeded() {
-    guard !panelController.isVisible else { return }
-    showPanel()
+    guard panelController.isVisible, !panelController.isDismissing else {
+      showPanel()
+      return
+    }
+    panelController.moveToActiveScreenIfNeeded()
   }
 
   private func hidePanel() {
+    clearHoveredItem()
     removeEditHotKey()
     panelController.hide()
   }

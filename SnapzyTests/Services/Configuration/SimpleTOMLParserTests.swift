@@ -54,4 +54,49 @@ final class SimpleTOMLParserTests: XCTestCase {
       XCTAssertEqual(error as? SimpleTOMLError, .invalidValue(1, "nope"))
     }
   }
+
+  func testUnescapePreservesBackslashFollowedByN() throws {
+    // In TOML, `\\` is an escaped backslash, so the quoted literal "a\\nb"
+    // decodes to the 4-char value a, \, n, b — NOT "a" + newline + "b".
+    let document = try SimpleTOMLParser.parse(#"key = "a\\nb""#)
+
+    XCTAssertEqual(document.value(at: "key")?.stringValue, "a\\nb")
+    XCTAssertEqual(document.value(at: "key")?.stringValue?.count, 4)
+  }
+
+  func testUnescapePreservesBackslashFollowedByT() throws {
+    // Mirror of the above for `\t`: the literal "a\\tb" decodes to a, \, t, b.
+    let document = try SimpleTOMLParser.parse(#"key = "a\\tb""#)
+
+    XCTAssertEqual(document.value(at: "key")?.stringValue, "a\\tb")
+    XCTAssertEqual(document.value(at: "key")?.stringValue?.count, 4)
+  }
+
+  func testRoundTripPreservesBackslashFollowedByNAndT() throws {
+    // A stored value that literally contains a backslash followed by n/t must
+    // survive a writer → parser round-trip. Real newline/tab are mixed in to
+    // prove the legitimate `\n` / `\t` escapes still round-trip too.
+    let original = "a\\nb\nc\td" // a, \, n, b, <newline>, c, <tab>, d
+    var writer = SimpleTOMLWriter()
+    writer.value("key", original)
+
+    let document = try SimpleTOMLParser.parse(writer.output)
+
+    XCTAssertEqual(document.value(at: "key")?.stringValue, original)
+    XCTAssertEqual(document.value(at: "key")?.stringValue?.count, original.count)
+  }
+
+  func testRoundTripPreservesEmbeddedDoubleQuote() throws {
+    // An embedded double quote is the one remaining escape `quote()` emits
+    // (`\"`); guard that the `\"` → `"` branch round-trips so it cannot be
+    // silently removed.
+    let original = "a\"b" // a, ", b
+    var writer = SimpleTOMLWriter()
+    writer.value("key", original)
+
+    let document = try SimpleTOMLParser.parse(writer.output)
+
+    XCTAssertEqual(document.value(at: "key")?.stringValue, original)
+    XCTAssertEqual(document.value(at: "key")?.stringValue?.count, 3)
+  }
 }

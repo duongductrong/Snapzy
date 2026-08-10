@@ -350,6 +350,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureFullscreen()
     case .captureArea:
       captureArea()
+    case .captureRepeatArea:
+      captureRepeatArea()
     case .captureAreaAnnotate:
       captureAreaAnnotate()
     case .captureApplication:
@@ -541,6 +543,93 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   func captureAreaAnnotate() {
     startInlineAreaAnnotateCapture()
+  }
+
+
+  /// Re-capture the most recently selected area screenshot rect without
+  /// re-entering selection mode. Never opens the selection flow: when no
+  /// previous area is stored (or it is no longer visible on any display), the
+  /// user is asked to capture an area first — via a native notification,
+  /// falling back to an in-app toast when notifications are unavailable.
+  func captureRepeatArea() {
+    // Prevent repeat capture while a selection overlay is active
+    if isAreaSelectionActive {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureRepeatArea blocked: already active")
+      return
+    }
+
+    guard let lastRect = ScreenshotLastAreaStore.load() else {
+      // No previous area stored — repeat must never enter the selection flow.
+      // Prefer a native notification; fall back to an in-app toast when
+      // notifications are unavailable or denied (mirrors OCRResultNotifier).
+      DiagnosticLogger.shared.log(.info, .capture, "Repeat area capture skipped: no stored area")
+      Task { @MainActor in
+        let delivered = await SystemNotificationService.shared.post(
+          title: L10n.Actions.captureRepeatArea,
+          body: L10n.ScreenCapture.repeatAreaNoPreviousSelection
+        )
+        if !delivered {
+          AppToastManager.shared.show(
+            message: L10n.ScreenCapture.repeatAreaNoPreviousSelection,
+            style: .warning
+          )
+        }
+      }
+      return
+    }
+
+    guard
+      let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+        promptMessage: L10n.Recording.chooseSaveLocationMessage
+      )
+    else {
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      return
+    }
+    saveDirectory = resolvedSaveDirectory
+
+    let captureContext = CaptureContext.fromFrontmostApp()
+    let showCursor = showsCursorInScreenshots
+    let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
+    let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
+    let prefetchedContentTask = captureManager.prefetchShareableContent(
+      includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
+    )
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
+
+    DiagnosticLogger.shared.log(.info, .capture, "Repeat area capture started", context: [
+      "rect": "\(Int(lastRect.width))x\(Int(lastRect.height))",
+    ])
+
+    Task { @MainActor in
+      defer { hiddenWindowSession.restore() }
+      self.isCapturing = true
+      await Task.yield()
+
+      let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
+        for: .screenshot,
+        exportDirectory: resolvedSaveDirectory
+      )
+
+      let result = await self.captureManager.captureArea(
+        rect: lastRect,
+        saveDirectory: actualSaveDirectory,
+        format: self.resolvedFormat,
+        showCursor: showCursor,
+        excludeDesktopIcons: excludeDesktopIcons,
+        excludeDesktopWidgets: excludeDesktopWidgets,
+        excludeOwnApplication: excludeOwnApplication,
+        prefetchedContentTask: prefetchedContentTask,
+        context: captureContext
+      )
+
+      self.isCapturing = false
+      self.lastCaptureResult = result
+      if case .success = result {
+        SoundManager.playScreenshotCapture()
+      }
+    }
   }
 
   private func startAreaCapture(initialInteractionMode: AreaSelectionInteractionMode) {
@@ -964,7 +1053,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           excludeDesktopWidgets: excludeDesktopWidgets,
           excludeOwnApplication: excludeOwnApplication
         )
-      }
+      },
+      allowsRepeatAreaCompletion: true
     ) { [weak self] selection in
       guard let self else {
         DiagnosticLogger.shared.log(.warning, .capture, "captureArea completion: self deallocated")
@@ -983,6 +1073,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         DiagnosticLogger.shared.log(.info, .capture, "Area capture cancelled by user")
         lastCaptureResult = .failure(.cancelled)
         return
+      }
+
+      // Remember the manual area selection for instant repeat capture
+      if case .rect(let rect) = selection.target {
+        ScreenshotLastAreaStore.save(rect)
       }
 
       let selectionContext: CaptureContext = switch selection.target {
@@ -1186,7 +1281,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
       ),
       initialInteractionMode: initialInteractionMode,
-      dismissesAfterSelection: false
+      dismissesAfterSelection: false,
+      allowsRepeatAreaCompletion: true
     ) { [weak self] selection in
       guard let self else {
         hiddenWindowSession.restore()
@@ -1199,6 +1295,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         DiagnosticLogger.shared.log(.info, .capture, "Live area capture cancelled by user")
         lastCaptureResult = .failure(.cancelled)
         return
+      }
+
+      // Remember the manual area selection for instant repeat capture
+      if case .rect(let rect) = selection.target {
+        ScreenshotLastAreaStore.save(rect)
       }
 
       let selectionContext: CaptureContext = switch selection.target {
@@ -1473,6 +1574,79 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         context: selectionContext
       )
     }
+  }
+
+  /// Resolve the captured image for a live (backdrop-less) selection with the same
+  /// transient-UI preservation as live area capture (⌘⇧4):
+  /// - a retained menu-bar popover target uses the pixels snapshotted at shortcut time
+  ///   (the transient WindowServer window may already be gone by mouse-up);
+  /// - otherwise the selection is cropped from the frame-locked mouse-up snapshots,
+  ///   which include hover states, dropdowns, tooltips, and popovers exactly as shown;
+  /// - when the fast path is unavailable (exclusion options or a failed grab), falls
+  ///   back to a fresh ScreenCaptureKit area capture — the same status-quo fallback
+  ///   live area capture uses.
+  /// Used by OCR and object-cutout captures, which consume an image rather than a
+  /// saved file. `minimumOutputScaleFactor: 1` keeps native pixels — no upscale or
+  /// sharpen cost beyond the previous behavior.
+  private func captureLiveSelectionImage(
+    selection: AreaSelectionResult,
+    mouseUpSnapshots: [FrozenDisplaySnapshot],
+    immediateMenuBarPopoverCaptures: [ImmediateMenuBarPopoverCapture],
+    excludeDesktopIcons: Bool,
+    excludeDesktopWidgets: Bool,
+    excludeOwnApplication: Bool,
+    prefetchedContentTask: ShareableContentPrefetchTask?
+  ) async throws -> (image: CGImage, scaleFactor: CGFloat)? {
+    if let windowTarget = selection.target.windowTarget,
+       let retained = immediateMenuBarPopoverCaptures.first(where: {
+         $0.target.windowID == windowTarget.windowID
+       })
+    {
+      return (retained.image, retained.scaleFactor)
+    }
+
+    if !mouseUpSnapshots.isEmpty {
+      do {
+        let snapshotsByID = FrozenAreaCaptureSession.fromSnapshots(mouseUpSnapshots).allSnapshots()
+        let cropResult: FrozenAreaCropResult
+        if selection.spansMultipleDisplays {
+          cropResult = try await Task.detached {
+            try FrozenAreaCaptureSession.cropCompositeImage(
+              snapshots: snapshotsByID,
+              for: selection,
+              minimumOutputScaleFactor: 1
+            )
+          }.value
+        } else {
+          cropResult = try await Task.detached {
+            try FrozenAreaCaptureSession.cropImage(
+              snapshots: snapshotsByID,
+              for: selection,
+              minimumOutputScaleFactor: 1
+            )
+          }.value
+        }
+        return (cropResult.image, cropResult.scaleFactor)
+      } catch {
+        DiagnosticLogger.shared.log(
+          .error,
+          .capture,
+          "Mouse-up snapshot crop failed; falling back to captureAreaAsImage: \(error.localizedDescription)"
+        )
+      }
+    }
+
+    guard
+      let image = try await captureManager.captureAreaAsImage(
+        rect: selection.rect,
+        excludeDesktopIcons: excludeDesktopIcons,
+        excludeDesktopWidgets: excludeDesktopWidgets,
+        excludeOwnApplication: excludeOwnApplication,
+        prefetchedContentTask: prefetchedContentTask
+      )
+    else { return nil }
+
+    return (image, Self.captureScaleFactor(for: image, rect: selection.rect))
   }
 
   private func ensureFrozenSnapshots(
@@ -2167,12 +2341,19 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     DiagnosticLogger.shared.log(.info, .ocr, "OCR capture flow started")
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
     let prefetchedContentTask = captureManager.prefetchShareableContent(
       includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
     )
+    // Same transient-UI preservation as live area capture (⌘⇧4): retain the pixels of
+    // any visible menu-bar popover before Snapzy presents its selection UI — menu
+    // extras may close as a side effect of global-hotkey handling or overlay ordering.
+    let immediateMenuBarPopoverCaptures = WindowSelectionQueryService.captureImmediateMenuBarPopoverCaptures(
+      excludeOwnApplication: excludeOwnApplication
+    )
 
     // Hide only normal-level app windows (not overlay panels)
-    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
 
     // Minimal delay to ensure window is hidden when we actually hid one.
     DispatchQueue.main
@@ -2184,26 +2365,54 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           return
         }
 
-        AreaSelectionController.shared.startSelection { [weak self] rect in
+        // `dismissesAfterSelection: false` keeps the overlay visible until the mouse-up
+        // snapshots are secured inside the completion (which then calls `cancelSelection()`
+        // itself) — the capture-before-hide sequencing live area capture relies on.
+        AreaSelectionController.shared.startSelection(
+          mode: .screenshot,
+          backdrops: [:],
+          applicationConfiguration: AreaSelectionApplicationConfiguration(
+            prefetchedContentTask: prefetchedContentTask,
+            excludeOwnApplication: excludeOwnApplication,
+            immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
+          ),
+          initialInteractionMode: .manualRegion,
+          dismissesAfterSelection: false
+        ) { [weak self] selection in
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .ocr, "captureOCR completion: self deallocated")
             hiddenWindowSession.restore()
             return
           }
 
-          guard let selectedRect = rect else {
+          guard let selection else {
             isAreaSelectionActive = false
             hiddenWindowSession.restore()
             DiagnosticLogger.shared.log(.info, .ocr, "OCR capture cancelled")
             return
           }
 
+          let selectedRect = selection.rect
           DiagnosticLogger.shared.log(
             .info,
             .ocr,
             "OCR area selected",
             context: ["rect": "\(Int(selectedRect.width))x\(Int(selectedRect.height))"]
           )
+
+          // Frame lock: synchronously snapshot every display the selection touches at the
+          // instant of mouse-up, BEFORE any async hop — hover states, dropdowns, tooltips,
+          // and popovers are captured exactly as on screen (mirrors live area capture).
+          let mouseUpSnapshots = self.captureLiveMouseUpSnapshots(
+            selection: selection,
+            showCursor: false,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets
+          )
+
+          // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
+          AreaSelectionController.shared.cancelSelection()
+
           Task { @MainActor in
             defer {
               self.isAreaSelectionActive = false
@@ -2219,11 +2428,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
               // Capture the screen region
               let captureStartTime = CFAbsoluteTimeGetCurrent()
-              guard let image = try await self.captureManager.captureAreaAsImage(
-                rect: selectedRect,
+              guard let liveCapture = try await self.captureLiveSelectionImage(
+                selection: selection,
+                mouseUpSnapshots: mouseUpSnapshots,
+                immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures,
                 excludeDesktopIcons: excludeDesktopIcons,
                 excludeDesktopWidgets: excludeDesktopWidgets,
-                excludeOwnApplication: !self.includesOwnAppInScreenshots,
+                excludeOwnApplication: excludeOwnApplication,
                 prefetchedContentTask: prefetchedContentTask
               ) else {
                 AppStatusBarController.shared.setProcessing(false)
@@ -2235,6 +2446,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 QuickAccessSound.failed.play()
                 return
               }
+              let image = liveCapture.image
               let captureDurationMs = Self.elapsedMilliseconds(since: captureStartTime)
 
               let processingStartTime = CFAbsoluteTimeGetCurrent()
@@ -2435,12 +2647,19 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     DiagnosticLogger.shared.log(.info, .capture, "Object cutout flow started")
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
     let prefetchedContentTask = captureManager.prefetchShareableContent(
       includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
     )
+    // Same transient-UI preservation as live area capture (⌘⇧4): retain the pixels of
+    // any visible menu-bar popover before Snapzy presents its selection UI — menu
+    // extras may close as a side effect of global-hotkey handling or overlay ordering.
+    let immediateMenuBarPopoverCaptures = WindowSelectionQueryService.captureImmediateMenuBarPopoverCaptures(
+      excludeOwnApplication: excludeOwnApplication
+    )
 
     // Hide only normal-level app windows (not overlay panels)
-    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(!includesOwnAppInScreenshots)
+    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
 
     DispatchQueue.main
       .asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
@@ -2451,20 +2670,53 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           return
         }
 
-        AreaSelectionController.shared.startSelection { [weak self] rect in
+        // `dismissesAfterSelection: false` keeps the overlay visible until the mouse-up
+        // snapshots are secured inside the completion (which then calls `cancelSelection()`
+        // itself) — the capture-before-hide sequencing live area capture relies on.
+        AreaSelectionController.shared.startSelection(
+          mode: .screenshot,
+          backdrops: [:],
+          applicationConfiguration: AreaSelectionApplicationConfiguration(
+            prefetchedContentTask: prefetchedContentTask,
+            excludeOwnApplication: excludeOwnApplication,
+            immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
+          ),
+          initialInteractionMode: .manualRegion,
+          dismissesAfterSelection: false
+        ) { [weak self] selection in
           guard let self else {
             DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout completion: self deallocated")
             hiddenWindowSession.restore()
             return
           }
 
-          guard let selectedRect = rect else {
+          guard let selection else {
             isAreaSelectionActive = false
             hiddenWindowSession.restore()
             DiagnosticLogger.shared.log(.info, .capture, "Object cutout capture cancelled")
             lastCaptureResult = .failure(.cancelled)
             return
           }
+
+          let selectionContext: CaptureContext = switch selection.target {
+          case .window(let target):
+            CaptureContext.fromPID(target.ownerPID, windowTitle: target.title)
+          case .rect:
+            captureContext
+          }
+
+          // Frame lock: synchronously snapshot every display the selection touches at the
+          // instant of mouse-up, BEFORE any async hop — hover states, dropdowns, tooltips,
+          // and popovers are captured exactly as on screen (mirrors live area capture).
+          let mouseUpSnapshots = self.captureLiveMouseUpSnapshots(
+            selection: selection,
+            showCursor: false,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets
+          )
+
+          // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
+          AreaSelectionController.shared.cancelSelection()
 
           Task { @MainActor in
             defer {
@@ -2476,11 +2728,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             await Task.yield()
 
             do {
-              guard let capturedImage = try await self.captureManager.captureAreaAsImage(
-                rect: selectedRect,
+              guard let liveCapture = try await self.captureLiveSelectionImage(
+                selection: selection,
+                mouseUpSnapshots: mouseUpSnapshots,
+                immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures,
                 excludeDesktopIcons: excludeDesktopIcons,
                 excludeDesktopWidgets: excludeDesktopWidgets,
-                excludeOwnApplication: !self.includesOwnAppInScreenshots,
+                excludeOwnApplication: excludeOwnApplication,
                 prefetchedContentTask: prefetchedContentTask
               ) else {
                 self.isCapturing = false
@@ -2494,6 +2748,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 return
               }
 
+              let capturedImage = liveCapture.image
+              let cutoutScaleFactor = liveCapture.scaleFactor
               let cutoutResult = try await ForegroundCutoutService.shared.extractForegroundResult(
                 from: capturedImage
               )
@@ -2526,20 +2782,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
                 for: .screenshot,
                 exportDirectory: resolvedSaveDirectory
               )
-              let cutoutScaleFactor: CGFloat = if selectedRect.width > 0 {
-                CGFloat(capturedImage.width) / selectedRect.width
-              } else if selectedRect.height > 0 {
-                CGFloat(capturedImage.height) / selectedRect.height
-              } else {
-                NSScreen.main?.backingScaleFactor ?? 2.0
-              }
 
               let result = await self.captureManager.saveProcessedImage(
                 outputImage,
                 to: actualSaveDirectory,
                 format: output.format,
                 scaleFactor: cutoutScaleFactor,
-                context: captureContext
+                context: selectionContext
               )
               self.lastCaptureResult = result
               self.isCapturing = false

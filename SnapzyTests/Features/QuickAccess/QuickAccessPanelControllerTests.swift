@@ -33,10 +33,15 @@ final class QuickAccessPanelControllerTests: XCTestCase {
     try await super.tearDown()
   }
 
+  private static let panelSize = CGSize(width: 200, height: 400)
+
+  /// Content is pinned to the panel size on purpose: an intrinsically-smaller
+  /// hosting view lets AppKit shrink the window around the top-left corner,
+  /// which would move the origin under test. Real cards are fixed-size.
   private func showPanel() {
     controller?.show(
-      Text("card"),
-      size: CGSize(width: 200, height: 400),
+      Text("card").frame(width: Self.panelSize.width, height: Self.panelSize.height),
+      size: Self.panelSize,
       itemCount: 1,
       scale: 1
     )
@@ -94,5 +99,88 @@ final class QuickAccessPanelControllerTests: XCTestCase {
     showPanel()
     XCTAssertNotNil(controller?.window)
     XCTAssertTrue(controller?.window?.isVisible ?? false)
+  }
+
+  // MARK: - Multi-display anchoring (#467)
+
+  /// A capture on the display the panel already lives on must not restart the
+  /// entrance animation — re-anchoring is only for cross-display captures.
+  func testMoveToActiveScreenIsNoOpOnSameDisplay() async throws {
+    showPanel()
+    try await Task.sleep(nanoseconds: 600_000_000)  // let the enter finish
+    let settledFrame = try XCTUnwrap(controller?.window?.frame)
+
+    controller?.moveToActiveScreenIfNeeded()
+
+    XCTAssertEqual(controller?.window?.frame, settledFrame, "Same-display capture must not move the panel")
+    XCTAssertFalse(controller?.isDismissing ?? true)
+  }
+
+  /// Re-anchoring must land the panel in the target display's corner, matching
+  /// the origin the position model computes for that screen.
+  func testMoveToActiveScreenLandsInCornerOfAnchoredScreen() async throws {
+    let size = Self.panelSize
+    showPanel()
+    try await Task.sleep(nanoseconds: 600_000_000)
+
+    controller?.moveToActiveScreenIfNeeded()
+    try await Task.sleep(nanoseconds: 900_000_000)  // enter (0.4s) + watchdog slack
+
+    // Assert against the anchored screen, not the live cursor screen: on a
+    // multi-display Mac the cursor can resolve elsewhere by assert time.
+    let screen = try XCTUnwrap(controller?.anchoredScreen)
+    let expected = QuickAccessPosition.bottomRight.calculateOrigin(for: size, on: screen)
+    let origin = try XCTUnwrap(controller?.window?.frame.origin)
+    XCTAssertEqual(origin.x, expected.x, accuracy: 1)
+    XCTAssertEqual(origin.y, expected.y, accuracy: 1)
+  }
+
+  /// A panel mid slide-out is being torn down; re-anchoring it would drag a
+  /// dying window onto the new display instead of the caller showing a fresh one.
+  func testMoveToActiveScreenIgnoredWhileDismissing() async throws {
+    showPanel()
+    try await Task.sleep(nanoseconds: 600_000_000)
+
+    controller?.hide()
+    XCTAssertTrue(controller?.isDismissing ?? false, "hide() must mark the panel as dismissing")
+    controller?.moveToActiveScreenIfNeeded()
+
+    try await Task.sleep(nanoseconds: 900_000_000)
+    XCTAssertNil(controller?.window, "Dismissal must still complete after a move request")
+  }
+}
+
+@MainActor
+final class QuickAccessScreenAnchorTests: XCTestCase {
+
+  func testAnchorReportsChangeOnlyOnNewDisplay() throws {
+    let screen = try XCTUnwrap(NSScreen.screens.first)
+    var anchor = QuickAccessScreenAnchor()
+
+    XCTAssertNil(anchor.displayID)
+    XCTAssertTrue(anchor.anchor(to: screen), "First anchor is always a change")
+    XCTAssertEqual(anchor.displayID, ScreenUtility.displayID(of: screen))
+    XCTAssertFalse(anchor.anchor(to: screen), "Re-anchoring to the same display is a no-op")
+  }
+
+  /// Positioning resolves against the anchored display, not the cursor — moving
+  /// the mouse to another screen must never teleport a visible panel.
+  func testScreenResolvesToAnchoredDisplay() throws {
+    let screen = try XCTUnwrap(NSScreen.screens.first)
+    var anchor = QuickAccessScreenAnchor()
+    anchor.anchor(to: screen)
+
+    XCTAssertEqual(ScreenUtility.displayID(of: anchor.screen), ScreenUtility.displayID(of: screen))
+  }
+
+  /// An unset anchor (and, by the same path, a disconnected display) falls back
+  /// to the active screen rather than trapping the panel on a missing monitor.
+  func testUnanchoredFallsBackToActiveScreen() {
+    let anchor = QuickAccessScreenAnchor()
+
+    XCTAssertEqual(
+      ScreenUtility.displayID(of: anchor.screen),
+      ScreenUtility.activeDisplayID()
+    )
   }
 }
