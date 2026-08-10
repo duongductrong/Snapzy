@@ -668,6 +668,11 @@ nonisolated enum L10n {
       defaultValue: "Capture Area",
       comment: "Action title for area screenshot capture"
     )
+    static let captureRepeatArea = string(
+      "action.capture-repeat-area",
+      defaultValue: "Repeat Area Screenshot",
+      comment: "Action title for repeating the last area screenshot"
+    )
     static let captureAreaAnnotate = string(
       "action.capture-area-annotate",
       defaultValue: "Capture Markup",
@@ -1955,6 +1960,27 @@ nonisolated enum L10n {
         displayName
       )
     }
+
+    static let quickAccessModifierRequired = string(
+      "shortcut-validation.quick-access-modifier-required",
+      defaultValue: "Add ⌘, ⌥, or ⌃. Card shortcuts capture the key while you hover.",
+      comment: "Validation error when a Quick Access card shortcut has no command, option, or control modifier"
+    )
+
+    static let quickAccessFnUnsupported = string(
+      "shortcut-validation.quick-access-fn-unsupported",
+      defaultValue: "The fn key is not supported for card shortcuts.",
+      comment: "Validation error when a Quick Access card shortcut uses the fn modifier"
+    )
+
+    static func quickAccessShadowsGlobal(_ displayName: String) -> String {
+      format(
+        "shortcut-validation.quick-access-shadows-global",
+        defaultValue: "Overrides %@ while you hover a card.",
+        comment: "Validation warning when a Quick Access card shortcut matches a global shortcut. %@ is the global action name.",
+        displayName
+      )
+    }
   }
 
   enum PreferencesGeneral {
@@ -2223,6 +2249,11 @@ nonisolated enum L10n {
   }
 
   enum PreferencesQuickAccess {
+    static let actionDisabledFootnote = string(
+      "preferences-quick-access.action-disabled-footnote",
+      defaultValue: "Turned off in Quick Access settings",
+      comment: "Footnote shown when a card action shortcut points at an action the user removed from the card"
+    )
     static let positionSection = string(
       "preferences-quick-access.section-position",
       defaultValue: "Position",
@@ -2685,6 +2716,16 @@ nonisolated enum L10n {
     static let showCursorDescription = string(
       "preferences-capture.show-cursor-description",
       defaultValue: "Include mouse pointer in captured screenshots",
+      comment: "Capture preferences setting description"
+    )
+    static let includeWindowShadowTitle = string(
+      "preferences-capture.include-window-shadow-title",
+      defaultValue: "Include window shadow",
+      comment: "Capture preferences setting title"
+    )
+    static let includeWindowShadowDescription = string(
+      "preferences-capture.include-window-shadow-description",
+      defaultValue: "Show the window drop shadow in Application Capture",
       comment: "Capture preferences setting description"
     )
     static let freezeAreaTitle = string(
@@ -3379,6 +3420,11 @@ nonisolated enum L10n {
       defaultValue: "Select a region to capture",
       comment: "Description for area capture shortcut"
     )
+    static let captureRepeatAreaDescription = string(
+      "preferences-shortcuts.capture-repeat-area-description",
+      defaultValue: "Capture the previously selected area again",
+      comment: "Description for repeat area capture shortcut"
+    )
     static let captureAreaAnnotateDescription = string(
       "preferences-shortcuts.capture-area-annotate-description",
       defaultValue: "Select a region, annotate in place, then finish with ⌘S or Enter",
@@ -3513,6 +3559,31 @@ nonisolated enum L10n {
       "preferences-shortcuts.edit-latest-capture-description",
       defaultValue: "Open the editor for the most recent capture while its preview is showing",
       comment: "Description for the edit latest capture shortcut"
+    )
+    static let cardActionsSection = string(
+      "preferences-shortcuts.card-actions-section",
+      defaultValue: "Quick Access Card Actions",
+      comment: "Shortcuts preferences section title for hover-activated Quick Access card actions"
+    )
+    static let cardActionsSectionDescription = string(
+      "preferences-shortcuts.card-actions-section-description",
+      defaultValue: "Hover a Quick Access card, then press a shortcut to run that action. These keys only work while the pointer is over a card.",
+      comment: "Description for the Quick Access card action shortcuts section"
+    )
+    static let cardActionsEnableTitle = string(
+      "preferences-shortcuts.card-actions-enable-title",
+      defaultValue: "Card action shortcuts",
+      comment: "Title for the master toggle of Quick Access card action shortcuts"
+    )
+    static let cardActionsEnableDescription = string(
+      "preferences-shortcuts.card-actions-enable-description",
+      defaultValue: "Turn every card shortcut on or off at once",
+      comment: "Description for the master toggle of Quick Access card action shortcuts"
+    )
+    static let cardActionsHoverFootnote = string(
+      "preferences-shortcuts.card-actions-hover-footnote",
+      defaultValue: "Active only while hovering a card",
+      comment: "Footnote shown on each Quick Access card action shortcut row"
     )
     static let recorderHint = string(
       "preferences-shortcuts.recorder-hint",
@@ -4905,6 +4976,11 @@ nonisolated enum L10n {
       "annotate.drag-to-app-help",
       defaultValue: "Drag this to another app to share the annotated image",
       comment: "Tooltip shown for the annotate drag handle"
+    )
+    static let extractText = string(
+      "annotate.extract-text",
+      defaultValue: "Extract Text",
+      comment: "Context-menu action that extracts text from the underlying annotate image"
     )
     static let newWindow = string(
       "annotate.new-window",
@@ -7402,6 +7478,11 @@ nonisolated enum L10n {
       "screen-capture.no-display-found",
       defaultValue: "No display found to capture",
       comment: "Error shown when no display matches the selected screenshot target"
+    )
+    static let repeatAreaNoPreviousSelection = string(
+      "screen-capture.repeat-area-no-previous-selection",
+      defaultValue: "No previous area — select an area with ⇧⌘4 first",
+      comment: "Toast shown when repeat area capture is triggered before any area selection exists"
     )
     nonisolated static let saveLocationPermissionRequired = string(
       "screen-capture.save-location-permission-required",

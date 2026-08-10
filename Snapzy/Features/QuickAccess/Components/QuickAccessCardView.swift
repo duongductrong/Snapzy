@@ -17,6 +17,7 @@ struct QuickAccessCardView: View {
 
   @ObservedObject private var preferencesManager = PreferencesManager.shared
   @ObservedObject private var actionConfiguration = QuickAccessActionConfigurationStore.shared
+  @ObservedObject private var actionShortcuts = QuickAccessActionShortcutStore.shared
   @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
   @ObservedObject private var swipeActionStore = QuickAccessSwipeActionStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
@@ -103,6 +104,9 @@ struct QuickAccessCardView: View {
       }
       onHover?(hovering)
 
+      // Arms/disarms the card action shortcuts for this card.
+      manager.setHoveredItem(id: item.id, hovering: hovering)
+
       // Pause/resume countdown on hover if enabled
       if manager.pauseCountdownOnHover {
         if hovering {
@@ -123,6 +127,9 @@ struct QuickAccessCardView: View {
     .onDisappear {
       isDragging = false
       isHovering = false
+      // A card can be pulled out from under the pointer (editor opened, countdown
+      // fired) without SwiftUI reporting hover-exit.
+      manager.setHoveredItem(id: item.id, hovering: false)
     }
     .onAppear {
       isDismissing = false
@@ -138,6 +145,10 @@ struct QuickAccessCardView: View {
           swipeOffset = 0
         }
       }
+    }
+    .onReceive(manager.cardShortcutTrigger) { trigger in
+      guard trigger.itemID == item.id, canPerformCardActions else { return }
+      performAction(trigger.action)
     }
     .animation(QuickAccessAnimations.hoverOverlay, value: isHovering)
   }
@@ -308,7 +319,7 @@ struct QuickAccessCardView: View {
           isDismissing = true
         }
       }
-      
+
       performAction(configuredAction)
     } else {
       withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -337,6 +348,19 @@ struct QuickAccessCardView: View {
     case .pinToScreen:
       return item.isPinned ? L10n.PreferencesQuickAccess.unpinAction : L10n.PreferencesQuickAccess.pinToScreenAction
     }
+  }
+
+  /// Tooltip text with the card action shortcut appended, so the binding is
+  /// discoverable without opening Settings.
+  private func actionHelpText(for action: QuickAccessActionKind) -> String {
+    let title = actionTitle(for: action)
+    guard actionShortcuts.isEnabled,
+          actionShortcuts.isEnabled(for: action),
+          let shortcut = actionShortcuts.shortcut(for: action),
+          !QuickAccessActionShortcutStore.containsFunctionModifier(shortcut) else {
+      return title
+    }
+    return "\(title)  \(shortcut.displayString)"
   }
 
   private func actionIcon(for action: QuickAccessActionKind) -> String {
@@ -527,6 +551,7 @@ struct QuickAccessCardView: View {
     QuickAccessTextButton(label: actionTitle(for: action)) {
       performAction(action)
     }
+      .help(actionHelpText(for: action))
       .disabled(!isActionEnabled(action))
       .opacity(isActionEnabled(action) ? 1 : 0.6)
       .transition(buttonTransition(delay: delay))
@@ -567,7 +592,7 @@ struct QuickAccessCardView: View {
     QuickAccessIconButton(
       icon: actionIcon(for: action),
       action: { performAction(action) },
-      helpText: actionTitle(for: action)
+      helpText: actionHelpText(for: action)
     )
     .transition(cornerButtonTransition(delay: delay))
     .padding(6)

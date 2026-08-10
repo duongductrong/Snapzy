@@ -14,6 +14,7 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
     let cases: [(String, SnapzyDeepLinkAction)] = [
       ("snapzy://capture/fullscreen", .captureFullscreen),
       ("snapzy://capture/area", .captureArea),
+      ("snapzy://capture/repeat-area", .captureRepeatArea),
       ("snapzy://capture/application", .captureApplication),
       ("snapzy://capture/area-annotate", .captureAreaAnnotate),
       ("snapzy://capture/scrolling", .captureScrolling),
@@ -34,6 +35,19 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
     for (urlString, expectedAction) in cases {
       let url = try XCTUnwrap(URL(string: urlString))
       XCTAssertEqual(SnapzyDeepLinkAction(url: url), expectedAction, urlString)
+    }
+  }
+
+  func testRepeatAreaAliasesParseExpectedAction() throws {
+    let aliases = [
+      "snapzy://repeat-area",
+      "snapzy://capture-repeat-area",
+      "snapzy://screenshot/repeat-area",
+    ]
+
+    for urlString in aliases {
+      let url = try XCTUnwrap(URL(string: urlString))
+      XCTAssertEqual(SnapzyDeepLinkAction(url: url), .captureRepeatArea, urlString)
     }
   }
 

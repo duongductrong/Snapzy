@@ -150,6 +150,14 @@ final class SnapzyConfigurationSyncCoordinator: ObservableObject {
       try? await Task.sleep(nanoseconds: delay)
       guard let self, !Task.isCancelled else { return }
       self.debounceTask = nil
+      // A capture session is presenting: postpone rather than stall the selection
+      // drag on a full main-thread TOML export + signature (~6-18ms per capture).
+      // The re-armed debounce fires once the flow settles, so the sync is delayed,
+      // never lost (and `flushPendingSync` still covers app terminate).
+      if AreaSelectionController.shared.isPresenting {
+        self.scheduleSync(reason: reason)
+        return
+      }
       // The unchanged-signature skip runs here — once after edits settle, never
       // per notification. The signature is a full TOML export + SHA256, so
       // computing it per UserDefaults change (e.g. every slider tick) stalls

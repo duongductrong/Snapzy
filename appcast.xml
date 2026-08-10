@@ -6,6 +6,108 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.31.0-beta.17</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>171</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.17</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sun, 09 Aug 2026 10:07:51 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add hover card action shortcuts and vsync hover performance optimizations (d66156fc)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>: round-trip function-key shortcuts through export/import (368f30be)</li><li>: correct TOML string unescape so backslash+n/t round-trips on import (684b8353)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.17/Snapzy-v1.31.0-beta.17.dmg"
+        sparkle:edSignature="fCMd5pzDDXGQ3YoQIje6mjZi5+gnlWj1akx69N3ZZ4Q6RI9YeFlajd6qLY0RKqYG9zV0I7O5j+yoFuyAbtOgCQ=="
+        length="47765708"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 1.31.0-beta.16</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>170</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.16</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 08 Aug 2026 17:17:11 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add "Include window shadow in Application Capture" preference (c4986601)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.16/Snapzy-v1.31.0-beta.16.dmg"
+        sparkle:edSignature="2ILWRR86/KoJA37sYQ5CPB/6Bl2YDE2mi/T/a9/tJ9KFvY8/cGoXgTs6qSxDA+/2ZAFkoa55oC1aBV2zrP6PCg=="
+        length="47720020"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 1.31.0-beta.15</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>169</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.15</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 08 Aug 2026 08:13:34 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>pin Quick Access panel to capture screen on multi-display setups #467 (1f884f2d)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.15/Snapzy-v1.31.0-beta.15.dmg"
+        sparkle:edSignature="GEjpvdAASjCDAO80gQNpukGttUxjsUKiRb+3V6BYaFe96Lfpu+5hyAasFP14BsJ2egmUWLqQQzfE652cP4HTDw=="
+        length="47715863"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 1.31.0-beta.14</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>168</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.14</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 08 Aug 2026 03:18:29 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>add repeat last area screenshot shortcut #460 (804c4e58)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.14/Snapzy-v1.31.0-beta.14.dmg"
+        sparkle:edSignature="UQsrPdblAWIxqaz2vTz0lAp9diGUC3MSSrH3z72ORAtkSAYN4Yju1bQlXrsUwqKIkPR5fRDCAQrSOPSWOs0WCg=="
+        length="47716124"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 1.31.0-beta.13</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>167</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.13</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 07 Aug 2026 15:50:01 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>retain hover states and transient UI in object cutout capture #422</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.13/Snapzy-v1.31.0-beta.13.dmg"
+        sparkle:edSignature="wuZ6au8/WwPa/jcZiD8Ia2010EKZy/VMFgv/0DJ65udAVvxp6wCRZvP2ydG+Y9UbCMWtOalr3G393IUhaflOBg=="
+        length="47722968"
+        type="application/octet-stream"/>
+    </item>
+    <item>
+      <title>Version 1.31.0-beta.12</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>166</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.12</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Fri, 07 Aug 2026 01:08:42 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Add OCR text extraction</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.12/Snapzy-v1.31.0-beta.12.dmg"
+        sparkle:edSignature="qYHsDFmdYGtY0nBtz1Yrh9YnAlRuVV8GXvDAE7fhrmnpWLq+tsnZRYfkGBAz0QjOIisEHKyU6JfpTzY2u66bDA=="
+        length="47718814"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.31.0-beta.10</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>164</sparkle:version>

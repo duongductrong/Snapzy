@@ -348,6 +348,15 @@ struct AnnotateCanvasView: View {
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
     }
+    .contentShape(Rectangle())
+    .contextMenu {
+      Button {
+        state.extractText()
+      } label: {
+        Label(L10n.AnnotateUI.extractText, systemImage: "text.viewfinder")
+      }
+      .disabled(!state.canExtractText)
+    }
     .onAppear {
       state.updateViewportMetrics(
         containerSize: viewportMetrics.containerSize,

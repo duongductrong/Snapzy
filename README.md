@@ -45,7 +45,7 @@
   <p>
     <a href="https://deepwiki.com/duongductrong/Snapzy"><img alt="Ask DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
     <a href="https://discord.gg/xkWDAuJkZu"><img alt="Join Discord Community" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&amp;logo=discord&amp;logoColor=white" /></a>
-    <a href="https://www.raycast.com/chk/snapzy"><img alt="Raycast Extension" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
+    <a href="https://www.raycast.com/chkzz/snapzy"><img alt="Raycast Extension" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
     <a href="#featured-on"><img alt="Featured On" src="https://img.shields.io/badge/Featured%20On-Product%20Hunt%20%2B%20Unikorn-111827?style=flat&amp;logo=producthunt&amp;logoColor=white" /></a>
   </p>
   <p>
@@ -58,10 +58,10 @@
 
 - **Screenshot**: fullscreen or selected-area capture with manual/application window mode toggle (`Application Capture`, default `A`), including already open third-party menu-bar popovers that would normally close when capture begins (restored visually for selection and saved with transparent rounded corners), area capture with inline annotate (annotate before saving), scrolling capture with live stitched preview, OCR text extraction with Apple Vision or custom OpenAI-compatible endpoints and a native result notification, transparent object cutout capture with optional safe auto-crop, window shadow capture (macOS 14+), multi-format export (PNG/JPG/WebP), hide desktop icons/widgets, quick screenshot during recording
 - **Screen Recording**: video or GIF output, system audio + microphone, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing, Smart Camera metadata for Follow Mouse edits
-- **Annotation Editor**: shapes, arrows, text, watermarks, filled rectangles, blur/pixelate, automatic local sensitive-data redaction, counters, highlighter with text snapping (⌘ to bypass), crop with edge-snapping (⌘ to bypass) and one-key auto-crop to content (`A`), remove background with crop-aware auto-crop support, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app with optional keep-editing and editor reactivation behavior, configurable tool/action shortcuts
+- **Annotation Editor**: shapes, arrows, text, watermarks, filled rectangles, blur/pixelate, automatic local sensitive-data redaction, OCR text extraction from the image context menu, counters, highlighter with text snapping (⌘ to bypass), crop with edge-snapping (⌘ to bypass) and one-key auto-crop to content (`A`), remove background with crop-aware auto-crop support, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app with optional keep-editing and editor reactivation behavior, configurable tool/action shortcuts
 - **After Capture Settings**: per-mode action matrix for save, Quick Access, clipboard copy, and annotate plus a separate global remove-background auto-crop toggle (enabled by default)
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
-- **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, two-finger swipe dismiss, open, and delete actions
+- **Quick Access**: floating panel after every capture with copy, edit, drag-to-app, two-finger swipe dismiss, open, and delete actions, plus configurable keyboard shortcuts that fire on the card you are hovering
 - **Capture History**: floating history panel + full browser for recent screenshots, videos, and GIFs with type/time filters, filename search, quick copy/open/delete actions, one-click reopen in Annotate or Video Editor, editable annotation restore for committed screenshot edits, configurable panel layout, and retention policies
 - **Shortcuts**: fully configurable global shortcuts for capture, recording, and annotation tools, with per-shortcut on/off control and system conflict detection
 - **Onboarding**: splash screen, first-run language selection, guided permissions setup, and shortcut configuration for first-time users
@@ -143,6 +143,7 @@ Control Snapzy directly from Raycast using the official extension:
 | Fullscreen screenshot                                   | `⇧⌘3`    |
 | Area screenshot                                         | `⇧⌘4`    |
 | ↳ Toggle manual/app window mode (`Application Capture`) | `A`      |
+| Repeat last area screenshot                             | `⌃⌘⇧4`   |
 | Area screenshot + inline annotate                       | `⇧⌘7`    |
 | Scrolling screenshot                                    | `⇧⌘6`    |
 | Screen recording (start/stop toggle)                    | `⇧⌘5`    |
@@ -155,14 +156,29 @@ Control Snapzy directly from Raycast using the official extension:
 | Open Cloud Uploads                                      | `⇧⌘L`    |
 | Show shortcuts list                                     | `⇧⌘K`    |
 
+### Quick Access card actions
+
+Hover a Quick Access card, then press the key. Active only while the pointer is over a card.
+
+| Action | Shortcut |
+| ------ | -------- |
+| Copy | `⌘C` |
+| Save / Open | `⌘S` |
+| Edit | `⌘E` |
+| Upload to cloud | `⌘U` |
+| Pin to screen | `⌘P` |
+| Delete | `⌘⌫` |
+| Close | `⌘W` |
+
 ## Automation
 
-Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (such as the [Raycast Extension](https://www.raycast.com/chk/snapzy), Alfred, or custom scripts) can trigger capture actions. This integration can be toggled on or off under **Settings -> Advanced -> URL Scheme integration**.
+Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (such as the [Raycast Extension](https://www.raycast.com/chkzz/snapzy), Alfred, or custom scripts) can trigger capture actions. This integration can be toggled on or off under **Settings -> Advanced -> URL Scheme integration**.
 
 | Action                | URL                               |
 | --------------------- | --------------------------------- |
 | Fullscreen screenshot | `snapzy://capture/fullscreen`     |
 | Area screenshot       | `snapzy://capture/area`           |
+| Repeat area screenshot | `snapzy://capture/repeat-area`   |
 | Application window    | `snapzy://capture/application`    |
 | Active window         | `snapzy://capture/active-window`  |
 | Area annotate         | `snapzy://capture/area-annotate`  |

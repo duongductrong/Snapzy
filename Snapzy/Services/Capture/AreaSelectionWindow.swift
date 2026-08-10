@@ -169,7 +169,12 @@ final class AreaSelectionController: NSObject {
   private var pendingLivePassthroughHoverPoint: CGPoint?
   private var isLivePassthroughHoverUpdateScheduled = false
   private var lastProcessedLivePassthroughHoverPoint: CGPoint?
+  /// Uptime of the last hover UI update that actually ran; drives the display-rate gate.
+  private var lastLivePassthroughHoverProcessTime: TimeInterval = 0
   private var lastProcessedLivePassthroughDisplayID: CGDirectDisplayID?
+  /// Uptime of the last overlay-event-driven inactive session recovery; drives the
+  /// coalescing gate in `areaSelectionWindowDidRequestDisplayActivation`.
+  private var lastEventDrivenSessionRecoveryTime: TimeInterval = 0
   /// Last raw pointer location (global Quartz, top-left origin) the capture event tap
   /// reported this session. On teardown the cursor is warped here before it is revealed:
   /// while the consuming tap runs, the WindowServer's tracked cursor position goes stale, so
@@ -187,6 +192,11 @@ final class AreaSelectionController: NSObject {
   func setDismissesAfterSelection(_ value: Bool) {
     dismissesAfterSelection = value
   }
+
+  /// Whether pressing Return during this session instantly completes with the last
+  /// stored area-screenshot rect. Opt-in per session so OCR/cutout selections
+  /// (which share `.screenshot` mode) are unaffected.
+  private var allowsRepeatAreaCompletion = false
 
   // MARK: - Initialization
 
@@ -437,6 +447,7 @@ final class AreaSelectionController: NSObject {
     dismissesAfterSelection: Bool = true,
     onDisplayActivationRequested: AreaSelectionDisplayActivationHandler? = nil,
     onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil,
+    allowsRepeatAreaCompletion: Bool = false,
     completion: @escaping AreaSelectionResultCompletion
   ) {
     startSelectionSession(
@@ -447,7 +458,8 @@ final class AreaSelectionController: NSObject {
       dismissesAfterSelection: dismissesAfterSelection,
       completionWithResult: completion,
       onDisplayActivationRequested: onDisplayActivationRequested,
-      onTransitionRecapture: onTransitionRecapture
+      onTransitionRecapture: onTransitionRecapture,
+      allowsRepeatAreaCompletion: allowsRepeatAreaCompletion
     )
   }
 
@@ -461,7 +473,8 @@ final class AreaSelectionController: NSObject {
     completionWithMode: AreaSelectionCompletionWithMode? = nil,
     completionWithResult: AreaSelectionResultCompletion? = nil,
     onDisplayActivationRequested: AreaSelectionDisplayActivationHandler? = nil,
-    onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil
+    onTransitionRecapture: AreaSelectionTransitionRecaptureHandler? = nil,
+    allowsRepeatAreaCompletion: Bool = false
   ) {
     // Atomic replacement: a presenting session must be torn down through the normal cancel
     // path — never silently dropped. This runs BEFORE the new completion is stored (below), so
@@ -509,6 +522,7 @@ final class AreaSelectionController: NSObject {
     self.completionWithResult = completionWithResult
     displayActivationHandler = onDisplayActivationRequested
     transitionRecaptureHandler = onTransitionRecapture
+    self.allowsRepeatAreaCompletion = allowsRepeatAreaCompletion
     requestedDisplayActivationIDs.removeAll()
     deferredBackdropDisplayIDs.removeAll()
     // Per-session recovery memory for the presentation watchdog (kept across mid-session
@@ -850,7 +864,7 @@ final class AreaSelectionController: NSObject {
   }
 
   private func isSessionKeyEvent(_ event: NSEvent) -> Bool {
-    event.keyCode == 53 || isApplicationToggleEvent(event)
+    event.keyCode == 53 || isApplicationToggleEvent(event) || isRepeatAreaEvent(event)
   }
 
   private func handleSessionKeyEvent(_ event: NSEvent) -> Bool {
@@ -859,8 +873,31 @@ final class AreaSelectionController: NSObject {
       return true
     }
 
+    if isRepeatAreaEvent(event) {
+      return completeWithLastAreaSelection()
+    }
+
     guard isApplicationToggleEvent(event) else { return false }
     toggleInteractionMode()
+    return true
+  }
+
+  /// Return key repeats the last area-screenshot selection instantly, reusing the
+  /// normal completion pipeline. Gated on the per-session opt-in so OCR/cutout
+  /// selections (same `.screenshot` mode) keep their default Return behavior.
+  private func isRepeatAreaEvent(_ event: NSEvent) -> Bool {
+    event.keyCode == 36 && allowsRepeatAreaCompletion // Return key
+  }
+
+  private func completeWithLastAreaSelection() -> Bool {
+    guard manualSelectionStartPoint == nil,
+          !windowPool.values.contains(where: \.overlayView.isManualSelectionInProgress),
+          let rect = ScreenshotLastAreaStore.load() else {
+      return false
+    }
+    let center = CGPoint(x: rect.midX, y: rect.midY)
+    guard let sourceWindow = window(containing: center) ?? activeWindow else { return false }
+    completeSelection(target: .rect(rect), from: sourceWindow)
     return true
   }
 
@@ -1472,24 +1509,59 @@ final class AreaSelectionController: NSObject {
   }
 
   /// Route an observed-then-consumed hover position into the overlay under the pointer.
-  /// Coalesced: only the latest point is kept and at most one UI update is enqueued per
-  /// run-loop pass — CALayer commits already batch per pass, so this just prevents
-  /// redundant hit-tests/layout when a high-frequency mouse floods the tap.
+  /// Coalesced twice: only the latest point is kept, and updates are gated to the
+  /// display's refresh rate — rendering hover UI faster than the screen can show is
+  /// pure main-thread waste when a high-frequency mouse floods the tap (a 1kHz mouse
+  /// would otherwise schedule ~1000 updates/sec). Between ticks the leading edge runs
+  /// immediately, so a slowly-moving pointer sees no added latency.
   private func handleLivePassthroughHover(at screenPoint: CGPoint) {
     guard isPresenting, isLivePassthroughInputActive else { return }
     pendingLivePassthroughHoverPoint = screenPoint
     guard !isLivePassthroughHoverUpdateScheduled else { return }
+
+    let now = ProcessInfo.processInfo.systemUptime
+    let interval = Self.livePassthroughHoverMinInterval
+    let elapsed = now - lastLivePassthroughHoverProcessTime
+    guard elapsed < interval else {
+      flushLivePassthroughHover()
+      return
+    }
+
     isLivePassthroughHoverUpdateScheduled = true
-    DispatchQueue.main.async { [weak self] in
+    DispatchQueue.main.asyncAfter(deadline: .now() + (interval - elapsed)) { [weak self] in
       MainActor.assumeIsolated {
         guard let self else { return }
         self.isLivePassthroughHoverUpdateScheduled = false
-        guard let point = self.pendingLivePassthroughHoverPoint else { return }
-        self.pendingLivePassthroughHoverPoint = nil
-        self.processLivePassthroughHover(at: point)
+        self.flushLivePassthroughHover()
       }
     }
   }
+
+  private func flushLivePassthroughHover() {
+    guard let point = pendingLivePassthroughHoverPoint else { return }
+    pendingLivePassthroughHoverPoint = nil
+    lastLivePassthroughHoverProcessTime = ProcessInfo.processInfo.systemUptime
+    processLivePassthroughHover(at: point)
+  }
+
+  /// Minimum spacing between hover UI updates. Follows the fastest display's refresh
+  /// rate so pointer-following chrome (crosshair proxy, size indicator, magnifier) can
+  /// land on every frame the screen can actually show — capping below the display rate
+  /// reads as a trailing crosshair on high-refresh screens, where the hidden system
+  /// cursor is replaced by this drawn proxy. A mouse reporting faster than the display
+  /// is still coalesced down to one update per frame. Only passive hover UI is gated;
+  /// the selection rect during a drag renders per event.
+  private static var livePassthroughHoverMinInterval: TimeInterval {
+    let fps = NSScreen.screens.map(\.maximumFramesPerSecond).max() ?? 60
+    return 1.0 / Double(max(fps, 1))
+  }
+
+  /// Minimum spacing between overlay-event-driven inactive session recoveries. The
+  /// session observers react to real space/activation changes instantly; this is only
+  /// a low-rate safety net for state changes that produce no notification, so 2Hz is
+  /// plenty — the previous per-pointer-tick behavior (60-120Hz) cost multiple ms of
+  /// main-thread time per mouse event (see `areaSelectionWindowDidRequestDisplayActivation`).
+  private static let eventDrivenSessionRecoveryMinInterval: TimeInterval = 0.5
 
   private func processLivePassthroughHover(at screenPoint: CGPoint) {
     guard isPresenting, isLivePassthroughInputActive else { return }
@@ -1619,6 +1691,7 @@ final class AreaSelectionController: NSObject {
     interactionMode = .manualRegion
     windowSelectionSnapshot = nil
     keyboardOwnerDisplayID = nil
+    lastEventDrivenSessionRecoveryTime = 0
   }
 
   private func beginManualSelection(at screenPoint: CGPoint, from window: AreaSelectionWindow) {
@@ -1988,9 +2061,23 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
   }
 
   func areaSelectionWindowDidRequestDisplayActivation(_ window: AreaSelectionWindow) {
+    // Overlay pointer events (hover AND drag, 60-120Hz) all land here, but the
+    // recovery below only matters on real space/activation changes — which the
+    // session observers already deliver immediately. While the app is inactive
+    // (every live session), running it per pointer tick put a WindowServer
+    // window-list query (watchdog re-arm), a per-window orderFront + cursor-rect
+    // invalidation + refreshCursor + needsDisplay pass, a log write, and a
+    // debounced-task cancel/create on EVERY mouse event — several ms of
+    // main-thread work per tick, starving the crosshair/coordinate updates that
+    // share that thread. Coalesce event-driven recoveries to a low-rate safety
+    // net; observer-driven recoveries stay immediate.
     if !NSApp.isActive {
-      handleSessionSpaceOrActivationChange()
-      recaptureBackdropsForLuma()
+      let now = ProcessInfo.processInfo.systemUptime
+      if now - lastEventDrivenSessionRecoveryTime >= Self.eventDrivenSessionRecoveryMinInterval {
+        lastEventDrivenSessionRecoveryTime = now
+        handleSessionSpaceOrActivationChange()
+        recaptureBackdropsForLuma()
+      }
     }
     requestDisplayActivationIfNeeded(for: window)
   }
@@ -2369,6 +2456,11 @@ final class AreaSelectionOverlayView: NSView {
   /// `NSCursor`; the system cursor itself stays where it is, since no public API can
   /// hide it from a background agent — see `LivePassthroughCursorHider`).
   private var cursorProxyLayer: CALayer!
+  /// Source image currently assigned to `cursorProxyLayer.contents`. Assigning an
+  /// NSImage forces Core Animation to re-render it into a texture, so the per-tick
+  /// hover update only re-assigns when the cursor image actually changes (identity)
+  /// and otherwise moves the layer via `frame` alone.
+  private var cursorProxySourceImage: NSImage?
   private var sizeIndicatorBackgroundLayer: CALayer!
   private var sizeIndicatorTextLayer: CATextLayer!
   private var lastSizeIndicatorText: String?
@@ -3424,7 +3516,10 @@ final class AreaSelectionOverlayView: NSView {
     let hotSpot = cursor.hotSpot
     CATransaction.begin()
     CATransaction.setDisableActions(true)
-    cursorProxyLayer.contents = image
+    if image !== cursorProxySourceImage {
+      cursorProxyLayer.contents = image
+      cursorProxySourceImage = image
+    }
     cursorProxyLayer.frame = CGRect(
       x: currentMousePosition.x - hotSpot.x,
       y: currentMousePosition.y - (image.size.height - hotSpot.y),
@@ -3472,12 +3567,15 @@ final class AreaSelectionOverlayView: NSView {
     let sizeText = "\(Int(displayedSize.width))\n\(Int(displayedSize.height))"
     let attributes = coordinateTextAttributes
     let textSize: CGSize
-    if sizeText == lastSizeIndicatorText {
-      textSize = lastSizeIndicatorTextSize
-    } else {
+    // Assigning `CATextLayer.string` re-rasterizes the text even when unchanged, and
+    // this runs per pointer tick — so measure and re-assign only on actual changes.
+    let textChanged = sizeText != lastSizeIndicatorText
+    if textChanged {
       textSize = multiLineTextSize(sizeText, attributes: attributes)
       lastSizeIndicatorText = sizeText
       lastSizeIndicatorTextSize = textSize
+    } else {
+      textSize = lastSizeIndicatorTextSize
     }
 
     let point = currentMousePosition
@@ -3500,7 +3598,9 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
     sizeIndicatorBackgroundLayer.isHidden = false
 
-    sizeIndicatorTextLayer.string = sizeText
+    if textChanged {
+      sizeIndicatorTextLayer.string = sizeText
+    }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
   }
@@ -3525,12 +3625,14 @@ final class AreaSelectionOverlayView: NSView {
 
     let attributes = coordinateTextAttributes
     let textSize: CGSize
-    if text == lastSizeIndicatorText {
-      textSize = lastSizeIndicatorTextSize
-    } else {
+    // Same per-tick re-raster guard as `updateSizeIndicator` (shared layer + cache).
+    let textChanged = text != lastSizeIndicatorText
+    if textChanged {
       textSize = multiLineTextSize(text, attributes: attributes)
       lastSizeIndicatorText = text
       lastSizeIndicatorTextSize = textSize
+    } else {
+      textSize = lastSizeIndicatorTextSize
     }
 
     let offset: CGFloat = 12
@@ -3552,7 +3654,9 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
     sizeIndicatorBackgroundLayer.isHidden = false
 
-    sizeIndicatorTextLayer.string = text
+    if textChanged {
+      sizeIndicatorTextLayer.string = text
+    }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
   }

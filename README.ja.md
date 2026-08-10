@@ -45,7 +45,7 @@
   <p>
     <a href="https://deepwiki.com/duongductrong/Snapzy"><img alt="DeepWiki に質問" src="https://deepwiki.com/badge.svg" /></a>
     <a href="https://discord.gg/xkWDAuJkZu"><img alt="Discord コミュニティに参加" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&amp;logo=discord&amp;logoColor=white" /></a>
-    <a href="https://www.raycast.com/chk/snapzy"><img alt="Raycast 拡張機能" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
+    <a href="https://www.raycast.com/chkzz/snapzy"><img alt="Raycast 拡張機能" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
     <a href="#featured-on"><img alt="掲載実績" src="https://img.shields.io/badge/Featured%20On-Product%20Hunt%20%2B%20Unikorn-111827?style=flat&amp;logo=producthunt&amp;logoColor=white" /></a>
   </p>
   <p>
@@ -163,11 +163,25 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | クラウドアップロード画面を開く                                   | `⇧⌘L`         |
 | ショートカット一覧を表示                               | `⇧⌘K`         |
 
+### クイックアクセスカードの操作
+
+クイックアクセスカードにカーソルを重ねてキーを押します。ポインタがカード上にある間のみ有効です。
+
+| 操作 | ショートカット |
+| ---- | -------------- |
+| コピー | `⌘C` |
+| 保存 / 開く | `⌘S` |
+| 編集 | `⌘E` |
+| クラウドにアップロード | `⌘U` |
+| 画面にピン留め | `⌘P` |
+| 削除 | `⌘⌫` |
+| 閉じる | `⌘W` |
+
 <a id="automation"></a>
 
 ## 自動化
 
-Snapzyは `snapzy://` URL schemeを登録しているため、ランチャーや自動化ツール（[Raycast Extension](https://www.raycast.com/chk/snapzy)、Alfred、カスタムスクリプトなど）からキャプチャ操作を起動できます。この連携は **Settings -> Advanced -> URL Scheme integration** でオン／オフを切り替えられます。
+Snapzyは `snapzy://` URL schemeを登録しているため、ランチャーや自動化ツール（[Raycast Extension](https://www.raycast.com/chkzz/snapzy)、Alfred、カスタムスクリプトなど）からキャプチャ操作を起動できます。この連携は **Settings -> Advanced -> URL Scheme integration** でオン／オフを切り替えられます。
 
 | 操作                            | URL                               |
 | ------------------------------- | --------------------------------- |

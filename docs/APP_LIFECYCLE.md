@@ -2,7 +2,7 @@
 
 How Snapzy launches, runs onboarding, lives in the menu bar, and shuts down. Covers `Snapzy/App/`, splash/onboarding, app identity, theme, data migrations, and the entitlements/Info.plist contract.
 
-Current as of HEAD (`v1.31.0-beta.10`, build 164, macOS 13.0+ deployment target).
+Current as of HEAD (`v1.31.0-beta.17`, build 171, macOS 13.0+ deployment target).
 
 ## Platform shape
 

@@ -846,6 +846,71 @@
         }
       }
     },
+    "preferences-shortcuts.capture-repeat-area-description": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zuletzt ausgewählten Bereich erneut aufnehmen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture the previously selected area again"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capturar de nuevo el área seleccionada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capturer à nouveau la zone sélectionnée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回選択した領域をもう一度キャプチャ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전에 선택한 영역을 다시 캡처"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Повторно захватить ранее выбранную область"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chụp lại vùng đã chọn trước đó"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次截取上次选择的区域"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再次擷取上次選擇的區域"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.capture-section": {
       "extractionState": "stale",
       "localizations": {
@@ -972,6 +1037,331 @@
           "stringUnit": {
             "state": "translated",
             "value": "從螢幕區域提取文本"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.card-actions-enable-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Kartenkurzbefehle auf einmal ein- oder ausschalten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn every card shortcut on or off at once"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa o desactiva todos los atajos de tarjeta a la vez"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activer ou désactiver tous les raccourcis de carte d'un coup"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべてのカードショートカットを一括でオン/オフ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 카드 단축키를 한 번에 켜거나 끕니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включить или выключить все сочетания карточки сразу"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật hoặc tắt tất cả phím tắt thẻ cùng lúc"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次性开启或关闭所有卡片快捷键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一次開啟或關閉所有卡片快速鍵"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.card-actions-enable-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kurzbefehle für Kartenaktionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card action shortcuts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atajos de acciones de tarjeta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raccourcis d'actions de carte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カード操作のショートカット"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 동작 단축키"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сочетания действий карточки"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím tắt hành động thẻ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片操作快捷键"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片動作快速鍵"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.card-actions-hover-footnote": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur aktiv, solange der Zeiger über einer Karte ist"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active only while hovering a card"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activo solo al pasar el cursor sobre una tarjeta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actif uniquement au survol d'une carte"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カードにカーソルを重ねている間のみ有効"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 위에 포인터를 올린 동안에만 작동"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Работает только при наведении на карточку"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉ hoạt động khi di chuột lên thẻ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在悬停卡片时生效"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅在停留於卡片上時生效"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.card-actions-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellzugriff-Kartenaktionen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Access Card Actions"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acciones de tarjeta de Acceso rápido"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actions de carte d'accès rapide"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイックアクセスカードの操作"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 접근 카드 동작"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Действия карточки быстрого доступа"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hành động thẻ Quick Access"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速访问卡片操作"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "快速存取卡片動作"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.card-actions-section-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bewege den Zeiger auf eine Schnellzugriff-Karte und drücke einen Kurzbefehl, um die Aktion auszuführen. Diese Tasten wirken nur, solange der Zeiger über einer Karte ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hover a Quick Access card, then press a shortcut to run that action. These keys only work while the pointer is over a card."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pasa el cursor sobre una tarjeta de Acceso rápido y pulsa un atajo para ejecutar esa acción. Estas teclas solo funcionan mientras el puntero está sobre una tarjeta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Survolez une carte d'accès rapide, puis appuyez sur un raccourci pour exécuter l'action. Ces touches ne fonctionnent que lorsque le pointeur est sur une carte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クイックアクセスカードにカーソルを重ねてショートカットを押すと、その操作を実行します。これらのキーはポインタがカード上にある間のみ有効です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 접근 카드 위에 포인터를 올린 뒤 단축키를 누르면 해당 동작이 실행됩니다. 이 키는 포인터가 카드 위에 있을 때만 작동합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наведите указатель на карточку быстрого доступа и нажмите сочетание, чтобы выполнить действие. Эти клавиши работают только при наведении на карточку."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Di chuột lên thẻ Quick Access rồi nhấn phím tắt để chạy hành động đó. Các phím này chỉ hoạt động khi con trỏ đang ở trên thẻ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将指针悬停在快速访问卡片上，然后按下快捷键即可执行该操作。这些按键仅在指针位于卡片上时生效。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "將指標停留在快速存取卡片上，然後按下快速鍵即可執行該動作。這些按鍵僅在指標位於卡片上時生效。"
           }
         }
       }
@@ -1167,6 +1557,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "將帶注釋的圖像複製到剪貼板並關閉"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.delete-recording-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktive Aufnahme löschen und abbrechen. Optional."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete active recording and cancel. Optional."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar grabación activa y cancelar. Opcional."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer l'enregistrement actif et annuler. Optionnel."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブな録画を削除してキャンセルします（任意）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성 녹화를 삭제하고 취소합니다. 선택 사항."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Удалить активную запись и отменить. Необязательно."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Xoá ghi hình hiện tại và huỷ bỏ. Tuỳ chọn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除当前录制并取消。可选。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刪除當前錄製並取消。可選。"
           }
         }
       }
@@ -2146,6 +2601,71 @@
         }
       }
     },
+    "preferences-shortcuts.open-history-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erfassungsverlauf-Browser öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the capture history browser"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir el explorador de historial de capturas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le navigateur d’historique de capture"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャ履歴ブラウザを開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "캡처 기록 탐색기 열기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть браузер истории снимков"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở trình duyệt lịch sử capture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开捕获历史记录浏览器"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打開擷取歷史記錄瀏覽器"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.open-keyboard-shortcuts-settings": {
       "extractionState": "stale",
       "localizations": {
@@ -2272,6 +2792,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "打開影片編輯工具"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.pause-resume-recording-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eine aktive Aufnahme pausieren oder fortsetzen. Optional. Empfohlen: ⌘⇧Space."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause or resume an active recording. Optional. Recommended: ⌘⇧Space."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausar o reanudar una grabación activa. Opcional. Recomendado: ⌘⇧Space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre en pause ou reprendre un enregistrement actif. Optionnel. Recommandé : ⌘⇧Space."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクティブな録画を一時停止または再開します（任意）。推奨: ⌘⇧Space"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "활성 녹화를 일시 정지하거나 재개합니다. 선택 사항. 권장: ⌘⇧Space."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Приостановить или возобновить активную запись. Необязательно. Рекомендуется: ⌘⇧Space."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tạm dừng hoặc tiếp tục ghi hình. Tuỳ chọn. Khuyên dùng: ⌘⇧Space."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂停或恢复当前录制。可选。推荐：⌘⇧Space."
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暫停或恢復當前錄製。可選。推薦：⌘⇧Space."
           }
         }
       }
@@ -2727,6 +3312,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "重置為預設值"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.restart-recording-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neustart/Erneut aufnehmen. Optional."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart/Re-record from scratch. Optional."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reiniciar/Grabar de nuevo desde cero. Opcional."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommencer/Réenregistrer à partir de zéro. Optionnel."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最初から録り直します（任意）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "처음부터 다시 녹화합니다. 선택 사항."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Перезапуск/перезапись с самого начала. Необязательно."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt đầu lại/Ghi hình lại từ đầu. Tuỳ chọn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新录制。可选。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新錄製。可選。"
           }
         }
       }
@@ -3245,6 +3895,71 @@
           "stringUnit": {
             "state": "translated",
             "value": "系統快捷鍵"
+          }
+        }
+      }
+    },
+    "preferences-shortcuts.toggle-pen-recording-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zeichenleiste und Overlays umschalten. Optional."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toggle drawing toolbar and overlays. Optional."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alternar barra de herramientas de dibujo y capas. Opcional."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Basculer la barre d'outils de dessin et les superpositions. Optionnel."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "描画ツールバーとオーバーレイを切り替えます（任意）"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그리기 도구 모음 및 오버레이를 전환합니다. 선택 사항."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Включение/выключение панели рисования и оверлеев. Необязательно."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật/Tắt thanh công cụ vẽ và lớp phủ. Tuỳ chọn."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切换绘图工具栏和图层。可选。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "切換繪圖工具欄和圖層。可選。"
           }
         }
       }
@@ -5654,6 +6369,201 @@
         }
       }
     },
+    "shortcut-validation.quick-access-fn-unsupported": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die fn-Taste wird für Kartenkurzbefehle nicht unterstützt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The fn key is not supported for card shortcuts."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La tecla fn no es compatible con los atajos de tarjeta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La touche fn n'est pas prise en charge pour les raccourcis de carte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カードのショートカットでは fn キーを使用できません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 단축키에서는 fn 키를 사용할 수 없습니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Клавиша fn не поддерживается для сочетаний карточки."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phím fn không được hỗ trợ cho phím tắt thẻ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片快捷键不支持 fn 键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片快速鍵不支援 fn 鍵。"
+          }
+        }
+      }
+    },
+    "shortcut-validation.quick-access-modifier-required": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge ⌘, ⌥ oder ⌃ hinzu. Kartenkurzbefehle belegen die Taste, solange du über der Karte bist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add ⌘, ⌥, or ⌃. Card shortcuts capture the key while you hover."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade ⌘, ⌥ o ⌃. Los atajos de tarjeta capturan la tecla mientras pasas el cursor."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez ⌘, ⌥ ou ⌃. Les raccourcis de carte capturent la touche pendant le survol."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘、⌥、⌃ のいずれかを追加してください。カードにカーソルを重ねている間、カードのショートカットがそのキーを占有します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘, ⌥ 또는 ⌃를 추가하세요. 카드 위에 포인터를 올린 동안 카드 단축키가 해당 키를 가로챕니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавьте ⌘, ⌥ или ⌃. Сочетания для карточки перехватывают клавишу при наведении."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm ⌘, ⌥ hoặc ⌃. Phím tắt thẻ sẽ chiếm phím khi bạn di chuột lên thẻ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请加入 ⌘、⌥ 或 ⌃。悬停卡片时，卡片快捷键会占用该按键。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "請加入 ⌘、⌥ 或 ⌃。停留在卡片上時，卡片快速鍵會佔用該按鍵。"
+          }
+        }
+      }
+    },
+    "shortcut-validation.quick-access-shadows-global": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überschreibt %@, solange du über einer Karte bist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overrides %@ while you hover a card."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anula %@ mientras pasas el cursor sobre una tarjeta."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplace %@ pendant le survol d'une carte."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カードにカーソルを重ねている間、%@ を上書きします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 위에 포인터를 올린 동안 %@을(를) 덮어씁니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Переопределяет %@ при наведении на карточку."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ghi đè %@ khi bạn di chuột lên thẻ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "悬停卡片时会覆盖“%@”。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停留在卡片上時會覆蓋「%@」。"
+          }
+        }
+      }
+    },
     "system-shortcuts.macos-capture-area": {
       "extractionState": "stale",
       "localizations": {
@@ -5975,331 +6885,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "macOS 螢幕截圖和錄製選項"
-          }
-        }
-      }
-    },
-    "preferences-shortcuts.toggle-pen-recording-description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zeichenleiste und Overlays umschalten. Optional."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toggle drawing toolbar and overlays. Optional."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Alternar barra de herramientas de dibujo y capas. Opcional."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Basculer la barre d'outils de dessin et les superpositions. Optionnel."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "描画ツールバーとオーバーレイを切り替えます（任意）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "그리기 도구 모음 및 오버레이를 전환합니다. 선택 사항."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Включение/выключение панели рисования и оверлеев. Необязательно."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bật/Tắt thanh công cụ vẽ và lớp phủ. Tuỳ chọn."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换绘图工具栏和图层。可选。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切換繪圖工具欄和圖層。可選。"
-          }
-        }
-      }
-    },
-    "preferences-shortcuts.restart-recording-description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Neustart/Erneut aufnehmen. Optional."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restart/Re-record from scratch. Optional."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reiniciar/Grabar de nuevo desde cero. Opcional."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recommencer/Réenregistrer à partir de zéro. Optionnel."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最初から録り直します（任意）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "처음부터 다시 녹화합니다. 선택 사항."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Перезапуск/перезапись с самого начала. Необязательно."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bắt đầu lại/Ghi hình lại từ đầu. Tuỳ chọn."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新录制。可选。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重新錄製。可選。"
-          }
-        }
-      }
-    },
-    "preferences-shortcuts.delete-recording-description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aktive Aufnahme löschen und abbrechen. Optional."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Delete active recording and cancel. Optional."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar grabación activa y cancelar. Opcional."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Supprimer l'enregistrement actif et annuler. Optionnel."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アクティブな録画を削除してキャンセルします（任意）"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "활성 녹화를 삭제하고 취소합니다. 선택 사항."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Удалить активную запись и отменить. Необязательно."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Xoá ghi hình hiện tại và huỷ bỏ. Tuỳ chọn."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除当前录制并取消。可选。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刪除當前錄製並取消。可選。"
-          }
-        }
-      }
-    },
-    "preferences-shortcuts.pause-resume-recording-description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine aktive Aufnahme pausieren oder fortsetzen. Optional. Empfohlen: ⌘⇧Space."
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pause or resume an active recording. Optional. Recommended: ⌘⇧Space."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pausar o reanudar una grabación activa. Opcional. Recomendado: ⌘⇧Space."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mettre en pause ou reprendre un enregistrement actif. Optionnel. Recommandé : ⌘⇧Space."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アクティブな録画を一時停止または再開します（任意）。推奨: ⌘⇧Space"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "활성 녹화를 일시 정지하거나 재개합니다. 선택 사항. 권장: ⌘⇧Space."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Приостановить или возобновить активную запись. Необязательно. Рекомендуется: ⌘⇧Space."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tạm dừng hoặc tiếp tục ghi hình. Tuỳ chọn. Khuyên dùng: ⌘⇧Space."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暂停或恢复当前录制。可选。推荐：⌘⇧Space."
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "暫停或恢復當前錄製。可選。推薦：⌘⇧Space."
-          }
-        }
-      }
-    },
-    "preferences-shortcuts.open-history-description": {
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Erfassungsverlauf-Browser öffnen"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open the capture history browser"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir el explorador de historial de capturas"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ouvrir le navigateur d’historique de capture"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キャプチャ履歴ブラウザを開く"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캡처 기록 탐색기 열기"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Открыть браузер истории снимков"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mở trình duyệt lịch sử capture"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开捕获历史记录浏览器"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打開擷取歷史記錄瀏覽器"
           }
         }
       }

@@ -36,6 +36,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(cmdKey | shiftKey)
   )
 
+  /// Ctrl + Cmd + Shift + 4
+  static let defaultRepeatArea = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_4),
+    modifiers: UInt32(controlKey | cmdKey | shiftKey)
+  )
+
   /// Cmd + Shift + 7
   static let defaultAreaAnnotate = ShortcutConfig(
     keyCode: UInt32(kVK_ANSI_7),
@@ -466,6 +472,7 @@ extension ShortcutConfig {
 enum GlobalShortcutKind: String, CaseIterable, Codable {
   case fullscreen
   case area
+  case repeatArea
   case areaAnnotate
   case activeWindow
   case scrollingCapture
@@ -485,7 +492,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
 
   var isSystemConflictRelevant: Bool {
     switch self {
-    case .fullscreen, .area, .recording:
+    case .fullscreen, .area, .repeatArea, .recording:
       return true
     default:
       return false
@@ -500,6 +507,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.captureFullscreen
     case .area:
       return L10n.Actions.captureArea
+    case .repeatArea:
+      return L10n.Actions.captureRepeatArea
     case .areaAnnotate:
       return L10n.Actions.captureAreaAnnotate
     case .activeWindow:
@@ -540,6 +549,7 @@ extension GlobalShortcutKind {
 enum ShortcutAction {
   case captureFullscreen
   case captureArea
+  case captureRepeatArea
   case captureAreaAnnotate
   case captureApplication
   case captureActiveWindow
@@ -575,6 +585,7 @@ final class KeyboardShortcutManager {
 
   private(set) var fullscreenShortcut: ShortcutConfig
   private(set) var areaShortcut: ShortcutConfig
+  private(set) var repeatAreaShortcut: ShortcutConfig
   private(set) var areaAnnotateShortcut: ShortcutConfig
   private(set) var scrollingCaptureShortcut: ShortcutConfig
   private(set) var recordingShortcut: ShortcutConfig
@@ -623,6 +634,7 @@ final class KeyboardShortcutManager {
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
   private var areaHotkeyRef: EventHotKeyRef?
+  private var repeatAreaHotkeyRef: EventHotKeyRef?
   private var areaAnnotateHotkeyRef: EventHotKeyRef?
   private var scrollingCaptureHotkeyRef: EventHotKeyRef?
   private var recordingHotkeyRef: EventHotKeyRef?
@@ -669,12 +681,14 @@ final class KeyboardShortcutManager {
   private let togglePenRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4649), id: 18)  // "ZSFI"
   private let restartRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464A), id: 19)    // "ZSFJ"
   private let deleteRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464B), id: 20)     // "ZSFK"
+  private let repeatAreaHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464C), id: 21)         // "ZSFL"
 
   private var eventHandler: EventHandlerRef?
 
   // UserDefaults keys
   private let fullscreenShortcutKey = "fullscreenShortcut"
   private let areaShortcutKey = "areaShortcut"
+  private let repeatAreaShortcutKey = "repeatAreaShortcut"
   private let areaAnnotateShortcutKey = "areaAnnotateShortcut"
   private let scrollingCaptureShortcutKey = "scrollingCaptureShortcut"
   private let recordingShortcutKey = "recordingShortcut"
@@ -698,6 +712,7 @@ final class KeyboardShortcutManager {
   private init() {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
+    repeatAreaShortcut = .defaultRepeatArea
     areaAnnotateShortcut = .defaultAreaAnnotate
     scrollingCaptureShortcut = .defaultScrollingCapture
     recordingShortcut = .defaultRecording
@@ -807,6 +822,7 @@ final class KeyboardShortcutManager {
     switch kind {
     case .fullscreen: return fullscreenShortcut
     case .area: return areaShortcut
+    case .repeatArea: return repeatAreaShortcut
     case .areaAnnotate: return areaAnnotateShortcut
     case .activeWindow: return activeWindowShortcut
     case .scrollingCapture: return scrollingCaptureShortcut
@@ -858,6 +874,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .area) {
         areaShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update repeat area shortcut
+  func setRepeatAreaShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .repeatArea) {
+        repeatAreaShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -1063,6 +1090,9 @@ final class KeyboardShortcutManager {
     if let areaData = try? encoder.encode(areaShortcut) {
       UserDefaults.standard.set(areaData, forKey: areaShortcutKey)
     }
+    if let repeatAreaData = try? encoder.encode(repeatAreaShortcut) {
+      UserDefaults.standard.set(repeatAreaData, forKey: repeatAreaShortcutKey)
+    }
     if let areaAnnotateData = try? encoder.encode(areaAnnotateShortcut) {
       UserDefaults.standard.set(areaAnnotateData, forKey: areaAnnotateShortcutKey)
     }
@@ -1132,6 +1162,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: areaData)
     {
       areaShortcut = config
+    }
+    if let repeatAreaData = UserDefaults.standard.data(forKey: repeatAreaShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: repeatAreaData)
+    {
+      repeatAreaShortcut = config
     }
     if let areaAnnotateData = UserDefaults.standard.data(forKey: areaAnnotateShortcutKey),
       let config = try? decoder.decode(ShortcutConfig.self, from: areaAnnotateData)
@@ -1326,6 +1361,9 @@ final class KeyboardShortcutManager {
     case areaHotkeyID.id:
       actionName = "area"
       action = .captureArea
+    case repeatAreaHotkeyID.id:
+      actionName = "repeat-area"
+      action = .captureRepeatArea
     case areaAnnotateHotkeyID.id:
       actionName = "area-annotate"
       action = .captureAreaAnnotate
@@ -1408,6 +1446,12 @@ final class KeyboardShortcutManager {
       config: shortcut(for: .area),
       hotkeyID: areaHotkeyID,
       ref: &areaHotkeyRef
+    )
+    registerShortcutIfNeeded(
+      kind: .repeatArea,
+      config: shortcut(for: .repeatArea),
+      hotkeyID: repeatAreaHotkeyID,
+      ref: &repeatAreaHotkeyRef
     )
     registerShortcutIfNeeded(
       kind: .areaAnnotate,
@@ -1703,6 +1747,10 @@ final class KeyboardShortcutManager {
     if let ref = areaHotkeyRef {
       UnregisterEventHotKey(ref)
       areaHotkeyRef = nil
+    }
+    if let ref = repeatAreaHotkeyRef {
+      UnregisterEventHotKey(ref)
+      repeatAreaHotkeyRef = nil
     }
     if let ref = areaAnnotateHotkeyRef {
       UnregisterEventHotKey(ref)

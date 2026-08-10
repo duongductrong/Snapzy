@@ -26,8 +26,18 @@ enum ScreenUtility {
 
   /// The `CGDirectDisplayID` of the screen the mouse cursor is currently on.
   static func activeDisplayID() -> CGDirectDisplayID {
-    let screen = activeScreen()
-    return screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
+    displayID(of: activeScreen())
+  }
+
+  /// The `CGDirectDisplayID` backing a given screen.
+  /// Falls back to the main display when the description key is missing.
+  static func displayID(of screen: NSScreen) -> CGDirectDisplayID {
+    screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID
       ?? CGMainDisplayID()
+  }
+
+  /// The screen backing a `CGDirectDisplayID`, or `nil` if it is no longer connected.
+  static func screen(withDisplayID displayID: CGDirectDisplayID) -> NSScreen? {
+    NSScreen.screens.first { self.displayID(of: $0) == displayID }
   }
 }
