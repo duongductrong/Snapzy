@@ -134,7 +134,8 @@ extension PersistedAnnotationSession {
       cutoutAutoAppliedCropRect: sessionData.cutoutAutoAppliedCropRect,
       createdAt: createdAt,
       updatedAt: updatedAt,
-      combineSession: persistedCombineSession
+      combineSession: persistedCombineSession,
+      sourceLogicalSize: sessionData.sourceLogicalSize
     )
   }
 
@@ -156,7 +157,8 @@ extension PersistedAnnotationSession {
       didCutoutAutoApplyCrop: didCutoutAutoApplyCrop,
       cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect,
       embeddedImageAssetsData: embeddedImageAssetsData,
-      combineSession: combineSession?.toSnapshot()
+      combineSession: combineSession?.toSnapshot(),
+      sourceLogicalSize: sourceLogicalSize
     )
   }
 }
