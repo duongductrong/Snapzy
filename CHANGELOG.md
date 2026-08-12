@@ -4,6 +4,27 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.31.0-beta.18] - 2026-08-12
+
+### Features
+-  enlarge screenshot magnifier and add pixel grid, crosshair, color picker (#466) (68e3d638)
+
+### Bug Fixes
+-  Fix non-retina draw non-exactly annotation (331fc30c)
+-  keep non-Retina screenshots at native pixel density (#452) (4747666e)
+-  publish selection pointer location to track crosshair and magnifier overlay during drag (f04cf634)
+-  recreate overlay window on space-membership loss in presentation watchdog (71f358e3)
+
+### Chore
+- ci: fix ci build fails (3953cebe)
+- chore: update appcast and docs for v1.31.0-beta.17 (e2a6b17a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @lcopilot
+- @motoish
+
 ## [1.31.0-beta.17] - 2026-08-09
 
 ### Features
