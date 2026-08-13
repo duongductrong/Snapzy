@@ -258,8 +258,12 @@ final class CaptureOutputNamingTests: XCTestCase {
     XCTAssertEqual(result, "Shots/\(Int(fixedDate.timeIntervalSince1970))/Snapzy_123")
   }
 
+  /// Mirror of the production formatter in `CaptureOutputNaming`: Gregorian
+  /// calendar so the year is Gregorian, locale left to the system so expected
+  /// month names track what production emits on the machine running the tests.
   private static func format(_ date: Date, style: String) -> String {
     let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
     formatter.dateFormat = style
     return formatter.string(from: date)
   }
@@ -563,7 +567,8 @@ final class CaptureOutputNamingTests: XCTestCase {
   /// fail pre-fix on a Gregorian CI runner. Instead it (1) proves the Buddhist
   /// calendar actually shifts the year for the reference date, and (2) pins the
   /// Gregorian contract for Snapzy's output. It WILL fail on a Buddhist-locale
-  /// machine if the `en_US_POSIX` locale on the internal formatter is reverted.
+  /// machine if the Gregorian calendar override on the internal formatter is
+  /// reverted.
   func testYearToken_alwaysGregorian_notBuddhistCalendarYear() {
     var gregorian = Calendar(identifier: .gregorian)
     gregorian.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -606,7 +611,7 @@ final class CaptureOutputNamingTests: XCTestCase {
   /// Same runtime-locale caveat as `testYearToken_alwaysGregorian_notBuddhistCalendarYear`:
   /// this cannot deterministically fail pre-fix on a Gregorian CI runner (the
   /// process locale is cached), but it pins the Gregorian contract and will fail
-  /// on a Buddhist-locale machine if the `en_US_POSIX` locale is reverted.
+  /// on a Buddhist-locale machine if the Gregorian calendar override is reverted.
   func testDefaultTemplate_startsGregorianYear_notBuddhistYear() {
     var gregorian = Calendar(identifier: .gregorian)
     gregorian.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -630,6 +635,43 @@ final class CaptureOutputNamingTests: XCTestCase {
     XCTAssertFalse(
       result.hasPrefix("Snapzy_\(buddhistYear)-"),
       "Default name must not use the Buddhist year \(buddhistYear), got: \(result)"
+    )
+  }
+
+  /// Pins the narrower contract of the calendar-only fix: a Gregorian calendar
+  /// keeps the year Gregorian under non-Gregorian system calendars while the
+  /// locale stays untouched, so `{monthName}`/`{monthShort}` remain localized.
+  ///
+  /// The production formatter is private and adopts the process locale, which
+  /// XCTest cannot swap at runtime, so this test rebuilds the production
+  /// configuration (`DateFormatter` + `Calendar(identifier: .gregorian)`) with
+  /// an explicit `th_TH` locale — the harshest case, where the bare formatter
+  /// emits the Buddhist year — and asserts both halves of the contract.
+  func testGregorianCalendarOverride_keepsLocalizedMonthNames() {
+    var gregorian = Calendar(identifier: .gregorian)
+    gregorian.timeZone = TimeZone(secondsFromGMT: 0)!
+    let date = gregorian.date(from: DateComponents(year: 2026, month: 1, day: 15))!
+
+    // Premise: without the calendar override a th_TH formatter emits the
+    // Buddhist year, not the Gregorian one.
+    let bare = DateFormatter()
+    bare.locale = Locale(identifier: "th_TH")
+    bare.dateFormat = "yyyy"
+    let bareYear = bare.string(from: date)
+    XCTAssertNotEqual(
+      bareYear, "2026",
+      "Precondition: th_TH must render the Buddhist year (\(bareYear)), not the Gregorian year."
+    )
+
+    // Production configuration with an explicit th_TH locale: Gregorian year
+    // plus the localized (Thai) month name.
+    let formatter = DateFormatter()
+    formatter.locale = Locale(identifier: "th_TH")
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.dateFormat = "yyyy MMMM"
+    XCTAssertEqual(
+      formatter.string(from: date), "2026 มกราคม",
+      "Gregorian calendar + th_TH locale must yield the Gregorian year with the localized month name."
     )
   }
 }
