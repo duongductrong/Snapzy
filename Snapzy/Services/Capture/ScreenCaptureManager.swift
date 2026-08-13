@@ -153,14 +153,10 @@ final class ScreenCaptureManager: ObservableObject {
   private var standardShareableContentCache: ShareableContentCacheEntry?
   private var desktopInclusiveShareableContentCache: ShareableContentCacheEntry?
   private var screenParametersObserver: NSObjectProtocol?
-  private nonisolated static let minimumScreenshotOutputScaleFactor: CGFloat = 2.0
-
-  private var preferredScreenshotOutputScaleFactor: CGFloat {
-    max(
-      NSScreen.screens.map(\.backingScaleFactor).max() ?? Self.minimumScreenshotOutputScaleFactor,
-      Self.minimumScreenshotOutputScaleFactor
-    )
-  }
+  /// Floor for screenshot output density. Keep at 1.0 so non-Retina external
+  /// displays save at native pixel size (issue #414). Mixed-DPI composites still
+  /// promote low-density slices up to the highest native scale in the selection.
+  private nonisolated static let minimumScreenshotOutputScaleFactor: CGFloat = 1.0
 
   private init() {
     screenParametersObserver = NotificationCenter.default.addObserver(
@@ -494,7 +490,7 @@ final class ScreenCaptureManager: ObservableObject {
         display: display,
         contentFilter: filter
       )
-      let outputScaleFactor = max(nativeScaleFactor, preferredScreenshotOutputScaleFactor)
+      let outputScaleFactor = max(nativeScaleFactor, Self.minimumScreenshotOutputScaleFactor)
 
       let config = SCStreamConfiguration()
       let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
@@ -785,7 +781,7 @@ final class ScreenCaptureManager: ObservableObject {
         contentFilter: filter
       )
       let captureScale = nativeScaleFactor
-      let outputScale = max(nativeScaleFactor, preferredScreenshotOutputScaleFactor)
+      let outputScale = max(nativeScaleFactor, Self.minimumScreenshotOutputScaleFactor)
       let configuration = makeDisplaySnapshotConfiguration(
         for: target.screen,
         scaleFactor: captureScale,
@@ -864,7 +860,10 @@ final class ScreenCaptureManager: ObservableObject {
             image,
             logicalSize: request.screenFrame.size,
             sourceScaleFactor: imageScaleFactor,
-            minimumOutputScaleFactor: Self.minimumScreenshotOutputScaleFactor,
+            minimumOutputScaleFactor: max(
+              request.scaleFactor,
+              Self.minimumScreenshotOutputScaleFactor
+            ),
             colorSpaceName: nil
           )
 
@@ -1029,7 +1028,7 @@ final class ScreenCaptureManager: ObservableObject {
         excludeDesktopWidgets: excludeDesktopWidgets,
         excludeOwnApplication: excludeOwnApplication,
         prefetchedContentTask: prefetchedContentTask,
-        minimumOutputScaleFactor: preferredScreenshotOutputScaleFactor
+        minimumOutputScaleFactor: Self.minimumScreenshotOutputScaleFactor
       )
 
       guard let captured = try await capturePreparedArea(preparedContext) else {
@@ -1037,7 +1036,7 @@ final class ScreenCaptureManager: ObservableObject {
       }
 
       // Save the cropped image. Use the post-reconciliation scale so DPI metadata
-      // matches the actual returned pixels (may be promoted to min-2x baseline).
+      // matches the actual returned pixels (native density; mixed composites may promote).
       return await saveImage(
         captured.image,
         to: saveDirectory,
@@ -1189,9 +1188,9 @@ final class ScreenCaptureManager: ObservableObject {
       Self.imageScaleFactor(
         for: image,
         screenFrame: target.frame,
-        fallback: preferredScreenshotOutputScaleFactor
+        fallback: Self.minimumScreenshotOutputScaleFactor
       ),
-      preferredScreenshotOutputScaleFactor
+      Self.minimumScreenshotOutputScaleFactor
     )
     return (image, scaleFactor)
   }
@@ -1509,9 +1508,9 @@ final class ScreenCaptureManager: ObservableObject {
       return nil
     }
 
-    // Promote low-density slices to the minimum screenshot output baseline
-    // (mirrors fullscreen + frozen paths). Native-density images pass through
-    // unchanged; the sharpener only runs when an actual upscale happened.
+    // Promote only when the caller requested a higher output density than the
+    // captured native scale (e.g. mixed-DPI composite). Native-density images
+    // pass through unchanged; the sharpener only runs when an actual upscale happened.
     let promoted = FrozenAreaCaptureSession.imageByPromotingScaleIfNeeded(
       capturedImage,
       logicalSize: context.logicalCropSize,
@@ -1661,7 +1660,7 @@ final class ScreenCaptureManager: ObservableObject {
     //    promotion, sharpening, and CGContext compositing.
     let compositeResult = try session.cropCompositeImage(
       for: selectionResult,
-      minimumOutputScaleFactor: preferredScreenshotOutputScaleFactor
+      minimumOutputScaleFactor: Self.minimumScreenshotOutputScaleFactor
     )
 
     DiagnosticLogger.shared.log(
@@ -1863,7 +1862,7 @@ final class ScreenCaptureManager: ObservableObject {
     let contentFilter = SCContentFilter(desktopIndependentWindow: window)
     let scaleFactor = max(
       resolvedWindowScaleFactor(window: window, fallbackDisplayID: fallbackTarget.displayID),
-      preferredScreenshotOutputScaleFactor
+      Self.minimumScreenshotOutputScaleFactor
     )
     let contentRect: CGRect
     if #available(macOS 14.0, *) {

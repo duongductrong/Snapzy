@@ -62,6 +62,8 @@ jobs:
             SnapzyTests/AnnotateTextSnappingTests/testDetectorReportsTextNearTheImageTopWithAHighY
             SnapzyTests/AnnotateBlurCacheManagerTests/testGetCachedBlur_nonBlockingSchedulesRender
             SnapzyTests/InlineAreaAnnotateSessionTests/testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected
+            SnapzyTests/InlineAreaAnnotateSessionTests/testUpdateSelectionPublishesPointerLocation
+            SnapzyTests/InlineAreaAnnotateSessionTests/testEndSelectionClearsPointerLocation
             SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
             SnapzyTests/AreaSelectionSessionLifecycleTests
             SnapzyTests/AreaSelectionHoverPerformanceTests

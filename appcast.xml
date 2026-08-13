@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 1.31.0-beta.18</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>172</sparkle:version>
+      <sparkle:shortVersionString>1.31.0-beta.18</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Wed, 12 Aug 2026 18:23:27 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>enlarge screenshot magnifier and add pixel grid, crosshair, color picker (68e3d638)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Fix non-retina draw non-exactly annotation (331fc30c)</li><li>keep non-Retina screenshots at native pixel density (4747666e)</li><li>publish selection pointer location to track crosshair and magnifier overlay during drag (f04cf634)</li><li>recreate overlay window on space-membership loss in presentation watchdog (71f358e3)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v1.31.0-beta.18/Snapzy-v1.31.0-beta.18.dmg"
+        sparkle:edSignature="283Zre5EU1eYBZPaM++GiXDMVecZR6nXGcMSNa6LlytMJV5YsZiy50jteqsxR1Ssu7hhxTPb12qknEzLHklqAQ=="
+        length="47845519"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 1.31.0-beta.17</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>171</sparkle:version>

@@ -65,7 +65,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     if let sessionData = sessionData {
       // Restore from cache: decompress original image + editable annotations
       let image = NSImage(data: sessionData.originalImageData)
-        .flatMap({ img in Self.applyRetinaScaling(to: img) })
+        .map({ img in Self.restoredSessionImage(img, sourceLogicalSize: sessionData.sourceLogicalSize) })
         ?? item.thumbnail
       self.originalImageData = sessionData.originalImageData
       self.state = AnnotateState(
@@ -178,7 +178,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
     if let sessionData {
       let image = NSImage(data: sessionData.originalImageData)
-        .flatMap({ img in Self.applyRetinaScaling(to: img) })
+        .map({ img in Self.restoredSessionImage(img, sourceLogicalSize: sessionData.sourceLogicalSize) })
         ?? Self.loadImageWithCorrectScale(from: url)
         ?? NSImage(size: NSSize(width: 400, height: 300))
       self.originalImageData = sessionData.originalImageData
@@ -306,21 +306,29 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
   // MARK: - Image Loading
 
-  /// Load image and adjust size for Retina displays
+  /// Load image and adjust size for the density recorded in the file
+  /// (single source of truth lives on AnnotateState).
   private static func loadImageWithCorrectScale(from url: URL) -> NSImage? {
-    guard let image = SandboxFileAccessManager.shared.withScopedAccess(to: url, {
-      NSImage(contentsOf: url)
-    }) else { return nil }
+    AnnotateState.loadImageWithCorrectScale(from: url)
+  }
 
-    let scaleFactor = NSScreen.main?.backingScaleFactor ?? 2.0
-    if let normalizedSize = normalizedRetinaLogicalSizeIfNeeded(for: image, scaleFactor: scaleFactor) {
-      image.size = normalizedSize
+  /// Restore a session source image in the exact logical coordinate space its
+  /// annotations were authored in. Sidecars saved before `sourceLogicalSize`
+  /// existed fall back to the legacy main-screen scale heuristic.
+  static func restoredSessionImage(_ image: NSImage, sourceLogicalSize: CGSize?) -> NSImage {
+    guard let sourceLogicalSize,
+          sourceLogicalSize.width > 0,
+          sourceLogicalSize.height > 0 else {
+      return applyRetinaScaling(to: image)
     }
-
+    image.size = sourceLogicalSize
     return image
   }
 
-  /// Apply Retina scaling to an image loaded from Data (same logic as loadImageWithCorrectScale)
+  /// Legacy fallback for pre-`sourceLogicalSize` sidecars: assumes the image is at
+  /// the main display's density. Kept only for old session data — new restores use
+  /// `restoredSessionImage(_:sourceLogicalSize:)`, and file opens use the file's
+  /// own DPI metadata via `AnnotateState.loadImageWithCorrectScale(from:)`.
   private static func applyRetinaScaling(to image: NSImage) -> NSImage {
     let scaleFactor = NSScreen.main?.backingScaleFactor ?? 2.0
     if let normalizedSize = normalizedRetinaLogicalSizeIfNeeded(for: image, scaleFactor: scaleFactor) {

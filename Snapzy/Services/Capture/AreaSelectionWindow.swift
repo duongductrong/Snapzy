@@ -141,6 +141,16 @@ final class AreaSelectionController: NSObject {
   /// Displays the watchdog most recently flagged anomalous; used to log when a heal actually
   /// recovers presentation (the evidence loop for the intermittent invisible-session bug).
   private var sessionPresentationAnomalousDisplays = Set<CGDirectDisplayID>()
+  /// Consecutive anomalous watchdog ticks per display this session — drives the heal
+  /// escalation ladder (`AreaSelectionPresentationLogic.healAction`).
+  private var sessionPresentationAnomalyCounts: [CGDirectDisplayID: Int] = [:]
+  /// Window recreations per display this session, capped (`maxWindowRecreationsPerSession`)
+  /// so a WindowServer that keeps rejecting fresh panels cannot thrash the pool.
+  private var sessionPresentationRecreationCounts: [CGDirectDisplayID: Int] = [:]
+  /// Displays that already spent their single activate-and-recreate last resort.
+  private var sessionPresentationLastResortUsed = Set<CGDirectDisplayID>()
+  /// Max pooled-window recreations per display per session before the last-resort rung.
+  private static let maxWindowRecreationsPerSession = 2
   private var isMovingManualSelection = false
   private var manualSelectionLastPointerLocation: CGPoint?
 
@@ -183,6 +193,12 @@ final class AreaSelectionController: NSObject {
   /// "jump"). Nil until the first observed event; cleared on teardown.
   private var lastLivePassthroughPointerLocation: CGPoint?
 
+  /// Debounced idle pool rebuild (see `scheduleIdlePoolRebuild`).
+  private var idlePoolRebuildTask: Task<Void, Never>?
+  /// App-lifetime observers for Space churn signals that rot pooled windows' WindowServer
+  /// all-spaces membership while they sit ordered out.
+  private var spaceChurnObservers: [NSObjectProtocol] = []
+
   /// Whether the overlay should be dismissed immediately after a selection is made.
   /// When `false`, the caller is responsible for calling `cancelSelection()` to dismiss.
   /// Prefer the `dismissesAfterSelection` start parameter over `setDismissesAfterSelection`:
@@ -203,6 +219,11 @@ final class AreaSelectionController: NSObject {
 
   override private init() {
     super.init()
+    // App-lifetime observers live in init, not `prepareWindowPool()` — the pool is torn
+    // down and re-prepared on Space churn (`rebuildWindowPool`), and re-registering these
+    // there would duplicate them on every rebuild.
+    setupScreenChangeObserver()
+    setupSpaceChurnObservers()
   }
 
   // MARK: - Window Pool Management (Phase 1)
@@ -219,7 +240,6 @@ final class AreaSelectionController: NSObject {
       windowPool[displayID] = window
     }
 
-    setupScreenChangeObserver()
     isPoolReady = true
   }
 
@@ -234,6 +254,59 @@ final class AreaSelectionController: NSObject {
         self?.refreshWindowPool()
       }
     }
+  }
+
+  /// Observe Space churn signals for idle pool maintenance. A pooled window spends its life
+  /// ordered out; while it sits hidden, Space churn (Mission Control add/remove/reorder,
+  /// fullscreen-app Spaces, display sleep/wake) lets the WindowServer drop its all-spaces
+  /// membership, degrading it to its "home" Space — the field failure where the overlay
+  /// presents on one desktop but not another. Rebuilding the pool on every observable churn
+  /// signal keeps pooled windows younger than the latest transition, so sessions usually
+  /// start with clean membership and the in-session recreation heal stays the rare fallback.
+  private func setupSpaceChurnObservers() {
+    let workspaceCenter = NSWorkspace.shared.notificationCenter
+    for name in [NSWorkspace.activeSpaceDidChangeNotification, NSWorkspace.didWakeNotification] {
+      let observer = workspaceCenter.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+        MainActor.assumeIsolated {
+          self?.scheduleIdlePoolRebuild()
+        }
+      }
+      spaceChurnObservers.append(observer)
+    }
+  }
+
+  /// Debounced idle pool rebuild. Skipped while a session is presenting — the session
+  /// watchdog owns presentation healing mid-session.
+  private func scheduleIdlePoolRebuild() {
+    guard isPoolReady else { return }
+    idlePoolRebuildTask?.cancel()
+    idlePoolRebuildTask = Task { @MainActor [weak self] in
+      // Space switches arrive in bursts during Mission Control gestures — coalesce them.
+      do {
+        try await Task.sleep(for: .milliseconds(500))
+      } catch {
+        return
+      }
+      guard let self, !isPresenting else { return }
+      rebuildWindowPool()
+    }
+  }
+
+  /// Close every pooled window and re-prepare the pool from scratch. Each fresh panel gets a
+  /// new WindowServer window record with clean `.canJoinAllSpaces` membership.
+  private func rebuildWindowPool() {
+    for (_, window) in windowPool {
+      window.close()
+    }
+    windowPool.removeAll()
+    isPoolReady = false
+    prepareWindowPool()
+    DiagnosticLogger.shared.log(
+      .debug,
+      .capture,
+      "Area selection window pool rebuilt after space churn",
+      context: ["poolSize": "\(windowPool.count)"]
+    )
   }
 
   /// Refresh window pool when screens change
@@ -529,6 +602,9 @@ final class AreaSelectionController: NSObject {
     // Per-session recovery memory for the presentation watchdog (kept across mid-session
     // watchdog re-arms; see `cancelSessionPresentationWatchdog`).
     sessionPresentationAnomalousDisplays.removeAll()
+    sessionPresentationAnomalyCounts.removeAll()
+    sessionPresentationRecreationCounts.removeAll()
+    sessionPresentationLastResortUsed.removeAll()
     allowsApplicationWindowSelection = applicationConfiguration != nil
     interactionMode = applicationConfiguration == nil ? .manualRegion : initialInteractionMode
     windowSelectionSnapshot = applicationConfiguration.map { configuration in
@@ -727,7 +803,12 @@ final class AreaSelectionController: NSObject {
   }
 
   /// Verify every pooled window's presentation state; heal and log anomalies. Safe to call
-  /// repeatedly — a clean window is a no-op.
+  /// repeatedly — a clean window is a no-op. The heal escalates per display via
+  /// `AreaSelectionPresentationLogic.healAction`: membership loss (`offActiveSpace` /
+  /// `notOnScreenPerWindowServer`) goes straight to pooled-window recreation — field
+  /// evidence shows the order-out + collectionBehavior-toggle re-assert never repairs a
+  /// mangled WindowServer window record — while transient states get one cheap re-assert
+  /// before escalating.
   private func runSessionPresentationCheck(sessionID: UUID) {
     guard isPresenting, selectionSessionID == sessionID else { return }
     let onScreenWindowNumbers = windowServerOnScreenWindowNumbers()
@@ -751,25 +832,48 @@ final class AreaSelectionController: NSObject {
       )
       let issues = AreaSelectionPresentationLogic.issues(for: state)
       if issues.isEmpty {
+        sessionPresentationAnomalyCounts.removeValue(forKey: displayID)
         // Evidence loop: a previously flagged display that now presents cleanly tells us the
         // heal worked (and how many ticks it took).
         if sessionPresentationAnomalousDisplays.remove(displayID) != nil {
           DiagnosticLogger.shared.log(
             .info,
             .capture,
-            "Area selection window presentation recovered after re-assert",
+            "Area selection window presentation recovered after heal",
             context: [
               "displayID": "\(displayID)",
               "watchdogTick": "\(sessionPresentationWatchdogTicks)",
               "windowNumber": "\(window.windowNumber)",
+              "recreations": "\(sessionPresentationRecreationCounts[displayID] ?? 0)",
             ]
           )
         }
         continue
       }
       sessionPresentationAnomalousDisplays.insert(displayID)
+      let consecutiveTicks = (sessionPresentationAnomalyCounts[displayID] ?? 0) + 1
+      sessionPresentationAnomalyCounts[displayID] = consecutiveTicks
+      let recreationCount = sessionPresentationRecreationCounts[displayID] ?? 0
+      let action = AreaSelectionPresentationLogic.healAction(
+        for: issues,
+        consecutiveAnomalyTicks: consecutiveTicks,
+        recreationCount: recreationCount,
+        maxRecreations: Self.maxWindowRecreationsPerSession,
+        lastResortUsed: sessionPresentationLastResortUsed.contains(displayID)
+      ) ?? .reassert
+      // A mid-drag session keeps its drag state across a recreation only in live passthrough
+      // (the event tap drives selection from screen coordinates); for the window-event
+      // fallback the drag's source window is load-bearing, so defer recreation to the next
+      // tick — the drag will have ended or the user is none the wiser either way.
+      let defersForActiveDrag = manualSelectionStartPoint != nil
+        && !isLivePassthroughInputActive
+        && action != .reassert
+      let effectiveAction = defersForActiveDrag ? .reassert : action
       var context: [String: String] = [
         "issues": issues.map(\.rawValue).joined(separator: ","),
+        "healAction": "\(effectiveAction)",
+        "consecutiveAnomalyTicks": "\(consecutiveTicks)",
+        "recreationCount": "\(recreationCount)",
         "displayID": "\(displayID)",
         "isVisible": "\(window.isVisible)",
         "isOnActiveSpace": "\(window.isOnActiveSpace)",
@@ -786,17 +890,64 @@ final class AreaSelectionController: NSObject {
       DiagnosticLogger.shared.log(
         .warning,
         .capture,
-        "Area selection window presentation anomaly; re-asserting",
+        "Area selection window presentation anomaly; healing",
         context: context
       )
-      if issues.contains(.frameMismatch) {
-        window.setFrame(screen.frame, display: true)
-        window.overlayView.updateBounds(screen.frame)
+      switch effectiveAction {
+      case .reassert:
+        // Transient heal only: re-order within the window's current space set. Deliberately
+        // NOT the old order-out + collectionBehavior toggle — it cannot repair membership
+        // loss (proven in the field) and it flickers healthy windows mid-space-switch.
+        if issues.contains(.frameMismatch) {
+          window.setFrame(screen.frame, display: true)
+          window.overlayView.updateBounds(screen.frame)
+        }
+        window.orderFrontRegardless()
+        window.activateKeyboardInputIfNeeded()
+        window.overlayView.refreshCursor()
+      case .recreateWindow, .activateAndRecreate:
+        if effectiveAction == .activateAndRecreate {
+          // Last resort, once per display per session: the inline-annotate formula (active
+          // app + fresh window). Accepts the live-capture trade-offs (foreground-window
+          // appearance change, retained-popover dismissal) for a session that would
+          // otherwise stay invisible.
+          sessionPresentationLastResortUsed.insert(displayID)
+          NSApp.activate(ignoringOtherApps: true)
+        }
+        sessionPresentationRecreationCounts[displayID] = recreationCount + 1
+        recreatePooledWindow(for: screen, displayID: displayID)
       }
-      window.reassertPresentation()
-      window.activateKeyboardInputIfNeeded()
-      window.overlayView.refreshCursor()
     }
+  }
+
+  /// Replace a pooled window whose WindowServer record is broken. A fresh panel gets a new
+  /// WindowServer window number with clean `.canJoinAllSpaces` membership established at
+  /// order-in time — the only heal that repairs all-spaces membership loss. Session state is
+  /// fully re-applied by `configureSessionWindow` (the same path used for mid-session display
+  /// attach), and every consumer resolves windows through `windowPool` per call (event tap,
+  /// hover, key routing), so the swap is transparent. Internal for testability.
+  func recreatePooledWindow(for screen: NSScreen, displayID: CGDirectDisplayID) {
+    let oldWindow = windowPool[displayID]
+    let oldWindowNumber = oldWindow?.windowNumber ?? 0
+    let replacement = AreaSelectionWindow(screen: screen, pooled: true)
+    replacement.selectionDelegate = self
+    windowPool[displayID] = replacement
+    if activeWindow === oldWindow { activeWindow = replacement }
+    if manualSelectionSourceWindow === oldWindow { manualSelectionSourceWindow = nil }
+    oldWindow?.orderOut(nil)
+    oldWindow?.close()
+    configureSessionWindow(replacement, for: screen, displayID: displayID)
+    DiagnosticLogger.shared.log(
+      .info,
+      .capture,
+      "Area selection pooled window recreated to restore presentation",
+      context: [
+        "displayID": "\(displayID)",
+        "oldWindowNumber": "\(oldWindowNumber)",
+        "newWindowNumber": "\(replacement.windowNumber)",
+        "isLivePassthroughInput": "\(isLivePassthroughInputActive)",
+      ]
+    )
   }
 
   /// WindowServer ground truth: the window numbers the compositor currently presents
@@ -2022,6 +2173,9 @@ final class AreaSelectionController: NSObject {
     if let observer = screenChangeObserver {
       NotificationCenter.default.removeObserver(observer)
     }
+    for observer in spaceChurnObservers {
+      NSWorkspace.shared.notificationCenter.removeObserver(observer)
+    }
     if let observer = sessionSpaceChangeObserver {
       NSWorkspace.shared.notificationCenter.removeObserver(observer)
     }
@@ -2286,21 +2440,6 @@ final class AreaSelectionWindow: NSPanel {
     guard receivesKeyboardInput else { return }
     makeKey()
     makeFirstResponder(overlayView)
-  }
-
-  /// Force the WindowServer to re-evaluate this panel's space membership and ordering. Plain
-  /// `orderFrontRegardless()` only re-orders within the spaces the window is already a
-  /// member of, so it cannot repair a broken `.canJoinAllSpaces` membership — the
-  /// invisible-on-the-active-Space field failure where every AppKit property looks healthy.
-  /// Cycling off-screen with a real collection-behavior change makes the WindowServer
-  /// re-join every space; the `needsDisplay` nudge recommits the layer tree afterwards.
-  func reassertPresentation() {
-    let behavior = collectionBehavior
-    orderOut(nil)
-    collectionBehavior = []
-    collectionBehavior = behavior
-    orderFrontRegardless()
-    overlayView.needsDisplay = true
   }
 
   var displayID: CGDirectDisplayID? {

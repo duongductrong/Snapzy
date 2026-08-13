@@ -62,6 +62,11 @@ struct AnnotationSessionData {
   var embeddedImageAssetsData: [UUID: Data] = [:]
   /// Active combine/stitch session flags, if the session was in combine mode.
   var combineSession: CombineSessionSnapshot? = nil
+  /// Logical (point-space) size of the source image when the session was cached.
+  /// Annotations live in this coordinate space, so restores must apply it verbatim
+  /// instead of re-deriving density from the current main display — native-density
+  /// (1×) captures would otherwise get a mismatched canvas (issue #414 follow-up).
+  var sourceLogicalSize: CGSize? = nil
 }
 
 /// Manages annotation window instances
@@ -345,7 +350,8 @@ extension AnnotationSessionData {
       didCutoutAutoApplyCrop: cutoutSnapshot.didAutoApplyCrop,
       cutoutAutoAppliedCropRect: cutoutSnapshot.autoAppliedCropRect,
       embeddedImageAssetsData: state.embeddedImageAssetsSnapshotData(),
-      combineSession: state.combineSessionSnapshot()
+      combineSession: state.combineSessionSnapshot(),
+      sourceLogicalSize: state.sourceImage?.size
     )
   }
 }

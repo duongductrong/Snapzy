@@ -243,6 +243,15 @@ private struct InlineAreaAnnotateRootView: View {
       let viewportRect = desktopRect.map(rectInViewport)
       let isSelectionPreviewing = resizePreviewRect != nil || movingPreviewRect != nil
       let showsCursorIndicator = movingPreviewRect != nil
+      // Pointer position for the drawn crosshair / magnifier during `.selecting`. Prefer the
+      // session-published desktop point, which the drag local monitor keeps fresh while it
+      // consumes `.leftMouseDragged` (starving the SwiftUI gesture that feeds
+      // `cursorIndicatorPoint`) — otherwise this chrome freezes at the drag-start point.
+      // Gated to this display's bounds: each per-display panel only renders the pointer
+      // chrome while the pointer is actually on that display.
+      let viewportBounds = CGRect(origin: .zero, size: display.localFrame.size)
+      let selectingPointerPoint = (session.selectionPointerLocation.map(viewportPoint(for:)) ?? cursorIndicatorPoint)
+        .flatMap { viewportBounds.contains($0) ? $0 : nil }
 
       ZStack(alignment: .topLeading) {
         ForEach(session.displays) { backdropDisplay in
@@ -279,7 +288,7 @@ private struct InlineAreaAnnotateRootView: View {
         if session.phase == .selecting {
           InlineAreaMagnifierOverlay(
             backdropImage: display.backdropCGImage,
-            point: cursorIndicatorPoint.map { appKitLocalPoint(fromViewportPoint: $0) },
+            point: selectingPointerPoint.map { appKitLocalPoint(fromViewportPoint: $0) },
             hostSize: display.localFrame.size,
             showsByDefault: session.showsMagnifierByDefault,
             showsColorPanel: session.showsMagnifierColorPanel,
@@ -299,8 +308,8 @@ private struct InlineAreaAnnotateRootView: View {
           // `NSCursor.set()` is not used here: on this `.nonactivatingPanel` configuration the
           // WindowServer can silently stop rendering it after roughly a second of no new mouse
           // events, even though the app's own cursor bookkeeping stays correct the whole time.
-          if let cursorIndicatorPoint {
-            InlineAreaSystemCrosshairProxy(point: cursorIndicatorPoint)
+          if let selectingPointerPoint {
+            InlineAreaSystemCrosshairProxy(point: selectingPointerPoint)
           }
         }
       }
@@ -309,12 +318,18 @@ private struct InlineAreaAnnotateRootView: View {
         switch phase {
         case let .active(location):
           cursorIndicatorPoint = location
+          if session.phase == .selecting {
+            session.selectionPointerLocation = desktopPoint(for: location)
+          }
           updateNativeCursorForIndicator(showsCursorIndicator)
           if session.phase == .selecting {
             session.updateHoveredWindow(atScreenPoint: screenPoint(fromDesktopPoint: desktopPoint(for: location)))
           }
         case .ended:
           cursorIndicatorPoint = nil
+          if session.phase == .selecting {
+            session.selectionPointerLocation = nil
+          }
           InlineAreaNativeCursor.restoreArrow()
           session.hoveredWindowCandidate = nil
           session.hoveredSmartElementRect = nil
@@ -335,6 +350,7 @@ private struct InlineAreaAnnotateRootView: View {
         && (0 ... display.localFrame.height).contains(candidate.y)
       if inBounds {
         cursorIndicatorPoint = candidate
+        session.selectionPointerLocation = desktopPoint(for: candidate)
         session.updateHoveredWindow(atScreenPoint: screenPoint(fromDesktopPoint: session.currentDesktopMouseLocation))
       }
     }
@@ -414,9 +430,9 @@ private struct InlineAreaAnnotateRootView: View {
     )
   }
 
-  /// Inverse of `desktopPoint(for:)` — used only to seed `cursorIndicatorPoint` from the real
-  /// system mouse location on first appearance (see `.onAppear`); the normal per-frame path
-  /// gets viewport points directly from SwiftUI's own hover/drag gesture callbacks.
+  /// Inverse of `desktopPoint(for:)` — converts the session-published desktop point into
+  /// this display's viewport space for the selection chrome in `body` (crosshair proxy,
+  /// magnifier), and seeds the initial pointer position in `.onAppear`.
   private func viewportPoint(for desktopPoint: CGPoint) -> CGPoint {
     CGPoint(
       x: desktopPoint.x - display.localFrame.minX,

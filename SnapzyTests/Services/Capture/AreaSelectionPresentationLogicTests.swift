@@ -117,4 +117,70 @@ final class AreaSelectionPresentationLogicTests: XCTestCase {
       Set(AreaSelectionPresentationIssue.allCases)
     )
   }
+
+  // MARK: - Heal escalation ladder
+
+  private func healAction(
+    issues: [AreaSelectionPresentationIssue],
+    ticks: Int = 1,
+    recreations: Int = 0,
+    maxRecreations: Int = 2,
+    lastResortUsed: Bool = false
+  ) -> AreaSelectionPresentationHealAction? {
+    AreaSelectionPresentationLogic.healAction(
+      for: issues,
+      consecutiveAnomalyTicks: ticks,
+      recreationCount: recreations,
+      maxRecreations: maxRecreations,
+      lastResortUsed: lastResortUsed
+    )
+  }
+
+  func testHealAction_noIssues_returnsNil() {
+    XCTAssertNil(healAction(issues: []))
+  }
+
+  /// Transient anomalies (space-switch turbulence) get one cheap re-assert first.
+  func testHealAction_transientOnlyFirstTick_reasserts() {
+    XCTAssertEqual(healAction(issues: [.occluded], ticks: 1), .reassert)
+    XCTAssertEqual(healAction(issues: [.notVisible], ticks: 1), .reassert)
+    XCTAssertEqual(healAction(issues: [.frameMismatch], ticks: 1), .reassert)
+    XCTAssertEqual(healAction(issues: [.unexpectedAlpha], ticks: 1), .reassert)
+  }
+
+  /// A transient anomaly that survives the first re-assert escalates to recreation.
+  func testHealAction_persistentTransient_escalatesToRecreate() {
+    XCTAssertEqual(healAction(issues: [.occluded], ticks: 2), .recreateWindow)
+  }
+
+  /// Membership loss escalates to recreation immediately — the re-assert provably cannot
+  /// repair it, so waiting a tick only delays the crosshair.
+  func testHealAction_membershipLoss_recreatesImmediately() {
+    XCTAssertEqual(healAction(issues: [.offActiveSpace], ticks: 1), .recreateWindow)
+    XCTAssertEqual(healAction(issues: [.notOnScreenPerWindowServer], ticks: 1), .recreateWindow)
+    XCTAssertEqual(
+      healAction(issues: [.offActiveSpace, .occluded, .notOnScreenPerWindowServer], ticks: 1),
+      .recreateWindow
+    )
+  }
+
+  /// Past the recreation cap, the single activate-and-recreate last resort fires once.
+  func testHealAction_recreationCapExhausted_activateAndRecreateOnce() {
+    XCTAssertEqual(
+      healAction(issues: [.offActiveSpace], ticks: 1, recreations: 2),
+      .activateAndRecreate
+    )
+    XCTAssertEqual(
+      healAction(issues: [.offActiveSpace], ticks: 1, recreations: 2, lastResortUsed: true),
+      .reassert
+    )
+  }
+
+  /// Under the cap, membership loss keeps recreating.
+  func testHealAction_underCap_keepsRecreating() {
+    XCTAssertEqual(
+      healAction(issues: [.notOnScreenPerWindowServer], ticks: 3, recreations: 1),
+      .recreateWindow
+    )
+  }
 }

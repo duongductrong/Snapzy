@@ -8,6 +8,7 @@
 import AppKit
 import Combine
 import CoreImage
+import ImageIO
 import SwiftUI
 
 /// Central state for annotation window
@@ -2220,13 +2221,18 @@ final class AnnotateState: ObservableObject {
     return bitmap.representation(using: .png, properties: [:])
   }
 
-  /// Load image and adjust size for Retina displays
+  /// Load image and adjust logical size for the density recorded in the file itself.
   static func loadImageWithCorrectScale(from url: URL) -> NSImage? {
     guard let image = SandboxFileAccessManager.shared.withScopedAccess(to: url, {
       NSImage(contentsOf: url)
     }) else { return nil }
 
-    let scaleFactor = NSScreen.main?.backingScaleFactor ?? 2.0
+    // Prefer the file's own DPI metadata (Snapzy writes scale × 72 DPI on save) so
+    // native-density (1×) captures keep their authored logical size on any display
+    // arrangement. Files without usable DPI (e.g. WebP) fall back to the legacy
+    // main-screen heuristic.
+    let scaleFactor = fileDensityScaleFactor(from: url)
+      ?? NSScreen.main?.backingScaleFactor ?? 2.0
     if let normalizedSize = normalizedRetinaLogicalSizeIfNeeded(for: image, scaleFactor: scaleFactor) {
       image.size = normalizedSize
     }
@@ -2234,7 +2240,26 @@ final class AnnotateState: ObservableObject {
     return image
   }
 
-  private static func normalizedRetinaLogicalSizeIfNeeded(
+  /// Pixel density carried by the image file's own DPI metadata (DPI ÷ 72), read
+  /// via ImageIO. Returns nil when the file has no usable DPI information, letting
+  /// callers apply a fallback heuristic.
+  static func fileDensityScaleFactor(from url: URL) -> CGFloat? {
+    SandboxFileAccessManager.shared.withScopedAccess(to: url) {
+      guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+            let dpiWidth = (properties[kCGImagePropertyDPIWidth] as? NSNumber)?.doubleValue,
+            let dpiHeight = (properties[kCGImagePropertyDPIHeight] as? NSNumber)?.doubleValue,
+            dpiWidth > 0, dpiHeight > 0 else {
+        return nil
+      }
+      let scale = max(dpiWidth, dpiHeight) / 72.0
+      guard scale.isFinite, scale > 0 else { return nil }
+      return CGFloat(scale)
+    }
+  }
+
+  /// Exposed (internal) for unit-testing the density-normalization branches.
+  static func normalizedRetinaLogicalSizeIfNeeded(
     for image: NSImage,
     scaleFactor: CGFloat
   ) -> NSSize? {

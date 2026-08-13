@@ -2,7 +2,7 @@
 
 Sparkle-based app updates, local diagnostic logging, crash detection, and the manual problem-report bundle. No telemetry anywhere — logs stay on the user's Mac.
 
-Verified against `Snapzy/Services/Updates/UpdaterManager.swift`, `Snapzy/Features/Updates/`, `Snapzy/Services/Diagnostics/`, `Snapzy/Features/CrashReport/`, `Snapzy/Resources/Info.plist`, and `appcast.xml` at HEAD (`v1.31.0-beta.17`).
+Verified against `Snapzy/Services/Updates/UpdaterManager.swift`, `Snapzy/Features/Updates/`, `Snapzy/Services/Diagnostics/`, `Snapzy/Features/CrashReport/`, `Snapzy/Resources/Info.plist`, and `appcast.xml` at HEAD (`v1.31.0-beta.18`).
 
 ## Sparkle updates
 

@@ -39,6 +39,24 @@ enum AreaSelectionPresentationIssue: String, CaseIterable {
   case notOnScreenPerWindowServer
 }
 
+/// Heal the watchdog applies for a detected anomaly. Ordered by escalation cost.
+enum AreaSelectionPresentationHealAction: Equatable {
+  /// Cheap re-order + key/cursor re-assert. Only meaningful for transient states
+  /// (occlusion turbulence during space switches, refused ordering) — it cannot
+  /// repair WindowServer space-membership loss.
+  case reassert
+  /// Replace the pooled window with a fresh one: a new WindowServer window record
+  /// re-establishes `.canJoinAllSpaces` membership at order-in time. The only heal
+  /// proven to repair membership loss (field evidence: `reassertPresentation`'s
+  /// order-out + collectionBehavior toggle never recovered a single session).
+  case recreateWindow
+  /// Recreation cap exhausted: activate the app and recreate once more — the
+  /// inline-annotate formula (fresh window + active app) with no known failure
+  /// mode. Accepts the live-capture trade-offs (foreground-window appearance
+  /// change, retained-popover dismissal) only when the session is otherwise dead.
+  case activateAndRecreate
+}
+
 struct AreaSelectionPresentationState: Equatable {
   var isVisible: Bool
   var isOnActiveSpace: Bool
@@ -75,5 +93,33 @@ enum AreaSelectionPresentationLogic {
       issues.append(.notOnScreenPerWindowServer)
     }
     return issues
+  }
+
+  /// Escalating heal decision for a detected anomaly. Pure — the controller feeds its
+  /// per-display counters in, so the ladder is unit-testable without windows.
+  ///
+  /// Ladder (field-evidence-based, plans/260812-1417):
+  /// - Membership loss (`.offActiveSpace` / `.notOnScreenPerWindowServer`) escalates to
+  ///   window recreation immediately: the order-out + collectionBehavior toggle re-assert
+  ///   provably never repairs it, so waiting a tick only delays the crosshair by 0.5s.
+  /// - Other anomalies (occlusion turbulence, refused ordering, stale frame, alpha) get one
+  ///   cheap `.reassert` — they are usually space-switch transients that self-heal — and
+  ///   escalate to recreation only when they persist (`consecutiveAnomalyTicks >= 2`).
+  /// - Past the recreation cap, a single `.activateAndRecreate` last resort; once that is
+  ///   spent, fall back to `.reassert` so the session keeps its cheap retry without churning
+  ///   windows every tick.
+  static func healAction(
+    for issues: [AreaSelectionPresentationIssue],
+    consecutiveAnomalyTicks: Int,
+    recreationCount: Int,
+    maxRecreations: Int,
+    lastResortUsed: Bool
+  ) -> AreaSelectionPresentationHealAction? {
+    guard !issues.isEmpty else { return nil }
+    let membershipBroken = issues.contains(.offActiveSpace)
+      || issues.contains(.notOnScreenPerWindowServer)
+    guard membershipBroken || consecutiveAnomalyTicks >= 2 else { return .reassert }
+    if recreationCount < maxRecreations { return .recreateWindow }
+    return lastResortUsed ? .reassert : .activateAndRecreate
   }
 }

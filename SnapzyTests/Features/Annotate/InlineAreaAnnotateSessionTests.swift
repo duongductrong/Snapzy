@@ -361,4 +361,72 @@ final class InlineAreaAnnotateSessionTests: XCTestCase {
       keyCode: keyCode
     ))
   }
+
+  // MARK: - Selection pointer location
+
+  /// Regression: during a drag, the session's local monitor consumes `.leftMouseDragged`
+  /// before SwiftUI's gesture sees it, so mid-drag pointer updates arrive ONLY through
+  /// these session calls. Pointer-positioned chrome (drawn crosshair, magnifier) reads
+  /// `selectionPointerLocation` — it must track every `updateSelection` call or the
+  /// crosshair freezes at the drag-start point (⌘⇧7 stuck-crosshair bug).
+  @MainActor
+  func testUpdateSelectionPublishesPointerLocation() throws {
+    let session = try makeSelectionSession()
+    session.beginSelection(at: CGPoint(x: 100, y: 100))
+    XCTAssertEqual(session.selectionPointerLocation, CGPoint(x: 100, y: 100))
+
+    for point in [CGPoint(x: 150, y: 180), CGPoint(x: 400, y: 500), CGPoint(x: 60, y: 40)] {
+      session.updateSelection(to: point)
+      XCTAssertEqual(session.selectionPointerLocation, point)
+    }
+
+    // Tears down the drag local monitor installed by `beginSelection`.
+    session.cancel()
+  }
+
+  @MainActor
+  func testEndSelectionClearsPointerLocation() throws {
+    let session = try makeSelectionSession()
+    session.beginSelection(at: CGPoint(x: 100, y: 100))
+    // Below the 5×5 minimum: the selection is discarded and the session stays `.selecting`.
+    session.endSelection(at: CGPoint(x: 102, y: 102))
+    XCTAssertNil(session.selectionPointerLocation)
+    XCTAssertNil(session.selectionRect)
+    XCTAssertEqual(session.phase, .selecting)
+  }
+
+  @MainActor
+  private func makeSelectionSession() throws -> InlineAreaAnnotateSession {
+    // Fake display ID: the session hides the cursor per display at init — a nonexistent
+    // display keeps that a harmless no-op instead of hiding the test runner's cursor.
+    let displayID: CGDirectDisplayID = 999_999_999
+    let screenFrame = CGRect(x: 0, y: 0, width: 800, height: 600)
+    let image = try XCTUnwrap(TestImageFactory.solidColor(
+      width: 1600, height: 1200, red: 100, green: 150, blue: 200
+    ))
+    let display = InlineAreaAnnotateDisplay(
+      displayID: displayID,
+      screenFrame: screenFrame,
+      localFrame: screenFrame,
+      controlInsets: .zero,
+      backdropImage: NSImage(cgImage: image, size: screenFrame.size),
+      backdropCGImage: image
+    )
+    return InlineAreaAnnotateSession(
+      primaryDisplayID: displayID,
+      desktopFrame: screenFrame,
+      displays: [display],
+      frozenSession: FrozenAreaCaptureSession.fromSnapshot(FrozenDisplaySnapshot(
+        displayID: displayID,
+        screenFrame: screenFrame,
+        scaleFactor: 2.0,
+        colorSpaceName: nil,
+        image: image
+      )),
+      saveDirectory: FileManager.default.temporaryDirectory,
+      outputFormat: .png,
+      defaults: try XCTUnwrap(UserDefaults(suiteName: "InlineAreaAnnotateSessionTests.pointer")),
+      onComplete: { _ in }
+    )
+  }
 }

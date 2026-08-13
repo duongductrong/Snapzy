@@ -61,6 +61,13 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
   @Published var phase: InlineAreaAnnotatePhase = .selecting
   @Published var selectionRect: CGRect?
+  /// Authoritative pointer position in desktop-local coordinates for the `.selecting` phase.
+  /// Fed by every input path — SwiftUI hover/drag callbacks *and* the drag local monitor
+  /// (`installSelectionMonitorIfNeeded`), which consumes `.leftMouseDragged` before AppKit
+  /// dispatches it to the hosting view, starving gesture-driven state for the rest of the
+  /// drag. Pointer-positioned chrome (drawn crosshair, magnifier, coordinate bubble) must
+  /// read this instead of gesture-only state, or it freezes at the drag-start point.
+  @Published var selectionPointerLocation: CGPoint?
   @Published var isMoveModifierActive = false
   /// The window currently under the cursor while "automatically detect window under cursor"
   /// is on (see `autoDetectWindowUnderCursor`) — mirrors plain area screenshot's
@@ -286,6 +293,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
   func updateSelection(to localPoint: CGPoint) {
     guard phase == .selecting, let start = selectionStartPoint else { return }
+    selectionPointerLocation = localPoint
     selectionRect = clampedSelectionRect(CGRect(
       x: min(start.x, localPoint.x),
       y: min(start.y, localPoint.y),
@@ -299,6 +307,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     updateSelection(to: localPoint)
     removeSelectionMonitor()
     selectionStartPoint = nil
+    selectionPointerLocation = nil
 
     guard let rect = selectionRect, rect.width > 5, rect.height > 5 else {
       selectionRect = nil
@@ -609,11 +618,12 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   /// The real system mouse location, in this session's desktop coordinate space. Used to seed
-  /// `InlineAreaAnnotateRootView`'s `cursorIndicatorPoint` on first appearance: SwiftUI's
-  /// `onContinuousHover` only reports a position once it observes an actual hover event, which
-  /// is not guaranteed to fire immediately for a window that just appeared under an already-
-  /// stationary pointer — without seeding, the magnifier/crosshair can stay invisible until the
-  /// user moves the mouse.
+  /// `InlineAreaAnnotateRootView`'s pointer position (`cursorIndicatorPoint` and
+  /// `selectionPointerLocation`) on first appearance: SwiftUI's `onContinuousHover` only
+  /// reports a position once it observes an actual hover event, which is not guaranteed to
+  /// fire immediately for a window that just appeared under an already-stationary pointer —
+  /// without seeding, the magnifier/crosshair can stay invisible until the user moves the
+  /// mouse.
   var currentDesktopMouseLocation: CGPoint {
     localDesktopPoint(for: NSEvent.mouseLocation)
   }
@@ -622,6 +632,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     guard !didComplete else { return }
     didComplete = true
     isMoveModifierActive = false
+    selectionPointerLocation = nil
     removeKeyMonitors()
     removeSelectionMonitor()
     frozenSession.invalidate()
@@ -662,7 +673,8 @@ final class InlineAreaAnnotateSession: ObservableObject {
   }
 
   private static var preferredOutputScaleFactor: CGFloat {
-    max(NSScreen.screens.map(\.backingScaleFactor).max() ?? 2.0, 2.0)
+    // Native density per display; mixed composites promote to the highest native scale.
+    1.0
   }
 
   nonisolated static func matchesCommandSaveShortcut(_ event: NSEvent) -> Bool {

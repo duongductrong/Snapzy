@@ -194,6 +194,44 @@ final class AreaSelectionSessionLifecycleTests: XCTestCase {
     )
   }
 
+  /// The membership-loss heal replaces the pooled window: the pool entry swaps to a fresh
+  /// panel (new WindowServer record), the old panel is ordered out and closed, and the
+  /// replacement presents with session configuration applied.
+  func testRecreatePooledWindow_swapsPoolEntryAndPresentsReplacement() throws {
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
+
+    let controller = AreaSelectionController.shared
+    controller.startSelection(mode: .screenshot, backdrops: [:]) { _ in }
+
+    guard let oldWindow = pooledWindow(),
+          let displayID = oldWindow.displayID,
+          let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else {
+      controller.cancelSelection()
+      throw XCTSkip("no pooled AreaSelectionWindow (headless host with no screens)")
+    }
+
+    controller.recreatePooledWindow(for: screen, displayID: displayID)
+
+    let replacement = pooledWindows().first { $0.displayID == displayID }
+    XCTAssertNotNil(replacement, "the pool must keep an entry for the recreated display")
+    XCTAssertTrue(
+      replacement !== oldWindow,
+      "recreation must install a fresh window (new WindowServer record), not reuse the old one"
+    )
+    XCTAssertFalse(oldWindow.isVisible, "the replaced window must be ordered out")
+    XCTAssertEqual(
+      replacement?.isVisible, true,
+      "the replacement must be presented via the session configuration path"
+    )
+    XCTAssertTrue(
+      replacement?.selectionDelegate != nil,
+      "the replacement must keep the controller as its selection delegate"
+    )
+    controller.cancelSelection()
+  }
+
   // MARK: - Helpers
 
   /// Resolve a real pooled overlay window (populated lazily by `startSelection`) to drive

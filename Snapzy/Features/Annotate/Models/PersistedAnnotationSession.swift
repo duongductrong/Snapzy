@@ -32,6 +32,11 @@ nonisolated struct PersistedAnnotationSession: Codable {
   /// Combine/stitch session flags. Optional so pre-existing sidecars (and older app
   /// builds) decode without it — schemaVersion stays 1, no migration needed.
   var combineSession: PersistedCombineSession?
+  /// Authoring-time logical (point-space) size of the source image — the coordinate
+  /// space annotations live in. Restored verbatim so native-density (1×) captures
+  /// reopen with matching annotation positions on any display arrangement. Optional
+  /// so pre-existing sidecars decode without it — schemaVersion stays 1.
+  var sourceLogicalSize: CGSize?
 }
 
 /// Persisted combine/stitch layout flags. Enum values stored as raw strings and read back

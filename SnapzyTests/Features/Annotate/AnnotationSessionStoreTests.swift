@@ -55,6 +55,7 @@ final class AnnotationSessionStoreTests: XCTestCase {
     XCTAssertEqual(loaded.cropRect, sessionData.cropRect)
     XCTAssertEqual(loaded.cutoutImageData, sessionData.cutoutImageData)
     XCTAssertEqual(loaded.embeddedImageAssetsData[assetId], Data("embedded-asset".utf8))
+    XCTAssertEqual(loaded.sourceLogicalSize, sessionData.sourceLogicalSize)
 
     guard case .text("Editable text") = loaded.annotations[0].type else {
       return XCTFail("Expected text annotation")
@@ -72,6 +73,28 @@ final class AnnotationSessionStoreTests: XCTestCase {
       return XCTFail("Expected embedded image annotation")
     }
     XCTAssertEqual(loadedAssetId, assetId)
+  }
+
+  func testLoad_decodesLegacyManifestWithoutSourceLogicalSize() throws {
+    let sourceURL = try writeSourceImage(named: "capture.png")
+    let sessionData = try makeSessionData()
+
+    XCTAssertTrue(store.persist(sessionData, for: sourceURL))
+
+    // Simulate a sidecar written before sourceLogicalSize existed (schemaVersion 1
+    // stays unchanged; the optional key is simply absent).
+    let manifestURL = sidecarDirectory(for: sourceURL).appendingPathComponent("manifest.json")
+    let manifestData = try Data(contentsOf: manifestURL)
+    var manifestObject = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: manifestData) as? [String: Any]
+    )
+    manifestObject.removeValue(forKey: "sourceLogicalSize")
+    let legacyData = try JSONSerialization.data(withJSONObject: manifestObject, options: [.sortedKeys])
+    try legacyData.write(to: manifestURL, options: .atomic)
+
+    let loaded = try XCTUnwrap(store.load(for: sourceURL))
+    XCTAssertNil(loaded.sourceLogicalSize)
+    XCTAssertEqual(loaded.annotations.count, sessionData.annotations.count)
   }
 
   func testLoad_returnsNilWhenSourceSignatureChanges() throws {
@@ -200,7 +223,8 @@ final class AnnotationSessionStoreTests: XCTestCase {
       cutoutImageData: cutoutData,
       didCutoutAutoApplyCrop: true,
       cutoutAutoAppliedCropRect: CGRect(x: 2, y: 2, width: 10, height: 6),
-      embeddedImageAssetsData: [assetId: Data("embedded-asset".utf8)]
+      embeddedImageAssetsData: [assetId: Data("embedded-asset".utf8)],
+      sourceLogicalSize: CGSize(width: 280, height: 202)
     )
   }
 
