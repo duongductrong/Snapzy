@@ -4,255 +4,63 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.31.0-beta.18] - 2026-08-12
+## [1.31.0] - 2026-08-15
 
 ### Features
 -  enlarge screenshot magnifier and add pixel grid, crosshair, color picker (#466) (68e3d638)
+-  Add hover card action shortcuts and vsync hover performance optimizations (#485) (#487) (d66156fc)
+-  Add "Include window shadow in Application Capture" preference (#433) (#474) (c4986601)
+-  add repeat last area screenshot shortcut #460 (#475) (804c4e58)
+-  Add OCR text extraction (#468) (53f91eee)
+-  support copy, paste, and duplicate for annotation objects (#463) (48222557)
+-  Add Shift drawing constraints (#455) (815f742e)
+-  add text snapping for highlighter in annotate editor (#410) (938f46b7)
+-  add downloadable PP-OCR models and custom OCR endpoint support (#453) (1b0f52fe)
+-  add OCR result notification popup after text recognition (#450) (b5846ca8)
+-  add customizable menu bar menu and menu bar icon (#446) (bde6e57e)
+-  Gate recording session shortcuts to active recording sessions (5627a522)
+-  support line dash styles for stroke annotations (#444) (0d1b1d12)
+- : add crop edge snapping and auto-crop to content (#437) (#442) (7b861dbc)
+-  apply startup tool preference in standalone editor windows (eb181f2e)
+-  Add default and remembered annotation tools (#429) (fe8c99a3)
+-  Extend live capture passthrough to menu bar popovers (#430) (ea9fc3e4)
+-  Add Raycast integration and update documentation for automation tools (a6f8edf0)
 
 ### Bug Fixes
 -  Fix non-retina draw non-exactly annotation (331fc30c)
 -  keep non-Retina screenshots at native pixel density (#452) (4747666e)
 -  publish selection pointer location to track crosshair and magnifier overlay during drag (f04cf634)
 -  recreate overlay window on space-membership loss in presentation watchdog (71f358e3)
-
-### Chore
-- ci: fix ci build fails (3953cebe)
-- chore: update appcast and docs for v1.31.0-beta.17 (e2a6b17a)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @lcopilot
-- @motoish
-
-## [1.31.0-beta.17] - 2026-08-09
-
-### Features
--  Add hover card action shortcuts and vsync hover performance optimizations (#485) (#487) (d66156fc)
-
-### Bug Fixes
 - : round-trip function-key shortcuts through export/import (#484) (368f30be)
 - : correct TOML string unescape so backslash+n/t round-trips on import (#481) (684b8353)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.16 (47a79f9f)
-
-### Contributors
-- @YuriNachos
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.16] - 2026-08-08
-
-### Features
--  Add "Include window shadow in Application Capture" preference (#433) (#474) (c4986601)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.15 (aa6b4a28)
-
-### Contributors
-- @YuriNachos
-- @github-actions[bot]
-
-## [1.31.0-beta.15] - 2026-08-08
-
-### Bug Fixes
 -  pin Quick Access panel to capture screen on multi-display setups #467 (#479) (1f884f2d)
+-  retain hover states and transient UI in object cutout capture #422 (b7385ac1)
+-  verify area selection presentation via WindowServer and reassert space membership (05074a11)
+-  invalidate static drawing layers before item resize gesture (c34e1f03)
+-  handle first mouse in inline annotation canvas (ac27a33c)
+-  support layout-aware Settings menu item lookup for non-US keyboards (#311) (385ea09f)
+-  Preserve copied temp files on quick access dismiss and refine history defaults (#439) (4fbf4ffe)
+-  Fixed ja localization (#432) (2c285f76)
 
 ### Chore
-- chore: update appcast and docs for v1.31.0-beta.14 (e964bfc6)
+- chore: fold beta entries and filter release noise in changelog scripts (e7ac9a59)
+- ci: fix ci build fails (3953cebe)
+- docs: update Raycast extension URLs in README files (af8b408a)
+- docs: add Japanese README (#465) (0405020e)
+- refactor: extract area selection presentation logic and add watchdog tests (819d1dc8)
+- refactor: remove downloadable PP-OCR models and custom OCR catalog (193f6775)
+- ci: fail release workflow on empty EdDSA signature (699322f9)
+- chore: update changelog shell (#441) (edf5c158)
+- ci: skip HotkeyUnregistrationTests on headless CI runners (01b09dcb)
+- fix: Fixed ja localization (#432) (2c285f76)
 
 ### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.14] - 2026-08-08
-
-### Features
--  add repeat last area screenshot shortcut #460 (#475) (804c4e58)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.13 (158bd04e)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.13] - 2026-08-07
-
-### Bug Fixes
--  retain hover states and transient UI in object cutout capture #422 (b7385ac)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.12 (2308d49)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.12] - 2026-08-07
-
-### Features
--  Add OCR text extraction (#468) (53f91ee)
-
-### Chore
-- chore: bump version to v1.31.0-beta.12 (#469) (ac6b3db)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.11] - 2026-08-04
-
-### Features
--  support copy, paste, and duplicate for annotation objects (#463) (4822255)
--  Add Shift drawing constraints (#455) (815f742)
--  add text snapping for highlighter in annotate editor (#410) (938f46b)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.10 (cb83605)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @tukuyomil032
-
-## [1.31.0-beta.10] - 2026-08-04
-
-### Bug Fixes
--  verify area selection presentation via WindowServer and reassert space membership (05074a1)
--  invalidate static drawing layers before item resize gesture (c34e1f0)
--  handle first mouse in inline annotation canvas (ac27a33)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.9 (de5d440)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @lcopilot
-
-## [1.31.0-beta.9] - 2026-08-03
-
-### Chore
-- refactor: extract area selection presentation logic and add watchdog tests (819d1dc)
-- chore: update appcast and docs for v1.31.0-beta.8 (f447b0d)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.8] - 2026-08-02
-
-### Features
--  add downloadable PP-OCR models and custom OCR endpoint support (#453) (1b0f52f)
-
-### Chore
-- refactor: remove downloadable PP-OCR models and custom OCR catalog (193f677)
-- chore: bump version to v1.31.0-beta.8 (#454) (b48c7af)
-- chore: update appcast and docs for v1.31.0-beta.7 (230ded1)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.7] - 2026-08-01
-
-### Features
--  add OCR result notification popup after text recognition (#450) (b5846ca)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.6 (ae61500)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.6] - 2026-08-01
-
-### Bug Fixes
--  support layout-aware Settings menu item lookup for non-US keyboards (#311) (385ea09)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.5 (ceb0ae8)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.5] - 2026-08-01
-
-### Features
--  add customizable menu bar menu and menu bar icon (#446) (bde6e57)
-
-### Chore
-- ci: fail release workflow on empty EdDSA signature (699322f)
-- chore: update changelog shell (#441) (edf5c15)
-- chore: update appcast and docs for v1.31.0-beta.4 (3bf067b)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @motoish
-
-## [1.31.0-beta.4] - 2026-07-31
-
-### Features
--  Gate recording session shortcuts to active recording sessions (5627a52)
--  support line dash styles for stroke annotations (#444) (0d1b1d1)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.3 (e845d26)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.3] - 2026-07-31
-
-### Features
-- : add crop edge snapping and auto-crop to content (#437) (#442) (7b861db)
-
-### Chore
-- chore: update appcast and docs for v1.31.0-beta.2 (4b6f434)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.2] - 2026-07-30
-
-### Bug Fixes
--  Preserve copied temp files on quick access dismiss and refine history defaults (#439) (4fbf4ff)
-
-### Chore
-- ci: skip HotkeyUnregistrationTests on headless CI runners (01b09dc)
-- chore: update appcast and docs for v1.31.0-beta.1 (96ae0ca)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [1.31.0-beta.1] - 2026-07-29
-
-### Features
--  apply startup tool preference in standalone editor windows (eb181f2)
--  Add default and remembered annotation tools (#429) (fe8c99a)
--  Extend live capture passthrough to menu bar popovers (#430) (ea9fc3e)
--  Add Raycast integration and update documentation for automation tools (a6f8edf)
-
-### Bug Fixes
--  Fixed ja localization (#432) (2c285f7)
-
-### Chore
-- fix: Fixed ja localization (#432) (2c285f7)
-- chore: update appcast, cask, readme, and docs for v1.30.1 (384331e)
-
-### Contributors
+- @YuriNachos
 - @duongductrong
 - @github-actions[bot]
 - @kawarimidoll
 - @lcopilot
+- @motoish
 - @tukuyomil032
 
 ## [1.30.1] - 2026-07-26
