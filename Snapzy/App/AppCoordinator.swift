@@ -89,6 +89,9 @@ final class AppCoordinator {
     }
 
     observeNotifications()
+
+    // Proactively warn about macOS system shortcut conflicts at launch (issue #500).
+    SystemScreenshotShortcutManager.shared.notifyConflictOnLaunchIfNeeded()
   }
 
   func applicationWillTerminate() {

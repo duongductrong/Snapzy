@@ -68,9 +68,21 @@ final class SystemScreenshotShortcutManager {
     }
   }
 
+  // MARK: - Known system shortcuts (fallback when live pref read is unavailable)
+
+  /// Other well-known macOS system shortcuts (outside the symbolic-hotkeys domain) that
+  /// can collide with Snapzy bindings. Used as a fallback so detection still reports the
+  /// most common conflicts when `com.apple.symbolichotkeys` cannot be read live.
+  ///
+  /// "Spotlight" is a proper noun and is intentionally left unlocalized.
+  private static let otherKnownSystemConflicts: [(name: String, shortcut: ShortcutConfig)] = [
+    ("Spotlight", ShortcutConfig(keyCode: UInt32(kVK_Space), modifiers: UInt32(cmdKey))),
+  ]
+
   // MARK: - UserDefaults Keys
 
   private let promptSeenKey = "systemShortcutsDisablePromptSeen"
+  private let startupReminderKey = "systemShortcutsStartupReminderLastShown"
 
   // MARK: - Public API
 
@@ -86,40 +98,72 @@ final class SystemScreenshotShortcutManager {
   /// Reads `com.apple.symbolichotkeys` via UserDefaults(suiteName:),
   /// which requires the shared-preference.read-only entitlement in sandbox.
   func hasConflictingSystemShortcuts() -> Bool {
-    guard let hotkeys = readHotkeys() else {
-      // Can't read — assume NO conflicts (don't nag user if we can't verify)
-      DiagnosticLogger.shared.log(
-        .warning, .action,
-        "Cannot read com.apple.symbolichotkeys — assuming no conflicts"
-      )
+    if let hotkeys = readHotkeys() {
+      for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
+        guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
+        guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
+
+        if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty {
+          return true
+        }
+      }
       return false
     }
 
-    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
-      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
-      guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
-
-      if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty {
-        return true
-      }
-    }
-
+    // Live pref read unavailable — fall back to known default macOS shortcuts so the most
+    // common conflicts (⌘⇧3 / ⌘⇧4 / ⌘⇧5, Spotlight) are still detected instead of silently
+    // assumed to be absent. This is the core of issue #500: without this fallback the app
+    // reported "no conflict" and never warned the user.
     DiagnosticLogger.shared.log(
-      .info, .action,
-      "No conflicting system screenshot shortcuts detected"
+      .warning, .action,
+      "Cannot read com.apple.symbolichotkeys — falling back to known default system shortcuts"
     )
-    return false
+    return hasKnownDefaultConflict()
   }
 
   /// Return human-readable system shortcut names that currently conflict with a proposed Snapzy shortcut.
   func conflictDescriptions(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> [String] {
-    guard kind.isSystemConflictRelevant, let hotkeys = readHotkeys() else { return [] }
-    return matchingSystemHotkeys(for: kind, shortcut: shortcut, in: hotkeys)
-      .map(\.displayName)
+    guard kind.isSystemConflictRelevant else { return [] }
+
+    if let hotkeys = readHotkeys() {
+      return matchingSystemHotkeys(for: kind, shortcut: shortcut, in: hotkeys)
+        .map(\.displayName)
+    }
+
+    // Live pref read unavailable — fall back to known default conflict names so the
+    // conflict UI (recorder popover / preferences banner) still warns the user instead
+    // of silently reporting "no conflict". See issue #500.
+    return knownDefaultConflictNames(for: kind, shortcut: shortcut)
   }
 
   func hasConflict(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> Bool {
     !conflictDescriptions(for: kind, shortcut: shortcut).isEmpty
+  }
+
+  /// Posts a native notification at app launch when a system shortcut conflict is detected,
+  /// so the user is warned proactively instead of discovering it only after a shortcut
+  /// silently fails. Throttled to at most once every 7 days to avoid nagging on every
+  /// launch. Directly addresses the "reminder" request in issue #500.
+  func notifyConflictOnLaunchIfNeeded() {
+    guard hasConflictingSystemShortcuts() else { return }
+
+    let defaults = UserDefaults.standard
+    if let lastShown = defaults.object(forKey: startupReminderKey) as? Date,
+       Date().timeIntervalSince(lastShown) < 7 * 24 * 60 * 60 {
+      return
+    }
+    defaults.set(Date(), forKey: startupReminderKey)
+
+    Task {
+      let posted = await SystemNotificationService.shared.post(
+        title: L10n.SystemShortcuts.conflictNotificationTitle,
+        body: L10n.SystemShortcuts.conflictNotificationBody
+      )
+      DiagnosticLogger.shared.log(
+        posted ? .info : .debug, .action,
+        "Startup system-shortcut conflict notification \(posted ? "posted" : "skipped")"
+      )
+    }
   }
 
   /// Open System Settings to the Keyboard Shortcuts → Screenshots pane
@@ -299,6 +343,40 @@ final class SystemScreenshotShortcutManager {
     default:
       return []
     }
+  }
+
+  /// Names of known-default system shortcuts that conflict with the given Snapzy shortcut,
+  /// used as a fallback when the live `com.apple.symbolichotkeys` read is unavailable.
+  /// Covers the default macOS screenshot shortcuts (⌘⇧3 / ⌘⇧4 / ⌘⇧5) and other well-known
+  /// system bindings such as Spotlight (⌘Space) defined in `otherKnownSystemConflicts`.
+  private func knownDefaultConflictNames(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> [String] {
+    var names: [String] = []
+
+    for hotkeyID in relevantSystemHotkeys(for: kind) where hotkeyID.fallbackShortcut == shortcut {
+      names.append(hotkeyID.displayName)
+    }
+    for known in Self.otherKnownSystemConflicts where known.shortcut == shortcut {
+      names.append(known.name)
+    }
+
+    return names
+  }
+
+  /// Fallback conflict check used when the live `com.apple.symbolichotkeys` read fails.
+  /// Iterates the enabled, system-conflict-relevant Snapzy shortcuts and compares them
+  /// against the well-known default macOS shortcuts. Prevents the silent "no conflict"
+  /// result that motivated issue #500, where the app never warned the user even though a
+  /// default macOS binding collided with a Snapzy shortcut.
+  private func hasKnownDefaultConflict() -> Bool {
+    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
+      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
+      guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
+
+      if !knownDefaultConflictNames(for: kind, shortcut: snapzyShortcut).isEmpty {
+        return true
+      }
+    }
+    return false
   }
 
   private init() {}
