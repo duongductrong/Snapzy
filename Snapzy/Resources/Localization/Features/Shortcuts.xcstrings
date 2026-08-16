@@ -6888,6 +6888,28 @@
           }
         }
       }
+    },
+    "system-shortcuts.conflict-notification-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcut conflict detected"
+          }
+        }
+      }
+    },
+    "system-shortcuts.conflict-notification-body": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Snapzy shortcut overlaps a macOS system shortcut and may be intercepted by the system. Review it in Settings → Shortcuts."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
