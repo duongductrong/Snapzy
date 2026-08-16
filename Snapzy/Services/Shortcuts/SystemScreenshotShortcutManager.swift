@@ -103,7 +103,8 @@ final class SystemScreenshotShortcutManager {
         guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
         guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
 
-        if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty {
+        if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty
+             || !otherKnownConflictNames(for: snapzyShortcut).isEmpty {
           return true
         }
       }
@@ -121,13 +122,35 @@ final class SystemScreenshotShortcutManager {
     return hasKnownDefaultConflict()
   }
 
+  /// High-confidence conflict check: returns `true` only when the live
+  /// `com.apple.symbolichotkeys` read succeeds AND finds an enabled system shortcut that
+  /// collides with an enabled Snapzy shortcut. Used for the proactive launch notification,
+  /// where we deliberately avoid notifying about the uncertain degraded-path fallback
+  /// conflicts (those can be false positives when the user has disabled the system binding).
+  func hasLiveSystemShortcutConflict() -> Bool {
+    guard let hotkeys = readHotkeys() else { return false }
+    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
+      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
+      guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
+
+      if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty
+           || !otherKnownConflictNames(for: snapzyShortcut).isEmpty {
+        return true
+      }
+    }
+    return false
+  }
+
   /// Return human-readable system shortcut names that currently conflict with a proposed Snapzy shortcut.
   func conflictDescriptions(for kind: GlobalShortcutKind, shortcut: ShortcutConfig) -> [String] {
     guard kind.isSystemConflictRelevant else { return [] }
 
     if let hotkeys = readHotkeys() {
-      return matchingSystemHotkeys(for: kind, shortcut: shortcut, in: hotkeys)
+      let names = matchingSystemHotkeys(for: kind, shortcut: shortcut, in: hotkeys)
         .map(\.displayName)
+      // Also flag always-on system shortcuts that live outside AppleSymbolicHotKeys
+      // (e.g. Spotlight ⌘Space), so coverage is real in the normal path, not just degraded.
+      return names + otherKnownConflictNames(for: shortcut)
     }
 
     // Live pref read unavailable — fall back to known default conflict names so the
@@ -140,25 +163,33 @@ final class SystemScreenshotShortcutManager {
     !conflictDescriptions(for: kind, shortcut: shortcut).isEmpty
   }
 
-  /// Posts a native notification at app launch when a system shortcut conflict is detected,
-  /// so the user is warned proactively instead of discovering it only after a shortcut
-  /// silently fails. Throttled to at most once every 7 days to avoid nagging on every
-  /// launch. Directly addresses the "reminder" request in issue #500.
+  /// Posts a native notification at app launch when a *high-confidence* system shortcut
+  /// conflict is detected (see `hasLiveSystemShortcutConflict`), so the user is warned
+  /// proactively instead of discovering it only after a shortcut silently fails. Uses only
+  /// the live, enabled-state-aware detection to avoid nagging users who intentionally
+  /// disabled the system bindings. Throttled to at most once every 7 days; the timestamp is
+  /// persisted only after a successful delivery so an unauthorized/undelivered notification
+  /// never silently suppresses the reminder. Directly addresses the "reminder" request in
+  /// issue #500.
   func notifyConflictOnLaunchIfNeeded() {
-    guard hasConflictingSystemShortcuts() else { return }
+    guard hasLiveSystemShortcutConflict() else { return }
 
     let defaults = UserDefaults.standard
     if let lastShown = defaults.object(forKey: startupReminderKey) as? Date,
        Date().timeIntervalSince(lastShown) < 7 * 24 * 60 * 60 {
       return
     }
-    defaults.set(Date(), forKey: startupReminderKey)
 
     Task {
       let posted = await SystemNotificationService.shared.post(
         title: L10n.SystemShortcuts.conflictNotificationTitle,
         body: L10n.SystemShortcuts.conflictNotificationBody
       )
+      // Persist only on success — an undelivered notification (e.g. not yet authorized)
+      // must not suppress the reminder for 7 days.
+      if posted {
+        defaults.set(Date(), forKey: startupReminderKey)
+      }
       DiagnosticLogger.shared.log(
         posted ? .info : .debug, .action,
         "Startup system-shortcut conflict notification \(posted ? "posted" : "skipped")"
@@ -345,6 +376,16 @@ final class SystemScreenshotShortcutManager {
     }
   }
 
+  /// Names of well-known, always-on macOS system shortcuts (e.g. Spotlight ⌘Space) that
+  /// live outside `AppleSymbolicHotKeys` and therefore are not part of the live pref read.
+  /// Checked in both the live and fallback detection paths so the coverage is real, not
+  /// merely a degraded-path safety net.
+  private func otherKnownConflictNames(for shortcut: ShortcutConfig) -> [String] {
+    Self.otherKnownSystemConflicts.compactMap { known in
+      known.shortcut == shortcut ? known.name : nil
+    }
+  }
+
   /// Names of known-default system shortcuts that conflict with the given Snapzy shortcut,
   /// used as a fallback when the live `com.apple.symbolichotkeys` read is unavailable.
   /// Covers the default macOS screenshot shortcuts (⌘⇧3 / ⌘⇧4 / ⌘⇧5) and other well-known
@@ -355,9 +396,7 @@ final class SystemScreenshotShortcutManager {
     for hotkeyID in relevantSystemHotkeys(for: kind) where hotkeyID.fallbackShortcut == shortcut {
       names.append(hotkeyID.displayName)
     }
-    for known in Self.otherKnownSystemConflicts where known.shortcut == shortcut {
-      names.append(known.name)
-    }
+    names.append(contentsOf: otherKnownConflictNames(for: shortcut))
 
     return names
   }

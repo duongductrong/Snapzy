@@ -91,7 +91,11 @@ final class AppCoordinator {
     observeNotifications()
 
     // Proactively warn about macOS system shortcut conflicts at launch (issue #500).
-    SystemScreenshotShortcutManager.shared.notifyConflictOnLaunchIfNeeded()
+    // Deferred off the cold-start critical path: the read is cheap but synchronous, and we
+    // don't want to add it to the already-heavy launch sequence. Mirrors the splash delay.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+      SystemScreenshotShortcutManager.shared.notifyConflictOnLaunchIfNeeded()
+    }
   }
 
   func applicationWillTerminate() {
