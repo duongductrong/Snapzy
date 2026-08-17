@@ -88,10 +88,19 @@ final class AppCoordinator {
       self.presentStartupExperience(configurationAutoImportResult: configurationAutoImportResult)
     }
 
+    // Plugin host: deferred, off the launch critical path. Manifests are
+    // read; no plugin code executes at launch (all plugins are `resolved`).
+    Task { @MainActor in
+      await PluginHostController.shared.start()
+    }
+
     observeNotifications()
   }
 
   func applicationWillTerminate() {
+    Task { @MainActor in
+      await PluginHostController.shared.shutdown()
+    }
     flushConfigurationSyncBeforeTermination()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")
     CrashSentinel.shared.markTerminated()

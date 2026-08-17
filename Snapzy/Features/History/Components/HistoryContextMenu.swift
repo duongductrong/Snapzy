@@ -5,11 +5,13 @@
 //  Context menu for history items
 //
 
+import SnapzyPluginAPI
 import SwiftUI
 
 struct HistoryContextMenu: View {
   let record: CaptureHistoryRecord
   @ObservedObject private var manager = HistoryFloatingManager.shared
+  @ObservedObject private var pluginHost = PluginHostController.shared
 
   var body: some View {
     Button("Open in Finder") {
@@ -33,11 +35,43 @@ struct HistoryContextMenu: View {
       .disabled(manager.cloudUploadState(for: record) != nil)
     }
 
+    PluginCommandMenu(items: pluginCommandItems) { item in
+      pluginLauncher.launch(item)
+    }
+
     Divider()
 
     Button("Delete") {
       HistoryWindowController.shared.deleteRecords([record], asksConfirmation: false)
     }
+  }
+
+  private var pluginCommandItems: [PluginCommandItem] {
+    let kind: SnapzyDocumentKind = switch record.captureType {
+    case .video: .video
+    case .gif: .gif
+    case .screenshot: .screenshot
+    }
+    return PluginCommandCatalog.commands(
+      pluginHost.snapshots.flatMap(\.contributions),
+      for: kind
+    )
+  }
+
+  private var pluginLauncher: PluginInvocationLauncher {
+    let kind: SnapzyDocumentKind = switch record.captureType {
+    case .video: .video
+    case .gif: .gif
+    case .screenshot: .screenshot
+    }
+    return PluginInvocationLauncher(
+      surface: .history,
+      documentKind: kind,
+      assetURL: record.fileURL,
+      document: nil,
+      selection: [],
+      options: .object([:])
+    )
   }
 
   private var uploadMenuTitle: String {

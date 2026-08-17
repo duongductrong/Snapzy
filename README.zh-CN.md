@@ -70,6 +70,7 @@
 - **引导流程**：首次使用时提供启动页、语言选择、权限引导和快捷键配置
 - **本地化**：应用已提供 🇺🇸 English、🇻🇳 Vietnamese、🇨🇳 Simplified Chinese、🇹🇼 Traditional Chinese、🇪🇸 Spanish、🇯🇵 Japanese、🇰🇷 Korean、🇷🇺 Russian、🇫🇷 French 和 🇩🇪 German，并支持 macOS 原生按应用选择语言
 - **云上传**：坚持隐私优先的自带存储方案，支持 AWS S3 或 Cloudflare R2，不经过第三方服务器；可从 Quick Access 手动上传截图、视频和 GIF，也可从 Annotate 手动上传截图；凭据存储于 macOS Keychain，可选密码保护；支持手动加密导入/导出凭据，便于在另一台 Mac 上快速配置；同时提供上传历史、可配置自动过期（1–90 天或永久）、生命周期规则和自定义域名支持
+- **插件**：通过在内核强制的沙箱中运行真实代码的插件扩展 Snapzy — 每个插件对应一个开启 App Sandbox 且**没有任何 entitlement** 的辅助进程，所有对宿主的调用都要经过代理，并按插件声明、你已批准的能力逐项校验。插件可以读取你对其调用的截图、使用本地 OCR、访问它声明的端点，并把结果写回 Annotate，作为**一次可撤销的操作**。不能访问文件系统、不能截屏、不能读取剪贴板、不能读取历史记录，Snapzy 也从不加载第三方原生代码 — 参见 [`docs/PLUGINS.md`](docs/PLUGINS.md)
 - **更新与诊断**：内置 Sparkle 应用更新、带诊断日志包的问题报告和缓存管理
 - **平台特性**：菜单栏应用、浅色/深色/跟随系统主题、启用 Hardened Runtime 并经 Developer ID 签名与 Apple 公证，以及针对用户所选文件夹的安全作用域书签
 
@@ -223,6 +224,7 @@ Snapzy 注册了 `snapzy://` URL scheme，因此 launcher 和自动化工具（�
 - [面向开发者和 agent 的文档索引](docs/README.md)
 - [项目结构与运行时架构](docs/STRUCTURE.md)
 - [截图、录制与编辑流程](docs/CAPTURE.md)
+- [插件：沙箱、能力与开发指南](docs/PLUGINS.md)
 - [构建与打包指南](docs/BUILD.md)
 - [发布与更新工作流](docs/RELEASES.md)
 - [本地 Sparkle 更新测试](docs/UPDATE_TESTING.md)

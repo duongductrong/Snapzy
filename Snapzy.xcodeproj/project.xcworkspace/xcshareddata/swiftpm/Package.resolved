@@ -1,42 +1,42 @@
 {
-  "originHash" : "6cf54849e224bf2405e3c426345ba2d2c50b6d8a13dd68dc60bcf72db9d56add",
-  "pins" : [
+  "originHash": "4a87fec34c56655dc06d5683c5ca9f0f70aacf336cdbd41659c2f2fd25c72ab6",
+  "pins": [
     {
-      "identity" : "grdb.swift",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/groue/GRDB.swift.git",
-      "state" : {
-        "revision" : "36e30a6f1ef10e4194f6af0cff90888526f0c115",
-        "version" : "7.10.0"
+      "identity": "grdb.swift",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/groue/GRDB.swift.git",
+      "state": {
+        "revision": "36e30a6f1ef10e4194f6af0cff90888526f0c115",
+        "version": "7.10.0"
       }
     },
     {
-      "identity" : "libwebp-xcode",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/SDWebImage/libwebp-Xcode.git",
-      "state" : {
-        "revision" : "0d60654eeefd5d7d2bef3835804892c40225e8b2",
-        "version" : "1.5.0"
+      "identity": "libwebp-xcode",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/SDWebImage/libwebp-Xcode.git",
+      "state": {
+        "revision": "0d60654eeefd5d7d2bef3835804892c40225e8b2",
+        "version": "1.5.0"
       }
     },
     {
-      "identity" : "sparkle",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/sparkle-project/Sparkle",
-      "state" : {
-        "revision" : "5581748cef2bae787496fe6d61139aebe0a451f6",
-        "version" : "2.8.1"
+      "identity": "sparkle",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/sparkle-project/Sparkle",
+      "state": {
+        "revision": "5581748cef2bae787496fe6d61139aebe0a451f6",
+        "version": "2.8.1"
       }
     },
     {
-      "identity" : "swift-webp",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/ainame/Swift-WebP.git",
-      "state" : {
-        "revision" : "4e7310667297f066e4884b6258a3a646cac8a50b",
-        "version" : "0.6.1"
+      "identity": "swift-webp",
+      "kind": "remoteSourceControl",
+      "location": "https://github.com/ainame/Swift-WebP.git",
+      "state": {
+        "revision": "4e7310667297f066e4884b6258a3a646cac8a50b",
+        "version": "0.6.1"
       }
     }
   ],
-  "version" : 3
+  "version": 3
 }

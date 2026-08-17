@@ -87,8 +87,18 @@ flowchart TD
 
 Settings → Quick Access: position (left/right), overlay size, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
 
+## Plugin commands
+
+`PluginCommandMenu` appears in the card's action menu, listing every plugin
+command whose `accepts` includes the card's document kind. Quick Access has no
+open document, so `.patch` outcomes are not applicable here — commands land as
+`.text` (shown and copied), `.url` (copied and notified), or `.asset` (saved and
+revealed). A well-written plugin degrades to one of those rather than failing.
+See [PLUGINS.md](PLUGINS.md).
+
 ## Related docs
 
+- [PLUGINS.md](PLUGINS.md) — plugin commands on this surface
 - [POST_CAPTURE.md](POST_CAPTURE.md) — after-capture routing into Quick Access
 - [CAPTURE.md](CAPTURE.md) — capture flows producing cards
 - [RECORDING.md](RECORDING.md) — GIF conversion placeholder swap

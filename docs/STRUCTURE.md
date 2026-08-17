@@ -19,6 +19,7 @@ Separated feature docs cover each runtime area in depth:
 - [`PREFERENCES.md`](PREFERENCES.md) — Settings tabs, preference storage, defaults
 - [`APP_LIFECYCLE.md`](APP_LIFECYCLE.md) — Launch sequence, onboarding, menu bar bootstrap
 - [`UPDATES.md`](UPDATES.md) — Sparkle updater, channels, release flow
+- [`PLUGINS.md`](PLUGINS.md) — Plugin sandbox, capabilities, manifests, document patches, publishing
 
 ## Runtime Map
 
@@ -134,6 +135,17 @@ tools/
   localization/
     CatalogTool.swift
 
+Packages/                        local Swift packages
+  PluginKit/                     vendored plugin framework (manifests, capabilities, lifecycle)
+  SnapzyPluginAPI/               the published vocabulary: command point, document, capabilities
+  SnapzyPluginProtocol/          binary protocol framing, message models, memory-mapped blob table
+  SnapzyPluginSDK/               Swift Native Plugin SDK, test doubles, snapzy-plugin CLI toolchain
+
+plugins/
+  official/
+    com.snapzy.translate/        Swift native translation plugin
+    com.snapzy.webhook-upload/   Swift native Discord webhook upload plugin
+
 Snapzy/
   App/
     SnapzyApp.swift
@@ -182,6 +194,34 @@ Snapzy/
     Notifications/
       OCRNotificationContent.swift
       SystemNotificationService.swift
+    Plugins/
+      PluginHostController.swift      the only file that imports PluginKit
+      PluginCommandCoordinator.swift  invoke → outcome routing
+      PluginCommandCatalog.swift
+      PluginConsentPresenter.swift
+      PluginCapabilityPresentation.swift  capability → friendly name, icon, consent line
+      PluginDevelopmentWatcher.swift
+      PluginDirectory.swift
+      PluginRequestLog.swift
+      SnapzyHostConfiguration.swift
+      SnapzyRuntimeSelector.swift
+      Runtime/
+        SnapzyScriptRuntime.swift     : PluginRuntime — spawns and drives the helper
+        PluginHelperSupervisor.swift
+        ScriptPluginInstance.swift
+        ScriptCommandProxy.swift
+      Services/
+        PluginServiceBroker.swift     capability checks → host services
+        PluginNetworkService.swift · PluginOCRService.swift · PluginImageService.swift
+        PluginMediaService.swift · PluginUIService.swift · PluginAssetService.swift
+        PluginSecretsStore.swift · PluginInvocationRegistry.swift
+      Document/
+        PluginDocumentBridge.swift    projection + patch application
+        AnnotateDocumentProjector.swift · AnnotateEditApplier.swift
+        DocumentEditValidator.swift
+      Distribution/
+        PluginRegistryIndex.swift     index model + registry client
+        PluginPackageVerifier.swift · PluginInstaller.swift
     Security/
     Shortcuts/
     Updates/
@@ -259,6 +299,7 @@ SnapzyUITests/
 | `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
 | `Services/Media/` | OCR provider routing (`OCRProvider`: built-in Vision and remote OpenAI-compatible endpoints), OCR profiles/results, QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
 | `Services/Notifications/` | Native macOS notification delivery (`UserNotifications`) and OCR notification title/body/preview formatting |
+| `Services/Plugins/` | The whole plugin subsystem: PluginKit host wiring, the out-of-process sandboxed child process runtime (`SnapzyProcessRuntime`), the capability broker, the document projection and patch application, consent, the request log, and install/update/revocation. `PluginHostController` is the only file that imports PluginKit |
 | `Services/Security/` | Keychain storage for custom OCR endpoint API keys (`OCRKeychainStore`) |
 | `Services/Shortcuts/` | Global shortcuts, conflict detection, system shortcut checks |
 | `Services/Diagnostics/` | Crash sentinel, logs, toasts, cleanup |
@@ -328,6 +369,17 @@ SnapzyUITests/
 - `ScrollingCaptureCoordinator` is its own subsystem. Treat `Services/Capture/ScrollingCapture/*` as a unit.
 - `ScrollingCaptureFrameSource` publishes timestamped region frames into `ScrollingCaptureFrameRing`, so live preview and commit/stitch decisions share one bounded frame timeline before falling back to still area capture.
 - `CloudManager` is a facade. Provider-specific behavior lives under `Services/Cloud/`.
+- Plugin code never runs in the app. `SnapzyScriptRuntime` spawns one
+  `SnapzyPluginHost.xpc` helper per plugin — App Sandbox on, **zero
+  entitlements** — and every `ctx.*` call returns to `PluginServiceBroker`,
+  which refuses anything the manifest did not declare. The sandbox governs the
+  process; the broker governs the plugin; neither is load-bearing alone.
+  `InProcessPluginRuntime(loadsBundles: false)` means Snapzy never `dlopen`s a
+  third-party binary. Details in `PLUGINS.md`.
+- Plugins see `SnapzyDocument`, a separately-versioned projection — never
+  `AnnotationItem`. Writes arrive as `[DocumentEdit]`, are validated per edit,
+  and are applied through `AnnotateState.pushUndoSnapshot` as **one** undo
+  entry. Invalid edits are dropped with a warning; the rest still apply.
 - `SnapzyConfigurationService` is the Settings-facing facade for TOML export/import. `SnapzyConfigurationAccessGranting` shares the config folder grant flow between upgrade onboarding and Settings -> Advanced, creating `~/.config/snapzy` and `config.toml` after a successful grant if either is missing. Settings import validates the selected `.toml`, replaces the managed `config.toml`, then applies it so app state and file state stay aligned. Open config.toml syncs current settings into the managed file first when the file still matches Snapzy's last applied/exported signature; if the file has unapplied external edits, Settings asks before replacing it. `SnapzyConfigurationAutoImporter` runs during startup, hashes `config.toml`, and imports only when the file changed since the last successful launch-time apply. Import paths validate the whole file before applying any mutation and intentionally exclude Keychain secrets, history rows, temp captures, and sandbox bookmarks.
 - `Shared/Localization/L10n.swift` is the bridge for user-facing copy that does not live directly in SwiftUI view literals.
 - `Resources/Localization/Shared/*.xcstrings` and `Resources/Localization/Features/*.xcstrings` are the runtime localization catalogs.
@@ -400,6 +452,8 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 | TOML config export/import + startup auto-apply | `Services/Configuration/`, `Features/Onboarding/Components/OnboardingConfigAccessView.swift`, `Features/Preferences/Components/PreferencesAdvancedSettingsView.swift`, `App/AppCoordinator.swift`, `docs/CONFIGURATION.md` |
 | Onboarding or app startup | `App/`, `Features/Splash/`, `Features/Onboarding/`, `docs/APP_LIFECYCLE.md` |
 | Shortcuts and conflicts | `Services/Shortcuts/`, `Features/Shortcuts/`, `docs/SHORTCUTS.md` |
+| Plugin runtime, capabilities, or the broker | `Services/Plugins/`, `SnapzyPluginHost/`, `Packages/SnapzyPluginAPI/`, `docs/PLUGINS.md` |
+| The plugin vocabulary (a new capability, document field, or outcome) | `Packages/SnapzyPluginAPI/`, then `swift scripts/generate-plugin-types.swift`, then `docs/PLUGINS.md` in the same change |
 | Unit tests for services | `SnapzyTests/Services/`, `SnapzyTests/Helpers/` |
 | UI tests for user flows | `SnapzyUITests/Features/` |
 | Test fixtures and mocks | `SnapzyTests/Helpers/`, `SnapzyTests/Fixtures/` |

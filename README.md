@@ -68,6 +68,7 @@
 - **Localization**: 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French, and 🇩🇪 German app localization with native macOS per-app language support
 - **Cloud Upload**: privacy-first bring-your-own-storage via AWS S3 or Cloudflare R2 — no third-party servers, manual upload from Quick Access for screenshots, videos, and GIFs, or from Annotate for screenshots, credentials stored in the macOS Keychain with optional password protection, manual encrypted credential import/export for faster setup on another Mac, upload history, configurable auto-expiration (1–90 days or permanent), lifecycle rules, custom domain support
 - **Advanced Settings**: TOML export/import, one-time config folder grant, debounced background sync, safe sync-before-open, and launch-time auto-apply for portable preferences, dotfiles, backup, and machine-to-machine setup via `~/.config/snapzy/config.toml`
+- **Plugins**: extend Snapzy with plugins that run in a kernel-enforced sandbox — one App-Sandboxed helper process per plugin with **zero entitlements**, communicating over a framed binary protocol via UNIX domain sockets, with every host call brokered against the capabilities the plugin declared and you approved. Plugins can read the capture you invoke them on, use local OCR, call the endpoints they named, and write results back into Annotate as **one undoable step**. No direct filesystem, no screen capture, no clipboard reading, and no history access. Authored in native Swift using the `SnapzyPluginSDK` and `snapzy-plugin` CLI — see [`docs/PLUGINS.md`](docs/PLUGINS.md)
 - **Updates & Diagnostics**: in-app updates via Sparkle, problem reporting with diagnostic log bundles, cache management
 - **Platform**: menu-bar app, appearance theming (light/dark/system), Developer ID signed and notarized with the Hardened Runtime enabled, security-scoped bookmarks for user-selected folders
 
@@ -220,6 +221,7 @@ If you need archive, export, or DMG packaging commands, see [docs/BUILD.md](docs
 - Capture: [screenshot flows](docs/CAPTURE.md) · [scrolling capture](docs/SCROLLING_CAPTURE.md) · [recording](docs/RECORDING.md) · [post-capture routing](docs/POST_CAPTURE.md)
 - Editors: [Quick Access](docs/QUICK_ACCESS.md) · [capture history](docs/HISTORY.md) · [Annotate](docs/ANNOTATE.md) · [Video Editor](docs/VIDEO_EDITOR.md)
 - Platform: [cloud upload](docs/CLOUD.md) · [shortcuts & URL scheme](docs/SHORTCUTS.md) · [settings reference](docs/PREFERENCES.md) · [updates & diagnostics](docs/UPDATES.md)
+- [Plugins: sandbox, capabilities, and writing one](docs/PLUGINS.md)
 - [TOML configuration export/import](docs/CONFIGURATION.md)
 - [Build and packaging guide](docs/BUILD.md)
 - [Release and update workflow](docs/RELEASES.md)

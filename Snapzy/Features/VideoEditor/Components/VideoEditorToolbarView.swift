@@ -5,6 +5,7 @@
 //  Top toolbar for video editor with undo/redo, filename, and save actions
 //
 
+import SnapzyPluginAPI
 import SwiftUI
 
 private enum VideoEditorToolbarSection: Hashable {
@@ -39,6 +40,25 @@ private extension View {
 /// Top toolbar for video editor window
 struct VideoEditorToolbarView: View {
   @ObservedObject var state: VideoEditorState
+  @ObservedObject private var pluginHost = PluginHostController.shared
+
+  private var pluginCommandItems: [PluginCommandItem] {
+    PluginCommandCatalog.commands(
+      pluginHost.snapshots.flatMap(\.contributions),
+      for: state.isGIF ? .gif : .video
+    )
+  }
+
+  private var pluginLauncher: PluginInvocationLauncher {
+    PluginInvocationLauncher(
+      surface: .videoEditor,
+      documentKind: state.isGIF ? .gif : .video,
+      assetURL: state.sourceURL,
+      document: nil,
+      selection: [],
+      options: .object([:])
+    )
+  }
 
   @State private var editingFilename: String = ""
   @State private var renameError: String?
@@ -111,6 +131,27 @@ struct VideoEditorToolbarView: View {
         state.openInFinder()
       }
       .help(L10n.Common.openInFinder)
+
+      // Plugin commands for the open video/GIF.
+      if !pluginCommandItems.isEmpty {
+        Menu {
+          ForEach(pluginCommandItems) { item in
+            Button {
+              pluginLauncher.launch(item)
+            } label: {
+              Label(item.title, systemImage: item.systemImage)
+            }
+            .disabled(item.disabledReason != nil)
+          }
+        } label: {
+          Image(systemName: "puzzlepiece.extension")
+            .frame(width: 22, height: 22)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Plugins")
+      }
 
       ToolbarButton(
         icon: "info.circle",

@@ -200,8 +200,31 @@ flowchart TD
 - Action rail: Pin-to-Screen / Cancel / Done (prominent) / Copy. Pin runs the normal post-capture pipeline once, then opens the saved image in a pin window.
 - No crop, no mockup, no canvas-preset auto-apply.
 
+## Plugin commands
+
+The plugin command menu (`PluginCommandMenu`) appears in the Annotate context
+menu, listing every contributed command whose `accepts` includes the document
+kind and whose `emits` this surface can apply.
+
+A command that returns `.patch([DocumentEdit])` writes into the live document:
+
+1. `AnnotateDocumentProjector` publishes a `SnapzyDocument.annotate` projection
+   — `size`, `scale`, `items[]`, `crop` in logical point space. Plugins never
+   see `AnnotationItem`.
+2. `PluginCommandCoordinator` gates the returned ops against the plugin's
+   granted `snapzy.document.write` scope. Refused ops are dropped and counted.
+3. `DocumentEditValidator` checks each surviving edit — rect within the canvas,
+   text length cap, item-count cap, style ranges. **Invalid edits are skipped
+   with a warning and the rest still apply.**
+4. `AnnotateEditApplier` applies the accepted set through
+   `AnnotateState.pushUndoSnapshot` as **one** undo entry, so a single ⌘Z
+   reverts the whole patch.
+
+Full reference in [PLUGINS.md](PLUGINS.md).
+
 ## Related docs
 
+- [PLUGINS.md](PLUGINS.md) — plugin commands, the document projection, patch application
 - [CAPTURE.md](CAPTURE.md) — capture flows feeding the editors
 - [SCROLLING_CAPTURE.md](SCROLLING_CAPTURE.md) — long captures (dynamic zoom max)
 - [QUICK_ACCESS.md](QUICK_ACCESS.md) — card edit action, pin windows, session cache

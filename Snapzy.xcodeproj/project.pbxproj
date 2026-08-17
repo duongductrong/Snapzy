@@ -10,6 +10,15 @@
 		A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A31BF0A72F1CF69100902D12 /* Sparkle */; };
 		B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */ = {isa = PBXBuildFile; productRef = B42DE1A12FA1B90000WEBP01 /* WebP */; };
 		C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C73DB2A12FA3GRDB00GRDB01 /* GRDB */; };
+		P00100162F9F00000000PLK07 /* PluginKitHost in Frameworks */ = {isa = PBXBuildFile; productRef = P00100022F9F00000000PLK02 /* PluginKitHost */; };
+		P00100172F9F00000000PLK08 /* PluginKitInProcess in Frameworks */ = {isa = PBXBuildFile; productRef = P00100032F9F00000000PLK03 /* PluginKitInProcess */; };
+		P00100182F9F00000000PLK09 /* SnapzyPluginAPI in Frameworks */ = {isa = PBXBuildFile; productRef = P00100052F9F00000000PLK05 /* SnapzyPluginAPI */; };
+		P00100192F9F00000000PLK10 /* SnapzyPluginAPI in Frameworks */ = {isa = PBXBuildFile; productRef = P00100052F9F00000000PLK05 /* SnapzyPluginAPI */; };
+		P001001A2F9F00000000PLK11 /* PluginKitTesting in Frameworks */ = {isa = PBXBuildFile; productRef = P00100062F9F00000000PLK06 /* PluginKitTesting */; };
+		P001001B2F9F00000000PLK12 /* SnapzyPluginAPI in Frameworks */ = {isa = PBXBuildFile; productRef = P00100052F9F00000000PLK05 /* SnapzyPluginAPI */; };
+		P001001D2F9F00000000PLK15 /* PluginKitCore in Frameworks */ = {isa = PBXBuildFile; productRef = P001000E2F9F00000000PLK14 /* PluginKitCore */; };
+		P00100232F9F00000000PLK23 /* SnapzyPluginProtocol in Frameworks */ = {isa = PBXBuildFile; productRef = P00100212F9F00000000PLK21 /* SnapzyPluginProtocol */; };
+		P00100242F9F00000000PLK24 /* SnapzyPluginMessages in Frameworks */ = {isa = PBXBuildFile; productRef = P00100222F9F00000000PLK22 /* SnapzyPluginMessages */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,6 +64,21 @@
 			path = SnapzyTests;
 			sourceTree = "<group>";
 		};
+		P001001C2F9F00000000PLK13 /* SnapzyPluginAPI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Packages/SnapzyPluginAPI";
+			sourceTree = "<group>";
+		};
+		P001001D2F9F00000000PLK14 /* PluginKit */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Packages/PluginKit";
+			sourceTree = "<group>";
+		};
+		P00100252F9F00000000PLK25 /* SnapzyPluginProtocol */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "Packages/SnapzyPluginProtocol";
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +89,11 @@
 				A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */,
 				B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */,
 				C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */,
+				P00100162F9F00000000PLK07 /* PluginKitHost in Frameworks */,
+				P00100172F9F00000000PLK08 /* PluginKitInProcess in Frameworks */,
+				P00100182F9F00000000PLK09 /* SnapzyPluginAPI in Frameworks */,
+				P00100232F9F00000000PLK23 /* SnapzyPluginProtocol in Frameworks */,
+				P00100242F9F00000000PLK24 /* SnapzyPluginMessages in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +101,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				P001001A2F9F00000000PLK11 /* PluginKitTesting in Frameworks */,
+				P001001B2F9F00000000PLK12 /* SnapzyPluginAPI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +115,9 @@
 				D00110022F9F000000000002 /* Snapzy.xctestplan */,
 				A36462A52F18EEDA0003453D /* Snapzy */,
 				D00100032F9F000000000003 /* SnapzyTests */,
+				P001001C2F9F00000000PLK13 /* SnapzyPluginAPI */,
+				P001001D2F9F00000000PLK14 /* PluginKit */,
+				P00100252F9F00000000PLK25 /* SnapzyPluginProtocol */,
 				A36462A42F18EEDA0003453D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -121,6 +155,11 @@
 				A31BF0A72F1CF69100902D12 /* Sparkle */,
 				B42DE1A12FA1B90000WEBP01 /* WebP */,
 				C73DB2A12FA3GRDB00GRDB01 /* GRDB */,
+				P00100022F9F00000000PLK02 /* PluginKitHost */,
+				P00100032F9F00000000PLK03 /* PluginKitInProcess */,
+				P00100052F9F00000000PLK05 /* SnapzyPluginAPI */,
+				P00100212F9F00000000PLK21 /* SnapzyPluginProtocol */,
+				P00100222F9F00000000PLK22 /* SnapzyPluginMessages */,
 			);
 			productName = Snapzy;
 			productReference = A36462A32F18EEDA0003453D /* Snapzy Debug.app */;
@@ -144,6 +183,8 @@
 			);
 			name = SnapzyTests;
 			packageProductDependencies = (
+				P00100052F9F00000000PLK05 /* SnapzyPluginAPI */,
+				P00100062F9F00000000PLK06 /* PluginKitTesting */,
 			);
 			productName = SnapzyTests;
 			productReference = D00100012F9F000000000001 /* SnapzyTests.xctest */;
@@ -190,6 +231,9 @@
 				A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "Swift-WebP" */,
 				C73DB19F2FA3GRDB00GRDB01 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */,
+				P00100042F9F00000000PLK04 /* XCLocalSwiftPackageReference "SnapzyPluginAPI" */,
+				P00100202F9F00000000PLK20 /* XCLocalSwiftPackageReference "SnapzyPluginProtocol" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A36462A42F18EEDA0003453D /* Products */;
@@ -552,6 +596,21 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		P00100042F9F00000000PLK04 /* XCLocalSwiftPackageReference "SnapzyPluginAPI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Packages/SnapzyPluginAPI";
+		};
+		P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Packages/PluginKit";
+		};
+		P00100202F9F00000000PLK20 /* XCLocalSwiftPackageReference "SnapzyPluginProtocol" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Packages/SnapzyPluginProtocol";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCRemoteSwiftPackageReference section */
 		A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
@@ -577,6 +636,10 @@
 				minimumVersion = 7.0.0;
 			};
 		};
+		P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = "Packages/PluginKit";
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -594,6 +657,40 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C73DB19F2FA3GRDB00GRDB01 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		P00100022F9F00000000PLK02 /* PluginKitHost */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */;
+			productName = PluginKitHost;
+		};
+		P001000E2F9F00000000PLK14 /* PluginKitCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */;
+			productName = PluginKitCore;
+		};
+		P00100032F9F00000000PLK03 /* PluginKitInProcess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */;
+			productName = PluginKitInProcess;
+		};
+		P00100052F9F00000000PLK05 /* SnapzyPluginAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = SnapzyPluginAPI;
+		};
+		P00100062F9F00000000PLK06 /* PluginKitTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100012F9F00000000PLK01 /* XCLocalSwiftPackageReference "PluginKit" */;
+			productName = PluginKitTesting;
+		};
+		P00100212F9F00000000PLK21 /* SnapzyPluginProtocol */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100202F9F00000000PLK20 /* XCLocalSwiftPackageReference "SnapzyPluginProtocol" */;
+			productName = SnapzyPluginProtocol;
+		};
+		P00100222F9F00000000PLK22 /* SnapzyPluginMessages */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = P00100202F9F00000000PLK20 /* XCLocalSwiftPackageReference "SnapzyPluginProtocol" */;
+			productName = SnapzyPluginMessages;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -71,8 +71,20 @@ Settings → History: enable toggle, floating panel (position, scale, max items,
 
 Unused (kept in tree): `HistoryMainView` (except `HistoryBackdropView`, still used by the floating panel + preferences + cloud history), `HistoryItemView`, `HistoryToolbar`, `HistoryFilterBar`, `HistoryGridView`. Live card views are `HistoryCardView` / `HistoryExpandedCaptureCardView` / `HistoryCompactCarouselView`.
 
+## Plugin commands
+
+`PluginCommandMenu` appears in the history context menu
+(`HistoryContextMenu.swift`). Commands run against the stored capture as their
+invocation asset. As with Quick Access there is no open document, so outcomes
+arrive as `.text`, `.url`, or `.asset`.
+
+**Plugins cannot read the history database.** There is no capability for it:
+`snapzy.asset.read` is scoped to the single item the user invoked the command
+on, and only while that invocation is live. See [PLUGINS.md](PLUGINS.md).
+
 ## Related docs
 
+- [PLUGINS.md](PLUGINS.md) — plugin commands on this surface, and what they cannot reach
 - [QUICK_ACCESS.md](QUICK_ACCESS.md) — restore target and card lifecycle
 - [ANNOTATE.md](ANNOTATE.md) — editable session restore, sidecar format
 - [VIDEO_EDITOR.md](VIDEO_EDITOR.md) — video/GIF restore target

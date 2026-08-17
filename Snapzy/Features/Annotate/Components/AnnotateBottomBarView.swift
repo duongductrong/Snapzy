@@ -5,6 +5,7 @@
 //  Bottom bar with zoom, drag handle, and action buttons
 //
 
+import SnapzyPluginAPI
 import SwiftUI
 
 private enum AnnotateBottomActionRegistration: Equatable {
@@ -47,6 +48,7 @@ struct AnnotateBottomBarView: View {
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var preferencesManager = PreferencesManager.shared
   @ObservedObject private var annotateShortcutManager = AnnotateShortcutManager.shared
+  @ObservedObject private var pluginHost = PluginHostController.shared
 
   @State private var isCloudUploading = false
   @State private var cloudUploadProgress: Double = 0
@@ -354,6 +356,27 @@ struct AnnotateBottomBarView: View {
     }
   }
 
+  private var pluginCommandItems: [PluginCommandItem] {
+    PluginCommandCatalog.commands(
+      pluginHost.snapshots.flatMap(\.contributions),
+      for: .annotateSession
+    )
+  }
+
+  private var pluginLauncher: PluginInvocationLauncher {
+    PluginInvocationLauncher(
+      surface: .annotate,
+      documentKind: .annotateSession,
+      assetURL: state.sourceURL ?? URL(fileURLWithPath: "/tmp/annotate-placeholder.png"),
+      document: PluginDocumentBridge.shared.projectDocument(state: state),
+      selection: state.selectedAnnotationIds.map(\.uuidString),
+      options: .object([:]),
+      applyPatch: { edits in
+        PluginDocumentBridge.shared.apply(edits, to: state)
+      }
+    )
+  }
+
   private var annotateActionButtons: some View {
     let showCloudButton = cloudManager.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)
     let cloudUploadShortcut = annotateShortcutManager.isActionShortcutEnabled(for: .cloudUpload)
@@ -369,6 +392,27 @@ struct AnnotateBottomBarView: View {
         tooltip: L10n.AnnotateUI.newWindow
       ) {
         AnnotateManager.shared.openEmptyAnnotation()
+      }
+
+      // Plugins: the same commands as the canvas context menu.
+      if !pluginCommandItems.isEmpty {
+        Menu {
+          ForEach(pluginCommandItems) { item in
+            Button {
+              pluginLauncher.launch(item)
+            } label: {
+              Label(item.title, systemImage: item.systemImage)
+            }
+            .disabled(item.disabledReason != nil)
+          }
+        } label: {
+          Image(systemName: "puzzlepiece.extension")
+            .frame(width: 20, height: 20)
+        }
+        .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Plugins")
       }
 
       BottomBarButton(icon: "square.and.arrow.up", tooltip: L10n.Common.share) {

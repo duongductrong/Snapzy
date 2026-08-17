@@ -110,6 +110,47 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 
 Provider configuration, credentials, expiration, usage stats, and the Cloud Uploads window. Summary only here — full reference in [CLOUD.md](CLOUD.md).
 
+### Plugins (`PreferencesPluginsView.swift`)
+
+The whole plugin surface, rendered from manifests — a plugin's row, capability
+list, and settings form all appear **before any of its code has been loaded**.
+
+A segmented control splits the tab in two, and author-only tooling is collapsed
+out of the way, so the default view is a list of plugins and one update button.
+
+- **Installed**: one row per plugin — name, a plain-language status badge (Ready,
+  Needs setup, Off, Not working, Needs a newer Snapzy, Developer, Blocked), the
+  problem sentence when there is one, an enable toggle, and an ⓘ button opening
+  the detail sheet. A healthy plugin shows no badge at all.
+- **Detail sheet** (`PreferencesPluginDetailSheet.swift`): version, trust tier,
+  problems and warnings, **What it can do** (the declared capabilities in
+  generated plain language, sensitive ones first), **What it adds** (contributed
+  commands), the on-disk location for development plugins, **Ask Me Again**
+  (clears recorded consent) and **Remove Plugin…** — which asks first, then
+  deletes the bundle, settings, storage, Keychain item, and recorded consent.
+- **Updates**: one **Check for Updates** button re-scans installed plugins *and*
+  refreshes the registry index, applying revocations
+  (`PluginRevocationEnforcer`). Plugins with a newer indexed version get their
+  own row with an **Update** button.
+- **Discover** (`PreferencesPluginsDiscoverView.swift`): indexed plugins with a
+  tier badge and an **Install** / **Update** / **Installed** action. Each row
+  carries a **What it can do** disclosure listing the capabilities and
+  destination hosts *before* install. Offline and failure states are explicit.
+- **Developer Tools** (`PreferencesPluginsDevelopment.swift`, collapsed by
+  default): **Load Plugin from Folder…** for sideloaded plugins, which run in
+  the same sandbox but show a development badge and re-prompt per capability
+  each session, plus the **Activity Log** — the last 100 brokered host calls
+  with service, a redacted summary, and the outcome. Copy-as-text is safe to
+  publish; secrets never reach any log sink.
+
+Capability names, status labels, tier labels, and the generated consent
+sentences are localized through `L10n.PreferencesPlugins`
+(`Snapzy/Shared/Localization/L10nPlugins.swift`), and manifest scope tokens
+(`addItem`, `annotateSession`) are read out in words rather than shown raw —
+see `PluginCapabilityPresentation`.
+
+Full reference in [PLUGINS.md](PLUGINS.md).
+
 ### Advanced (`PreferencesAdvancedSettingsView.swift`)
 
 - **Backup**: TOML Import / Export / Restore Defaults (`SnapzyConfiguration*` services).
@@ -148,5 +189,6 @@ flowchart LR
 - [UPDATES.md](UPDATES.md) — update channel, diagnostics, problem reporting
 - [APP_LIFECYCLE.md](APP_LIFECYCLE.md) — seeded defaults, activation policy, onboarding
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML backup/sync of these prefs
+- [PLUGINS.md](PLUGINS.md) — the Plugins tab in full: capabilities, consent, trust tiers
 - [QUICK_ACCESS.md](QUICK_ACCESS.md) — overlay behavior details
 - [HISTORY.md](HISTORY.md) — retention and storage internals

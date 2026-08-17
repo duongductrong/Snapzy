@@ -1,0 +1,147 @@
+{
+  "id": "com.snapzy.translate",
+  "version": "2.0.0",
+  "displayName": "Translate",
+  "summary": "Recognises text locally on your Mac, sends it to an LLM endpoint, and places translated text back over the original image.",
+  "author": {
+    "name": "Snapzy",
+    "url": "https://github.com/duongductrong/Snapzy"
+  },
+  "sdkVersion": ">=1.0.0 <2.0.0",
+  "contracts": [
+    {
+      "vocabulary": "com.snapzy.api",
+      "builtAgainst": "1.0.0",
+      "compatibleWith": ">=1.0.0 <2.0.0"
+    }
+  ],
+  "runtime": {
+    "kind": "custom",
+    "runtimeID": "process",
+    "options": {
+      "executable": "Translate",
+      "protocolVersion": "1.0.0"
+    }
+  },
+  "activation": {
+    "kind": "onDemand"
+  },
+  "capabilities": [
+    {
+      "id": "snapzy.asset.read",
+      "required": true,
+      "reason": "Reads the image you run it on so it can find text to translate.",
+      "scope": {
+        "kinds": ["screenshot", "annotateSession"]
+      }
+    },
+    {
+      "id": "snapzy.ocr",
+      "required": true,
+      "reason": "Recognises text locally on your Mac so the image itself never leaves your device.",
+      "scope": {
+        "languages": ["auto"]
+      }
+    },
+    {
+      "id": "snapzy.network",
+      "required": true,
+      "reason": "Sends the recognised text strings to the translation endpoint you configured.",
+      "scope": {
+        "hosts": [
+          "api.openai.com",
+          "api.anthropic.com",
+          "api.deepseek.com",
+          "openrouter.ai",
+          "api.together.xyz",
+          "api.groq.com",
+          "generativelanguage.googleapis.com",
+          "api.mistral.ai",
+          "localhost",
+          "127.0.0.1"
+        ]
+      }
+    },
+    {
+      "id": "snapzy.document.write",
+      "required": false,
+      "reason": "Places translated text items onto the canvas, positioned over the original text as one undo step.",
+      "scope": {
+        "ops": ["addItem"]
+      }
+    },
+    {
+      "id": "snapzy.secrets",
+      "required": true,
+      "reason": "Stores your translation API key in the Keychain — it is a credential, not a setting.",
+      "scope": {}
+    },
+    {
+      "id": "snapzy.ui",
+      "required": false,
+      "reason": "Asks for your API key the first time you run Translate.",
+      "scope": {}
+    }
+  ],
+  "contributions": [
+    {
+      "extensionPoint": "com.snapzy.command",
+      "name": "translate",
+      "contractVersion": "1.0.0",
+      "priority": 100,
+      "metadata": {
+        "title": "Translate",
+        "systemImage": "character.bubble",
+        "accepts": ["screenshot", "annotateSession"],
+        "emits": ["addItem"],
+        "isLongRunning": true
+      }
+    }
+  ],
+  "configuration": {
+    "version": 1,
+    "keys": [
+      {
+        "name": "endpoint",
+        "type": "string",
+        "defaultValue": "https://api.openai.com/v1/chat/completions",
+        "title": "Endpoint URL",
+        "summary": "Any OpenAI-compatible chat-completions endpoint.",
+        "scope": "settings"
+      },
+      {
+        "name": "model",
+        "type": "string",
+        "defaultValue": "gpt-4o-mini",
+        "title": "Model",
+        "summary": "Model name sent in the request payload.",
+        "scope": "settings"
+      },
+      {
+        "name": "targetLanguage",
+        "type": "string",
+        "defaultValue": "English",
+        "title": "Target language",
+        "summary": "The language translations are produced in.",
+        "scope": "settings"
+      },
+      {
+        "name": "style",
+        "type": "string",
+        "defaultValue": "overlay",
+        "allowedValues": ["overlay", "callout"],
+        "title": "Style",
+        "summary": "Overlay replaces text in place; callout adds text adjacent to the original.",
+        "scope": "settings"
+      },
+      {
+        "name": "minimumConfidence",
+        "type": "double",
+        "defaultValue": 0.3,
+        "title": "Minimum OCR confidence",
+        "summary": "Lines below this threshold are skipped.",
+        "scope": "settings"
+      }
+    ]
+  }
+}

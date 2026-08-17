@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import SnapzyPluginAPI
 import SwiftUI
 
 /// Displays a single item preview with hover-activated actions and swipe gestures
@@ -21,6 +22,7 @@ struct QuickAccessCardView: View {
   @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
   @ObservedObject private var swipeActionStore = QuickAccessSwipeActionStore.shared
   @ObservedObject private var cloudManager = CloudManager.shared
+  @ObservedObject private var pluginHost = PluginHostController.shared
   @State private var isHovering = false
   @State private var isDragging = false
   @State private var isSwiping = false
@@ -620,6 +622,17 @@ struct QuickAccessCardView: View {
       .shadow(color: Color.black.opacity(0.3), radius: 4, x: 0, y: 2)
   }
 
+  private var pluginLauncher: PluginInvocationLauncher {
+    PluginInvocationLauncher(
+      surface: .quickAccess,
+      documentKind: item.isVideo ? .video : .screenshot,
+      assetURL: item.url,
+      document: nil,
+      selection: [],
+      options: .object([:])
+    )
+  }
+
   private var quickAccessContextMenuEntries: [QuickAccessContextMenuEntry] {
     guard canPerformCardActions else { return [] }
 
@@ -646,6 +659,24 @@ struct QuickAccessCardView: View {
           action: { performAction(action) }
         )
       )
+    }
+
+    // Plugin commands: the same metadata-only menu as every other surface.
+    let pluginItems = PluginCommandCatalog.commands(
+      pluginHost.snapshots.flatMap(\.contributions),
+      for: item.isVideo ? .video : .screenshot
+    )
+    if !pluginItems.isEmpty {
+      entries.append(.separator)
+      for pluginItem in pluginItems {
+        entries.append(
+          .plugin(
+            title: pluginItem.title,
+            systemImage: pluginItem.systemImage,
+            action: { pluginLauncher.launch(pluginItem) }
+          )
+        )
+      }
     }
 
     return entries
@@ -768,6 +799,7 @@ private enum QuickAccessContextMenuEntry {
     isEnabled: Bool = true,
     action: () -> Void
   )
+  case plugin(title: String, systemImage: String, action: () -> Void)
   case separator
 }
 
@@ -798,8 +830,10 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
 
     var hasMenuItems: Bool {
       entries.contains { entry in
-        if case .action = entry { return true }
-        return false
+        switch entry {
+        case .action, .plugin: return true
+        case .separator: return false
+        }
       }
     }
 
@@ -816,6 +850,14 @@ private struct QuickAccessContextMenuPresenter: NSViewRepresentable {
           let item = NSMenuItem(title: title, action: #selector(performMenuAction(_:)), keyEquivalent: "")
           item.target = self
           item.isEnabled = isEnabled
+          item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
+          item.representedObject = QuickAccessContextMenuAction(action)
+
+          menu.addItem(item)
+        case .plugin(let title, let systemImage, let action):
+          let item = NSMenuItem(title: title, action: #selector(performMenuAction(_:)), keyEquivalent: "")
+          item.target = self
+          item.isEnabled = true
           item.image = NSImage(systemSymbolName: systemImage, accessibilityDescription: title)
           item.representedObject = QuickAccessContextMenuAction(action)
 

@@ -245,6 +245,8 @@ enum SnapzyDeepLinkAction: Equatable {
       return .cloud
     case "advanced", "configuration", "config", "toml":
       return .advanced
+    case "plugins", "extensions":
+      return .plugins
     case "about":
       return .about
     default:

@@ -17,3 +17,8 @@ Snapzy/Config/Secrets.xcconfig
 /plans
 
 .codex
+
+**/.build/*
+**/build/*
+
+node_modules/

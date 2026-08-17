@@ -105,6 +105,19 @@ create-dmg \
   "./exported_app/Snapzy.app"
 ```
 
+## Plugin Packages
+
+The plugin subsystem consists of local Swift packages:
+
+| Piece | What it is |
+| --- | --- |
+| `Packages/SnapzyPluginProtocol` | Binary protocol framing, IPC message models, and shared memory blob table |
+| `Packages/SnapzyPluginSDK` | Swift Native Plugin SDK (`SnapzyPlugin`, `CommandContext`), test harnesses (`FakeHost`, `PluginHarness`), and `snapzy-plugin` CLI |
+| `Packages/SnapzyPluginAPI` | Extension points and vocabulary (commands, documents, capability identifiers) |
+| `Packages/PluginKit` | Vendored plugin foundation: manifests, capabilities, registries, lifecycle |
+
+**Plugins are not bundled into the app.** They run as isolated, sandboxed native Swift child processes and are installed into `~/Library/Application Support/Snapzy/Plugins/`.
+
 ## Build Locations
 
 | Build Type | Location |

@@ -30,6 +30,7 @@ nonisolated enum L10n {
     ("preferences-about.", "Settings"),
     ("preferences-quick-access.", "QuickAccess"),
     ("preferences-history.", "Settings"),
+    ("preferences-plugins.", "Settings"),
     ("preferences-advanced.", "Settings"),
     ("preferences-permissions.", "Permissions"),
     ("history-background-style.", "Settings"),
@@ -198,6 +199,11 @@ nonisolated enum L10n {
     static let aboutTab = string(
       "preferences.tab.about",
       defaultValue: "About",
+      comment: "Preferences tab title"
+    )
+    static let pluginsTab = string(
+      "preferences.tab.plugins",
+      defaultValue: "Plugins",
       comment: "Preferences tab title"
     )
   }

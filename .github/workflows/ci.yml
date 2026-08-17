@@ -30,6 +30,16 @@ jobs:
           mkdir -p build/swift-module-cache
           swift -module-cache-path build/swift-module-cache tools/localization/CatalogTool.swift verify
 
+      - name: Verify generated plugin types
+        run: |
+          set -euo pipefail
+          # The TypeScript vocabulary in sdk/plugin-sdk is generated from
+          # Packages/SnapzyPluginAPI. Two hand-maintained copies of one API
+          # drift within a release, so this check is mandatory, not advisory.
+          mkdir -p build/swift-module-cache
+          swift -module-cache-path build/swift-module-cache \
+            scripts/generate-plugin-types.swift --check
+
       - name: Run tests
         env:
           # The following tests crash on GitHub Actions macOS runners (Swift concurrency /

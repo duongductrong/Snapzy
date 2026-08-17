@@ -53,6 +53,10 @@ struct PreferencesView: View {
         .tabItem { Label(L10n.Preferences.advancedTab, systemImage: "slider.horizontal.3") }
         .tag(PreferencesTab.advanced)
 
+      LazyView(PreferencesPluginsView())
+        .tabItem { Label(L10n.Preferences.pluginsTab, systemImage: "puzzlepiece.extension.fill") }
+        .tag(PreferencesTab.plugins)
+
       LazyView(AboutSettingsView())
         .tabItem { Label(L10n.Preferences.aboutTab, systemImage: "info.circle.fill") }
         .tag(PreferencesTab.about)

@@ -5,6 +5,7 @@
 //  Canvas view displaying the image with annotations
 //
 
+import SnapzyPluginAPI
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -61,10 +62,33 @@ enum AnnotateImageDropLoader {
 /// Canvas view for displaying and annotating the image
 struct AnnotateCanvasView: View {
   @ObservedObject var state: AnnotateState
+  @ObservedObject private var pluginHost = PluginHostController.shared
   @FocusState private var isCanvasFocused: Bool
   @State private var isDragOver = false
   @State private var showDropError = false
   @State private var dropErrorMessage = ""
+
+  /// Plugin commands for the open annotate document, metadata-only.
+  private var pluginCommandItems: [PluginCommandItem] {
+    PluginCommandCatalog.commands(
+      pluginHost.snapshots.flatMap(\.contributions),
+      for: .annotateSession
+    )
+  }
+
+  private var pluginLauncher: PluginInvocationLauncher {
+    PluginInvocationLauncher(
+      surface: .annotate,
+      documentKind: .annotateSession,
+      assetURL: state.sourceURL ?? URL(fileURLWithPath: "/tmp/annotate-placeholder.png"),
+      document: PluginDocumentBridge.shared.projectDocument(state: state),
+      selection: state.selectedAnnotationIds.map(\.uuidString),
+      options: .object([:]),
+      applyPatch: { edits in
+        PluginDocumentBridge.shared.apply(edits, to: state)
+      }
+    )
+  }
 
   /// Supported image types for drag-drop
   static let supportedImageTypes: [UTType] = [
@@ -356,6 +380,10 @@ struct AnnotateCanvasView: View {
         Label(L10n.AnnotateUI.extractText, systemImage: "text.viewfinder")
       }
       .disabled(!state.canExtractText)
+
+      PluginCommandMenu(items: pluginCommandItems) { item in
+        pluginLauncher.launch(item)
+      }
     }
     .onAppear {
       state.updateViewportMetrics(

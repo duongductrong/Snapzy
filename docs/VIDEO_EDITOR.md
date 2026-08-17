@@ -126,8 +126,22 @@ flowchart TD
 | `Snapzy/Features/VideoEditor/Components/VideoEditorBottomBar.swift` | Cancel / cloud-upload / Convert-Save bar |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata consumed by Follow Mouse and multitrack audio |
 
+## Plugin commands
+
+`PluginCommandMenu` appears in the editor toolbar for commands accepting
+`video` or `gif`. The projection they receive is `SnapzyDocument.media` —
+duration, size, fps, and zoom/speed segments — and it is **read-only in v1**:
+video commands produce `.text`, `.url`, or `.asset` outcomes. `snapzy.media`
+gives a plugin duration, a frame at a time, and extracted audio, all computed
+host-side.
+
+A caption/subtitle track is the prerequisite for transcription plugins and is
+host feature work; when it ships, `.addCaption` follows through capability
+negotiation without a contract break. See [PLUGINS.md](PLUGINS.md).
+
 ## Related docs
 
+- [`PLUGINS.md`](PLUGINS.md) — plugin commands, the media projection, capability negotiation
 - [`RECORDING.md`](RECORDING.md) — recording pipeline, GIF conversion, Smart Camera metadata format and store
 - [`CAPTURE.md`](CAPTURE.md) — post-capture routing, Quick Access actions, history restore
 - [`STRUCTURE.md`](STRUCTURE.md) — runtime map and persistence layout

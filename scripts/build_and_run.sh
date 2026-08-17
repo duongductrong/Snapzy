@@ -43,10 +43,10 @@ ${BOLD}Usage:${NC} $0 [run|--logs|--telemetry|--debug|--verify] [options]
 
 ${BOLD}Modes:${NC}
   run                 Kill, build, and launch Snapzy.app (default)
-  --logs, logs        Launch then stream unified logs for process == "Snapzy"
+  --logs, logs        Launch then stream unified logs for the built app process
   --telemetry         Launch then stream unified logs for subsystem == "$LOG_SUBSYSTEM"
   --debug, debug      Build then launch the app binary under lldb
-  --verify, verify    Launch and confirm the Snapzy process is running
+  --verify, verify    Launch and confirm the built app process is running
 
 ${BOLD}Options:${NC}
   --configuration C   Build configuration. Default: Debug
@@ -159,7 +159,7 @@ message_type_predicate() {
 }
 
 process_log_predicate() {
-  printf "process == \"%s\"" "$APP_NAME"
+  printf "processImagePath == \"%s\"" "$(app_binary_path)"
   message_type_predicate "$LOG_LEVEL"
 }
 
@@ -185,11 +185,28 @@ app_binary_path() {
   printf "%s/Contents/MacOS/%s" "$(app_bundle_path)" "$APP_NAME"
 }
 
+# The Debug bundle ("Snapzy Debug.app") and the published app
+# ("/Applications/Snapzy.app") both run a process named "Snapzy", so matching
+# by process name cannot tell them apart. Match the built binary's absolute
+# path instead (ERE-escaped for pgrep/pkill -f).
+process_pattern() {
+  printf '%s' "$(app_binary_path)" | sed 's/[][^$.*/+?(){}|]/\\&/g'
+}
+
 stop_app() {
-  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
-    info "Stopping existing $APP_NAME process..."
-    pkill -x "$APP_NAME" >/dev/null 2>&1 || true
-    sleep 0.5
+  local pattern
+  pattern="$(process_pattern)"
+
+  if pgrep -f "$pattern" >/dev/null 2>&1; then
+    info "Stopping existing $(basename "$(app_bundle_path)") process..."
+    pkill -f "$pattern" >/dev/null 2>&1 || true
+
+    local waited=0
+    while pgrep -f "$pattern" >/dev/null 2>&1; do
+      [[ "$waited" -ge 20 ]] && break
+      sleep 0.1
+      waited=$((waited + 1))
+    done
   fi
 }
 
@@ -242,10 +259,10 @@ verify_app() {
   open_app
   sleep 2
 
-  if pgrep -x "$APP_NAME" >/dev/null 2>&1; then
+  if pgrep -f "$(process_pattern)" >/dev/null 2>&1; then
     success "$APP_NAME is running."
   else
-    fail "$APP_NAME did not stay running after launch."
+    fail "$(app_bundle_path) did not stay running after launch."
   fi
 }
 
@@ -254,16 +271,28 @@ stream_logs() {
 
   open_app
 
+  # Run `log stream` in the background and wait on it: bash defers traps
+  # while a foreground child runs, so with a plain foreground call the
+  # cleanup would only execute once `log stream` happened to exit (and the
+  # app would be left running if `log stream` died on its own).
+  local log_stream_pid=""
   cleanup_stream() {
+    trap - INT TERM
     printf "\n"
+    if [[ -n "$log_stream_pid" ]]; then
+      kill "$log_stream_pid" 2>/dev/null || true
+    fi
     info "Stopping $APP_NAME..."
-    pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+    pkill -f "$(process_pattern)" >/dev/null 2>&1 || true
     success "App stopped."
   }
   trap cleanup_stream INT TERM
 
   info "Streaming logs for predicate: $predicate"
-  /usr/bin/log stream --info --debug --style compact --predicate "$predicate"
+  /usr/bin/log stream --info --debug --style compact --predicate "$predicate" &
+  log_stream_pid=$!
+  wait "$log_stream_pid" 2>/dev/null || true
+  cleanup_stream
 }
 
 launch_debugger() {
@@ -278,6 +307,12 @@ main() {
   require_command xcodebuild
   require_command pgrep
   require_command pkill
+
+  # Process matching relies on the absolute binary path, so resolve a
+  # relative --derived-data value against the repo root.
+  if [[ "$DERIVED_DATA_PATH" != /* ]]; then
+    DERIVED_DATA_PATH="$ROOT_DIR/${DERIVED_DATA_PATH#./}"
+  fi
 
   cd "$ROOT_DIR"
   stop_app

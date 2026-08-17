@@ -40,6 +40,12 @@ Flow-first entrypoint for humans and agents working in Snapzy. Docs are separate
 | [`VIDEO_EDITOR.md`](VIDEO_EDITOR.md) | Trim, zoom segments, Follow Mouse, speed, backgrounds, export, GIF |
 | [`CLOUD.md`](CLOUD.md) | S3/R2/Google Drive uploads, credentials, uploads window, history |
 
+## Extensibility
+
+| Doc | Covers |
+| --- | --- |
+| [`PLUGINS.md`](PLUGINS.md) | What plugins cannot do, capability table, manifest and `ctx` reference, document patches, trust tiers, publishing |
+
 ## Build & Release
 
 | Doc | Covers |
@@ -102,6 +108,7 @@ flowchart TD
 - Cloud storage and upload UX: `CLOUD.md`
 - TOML config export/import: `CONFIGURATION.md` (+ `APP_LIFECYCLE.md` onboarding grant)
 - Updates, diagnostics, problem reports: `UPDATES.md`
+- Plugins, the plugin sandbox, or the `ctx` API: `PLUGINS.md` → `STRUCTURE.md` (source map) → `../SECURITY.md` (threat model)
 - Tests: `STRUCTURE.md` → `DEVELOPMENT.md`
 - Localization or user-facing copy: `LOCALIZATION.md` → the feature doc for the affected flow
 - Build, release, updater: `DEVELOPMENT.md` → `BUILD.md` → `RELEASES.md` → `UPDATE_TESTING.md`
@@ -117,6 +124,7 @@ flowchart TD
 - Full Annotate drag-to-app closes the editor by default. Settings → Annotate → `Close after drop` can be turned off to keep the editor session alive after sharing a rendered copy; `Reactivate after drop` controls whether that preserved editor is activated after drop.
 - During recording, the menu bar item stays menu-first instead of left-click-to-stop. It shows the live timer, keeps Preferences reachable, and temporarily excludes the Settings window from own-app recordings when needed. Details in `RECORDING.md`.
 - URL Scheme automation triggers via `snapzy://` deep links can be disabled under Settings → Advanced → URL Scheme integration (enabled by default). When disabled, incoming automation requests are logged and ignored. Full route table in `SHORTCUTS.md`.
+- Plugins run as **code**, in an App-Sandboxed `SnapzyPluginHost.xpc` helper with zero entitlements — one process per plugin, every side effect brokered back to the host and checked against the plugin's declared capabilities. Snapzy never `dlopen`s a third-party binary. Details in `PLUGINS.md`.
 - Settings → Advanced exports and imports portable TOML preferences at `~/.config/snapzy/config.toml`; folder access is granted once (onboarding config step or Settings → Advanced), background sync is debounced and signature-guarded, and valid direct edits apply on next launch. Details in `CONFIGURATION.md`.
 
 If one of these behaviors changes, update this file, the owning feature doc, [`STRUCTURE.md`](STRUCTURE.md), and the root [`README.md`](../README.md) in the same change.

@@ -70,6 +70,7 @@
 - **Onboarding**: màn hình chào, chọn ngôn ngữ lần đầu, hướng dẫn cấp quyền, và cấu hình shortcut cho người dùng lần đầu
 - **Bản địa hóa**: bản địa hóa ứng dụng cho 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French và 🇩🇪 German, hỗ trợ chọn ngôn ngữ riêng cho từng app theo macOS
 - **Cloud Upload**: quyền riêng tư trước hết với mô hình tự mang storage bằng AWS S3 hoặc Cloudflare R2, không dùng server bên thứ ba, upload thủ công từ Quick Access cho screenshot, video và GIF, hoặc từ Annotate cho screenshot, credential lưu trong macOS Keychain với bảo vệ mật khẩu tùy chọn, import/export credential mã hóa thủ công để thiết lập nhanh trên Mac khác, lịch sử upload, auto-expiration cấu hình được (1–90 ngày hoặc vĩnh viễn), lifecycle rules, hỗ trợ custom domain
+- **Plugins**: mở rộng Snapzy bằng plugin chạy code thật trong sandbox do kernel thực thi — mỗi plugin một tiến trình helper App Sandbox với **zero entitlement**, mọi lệnh gọi tới host đều đi qua broker và được kiểm tra theo đúng capability mà plugin khai báo và bạn đã đồng ý. Plugin có thể đọc ảnh chụp bạn chạy nó lên, dùng OCR cục bộ, gọi tới đúng endpoint đã khai báo, và ghi kết quả trở lại Annotate thành **một bước undo duy nhất**. Không truy cập filesystem, không chụp màn hình, không đọc clipboard, không đọc lịch sử, và Snapzy không bao giờ nạp native code của bên thứ ba — xem [`docs/PLUGINS.md`](docs/PLUGINS.md)
 - **Cập nhật & chẩn đoán**: cập nhật trong app qua Sparkle, báo vấn đề kèm gói log chẩn đoán, quản lý cache
 - **Nền tảng**: app thanh menu, giao diện light/dark/system, ký Developer ID và notarize với Hardened Runtime bật, security-scoped bookmark cho thư mục người dùng chọn
 
@@ -223,6 +224,7 @@ Nếu bạn cần lệnh archive, export, hoặc đóng gói DMG, xem [docs/BUIL
 - [Bản đồ tài liệu cho con người và agent](docs/README.md)
 - [Cấu trúc dự án và kiến trúc runtime](docs/STRUCTURE.md)
 - [Luồng chụp, quay và chỉnh sửa](docs/CAPTURE.md)
+- [Plugins: sandbox, capability và cách viết plugin](docs/PLUGINS.md)
 - [Hướng dẫn build và đóng gói](docs/BUILD.md)
 - [Quy trình release và update](docs/RELEASES.md)
 - [Kiểm thử update Sparkle cục bộ](docs/UPDATE_TESTING.md)

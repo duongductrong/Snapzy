@@ -1,0 +1,87 @@
+{
+  "id": "com.snapzy.webhook-upload",
+  "version": "2.0.0",
+  "displayName": "Send to Discord",
+  "summary": "Uploads the capture to a Discord webhook and copies the resulting link.",
+  "author": {
+    "name": "Snapzy",
+    "url": "https://github.com/duongductrong/Snapzy"
+  },
+  "sdkVersion": ">=1.0.0 <2.0.0",
+  "contracts": [
+    {
+      "vocabulary": "com.snapzy.api",
+      "builtAgainst": "1.0.0",
+      "compatibleWith": ">=1.0.0 <2.0.0"
+    }
+  ],
+  "runtime": {
+    "kind": "custom",
+    "runtimeID": "process",
+    "options": {
+      "executable": "WebhookUpload",
+      "protocolVersion": "1.0.0"
+    }
+  },
+  "activation": {
+    "kind": "onDemand"
+  },
+  "capabilities": [
+    {
+      "id": "snapzy.asset.read",
+      "required": true,
+      "reason": "Reads the capture you run it on, so it can upload it.",
+      "scope": {
+        "kinds": ["screenshot", "annotateSession", "gif", "video"]
+      }
+    },
+    {
+      "id": "snapzy.network",
+      "required": true,
+      "reason": "Uploads the capture to the Discord webhook you configured.",
+      "scope": {
+        "hosts": ["discord.com", "discordapp.com"]
+      }
+    },
+    {
+      "id": "snapzy.secrets",
+      "required": true,
+      "reason": "Stores your webhook URL in the Keychain — it is a credential, not a setting.",
+      "scope": {}
+    },
+    {
+      "id": "snapzy.ui",
+      "required": false,
+      "reason": "Asks for your webhook URL the first time you use it.",
+      "scope": {}
+    }
+  ],
+  "contributions": [
+    {
+      "extensionPoint": "com.snapzy.command",
+      "name": "upload",
+      "contractVersion": "1.0.0",
+      "priority": 50,
+      "metadata": {
+        "title": "Send to Discord",
+        "systemImage": "paperplane",
+        "accepts": ["screenshot", "annotateSession", "gif", "video"],
+        "emits": [],
+        "isLongRunning": true
+      }
+    }
+  ],
+  "configuration": {
+    "version": 1,
+    "keys": [
+      {
+        "name": "message",
+        "type": "string",
+        "defaultValue": "",
+        "title": "Message",
+        "summary": "Optional text posted alongside the file.",
+        "scope": "settings"
+      }
+    ]
+  }
+}

@@ -79,6 +79,7 @@
         "preferences-general.",
         "preferences-history.",
         "preferences-menubar.",
+        "preferences-plugins.",
         "preferences.tab."
       ]
     },
