@@ -2413,10 +2413,30 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
           AreaSelectionController.shared.cancelSelection()
 
+          // Shown synchronously on mouse-up so the feedback lands before the first async hop, and
+          // only after the snapshots above are secured so the panel cannot reach the captured
+          // pixels. One label covers the whole operation: the capture step only crops the snapshot
+          // already taken, which completes well inside the toast's own fade-in.
+          let progressToast = AppToastManager.shared.show(
+            message: L10n.OCR.capturingContent,
+            style: .info,
+            duration: nil,
+            variant: .compact,
+            iconMode: .spinner
+          )
+
           Task { @MainActor in
+            // Set once the toast has been given a terminal state, so the cleanup below leaves it
+            // alone. `OCRResultNotifier` prefers a native notification and shows no toast when one
+            // is delivered, and reports from a detached task that resolves after this scope exits,
+            // so an unconditional dismiss would always win the race.
+            var progressToastResolved = false
             defer {
               self.isAreaSelectionActive = false
               hiddenWindowSession.restore()
+              if let progressToast, !progressToastResolved {
+                AppToastManager.shared.dismiss(progressToast)
+              }
             }
             await Task.yield()
 
@@ -2470,6 +2490,20 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               AppStatusBarController.shared.setProcessing(false)
 
               guard let clipboardText else {
+                // Same reasoning as the success path — a silent dismissal is least helpful
+                // exactly when nothing was found.
+                if let progressToast {
+                  AppToastManager.shared.update(
+                    progressToast,
+                    message: qrResult.unsupportedPayloadCount > 0
+                      ? L10n.OCR.qrTextOnlyUnsupported
+                      : L10n.OCR.noTextFound,
+                    style: .warning,
+                    duration: 2.5,
+                    variant: .compact
+                  )
+                  progressToastResolved = true
+                }
                 if qrResult.unsupportedPayloadCount > 0 {
                   var context = performanceContext
                   context["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
@@ -2502,6 +2536,20 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               successContext["qrCount"] = "\(qrResult.detections.count)"
               successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
               DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
+
+              // Land on a success state rather than dismissing: the preferred notification is
+              // easy to miss and is suppressed entirely by Focus.
+              if let progressToast {
+                AppToastManager.shared.update(
+                  progressToast,
+                  message: L10n.Common.copiedToClipboard,
+                  style: .success,
+                  duration: 2.0,
+                  variant: .compact
+                )
+                progressToastResolved = true
+              }
+
               OCRResultNotifier.shared.report(.copied(clipboardText))
               if OCRResultNotifier.isEnabled() {
                 QuickAccessSound.complete.play()
@@ -2520,6 +2568,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               // Error feedback
               AppStatusBarController.shared.setProcessing(false)
               DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
+              if let progressToast {
+                AppToastManager.shared.update(
+                  progressToast,
+                  message: error.localizedDescription,
+                  style: .error,
+                  duration: 2.5,
+                  variant: .compact
+                )
+                progressToastResolved = true
+              }
               OCRResultNotifier.shared.report(.failed(errorDescription: error.localizedDescription))
               QuickAccessSound.failed.play()
             }
