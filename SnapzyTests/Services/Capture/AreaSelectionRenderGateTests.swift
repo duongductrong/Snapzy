@@ -2,10 +2,6 @@
 //  AreaSelectionRenderGateTests.swift
 //  SnapzyTests
 //
-//  The multi-display render fan-out gate. These stand in for a multi-display rig: the risk in
-//  skipping a render is stranding pixels on a display the selection has left, so the clearing
-//  pass is pinned explicitly.
-//
 
 import CoreGraphics
 @testable import Snapzy
@@ -20,9 +16,9 @@ final class AreaSelectionRenderGateTests: XCTestCase {
 
   func testRendersWheneverAnyTermHolds() {
     for (content, pointer, intersects) in [
-      (true, false, false),  // must still clear what the last pass drew
-      (false, true, false),  // owns crosshair / coordinate / magnifier
-      (false, false, true),  // selection rect reaches this display
+      (true, false, false),
+      (false, true, false),
+      (false, false, true),
       (true, true, true),
     ] {
       XCTAssertTrue(AreaSelectionRenderGate.shouldRender(
@@ -31,17 +27,15 @@ final class AreaSelectionRenderGateTests: XCTestCase {
     }
   }
 
-  /// The regression the gate must not introduce: a display the pointer just left, with the rect
-  /// elsewhere, gets exactly one clearing pass and only then goes quiet.
   func testDisplayThePointerLeavesIsClearedExactlyOnceThenSkipped() {
-    var hasContent = true // last pass drew the crosshair while the pointer was here
+    var hasContent = true
     var renders = 0
     for _ in 0 ..< 5 {
       guard AreaSelectionRenderGate.shouldRender(
         hasContentOnScreen: hasContent, pointerIsOverView: false, selectionIntersectsView: false
       ) else { continue }
       renders += 1
-      hasContent = false // the pass cleared it
+      hasContent = false
     }
     XCTAssertEqual(renders, 1)
   }

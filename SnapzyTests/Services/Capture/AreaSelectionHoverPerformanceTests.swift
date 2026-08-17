@@ -91,17 +91,13 @@ final class AreaSelectionHoverPerformanceTests: XCTestCase {
     }
   }
 
-  /// Drag hot path. Unlike hover — which only touches the overlay under the pointer —
-  /// `renderManualSelectionIfNeeded()` fans every pointer event out to *all* pooled windows, so
-  /// this cost scales with attached display count. Reports the display count alongside the timing
-  /// so a single-display run and a multi-display run are comparable.
+  /// Drag hot path, which fans out to every pooled window and so scales with display count.
   func testDragTickCost_multiDisplayFanOut() throws {
     try skipIfRunningInCI(
       "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
     )
     let (window, overlay) = try makeLiveSession(forcePassthrough: true)
 
-    // Begin a real manual selection so the drag path (not the hover path) is what gets measured.
     overlay.handleLivePassthroughMouseDown(
       atScreenPoint: CGPoint(x: window.frame.midX, y: window.frame.midY)
     )

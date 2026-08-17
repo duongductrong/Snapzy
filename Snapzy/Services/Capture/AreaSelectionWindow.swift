@@ -78,8 +78,6 @@ final class AreaSelectionController: NSObject {
   private(set) var selectionMode: SelectionMode = .screenshot
   private var selectionBackdrops: [CGDirectDisplayID: AreaSelectionBackdrop] = [:]
   private var liveFallbackDisplayIDs = Set<CGDirectDisplayID>()
-  /// Latch for `requestDisplayActivationForManualSelection()`. True once every display has a
-  /// backdrop or live-fallback, which makes that per-pointer-event scan a no-op.
   private var manualSelectionDisplayActivationSettled = false
   private var interactionMode: AreaSelectionInteractionMode = .manualRegion
   private var allowsApplicationWindowSelection = false
@@ -153,7 +151,6 @@ final class AreaSelectionController: NSObject {
   private var sessionPresentationLastResortUsed = Set<CGDirectDisplayID>()
   /// Max pooled-window recreations per display per session before the last-resort rung.
   private static let maxWindowRecreationsPerSession = 2
-  /// Non-nil while Space is held to move the whole selection. See `AreaSelectionMoveLogic`.
   private var manualSelectionMoveAnchors: AreaSelectionMoveAnchors?
   private var isMovingManualSelection: Bool { manualSelectionMoveAnchors != nil }
 
@@ -1869,8 +1866,6 @@ final class AreaSelectionController: NSObject {
     renderManualSelectionIfNeeded()
   }
 
-  /// Must stay idempotent: several event sources report the same physical movement, each sampling
-  /// the pointer at a different instant. See `AreaSelectionMoveLogic`.
   private func updateManualSelection(to screenPoint: CGPoint) {
     guard manualSelectionStartPoint != nil else { return }
     guard applyManualSelectionPointerSample(screenPoint) else { return }
@@ -1880,9 +1875,6 @@ final class AreaSelectionController: NSObject {
     reassertManualSelectionCursor()
   }
 
-  /// The single place a pointer sample turns into selection geometry. Drag updates and the final
-  /// mouse-up both route through it, so the committed rect cannot disagree with the drawn one.
-  /// Returns whether anything changed.
   @discardableResult
   private func applyManualSelectionPointerSample(_ screenPoint: CGPoint) -> Bool {
     if let anchors = manualSelectionMoveAnchors {
@@ -1914,7 +1906,6 @@ final class AreaSelectionController: NSObject {
     guard let start = manualSelectionStartPoint, let current = manualSelectionCurrentPoint else { return false }
     switch event.type {
     case .keyDown:
-      // Key auto-repeat re-enters this case, so anchor only on the transition into move mode.
       guard !isMovingManualSelection else { break }
       manualSelectionMoveAnchors = AreaSelectionMoveAnchors(originStart: start, anchor: current)
     case .keyUp:
@@ -1927,9 +1918,6 @@ final class AreaSelectionController: NSObject {
 
   private func endManualSelection(at screenPoint: CGPoint) {
     guard manualSelectionStartPoint != nil else { return }
-    // Commit through the same transform the overlay drew with. Assigning the mouse-up point
-    // straight to `current` would move only that corner while `start` kept its translation,
-    // committing a different size and origin than the rect on screen.
     applyManualSelectionPointerSample(screenPoint)
     removeManualSelectionMonitor()
 
@@ -2119,12 +2107,6 @@ final class AreaSelectionController: NSObject {
     }
   }
 
-  /// Runs on every pointer event of a drag, where `NSScreen.screens` and the per-screen
-  /// `deviceDescription` build in `displayID` are too costly to repeat.
-  ///
-  /// The loop can only do work for a display with neither a backdrop nor live-fallback, and both
-  /// sets only grow within a session, so once every display is settled it is a no-op — latch it
-  /// off. The latch is cleared on a new drag, a screen-configuration change and session teardown.
   private func requestDisplayActivationForManualSelection() {
     guard selectionMode == .screenshot else { return }
     guard !manualSelectionDisplayActivationSettled else { return }
@@ -2575,7 +2557,6 @@ final class AreaSelectionOverlayView: NSView {
   /// The coordinate label stays visible until this flips true, then the dimensions label
   /// owns the size indicator layers — mirroring native macOS / CleanShot X behavior.
   private var hasVisibleSelectionRect = false
-  /// What the last `renderManualSelection` pass left drawn. See `AreaSelectionRenderGate`.
   private var hasManualSelectionContentOnScreen = false
   private var pendingSelectionStartPoint: CGPoint?
   private var currentMousePosition: CGPoint = .zero
@@ -2918,8 +2899,6 @@ final class AreaSelectionOverlayView: NSView {
   func resetSelection() {
     isSelecting = false
     hasVisibleSelectionRect = false
-    // A reset can leave crosshair content drawn below, so force one pass through the fan-out
-    // gate. Erring true costs a render; erring false would strand pixels on this display.
     hasManualSelectionContentOnScreen = true
     pendingSelectionStartPoint = nil
     hoveredWindowCandidate = nil
@@ -3901,8 +3880,6 @@ final class AreaSelectionOverlayView: NSView {
   func renderManualSelection(screenRect: CGRect?, currentScreenPoint: CGPoint?) {
     guard interactionMode == .manualRegion else { return }
 
-    // Multi-display fan-out gate — see `AreaSelectionRenderGate`. `isMouseOver` reads
-    // `NSEvent.mouseLocation`, so it is computed once and reused.
     let pointerIsOverView = isMouseOver
     guard AreaSelectionRenderGate.shouldRender(
       hasContentOnScreen: hasManualSelectionContentOnScreen,
