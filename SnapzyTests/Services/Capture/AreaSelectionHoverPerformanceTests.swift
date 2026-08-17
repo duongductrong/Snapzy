@@ -91,6 +91,33 @@ final class AreaSelectionHoverPerformanceTests: XCTestCase {
     }
   }
 
+  /// Drag hot path. Unlike hover — which only touches the overlay under the pointer —
+  /// `renderManualSelectionIfNeeded()` fans every pointer event out to *all* pooled windows, so
+  /// this cost scales with attached display count. Reports the display count alongside the timing
+  /// so a single-display run and a multi-display run are comparable.
+  func testDragTickCost_multiDisplayFanOut() throws {
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
+    let (window, overlay) = try makeLiveSession(forcePassthrough: true)
+
+    // Begin a real manual selection so the drag path (not the hover path) is what gets measured.
+    overlay.handleLivePassthroughMouseDown(
+      atScreenPoint: CGPoint(x: window.frame.midX, y: window.frame.midY)
+    )
+
+    var sync: [Double] = []
+    var tick: [Double] = []
+    for index in 0 ..< iterations {
+      let local = walkPoint(index: index, in: overlay.bounds)
+      let screenPoint = CGPoint(x: window.frame.minX + local.x, y: window.frame.minY + local.y)
+      measureTick(sync: &sync, tick: &tick) {
+        overlay.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint)
+      }
+    }
+    report(label: "dragFanOut(displays=\(NSScreen.screens.count))", sync: sync, tick: tick)
+  }
+
   /// Attribution probe: the presentation watchdog runs this WindowServer query
   /// whenever it is (re-)armed; the hover path re-arms it per tick while the app
   /// is inactive, so its standalone cost is reported for comparison against the
