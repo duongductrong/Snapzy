@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.1] - 2026-08-17
+
+### Bug Fixes
+-  Update .gitignore content (af7095bc)
+-  Fixed percent-encode object-key path in AWS SigV4 presigned URLs (#491) (a9991aa4)
+-  Fixed surface hours in capture/video duration labels (#490) (5624a89b)
+
+### Chore
+- chore: Update README, SECURITY and APP_LIFECYCLE content (8ce63ad1)
+
+### Contributors
+- @YuriNachos
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.31.0] - 2026-08-15
 
 ### Features
