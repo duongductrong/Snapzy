@@ -9,7 +9,10 @@ import AppKit
 import Foundation
 
 enum AnnotateCanvasDefaults {
-  static let cornerRadius: CGFloat = 0
+  nonisolated static let cornerRadius: CGFloat = 0
+  nonisolated static let shadowRadius: CGFloat = 15
+  nonisolated static let shadowOffsetX: CGFloat = 0
+  nonisolated static let shadowOffsetY: CGFloat = 8
 }
 
 /// In-memory annotation session data for re-editing annotations

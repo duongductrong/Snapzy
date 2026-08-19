@@ -342,15 +342,22 @@ final class AnnotateExporter {
       totalSize: totalSize,
       alignment: effects.imageAlignment
     )
+    let imageRect = CGRect(origin: destinationOrigin, size: effectiveBounds.size)
+
+    drawCanvasShadow(
+      imageRect: imageRect,
+      canvasRect: CGRect(origin: .zero, size: totalSize),
+      cornerRadius: effects.cornerRadius,
+      intensity: effects.backgroundStyle != .none ? effects.shadowIntensity : 0,
+      in: context
+    )
 
     if effects.cornerRadius > 0 {
-      let clipRect = NSRect(
-        x: destinationOrigin.x,
-        y: destinationOrigin.y,
-        width: effectiveBounds.width,
-        height: effectiveBounds.height
+      let path = NSBezierPath(
+        roundedRect: imageRect,
+        xRadius: effects.cornerRadius,
+        yRadius: effects.cornerRadius
       )
-      let path = NSBezierPath(roundedRect: clipRect, xRadius: effects.cornerRadius, yRadius: effects.cornerRadius)
       path.addClip()
     }
 
@@ -514,14 +521,26 @@ final class AnnotateExporter {
       destY = 0
     }
 
+    let imageRect = CGRect(
+      x: destX,
+      y: destY,
+      width: effectiveBounds.width,
+      height: effectiveBounds.height
+    )
+    drawCanvasShadow(
+      imageRect: imageRect,
+      canvasRect: CGRect(origin: .zero, size: totalSize),
+      cornerRadius: snapshot.cornerRadius,
+      intensity: snapshot.backgroundStyle != .none ? snapshot.shadowIntensity : 0,
+      in: context
+    )
+
     if snapshot.cornerRadius > 0 {
-      let clipRect = NSRect(
-        x: destX,
-        y: destY,
-        width: effectiveBounds.width,
-        height: effectiveBounds.height
+      let path = NSBezierPath(
+        roundedRect: imageRect,
+        xRadius: snapshot.cornerRadius,
+        yRadius: snapshot.cornerRadius
       )
-      let path = NSBezierPath(roundedRect: clipRect, xRadius: snapshot.cornerRadius, yRadius: snapshot.cornerRadius)
       path.addClip()
     }
 
@@ -590,6 +609,51 @@ final class AnnotateExporter {
     let image = NSImage(size: totalSize)
     image.addRepresentation(bitmapRep)
     return image
+  }
+
+  /// Draw the flat-canvas screenshot shadow without painting beneath the source image.
+  /// The even-odd clip keeps only the blurred pixels outside the rounded silhouette,
+  /// so transparent source pixels and native-resolution screenshot pixels stay untouched.
+  nonisolated private static func drawCanvasShadow(
+    imageRect: CGRect,
+    canvasRect: CGRect,
+    cornerRadius: CGFloat,
+    intensity: CGFloat,
+    in context: CGContext
+  ) {
+    let opacity = min(max(intensity, 0), 1)
+    guard opacity > 0, imageRect.width > 0, imageRect.height > 0 else { return }
+
+    let radius = min(
+      max(cornerRadius, 0),
+      min(imageRect.width, imageRect.height) / 2
+    )
+    let silhouette = CGPath(
+      roundedRect: imageRect,
+      cornerWidth: radius,
+      cornerHeight: radius,
+      transform: nil
+    )
+
+    context.saveGState()
+    let outsideSilhouette = CGMutablePath()
+    outsideSilhouette.addRect(canvasRect)
+    outsideSilhouette.addPath(silhouette)
+    context.addPath(outsideSilhouette)
+    context.clip(using: .evenOdd)
+
+    context.setShadow(
+      offset: CGSize(
+        width: AnnotateCanvasDefaults.shadowOffsetX,
+        height: -AnnotateCanvasDefaults.shadowOffsetY
+      ),
+      blur: AnnotateCanvasDefaults.shadowRadius,
+      color: NSColor.black.withAlphaComponent(opacity).cgColor
+    )
+    context.addPath(silhouette)
+    context.setFillColor(NSColor.black.cgColor)
+    context.fillPath()
+    context.restoreGState()
   }
 
   /// Draw only the source-image portion that intersects the requested canvas bounds.

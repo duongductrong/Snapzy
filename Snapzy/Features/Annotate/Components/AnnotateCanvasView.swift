@@ -537,9 +537,9 @@ struct AnnotateCanvasView: View {
         .clipShape(RoundedRectangle(cornerRadius: currentCornerRadius, style: .continuous))
         .shadow(
           color: .black.opacity(state.backgroundStyle != .none ? currentShadowIntensity : 0),
-          radius: 15,
-          x: 0,
-          y: 8
+          radius: AnnotateCanvasDefaults.shadowRadius,
+          x: AnnotateCanvasDefaults.shadowOffsetX,
+          y: AnnotateCanvasDefaults.shadowOffsetY
         )
     }
   }
