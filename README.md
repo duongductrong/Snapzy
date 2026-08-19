@@ -277,11 +277,11 @@ Thanks to all the people who contribute to Snapzy!
 
 ## Star History
 
-<a href="https://www.star-history.com/?repos=duongductrong%2FSnapzy&type=date&logscale=&legend=top-left">
+<a href="https://star-history.dera.page/#duongductrong/Snapzy&type=date&logscale=&legend=top-left">
  <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&theme=dark&logscale&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: dark)" srcset="https://star-history.dera.page/svg?repos=duongductrong/Snapzy&type=date&theme=dark&logscale&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://star-history.dera.page/svg?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+   <img alt="Star History Chart" src="https://star-history.dera.page/svg?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
  </picture>
 </a>
 
