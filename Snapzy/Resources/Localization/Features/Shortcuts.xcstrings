@@ -486,7 +486,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリの画面録画"
+            "value": "アプリ録画"
           }
         },
         "ko": {
@@ -616,7 +616,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択操作なしでフォーカスされたウィンドウを即座にキャプチャします"
+            "value": "選択操作なしでフォーカスされたウィンドウを即座に撮影します"
           }
         },
         "ko": {
@@ -746,7 +746,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "領域を選択してキャプチャ"
+            "value": "領域を選択して撮影"
           }
         },
         "ko": {
@@ -811,7 +811,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "画面全体を瞬時にキャプチャ"
+            "value": "画面全体を瞬時に撮影"
           }
         },
         "ko": {
@@ -876,7 +876,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "前回選択した領域をもう一度キャプチャ"
+            "value": "前回選択した領域をもう一度撮影"
           }
         },
         "ko": {
@@ -941,7 +941,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャショートカット"
+            "value": "撮影ショートカット"
           }
         },
         "ko": {
@@ -1656,7 +1656,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "どのアプリからでも、キーボードショートカットでスクリーンショットや録画を行えなくなります。キャプチャ機能を使用するには、Snapzy を手動で開く必要があります。"
+            "value": "どのアプリからでも、キーボードショートカットでスクリーンショットや録画を行えなくなります。撮影機能を使用するには、Snapzy を手動で開く必要があります。"
           }
         },
         "ko": {
@@ -1786,7 +1786,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最新のキャプチャを編集"
+            "value": "最新の撮影を編集"
           }
         },
         "ko": {
@@ -1851,7 +1851,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "プレビューが表示されている間に、最新のキャプチャのエディタを開きます。"
+            "value": "プレビューが表示されている間に、最新の撮影のエディタを開きます。"
           }
         },
         "ko": {
@@ -1916,7 +1916,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "任意のアプリからキャプチャ"
+            "value": "任意のアプリから撮影"
           }
         },
         "ko": {
@@ -2176,7 +2176,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キーボードショートカットを使用して、どこからでもキャプチャできます。"
+            "value": "キーボードショートカットを使用して、どこからでも撮影できます。"
           }
         },
         "ko": {
@@ -2761,7 +2761,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオ編集ツールを開く"
+            "value": "動画編集ツールを開く"
           }
         },
         "ko": {
@@ -3675,7 +3675,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクセシブルな UI 要素をリアルタイムでハイライトし、クリックしてキャプチャします"
+            "value": "アクセシブルな UI 要素をリアルタイムでハイライトし、クリックして撮影します"
           }
         },
         "ko": {
@@ -4189,7 +4189,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈のリファレンス"
+            "value": "注釈の早見表"
           }
         },
         "ko": {
@@ -4384,7 +4384,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリケーション録画: %@"
+            "value": "アプリ録画: %@"
           }
         },
         "ko": {
@@ -4449,7 +4449,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "機密データの自動モザイク"
+            "value": "機密データの自動ぼかし"
           }
         },
         "ko": {
@@ -4969,7 +4969,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "注釈エディタの内部"
+            "value": "注釈エディタ内"
           }
         },
         "ko": {
@@ -5554,7 +5554,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ"
+            "value": "撮影"
           }
         },
         "ko": {
@@ -6659,7 +6659,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS キャプチャ全画面"
+            "value": "macOS 全画面キャプチャ"
           }
         },
         "ko": {

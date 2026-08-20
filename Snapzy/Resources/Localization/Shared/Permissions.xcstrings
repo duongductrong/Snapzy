@@ -616,7 +616,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy が画面と音声をキャプチャするには、いくつかの権限が必要です。"
+            "value" : "Snapzy が画面と音声を記録するには、いくつかの権限が必要です。"
           }
         },
         "ko" : {

@@ -96,7 +96,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Audio Track %d"
+            "value" : "オーディオトラック %d"
           }
         },
         "ko" : {
@@ -356,7 +356,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Volume"
+            "value" : "音量"
           }
         },
         "ko" : {
@@ -616,7 +616,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "自動セグメント"
+            "value" : "自動分割"
           }
         },
         "ko" : {
@@ -2956,7 +2956,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "フォーカスマージン"
+            "value" : "フォーカス余白"
           }
         },
         "ko" : {
@@ -4124,7 +4124,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "マウスのサンプル"
+            "value" : "マウスのサンプル数"
           }
         },
         "ko" : {
@@ -4254,7 +4254,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Microphone"
+            "value" : "マイク"
           }
         },
         "ko" : {
@@ -4319,7 +4319,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mic"
+            "value" : "マイク"
           }
         },
         "ko" : {
@@ -4579,7 +4579,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "元の (%d×%d)"
+            "value" : "元のサイズ (%d×%d)"
           }
         },
         "ko" : {
@@ -5879,7 +5879,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "セグメント"
+            "value" : "区間"
           }
         },
         "ko" : {
@@ -6462,7 +6462,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "System Audio"
+            "value" : "システムオーディオ"
           }
         },
         "ko" : {
@@ -7112,7 +7112,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "サポートされていないファイルタイプ"
+            "value" : "サポートされていないファイル形式"
           }
         },
         "ko" : {
@@ -7437,7 +7437,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ズームレベル"
+            "value" : "ズーム倍率"
           }
         },
         "ko" : {

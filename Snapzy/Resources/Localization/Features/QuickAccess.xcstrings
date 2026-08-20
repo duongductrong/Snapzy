@@ -427,7 +427,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スケールとフェード"
+            "value": "拡大縮小とフェード"
           }
         },
         "ko": {
@@ -746,7 +746,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メイン"
+            "value": "中央"
           }
         },
         "ko": {
@@ -941,7 +941,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャを他のアプリにドラッグ"
+            "value": "撮影したファイルを他のアプリにドラッグ"
           }
         },
         "ko": {
@@ -1071,7 +1071,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ後にプレビューを表示"
+            "value": "撮影後にプレビューを表示"
           }
         },
         "ko": {
@@ -3344,7 +3344,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "閉じるにリセット"
+            "value": "「閉じる」にリセット"
           }
         },
         "ko": {
@@ -3795,7 +3795,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオを編集"
+            "value": "動画を編集"
           }
         },
         "ko": {
@@ -3860,7 +3860,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィット"
+            "value": "画面に合わせる"
           }
         },
         "ko": {
@@ -3990,7 +3990,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "固定ウィンドウのロックを解除"
+            "value": "固定ウィンドウのロックを解除（ピン留めウィンドウとの用語統一を検討）"
           }
         },
         "ko": {
@@ -4055,7 +4055,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "固定ウィンドウをズーム"
+            "value": "固定ウィンドウを拡大/縮小"
           }
         },
         "ko": {

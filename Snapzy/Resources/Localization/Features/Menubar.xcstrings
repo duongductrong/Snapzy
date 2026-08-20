@@ -31,7 +31,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アップデートを確認..."
+            "value" : "アップデートを確認する..."
           }
         },
         "ko" : {
@@ -356,7 +356,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy を終了"
+            "value" : "Snapzy を終了する"
           }
         },
         "ko" : {
@@ -421,7 +421,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "画面を録画"
+            "value" : "画面を収録"
           }
         },
         "ko" : {
@@ -486,7 +486,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "録画を停止 (%@)"
+            "value" : "画面収録を停止 (%@)"
           }
         },
         "ko" : {

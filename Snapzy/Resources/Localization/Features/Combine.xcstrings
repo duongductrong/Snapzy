@@ -10,6 +10,12 @@
             "value": "Arrangement"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "配置"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -30,6 +36,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auto Stitch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動結合"
           }
         },
         "zh-Hans": {
@@ -54,6 +66,12 @@
             "value": "Copy to Clipboard"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリップボードにコピー"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -74,6 +92,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Free Canvas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自由配置"
           }
         },
         "zh-Hans": {
@@ -98,6 +122,12 @@
             "value": "Horizontal"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "横に並べる"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -118,6 +148,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Image Gap"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像の間隔"
           }
         },
         "zh-Hans": {
@@ -142,6 +178,12 @@
             "value": "Image %d"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像 %d"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -162,6 +204,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Images"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像"
           }
         },
         "zh-Hans": {
@@ -186,6 +234,12 @@
             "value": "Combine mode"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結合モード"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -206,6 +260,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Move Earlier"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前に移動"
           }
         },
         "zh-Hans": {
@@ -230,6 +290,12 @@
             "value": "Move Later"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "後ろに移動"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -250,6 +316,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Combine Images"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像を結合"
           }
         },
         "zh-Hans": {
@@ -274,6 +346,12 @@
             "value": "Combine"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結合する"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -294,6 +372,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Select two or more images."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2枚以上の画像を選択してください。"
           }
         },
         "zh-Hans": {
@@ -318,6 +402,12 @@
             "value": "Choose Images to Combine"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結合する画像を選択"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -338,6 +428,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choose how to export the stitched result."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "つなぎ合わせた結果の書き出し方法を選択してください。"
           }
         },
         "zh-Hans": {
@@ -362,6 +458,12 @@
             "value": "Save Combined Image"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "結合画像を保存"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -382,6 +484,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Save to File…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ファイルに保存…"
           }
         },
         "zh-Hans": {
@@ -406,6 +514,12 @@
             "value": "Smart"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スマート"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -428,6 +542,12 @@
             "value": "Spacing"
           }
         },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "間隔"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -448,6 +568,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vertical"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "縦に並べる"
           }
         },
         "zh-Hans": {

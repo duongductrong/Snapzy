@@ -226,7 +226,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "14 日間"
+            "value": "14日間"
           }
         },
         "ko": {
@@ -291,7 +291,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "30 日"
+            "value": "30日間"
           }
         },
         "ko": {
@@ -356,7 +356,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "60 日"
+            "value": "60日間"
           }
         },
         "ko": {
@@ -421,7 +421,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "90 日"
+            "value": "90日間"
           }
         },
         "ko": {
@@ -3843,7 +3843,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
         "es": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Google 認証" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Google Authorization" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Ủy quyền Google" } },
@@ -3858,7 +3858,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
         "es": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Google で認証する" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Authorize with Google" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Ủy quyền với Google" } },
@@ -3873,7 +3873,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Authorized" } },
         "es": { "stringUnit": { "state": "translated", "value": "Authorized" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Authorized" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Authorized" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "認証済み" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Authorized" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Authorized" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Đã ủy quyền" } },
@@ -3888,7 +3888,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
         "es": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "認証中…" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Authorizing…" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Đang ủy quyền…" } },
@@ -3903,7 +3903,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Client ID" } },
         "es": { "stringUnit": { "state": "translated", "value": "Client ID" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Client ID" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Client ID" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "クライアント ID" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Client ID" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Client ID" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Client ID" } },
@@ -3918,7 +3918,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
         "es": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "クライアントシークレット" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Client Secret" } },
@@ -3933,7 +3933,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
         "es": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "接続中のアカウント: %@" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Connected as: %@" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Đã kết nối: %@" } },
@@ -3948,7 +3948,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
         "es": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Google Drive 認証情報" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Google Drive Credentials" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Thông tin cấu hình Google Drive" } },
@@ -3963,7 +3963,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
         "es": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
         "fr": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "スクリーンショットと録画は、Google Drive内のこのフォルダに保存されます（デフォルト: Snapzy）。" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
         "ru": { "stringUnit": { "state": "translated", "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)." } },
         "vi": { "stringUnit": { "state": "translated", "value": "Ảnh chụp màn hình và video sẽ được lưu dưới thư mục này trong Google Drive của bạn (mặc định: Snapzy)." } },
@@ -3978,7 +3978,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
         "es": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "フォルダ名" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Folder Name" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Tên thư mục" } },
@@ -3993,7 +3993,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
         "es": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
         "fr": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "Google Drive フォルダ" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
         "ru": { "stringUnit": { "state": "translated", "value": "Google Drive Folder" } },
         "vi": { "stringUnit": { "state": "translated", "value": "Thư mục Google Drive" } },
@@ -4008,7 +4008,7 @@
         "en": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
         "es": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
         "fr": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "プライバシー保護のため、ご自身の認証情報を使用します。Google Cloud Console で「デスクトップ アプリ」用の OAuth クライアント ID を作成してください。" } },
         "ko": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
         "ru": { "stringUnit": { "state": "translated", "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console." } },
         "vi": { "stringUnit": { "state": "translated", "value": "Sử dụng thông tin cấu hình của riêng bạn để bảo vệ quyền riêng tư. Tạo một Desktop App OAuth Client ID trong Google Cloud Console của bạn." } },
@@ -7556,7 +7556,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アーカイブパスフレーズ"
+            "value": "アーカイブのパスフレーズ"
           }
         },
         "ko": {
@@ -9116,7 +9116,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クラウドのステータス"
+            "value": "クラウドの状態"
           }
         },
         "ko": {
@@ -9246,7 +9246,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "あと %dd で期限切れ"
+            "value": "あと %d 日で期限切れ"
           }
         },
         "ko": {
@@ -9311,7 +9311,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "推定コスト/月"
+            "value": "推定費用/月"
           }
         },
         "ko": {
@@ -10806,7 +10806,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィルター"
+            "value": "絞り込み"
           }
         },
         "ko": {
@@ -11391,7 +11391,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィルターをリセット"
+            "value": "絞り込みをリセット"
           }
         },
         "ko": {
@@ -11651,7 +11651,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "並べ替え順"
+            "value": "並び順"
           }
         },
         "ko": {
@@ -11716,7 +11716,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ステータス"
+            "value": "状態"
           }
         },
         "ko": {
@@ -11781,7 +11781,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティブ"
+            "value": "有効"
           }
         },
         "ko": {

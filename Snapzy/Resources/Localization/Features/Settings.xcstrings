@@ -30,7 +30,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "config.toml が Snapzy の設定と一致せず、アプリ外で編集されている可能性があります。同期すると現在の設定で置き換えます。"
+            "value": "config.toml が Snapzy の設定と一致せず、アプリ外で編集されている可能性があります。同期すると現在の設定に置き換えられます。"
           }
         },
         "ko": {
@@ -158,7 +158,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "config.toml に外部変更があります。"
+            "value": "config.toml に外部からの変更があります。"
           }
         },
         "ko": {
@@ -222,7 +222,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "config.toml 同期"
+            "value": "config.toml を同期する"
           }
         },
         "ko": {
@@ -414,7 +414,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクセス必要"
+            "value": "アクセス権限が必要です"
           }
         },
         "ko": {
@@ -478,7 +478,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "失敗"
+            "value": "同期に失敗しました"
           }
         },
         "ko": {
@@ -606,7 +606,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "確認必要"
+            "value": "確認が必要です"
           }
         },
         "ko": {
@@ -926,7 +926,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "config.toml を現在の設定で更新しました: %@。"
+            "value": "config.toml を現在の設定に更新しました: %@。"
           }
         },
         "ko": {
@@ -990,7 +990,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "config.toml は現在の設定と一致しています。最終確認: %@。"
+            "value": "config.toml は現在の設定と一致しています。最終確認: %@"
           }
         },
         "ko": {
@@ -1054,7 +1054,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在の設定を config.toml に書き込んでいます。"
+            "value": "現在の設定を config.toml に書き込んでいます"
           }
         },
         "ko": {
@@ -1118,7 +1118,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "既存を開く"
+            "value": "既存の設定を開く"
           }
         },
         "ko": {
@@ -1246,7 +1246,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "確認すると、Snapzy は config.toml をデフォルト値で置き換え、アプリ設定をリセットし、クラウド認証情報を消去します。保存済みのキャプチャは削除されません。"
+            "value": "復元をすると、Snapzy は config.toml をデフォルト値に上書きしてアプリ設定をリセットし、クラウド認証情報を消去します。保存済みのキャプチャは削除されません。"
           }
         },
         "ko": {
@@ -1438,7 +1438,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "今すぐ同期"
+            "value": "同期する"
           }
         },
         "ko": {
@@ -1509,7 +1509,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "グラス"
+            "value": "ガラス"
           }
         },
         "ko": {
@@ -1893,7 +1893,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "macOS 用のスクリーンショットと画面録画"
+            "value": "macOSネイティブのスクリーンショット、録画、注釈、編集アプリ"
           }
         },
         "ko": {
@@ -1958,7 +1958,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アップデートを確認"
+            "value": "アップデートを確認する"
           }
         },
         "ko": {
@@ -2023,7 +2023,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "チェック済み"
+            "value": "確認済み"
           }
         },
         "ko": {
@@ -2218,7 +2218,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "問題を報告"
+            "value": "問題を報告する"
           }
         },
         "ko": {
@@ -2478,7 +2478,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy はオープンソースです。ワークフローに役立っているなら、スポンサーとしてご支援ください。"
+            "value": "Snapzy はオープンソースです。もし役立っているなら、スポンサーとしてご支援ください。"
           }
         },
         "ko": {
@@ -2543,7 +2543,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy をサポート"
+            "value": "Snapzy をサポートする"
           }
         },
         "ko": {
@@ -2673,7 +2673,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウェブサイト"
+            "value": "Webサイト"
           }
         },
         "ko": {
@@ -2801,7 +2801,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "受け取るリリースを選択します"
+            "value": "リリースチャンネルを選択します"
           }
         },
         "ko": {
@@ -3318,7 +3318,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択..."
+            "value": "選択する..."
           }
         },
         "ko": {
@@ -3643,7 +3643,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "バックグラウンドでアップデートをダウンロード"
+            "value": "バックグラウンドでアップデートする"
           }
         },
         "ko": {
@@ -3708,7 +3708,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "自動的にダウンロード"
+            "value": "自動ダウンロードする"
           }
         },
         "ko": {
@@ -4228,7 +4228,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アプリの言語"
+            "value": "使用言語"
           }
         },
         "ko": {
@@ -4813,7 +4813,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューバーからSnapzyにアクセスします。非表示の場合は、もう一度Snapzyを開いて設定を表示します。"
+            "value": "メニューバーからSnapzyにアクセスできます。非表示の場合は、もう一度Snapzyを開いて設定を表示してください。"
           }
         },
         "ko": {
@@ -4878,7 +4878,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "メニューバーのアイコンを表示"
+            "value": "メニューバーにアイコンを表示"
           }
         },
         "ko": {
@@ -4943,7 +4943,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャの音声フィードバック"
+            "value": "撮影時に音声を再生する"
           }
         },
         "ko": {
@@ -5268,7 +5268,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ようこそチュートリアルを再度表示します"
+            "value": "チュートリアル画面を再度表示する"
           }
         },
         "ko": {
@@ -5463,7 +5463,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy がキャプチャを保存する場所"
+            "value": "Snapzy が撮影したものを保存する場所"
           }
         },
         "ko": {
@@ -6379,7 +6379,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャの保存場所"
+            "value": "撮影物の保存場所"
           }
         },
         "ko": {
@@ -6444,7 +6444,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべてのキャプチャファイルがゴミ箱に移動され、履歴から削除されます。この操作は Snapzy では取り消せません。"
+            "value": "すべての撮影物がゴミ箱に移動され、履歴から削除されます。この操作は Snapzy では取り消せません。"
           }
         },
         "ko": {
@@ -6704,7 +6704,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "すべてのキャプチャをゴミ箱に移動して履歴を消去"
+            "value": "すべての撮影物をゴミ箱に移動して履歴を消去"
           }
         },
         "ko": {
@@ -7094,7 +7094,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択した %d 件のキャプチャをゴミ箱に移動し、履歴から削除します。"
+            "value": "選択した %d 件の撮影物をゴミ箱に移動し、履歴から削除します。"
           }
         },
         "ko": {
@@ -7159,7 +7159,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択したキャプチャを削除しますか？"
+            "value": "選択した撮影物を削除しますか？"
           }
         },
         "ko": {
@@ -7224,7 +7224,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャを %d 件削除しました"
+            "value": "撮影物を %d 件削除しました"
           }
         },
         "ko": {
@@ -7614,7 +7614,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最近のキャプチャにすばやくアクセスするフローティングパネルを表示します"
+            "value": "最近の撮影物にすばやくアクセスするフローティングパネルを表示します"
           }
         },
         "ko": {
@@ -7939,7 +7939,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャをずっと保持"
+            "value": "撮影物をずっと保持"
           }
         },
         "ko": {
@@ -8004,7 +8004,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "履歴に保存するキャプチャの最大数"
+            "value": "履歴に保存する撮影物の最大数"
           }
         },
         "ko": {
@@ -9038,7 +9038,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ"
+            "value": "撮影"
           }
         },
         "ko": {
@@ -10651,7 +10651,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定フォルダへのアクセスが必要"
+            "value": "設定フォルダへのアクセスが必要です"
           }
         },
         "ko": {
@@ -10971,7 +10971,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "設定バックアップを書き出しました。"
+            "value": "設定のバックアップを書き出しました。"
           }
         },
         "ko": {
@@ -11675,7 +11675,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ へのアクセスを許可してください。config.toml がない場合は Snapzy がそこに作成します。"
+            "value": "%@ へのアクセスを許可してください。config.toml がない場合は Snapzy が作成します。"
           }
         },
         "ko": {
@@ -11739,7 +11739,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Snapzy 設定をデフォルトの dotfiles 場所に置くには %@ を選択してください。"
+            "value": "Snapzy 設定をデフォルトの dotfiles と同じ場所に置くには %@ を選択してください。"
           }
         },
         "ko": {
@@ -12637,7 +12637,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "URLスキームの統合"
+            "value": "URLスキーム"
           }
         },
         "ko": {
@@ -12702,7 +12702,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "snapzy:// URL による外部からの呼び出しを許可します"
+            "value": "snapzy:// URL による外部からの呼び出しを許可"
           }
         },
         "ko": {
@@ -12894,7 +12894,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "内蔵アイコンを選択するか、+ をクリックまたは PNG をドロップして独自のアイコンを追加します（18×18 推奨）。アイコンはメニューバーでモノクロテンプレートとして表示されます。"
+            "value": "内蔵アイコンを選択するか、+ をクリックまたは PNG ファイルをドロップして独自のアイコンを追加できます（18×18 推奨）。アイコンはメニューバーでモノクロで表示されます。"
           }
         },
         "ko": {
@@ -13086,7 +13086,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "PNG を読み込む…"
+            "value": "PNG ファイルを読み込む…"
           }
         },
         "ko": {
@@ -13214,7 +13214,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "選択したファイルを読み込めませんでした。有効な PNG 画像を選択してください。"
+            "value": "選択したファイルを読み込めませんでした。有効な PNG ファイルを選択してください。"
           }
         },
         "ko": {
@@ -13278,7 +13278,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "キャプチャ"
+            "value": "撮影"
           }
         },
         "ko": {
@@ -13342,7 +13342,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録画"
+            "value": "画面収録"
           }
         },
         "ko": {

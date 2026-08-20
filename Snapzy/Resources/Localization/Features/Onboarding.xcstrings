@@ -421,7 +421,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "⇧⌘3、⇧⌘4、⇧⌘5 を使用していつでもキャプチャできます"
+            "value" : "⇧⌘3、⇧⌘4、⇧⌘5 を使用していつでも撮影できます"
           }
         },
         "ko" : {
@@ -1331,7 +1331,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy キャプチャのフォルダを選択します (デフォルト: Desktop/Snapzy)"
+            "value" : "Snapzy の保存先フォルダを選択します (デフォルト: Desktop/Snapzy)"
           }
         },
         "ko" : {
@@ -1461,7 +1461,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ビルド ID には注意が必要です"
+            "value" : "ビルドの識別情報を確認してください"
           }
         },
         "ko" : {
@@ -1656,7 +1656,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "グローバルショートカットに使用"
+            "value" : "グローバルショートカットに使用（任意）"
           }
         },
         "ko" : {
@@ -1721,7 +1721,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "音声の録音に使用"
+            "value" : "音声の録音に使用（任意）"
           }
         },
         "ko" : {
@@ -2111,7 +2111,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Snapzy はキャプチャ、オーディオ、通知、保存先の権限が必要です。"
+            "value" : "Snapzy は画面録画、オーディオ、通知、保存先の権限が必要です。"
           }
         },
         "ko" : {
@@ -4248,7 +4248,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "キャプチャに注釈を付けて編集する"
+            "value" : "撮影した画像に注釈を付けて編集する"
           }
         },
         "ko" : {
@@ -4313,7 +4313,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "領域または全画面のスクリーンショットをキャプチャ"
+            "value" : "領域または全画面のスクリーンショットを撮影"
           }
         },
         "ko" : {
@@ -5028,7 +5028,7 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "OCR の結果とキャプチャ通知に使用（任意）"
+            "value" : "OCR の結果と撮影通知に使用（任意）"
           }
         },
         "ko" : {

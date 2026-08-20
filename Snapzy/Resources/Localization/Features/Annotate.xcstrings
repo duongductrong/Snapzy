@@ -161,7 +161,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "森"
+            "value": "森林"
           }
         },
         "ko": {
@@ -291,7 +291,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "日没"
+            "value": "太陽"
           }
         },
         "ko": {
@@ -356,7 +356,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新しいプリセットを追加"
+            "value": "新しくプリセットを追加"
           }
         },
         "ko": {
@@ -1201,7 +1201,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アウトライン"
+            "value": "縁取り"
           }
         },
         "ko": {
@@ -1266,7 +1266,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "テーパード"
+            "value": "先細り"
           }
         },
         "ko": {
@@ -1981,7 +1981,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ぼかしタイプ"
+            "value": "モザイクの種類"
           }
         },
         "ko": {
@@ -2046,7 +2046,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ぼかし"
+            "value": "モザイク"
           }
         },
         "ko": {
@@ -2176,7 +2176,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フロスト"
+            "value": "すりガラス風"
           }
         },
         "ko": {
@@ -2241,7 +2241,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ソフト"
+            "value": "やわらか"
           }
         },
         "ko": {
@@ -2371,7 +2371,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "または、スクリーンショットをキャプチャして注釈を付けます"
+            "value": "または、スクリーンショットを撮影して注釈を付けます"
           }
         },
         "ko": {
@@ -2501,7 +2501,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Annotate がクリップボード内の画像を見つけました。キャンバスに読み込みますか？"
+            "value": "注釈ツールがクリップボード内に画像を見つけました。キャンバスに読み込みますか？"
           }
         },
         "ko": {
@@ -2696,7 +2696,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クラウドが構成されていません"
+            "value": "クラウドが設定されていません"
           }
         },
         "ko": {
@@ -3996,7 +3996,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フィット (%@)"
+            "value": "合わせる (%@)"
           }
         },
         "ko": {
@@ -5361,7 +5361,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "新しいAnnotateウィンドウ"
+            "value": "新しい注釈ウィンドウ"
           }
         },
         "ko": {
@@ -6661,7 +6661,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "背景、パディング、シャドウ、コーナーをリセット"
+            "value": "背景、余白、影、角の丸みをリセット"
           }
         },
         "ko": {
@@ -7571,7 +7571,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ストレート"
+            "value": "直線"
           }
         },
         "ko": {
@@ -8481,7 +8481,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "塗りつぶされた長方形"
+            "value": "塗りつぶし長方形"
           }
         },
         "ko": {
@@ -9131,7 +9131,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ウォーターマーク"
+            "value": "透かし"
           }
         },
         "ko": {
@@ -10236,7 +10236,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単体"
+            "value": "単一"
           }
         },
         "ko": {
@@ -10301,7 +10301,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "タイル"
+            "value": "タイル状に配置"
           }
         },
         "ko": {
@@ -10561,7 +10561,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "エッジにスナップ"
+            "value": "端にスナップ"
           }
         },
         "ko": {
@@ -10951,7 +10951,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コンテンツに自動クロップ"
+            "value": "コンテンツに合わせて自動で切り抜き"
           }
         },
         "ko": {
@@ -11016,7 +11016,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クロップ対象のコンテンツが検出されませんでした"
+            "value": "切り抜き対象のコンテンツが検出されませんでした"
           }
         },
         "ko": {

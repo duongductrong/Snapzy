@@ -161,7 +161,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "GIF ファイルをファイナライズできませんでした"
+            "value": "GIF ファイルの最終処理に失敗しました"
           }
         },
         "ko": {
@@ -226,7 +226,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "サイズ変更された GIF をファイナライズできませんでした"
+            "value": "サイズ変更した GIF の最終処理に失敗しました"
           }
         },
         "ko": {
@@ -291,7 +291,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "無効または空のビデオファイル"
+            "value": "無効または空の動画ファイル"
           }
         },
         "ko": {
@@ -356,7 +356,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオからフレームを抽出できませんでした"
+            "value": "動画からフレームを抽出できませんでした"
           }
         },
         "ko": {
@@ -1396,7 +1396,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "マイクオプション"
+            "value": "マイク設定"
           }
         },
         "ko": {
@@ -2371,7 +2371,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オーディオ"
+            "value": "音声"
           }
         },
         "ko": {
@@ -2501,7 +2501,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "スクリーンショットをキャプチャ"
+            "value": "スクリーンショットを撮影"
           }
         },
         "ko": {
@@ -2891,7 +2891,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ハイライトクリック"
+            "value": "クリックを強調表示"
           }
         },
         "ko": {
@@ -3346,7 +3346,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオ"
+            "value": "動画"
           }
         },
         "ko": {
@@ -3931,7 +3931,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録画を一時停止中"
+            "value": "録画を一時停止しています"
           }
         },
         "ko": {
@@ -4581,7 +4581,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "録画を停止 - 時間: %@"
+            "value": "録画を停止（経過時間: %@）"
           }
         },
         "ko": {
@@ -4776,7 +4776,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "システムオーディオ"
+            "value": "システム音声"
           }
         },
         "ko": {
@@ -5036,7 +5036,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "マイクライター入力を追加できません"
+            "value": "マイクの書き込み入力を追加できません"
           }
         },
         "ko": {
@@ -5101,7 +5101,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "システムオーディオライター入力を追加できません"
+            "value": "システム音声の書き込み入力を追加できません"
           }
         },
         "ko": {
@@ -5166,7 +5166,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ビデオライター入力を追加できません"
+            "value": "映像の書き込み入力を追加できません"
           }
         },
         "ko": {

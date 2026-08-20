@@ -31,7 +31,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "アクティブウィンドウをキャプチャ"
+            "value": "アクティブウィンドウを撮影"
           }
         },
         "ko": {
@@ -291,7 +291,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "同じ領域を再キャプチャ"
+            "value": "同じ領域を再撮影"
           }
         },
         "ko": {
@@ -421,7 +421,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "被写体をキャプチャ"
+            "value": "被写体を撮影"
           }
         },
         "ko": {
@@ -486,7 +486,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "テキストのキャプチャ (OCR)"
+            "value": "テキストを抽出 (OCR)"
           }
         },
         "ko": {
@@ -2046,7 +2046,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オーディオ"
+            "value": "音声"
           }
         },
         "ko": {
@@ -2696,7 +2696,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "コーナー"
+            "value": "角"
           }
         },
         "ko": {
@@ -3996,7 +3996,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "フォーマット"
+            "value": "形式"
           }
         },
         "ko": {
@@ -4386,7 +4386,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "インセット"
+            "value": "内側の余白"
           }
         },
         "ko": {
@@ -5426,7 +5426,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "システム設定を開きます"
+            "value": "システム設定を開く"
           }
         },
         "ko": {
@@ -5491,7 +5491,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "オリジナル"
+            "value": "元"
           }
         },
         "ko": {
@@ -5621,7 +5621,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "パディング"
+            "value": "余白"
           }
         },
         "ko": {
@@ -6986,7 +6986,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ステータス"
+            "value": "状態"
           }
         },
         "ko": {
@@ -7051,7 +7051,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "線幅"
+            "value": "線の幅"
           }
         },
         "ko": {
