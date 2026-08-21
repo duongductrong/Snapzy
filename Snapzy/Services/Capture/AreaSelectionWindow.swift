@@ -1763,15 +1763,34 @@ final class AreaSelectionController: NSObject {
       revealLivePassthroughDimIfNeeded()
       switch interactionMode {
       case .manualRegion:
-        // Same path the global drag monitors use: global coordinates, works across displays.
-        updateManualSelection(to: screenPoint)
+        if manualSelectionStartPoint != nil {
+          // Already a committed drag — same path the global drag monitors use: global
+          // coordinates, works across displays.
+          updateManualSelection(to: screenPoint)
+        } else {
+          // No drag committed yet: with window/element auto-detection on, `mouseDown` may
+          // have parked this as a pending click (`pendingWindowDetectionStartPoint`) instead
+          // of starting a selection, so `manualSelectionStartPoint` is still nil and
+          // `updateManualSelection` would silently no-op. Route to the source overlay, which
+          // tracks that pending state and promotes it to a real drag once the pointer clears
+          // the click/drag threshold.
+          window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint)
+        }
       case .applicationWindow:
         window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint)
       }
     case .leftMouseUp:
       switch interactionMode {
       case .manualRegion:
-        endManualSelection(at: screenPoint)
+        if manualSelectionStartPoint != nil {
+          endManualSelection(at: screenPoint)
+        } else {
+          // Mirrors the `leftMouseDragged` case above: no drag ever committed, so resolve the
+          // release as a click on whatever the source overlay was hovering (a window, or with
+          // element detection on, a finer AX element) instead of letting `endManualSelection`
+          // no-op the release into nothing.
+          window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint)
+        }
       case .applicationWindow:
         window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint)
       }
@@ -1781,6 +1800,16 @@ final class AreaSelectionController: NSObject {
       break
     }
   }
+
+  #if DEBUG
+    /// Test-only mirror of `eventTapDidReceiveButton`, for exercising `handleLivePassthroughButton`'s
+    /// dispatch without a real (Accessibility-gated) event tap running — forces
+    /// `isLivePassthroughInputActive` on for the call.
+    func testHandleLivePassthroughButton(_ kind: CaptureButtonEvent, at screenPoint: CGPoint) {
+      isLivePassthroughInputActive = true
+      handleLivePassthroughButton(kind, at: screenPoint)
+    }
+  #endif
 
   /// Route a consumed key. Esc cancels via the same teardown funnel as right-click.
   /// Arrows/Return stay no-ops: the legacy overlay has no nudge/confirm key handling
