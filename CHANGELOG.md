@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.3] - 2026-08-21
+
+### Bug Fixes
+-  Fixed Pin DateFormatter to Gregorian locale for filename tokens (#486) (1bacf958)
+
+### Contributors
+- @YuriNachos
+- @github-actions[bot]
+
 ## [1.32.0-beta.2] - 2026-08-20
 
 ### Bug Fixes
