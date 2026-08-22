@@ -2,8 +2,8 @@
 //  AreaSelectionOverlayTests.swift
 //  SnapzyTests
 //
-//  Remaining overlay tests: coordinates indicator visibility and
-//  application-window interaction mode.
+//  Remaining overlay tests: coordinates indicator visibility, dimension label
+//  presentation, and application-window interaction mode.
 //
 
 import XCTest
@@ -97,23 +97,168 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
   }
 
   /// Once the drag produces a non-empty selection rect, the dimensions label owns the size
-  /// indicator layers — a passive refresh (e.g. layout pass) must not bring the coordinate
-  /// label back over it.
-  func testCoordinateIndicator_staysHiddenWhileSelectionRectVisible() {
-    // GIVEN: an in-progress drag with a non-empty selection rect
+  /// indicator layers — a passive refresh must keep that pill visible and must not swap back
+  /// to the two-line coordinate label.
+  func testDimensionIndicator_survivesLayoutPassWhileSelectionRectVisible() {
     overlayView.setSelectionEnabled(true)
     overlayView.setInteractionMode(.manualRegion, resetSelection: false)
-    overlayView.resetSelection()
+    movePointer(to: CGPoint(x: 400, y: 300))
     overlayView.renderManualSelection(
       screenRect: CGRect(x: 10, y: 10, width: 200, height: 100),
       currentScreenPoint: nil
     )
 
-    // WHEN: a passive re-evaluation happens (layout pass on the overlay)
     overlayView.layout()
 
-    // THEN: the coordinate indicator is not restored over the active selection
-    XCTAssertTrue(overlayView.testSizeIndicatorTextLayer.isHidden, "Coordinate indicator must not reappear while a sized selection rect is visible")
+    XCTAssertEqual(overlayView.testSizeIndicatorTextLayer.string as? String, "200 × 100")
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertEqual(
+      overlayView.testSizeIndicatorBackgroundLayer.backgroundColor,
+      CoordinateBubbleStyle.dimensionBackgroundColor.cgColor
+    )
+  }
+
+  func testDimensionIndicator_survivesLayoutPassInHostedWindow() throws {
+    try skipIfRunningInCI("Requires a visible host window which can fail on headless CI runners")
+
+    let hostWindowFrame = CGRect(x: 100, y: 100, width: 800, height: 600)
+    let hostWindow = NSWindow(
+      contentRect: hostWindowFrame,
+      styleMask: .borderless,
+      backing: .buffered,
+      defer: false
+    )
+    hostWindow.contentView = overlayView
+    hostWindow.setIsVisible(true)
+    defer {
+      hostWindow.contentView = nil
+      hostWindow.setIsVisible(false)
+    }
+
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+
+    let localPointer = CGPoint(x: 400, y: 300)
+    movePointer(to: localPointer)
+    let screenPointer = hostWindow.convertPoint(toScreen: localPointer)
+    let screenRect = CGRect(
+      x: hostWindowFrame.minX + 10,
+      y: hostWindowFrame.minY + 10,
+      width: 200,
+      height: 100
+    )
+
+    overlayView.renderManualSelection(screenRect: screenRect, currentScreenPoint: screenPointer)
+    overlayView.layout()
+
+    XCTAssertEqual(overlayView.testSizeIndicatorTextLayer.string as? String, "200 × 100")
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertEqual(
+      overlayView.testSizeIndicatorBackgroundLayer.backgroundColor,
+      CoordinateBubbleStyle.dimensionBackgroundColor.cgColor
+    )
+  }
+
+  func testDimensionIndicator_showsReadableSingleLineSizeAtSelectionCorner() {
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    movePointer(to: CGPoint(x: 400, y: 300))
+    overlayView.renderManualSelection(
+      screenRect: CGRect(x: 10, y: 10, width: 640, height: 220),
+      currentScreenPoint: nil
+    )
+
+    let text = overlayView.testSizeIndicatorTextLayer.string as? String
+    XCTAssertEqual(text, "640 × 220")
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertFalse(overlayView.testSizeIndicatorBackgroundLayer.isHidden)
+    XCTAssertEqual(
+      overlayView.testSizeIndicatorBackgroundLayer.backgroundColor,
+      CoordinateBubbleStyle.dimensionBackgroundColor.cgColor
+    )
+
+    let labelFrame = overlayView.testSizeIndicatorTextLayer.frame
+    let selectionRect = CGRect(x: 10, y: 10, width: 640, height: 220)
+    XCTAssertGreaterThanOrEqual(labelFrame.minX, selectionRect.maxX - 4)
+    XCTAssertGreaterThanOrEqual(labelFrame.minY, selectionRect.minY - 4)
+  }
+
+  func testDimensionIndicator_hiddenWhenPointerOutsideOverlay() {
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    movePointer(to: CGPoint(x: 400, y: 300))
+    overlayView.renderManualSelection(
+      screenRect: CGRect(x: 10, y: 10, width: 200, height: 100),
+      currentScreenPoint: nil
+    )
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+
+    movePointer(to: CGPoint(x: -20, y: 300))
+    overlayView.renderManualSelection(
+      screenRect: CGRect(x: 10, y: 10, width: 200, height: 100),
+      currentScreenPoint: nil
+    )
+
+    XCTAssertTrue(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertTrue(overlayView.testSizeIndicatorBackgroundLayer.isHidden)
+  }
+
+  func testDimensionIndicator_fallsBackInsideSelectionWhenNearBottomRightEdge() {
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    movePointer(to: CGPoint(x: 760, y: 40))
+    overlayView.renderManualSelection(
+      screenRect: CGRect(x: 720, y: 10, width: 70, height: 40),
+      currentScreenPoint: nil
+    )
+
+    let labelFrame = overlayView.testSizeIndicatorTextLayer.frame
+    let selectionRect = CGRect(x: 720, y: 10, width: 70, height: 40)
+    XCTAssertLessThanOrEqual(labelFrame.maxX, overlayView.bounds.maxX)
+    XCTAssertLessThanOrEqual(labelFrame.maxY, overlayView.bounds.maxY)
+    XCTAssertGreaterThanOrEqual(labelFrame.minX, selectionRect.minX)
+    XCTAssertLessThanOrEqual(labelFrame.maxX, selectionRect.maxX)
+  }
+
+  func testCoordinateIndicator_restoresTransparentStyleAfterSelectionEnds() {
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    movePointer(to: CGPoint(x: 120, y: 120))
+    overlayView.renderManualSelection(
+      screenRect: CGRect(x: 10, y: 10, width: 200, height: 100),
+      currentScreenPoint: nil
+    )
+    XCTAssertEqual(
+      overlayView.testSizeIndicatorBackgroundLayer.backgroundColor,
+      CoordinateBubbleStyle.dimensionBackgroundColor.cgColor
+    )
+
+    overlayView.renderManualSelection(screenRect: nil, currentScreenPoint: nil)
+
+    XCTAssertFalse(overlayView.testSizeIndicatorTextLayer.isHidden)
+    XCTAssertEqual(
+      overlayView.testSizeIndicatorBackgroundLayer.backgroundColor,
+      CoordinateBubbleStyle.backgroundColor.cgColor
+    )
+    XCTAssertEqual(overlayView.testSizeIndicatorTextLayer.string as? String, "120\n480")
+  }
+
+  private func movePointer(to point: CGPoint) {
+    guard let event = NSEvent.mouseEvent(
+      with: .mouseMoved,
+      location: point,
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      eventNumber: 0,
+      clickCount: 0,
+      pressure: 0
+    ) else {
+      XCTFail("Failed to synthesize mouse-moved event")
+      return
+    }
+    overlayView.mouseMoved(with: event)
   }
 
   func testApplicationWindowMode_hasNoManualDragInProgress() {

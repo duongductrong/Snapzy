@@ -24,4 +24,13 @@ enum CoordinateBubbleStyle {
   static let shadowOffset = CGSize(width: 0.5, height: -0.5)
   static let shadowRadius: CGFloat = 0.1
   static let shadowOpacity: Float = 1.0
+
+  /// Readable pill for selection dimensions. Separate from the coordinate
+  /// indicator so the crosshair/cursor styling stays unchanged.
+  static let dimensionFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+  static let dimensionTextColor = NSColor.white
+  static let dimensionBackgroundColor = NSColor.black.withAlphaComponent(0.72)
+  static let dimensionCornerRadius: CGFloat = 6
+  static let dimensionHorizontalInset: CGFloat = 8
+  static let dimensionVerticalInset: CGFloat = 4
 }

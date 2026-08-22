@@ -2604,6 +2604,8 @@ final class AreaSelectionOverlayView: NSView {
   private var sizeIndicatorTextLayer: CATextLayer!
   private var lastSizeIndicatorText: String?
   private var lastSizeIndicatorTextSize: CGSize = .zero
+  private var lastVisibleSelectionLocalRect: CGRect?
+  private var lastVisibleSelectionMeasuredSize: CGSize?
   private var modeHintBackgroundLayer: CALayer!
   private var modeHintTextLayer: CATextLayer!
 
@@ -3440,13 +3442,40 @@ final class AreaSelectionOverlayView: NSView {
     return currentMousePosition
   }
 
-  /// Re-evaluates the coordinate indicator after a non-mouse event (layout pass, bounds
-  /// change, selection re-render). `updateCoordinateIndicator(at:)` applies its own guards
-  /// (mouse-over, interaction mode, visible selection rect), so this only restores the label
-  /// where it belongs on screen and keeps it hidden everywhere else — including during a
-  /// drag, where the dimensions label owns the size indicator layers.
+  /// Re-evaluates the size/coordinate indicator after a non-mouse event (layout pass, bounds
+  /// change, selection re-render). During a drag the dimensions label owns the size indicator
+  /// layers; passive updates must refresh that label instead of hiding it via the coordinate path.
   private func refreshCoordinateIndicatorAfterPassiveUpdate() {
+    if hasVisibleSelectionRect {
+      refreshDimensionIndicatorAfterPassiveUpdate()
+      return
+    }
     updateCoordinateIndicator(at: currentLocalMousePoint())
+  }
+
+  private func refreshDimensionIndicatorAfterPassiveUpdate() {
+    guard let localRect = lastVisibleSelectionLocalRect else { return }
+    guard showsDimensionIndicator(forLocalPointer: currentLocalMousePoint()) else {
+      hideSizeIndicator()
+      return
+    }
+    updateSizeIndicator(for: localRect, measuredSize: lastVisibleSelectionMeasuredSize)
+  }
+
+  /// Only the overlay whose bounds contain the active pointer shows the dimensions pill.
+  private func showsDimensionIndicator(forLocalPointer localCurrentPoint: CGPoint?) -> Bool {
+    let pointer = resolvedLocalPointerForDimensionIndicator(from: localCurrentPoint)
+    guard let pointer else { return false }
+    return bounds.contains(pointer)
+  }
+
+  private func resolvedLocalPointerForDimensionIndicator(from localCurrentPoint: CGPoint?) -> CGPoint? {
+    if let localCurrentPoint {
+      return localCurrentPoint
+    }
+    // Window-less unit tests drive the overlay directly and never supply a screen point.
+    guard window == nil else { return nil }
+    return currentMousePosition
   }
 
   /// Update bounds when screen configuration changes
@@ -3580,6 +3609,49 @@ final class AreaSelectionOverlayView: NSView {
     ]
   }
 
+  private var dimensionTextAttributes: [NSAttributedString.Key: Any] {
+    [
+      .font: CoordinateBubbleStyle.dimensionFont,
+      .foregroundColor: CoordinateBubbleStyle.dimensionTextColor,
+    ]
+  }
+
+  private func applyDimensionIndicatorPresentation() {
+    sizeIndicatorBackgroundLayer.backgroundColor = CoordinateBubbleStyle.dimensionBackgroundColor.cgColor
+    sizeIndicatorBackgroundLayer.cornerRadius = CoordinateBubbleStyle.dimensionCornerRadius
+    sizeIndicatorTextLayer.shadowOpacity = 0
+  }
+
+  private func applyCoordinateIndicatorPresentation() {
+    sizeIndicatorBackgroundLayer.backgroundColor = CoordinateBubbleStyle.backgroundColor.cgColor
+    sizeIndicatorBackgroundLayer.cornerRadius = CoordinateBubbleStyle.cornerRadius
+    sizeIndicatorTextLayer.shadowOpacity = CoordinateBubbleStyle.shadowOpacity
+  }
+
+  /// Bottom-right of the selection rect.
+  private func dimensionLabelRect(for selectionRect: CGRect, textSize: CGSize) -> CGRect {
+    let padding: CGFloat = 8
+    var origin = CGPoint(
+      x: selectionRect.maxX + padding,
+      y: selectionRect.minY - textSize.height - padding
+    )
+
+    if origin.y < bounds.minY {
+      origin.y = selectionRect.minY + padding
+    }
+    if origin.x + textSize.width > bounds.maxX {
+      origin.x = selectionRect.maxX - textSize.width - padding
+    }
+    if origin.x < bounds.minX {
+      origin.x = bounds.minX + padding
+    }
+    if origin.y + textSize.height > bounds.maxY {
+      origin.y = bounds.maxY - textSize.height - padding
+    }
+
+    return CGRect(origin: origin, size: textSize)
+  }
+
   private func multiLineTextSize(_ text: String, attributes: [NSAttributedString.Key: Any]) -> CGSize {
     let lines = text.components(separatedBy: "\n")
     let maxWidth = lines.map { $0.size(withAttributes: attributes).width }.max() ?? 0
@@ -3623,6 +3695,8 @@ final class AreaSelectionOverlayView: NSView {
     sizeIndicatorBackgroundLayer.isHidden = true
     sizeIndicatorTextLayer.isHidden = true
     lastSizeIndicatorText = nil
+    lastVisibleSelectionLocalRect = nil
+    lastVisibleSelectionMeasuredSize = nil
   }
 
   func hideMagnifier() {
@@ -3710,42 +3784,38 @@ final class AreaSelectionOverlayView: NSView {
 
   private func updateSizeIndicator(for rect: CGRect, measuredSize: CGSize? = nil) {
     let displayedSize = measuredSize ?? rect.size
-    let sizeText = "\(Int(displayedSize.width))\n\(Int(displayedSize.height))"
-    let attributes = coordinateTextAttributes
+    let sizeText = "\(Int(displayedSize.width)) × \(Int(displayedSize.height))"
+    let attributes = dimensionTextAttributes
     let textSize: CGSize
     // Assigning `CATextLayer.string` re-rasterizes the text even when unchanged, and
     // this runs per pointer tick — so measure and re-assign only on actual changes.
     let textChanged = sizeText != lastSizeIndicatorText
     if textChanged {
-      textSize = multiLineTextSize(sizeText, attributes: attributes)
+      textSize = sizeText.size(withAttributes: attributes)
       lastSizeIndicatorText = sizeText
       lastSizeIndicatorTextSize = textSize
     } else {
       textSize = lastSizeIndicatorTextSize
     }
 
-    let point = currentMousePosition
-    let offset: CGFloat = 12
-    var textRect = CGRect(
-      x: point.x + offset,
-      y: point.y - textSize.height - 4,
-      width: textSize.width,
-      height: textSize.height
-    )
+    lastVisibleSelectionLocalRect = rect
+    lastVisibleSelectionMeasuredSize = displayedSize
 
-    if textRect.maxX > bounds.maxX {
-      textRect.origin.x = point.x - textSize.width - offset
-    }
-    if textRect.minY < bounds.minY {
-      textRect.origin.y = point.y + offset
-    }
+    let textRect = dimensionLabelRect(for: rect, textSize: textSize)
 
     updateTextLayerScales()
-    sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
+    applyDimensionIndicatorPresentation()
+    sizeIndicatorBackgroundLayer.frame = textRect.insetBy(
+      dx: -CoordinateBubbleStyle.dimensionHorizontalInset,
+      dy: -CoordinateBubbleStyle.dimensionVerticalInset
+    )
     sizeIndicatorBackgroundLayer.isHidden = false
 
     if textChanged {
       sizeIndicatorTextLayer.string = sizeText
+      sizeIndicatorTextLayer.font = CoordinateBubbleStyle.dimensionFont as CTFont
+      sizeIndicatorTextLayer.fontSize = CoordinateBubbleStyle.dimensionFont.pointSize
+      sizeIndicatorTextLayer.foregroundColor = CoordinateBubbleStyle.dimensionTextColor.cgColor
     }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
@@ -3757,8 +3827,11 @@ final class AreaSelectionOverlayView: NSView {
     // which has no indicator of its own and relies on that panel exclusively. Showing this
     // indicator too would just duplicate it, so this one stands down and leaves the panel as
     // the single source once the magnifier takes over.
-    guard isMouseOver, interactionMode == .manualRegion, !hasVisibleSelectionRect,
-          magnifier.zoom <= 1.0 else {
+    if hasVisibleSelectionRect {
+      return
+    }
+
+    guard isMouseOver, interactionMode == .manualRegion, magnifier.zoom <= 1.0 else {
       hideSizeIndicator()
       return
     }
@@ -3795,11 +3868,18 @@ final class AreaSelectionOverlayView: NSView {
     }
 
     updateTextLayerScales()
-    sizeIndicatorBackgroundLayer.frame = textRect.insetBy(dx: -4, dy: -2)
+    applyCoordinateIndicatorPresentation()
+    sizeIndicatorBackgroundLayer.frame = textRect.insetBy(
+      dx: -CoordinateBubbleStyle.horizontalInset,
+      dy: -CoordinateBubbleStyle.verticalInset
+    )
     sizeIndicatorBackgroundLayer.isHidden = false
 
     if textChanged {
       sizeIndicatorTextLayer.string = text
+      sizeIndicatorTextLayer.font = coordinateIndicatorFont as CTFont
+      sizeIndicatorTextLayer.fontSize = coordinateIndicatorFont.pointSize
+      sizeIndicatorTextLayer.foregroundColor = CoordinateBubbleStyle.textColor.cgColor
     }
     sizeIndicatorTextLayer.frame = textRect
     sizeIndicatorTextLayer.isHidden = false
@@ -3912,7 +3992,6 @@ final class AreaSelectionOverlayView: NSView {
     }
 
     let localRect = convertToLocalRect(screenRect).intersection(bounds)
-    let showsCurrentPointer = localCurrentPoint.map { bounds.contains($0) } == true
 
     CATransaction.begin()
     CATransaction.setDisableActions(true)
@@ -3938,7 +4017,7 @@ final class AreaSelectionOverlayView: NSView {
         updateInsideOverlayAppearance(for: localRect)
         insideSelectionOverlayLayer.isHidden = false
       }
-      if showsCurrentPointer {
+      if showsDimensionIndicator(forLocalPointer: localCurrentPoint) {
         updateSizeIndicator(for: localRect, measuredSize: screenRect.size)
       } else {
         hideSizeIndicator()
