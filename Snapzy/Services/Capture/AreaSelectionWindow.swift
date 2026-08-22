@@ -3455,7 +3455,10 @@ final class AreaSelectionOverlayView: NSView {
 
   private func refreshDimensionIndicatorAfterPassiveUpdate() {
     guard let localRect = lastVisibleSelectionLocalRect else { return }
-    guard showsDimensionIndicator(forLocalPointer: currentLocalMousePoint()) else {
+    // During an active drag the tap/window path keeps `currentMousePosition` fresh;
+    // `currentLocalMousePoint()` reads `NSEvent.mouseLocation`, which unit/CI hosts
+    // do not update when tests synthesize mouse-moved events.
+    guard showsDimensionIndicator(forLocalPointer: currentMousePosition) else {
       hideSizeIndicator()
       return
     }
