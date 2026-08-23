@@ -252,7 +252,9 @@ final class RecordingToolbarWindow: NSWindow {
   private func configureWindow() {
     isOpaque = false
     backgroundColor = .clear
-    sharingType = .none
+    // Keep pre-record controls visible to remote-display clients. The recording stream
+    // excludes this window ID explicitly.
+    sharingType = .readOnly
     // Use popUpMenu level to ensure toolbar is above the region overlay (.floating)
     level = .popUpMenu
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
