@@ -7545,6 +7545,11 @@ nonisolated enum L10n {
       defaultValue: "Capture timed out. Please try again.",
       comment: "Error shown when the capture stream does not deliver a frame within the time limit"
     )
+    static let captureSubjectPreview = string(
+      "screen-capture.capture-subject-preview",
+      defaultValue: "Capture subject",
+      comment: "Accessibility label for the Capture Subject preview camera button"
+    )
     nonisolated static let selectedWindowUnavailable = string(
       "screen-capture.selected-window-unavailable",
       defaultValue: "The selected window is no longer available",
