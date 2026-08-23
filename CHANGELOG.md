@@ -4,6 +4,17 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.4] - 2026-08-23
+
+### Bug Fixes
+-  Fixed render canvas shadow in screenshot exports (#510) (4fa04df8)
+-  keep space-to-move selection locked to the pointer (#504) (cd39ebee)
+
+### Contributors
+- @RaviMaru20
+- @github-actions[bot]
+- @vxirau
+
 ## [1.32.0-beta.3] - 2026-08-21
 
 ### Bug Fixes
