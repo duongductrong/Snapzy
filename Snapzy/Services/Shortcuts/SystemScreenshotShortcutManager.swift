@@ -99,16 +99,7 @@ final class SystemScreenshotShortcutManager {
   /// which requires the shared-preference.read-only entitlement in sandbox.
   func hasConflictingSystemShortcuts() -> Bool {
     if let hotkeys = readHotkeys() {
-      for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
-        guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
-        guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
-
-        if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty
-             || !otherKnownConflictNames(for: snapzyShortcut).isEmpty {
-          return true
-        }
-      }
-      return false
+      return liveConflictDetected(in: hotkeys)
     }
 
     // Live pref read unavailable — fall back to known default macOS shortcuts so the most
@@ -129,16 +120,7 @@ final class SystemScreenshotShortcutManager {
   /// conflicts (those can be false positives when the user has disabled the system binding).
   func hasLiveSystemShortcutConflict() -> Bool {
     guard let hotkeys = readHotkeys() else { return false }
-    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
-      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
-      guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
-
-      if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty
-           || !otherKnownConflictNames(for: snapzyShortcut).isEmpty {
-        return true
-      }
-    }
-    return false
+    return liveConflictDetected(in: hotkeys)
   }
 
   /// Return human-readable system shortcut names that currently conflict with a proposed Snapzy shortcut.
@@ -374,6 +356,23 @@ final class SystemScreenshotShortcutManager {
     default:
       return []
     }
+  }
+
+  /// Shared live-path scan: `true` when any enabled, conflict-relevant Snapzy shortcut
+  /// collides with a detected system shortcut. Single source of truth for the live branch
+  /// so future changes to conflict semantics don't silently drift between the two callers
+  /// (`hasConflictingSystemShortcuts` and `hasLiveSystemShortcutConflict`).
+  private func liveConflictDetected(in hotkeys: [String: Any]) -> Bool {
+    for kind in GlobalShortcutKind.allCases where kind.isSystemConflictRelevant {
+      guard KeyboardShortcutManager.shared.isShortcutEnabled(for: kind) else { continue }
+      guard let snapzyShortcut = KeyboardShortcutManager.shared.shortcut(for: kind) else { continue }
+
+      if !matchingSystemHotkeys(for: kind, shortcut: snapzyShortcut, in: hotkeys).isEmpty
+           || !otherKnownConflictNames(for: snapzyShortcut).isEmpty {
+        return true
+      }
+    }
+    return false
   }
 
   /// Names of well-known, always-on macOS system shortcuts (e.g. Spotlight ⌘Space) that
