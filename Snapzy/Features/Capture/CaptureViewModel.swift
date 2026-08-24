@@ -2413,13 +2413,18 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
           AreaSelectionController.shared.cancelSelection()
 
-          let progressToast = AppToastManager.shared.show(
-            message: L10n.OCR.capturingContent,
-            style: .info,
-            duration: nil,
-            variant: .compact,
-            iconMode: .spinner
-          )
+          // The menu-bar spinner is the primary progress surface, but `setProcessing` is a no-op
+          // without a status item, so it reports nothing when the icon is hidden. Fall back to a
+          // toast only in that case, never alongside it.
+          let progressToast = AppStatusBarController.shared.isMenuBarIconVisible
+            ? nil
+            : AppToastManager.shared.show(
+              message: L10n.OCR.capturingContent,
+              style: .info,
+              duration: nil,
+              variant: .compact,
+              iconMode: .spinner
+            )
 
           Task { @MainActor in
             var progressToastResolved = false
