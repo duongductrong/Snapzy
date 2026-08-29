@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.5] - 2026-08-29
+
+### Features
+-  Reduce friction in window/element capture — auto-detect under cursor, layered smart element detection (#472) (a30a9a02)
+
+### Contributors
+- @github-actions[bot]
+- @lcopilot
+
 ## [1.32.0-beta.4] - 2026-08-23
 
 ### Bug Fixes
