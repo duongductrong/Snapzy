@@ -29,6 +29,8 @@ final class CaptureSubjectController: NSObject {
   private var dragOrigin: CGPoint?
   private var isDragging = false
 
+  var cursorSetEffect: (NSCursor) -> Void = { $0.set() }
+
   private static let dragThreshold: CGFloat = 4
 
   var isSessionActive: Bool { isActive }
@@ -58,7 +60,7 @@ final class CaptureSubjectController: NSObject {
     observeScreenChanges()
     installEscapeMonitors()
     showWindows()
-    NSCursor.vectorScreenshotCrosshairHighContrast.set()
+    cursorSetEffect(.vectorScreenshotCrosshairHighContrast)
 
     DiagnosticLogger.shared.log(
       .info,
@@ -209,7 +211,7 @@ final class CaptureSubjectController: NSObject {
     sessionWindows.forEach { $0.orderFrontRegardless() }
     keyboardWindow?.makeKey()
     _ = keyboardWindow?.makeFirstResponder(nil)
-    NSCursor.vectorScreenshotCrosshairHighContrast.set()
+    cursorSetEffect(.vectorScreenshotCrosshairHighContrast)
 
     guard let captured else {
       return CaptureSubjectSnappedPreview(
@@ -241,7 +243,7 @@ final class CaptureSubjectController: NSObject {
       window.updatePreview(nil)
       window.updateDragRect(nil)
     }
-    NSCursor.vectorScreenshotCrosshairHighContrast.set()
+    cursorSetEffect(.vectorScreenshotCrosshairHighContrast)
   }
 
   private func commit(_ preview: CaptureSubjectSnappedPreview) {
@@ -273,10 +275,10 @@ final class CaptureSubjectController: NSObject {
     }
     isActive = false
     sourceContext = nil
-    NSCursor.arrow.set()
+    cursorSetEffect(.arrow)
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
       guard self?.isActive == false else { return }
-      NSCursor.arrow.set()
+      self?.cursorSetEffect(.arrow)
     }
   }
 

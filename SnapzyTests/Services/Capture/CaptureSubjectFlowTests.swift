@@ -13,12 +13,14 @@ import XCTest
 final class CaptureSubjectFlowTests: XCTestCase {
   func testCursor_usesHighContrastCrosshairAndRestoresArrowOnCancel() {
     let (controller, _, _, _) = makeCaptureSubjectController()
+    var cursors: [NSCursor] = []
+    controller.cursorSetEffect = { cursors.append($0) }
 
     controller.startCapture()
-    XCTAssertTrue(NSCursor.current === NSCursor.vectorScreenshotCrosshairHighContrast)
+    XCTAssertTrue(cursors.last === NSCursor.vectorScreenshotCrosshairHighContrast)
 
     controller.cancel()
-    XCTAssertTrue(NSCursor.current === NSCursor.arrow)
+    XCTAssertTrue(cursors.last === NSCursor.arrow)
   }
 
   func testDragRelease_locksPreviewWithoutCapturing() async throws {
