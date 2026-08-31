@@ -207,9 +207,12 @@ final class CaptureSubjectFlowTests: XCTestCase {
   }
 }
 
+// Xcode 26.2 can abort if XCTest releases these actor-isolated fakes outside a Swift task.
 @MainActor
 final class FakeCaptureSubjectPerformer: CaptureSubjectCapturePerforming {
   private(set) var capturedPreviews: [CaptureSubjectSnappedPreview] = []
+
+  nonisolated deinit {}
 
   func captureSubject(preview: CaptureSubjectSnappedPreview) async {
     capturedPreviews.append(preview)
@@ -218,6 +221,8 @@ final class FakeCaptureSubjectPerformer: CaptureSubjectCapturePerforming {
 
 @MainActor
 final class FakeCaptureSubjectPreviewCapturer: CaptureSubjectPreviewCapturing {
+  nonisolated deinit {}
+
   func capturePreview(of rect: CGRect) -> CaptureSubjectPreviewFrame? {
     CaptureSubjectPreviewFrame(
       rect: rect.integral,
@@ -247,6 +252,8 @@ final class FakeCaptureSubjectOverlayWindow: CaptureSubjectOverlayWindowProvidin
     self.frame = frame
   }
 
+  nonisolated deinit {}
+
   func setFrame(_ frameRect: NSRect, display flag: Bool) { frame = frameRect }
   func orderFrontRegardless() { orderFrontCount += 1 }
   func orderOut(_ sender: Any?) { orderOutCount += 1 }
@@ -271,6 +278,8 @@ final class FakeCaptureSubjectOverlayWindow: CaptureSubjectOverlayWindowProvidin
 @MainActor
 final class CaptureSubjectWindowBox {
   var windows: [FakeCaptureSubjectOverlayWindow] = []
+
+  nonisolated deinit {}
 }
 
 @MainActor
