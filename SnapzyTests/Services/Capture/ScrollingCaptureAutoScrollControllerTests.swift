@@ -11,7 +11,7 @@ import XCTest
 @MainActor
 final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
 
-  func testNoSecondStepStartsUntilPreviousCommitResolves() throws {
+  func testNoSecondStepStartsUntilPreviousCommitResolves() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try beginPostedStep(on: controller)
 
@@ -34,7 +34,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertTrue(controller.canBeginStep)
   }
 
-  func testSyntheticEventsInsideAStepDoNotCreateCommits() throws {
+  func testSyntheticEventsInsideAStepDoNotCreateCommits() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try beginPostedStep(on: controller)
 
@@ -46,7 +46,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertFalse(controller.noteCommitRequested(generation: 1, stepID: step.id))
   }
 
-  func testExactlyOneSettledCommitPerSuccessfulStep() throws {
+  func testExactlyOneSettledCommitPerSuccessfulStep() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try requestCommit(on: controller)
 
@@ -54,7 +54,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertEqual(controller.settledCommitCount, 1)
   }
 
-  func testFrameOlderThanFinalSyntheticEventIsNotEligible() throws {
+  func testFrameOlderThanFinalSyntheticEventIsNotEligible() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     _ = try beginPostedStep(on: controller, eventAt: 5.0)
 
@@ -62,7 +62,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertTrue(controller.isFrameEligible(capturedAt: 5.01, generation: 1))
   }
 
-  func testKnownStepExpectedDeltaUsesCurrentStepNotPreviousAccepted() throws {
+  func testKnownStepExpectedDeltaUsesCurrentStepNotPreviousAccepted() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try beginPostedStep(on: controller, regionHeight: 800)
 
@@ -80,7 +80,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     )
   }
 
-  func testFailedAlignmentCausesRetryRatherThanImmediateNextFullStep() throws {
+  func testFailedAlignmentCausesRetryRatherThanImmediateNextFullStep() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try requestCommit(on: controller)
 
@@ -96,7 +96,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertLessThan(retry.plan.postedDistancePoints, step.plan.postedDistancePoints)
   }
 
-  func testPointerLeavingAbortsUnsettledStepWithoutCommit() throws {
+  func testPointerLeavingAbortsUnsettledStepWithoutCommit() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     _ = try beginPostedStep(on: controller)
 
@@ -106,7 +106,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertEqual(controller.settledCommitCount, 0)
   }
 
-  func testCancelInvalidatesLateCommitResults() throws {
+  func testCancelInvalidatesLateCommitResults() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try requestCommit(on: controller)
 
@@ -121,7 +121,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertEqual(controller.phase, .idle)
   }
 
-  func testDoneWaitsForActiveStepAndDoesNotStartAnother() throws {
+  func testDoneWaitsForActiveStepAndDoesNotStartAnother() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try requestCommit(on: controller)
 
@@ -140,7 +140,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertFalse(controller.canBeginStep)
   }
 
-  func testBoundaryDetectionRequiresTwoObservations() throws {
+  func testBoundaryDetectionRequiresTwoObservations() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let first = try requestCommit(on: controller)
 
@@ -164,7 +164,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     )
   }
 
-  func testManualCommitLoopIsNotSuppressedWhileIdle() throws {
+  func testManualCommitLoopIsNotSuppressedWhileIdle() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     controller.start(generation: 1)
     XCTAssertFalse(controller.suppressesManualCommitLoop)
@@ -173,7 +173,7 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertTrue(controller.suppressesManualCommitLoop)
   }
 
-  func testRingRejectsFramesCapturedBeforeSyntheticEvent() {
+  func testRingRejectsFramesCapturedBeforeSyntheticEvent() async {
     let ring = ScrollingCaptureFrameRing(capacity: 8)
     guard let image = TestImageFactory.solidColor(width: 20, height: 20) else {
       XCTFail("Failed to create frame image")
