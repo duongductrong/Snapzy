@@ -480,11 +480,37 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
-        expectedSignedDeltaPixels: nil,
+        expectedSignedDeltaPixels: expectedSignedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .recovery
       )
       alignmentPath = .recoveryVision
+    }
+
+    if
+      let expectedDeltaPixels,
+      expectedDeltaPixels > 0,
+      let candidate = match,
+      stronglyContradictsKnownStep(
+        candidate,
+        expectedDeltaPixels: expectedDeltaPixels,
+        visionAlignmentEstimate: visionAlignmentEstimate
+      )
+    {
+      matchNotFoundCount += 1
+      return currentUpdate(
+        outcome: .ignoredAlignmentFailed,
+        includeMergedImage: renderMergedImage,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .alignmentFailed,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          confidence: matcherConfidence(for: candidate),
+          pixelScore: candidate.pixelScore,
+          totalScore: candidate.totalScore,
+          appendDeltaY: candidate.deltaY,
+          visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
+        )
+      )
     }
 
     if isLikelyDuplicateBoundary(
@@ -1002,7 +1028,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       centers.append(clamp(expectedDeltaPixels, to: broadRange))
     }
 
-    if let lastMatch {
+    if let lastMatch, lastMatchAgreesWithExpected(
+      lastMatchDelta: lastMatch.deltaY,
+      expectedDeltaPixels: expectedDeltaPixels
+    ) {
       centers.append(clamp(lastMatch.deltaY, to: broadRange))
     }
 
@@ -1264,7 +1293,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       }
     }
 
-    if searchMode == .guided, let lastMatch {
+    if searchMode == .guided, let lastMatch, lastMatchAgreesWithExpected(
+      lastMatchDelta: lastMatch.deltaY,
+      expectedDeltaPixels: expectedDeltaPixels
+    ) {
       penalty += deviationPenalty(candidate: deltaY, expected: lastMatch.deltaY, weight: 18)
 
       let largeLeapThreshold = max(lastMatch.deltaY * 2, lastMatch.deltaY + 160)
@@ -1299,6 +1331,38 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let baseline = max(1, expected)
     let deviation = Double(abs(candidate - expected)) / Double(baseline)
     return deviation * weight
+  }
+
+  private func lastMatchAgreesWithExpected(
+    lastMatchDelta: Int,
+    expectedDeltaPixels: Int?
+  ) -> Bool {
+    guard let expectedDeltaPixels, expectedDeltaPixels > 0 else { return true }
+    let tolerance = max(28, expectedDeltaPixels / 2)
+    return abs(lastMatchDelta - expectedDeltaPixels) <= tolerance
+  }
+
+  private func stronglyContradictsKnownStep(
+    _ match: Match,
+    expectedDeltaPixels: Int,
+    visionAlignmentEstimate: VisionAlignmentEstimate?
+  ) -> Bool {
+    let error = abs(match.deltaY - expectedDeltaPixels)
+    let tooLarge = error > max(48, Int(Double(expectedDeltaPixels) * 1.35))
+    let tooSmall = match.deltaY < max(18, expectedDeltaPixels / 2)
+    guard tooLarge || tooSmall else { return false }
+
+    let confidence = matcherConfidence(for: match)
+    let visionDelta = visionAlignmentEstimate?.deltaY ?? 0
+    let independentlyStrong =
+      confidence >= 0.88
+      && match.pixelScore < 6.5
+      && (visionAlignmentEstimate?.agreementCount ?? 0) >= 2
+      && visionDelta > 0
+      && abs(visionDelta - match.deltaY) <= max(24, expectedDeltaPixels / 4)
+      && error <= max(56, Int(Double(expectedDeltaPixels) * 0.65))
+
+    return !independentlyStrong
   }
 
   private func isAcceptable(

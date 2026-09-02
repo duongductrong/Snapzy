@@ -254,13 +254,49 @@ enum ScrollingCaptureConfiguration {
 
 enum ScrollingCaptureAutoScrollStitchAction: Equatable {
   case keepScrolling
+  case retryStep
   case stopScrolling
   case finishCapture
 }
 
+enum ScrollingCaptureAutoScrollPhase: Equatable {
+  case idle
+  case emittingBoundedStep
+  case waitingForSettle
+  case requestingCommit
+  case waitingForCommitResult
+  case decidingNextAction
+}
+
+enum ScrollingCaptureAutoScrollStopReason: Equatable {
+  case none
+  case userToggle
+  case finishRequested
+  case cancelRequested
+}
+
 enum ScrollingCaptureAutoScrollPolicy {
+  struct StepPlan: Equatable {
+    let tickCount: Int
+    let postedDistancePoints: CGFloat
+    let tickIntervalNanoseconds: UInt64
+    let settleNanoseconds: UInt64
+  }
+
   static let hoverPadding: CGFloat = 16
   static let alignmentFailureStopThreshold = 3
+  static let noMovementFinishThreshold = 2
+  static let minimumPostEventFrames = 2
+  static let wheelDeltaY: Int32 = -15
+  static let tickIntervalNanoseconds: UInt64 = 12_000_000
+  static let settleNanoseconds: UInt64 = 180_000_000
+  static let retrySettleNanoseconds: UInt64 = 260_000_000
+  static let pausedIntervalNanoseconds: UInt64 = 150_000_000
+  static let freshFrameTimeoutNanoseconds: UInt64 = 220_000_000
+  static let targetViewportFraction: CGFloat = 0.34
+  static let maxSafeViewportFraction: CGFloat = 0.42
+  static let minStepPoints: CGFloat = 56
+  static let maxStepPoints: CGFloat = 260
 
   static func canToggle(
     phase: ScrollingCapturePhase,
@@ -281,19 +317,80 @@ enum ScrollingCaptureAutoScrollPolicy {
     return mouseLocation
   }
 
-  static func stitchAction(for update: ScrollingCaptureStitchUpdate) -> ScrollingCaptureAutoScrollStitchAction {
-    if update.likelyReachedBoundary {
-      return .finishCapture
+  static func stepDistancePoints(regionHeight: CGFloat) -> CGFloat {
+    let height = max(1, regionHeight)
+    let preferred = height * targetViewportFraction
+    let maxSafe = height * maxSafeViewportFraction
+    let clampedPreferred = min(maxStepPoints, max(minStepPoints, preferred))
+    return min(clampedPreferred, max(1, maxSafe))
+  }
+
+  static func tickCount(forStepDistancePoints step: CGFloat) -> Int {
+    let tickMagnitude = CGFloat(abs(wheelDeltaY))
+    guard tickMagnitude > 0 else { return 1 }
+    return max(1, Int((step / tickMagnitude).rounded()))
+  }
+
+  static func stepPlan(regionHeight: CGFloat, isRetry: Bool) -> StepPlan {
+    let fullStep = stepDistancePoints(regionHeight: regionHeight)
+    let step = isRetry ? max(1, fullStep * 0.55) : fullStep
+    let ticks = tickCount(forStepDistancePoints: step)
+    return StepPlan(
+      tickCount: ticks,
+      postedDistancePoints: CGFloat(ticks) * CGFloat(abs(wheelDeltaY)),
+      tickIntervalNanoseconds: tickIntervalNanoseconds,
+      settleNanoseconds: isRetry ? retrySettleNanoseconds : settleNanoseconds
+    )
+  }
+
+  static func expectedSignedDeltaPixels(
+    postedDistancePoints: CGFloat,
+    observedDistancePoints: CGFloat,
+    scaleFactor: CGFloat
+  ) -> Int {
+    let scale = max(scaleFactor, 1)
+    let observedPixels = Int(round(observedDistancePoints * scale))
+    if abs(observedPixels) > 2 {
+      return observedPixels
     }
 
+    let sign: CGFloat = wheelDeltaY < 0 ? -1 : 1
+    return Int(round(abs(postedDistancePoints) * scale * sign))
+  }
+
+  static func isCommitFrameEligible(
+    capturedAt: TimeInterval,
+    lastSyntheticEventAt: TimeInterval?
+  ) -> Bool {
+    guard let lastSyntheticEventAt else { return true }
+    return capturedAt > lastSyntheticEventAt
+  }
+
+  static func stitchAction(
+    for update: ScrollingCaptureStitchUpdate,
+    consecutiveNoMovementCount: Int = 0
+  ) -> ScrollingCaptureAutoScrollStitchAction {
     switch update.outcome {
     case .reachedHeightLimit:
       return .finishCapture
     case .ignoredAlignmentFailed where update.matchFailureCount >= alignmentFailureStopThreshold:
       return .stopScrolling
-    case .initialized, .appended, .ignoredNoMovement, .ignoredAlignmentFailed:
+    case .ignoredAlignmentFailed:
+      return .retryStep
+    case .ignoredNoMovement:
+      if consecutiveNoMovementCount >= noMovementFinishThreshold {
+        return .finishCapture
+      }
+      return .retryStep
+    case .initialized, .appended:
       return .keepScrolling
     }
+  }
+
+  static func actionForMissingStitchUpdate(
+    consecutiveNoMovementCount: Int
+  ) -> ScrollingCaptureAutoScrollStitchAction {
+    consecutiveNoMovementCount >= noMovementFinishThreshold ? .finishCapture : .retryStep
   }
 }
 

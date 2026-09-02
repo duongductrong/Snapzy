@@ -50,6 +50,16 @@ final class ScrollingCaptureFrameRing {
     return frames.last { $0.sequenceNumber > sequenceNumber }
   }
 
+  func latestFrame(
+    capturedAfter timestamp: TimeInterval,
+    afterSequenceNumber sequenceNumber: Int?
+  ) -> ScrollingCaptureFrame? {
+    frames.last { frame in
+      frame.capturedAt > timestamp
+        && (sequenceNumber.map { frame.sequenceNumber > $0 } ?? true)
+    }
+  }
+
   func markCommitted(sequenceNumber: Int?) {
     guard let sequenceNumber else { return }
     lastCommittedSequenceNumber = max(lastCommittedSequenceNumber ?? sequenceNumber, sequenceNumber)

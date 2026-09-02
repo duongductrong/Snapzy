@@ -30,9 +30,6 @@ final class ScrollingCaptureCoordinator {
   private let previewTruthLagToleranceMs = 90
   private let liveFrameDebugSampleInterval = 30
   private let scrollHitSlop: CGFloat = 32
-  private let autoScrollIntervalNanoseconds: UInt64 = 40_000_000
-  private let autoScrollPausedIntervalNanoseconds: UInt64 = 150_000_000
-  private let autoScrollDeltaY: Int32 = -15
   private let previewRenderScale: CGFloat = 2
   private let processingQueue = DispatchQueue(
     label: "com.snapzy.scrolling-capture.processing",
@@ -61,6 +58,7 @@ final class ScrollingCaptureCoordinator {
   private var pendingRefreshTask: Task<Void, Never>?
   private var autoScrollTask: Task<Void, Never>?
   private var autoScrollTaskID: UUID?
+  private let autoScrollController = ScrollingCaptureAutoScrollController()
   private var prepareCaptureContextTask: Task<Void, Never>?
   private var preparedCaptureContext: ScreenCaptureManager.PreparedAreaCaptureContext?
   private var captureScaleFactor: CGFloat = 2
@@ -79,6 +77,7 @@ final class ScrollingCaptureCoordinator {
   private var lastLivePreviewPublishedAt: TimeInterval?
   private var lastCommittedObservationAt: TimeInterval?
   private var onSessionEnded: (@MainActor () -> Void)?
+  private var isFinishRequested = false
 
   var isActive: Bool {
     sessionModel != nil
@@ -117,6 +116,7 @@ final class ScrollingCaptureCoordinator {
     self.liveFrameSource = nil
     self.liveFrameRing.reset()
     self.commitScheduler = makeCommitScheduler()
+    self.autoScrollController.start(generation: sessionGeneration)
     self.livePreviewFrameSequence = 0
     self.lastScheduledCommitSequenceNumber = 0
     self.lastScheduledCommitUpdate = nil
@@ -124,6 +124,7 @@ final class ScrollingCaptureCoordinator {
     self.lastCommittedObservationAt = nil
     self.sessionMetrics = ScrollingCaptureSessionMetrics()
     self.didFlushSessionMetrics = false
+    self.isFinishRequested = false
 
     showRegionOverlay(for: rect)
     bindRegionOverlayGuidance(to: model)
@@ -160,9 +161,10 @@ final class ScrollingCaptureCoordinator {
   }
 
   func cancel() {
-    stopAutoScrolling()
+    stopAutoScrolling(reason: .cancelRequested)
     flushSessionMetricsIfNeeded(reason: "cancelled")
     sessionGeneration += 1
+    autoScrollController.invalidate(generation: sessionGeneration)
     pendingRefreshTask?.cancel()
     pendingRefreshTask = nil
     prepareCaptureContextTask?.cancel()
@@ -211,6 +213,7 @@ final class ScrollingCaptureCoordinator {
     lastCommittedObservationAt = nil
     sessionMetrics = ScrollingCaptureSessionMetrics()
     didFlushSessionMetrics = false
+    isFinishRequested = false
 
     let sessionEndHandler = onSessionEnded
     onSessionEnded = nil
@@ -239,7 +242,7 @@ final class ScrollingCaptureCoordinator {
 
   private func toggleAutoScrolling() {
     if sessionModel?.isAutoScrolling == true {
-      stopAutoScrolling()
+      stopAutoScrolling(reason: .userToggle)
     } else {
       startAutoScrolling()
     }
@@ -252,6 +255,10 @@ final class ScrollingCaptureCoordinator {
     guard autoScrollTask == nil else { return }
 
     sessionModel.isAutoScrolling = true
+    pendingRefreshTask?.cancel()
+    pendingRefreshTask = nil
+    commitScheduler?.discardPendingRequest()
+    autoScrollController.start(generation: sessionGeneration)
     let taskID = UUID()
     autoScrollTaskID = taskID
     autoScrollTask = Task { @MainActor [weak self] in
@@ -264,52 +271,241 @@ final class ScrollingCaptureCoordinator {
         }
       }
 
+      var isRetry = false
+
       while self.autoScrollTaskID == taskID && !Task.isCancelled {
         guard
           let sessionModel = self.sessionModel,
-          sessionModel.phase == .capturing,
-          sessionModel.isAutoScrolling
+          sessionModel.phase == .capturing
         else {
           break
         }
         guard let rect = self.selectedRect else { break }
 
+        if self.autoScrollController.stopReason != .none {
+          if self.autoScrollController.isWaitingForCommitResult {
+            await self.waitForPendingPreviewRefresh()
+          }
+          break
+        }
+
         let mouseLocation = NSEvent.mouseLocation
-        if let scrollTargetPoint = ScrollingCaptureAutoScrollPolicy.scrollTargetPoint(
+        guard let scrollTargetPoint = ScrollingCaptureAutoScrollPolicy.scrollTargetPoint(
           mouseLocation: mouseLocation,
           selectedRect: rect
-        ) {
-          if sessionModel.guidanceKind == .placeMouseInsideSelection {
-            sessionModel.setStatus(
-              L10n.ScrollingCaptureStatus.sessionActive(
-                sessionModel.acceptedFrameCount,
-                sessionModel.stitchedPixelHeight
-              ),
-              guidance: .scrollDownSteadily
-            )
-          }
-
-          self.postScrollEvent(
-            deltaY: self.autoScrollDeltaY,
-            at: scrollTargetPoint
-          )
-          try? await Task.sleep(nanoseconds: self.autoScrollIntervalNanoseconds)
-        } else {
+        ) else {
+          _ = self.autoScrollController.abortActiveStepWithoutCommit(generation: self.sessionGeneration)
           sessionModel.setStatus(
             L10n.ScrollingCaptureStatus.autoScrollPausedMoveMouseInside,
             guidance: .placeMouseInsideSelection
           )
-          try? await Task.sleep(nanoseconds: self.autoScrollPausedIntervalNanoseconds)
+          try? await Task.sleep(
+            nanoseconds: ScrollingCaptureAutoScrollPolicy.pausedIntervalNanoseconds
+          )
+          continue
+        }
+
+        if sessionModel.guidanceKind == .placeMouseInsideSelection {
+          sessionModel.setStatus(
+            L10n.ScrollingCaptureStatus.sessionActive(
+              sessionModel.acceptedFrameCount,
+              sessionModel.stitchedPixelHeight
+            ),
+            guidance: .scrollDownSteadily
+          )
+        }
+
+        await self.waitForPendingPreviewRefresh()
+        self.pendingRefreshTask?.cancel()
+        self.pendingRefreshTask = nil
+        guard
+          self.autoScrollTaskID == taskID,
+          self.autoScrollController.stopReason == .none,
+          self.sessionModel?.isAutoScrolling == true
+        else {
+          break
+        }
+
+        guard let step = self.autoScrollController.beginStep(
+          generation: self.sessionGeneration,
+          regionHeight: rect.height,
+          isRetry: isRetry
+        ) else {
+          break
+        }
+
+        let didPostScroll = await self.postAutoScrollBurst(
+          step: step,
+          at: scrollTargetPoint,
+          taskID: taskID
+        )
+        guard self.autoScrollTaskID == taskID else { break }
+
+        if !didPostScroll {
+          _ = self.autoScrollController.abortActiveStepWithoutCommit(generation: self.sessionGeneration)
+          try? await Task.sleep(
+            nanoseconds: ScrollingCaptureAutoScrollPolicy.pausedIntervalNanoseconds
+          )
+          continue
+        }
+
+        guard self.autoScrollController.finishEmitting(generation: self.sessionGeneration) else {
+          continue
+        }
+
+        try? await Task.sleep(nanoseconds: step.plan.settleNanoseconds)
+        guard self.autoScrollTaskID == taskID else { break }
+
+        await self.waitForSettledAutoScrollFrame(generation: self.sessionGeneration)
+        guard
+          self.autoScrollTaskID == taskID,
+          self.autoScrollController.markReadyToCommit(generation: self.sessionGeneration)
+        else {
+          break
+        }
+
+        let expectedSignedDeltaPixels = self.autoScrollController.expectedSignedDeltaPixels(
+          observedDistancePoints: self.pendingScrollDistancePoints,
+          scaleFactor: self.captureScaleFactor
+        )
+        guard self.autoScrollController.noteCommitRequested(
+          generation: self.sessionGeneration,
+          stepID: step.id
+        ) else {
+          break
+        }
+
+        self.sessionMetrics.recordAutoScrollSettledCommit()
+        let update = await self.scheduleCommitRefreshAndWait(
+          reason: "Auto-scroll step",
+          expectedSignedDeltaPixelsOverride: expectedSignedDeltaPixels
+        )
+        guard
+          self.autoScrollTaskID == taskID,
+          self.sessionModel?.phase == .capturing
+        else {
+          break
+        }
+
+        let action = self.autoScrollController.handleCommitResult(
+          generation: self.sessionGeneration,
+          stepID: step.id,
+          update: update
+        )
+        guard let action else { break }
+
+        isRetry = action == .retryStep
+        switch action {
+        case .keepScrolling, .retryStep:
+          if self.autoScrollController.stopReason != .none {
+            return
+          }
+          continue
+        case .stopScrolling:
+          self.stopAutoScrolling(reason: .userToggle)
+          return
+        case .finishCapture:
+          self.finish(calledFromAutoScrollLoop: true)
+          return
         }
       }
     }
   }
 
-  private func stopAutoScrolling() {
+  private func stopAutoScrolling(reason: ScrollingCaptureAutoScrollStopReason = .userToggle) {
+    autoScrollController.requestStop(reason)
     sessionModel?.isAutoScrolling = false
-    autoScrollTaskID = nil
-    autoScrollTask?.cancel()
-    autoScrollTask = nil
+    if reason == .cancelRequested {
+      autoScrollTaskID = nil
+      autoScrollTask?.cancel()
+      autoScrollTask = nil
+    } else if reason == .userToggle, !autoScrollController.isWaitingForCommitResult {
+      autoScrollTaskID = nil
+      autoScrollTask?.cancel()
+      autoScrollTask = nil
+    }
+  }
+
+  private func waitForAutoScrollIdle() async {
+    let deadline = ProcessInfo.processInfo.systemUptime + 4
+    while
+      autoScrollTask != nil,
+      !autoScrollController.isIdleForFinish,
+      ProcessInfo.processInfo.systemUptime < deadline
+    {
+      try? await Task.sleep(nanoseconds: 20_000_000)
+    }
+    await waitForPendingPreviewRefresh()
+  }
+
+  private func postAutoScrollBurst(
+    step: ScrollingCaptureAutoScrollStep,
+    at point: CGPoint,
+    taskID: UUID
+  ) async -> Bool {
+    pendingScrollDistancePoints = 0
+    pendingScrollDirection = nil
+    pendingMixedDirections = false
+
+    var didPostScroll = false
+    var scrollTargetPoint = point
+
+    for _ in 0..<step.plan.tickCount {
+      guard autoScrollTaskID == taskID, autoScrollController.stopReason == .none else {
+        break
+      }
+      guard let selectedRect else { break }
+
+      let mouseLocation = NSEvent.mouseLocation
+      guard let currentTarget = ScrollingCaptureAutoScrollPolicy.scrollTargetPoint(
+        mouseLocation: mouseLocation,
+        selectedRect: selectedRect
+      ) else {
+        break
+      }
+
+      scrollTargetPoint = currentTarget
+      postScrollEvent(
+        deltaY: ScrollingCaptureAutoScrollPolicy.wheelDeltaY,
+        at: scrollTargetPoint
+      )
+      autoScrollController.noteSyntheticEvent(
+        at: ProcessInfo.processInfo.systemUptime,
+        generation: sessionGeneration
+      )
+      sessionMetrics.recordAutoScrollTick()
+      didPostScroll = true
+      try? await Task.sleep(nanoseconds: step.plan.tickIntervalNanoseconds)
+    }
+
+    return didPostScroll
+  }
+
+  private func waitForSettledAutoScrollFrame(generation: Int) async {
+    guard liveFrameSource != nil else { return }
+
+    let timeout = Double(ScrollingCaptureAutoScrollPolicy.freshFrameTimeoutNanoseconds)
+      / 1_000_000_000
+    let deadline = ProcessInfo.processInfo.systemUptime + timeout
+    var lastCountedSequence: Int?
+
+    while ProcessInfo.processInfo.systemUptime < deadline {
+      if let frame = liveFrameRing.latest {
+        if autoScrollController.isFrameEligible(capturedAt: frame.capturedAt, generation: generation) {
+          if lastCountedSequence != frame.sequenceNumber {
+            autoScrollController.notePostEventFrame(
+              capturedAt: frame.capturedAt,
+              generation: generation
+            )
+            lastCountedSequence = frame.sequenceNumber
+          }
+          if autoScrollController.hasSettledFrames() {
+            return
+          }
+        }
+      }
+      try? await Task.sleep(nanoseconds: 16_000_000)
+    }
   }
 
   private func requestAccessibilityPermissionForAutoScrollIfNeeded() -> Bool {
@@ -364,8 +560,7 @@ final class ScrollingCaptureCoordinator {
     return CGPoint(x: point.x, y: mainScreenHeight - point.y)
   }
 
-  private func finish() {
-    stopAutoScrolling()
+  private func finish(calledFromAutoScrollLoop: Bool = false) {
     guard let sessionModel else { return }
     guard sessionModel.phase == .capturing else {
       if sessionModel.isInteractionLocked {
@@ -373,11 +568,23 @@ final class ScrollingCaptureCoordinator {
       }
       return
     }
+    guard !isFinishRequested else {
+      sessionMetrics.recordFinalizingBlockedInput()
+      return
+    }
 
-    beginFinalizing()
+    isFinishRequested = true
+    stopAutoScrolling(reason: .finishRequested)
 
     Task { @MainActor in
-      await waitForPendingPreviewRefresh()
+      if !calledFromAutoScrollLoop {
+        await waitForAutoScrollIdle()
+      } else {
+        await waitForPendingPreviewRefresh()
+      }
+
+      guard let sessionModel = self.sessionModel, sessionModel.phase == .capturing else { return }
+      beginFinalizing()
 
       if abs(pendingScrollDistancePoints) > 2 {
         _ = await refreshPreview(reason: "Final visible frame captured before save")
@@ -396,6 +603,7 @@ final class ScrollingCaptureCoordinator {
 
       guard let latestImage, let saveDirectory else {
         sessionMetrics.recordFinalizingCompleted(at: ProcessInfo.processInfo.systemUptime)
+        isFinishRequested = false
         sessionModel.phase = .capturing
         sessionModel.runtimeState = .paused
         sessionModel.setStatus(
@@ -435,6 +643,7 @@ final class ScrollingCaptureCoordinator {
         )
         cancel()
       case .failure(let error):
+        isFinishRequested = false
         sessionModel.phase = .capturing
         sessionModel.runtimeState = .paused
         sessionModel.setStatus(
@@ -500,6 +709,10 @@ final class ScrollingCaptureCoordinator {
       L10n.ScrollingCaptureStatus.aligningLatestContent,
       guidance: .scrollDownSteadily
     )
+    if sessionModel.isAutoScrolling {
+      updatePreviewTruthState()
+      return
+    }
     startLiveRefreshLoopIfNeeded()
     updatePreviewTruthState()
   }
@@ -749,7 +962,9 @@ final class ScrollingCaptureCoordinator {
           guidance: .heightLimitReached
         )
       }
-      handleAutoScrollStitchUpdate(update)
+      if sessionModel.isAutoScrolling == false {
+        handleAutoScrollStitchUpdate(update)
+      }
       updatePreviewTruthState()
       return update
     } catch {
@@ -975,12 +1190,7 @@ final class ScrollingCaptureCoordinator {
 
   private func captureFrameForCommit() async throws -> CommitFrame? {
     let context = try await ensurePreparedCaptureContext()
-    let streamFrame: ScrollingCaptureFrame?
-    if let lastCommittedSequenceNumber = liveFrameRing.lastCommittedSequenceNumber {
-      streamFrame = liveFrameRing.latestFrame(after: lastCommittedSequenceNumber)
-    } else {
-      streamFrame = liveFrameRing.latest
-    }
+    let streamFrame = selectCommitStreamFrame()
 
     if let streamFrame,
        let normalizedImage = normalizeCommitFrame(streamFrame.image, context: context) {
@@ -1055,6 +1265,44 @@ final class ScrollingCaptureCoordinator {
     )
     logScrollingCaptureCommitFrameSelected(commitFrame)
     return commitFrame
+  }
+
+  private func selectCommitStreamFrame() -> ScrollingCaptureFrame? {
+    let lastCommittedSequenceNumber = liveFrameRing.lastCommittedSequenceNumber
+    let candidate: ScrollingCaptureFrame?
+    if sessionModel?.isAutoScrolling == true, let lastSyntheticEventAt = autoScrollController.activeStep?.lastSyntheticEventAt {
+      candidate = liveFrameRing.latestFrame(
+        capturedAfter: lastSyntheticEventAt,
+        afterSequenceNumber: lastCommittedSequenceNumber
+      )
+      if candidate == nil {
+        autoScrollController.noteRejectedStaleFrame()
+        sessionMetrics.recordAutoScrollRejectedStaleFrame()
+        logScrollingCaptureDebug(
+          "commit-frame-rejected-stale",
+          context: [
+            "lastSyntheticEventAgeMs": "\(max(0, Int(((ProcessInfo.processInfo.systemUptime - lastSyntheticEventAt) * 1_000).rounded())))",
+            "lastCommittedSequence": optionalString(lastCommittedSequenceNumber),
+            "ringFrames": "\(liveFrameRing.frames.count)"
+          ]
+        )
+      }
+    } else if let lastCommittedSequenceNumber {
+      candidate = liveFrameRing.latestFrame(after: lastCommittedSequenceNumber)
+    } else {
+      candidate = liveFrameRing.latest
+    }
+
+    if let candidate, !autoScrollController.isFrameEligible(
+      capturedAt: candidate.capturedAt,
+      generation: sessionGeneration
+    ), sessionModel?.isAutoScrolling == true {
+      autoScrollController.noteRejectedStaleFrame()
+      sessionMetrics.recordAutoScrollRejectedStaleFrame()
+      return nil
+    }
+
+    return candidate
   }
 
   private func normalizeCommitFrame(
@@ -1455,11 +1703,11 @@ final class ScrollingCaptureCoordinator {
 
     switch ScrollingCaptureAutoScrollPolicy.stitchAction(for: update) {
     case .finishCapture:
-      stopAutoScrolling()
+      stopAutoScrolling(reason: .finishRequested)
       finish()
     case .stopScrolling:
-      stopAutoScrolling()
-    case .keepScrolling:
+      stopAutoScrolling(reason: .userToggle)
+    case .keepScrolling, .retryStep:
       break
     }
   }
@@ -1622,6 +1870,17 @@ final class ScrollingCaptureCoordinator {
 
     addOutcomeDetails(update.outcome, to: &context)
 
+    if sessionModel?.isAutoScrolling == true {
+      context["autoScrollPhase"] = autoScrollPhaseName(autoScrollController.phase)
+      context["autoScrollStep"] = autoScrollController.activeStep?.id.uuidString ?? "none"
+      if let lastSyntheticEventAt = autoScrollController.activeStep?.lastSyntheticEventAt {
+        context["lastSyntheticEventAgeMs"] = "\(max(0, Int(((ProcessInfo.processInfo.systemUptime - lastSyntheticEventAt) * 1_000).rounded())))"
+      } else {
+        context["lastSyntheticEventAgeMs"] = "none"
+      }
+      context["postEventFrames"] = "\(autoScrollController.activeStep?.postEventFrameCount ?? 0)"
+    }
+
     if let alignmentDebug = update.alignmentDebug {
       context["alignmentPath"] = alignmentDebug.path.rawValue
       context["confidence"] = Self.formattedDebugDouble(alignmentDebug.confidence)
@@ -1762,6 +2021,23 @@ final class ScrollingCaptureCoordinator {
       return "append-from-bottom"
     case .appendFromTop:
       return "append-from-top"
+    }
+  }
+
+  private func autoScrollPhaseName(_ phase: ScrollingCaptureAutoScrollPhase) -> String {
+    switch phase {
+    case .idle:
+      return "idle"
+    case .emittingBoundedStep:
+      return "emitting-bounded-step"
+    case .waitingForSettle:
+      return "waiting-for-settle"
+    case .requestingCommit:
+      return "requesting-commit"
+    case .waitingForCommitResult:
+      return "waiting-for-commit-result"
+    case .decidingNextAction:
+      return "deciding-next-action"
     }
   }
 
