@@ -8,6 +8,16 @@
 import AppKit
 import Foundation
 
+enum ScrollAccuracyFrameExpectation {
+  case append
+  case ignore
+}
+
+enum ScrollAccuracyPattern {
+  case uniqueRows
+  case repeatedBands
+}
+
 struct ScrollAccuracyBenchmarkCase {
   let name: String
   let width: Int
@@ -17,6 +27,12 @@ struct ScrollAccuracyBenchmarkCase {
   let footerHeight: Int
   let offsets: [Int]
   let minimumOverallAccuracy: Double
+  var pattern: ScrollAccuracyPattern = .uniqueRows
+  var repeatPeriod: Int = 48
+  var frameExpectations: [ScrollAccuracyFrameExpectation]? = nil
+  var expectedDeltas: [Int?]? = nil
+  var verifyEncodedRows: Bool = false
+  var allowIgnoredFrames: Bool = false
 
   var movingViewportHeight: Int {
     viewportHeight - headerHeight - footerHeight
@@ -88,15 +104,15 @@ enum ScrollAccuracyFixture {
         return staticPixel(x: x, y: y, salt: 91)
       }
 
-      return contentPixel(x: x, logicalY: offset + y - benchmark.headerHeight)
+      return contentPixel(x: x, logicalY: offset + y - benchmark.headerHeight, pattern: benchmark)
     }
   }
 
-  static func expectedImage(for benchmark: ScrollAccuracyBenchmarkCase) -> CGImage? {
-    let expectedHeight = benchmark.movingViewportHeight + (benchmark.offsets.last ?? 0)
+  static func expectedImage(for benchmark: ScrollAccuracyBenchmarkCase, finalOffset: Int? = nil) -> CGImage? {
+    let expectedHeight = benchmark.movingViewportHeight + (finalOffset ?? benchmark.offsets.last ?? 0)
     guard expectedHeight <= benchmark.contentHeight else { return nil }
     return makeImage(width: benchmark.width, height: expectedHeight) { x, y in
-      contentPixel(x: x, logicalY: y)
+      contentPixel(x: x, logicalY: y, pattern: benchmark)
     }
   }
 
@@ -144,7 +160,29 @@ enum ScrollAccuracyFixture {
     )
   }
 
-  private static func contentPixel(x: Int, logicalY: Int) -> (UInt8, UInt8, UInt8) {
+  private static func contentPixel(
+    x: Int,
+    logicalY: Int,
+    pattern: ScrollAccuracyBenchmarkCase
+  ) -> (UInt8, UInt8, UInt8) {
+    switch pattern.pattern {
+    case .uniqueRows:
+      return uniquePixel(x: x, logicalY: logicalY)
+    case .repeatedBands:
+      let period = max(8, pattern.repeatPeriod)
+      let phase = logicalY % period
+      if x >= 40 && x < 96 {
+        return encodedRowPixel(logicalY: logicalY)
+      }
+      return (
+        UInt8((phase * 17) % 200 + 20),
+        UInt8((phase * 43) % 200 + 20),
+        UInt8((phase * 89) % 200 + 20)
+      )
+    }
+  }
+
+  private static func uniquePixel(x: Int, logicalY: Int) -> (UInt8, UInt8, UInt8) {
     let value = UInt64(logicalY) &* 1_103_515_245
       &+ UInt64(x) &* 2_654_435_761
       &+ 0x9E37_79B9_7F4A_7C15
@@ -154,6 +192,25 @@ enum ScrollAccuracyFixture {
       UInt8(truncatingIfNeeded: mixed >> 11),
       UInt8(truncatingIfNeeded: mixed >> 23)
     )
+  }
+
+  private static func encodedRowPixel(logicalY: Int) -> (UInt8, UInt8, UInt8) {
+    (
+      UInt8((logicalY >> 8) & 0xFF),
+      UInt8(logicalY & 0xFF),
+      90
+    )
+  }
+
+  static func encodedLogicalY(from raster: ScrollAccuracyRGBA, row: Int) -> Int? {
+    guard row >= 0, row < raster.height, raster.width > 96 else { return nil }
+    let markerX = 48
+    let index = row * raster.bytesPerRow + markerX * 4
+    let r = Int(raster.pixels[index])
+    let g = Int(raster.pixels[index + 1])
+    let b = raster.pixels[index + 2]
+    guard b == 90 else { return nil }
+    return (r << 8) | g
   }
 
   private static func staticPixel(x: Int, y: Int, salt: Int) -> (UInt8, UInt8, UInt8) {

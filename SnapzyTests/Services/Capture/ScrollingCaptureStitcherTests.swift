@@ -295,6 +295,145 @@ final class ScrollingCaptureStitcherTests: XCTestCase {
     XCTAssertNotNil(update)
   }
 
+  func testAppend_largeExpectedDelta_isNotPinnedToSmallLastMatch() {
+    let stitcher = ScrollingCaptureStitcher()
+    let width = 240
+    let height = 400
+    let firstDelta = 24
+    let secondDelta = 140
+
+    guard
+      let first = TestImageFactory.scrollingFrame(width: width, height: height, logicalYOffset: 0),
+      let second = TestImageFactory.scrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: firstDelta
+      ),
+      let third = TestImageFactory.scrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: firstDelta + secondDelta
+      )
+    else {
+      XCTFail("Failed to create scrolling frames")
+      return
+    }
+
+    _ = stitcher.start(with: first)
+    let firstUpdate = stitcher.append(
+      second,
+      maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: firstDelta
+    )
+    guard case .appended(let acceptedFirstDelta) = firstUpdate?.outcome else {
+      XCTFail("Expected first append to succeed, got \(String(describing: firstUpdate?.outcome))")
+      return
+    }
+    XCTAssertEqual(acceptedFirstDelta, firstDelta)
+
+    let secondUpdate = stitcher.append(
+      third,
+      maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: secondDelta
+    )
+    guard case .appended(let acceptedSecondDelta) = secondUpdate?.outcome else {
+      XCTFail("Expected large second append to succeed, got \(String(describing: secondUpdate?.outcome))")
+      return
+    }
+    XCTAssertEqual(acceptedSecondDelta, secondDelta)
+    XCTAssertEqual(stitcher.outputHeight, height + firstDelta + secondDelta)
+  }
+
+  func testAppend_repeatedContentIntermediateFrame_isNotAppendedForKnownStep() {
+    let stitcher = ScrollingCaptureStitcher()
+    let width = 240
+    let height = 360
+    let knownStep = 80
+    let intermediate = 12
+
+    guard
+      let first = TestImageFactory.repeatedScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: 0
+      ),
+      let mid = TestImageFactory.repeatedScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: intermediate
+      ),
+      let settled = TestImageFactory.repeatedScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: knownStep
+      )
+    else {
+      XCTFail("Failed to create repeated-content frames")
+      return
+    }
+
+    _ = stitcher.start(with: first)
+    let intermediateUpdate = stitcher.append(
+      mid,
+      maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: knownStep
+    )
+    if case .appended = intermediateUpdate?.outcome {
+      XCTFail("Intermediate repeated-content frame should not append, got \(String(describing: intermediateUpdate?.outcome))")
+      return
+    }
+    XCTAssertEqual(stitcher.acceptedFrameCount, 1)
+
+    let settledUpdate = stitcher.append(
+      settled,
+      maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: knownStep
+    )
+    guard case .appended(let deltaY) = settledUpdate?.outcome else {
+      XCTFail("Settled known-step frame should append, got \(String(describing: settledUpdate?.outcome))")
+      return
+    }
+    XCTAssertEqual(deltaY, knownStep)
+    XCTAssertEqual(stitcher.outputHeight, height + knownStep)
+  }
+
+  func testAppend_skippedBandDoesNotOverrideKnownStep() {
+    let stitcher = ScrollingCaptureStitcher()
+    let width = 240
+    let height = 360
+    let knownStep = 80
+    let skippedBand = 240
+
+    guard
+      let first = TestImageFactory.repeatedScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: 0
+      ),
+      let leap = TestImageFactory.repeatedScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: skippedBand
+      )
+    else {
+      XCTFail("Failed to create skipped-band frames")
+      return
+    }
+
+    _ = stitcher.start(with: first)
+    let update = stitcher.append(
+      leap,
+      maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: knownStep
+    )
+    if case .appended(let deltaY) = update?.outcome {
+      XCTFail("Skipped-band leap \(deltaY) should not append against known step \(knownStep)")
+      return
+    }
+    XCTAssertEqual(stitcher.acceptedFrameCount, 1)
+    XCTAssertEqual(stitcher.outputHeight, height)
+  }
+
   func testAppend_mismatchedDimensions_marksUnsafe() {
     let stitcher = ScrollingCaptureStitcher()
     guard
