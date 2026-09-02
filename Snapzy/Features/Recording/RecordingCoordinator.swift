@@ -613,6 +613,7 @@ final class RecordingCoordinator: ObservableObject {
 
         try await recorder.startRecording()
         removeEscapeMonitors()
+        setupRecordingOverlays(for: rect)
         DiagnosticLogger.shared.log(.info, .recording, "Recording restart completed")
 
         // Play sound to indicate restart
@@ -744,14 +745,7 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
 
-        // Setup annotation overlay (must be after recording starts so window exists)
-        setupAnnotationOverlay(for: rect)
-
-        // Setup click highlight overlay (must be after recording starts)
-        setupClickHighlightOverlay(for: rect)
-
-        // Setup keystroke overlay (must be after recording starts)
-        setupKeystrokeOverlay(for: rect)
+        setupRecordingOverlays(for: rect)
 
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
@@ -872,6 +866,7 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setInteractionEnabled(false)
           overlay.setDimEnabled(dimNonSelectedArea)
         }
+        setupRecordingOverlays(for: rect)
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
         finishRecordingStartAttempt()
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
@@ -1142,6 +1137,20 @@ final class RecordingCoordinator: ObservableObject {
     alert.alertStyle = .warning
     alert.addButton(withTitle: L10n.Common.ok)
     alert.runModal()
+  }
+
+  // MARK: - Recording Overlays
+
+  private func setupRecordingOverlays(for rect: CGRect) {
+    if annotationOverlayWindow == nil {
+      setupAnnotationOverlay(for: rect)
+    }
+    if clickHighlightWindow == nil {
+      setupClickHighlightOverlay(for: rect)
+    }
+    if keystrokeOverlayWindow == nil {
+      setupKeystrokeOverlay(for: rect)
+    }
   }
 
   // MARK: - Annotation Overlay

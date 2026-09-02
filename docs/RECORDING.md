@@ -77,7 +77,7 @@ flowchart TD
 Snapzy windows are normally excluded from the stream; effect overlays are re-included via `ScreenRecordingManager.addExceptedWindow(windowID:)` so they appear in the video:
 
 - **Click highlights** (pref `PreferencesKeys.recordingHighlightClicks`, default off): `MouseClickHighlightService` installs local+global NSEvent monitors for down/up/drag and forwards points to `MouseClickHighlightWindow` (`showClickEffect` ripple rings, hold circle while pressed, drag follow).
-- **Keystroke overlay** (pref `PreferencesKeys.recordingShowKeystrokes`, default off): `KeystrokeMonitorService` shows keystrokes only when a modifier (⌘/⌥/⌃) is held or a special key is pressed, building modifier-combo display strings; rendered by `KeystrokeOverlayWindow.showKeystroke`.
+- **Keystroke overlay** (pref `PreferencesKeys.recordingShowKeystrokes`, default off): `KeystrokeMonitorService` observes session key events before other event taps can consume them and forwards every event unchanged, showing keystrokes only when a modifier (⌘/⌥/⌃) is held or a special key is pressed; rendered by `KeystrokeOverlayWindow.showKeystroke`.
 - **Live annotations**: `RecordingAnnotationState` + `RecordingAnnotationOverlayWindow` over the recording rect, plus a popover-style `RecordingAnnotationToolbarWindow` anchored to the status bar pencil button (button position reported through a SwiftUI `PreferenceKey`). Tools: selection, rectangle, oval, arrow, line, pencil, highlighter, with per-tool auto-clear modes (persist / time-based / count-based). Global shortcut path: `RecordingCoordinator.togglePenFromShortcut()`.
 
 Overlay setup happens after `startRecording()` succeeds; region overlay borders are hidden and interaction disabled at the same moment.
@@ -130,7 +130,7 @@ The pre-record toolbar has a camera button (`RecordingToolbarView` → `Recordin
 | `Snapzy/Services/Capture/RecordingMouseTracker.swift` | Cursor sampling for Smart Camera |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata v5 model, store layout, index, migration, orphan cleanup |
 | `Snapzy/Services/Capture/RecordingAudioLevelMeter.swift` | RMS metering for the status bar waveform |
-| `Snapzy/Services/Capture/MouseClickHighlightService.swift` + `KeystrokeMonitorService.swift` | Global event monitors behind click/keystroke overlays |
+| `Snapzy/Services/Capture/MouseClickHighlightService.swift` + `KeystrokeMonitorService.swift` | Global mouse monitors and head session keyboard tap behind recording overlays |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Recording save plan, processing dir lifecycle, temp recovery |
 | `Snapzy/Services/Media/GIFConverter.swift` | Video → GIF conversion (AVFoundation + ImageIO) |
 
