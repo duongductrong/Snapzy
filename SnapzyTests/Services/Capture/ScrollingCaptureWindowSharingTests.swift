@@ -193,29 +193,44 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_stepDistanceStaysInsideOverlapSafeBounds() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 800),
-      260,
+      90,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 100),
-      42,
+      26,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 200),
-      68,
+      36,
       accuracy: 0.001
     )
   }
 
   func testAutoScrollPolicy_tickCountMatchesWheelDelta() {
     XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 56),
-      4
+      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 36),
+      2
     )
     XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 260),
-      17
+      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 90),
+      6
+    )
+  }
+
+  func testAutoScrollPolicy_undersizedAppendTriggersSmallerFollowUpStep() {
+    XCTAssertTrue(
+      ScrollingCaptureAutoScrollPolicy.shouldTakeSmallerFollowUpStep(
+        acceptedDeltaPixels: 24,
+        expectedSignedDeltaPixels: -120
+      )
+    )
+    XCTAssertFalse(
+      ScrollingCaptureAutoScrollPolicy.shouldTakeSmallerFollowUpStep(
+        acceptedDeltaPixels: 80,
+        expectedSignedDeltaPixels: -120
+      )
     )
   }
 

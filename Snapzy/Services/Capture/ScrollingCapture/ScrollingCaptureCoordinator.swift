@@ -395,6 +395,15 @@ final class ScrollingCaptureCoordinator {
         guard let action else { break }
 
         isRetry = action == .retryStep
+        if
+          case .appended(let deltaY) = update?.outcome,
+          ScrollingCaptureAutoScrollPolicy.shouldTakeSmallerFollowUpStep(
+            acceptedDeltaPixels: deltaY,
+            expectedSignedDeltaPixels: expectedSignedDeltaPixels
+          )
+        {
+          isRetry = true
+        }
         switch action {
         case .keepScrolling, .retryStep:
           if self.autoScrollController.stopReason != .none {
@@ -586,9 +595,9 @@ final class ScrollingCaptureCoordinator {
       guard let sessionModel = self.sessionModel, sessionModel.phase == .capturing else { return }
       beginFinalizing()
 
-      if abs(pendingScrollDistancePoints) > 2 {
-        _ = await refreshPreview(reason: "Final visible frame captured before save")
-      }
+      // Always seal the current viewport. Auto Scroll zeros pending distance at
+      // the start of each burst, so a pending-only check drops the last slice.
+      _ = await refreshPreview(reason: "Final visible frame captured before save")
 
       if latestImage == nil {
         _ = await refreshPreview(reason: "Current frame captured before save")

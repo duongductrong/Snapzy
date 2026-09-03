@@ -289,14 +289,14 @@ enum ScrollingCaptureAutoScrollPolicy {
   static let minimumPostEventFrames = 2
   static let wheelDeltaY: Int32 = -15
   static let tickIntervalNanoseconds: UInt64 = 12_000_000
-  static let settleNanoseconds: UInt64 = 180_000_000
-  static let retrySettleNanoseconds: UInt64 = 260_000_000
+  static let settleNanoseconds: UInt64 = 120_000_000
+  static let retrySettleNanoseconds: UInt64 = 180_000_000
   static let pausedIntervalNanoseconds: UInt64 = 150_000_000
-  static let freshFrameTimeoutNanoseconds: UInt64 = 220_000_000
-  static let targetViewportFraction: CGFloat = 0.34
-  static let maxSafeViewportFraction: CGFloat = 0.42
-  static let minStepPoints: CGFloat = 56
-  static let maxStepPoints: CGFloat = 260
+  static let freshFrameTimeoutNanoseconds: UInt64 = 160_000_000
+  static let targetViewportFraction: CGFloat = 0.18
+  static let maxSafeViewportFraction: CGFloat = 0.26
+  static let minStepPoints: CGFloat = 36
+  static let maxStepPoints: CGFloat = 90
 
   static func canToggle(
     phase: ScrollingCapturePhase,
@@ -391,6 +391,14 @@ enum ScrollingCaptureAutoScrollPolicy {
     consecutiveNoMovementCount: Int
   ) -> ScrollingCaptureAutoScrollStitchAction {
     consecutiveNoMovementCount >= noMovementFinishThreshold ? .finishCapture : .retryStep
+  }
+
+  static func shouldTakeSmallerFollowUpStep(
+    acceptedDeltaPixels: Int,
+    expectedSignedDeltaPixels: Int?
+  ) -> Bool {
+    guard let expected = expectedSignedDeltaPixels.map(abs), expected > 24 else { return false }
+    return acceptedDeltaPixels < max(18, expected / 2)
   }
 }
 

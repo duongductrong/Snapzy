@@ -98,12 +98,12 @@ flowchart TD
   `idle → emittingBoundedStep → waitingForSettle → requestingCommit → waitingForCommitResult → decidingNextAction`
 
   A new synthetic step never starts while the previous commit is pending.
-- Each step posts a short burst of `CGEvent` scroll-wheel events (`deltaY = -15` pixels, 12ms tick spacing) sized to about 34% of the selected region height (clamped 56–260 pt, and never more than 42% of the region so frames keep overlap). It then waits ~180ms, waits for live frames captured after the last synthetic event (preferring two post-event frames, with a still-capture fallback), and only then requests one stitch commit.
+- Each step posts a short burst of `CGEvent` scroll-wheel events (`deltaY = -15` pixels, 12ms tick spacing) sized to about 18% of the selected region height (clamped 36–90 pt, and never more than 26% of the region so frames keep overlap). It then waits ~120ms, waits for live frames captured after the last synthetic event (preferring two post-event frames, with a still-capture fallback), and only then requests one stitch commit. If a commit appends less than half of the expected step, the next burst is the smaller retry size so leftover movement is captured instead of skipped.
 - Synthetic events still accumulate `pendingScrollDistancePoints` for the current step’s expected delta, but they do **not** schedule the manual-scroll commit loop. Manual scrolling keeps the existing event-driven settle/commit path.
 - The stitch commit uses the observed wheel distance when the global monitor saw the burst, otherwise the posted step distance, as `expectedSignedDeltaPixels`. That expected delta is **not** clamped to the last accepted match, so a small false stitch cannot pin later steps to the wrong overlap. The stitcher also rejects a match that strongly contradicts the current expected step unless Vision and confidence independently support it.
-- Retry steps (no new content yet, or a failed alignment) use a smaller burst and a longer 260ms settle. Two consecutive settled no-movement/boundary observations auto-finish; three consecutive alignment failures stop auto scroll so the user can continue manually. Height limit still auto-finishes immediately.
+- Retry steps (no new content yet, a failed alignment, or an undersized append) use a smaller burst and a longer 180ms settle. Two consecutive settled no-movement/boundary observations auto-finish; three consecutive alignment failures stop auto scroll so the user can continue manually. Height limit still auto-finishes immediately.
 - The pointer must stay inside the region (16pt hover padding). When it leaves mid-step, Auto Scroll pauses without committing a stale/partial frame and resumes when it returns.
-- Done stops posting events, waits for the active step and commit lane to go idle, then performs a final settled-frame commit only if uncommitted motion remains. Cancel invalidates the active step and ignores late commit callbacks.
+- Done stops posting events, waits for the active step and commit lane to go idle, then always performs a final settled-frame commit so the last viewport is not dropped after Auto Scroll zeroed pending distance. Cancel invalidates the active step and ignores late commit callbacks.
 - `ScrollingCaptureAutoScrollPolicy.stitchAction(for:consecutiveNoMovementCount:)` maps stitch updates to `keepScrolling` / `retryStep` / `stopScrolling` / `finishCapture`.
 - Session-summary metrics include `autoScrollTicks`, `autoScrollSettledCommits`, and `autoScrollRejectedStaleFrames`. Stitch debug lines add `autoScrollPhase`, `lastSyntheticEventAgeMs`, and `postEventFrames` while Auto Scroll is driving.
 
@@ -127,7 +127,7 @@ flowchart TD
 ## Finish and Save
 
 1. `finish()` stops auto scroll, enters `.finalizing`, and waits for the commit lane to go idle (`commitScheduler.waitForIdle()` plus in-flight refresh).
-2. If significant scroll remains uncommitted (`|pendingScrollDistancePoints| > 2`), or no frame was ever captured, a final `refreshPreview` runs to seal the visible content.
+2. A final `refreshPreview` always runs to seal the visible viewport, then a still fallback runs only if no frame was ever captured.
 3. The live stream stops, `stitcher.mergedImage()` becomes the final image, and the model enters `.saving`.
 4. `ScreenCaptureManager.saveProcessedImage(_:to:format:scaleFactor:)` writes the file at the session's native output scale and emits `captureCompletedPublisher`.
 5. `ScreenCaptureViewModel`'s single subscription routes the URL into `PostCaptureActionHandler.handleScreenshotCapture(url:)` — Quick Access, clipboard, auto-open, and history behave identically to a standard screenshot. See [`POST_CAPTURE.md`](POST_CAPTURE.md).
