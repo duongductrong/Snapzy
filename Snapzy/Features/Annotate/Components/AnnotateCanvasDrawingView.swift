@@ -718,15 +718,13 @@ final class DrawingCanvasNSView: NSView {
     }
   }
 
-  /// Secondary images are movable layers in selection mode, but behave like
-  /// the base image when the user is adding a markup annotation.
+  /// Existing annotations behave like canvas content while a drawing tool is
+  /// active. Only the selection tool should claim a hit for layer movement.
   static func shouldPrioritizeCanvasMarkup(
-    over annotation: AnnotationItem,
+    over _: AnnotationItem,
     selectedTool: AnnotationToolType
   ) -> Bool {
-    guard selectedTool != .selection else { return false }
-    if case .embeddedImage = annotation.type { return true }
-    return false
+    selectedTool != .selection
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
