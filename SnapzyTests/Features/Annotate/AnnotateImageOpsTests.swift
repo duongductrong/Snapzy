@@ -157,7 +157,7 @@ final class AnnotateImageOpsTests: XCTestCase {
     XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 200, height: 100))
   }
 
-  func testMarkupToolsTreatCombinedImageLayersAsCanvas() throws {
+  func testMarkupToolsTreatExistingAnnotationsAsCanvas() throws {
     let embeddedLayer = AnnotationItem(
       type: .embeddedImage(UUID()),
       bounds: CGRect(x: 300, y: 0, width: 200, height: 300),
@@ -171,8 +171,16 @@ final class AnnotateImageOpsTests: XCTestCase {
 
     XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .rectangle))
     XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .text))
+
+    for tool in AnnotationToolType.allCases {
+      XCTAssertEqual(
+        DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: rectangle, selectedTool: tool),
+        tool != .selection,
+        "Unexpected canvas-priority result for \(tool)"
+      )
+    }
+
     XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .selection))
-    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: rectangle, selectedTool: .rectangle))
   }
 
   func testActivatingMarkupToolClearsCombinedImageSelection() throws {

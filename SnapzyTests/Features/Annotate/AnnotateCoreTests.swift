@@ -933,6 +933,135 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   @MainActor
+  func testCanvasRectangleToolStartsDrawingOnExistingAnnotation() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let start = CGPoint(x: 30, y: 30)
+    let end = CGPoint(x: 160, y: 120)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: start))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: end))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: end))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, existing.id)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+
+    let created = try XCTUnwrap(state.annotations.last)
+    guard case .rectangle = created.type else {
+      return XCTFail("Expected a new rectangle annotation, got \(created.type)")
+    }
+    XCTAssertEqual(created.bounds, CGRect(x: 30, y: 30, width: 130, height: 90))
+    XCTAssertEqual(state.selectedAnnotationId, created.id)
+  }
+
+  @MainActor
+  func testCanvasArrowToolStartsDrawingOnExistingAnnotation() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let start = CGPoint(x: 30, y: 30)
+    let end = CGPoint(x: 160, y: 120)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: start))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: end))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: end))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, existing.id)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+
+    let created = try XCTUnwrap(state.annotations.last)
+    guard case .arrow(let geometry) = created.type else {
+      return XCTFail("Expected a new arrow annotation, got \(created.type)")
+    }
+    XCTAssertEqual(geometry.start, start)
+    XCTAssertEqual(geometry.end, end)
+    XCTAssertEqual(state.selectedAnnotationId, created.id)
+  }
+
+  @MainActor
+  func testCanvasSelectionToolMovesExistingAnnotation() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .selection
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let start = CGPoint(x: 30, y: 30)
+    let end = CGPoint(x: 160, y: 120)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: start))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: end))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: end))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    let moved = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(moved.id, existing.id)
+    XCTAssertEqual(moved.bounds, existing.bounds.offsetBy(dx: 130, dy: 90))
+    XCTAssertEqual(state.selectedAnnotationId, existing.id)
+  }
+
+  @MainActor
+  func testCanvasResizeHandleTakesPriorityOverDrawingTool() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 50, y: 50, width: 80, height: 60),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedAnnotationId = existing.id
+    state.selectedTool = .rectangle
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    let handle = CGPoint(x: existing.bounds.maxX, y: existing.bounds.maxY)
+    let resizedHandle = CGPoint(x: 160, y: 140)
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: handle))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: resizedHandle))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: resizedHandle))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    let resized = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(resized.id, existing.id)
+    XCTAssertEqual(resized.bounds, CGRect(x: 50, y: 50, width: 110, height: 90))
+    XCTAssertEqual(state.selectedAnnotationId, existing.id)
+  }
+
+  @MainActor
   func testCanvasShiftRectangleDragCommitsConstrainedPreviewEndpoint() throws {
     let state = makeAnnotateState()
     state.selectedTool = .rectangle
