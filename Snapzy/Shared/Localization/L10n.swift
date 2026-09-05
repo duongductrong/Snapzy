@@ -7629,6 +7629,11 @@ nonisolated enum L10n {
   }
 
   enum OCR {
+    static let capturingContent = string(
+      "ocr.capturing-content",
+      defaultValue: "Capturing...",
+      comment: "Progress toast shown the moment an OCR capture starts, while the selected area is still being captured"
+    )
     static let extractingContent = string(
       "ocr.extracting-content",
       defaultValue: "Extracting content...",

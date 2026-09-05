@@ -2415,10 +2415,24 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
           AreaSelectionController.shared.cancelSelection()
 
+          let progressToast = AppStatusBarController.shared.isMenuBarIconVisible
+            ? nil
+            : AppToastManager.shared.show(
+              message: L10n.OCR.capturingContent,
+              style: .info,
+              duration: nil,
+              variant: .compact,
+              iconMode: .spinner
+            )
+
           Task { @MainActor in
+            var progressToastResolved = false
             defer {
               self.isAreaSelectionActive = false
               hiddenWindowSession.restore()
+              if let progressToast, !progressToastResolved {
+                AppToastManager.shared.dismiss(progressToast)
+              }
             }
             await Task.yield()
 
@@ -2472,6 +2486,18 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               AppStatusBarController.shared.setProcessing(false)
 
               guard let clipboardText else {
+                if let progressToast {
+                  AppToastManager.shared.update(
+                    progressToast,
+                    message: qrResult.unsupportedPayloadCount > 0
+                      ? L10n.OCR.qrTextOnlyUnsupported
+                      : L10n.OCR.noTextFound,
+                    style: .warning,
+                    duration: 2.5,
+                    variant: .compact
+                  )
+                  progressToastResolved = true
+                }
                 if qrResult.unsupportedPayloadCount > 0 {
                   var context = performanceContext
                   context["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
@@ -2504,6 +2530,18 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               successContext["qrCount"] = "\(qrResult.detections.count)"
               successContext["unsupportedQRCount"] = "\(qrResult.unsupportedPayloadCount)"
               DiagnosticLogger.shared.log(.info, .ocr, "OCR text copied to clipboard", context: successContext)
+
+              if let progressToast {
+                AppToastManager.shared.update(
+                  progressToast,
+                  message: L10n.Common.copiedToClipboard,
+                  style: .success,
+                  duration: 2.0,
+                  variant: .compact
+                )
+                progressToastResolved = true
+              }
+
               OCRResultNotifier.shared.report(.copied(clipboardText))
               if OCRResultNotifier.isEnabled() {
                 QuickAccessSound.complete.play()
@@ -2522,6 +2560,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               // Error feedback
               AppStatusBarController.shared.setProcessing(false)
               DiagnosticLogger.shared.logError(.ocr, error, "OCR capture failed")
+              if let progressToast {
+                AppToastManager.shared.update(
+                  progressToast,
+                  message: error.localizedDescription,
+                  style: .error,
+                  duration: 2.5,
+                  variant: .compact
+                )
+                progressToastResolved = true
+              }
               OCRResultNotifier.shared.report(.failed(errorDescription: error.localizedDescription))
               QuickAccessSound.failed.play()
             }
