@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.6] - 2026-09-05
+
+### Bug Fixes
+-  Fixed allow drawing over existing annotations (#546) (126fc2e4)
+
+### Contributors
+- @github-actions[bot]
+- @tukuyomil032
+
 ## [1.32.0-beta.5] - 2026-08-29
 
 ### Features
