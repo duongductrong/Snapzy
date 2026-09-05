@@ -1254,8 +1254,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  /// Area selection without a frozen backdrop: the overlay sits over the live screen (excluded from
-  /// capture via its `.none` sharing type), and the region is captured when the user commits.
+  /// Area selection without a frozen backdrop: the overlay sits over the live screen and is hidden
+  /// around Snapzy's own snapshots; the region is captured when the user commits.
   private func startLiveAreaSelection(
     saveDirectory resolvedSaveDirectory: URL,
     prefetchedContentTask: ShareableContentPrefetchTask?,
@@ -1384,9 +1384,9 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   /// Synchronously snapshot each display the live `.rect` selection touches, at the instant
   /// of mouse-up, via the existing CGDisplayCreateImage fast path (~5-20ms per display, no
-  /// SCStream, no recording indicator). The area-selection overlay never bakes in: its
-  /// windows are `sharingType = .none`, which CGDisplayCreateImage respects — the same
-  /// mechanism frozen-mode lazy snapshots rely on while overlays are visible.
+  /// SCStream, no recording indicator). The area-selection overlay never bakes in: each
+  /// touched display's overlay is hidden around the snapshot, matching the frozen-mode
+  /// lazy snapshot path.
   ///
   /// Own-app exclusion does NOT disqualify the fast path here: live sessions hide own
   /// normal windows for their whole duration (`hideVisibleNormalWindowsIfNeeded`), so at
@@ -1411,13 +1411,15 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       excludeDesktopIcons: excludeDesktopIcons,
       excludeDesktopWidgets: excludeDesktopWidgets
     ) { displayID in
-      let snapshot = captureManager.captureFastDisplaySnapshot(
-        displayID: displayID,
-        showCursor: false,
-        excludeDesktopIcons: false,
-        excludeDesktopWidgets: false,
-        excludeOwnApplication: false
-      )
+      let snapshot = AreaSelectionController.shared.withDisplayOverlayHidden(for: displayID) {
+        captureManager.captureFastDisplaySnapshot(
+          displayID: displayID,
+          showCursor: false,
+          excludeDesktopIcons: false,
+          excludeDesktopWidgets: false,
+          excludeOwnApplication: false
+        )
+      }
       if snapshot == nil {
         DiagnosticLogger.shared.log(
           .info, .capture,
@@ -1875,8 +1877,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         guard let self, self.activeAreaSelectionSessionID == sessionID else { return }
         let startedAt = Date()
 
-        // Fast CoreGraphics path when no cursor/desktop exclusions are needed. The overlay
-        // is capture-excluded (sharingType == .none), so it is not baked into the snapshot.
+        // Fast CoreGraphics path when no cursor/desktop exclusions are needed. The helper
+        // hides the shareable overlay so it is not baked into the snapshot.
         if !showCursor, !excludeDesktopIcons, !excludeDesktopWidgets,
            let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
           let screenFrame = screen.frame
