@@ -367,7 +367,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     case .captureSmartElement:
       SmartElementCaptureController.shared.startCapture()
     case .captureObjectCutout:
-      captureObjectCutout()
+      startCaptureSubject()
     case .recordVideo:
       toggleRecordingFromShortcut(initialInteractionMode: .manualRegion)
     case .recordApplication:
@@ -2614,6 +2614,10 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   // MARK: - Object Cutout Capture
 
   func captureObjectCutout() {
+    startCaptureSubject()
+  }
+
+  func startCaptureSubject() {
     // Feature gate: keep app compatible on macOS 13 while disabling this flow safely.
     guard #available(macOS 14.0, *) else {
       DiagnosticLogger.shared.log(.warning, .capture, "Object cutout unavailable: macOS < 14")
@@ -2627,11 +2631,16 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       return
     }
 
-    // Prevent multiple area captures
-    if isAreaSelectionActive {
-      DiagnosticLogger.shared.log(.debug, .capture, "captureObjectCutout blocked: area selection active")
+    if isAreaSelectionActive || CaptureSubjectController.shared.isSessionActive {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureObjectCutout blocked: capture session active")
       return
     }
+
+    CaptureSubjectController.shared.startCapture()
+  }
+
+  func finishObjectCutout(from preview: CaptureSubjectSnappedPreview) async {
+    guard #available(macOS 14.0, *) else { return }
 
     guard
       let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
@@ -2643,179 +2652,101 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
     saveDirectory = resolvedSaveDirectory
 
-    let captureContext = CaptureContext.fromFrontmostApp()
+    let selectionContext = preview.selectionContext ?? CaptureContext.fromFrontmostApp()
+    isCapturing = true
+    await Task.yield()
 
-    isAreaSelectionActive = true
-    DiagnosticLogger.shared.log(.info, .capture, "Object cutout flow started")
-    let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
-    let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
-    let excludeOwnApplication = !includesOwnAppInScreenshots
-    let prefetchedContentTask = captureManager.prefetchShareableContent(
-      includeDesktopWindows: excludeDesktopIcons || excludeDesktopWidgets
-    )
-    // Same transient-UI preservation as live area capture (⌘⇧4): retain the pixels of
-    // any visible menu-bar popover before Snapzy presents its selection UI — menu
-    // extras may close as a side effect of global-hotkey handling or overlay ordering.
-    let immediateMenuBarPopoverCaptures = WindowSelectionQueryService.captureImmediateMenuBarPopoverCaptures(
-      excludeOwnApplication: excludeOwnApplication
-    )
-
-    // Hide only normal-level app windows (not overlay panels)
-    let hiddenWindowSession = hideVisibleNormalWindowsIfNeeded(excludeOwnApplication)
-
-    DispatchQueue.main
-      .asyncAfter(deadline: .now() + (hiddenWindowSession.didHideWindows ? windowHideSettleDelay : 0)) { [weak self] in
-        guard let self else {
-          DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout: self deallocated")
-          hiddenWindowSession.restore()
-          AreaSelectionController.shared.cancelSelection()
+    do {
+      let capturedImage: CGImage
+      let cutoutScaleFactor: CGFloat
+      if let image = preview.image {
+        capturedImage = image
+        cutoutScaleFactor = Self.captureScaleFactor(for: image, rect: preview.rect)
+      } else {
+        let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
+        let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+        guard
+          let recaptured = try await captureManager.captureAreaAsImage(
+            rect: preview.rect,
+            excludeDesktopIcons: excludeDesktopIcons,
+            excludeDesktopWidgets: excludeDesktopWidgets,
+            excludeOwnApplication: !includesOwnAppInScreenshots
+          )
+        else {
+          isCapturing = false
+          lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.unableToCaptureSelectedArea))
+          AppToastManager.shared.show(
+            message: L10n.ScreenCapture.unableToCaptureSelectedArea,
+            style: .error,
+            position: .bottomCenter
+          )
+          QuickAccessSound.failed.play()
           return
         }
-
-        // `dismissesAfterSelection: false` keeps the overlay visible until the mouse-up
-        // snapshots are secured inside the completion (which then calls `cancelSelection()`
-        // itself) — the capture-before-hide sequencing live area capture relies on.
-        AreaSelectionController.shared.startSelection(
-          mode: .screenshot,
-          backdrops: [:],
-          applicationConfiguration: AreaSelectionApplicationConfiguration(
-            prefetchedContentTask: prefetchedContentTask,
-            excludeOwnApplication: excludeOwnApplication,
-            immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures
-          ),
-          initialInteractionMode: .manualRegion,
-          dismissesAfterSelection: false
-        ) { [weak self] selection in
-          guard let self else {
-            DiagnosticLogger.shared.log(.warning, .capture, "captureObjectCutout completion: self deallocated")
-            hiddenWindowSession.restore()
-            return
-          }
-
-          guard let selection else {
-            isAreaSelectionActive = false
-            hiddenWindowSession.restore()
-            DiagnosticLogger.shared.log(.info, .capture, "Object cutout capture cancelled")
-            lastCaptureResult = .failure(.cancelled)
-            return
-          }
-
-          let selectionContext: CaptureContext = switch selection.target {
-          case .window(let target):
-            CaptureContext.fromPID(target.ownerPID, windowTitle: target.title)
-          case .rect:
-            captureContext
-          }
-
-          // Frame lock: synchronously snapshot every display the selection touches at the
-          // instant of mouse-up, BEFORE any async hop — hover states, dropdowns, tooltips,
-          // and popovers are captured exactly as on screen (mirrors live area capture).
-          let mouseUpSnapshots = self.captureLiveMouseUpSnapshots(
-            selection: selection,
-            showCursor: false,
-            excludeDesktopIcons: excludeDesktopIcons,
-            excludeDesktopWidgets: excludeDesktopWidgets
-          )
-
-          // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
-          AreaSelectionController.shared.cancelSelection()
-
-          Task { @MainActor in
-            defer {
-              self.isAreaSelectionActive = false
-              hiddenWindowSession.restore()
-            }
-
-            self.isCapturing = true
-            await Task.yield()
-
-            do {
-              guard let liveCapture = try await self.captureLiveSelectionImage(
-                selection: selection,
-                mouseUpSnapshots: mouseUpSnapshots,
-                immediateMenuBarPopoverCaptures: immediateMenuBarPopoverCaptures,
-                excludeDesktopIcons: excludeDesktopIcons,
-                excludeDesktopWidgets: excludeDesktopWidgets,
-                excludeOwnApplication: excludeOwnApplication,
-                prefetchedContentTask: prefetchedContentTask
-              ) else {
-                self.isCapturing = false
-                self.lastCaptureResult = .failure(.captureFailed(L10n.ScreenCapture.unableToCaptureSelectedArea))
-                AppToastManager.shared.show(
-                  message: L10n.ScreenCapture.unableToCaptureSelectedArea,
-                  style: .error,
-                  position: .bottomCenter
-                )
-                QuickAccessSound.failed.play()
-                return
-              }
-
-              let capturedImage = liveCapture.image
-              let cutoutScaleFactor = liveCapture.scaleFactor
-              let cutoutResult = try await ForegroundCutoutService.shared.extractForegroundResult(
-                from: capturedImage
-              )
-              let (outputImage, didAutoCrop) = self.resolveObjectCutoutOutputImage(
-                from: cutoutResult,
-                autoCropEnabled: self.isBackgroundCutoutAutoCropEnabled
-              )
-              DiagnosticLogger.shared.log(
-                .info,
-                .capture,
-                "Object cutout auto-crop evaluation",
-                context: [
-                  "autoCropEnabled": "\(self.isBackgroundCutoutAutoCropEnabled)",
-                  "decision": cutoutResult.autoCropDecision.rawValue,
-                  "autoCropApplied": "\(didAutoCrop)",
-                ]
-              )
-
-              // Transparency cannot be stored in JPEG. For this mode we force alpha-capable output.
-              let output = self.resolvedCutoutOutputFormat()
-              if output.didOverrideFromJPEG {
-                DiagnosticLogger.shared.log(
-                  .warning,
-                  .capture,
-                  "Object cutout format overridden to PNG because JPEG does not support transparency"
-                )
-              }
-
-              let actualSaveDirectory = self.tempCaptureManager.resolveSaveDirectory(
-                for: .screenshot,
-                exportDirectory: resolvedSaveDirectory
-              )
-
-              let result = await self.captureManager.saveProcessedImage(
-                outputImage,
-                to: actualSaveDirectory,
-                format: output.format,
-                scaleFactor: cutoutScaleFactor,
-                context: selectionContext
-              )
-              self.lastCaptureResult = result
-              self.isCapturing = false
-
-              switch result {
-              case .success:
-                SoundManager.playScreenshotCapture()
-              case .failure(let error):
-                AppToastManager.shared.show(
-                  message: error.localizedDescription,
-                  style: .error,
-                  position: .bottomCenter
-                )
-                QuickAccessSound.failed.play()
-              }
-            } catch {
-              self.isCapturing = false
-              self.lastCaptureResult = .failure(.captureFailed(error.localizedDescription))
-              self.showCutoutFailureToast(for: error)
-              DiagnosticLogger.shared.logError(.capture, error, "Object cutout capture failed")
-              QuickAccessSound.failed.play()
-            }
-          }
-        }
+        capturedImage = recaptured
+        cutoutScaleFactor = Self.captureScaleFactor(for: recaptured, rect: preview.rect)
       }
+
+      let cutoutResult = try await ForegroundCutoutService.shared.extractForegroundResult(
+        from: capturedImage,
+        fallbackToOriginalWhenNoSubject: true
+      )
+      let (outputImage, didAutoCrop) = resolveObjectCutoutOutputImage(
+        from: cutoutResult,
+        autoCropEnabled: isBackgroundCutoutAutoCropEnabled
+      )
+      DiagnosticLogger.shared.log(
+        .info,
+        .capture,
+        "Object cutout auto-crop evaluation",
+        context: [
+          "autoCropEnabled": "\(isBackgroundCutoutAutoCropEnabled)",
+          "decision": cutoutResult.autoCropDecision.rawValue,
+          "autoCropApplied": "\(didAutoCrop)",
+        ]
+      )
+
+      let output = resolvedCutoutOutputFormat()
+      if output.didOverrideFromJPEG {
+        DiagnosticLogger.shared.log(
+          .warning,
+          .capture,
+          "Object cutout format overridden to PNG because JPEG does not support transparency"
+        )
+      }
+
+      let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+        for: .screenshot,
+        exportDirectory: resolvedSaveDirectory
+      )
+      let result = await captureManager.saveProcessedImage(
+        outputImage,
+        to: actualSaveDirectory,
+        format: output.format,
+        scaleFactor: cutoutScaleFactor,
+        context: selectionContext
+      )
+      lastCaptureResult = result
+      isCapturing = false
+
+      switch result {
+      case .success:
+        SoundManager.playScreenshotCapture()
+      case .failure(let error):
+        AppToastManager.shared.show(
+          message: error.localizedDescription,
+          style: .error,
+          position: .bottomCenter
+        )
+        QuickAccessSound.failed.play()
+      }
+    } catch {
+      isCapturing = false
+      lastCaptureResult = .failure(.captureFailed(error.localizedDescription))
+      showCutoutFailureToast(for: error)
+      DiagnosticLogger.shared.logError(.capture, error, "Object cutout capture failed")
+      QuickAccessSound.failed.play()
+    }
   }
 
   private func resolveObjectCutoutOutputImage(
