@@ -1028,6 +1028,9 @@ final class ScrollingCaptureCoordinator {
         "Scrolling capture preview refresh failed",
         context: ["error": error.localizedDescription]
       )
+      // Keep the capture error visible: scrolling cannot recover a permission
+      // or app-identity failure, and the generic guidance hides its actual cause.
+      sessionModel.previewCaption = error.localizedDescription
       sessionModel.setStatus(
         isFinalizingRefresh
           ? L10n.ScrollingCaptureStatus.finalizingCurrentCapture
