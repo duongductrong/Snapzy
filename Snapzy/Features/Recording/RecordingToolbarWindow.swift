@@ -6,8 +6,35 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import Combine
 import SwiftUI
+
+@MainActor
+private final class RecordingToolbarHostingView<Content: View>: NSHostingView<Content> {
+  var onEscape: (() -> Void)?
+
+  override var acceptsFirstResponder: Bool {
+    true
+  }
+
+  override func acceptsFirstMouse(for event: NSEvent?) -> Bool {
+    true
+  }
+
+  override func keyDown(with event: NSEvent) {
+    guard event.keyCode == UInt16(kVK_Escape) else {
+      super.keyDown(with: event)
+      return
+    }
+
+    onEscape?()
+  }
+
+  override func cancelOperation(_ sender: Any?) {
+    onEscape?()
+  }
+}
 
 enum RecordingToolbarMode {
   case preRecord
@@ -169,11 +196,11 @@ final class RecordingToolbarState: ObservableObject {
 // MARK: - Toolbar Window
 
 @MainActor
-final class RecordingToolbarWindow: NSWindow {
+final class RecordingToolbarWindow: NSPanel {
 
   private var anchorRect: CGRect
   private var mode: RecordingToolbarMode = .preRecord
-  private var hostingView: NSHostingView<AnyView>?
+  private var hostingView: RecordingToolbarHostingView<AnyView>?
   private var effectView: NSVisualEffectView?
   private var cachedContentSize: CGSize?
 
@@ -257,7 +284,9 @@ final class RecordingToolbarWindow: NSWindow {
     level = .popUpMenu
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     hasShadow = true
+    isFloatingPanel = true
     isReleasedWhenClosed = false
+    hidesOnDeactivate = false
 
     // Apply theme appearance at window level (mirrors AnnotateWindow.applyTheme)
     appearance = ThemeManager.shared.nsAppearance
@@ -429,7 +458,11 @@ final class RecordingToolbarWindow: NSWindow {
 
   private func setContent(_ view: AnyView) {
     let themedView = view.preferredColorScheme(ThemeManager.shared.systemAppearance)
-    let hosting = NSHostingView(rootView: AnyView(themedView))
+    let hosting = RecordingToolbarHostingView(rootView: AnyView(themedView))
+    hosting.onEscape = { [weak self] in
+      guard self?.mode == .preRecord else { return }
+      self?.onCancel?()
+    }
     hosting.translatesAutoresizingMaskIntoConstraints = false
 
     // NSVisualEffectView provides native wallpaper-tinted material backing,
@@ -487,10 +520,38 @@ final class RecordingToolbarWindow: NSWindow {
   /// Position and order the window to the front (initial show only).
   private func showBelowRect(_ rect: CGRect) {
     positionBelowRect(rect)
+    bringToFrontForInteraction()
+  }
+
+  func bringToFrontForInteraction() {
+    NSApp.activate(ignoringOtherApps: true)
     orderFrontRegardless()
+    makeKey()
+    if let hostingView {
+      makeFirstResponder(hostingView)
+    }
   }
 
   override var canBecomeKey: Bool { true }
+  override var canBecomeMain: Bool { false }
+
+  override func keyDown(with event: NSEvent) {
+    guard mode == .preRecord, event.keyCode == UInt16(kVK_Escape) else {
+      super.keyDown(with: event)
+      return
+    }
+
+    onCancel?()
+  }
+
+  override func cancelOperation(_ sender: Any?) {
+    guard mode == .preRecord else {
+      super.cancelOperation(sender)
+      return
+    }
+
+    onCancel?()
+  }
 
   func updateAnchorRect(_ rect: CGRect) {
     anchorRect = rect

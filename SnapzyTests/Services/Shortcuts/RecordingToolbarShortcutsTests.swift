@@ -15,6 +15,45 @@ import XCTest
 
 final class RecordingToolbarShortcutsTests: XCTestCase {
 
+  @MainActor
+  func testPreRecordToolbarWindow_usesActivatingPanelForButtonClicks() {
+    let window = RecordingToolbarWindow(anchorRect: CGRect(x: 0, y: 0, width: 640, height: 360))
+    defer { window.close() }
+
+    XCTAssertTrue(window.styleMask.contains(.borderless))
+    XCTAssertFalse(window.styleMask.contains(.nonactivatingPanel))
+    XCTAssertTrue(window.canBecomeKey)
+    XCTAssertFalse(window.canBecomeMain)
+  }
+
+  @MainActor
+  func testPreRecordToolbarWindow_escapeInvokesCancel() throws {
+    let window = RecordingToolbarWindow(anchorRect: CGRect(x: 0, y: 0, width: 640, height: 360))
+    defer { window.close() }
+
+    var didCancel = false
+    window.onCancel = {
+      didCancel = true
+    }
+
+    let event = try XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [],
+      timestamp: 0,
+      windowNumber: window.windowNumber,
+      context: nil,
+      characters: "\u{1b}",
+      charactersIgnoringModifiers: "\u{1b}",
+      isARepeat: false,
+      keyCode: UInt16(kVK_Escape)
+    ))
+
+    window.keyDown(with: event)
+
+    XCTAssertTrue(didCancel)
+  }
+
   // MARK: - GlobalShortcutKind & ShortcutAction Case Matching
 
   func testRecordingToolbarShortcuts_kindsArePresent() {
