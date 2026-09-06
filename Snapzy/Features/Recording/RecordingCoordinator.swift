@@ -613,7 +613,7 @@ final class RecordingCoordinator: ObservableObject {
 
         try await recorder.startRecording()
         removeEscapeMonitors()
-        setupRecordingOverlays(for: rect)
+        await setupRecordingOverlays(for: rect)
         DiagnosticLogger.shared.log(.info, .recording, "Recording restart completed")
 
         // Play sound to indicate restart
@@ -745,7 +745,7 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
 
-        setupRecordingOverlays(for: rect)
+        await setupRecordingOverlays(for: rect)
 
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
@@ -866,7 +866,7 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setInteractionEnabled(false)
           overlay.setDimEnabled(dimNonSelectedArea)
         }
-        setupRecordingOverlays(for: rect)
+        await setupRecordingOverlays(for: rect)
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
         finishRecordingStartAttempt()
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
@@ -1141,7 +1141,7 @@ final class RecordingCoordinator: ObservableObject {
 
   // MARK: - Recording Overlays
 
-  private func setupRecordingOverlays(for rect: CGRect) {
+  private func setupRecordingOverlays(for rect: CGRect) async {
     if annotationOverlayWindow == nil {
       setupAnnotationOverlay(for: rect)
     }
@@ -1150,6 +1150,16 @@ final class RecordingCoordinator: ObservableObject {
     }
     if keystrokeOverlayWindow == nil {
       setupKeystrokeOverlay(for: rect)
+    }
+
+    // Each new recording stream resets its exceptions, even when the overlay
+    // windows survive a restart. Register both new and retained overlays.
+    for windowID in [
+      annotationOverlayWindow?.overlayWindowID,
+      clickHighlightWindow?.overlayWindowID,
+      keystrokeOverlayWindow?.overlayWindowID,
+    ].compactMap({ $0 }) {
+      await recorder.addExceptedWindow(windowID: windowID)
     }
   }
 
@@ -1191,11 +1201,6 @@ final class RecordingCoordinator: ObservableObject {
     // Start auto-clear timer
     annotationState.startCleanupTimer()
 
-    // Add overlay window to ScreenCaptureKit's exceptingWindows
-    // so annotations appear in the recorded video
-    Task {
-      await recorder.addExceptedWindow(windowID: overlayWindow.overlayWindowID)
-    }
   }
 
   private func cleanupAnnotationOverlay() {
@@ -1242,10 +1247,6 @@ final class RecordingCoordinator: ObservableObject {
       "windowID": "\(highlightWindow.overlayWindowID)"
     ])
 
-    // Add to ScreenCaptureKit's exceptingWindows so the effect is captured
-    Task {
-      await recorder.addExceptedWindow(windowID: highlightWindow.overlayWindowID)
-    }
   }
 
   private func cleanupClickHighlightOverlay() {
@@ -1282,10 +1283,6 @@ final class RecordingCoordinator: ObservableObject {
       "windowID": "\(overlayWindow.overlayWindowID)"
     ])
 
-    // Add to ScreenCaptureKit's exceptingWindows so keystrokes are captured
-    Task {
-      await recorder.addExceptedWindow(windowID: overlayWindow.overlayWindowID)
-    }
   }
 
   private func cleanupKeystrokeOverlay() {
