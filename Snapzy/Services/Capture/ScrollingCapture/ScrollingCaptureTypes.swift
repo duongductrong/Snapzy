@@ -287,16 +287,18 @@ enum ScrollingCaptureAutoScrollPolicy {
   static let hoverPadding: CGFloat = 16
   static let alignmentFailureStopThreshold = 3
   static let noMovementFinishThreshold = 2
-  static let wheelDeltaY: Int32 = -3
+  // Keep display-paced input while advancing enough per commit to avoid crawling
+  // on tall selections, retaining the existing viewport overlap bound.
+  static let wheelDeltaY: Int32 = -8
   static let tickIntervalNanoseconds: UInt64 = 16_000_000
   static let settleNanoseconds: UInt64 = 120_000_000
   static let retrySettleNanoseconds: UInt64 = 180_000_000
   static let pausedIntervalNanoseconds: UInt64 = 150_000_000
   static let freshFrameTimeoutNanoseconds: UInt64 = 600_000_000
-  static let targetViewportFraction: CGFloat = 0.18
+  static let targetViewportFraction: CGFloat = 0.24
   static let maxSafeViewportFraction: CGFloat = 0.26
   static let minStepPoints: CGFloat = 36
-  static let maxStepPoints: CGFloat = 90
+  static let maxStepPoints: CGFloat = 240
 
   static func canToggle(
     phase: ScrollingCapturePhase,

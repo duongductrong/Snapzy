@@ -193,7 +193,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_stepDistanceStaysInsideOverlapSafeBounds() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 800),
-      90,
+      192,
       accuracy: 0.001
     )
     XCTAssertEqual(
@@ -203,7 +203,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 200),
-      36,
+      48,
       accuracy: 0.001
     )
   }
@@ -211,11 +211,11 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_tickCountMatchesWheelDelta() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 36),
-      12
+      4
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 90),
-      30
+      11
     )
   }
 
@@ -244,6 +244,24 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     XCTAssertEqual(
       normal.postedDistancePoints,
       CGFloat(normal.tickCount) * CGFloat(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY))
+    )
+  }
+
+  func testAutoScrollPolicy_makesUsefulProgressWithoutLongBurstsOrLostOverlap() {
+    for height: CGFloat in [120, 240, 600, 800, 1000, 2000] {
+      let plan = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: height, isRetry: false)
+      let duration = Double(plan.tickCount) * Double(plan.tickIntervalNanoseconds) / 1_000_000_000
+
+      XCTAssertGreaterThan(plan.postedDistancePoints, 0)
+      XCTAssertLessThanOrEqual(plan.postedDistancePoints, height * 0.26)
+      XCTAssertLessThanOrEqual(duration, 0.5, "Input must stay responsive to Stop and pointer exit")
+      XCTAssertGreaterThanOrEqual(Double(plan.postedDistancePoints) / duration, 400)
+    }
+
+    let tallSelection = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 1000, isRetry: false)
+    XCTAssertGreaterThanOrEqual(
+      tallSelection.postedDistancePoints, 200,
+      "Tall selections should not stitch after every tiny scroll"
     )
   }
 
