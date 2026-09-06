@@ -10,11 +10,23 @@ import Foundation
 import Security
 
 enum AppBundleIdentity {
+  static let releaseIdentifier = "com.trongduong.snapzy"
+  static let debugIdentifier = "com.trongduong.snapzy.debug"
+
   #if DEBUG
-  static let expected = "com.trongduong.snapzy.debug"
+  static let isDebugBuild = true
   #else
-  static let expected = "com.trongduong.snapzy"
+  static let isDebugBuild = false
   #endif
+
+  static let expected = isDebugBuild ? debugIdentifier : releaseIdentifier
+
+  static func matches(_ identifier: String?, debugBuild: Bool = isDebugBuild) -> Bool {
+    // Local development builds may retain the normal app identity and signing
+    // certificate to preserve existing macOS capture permissions across rebuilds.
+    // Release builds still require the release identity; arbitrary IDs are rejected.
+    identifier == releaseIdentifier || (debugBuild && identifier == debugIdentifier)
+  }
 }
 
 enum AppIdentityIssue: Equatable, Hashable {
@@ -77,7 +89,7 @@ final class AppIdentityManager: ObservableObject {
     var issues: [AppIdentityIssue] = []
     let quarantined = isQuarantined(bundleURL)
 
-    if Bundle.main.bundleIdentifier != AppBundleIdentity.expected {
+    if !AppBundleIdentity.matches(Bundle.main.bundleIdentifier) {
       issues.append(.unexpectedBundleIdentifier(Bundle.main.bundleIdentifier))
     }
 

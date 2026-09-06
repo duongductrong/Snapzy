@@ -35,6 +35,19 @@ final class ScrollingCaptureMetricsTests: XCTestCase {
 
   // MARK: - Scroll Events
 
+  func testRecordAutoScrollCounters_appearInSummary() {
+    var metrics = ScrollingCaptureSessionMetrics()
+    metrics.recordAutoScrollTick()
+    metrics.recordAutoScrollTick()
+    metrics.recordAutoScrollSettledCommit()
+    metrics.recordAutoScrollRejectedStaleFrame()
+
+    let context = metrics.summaryContext(reason: "saved")
+    XCTAssertEqual(context["autoScrollTicks"], "2")
+    XCTAssertEqual(context["autoScrollSettledCommits"], "1")
+    XCTAssertEqual(context["autoScrollRejectedStaleFrames"], "1")
+  }
+
   func testRecordScrollEvent_incrementsCountAndDistance() {
     var metrics = ScrollingCaptureSessionMetrics()
     metrics.recordScrollEvent(deltaY: 10.5)
@@ -356,7 +369,8 @@ final class ScrollingCaptureMetricsTests: XCTestCase {
       "previewTruthLiveAhead", "previewTruthLiveAheadMaxLagMs",
       "tentativeStitches", "unsafeStitches",
       "finalizingStarts", "finalizingAvgMs", "finalizingBlockedInput",
-      "preStartEscapeCancels"
+      "preStartEscapeCancels",
+      "autoScrollTicks", "autoScrollSettledCommits", "autoScrollRejectedStaleFrames"
     ]
 
     for key in expectedKeys {

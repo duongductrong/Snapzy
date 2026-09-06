@@ -62,6 +62,9 @@ nonisolated struct ScrollingCaptureSessionMetrics {
   private(set) var finalizingDurationTotalMs = 0
   private(set) var finalizingBlockedInputCount = 0
   private(set) var preStartEscapeCancelCount = 0
+  private(set) var autoScrollTickCount = 0
+  private(set) var autoScrollSettledCommitCount = 0
+  private(set) var autoScrollRejectedStaleFrameCount = 0
 
   private var lastLivePreviewFrameAt: TimeInterval?
   private var currentAlignmentFailureStreak = 0
@@ -256,6 +259,18 @@ nonisolated struct ScrollingCaptureSessionMetrics {
     preStartEscapeCancelCount += 1
   }
 
+  mutating func recordAutoScrollTick() {
+    autoScrollTickCount += 1
+  }
+
+  mutating func recordAutoScrollSettledCommit() {
+    autoScrollSettledCommitCount += 1
+  }
+
+  mutating func recordAutoScrollRejectedStaleFrame() {
+    autoScrollRejectedStaleFrameCount += 1
+  }
+
   func summaryContext(reason: String) -> [String: String] {
     let sessionDurationSeconds = max(0, ProcessInfo.processInfo.systemUptime - sessionStartedAt)
     let livePreviewGapCount = max(0, livePreviewFrameCount - 1)
@@ -321,7 +336,10 @@ nonisolated struct ScrollingCaptureSessionMetrics {
       "finalizingStarts": "\(finalizingStartCount)",
       "finalizingAvgMs": Self.averageString(total: finalizingDurationTotalMs, count: finalizingStartCount),
       "finalizingBlockedInput": "\(finalizingBlockedInputCount)",
-      "preStartEscapeCancels": "\(preStartEscapeCancelCount)"
+      "preStartEscapeCancels": "\(preStartEscapeCancelCount)",
+      "autoScrollTicks": "\(autoScrollTickCount)",
+      "autoScrollSettledCommits": "\(autoScrollSettledCommitCount)",
+      "autoScrollRejectedStaleFrames": "\(autoScrollRejectedStaleFrameCount)"
     ]
   }
 

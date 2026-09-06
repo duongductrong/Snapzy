@@ -126,7 +126,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
   }
 
-  func testAutoScrollPolicy_allowsSmallHoverPadding() {
+  func testAutoScrollPolicy_clampsHoverPaddingInsideCapturedPane() {
     let mouseLocation = CGPoint(x: sampleAnchorRect.minX - 10, y: sampleAnchorRect.midY)
 
     XCTAssertEqual(
@@ -134,7 +134,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
         mouseLocation: mouseLocation,
         selectedRect: sampleAnchorRect
       ),
-      mouseLocation
+      CGPoint(x: sampleAnchorRect.minX + 1, y: sampleAnchorRect.midY)
     )
   }
 
@@ -149,16 +149,27 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
   }
 
-  func testAutoScrollPolicy_finishesOnBoundaryOrHeightLimit() {
-    XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.stitchAction(
-        for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
-      ),
-      .finishCapture
-    )
+  func testAutoScrollPolicy_finishesOnHeightLimit() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .reachedHeightLimit)
+      ),
+      .finishCapture
+    )
+  }
+
+  func testAutoScrollPolicy_retriesBeforeTreatingNoMovementAsEnd() {
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stitchAction(
+        for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
+        consecutiveNoMovementCount: 1
+      ),
+      .retryStep
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stitchAction(
+        for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
+        consecutiveNoMovementCount: ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold
       ),
       .finishCapture
     )
@@ -169,13 +180,135 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .ignoredAlignmentFailed, matchFailureCount: 2)
       ),
-      .keepScrolling
+      .retryCommit
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .ignoredAlignmentFailed, matchFailureCount: 3)
       ),
       .stopScrolling
+    )
+  }
+
+  func testAutoScrollPolicy_stepDistanceStaysInsideOverlapSafeBounds() {
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 800),
+      192,
+      accuracy: 0.001
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 100),
+      26,
+      accuracy: 0.001
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 200),
+      48,
+      accuracy: 0.001
+    )
+  }
+
+  func testAutoScrollPolicy_tickCountMatchesWheelDelta() {
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 36),
+      4
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 90),
+      11
+    )
+  }
+
+  func testAutoScrollPolicy_undersizedAppendTriggersSmallerFollowUpStep() {
+    XCTAssertTrue(
+      ScrollingCaptureAutoScrollPolicy.shouldTakeSmallerFollowUpStep(
+        acceptedDeltaPixels: 24,
+        expectedSignedDeltaPixels: -120
+      )
+    )
+    XCTAssertFalse(
+      ScrollingCaptureAutoScrollPolicy.shouldTakeSmallerFollowUpStep(
+        acceptedDeltaPixels: 80,
+        expectedSignedDeltaPixels: -120
+      )
+    )
+  }
+
+  func testAutoScrollPolicy_retryStepPlanUsesSmallerBurstAndLongerSettle() {
+    let normal = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 800, isRetry: false)
+    let retry = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 800, isRetry: true)
+
+    XCTAssertGreaterThan(normal.tickCount, retry.tickCount)
+    XCTAssertEqual(normal.settleNanoseconds, ScrollingCaptureAutoScrollPolicy.settleNanoseconds)
+    XCTAssertEqual(retry.settleNanoseconds, ScrollingCaptureAutoScrollPolicy.retrySettleNanoseconds)
+    XCTAssertEqual(
+      normal.postedDistancePoints,
+      CGFloat(normal.tickCount) * CGFloat(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY))
+    )
+  }
+
+  func testAutoScrollPolicy_makesUsefulProgressWithoutLongBurstsOrLostOverlap() {
+    for height: CGFloat in [120, 240, 600, 800, 1000, 2000] {
+      let plan = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: height, isRetry: false)
+      let duration = Double(plan.tickCount) * Double(plan.tickIntervalNanoseconds) / 1_000_000_000
+
+      XCTAssertGreaterThan(plan.postedDistancePoints, 0)
+      XCTAssertLessThanOrEqual(plan.postedDistancePoints, height * 0.26)
+      XCTAssertLessThanOrEqual(duration, 0.5, "Input must stay responsive to Stop and pointer exit")
+      XCTAssertGreaterThanOrEqual(Double(plan.postedDistancePoints) / duration, 400)
+    }
+
+    let tallSelection = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 1000, isRetry: false)
+    XCTAssertGreaterThanOrEqual(
+      tallSelection.postedDistancePoints, 200,
+      "Tall selections should not stitch after every tiny scroll"
+    )
+  }
+
+  func testAutoScrollPolicy_expectedDeltaPrefersObservedScroll() {
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.expectedSignedDeltaPixels(
+        postedDistancePoints: 120,
+        observedDistancePoints: -80,
+        scaleFactor: 2
+      ),
+      -160
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.expectedSignedDeltaPixels(
+        postedDistancePoints: 120,
+        observedDistancePoints: 0,
+        scaleFactor: 2
+      ),
+      -240
+    )
+  }
+
+  func testAutoScrollPolicy_missingStitchUpdateRetriesThenStopsWithoutSaving() {
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(consecutiveFailureCount: 1),
+      .retryCommit
+    )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(
+        consecutiveFailureCount: ScrollingCaptureAutoScrollPolicy.alignmentFailureStopThreshold
+      ),
+      .stopScrolling
+    )
+  }
+
+  func testAutoScrollPolicy_rejectsFrameCapturedBeforeLastSyntheticEvent() {
+    XCTAssertFalse(
+      ScrollingCaptureAutoScrollPolicy.isCommitFrameEligible(
+        capturedAt: 10.0,
+        lastSyntheticEventAt: 10.5
+      )
+    )
+    XCTAssertTrue(
+      ScrollingCaptureAutoScrollPolicy.isCommitFrameEligible(
+        capturedAt: 10.6,
+        lastSyntheticEventAt: 10.5
+      )
     )
   }
 

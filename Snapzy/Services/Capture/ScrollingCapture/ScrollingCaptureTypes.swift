@@ -254,13 +254,51 @@ enum ScrollingCaptureConfiguration {
 
 enum ScrollingCaptureAutoScrollStitchAction: Equatable {
   case keepScrolling
+  case retryStep
+  case retryCommit
   case stopScrolling
   case finishCapture
 }
 
+enum ScrollingCaptureAutoScrollPhase: Equatable {
+  case idle
+  case emittingBoundedStep
+  case waitingForSettle
+  case requestingCommit
+  case waitingForCommitResult
+  case decidingNextAction
+}
+
+enum ScrollingCaptureAutoScrollStopReason: Equatable {
+  case none
+  case userToggle
+  case finishRequested
+  case cancelRequested
+}
+
 enum ScrollingCaptureAutoScrollPolicy {
+  struct StepPlan: Equatable {
+    let tickCount: Int
+    let postedDistancePoints: CGFloat
+    let tickIntervalNanoseconds: UInt64
+    let settleNanoseconds: UInt64
+  }
+
   static let hoverPadding: CGFloat = 16
   static let alignmentFailureStopThreshold = 3
+  static let noMovementFinishThreshold = 2
+  // Keep display-paced input while advancing enough per commit to avoid crawling
+  // on tall selections, retaining the existing viewport overlap bound.
+  static let wheelDeltaY: Int32 = -8
+  static let tickIntervalNanoseconds: UInt64 = 16_000_000
+  static let settleNanoseconds: UInt64 = 120_000_000
+  static let retrySettleNanoseconds: UInt64 = 180_000_000
+  static let pausedIntervalNanoseconds: UInt64 = 150_000_000
+  static let freshFrameTimeoutNanoseconds: UInt64 = 600_000_000
+  static let targetViewportFraction: CGFloat = 0.24
+  static let maxSafeViewportFraction: CGFloat = 0.26
+  static let minStepPoints: CGFloat = 36
+  static let maxStepPoints: CGFloat = 240
 
   static func canToggle(
     phase: ScrollingCapturePhase,
@@ -278,22 +316,95 @@ enum ScrollingCaptureAutoScrollPolicy {
   static func scrollTargetPoint(mouseLocation: CGPoint, selectedRect: CGRect) -> CGPoint? {
     let hoverRect = selectedRect.insetBy(dx: -hoverPadding, dy: -hoverPadding)
     guard hoverRect.contains(mouseLocation) else { return nil }
-    return mouseLocation
+    // Padding keeps the pause forgiving without sending input to a neighboring pane.
+    return CGPoint(
+      x: min(max(mouseLocation.x, selectedRect.minX + 1), selectedRect.maxX - 1),
+      y: min(max(mouseLocation.y, selectedRect.minY + 1), selectedRect.maxY - 1)
+    )
   }
 
-  static func stitchAction(for update: ScrollingCaptureStitchUpdate) -> ScrollingCaptureAutoScrollStitchAction {
-    if update.likelyReachedBoundary {
-      return .finishCapture
+  static func stepDistancePoints(regionHeight: CGFloat) -> CGFloat {
+    let height = max(1, regionHeight)
+    let preferred = height * targetViewportFraction
+    let maxSafe = height * maxSafeViewportFraction
+    let clampedPreferred = min(maxStepPoints, max(minStepPoints, preferred))
+    return min(clampedPreferred, max(1, maxSafe))
+  }
+
+  static func tickCount(forStepDistancePoints step: CGFloat) -> Int {
+    let tickMagnitude = CGFloat(abs(wheelDeltaY))
+    guard tickMagnitude > 0 else { return 1 }
+    return max(1, Int((step / tickMagnitude).rounded(.down)))
+  }
+
+  static func stepPlan(regionHeight: CGFloat, isRetry: Bool) -> StepPlan {
+    let fullStep = stepDistancePoints(regionHeight: regionHeight)
+    let step = isRetry ? max(1, fullStep * 0.55) : fullStep
+    let ticks = tickCount(forStepDistancePoints: step)
+    return StepPlan(
+      tickCount: ticks,
+      postedDistancePoints: CGFloat(ticks) * CGFloat(abs(wheelDeltaY)),
+      tickIntervalNanoseconds: tickIntervalNanoseconds,
+      settleNanoseconds: isRetry ? retrySettleNanoseconds : settleNanoseconds
+    )
+  }
+
+  static func expectedSignedDeltaPixels(
+    postedDistancePoints: CGFloat,
+    observedDistancePoints: CGFloat,
+    scaleFactor: CGFloat
+  ) -> Int {
+    let scale = max(scaleFactor, 1)
+    let observedPixels = Int(round(observedDistancePoints * scale))
+    if abs(observedPixels) > 2 {
+      return observedPixels
     }
 
+    let sign: CGFloat = wheelDeltaY < 0 ? -1 : 1
+    return Int(round(abs(postedDistancePoints) * scale * sign))
+  }
+
+  static func isCommitFrameEligible(
+    capturedAt: TimeInterval,
+    lastSyntheticEventAt: TimeInterval?
+  ) -> Bool {
+    guard let lastSyntheticEventAt else { return true }
+    return capturedAt > lastSyntheticEventAt
+  }
+
+  static func stitchAction(
+    for update: ScrollingCaptureStitchUpdate,
+    consecutiveNoMovementCount: Int = 0
+  ) -> ScrollingCaptureAutoScrollStitchAction {
     switch update.outcome {
     case .reachedHeightLimit:
       return .finishCapture
     case .ignoredAlignmentFailed where update.matchFailureCount >= alignmentFailureStopThreshold:
       return .stopScrolling
-    case .initialized, .appended, .ignoredNoMovement, .ignoredAlignmentFailed:
+    case .ignoredAlignmentFailed:
+      return .retryCommit
+    case .ignoredNoMovement:
+      if update.likelyReachedBoundary, consecutiveNoMovementCount >= noMovementFinishThreshold {
+        return .finishCapture
+      }
+      return .retryStep
+    case .initialized, .appended:
       return .keepScrolling
     }
+  }
+
+  static func actionForMissingStitchUpdate(
+    consecutiveFailureCount: Int
+  ) -> ScrollingCaptureAutoScrollStitchAction {
+    consecutiveFailureCount >= alignmentFailureStopThreshold ? .stopScrolling : .retryCommit
+  }
+
+  static func shouldTakeSmallerFollowUpStep(
+    acceptedDeltaPixels: Int,
+    expectedSignedDeltaPixels: Int?
+  ) -> Bool {
+    guard let expected = expectedSignedDeltaPixels.map(abs), expected > 24 else { return false }
+    return acceptedDeltaPixels < max(18, expected / 2)
   }
 }
 
@@ -314,6 +425,7 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   @Published var acceptedFrameCount = 0
   @Published var stitchedPixelHeight = 0
   @Published var isAutoScrolling = false
+  @Published var isAutoScrollStopping = false
 
   init(selectedRect: CGRect) {
     self.selectedRect = selectedRect
@@ -345,7 +457,7 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   }
 
   var canToggleAutoScroll: Bool {
-    ScrollingCaptureAutoScrollPolicy.canToggle(
+    !isAutoScrollStopping && ScrollingCaptureAutoScrollPolicy.canToggle(
       phase: phase,
       acceptedFrameCount: acceptedFrameCount,
       isAutoScrolling: isAutoScrolling
