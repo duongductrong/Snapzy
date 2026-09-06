@@ -373,7 +373,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     _ image: CGImage,
     maxOutputHeight: Int,
     expectedSignedDeltaPixels: Int? = nil,
-    renderMergedImage: Bool = true
+    renderMergedImage: Bool = true,
+    allowsSettledPartialStep: Bool = false
   ) -> ScrollingCaptureStitchUpdate? {
     guard let lastRaster, let baseRaster else { return start(with: image) }
     guard let raster = RasterImage(cgImage: image) else { return nil }
@@ -403,6 +404,18 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth
     )
+    // A wheel request is an upper bound at the end of a scroll area. Only a
+    // viewport independently verified as settled may use a smaller visual prior.
+    let matchingExpectedDelta: Int?
+    if allowsSettledPartialStep,
+       let expectedDeltaPixels,
+       let estimate = visionAlignmentEstimate,
+       estimate.agreementCount >= 2,
+       estimate.deltaY > 0, estimate.deltaY < expectedDeltaPixels {
+      matchingExpectedDelta = estimate.deltaY * ((expectedSignedDeltaPixels ?? 0) < 0 ? -1 : 1)
+    } else {
+      matchingExpectedDelta = expectedSignedDeltaPixels
+    }
     let frameDifference = contentDifference(
       previous: lastRaster,
       current: raster,
@@ -418,7 +431,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       footerHeight: inferredFooterHeight,
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth,
-      expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+      expectedSignedDeltaPixels: matchingExpectedDelta,
       visionAlignmentEstimate: nil,
       searchMode: .guided
     )
@@ -456,7 +469,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
-        expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+        expectedSignedDeltaPixels: matchingExpectedDelta,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .guided
       )
@@ -480,7 +493,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
-        expectedSignedDeltaPixels: expectedSignedDeltaPixels,
+        expectedSignedDeltaPixels: matchingExpectedDelta,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .recovery
       )
@@ -491,6 +504,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       let expectedDeltaPixels,
       expectedDeltaPixels > 0,
       let candidate = match,
+      !isVerifiedSettledPartialMatch(candidate, expectedDeltaPixels: expectedDeltaPixels,
+        visionAlignmentEstimate: visionAlignmentEstimate, allowed: allowsSettledPartialStep),
       stronglyContradictsKnownStep(
         candidate,
         expectedDeltaPixels: expectedDeltaPixels,
@@ -1340,6 +1355,20 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     guard let expectedDeltaPixels, expectedDeltaPixels > 0 else { return true }
     let tolerance = max(28, expectedDeltaPixels / 2)
     return abs(lastMatchDelta - expectedDeltaPixels) <= tolerance
+  }
+
+  private func isVerifiedSettledPartialMatch(
+    _ match: Match,
+    expectedDeltaPixels: Int,
+    visionAlignmentEstimate: VisionAlignmentEstimate?,
+    allowed: Bool
+  ) -> Bool {
+    guard allowed, match.deltaY < expectedDeltaPixels,
+          let estimate = visionAlignmentEstimate, estimate.agreementCount >= 2 else { return false }
+    return abs(estimate.deltaY - match.deltaY) <= 2
+      && match.pixelScore < 2
+      && match.bandVariance < 2
+      && matcherConfidence(for: match) >= 0.9
   }
 
   private func stronglyContradictsKnownStep(

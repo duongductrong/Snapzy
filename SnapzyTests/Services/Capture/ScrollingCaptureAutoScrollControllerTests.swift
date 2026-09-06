@@ -64,23 +64,23 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
 
   func testKnownStepExpectedDeltaUsesCurrentStepNotPreviousAccepted() async throws {
     let controller = ScrollingCaptureAutoScrollController()
-    let step = try beginPostedStep(on: controller, regionHeight: 800)
+    _ = try beginPostedStep(on: controller, regionHeight: 800)
 
     let expected = try XCTUnwrap(
       controller.expectedSignedDeltaPixels(observedDistancePoints: 0, scaleFactor: 2)
     )
-    XCTAssertEqual(expected, -Int(step.plan.postedDistancePoints * 2))
+    XCTAssertEqual(expected, -Int(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY)) * 2)
     XCTAssertEqual(
       expected,
       ScrollingCaptureAutoScrollPolicy.expectedSignedDeltaPixels(
-        postedDistancePoints: step.plan.postedDistancePoints,
+        postedDistancePoints: CGFloat(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY)),
         observedDistancePoints: 0,
         scaleFactor: 2
       )
     )
   }
 
-  func testFailedAlignmentCausesRetryRatherThanImmediateNextFullStep() async throws {
+  func testFailedAlignmentRetriesSameViewportWithoutPostingAnotherStep() async throws {
     let controller = ScrollingCaptureAutoScrollController()
     let step = try requestCommit(on: controller)
 
@@ -89,11 +89,12 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
       stepID: step.id,
       update: stitchUpdate(outcome: .ignoredAlignmentFailed, matchFailureCount: 1)
     )
-    XCTAssertEqual(action, .retryStep)
-
-    let retry = try XCTUnwrap(controller.beginStep(generation: 1, regionHeight: 400, isRetry: true))
-    XCTAssertTrue(retry.isRetry)
-    XCTAssertLessThan(retry.plan.postedDistancePoints, step.plan.postedDistancePoints)
+    XCTAssertEqual(action, .retryCommit)
+    XCTAssertEqual(controller.activeStep?.id, step.id)
+    XCTAssertEqual(controller.phase, .waitingForSettle)
+    XCTAssertNil(controller.beginStep(generation: 1, regionHeight: 400, isRetry: true))
+    XCTAssertTrue(controller.markReadyToCommit(generation: 1))
+    XCTAssertTrue(controller.noteCommitRequested(generation: 1, stepID: step.id))
   }
 
   func testPointerLeavingAbortsUnsettledStepWithoutCommit() async throws {
@@ -188,6 +189,101 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertEqual(eligible?.sequenceNumber, 3)
 
     XCTAssertNil(ring.latestFrame(capturedAfter: 2.0, afterSequenceNumber: 1))
+  }
+
+  func testStoppingMidBurstSealsOnlyPostedDistance() async throws {
+    let controller = ScrollingCaptureAutoScrollController()
+    let step = try beginPostedStep(on: controller)
+    controller.noteSyntheticEvent(at: 1.02, generation: 1)
+    controller.requestStop(.userToggle)
+
+    XCTAssertTrue(controller.suppressesManualCommitLoop)
+    XCTAssertFalse(controller.isIdleForFinish)
+    XCTAssertEqual(
+      controller.expectedSignedDeltaPixels(observedDistancePoints: 0, scaleFactor: 2),
+      -Int(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY)) * 4
+    )
+    XCTAssertTrue(controller.finishEmitting(generation: 1))
+    XCTAssertTrue(controller.markReadyToCommit(generation: 1))
+    XCTAssertTrue(controller.noteCommitRequested(generation: 1, stepID: step.id))
+    _ = controller.handleCommitResult(generation: 1, stepID: step.id, update: stitchUpdate(outcome: .appended(deltaY: 12)))
+    XCTAssertTrue(controller.isIdleForFinish)
+    XCTAssertFalse(controller.canBeginStep)
+    XCTAssertFalse(controller.suppressesManualCommitLoop)
+  }
+
+  func testCaptureFailuresStopWithoutSavingOrScrollingFarther() async throws {
+    let controller = ScrollingCaptureAutoScrollController()
+    let step = try requestCommit(on: controller)
+    for failure in 1...3 {
+      let action = controller.handleCommitResult(generation: 1, stepID: step.id, update: nil)
+      XCTAssertEqual(controller.consecutiveNoMovementCount, 0)
+      XCTAssertEqual(action, failure == 3 ? .stopScrolling : .retryCommit)
+      if failure < 3 {
+        XCTAssertFalse(controller.canBeginStep)
+        XCTAssertTrue(controller.markReadyToCommit(generation: 1))
+        XCTAssertTrue(controller.noteCommitRequested(generation: 1, stepID: step.id))
+      }
+    }
+    XCTAssertEqual(controller.stepCount, 1)
+  }
+
+  func testUnconfirmedNoMovementDoesNotFinishCapture() async throws {
+    let controller = ScrollingCaptureAutoScrollController()
+    for eventAt in [1.0, 2.0, 3.0] {
+      let step = try requestCommit(on: controller, eventAt: eventAt)
+      let action = controller.handleCommitResult(
+        generation: 1, stepID: step.id,
+        update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: false)
+      )
+      XCTAssertEqual(action, .retryStep)
+      XCTAssertEqual(controller.consecutiveNoMovementCount, 0)
+    }
+  }
+
+  func testFailureBreaksConsecutiveBoundaryObservations() async throws {
+    let controller = ScrollingCaptureAutoScrollController()
+    let first = try requestCommit(on: controller)
+    _ = controller.handleCommitResult(generation: 1, stepID: first.id,
+      update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true))
+    let second = try requestCommit(on: controller, eventAt: 2)
+    _ = controller.handleCommitResult(generation: 1, stepID: second.id, update: nil)
+    XCTAssertTrue(controller.markReadyToCommit(generation: 1))
+    XCTAssertTrue(controller.noteCommitRequested(generation: 1, stepID: second.id))
+    XCTAssertEqual(controller.handleCommitResult(generation: 1, stepID: second.id,
+      update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)), .retryStep)
+  }
+
+  func testFreshAnimationFramesMustBecomeVisuallyStable() async throws {
+    var stability = ScrollingCaptureFrameStability()
+    let first = try XCTUnwrap(TestImageFactory.solidColor(width: 128, height: 128, red: 0, green: 0, blue: 0))
+    let second = try XCTUnwrap(TestImageFactory.solidColor(width: 128, height: 128, red: 255, green: 255, blue: 255))
+    XCTAssertFalse(stability.observe(first, at: 1.0))
+    XCTAssertFalse(stability.observe(second, at: 1.04))
+    XCTAssertFalse(stability.observe(first, at: 1.08))
+    XCTAssertFalse(stability.observe(first, at: 1.12))
+    XCTAssertTrue(stability.observe(first, at: 1.20))
+  }
+
+  func testStaticStreamDoesNotNeedToPublishDuplicateFramesToSettle() async throws {
+    var stability = ScrollingCaptureFrameStability()
+    let image = try XCTUnwrap(TestImageFactory.solidColor(width: 128, height: 128))
+    XCTAssertFalse(stability.observe(image, at: 1))
+    XCTAssertTrue(stability.observe(image, at: 1.11))
+  }
+
+  func testStopButtonCannotRestartUntilActiveStepIsSealed() async {
+    let model = ScrollingCaptureSessionModel(selectedRect: CGRect(x: 0, y: 0, width: 400, height: 400))
+    model.phase = .capturing
+    model.acceptedFrameCount = 1
+    model.isAutoScrolling = true
+    model.isAutoScrollStopping = true
+    XCTAssertFalse(model.canToggleAutoScroll)
+    XCTAssertTrue(model.canFinishCapture)
+    XCTAssertTrue(model.canCancelSession)
+    model.isAutoScrolling = false
+    model.isAutoScrollStopping = false
+    XCTAssertTrue(model.canToggleAutoScroll)
   }
 
   @discardableResult

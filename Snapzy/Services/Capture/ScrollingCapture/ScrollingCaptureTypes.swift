@@ -255,6 +255,7 @@ enum ScrollingCaptureConfiguration {
 enum ScrollingCaptureAutoScrollStitchAction: Equatable {
   case keepScrolling
   case retryStep
+  case retryCommit
   case stopScrolling
   case finishCapture
 }
@@ -286,13 +287,12 @@ enum ScrollingCaptureAutoScrollPolicy {
   static let hoverPadding: CGFloat = 16
   static let alignmentFailureStopThreshold = 3
   static let noMovementFinishThreshold = 2
-  static let minimumPostEventFrames = 2
-  static let wheelDeltaY: Int32 = -15
-  static let tickIntervalNanoseconds: UInt64 = 12_000_000
+  static let wheelDeltaY: Int32 = -3
+  static let tickIntervalNanoseconds: UInt64 = 16_000_000
   static let settleNanoseconds: UInt64 = 120_000_000
   static let retrySettleNanoseconds: UInt64 = 180_000_000
   static let pausedIntervalNanoseconds: UInt64 = 150_000_000
-  static let freshFrameTimeoutNanoseconds: UInt64 = 160_000_000
+  static let freshFrameTimeoutNanoseconds: UInt64 = 600_000_000
   static let targetViewportFraction: CGFloat = 0.18
   static let maxSafeViewportFraction: CGFloat = 0.26
   static let minStepPoints: CGFloat = 36
@@ -314,7 +314,11 @@ enum ScrollingCaptureAutoScrollPolicy {
   static func scrollTargetPoint(mouseLocation: CGPoint, selectedRect: CGRect) -> CGPoint? {
     let hoverRect = selectedRect.insetBy(dx: -hoverPadding, dy: -hoverPadding)
     guard hoverRect.contains(mouseLocation) else { return nil }
-    return mouseLocation
+    // Padding keeps the pause forgiving without sending input to a neighboring pane.
+    return CGPoint(
+      x: min(max(mouseLocation.x, selectedRect.minX + 1), selectedRect.maxX - 1),
+      y: min(max(mouseLocation.y, selectedRect.minY + 1), selectedRect.maxY - 1)
+    )
   }
 
   static func stepDistancePoints(regionHeight: CGFloat) -> CGFloat {
@@ -328,7 +332,7 @@ enum ScrollingCaptureAutoScrollPolicy {
   static func tickCount(forStepDistancePoints step: CGFloat) -> Int {
     let tickMagnitude = CGFloat(abs(wheelDeltaY))
     guard tickMagnitude > 0 else { return 1 }
-    return max(1, Int((step / tickMagnitude).rounded()))
+    return max(1, Int((step / tickMagnitude).rounded(.down)))
   }
 
   static func stepPlan(regionHeight: CGFloat, isRetry: Bool) -> StepPlan {
@@ -376,9 +380,9 @@ enum ScrollingCaptureAutoScrollPolicy {
     case .ignoredAlignmentFailed where update.matchFailureCount >= alignmentFailureStopThreshold:
       return .stopScrolling
     case .ignoredAlignmentFailed:
-      return .retryStep
+      return .retryCommit
     case .ignoredNoMovement:
-      if consecutiveNoMovementCount >= noMovementFinishThreshold {
+      if update.likelyReachedBoundary, consecutiveNoMovementCount >= noMovementFinishThreshold {
         return .finishCapture
       }
       return .retryStep
@@ -388,9 +392,9 @@ enum ScrollingCaptureAutoScrollPolicy {
   }
 
   static func actionForMissingStitchUpdate(
-    consecutiveNoMovementCount: Int
+    consecutiveFailureCount: Int
   ) -> ScrollingCaptureAutoScrollStitchAction {
-    consecutiveNoMovementCount >= noMovementFinishThreshold ? .finishCapture : .retryStep
+    consecutiveFailureCount >= alignmentFailureStopThreshold ? .stopScrolling : .retryCommit
   }
 
   static func shouldTakeSmallerFollowUpStep(
@@ -419,6 +423,7 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   @Published var acceptedFrameCount = 0
   @Published var stitchedPixelHeight = 0
   @Published var isAutoScrolling = false
+  @Published var isAutoScrollStopping = false
 
   init(selectedRect: CGRect) {
     self.selectedRect = selectedRect
@@ -450,7 +455,7 @@ final class ScrollingCaptureSessionModel: ObservableObject {
   }
 
   var canToggleAutoScroll: Bool {
-    ScrollingCaptureAutoScrollPolicy.canToggle(
+    !isAutoScrollStopping && ScrollingCaptureAutoScrollPolicy.canToggle(
       phase: phase,
       acceptedFrameCount: acceptedFrameCount,
       isAutoScrolling: isAutoScrolling

@@ -126,7 +126,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
   }
 
-  func testAutoScrollPolicy_allowsSmallHoverPadding() {
+  func testAutoScrollPolicy_clampsHoverPaddingInsideCapturedPane() {
     let mouseLocation = CGPoint(x: sampleAnchorRect.minX - 10, y: sampleAnchorRect.midY)
 
     XCTAssertEqual(
@@ -134,7 +134,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
         mouseLocation: mouseLocation,
         selectedRect: sampleAnchorRect
       ),
-      mouseLocation
+      CGPoint(x: sampleAnchorRect.minX + 1, y: sampleAnchorRect.midY)
     )
   }
 
@@ -180,7 +180,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .ignoredAlignmentFailed, matchFailureCount: 2)
       ),
-      .retryStep
+      .retryCommit
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stitchAction(
@@ -211,11 +211,11 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_tickCountMatchesWheelDelta() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 36),
-      2
+      12
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.tickCount(forStepDistancePoints: 90),
-      6
+      30
     )
   }
 
@@ -266,16 +266,16 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
   }
 
-  func testAutoScrollPolicy_missingStitchUpdateRetriesThenFinishes() {
+  func testAutoScrollPolicy_missingStitchUpdateRetriesThenStopsWithoutSaving() {
     XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(consecutiveNoMovementCount: 1),
-      .retryStep
+      ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(consecutiveFailureCount: 1),
+      .retryCommit
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(
-        consecutiveNoMovementCount: ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold
+        consecutiveFailureCount: ScrollingCaptureAutoScrollPolicy.alignmentFailureStopThreshold
       ),
-      .finishCapture
+      .stopScrolling
     )
   }
 

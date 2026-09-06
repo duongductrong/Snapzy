@@ -119,6 +119,35 @@ private enum ScrollingCaptureAccuracyBenchmark {
         verifyEncodedRows: true
       ),
       ScrollAccuracyBenchmarkCase(
+        name: "settled-final-clamped-wheel-step",
+        width: 280,
+        viewportHeight: 360,
+        contentHeight: 532,
+        headerHeight: 0,
+        footerHeight: 0,
+        offsets: [0, 80, 160, 172],
+        minimumOverallAccuracy: 0.995,
+        pattern: .repeatedBands,
+        expectedDeltas: [nil, 80, 80, 80],
+        verifyEncodedRows: true,
+        allowsSettledPartialStep: true
+      ),
+      ScrollAccuracyBenchmarkCase(
+        name: "settled-frame-still-rejects-skipped-band",
+        width: 280,
+        viewportHeight: 360,
+        contentHeight: 1_200,
+        headerHeight: 0,
+        footerHeight: 0,
+        offsets: [0, 240],
+        minimumOverallAccuracy: 0.995,
+        pattern: .repeatedBands,
+        frameExpectations: [.append, .ignore],
+        expectedDeltas: [nil, 80],
+        verifyEncodedRows: true,
+        allowsSettledPartialStep: true
+      ),
+      ScrollAccuracyBenchmarkCase(
         name: "final-small-step-at-boundary",
         width: 280,
         viewportHeight: 360,
@@ -157,7 +186,8 @@ private enum ScrollingCaptureAccuracyBenchmark {
         frames[index],
         maxOutputHeight: 32_768,
         expectedSignedDeltaPixels: expectedDelta,
-        renderMergedImage: false
+        renderMergedImage: false,
+        allowsSettledPartialStep: benchmark.allowsSettledPartialStep
       ) else {
         if case .append = expectation {
           failedCount += 1

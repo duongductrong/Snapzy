@@ -29,6 +29,7 @@ final class ScrollingCaptureAutoScrollController {
   private(set) var activeStep: ScrollingCaptureAutoScrollStep?
   private(set) var generation = 0
   private(set) var consecutiveNoMovementCount = 0
+  private(set) var consecutiveFailureCount = 0
   private(set) var stopReason: ScrollingCaptureAutoScrollStopReason = .none
   private(set) var stepCount = 0
   private(set) var settledCommitCount = 0
@@ -79,6 +80,7 @@ final class ScrollingCaptureAutoScrollController {
     phase = .idle
     activeStep = nil
     consecutiveNoMovementCount = 0
+    consecutiveFailureCount = 0
     stopReason = .none
     stepCount = 0
     settledCommitCount = 0
@@ -89,6 +91,9 @@ final class ScrollingCaptureAutoScrollController {
 
   func requestStop(_ reason: ScrollingCaptureAutoScrollStopReason) {
     stopReason = reason
+    if activeStep == nil {
+      phase = .idle
+    }
     if reason == .cancelRequested {
       invalidate(generation: generation)
     }
@@ -216,14 +221,10 @@ final class ScrollingCaptureAutoScrollController {
     activeStep = step
   }
 
-  func hasSettledFrames(minimum: Int = ScrollingCaptureAutoScrollPolicy.minimumPostEventFrames) -> Bool {
-    (activeStep?.postEventFrameCount ?? 0) >= minimum
-  }
-
   func expectedSignedDeltaPixels(observedDistancePoints: CGFloat, scaleFactor: CGFloat) -> Int? {
     guard let step = activeStep else { return nil }
     return ScrollingCaptureAutoScrollPolicy.expectedSignedDeltaPixels(
-      postedDistancePoints: step.plan.postedDistancePoints,
+      postedDistancePoints: CGFloat(step.postedTickCount) * CGFloat(abs(ScrollingCaptureAutoScrollPolicy.wheelDeltaY)),
       observedDistancePoints: observedDistancePoints,
       scaleFactor: scaleFactor
     )
@@ -242,29 +243,43 @@ final class ScrollingCaptureAutoScrollController {
     if let update {
       switch update.outcome {
       case .ignoredNoMovement:
-        consecutiveNoMovementCount += 1
+        consecutiveFailureCount = 0
+        consecutiveNoMovementCount = update.likelyReachedBoundary ? consecutiveNoMovementCount + 1 : 0
         if update.likelyReachedBoundary {
           boundaryConfirmationCount += 1
         }
-      case .initialized, .appended:
+      case .initialized, .appended, .reachedHeightLimit:
         consecutiveNoMovementCount = 0
-      case .ignoredAlignmentFailed, .reachedHeightLimit:
-        break
+        consecutiveFailureCount = 0
+      case .ignoredAlignmentFailed:
+        consecutiveNoMovementCount = 0
+        consecutiveFailureCount += 1
       }
-      action = ScrollingCaptureAutoScrollPolicy.stitchAction(
-        for: update,
-        consecutiveNoMovementCount: consecutiveNoMovementCount
-      )
+      action = consecutiveFailureCount >= ScrollingCaptureAutoScrollPolicy.alignmentFailureStopThreshold
+        ? .stopScrolling
+        : ScrollingCaptureAutoScrollPolicy.stitchAction(
+          for: update,
+          consecutiveNoMovementCount: consecutiveNoMovementCount
+        )
     } else {
-      consecutiveNoMovementCount += 1
+      consecutiveNoMovementCount = 0
+      consecutiveFailureCount += 1
       action = ScrollingCaptureAutoScrollPolicy.actionForMissingStitchUpdate(
-        consecutiveNoMovementCount: consecutiveNoMovementCount
+        consecutiveFailureCount: consecutiveFailureCount
       )
     }
 
-    activeStep = nil
-    if stopReason != .none {
-      phase = .idle
+    if action == .retryCommit, stopReason == .none {
+      // Retry the same viewport and distance. Scrolling farther after an unsuccessful
+      // stitch loses overlap with the last accepted frame and compounds the failure.
+      activeStep?.commitRequested = false
+      retryCount += 1
+      phase = .waitingForSettle
+    } else {
+      activeStep = nil
+      if stopReason != .none {
+        phase = .idle
+      }
     }
     return action
   }

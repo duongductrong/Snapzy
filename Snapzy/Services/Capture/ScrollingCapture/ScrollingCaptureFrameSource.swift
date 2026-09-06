@@ -89,12 +89,12 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       guard type == .screen, sampleBuffer.isValid else { return }
       guard let pixelBuffer = sampleBuffer.imageBuffer else { return }
 
+      let attachments = CMSampleBufferGetSampleAttachmentsArray(
+        sampleBuffer,
+        createIfNecessary: false
+      ) as? [[SCStreamFrameInfo: Any]]
       if
-        let attachments = CMSampleBufferGetSampleAttachmentsArray(
-          sampleBuffer,
-          createIfNecessary: false
-        ) as? [[SCStreamFrameInfo: Any]],
-        let statusRaw = attachments.first?[.status] as? Int,
+        let statusRaw = attachments?.first?[.status] as? Int,
         let status = SCFrameStatus(rawValue: statusRaw),
         status != .complete
       {
@@ -102,6 +102,9 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       }
 
       let now = ProcessInfo.processInfo.systemUptime
+      guard let displayTime = attachments?.first?[.displayTime] as? UInt64, displayTime > 0 else { return }
+      let capturedAt = CMClockMakeHostTimeFromSystemUnits(displayTime).seconds
+      guard capturedAt.isFinite, capturedAt > 0 else { return }
       guard now - lastPublishedAt >= minimumPublishInterval else { return }
 
       let imageRect = CGRect(
@@ -120,11 +123,12 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       let frame = ScrollingCaptureFrame(
         sequenceNumber: nextSequenceNumber,
         image: cgImage,
-        capturedAt: now,
+        capturedAt: capturedAt,
         motionScore: nil
       )
       DispatchQueue.main.async { [weak self] in
-        self?.onFrame?(frame)
+        guard let self, self.stream === stream else { return }
+        self.onFrame?(frame)
       }
     }
   }
@@ -133,7 +137,8 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
 extension ScrollingCaptureFrameSource: SCStreamDelegate {
   nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
     DispatchQueue.main.async { [weak self] in
-      self?.onFailure?(error.localizedDescription)
+      guard let self, self.stream === stream else { return }
+      self.onFailure?(error.localizedDescription)
     }
   }
 }

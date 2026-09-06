@@ -33,6 +33,7 @@ struct ScrollAccuracyBenchmarkCase {
   var expectedDeltas: [Int?]? = nil
   var verifyEncodedRows: Bool = false
   var allowIgnoredFrames: Bool = false
+  var allowsSettledPartialStep: Bool = false
 
   var movingViewportHeight: Int {
     viewportHeight - headerHeight - footerHeight

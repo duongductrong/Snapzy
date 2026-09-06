@@ -397,6 +397,38 @@ final class ScrollingCaptureStitcherTests: XCTestCase {
     XCTAssertEqual(stitcher.outputHeight, height + knownStep)
   }
 
+  func testAppend_settledFinalStepIncludesShortRemainingStrip() throws {
+    let stitcher = ScrollingCaptureStitcher()
+    let first = try XCTUnwrap(TestImageFactory.repeatedScrollingFrame(width: 240, height: 360, logicalYOffset: 0))
+    _ = stitcher.start(with: first)
+    for (offset, expectedAppend) in [(80, 80), (160, 80), (172, 12)] {
+      let frame = try XCTUnwrap(TestImageFactory.repeatedScrollingFrame(width: 240, height: 360, logicalYOffset: offset))
+      let update = try XCTUnwrap(stitcher.append(frame, maxOutputHeight: 10_000,
+        expectedSignedDeltaPixels: -80, allowsSettledPartialStep: true))
+      guard case .appended(let delta) = update.outcome else {
+        return XCTFail("Expected remaining strip at offset \(offset), got \(update.outcome)")
+      }
+      XCTAssertEqual(delta, expectedAppend)
+    }
+    XCTAssertEqual(stitcher.outputHeight, 532)
+    let reference = try XCTUnwrap(TestImageFactory.repeatedScrollingFrame(width: 240, height: 532, logicalYOffset: 0))
+    let result = try XCTUnwrap(stitcher.mergedImage())
+    XCTAssertEqual(result.dataProvider?.data as Data?, reference.dataProvider?.data as Data?)
+  }
+
+  func testAppend_settledStepStillRejectsOversizedJump() throws {
+    let stitcher = ScrollingCaptureStitcher()
+    let first = try XCTUnwrap(TestImageFactory.repeatedScrollingFrame(width: 240, height: 360, logicalYOffset: 0))
+    let jumped = try XCTUnwrap(TestImageFactory.repeatedScrollingFrame(width: 240, height: 360, logicalYOffset: 240))
+    _ = stitcher.start(with: first)
+    let update = stitcher.append(jumped, maxOutputHeight: 10_000,
+      expectedSignedDeltaPixels: -80, allowsSettledPartialStep: true)
+    if case .appended = update?.outcome {
+      XCTFail("Settled frames must still obey the maximum known step")
+    }
+    XCTAssertEqual(stitcher.outputHeight, 360)
+  }
+
   func testAppend_skippedBandDoesNotOverrideKnownStep() {
     let stitcher = ScrollingCaptureStitcher()
     let width = 240
