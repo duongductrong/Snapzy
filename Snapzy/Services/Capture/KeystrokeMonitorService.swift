@@ -15,6 +15,8 @@ final class KeystrokeMonitorService {
   static let tapLocation: CGEventTapLocation = .cgSessionEventTap
   static let tapPlacement: CGEventTapPlacement = .headInsertEventTap
   static let tapOptions: CGEventTapOptions = .defaultTap
+  static let eventMask = (CGEventMask(1) << CGEventType.keyDown.rawValue)
+    | (CGEventMask(1) << CGEventType.flagsChanged.rawValue)
 
   private var eventTap: CFMachPort?
   private var runLoopSource: CFRunLoopSource?
@@ -28,12 +30,11 @@ final class KeystrokeMonitorService {
 
   func start() {
     guard !isRunning else { return }
-    let mask = CGEventMask(1) << CGEventMask(CGEventType.keyDown.rawValue)
     guard let eventTap = CGEvent.tapCreate(
       tap: Self.tapLocation,
       place: Self.tapPlacement,
       options: Self.tapOptions,
-      eventsOfInterest: mask,
+      eventsOfInterest: Self.eventMask,
       callback: Self.tapCallback,
       userInfo: Unmanaged.passUnretained(self).toOpaque()
     ) else {
@@ -103,9 +104,14 @@ final class KeystrokeMonitorService {
 
   func handleTapEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+      observedModifierFlags = []
       if let eventTap {
         CGEvent.tapEnable(tap: eventTap, enable: true)
       }
+    } else if type == .flagsChanged {
+      // Invalidate the previous rewrite before a downstream tap can consume the
+      // release. AppKit can then supply the rewrite for this new modifier state.
+      observedModifierFlags = []
     } else if type == .keyDown {
       if let keyEvent = NSEvent(cgEvent: event) {
         handleKeyDown(keyEvent)

@@ -16,13 +16,15 @@ final class RecordingCoordinator: ObservableObject {
 
   @Published private(set) var isActive = false
 
-  private var toolbarWindow: RecordingToolbarWindow?
+  private(set) var toolbarWindow: RecordingToolbarWindow?
   private var regionOverlayWindows: [RecordingRegionOverlayWindow] = []
   private var selectedRect: CGRect?
   private var selectedWindowTarget: WindowCaptureTarget?
   private let captureManager = ScreenCaptureManager.shared
   private let recorder = ScreenRecordingManager.shared
   private var isStartingRecording = false
+  // Invalidated before Stop/Cancel/Restart suspends, even while the toolbar survives.
+  private var recordingGeneration = UUID()
   private var localEscapeMonitor: Any?
   private var globalEscapeMonitor: Any?
   private var onSessionEnded: (@MainActor () -> Void)?
@@ -52,7 +54,7 @@ final class RecordingCoordinator: ObservableObject {
     let dimNonSelectedArea: Bool
   }
 
-  private init() {
+  init() {
     // Live-apply the dim preference while recording so toggling it in Settings (or the
     // toolbar options) takes effect immediately, mirroring the hover-bar live toggle.
     NotificationCenter.default.addObserver(
@@ -280,6 +282,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func cancel() {
+    recordingGeneration = UUID()
     DiagnosticLogger.shared.log(.info, .recording, "Recording coordinator cancel requested", context: [
       "isActive": "\(isActive)",
       "recorderState": "\(recorder.state)",
@@ -535,6 +538,7 @@ final class RecordingCoordinator: ObservableObject {
 
   /// Delete current recording and close
   private func deleteRecording() {
+    recordingGeneration = UUID()
     DiagnosticLogger.shared.log(.info, .recording, "Recording delete requested", context: [
       "recorderState": "\(recorder.state)"
     ])
@@ -552,6 +556,8 @@ final class RecordingCoordinator: ObservableObject {
       return
     }
 
+    recordingGeneration = UUID()
+    let generation = recordingGeneration
     let savedFormat = window.selectedFormat
     let savedQuality = window.selectedQuality
     let savedCaptureAudio = window.captureAudio
@@ -569,11 +575,14 @@ final class RecordingCoordinator: ObservableObject {
     ])
 
     Task {
+      guard isCurrentRecordingStart(generation, window: window) else { return }
       // Cancel current recording
       await recorder.cancelRecording()
+      guard isCurrentRecordingStart(generation, window: window) else { return }
 
       // Small delay to ensure cleanup completes
       try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+      guard isCurrentRecordingStart(generation, window: window) else { return }
 
       // Re-prepare and start recording with same settings
       do {
@@ -611,20 +620,24 @@ final class RecordingCoordinator: ObservableObject {
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         try await recorder.startRecording()
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         removeEscapeMonitors()
-        await setupRecordingOverlays(for: rect)
+        guard await completeRecordingStart(for: rect) else { return }
         DiagnosticLogger.shared.log(.info, .recording, "Recording restart completed")
 
         // Play sound to indicate restart
         SoundManager.play("Purr")
 
       } catch let error as RecordingError {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Recording restart failed")
         if !showErrorAlert(error) {
           cancel()
         }
       } catch {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Recording restart failed (generic)")
         if !showErrorAlert(.setupFailed(error.localizedDescription)) {
           cancel()
@@ -662,6 +675,7 @@ final class RecordingCoordinator: ObservableObject {
       return
     }
     guard beginRecordingStartAttempt(source: "toolbar") else { return }
+    let generation = recordingGeneration
 
     let format = window.selectedFormat
     DiagnosticLogger.shared.log(.info, .recording, "Start recording", context: [
@@ -703,6 +717,7 @@ final class RecordingCoordinator: ObservableObject {
     UserDefaults.standard.set(format.rawValue, forKey: PreferencesKeys.recordingFormat)
 
     Task {
+      guard isCurrentRecordingStart(generation, window: window) else { return }
       do {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
         DiagnosticLogger.shared.log(.debug, .recording, "Recording capture exclusion resolved", context: [
@@ -733,7 +748,9 @@ final class RecordingCoordinator: ObservableObject {
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         try await recorder.startRecording()
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         removeEscapeMonitors()
 
         // Hide border on overlay (would appear in video), disable interaction, and
@@ -745,13 +762,10 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
 
-        await setupRecordingOverlays(for: rect)
-
-        // Switch to status bar
-        window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
-        finishRecordingStartAttempt()
+        guard await completeRecordingStart(for: rect) else { return }
 
       } catch let error as RecordingError {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Recording setup failed")
         finishRecordingStartAttempt()
         if case .alreadyActive = error { return }
@@ -759,6 +773,7 @@ final class RecordingCoordinator: ObservableObject {
           cancel()
         }
       } catch {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Recording setup failed (generic)")
         finishRecordingStartAttempt()
         if !showErrorAlert(.setupFailed(error.localizedDescription)) {
@@ -812,6 +827,7 @@ final class RecordingCoordinator: ObservableObject {
       return
     }
     guard beginRecordingStartAttempt(source: "microphone-retry") else { return }
+    let generation = recordingGeneration
 
     // Disable microphone and retry
     window.captureMicrophone = false
@@ -833,6 +849,7 @@ final class RecordingCoordinator: ObservableObject {
     }
 
     Task {
+      guard isCurrentRecordingStart(generation, window: window) else { return }
       do {
         let exclusionConfig = self.recordingCaptureExclusionConfiguration()
 
@@ -857,7 +874,9 @@ final class RecordingCoordinator: ObservableObject {
           excludedWindowIDs: exclusionConfig.excludedWindowIDs,
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         try await recorder.startRecording()
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         removeEscapeMonitors()
 
         let dimNonSelectedArea = RecordingToolbarPreferences.dimNonSelectedArea()
@@ -866,11 +885,10 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setInteractionEnabled(false)
           overlay.setDimEnabled(dimNonSelectedArea)
         }
-        await setupRecordingOverlays(for: rect)
-        window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
-        finishRecordingStartAttempt()
+        guard await completeRecordingStart(for: rect) else { return }
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
       } catch let error as RecordingError {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Microphone retry recording failed")
         finishRecordingStartAttempt()
         if case .alreadyActive = error { return }
@@ -878,6 +896,7 @@ final class RecordingCoordinator: ObservableObject {
           cancel()
         }
       } catch {
+        guard isCurrentRecordingStart(generation, window: window) else { return }
         DiagnosticLogger.shared.logError(.recording, error, "Microphone retry recording failed (generic)")
         finishRecordingStartAttempt()
         if !showErrorAlert(.setupFailed(error.localizedDescription)) {
@@ -888,6 +907,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   private func stopRecording() {
+    recordingGeneration = UUID()
     // Capture output mode before cleanup closes the toolbar
     let outputMode = toolbarWindow?.state.outputMode ?? .video
 
@@ -1075,6 +1095,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   private func cleanup() {
+    recordingGeneration = UUID()
     DiagnosticLogger.shared.log(.debug, .recording, "Recording cleanup", context: [
       "regionOverlays": "\(regionOverlayWindows.count)",
       "hasToolbar": "\(toolbarWindow != nil)",
@@ -1114,6 +1135,7 @@ final class RecordingCoordinator: ObservableObject {
       return false
     }
 
+    recordingGeneration = UUID()
     isStartingRecording = true
     toolbarWindow?.state.isPreparingToRecord = true
     return true
@@ -1141,7 +1163,18 @@ final class RecordingCoordinator: ObservableObject {
 
   // MARK: - Recording Overlays
 
-  private func setupRecordingOverlays(for rect: CGRect) async {
+  private func isCurrentRecordingStart(_ generation: UUID, window: RecordingToolbarWindow) -> Bool {
+    isActive && recordingGeneration == generation && toolbarWindow === window
+  }
+
+  func completeRecordingStart(
+    for rect: CGRect,
+    registerWindow: (CGWindowID) async -> Void = {
+      await ScreenRecordingManager.shared.addExceptedWindow(windowID: $0)
+    }
+  ) async -> Bool {
+    guard isActive, let window = toolbarWindow else { return false }
+    let generation = recordingGeneration
     if annotationOverlayWindow == nil {
       setupAnnotationOverlay(for: rect)
     }
@@ -1159,8 +1192,12 @@ final class RecordingCoordinator: ObservableObject {
       clickHighlightWindow?.overlayWindowID,
       keystrokeOverlayWindow?.overlayWindowID,
     ].compactMap({ $0 }) {
-      await recorder.addExceptedWindow(windowID: windowID)
+      await registerWindow(windowID)
+      guard isCurrentRecordingStart(generation, window: window) else { return false }
     }
+    window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
+    finishRecordingStartAttempt()
+    return true
   }
 
   // MARK: - Annotation Overlay
