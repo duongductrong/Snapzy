@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 
 // MARK: - Notifications
 
@@ -29,6 +30,26 @@ extension Notification.Name {
   static let annotateSpaceUp = Notification.Name("annotateSpaceUp")
   static let annotatePanDrag = Notification.Name("annotatePanDrag")
   static let annotatePanScroll = Notification.Name("annotatePanScroll")
+}
+
+/// Routes full-editor notifications to the view tree belonging to one window.
+/// The weak reference keeps the SwiftUI content from retaining a closed window.
+final class AnnotateWindowEventRouter {
+  private weak var window: NSWindow?
+
+  init(window: NSWindow) {
+    self.window = window
+  }
+
+  func publisher(for name: Notification.Name) -> AnyPublisher<Notification, Never> {
+    NotificationCenter.default.publisher(for: name)
+      .filter { [weak self] notification in
+        guard let object = notification.object as? NSWindow,
+              let window = self?.window else { return false }
+        return object === window
+      }
+      .eraseToAnyPublisher()
+  }
 }
 
 enum AnnotateObjectShortcut: Equatable {

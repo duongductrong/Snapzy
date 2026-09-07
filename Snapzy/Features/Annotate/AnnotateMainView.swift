@@ -10,6 +10,7 @@ import SwiftUI
 /// Main container for annotation window layout
 struct AnnotateMainView: View {
   @StateObject var state: AnnotateState
+  let eventRouter: AnnotateWindowEventRouter
   @ObservedObject private var themeManager = ThemeManager.shared
   private let quickPropertiesBarHeight: CGFloat = 48
 
@@ -42,7 +43,7 @@ struct AnnotateMainView: View {
             .background(Color.white.opacity(0.1))
         }
 
-        AnnotateCanvasView(state: state)
+        AnnotateCanvasView(state: state, eventRouter: eventRouter)
           .frame(maxWidth: .infinity, maxHeight: .infinity)
           .contentShape(Rectangle()) // Constrain hit-test area to frame bounds
           .clipped() // Prevent canvas content from overlapping toolbar/bottombar
@@ -51,7 +52,7 @@ struct AnnotateMainView: View {
       Divider()
         .background(Color(nsColor: .separatorColor))
 
-      AnnotateBottomBarView(state: state)
+      AnnotateBottomBarView(state: state, eventRouter: eventRouter)
     }
     .preferredColorScheme(themeManager.systemAppearance)
     .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar

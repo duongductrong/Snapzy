@@ -10,7 +10,9 @@
 //  duplicated here.
 //
 
+import AppKit
 import CoreGraphics
+import SwiftUI
 import XCTest
 @testable import Snapzy
 
@@ -73,6 +75,79 @@ final class AnnotateViewportUIStateTests: XCTestCase {
 
     // percent/100 / fitScale = 1.0 / 0.5 = 2.0, still within [0.25, max].
     XCTAssertEqual(state.zoomLevel(forDisplayedPercent: 100), 2.0, accuracy: 0.0001)
+  }
+
+  @MainActor
+  func testZoomShortcutOnlyUpdatesTheOriginatingAnnotationWindow() {
+    let stateA = makeAnnotateStateWithImage()
+    let stateB = makeAnnotateStateWithImage()
+    let windowA = makeAnnotationWindow(state: stateA)
+    let windowB = makeAnnotationWindow(state: stateB)
+    defer {
+      windowA.close()
+      windowB.close()
+      windowA.contentView = nil
+      windowB.contentView = nil
+    }
+
+    windowA.makeKeyAndOrderFront(nil)
+    windowB.orderFrontRegardless()
+    drainMainRunLoop()
+
+    let event = NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: .command,
+      timestamp: 0,
+      windowNumber: windowA.windowNumber,
+      context: nil,
+      characters: "=",
+      charactersIgnoringModifiers: "=",
+      isARepeat: false,
+      keyCode: 24
+    )
+
+    XCTAssertNotNil(event)
+    XCTAssertTrue(windowA.performKeyEquivalent(with: event!))
+    drainMainRunLoop()
+
+    XCTAssertEqual(stateA.zoomLevel, 1.25, accuracy: 0.0001)
+    XCTAssertEqual(stateB.zoomLevel, 1.0, accuracy: 0.0001)
+
+    stateA.updateViewportMetrics(
+      containerSize: CGSize(width: 200, height: 200),
+      baseCanvasSize: CGSize(width: 1_000, height: 1_000),
+      fitScale: 1.0
+    )
+    stateB.updateViewportMetrics(
+      containerSize: CGSize(width: 200, height: 200),
+      baseCanvasSize: CGSize(width: 1_000, height: 1_000),
+      fitScale: 1.0
+    )
+
+    NotificationCenter.default.post(name: .annotateSpaceDown, object: windowA)
+    NotificationCenter.default.post(
+      name: .annotatePanDrag,
+      object: windowA,
+      userInfo: ["deltaX": CGFloat(24), "deltaY": CGFloat(-12)]
+    )
+    drainMainRunLoop()
+
+    XCTAssertTrue(stateA.isSpacePanning)
+    XCTAssertFalse(stateB.isSpacePanning)
+    XCTAssertEqual(stateA.panOffset.width, 24, accuracy: 0.0001)
+    XCTAssertEqual(stateA.panOffset.height, -12, accuracy: 0.0001)
+    XCTAssertEqual(stateB.panOffset, .zero)
+
+    NotificationCenter.default.post(name: .annotateSpaceUp, object: windowA)
+    drainMainRunLoop()
+    XCTAssertFalse(stateA.isSpacePanning)
+    XCTAssertFalse(stateB.isSpacePanning)
+
+    windowA.close()
+    drainMainRunLoop()
+    XCTAssertEqual(stateB.zoomLevel, 1.0, accuracy: 0.0001)
+    XCTAssertEqual(stateB.panOffset, .zero)
   }
 
   // MARK: - Pan
@@ -318,5 +393,29 @@ final class AnnotateViewportUIStateTests: XCTestCase {
     state.markAsSaved()
 
     XCTAssertFalse(state.hasUnsavedChanges)
+  }
+
+  @MainActor
+  private func makeAnnotateStateWithImage() -> AnnotateState {
+    let state = AnnotateState(
+      image: NSImage(size: NSSize(width: 100, height: 100)),
+      url: URL(fileURLWithPath: "/tmp/annotate-window-isolation.png")
+    )
+    Self.retainedAnnotateStates.append(state)
+    return state
+  }
+
+  @MainActor
+  private func makeAnnotationWindow(state: AnnotateState) -> AnnotateWindow {
+    let window = AnnotateWindow(contentRect: NSRect(x: 0, y: 0, width: 800, height: 600))
+    window.interactionState = state
+    let eventRouter = AnnotateWindowEventRouter(window: window)
+    window.contentView = NSHostingView(rootView: AnnotateCanvasView(state: state, eventRouter: eventRouter))
+    return window
+  }
+
+  @MainActor
+  private func drainMainRunLoop() {
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
   }
 }

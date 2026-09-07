@@ -44,6 +44,7 @@ private extension View {
 /// Bottom bar containing zoom controls and action buttons
 struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
+  let eventRouter: AnnotateWindowEventRouter
   @ObservedObject private var cloudManager = CloudManager.shared
   @ObservedObject private var preferencesManager = PreferencesManager.shared
   @ObservedObject private var annotateShortcutManager = AnnotateShortcutManager.shared
@@ -97,7 +98,7 @@ struct AnnotateBottomBarView: View {
     } message: {
       Text(L10n.AnnotateUI.overwriteCloudFileMessage)
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateCloudUpload)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateCloudUpload)) { _ in
       // ⌘U shortcut: trigger cloud upload (with overwrite confirmation if needed)
       let showCloudButton = cloudManager.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)
       let needsReUpload = state.requiresRenderedOutputForSharing || state.isCloudStale

@@ -248,7 +248,9 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
 
   private func setupContent() {
     let capturedState = self.state
-    let mainView = AnnotateMainView(state: capturedState)
+    guard let annotateWindow = window as? AnnotateWindow else { return }
+    let eventRouter = AnnotateWindowEventRouter(window: annotateWindow)
+    let mainView = AnnotateMainView(state: capturedState, eventRouter: eventRouter)
     window?.contentView = NSHostingView(rootView: mainView)
     (window as? AnnotateWindow)?.onEscape = { [weak self] in
       self?.discardEditsAndClose() ?? false
