@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.7] - 2026-09-07
+
+### Features
+-  Show progress and outcome for OCR capture (#505) (c81bd43b)
+
+### Bug Fixes
+-  Fixed selection tool active after selecting annotations (673984eb)
+-  Added AnnotateWindowEventRouter to isolate multi-window viewport (#553) (e204713b)
+-  Fixed Carbon hotkeys with CGEventTap for exact key matching (f591f320)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @vxirau
+
 ## [1.32.0-beta.6] - 2026-09-05
 
 ### Bug Fixes
