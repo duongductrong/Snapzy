@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.8] - 2026-09-08
+
+### Features
+-  Added drag-to-app to History cards with scroll-safe gesture arbitration (a8d633a8)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.32.0-beta.7] - 2026-09-07
 
 ### Features
