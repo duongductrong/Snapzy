@@ -7486,6 +7486,16 @@ nonisolated enum L10n {
       defaultValue: "macOS Screenshot & Recording Options",
       comment: "Human-readable label for the macOS system shortcut that opens the screenshot and recording options"
     )
+    static let conflictNotificationTitle = string(
+      "system-shortcuts.conflict-notification-title",
+      defaultValue: "Shortcut conflict detected",
+      comment: "Title of the startup notification shown when a Snapzy shortcut collides with a macOS system shortcut"
+    )
+    static let conflictNotificationBody = string(
+      "system-shortcuts.conflict-notification-body",
+      defaultValue: "A Snapzy shortcut overlaps a macOS system shortcut and may be intercepted by the system. Review it in Settings → Shortcuts.",
+      comment: "Body of the startup notification shown when a Snapzy shortcut collides with a macOS system shortcut"
+    )
   }
 
   enum ScreenCapture {
