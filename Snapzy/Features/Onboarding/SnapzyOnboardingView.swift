@@ -1,0 +1,223 @@
+//
+//  SnapzyOnboardingView.swift
+//  Snapzy
+//
+//  Ruru-inspired interactive walkthrough view for Snapzy, compatible with macOS 13.0+.
+//
+
+import SwiftUI
+
+struct SnapzyOnboardingView: View {
+  var onDismiss: () -> Void
+
+  @StateObject private var state = SnapzyOnboardingState()
+  @State private var isShowingCompletion = false
+  @EnvironmentObject private var onboardingLocalization: OnboardingLocalizationController
+
+  var body: some View {
+    ZStack(alignment: .topLeading) {
+      SnapzyGlassWindowBackdrop()
+
+      if isShowingCompletion {
+        SnapzyOnboardingCompletionCard(onFinish: finish)
+          .transition(.opacity.combined(with: .scale(scale: 0.96)))
+      } else if state.currentStep.usesWideLayout {
+        // Full-width layout for permissions step
+        VStack(spacing: 0) {
+          header
+            .frame(height: SnapzyOnboardingMetrics.headerHeight)
+            .padding(.top, SnapzyOnboardingMetrics.gutter)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+
+          SnapzyOnboardingPermissionsView(state: state)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.top, 24)
+            .padding(.bottom, 16)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+
+          footer
+            .frame(height: SnapzyOnboardingMetrics.footerHeight)
+            .padding(.bottom, SnapzyOnboardingMetrics.gutter)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        }
+        .transition(
+          .asymmetric(
+            insertion: .opacity.combined(with: .offset(x: 16)),
+            removal: .opacity.combined(with: .offset(x: -16))
+          )
+        )
+      } else {
+        // Two-column layout: Left instruction rail + Right full-bleed mock stage
+        VStack(spacing: 0) {
+          header
+            .frame(height: SnapzyOnboardingMetrics.headerHeight)
+            .padding(.top, SnapzyOnboardingMetrics.gutter)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+
+          HStack(alignment: .top, spacing: 0) {
+            // Left Column
+            VStack(alignment: .leading, spacing: 0) {
+              SnapzyOnboardingInstructionPanel(state: state)
+                .padding(.top, 20)
+
+              Spacer(minLength: 16)
+
+              SnapzyOnboardingEscapeHint(text: escapeHintText)
+                .frame(height: SnapzyOnboardingMetrics.footerHeight, alignment: .leading)
+                .padding(.bottom, SnapzyOnboardingMetrics.gutter)
+            }
+            .frame(width: SnapzyOnboardingMetrics.railWidth, alignment: .leading)
+            .padding(.leading, SnapzyOnboardingMetrics.gutter)
+            .padding(.trailing, SnapzyOnboardingMetrics.columnGap)
+
+            // Right Column: Mockup Stage with Floating Action Bar
+            ZStack(alignment: .bottomTrailing) {
+              SnapzyOnboardingMockHost(state: state)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, 14)
+
+              actionBar
+                .padding(.trailing, SnapzyOnboardingMetrics.gutter)
+                .padding(.bottom, SnapzyOnboardingMetrics.gutter)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+          }
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .transition(
+          .asymmetric(
+            insertion: .opacity.combined(with: .offset(x: 16)),
+            removal: .opacity.combined(with: .offset(x: -16))
+          )
+        )
+      }
+    }
+    .frame(
+      minWidth: SnapzyOnboardingMetrics.minSize.width,
+      maxWidth: SnapzyOnboardingMetrics.maxSize.width,
+      minHeight: SnapzyOnboardingMetrics.minSize.height,
+      maxHeight: SnapzyOnboardingMetrics.maxSize.height
+    )
+    .environment(\.colorScheme, .dark)
+    .background(keyboardShortcuts)
+    .animation(SnapzyMotionPreferences.shared.spec(.morph).animation, value: state.currentStep)
+  }
+
+  // MARK: - Header
+
+  private var header: some View {
+    HStack(spacing: 0) {
+      brand
+
+      Spacer(minLength: SnapzySpace.xxl)
+
+      HStack(spacing: SnapzySpace.md) {
+        SnapzyOnboardingLanguagePicker()
+        SnapzyOnboardingCloseButton(action: finish)
+      }
+    }
+    .overlay(SnapzyOnboardingStepRail(state: state))
+  }
+
+  private var brand: some View {
+    HStack(spacing: SnapzySpace.xl) {
+      Image(nsImage: NSApp.applicationIconImage)
+        .resizable()
+        .aspectRatio(contentMode: .fit)
+        .frame(width: 32, height: 32)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+      Text("Snapzy")
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundStyle(SnapzyGlassInk.primary)
+    }
+  }
+
+  // MARK: - Actions & Footer
+
+  private var escapeHintText: String {
+    state.canGoBack ? "Go back a step" : "Close onboarding"
+  }
+
+  private var actionBar: some View {
+    let isLastStep = !state.canGoForward
+    let skipTitle: String? = isLastStep ? nil : "Skip"
+    let skipAction: (() -> Void)? = isLastStep ? nil : { skip() }
+    let canAdvance = state.isCurrentStepComplete || isLastStep
+
+    return SnapzyOnboardingActionBar(
+      skipTitle: skipTitle,
+      continueTitle: isLastStep ? "Finish" : "Continue",
+      continueKey: "\u{21A9}",
+      isContinueEnabled: canAdvance,
+      onSkip: skipAction,
+      onContinue: advance
+    )
+  }
+
+  private var footer: some View {
+    HStack(spacing: SnapzySpace.xxl) {
+      SnapzyOnboardingEscapeHint(text: escapeHintText)
+      Spacer(minLength: SnapzySpace.xxl)
+      actionBar
+    }
+  }
+
+  // MARK: - Keyboard Shortcuts
+
+  private var keyboardShortcuts: some View {
+    ZStack {
+      Button("", action: advance)
+        .keyboardShortcut(.defaultAction)
+
+      Button("", action: retreat)
+        .keyboardShortcut(.cancelAction)
+    }
+    .opacity(0)
+    .frame(width: 0, height: 0)
+    .accessibilityHidden(true)
+  }
+
+  // MARK: - Navigation
+
+  private func advance() {
+    guard state.canGoForward else {
+      withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+        isShowingCompletion = true
+      }
+      return
+    }
+    state.markCurrentStepVisited()
+    state.nextStep()
+  }
+
+  private func skip() {
+    guard state.canGoForward else {
+      withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+        isShowingCompletion = true
+      }
+      return
+    }
+    state.nextStep()
+  }
+
+  private func retreat() {
+    if isShowingCompletion {
+      withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+        isShowingCompletion = false
+      }
+    } else if state.canGoBack {
+      state.previousStep()
+    } else {
+      finish()
+    }
+  }
+
+  private func finish() {
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
+    onboardingLocalization.commitLanguageSelection()
+    onDismiss()
+  }
+}

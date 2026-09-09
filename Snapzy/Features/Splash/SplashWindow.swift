@@ -100,6 +100,11 @@ final class SplashWindowController: NSObject, NSWindowDelegate {
   /// Show splash with integrated onboarding flow.
   /// - Parameter forceOnboarding: When true, always show onboarding steps (used by "Restart Onboarding")
   func show(forceOnboarding: Bool = false) {
+    let needsOnboarding = forceOnboarding || !OnboardingFlowView.hasCompletedOnboarding
+    if needsOnboarding {
+      SnapzyOnboardingWindowController.shared.show()
+      return
+    }
     showWindow(forceOnboarding: forceOnboarding)
   }
 
