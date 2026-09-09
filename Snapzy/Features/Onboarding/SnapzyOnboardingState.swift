@@ -82,7 +82,10 @@ final class SnapzyOnboardingState: ObservableObject {
   private var recordingTimer: Timer? = nil
 
   // Step 3: Shortcuts & Config Mock State
-  @Published var hasConflict: Bool = false
+  @Published var hasConflict: Bool = true
+  @Published var hasFullscreenConflict: Bool = true
+  @Published var hasAreaConflict: Bool = true
+  @Published var hasRecordingConflict: Bool = true
   @Published var isCheckingConflict: Bool = false
   @Published var isConfigGranted: Bool = false
   @Published var diagnosticsOptIn: Bool = true
@@ -160,8 +163,10 @@ final class SnapzyOnboardingState: ObservableObject {
     case .quickAccess:
       resetStep2Flow()
     case .shortcuts:
-      hasConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
-      completeChallenge(.checkShortcuts)
+      hasFullscreenConflict = true
+      hasAreaConflict = true
+      hasRecordingConflict = true
+      hasConflict = true
     case .permissions:
       break
     }
@@ -308,5 +313,26 @@ final class SnapzyOnboardingState: ObservableObject {
     withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
       step2Stage = .readyToRecord
     }
+  }
+
+  // MARK: - Step 3: Shortcuts & Conflict Resolution
+
+  func updateShortcutConflicts(fullscreenConflict: Bool, areaConflict: Bool, recordingConflict: Bool) {
+    withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+      hasFullscreenConflict = fullscreenConflict
+      hasAreaConflict = areaConflict
+      hasRecordingConflict = recordingConflict
+      hasConflict = fullscreenConflict || areaConflict || recordingConflict
+      if !hasConflict {
+        completeChallenge(.checkShortcuts)
+      } else {
+        completedChallenges.remove(.checkShortcuts)
+        completedSteps.remove(.shortcuts)
+      }
+    }
+  }
+
+  func resolveShortcutConflicts() {
+    updateShortcutConflicts(fullscreenConflict: false, areaConflict: false, recordingConflict: false)
   }
 }

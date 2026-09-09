@@ -16,26 +16,26 @@ struct SnapzyMockShortcutsView: View {
   var body: some View {
     ZStack(alignment: .top) {
       // 1. macOS Desktop Wallpaper Canvas
-      SnapzyMockWallpaper(app: .finder).equatable()
+      SnapzyMockWallpaper(app: .settings).equatable()
 
-      // 2. macOS Finder Window in Background
-      VStack(spacing: 0) {
-        Spacer(minLength: 16)
-
-        SnapzyMockFinderWindow().equatable()
-          .frame(maxWidth: 480, maxHeight: 280)
-          .padding(.horizontal, 20)
-
-        Spacer(minLength: 16)
-      }
-      .padding(.top, 28) // Room for Menu Bar
-
-      // 3. macOS Menu Bar & Camera Notch
-      SnapzyMockMenuBar(app: .finder).equatable()
-
-      // 4. Centered Floating Snapzy Shortcut HUD & Simulator
+      // 2. Main Content Stack: macOS System Settings Window + Snapzy HUD + Config Card
       VStack(spacing: 12) {
-        Spacer()
+        Spacer(minLength: 8)
+
+        SnapzyMockSystemSettingsWindow(
+          hasFullscreenConflict: $state.hasFullscreenConflict,
+          hasAreaConflict: $state.hasAreaConflict,
+          hasRecordingConflict: $state.hasRecordingConflict,
+          onConflictChanged: { fullscreen, area, recording in
+            state.updateShortcutConflicts(fullscreenConflict: fullscreen, areaConflict: area, recordingConflict: recording)
+          },
+          onResolveAll: {
+            state.resolveShortcutConflicts()
+          },
+          onOpenRealSettings: {
+            SystemScreenshotShortcutManager.shared.openSystemScreenshotSettings()
+          }
+        )
 
         // Floating Shortcut HUD Capsule
         shortcutHUDCapsule
@@ -43,12 +43,15 @@ struct SnapzyMockShortcutsView: View {
         // Portable Config & Diagnostics Card
         bottomConfigCard
 
-        Spacer(minLength: 20)
+        Spacer(minLength: 12)
       }
-      .padding(.horizontal, 24)
-      .padding(.top, 28)
+      .padding(.horizontal, 16)
+      .padding(.top, 28) // Room for Menu Bar
 
-      // 5. Camera Shutter Flash Effect
+      // 3. macOS Menu Bar & Camera Notch
+      SnapzyMockMenuBar(app: .settings).equatable()
+
+      // 4. Camera Shutter Flash Effect
       Color.white
         .opacity(screenFlashOpacity)
         .allowsHitTesting(false)
@@ -88,15 +91,14 @@ struct SnapzyMockShortcutsView: View {
             .font(.system(size: 9.5))
             .foregroundStyle(Color.orange)
 
-          Text("System conflict detected with macOS screenshot shortcut.")
+          Text("macOS shortcut conflicts detected (⇧⌘3, ⇧⌘4, ⇧⌘5)")
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.85))
 
           Button {
-            SystemScreenshotShortcutManager.shared.openSystemScreenshotSettings()
-            state.hasConflict = false
+            state.resolveShortcutConflicts()
           } label: {
-            Text("Resolve")
+            Text("Resolve All")
               .font(.system(size: 9.5, weight: .bold))
               .foregroundStyle(Color.orange)
               .underline()
@@ -107,7 +109,7 @@ struct SnapzyMockShortcutsView: View {
             .font(.system(size: 9.5))
             .foregroundStyle(Color.green)
 
-          Text(triggeredMode != nil ? "Captured \(triggeredMode!)!" : "All global shortcuts active & ready")
+          Text(triggeredMode != nil ? "Captured \(triggeredMode!)!" : "All global shortcuts active & conflict-free")
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.85))
         }

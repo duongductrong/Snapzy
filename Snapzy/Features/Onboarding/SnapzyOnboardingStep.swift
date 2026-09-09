@@ -37,7 +37,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     switch self {
     case .meetSnapzy: return "Screen Capture & Annotate"
     case .quickAccess: return "Screen Recording & Video Editor"
-    case .shortcuts: return "Global Keys & Sync"
+    case .shortcuts: return "macOS Shortcuts & Conflicts"
     case .permissions: return "Permissions & Privacy"
     }
   }
@@ -49,7 +49,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     case .quickAccess:
       return "Press ⇧⌘5 to frame any region. Capture system audio & microphone, trim in the timeline, and export crisp MP4 or GIF."
     case .shortcuts:
-      return "Assign native macOS shortcuts to Snapzy. Keep your workflows portable with optional config.toml support."
+      return "Go to System Settings > Keyboard > Keyboard Shortcuts > Screenshots to uncheck ⇧⌘3, ⇧⌘4, and ⇧⌘5 to prevent key conflicts with Snapzy. Keep workflows portable with config.toml."
     case .permissions:
       return "Snapzy runs entirely on your Mac. These macOS grants enable screen capture, audio recording, and global shortcuts."
     }
@@ -71,7 +71,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     case .quickAccess:
       return "Try the recording flow: Click 'Simulate ⇧⌘5' → Click 'Record' → Open Video Editor from card."
     case .shortcuts:
-      return "Check for macOS shortcut conflicts and enable portable config.toml."
+      return "Go to Keyboard > Keyboard Shortcuts > Screenshots to uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5, or tap to configure."
     case .permissions:
       return ""
     }
@@ -130,7 +130,7 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
     case .openVideoEditor: return "Open Video Editor from card"
     case .hoverCard: return "Hover floating card"
     case .triggerQuickAction: return "Trigger ⌘C / ⌘S quick action"
-    case .checkShortcuts: return "Review shortcut configuration"
+    case .checkShortcuts: return "Resolve shortcut conflicts"
     case .grantScreenRecording: return "Allow Screen Recording"
     case .grantSaveFolder: return "Choose default save destination"
     case .grantAccessibility: return "Enable Accessibility features"
@@ -145,7 +145,7 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
     case .openAnnotateWindow:     return "Click card to open Annotate window."
     case .hoverCard:              return "Hover over the Quick Access card."
     case .triggerQuickAction:     return "Press ⌘C to copy or ⌘E to edit."
-    case .checkShortcuts:         return "Review global capture shortcuts."
+    case .checkShortcuts:         return "Uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 in Keyboard > Screenshots."
     case .grantScreenRecording:   return "Allow Screen Recording."
     case .grantSaveFolder:       return "Select captures save folder."
     case .grantAccessibility:     return "Allow Accessibility (optional)."

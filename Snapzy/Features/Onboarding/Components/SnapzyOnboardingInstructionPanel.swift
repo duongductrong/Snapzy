@@ -95,6 +95,12 @@ struct SnapzyOnboardingInstructionPanel: View {
       case .videoEditorOpen:
         return "Video Editor open! Click here or 'Replay' to test the recording flow again."
       }
+    } else if state.currentStep == .shortcuts {
+      if state.hasConflict {
+        return "Conflicts detected! In Keyboard > Keyboard Shortcuts > Screenshots, uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 (or tap here to resolve)."
+      } else {
+        return "Conflicts resolved! Test the shortcut buttons or grant config.toml access below."
+      }
     }
     return state.currentStep.examplePrompt
   }
@@ -127,7 +133,7 @@ struct SnapzyOnboardingInstructionPanel: View {
           state.resetStep2Flow()
         }
       case .shortcuts:
-        state.completeChallenge(.checkShortcuts)
+        state.resolveShortcutConflicts()
       case .permissions:
         break
       }

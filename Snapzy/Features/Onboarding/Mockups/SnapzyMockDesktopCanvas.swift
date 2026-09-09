@@ -12,11 +12,13 @@ import SwiftUI
 enum SnapzyMockApp: Equatable {
   case notes
   case finder
+  case settings
 
   var menuTitle: String {
     switch self {
     case .notes: return "Notes"
     case .finder: return "Finder"
+    case .settings: return "System Settings"
     }
   }
 
@@ -24,6 +26,7 @@ enum SnapzyMockApp: Equatable {
     switch self {
     case .notes: return ["File", "Edit", "Format", "View", "Window", "Help"]
     case .finder: return ["File", "Edit", "View", "Go", "Window", "Help"]
+    case .settings: return ["Edit", "View", "Window", "Help"]
     }
   }
 
@@ -46,6 +49,15 @@ enum SnapzyMockApp: Equatable {
         .init(text: "Mac 26"),
         .init(text: "Studio", opacity: 0.040),
         .init(text: "Capture", opacity: 0.040),
+      ]
+    case .settings:
+      return [
+        .init(text: "Settings"),
+        .init(text: "Shortcuts"),
+        .init(text: "Snapzy", size: 30, weight: .heavy, opacity: 0.040),
+        .init(text: "Keyboard"),
+        .init(text: "macOS 26", opacity: 0.040),
+        .init(text: "Screenshots", opacity: 0.040),
       ]
     }
   }

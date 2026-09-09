@@ -170,4 +170,56 @@ final class SnapzyOnboardingStateTests: XCTestCase {
 
     waitForExpectations(timeout: 1.0)
   }
+
+  @MainActor
+  func testStep3ShortcutConflictResolution() {
+    let state = SnapzyOnboardingState()
+    state.transition(to: .shortcuts)
+    XCTAssertEqual(state.currentStep, .shortcuts)
+    XCTAssertTrue(state.hasConflict)
+    XCTAssertTrue(state.hasFullscreenConflict)
+    XCTAssertTrue(state.hasAreaConflict)
+    XCTAssertTrue(state.hasRecordingConflict)
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    // 1. Resolve fullscreen conflict only
+    state.updateShortcutConflicts(fullscreenConflict: false, areaConflict: true, recordingConflict: true)
+    XCTAssertTrue(state.hasConflict)
+    XCTAssertFalse(state.hasFullscreenConflict)
+    XCTAssertTrue(state.hasAreaConflict)
+    XCTAssertTrue(state.hasRecordingConflict)
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    // 2. Resolve area conflict too (recording still active)
+    state.updateShortcutConflicts(fullscreenConflict: false, areaConflict: false, recordingConflict: true)
+    XCTAssertTrue(state.hasConflict)
+    XCTAssertFalse(state.hasFullscreenConflict)
+    XCTAssertFalse(state.hasAreaConflict)
+    XCTAssertTrue(state.hasRecordingConflict)
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    // 3. Resolve recording conflict too -> All resolved
+    state.updateShortcutConflicts(fullscreenConflict: false, areaConflict: false, recordingConflict: false)
+    XCTAssertFalse(state.hasConflict)
+    XCTAssertFalse(state.hasFullscreenConflict)
+    XCTAssertFalse(state.hasAreaConflict)
+    XCTAssertFalse(state.hasRecordingConflict)
+    XCTAssertTrue(state.completedChallenges.contains(.checkShortcuts))
+    XCTAssertTrue(state.isCurrentStepComplete)
+    XCTAssertTrue(state.completedSteps.contains(.shortcuts))
+
+    // 4. Reactivate a conflict -> marks step incomplete
+    state.updateShortcutConflicts(fullscreenConflict: true, areaConflict: false, recordingConflict: false)
+    XCTAssertTrue(state.hasConflict)
+    XCTAssertFalse(state.isCurrentStepComplete)
+    XCTAssertFalse(state.completedChallenges.contains(.checkShortcuts))
+
+    // 5. Resolve all at once via helper
+    state.resolveShortcutConflicts()
+    XCTAssertFalse(state.hasConflict)
+    XCTAssertFalse(state.hasFullscreenConflict)
+    XCTAssertFalse(state.hasAreaConflict)
+    XCTAssertFalse(state.hasRecordingConflict)
+    XCTAssertTrue(state.isCurrentStepComplete)
+  }
 }
