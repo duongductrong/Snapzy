@@ -124,4 +124,50 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     state.setChallenge(.grantScreenRecording, completed: false)
     XCTAssertFalse(state.completedChallenges.contains(.grantScreenRecording))
   }
+
+  @MainActor
+  func testStep2ScreenRecordingWorkflow() {
+    let state = SnapzyOnboardingState()
+    state.transition(to: .quickAccess)
+    XCTAssertEqual(state.currentStep, .quickAccess)
+    XCTAssertEqual(state.step2Stage, .readyToRecord)
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    // 1. Trigger ⇧⌘5 simulation
+    state.simulateStartPrerecord()
+    XCTAssertEqual(state.step2Stage, .prerecordArea)
+    XCTAssertTrue(state.completedChallenges.contains(.selectRecordArea))
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    // 2. Start recording (active stage)
+    state.simulateStartRecording()
+    XCTAssertEqual(state.step2Stage, .recordingActive)
+    XCTAssertTrue(state.isRecordingTimerRunning)
+
+    // 3. Finish recording -> Video Quick Access Card
+    state.simulateFinishRecording()
+    let exp = expectation(description: "Wait for video quick access transition")
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+      XCTAssertEqual(state.step2Stage, .videoQuickAccess)
+      XCTAssertTrue(state.completedChallenges.contains(.recordVideo3s))
+      XCTAssertFalse(state.isCurrentStepComplete)
+
+      // 4. Open Video Editor from Quick Access Card
+      state.openVideoEditorFromQuickAccess()
+      XCTAssertEqual(state.step2Stage, .videoEditorOpen)
+      XCTAssertTrue(state.completedChallenges.contains(.openVideoEditor))
+      XCTAssertTrue(state.isCurrentStepComplete)
+      XCTAssertTrue(state.completedSteps.contains(.quickAccess))
+
+      // 5. Reset Step 2 flow
+      state.resetStep2Flow()
+      XCTAssertEqual(state.step2Stage, .readyToRecord)
+      XCTAssertEqual(state.recordingSeconds, 0)
+      XCTAssertFalse(state.isRecordingTimerRunning)
+
+      exp.fulfill()
+    }
+
+    waitForExpectations(timeout: 1.0)
+  }
 }

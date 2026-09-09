@@ -82,6 +82,19 @@ struct SnapzyOnboardingInstructionPanel: View {
       case .annotateWindowOpen:
         return "Annotate window open! Click to replay the complete flow from the beginning."
       }
+    } else if state.currentStep == .quickAccess {
+      switch state.step2Stage {
+      case .readyToRecord:
+        return "Click to simulate ⇧⌘5 recording shortcut and open prerecord area."
+      case .prerecordArea:
+        return "Region framed! Click 'Record MP4' or tap here to start 3s countdown."
+      case .recordingActive:
+        return "Recording in progress (\(state.recordingSeconds)s)... Tap Stop or wait 3s."
+      case .videoQuickAccess:
+        return "Video in Quick Access! Click card or tap here to open Video Editor."
+      case .videoEditorOpen:
+        return "Video Editor open! Click here or 'Replay' to test the recording flow again."
+      }
     }
     return state.currentStep.examplePrompt
   }
@@ -101,7 +114,18 @@ struct SnapzyOnboardingInstructionPanel: View {
           state.resetStep1Flow()
         }
       case .quickAccess:
-        state.simulateQuickAccessAction("⌘C Copied")
+        switch state.step2Stage {
+        case .readyToRecord:
+          state.simulateStartPrerecord()
+        case .prerecordArea:
+          state.simulateStartRecording()
+        case .recordingActive:
+          state.simulateFinishRecording()
+        case .videoQuickAccess:
+          state.openVideoEditorFromQuickAccess()
+        case .videoEditorOpen:
+          state.resetStep2Flow()
+        }
       case .shortcuts:
         state.completeChallenge(.checkShortcuts)
       case .permissions:

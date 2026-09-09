@@ -49,6 +49,14 @@ enum Step1WorkflowStage: Equatable {
   case annotateWindowOpen
 }
 
+enum Step2WorkflowStage: Equatable {
+  case readyToRecord
+  case prerecordArea
+  case recordingActive
+  case videoQuickAccess
+  case videoEditorOpen
+}
+
 @MainActor
 final class SnapzyOnboardingState: ObservableObject {
   @Published var currentStep: SnapzyOnboardingStep = .meetSnapzy
@@ -63,10 +71,15 @@ final class SnapzyOnboardingState: ObservableObject {
   @Published var annotationItems: [MockAnnotateItem] = []
   @Published var isSimulatingSelection: Bool = false
 
-  // Step 2: Quick Access Floating Card Mock State
+  // Step 2: Screen Recording & Video Editor Lifecycle State
+  @Published var step2Stage: Step2WorkflowStage = .readyToRecord
+  @Published var recordingSeconds: Int = 0
+  @Published var isRecordingTimerRunning: Bool = false
+  @Published var isPlayingPreview: Bool = false
   @Published var isQuickAccessHovered: Bool = false
   @Published var quickAccessFeedbackText: String? = nil
   @Published var isCardPinned: Bool = false
+  private var recordingTimer: Timer? = nil
 
   // Step 3: Shortcuts & Config Mock State
   @Published var hasConflict: Bool = false
@@ -145,9 +158,7 @@ final class SnapzyOnboardingState: ObservableObject {
       selectedTool = nil
       annotationItems = []
     case .quickAccess:
-      isQuickAccessHovered = false
-      quickAccessFeedbackText = nil
-      isCardPinned = false
+      resetStep2Flow()
     case .shortcuts:
       hasConflict = SystemScreenshotShortcutManager.shared.hasConflictingSystemShortcuts()
       completeChallenge(.checkShortcuts)
@@ -221,6 +232,81 @@ final class SnapzyOnboardingState: ObservableObject {
       withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
         self?.quickAccessFeedbackText = nil
       }
+    }
+  }
+
+  // MARK: - Step 2: Screen Recording Simulation Actions
+
+  func simulateStartPrerecord() {
+    withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+      step2Stage = .prerecordArea
+      completeChallenge(.selectRecordArea)
+    }
+  }
+
+  func simulateStartRecording() {
+    recordingTimer?.invalidate()
+    recordingTimer = nil
+    recordingSeconds = 0
+    isRecordingTimerRunning = true
+
+    withAnimation(SnapzyMotionPreferences.shared.spec(.settle).animation) {
+      step2Stage = .recordingActive
+    }
+
+    recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+      guard let self else {
+        timer.invalidate()
+        return
+      }
+      Task { @MainActor in
+        if self.recordingSeconds < 3 {
+          self.recordingSeconds += 1
+        }
+        if self.recordingSeconds >= 3 {
+          timer.invalidate()
+          self.simulateFinishRecording()
+        }
+      }
+    }
+  }
+
+  func simulateFinishRecording() {
+    recordingTimer?.invalidate()
+    recordingTimer = nil
+    isRecordingTimerRunning = false
+
+    withAnimation(.easeOut(duration: 0.12)) {
+      screenFlashOpacity = 0.65
+    }
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+      withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+        self?.screenFlashOpacity = 0
+        self?.step2Stage = .videoQuickAccess
+        self?.completeChallenge(.recordVideo3s)
+      }
+    }
+  }
+
+  func openVideoEditorFromQuickAccess() {
+    withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+      step2Stage = .videoEditorOpen
+      completeChallenge(.openVideoEditor)
+    }
+  }
+
+  func resetStep2Flow() {
+    recordingTimer?.invalidate()
+    recordingTimer = nil
+    isRecordingTimerRunning = false
+    recordingSeconds = 0
+    isPlayingPreview = false
+    isQuickAccessHovered = false
+    quickAccessFeedbackText = nil
+    isCardPinned = false
+
+    withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+      step2Stage = .readyToRecord
     }
   }
 }

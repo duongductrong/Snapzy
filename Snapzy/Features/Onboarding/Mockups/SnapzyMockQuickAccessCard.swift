@@ -11,6 +11,8 @@ import SwiftUI
 
 struct SnapzyMockQuickAccessCard: View {
   var isPinned: Bool = false
+  var isVideo: Bool = false
+  var durationText: String = "00:03"
   var onCopy: (() -> Void)? = nil
   var onSave: (() -> Void)? = nil
   var onAnnotate: (() -> Void)? = nil
@@ -91,6 +93,17 @@ struct SnapzyMockQuickAccessCard: View {
 
   private var thumbnailLayer: some View {
     ZStack {
+      if isVideo {
+        videoThumbnail
+      } else {
+        noteThumbnail
+      }
+    }
+    .frame(width: cardWidth, height: cardHeight)
+  }
+
+  private var noteThumbnail: some View {
+    ZStack {
       Color(white: 0.96)
 
       VStack(alignment: .leading, spacing: 2.5) {
@@ -132,7 +145,71 @@ struct SnapzyMockQuickAccessCard: View {
       }
       .padding(7)
     }
-    .frame(width: cardWidth, height: cardHeight)
+  }
+
+  private var videoThumbnail: some View {
+    ZStack {
+      Color(red: 0.94, green: 0.95, blue: 0.96)
+
+      // Mini Finder preview
+      VStack(alignment: .leading, spacing: 2) {
+        HStack(spacing: 2) {
+          Circle().fill(Color(red: 1.0, green: 0.36, blue: 0.33)).frame(width: 3, height: 3)
+          Circle().fill(Color(red: 1.0, green: 0.74, blue: 0.18)).frame(width: 3, height: 3)
+          Circle().fill(Color(red: 0.15, green: 0.79, blue: 0.25)).frame(width: 3, height: 3)
+
+          Spacer()
+
+          Text("Finder • 440 × 260")
+            .font(.system(size: 5.5, weight: .medium, design: .monospaced))
+            .foregroundStyle(Color.black.opacity(0.40))
+        }
+
+        HStack(spacing: 3) {
+          VStack(alignment: .leading, spacing: 1.5) {
+            RoundedRectangle(cornerRadius: 1).fill(Color.blue.opacity(0.7)).frame(width: 16, height: 2.5)
+            RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.15)).frame(width: 20, height: 2.5)
+            RoundedRectangle(cornerRadius: 1).fill(Color.black.opacity(0.15)).frame(width: 18, height: 2.5)
+          }
+          .padding(3)
+          .background(RoundedRectangle(cornerRadius: 2).fill(Color.black.opacity(0.05)))
+
+          Spacer()
+        }
+
+        Spacer(minLength: 0)
+      }
+      .padding(7)
+
+      // Center Play Overlay
+      Circle()
+        .fill(Color.black.opacity(0.45))
+        .frame(width: 22, height: 22)
+        .overlay(
+          Image(systemName: "play.fill")
+            .font(.system(size: 8.5, weight: .bold))
+            .foregroundStyle(Color.white)
+            .offset(x: 1)
+        )
+
+      // Bottom-right duration badge
+      VStack {
+        Spacer()
+        HStack {
+          Spacer()
+          Text(durationText)
+            .font(.system(size: 7, weight: .semibold, design: .monospaced))
+            .foregroundColor(.white)
+            .padding(.horizontal, 4.5)
+            .padding(.vertical, 1.5)
+            .background(
+              RoundedRectangle(cornerRadius: 3)
+                .fill(Color.black.opacity(0.72))
+            )
+            .padding(5)
+        }
+      }
+    }
   }
 
   // MARK: - Pin Badge
@@ -200,7 +277,10 @@ struct SnapzyMockQuickAccessCard: View {
         Spacer()
 
         HStack {
-          cornerIconButton(icon: "pencil.and.outline", tooltip: "Annotate (⌘E)") {
+          cornerIconButton(
+            icon: isVideo ? "scissors" : "pencil.and.outline",
+            tooltip: isVideo ? "Edit Video (⌘E)" : "Annotate (⌘E)"
+          ) {
             onAnnotate?()
           }
 

@@ -26,8 +26,8 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
 
   var shortTitle: String {
     switch self {
-    case .meetSnapzy: return "The Flow"
-    case .quickAccess: return "Quick Access"
+    case .meetSnapzy: return "Capture"
+    case .quickAccess: return "Recording"
     case .shortcuts: return "Shortcuts"
     case .permissions: return "Permissions"
     }
@@ -35,8 +35,8 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
 
   var title: String {
     switch self {
-    case .meetSnapzy: return "Capture to Quick Access"
-    case .quickAccess: return "Action on the Fly"
+    case .meetSnapzy: return "Screen Capture & Annotate"
+    case .quickAccess: return "Screen Recording & Video Editor"
     case .shortcuts: return "Global Keys & Sync"
     case .permissions: return "Permissions & Privacy"
     }
@@ -47,7 +47,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     case .meetSnapzy:
       return "Press ⇧⌘4 to freeze and select an area. Your capture instantly lands in a floating Quick Access card—ready to copy, save, or open in Annotate."
     case .quickAccess:
-      return "Every screenshot or recording lands in a sleek floating card. Hover and press ⌘C to copy, ⌘S to save, or ⌘E to edit."
+      return "Press ⇧⌘5 to frame any region. Capture system audio & microphone, trim in the timeline, and export crisp MP4 or GIF."
     case .shortcuts:
       return "Assign native macOS shortcuts to Snapzy. Keep your workflows portable with optional config.toml support."
     case .permissions:
@@ -58,7 +58,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
   var symbol: String {
     switch self {
     case .meetSnapzy: return "camera.viewfinder"
-    case .quickAccess: return "sparkles.rectangle.stack"
+    case .quickAccess: return "record.circle"
     case .shortcuts: return "keyboard"
     case .permissions: return "lock.shield"
     }
@@ -69,7 +69,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     case .meetSnapzy:
       return "Try the complete flow: Click 'Simulate Capture' → Hover Quick Access card → Click card to open Annotate."
     case .quickAccess:
-      return "Hover the floating card and press ⌘C to copy, or drag directly to another app."
+      return "Try the recording flow: Click 'Simulate ⇧⌘5' → Click 'Record' → Open Video Editor from card."
     case .shortcuts:
       return "Check for macOS shortcut conflicts and enable portable config.toml."
     case .permissions:
@@ -80,7 +80,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
   var tip: String {
     switch self {
     case .meetSnapzy: return "Clicking the Quick Access card directly opens the full vector Annotate window."
-    case .quickAccess: return "Swipe left with two fingers on any card to instantly dismiss it."
+    case .quickAccess: return "You can pause, resume, and annotate on screen while recording video."
     case .shortcuts: return "You can customize every shortcut anytime in Preferences → Shortcuts."
     case .permissions: return "All OCR and processing happen on-device using Apple Vision."
     }
@@ -91,7 +91,7 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
     case .meetSnapzy:
       return [.selectArea, .captureToQuickAccess, .openAnnotateWindow]
     case .quickAccess:
-      return [.hoverCard, .triggerQuickAction]
+      return [.selectRecordArea, .recordVideo3s, .openVideoEditor]
     case .shortcuts:
       return [.checkShortcuts]
     case .permissions:
@@ -107,6 +107,9 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
   case addAnnotation
   case captureToQuickAccess
   case openAnnotateWindow
+  case selectRecordArea
+  case recordVideo3s
+  case openVideoEditor
   case hoverCard
   case triggerQuickAction
   case checkShortcuts
@@ -115,6 +118,24 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
   case grantAccessibility
 
   var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .selectArea: return "Select capture area (⇧⌘4)"
+    case .addAnnotation: return "Add vector annotation"
+    case .captureToQuickAccess: return "Capture lands in Quick Access"
+    case .openAnnotateWindow: return "Open Annotate window"
+    case .selectRecordArea: return "Select record area (⇧⌘5)"
+    case .recordVideo3s: return "Record 3s video clip"
+    case .openVideoEditor: return "Open Video Editor from card"
+    case .hoverCard: return "Hover floating card"
+    case .triggerQuickAction: return "Trigger ⌘C / ⌘S quick action"
+    case .checkShortcuts: return "Review shortcut configuration"
+    case .grantScreenRecording: return "Allow Screen Recording"
+    case .grantSaveFolder: return "Choose default save destination"
+    case .grantAccessibility: return "Enable Accessibility features"
+    }
+  }
 
   var label: String {
     switch self {
@@ -128,6 +149,9 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
     case .grantScreenRecording:   return "Allow Screen Recording."
     case .grantSaveFolder:       return "Select captures save folder."
     case .grantAccessibility:     return "Allow Accessibility (optional)."
+    case .selectRecordArea:       return "Select an area for screen recording."
+    case .recordVideo3s:          return "Record a short 3-second video clip."
+    case .openVideoEditor:        return "Open the video editor from the card."
     }
   }
 
@@ -137,6 +161,9 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
     case .addAnnotation:          return ["A"]
     case .captureToQuickAccess:   return ["⌘S"]
     case .openAnnotateWindow:     return ["⌘E"]
+    case .selectRecordArea:       return ["⇧", "⌘", "5"]
+    case .recordVideo3s:          return ["●"]
+    case .openVideoEditor:        return ["⌘E"]
     case .hoverCard:              return []
     case .triggerQuickAction:     return ["⌘C"]
     case .checkShortcuts:         return ["⇧", "⌘", "3"]
