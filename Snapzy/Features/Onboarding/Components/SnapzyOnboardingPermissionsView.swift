@@ -19,6 +19,7 @@ struct SnapzyOnboardingPermissionsView: View {
   @State private var microphoneGranted = false
   @State private var accessibilityGranted = false
   @State private var exportFolderGranted = false
+  @State private var probeTimer: Timer? = nil
 
   var body: some View {
     VStack(alignment: .leading, spacing: 24) {
@@ -92,10 +93,19 @@ struct SnapzyOnboardingPermissionsView: View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .onAppear {
+      startProbeTimer()
       Task { await refreshPermissions() }
+    }
+    .onDisappear {
+      stopProbeTimer()
     }
     .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
       Task { await refreshPermissions() }
+    }
+    .onChange(of: screenCaptureManager.hasPermission) { hasPermission in
+      if hasPermission {
+        stopProbeTimer()
+      }
     }
   }
 
@@ -191,6 +201,31 @@ struct SnapzyOnboardingPermissionsView: View {
     let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
     _ = AXIsProcessTrustedWithOptions(options)
     Task { await refreshPermissions() }
+  }
+
+  // MARK: - Probe Timer
+
+  private func startProbeTimer() {
+    stopProbeTimer()
+    guard !screenCaptureManager.hasPermission else { return }
+    probeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak screenCaptureManager] timer in
+      guard let screenCaptureManager else {
+        timer.invalidate()
+        return
+      }
+      if screenCaptureManager.hasPermission {
+        timer.invalidate()
+        return
+      }
+      Task { @MainActor in
+        await refreshPermissions()
+      }
+    }
+  }
+
+  private func stopProbeTimer() {
+    probeTimer?.invalidate()
+    probeTimer = nil
   }
 }
 

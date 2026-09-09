@@ -217,7 +217,20 @@ struct SnapzyOnboardingView: View {
     UserDefaults.standard.set(true, forKey: PreferencesKeys.onboardingCompleted)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipped)
     UserDefaults.standard.set(true, forKey: PreferencesKeys.sponsorPromptSeen)
+    UserDefaults.standard.removeObject(forKey: PreferencesKeys.onboardingActiveStep)
+
+    let isUnderXCTest = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    let requiresRelaunch = !isUnderXCTest && (ScreenCaptureManager.shared.requiresRelaunchToActivate || onboardingLocalization.requiresRelaunchOnCompletion)
     onboardingLocalization.commitLanguageSelection()
+
+    if requiresRelaunch {
+      UserDefaults.standard.set(true, forKey: PreferencesKeys.splashSkipOnceAfterOnboardingRelaunch)
+      Task {
+        try? await Task.sleep(for: .milliseconds(150))
+        try? await onboardingLocalization.relaunchApplication()
+      }
+    }
+
     onDismiss()
   }
 }

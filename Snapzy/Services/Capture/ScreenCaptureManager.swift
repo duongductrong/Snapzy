@@ -143,6 +143,7 @@ final class ScreenCaptureManager: ObservableObject {
 
   @Published private(set) var permissionStatus: ScreenRecordingPermissionStatus = .notGranted
   @Published private(set) var hasPermission: Bool = false
+  @Published private(set) var requiresRelaunchToActivate: Bool = false
   @Published private(set) var isCapturing: Bool = false
 
   /// Publisher for successful capture completions
@@ -176,10 +177,27 @@ final class ScreenCaptureManager: ObservableObject {
 
   // MARK: - Permission Handling
 
+  private var activeProbeTask: Task<Bool, Never>?
+
   /// Check if screen recording permission is granted
   func checkPermission() async {
     AppIdentityManager.shared.refresh()
-    updatePermissionStatus(systemGranted: CGPreflightScreenCaptureAccess())
+    if CGPreflightScreenCaptureAccess() {
+      requiresRelaunchToActivate = false
+      updatePermissionStatus(systemGranted: true)
+      return
+    }
+
+    // Direct check failed (Mach audit token in current process is stale or not granted).
+    // Probe via a fast child process to see if TCC.db on disk has granted permission.
+    if await probeScreenCapturePermission() {
+      requiresRelaunchToActivate = true
+      updatePermissionStatus(systemGranted: true)
+      return
+    }
+
+    requiresRelaunchToActivate = false
+    updatePermissionStatus(systemGranted: false)
   }
 
   /// Request screen recording permission by triggering the system prompt.
@@ -196,6 +214,7 @@ final class ScreenCaptureManager: ObservableObject {
 
     // Fast path: already granted by the system.
     if CGPreflightScreenCaptureAccess() {
+      requiresRelaunchToActivate = false
       updatePermissionStatus(systemGranted: true)
       return hasPermission
     }
@@ -205,10 +224,17 @@ final class ScreenCaptureManager: ObservableObject {
     do {
       _ = try await SCShareableContent.current
       // If we reach here, the system granted access.
+      requiresRelaunchToActivate = false
       updatePermissionStatus(systemGranted: true)
       return hasPermission
     } catch {
-      // SCShareableContent threw — permission not yet granted.
+      // Check if user already granted permission on disk
+      if await probeScreenCapturePermission() {
+        requiresRelaunchToActivate = true
+        updatePermissionStatus(systemGranted: true)
+        return hasPermission
+      }
+
       // Fallback: CGRequestScreenCaptureAccess opens System Settings on macOS 15+.
       let granted = CGRequestScreenCaptureAccess()
       if !granted {
@@ -216,6 +242,69 @@ final class ScreenCaptureManager: ObservableObject {
       }
       await checkPermission()
       return hasPermission
+    }
+  }
+
+  /// Probe whether Screen Recording permission has been toggled ON in System Settings,
+  /// even if this current process's Mach audit token has not yet been refreshed by launchd.
+  func probeScreenCapturePermission() async -> Bool {
+    if let existing = activeProbeTask {
+      return await existing.value
+    }
+
+    let task = Task<Bool, Never> {
+      await performSubprocessProbe()
+    }
+    activeProbeTask = task
+    let result = await task.value
+    activeProbeTask = nil
+    return result
+  }
+
+  private func performSubprocessProbe() async -> Bool {
+    // Avoid running probe in unit test harnesses
+    if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
+      return false
+    }
+
+    guard let executableURL = Bundle.main.executableURL,
+          executableURL.lastPathComponent.contains("Snapzy"),
+          FileManager.default.isExecutableFile(atPath: executableURL.path) else {
+      return false
+    }
+
+    return await withCheckedContinuation { continuation in
+      DispatchQueue.global(qos: .userInitiated).async {
+        let process = Process()
+        process.executableURL = executableURL
+        process.arguments = ["--check-screen-capture-granted"]
+
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = pipe
+
+        do {
+          try process.run()
+
+          let deadline = DispatchTime.now() + .milliseconds(800)
+          let group = DispatchGroup()
+          group.enter()
+          DispatchQueue.global().async {
+            process.waitUntilExit()
+            group.leave()
+          }
+
+          if group.wait(timeout: deadline) == .timedOut {
+            process.terminate()
+            continuation.resume(returning: false)
+          } else {
+            let isGranted = (process.terminationStatus == 0)
+            continuation.resume(returning: isGranted)
+          }
+        } catch {
+          continuation.resume(returning: false)
+        }
+      }
     }
   }
 
@@ -2354,9 +2443,11 @@ final class ScreenCaptureManager: ObservableObject {
 
     permissionStatus = .granted
     hasPermission = true
-    _ = prefetchShareableContent()
-    if DesktopIconManager.shared.isIconHidingEnabled || DesktopIconManager.shared.isWidgetHidingEnabled {
-      _ = prefetchShareableContent(includeDesktopWindows: true)
+    if !requiresRelaunchToActivate {
+      _ = prefetchShareableContent()
+      if DesktopIconManager.shared.isIconHidingEnabled || DesktopIconManager.shared.isWidgetHidingEnabled {
+        _ = prefetchShareableContent(includeDesktopWindows: true)
+      }
     }
   }
 

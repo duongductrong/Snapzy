@@ -63,6 +63,15 @@ final class SnapzyOnboardingState: ObservableObject {
   @Published var completedSteps: Set<SnapzyOnboardingStep> = []
   @Published var completedChallenges: Set<SnapzyOnboardingChallenge> = []
 
+  init(restoreSavedStep: Bool = true) {
+    if restoreSavedStep,
+       let savedStepRaw = UserDefaults.standard.string(forKey: PreferencesKeys.onboardingActiveStep),
+       let savedStep = SnapzyOnboardingStep(rawValue: savedStepRaw) {
+      self.currentStep = savedStep
+      self.resetStateForStep(savedStep)
+    }
+  }
+
   // Step 1: Capture > Quick Access > Annotate Lifecycle State
   @Published var step1Stage: Step1WorkflowStage = .readyToCapture
   @Published var screenFlashOpacity: Double = 0
@@ -148,6 +157,7 @@ final class SnapzyOnboardingState: ObservableObject {
   func transition(to step: SnapzyOnboardingStep) {
     withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
       currentStep = step
+      UserDefaults.standard.set(step.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
       resetStateForStep(step)
     }
   }

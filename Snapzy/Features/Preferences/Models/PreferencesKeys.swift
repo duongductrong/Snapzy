@@ -11,6 +11,7 @@ import Foundation
 enum PreferencesKeys {
   // Onboarding
   static let onboardingCompleted = "onboardingCompleted"
+  static let onboardingActiveStep = "onboarding.activeStep"
   static let sponsorPromptSeen = "sponsorPromptSeen"
   static let splashSkipped = "splashSkipped"
   static let splashSkipOnceAfterOnboardingRelaunch = "splash.skipOnceAfterOnboardingRelaunch"

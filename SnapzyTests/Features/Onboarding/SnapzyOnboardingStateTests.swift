@@ -9,6 +9,15 @@ import XCTest
 @testable import Snapzy
 
 final class SnapzyOnboardingStateTests: XCTestCase {
+  override func setUp() {
+    super.setUp()
+    UserDefaults.standard.removeObject(forKey: PreferencesKeys.onboardingActiveStep)
+  }
+
+  override func tearDown() {
+    UserDefaults.standard.removeObject(forKey: PreferencesKeys.onboardingActiveStep)
+    super.tearDown()
+  }
 
   @MainActor
   func testInitialState() {
@@ -221,5 +230,49 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertFalse(state.hasAreaConflict)
     XCTAssertFalse(state.hasRecordingConflict)
     XCTAssertTrue(state.isCurrentStepComplete)
+  }
+
+  @MainActor
+  func testStepStateRestorationFromUserDefaults() {
+    let defaults = UserDefaults.standard
+    let original = defaults.string(forKey: PreferencesKeys.onboardingActiveStep)
+    defer {
+      if let original {
+        defaults.set(original, forKey: PreferencesKeys.onboardingActiveStep)
+      } else {
+        defaults.removeObject(forKey: PreferencesKeys.onboardingActiveStep)
+      }
+    }
+
+    defaults.set(SnapzyOnboardingStep.permissions.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
+    let restoredState = SnapzyOnboardingState()
+    XCTAssertEqual(restoredState.currentStep, .permissions)
+
+    restoredState.transition(to: .shortcuts)
+    XCTAssertEqual(
+      defaults.string(forKey: PreferencesKeys.onboardingActiveStep),
+      SnapzyOnboardingStep.shortcuts.rawValue
+    )
+  }
+
+  @MainActor
+  func testStep4PermissionChallenges() {
+    let state = SnapzyOnboardingState()
+    state.transition(to: .permissions)
+    XCTAssertEqual(state.currentStep, .permissions)
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    state.setChallenge(.grantScreenRecording, completed: true)
+    XCTAssertTrue(state.completedChallenges.contains(.grantScreenRecording))
+    XCTAssertFalse(state.isCurrentStepComplete)
+
+    state.setChallenge(.grantSaveFolder, completed: true)
+    XCTAssertTrue(state.completedChallenges.contains(.grantSaveFolder))
+    XCTAssertTrue(state.isCurrentStepComplete)
+    XCTAssertTrue(state.completedSteps.contains(.permissions))
+
+    state.setChallenge(.grantScreenRecording, completed: false)
+    XCTAssertFalse(state.isCurrentStepComplete)
+    XCTAssertFalse(state.completedSteps.contains(.permissions))
   }
 }
