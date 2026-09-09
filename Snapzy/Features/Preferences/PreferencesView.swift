@@ -50,6 +50,9 @@ struct PreferencesView: View {
     }
     .listStyle(.sidebar)
     .modifier(SidebarToggleRemovalModifier())
+    .safeAreaInset(edge: .bottom) {
+      PreferencesSidebarUpdateBadge()
+    }
     .navigationSplitViewColumnWidth(
       min: Self.fixedSidebarWidth,
       ideal: Self.fixedSidebarWidth,
