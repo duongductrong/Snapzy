@@ -63,14 +63,14 @@ struct SnapzyOnboardingCompletionCard: View {
 
   private var headerSection: some View {
     VStack(spacing: 8) {
-      SnapzyOnboardingOverline("SETUP COMPLETE")
+      SnapzyOnboardingOverline(L10n.Onboarding.completionCardOverline)
 
-      Text("You're All Set!")
+      Text(L10n.Onboarding.completionCardTitle)
         .font(.system(size: 28, weight: .bold))
         .tracking(-0.5)
         .foregroundStyle(SnapzyGlassInk.primary)
 
-      Text("Snapzy is ready in your menu bar. Take screenshots, record clips, extract text, and annotate anytime.")
+      Text(L10n.Onboarding.completionCardSubtitle)
         .font(.system(size: SnapzyOnboardingType.lede))
         .foregroundStyle(SnapzyGlassInk.body)
         .multilineTextAlignment(.center)
@@ -86,29 +86,29 @@ struct SnapzyOnboardingCompletionCard: View {
       CapabilityCard(
         icon: "camera.viewfinder",
         shortcut: "⇧⌘4",
-        title: "Area Capture",
-        detail: "Freeze, crop, and drop straight into Annotate or copy."
+        title: L10n.Onboarding.completionAreaCaptureTitle,
+        detail: L10n.Onboarding.completionAreaCaptureDetail
       )
 
       CapabilityCard(
         icon: "record.circle",
         shortcut: "⇧⌘5",
-        title: "Screen Recording",
-        detail: "Capture mic, system audio, and clicks. Export MP4 or GIF."
+        title: L10n.Onboarding.completionScreenRecordingTitle,
+        detail: L10n.Onboarding.completionScreenRecordingDetail
       )
 
       CapabilityCard(
         icon: "text.viewfinder",
         shortcut: "⇧⌘2",
-        title: "Text Grab (OCR)",
-        detail: "Extract text on-device with Apple Vision to clipboard."
+        title: L10n.Onboarding.completionOcrTitle,
+        detail: L10n.Onboarding.completionOcrDetail
       )
 
       CapabilityCard(
         icon: "menubar.rectangle",
         shortcut: "⌘,",
-        title: "Menu Bar Hub",
-        detail: "Access recent captures, history, hotkeys, and preferences."
+        title: L10n.Onboarding.completionMenubarHubTitle,
+        detail: L10n.Onboarding.completionMenubarHubDetail
       )
     }
     .frame(maxWidth: 880)
@@ -119,19 +119,19 @@ struct SnapzyOnboardingCompletionCard: View {
   private var communityRow: some View {
     HStack(spacing: 12) {
       CommunityLinkPill(
-        title: "Star on GitHub",
+        title: L10n.Onboarding.completionStarGithub,
         icon: "star.fill",
         url: "https://github.com/duongductrong/Snapzy"
       )
 
       CommunityLinkPill(
-        title: "Join Discord",
+        title: L10n.Onboarding.completionJoinDiscord,
         icon: "bubble.left.and.bubble.right.fill",
         url: "https://discord.gg/xkWDAuJkZu"
       )
 
       CommunityLinkPill(
-        title: "Sponsor Project",
+        title: L10n.Onboarding.completionSponsorProject,
         icon: "heart.fill",
         url: "https://github.com/sponsors/duongductrong"
       )
@@ -144,7 +144,7 @@ struct SnapzyOnboardingCompletionCard: View {
   private var primaryActionRow: some View {
     VStack(spacing: 10) {
       SnapzyOnboardingActionBar(
-        continueTitle: "Start Using Snapzy",
+        continueTitle: L10n.Onboarding.completionStartUsing,
         continueKey: "\u{21A9}",
         isContinueEnabled: true,
         onContinue: onFinish
@@ -152,7 +152,7 @@ struct SnapzyOnboardingCompletionCard: View {
 
       if let onBack {
         Button(action: onBack) {
-          Text("Press Esc to review previous steps")
+          Text(L10n.Onboarding.completionReviewHint)
             .font(.system(size: 11))
             .foregroundStyle(SnapzyGlassInk.faint)
         }

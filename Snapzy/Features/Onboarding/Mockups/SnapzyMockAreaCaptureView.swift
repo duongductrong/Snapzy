@@ -144,7 +144,7 @@ struct SnapzyMockAreaCaptureView: View {
             Image(systemName: "viewfinder")
               .font(.system(size: 13, weight: .bold))
 
-            Text("Press ⇧⌘4 or Click to Capture")
+            Text(L10n.Onboarding.mockPressToCapture)
               .font(.system(size: 11.5, weight: .semibold))
               .lineLimit(1)
               .fixedSize(horizontal: true, vertical: false)
@@ -183,7 +183,7 @@ struct SnapzyMockAreaCaptureView: View {
           VStack(alignment: .leading, spacing: 4) {
             // Curved hint arrow pointing down to the card
             SnapzyCurvedHintArrow(
-              text: "Click card to open Annotate",
+              text: L10n.Onboarding.challengeOpenAnnotateWindow,
               orientation: .curveDownToTarget,
               arrowAlignment: .leading,
               color: .white

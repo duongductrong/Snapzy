@@ -151,18 +151,18 @@ struct SnapzyOnboardingView: View {
   // MARK: - Actions & Footer
 
   private var escapeHintText: String {
-    state.canGoBack ? "Go back a step" : "Close onboarding"
+    state.canGoBack ? L10n.Onboarding.goBackHint : L10n.Onboarding.closeHint
   }
 
   private var actionBar: some View {
     let isLastStep = !state.canGoForward
-    let skipTitle: String? = isLastStep ? nil : "Skip"
+    let skipTitle: String? = isLastStep ? nil : L10n.Onboarding.actionSkip
     let skipAction: (() -> Void)? = isLastStep ? nil : { skip() }
     let canAdvance = state.isCurrentStepComplete || isLastStep
 
     return SnapzyOnboardingActionBar(
       skipTitle: skipTitle,
-      continueTitle: isLastStep ? "Finish" : "Continue",
+      continueTitle: isLastStep ? L10n.Onboarding.actionFinish : L10n.Onboarding.actionContinue,
       continueKey: "\u{21A9}",
       isContinueEnabled: canAdvance,
       onSkip: skipAction,
@@ -174,7 +174,7 @@ struct SnapzyOnboardingView: View {
     VStack(alignment: .trailing, spacing: 6) {
       if state.canGoForward && state.isCurrentStepComplete {
         SnapzyCurvedHintArrow(
-          text: "Click Continue to proceed",
+          text: L10n.Onboarding.continueHint,
           orientation: .curveDownToTarget,
           arrowAlignment: .trailing,
           color: .white

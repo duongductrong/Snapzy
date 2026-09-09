@@ -20,7 +20,7 @@ struct SnapzyMockPrerecordToolbar: View {
     VStack(alignment: .trailing, spacing: 4) {
       // Curved hint arrow pointing to the Record button
       SnapzyCurvedHintArrow(
-        text: "Click Record to start (3s demo)",
+        text: L10n.Onboarding.mockRecordHint,
         orientation: .curveDownToTarget,
         arrowAlignment: .trailing,
         color: .white
@@ -83,7 +83,7 @@ struct SnapzyMockPrerecordToolbar: View {
                 .fill(Color.red)
                 .frame(width: 7, height: 7)
 
-              Text("Record MP4")
+              Text(L10n.Onboarding.mockRecordMp4)
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundColor(.primary)
             }

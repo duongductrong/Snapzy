@@ -34,16 +34,16 @@ struct SnapzyOnboardingPermissionsView: View {
       ) {
         // 1. Screen Recording
         PermissionCard(
-          title: "Screen Recording",
+          title: L10n.Onboarding.screenRecording,
           isRequired: true,
-          promise: "Captures your displays, windows, and selections with pixel precision",
+          promise: L10n.Onboarding.permissionsScreenRecordingPromise,
           assurances: [
-            "Captures only when you invoke a shortcut or action.",
-            "No background streaming or hidden recording.",
-            "OCR text extraction runs completely on-device.",
+            L10n.Onboarding.permissionsScreenRecordingAssurance1,
+            L10n.Onboarding.permissionsScreenRecordingAssurance2,
+            L10n.Onboarding.permissionsScreenRecordingAssurance3,
           ],
           isGranted: screenCaptureManager.hasPermission,
-          actionTitle: "Allow Screen Recording…",
+          actionTitle: L10n.Onboarding.permissionsScreenRecordingAction,
           onAction: {
             Task {
               _ = await screenCaptureManager.requestPermission()
@@ -54,16 +54,16 @@ struct SnapzyOnboardingPermissionsView: View {
 
         // 2. Save Location
         PermissionCard(
-          title: "Save Folder",
+          title: L10n.Onboarding.saveFolder,
           isRequired: true,
-          promise: "Stores your captures in your chosen folder without permission prompts",
+          promise: L10n.Onboarding.permissionsSaveFolderPromise,
           assurances: [
-            "Snapzy only touches its assigned folder (default: Desktop/Snapzy).",
-            "Saves with customizable naming tokens and subfolders.",
-            "Files remain completely local on your Mac.",
+            L10n.Onboarding.permissionsSaveFolderAssurance1,
+            L10n.Onboarding.permissionsSaveFolderAssurance2,
+            L10n.Onboarding.permissionsSaveFolderAssurance3,
           ],
           isGranted: exportFolderGranted,
-          actionTitle: "Choose Folder…",
+          actionTitle: L10n.Onboarding.permissionsSaveFolderAction,
           onAction: {
             requestExportFolder()
           }
@@ -71,16 +71,16 @@ struct SnapzyOnboardingPermissionsView: View {
 
         // 3. Accessibility & Global Shortcuts
         PermissionCard(
-          title: "Accessibility",
+          title: L10n.Onboarding.accessibility,
           isRequired: false,
-          promise: "Listens for ⇧⌘4 and your custom global hotkeys from any application",
+          promise: L10n.Onboarding.permissionsAccessibilityPromise,
           assurances: [
-            "Only checks keys against configured capture shortcuts.",
-            "Never reads passwords or logs your keystrokes.",
-            "Can be toggled off anytime in System Settings.",
+            L10n.Onboarding.permissionsAccessibilityAssurance1,
+            L10n.Onboarding.permissionsAccessibilityAssurance2,
+            L10n.Onboarding.permissionsAccessibilityAssurance3,
           ],
           isGranted: accessibilityGranted,
-          actionTitle: "Enable Shortcuts…",
+          actionTitle: L10n.Onboarding.permissionsAccessibilityAction,
           onAction: {
             requestAccessibility()
           }
@@ -123,7 +123,7 @@ struct SnapzyOnboardingPermissionsView: View {
           .font(.system(size: SnapzyOnboardingType.lede))
           .foregroundStyle(SnapzyGlassInk.body)
 
-        Text("Take them all or take some — you can adjust permissions in System Settings anytime.")
+        Text(L10n.Onboarding.permissionsAdjustAnytime)
           .font(.system(size: SnapzyOnboardingType.lede))
           .foregroundStyle(SnapzyGlassInk.muted)
       }
@@ -135,25 +135,25 @@ struct SnapzyOnboardingPermissionsView: View {
 
   private var privacyBand: some View {
     VStack(alignment: .leading, spacing: SnapzySpace.xl) {
-      SnapzyOnboardingOverline("No matter what you choose")
+      SnapzyOnboardingOverline(L10n.Onboarding.permissionsPrivacyOverline)
 
       HStack(alignment: .top, spacing: SnapzySpace.xxl + SnapzySpace.xs) {
         PrivacyPromise(
           symbol: "hand.tap",
-          title: "You trigger every capture",
-          detail: "Snapzy stays completely idle until you press a shortcut. There is zero background scanning of your display."
+          title: L10n.Onboarding.permissionsPrivacyTriggerTitle,
+          detail: L10n.Onboarding.permissionsPrivacyTriggerDetail
         )
 
         PrivacyPromise(
           symbol: "lock.shield",
-          title: "100% On-Device & Private",
-          detail: "Vision OCR, image annotations, and audio capture are processed entirely locally on your Mac's hardware."
+          title: L10n.Onboarding.permissionsPrivacyLocalTitle,
+          detail: L10n.Onboarding.permissionsPrivacyLocalDetail
         )
 
         PrivacyPromise(
           symbol: "arrow.uturn.backward",
-          title: "Undo anytime in Settings",
-          detail: "Withdraw grants in System Settings whenever you like, and Snapzy gracefully continues with remaining tools."
+          title: L10n.Onboarding.permissionsPrivacySettingsTitle,
+          detail: L10n.Onboarding.permissionsPrivacySettingsDetail
         )
       }
     }
@@ -278,7 +278,7 @@ private struct PermissionCard: View {
             .font(.system(size: 14))
             .foregroundStyle(Color.green)
 
-          Text("Granted")
+          Text(L10n.Onboarding.permissionsStatusGranted)
             .font(.system(size: SnapzyOnboardingType.body, weight: .medium))
             .foregroundStyle(SnapzyGlassInk.body)
         }
@@ -315,7 +315,7 @@ private struct PermissionCard: View {
   }
 
   private var badge: some View {
-    Text(isRequired ? "REQUIRED" : "OPTIONAL")
+    Text(isRequired ? L10n.Onboarding.permissionsBadgeRequired : L10n.Onboarding.permissionsBadgeOptional)
       .font(.system(size: 9, weight: .bold))
       .tracking(0.8)
       .foregroundStyle(SnapzyGlassInk.body)

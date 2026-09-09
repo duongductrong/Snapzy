@@ -295,7 +295,7 @@ struct SnapzyMockSystemSettingsWindow: View {
             HStack(spacing: 3) {
               Image(systemName: "exclamationmark.triangle.fill")
                 .font(.system(size: 8))
-              Text("Conflicts active")
+              Text(L10n.Onboarding.mockConflictsActive)
                 .font(.system(size: 8, weight: .semibold))
             }
             .foregroundStyle(Color.orange)
@@ -306,7 +306,7 @@ struct SnapzyMockSystemSettingsWindow: View {
             HStack(spacing: 3) {
               Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 8))
-              Text("No conflicts")
+              Text(L10n.Onboarding.mockNoConflicts)
                 .font(.system(size: 8, weight: .semibold))
             }
             .foregroundStyle(Color.green)
@@ -321,7 +321,7 @@ struct SnapzyMockSystemSettingsWindow: View {
             Image(systemName: "arrow.turn.down.right")
               .font(.system(size: 8, weight: .bold))
               .foregroundStyle(Color.orange)
-            Text("Uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 below to disable macOS native shortcuts.")
+            Text(L10n.Onboarding.mockUncheckInstruction)
               .font(.system(size: 8.5, weight: .medium))
               .foregroundStyle(Color(red: 0.55, green: 0.32, blue: 0.05))
           }
@@ -448,7 +448,7 @@ struct SnapzyMockSystemSettingsWindow: View {
 
         // Conflict Pill
         if hasConflict {
-          Text("Conflict")
+          Text(L10n.Onboarding.mockConflictBadge)
             .font(.system(size: 7.5, weight: .bold))
             .foregroundStyle(Color.orange)
             .padding(.horizontal, 4)
@@ -493,7 +493,7 @@ struct SnapzyMockSystemSettingsWindow: View {
           notifyChanges()
         }
       } label: {
-        Text("Restore Defaults")
+        Text(L10n.Onboarding.mockRestoreDefaults)
           .font(.system(size: 9.5, weight: .medium))
           .foregroundStyle(Color.black.opacity(0.75))
           .padding(.horizontal, 8)
@@ -513,7 +513,7 @@ struct SnapzyMockSystemSettingsWindow: View {
         HStack(spacing: 4) {
           Image(systemName: "arrow.up.forward.app")
             .font(.system(size: 8.5, weight: .bold))
-          Text("Open System Settings...")
+          Text(L10n.Onboarding.mockOpenSystemSettings)
             .font(.system(size: 9.5, weight: .medium))
         }
         .foregroundStyle(Color(red: 0.08, green: 0.46, blue: 0.96))
@@ -540,7 +540,7 @@ struct SnapzyMockSystemSettingsWindow: View {
             notifyChanges()
           }
         } label: {
-          Text("Uncheck to Resolve")
+          Text(L10n.Onboarding.mockUncheckToResolve)
             .font(.system(size: 9.5, weight: .semibold))
             .foregroundStyle(Color.orange)
             .padding(.horizontal, 7)
@@ -555,7 +555,7 @@ struct SnapzyMockSystemSettingsWindow: View {
         HStack(spacing: 3) {
           Image(systemName: "checkmark")
             .font(.system(size: 8, weight: .bold))
-          Text("Snapzy shortcuts ready")
+          Text(L10n.Onboarding.mockShortcutsReady)
             .font(.system(size: 9.5, weight: .medium))
         }
         .foregroundStyle(Color.green)
@@ -570,7 +570,7 @@ struct SnapzyMockSystemSettingsWindow: View {
           notifyChanges()
         }
       } label: {
-        Text("Done")
+        Text(L10n.Onboarding.mockDone)
           .font(.system(size: 10, weight: .semibold))
           .foregroundStyle(Color.white)
           .padding(.horizontal, 12)

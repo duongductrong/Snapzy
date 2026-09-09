@@ -1525,11 +1525,6 @@ nonisolated enum L10n {
       defaultValue: "Build Identity Needs Attention",
       comment: "Warning title when app identity health issues block permission usage"
     )
-    static let quit = string(
-      "onboarding.permissions.quit",
-      defaultValue: "Quit",
-      comment: "Quit button title in onboarding permissions step"
-    )
     static let chooseFolderMessage = string(
       "onboarding.permissions.choose-folder-message",
       defaultValue: "Choose a folder for Snapzy captures (default: Desktop/Snapzy)",
@@ -1756,6 +1751,638 @@ nonisolated enum L10n {
       defaultValue: "Get Started",
       comment: "Primary action on onboarding completion screen"
     )
+
+
+    // Action bar & hints
+    static let actionSkip = string(
+      "onboarding.action.skip",
+      defaultValue: "Skip",
+      comment: "Skip onboarding step action button"
+    )
+    static let actionContinue = string(
+      "onboarding.action.continue",
+      defaultValue: "Continue",
+      comment: "Continue onboarding step action button"
+    )
+    static let actionFinish = string(
+      "onboarding.action.finish",
+      defaultValue: "Finish",
+      comment: "Finish onboarding step action button"
+    )
+    static let goBackHint = string(
+      "onboarding.action.go-back-hint",
+      defaultValue: "Go back a step",
+      comment: "Escape key hint when navigation back is available"
+    )
+    static let closeHint = string(
+      "onboarding.action.close-hint",
+      defaultValue: "Close onboarding",
+      comment: "Escape key hint when at first step or closing onboarding"
+    )
+    static let continueHint = string(
+      "onboarding.action.continue-hint",
+      defaultValue: "Click Continue to proceed",
+      comment: "Hint arrow pointing to continue button when step completed"
+    )
+
+    // Chrome
+    static let chromeCloseAccessibility = string(
+      "onboarding.chrome.close-accessibility",
+      defaultValue: "Close onboarding",
+      comment: "Accessibility label for onboarding close button"
+    )
+    static let chromeLanguageAutoSystem = string(
+      "onboarding.chrome.language-auto-system",
+      defaultValue: "Auto (System)",
+      comment: "Onboarding header language menu system auto option"
+    )
+    static let chromeLanguageAuto = string(
+      "onboarding.chrome.language-auto",
+      defaultValue: "Auto",
+      comment: "Fallback short label for system auto language"
+    )
+    static let chromeLanguageLabel = string(
+      "onboarding.chrome.language-label",
+      defaultValue: "Language",
+      comment: "Fallback label for language selector pill"
+    )
+    static func stepIndicator(_ current: Int, _ total: Int) -> String {
+      format(
+        "onboarding.step-indicator",
+        defaultValue: "Step %d of %d",
+        comment: "Step indicator in onboarding instruction panel",
+        current,
+        total
+      )
+    }
+    static let demoOverline = string(
+      "onboarding.demo.overline",
+      defaultValue: "Interactive Demo",
+      comment: "Overline header for prompt card"
+    )
+    static let demoTooltip = string(
+      "onboarding.demo.tooltip",
+      defaultValue: "Run simulation on mock stage",
+      comment: "Tooltip for interactive simulation prompt card"
+    )
+
+    // Step 1: Capture
+    static let stepCaptureShortTitle = string(
+      "onboarding.step.capture.short-title",
+      defaultValue: "Capture",
+      comment: "Short title for Step 1 Capture"
+    )
+    static let stepCaptureTitle = string(
+      "onboarding.step.capture.title",
+      defaultValue: "Screen Capture & Annotate",
+      comment: "Title for Step 1 Capture"
+    )
+    static let stepCaptureSubtitle = string(
+      "onboarding.step.capture.subtitle",
+      defaultValue: "Press ⇧⌘4 to freeze and select an area. Your capture instantly lands in a floating Quick Access card—ready to copy, save, or open in Annotate.",
+      comment: "Subtitle narrative for Step 1 Capture"
+    )
+    static let stepCaptureTip = string(
+      "onboarding.step.capture.tip",
+      defaultValue: "Clicking the Quick Access card directly opens the full vector Annotate window.",
+      comment: "Tip footer for Step 1 Capture"
+    )
+    static let stepCapturePromptReady = string(
+      "onboarding.step.capture.prompt-ready",
+      defaultValue: "Click to freeze the screen and simulate selecting an area with ⇧⌘4.",
+      comment: "Simulation prompt for Step 1 ready to capture"
+    )
+    static let stepCapturePromptSelecting = string(
+      "onboarding.step.capture.prompt-selecting",
+      defaultValue: "Area selected! Click to complete capture and send to Quick Access.",
+      comment: "Simulation prompt for Step 1 selecting area"
+    )
+    static let stepCapturePromptFloating = string(
+      "onboarding.step.capture.prompt-floating",
+      defaultValue: "Capture is in Quick Access! Click card or ✎ to open Annotate window.",
+      comment: "Simulation prompt for Step 1 quick access floating"
+    )
+    static let stepCapturePromptOpen = string(
+      "onboarding.step.capture.prompt-open",
+      defaultValue: "Annotate window open! Click to replay the complete flow from the beginning.",
+      comment: "Simulation prompt for Step 1 annotate window open"
+    )
+
+    // Step 2: Recording
+    static let stepRecordingShortTitle = string(
+      "onboarding.step.recording.short-title",
+      defaultValue: "Recording",
+      comment: "Short title for Step 2 Recording"
+    )
+    static let stepRecordingTitle = string(
+      "onboarding.step.recording.title",
+      defaultValue: "Screen Recording & Video Editor",
+      comment: "Title for Step 2 Recording"
+    )
+    static let stepRecordingSubtitle = string(
+      "onboarding.step.recording.subtitle",
+      defaultValue: "Press ⇧⌘5 to frame any region. Capture system audio & microphone, trim in the timeline, and export crisp MP4 or GIF.",
+      comment: "Subtitle narrative for Step 2 Recording"
+    )
+    static let stepRecordingTip = string(
+      "onboarding.step.recording.tip",
+      defaultValue: "You can pause, resume, and annotate on screen while recording video.",
+      comment: "Tip footer for Step 2 Recording"
+    )
+    static let stepRecordingPromptReady = string(
+      "onboarding.step.recording.prompt-ready",
+      defaultValue: "Click to simulate ⇧⌘5 recording shortcut and open prerecord area.",
+      comment: "Simulation prompt for Step 2 ready to record"
+    )
+    static let stepRecordingPromptFramed = string(
+      "onboarding.step.recording.prompt-framed",
+      defaultValue: "Region framed! Click 'Record MP4' or tap here to start 3s countdown.",
+      comment: "Simulation prompt for Step 2 region framed"
+    )
+    static func stepRecordingPromptActive(_ seconds: Int) -> String {
+      format(
+        "onboarding.step.recording.prompt-active",
+        defaultValue: "Recording in progress (%ds)... Tap Stop or wait 3s.",
+        comment: "Simulation prompt for Step 2 recording active",
+        seconds
+      )
+    }
+    static let stepRecordingPromptFloating = string(
+      "onboarding.step.recording.prompt-floating",
+      defaultValue: "Video in Quick Access! Click card or tap here to open Video Editor.",
+      comment: "Simulation prompt for Step 2 video quick access"
+    )
+    static let stepRecordingPromptOpen = string(
+      "onboarding.step.recording.prompt-open",
+      defaultValue: "Video Editor open! Click here or 'Replay' to test the recording flow again.",
+      comment: "Simulation prompt for Step 2 video editor open"
+    )
+
+    // Step 3: Shortcuts
+    static let stepShortcutsShortTitle = string(
+      "onboarding.step.shortcuts.short-title",
+      defaultValue: "Shortcuts",
+      comment: "Short title for Step 3 Shortcuts"
+    )
+    static let stepShortcutsTitle = string(
+      "onboarding.step.shortcuts.title",
+      defaultValue: "macOS Shortcuts & Conflicts",
+      comment: "Title for Step 3 Shortcuts"
+    )
+    static let stepShortcutsSubtitle = string(
+      "onboarding.step.shortcuts.subtitle",
+      defaultValue: "Go to System Settings > Keyboard > Keyboard Shortcuts > Screenshots to uncheck ⇧⌘3, ⇧⌘4, and ⇧⌘5 to prevent key conflicts with Snapzy. Keep workflows portable with config.toml.",
+      comment: "Subtitle narrative for Step 3 Shortcuts"
+    )
+    static let stepShortcutsTip = string(
+      "onboarding.step.shortcuts.tip",
+      defaultValue: "You can customize every shortcut anytime in Preferences → Shortcuts.",
+      comment: "Tip footer for Step 3 Shortcuts"
+    )
+    static let stepShortcutsPromptConflicts = string(
+      "onboarding.step.shortcuts.prompt-conflicts",
+      defaultValue: "Conflicts detected! In Keyboard > Keyboard Shortcuts > Screenshots, uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 (or tap here to resolve).",
+      comment: "Simulation prompt for Step 3 conflicts active"
+    )
+    static let stepShortcutsPromptResolved = string(
+      "onboarding.step.shortcuts.prompt-resolved",
+      defaultValue: "Conflicts resolved! Test the shortcut buttons or grant config.toml access below.",
+      comment: "Simulation prompt for Step 3 conflicts resolved"
+    )
+
+    // Step 4: Permissions
+    static let stepPermissionsShortTitle = string(
+      "onboarding.step.permissions.short-title",
+      defaultValue: "Permissions",
+      comment: "Short title for Step 4 Permissions"
+    )
+    static let stepPermissionsTitle = string(
+      "onboarding.step.permissions.title",
+      defaultValue: "Permissions & Privacy",
+      comment: "Title for Step 4 Permissions"
+    )
+    static let stepPermissionsSubtitle = string(
+      "onboarding.step.permissions.subtitle",
+      defaultValue: "Snapzy runs entirely on your Mac. These macOS grants enable screen capture, audio recording, and global shortcuts.",
+      comment: "Subtitle narrative for Step 4 Permissions"
+    )
+    static let stepPermissionsTip = string(
+      "onboarding.step.permissions.tip",
+      defaultValue: "All OCR and processing happen on-device using Apple Vision.",
+      comment: "Tip footer for Step 4 Permissions"
+    )
+
+    // Challenges
+    static let challengeSelectArea = string(
+      "onboarding.challenge.select-area",
+      defaultValue: "Select an area on the screen.",
+      comment: "Challenge label for selectArea"
+    )
+    static let challengeAddAnnotation = string(
+      "onboarding.challenge.add-annotation",
+      defaultValue: "Pick an annotation tool (arrow, rect, blur).",
+      comment: "Challenge label for addAnnotation"
+    )
+    static let challengeCaptureToQuickAccess = string(
+      "onboarding.challenge.capture-to-quick-access",
+      defaultValue: "Capture lands in Quick Access card.",
+      comment: "Challenge label for captureToQuickAccess"
+    )
+    static let challengeOpenAnnotateWindow = string(
+      "onboarding.challenge.open-annotate-window",
+      defaultValue: "Click card to open Annotate window.",
+      comment: "Challenge label for openAnnotateWindow"
+    )
+    static let challengeSelectRecordArea = string(
+      "onboarding.challenge.select-record-area",
+      defaultValue: "Select an area for screen recording.",
+      comment: "Challenge label for selectRecordArea"
+    )
+    static let challengeRecordVideo3s = string(
+      "onboarding.challenge.record-video-3s",
+      defaultValue: "Record a short 3-second video clip.",
+      comment: "Challenge label for recordVideo3s"
+    )
+    static let challengeOpenVideoEditor = string(
+      "onboarding.challenge.open-video-editor",
+      defaultValue: "Open the video editor from the card.",
+      comment: "Challenge label for openVideoEditor"
+    )
+    static let challengeHoverCard = string(
+      "onboarding.challenge.hover-card",
+      defaultValue: "Hover over the Quick Access card.",
+      comment: "Challenge label for hoverCard"
+    )
+    static let challengeTriggerQuickAction = string(
+      "onboarding.challenge.trigger-quick-action",
+      defaultValue: "Press ⌘C to copy or ⌘E to edit.",
+      comment: "Challenge label for triggerQuickAction"
+    )
+    static let challengeCheckShortcuts = string(
+      "onboarding.challenge.check-shortcuts",
+      defaultValue: "Uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 in Keyboard > Screenshots.",
+      comment: "Challenge label for checkShortcuts"
+    )
+    static let challengeGrantScreenRecording = string(
+      "onboarding.challenge.grant-screen-recording",
+      defaultValue: "Allow Screen Recording.",
+      comment: "Challenge label for grantScreenRecording"
+    )
+    static let challengeGrantSaveFolder = string(
+      "onboarding.challenge.grant-save-folder",
+      defaultValue: "Select captures save folder.",
+      comment: "Challenge label for grantSaveFolder"
+    )
+    static let challengeGrantAccessibility = string(
+      "onboarding.challenge.grant-accessibility",
+      defaultValue: "Allow Accessibility (optional).",
+      comment: "Challenge label for grantAccessibility"
+    )
+
+    // Permissions Grid & Assurances
+    static let permissionsAdjustAnytime = string(
+      "onboarding.permissions.adjust-anytime",
+      defaultValue: "Take them all or take some — you can adjust permissions in System Settings anytime.",
+      comment: "Hint on permissions step that grants can be adjusted anytime"
+    )
+    static let permissionsScreenRecordingPromise = string(
+      "onboarding.permissions.screen-recording-promise",
+      defaultValue: "Captures your displays, windows, and selections with pixel precision",
+      comment: "Promise description for Screen Recording permission"
+    )
+    static let permissionsScreenRecordingAssurance1 = string(
+      "onboarding.permissions.screen-recording-assurance-1",
+      defaultValue: "Captures only when you invoke a shortcut or action.",
+      comment: "Assurance 1 for Screen Recording"
+    )
+    static let permissionsScreenRecordingAssurance2 = string(
+      "onboarding.permissions.screen-recording-assurance-2",
+      defaultValue: "No background streaming or hidden recording.",
+      comment: "Assurance 2 for Screen Recording"
+    )
+    static let permissionsScreenRecordingAssurance3 = string(
+      "onboarding.permissions.screen-recording-assurance-3",
+      defaultValue: "OCR text extraction runs completely on-device.",
+      comment: "Assurance 3 for Screen Recording"
+    )
+    static let permissionsScreenRecordingAction = string(
+      "onboarding.permissions.screen-recording-action",
+      defaultValue: "Allow Screen Recording…",
+      comment: "Action button title for Screen Recording"
+    )
+    static let permissionsSaveFolderPromise = string(
+      "onboarding.permissions.save-folder-promise",
+      defaultValue: "Stores your captures in your chosen folder without permission prompts",
+      comment: "Promise description for Save Folder permission"
+    )
+    static let permissionsSaveFolderAssurance1 = string(
+      "onboarding.permissions.save-folder-assurance-1",
+      defaultValue: "Snapzy only touches its assigned folder (default: Desktop/Snapzy).",
+      comment: "Assurance 1 for Save Folder"
+    )
+    static let permissionsSaveFolderAssurance2 = string(
+      "onboarding.permissions.save-folder-assurance-2",
+      defaultValue: "Saves with customizable naming tokens and subfolders.",
+      comment: "Assurance 2 for Save Folder"
+    )
+    static let permissionsSaveFolderAssurance3 = string(
+      "onboarding.permissions.save-folder-assurance-3",
+      defaultValue: "Files remain completely local on your Mac.",
+      comment: "Assurance 3 for Save Folder"
+    )
+    static let permissionsSaveFolderAction = string(
+      "onboarding.permissions.save-folder-action",
+      defaultValue: "Choose Folder…",
+      comment: "Action button title for Save Folder"
+    )
+    static let permissionsAccessibilityPromise = string(
+      "onboarding.permissions.accessibility-promise",
+      defaultValue: "Listens for ⇧⌘4 and your custom global hotkeys from any application",
+      comment: "Promise description for Accessibility permission"
+    )
+    static let permissionsAccessibilityAssurance1 = string(
+      "onboarding.permissions.accessibility-assurance-1",
+      defaultValue: "Only checks keys against configured capture shortcuts.",
+      comment: "Assurance 1 for Accessibility"
+    )
+    static let permissionsAccessibilityAssurance2 = string(
+      "onboarding.permissions.accessibility-assurance-2",
+      defaultValue: "Never reads passwords or logs your keystrokes.",
+      comment: "Assurance 2 for Accessibility"
+    )
+    static let permissionsAccessibilityAssurance3 = string(
+      "onboarding.permissions.accessibility-assurance-3",
+      defaultValue: "Can be toggled off anytime in System Settings.",
+      comment: "Assurance 3 for Accessibility"
+    )
+    static let permissionsAccessibilityAction = string(
+      "onboarding.permissions.accessibility-action",
+      defaultValue: "Enable Shortcuts…",
+      comment: "Action button title for Accessibility"
+    )
+    static let permissionsBadgeRequired = string(
+      "onboarding.permissions.badge-required",
+      defaultValue: "REQUIRED",
+      comment: "Badge for required permissions"
+    )
+    static let permissionsBadgeOptional = string(
+      "onboarding.permissions.badge-optional",
+      defaultValue: "OPTIONAL",
+      comment: "Badge for optional permissions"
+    )
+    static let permissionsStatusGranted = string(
+      "onboarding.permissions.status-granted",
+      defaultValue: "Granted",
+      comment: "Status indicator when permission is granted"
+    )
+    static let permissionsPrivacyOverline = string(
+      "onboarding.permissions.privacy-overline",
+      defaultValue: "No matter what you choose",
+      comment: "Overline for privacy band in permissions step"
+    )
+    static let permissionsPrivacyTriggerTitle = string(
+      "onboarding.permissions.privacy-trigger-title",
+      defaultValue: "You trigger every capture",
+      comment: "Title for user-triggered capture guarantee"
+    )
+    static let permissionsPrivacyTriggerDetail = string(
+      "onboarding.permissions.privacy-trigger-detail",
+      defaultValue: "Snapzy stays completely idle until you press a shortcut. There is zero background scanning of your display.",
+      comment: "Detail for user-triggered capture guarantee"
+    )
+    static let permissionsPrivacyLocalTitle = string(
+      "onboarding.permissions.privacy-local-title",
+      defaultValue: "100% On-Device & Private",
+      comment: "Title for on-device processing guarantee"
+    )
+    static let permissionsPrivacyLocalDetail = string(
+      "onboarding.permissions.privacy-local-detail",
+      defaultValue: "Vision OCR, image annotations, and audio capture are processed entirely locally on your Mac's hardware.",
+      comment: "Detail for on-device processing guarantee"
+    )
+    static let permissionsPrivacySettingsTitle = string(
+      "onboarding.permissions.privacy-settings-title",
+      defaultValue: "Undo anytime in Settings",
+      comment: "Title for revocable permissions guarantee"
+    )
+    static let permissionsPrivacySettingsDetail = string(
+      "onboarding.permissions.privacy-settings-detail",
+      defaultValue: "Withdraw grants in System Settings whenever you like, and Snapzy gracefully continues with remaining tools.",
+      comment: "Detail for revocable permissions guarantee"
+    )
+
+    // Completion Card
+    static let completionCardOverline = string(
+      "onboarding.completion.card-overline",
+      defaultValue: "SETUP COMPLETE",
+      comment: "Overline badge on onboarding completion card"
+    )
+    static let completionCardTitle = string(
+      "onboarding.completion.card-title",
+      defaultValue: "You're All Set!",
+      comment: "Title on onboarding completion card"
+    )
+    static let completionCardSubtitle = string(
+      "onboarding.completion.card-subtitle",
+      defaultValue: "Snapzy is ready in your menu bar. Take screenshots, record clips, extract text, and annotate anytime.",
+      comment: "Subtitle on onboarding completion card"
+    )
+    static let completionAreaCaptureTitle = string(
+      "onboarding.completion.area-capture-title",
+      defaultValue: "Area Capture",
+      comment: "Title for Area Capture capability card"
+    )
+    static let completionAreaCaptureDetail = string(
+      "onboarding.completion.area-capture-detail",
+      defaultValue: "Freeze, crop, and drop straight into Annotate or copy.",
+      comment: "Detail for Area Capture capability card"
+    )
+    static let completionScreenRecordingTitle = string(
+      "onboarding.completion.screen-recording-title",
+      defaultValue: "Screen Recording",
+      comment: "Title for Screen Recording capability card"
+    )
+    static let completionScreenRecordingDetail = string(
+      "onboarding.completion.screen-recording-detail",
+      defaultValue: "Capture mic, system audio, and clicks. Export MP4 or GIF.",
+      comment: "Detail for Screen Recording capability card"
+    )
+    static let completionOcrTitle = string(
+      "onboarding.completion.ocr-title",
+      defaultValue: "Text Grab (OCR)",
+      comment: "Title for Text Grab OCR capability card"
+    )
+    static let completionOcrDetail = string(
+      "onboarding.completion.ocr-detail",
+      defaultValue: "Extract text on-device with Apple Vision to clipboard.",
+      comment: "Detail for Text Grab OCR capability card"
+    )
+    static let completionMenubarHubTitle = string(
+      "onboarding.completion.menubar-hub-title",
+      defaultValue: "Menu Bar Hub",
+      comment: "Title for Menu Bar Hub capability card"
+    )
+    static let completionMenubarHubDetail = string(
+      "onboarding.completion.menubar-hub-detail",
+      defaultValue: "Access recent captures, history, hotkeys, and preferences.",
+      comment: "Detail for Menu Bar Hub capability card"
+    )
+    static let completionStarGithub = string(
+      "onboarding.completion.star-github",
+      defaultValue: "Star on GitHub",
+      comment: "Button label for starring on GitHub"
+    )
+    static let completionJoinDiscord = string(
+      "onboarding.completion.join-discord",
+      defaultValue: "Join Discord",
+      comment: "Button label for joining Discord"
+    )
+    static let completionSponsorProject = string(
+      "onboarding.completion.sponsor-project",
+      defaultValue: "Sponsor Project",
+      comment: "Button label for sponsoring project"
+    )
+    static let completionStartUsing = string(
+      "onboarding.completion.start-using",
+      defaultValue: "Start Using Snapzy",
+      comment: "Primary action button title on completion screen"
+    )
+    static let completionReviewHint = string(
+      "onboarding.completion.review-hint",
+      defaultValue: "Press Esc to review previous steps",
+      comment: "Hint for escaping back to previous steps from completion screen"
+    )
+
+    // Interactive Mockups
+    static let mockPressToCapture = string(
+      "onboarding.mock.press-to-capture",
+      defaultValue: "Press ⇧⌘4 or Click to Capture",
+      comment: "Stage banner on Area Capture mock screen"
+    )
+    static let mockRecordHint = string(
+      "onboarding.mock.record-hint",
+      defaultValue: "Click Record to start (3s demo)",
+      comment: "Hint arrow text pointing to record button"
+    )
+    static let mockRecordMp4 = string(
+      "onboarding.mock.record-mp4",
+      defaultValue: "Record MP4",
+      comment: "Button label on prerecord toolbar"
+    )
+    static let mockStop = string(
+      "onboarding.mock.stop",
+      defaultValue: "Stop",
+      comment: "Button label on recording status bar"
+    )
+    static let mockReplay = string(
+      "onboarding.mock.replay",
+      defaultValue: "Replay Demo",
+      comment: "Button label on mock video editor window"
+    )
+    static let mockExportMp4 = string(
+      "onboarding.mock.export-mp4",
+      defaultValue: "Export MP4 (⌘S)",
+      comment: "Button label on mock video editor window"
+    )
+    static let mockSwipeToDismiss = string(
+      "onboarding.mock.swipe-to-dismiss",
+      defaultValue: "Swipe to dismiss",
+      comment: "Instruction hint above floating quick access card"
+    )
+    static let mockConflictsDetected = string(
+      "onboarding.mock.conflicts-detected",
+      defaultValue: "macOS shortcut conflicts detected (⇧⌘3, ⇧⌘4, ⇧⌘5)",
+      comment: "Banner text when shortcut conflicts are active in mock"
+    )
+    static let mockResolveAll = string(
+      "onboarding.mock.resolve-all",
+      defaultValue: "Resolve All",
+      comment: "Action button to resolve all conflicts in mock"
+    )
+    static let mockShortcutsActive = string(
+      "onboarding.mock.shortcuts-active",
+      defaultValue: "All global shortcuts active & conflict-free",
+      comment: "Banner text when shortcuts are conflict-free in mock"
+    )
+    static func mockCapturedMode(_ mode: String) -> String {
+      format(
+        "onboarding.mock.captured-mode",
+        defaultValue: "Captured %@!",
+        comment: "Notification banner after capture in mock HUD",
+        mode
+      )
+    }
+    static let mockPortableConfig = string(
+      "onboarding.mock.portable-config",
+      defaultValue: "Portable plaintext settings",
+      comment: "Subtitle for config.toml card in mock"
+    )
+    static let mockLinked = string(
+      "onboarding.mock.linked",
+      defaultValue: "Linked",
+      comment: "Status badge when config.toml is linked in mock"
+    )
+    static let mockGrant = string(
+      "onboarding.mock.grant",
+      defaultValue: "Grant",
+      comment: "Action button to link config.toml in mock"
+    )
+    static let mockAnonymousDiagnostics = string(
+      "onboarding.mock.anonymous-diagnostics",
+      defaultValue: "Anonymous Diagnostics",
+      comment: "Title for anonymous diagnostics toggle in mock"
+    )
+    static let mockDiagnosticsDetail = string(
+      "onboarding.mock.diagnostics-detail",
+      defaultValue: "Crash reports only, zero capture content",
+      comment: "Detail for anonymous diagnostics toggle in mock"
+    )
+    static let mockRestoreDefaults = string(
+      "onboarding.mock.restore-defaults",
+      defaultValue: "Restore Defaults",
+      comment: "Button label in mock system settings window"
+    )
+    static let mockOpenSystemSettings = string(
+      "onboarding.mock.open-system-settings",
+      defaultValue: "Open System Settings...",
+      comment: "Button label in mock system settings window"
+    )
+    static let mockUncheckToResolve = string(
+      "onboarding.mock.uncheck-to-resolve",
+      defaultValue: "Uncheck to Resolve",
+      comment: "Instruction header in mock system settings window"
+    )
+    static let mockShortcutsReady = string(
+      "onboarding.mock.shortcuts-ready",
+      defaultValue: "Snapzy shortcuts ready",
+      comment: "Success message in mock system settings window"
+    )
+    static let mockConflictBadge = string(
+      "onboarding.mock.conflict-badge",
+      defaultValue: "Conflict",
+      comment: "Warning badge next to conflicting shortcut row in mock"
+    )
+    static let mockUncheckInstruction = string(
+      "onboarding.mock.uncheck-instruction",
+      defaultValue: "Uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 below to disable macOS native shortcuts.",
+      comment: "Instruction text in mock system settings window"
+    )
+    static let mockConflictsActive = string(
+      "onboarding.mock.conflicts-active",
+      defaultValue: "Conflicts active",
+      comment: "Status badge when conflicts are active in mock system settings"
+    )
+    static let mockNoConflicts = string(
+      "onboarding.mock.no-conflicts",
+      defaultValue: "No conflicts",
+      comment: "Status badge when no conflicts exist in mock system settings"
+    )
+    static let mockDone = string(
+      "onboarding.mock.done",
+      defaultValue: "Done",
+      comment: "Done button in mock system settings window"
+    )
+
   }
 
   enum ShortcutOverlay {
@@ -2237,6 +2864,21 @@ nonisolated enum L10n {
       "preferences-general.save-here-button",
       defaultValue: "Save Here",
       comment: "Open panel prompt for choosing export location"
+    )
+    static let sidebarAccessibilityLabel = string(
+      "preferences-general.sidebar-accessibility-label",
+      defaultValue: "Settings categories",
+      comment: "Accessibility label for settings sidebar categories"
+    )
+    static let navigationBack = string(
+      "preferences-general.navigation-back",
+      defaultValue: "Back (⌘[)",
+      comment: "Tooltip for preferences back navigation button"
+    )
+    static let navigationForward = string(
+      "preferences-general.navigation-forward",
+      defaultValue: "Forward (⌘])",
+      comment: "Tooltip for preferences forward navigation button"
     )
   }
 
@@ -3673,23 +4315,35 @@ nonisolated enum L10n {
       defaultValue: "Screenshot & Recording for macOS",
       comment: "About screen app subtitle"
     )
-    static func version(_ appVersion: String) -> String {
-      format(
-        "preferences-about.version",
-        defaultValue: "Version %@",
-        comment: "About screen version label. %@ is the version and build string.",
-        appVersion
-      )
-    }
+    static let madeBy = string(
+      "preferences-about.made-by",
+      defaultValue: "Made by",
+      comment: "Label for creator attribution in About"
+    )
+    static let specialThanks = string(
+      "preferences-about.special-thanks",
+      defaultValue: "Special thanks",
+      comment: "Label for contributor thanks section in About"
+    )
+    static let allContributors = string(
+      "preferences-about.all-contributors",
+      defaultValue: "and all GitHub contributors",
+      comment: "Suffix label for GitHub contributors list"
+    )
+    static let viewAllContributors = string(
+      "preferences-about.view-all-contributors",
+      defaultValue: "View all contributors on GitHub",
+      comment: "Tooltip for GitHub contributors link"
+    )
+    static let appVersion = string(
+      "preferences-about.app-version",
+      defaultValue: "App version",
+      comment: "About screen app version header"
+    )
     static let checkedLabel = string(
       "preferences-about.checked-label",
       defaultValue: "Checked",
       comment: "About screen label before relative update check time"
-    )
-    static let reportProblem = string(
-      "preferences-about.report-problem",
-      defaultValue: "Report a Problem",
-      comment: "Button title on the about screen"
     )
     static let checkForUpdates = string(
       "preferences-about.check-for-updates",
@@ -3711,30 +4365,20 @@ nonisolated enum L10n {
       defaultValue: "Report a Bug",
       comment: "Tooltip for issue reporting link"
     )
+    static let support = string(
+      "preferences-about.support",
+      defaultValue: "Support",
+      comment: "About screen support section header"
+    )
+    static let discordCommunity = string(
+      "preferences-about.discord-community",
+      defaultValue: "Discord Community",
+      comment: "Label for Discord community link"
+    )
     static let supportTitle = string(
       "preferences-about.support-title",
       defaultValue: "Support Snapzy",
       comment: "About screen sponsor card title"
-    )
-    static let supportDescription = string(
-      "preferences-about.support-description",
-      defaultValue: "Snapzy is open-source. Sponsor if it helps your workflow.",
-      comment: "About screen sponsor card description"
-    )
-    static let sponsorButtonGithub = string(
-      "preferences-about.sponsor-button-github",
-      defaultValue: "Sponsor",
-      comment: "GitHub Sponsors action button label"
-    )
-    static let sponsorButtonKofi = string(
-      "preferences-about.sponsor-button-kofi",
-      defaultValue: "Tip",
-      comment: "Ko-fi action button label"
-    )
-    static let sponsorButtonPaypal = string(
-      "preferences-about.sponsor-button-paypal",
-      defaultValue: "Donate",
-      comment: "PayPal action button label"
     )
     static let updateChannelTitle = string(
       "preferences-about.update-channel-title",

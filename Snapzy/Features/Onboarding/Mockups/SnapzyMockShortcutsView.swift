@@ -91,14 +91,14 @@ struct SnapzyMockShortcutsView: View {
             .font(.system(size: 9.5))
             .foregroundStyle(Color.orange)
 
-          Text("macOS shortcut conflicts detected (⇧⌘3, ⇧⌘4, ⇧⌘5)")
+          Text(L10n.Onboarding.mockConflictsDetected)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.85))
 
           Button {
             state.resolveShortcutConflicts()
           } label: {
-            Text("Resolve All")
+            Text(L10n.Onboarding.mockResolveAll)
               .font(.system(size: 9.5, weight: .bold))
               .foregroundStyle(Color.orange)
               .underline()
@@ -109,7 +109,7 @@ struct SnapzyMockShortcutsView: View {
             .font(.system(size: 9.5))
             .foregroundStyle(Color.green)
 
-          Text(triggeredMode != nil ? "Captured \(triggeredMode!)!" : "All global shortcuts active & conflict-free")
+          Text(triggeredMode != nil ? L10n.Onboarding.mockCapturedMode(triggeredMode!) : L10n.Onboarding.mockShortcutsActive)
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.85))
         }
@@ -184,7 +184,7 @@ struct SnapzyMockShortcutsView: View {
           Text("~/.config/snapzy/config.toml")
             .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
             .foregroundStyle(Color.white.opacity(0.90))
-          Text("Portable plaintext settings")
+          Text(L10n.Onboarding.mockPortableConfig)
             .font(.system(size: 8.5))
             .foregroundStyle(Color.white.opacity(0.55))
         }
@@ -192,7 +192,7 @@ struct SnapzyMockShortcutsView: View {
         Button {
           state.isConfigGranted = true
         } label: {
-          Text(state.isConfigGranted ? "Linked" : "Grant")
+          Text(state.isConfigGranted ? L10n.Onboarding.mockLinked : L10n.Onboarding.mockGrant)
             .font(.system(size: 9, weight: .bold))
             .foregroundStyle(Color.white)
             .padding(.horizontal, 7)
@@ -217,10 +217,10 @@ struct SnapzyMockShortcutsView: View {
           .scaleEffect(0.65)
 
         VStack(alignment: .leading, spacing: 1) {
-          Text("Anonymous Diagnostics")
+          Text(L10n.Onboarding.mockAnonymousDiagnostics)
             .font(.system(size: 9.5, weight: .medium))
             .foregroundStyle(Color.white.opacity(0.85))
-          Text("Crash reports only, zero capture content")
+          Text(L10n.Onboarding.mockDiagnosticsDetail)
             .font(.system(size: 8))
             .foregroundStyle(Color.white.opacity(0.50))
         }

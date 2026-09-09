@@ -51,7 +51,7 @@ struct SnapzyMockQuickAccessCard: View {
           HStack(spacing: 2.5) {
             Image(systemName: "chevron.right")
               .font(.system(size: 6.5, weight: .bold))
-            Text("Swipe to dismiss")
+            Text(L10n.Onboarding.mockSwipeToDismiss)
               .font(.system(size: 7, weight: .medium))
           }
           .foregroundStyle(Color.white.opacity(0.75))

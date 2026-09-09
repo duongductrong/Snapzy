@@ -78,7 +78,7 @@ struct SnapzyMockRecordingStatusBar: View {
 
       // Stop button
       Button(action: onStop) {
-        Text("Stop")
+        Text(L10n.Onboarding.mockStop)
           .font(.system(size: 11.5, weight: .semibold))
           .foregroundColor(.white)
           .padding(.horizontal, 10)

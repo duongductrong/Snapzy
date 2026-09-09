@@ -52,7 +52,7 @@ struct SnapzyOnboardingCloseButton: View {
         isHovered = hovering
       }
     }
-    .accessibilityLabel("Close onboarding")
+    .accessibilityLabel(L10n.Onboarding.chromeCloseAccessibility)
   }
 }
 
@@ -67,7 +67,7 @@ struct SnapzyOnboardingLanguagePicker: View {
         onboardingLocalization.selectLanguage("")
       } label: {
         HStack {
-          Text("Auto (System)")
+          Text(L10n.Onboarding.chromeLanguageAutoSystem)
           if onboardingLocalization.selectedLanguageIdentifier.isEmpty {
             Image(systemName: "checkmark")
           }
@@ -116,9 +116,9 @@ struct SnapzyOnboardingLanguagePicker: View {
 
   private var currentLanguageLabel: String {
     if onboardingLocalization.selectedLanguageIdentifier.isEmpty {
-      return onboardingLocalization.systemResolvedOption?.displayName ?? "Auto"
+      return onboardingLocalization.systemResolvedOption?.displayName ?? L10n.Onboarding.chromeLanguageAuto
     }
-    return onboardingLocalization.availableOptions.first(where: { $0.identifier == onboardingLocalization.selectedLanguageIdentifier })?.displayName ?? "Language"
+    return onboardingLocalization.availableOptions.first(where: { $0.identifier == onboardingLocalization.selectedLanguageIdentifier })?.displayName ?? L10n.Onboarding.chromeLanguageLabel
   }
 }
 

@@ -26,32 +26,32 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
 
   var shortTitle: String {
     switch self {
-    case .meetSnapzy: return "Capture"
-    case .quickAccess: return "Recording"
-    case .shortcuts: return "Shortcuts"
-    case .permissions: return "Permissions"
+    case .meetSnapzy: return L10n.Onboarding.stepCaptureShortTitle
+    case .quickAccess: return L10n.Onboarding.stepRecordingShortTitle
+    case .shortcuts: return L10n.Onboarding.stepShortcutsShortTitle
+    case .permissions: return L10n.Onboarding.stepPermissionsShortTitle
     }
   }
 
   var title: String {
     switch self {
-    case .meetSnapzy: return "Screen Capture & Annotate"
-    case .quickAccess: return "Screen Recording & Video Editor"
-    case .shortcuts: return "macOS Shortcuts & Conflicts"
-    case .permissions: return "Permissions & Privacy"
+    case .meetSnapzy: return L10n.Onboarding.stepCaptureTitle
+    case .quickAccess: return L10n.Onboarding.stepRecordingTitle
+    case .shortcuts: return L10n.Onboarding.stepShortcutsTitle
+    case .permissions: return L10n.Onboarding.stepPermissionsTitle
     }
   }
 
   var subtitle: String {
     switch self {
     case .meetSnapzy:
-      return "Press ⇧⌘4 to freeze and select an area. Your capture instantly lands in a floating Quick Access card—ready to copy, save, or open in Annotate."
+      return L10n.Onboarding.stepCaptureSubtitle
     case .quickAccess:
-      return "Press ⇧⌘5 to frame any region. Capture system audio & microphone, trim in the timeline, and export crisp MP4 or GIF."
+      return L10n.Onboarding.stepRecordingSubtitle
     case .shortcuts:
-      return "Go to System Settings > Keyboard > Keyboard Shortcuts > Screenshots to uncheck ⇧⌘3, ⇧⌘4, and ⇧⌘5 to prevent key conflicts with Snapzy. Keep workflows portable with config.toml."
+      return L10n.Onboarding.stepShortcutsSubtitle
     case .permissions:
-      return "Snapzy runs entirely on your Mac. These macOS grants enable screen capture, audio recording, and global shortcuts."
+      return L10n.Onboarding.stepPermissionsSubtitle
     }
   }
 
@@ -67,11 +67,11 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
   var examplePrompt: String {
     switch self {
     case .meetSnapzy:
-      return "Try the complete flow: Click 'Simulate Capture' → Hover Quick Access card → Click card to open Annotate."
+      return L10n.Onboarding.stepCapturePromptReady
     case .quickAccess:
-      return "Try the recording flow: Click 'Simulate ⇧⌘5' → Click 'Record' → Open Video Editor from card."
+      return L10n.Onboarding.stepRecordingPromptReady
     case .shortcuts:
-      return "Go to Keyboard > Keyboard Shortcuts > Screenshots to uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5, or tap to configure."
+      return L10n.Onboarding.stepShortcutsPromptConflicts
     case .permissions:
       return ""
     }
@@ -79,10 +79,10 @@ enum SnapzyOnboardingStep: String, CaseIterable, Identifiable, Hashable {
 
   var tip: String {
     switch self {
-    case .meetSnapzy: return "Clicking the Quick Access card directly opens the full vector Annotate window."
-    case .quickAccess: return "You can pause, resume, and annotate on screen while recording video."
-    case .shortcuts: return "You can customize every shortcut anytime in Preferences → Shortcuts."
-    case .permissions: return "All OCR and processing happen on-device using Apple Vision."
+    case .meetSnapzy: return L10n.Onboarding.stepCaptureTip
+    case .quickAccess: return L10n.Onboarding.stepRecordingTip
+    case .shortcuts: return L10n.Onboarding.stepShortcutsTip
+    case .permissions: return L10n.Onboarding.stepPermissionsTip
     }
   }
 
@@ -120,38 +120,24 @@ enum SnapzyOnboardingChallenge: String, CaseIterable, Identifiable, Hashable {
   var id: String { rawValue }
 
   var title: String {
-    switch self {
-    case .selectArea: return "Select capture area (⇧⌘4)"
-    case .addAnnotation: return "Add vector annotation"
-    case .captureToQuickAccess: return "Capture lands in Quick Access"
-    case .openAnnotateWindow: return "Open Annotate window"
-    case .selectRecordArea: return "Select record area (⇧⌘5)"
-    case .recordVideo3s: return "Record 3s video clip"
-    case .openVideoEditor: return "Open Video Editor from card"
-    case .hoverCard: return "Hover floating card"
-    case .triggerQuickAction: return "Trigger ⌘C / ⌘S quick action"
-    case .checkShortcuts: return "Resolve shortcut conflicts"
-    case .grantScreenRecording: return "Allow Screen Recording"
-    case .grantSaveFolder: return "Choose default save destination"
-    case .grantAccessibility: return "Enable Accessibility features"
-    }
+    label
   }
 
   var label: String {
     switch self {
-    case .selectArea:             return "Select an area on the screen."
-    case .addAnnotation:          return "Pick an annotation tool (arrow, rect, blur)."
-    case .captureToQuickAccess:   return "Capture lands in Quick Access card."
-    case .openAnnotateWindow:     return "Click card to open Annotate window."
-    case .hoverCard:              return "Hover over the Quick Access card."
-    case .triggerQuickAction:     return "Press ⌘C to copy or ⌘E to edit."
-    case .checkShortcuts:         return "Uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 in Keyboard > Screenshots."
-    case .grantScreenRecording:   return "Allow Screen Recording."
-    case .grantSaveFolder:       return "Select captures save folder."
-    case .grantAccessibility:     return "Allow Accessibility (optional)."
-    case .selectRecordArea:       return "Select an area for screen recording."
-    case .recordVideo3s:          return "Record a short 3-second video clip."
-    case .openVideoEditor:        return "Open the video editor from the card."
+    case .selectArea:             return L10n.Onboarding.challengeSelectArea
+    case .addAnnotation:          return L10n.Onboarding.challengeAddAnnotation
+    case .captureToQuickAccess:   return L10n.Onboarding.challengeCaptureToQuickAccess
+    case .openAnnotateWindow:     return L10n.Onboarding.challengeOpenAnnotateWindow
+    case .hoverCard:              return L10n.Onboarding.challengeHoverCard
+    case .triggerQuickAction:     return L10n.Onboarding.challengeTriggerQuickAction
+    case .checkShortcuts:         return L10n.Onboarding.challengeCheckShortcuts
+    case .grantScreenRecording:   return L10n.Onboarding.challengeGrantScreenRecording
+    case .grantSaveFolder:       return L10n.Onboarding.challengeGrantSaveFolder
+    case .grantAccessibility:     return L10n.Onboarding.challengeGrantAccessibility
+    case .selectRecordArea:       return L10n.Onboarding.challengeSelectRecordArea
+    case .recordVideo3s:          return L10n.Onboarding.challengeRecordVideo3s
+    case .openVideoEditor:        return L10n.Onboarding.challengeOpenVideoEditor
     }
   }
 

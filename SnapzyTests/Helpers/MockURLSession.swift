@@ -6,11 +6,15 @@
 //
 
 import Foundation
+import os.lock
 @testable import Snapzy
 
 final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
-  private let lock = NSLock()
-  private var _requests: [URLRequest] = []
+  private struct State {
+    var requests: [URLRequest] = []
+  }
+
+  private let state = OSAllocatedUnfairLock(initialState: State())
   private let responder: (URLRequest) async throws -> (Data, URLResponse)
 
   init(responder: @escaping (URLRequest) async throws -> (Data, URLResponse) = { _ in throw URLError(.unsupportedURL) }) {
@@ -23,15 +27,11 @@ final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
   }
 
   private func record(_ request: URLRequest) {
-    lock.lock()
-    defer { lock.unlock() }
-    _requests.append(request)
+    state.withLock { $0.requests.append(request) }
   }
 
   var requests: [URLRequest] {
-    lock.lock()
-    defer { lock.unlock() }
-    return _requests
+    state.withLock { $0.requests }
   }
 
   static func makeResponse(

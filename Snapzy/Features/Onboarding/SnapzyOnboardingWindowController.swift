@@ -204,7 +204,7 @@ final class SnapzyOnboardingWindowController: NSObject, NSWindowDelegate {
       defer: false
     )
 
-    created.title = "Welcome to Snapzy"
+    created.title = L10n.Splash.welcomeTitle
     created.delegate = self
     created.isReleasedWhenClosed = false
     created.level = .normal

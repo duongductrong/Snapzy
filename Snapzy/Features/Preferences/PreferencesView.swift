@@ -58,7 +58,7 @@ struct PreferencesView: View {
       ideal: Self.fixedSidebarWidth,
       max: Self.fixedSidebarWidth
     )
-    .accessibilityLabel("Settings categories")
+    .accessibilityLabel(L10n.PreferencesGeneral.sidebarAccessibilityLabel)
   }
 
   private var sidebarSelection: Binding<PreferencesTab?> {
@@ -113,7 +113,7 @@ struct PreferencesView: View {
           Image(systemName: "chevron.left")
         }
         .disabled(!navigationState.canGoBack)
-        .help("Back (⌘[)")
+        .help(L10n.PreferencesGeneral.navigationBack)
         .keyboardShortcut("[", modifiers: .command)
 
         Button {
@@ -122,7 +122,7 @@ struct PreferencesView: View {
           Image(systemName: "chevron.right")
         }
         .disabled(!navigationState.canGoForward)
-        .help("Forward (⌘])")
+        .help(L10n.PreferencesGeneral.navigationForward)
         .keyboardShortcut("]", modifiers: .command)
       }
     }

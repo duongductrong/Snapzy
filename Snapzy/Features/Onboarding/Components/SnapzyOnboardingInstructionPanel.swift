@@ -37,7 +37,7 @@ struct SnapzyOnboardingInstructionPanel: View {
 
   private var headline: some View {
     VStack(alignment: .leading, spacing: SnapzySpace.xxl) {
-      SnapzyOnboardingOverline("Step \(state.currentStep.stepNumber) of \(SnapzyOnboardingStep.allCases.count)")
+      SnapzyOnboardingOverline(L10n.Onboarding.stepIndicator(state.currentStep.stepNumber, SnapzyOnboardingStep.allCases.count))
 
       Text(state.currentStep.title)
         .font(.system(size: SnapzyOnboardingType.display, weight: .bold))
@@ -74,32 +74,32 @@ struct SnapzyOnboardingInstructionPanel: View {
     if state.currentStep == .meetSnapzy {
       switch state.step1Stage {
       case .readyToCapture:
-        return "Click to freeze the screen and simulate selecting an area with ⇧⌘4."
+        return L10n.Onboarding.stepCapturePromptReady
       case .selectingArea:
-        return "Area selected! Click to complete capture and send to Quick Access."
+        return L10n.Onboarding.stepCapturePromptSelecting
       case .quickAccessFloating:
-        return "Capture is in Quick Access! Click card or ✎ to open Annotate window."
+        return L10n.Onboarding.stepCapturePromptFloating
       case .annotateWindowOpen:
-        return "Annotate window open! Click to replay the complete flow from the beginning."
+        return L10n.Onboarding.stepCapturePromptOpen
       }
     } else if state.currentStep == .quickAccess {
       switch state.step2Stage {
       case .readyToRecord:
-        return "Click to simulate ⇧⌘5 recording shortcut and open prerecord area."
+        return L10n.Onboarding.stepRecordingPromptReady
       case .prerecordArea:
-        return "Region framed! Click 'Record MP4' or tap here to start 3s countdown."
+        return L10n.Onboarding.stepRecordingPromptFramed
       case .recordingActive:
-        return "Recording in progress (\(state.recordingSeconds)s)... Tap Stop or wait 3s."
+        return L10n.Onboarding.stepRecordingPromptActive(state.recordingSeconds)
       case .videoQuickAccess:
-        return "Video in Quick Access! Click card or tap here to open Video Editor."
+        return L10n.Onboarding.stepRecordingPromptFloating
       case .videoEditorOpen:
-        return "Video Editor open! Click here or 'Replay' to test the recording flow again."
+        return L10n.Onboarding.stepRecordingPromptOpen
       }
     } else if state.currentStep == .shortcuts {
       if state.hasConflict {
-        return "Conflicts detected! In Keyboard > Keyboard Shortcuts > Screenshots, uncheck ⇧⌘3, ⇧⌘4, ⇧⌘5 (or tap here to resolve)."
+        return L10n.Onboarding.stepShortcutsPromptConflicts
       } else {
-        return "Conflicts resolved! Test the shortcut buttons or grant config.toml access below."
+        return L10n.Onboarding.stepShortcutsPromptResolved
       }
     }
     return state.currentStep.examplePrompt
@@ -139,7 +139,7 @@ struct SnapzyOnboardingInstructionPanel: View {
       }
     } label: {
       VStack(alignment: .leading, spacing: SnapzySpace.lg) {
-        SnapzyOnboardingOverline("Interactive Demo", tint: SnapzyGlassInk.muted)
+        SnapzyOnboardingOverline(L10n.Onboarding.demoOverline, tint: SnapzyGlassInk.muted)
 
         Text(promptText)
           .font(.system(size: SnapzyOnboardingType.lede - 0.5).italic())
@@ -162,7 +162,7 @@ struct SnapzyOnboardingInstructionPanel: View {
       .contentShape(Rectangle())
     }
     .buttonStyle(SnapzyPromptCardButtonStyle())
-    .help("Run simulation on mock stage")
+    .help(L10n.Onboarding.demoTooltip)
   }
 
   // MARK: - Tip

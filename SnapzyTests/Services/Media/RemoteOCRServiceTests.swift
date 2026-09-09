@@ -9,12 +9,12 @@ import XCTest
 @testable import Snapzy
 
 final class RemoteOCRServiceTests: XCTestCase {
-  private var keychain: FakeOCRKeychainStore!
+  private let keychain = FakeOCRKeychainStore()
   private let modelID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
   override func setUp() {
     super.setUp()
-    keychain = FakeOCRKeychainStore()
+    keychain.reset()
   }
 
   private func makeModel(

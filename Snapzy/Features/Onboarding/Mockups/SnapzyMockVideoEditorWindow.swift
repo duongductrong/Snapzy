@@ -342,7 +342,7 @@ struct SnapzyMockVideoEditorWindow: View {
         HStack(spacing: 4) {
           Image(systemName: "arrow.counterclockwise")
             .font(.system(size: 9.5, weight: .medium))
-          Text("Replay Demo")
+          Text(L10n.Onboarding.mockReplay)
             .font(.system(size: 11, weight: .medium))
         }
         .foregroundStyle(Color.primary.opacity(0.85))
@@ -365,7 +365,7 @@ struct SnapzyMockVideoEditorWindow: View {
         HStack(spacing: 5) {
           Image(systemName: "arrow.down.circle.fill")
             .font(.system(size: 10.5, weight: .medium))
-          Text("Export MP4 (⌘S)")
+          Text(L10n.Onboarding.mockExportMp4)
             .font(.system(size: 11, weight: .semibold))
         }
         .foregroundStyle(Color.white)

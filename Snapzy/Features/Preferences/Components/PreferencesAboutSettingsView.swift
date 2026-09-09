@@ -22,17 +22,19 @@ struct AboutSettingsView: View {
     return "Snapzy \(version) (\(build))"
   }
 
-  private let contributors: [String] = [
-    "Omar Shahine,",
-    "Victor Xirau,",
-    "Yuri Chukhlib,",
-    "Yuan Zhang,",
-    "tukuyomi032,",
-    "Aurora,",
-    "Jiawen Geng,",
-    "William Cachamwri,",
-    "and all GitHub contributors"
-  ]
+  private var contributors: [String] {
+    [
+      "Omar Shahine,",
+      "Victor Xirau,",
+      "Yuri Chukhlib,",
+      "Yuan Zhang,",
+      "tukuyomi032,",
+      "Aurora,",
+      "Jiawen Geng,",
+      "William Cachamwri,",
+      L10n.PreferencesAbout.allContributors
+    ]
+  }
 
   var body: some View {
     GeometryReader { proxy in
@@ -91,7 +93,7 @@ struct AboutSettingsView: View {
     VStack(spacing: 0) {
       // Made by
       HStack(alignment: .center) {
-        Text("Made by")
+        Text(L10n.PreferencesAbout.madeBy)
           .font(.system(size: 13, weight: .regular))
           .foregroundStyle(Color.primary)
 
@@ -111,7 +113,7 @@ struct AboutSettingsView: View {
 
       // Special thanks
       HStack(alignment: .top) {
-        Text("Special thanks")
+        Text(L10n.PreferencesAbout.specialThanks)
           .font(.system(size: 13, weight: .regular))
           .foregroundStyle(Color.primary)
 
@@ -128,7 +130,7 @@ struct AboutSettingsView: View {
           }
         }
         .buttonStyle(.plain)
-        .help("View all contributors on GitHub")
+        .help(L10n.PreferencesAbout.viewAllContributors)
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 12)
@@ -143,7 +145,7 @@ struct AboutSettingsView: View {
       // App version + Check for Updates action
       HStack(alignment: .center) {
         VStack(alignment: .leading, spacing: 3) {
-          Text("App version")
+          Text(L10n.PreferencesAbout.appVersion)
             .font(.system(size: 13, weight: .regular))
             .foregroundStyle(Color.primary)
 
@@ -221,7 +223,7 @@ struct AboutSettingsView: View {
 
       // Support & Links
       HStack(alignment: .top) {
-        Text("Support")
+        Text(L10n.PreferencesAbout.support)
           .font(.system(size: 13, weight: .regular))
           .foregroundStyle(Color.primary)
 
@@ -231,7 +233,7 @@ struct AboutSettingsView: View {
           supportLink(title: L10n.PreferencesAbout.website, url: "https://snapzy.app")
           supportLink(title: L10n.PreferencesAbout.github, url: "https://github.com/duongductrong/Snapzy")
           supportLink(title: L10n.PreferencesAbout.reportBug, url: "https://github.com/duongductrong/Snapzy/issues")
-          supportLink(title: "Discord Community", url: "https://discord.gg/xkWDAuJkZu")
+          supportLink(title: L10n.PreferencesAbout.discordCommunity, url: "https://discord.gg/xkWDAuJkZu")
           supportLink(title: "\(L10n.PreferencesAbout.supportTitle) ❤️", url: "https://github.com/sponsors/duongductrong", isHighlighted: true)
         }
       }
