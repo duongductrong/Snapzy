@@ -8,6 +8,7 @@
 import XCTest
 @testable import Snapzy
 
+@MainActor
 final class SnapzyOnboardingStateTests: XCTestCase {
   override func setUp() {
     super.setUp()
@@ -19,7 +20,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     super.tearDown()
   }
 
-  @MainActor
   func testInitialState() {
     let state = SnapzyOnboardingState()
     XCTAssertEqual(state.currentStep, .meetSnapzy)
@@ -31,7 +31,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertFalse(state.isCurrentStepComplete)
   }
 
-  @MainActor
   func testStep1FullWorkflowProgression() {
     let state = SnapzyOnboardingState()
     XCTAssertEqual(state.step1Stage, .readyToCapture)
@@ -69,7 +68,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     waitForExpectations(timeout: 1.0)
   }
 
-  @MainActor
   func testStepNavigation() {
     let state = SnapzyOnboardingState()
 
@@ -103,7 +101,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertEqual(state.step1Stage, .readyToCapture)
   }
 
-  @MainActor
   func testAnnotationToolsSimulation() {
     let state = SnapzyOnboardingState()
     state.simulateAreaCapture()
@@ -114,7 +111,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertEqual(state.annotationItems.first?.tool, .arrow)
   }
 
-  @MainActor
   func testQuickAccessActionSimulation() {
     let state = SnapzyOnboardingState()
 
@@ -123,7 +119,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertTrue(state.completedChallenges.contains(.triggerQuickAction))
   }
 
-  @MainActor
   func testSetChallengeToggle() {
     let state = SnapzyOnboardingState()
 
@@ -134,7 +129,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertFalse(state.completedChallenges.contains(.grantScreenRecording))
   }
 
-  @MainActor
   func testStep2ScreenRecordingWorkflow() {
     let state = SnapzyOnboardingState()
     state.transition(to: .quickAccess)
@@ -180,7 +174,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     waitForExpectations(timeout: 1.0)
   }
 
-  @MainActor
   func testStep3ShortcutConflictResolution() {
     let state = SnapzyOnboardingState()
     state.transition(to: .shortcuts)
@@ -232,7 +225,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     XCTAssertTrue(state.isCurrentStepComplete)
   }
 
-  @MainActor
   func testStepStateRestorationFromUserDefaults() {
     let defaults = UserDefaults.standard
     let original = defaults.string(forKey: PreferencesKeys.onboardingActiveStep)
@@ -255,7 +247,6 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     )
   }
 
-  @MainActor
   func testStep4PermissionChallenges() {
     let state = SnapzyOnboardingState()
     state.transition(to: .permissions)

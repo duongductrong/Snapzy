@@ -8,6 +8,7 @@
 import XCTest
 @testable import Snapzy
 
+@MainActor
 final class PreferencesCoreTests: XCTestCase {
 
   func testCloudUploadFloatingPositionStored_readsValidValueAndFallsBackToDefault() throws {
@@ -131,7 +132,6 @@ final class PreferencesCoreTests: XCTestCase {
     }
   }
 
-  @MainActor
   func testPreferencesNavigationState_historyStackAndNavigation() {
     let navigation = PreferencesNavigationState(initialTab: .general)
     XCTAssertEqual(navigation.selectedTab, .general)
