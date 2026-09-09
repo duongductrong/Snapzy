@@ -91,7 +91,7 @@ struct SnapzyOnboardingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, 14)
 
-              actionBar
+              floatingActionBarWithHint
                 .padding(.trailing, SnapzyOnboardingMetrics.gutter)
                 .padding(.bottom, SnapzyOnboardingMetrics.gutter)
             }
@@ -168,6 +168,29 @@ struct SnapzyOnboardingView: View {
       onSkip: skipAction,
       onContinue: advance
     )
+  }
+
+  private var floatingActionBarWithHint: some View {
+    VStack(alignment: .trailing, spacing: 6) {
+      if state.canGoForward && state.isCurrentStepComplete {
+        SnapzyCurvedHintArrow(
+          text: "Click Continue to proceed",
+          orientation: .curveDownToTarget,
+          arrowAlignment: .trailing,
+          color: .white
+        )
+        .padding(.trailing, 8)
+        .transition(
+          .asymmetric(
+            insertion: .scale(scale: 0.90, anchor: .bottomTrailing).combined(with: .opacity),
+            removal: .scale(scale: 0.95, anchor: .bottomTrailing).combined(with: .opacity)
+          )
+        )
+      }
+
+      actionBar
+    }
+    .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: state.isCurrentStepComplete)
   }
 
   private var footer: some View {

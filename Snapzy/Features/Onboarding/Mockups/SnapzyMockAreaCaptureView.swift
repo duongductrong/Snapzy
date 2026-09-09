@@ -175,30 +175,42 @@ struct SnapzyMockAreaCaptureView: View {
         .transition(.opacity)
 
     case .quickAccessFloating:
-      // Floating Quick Access Card in bottom-left corner
+      // Floating Quick Access Card in bottom-left corner with curved hint arrow
       VStack {
         Spacer()
 
-        HStack {
-          SnapzyMockQuickAccessCard(
-            isPinned: state.isCardPinned,
-            onCopy: {
-              showToast("Copied to Clipboard (⌘C)")
-            },
-            onSave: {
-              showToast("Saved to Desktop (⌘S)")
-            },
-            onAnnotate: {
-              state.openAnnotateFromQuickAccess()
-            },
-            onTogglePin: {
-              state.isCardPinned.toggle()
-              showToast(state.isCardPinned ? "Pinned on Screen (⌘P)" : "Unpinned")
-            },
-            onDismiss: {
-              state.resetStep1Flow()
-            }
-          )
+        HStack(alignment: .bottom, spacing: 8) {
+          VStack(alignment: .leading, spacing: 4) {
+            // Curved hint arrow pointing down to the card
+            SnapzyCurvedHintArrow(
+              text: "Click card to open Annotate",
+              orientation: .curveDownToTarget,
+              arrowAlignment: .leading,
+              color: .white
+            )
+            .padding(.leading, 12)
+
+            // Image Quick Access Card
+            SnapzyMockQuickAccessCard(
+              isPinned: state.isCardPinned,
+              onCopy: {
+                showToast("Copied to Clipboard (⌘C)")
+              },
+              onSave: {
+                showToast("Saved to Desktop (⌘S)")
+              },
+              onAnnotate: {
+                state.openAnnotateFromQuickAccess()
+              },
+              onTogglePin: {
+                state.isCardPinned.toggle()
+                showToast(state.isCardPinned ? "Pinned on Screen (⌘P)" : "Unpinned")
+              },
+              onDismiss: {
+                state.resetStep1Flow()
+              }
+            )
+          }
           .padding(.leading, 24)
           .padding(.bottom, 22)
 

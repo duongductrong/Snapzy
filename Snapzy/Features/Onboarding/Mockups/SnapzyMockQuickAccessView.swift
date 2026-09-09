@@ -274,7 +274,8 @@ struct SnapzyMockQuickAccessView: View {
             SnapzyCurvedHintArrow(
               text: "Click card to open Video Editor",
               orientation: .curveDownToTarget,
-              icon: "scissors"
+              arrowAlignment: .leading,
+              color: .white
             )
             .padding(.leading, 12)
 

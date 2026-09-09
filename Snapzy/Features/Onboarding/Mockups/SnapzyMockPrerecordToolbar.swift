@@ -22,7 +22,8 @@ struct SnapzyMockPrerecordToolbar: View {
       SnapzyCurvedHintArrow(
         text: "Click Record to start (3s demo)",
         orientation: .curveDownToTarget,
-        icon: "record.circle"
+        arrowAlignment: .trailing,
+        color: .white
       )
       .padding(.trailing, 2)
 
