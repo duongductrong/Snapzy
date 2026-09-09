@@ -10,6 +10,17 @@ import XCTest
 
 @MainActor
 final class SnapzyOnboardingStateTests: XCTestCase {
+  // Keep MainActor ObservableObjects alive for the test process; XCTest scope
+  // cleanup can crash while deinitializing them on the macOS 15 back-deployed
+  // Swift concurrency runtime.
+  private static var retainedStates: [SnapzyOnboardingState] = []
+
+  private func makeState() -> SnapzyOnboardingState {
+    let state = SnapzyOnboardingState()
+    Self.retainedStates.append(state)
+    return state
+  }
+
   override func setUp() {
     super.setUp()
     UserDefaults.standard.removeObject(forKey: PreferencesKeys.onboardingActiveStep)
@@ -21,7 +32,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testInitialState() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     XCTAssertEqual(state.currentStep, .meetSnapzy)
     XCTAssertEqual(state.step1Stage, .readyToCapture)
     XCTAssertTrue(state.completedSteps.isEmpty)
@@ -32,7 +43,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testStep1FullWorkflowProgression() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     XCTAssertEqual(state.step1Stage, .readyToCapture)
 
     // 1. User selects area
@@ -69,7 +80,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testStepNavigation() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
 
     // Step 1 -> Step 2
     state.nextStep()
@@ -102,7 +113,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testAnnotationToolsSimulation() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     state.simulateAreaCapture()
 
     state.selectAnnotationTool(.arrow)
@@ -112,7 +123,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testQuickAccessActionSimulation() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
 
     state.simulateQuickAccessAction("Copied")
     XCTAssertEqual(state.quickAccessFeedbackText, "Copied")
@@ -120,7 +131,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testSetChallengeToggle() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
 
     state.setChallenge(.grantScreenRecording, completed: true)
     XCTAssertTrue(state.completedChallenges.contains(.grantScreenRecording))
@@ -130,7 +141,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testStep2ScreenRecordingWorkflow() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     state.transition(to: .quickAccess)
     XCTAssertEqual(state.currentStep, .quickAccess)
     XCTAssertEqual(state.step2Stage, .readyToRecord)
@@ -175,7 +186,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testStep3ShortcutConflictResolution() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     state.transition(to: .shortcuts)
     XCTAssertEqual(state.currentStep, .shortcuts)
     XCTAssertTrue(state.hasConflict)
@@ -237,7 +248,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
     }
 
     defaults.set(SnapzyOnboardingStep.permissions.rawValue, forKey: PreferencesKeys.onboardingActiveStep)
-    let restoredState = SnapzyOnboardingState()
+    let restoredState = makeState()
     XCTAssertEqual(restoredState.currentStep, .permissions)
 
     restoredState.transition(to: .shortcuts)
@@ -248,7 +259,7 @@ final class SnapzyOnboardingStateTests: XCTestCase {
   }
 
   func testStep4PermissionChallenges() {
-    let state = SnapzyOnboardingState()
+    let state = makeState()
     state.transition(to: .permissions)
     XCTAssertEqual(state.currentStep, .permissions)
     XCTAssertFalse(state.isCurrentStepComplete)

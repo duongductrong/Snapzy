@@ -10,6 +10,16 @@ import XCTest
 
 @MainActor
 final class PreferencesCoreTests: XCTestCase {
+  // Keep MainActor ObservableObjects alive for the test process; XCTest scope
+  // cleanup can crash while deinitializing them on the macOS 15 back-deployed
+  // Swift concurrency runtime.
+  private static var retainedNavigationStates: [PreferencesNavigationState] = []
+
+  private func makeNavigationState(initialTab: PreferencesTab) -> PreferencesNavigationState {
+    let navigation = PreferencesNavigationState(initialTab: initialTab)
+    Self.retainedNavigationStates.append(navigation)
+    return navigation
+  }
 
   func testCloudUploadFloatingPositionStored_readsValidValueAndFallsBackToDefault() throws {
     let defaults = try makeDefaults()
@@ -133,7 +143,7 @@ final class PreferencesCoreTests: XCTestCase {
   }
 
   func testPreferencesNavigationState_historyStackAndNavigation() {
-    let navigation = PreferencesNavigationState(initialTab: .general)
+    let navigation = makeNavigationState(initialTab: .general)
     XCTAssertEqual(navigation.selectedTab, .general)
     XCTAssertFalse(navigation.canGoBack)
     XCTAssertFalse(navigation.canGoForward)

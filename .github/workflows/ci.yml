@@ -74,9 +74,6 @@ jobs:
             SnapzyTests/LivePassthroughInputLogicTests
             SnapzyTests/HotkeyUnregistrationTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
-            SnapzyTests/PreferencesCoreTests/testPreferencesNavigationState_historyStackAndNavigation
-            SnapzyTests/SnapzyOnboardingStateTests/testAnnotationToolsSimulation
-            SnapzyTests/SnapzyOnboardingStateTests/testInitialState
         run: |
           set -euo pipefail
           mkdir -p build
@@ -100,6 +97,7 @@ jobs:
             -destination 'platform=macOS' \
             -derivedDataPath build/DerivedData \
             -resultBundlePath build/ci-test.xcresult \
+            -parallel-testing-enabled NO \
             CODE_SIGN_IDENTITY="" \
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
