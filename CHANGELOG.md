@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.9] - 2026-09-09
+
+### Bug Fixes
+-  Fixed canvas hit testing under SwiftUI zoom/pan transforms (348bd768)
+-  Fixed selection chrome sizing during zoom (2dc8e9e5)
+-  Prevented corrupted seams during scrolling auto-scroll (#538) (e603c6af)
+
+### Contributors
+- @BenjaminD2023
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.32.0-beta.8] - 2026-09-08
 
 ### Features
