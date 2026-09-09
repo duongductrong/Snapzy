@@ -19,8 +19,23 @@ struct SnapzyOnboardingView: View {
       SnapzyGlassWindowBackdrop()
 
       if isShowingCompletion {
-        SnapzyOnboardingCompletionCard(onFinish: finish)
-          .transition(.opacity.combined(with: .scale(scale: 0.96)))
+        VStack(spacing: 0) {
+          header
+            .frame(height: SnapzyOnboardingMetrics.headerHeight)
+            .padding(.top, SnapzyOnboardingMetrics.gutter)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+
+          SnapzyOnboardingCompletionCard(onFinish: finish, onBack: retreat)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+            .padding(.bottom, SnapzyOnboardingMetrics.gutter)
+            .padding(.horizontal, SnapzyOnboardingMetrics.gutter)
+        }
+        .transition(
+          .asymmetric(
+            insertion: .opacity.combined(with: .scale(scale: 0.97)),
+            removal: .opacity.combined(with: .scale(scale: 0.97))
+          )
+        )
       } else if state.currentStep.usesWideLayout {
         // Full-width layout for permissions step
         VStack(spacing: 0) {

@@ -2,96 +2,237 @@
 //  SnapzyOnboardingCompletionCard.swift
 //  Snapzy
 //
-//  Celebratory completion view with quick reference shortcuts and community/sponsor links.
+//  Celebratory completion view with Dark Liquid Glass aesthetics, clean logo presentation,
+//  monochrome capability cards showcase, ecosystem links, and consistent action bar button.
 //
 
+import AppKit
 import SwiftUI
 
 struct SnapzyOnboardingCompletionCard: View {
   var onFinish: () -> Void
+  var onBack: (() -> Void)? = nil
+
+  @State private var hasAppeared = false
 
   var body: some View {
-    VStack(spacing: 24) {
-      Spacer()
+    VStack(spacing: 22) {
+      Spacer(minLength: 8)
 
-      // Success Icon
-      Image(systemName: "checkmark.circle.fill")
-        .font(.system(size: 54))
-        .foregroundStyle(Color.green)
-        .shadow(color: Color.green.opacity(0.35), radius: 16, y: 4)
+      // 1. Clean Logo (no border, no check, no shadow)
+      heroLogo
+        .opacity(hasAppeared ? 1 : 0)
 
-      VStack(spacing: 6) {
-        Text("You're All Set!")
-          .font(.system(size: 28, weight: .bold))
-          .foregroundStyle(SnapzyGlassInk.primary)
+      // 2. Headline & Description (monochrome simple palette)
+      headerSection
+        .opacity(hasAppeared ? 1 : 0)
 
-        Text("Snapzy is ready in your menu bar. Take your first capture anytime.")
-          .font(.system(size: SnapzyOnboardingType.lede))
-          .foregroundStyle(SnapzyGlassInk.body)
-          .multilineTextAlignment(.center)
-      }
+      // 3. Core Capabilities (monochrome 4-card glass grid)
+      capabilitiesGrid
+        .opacity(hasAppeared ? 1 : 0)
 
-      // Quick Reference Row
-      HStack(spacing: SnapzySpace.xl) {
-        summaryPill("⇧⌘4", title: "Area Capture")
-        summaryPill("⇧⌘3", title: "Fullscreen")
-        summaryPill("⇧⌘5", title: "Recording")
-        summaryPill("⌘,", title: "Preferences")
-      }
-      .padding(.vertical, 8)
+      // 4. Community & Open Source Row (monochrome pills)
+      communityRow
+        .opacity(hasAppeared ? 1 : 0)
 
-      // Sponsor & Community Card
-      HStack(spacing: SnapzySpace.xxl) {
-        linkButton("Star on GitHub", icon: "star.fill", url: "https://github.com/duongductrong/Snapzy")
-        linkButton("Join Discord", icon: "bubble.left.and.bubble.right.fill", url: "https://discord.gg/xkWDAuJkZu")
-        linkButton("Sponsor Project", icon: "heart.fill", url: "https://github.com/sponsors/duongductrong")
-      }
-      .padding(.vertical, 4)
+      // 5. Primary Action Button (same style as previous onboarding steps)
+      primaryActionRow
+        .opacity(hasAppeared ? 1 : 0)
 
-      // Finish Button
-      Button(action: onFinish) {
-        HStack(spacing: 6) {
-          Text("Start Using Snapzy")
-            .font(.system(size: 14, weight: .semibold))
-          SnapzyKeycapChip(label: "⏎", emphasis: true)
-        }
-        .foregroundStyle(Color.white)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 10)
-        .background(
-          Capsule()
-            .fill(Color.blue.opacity(0.85))
-            .overlay(Capsule().strokeBorder(Color.white.opacity(0.3), lineWidth: 0.75))
-        )
-        .shadow(color: Color.blue.opacity(0.4), radius: 12, y: 4)
-      }
-      .buttonStyle(.plain)
-      .keyboardShortcut(.defaultAction)
-      .padding(.top, 8)
-
-      Spacer()
+      Spacer(minLength: 8)
     }
-    .frame(maxWidth: 640)
-    .padding(32)
+    .frame(maxWidth: 900)
+    .onAppear {
+      withAnimation(SnapzyMotionPreferences.shared.spec(.morph).animation) {
+        hasAppeared = true
+      }
+    }
   }
 
-  private func summaryPill(_ key: String, title: String) -> some View {
-    HStack(spacing: 6) {
-      SnapzyKeycapChip(label: key, emphasis: true)
-      Text(title)
-        .font(.system(size: 11.5, weight: .medium))
+  // MARK: - Hero Logo
+
+  private var heroLogo: some View {
+    Image(nsImage: NSApp.applicationIconImage)
+      .resizable()
+      .aspectRatio(contentMode: .fit)
+      .frame(width: 56, height: 56)
+      .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+  }
+
+  // MARK: - Header Section
+
+  private var headerSection: some View {
+    VStack(spacing: 8) {
+      SnapzyOnboardingOverline("SETUP COMPLETE")
+
+      Text("You're All Set!")
+        .font(.system(size: 28, weight: .bold))
+        .tracking(-0.5)
+        .foregroundStyle(SnapzyGlassInk.primary)
+
+      Text("Snapzy is ready in your menu bar. Take screenshots, record clips, extract text, and annotate anytime.")
+        .font(.system(size: SnapzyOnboardingType.lede))
         .foregroundStyle(SnapzyGlassInk.body)
+        .multilineTextAlignment(.center)
+        .lineSpacing(3)
+        .frame(maxWidth: 580)
     }
-    .padding(.horizontal, 10)
-    .padding(.vertical, 6)
-    .background(
-      RoundedRectangle(cornerRadius: 8)
-        .fill(Color.white.opacity(0.06))
-        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5))
-    )
   }
 
-  private func linkButton(_ title: String, icon: String, url: String) -> some View {
+  // MARK: - Capabilities Grid
+
+  private var capabilitiesGrid: some View {
+    HStack(spacing: 12) {
+      CapabilityCard(
+        icon: "camera.viewfinder",
+        shortcut: "⇧⌘4",
+        title: "Area Capture",
+        detail: "Freeze, crop, and drop straight into Annotate or copy."
+      )
+
+      CapabilityCard(
+        icon: "record.circle",
+        shortcut: "⇧⌘5",
+        title: "Screen Recording",
+        detail: "Capture mic, system audio, and clicks. Export MP4 or GIF."
+      )
+
+      CapabilityCard(
+        icon: "text.viewfinder",
+        shortcut: "⇧⌘2",
+        title: "Text Grab (OCR)",
+        detail: "Extract text on-device with Apple Vision to clipboard."
+      )
+
+      CapabilityCard(
+        icon: "menubar.rectangle",
+        shortcut: "⌘,",
+        title: "Menu Bar Hub",
+        detail: "Access recent captures, history, hotkeys, and preferences."
+      )
+    }
+    .frame(maxWidth: 880)
+  }
+
+  // MARK: - Community Links
+
+  private var communityRow: some View {
+    HStack(spacing: 12) {
+      CommunityLinkPill(
+        title: "Star on GitHub",
+        icon: "star.fill",
+        url: "https://github.com/duongductrong/Snapzy"
+      )
+
+      CommunityLinkPill(
+        title: "Join Discord",
+        icon: "bubble.left.and.bubble.right.fill",
+        url: "https://discord.gg/xkWDAuJkZu"
+      )
+
+      CommunityLinkPill(
+        title: "Sponsor Project",
+        icon: "heart.fill",
+        url: "https://github.com/sponsors/duongductrong"
+      )
+    }
+    .padding(.vertical, 2)
+  }
+
+  // MARK: - Primary Action
+
+  private var primaryActionRow: some View {
+    VStack(spacing: 10) {
+      SnapzyOnboardingActionBar(
+        continueTitle: "Start Using Snapzy",
+        continueKey: "\u{21A9}",
+        isContinueEnabled: true,
+        onContinue: onFinish
+      )
+
+      if let onBack {
+        Button(action: onBack) {
+          Text("Press Esc to review previous steps")
+            .font(.system(size: 11))
+            .foregroundStyle(SnapzyGlassInk.faint)
+        }
+        .buttonStyle(.plain)
+      }
+    }
+  }
+}
+
+// MARK: - Capability Card
+
+private struct CapabilityCard: View {
+  var icon: String
+  var shortcut: String
+  var title: String
+  var detail: String
+
+  @State private var isHovered = false
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 10) {
+      HStack {
+        // Monochrome glass icon container matching previous steps
+        Image(systemName: icon)
+          .font(.system(size: 13))
+          .foregroundStyle(SnapzyGlassInk.body)
+          .frame(width: 26, height: 26)
+          .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+              .fill(Color.white.opacity(0.08))
+          )
+
+        Spacer(minLength: 0)
+
+        SnapzyKeycapChip(label: shortcut, emphasis: isHovered)
+      }
+
+      Text(title)
+        .font(.system(size: 12.5, weight: .semibold))
+        .foregroundStyle(SnapzyGlassInk.primary)
+
+      Text(detail)
+        .font(.system(size: 11))
+        .foregroundStyle(SnapzyGlassInk.muted)
+        .lineSpacing(2)
+        .fixedSize(horizontal: false, vertical: true)
+
+      Spacer(minLength: 0)
+    }
+    .padding(14)
+    .frame(maxWidth: .infinity, minHeight: 122, alignment: .topLeading)
+    .background(
+      RoundedRectangle(cornerRadius: SnapzyRadius.card + 1, style: .continuous)
+        .fill(Color.white.opacity(isHovered ? 0.065 : 0.04))
+        .overlay(
+          RoundedRectangle(cornerRadius: SnapzyRadius.card + 1, style: .continuous)
+            .strokeBorder(
+              Color.white.opacity(isHovered ? 0.16 : 0.08),
+              lineWidth: 0.5
+            )
+        )
+    )
+    .onHover { hovering in
+      withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+        isHovered = hovering
+      }
+    }
+  }
+}
+
+// MARK: - Community Link Pill
+
+private struct CommunityLinkPill: View {
+  var title: String
+  var icon: String
+  var url: String
+
+  @State private var isHovered = false
+
+  var body: some View {
     Button {
       if let targetURL = URL(string: url) {
         NSWorkspace.shared.open(targetURL)
@@ -99,20 +240,29 @@ struct SnapzyOnboardingCompletionCard: View {
     } label: {
       HStack(spacing: 6) {
         Image(systemName: icon)
-          .font(.system(size: 11))
-          .foregroundStyle(Color.yellow.opacity(0.9))
+          .font(.system(size: 10.5))
+          .foregroundStyle(SnapzyGlassInk.muted)
+
         Text(title)
           .font(.system(size: 11, weight: .medium))
-          .foregroundStyle(SnapzyGlassInk.body)
+          .foregroundStyle(isHovered ? SnapzyGlassInk.primary : SnapzyGlassInk.body)
       }
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .background(
         Capsule()
-          .fill(Color.white.opacity(0.08))
-          .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5))
+          .fill(Color.white.opacity(isHovered ? 0.09 : 0.04))
+          .overlay(
+            Capsule()
+              .strokeBorder(Color.white.opacity(isHovered ? 0.14 : 0.07), lineWidth: 0.5)
+          )
       )
     }
     .buttonStyle(.plain)
+    .onHover { hovering in
+      withAnimation(SnapzyMotionPreferences.shared.spec(.hover).animation) {
+        isHovered = hovering
+      }
+    }
   }
 }
