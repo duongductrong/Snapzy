@@ -18,10 +18,14 @@ final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
   }
 
   func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-    lock.lock()
-    _requests.append(request)
-    lock.unlock()
+    record(request)
     return try await responder(request)
+  }
+
+  private func record(_ request: URLRequest) {
+    lock.lock()
+    defer { lock.unlock() }
+    _requests.append(request)
   }
 
   var requests: [URLRequest] {

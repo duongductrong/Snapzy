@@ -56,6 +56,10 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     let homeDirectory = temporaryHomeDirectory()
     defer { try? FileManager.default.removeItem(at: homeDirectory) }
     let url = SnapzyConfigurationPaths.suggestedConfigURL(homeDirectory: homeDirectory)
+    let manager = QuickAccessManager.shared
+    let originalTwoFingerSwipe = manager.twoFingerSwipeToDismissEnabled
+    manager.twoFingerSwipeToDismissEnabled = true
+    defer { manager.twoFingerSwipeToDismissEnabled = originalTwoFingerSwipe }
 
     let returnedURL = try SnapzyConfigurationService.shared.ensureConfigExists(at: url)
 

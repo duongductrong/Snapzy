@@ -104,7 +104,7 @@ jobs:
             "${test_args[@]}" \
             test > build/ci-test.log 2>&1; then
             echo "::group::Likely test failures"
-            grep -E "Test case '.*' failed|Failing tests:|\\*\\* TEST FAILED \\*\\*|error:" build/ci-test.log || true
+            grep -E "Test [Cc]ase '.*' (failed|skipped)|Test crashed|malloc:|Failing tests:|\\*\\* TEST FAILED \\*\\*|error:" build/ci-test.log || true
             echo "::endgroup::"
             tail -200 build/ci-test.log
             exit 1

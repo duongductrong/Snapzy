@@ -49,8 +49,9 @@ final class RemoteOCRServiceTests: XCTestCase {
     statusCode: Int = 200,
     data: Data? = nil
   ) -> MockURLSession {
-    MockURLSession { _ in
-      MockURLSession.makeResponse(statusCode: statusCode, data: data ?? self.completionData(content: "ok"))
+    let responseData = data ?? completionData(content: "ok")
+    return MockURLSession { _ in
+      MockURLSession.makeResponse(statusCode: statusCode, data: responseData)
     }
   }
 
