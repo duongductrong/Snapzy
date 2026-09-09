@@ -74,6 +74,9 @@ jobs:
             SnapzyTests/LivePassthroughInputLogicTests
             SnapzyTests/HotkeyUnregistrationTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
+            SnapzyTests/PreferencesCoreTests/testPreferencesNavigationState_historyStackAndNavigation
+            SnapzyTests/SnapzyOnboardingStateTests/testAnnotationToolsSimulation
+            SnapzyTests/SnapzyOnboardingStateTests/testInitialState
         run: |
           set -euo pipefail
           mkdir -p build
