@@ -98,7 +98,7 @@ struct AboutSettingsView: View {
         Spacer()
 
         Link(destination: URL(string: "https://github.com/duongductrong")!) {
-          Text("Duong Duc Trong")
+          Text("Trong Duong")
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(Color.primary)
         }
