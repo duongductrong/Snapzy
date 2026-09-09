@@ -229,6 +229,8 @@ enum SnapzyDeepLinkAction: Equatable {
     switch name {
     case "general":
       return .general
+    case "menubar", "menu-bar":
+      return .menuBar
     case "capture", "screenshots", "screenshot":
       return .capture
     case "annotate", "annotation", "annotations":

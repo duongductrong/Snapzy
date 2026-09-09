@@ -100,6 +100,7 @@ final class PreferencesCoreTests: XCTestCase {
   func testPreferencesTabsRemainUniqueAndHashable() {
     let tabs: Set<PreferencesTab> = [
       .general,
+      .menuBar,
       .capture,
       .annotate,
       .quickAccess,
@@ -111,7 +112,75 @@ final class PreferencesCoreTests: XCTestCase {
       .about,
     ]
 
-    XCTAssertEqual(tabs.count, 10)
+    XCTAssertEqual(tabs.count, 11)
+    XCTAssertEqual(PreferencesTab.allCases.count, 11)
+  }
+
+  func testPreferencesTabGroups_coverAllCasesExactlyOnce() {
+    let flattened = PreferencesTab.groups.flatMap { $0 }
+    XCTAssertEqual(flattened.count, PreferencesTab.allCases.count)
+    XCTAssertEqual(Set(flattened).count, PreferencesTab.allCases.count)
+    XCTAssertEqual(PreferencesTab.groups.count, 4)
+  }
+
+  func testPreferencesTab_symbolsAndTitlesAreNonEmpty() {
+    for tab in PreferencesTab.allCases {
+      XCTAssertFalse(tab.title.isEmpty, "Expected title for tab \(tab)")
+      XCTAssertFalse(tab.symbol.isEmpty, "Expected symbol for tab \(tab)")
+      XCTAssertEqual(tab.id, tab.rawValue)
+    }
+  }
+
+  @MainActor
+  func testPreferencesNavigationState_historyStackAndNavigation() {
+    let navigation = PreferencesNavigationState(initialTab: .general)
+    XCTAssertEqual(navigation.selectedTab, .general)
+    XCTAssertFalse(navigation.canGoBack)
+    XCTAssertFalse(navigation.canGoForward)
+
+    // Selecting current tab should not push history
+    navigation.select(.general)
+    XCTAssertFalse(navigation.canGoBack)
+
+    // Navigate to capture
+    navigation.select(.capture)
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertFalse(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general])
+
+    // Navigate to annotate
+    navigation.select(.annotate)
+    XCTAssertEqual(navigation.selectedTab, .annotate)
+    XCTAssertEqual(navigation.backStack, [.general, .capture])
+
+    // Go back to capture
+    navigation.goBack()
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.forwardStack, [.annotate])
+
+    // Go back to general
+    navigation.goBack()
+    XCTAssertEqual(navigation.selectedTab, .general)
+    XCTAssertFalse(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.forwardStack, [.annotate, .capture])
+
+    // Go forward to capture
+    navigation.goForward()
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general])
+    XCTAssertEqual(navigation.forwardStack, [.annotate])
+
+    // A new selection clears the forward stack
+    navigation.select(.shortcuts)
+    XCTAssertEqual(navigation.selectedTab, .shortcuts)
+    XCTAssertFalse(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general, .capture])
   }
 
   private func makeDefaults(

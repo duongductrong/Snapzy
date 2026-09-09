@@ -863,7 +863,7 @@ final class AppStatusBarController: ObservableObject {
 
   func openPreferencesWindow(tab: PreferencesTab? = nil) {
     if let tab {
-      PreferencesNavigationState.shared.selectedTab = tab
+      PreferencesNavigationState.shared.select(tab)
     }
     DiagnosticLogger.shared.log(
       .info,
@@ -871,12 +871,10 @@ final class AppStatusBarController: ObservableObject {
       "Preferences window requested",
       context: ["tab": tab.map { "\($0)" } ?? "current"]
     )
-    presentPreferencesWindow()
+    presentPreferencesWindow(tab: tab)
   }
 
-  private func presentPreferencesWindow() {
-    let existingWindowNumbers = Set(NSApp.windows.map(\.windowNumber))
-
+  private func presentPreferencesWindow(tab: PreferencesTab? = nil) {
     // Elevate to regular app so Snapzy appears in top-left menu bar
     if !didElevateForSettings {
       NSApp.setActivationPolicy(.regular)
@@ -892,19 +890,12 @@ final class AppStatusBarController: ObservableObject {
       )
     }
 
-    NSApp.activate(ignoringOtherApps: true)
+    PreferencesWindowController.shared.show(tab: tab)
 
-    // Trigger Settings scene - equivalent to SettingsLink behavior.
-    // Simulating Cmd+, fails on layouts where AppKit mirrors the Settings item's
-    // key equivalent to the physical comma key's character (e.g. "ö" on Turkish
-    // layouts, issue #311), so find and perform the menu item directly instead.
-    if #available(macOS 14.0, *) {
-      attemptToTriggerSettings(remainingAttempts: Self.settingsTriggerMaxAttempts)
-    } else {
-      NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    if let window = PreferencesWindowController.shared.window {
+      trackedPreferencesWindow = window
+      syncTrackedPreferencesWindowExclusion()
     }
-
-    schedulePreferencesWindowTracking(excludingWindowNumbers: existingWindowNumbers)
   }
 
   // MARK: - Settings Scene Trigger

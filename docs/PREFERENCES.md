@@ -4,9 +4,9 @@ Reference for the Settings window: tab structure, every section, and how prefere
 
 ## Root
 
-- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `TabView`, fixed 760×550, 10 tabs.
-- Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — set programmatically from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
-- Presented through the `Settings` scene in `SnapzyApp`; activation-policy dance handled by `AppStatusBarController` (see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)).
+- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 11 categories in 4 unlabelled groups.
+- `PreferencesWindowController` (`Snapzy/Features/Preferences/PreferencesWindowController.swift`) — Dedicated `NSWindowController` directly managing window lifecycle, activation policy transitions (`.regular` ↔ `.accessory`), fullSizeContentView, and titlebar transparency.
+- Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — supports back/forward history stacks (`⌘[` and `⌘]`), last-visited tab persistence, and programmatical routing from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
 
 ## Storage pattern
 

@@ -113,6 +113,8 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
   func testSettingsTabRoutesParseExpectedTabs() throws {
     let cases: [(String, PreferencesTab)] = [
       ("general", .general),
+      ("menubar", .menuBar),
+      ("menu-bar", .menuBar),
       ("capture", .capture),
       ("annotate", .annotate),
       ("quick-access", .quickAccess),
