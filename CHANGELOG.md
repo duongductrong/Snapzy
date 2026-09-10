@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.10] - 2026-09-10
+
+### Features
+-  Modernize preferences UI, settings navigation, and interactive onboarding flow (#557) (5b1e4393)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.32.0-beta.9] - 2026-09-09
 
 ### Bug Fixes
