@@ -66,7 +66,8 @@ final class RecordingToolbarWindowTests: XCTestCase {
   /// still on screen (`init` orders the window front). The already-visible early
   /// return in `applyRecordingBarVisibility` must not skip enabling background
   /// dragging, or the recording bar can never be dragged.
-  func testShowRecordingStatusBar_alreadyVisibleWindow_enablesBackgroundDragging() {
+  func testShowRecordingStatusBar_alreadyVisibleWindow_enablesBackgroundDragging() throws {
+    try skipIfRunningInCI("Requires onscreen window and recording manager")
     let window = RecordingToolbarWindow(anchorRect: CGRect(x: 100, y: 100, width: 400, height: 300))
     XCTAssertTrue(window.isVisible, "pre-record toolbar should be on screen after init")
 

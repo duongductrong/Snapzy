@@ -46,12 +46,14 @@ jobs:
             SnapzyTests/OCRModelSelectionTests
             SnapzyTests/PreferencesOCRModelSelectionTests
             SnapzyTests/OCRKeychainStoreTests
+            SnapzyTests/RemoteOCRServiceTests
             SnapzyTests/SmartElementCaptureControllerTests
             SnapzyTests/SmartElementWindowOwnerResolverTests
             SnapzyTests/SmartElementQueryServiceTests
             SnapzyTests/SandboxOffDataMigrationServiceTests
             SnapzyTests/AppStatusBarControllerTests
             SnapzyTests/RecordingAudioLevelMeterTests
+            SnapzyTests/RecordingToolbarWindowTests/testShowRecordingStatusBar_alreadyVisibleWindow_enablesBackgroundDragging
             SnapzyTests/CaptureViewModelTests/testHiddenWindowSession_restore_postsSyntheticMouseMovedEvent
             SnapzyTests/AnnotateCreationTests/testCanExtractTextRequiresNormalAnnotateSourceImage
             SnapzyTests/AnnotateExportSaveTests/testCopyToClipboardRunsWithoutCrashing
@@ -68,11 +70,15 @@ jobs:
             SnapzyTests/AreaSelectionSessionLifecycleTests
             SnapzyTests/AreaSelectionHoverPerformanceTests
             SnapzyTests/AreaSelectionControllerTests
+            SnapzyTests/AreaSelectionModelsTests
+            SnapzyTests/AreaSelectionOverlayPassthroughStaleLocationTests
+            SnapzyTests/AreaSelectionLivePassthroughWindowDetectionTests
             SnapzyTests/AreaSelectionOverlayMagnifierLayoutTests/testMagnifierZoom_worksWithEmptyBackdropsInitially
             SnapzyTests/PersistedCombineSessionTests/testCaptureStitchSaveReopen_persistsStitchEverywhere
             SnapzyTests/BackgroundCursorControlTests
             SnapzyTests/LivePassthroughInputLogicTests
             SnapzyTests/HotkeyUnregistrationTests
+            SnapzyTests/RecordingSessionShortcutGatingTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
         run: |
           set -euo pipefail

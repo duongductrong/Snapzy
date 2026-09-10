@@ -14,9 +14,6 @@ final class FakeOCRKeychainStore: OCRKeychainStoring, @unchecked Sendable {
   private var _deletedIDs: [UUID] = []
   private var _saveError: Error?
 
-  // Work around the Xcode 26.2 XCTest/MainActor deallocation bug.
-  nonisolated deinit {}
-
   var deletedIDs: [UUID] {
     stateQueue.sync { _deletedIDs }
   }

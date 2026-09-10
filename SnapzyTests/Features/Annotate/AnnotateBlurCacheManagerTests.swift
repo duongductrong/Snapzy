@@ -86,7 +86,7 @@ final class AnnotateBlurCacheManagerTests: XCTestCase {
 
   func testInvalidate_removesCache() {
     let id = UUID()
-    cache.getCachedBlur(for: id, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
+    _ = cache.getCachedBlur(for: id, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
     XCTAssertTrue(cache.hasCachedBlur(for: id))
     cache.invalidate(id: id)
     XCTAssertFalse(cache.hasCachedBlur(for: id))
@@ -95,8 +95,8 @@ final class AnnotateBlurCacheManagerTests: XCTestCase {
   func testClearAll_removesAllCache() {
     let id1 = UUID()
     let id2 = UUID()
-    cache.getCachedBlur(for: id1, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
-    cache.getCachedBlur(for: id2, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
+    _ = cache.getCachedBlur(for: id1, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
+    _ = cache.getCachedBlur(for: id2, bounds: CGRect(x: 0, y: 0, width: 20, height: 20), sourceImage: sourceImage, blurType: .pixelated, effectValue: 8)
     cache.clearAll()
     XCTAssertFalse(cache.hasCachedBlur(for: id1))
     XCTAssertFalse(cache.hasCachedBlur(for: id2))

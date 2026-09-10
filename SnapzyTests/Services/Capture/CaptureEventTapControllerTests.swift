@@ -170,7 +170,7 @@ final class CaptureEventTapControllerTests: XCTestCase {
       (.rightMouseDragged, .rightMouseDragged),
     ]
 
-    for (eventType, expectedKind) in cases {
+    for (eventType, _) in cases {
       let event = try XCTUnwrap(CGEvent(
         mouseEventSource: nil,
         mouseType: eventType,
@@ -196,7 +196,7 @@ final class CaptureEventTapControllerTests: XCTestCase {
       (76, .return),
     ]
 
-    for (keyCode, expectedKey) in cases {
+    for (keyCode, _) in cases {
       let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true))
       let result = controller.handleTapEvent(type: .keyDown, event: event)
       XCTAssertNil(result, "keyDown \(keyCode) should be consumed")

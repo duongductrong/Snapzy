@@ -20,10 +20,9 @@ final class HistoryPanelPositionTests: XCTestCase {
 
   // MARK: - calculateOrigin
 
-  func testTopCenterPositionsAtTopWithPadding() {
+  func testTopCenterPositionsAtTopWithPadding() throws {
     guard let screen else {
-      XCTSkip("No NSScreen available in test environment")
-      return
+      throw XCTSkip("No NSScreen available in test environment")
     }
     let size = CGSize(width: 400, height: 200)
     let origin = HistoryPanelPosition.topCenter.calculateOrigin(for: size, on: screen, padding: 20)
@@ -33,10 +32,9 @@ final class HistoryPanelPositionTests: XCTestCase {
     XCTAssertEqual(origin.y, frame.maxY - size.height - 20, accuracy: 0.0001)
   }
 
-  func testBottomCenterPositionsAtBottomWithPadding() {
+  func testBottomCenterPositionsAtBottomWithPadding() throws {
     guard let screen else {
-      XCTSkip("No NSScreen available in test environment")
-      return
+      throw XCTSkip("No NSScreen available in test environment")
     }
     let size = CGSize(width: 400, height: 200)
     let origin = HistoryPanelPosition.bottomCenter.calculateOrigin(for: size, on: screen, padding: 20)
@@ -46,10 +44,9 @@ final class HistoryPanelPositionTests: XCTestCase {
     XCTAssertEqual(origin.y, frame.minY + 20, accuracy: 0.0001)
   }
 
-  func testCenterPositionsAtVerticalCenter() {
+  func testCenterPositionsAtVerticalCenter() throws {
     guard let screen else {
-      XCTSkip("No NSScreen available in test environment")
-      return
+      throw XCTSkip("No NSScreen available in test environment")
     }
     let size = CGSize(width: 400, height: 200)
     let origin = HistoryPanelPosition.center.calculateOrigin(for: size, on: screen, padding: 20)
@@ -59,10 +56,9 @@ final class HistoryPanelPositionTests: XCTestCase {
     XCTAssertEqual(origin.y, frame.midY - size.height / 2, accuracy: 0.0001)
   }
 
-  func testCalculateOriginIgnoresPaddingForCenterCase() {
+  func testCalculateOriginIgnoresPaddingForCenterCase() throws {
     guard let screen else {
-      XCTSkip("No NSScreen available in test environment")
-      return
+      throw XCTSkip("No NSScreen available in test environment")
     }
     let size = CGSize(width: 200, height: 100)
     let withPadding = HistoryPanelPosition.center.calculateOrigin(for: size, on: screen, padding: 999)

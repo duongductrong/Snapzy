@@ -17,9 +17,6 @@ final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
     self.responder = responder
   }
 
-  // Work around the Xcode 26.2 XCTest/MainActor deallocation bug.
-  nonisolated deinit {}
-
   func data(for request: URLRequest) async throws -> (Data, URLResponse) {
     record(request)
     return try await responder(request)

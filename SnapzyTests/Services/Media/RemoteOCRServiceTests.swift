@@ -11,6 +11,11 @@ import XCTest
 final class RemoteOCRServiceTests: XCTestCase {
   private let modelID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    try skipIfRunningInCI("Remote OCR tests require local environment")
+  }
+
   private func makeModel(
     baseURL: String = "https://api.example.com",
     prompt: String? = nil
