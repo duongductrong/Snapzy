@@ -46,6 +46,7 @@ nonisolated enum L10n {
     ("gif.", "Recording"),
     ("keystroke-position.", "Recording"),
     ("microphone.", "Recording"),
+    ("camera.", "Recording"),
     ("recording.", "Recording"),
     ("recording-annotation.", "Recording"),
     ("recording-toolbar.", "Recording"),
@@ -4001,6 +4002,69 @@ nonisolated enum L10n {
       "microphone.unavailable",
       defaultValue: "Unavailable",
       comment: "Microphone picker suffix for a stored input device that is not currently connected"
+    )
+  }
+
+  enum Camera {
+    static let accessRequiredTitle = string(
+      "camera.access-required-title",
+      defaultValue: "Camera Access Required",
+      comment: "Alert title when camera permission is missing"
+    )
+    static let preferencesMessage = string(
+      "camera.preferences-message",
+      defaultValue: "Snapzy needs camera permission. Please enable it in System Settings > Privacy & Security > Camera.",
+      comment: "Alert message when camera permission is missing from the recording toolbar"
+    )
+    static let recordingMessage = string(
+      "camera.recording-message",
+      defaultValue: "Snapzy needs camera permission to add camera video to the recording. Please grant access in System Settings.",
+      comment: "Alert message when camera permission is missing while starting a recording"
+    )
+    static let doNotUse = string(
+      "camera.do-not-use",
+      defaultValue: "Do Not Use Camera",
+      comment: "Camera menu option to disable camera capture"
+    )
+    static let disconnected = string(
+      "camera.disconnected",
+      defaultValue: "Camera disconnected. Waiting to reconnect…",
+      comment: "Message shown in the camera overlay while the selected camera is unavailable"
+    )
+    static let on = string(
+      "camera.on",
+      defaultValue: "Camera on",
+      comment: "Tooltip when camera capture is enabled"
+    )
+    static let off = string(
+      "camera.off",
+      defaultValue: "Camera off",
+      comment: "Tooltip when camera capture is disabled"
+    )
+    static let options = string(
+      "camera.options",
+      defaultValue: "Camera options",
+      comment: "Accessibility label for the camera options menu button"
+    )
+    static let chooseInput = string(
+      "camera.choose-input",
+      defaultValue: "Choose a camera input",
+      comment: "Accessibility hint for the camera options menu button"
+    )
+    static let systemDefault = string(
+      "camera.system-default",
+      defaultValue: "System Default Camera",
+      comment: "Camera picker option for the current macOS default video device"
+    )
+    static let unavailable = string(
+      "camera.unavailable",
+      defaultValue: "Unavailable",
+      comment: "Camera picker suffix for a stored video device that is not currently connected"
+    )
+    static let continuity = string(
+      "camera.continuity",
+      defaultValue: "Continuity Camera",
+      comment: "Camera picker suffix for an iPhone Continuity Camera device"
     )
   }
 

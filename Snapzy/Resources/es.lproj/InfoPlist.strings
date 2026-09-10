@@ -1,2 +1,3 @@
 "NSMicrophoneUsageDescription" = "Snapzy necesita acceso al micrófono para grabar audio con las grabaciones de su pantalla.";
+"NSCameraUsageDescription" = "Snapzy necesita acceso a la cámara para añadir una imagen de cámara a sus grabaciones de pantalla.";
 "NSScreenCaptureUsageDescription" = "Snapzy necesita permiso de grabación de pantalla para realizar capturas de pantalla y grabar su pantalla.";

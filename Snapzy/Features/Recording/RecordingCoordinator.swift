@@ -39,12 +39,16 @@ final class RecordingCoordinator: ObservableObject {
   private var keystrokeOverlayWindow: KeystrokeOverlayWindow?
   private var keystrokeMonitorService: KeystrokeMonitorService?
 
+  private var cameraOverlayWindow: RecordingCameraOverlayWindow?
+
   private struct ToolbarConfiguration {
     let format: VideoFormat
     let quality: VideoQuality
     let captureAudio: Bool
     let captureMicrophone: Bool
     let microphoneDeviceID: String
+    let captureCamera: Bool
+    let cameraDeviceID: String
     let outputMode: RecordingOutputMode
     let showCursor: Bool
     let highlightClicks: Bool
@@ -352,6 +356,8 @@ final class RecordingCoordinator: ObservableObject {
       captureAudio: toolbarWindow.captureAudio,
       captureMicrophone: toolbarWindow.captureMicrophone,
       microphoneDeviceID: toolbarWindow.microphoneDeviceID,
+      captureCamera: toolbarWindow.captureCamera,
+      cameraDeviceID: toolbarWindow.cameraDeviceID,
       outputMode: toolbarWindow.outputMode,
       showCursor: toolbarWindow.state.showCursor,
       highlightClicks: toolbarWindow.state.highlightClicks,
@@ -370,6 +376,8 @@ final class RecordingCoordinator: ObservableObject {
       toolbar.captureAudio = configuration.captureAudio
       toolbar.captureMicrophone = configuration.captureMicrophone
       toolbar.microphoneDeviceID = configuration.microphoneDeviceID
+      toolbar.captureCamera = configuration.captureCamera
+      toolbar.cameraDeviceID = configuration.cameraDeviceID
       toolbar.outputMode = configuration.outputMode
       toolbar.state.showCursor = configuration.showCursor
       toolbar.state.highlightClicks = configuration.highlightClicks
@@ -557,6 +565,8 @@ final class RecordingCoordinator: ObservableObject {
     let savedCaptureAudio = window.captureAudio
     let savedCaptureMicrophone = window.captureMicrophone
     let savedMicrophoneDeviceID = window.microphoneDeviceID
+    let savedCaptureCamera = window.captureCamera
+    let savedCameraDeviceID = window.cameraDeviceID
     let savedShowCursor = window.state.showCursor
     DiagnosticLogger.shared.log(.info, .recording, "Recording restart requested", context: [
       "format": savedFormat.rawValue,
@@ -564,6 +574,8 @@ final class RecordingCoordinator: ObservableObject {
       "systemAudio": "\(savedCaptureAudio)",
       "microphone": "\(savedCaptureMicrophone)",
       "microphoneDevice": savedMicrophoneDeviceID,
+      "camera": "\(savedCaptureCamera)",
+      "cameraDevice": savedCameraDeviceID,
       "showCursor": "\(savedShowCursor)",
       "rect": "\(Int(rect.width))x\(Int(rect.height))",
     ])
@@ -611,6 +623,11 @@ final class RecordingCoordinator: ObservableObject {
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
+        try await self.setupCameraOverlay(
+          for: rect,
+          enabled: savedCaptureCamera,
+          deviceID: savedCameraDeviceID
+        )
         try await recorder.startRecording()
         removeEscapeMonitors()
         DiagnosticLogger.shared.log(.info, .recording, "Recording restart completed")
@@ -682,12 +699,16 @@ final class RecordingCoordinator: ObservableObject {
     // Get microphone setting from toolbar
     let captureMicrophone = window.captureMicrophone
     let microphoneDeviceID = window.microphoneDeviceID
+    let captureCamera = window.captureCamera
+    let cameraDeviceID = window.cameraDeviceID
     DiagnosticLogger.shared.log(.debug, .recording, "Recording options resolved", context: [
       "quality": quality.rawValue,
       "fps": "\(fps)",
       "systemAudio": "\(captureSystemAudio)",
       "microphone": "\(captureMicrophone)",
       "microphoneDevice": microphoneDeviceID,
+      "camera": "\(captureCamera)",
+      "cameraDevice": cameraDeviceID,
       "showCursor": "\(showCursor)",
     ])
 
@@ -732,6 +753,11 @@ final class RecordingCoordinator: ObservableObject {
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
+        try await self.setupCameraOverlay(
+          for: rect,
+          enabled: captureCamera,
+          deviceID: cameraDeviceID
+        )
         try await recorder.startRecording()
         removeEscapeMonitors()
 
@@ -782,8 +808,18 @@ final class RecordingCoordinator: ObservableObject {
     alert.informativeText = error.localizedDescription
     alert.alertStyle = .warning
 
-    // Special handling for microphone permission denied
-    if case .microphonePermissionDenied = error {
+    if case .cameraPermissionDenied = error {
+      alert.messageText = L10n.Camera.accessRequiredTitle
+      alert.informativeText = L10n.Camera.recordingMessage
+      alert.addButton(withTitle: L10n.Common.openSystemSettings)
+      alert.addButton(withTitle: L10n.Common.cancel)
+
+      if alert.runModal() == .alertFirstButtonReturn,
+         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Camera") {
+        NSWorkspace.shared.open(url)
+      }
+      return false
+    } else if case .microphonePermissionDenied = error {
       alert.messageText = L10n.Microphone.accessRequiredTitle
       alert.informativeText = L10n.Microphone.recordingMessage
       alert.addButton(withTitle: L10n.Common.openSystemSettings)
@@ -830,6 +866,8 @@ final class RecordingCoordinator: ObservableObject {
     let quality = VideoQuality(rawValue: qualityString) ?? .high
     let captureSystemAudio = window.captureAudio
     let showCursor = window.state.showCursor
+    let captureCamera = window.captureCamera
+    let cameraDeviceID = window.cameraDeviceID
 
     guard let saveDirectory = resolveSaveDirectoryForOperation() else {
       DiagnosticLogger.shared.log(.warning, .recording, "Microphone retry blocked: no save directory access")
@@ -862,6 +900,11 @@ final class RecordingCoordinator: ObservableObject {
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
           excludedWindowIDs: exclusionConfig.excludedWindowIDs,
           context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
+        )
+        try await self.setupCameraOverlay(
+          for: rect,
+          enabled: captureCamera,
+          deviceID: cameraDeviceID
         )
         try await recorder.startRecording()
         removeEscapeMonitors()
@@ -1086,6 +1129,7 @@ final class RecordingCoordinator: ObservableObject {
       "hasAnnotationOverlay": "\(annotationOverlayWindow != nil)",
       "hasClickHighlight": "\(clickHighlightWindow != nil)",
       "hasKeystrokeOverlay": "\(keystrokeOverlayWindow != nil)",
+      "hasCameraOverlay": "\(cameraOverlayWindow != nil)",
     ])
     finishRecordingStartAttempt()
     // Remove escape monitors
@@ -1100,6 +1144,8 @@ final class RecordingCoordinator: ObservableObject {
     // Close annotation windows
     cleanupAnnotationOverlay()
 
+    cleanupCameraOverlay()
+
     // Close region overlay windows
     closePreRecordUI()
     selectedRect = nil
@@ -1108,6 +1154,41 @@ final class RecordingCoordinator: ObservableObject {
     let sessionEndHandler = onSessionEnded
     onSessionEnded = nil
     sessionEndHandler?()
+  }
+
+  private func setupCameraOverlay(
+    for rect: CGRect,
+    enabled: Bool,
+    deviceID: String
+  ) async throws {
+    guard enabled else {
+      cleanupCameraOverlay()
+      return
+    }
+
+    guard await RecordingCameraDeviceProvider.requestAccessIfNeeded() else {
+      throw RecordingError.cameraPermissionDenied
+    }
+
+    if let cameraOverlayWindow {
+      await recorder.addExceptedWindow(windowID: cameraOverlayWindow.overlayWindowID)
+      return
+    }
+
+    do {
+      let window = try RecordingCameraOverlayWindow(recordingRect: rect, deviceID: deviceID)
+      cameraOverlayWindow = window
+      window.startPreview()
+      await recorder.addExceptedWindow(windowID: window.overlayWindowID)
+    } catch {
+      DiagnosticLogger.shared.logError(.recording, error, "Camera overlay setup failed")
+      throw RecordingError.setupFailed(L10n.Camera.unavailable)
+    }
+  }
+
+  private func cleanupCameraOverlay() {
+    cameraOverlayWindow?.close()
+    cameraOverlayWindow = nil
   }
 
   private func beginRecordingStartAttempt(source: String) -> Bool {

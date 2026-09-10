@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "camera.access-required-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera Access Required"
+          }
+        }
+      }
+    },
+    "camera.choose-input": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a camera input"
+          }
+        }
+      }
+    },
+    "camera.continuity": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuity Camera"
+          }
+        }
+      }
+    },
+    "camera.do-not-use": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Do Not Use Camera"
+          }
+        }
+      }
+    },
+    "camera.disconnected": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera disconnected. Waiting to reconnect…"
+          }
+        }
+      }
+    },
+    "camera.off": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera off"
+          }
+        }
+      }
+    },
+    "camera.on": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera on"
+          }
+        }
+      }
+    },
+    "camera.options": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera options"
+          }
+        }
+      }
+    },
+    "camera.preferences-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy needs camera permission. Please enable it in System Settings > Privacy & Security > Camera."
+          }
+        }
+      }
+    },
+    "camera.recording-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy needs camera permission to add a camera overlay to the recording."
+          }
+        }
+      }
+    },
+    "camera.system-default": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System Default Camera"
+          }
+        }
+      }
+    },
+    "camera.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera Unavailable"
+          }
+        }
+      }
+    },
     "gif.cannot-create-output-file": {
       "extractionState": "stale",
       "localizations": {

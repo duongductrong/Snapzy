@@ -5,7 +5,7 @@
 //  Pre-record toolbar with options menu and record/cancel buttons
 //  Styled to match Apple's native macOS recording toolbar aesthetic
 //
-//  Layout: [✕] | [📷] | [□ □] | [🎙 🔊] | [Options▾] [Record]
+//  Layout: [✕] | [📷] | [□ □] | [🎥 🎙 🔊] | [Options▾] [Record]
 //
 
 import SwiftUI
@@ -43,6 +43,7 @@ struct RecordingToolbarView: View {
 
       // Audio quick controls
       HStack(spacing: ToolbarConstants.groupSpacing) {
+        RecordingToolbarCameraToggleButton(state: state)
         ToolbarMicToggleButton(state: state)
         ToolbarSystemAudioToggleButton(state: state)
       }

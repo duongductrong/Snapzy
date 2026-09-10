@@ -57,7 +57,7 @@
 ## Features
 
 - **Screenshot**: fullscreen or selected-area capture with manual/application window mode toggle (`Application Capture`, default `A`), including already open third-party menu-bar popovers that would normally close when capture begins (restored visually for selection and saved with transparent rounded corners), area capture with inline annotate (annotate before saving), scrolling capture with live stitched preview, OCR text extraction with Apple Vision or custom OpenAI-compatible endpoints and a native result notification, transparent object cutout capture with optional safe auto-crop, window shadow capture (macOS 14+), multi-format export (PNG/JPG/WebP), hide desktop icons/widgets, quick screenshot during recording
-- **Screen Recording**: video or GIF output, system audio + microphone, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing, Smart Camera metadata for Follow Mouse edits
+- **Screen Recording**: video or GIF output, system audio + microphone, camera overlay with iPhone Continuity Camera support, mouse click highlights, keystroke overlays, live on-screen annotations, remember last area, GIF resizing, Smart Camera metadata for Follow Mouse edits
 - **Annotation Editor**: shapes, arrows, text, watermarks, filled rectangles, blur/pixelate, automatic local sensitive-data redaction, OCR text extraction from the image context menu, counters, highlighter with text snapping (⌘ to bypass), crop with edge-snapping (⌘ to bypass) and one-key auto-crop to content (`A`), remove background with crop-aware auto-crop support, mockup backgrounds with 3D renderer, zoom/pan (pinch + keyboard), drag-to-app with optional keep-editing and editor reactivation behavior, configurable tool/action shortcuts
 - **After Capture Settings**: per-mode action matrix for save, Quick Access, clipboard copy, and annotate plus a separate global remove-background auto-crop toggle (enabled by default)
 - **Video Editor**: trim with visual timeline + frame strip, zoom segments with auto-focus (Follow Mouse), wallpaper backgrounds + padding, custom export dimensions, animated GIF viewer, undo/redo
@@ -96,7 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.31.0/instal
 4. Launch Snapzy
 5. Grant Screen Recording permission when prompted in System Settings
 6. Re-launch Snapzy after granting Screen Recording if macOS asks for it
-7. Grant Microphone permission too if you want voice input in recordings
+7. Grant Microphone and Camera permission too if you want voice or camera input in recordings
 
 > Snapzy is signed and notarized by Apple. macOS will open it without any extra steps.
 

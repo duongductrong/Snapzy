@@ -13,7 +13,7 @@ flowchart TD
     E --> D
 
     D --> F["RecordingToolbarWindow (pre-record) + RecordingRegionOverlayWindow per screen"]
-    F --> G["User adjusts region / mode / audio / format, presses Record"]
+    F --> G["User adjusts region / mode / audio / camera / format, presses Record"]
     G --> H["TempCaptureManager.makeRecordingSavePlan(exportDirectory:)"]
     H --> I["ScreenRecordingManager.prepareRecording(...)"]
     I --> J["ScreenRecordingManager.startRecording()"]
@@ -78,9 +78,10 @@ Snapzy windows are normally excluded from the stream; effect overlays are re-inc
 
 - **Click highlights** (pref `PreferencesKeys.recordingHighlightClicks`, default off): `MouseClickHighlightService` installs local+global NSEvent monitors for down/up/drag and forwards points to `MouseClickHighlightWindow` (`showClickEffect` ripple rings, hold circle while pressed, drag follow).
 - **Keystroke overlay** (pref `PreferencesKeys.recordingShowKeystrokes`, default off): `KeystrokeMonitorService` shows keystrokes only when a modifier (⌘/⌥/⌃) is held or a special key is pressed, building modifier-combo display strings; rendered by `KeystrokeOverlayWindow.showKeystroke`.
+- **Camera overlay** (pref `PreferencesKeys.recordingCaptureCamera`, default off): the toolbar lists the system camera and available devices, including iPhone Continuity Camera. `RecordingCameraOverlayWindow` shows a fixed 16:9 preview at the bottom-right of the recording area. ScreenCaptureKit includes this window in the video. If the camera disconnects, screen recording continues, the overlay shows a waiting message, and Snapzy reconnects the same device when it returns. Camera audio is not used; select a microphone separately.
 - **Live annotations**: `RecordingAnnotationState` + `RecordingAnnotationOverlayWindow` over the recording rect, plus a popover-style `RecordingAnnotationToolbarWindow` anchored to the status bar pencil button (button position reported through a SwiftUI `PreferenceKey`). Tools: selection, rectangle, oval, arrow, line, pencil, highlighter, with per-tool auto-clear modes (persist / time-based / count-based). Global shortcut path: `RecordingCoordinator.togglePenFromShortcut()`.
 
-Overlay setup happens after `startRecording()` succeeds; region overlay borders are hidden and interaction disabled at the same moment.
+The camera overlay starts before `startRecording()` so it can be added to the initial content filter. The other overlays start after recording begins. Region overlay borders are hidden and interaction is disabled at the same moment.
 
 - **Region dimming toggle** (pref `PreferencesKeys.recordingDimNonSelectedArea`, default on): `RecordingRegionOverlayView` fills the area outside the recording rect with `black@0.4` (window `sharingType = .none`, so it never enters the video). The dim is always shown during pre-record selection for visual feedback. At record-start each per-screen overlay gets `setDimEnabled(dimNonSelectedArea)` in the same loop that calls `hideBorder()`, so when the pref is off the dim disappears the instant recording begins and non-selected windows stay fully usable. Surfaced in Settings (Capture → Recording → Behavior) and the pre-record toolbar Options popover; `RecordingCoordinator` observes `UserDefaults.didChangeNotification` and re-applies to live overlays while `RecordingState.isPauseResumeEligible` (mid-recording Settings toggles apply live). Pre-record selection dim is never affected by the toggle.
 
@@ -125,6 +126,7 @@ The pre-record toolbar has a camera button (`RecordingToolbarView` → `Recordin
 | `Snapzy/Features/Recording/RecordingToolbarView.swift` | Pre-record controls (close, screenshot, mode toggle, mic/system audio, options, Record + output dropdown) |
 | `Snapzy/Features/Recording/Components/RecordingStatusBarView.swift` | During-recording controls: timer, pause/resume, annotate, restart, delete, stop, waveform |
 | `Snapzy/Features/Recording/Managers/RecordingRegionOverlayWindow.swift` | Cross-display region overlay (drag/resize/reselect) |
+| `Snapzy/Features/Recording/Managers/RecordingCameraOverlayWindow.swift` | Camera discovery, preview session, and captured camera overlay |
 | `Snapzy/Features/Recording/MicrophoneAudioCapturer.swift` | Independent AVCaptureSession mic capture, 48 kHz LPCM pinning |
 | `Snapzy/Services/Capture/ScreenRecordingManager.swift` | SCStream + writer pipeline, state machine, audio normalization, metadata save |
 | `Snapzy/Services/Capture/RecordingMouseTracker.swift` | Cursor sampling for Smart Camera |

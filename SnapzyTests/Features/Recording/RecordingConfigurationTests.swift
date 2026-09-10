@@ -28,6 +28,11 @@ final class RecordingConfigurationTests: XCTestCase {
       RecordingToolbarPreferences.microphoneDeviceID(defaults: defaults),
       RecordingMicrophoneDevice.systemDefaultID
     )
+    XCTAssertFalse(RecordingToolbarPreferences.captureCamera(defaults: defaults))
+    XCTAssertEqual(
+      RecordingToolbarPreferences.cameraDeviceID(defaults: defaults),
+      RecordingCameraDevice.systemDefaultID
+    )
     XCTAssertEqual(RecordingToolbarPreferences.outputMode(defaults: defaults), .video)
     XCTAssertTrue(RecordingToolbarPreferences.showCursor(defaults: defaults))
     XCTAssertFalse(RecordingToolbarPreferences.highlightClicks(defaults: defaults))
@@ -40,6 +45,8 @@ final class RecordingConfigurationTests: XCTestCase {
     defaults.set(false, forKey: PreferencesKeys.recordingCaptureAudio)
     defaults.set(true, forKey: PreferencesKeys.recordingCaptureMicrophone)
     defaults.set("external-mic-id", forKey: PreferencesKeys.recordingMicrophoneDeviceID)
+    defaults.set(true, forKey: PreferencesKeys.recordingCaptureCamera)
+    defaults.set("iphone-camera-id", forKey: PreferencesKeys.recordingCameraDeviceID)
     defaults.set(RecordingOutputMode.gif.rawValue, forKey: PreferencesKeys.recordingOutputMode)
     defaults.set(false, forKey: PreferencesKeys.recordingShowCursor)
     defaults.set(true, forKey: PreferencesKeys.recordingHighlightClicks)
@@ -50,6 +57,8 @@ final class RecordingConfigurationTests: XCTestCase {
     XCTAssertFalse(RecordingToolbarPreferences.captureAudio(defaults: defaults))
     XCTAssertTrue(RecordingToolbarPreferences.captureMicrophone(defaults: defaults))
     XCTAssertEqual(RecordingToolbarPreferences.microphoneDeviceID(defaults: defaults), "external-mic-id")
+    XCTAssertTrue(RecordingToolbarPreferences.captureCamera(defaults: defaults))
+    XCTAssertEqual(RecordingToolbarPreferences.cameraDeviceID(defaults: defaults), "iphone-camera-id")
     XCTAssertEqual(RecordingToolbarPreferences.outputMode(defaults: defaults), .gif)
     XCTAssertFalse(RecordingToolbarPreferences.showCursor(defaults: defaults))
     XCTAssertTrue(RecordingToolbarPreferences.highlightClicks(defaults: defaults))
@@ -123,6 +132,19 @@ final class RecordingConfigurationTests: XCTestCase {
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 30), 60)
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 60), 120)
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 240), 120)
+  }
+
+  func testRecordingCameraOverlayPlacement_staysInsideSelectionAtSixteenByNine() {
+    let selectionRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+
+    let frame = RecordingCameraOverlayWindow.overlayFrame(in: selectionRect)
+
+    XCTAssertTrue(selectionRect.contains(frame))
+    XCTAssertEqual(frame.width / frame.height, RecordingCameraOverlayWindow.aspectRatio, accuracy: 0.001)
+  }
+
+  func testRecordingCameraDeviceProvider_doesNotReplaceMissingCamera() {
+    XCTAssertNil(RecordingCameraDeviceProvider.captureDevice(matching: "missing-camera-id"))
   }
 
   func testMouseHighlightConfiguration_defaults() {

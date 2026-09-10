@@ -562,6 +562,7 @@ enum RecordingState: Equatable {
 enum RecordingError: Error, LocalizedError {
   case permissionDenied
   case microphonePermissionDenied
+  case cameraPermissionDenied
   case noDisplayFound
   case setupFailed(String)
   case writeFailed(String)
@@ -572,6 +573,7 @@ enum RecordingError: Error, LocalizedError {
     switch self {
     case .permissionDenied: return L10n.Recording.screenPermissionDenied
     case .microphonePermissionDenied: return L10n.Recording.microphonePermissionDenied
+    case .cameraPermissionDenied: return L10n.Camera.recordingMessage
     case .noDisplayFound: return L10n.Recording.noDisplayFound
     case .setupFailed(let msg): return L10n.Recording.setupFailed(msg)
     case .writeFailed(let msg): return L10n.Recording.writeFailed(msg)

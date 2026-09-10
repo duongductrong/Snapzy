@@ -66,6 +66,14 @@ enum RecordingToolbarPreferences {
     RecordingMicrophoneDeviceProvider.storedDeviceID(defaults: defaults)
   }
 
+  static func captureCamera(defaults: UserDefaults = .standard) -> Bool {
+    defaults.object(forKey: PreferencesKeys.recordingCaptureCamera) as? Bool ?? false
+  }
+
+  static func cameraDeviceID(defaults: UserDefaults = .standard) -> String {
+    RecordingCameraDeviceProvider.storedDeviceID(defaults: defaults)
+  }
+
   static func outputMode(defaults: UserDefaults = .standard) -> RecordingOutputMode {
     guard let modeString = defaults.string(forKey: PreferencesKeys.recordingOutputMode),
           let mode = RecordingOutputMode(rawValue: modeString)
@@ -141,6 +149,8 @@ final class RecordingToolbarState: ObservableObject {
   @Published var captureAudio: Bool
   @Published var captureMicrophone: Bool
   @Published var microphoneDeviceID: String
+  @Published var captureCamera: Bool
+  @Published var cameraDeviceID: String
   @Published var captureMode: RecordingCaptureMode
   @Published var outputMode: RecordingOutputMode
   @Published var showCursor: Bool
@@ -157,6 +167,8 @@ final class RecordingToolbarState: ObservableObject {
     self.captureAudio = RecordingToolbarPreferences.captureAudio()
     self.captureMicrophone = RecordingToolbarPreferences.captureMicrophone()
     self.microphoneDeviceID = RecordingToolbarPreferences.microphoneDeviceID()
+    self.captureCamera = RecordingToolbarPreferences.captureCamera()
+    self.cameraDeviceID = RecordingToolbarPreferences.cameraDeviceID()
     self.captureMode = .area
     self.outputMode = RecordingToolbarPreferences.outputMode()
     self.showCursor = RecordingToolbarPreferences.showCursor()
@@ -215,6 +227,14 @@ final class RecordingToolbarWindow: NSWindow {
   var microphoneDeviceID: String {
     get { state.microphoneDeviceID }
     set { state.microphoneDeviceID = newValue }
+  }
+  var captureCamera: Bool {
+    get { state.captureCamera }
+    set { state.captureCamera = newValue }
+  }
+  var cameraDeviceID: String {
+    get { state.cameraDeviceID }
+    set { state.cameraDeviceID = newValue }
   }
   var captureMode: RecordingCaptureMode {
     get { state.captureMode }
