@@ -269,6 +269,7 @@ struct CloudSettingsView: View {
           }
           .foregroundColor(.red)
         }
+        .controlSize(.regular)
         .padding(.top, 4)
       }
     }
@@ -835,6 +836,7 @@ private struct CloudCredentialFormView: View {
           Button(action: onImport) {
             Label(L10n.CloudSettings.importEncryptedArchive, systemImage: "square.and.arrow.down")
           }
+          .controlSize(.regular)
 
           Text(L10n.CloudSettings.importEncryptedArchiveDescription)
             .font(.system(size: 11))
@@ -915,6 +917,7 @@ private struct CloudCredentialFormView: View {
                 Text(isAuthorizing ? L10n.CloudSettings.googleAuthorizing : (authorizationSuccess ? L10n.CloudSettings.googleAuthorized : L10n.CloudSettings.googleAuthorize))
               }
             }
+            .controlSize(.regular)
             .disabled(googleClientId.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || googleClientSecret.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isAuthorizing)
 
             if !googleUserEmail.isEmpty {
@@ -1175,6 +1178,8 @@ private struct CloudCredentialFormView: View {
             }
           }
         }
+        .controlSize(.regular)
+        .padding(.top, 4)
       }
     }
     .onAppear {

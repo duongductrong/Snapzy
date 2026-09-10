@@ -112,6 +112,7 @@ struct PermissionsSettingsView: View {
               Text(L10n.Onboarding.refreshStatus)
             }
           }
+          .controlSize(.regular)
           .disabled(isChecking)
         }
         .padding(.top, 4)
@@ -180,7 +181,7 @@ struct PermissionsSettingsView: View {
         openSystemSettings(settingsURL)
       }
       .buttonStyle(.bordered)
-      .controlSize(.small)
+      .controlSize(.regular)
     }
     .padding(.vertical, 4)
   }

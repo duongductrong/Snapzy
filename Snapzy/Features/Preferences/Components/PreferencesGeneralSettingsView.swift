@@ -61,7 +61,7 @@ struct GeneralSettingsView: View {
             chooseExportLocation()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       }
 
@@ -107,7 +107,7 @@ struct GeneralSettingsView: View {
             restartOnboarding()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
 
         SettingRow(
@@ -119,7 +119,7 @@ struct GeneralSettingsView: View {
             openBugReportPage()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       }
     }

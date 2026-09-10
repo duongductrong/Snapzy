@@ -163,7 +163,7 @@ struct HistorySettingsView: View {
             revealCaptureStorage()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
 
         SettingRow(
@@ -175,7 +175,7 @@ struct HistorySettingsView: View {
             clearHistoryWithConfirmation()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
           .tint(.red)
         }
       }

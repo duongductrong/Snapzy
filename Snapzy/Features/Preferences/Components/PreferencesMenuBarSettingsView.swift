@@ -53,7 +53,7 @@ struct MenuBarSettingsView: View {
             iconRefreshID = UUID()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       } footer: {
         Text(L10n.PreferencesMenuBar.itemsDescription)
@@ -106,7 +106,7 @@ struct MenuBarSettingsView: View {
               presentImportPanel()
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
 
             Button(L10n.PreferencesMenuBar.removeCustomButton) {
               iconRenderer.removeCustomIcon()
@@ -114,7 +114,7 @@ struct MenuBarSettingsView: View {
               iconRefreshID = UUID()
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
           }
           .transition(.opacity.combined(with: .move(edge: .top)))
         }

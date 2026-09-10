@@ -315,7 +315,7 @@ struct ShortcutsSettingsView: View {
               }
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
           }
           .padding(.vertical, 2)
         }
@@ -819,7 +819,7 @@ struct ShortcutsSettingsView: View {
           resetToDefaults()
         }
         .buttonStyle(.bordered)
-        .controlSize(.small)
+        .controlSize(.regular)
         .padding()
       }
     }

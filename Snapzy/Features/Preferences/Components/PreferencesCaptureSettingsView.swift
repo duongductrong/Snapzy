@@ -305,7 +305,7 @@ struct CaptureSettingsView: View {
                     NSWorkspace.shared.open(url)
                   }
                 }
-                .controlSize(.small)
+                .controlSize(.regular)
               }
               .padding(.vertical, 4)
               .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
@@ -837,7 +837,7 @@ struct CaptureSettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
       Spacer()
       Button(actionTitle, action: action)
-        .controlSize(.small)
+        .controlSize(.regular)
     }
     .padding(.vertical, 4)
   }

@@ -47,7 +47,7 @@ struct AdvancedSettingsView: View {
             importConfig()
           }
           .buttonStyle(.borderedProminent)
-          .controlSize(.small)
+          .controlSize(.regular)
           .disabled(!canUseBackupActions)
           .help(disabledBackupActionHelp)
         }
@@ -61,7 +61,7 @@ struct AdvancedSettingsView: View {
             exportConfig()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
           .disabled(!canUseBackupActions)
           .help(disabledBackupActionHelp)
         }
@@ -75,7 +75,7 @@ struct AdvancedSettingsView: View {
             requestRestoreDefaults()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
           .disabled(!canUseBackupActions)
           .help(disabledBackupActionHelp)
         }
@@ -92,7 +92,7 @@ struct AdvancedSettingsView: View {
               syncConfigNow()
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
             .disabled(!canUseBackupActions || isConfigSyncing)
             .help(disabledBackupActionHelp)
           }
@@ -105,7 +105,7 @@ struct AdvancedSettingsView: View {
             openConfigFile()
           }
           .buttonStyle(.link)
-          .controlSize(.small)
+          .controlSize(.regular)
           .disabled(!canUseBackupActions)
           .help(disabledBackupActionHelp)
         }
@@ -160,7 +160,7 @@ struct AdvancedSettingsView: View {
             revealLogFolder()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       }
     }
@@ -633,7 +633,7 @@ private struct AdvancedConfigAccessWarningRow: View {
         onGrant()
       }
       .buttonStyle(.borderedProminent)
-      .controlSize(.small)
+      .controlSize(.regular)
     }
     .padding(.vertical, 4)
     .contentShape(Rectangle())
