@@ -9,13 +9,7 @@ import XCTest
 @testable import Snapzy
 
 final class RemoteOCRServiceTests: XCTestCase {
-  private let keychain = FakeOCRKeychainStore()
   private let modelID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
-
-  override func setUp() {
-    super.setUp()
-    keychain.reset()
-  }
 
   private func makeModel(
     baseURL: String = "https://api.example.com",
@@ -40,7 +34,8 @@ final class RemoteOCRServiceTests: XCTestCase {
 
   private func makeProvider(
     model: CustomOCRModel? = nil,
-    session: MockURLSession
+    session: MockURLSession,
+    keychain: FakeOCRKeychainStore = FakeOCRKeychainStore()
   ) -> RemoteOCRProvider {
     RemoteOCRProvider(model: model ?? makeModel(), keychainStore: keychain, session: session)
   }
@@ -147,9 +142,10 @@ final class RemoteOCRServiceTests: XCTestCase {
   // MARK: - Auth header
 
   func testAuthorizationHeaderIncludedWhenKeyExists() async throws {
+    let keychain = FakeOCRKeychainStore()
     keychain.seedKey("sk-live", for: modelID)
     let session = makeSession()
-    let provider = makeProvider(session: session)
+    let provider = makeProvider(session: session, keychain: keychain)
 
     _ = try await provider.recognize(OCRRequest(image: makeImage()))
 

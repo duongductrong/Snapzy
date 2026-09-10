@@ -6,20 +6,19 @@
 //
 
 import Foundation
-import os.lock
 @testable import Snapzy
 
 final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
-  private struct State {
-    var requests: [URLRequest] = []
-  }
+  private let stateQueue = DispatchQueue(label: "com.snapzy.tests.mock-url-session")
+  private var _requests: [URLRequest] = []
+  private let responder: @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
-  private let state = OSAllocatedUnfairLock(initialState: State())
-  private let responder: (URLRequest) async throws -> (Data, URLResponse)
-
-  init(responder: @escaping (URLRequest) async throws -> (Data, URLResponse) = { _ in throw URLError(.unsupportedURL) }) {
+  init(responder: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = { _ in throw URLError(.unsupportedURL) }) {
     self.responder = responder
   }
+
+  // Work around the Xcode 26.2 XCTest/MainActor deallocation bug.
+  nonisolated deinit {}
 
   func data(for request: URLRequest) async throws -> (Data, URLResponse) {
     record(request)
@@ -27,11 +26,11 @@ final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
   }
 
   private func record(_ request: URLRequest) {
-    state.withLock { $0.requests.append(request) }
+    stateQueue.sync { _requests.append(request) }
   }
 
   var requests: [URLRequest] {
-    state.withLock { $0.requests }
+    stateQueue.sync { _requests }
   }
 
   static func makeResponse(
