@@ -15,6 +15,7 @@ Flow-first entrypoint for humans and agents working in Snapzy. Docs are separate
 | Doc | Covers |
 | --- | --- |
 | [`APP_LIFECYCLE.md`](APP_LIFECYCLE.md) | Launch sequence, onboarding, menu bar, app identity, theme, migrations, entitlements |
+| [`LIQUID_GLASS.md`](LIQUID_GLASS.md) | Liquid Glass architecture, 4-layer composite model, buttons, segments, and custom views |
 | [`PREFERENCES.md`](PREFERENCES.md) | Settings tabs reference, after-capture matrix, preferences storage pattern |
 | [`SHORTCUTS.md`](SHORTCUTS.md) | Global/overlay/annotate shortcuts, conflict detection, `snapzy://` URL scheme |
 | [`UPDATES.md`](UPDATES.md) | Sparkle updates and channels, diagnostics logging, problem reporting |

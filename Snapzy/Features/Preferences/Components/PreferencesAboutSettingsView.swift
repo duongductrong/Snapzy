@@ -161,10 +161,13 @@ struct AboutSettingsView: View {
         Button(action: {
           updater.checkForUpdates()
         }) {
-          Text(L10n.PreferencesAbout.checkForUpdates)
+          HStack(spacing: 5) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+              .font(.system(size: 11, weight: .semibold))
+            Text(L10n.PreferencesAbout.checkForUpdates)
+          }
         }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
+        .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
         .help(updater.lastUpdateCheckDate
           .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
           L10n.PreferencesAbout.checkForUpdates)
