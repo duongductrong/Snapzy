@@ -4,6 +4,17 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.11] - 2026-09-11
+
+### Features
+-  Added pin action and shortcut to history floating panel (#552) (d860e7f6)
+-  Added camera overlay to screen recordings (#560) (41222250)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @mukhtharcm
+
 ## [1.32.0-beta.10] - 2026-09-10
 
 ### Features
