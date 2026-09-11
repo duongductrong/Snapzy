@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.0-beta.12] - 2026-09-11
+
+### Bug Fixes
+-  Fixed recording-session shortcut gating timing bug (#517) (b48ee9ce)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.32.0-beta.11] - 2026-09-11
 
 ### Features
