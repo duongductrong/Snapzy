@@ -163,10 +163,15 @@ struct AnnotateQuickPropertiesBar: View {
 
   @ViewBuilder
   private func barContent(density: QuickPropertiesDensity) -> some View {
+    // One effect container per bar, applied inside `ViewThatFits` so only the variant that is
+    // actually laid out gets one: the row's glass is evaluated in a single pass rather than once
+    // per control, and neighbours merge when they light up together.
     if state.showsQuickPropertiesBar {
       activePropertiesContent(density: density)
+        .liquidGlassGroup(spacing: Spacing.xs)
     } else {
       idlePropertiesContent(density: density)
+        .liquidGlassGroup(spacing: Spacing.xs)
     }
   }
 
@@ -631,19 +636,9 @@ private struct QuickToolPicker: View {
         } label: {
           Image(systemName: tool.icon)
             .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
+            .foregroundColor(selectedTool == tool ? .primary : .secondary)
             .frame(width: buttonWidth, height: 26)
-            .background(
-              RoundedRectangle(cornerRadius: 7)
-                .fill(selectedTool == tool ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-            )
-            .overlay(
-              RoundedRectangle(cornerRadius: 7)
-                .stroke(
-                  selectedTool == tool ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                  lineWidth: 1
-                )
-            )
+            .liquidGlassControl(isActive: selectedTool == tool)
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -683,14 +678,7 @@ private struct QuickPropertiesColorPopoverControl: View {
               .foregroundColor(.secondary)
           }
           .frame(width: 42, height: 26)
-          .background(
-            RoundedRectangle(cornerRadius: 7)
-              .fill(SidebarColors.itemDefault)
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: 7)
-              .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
-          )
+          .liquidGlassControl(isActive: false)
         }
         .buttonStyle(.plain)
         .help(title)
@@ -1472,16 +1460,9 @@ private struct QuickTextPresentationControl: View {
           } label: {
             Image(systemName: presentation.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedPresentation == presentation ? .accentColor : .secondary)
+              .foregroundColor(selectedPresentation == presentation ? .primary : .secondary)
               .frame(width: buttonWidth, height: 24)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(selectedPresentation == presentation ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                  .stroke(selectedPresentation == presentation ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14), lineWidth: 1)
-              )
+              .liquidGlassControl(isActive: selectedPresentation == presentation)
           }
           .buttonStyle(.plain)
           .help(presentation.helpText)
@@ -1505,16 +1486,9 @@ private struct QuickTextSnapControl: View {
       } label: {
         Image(systemName: CropToolbarSymbols.snapToEdges)
           .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(isEnabled ? .accentColor : .secondary)
+          .foregroundColor(isEnabled ? .primary : .secondary)
           .frame(width: buttonWidth, height: 24)
-          .background(
-            RoundedRectangle(cornerRadius: 7)
-              .fill(isEnabled ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: 7)
-              .stroke(isEnabled ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14), lineWidth: 1)
-          )
+          .liquidGlassControl(isActive: isEnabled)
       }
       .buttonStyle(.plain)
       .help(L10n.AnnotateUI.highlighterTextSnappingDescription)
@@ -1537,14 +1511,7 @@ private struct QuickWatermarkTextControl: View {
         .lineLimit(1)
         .padding(.horizontal, 8)
         .frame(height: 24)
-        .background(
-          RoundedRectangle(cornerRadius: 7)
-            .fill(SidebarColors.itemDefault)
-        )
-        .overlay(
-          RoundedRectangle(cornerRadius: 7)
-            .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
-        )
+        .liquidGlassControl(isActive: false)
     }
   }
 }
@@ -1563,19 +1530,9 @@ private struct QuickWatermarkStyleControl: View {
           } label: {
             Image(systemName: style.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+              .foregroundColor(selectedStyle == style ? .primary : .secondary)
               .frame(width: buttonWidth, height: 24)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                  .stroke(
-                    selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                    lineWidth: 1
-                  )
-              )
+              .liquidGlassControl(isActive: selectedStyle == style)
           }
           .buttonStyle(.plain)
           .help(style.displayName)
@@ -1707,19 +1664,9 @@ private struct QuickBlurTypeControl: View {
           } label: {
             Image(systemName: blurType.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedType == blurType ? .accentColor : .secondary)
+              .foregroundColor(selectedType == blurType ? .primary : .secondary)
               .frame(width: buttonWidth, height: 24)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(selectedType == blurType ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                  .stroke(
-                    selectedType == blurType ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                    lineWidth: 1
-                  )
-              )
+              .liquidGlassControl(isActive: selectedType == blurType)
           }
           .buttonStyle(.plain)
           .help(blurType.displayName)
@@ -1743,14 +1690,7 @@ private struct QuickAutoRedactControl: View {
           .font(.system(size: 12, weight: .semibold))
           .foregroundColor(state.isSensitiveRedactionScanning ? .accentColor : .secondary)
           .frame(width: buttonWidth, height: 24)
-          .background(
-            RoundedRectangle(cornerRadius: 7)
-              .fill(SidebarColors.itemDefault)
-          )
-          .overlay(
-            RoundedRectangle(cornerRadius: 7)
-              .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
-          )
+          .liquidGlassControl(isActive: false)
       }
       .buttonStyle(.plain)
       .disabled(!state.hasImage || state.isSensitiveRedactionScanning || state.editorMode != .annotate || state.isCropInteractionActive)
@@ -1785,19 +1725,9 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: style.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+                .foregroundColor(selectedStyle == style ? .primary : .secondary)
                 .frame(width: buttonWidth, height: 24)
-                .background(
-                  RoundedRectangle(cornerRadius: 7)
-                    .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-                )
-                .overlay(
-                  RoundedRectangle(cornerRadius: 7)
-                    .stroke(
-                      selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                      lineWidth: 1
-                    )
-                )
+                .liquidGlassControl(isActive: selectedStyle == style)
             }
             .buttonStyle(.plain)
             .help(style.displayName)
@@ -1814,19 +1744,9 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: bendDirection.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(bendDirection == .alternate ? .accentColor : .secondary)
+                .foregroundColor(bendDirection == .alternate ? .primary : .secondary)
                 .frame(width: buttonWidth, height: 24)
-                .background(
-                  RoundedRectangle(cornerRadius: 7)
-                    .fill(bendDirection == .alternate ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-                )
-                .overlay(
-                  RoundedRectangle(cornerRadius: 7)
-                    .stroke(
-                      bendDirection == .alternate ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                      lineWidth: 1
-                    )
-                )
+                .liquidGlassControl(isActive: bendDirection == .alternate)
             }
             .buttonStyle(.plain)
             .help("\(L10n.AnnotateUI.flipArrowBend): \(bendDirection.displayName)")
@@ -1848,19 +1768,9 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: type.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(selectedType == type ? .accentColor : .secondary)
+                .foregroundColor(selectedType == type ? .primary : .secondary)
                 .frame(width: buttonWidth, height: 24)
-                .background(
-                  RoundedRectangle(cornerRadius: 7)
-                    .fill(selectedType == type ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-                )
-                .overlay(
-                  RoundedRectangle(cornerRadius: 7)
-                    .stroke(
-                      selectedType == type ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                      lineWidth: 1
-                    )
-                )
+                .liquidGlassControl(isActive: selectedType == type)
             }
             .buttonStyle(.plain)
             .help(type.displayName)
@@ -1889,19 +1799,9 @@ private struct QuickArrowStyleControl: View {
           } label: {
             Image(systemName: head.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selection.wrappedValue == head ? .accentColor : .secondary)
+              .foregroundColor(selection.wrappedValue == head ? .primary : .secondary)
               .frame(width: buttonWidth, height: 24)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(selection.wrappedValue == head ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                  .stroke(
-                    selection.wrappedValue == head ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                    lineWidth: 1
-                  )
-              )
+              .liquidGlassControl(isActive: selection.wrappedValue == head)
           }
           .buttonStyle(.plain)
           .help(head.displayName)
@@ -1924,19 +1824,9 @@ private struct QuickLineStyleControl: View {
             selectedStyle = style
           } label: {
             LineStyleIcon(style: style)
-              .foregroundColor(selectedStyle == style ? .accentColor : .secondary)
+              .foregroundColor(selectedStyle == style ? .primary : .secondary)
               .frame(width: buttonWidth, height: 24)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(selectedStyle == style ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-              )
-              .overlay(
-                RoundedRectangle(cornerRadius: 7)
-                  .stroke(
-                    selectedStyle == style ? Color.accentColor.opacity(0.45) : Color.secondary.opacity(0.14),
-                    lineWidth: 1
-                  )
-              )
+              .liquidGlassControl(isActive: selectedStyle == style)
           }
           .buttonStyle(.plain)
           .help(style.displayName)

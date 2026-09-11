@@ -38,7 +38,7 @@ struct AnnotateToolbarView: View {
       ToolbarDivider()
 
       if state.isCombineMode {
-        ToolbarButton(icon: "photo.badge.plus", isSelected: false) {
+        ToolbarButton(treatment: .glass, icon: "photo.badge.plus", isSelected: false) {
           guard let window = NSApp.keyWindow else { return }
           NotificationCenter.default.post(name: .annotateAddImage, object: window)
         }
@@ -51,6 +51,7 @@ struct AnnotateToolbarView: View {
 
       registeredActionButtons
     }
+    .liquidGlassGroup(spacing: Spacing.xs)
     .windowTrafficLightsInset()
     .windowToolbarPadding()
     .animation(.easeInOut(duration: 0.16), value: activeActionRegistration)
@@ -72,6 +73,7 @@ struct AnnotateToolbarView: View {
   private var captureToolsGroup: some View {
     HStack(spacing: 4) {
       ToolbarButton(
+        treatment: .glass,
         icon: "crop",
         isSelected: state.selectedTool == .crop
       ) {
@@ -80,6 +82,7 @@ struct AnnotateToolbarView: View {
       .help(L10n.AnnotateUI.crop)
 
       ToolbarButton(
+        treatment: .glass,
         icon: "rectangle.on.rectangle",
         isSelected: state.showSidebar,
         highlightColor: .blue
@@ -96,14 +99,14 @@ struct AnnotateToolbarView: View {
 
   private var rotateButtonsGroup: some View {
     HStack(spacing: 4) {
-      ToolbarButton(icon: "rotate.left", isSelected: false) {
+      ToolbarButton(treatment: .glass, icon: "rotate.left", isSelected: false) {
         state.rotateImage(clockwise: false)
       }
       .help(L10n.AnnotateUI.rotateLeft)
       .disabled(!state.canRotateImage)
       .opacity(state.canRotateImage ? 1 : 0.4)
 
-      ToolbarButton(icon: "rotate.right", isSelected: false) {
+      ToolbarButton(treatment: .glass, icon: "rotate.right", isSelected: false) {
         state.rotateImage(clockwise: true)
       }
       .help(L10n.AnnotateUI.rotateRight)
@@ -131,6 +134,7 @@ struct AnnotateToolbarView: View {
 
   private var backgroundCutoutButton: some View {
     ToolbarButton(
+      treatment: .glass,
       icon: state.isCutoutProcessing ? "hourglass" : "wand.and.stars",
       isSelected: state.isCutoutApplied,
       highlightColor: .blue
@@ -153,6 +157,7 @@ struct AnnotateToolbarView: View {
   @ViewBuilder
   private func annotationToolButton(for tool: AnnotationToolType) -> some View {
     ToolbarButton(
+      treatment: .glass,
       icon: tool.icon,
       isSelected: state.selectedTool == tool
     ) {
@@ -165,14 +170,14 @@ struct AnnotateToolbarView: View {
 
   private var undoRedoGroup: some View {
     HStack(spacing: 4) {
-      ToolbarButton(icon: "arrow.uturn.backward", isSelected: false) {
+      ToolbarButton(treatment: .glass, icon: "arrow.uturn.backward", isSelected: false) {
         state.undo()
       }
       .help(L10n.Common.undo)
       .disabled(!state.canUndo)
       .opacity(state.canUndo ? 1 : 0.4)
 
-      ToolbarButton(icon: "arrow.uturn.forward", isSelected: false) {
+      ToolbarButton(treatment: .glass, icon: "arrow.uturn.forward", isSelected: false) {
         state.redo()
       }
       .help(L10n.Common.redo)
@@ -194,10 +199,10 @@ struct AnnotateToolbarView: View {
     switch activeActionRegistration {
     case .annotateDefault:
       annotateActionButtons
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .transition(.move(edge: .trailing))
     case .crop:
       cropActionButtons
-        .transition(.opacity.combined(with: .move(edge: .trailing)))
+        .transition(.move(edge: .trailing))
     }
   }
 
@@ -206,13 +211,12 @@ struct AnnotateToolbarView: View {
       Button(L10n.Common.saveAs) {
         saveAs()
       }
-      .buttonStyle(.bordered)
+      .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
 
       Button(L10n.Common.done) {
         done()
       }
-      .buttonStyle(.borderedProminent)
-      .tint(.blue)
+      .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
     }
   }
 
@@ -221,19 +225,18 @@ struct AnnotateToolbarView: View {
       Button("\(L10n.Common.restore) \(L10n.Common.original)") {
         state.revertCropToOriginalBounds()
       }
-      .buttonStyle(.bordered)
+      .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
       .help("\(L10n.Common.restore) \(L10n.Common.original)")
 
       Button(L10n.Common.cancel) {
         state.cancelCrop()
       }
-      .buttonStyle(.bordered)
+      .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
 
       Button(L10n.Common.apply) {
         state.confirmCropInteraction()
       }
-      .buttonStyle(.borderedProminent)
-      .tint(.blue)
+      .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
     }
   }
 
