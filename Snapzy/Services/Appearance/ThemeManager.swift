@@ -10,28 +10,33 @@ import Combine
 import SwiftUI
 
 enum WindowSurfacePalette {
-  static let lightBase = NSColor(white: 0.95, alpha: 1)
-  static let darkBase = NSColor(white: 0.12, alpha: 1)
+  static var lightBase: NSColor {
+    var color = NSColor.windowBackgroundColor
+    NSAppearance(named: .aqua)?.performAsCurrentDrawingAppearance {
+      color = NSColor.windowBackgroundColor.usingColorSpace(.sRGB) ?? NSColor.windowBackgroundColor
+    }
+    return color
+  }
+
+  static var darkBase: NSColor {
+    var color = NSColor.windowBackgroundColor
+    NSAppearance(named: .darkAqua)?.performAsCurrentDrawingAppearance {
+      color = NSColor.windowBackgroundColor.usingColorSpace(.sRGB) ?? NSColor.windowBackgroundColor
+    }
+    return color
+  }
 
   @MainActor
   static func backgroundColor(for appearanceMode: AppearanceMode) -> NSColor {
-    switch appearanceMode {
-    case .light:
-      return lightBase
-    case .dark:
-      return darkBase
-    case .system:
-      return NSColor.windowBackgroundColor
-    }
+    NSColor.windowBackgroundColor
   }
 
   static func backgroundColor(for appearance: NSAppearance) -> NSColor {
-    switch appearance.bestMatch(from: [.darkAqua, .aqua]) {
-    case .darkAqua:
-      return darkBase
-    default:
-      return lightBase
+    var resolvedColor = NSColor.windowBackgroundColor
+    appearance.performAsCurrentDrawingAppearance {
+      resolvedColor = NSColor.windowBackgroundColor.usingColorSpace(.sRGB) ?? NSColor.windowBackgroundColor
     }
+    return resolvedColor
   }
 }
 
@@ -46,6 +51,7 @@ final class ThemeManager: ObservableObject {
   var preferredAppearance: AppearanceMode = .system {
     didSet {
       updateSystemAppearance()
+      objectWillChange.send()
     }
   }
 

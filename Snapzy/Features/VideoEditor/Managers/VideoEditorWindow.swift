@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 
 // MARK: - Notifications
 
@@ -17,6 +18,7 @@ extension Notification.Name {
 class VideoEditorWindow: NSWindow {
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private var restingLevel: NSWindow.Level = .normal
+  private var themeObserver: AnyCancellable?
 
   init(contentRect: NSRect) {
     super.init(
@@ -36,6 +38,7 @@ class VideoEditorWindow: NSWindow {
 
   private func configure() {
     applyTheme()
+    setupThemeObserver()
 
     // Enable full-size content view
     styleMask.insert(.fullSizeContentView)
@@ -53,6 +56,14 @@ class VideoEditorWindow: NSWindow {
     collectionBehavior = [.managed, .participatesInCycle]
 
     applyCornerRadius()
+  }
+
+  private func setupThemeObserver() {
+    themeObserver = ThemeManager.shared.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.applyTheme()
+      }
   }
 
   func applyActiveEditorLevel() {
