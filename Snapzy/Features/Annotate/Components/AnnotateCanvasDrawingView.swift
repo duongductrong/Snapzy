@@ -201,6 +201,7 @@ enum ResizeHandle: Equatable {
   case topLeft, topRight, bottomLeft, bottomRight
   case top, bottom, left, right
   case lineStart, lineEnd
+  case arrowControl
   case textCalloutTail
 }
 
@@ -299,6 +300,7 @@ final class DrawingCanvasNSView: NSView {
   private var gestureLastResizeBounds: CGRect?
   private var gestureLastPoint: CGPoint?
   private var gestureDidMutate = false
+  private var gestureUndoCheckpointed = false
 
   // Layered canvas composition: stacked child views let CoreAnimation composite
   // unchanged content straight from their backing stores (a layer-backed view
@@ -687,13 +689,21 @@ final class DrawingCanvasNSView: NSView {
       return handles
 
     case .arrow(let geometry):
-      // Figma-style endpoint editing: two draggable endpoints instead of a bounding box.
+      // Curved arrows expose their Bezier control point before the endpoints so
+      // it remains reachable even when a user places it close to an endpoint.
       let startPoint = coordinateSpace == .canvas ? imageToDisplay(geometry.start) : geometry.start
       let endPoint = coordinateSpace == .canvas ? imageToDisplay(geometry.end) : geometry.end
-      return [
+      var handles: [(ResizeHandle, CGRect)] = []
+      if geometry.style != .straight,
+         let controlPoint = geometry.resolvedControlPoint {
+        let point = coordinateSpace == .canvas ? imageToDisplay(controlPoint) : controlPoint
+        handles.append((.arrowControl, handleRect(at: point, in: coordinateSpace)))
+      }
+      handles.append(contentsOf: [
         (.lineStart, handleRect(at: startPoint, in: coordinateSpace)),
         (.lineEnd, handleRect(at: endPoint, in: coordinateSpace)),
-      ]
+      ])
+      return handles
 
     default:
       let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
@@ -844,6 +854,7 @@ final class DrawingCanvasNSView: NSView {
         gestureLastResizeBounds = nil
         gestureLastPoint = nil
         gestureDidMutate = false
+        gestureUndoCheckpointed = false
         // Re-render static layers once so the resized item is excluded from
         // their backing stores before the live (dragged) layer takes over —
         // otherwise the pre-gesture bitmap lingers and ghosts during resize.
@@ -958,6 +969,7 @@ final class DrawingCanvasNSView: NSView {
     gestureLastResizeBounds = nil
     gestureLastPoint = nil
     gestureDidMutate = false
+    gestureUndoCheckpointed = false
     NSCursor.closedHand.set()
     invalidateDrawing()
   }
@@ -1069,7 +1081,6 @@ final class DrawingCanvasNSView: NSView {
           size: originalBounds.size
         )
         gestureLocalItems[id] = original.applyingResizeBounds(newBounds)
-        gestureDidMutate = true
       }
 
       // Combine free-canvas snapping resolves against the gesture-local copy
@@ -1092,6 +1103,11 @@ final class DrawingCanvasNSView: NSView {
         ) {
           gestureLocalItems[draggedID] = dragged.applyingResizeBounds(snapped)
         }
+      }
+      for id in activeIds {
+        guard let original = gestureOriginalItems[id],
+              let updated = gestureLocalItems[id] else { continue }
+        noteGestureMutation(original: original, updated: updated)
       }
       invalidateLiveLayers()
       return
@@ -1184,7 +1200,6 @@ final class DrawingCanvasNSView: NSView {
   private func applyGestureResize(handle: ResizeHandle, resizeId: UUID, imagePoint: CGPoint, event: NSEvent) {
     guard let original = gestureOriginalItems[resizeId] else { return }
     gestureLastPoint = imagePoint
-    gestureDidMutate = true
 
     switch handle {
     case .lineStart, .lineEnd:
@@ -1192,13 +1207,9 @@ final class DrawingCanvasNSView: NSView {
       let isStart = handle == .lineStart
       switch item.type {
       case .arrow(let geometry):
-        let updated = ArrowGeometry(
+        let updated = geometry.withEndpoints(
           start: isStart ? imagePoint : geometry.start,
-          end: isStart ? geometry.end : imagePoint,
-          style: geometry.style,
-          arrowType: geometry.arrowType,
-          startHead: geometry.startHead,
-          endHead: geometry.endHead
+          end: isStart ? geometry.end : imagePoint
         )
         item.type = .arrow(updated)
         item.bounds = updated.bounds()
@@ -1216,6 +1227,17 @@ final class DrawingCanvasNSView: NSView {
         return
       }
       gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
+
+    case .arrowControl:
+      var item = original
+      guard case .arrow(let geometry) = item.type,
+            geometry.style != .straight else { return }
+      let updated = geometry.withControlPoint(imagePoint)
+      item.type = .arrow(updated)
+      item.bounds = updated.bounds()
+      gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
 
     case .textCalloutTail:
       var item = original
@@ -1227,6 +1249,7 @@ final class DrawingCanvasNSView: NSView {
         fontSize: item.properties.fontSize
       )
       gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
 
     default:
       let isEmbeddedImage: Bool = {
@@ -1241,8 +1264,21 @@ final class DrawingCanvasNSView: NSView {
         proportional: proportional
       )
       gestureLastResizeBounds = newBounds
-      gestureLocalItems[resizeId] = original.applyingResizeBounds(newBounds)
+      let updated = original.applyingResizeBounds(newBounds)
+      gestureLocalItems[resizeId] = updated
+      noteGestureMutation(original: original, updated: updated)
     }
+  }
+
+  private func noteGestureMutation(original: AnnotationItem, updated: AnnotationItem) {
+    guard original.type != updated.type
+      || original.bounds != updated.bounds
+      || original.properties != updated.properties else { return }
+    if !gestureUndoCheckpointed {
+      state.saveState()
+      gestureUndoCheckpointed = true
+    }
+    gestureDidMutate = true
   }
 
   override func mouseUp(with event: NSEvent) {
@@ -1263,7 +1299,7 @@ final class DrawingCanvasNSView: NSView {
       // Commit the gesture-local result synchronously so the very next draw
       // shows the new geometry — a deferred Task would paint one stale frame
       // at the old bounds first (visible as old/new flicker on drop).
-      if let resizeId = resizingAnnotationId, let handle = activeResizeHandle {
+      if gestureDidMutate, let resizeId = resizingAnnotationId, let handle = activeResizeHandle {
         let isArrow: Bool = {
           guard let item = gestureLocalItems[resizeId] ?? gestureOriginalItems[resizeId] else { return false }
           if case .arrow = item.type { return true }
@@ -1286,6 +1322,10 @@ final class DrawingCanvasNSView: NSView {
               state.updateLineEndpoint(id: resizeId, end: lastPoint)
             }
           }
+        case .arrowControl:
+          if let lastPoint = gestureLastPoint {
+            state.updateArrowControlPoint(id: resizeId, controlPoint: lastPoint)
+          }
         case .textCalloutTail:
           if let lastPoint = gestureLastPoint {
             state.updateTextCalloutTail(id: resizeId, target: lastPoint)
@@ -1296,7 +1336,6 @@ final class DrawingCanvasNSView: NSView {
           }
         }
       }
-      state.saveState()
       isResizingAnnotation = false
       resizingAnnotationId = nil
       activeResizeHandle = nil
@@ -1345,7 +1384,6 @@ final class DrawingCanvasNSView: NSView {
           state.updateAnnotationBounds(id: id, bounds: local.resizeBounds)
         }
       }
-      state.saveState()
       isDraggingAnnotation = false
       draggingAnnotationId = nil
       draggingAnnotationIds = []
@@ -1514,6 +1552,7 @@ final class DrawingCanvasNSView: NSView {
     gestureLastResizeBounds = nil
     gestureLastPoint = nil
     gestureDidMutate = false
+    gestureUndoCheckpointed = false
   }
 
   @MainActor
@@ -1892,7 +1931,28 @@ final class DrawingCanvasNSView: NSView {
     }
 
     guard showsHandles else { return }
+    if case .arrow(let geometry) = annotation.type,
+       geometry.style != .straight {
+      drawArrowControlGuides(for: geometry, in: context)
+    }
     drawResizeHandles(for: annotation, in: context)
+  }
+
+  private func drawArrowControlGuides(for geometry: ArrowGeometry, in context: CGContext) {
+    guard let controlPoint = geometry.resolvedControlPoint else { return }
+
+    let dashLength = selectionChromeMetrics.imageLength(forScreenPoints: 4)
+    context.saveGState()
+    context.setStrokeColor(NSColor.systemBlue.withAlphaComponent(0.4).cgColor)
+    context.setLineWidth(selectionChromeMetrics.imageLength(forScreenPoints: 1))
+    context.setLineDash(phase: 0, lengths: [dashLength, dashLength])
+    context.beginPath()
+    context.move(to: geometry.start)
+    context.addLine(to: controlPoint)
+    context.move(to: geometry.end)
+    context.addLine(to: controlPoint)
+    context.strokePath()
+    context.restoreGState()
   }
 
   private func drawSelectionBounds(_ bounds: CGRect, in context: CGContext) {
@@ -1960,8 +2020,8 @@ final class DrawingCanvasNSView: NSView {
 
     for (handle, rect) in resizeHandleRects(for: annotation, in: .image) {
       switch handle {
-      case .lineStart, .lineEnd:
-        // Circular endpoint grips for line/arrow endpoint editing.
+      case .lineStart, .lineEnd, .arrowControl:
+        // Circular grips for line/arrow endpoint and Bezier control editing.
         context.fillEllipse(in: rect)
         context.strokeEllipse(in: rect)
       default:
@@ -2069,7 +2129,7 @@ final class DrawingCanvasNSView: NSView {
 
   private func setCursorForHandle(_ handle: ResizeHandle) {
     switch handle {
-    case .topLeft, .bottomRight, .lineStart, .lineEnd, .textCalloutTail:
+    case .topLeft, .bottomRight, .lineStart, .lineEnd, .arrowControl, .textCalloutTail:
       NSCursor.crosshair.set()
     case .topRight, .bottomLeft:
       NSCursor.crosshair.set()

@@ -1154,6 +1154,90 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   @MainActor
+  func testCanvasCurvedArrowControlHandleUpdatesCurveWithoutMovingEndpoints() throws {
+    let state = makeAnnotateState()
+    state.loadImage(NSImage(size: CGSize(width: 400, height: 300)))
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 80, y: 100),
+      end: CGPoint(x: 280, y: 100),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 180, y: 180)
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(geometry),
+      bounds: geometry.bounds(),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [arrow]
+    state.selectedAnnotationId = arrow.id
+    state.selectedTool = .selection
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 180, y: 180)))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: CGPoint(x: 180, y: 240)))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 180, y: 240)))
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    guard case .arrow(let updatedGeometry) = updated.type else {
+      return XCTFail("Expected arrow annotation")
+    }
+    XCTAssertEqual(updatedGeometry.start, geometry.start)
+    XCTAssertEqual(updatedGeometry.end, geometry.end)
+    XCTAssertEqual(updatedGeometry.resolvedControlPoint, CGPoint(x: 180, y: 240))
+    XCTAssertEqual(updatedGeometry.style, .curvedLeft)
+
+    XCTAssertTrue(state.canUndo)
+    state.undo()
+    let undone = try XCTUnwrap(state.annotations.first)
+    guard case .arrow(let undoneGeometry) = undone.type else {
+      return XCTFail("Expected arrow annotation after undo")
+    }
+    XCTAssertEqual(undoneGeometry.start, geometry.start)
+    XCTAssertEqual(undoneGeometry.end, geometry.end)
+    XCTAssertEqual(undoneGeometry.resolvedControlPoint, geometry.resolvedControlPoint)
+    XCTAssertFalse(state.canUndo)
+  }
+
+  @MainActor
+  func testCanvasCurvedArrowControlHandleClampsToActiveCanvasBounds() throws {
+    let state = makeAnnotateState()
+    state.loadImage(NSImage(size: CGSize(width: 400, height: 300)))
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 80, y: 100),
+      end: CGPoint(x: 280, y: 100),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 180, y: 180)
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(geometry),
+      bounds: geometry.bounds(),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [arrow]
+    state.selectedAnnotationId = arrow.id
+    state.selectedTool = .selection
+
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(x: 0, y: 0, width: 400, height: 300)
+    canvas.displayScale = 1
+    canvas.canvasBounds = CGRect(x: 0, y: 0, width: 400, height: 300)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 180, y: 180)))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: CGPoint(x: 500, y: 500)))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 500, y: 500)))
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    guard case .arrow(let updatedGeometry) = updated.type else {
+      return XCTFail("Expected arrow annotation")
+    }
+    XCTAssertEqual(updatedGeometry.resolvedControlPoint, CGPoint(x: 400, y: 300))
+  }
+
+  @MainActor
   func testCanvasTinyFitScaleDoesNotTreatFarCanvasPointAsResizeHandle() {
     let state = makeAnnotateState()
     state.loadImage(NSImage(size: CGSize(width: 4_000, height: 4_000)))
