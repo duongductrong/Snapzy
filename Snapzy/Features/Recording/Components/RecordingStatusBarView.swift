@@ -132,6 +132,7 @@ struct RecordingStatusBarView: View {
     .coordinateSpace(name: "statusBar")
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
+    .liquidGlassGroup(spacing: ToolbarConstants.itemSpacing)
     .background {
       // Hidden entirely (not just faded) when no mic audio is captured so the
       // TimelineView animation stops too.

@@ -63,6 +63,9 @@ struct RecordingToolbarView: View {
     }
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
+    // One effect container for the whole bar: glass is evaluated once, and adjacent lit controls
+    // merge optically on macOS 26+.
+    .liquidGlassGroup(spacing: ToolbarConstants.itemSpacing)
     .accessibilityElement(children: .contain)
     .accessibilityLabel(L10n.RecordingToolbar.toolbarAccessibility)
   }

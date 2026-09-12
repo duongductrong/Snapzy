@@ -22,6 +22,11 @@ enum ToolbarConstants {
   static let verticalPadding: CGFloat = 6
   static let hoverAnimation: Animation = .easeInOut(duration: 0.15)
   static let pressAnimation: Animation = .easeInOut(duration: 0.1)
+
+  /// Shared hit/glass shape for every toolbar control, so chrome and hit target never drift.
+  static var buttonShape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: buttonCornerRadius, style: .continuous)
+  }
 }
 
 // MARK: - Native Toolbar Button Style (for icon buttons)
@@ -47,12 +52,12 @@ struct RecordButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.buttonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
@@ -65,12 +70,12 @@ struct OptionsButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.buttonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
@@ -98,12 +103,8 @@ struct ToolbarIconButtonLabel: View {
         width: ToolbarConstants.iconButtonSize,
         height: ToolbarConstants.iconButtonSize
       )
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(isHovered ? 0.1 : 0))
-      )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.hoverAnimation, value: isHovered)
+      .liquidGlassChrome(shape: ToolbarConstants.buttonShape, isVisible: isHovered)
+      .animation(LiquidGlassTokens.hoverSpring, value: isHovered)
   }
 }
 
@@ -116,12 +117,12 @@ struct StopButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.buttonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 

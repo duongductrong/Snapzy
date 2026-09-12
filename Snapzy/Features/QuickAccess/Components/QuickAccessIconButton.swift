@@ -22,7 +22,7 @@ struct QuickAccessIconButton: View {
     Button(action: {
       guard isEnabled else { return }
       // Immediate visual feedback before action
-      withAnimation(.easeOut(duration: 0.05)) {
+      withAnimation(LiquidGlassTokens.pressSpring) {
         isPressed = true
       }
       // Execute action immediately
@@ -34,12 +34,19 @@ struct QuickAccessIconButton: View {
     }) {
       Image(systemName: icon)
         .font(.system(size: 10, weight: .bold))
-        .foregroundColor(.white.opacity(isEnabled ? 1 : 0.7))
+        .foregroundColor(LiquidGlassTokens.inkOverlay.opacity(isEnabled ? 1 : 0.55))
         .frame(width: 20, height: 20)
-        .background(
-          Circle()
-            .fill(buttonBackgroundColor)
+        // These buttons are the only affordance on the card, so the surface stays lit at rest
+        // rather than materialising on hover. `.overlay` emphasis pins the glass dark so the
+        // glyph stays legible whether the capture underneath is a white page or a black terminal.
+        .liquidGlassChrome(
+          shape: Circle(),
+          isVisible: true,
+          isActive: isEnabled && (isPressed || isHovering),
+          emphasis: .overlay
         )
+        // Rule 2: scale folds into a transform, so it never detaches the backdrop the way an
+        // animated `.opacity` would.
         .scaleEffect(isPressed ? 0.85 : 1.0)
     }
     .buttonStyle(.plain)
@@ -49,7 +56,7 @@ struct QuickAccessIconButton: View {
         NSCursor.arrow.set()
         return
       }
-      withAnimation(.easeInOut(duration: 0.1)) {
+      withAnimation(LiquidGlassTokens.hoverSpring) {
         isHovering = hovering
       }
       if hovering {
@@ -63,15 +70,4 @@ struct QuickAccessIconButton: View {
     }
   }
 
-  private var buttonBackgroundColor: Color {
-    if !isEnabled {
-      return Color.black.opacity(0.4)
-    } else if isPressed {
-      return Color.white.opacity(0.5)
-    } else if isHovering {
-      return Color.white.opacity(0.35)
-    } else {
-      return Color.black.opacity(0.6)
-    }
-  }
 }

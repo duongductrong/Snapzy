@@ -27,13 +27,14 @@ struct ToolbarOutputModeDropdown: View {
     }
     .buttonStyle(.plain)
     .onHover { hovering in
-      withAnimation(ToolbarConstants.hoverAnimation) {
+      withAnimation(LiquidGlassTokens.hoverSpring) {
         isHovered = hovering
       }
     }
-    .background(
-      RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-        .fill(Color.primary.opacity(isHovered || showPopover ? 0.1 : 0))
+    .liquidGlassChrome(
+      shape: ToolbarConstants.buttonShape,
+      isVisible: isHovered || showPopover,
+      isActive: showPopover
     )
     .popover(isPresented: $showPopover, arrowEdge: .bottom) {
       OutputModePopoverContent(state: state)
@@ -72,23 +73,23 @@ struct RecordButtonWithBadge: View {
               .fill(badgeBackgroundColor)
           )
       }
-      .foregroundColor(.primary)
+      // Preparing-to-record dimming is applied to the label, not around the glass surface:
+      // an `.opacity()` wrapper would detach the backdrop (Rule 2).
+      .foregroundColor(.primary.opacity(state.isPreparingToRecord ? 0.65 : 1))
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
     }
     .buttonStyle(.plain)
     .disabled(state.isPreparingToRecord)
     .onHover { hovering in
-      withAnimation(ToolbarConstants.hoverAnimation) {
+      withAnimation(LiquidGlassTokens.hoverSpring) {
         isHovered = hovering
       }
     }
-    .background(
-      RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-        .fill(Color.primary.opacity(isHovered && !state.isPreparingToRecord ? 0.08 : 0))
+    .liquidGlassChrome(
+      shape: ToolbarConstants.buttonShape,
+      isVisible: isHovered && !state.isPreparingToRecord
     )
-    .opacity(state.isPreparingToRecord ? 0.65 : 1)
     .accessibilityLabel(L10n.RecordingToolbar.startRecordingAs(state.outputMode.displayName))
     .accessibilityHint(L10n.RecordingToolbar.startRecordingHint)
   }
@@ -139,32 +140,39 @@ private struct OutputModeRow: View {
       HStack(spacing: 8) {
         Image(systemName: mode.iconName)
           .font(.system(size: 12))
-          .foregroundColor(isSelected ? .accentColor : .secondary)
+          .foregroundColor(isSelected ? selectedInk : .secondary)
           .frame(width: 16)
 
         Text(mode.displayName)
           .font(.system(size: 12, weight: isSelected ? .semibold : .regular))
-          .foregroundColor(.primary)
+          .foregroundColor(isSelected ? selectedInk : .primary)
 
         Spacer()
 
         if isSelected {
           Image(systemName: "checkmark")
             .font(.system(size: 10, weight: .bold))
-            .foregroundColor(.accentColor)
+            .foregroundColor(selectedInk)
         }
       }
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: 6)
-          .fill(Color.primary.opacity(isHovered ? 0.08 : 0))
+      .liquidGlassChrome(
+        shape: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous),
+        isVisible: isHovered || isSelected,
+        isActive: isSelected,
+        glassTint: isSelected ? .accentColor : nil
       )
-      .contentShape(RoundedRectangle(cornerRadius: 6))
     }
     .buttonStyle(.plain)
-    .onHover { isHovered = $0 }
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
+    }
   }
+
+  /// The selected row's surface carries the accent tint, so accent-coloured glyphs would sit on
+  /// accent glass and the neutral label would go dark on it in Light theme.
+  private var selectedInk: Color { LiquidGlassTokens.inkOnAccent }
 }
 
 #Preview {

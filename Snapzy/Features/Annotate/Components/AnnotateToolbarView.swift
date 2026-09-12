@@ -38,7 +38,7 @@ struct AnnotateToolbarView: View {
       ToolbarDivider()
 
       if state.isCombineMode {
-        ToolbarButton(treatment: .glass, icon: "photo.badge.plus", isSelected: false) {
+        ToolbarButton(icon: "photo.badge.plus", isSelected: false) {
           guard let window = NSApp.keyWindow else { return }
           NotificationCenter.default.post(name: .annotateAddImage, object: window)
         }
@@ -73,7 +73,6 @@ struct AnnotateToolbarView: View {
   private var captureToolsGroup: some View {
     HStack(spacing: 4) {
       ToolbarButton(
-        treatment: .glass,
         icon: "crop",
         isSelected: state.selectedTool == .crop
       ) {
@@ -82,7 +81,6 @@ struct AnnotateToolbarView: View {
       .help(L10n.AnnotateUI.crop)
 
       ToolbarButton(
-        treatment: .glass,
         icon: "rectangle.on.rectangle",
         isSelected: state.showSidebar,
         highlightColor: .blue
@@ -99,19 +97,17 @@ struct AnnotateToolbarView: View {
 
   private var rotateButtonsGroup: some View {
     HStack(spacing: 4) {
-      ToolbarButton(treatment: .glass, icon: "rotate.left", isSelected: false) {
+      ToolbarButton(icon: "rotate.left", isSelected: false) {
         state.rotateImage(clockwise: false)
       }
       .help(L10n.AnnotateUI.rotateLeft)
       .disabled(!state.canRotateImage)
-      .opacity(state.canRotateImage ? 1 : 0.4)
 
-      ToolbarButton(treatment: .glass, icon: "rotate.right", isSelected: false) {
+      ToolbarButton(icon: "rotate.right", isSelected: false) {
         state.rotateImage(clockwise: true)
       }
       .help(L10n.AnnotateUI.rotateRight)
       .disabled(!state.canRotateImage)
-      .opacity(state.canRotateImage ? 1 : 0.4)
     }
   }
 
@@ -134,7 +130,6 @@ struct AnnotateToolbarView: View {
 
   private var backgroundCutoutButton: some View {
     ToolbarButton(
-      treatment: .glass,
       icon: state.isCutoutProcessing ? "hourglass" : "wand.and.stars",
       isSelected: state.isCutoutApplied,
       highlightColor: .blue
@@ -157,7 +152,6 @@ struct AnnotateToolbarView: View {
   @ViewBuilder
   private func annotationToolButton(for tool: AnnotationToolType) -> some View {
     ToolbarButton(
-      treatment: .glass,
       icon: tool.icon,
       isSelected: state.selectedTool == tool
     ) {
@@ -170,19 +164,17 @@ struct AnnotateToolbarView: View {
 
   private var undoRedoGroup: some View {
     HStack(spacing: 4) {
-      ToolbarButton(treatment: .glass, icon: "arrow.uturn.backward", isSelected: false) {
+      ToolbarButton(icon: "arrow.uturn.backward", isSelected: false) {
         state.undo()
       }
       .help(L10n.Common.undo)
       .disabled(!state.canUndo)
-      .opacity(state.canUndo ? 1 : 0.4)
 
-      ToolbarButton(treatment: .glass, icon: "arrow.uturn.forward", isSelected: false) {
+      ToolbarButton(icon: "arrow.uturn.forward", isSelected: false) {
         state.redo()
       }
       .help(L10n.Common.redo)
       .disabled(!state.canRedo)
-      .opacity(state.canRedo ? 1 : 0.4)
     }
   }
 

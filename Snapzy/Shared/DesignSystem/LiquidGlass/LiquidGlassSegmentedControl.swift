@@ -28,9 +28,11 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
         } label: {
           label(item)
             .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+            // The selected pill is accent-tinted glass, so its label resolves against the tint;
+            // unselected labels have no surface and follow the app appearance.
             .foregroundStyle(
               isSelected
-                ? LiquidGlassTokens.inkPrimary
+                ? LiquidGlassTokens.inkOnAccent
                 : (isHovered ? LiquidGlassTokens.inkBody : LiquidGlassTokens.inkMuted)
             )
             .padding(.horizontal, 12)
