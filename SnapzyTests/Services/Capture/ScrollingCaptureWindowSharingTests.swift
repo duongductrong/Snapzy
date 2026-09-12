@@ -43,6 +43,14 @@ final class ScrollingCaptureWindowSharingTests: XCTestCase {
     XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
   }
 
+  func testCaptureSubjectOverlay_isVisibleToExternalScreenCapture() throws {
+    let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
+    let window = CaptureSubjectOverlayWindow(screen: screen)
+    defer { window.close() }
+
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+  }
+
   private var sampleAnchorRect: CGRect {
     CGRect(x: 120, y: 120, width: 360, height: 480)
   }
