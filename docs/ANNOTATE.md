@@ -68,6 +68,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - `ArrowGeometry` (`Models/AnnotateAnnotationItem.swift`): `ArrowStyle` = straight / curvedRight / curvedLeft; `ArrowType` = classic / tapered / outlined.
 - Double-sided heads: `ArrowEndpointStyle` `startHead` / `endHead` (commit `b299bad`); applies to `.classic` — tapered/outlined bake the head into the body.
 - Figma-style endpoint dragging for arrows + lines (commit `22766cb`).
+- Curved arrows expose an external Bezier control-point handle while a single arrow is selected with the Selection tool. Dashed guides connect the handle to both endpoints; dragging it changes curvature without moving endpoints, clamps to the active drawing bounds, and synchronizes `curvedLeft` / `curvedRight` when it crosses the endpoint chord. Endpoint drags preserve the curve's normalized shape, straight arrows expose no control handle, and the existing persisted `controlPoint` field requires no schema migration.
 
 ## Blur / Pixelate
 
@@ -179,7 +180,7 @@ flowchart TD
     B --> C["InlineAreaAnnotateCoordinator.start -> InlineAreaAnnotatePanel per display (.screenSaver)"]
     C --> D["Phase selecting: drag rect"]
     D --> E["Phase annotating: canvas + toolbar + quick properties + action rail"]
-    E --> F["Space-drag move / 8 resize handles (annotations preserved via offset)"]
+    E --> F["Space-drag move / resize handles / curved-arrow control handle (annotations preserved via offset)"]
     E --> G["Pin: save + open pinned window"]
     E --> H{"Finish"}
     H -->|⌘S / Enter / Done| I["AnnotateExporter.renderFinalImage"]
