@@ -19,14 +19,12 @@ struct QuickAccessTextButton: View {
     Button(action: action) {
       Text(label)
         .font(.system(size: 12, weight: .medium))
-        .foregroundColor(LiquidGlassTokens.inkOverlay.opacity(isEnabled ? 1 : 0.55))
+        .foregroundColor(.white.opacity(isEnabled ? 1 : 0.75))
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .liquidGlassChrome(
-          shape: Capsule(style: .continuous),
-          isVisible: true,
-          isActive: isEnabled && isHovering,
-          emphasis: .overlay
+        .background(
+          RoundedRectangle(cornerRadius: 24)
+            .fill(buttonBackgroundColor)
         )
     }
     .buttonStyle(.plain)
@@ -35,9 +33,16 @@ struct QuickAccessTextButton: View {
         isHovering = false
         return
       }
-      withAnimation(LiquidGlassTokens.hoverSpring) {
+      withAnimation(.easeInOut(duration: 0.15)) {
         isHovering = hovering
       }
     }
+  }
+
+  private var buttonBackgroundColor: Color {
+    guard isEnabled else {
+      return Color.black.opacity(0.45)
+    }
+    return isHovering ? Color.white.opacity(0.35) : Color.black.opacity(0.6)
   }
 }
