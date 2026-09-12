@@ -56,6 +56,7 @@ struct AnnotateBottomBarView: View {
   @State private var showOverwriteConfirmation = false
   @State private var measuredLeftWidth: CGFloat = 0
   @State private var measuredRightWidth: CGFloat = 0
+  @State private var isZoomHovered = false
 
   private let centeredDragFullWidth: CGFloat = 160
   private let centeredDragCompactWidth: CGFloat = 44
@@ -150,7 +151,6 @@ struct AnnotateBottomBarView: View {
   private var leftSection: some View {
     HStack(spacing: 10) {
       zoomPicker
-      canvasPanButton
       modeToggle
     }
   }
@@ -175,22 +175,6 @@ struct AnnotateBottomBarView: View {
   }
 
   // MARK: - Zoom Picker
-
-  private var canvasPanButton: some View {
-    Button {
-      state.isCanvasPanningMode.toggle()
-    } label: {
-      Image(systemName: state.isCanvasPanningMode ? "hand.draw.fill" : "hand.draw")
-        .font(.system(size: 13, weight: .medium))
-        .frame(width: 28, height: 28)
-    }
-    .buttonStyle(.plain)
-    .foregroundColor(state.isCanvasPanningMode ? .accentColor : .secondary)
-    .background(state.isCanvasPanningMode ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.08))
-    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-    .help("Move canvas")
-    .disabled(!state.canPanInteractively)
-  }
 
   private var zoomPicker: some View {
     Menu {
@@ -218,18 +202,30 @@ struct AnnotateBottomBarView: View {
     } label: {
       HStack(spacing: 4) {
         Text("\(state.currentDisplayedZoomPercent)%")
-          .font(.system(size: 12, weight: .medium))
-          .foregroundColor(.primary)
+          .font(.system(size: 11.5, weight: .medium))
         Image(systemName: "chevron.down")
-          .font(.system(size: 8))
-          .foregroundColor(.secondary)
+          .font(.system(size: 8, weight: .semibold))
       }
+      .foregroundColor(isZoomHovered ? .primary : .secondary)
       .padding(.horizontal, 10)
-      .padding(.vertical, 6)
-      .background(Color.primary.opacity(0.1))
-      .cornerRadius(6)
+      .frame(height: 28)
+      .background(
+        Capsule(style: .continuous)
+          .fill(Color.secondary.opacity(isZoomHovered ? 0.18 : 0.10))
+      )
+      .overlay(
+        Capsule(style: .continuous)
+          .strokeBorder(Color.secondary.opacity(isZoomHovered ? 0.28 : 0.14), lineWidth: 0.5)
+      )
+      .contentShape(Capsule(style: .continuous))
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) {
+          isZoomHovered = hovering
+        }
+      }
     }
     .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
     .fixedSize(horizontal: true, vertical: false)
   }
 
@@ -243,16 +239,40 @@ struct AnnotateBottomBarView: View {
   }
 
   private var modeToggle: some View {
-    Picker("", selection: $state.editorMode) {
-      Label(L10n.AnnotateUI.modeAnnotate, systemImage: "pencil.and.outline")
-        .tag(AnnotateState.EditorMode.annotate)
-      Label(L10n.AnnotateUI.modeMockup, systemImage: "cube.transparent")
-        .tag(AnnotateState.EditorMode.mockup)
-      Label(L10n.AnnotateUI.modePreview, systemImage: "eye")
-        .tag(AnnotateState.EditorMode.preview)
+    LiquidGlassSegmentedControl(
+      items: AnnotateState.EditorMode.allCases,
+      selection: $state.editorMode
+    ) { mode in
+      HStack(spacing: 5) {
+        Image(systemName: modeIcon(for: mode))
+          .font(.system(size: 11, weight: .medium))
+        Text(modeTitle(for: mode))
+          .lineLimit(1)
+      }
+      .help(modeTitle(for: mode))
     }
-    .pickerStyle(.segmented)
-    .frame(width: 220)
+  }
+
+  private func modeIcon(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate:
+      return "pencil.and.outline"
+    case .mockup:
+      return "cube.transparent"
+    case .preview:
+      return "eye"
+    }
+  }
+
+  private func modeTitle(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate:
+      return L10n.AnnotateUI.modeAnnotate
+    case .mockup:
+      return L10n.AnnotateUI.modeMockup
+    case .preview:
+      return L10n.AnnotateUI.modePreview
+    }
   }
 
   // MARK: - Drag Handle (CleanShot-style)

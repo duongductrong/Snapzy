@@ -427,7 +427,7 @@ because every call site uses the design system.
 
 | Surface | What moved to glass |
 | :--- | :--- |
-| **Annotate** | Toolbar icons and action buttons, quick-properties bar, bottom bar |
+| **Annotate** | Toolbar icons and action buttons, quick-properties bar, bottom bar (action buttons & mode segmented control) |
 | **Video Editor** | Toolbar (via `ToolbarButton`), rename field, playback transport + play/pause, bottom bar (`.liquidGlass` emphasis buttons, shared `BottomBarButton`) |
 | **Quick Access** | Pinned-window zoom pill, drag handle, chrome buttons, zoom picker rows (card buttons use standard translucent controls) |
 | **Recording toolbar** | `ToolbarIconButtonLabel`, record/options/stop button styles, capture-area toggle, output-mode dropdown and its rows, option pills |

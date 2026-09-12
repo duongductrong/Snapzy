@@ -270,7 +270,7 @@ final class AnnotateState: ObservableObject {
   // MARK: - Editor Mode
 
   /// Editor mode determines whether user is annotating or applying mockup transforms
-  nonisolated enum EditorMode: String, CaseIterable {
+  nonisolated enum EditorMode: String, CaseIterable, Sendable {
     case annotate  // Normal annotation editing (flat image)
     case mockup    // 3D perspective transforms with controls
     case preview   // Preview combined result (hides all editing UI)
