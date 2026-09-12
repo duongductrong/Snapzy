@@ -51,6 +51,8 @@ struct LiquidGlassActionButton: View {
             .font(.system(size: 11, weight: .semibold))
         }
         Text(title)
+          .lineLimit(1)
+          .fixedSize(horizontal: true, vertical: false)
         if let trailingKey {
           Text(trailingKey)
             .font(.system(size: 9.5, weight: .semibold, design: .rounded))

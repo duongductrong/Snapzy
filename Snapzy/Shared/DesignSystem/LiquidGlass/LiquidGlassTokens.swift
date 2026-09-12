@@ -10,22 +10,121 @@ import SwiftUI
 
 // MARK: - Capabilities
 
+enum LiquidGlassRenderMode: String, CaseIterable, Identifiable {
+  case system = "system"
+  case native = "native"
+  case legacy = "legacy"
+
+  var id: String { rawValue }
+
+  var title: String {
+    switch self {
+    case .system:
+      return "System Default"
+    case .native:
+      return "macOS 26+ (Apple Liquid Glass)"
+    case .legacy:
+      return "macOS 13–15 (Fallback Composite)"
+    }
+  }
+}
+
+struct LiquidGlassTuning: Equatable {
+  var substrateOpacity: CGFloat = LiquidGlassTokens.baseDarkness
+  var sheenTopOpacity: Double = LiquidGlassTokens.fallbackControlSheenTop
+  var sheenBottomOpacity: Double = LiquidGlassTokens.fallbackControlSheenBottom
+  var specularTopOpacity: Double = 0.22
+  var specularBottomOpacity: Double = 0.06
+  var isSubstrateEnabled: Bool = true
+  var isRefractionEnabled: Bool = true
+  var isVeilEnabled: Bool = true
+  var isSpecularEnabled: Bool = true
+  var isRimLightingEnabled: Bool = true
+
+  static let `default` = LiquidGlassTuning()
+}
+
+private struct LiquidGlassRenderModeKey: EnvironmentKey {
+  static let defaultValue: LiquidGlassRenderMode = .system
+}
+
+private struct LiquidGlassTuningKey: EnvironmentKey {
+  static let defaultValue: LiquidGlassTuning? = nil
+}
+
+extension EnvironmentValues {
+  var liquidGlassRenderMode: LiquidGlassRenderMode {
+    get { self[LiquidGlassRenderModeKey.self] }
+    set { self[LiquidGlassRenderModeKey.self] = newValue }
+  }
+
+  var liquidGlassTuning: LiquidGlassTuning? {
+    get { self[LiquidGlassTuningKey.self] }
+    set { self[LiquidGlassTuningKey.self] = newValue }
+  }
+}
+
 enum LiquidGlassCapabilities {
-  /// Forces the pre-26 fallback path for local testing and validation.
-  #if DEBUG
-    static let forcesLegacyGlass: Bool =
-      ProcessInfo.processInfo.arguments.contains("-SnapzyForceLegacyGlass")
-      || ProcessInfo.processInfo.environment["SNAPZY_FORCE_LEGACY_GLASS"] == "1"
-  #else
-    static let forcesLegacyGlass: Bool = false
-  #endif
+  /// Dynamic runtime override for in-app testing and playground inspection.
+  static var runtimeLegacyOverride: Bool? = nil
 
   /// Whether the host operating system supports Apple's native Liquid Glass APIs.
-  static var hasNativeLiquidGlass: Bool {
+  static var isSystemSupported: Bool {
     if #available(macOS 26.0, *) {
-      !forcesLegacyGlass
-    } else {
-      false
+      return true
+    }
+    return false
+  }
+
+  /// Whether the user enabled Liquid Glass in Settings (default true).
+  static var isUserPreferenceEnabled: Bool {
+    UserDefaults.standard.object(forKey: PreferencesKeys.useLiquidGlass) as? Bool ?? true
+  }
+
+  /// Forces the pre-26 fallback path for local testing and validation.
+  #if DEBUG
+    static let argumentForcesLegacy: Bool =
+      ProcessInfo.processInfo.arguments.contains("-SnapzyForceLegacyGlass")
+      || ProcessInfo.processInfo.environment["SNAPZY_FORCE_LEGACY_GLASS"] == "1"
+
+    static var forcesLegacyGlass: Bool {
+      if let runtime = runtimeLegacyOverride {
+        return runtime
+      }
+      if !isUserPreferenceEnabled {
+        return true
+      }
+      return argumentForcesLegacy
+    }
+  #else
+    static var forcesLegacyGlass: Bool {
+      if let runtime = runtimeLegacyOverride {
+        return runtime
+      }
+      if !isUserPreferenceEnabled {
+        return true
+      }
+      return false
+    }
+  #endif
+
+  /// Whether the host operating system supports Apple's native Liquid Glass APIs and is not forced to fallback.
+  static var hasNativeLiquidGlass: Bool {
+    isSystemSupported && !forcesLegacyGlass
+  }
+
+  /// Evaluates whether native glass is active given a scoped render mode.
+  static func usesNativeGlass(for mode: LiquidGlassRenderMode) -> Bool {
+    switch mode {
+    case .system:
+      return hasNativeLiquidGlass
+    case .native:
+      if #available(macOS 26.0, *) {
+        return true
+      }
+      return false
+    case .legacy:
+      return false
     }
   }
 }
@@ -34,26 +133,26 @@ enum LiquidGlassCapabilities {
 
 enum LiquidGlassTokens {
   // Base dark substrate (Dark Aqua)
-  static let baseDarkness: CGFloat = 0.28
+  static let baseDarkness: CGFloat = 0.60
   static let fallbackSubstrateScale: CGFloat = 0.40
 
   // Specular hairline physics
   static let specularLineWidth: CGFloat = 0.50
-  static let specularTopColor: Color = .white.opacity(0.16)
-  static let specularBottomColor: Color = .white.opacity(0.04)
+  static let specularTopColor: Color = .white.opacity(0.22)
+  static let specularBottomColor: Color = .white.opacity(0.06)
 
   // Control substrate levels
-  static let controlSubstrateResting: CGFloat = 0.20
-  static let controlSubstrateHover: CGFloat = 0.28
-  static let controlSubstratePressed: CGFloat = 0.36
+  static let controlSubstrateResting: CGFloat = 0.45
+  static let controlSubstrateHover: CGFloat = 0.60
+  static let controlSubstratePressed: CGFloat = 0.72
 
   // Control stroke levels
-  static let controlStrokeResting: CGFloat = 0.08
-  static let controlStrokeHover: CGFloat = 0.22
+  static let controlStrokeResting: CGFloat = 0.12
+  static let controlStrokeHover: CGFloat = 0.26
 
   // Fallback control gradient sheen
-  static let fallbackControlSheenTop: Double = 0.10
-  static let fallbackControlSheenBottom: Double = 0.02
+  static let fallbackControlSheenTop: Double = 0.00
+  static let fallbackControlSheenBottom: Double = 0.00
 
   // Leading & Trailing edge lighting (convex rim reflections)
   static let rimLeadingResting: Double = 0.34
@@ -95,19 +194,21 @@ enum LiquidGlassTokens {
 
   /// Ink for content sitting on a colour-tinted glass surface.
   ///
-  /// `.glassEffect(.regular.tint(_:))` floods the surface with the tint, so ink that follows the
-  /// *app* appearance (`inkPrimary` → near-black in Light Aqua) lands as dark glyphs on a
-  /// saturated accent pill. That is what put black icons on the Annotate toolbar's selected tools
-  /// and on the Video Editor transport in Light theme. Resolve the ink from the tint's own
-  /// luminance instead, the way AppKit does for a filled control — `LiquidGlassButtonStyle`'s
-  /// `.primary` emphasis already did this by hand, which is why "Done" always looked right.
-  ///
-  /// The macOS 13–15 composite drops `glassTint` entirely; its active state is a substrate step
-  /// rather than a colour, so it keeps the appearance-adaptive ink.
+  /// Both macOS 26+ native glass and macOS 13–15 fallback composite render `glassTint`,
+  /// so ink resolves against the tint's own luminance to maintain > 4.5:1 contrast across
+  /// all appearances.
   static func ink(onTint tint: Color?, otherwise fallback: Color = inkPrimary) -> Color {
-    guard LiquidGlassCapabilities.hasNativeLiquidGlass, let tint else { return fallback }
+    guard let tint else { return fallback }
+    return resolveTintLuminanceInk(tint: tint)
+  }
 
-    return Color(nsColor: NSColor(name: nil) { appearance in
+  static func ink(onTint tint: Color?, renderMode: LiquidGlassRenderMode, otherwise fallback: Color = inkPrimary) -> Color {
+    guard let tint else { return fallback }
+    return resolveTintLuminanceInk(tint: tint)
+  }
+
+  private static func resolveTintLuminanceInk(tint: Color) -> Color {
+    Color(nsColor: NSColor(name: nil) { appearance in
       var luminance: CGFloat = 0
       appearance.performAsCurrentDrawingAppearance {
         luminance = relativeLuminance(of: tint)

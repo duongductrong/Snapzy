@@ -7334,6 +7334,136 @@
         }
       }
     },
+    "preferences-general.liquid-glass-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwenden Sie transluzentes Liquid Glass ab macOS 26+. Deaktivieren für solide native Steuerelemente."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use translucent Liquid Glass on macOS 26+. Turn off to use solid native controls."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa Liquid Glass translúcido en macOS 26+. Desactiva para usar controles sólidos nativos."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utiliser Liquid Glass translucide sur macOS 26+. Désactiver pour utiliser les contrôles natifs solides."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 26+ で半透明の Liquid Glass を使用します。オフにするとソリッドネイティブコントロールを使用します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "macOS 26+에서 반투명 Liquid Glass 효과를 사용합니다. 끄면 솔리드 네이티브 컨트롤을 사용합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Использовать полупрозрачный Liquid Glass на macOS 26+. Отключите для сплошных нативных элементов."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bật hiệu ứng kính mờ Liquid Glass trên macOS 26+. Tắt để luôn dùng giao diện solid native."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 macOS 26+ 上启用半透明 Liquid Glass 效果。关闭以始终使用纯色原生控件。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 macOS 26+ 上啟用半透明 Liquid Glass 效果。關閉以始終使用純色原生控件。"
+          }
+        }
+      }
+    },
+    "preferences-general.liquid-glass-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass-Effekt"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass Effect"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Efecto Liquid Glass"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effet Liquid Glass"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass エフェクト"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass 효과"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эффект Liquid Glass"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiệu ứng Liquid Glass"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass 效果"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liquid Glass 效果"
+          }
+        }
+      }
+    },
     "preferences-general.log-files-title": {
       "extractionState": "stale",
       "localizations": {

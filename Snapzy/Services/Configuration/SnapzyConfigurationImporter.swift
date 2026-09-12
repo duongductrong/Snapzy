@@ -111,6 +111,9 @@ enum SnapzyConfigurationImporter {
       }
       mutations.append { ThemeManager.shared.preferredAppearance = mode }
     }
+    collectBool(&reader, "general", "use_liquid_glass", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.useLiquidGlass)
+    }
     collectBool(&reader, "general", "play_sounds", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.playSounds)
     }

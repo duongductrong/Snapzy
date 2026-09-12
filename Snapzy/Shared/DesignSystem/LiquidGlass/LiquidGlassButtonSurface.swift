@@ -16,7 +16,13 @@ struct LiquidGlassButtonSurface: View {
   let isActive: Bool
 
   @Environment(\.isEnabled) private var isEnabled
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
   @State private var isHovered = false
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+  }
 
   private var isVisuallyActive: Bool { (isHovered && isEnabled) || isActive }
   private var isPressed: Bool { configuration.isPressed && isEnabled }
@@ -63,7 +69,7 @@ struct LiquidGlassButtonSurface: View {
   @ViewBuilder
   private var borderLayer: some View {
     // Native glass draws its own refractive edge; a second stroke on top reads as a white outline.
-    if !LiquidGlassCapabilities.hasNativeLiquidGlass {
+    if !usesNativeGlass {
       if capsule {
         LiquidGlassRimBorder(
           shape: Capsule(style: .continuous),
@@ -93,9 +99,9 @@ struct LiquidGlassButtonSurface: View {
   private var currentSubstrate: CGFloat {
     guard isEnabled else { return 0 }
     switch emphasis {
-    case .primary: return isPressed ? 0.38 : (isVisuallyActive ? 0.28 : 0.20)
-    case .secondary: return isPressed ? 0.30 : (isVisuallyActive ? 0.22 : 0.12)
-    case .destructive: return isPressed ? 0.30 : (isVisuallyActive ? 0.20 : 0.10)
+    case .primary: return isPressed ? 0.72 : (isVisuallyActive ? 0.60 : 0.50)
+    case .secondary: return isPressed ? 0.72 : (isVisuallyActive ? 0.60 : 0.45)
+    case .destructive: return isPressed ? 0.72 : (isVisuallyActive ? 0.60 : 0.50)
     case .contextPill:
       return isPressed
         ? LiquidGlassTokens.controlSubstratePressed
@@ -137,17 +143,19 @@ struct LiquidGlassButtonSurface: View {
       // which lands around 3:1 and fails AA at 12pt. On macOS 13–15 there *is* no tint (the
       // composite drops `glassTint`) and the pill is a light substrate in Aqua, so the ink falls
       // back to adaptive there — pinning it white is what made those buttons unreadable.
-      return LiquidGlassTokens.ink(onTint: currentGlassTint)
+      return LiquidGlassTokens.ink(onTint: currentGlassTint, renderMode: renderMode)
     case .secondary:
       // `isActive` is what turns on the accent tint; plain hover leaves the glass untinted, so
       // only the active state hands its ink over to the tint.
       return LiquidGlassTokens.ink(
         onTint: currentGlassTint,
+        renderMode: renderMode,
         otherwise: isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody
       )
     case .contextPill:
       return LiquidGlassTokens.ink(
         onTint: currentGlassTint,
+        renderMode: renderMode,
         otherwise: isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkMuted
       )
     }
@@ -167,6 +175,13 @@ private struct LiquidGlassButtonBackground: ViewModifier {
   let isEnabled: Bool
   let isActive: Bool
 
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+  }
+
   func body(content: Content) -> some View {
     if capsule {
       apply(content, shape: Capsule(style: .continuous))
@@ -185,7 +200,7 @@ private struct LiquidGlassButtonBackground: ViewModifier {
         substrate: substrate,
         tint: tint,
         highlight: .none,
-        withRimLighting: isEnabled && !LiquidGlassCapabilities.hasNativeLiquidGlass,
+        withRimLighting: false,
         isInteractive: isEnabled,
         glassTint: glassTint
       )
@@ -194,7 +209,7 @@ private struct LiquidGlassButtonBackground: ViewModifier {
 
   /// Native glass carries its own elevation, and a shadow here would also fall on the glyphs.
   private var shadowColor: Color {
-    guard isEnabled, !LiquidGlassCapabilities.hasNativeLiquidGlass else { return .clear }
+    guard isEnabled, !usesNativeGlass else { return .clear }
     return Color.black.opacity(isActive ? 0.24 : 0.12)
   }
 }
