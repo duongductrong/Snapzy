@@ -35,12 +35,35 @@ final class ScrollingCaptureWindowSharingTests: XCTestCase {
     XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
   }
 
-  func testAreaSelectionWindow_isExcludedFromScreenCapture() throws {
+  func testAreaSelectionWindow_isVisibleToExternalScreenCapture() throws {
     let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
     let window = AreaSelectionWindow(screen: screen, pooled: true)
     defer { window.close() }
 
-    XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+  }
+
+  func testRecordingRegionOverlay_isVisibleToExternalScreenCapture() throws {
+    let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
+    let window = RecordingRegionOverlayWindow(screen: screen, highlightRect: sampleAnchorRect)
+    defer { window.close() }
+
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+  }
+
+  func testRecordingToolbar_isVisibleToExternalScreenCapture() {
+    let window = RecordingToolbarWindow(anchorRect: sampleAnchorRect)
+    defer { window.close() }
+
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+  }
+
+  func testSmartElementOverlay_isVisibleToExternalScreenCapture() throws {
+    let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
+    let window = SmartElementOverlayWindow(screen: screen)
+    defer { window.close() }
+
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
   }
 
   private var sampleAnchorRect: CGRect {
