@@ -331,8 +331,7 @@ struct VideoControlsView: View {
       }
       .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
       .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(ZoomColors.primary.opacity(0.15))
-      .cornerRadius(4)
+      .background(Capsule().fill(ZoomColors.primary.opacity(0.15)))
     }
 
     if isAutoZoomActiveAtCurrentTime {
@@ -347,8 +346,7 @@ struct VideoControlsView: View {
       }
       .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
       .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(Color.green.opacity(0.12))
-      .cornerRadius(4)
+      .background(Capsule().fill(Color.green.opacity(0.12)))
     }
 
     if state.hasUnsavedChanges {

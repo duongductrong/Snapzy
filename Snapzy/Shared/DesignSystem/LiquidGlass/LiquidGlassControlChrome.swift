@@ -90,9 +90,10 @@ extension View {
   /// Apply this to a control's *label content*, inside the `Button`. It owns its own hover state,
   /// so call sites stay declarative, and it declares an explicit hit target — a glass surface
   /// contributes no hit-testable content, so without one only the glyph responds to clicks.
-  /// The default radius is the property-chip step (`Radius.controlS`). For a control at any other
-  /// height, pass `Radius.control(forHeight:)` rather than a literal — roundness is proportional
-  /// to height in this design system, so a fixed default silently under-rounds taller controls.
+  /// The default radius is the property-chip step (`Radius.controlS`). For an icon control at any
+  /// other height, pass `Radius.control(forHeight:)` rather than a literal — roundness is
+  /// proportional to height in this design system, so a fixed default silently under-rounds taller
+  /// controls. Labelled buttons are not in this family: they use `Capsule(style: .continuous)`.
   func liquidGlassControl(
     isActive: Bool,
     cornerRadius: CGFloat = Radius.control(forHeight: ControlMetrics.propertyChip)

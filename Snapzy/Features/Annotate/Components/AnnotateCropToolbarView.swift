@@ -167,7 +167,7 @@ struct CropRatioButton: View {
         .frame(height: Self.height)
         .liquidGlassControl(
           isActive: isSelected,
-          in: Radius.controlRect(forHeight: Self.height)
+          in: Capsule(style: .continuous)
         )
     }
     .buttonStyle(.plain)

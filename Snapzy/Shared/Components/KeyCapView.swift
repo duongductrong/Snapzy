@@ -19,12 +19,12 @@ struct KeyCapView: View {
       .frame(minWidth: 24, minHeight: 22)
       .padding(.horizontal, 6)
       .background(
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
+        Radius.rect(Radius.ornament)
           .fill(Color(nsColor: .controlBackgroundColor))
           .shadow(color: .black.opacity(0.06), radius: 0.5, x: 0, y: 0.5)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 5, style: .continuous)
+        Radius.rect(Radius.ornament)
           .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
       )
   }

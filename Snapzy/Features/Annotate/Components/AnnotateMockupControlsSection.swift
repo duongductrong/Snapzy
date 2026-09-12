@@ -75,7 +75,7 @@ struct MockupControlsSection: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 6)
                 .background(
-                    Radius.controlRect(forHeight: 26)
+                    Capsule(style: .continuous)
                         .fill(Color.primary.opacity(0.1))
                 )
         }

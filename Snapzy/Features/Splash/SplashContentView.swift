@@ -88,7 +88,7 @@ private extension SplashContentView {
       .resizable()
       .aspectRatio(contentMode: .fit)
       .frame(width: 100, height: 100)
-      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
       .shadow(color: .black.opacity(0.25), radius: 16, x: 0, y: 4)
   }
 

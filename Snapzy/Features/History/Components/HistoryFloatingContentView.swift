@@ -485,26 +485,26 @@ struct HistoryFloatingContentView: View {
       LazyVGrid(columns: expandedColumns, spacing: 12) {
         ForEach(0..<8, id: \.self) { _ in
           VStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            Radius.rect(Radius.tile)
               .fill(placeholderFill)
               .aspectRatio(16 / 10, contentMode: .fit)
 
             VStack(alignment: .leading, spacing: 7) {
-              RoundedRectangle(cornerRadius: 5, style: .continuous)
+              Radius.rect(Radius.ornament)
                 .fill(placeholderFill)
                 .frame(height: 12)
 
               HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                Radius.rect(Radius.ornament)
                   .fill(placeholderFill)
                   .frame(width: 96, height: 10)
               }
             }
           }
           .padding(10)
-          .background(placeholderCardFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+          .background(placeholderCardFill, in: Radius.rect(Radius.card))
           .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            Radius.rect(Radius.card)
               .stroke(placeholderStroke, lineWidth: 1)
           )
           .redacted(reason: .placeholder)

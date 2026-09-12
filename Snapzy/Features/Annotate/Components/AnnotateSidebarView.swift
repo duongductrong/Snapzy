@@ -159,11 +159,11 @@ struct AnnotateSidebarView: View, Equatable {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 7)
         .background(
-          Radius.rect(AnnotateSidebarMetrics.controlRadius)
+          Capsule(style: .continuous)
             .fill(state.isNoneCanvasEffectsActive ? Color.accentColor.opacity(0.25) : SidebarColors.itemDefault)
         )
         .overlay(
-          Radius.rect(AnnotateSidebarMetrics.controlRadius)
+          Capsule(style: .continuous)
             .stroke(
               state.isNoneCanvasEffectsActive ? Color.accentColor : Color.clear,
               lineWidth: Size.strokeSelected
@@ -195,11 +195,11 @@ struct AnnotateSidebarView: View, Equatable {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
       .background(
-        Radius.rect(AnnotateSidebarMetrics.controlRadius)
+        Capsule(style: .continuous)
           .fill(SidebarColors.itemDefault)
       )
       .overlay(
-        Radius.rect(AnnotateSidebarMetrics.controlRadius)
+        Capsule(style: .continuous)
           .stroke(
             state.selectedCanvasPresetId != nil ? Color.accentColor.opacity(0.7) : Color.clear,
             lineWidth: Size.strokeDefault
@@ -324,11 +324,11 @@ struct AnnotateSidebarView: View, Equatable {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
       .background(
-        Radius.rect(AnnotateSidebarMetrics.controlRadius)
+        Capsule(style: .continuous)
           .fill(SidebarColors.itemDefault)
       )
       .overlay(
-        Radius.rect(AnnotateSidebarMetrics.controlRadius)
+        Capsule(style: .continuous)
           .stroke(Color.orange.opacity(0.5), lineWidth: Size.strokeDefault)
       )
     }
@@ -633,11 +633,11 @@ struct AspectRatioOptionButton: View {
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, minHeight: 30)
         .background(
-          Radius.rect(AnnotateSidebarMetrics.controlRadius)
+          Capsule(style: .continuous)
             .fill(backgroundColor)
         )
         .overlay(
-          Radius.rect(AnnotateSidebarMetrics.controlRadius)
+          Capsule(style: .continuous)
             .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: Size.strokeSelected)
         )
     }

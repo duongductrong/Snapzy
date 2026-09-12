@@ -41,11 +41,11 @@ struct ShortcutOverlayView: View {
       }
       .frame(width: 760)
       .background(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Radius.rect(Radius.panel)
           .fill(Color(nsColor: .windowBackgroundColor).opacity(0.96))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Radius.rect(Radius.panel)
           .stroke(Color.primary.opacity(0.08), lineWidth: 1)
       )
       .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
@@ -118,11 +118,11 @@ struct ShortcutOverlayView: View {
         }
       }
       .background(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Radius.rect(Radius.card)
           .fill(Color.primary.opacity(0.035))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Radius.rect(Radius.card)
           .stroke(Color.primary.opacity(0.06), lineWidth: 1)
       )
     }
@@ -175,7 +175,7 @@ struct ShortcutOverlayView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: 7, style: .continuous)
+          Radius.rect(Radius.ornament)
             .fill(Color.secondary.opacity(0.12))
         )
     }

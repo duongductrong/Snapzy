@@ -28,7 +28,7 @@ struct VideoGradientPresetButton: View {
 
   var body: some View {
     Button(action: action) {
-      RoundedRectangle(cornerRadius: Size.radiusMd)
+      Radius.rect(Radius.tile)
         .fill(LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
         .sidebarItemStyle(isSelected: isSelected)
     }
@@ -126,7 +126,7 @@ struct VideoSliderRow: View {
           .padding(.horizontal, Spacing.xs)
           .padding(.vertical, 2)
           .background(
-            RoundedRectangle(cornerRadius: Size.radiusXs)
+            Radius.controlRect(forHeight: 17)
               .fill(SidebarColors.itemDefault)
           )
           .focused($isTextFieldFocused)
@@ -216,7 +216,7 @@ struct VideoDefaultWallpaperButton: View {
         }
       }
       .clipped()
-      .cornerRadius(Size.radiusMd)
+      .cornerRadius(Radius.tile)
       .sidebarItemStyle(isSelected: isSelected)
     }
     .buttonStyle(.plain)
@@ -267,7 +267,7 @@ struct VideoCustomWallpaperButton: View {
           }
         }
         .clipped()
-        .cornerRadius(Size.radiusMd)
+        .cornerRadius(Radius.tile)
         .sidebarItemStyle(isSelected: isSelected)
       }
       .buttonStyle(.plain)

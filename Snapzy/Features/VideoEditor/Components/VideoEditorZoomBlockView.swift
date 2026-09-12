@@ -77,10 +77,10 @@ struct ZoomBlockView: View {
   var body: some View {
     ZStack(alignment: .leading) {
       // Main block background
-      RoundedRectangle(cornerRadius: 6)
+      Radius.controlRect(forHeight: 28)
         .fill(blockFillColor)
         .overlay(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.controlRect(forHeight: 28)
             .strokeBorder(isSelected ? ZoomColors.selected : Color.clear, lineWidth: 2)
         )
         .shadow(color: isSelected ? ZoomColors.primary.opacity(0.35) : .clear, radius: 3, y: 1)
@@ -103,8 +103,7 @@ struct ZoomBlockView: View {
             .font(.system(size: 8, weight: .medium))
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.2))
-            .cornerRadius(3)
+            .background(Capsule().fill(Color.white.opacity(0.2)))
         }
       }
       .padding(.horizontal, handleWidth + 4)
@@ -152,7 +151,7 @@ struct ZoomBlockView: View {
         .fill(isHovering || isSelected ? ZoomColors.handleHighlight.opacity(0.3) : Color.clear)
 
       // Handle grip indicator
-      RoundedRectangle(cornerRadius: 1)
+      Radius.rect(Radius.ornament)
         .fill(isHovering || isSelected ? ZoomColors.handleHighlight : Color.white.opacity(0.4))
         .frame(width: 3, height: 14)
     }

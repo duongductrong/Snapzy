@@ -238,10 +238,7 @@ struct QuickAccessPinWindowView: View {
 private enum PinWindowZoomPickerMetrics {
   static let width: CGFloat = 122
   static let contentInset: CGFloat = 6
-  static let containerCornerRadius: CGFloat = Size.radiusLg
-  static var optionCornerRadius: CGFloat {
-    max(containerCornerRadius - contentInset, Size.radiusMd)
-  }
+  static let containerCornerRadius = Radius.panel
 }
 
 private struct PinWindowZoomOptionButton: View {
@@ -249,8 +246,6 @@ private struct PinWindowZoomOptionButton: View {
   var systemImage: String?
   let isSelected: Bool
   let action: () -> Void
-
-  private let cornerRadius = PinWindowZoomPickerMetrics.optionCornerRadius
 
   var body: some View {
     Button(action: action) {
@@ -278,7 +273,7 @@ private struct PinWindowZoomOptionButton: View {
       .frame(height: 25)
       .liquidGlassControl(
         isActive: isSelected,
-        in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        in: Capsule(style: .continuous)
       )
     }
     .buttonStyle(.plain)

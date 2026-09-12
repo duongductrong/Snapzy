@@ -165,7 +165,7 @@ struct VideoEditorToolbarView: View {
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
           .liquidGlassChrome(
-            shape: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous),
+            shape: Radius.controlRect(forHeight: 24),
             isVisible: true,
             isActive: true
           )

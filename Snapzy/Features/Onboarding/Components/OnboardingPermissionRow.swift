@@ -52,7 +52,7 @@ struct PermissionRow: View {
         .foregroundColor(VSDesignSystem.Colors.primary)
         .frame(width: 44, height: 44)
         .background(
-          RoundedRectangle(cornerRadius: 10)
+          Radius.rect(Radius.tile)
             .fill(VSDesignSystem.Colors.secondaryButtonFill)
         )
         .overlay(alignment: .topTrailing) {
@@ -74,17 +74,15 @@ struct PermissionRow: View {
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(Color.orange.opacity(0.3))
+              .background(Capsule().fill(Color.orange.opacity(0.3)))
               .foregroundColor(.orange)
-              .cornerRadius(4)
           } else {
             Text(optionalLabel)
               .font(.caption2)
               .padding(.horizontal, 6)
               .padding(.vertical, 2)
-              .background(VSDesignSystem.Colors.secondaryButtonFill)
+              .background(Capsule().fill(VSDesignSystem.Colors.secondaryButtonFill))
               .foregroundColor(VSDesignSystem.Colors.tertiary)
-              .cornerRadius(4)
           }
         }
 
@@ -107,8 +105,7 @@ struct PermissionRow: View {
           }
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(badge.color.opacity(0.15))
-          .cornerRadius(6)
+          .background(Capsule().fill(badge.color.opacity(0.15)))
         }
 
         if let buttonTitle = actionTitle {
@@ -122,11 +119,11 @@ struct PermissionRow: View {
     }
     .padding(16)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      Radius.rect(Radius.card)
         .fill(VSDesignSystem.Colors.cardFill)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 12)
+      Radius.rect(Radius.card)
         .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
     )
   }

@@ -152,10 +152,10 @@ struct SnapzyOnboardingInstructionPanel: View {
       .padding(.horizontal, SnapzySpace.xxl + SnapzySpace.xs)
       .padding(.vertical, SnapzySpace.xxl)
       .background(
-        RoundedRectangle(cornerRadius: SnapzyRadius.control, style: .continuous)
+        Radius.rect(SnapzyRadius.card)
           .fill(Color.white.opacity(0.07))
           .overlay(
-            RoundedRectangle(cornerRadius: SnapzyRadius.control, style: .continuous)
+            Radius.rect(SnapzyRadius.card)
               .strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5)
           )
       )
@@ -241,7 +241,7 @@ private struct SnapzyPromptCardButtonStyle: ButtonStyle {
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .overlay(
-        RoundedRectangle(cornerRadius: SnapzyRadius.control, style: .continuous)
+        Radius.rect(SnapzyRadius.card)
           .fill(Color.white.opacity(configuration.isPressed ? 0.06 : (isHovered ? 0.04 : 0)))
       )
       .scaleEffect(configuration.isPressed ? 0.99 : 1.0)

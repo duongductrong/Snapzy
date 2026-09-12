@@ -69,7 +69,7 @@ struct RecordButtonWithBadge: View {
           .padding(.horizontal, 5)
           .padding(.vertical, 2)
           .background(
-            RoundedRectangle(cornerRadius: 4)
+            Capsule()
               .fill(badgeBackgroundColor)
           )
       }
@@ -87,7 +87,7 @@ struct RecordButtonWithBadge: View {
       }
     }
     .liquidGlassChrome(
-      shape: ToolbarConstants.buttonShape,
+      shape: ToolbarConstants.textButtonShape,
       isVisible: isHovered && !state.isPreparingToRecord
     )
     .accessibilityLabel(L10n.RecordingToolbar.startRecordingAs(state.outputMode.displayName))
@@ -158,7 +158,7 @@ private struct OutputModeRow: View {
       .padding(.horizontal, 8)
       .padding(.vertical, 6)
       .liquidGlassChrome(
-        shape: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous),
+        shape: Capsule(style: .continuous),
         isVisible: isHovered || isSelected,
         isActive: isSelected,
         glassTint: isSelected ? .accentColor : nil
@@ -182,5 +182,5 @@ private struct OutputModeRow: View {
   }
   .padding(10)
   .background(.ultraThinMaterial)
-  .clipShape(RoundedRectangle(cornerRadius: 14))
+  .clipShape(Radius.rect(Radius.card))
 }

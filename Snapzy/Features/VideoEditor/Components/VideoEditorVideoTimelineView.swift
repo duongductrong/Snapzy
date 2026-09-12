@@ -48,7 +48,7 @@ struct VideoTimelineView: View {
           )
         }
         .frame(height: frameStripHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .clipShape(Radius.rect(Radius.tile))
         .contentShape(Rectangle())
         .gesture(scrubGesture(timelineWidth: timelineWidth))
 
@@ -65,7 +65,7 @@ struct VideoTimelineView: View {
     }
     .frame(height: totalHeight)
     .background(Color.black.opacity(0.2))
-    .cornerRadius(6)
+    .cornerRadius(Radius.tile)
   }
 
   // MARK: - Scrub Gesture

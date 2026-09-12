@@ -30,7 +30,7 @@ struct AppearanceThumbnailView: View {
       VStack(spacing: 6) {
         thumbnailPreview
           .overlay(
-            RoundedRectangle(cornerRadius: 8)
+            Radius.rect(Radius.tile)
               .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
           )
           .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
@@ -83,7 +83,7 @@ struct AppearanceThumbnailView: View {
       }
     }
     .frame(width: 72, height: 52)
-    .clipShape(RoundedRectangle(cornerRadius: 8))
+    .clipShape(Radius.rect(Radius.tile))
   }
 
   // MARK: - Single Thumbnail
@@ -91,7 +91,7 @@ struct AppearanceThumbnailView: View {
   private func singleThumbnail(isDark: Bool) -> some View {
     windowPreview(isDark: isDark)
       .frame(width: 72, height: 52)
-      .clipShape(RoundedRectangle(cornerRadius: 8))
+      .clipShape(Radius.rect(Radius.tile))
   }
 
   // MARK: - Window Preview
@@ -122,7 +122,7 @@ struct AppearanceThumbnailView: View {
         // Sidebar
         VStack(spacing: 3) {
           ForEach(0..<3, id: \.self) { _ in
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: 2) // radius-lint:allow — miniature window illustration at icon scale
               .fill(isDark ? Color.white.opacity(0.15) : Color.black.opacity(0.08))
               .frame(height: 4)
           }
@@ -134,10 +134,10 @@ struct AppearanceThumbnailView: View {
 
         // Content area
         VStack(spacing: 3) {
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: 2) // radius-lint:allow — miniature window illustration at icon scale
             .fill(isDark ? Color.white.opacity(0.12) : Color.black.opacity(0.06))
             .frame(height: 6)
-          RoundedRectangle(cornerRadius: 2)
+          RoundedRectangle(cornerRadius: 2) // radius-lint:allow — miniature window illustration at icon scale
             .fill(isDark ? Color.white.opacity(0.08) : Color.black.opacity(0.04))
             .frame(height: 4)
           Spacer()

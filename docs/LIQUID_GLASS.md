@@ -196,27 +196,58 @@ downward. `ControlMetrics` holds the heights the shared chrome is built at, so a
 radius cannot drift apart.
 
 Containers are **not** proportional — a 400pt inspector does not want a 144pt radius — so they stay
-semantic: `ornament` 4 (badges, keycap plates, hairline frames), `tile` 8 (grid thumbnails, preset
-tiles), `card` 14 (cards, rows, floating bars), `panel` 20 (popovers, inspectors), `window` 26.
+semantic: `ornament` 4 (badges, keycap plates, hairline frames, progress tracks), `tile` 8 (grid
+thumbnails, preset tiles, icon plates, inline previews), `card` 14 (cards, list rows, banners,
+toasts, floating bars), `panel` 20 (popovers, inspectors, sheets, empty-state panels), `window` 26
+(window backdrops).
 
 ### Shape families
 
-Radius is only half the system. The shape a control takes states what class of control it is:
+Radius is only half the system. The shape a control takes says what *class* of control it is, and
+the app uses exactly three. Picking a shape is a semantic decision; picking its radius is then
+automatic.
 
-| Shape | Reserved for |
-| :--- | :--- |
-| `Capsule` | Terminal text actions (`Done`, `Save As`, `Apply`) and selection tracks (the segmented control and its sliding indicator). The pill *is* the "this commits" signal. |
-| `Radius.controlRect(forHeight:)` | Every other interactive control: icon buttons, toggle chips, **selects and dropdowns**, ratio buttons, text fields. |
-| `Circle` | Only where the content is inherently round — colour swatches, radio dots. |
+**1. `Capsule` — the pill family.** Every button that carries a label, because a label reads as a
+pill and the pill is the app's soft, friendly action shape:
 
-A square icon button is deliberately not promoted to a capsule: at 28×28 a capsule *is* a circle,
-which reads as a different control class (destructive, media transport) and loses the glyph's
-optical alignment. `controlM` closes most of the gap to the neighbouring `Done` pill while keeping
-the button legibly rectangular.
+- terminal actions (`Done`, `Save As`, `Apply`, `Cancel` in an action row) and ordinary labelled
+  actions — `Restore`, `Continue`, `Open All Links`, "Check for Updates", the language picker, the
+  legacy VS button styles;
+- selects and menus that show text (the Annotate zoom picker, the pinned window's zoom menu);
+- selection tracks (the segmented control and its sliding indicator);
+- search fields;
+- filter and tag pills;
+- non-interactive status badges (BETA/STABLE, `Required`, duration chips).
 
-A select is not a terminal action, so the Annotate zoom picker takes the rounded-rect control
-shape rather than a capsule — which also puts it on the same radius as the `BottomBarButton`s
-beside it.
+The last three are strong platform conventions, and a fully round badge cannot be mistaken for the
+button beside it.
+
+**2. `Circle` — round chrome.** Reserved for:
+
+- chrome floating over *user content* — Quick Access cards, the pinned-screenshot window, History
+  cards. This is the same population as `LiquidGlassChromeEmphasis.overlay`: a control with no
+  toolbar around it has to read as an object in its own right, and a disc does that where a
+  squircle reads as a fragment of a missing bar;
+- media transport (play / pause / skip);
+- content that is inherently round — colour swatches, radio dots, slider thumbs and tracks.
+
+**3. `Radius.controlRect(forHeight:)` — the squircle ramp.** Controls with no text to justify a
+pill, and the default when in doubt: icon-only buttons and icon toggles, non-search text fields
+(the pill belongs to buttons), and stacked icon-over-text tiles that would become lozenges as
+capsules.
+
+The dividing line between families 2 and 3 is *what the control sits on*, not how big it is. A 28pt
+icon button in the Annotate toolbar is a squircle; a 28pt icon button on the pinned window,
+floating over a screenshot, is a circle. Both are deliberate.
+
+A square icon button is deliberately not promoted to a capsule: it has no label, and at 28×28 a
+capsule *is* a circle, which would move it into family 2 and claim it floats over content.
+`controlM` closes most of the gap to the neighbouring `Done` pill while keeping the button legibly
+rectangular.
+
+Nested surfaces follow the concentric rule: an inset child inside a radius-`R` parent with padding
+`P` wants about `R - P`. Controls *inside* a surface are not surfaces themselves — they keep their
+control-ramp radius.
 
 Grid cells that share an edge (the sidebar's 3×3 alignment picker) stay at `ornament`: a
 control-sized radius on abutting tiles opens visible gaps between them.
@@ -228,12 +259,20 @@ easing in — so mixing the two styles reintroduces the inconsistency the scale 
 `Radius.rect(_:)` and `Radius.controlRect(forHeight:)` pin it for you; prefer them over a bare
 `RoundedRectangle`.
 
+### Enforcing it
+
+`scripts/lint-corner-radius.sh` flags literal radii that bypass the scale (whole tree, or
+`--staged`). A deliberate one-off — clipping the app-icon bitmap, miniature window illustrations,
+user-content geometry — keeps its literal and carries a trailing `// radius-lint:allow <why>`.
+The check cannot see shape-family mistakes, so the families above live in code review and in the
+`Radius` doc comment.
+
 ### Legacy
 
-`Size.radiusXs/Sm/Md/Lg` (DesignTokens.swift) predate this and name a size rather than a use,
-which is how a 32pt recording button and a 12pt badge both ended up asking for `radiusSm`. They
-are kept at their original values so untouched surfaces do not move. New code uses `Radius`;
-migrate a legacy call site when you are already editing its surface.
+`Size.radiusXs/Sm/Md/Lg` (DesignTokens.swift) predate this and name a size rather than a use, which
+is how a 32pt recording button and a 12pt badge both ended up asking for `radiusSm`. The app-wide
+sweep moved every call site onto `Radius`; the old names remain as pass-throughs and are not for
+new code.
 
 The scale is rendered live in the Liquid Glass playground under **Overview & Tokens →
 Geometry & Hairline Physics**, so it cannot go stale.

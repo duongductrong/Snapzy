@@ -93,7 +93,7 @@ struct ZoomTimelineTrack: View {
   var body: some View {
     ZStack(alignment: .leading) {
       // Track background
-      RoundedRectangle(cornerRadius: 4)
+      Radius.rect(Radius.ornament)
         .fill(Color.black.opacity(0.15))
         .frame(height: trackHeight)
 
@@ -409,10 +409,10 @@ private struct ZoomBlockVisual: View {
   var body: some View {
     ZStack(alignment: .leading) {
       // Main block background
-      RoundedRectangle(cornerRadius: 6)
+      Radius.controlRect(forHeight: 28)
         .fill(blockFillColor)
         .overlay(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.controlRect(forHeight: 28)
             .strokeBorder(isSelected ? Color.white : Color.clear, lineWidth: 2)
         )
         .shadow(color: isSelected ? ZoomColors.primary.opacity(0.4) : .clear, radius: 4, y: 2)
@@ -434,8 +434,7 @@ private struct ZoomBlockVisual: View {
             .font(.system(size: 8, weight: .medium))
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
-            .background(Color.white.opacity(0.2))
-            .cornerRadius(3)
+            .background(Capsule().fill(Color.white.opacity(0.2)))
         }
       }
       .padding(.horizontal, blockWidth < 48 ? handleWidth + 2 : handleWidth + 4)
@@ -462,7 +461,7 @@ private struct ZoomBlockVisual: View {
       Rectangle()
         .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
 
-      RoundedRectangle(cornerRadius: 1)
+      Radius.rect(Radius.ornament)
         .fill(isSelected ? Color.white.opacity(0.8) : Color.white.opacity(0.4))
         .frame(width: 3, height: 14)
     }
@@ -488,10 +487,10 @@ private struct ZoomPlaceholderView: View {
   let xPosition: CGFloat
 
   var body: some View {
-    RoundedRectangle(cornerRadius: 6)
+    Radius.controlRect(forHeight: 28)
       .fill(ZoomColors.primary.opacity(0.2))
       .overlay(
-        RoundedRectangle(cornerRadius: 6)
+        Radius.controlRect(forHeight: 28)
           .strokeBorder(
             ZoomColors.primary.opacity(0.5),
             style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])

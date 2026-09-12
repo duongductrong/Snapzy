@@ -176,8 +176,8 @@ struct AnnotateBottomBarView: View {
 
   // MARK: - Zoom Picker
 
-  private var zoomShape: RoundedRectangle {
-    Radius.controlRect(forHeight: ControlMetrics.bottomBarControl)
+  private var zoomShape: Capsule {
+    Capsule(style: .continuous)
   }
 
   private var zoomPicker: some View {
@@ -213,9 +213,8 @@ struct AnnotateBottomBarView: View {
       .foregroundColor(isZoomHovered ? .primary : .secondary)
       .padding(.horizontal, 10)
       .frame(height: ControlMetrics.bottomBarControl)
-      // A select is not a terminal action, so it takes the rounded-rect control shape rather than
-      // the capsule the bar reserves for `Done`-class buttons and the mode track. That also puts
-      // it on the same radius as the `BottomBarButton`s it sits beside.
+      // A labelled select is a text button, so it takes the same capsule as `Done` and the mode
+      // track; only the icon-only `BottomBarButton`s keep the squircle ramp.
       .background(
         zoomShape
           .fill(Color.secondary.opacity(isZoomHovered ? 0.18 : 0.10))

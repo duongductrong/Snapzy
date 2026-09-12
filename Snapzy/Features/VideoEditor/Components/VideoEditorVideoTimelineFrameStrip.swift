@@ -41,7 +41,7 @@ struct VideoTimelineFrameStrip: View {
       }
     }
     .frame(height: 50)
-    .cornerRadius(4)
+    .cornerRadius(Radius.tile)
     .clipped()
   }
 }

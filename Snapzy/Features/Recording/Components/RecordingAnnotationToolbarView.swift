@@ -74,7 +74,7 @@ struct RecordingAnnotationToolbarView: View {
             .padding(.horizontal, 3)
             .padding(.vertical, 1)
             .background(
-              RoundedRectangle(cornerRadius: 3)
+              Radius.rect(Radius.ornament)
                 .fill(Color.accentColor)
             )
             .offset(x: 4, y: 4)
@@ -117,7 +117,7 @@ struct RecordingAnnotationToolbarView: View {
       Button {
         state.strokeWidth = width
       } label: {
-        RoundedRectangle(cornerRadius: 1)
+        RoundedRectangle(cornerRadius: 1) // radius-lint:allow — draws the pen-width sample; roundness is not a surface
           .fill(state.strokeWidth == width ? Color.primary : Color.primary.opacity(0.4))
           .frame(
             width: direction == .horizontal ? width * 3 : 16,
@@ -148,7 +148,7 @@ struct RecordingAnnotationToolbarView: View {
         .foregroundColor(.primary.opacity(0.85))
         .frame(width: 28, height: 28)
         .background(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.controlRect(forHeight: 28)
             .fill(Color.clear)
         )
     }

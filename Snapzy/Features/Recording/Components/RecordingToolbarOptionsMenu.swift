@@ -28,7 +28,7 @@ struct ToolbarOptionsMenu: View {
       .padding(.horizontal, 10)
       .padding(.vertical, 6)
       .liquidGlassChrome(
-        shape: ToolbarConstants.buttonShape,
+        shape: ToolbarConstants.textButtonShape,
         isVisible: isHovered || showPopover,
         isActive: showPopover
       )
@@ -207,7 +207,7 @@ private struct OptionPill: View {
         .padding(.vertical, 5)
         .liquidGlassControl(
           isActive: isSelected,
-          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
+          in: Capsule(style: .continuous)
         )
     }
     .buttonStyle(.plain)
@@ -218,7 +218,7 @@ private struct OptionPill: View {
   ToolbarOptionsMenu(state: RecordingToolbarState())
     .padding()
     .background(.ultraThinMaterial)
-    .clipShape(RoundedRectangle(cornerRadius: 14))
+    .clipShape(Radius.rect(Radius.card))
 }
 
 #Preview("Popover Content") {

@@ -30,7 +30,7 @@ struct HistoryItemView: View, Equatable {
       // Thumbnail
       GeometryReader { geometry in
         ZStack {
-          RoundedRectangle(cornerRadius: 8)
+          Radius.rect(Radius.tile)
             .fill(Color.secondary.opacity(0.1))
 
           if isVisible, let image = thumbnailImage {
@@ -109,11 +109,11 @@ struct HistoryItemView: View, Equatable {
             HistoryCloudUploadOverlayView(state: uploadState)
           }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(Radius.rect(Radius.tile))
       }
       .aspectRatio(1.0, contentMode: .fit)
       .overlay(
-        RoundedRectangle(cornerRadius: 8)
+        Radius.rect(Radius.tile)
           .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
       )
       .onHover { hovering in

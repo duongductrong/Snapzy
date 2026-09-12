@@ -55,7 +55,7 @@ struct AboutSettingsView: View {
         .resizable()
         .aspectRatio(contentMode: .fit)
         .frame(width: 96, height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
         .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 6)
         .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
 
@@ -369,10 +369,10 @@ private struct ActionLinkButtonStyle: ButtonStyle {
 private extension View {
   func cardContainer(maxWidth: CGFloat) -> some View {
     background {
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.card)
         .fill(Color.primary.opacity(0.04))
     }
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(Radius.rect(Radius.card))
     .frame(maxWidth: maxWidth)
   }
 }

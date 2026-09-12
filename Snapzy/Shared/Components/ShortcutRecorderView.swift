@@ -232,6 +232,14 @@ struct ShortcutResetButton: View {
   }
 }
 
+/// Geometry shared by the recorder field, its validation highlight and the legacy button style.
+/// All three draw the same rectangle on top of each other, so they must agree on the radius.
+enum ShortcutRecorderMetrics {
+  /// A `KeyCapView` is 22pt tall and the styles add 4pt of vertical padding either side.
+  static let fieldHeight: CGFloat = 30
+  static var fieldRadius: CGFloat { Radius.control(forHeight: fieldHeight) }
+}
+
 /// Transparent button style for keycap-based shortcut recorder; keycaps provide visual affordance
 struct ShortcutKeycapButtonStyle: ButtonStyle {
   let isRecording: Bool
@@ -243,17 +251,17 @@ struct ShortcutKeycapButtonStyle: ButtonStyle {
       .padding(.horizontal, horizontalPadding)
       .padding(.vertical, verticalPadding)
       .background(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .strokeBorder(
             isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
             lineWidth: 1
           )
       )
-      .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+      .contentShape(Radius.rect(ShortcutRecorderMetrics.fieldRadius))
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
   }
@@ -325,12 +333,12 @@ struct ShortcutValidationHighlightModifier: ViewModifier {
   func body(content: Content) -> some View {
     content
       .background(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .fill(pillFill)
           .animation(.easeOut(duration: 0.2), value: issue)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .strokeBorder(pillBorder, lineWidth: 1)
           .animation(.easeOut(duration: 0.2), value: issue)
       )
@@ -402,17 +410,17 @@ struct ShortcutButtonStyle: ButtonStyle {
       .padding(.horizontal, 6)
       .padding(.vertical, 4)
       .background(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
           .strokeBorder(
             isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
             lineWidth: 1
           )
       )
-      .contentShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+      .contentShape(Radius.rect(ShortcutRecorderMetrics.fieldRadius))
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
   }
