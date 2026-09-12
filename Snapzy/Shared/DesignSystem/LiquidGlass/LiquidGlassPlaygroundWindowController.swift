@@ -16,8 +16,8 @@ final class LiquidGlassPlaygroundWindowController: NSObject, NSWindowDelegate {
 
   var isVisible: Bool { window?.isVisible ?? false }
 
-  static let defaultSize = CGSize(width: 960, height: 720)
-  static let minSize = CGSize(width: 820, height: 600)
+  static let defaultSize = CGSize(width: 1360, height: 840)
+  static let minSize = CGSize(width: 1140, height: 680)
 
   private var didElevateActivationPolicy = false
 
@@ -54,14 +54,12 @@ final class LiquidGlassPlaygroundWindowController: NSObject, NSWindowDelegate {
     let hostingView = NSHostingView(rootView: LiquidGlassPlaygroundView())
     let window = NSWindow(
       contentRect: CGRect(origin: .zero, size: Self.defaultSize),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
+      styleMask: [.titled, .closable, .miniaturizable, .resizable],
       backing: .buffered,
       defer: false
     )
 
-    window.title = "Bản Điều Chỉnh Liquid Glass (macOS 13–15 vs 26+)"
-    window.titlebarAppearsTransparent = true
-    window.titleVisibility = .visible
+    window.title = "Snapzy Design Studio"
     window.minSize = Self.minSize
     window.contentView = hostingView
     window.delegate = self
@@ -71,6 +69,17 @@ final class LiquidGlassPlaygroundWindowController: NSObject, NSWindowDelegate {
   }
 
   func windowWillClose(_ notification: Notification) {
-    // Keep window reference for faster reopen, or let it stay ready
+    let visibleWindows = NSApp.windows.filter { win in
+      win.isVisible &&
+      win !== self.window &&
+      win.className != "NSStatusBarWindow" &&
+      win.level == .normal
+    }
+
+    if visibleWindows.isEmpty && didElevateActivationPolicy {
+      NSApp.setActivationPolicy(.accessory)
+      didElevateActivationPolicy = false
+      DiagnosticLogger.shared.log(.debug, .ui, "Activation policy restored to accessory after studio closed")
+    }
   }
 }

@@ -128,7 +128,7 @@ The Permissions tab reflects unhealthy identity as `grantedButUnavailableDueToAp
 
 - `ThemeManager` (`Snapzy/Services/Appearance/ThemeManager.swift`): `@AppStorage(PreferencesKeys.appearanceMode)` → `AppearanceMode` `.system` / `.light` / `.dark`.
 - `nsAppearance`: `nil` (system) / `.aqua` / `.darkAqua` for AppKit windows; `systemAppearance: ColorScheme` published for SwiftUI `.preferredColorScheme`, tracking `AppleInterfaceThemeChangedNotification`.
-- `WindowSurfacePalette`: shared opaque window backgrounds (`lightBase` white 0.95, `darkBase` white 0.12).
+- `WindowSurfacePalette`: shared window background color provider resolving `NSColor.windowBackgroundColor` dynamically across appearance modes (`.system`, `.light`, `.dark`) and appearances (`.aqua`, `.darkAqua`) so windows maintain native wallpaper tinting and theme consistency.
 
 ## Migrations & recovery
 
