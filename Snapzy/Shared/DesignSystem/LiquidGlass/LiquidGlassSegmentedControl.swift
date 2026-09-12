@@ -14,6 +14,12 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
 
   @Namespace private var segmentNamespace
   @State private var hoveredItem: Item? = nil
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+  }
 
   var body: some View {
     HStack(spacing: 2) {
@@ -43,12 +49,17 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
               substrate: LiquidGlassTokens.controlSubstrateHover,
               tint: 0.14,
               highlight: .none,
-              withRimLighting: isSelected && !LiquidGlassCapabilities.hasNativeLiquidGlass,
+              withRimLighting: isSelected && !usesNativeGlass,
               isInteractive: true,
               glassTint: .accentColor
             )
             .liquidGlassID(item, in: segmentNamespace)
             .contentShape(Capsule(style: .continuous))
+            .shadow(
+              color: !usesNativeGlass && isSelected ? Color.black.opacity(0.18) : .clear,
+              radius: 2,
+              y: 1
+            )
         }
         .buttonStyle(.plain)
         .background {
@@ -71,7 +82,7 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
       substrate: LiquidGlassTokens.baseDarkness,
       tint: 0.02,
       highlight: .none,
-      withRimLighting: !LiquidGlassCapabilities.hasNativeLiquidGlass
+      withRimLighting: !usesNativeGlass
     )
     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 3)
   }

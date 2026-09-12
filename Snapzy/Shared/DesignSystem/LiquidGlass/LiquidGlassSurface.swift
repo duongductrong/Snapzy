@@ -38,6 +38,8 @@ struct LiquidGlassRefraction<S: InsettableShape>: View {
   var shape: S
   var layer: LiquidGlassLayer = .control
 
+  @Environment(\.liquidGlassTuning) private var tuning
+
   @ViewBuilder
   var body: some View {
     switch layer {
@@ -45,13 +47,15 @@ struct LiquidGlassRefraction<S: InsettableShape>: View {
       LiquidGlassVibrancyBackdrop(material: .hudWindow, blending: .behindWindow)
         .clipShape(shape)
     case .control:
+      let top = tuning?.sheenTopOpacity ?? LiquidGlassTokens.fallbackControlSheenTop
+      let bottom = tuning?.sheenBottomOpacity ?? LiquidGlassTokens.fallbackControlSheenBottom
       // A live AppKit blur per control would thrash the view hierarchy on every pointer move,
       // so nested controls approximate refraction with a diagonal sheen instead.
       shape.fill(
         LinearGradient(
           colors: [
-            Color.white.opacity(LiquidGlassTokens.fallbackControlSheenTop),
-            Color.white.opacity(LiquidGlassTokens.fallbackControlSheenBottom),
+            Color.white.opacity(top),
+            Color.white.opacity(bottom),
           ],
           startPoint: .topLeading,
           endPoint: .bottomTrailing
@@ -74,43 +78,65 @@ struct LiquidGlassSurface<S: InsettableShape>: View {
   var highlight: LiquidGlassHighlight = .specular
   var layer: LiquidGlassLayer = .control
   var withRimLighting: Bool = false
+  var glassTint: Color? = nil
 
   @Environment(\.colorScheme) private var colorScheme
+  @Environment(\.liquidGlassTuning) private var tuning
 
   var body: some View {
+    let substrateActive = tuning?.isSubstrateEnabled ?? true
+    let refractionActive = tuning?.isRefractionEnabled ?? true
+    let veilActive = tuning?.isVeilEnabled ?? true
+    let specularActive = tuning?.isSpecularEnabled ?? true
+    let rimActive = (tuning?.isRimLightingEnabled ?? true) && withRimLighting
+
+    let effectiveSubstrate = (tuning != nil && layer == .control) ? tuning!.substrateOpacity : resolvedSubstrate
+
     ZStack {
-      if resolvedSubstrate > 0 {
-        shape.fill(LiquidGlassTokens.substrateFill.opacity(resolvedSubstrate))
-      }
+      if let glassTint {
+        // macOS 13–15 Solid Native: Grounded, punchy system color without fake optical lens artifacts
+        shape.fill(glassTint)
 
-      LiquidGlassRefraction(shape: shape, layer: layer)
-        .clipShape(shape)
+        if specularActive, let stops = resolvedHighlightStops {
+          shape.strokeBorder(
+            LinearGradient(
+              colors: [stops.top, stops.bottom],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            ),
+            lineWidth: LiquidGlassTokens.specularLineWidth
+          )
+        }
+      } else {
+        if substrateActive, effectiveSubstrate > 0 {
+          shape.fill(LiquidGlassTokens.substrateFill.opacity(effectiveSubstrate))
+        }
 
-      if withRimLighting {
-        LiquidGlassCaustics(shape: shape, isHovered: false, isEnabled: true)
-      }
+        if refractionActive {
+          LiquidGlassRefraction(shape: shape, layer: layer)
+            .clipShape(shape)
+        }
 
-      if dim > 0 {
-        shape.fill(LiquidGlassTokens.substrateFill.opacity(dim))
-      }
+        if substrateActive, dim > 0 {
+          shape.fill(LiquidGlassTokens.substrateFill.opacity(dim))
+        }
 
-      if resolvedTint > 0 {
-        shape.fill(LiquidGlassTokens.veilFill.opacity(resolvedTint))
-      }
+        if veilActive, resolvedTint > 0 {
+          shape.fill(LiquidGlassTokens.veilFill.opacity(resolvedTint))
+        }
 
-      if withRimLighting {
-        // `LiquidGlassRimBorder` already draws the specular diagonal hairline, so drawing
-        // `highlight` as well stacks two identical strokes into a chalky white outline.
-        LiquidGlassRimBorder(shape: shape, isHovered: false, isEnabled: true)
-      } else if let stops = highlight.stops {
-        shape.strokeBorder(
-          LinearGradient(
-            colors: [stops.top, stops.bottom],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          ),
-          lineWidth: LiquidGlassTokens.specularLineWidth
-        )
+        if rimActive {
+          LiquidGlassRimBorder(shape: shape, isHovered: false, isEnabled: true)
+        } else if specularActive, let stops = resolvedHighlightStops {
+          shape.strokeBorder(
+            LinearGradient(
+              colors: [stops.top, stops.bottom],
+              startPoint: .topLeading,
+              endPoint: .bottomTrailing
+            ),
+            lineWidth: LiquidGlassTokens.specularLineWidth
+          )
+        }
       }
     }
   }
@@ -124,6 +150,13 @@ struct LiquidGlassSurface<S: InsettableShape>: View {
 
   private var resolvedTint: Double {
     LiquidGlassTokens.veilOpacity(tint, isDark: isDark)
+  }
+
+  private var resolvedHighlightStops: (top: Color, bottom: Color)? {
+    if let tuning {
+      return (Color.white.opacity(tuning.specularTopOpacity), Color.white.opacity(tuning.specularBottomOpacity))
+    }
+    return highlight.stops
   }
 }
 
@@ -140,7 +173,6 @@ extension View {
   /// Pass `isVisible: false` to keep the surface in the hierarchy but render nothing — that maps
   /// to `Glass.identity` on native, which avoids the conditional insert/remove (and its implicit
   /// `.opacity` transition) that would otherwise sever backdrop sampling.
-  @ViewBuilder
   func liquidGlassSurface<S: InsettableShape>(
     shape: S,
     isVisible: Bool = true,
@@ -153,30 +185,18 @@ extension View {
     isInteractive: Bool = false,
     glassTint: Color? = nil
   ) -> some View {
-    if #available(macOS 26.0, *), !LiquidGlassCapabilities.forcesLegacyGlass {
-      glassEffect(
-        LiquidGlassNativeStyle.glass(
-          isVisible: isVisible,
-          isInteractive: isInteractive,
-          tint: glassTint
-        ),
-        in: shape
-      )
-    } else if isVisible {
-      background {
-        LiquidGlassSurface(
-          shape: shape,
-          substrate: substrate,
-          dim: dim,
-          tint: tint,
-          highlight: highlight,
-          layer: layer,
-          withRimLighting: withRimLighting
-        )
-      }
-    } else {
-      self
-    }
+    modifier(LiquidGlassSurfaceModifier(
+      shape: shape,
+      isVisible: isVisible,
+      substrate: substrate,
+      dim: dim,
+      tint: tint,
+      highlight: highlight,
+      layer: layer,
+      withRimLighting: withRimLighting,
+      isInteractive: isInteractive,
+      glassTint: glassTint
+    ))
   }
 
   /// Legacy alias kept for call sites that also want the content clipped to `shape`.
@@ -203,6 +223,53 @@ extension View {
       glassTint: glassTint
     )
     .contentShape(shape)
+  }
+}
+
+private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
+  let shape: S
+  let isVisible: Bool
+  let substrate: CGFloat
+  let dim: CGFloat
+  let tint: CGFloat
+  let highlight: LiquidGlassHighlight
+  let layer: LiquidGlassLayer
+  let withRimLighting: Bool
+  let isInteractive: Bool
+  let glassTint: Color?
+
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
+
+  @ViewBuilder
+  func body(content: Content) -> some View {
+    let useNative = LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+
+    if #available(macOS 26.0, *), useNative {
+      content.glassEffect(
+        LiquidGlassNativeStyle.glass(
+          isVisible: isVisible,
+          isInteractive: isInteractive,
+          tint: glassTint
+        ),
+        in: shape
+      )
+    } else if isVisible {
+      content.background {
+        LiquidGlassSurface(
+          shape: shape,
+          substrate: substrate,
+          dim: dim,
+          tint: tint,
+          highlight: highlight,
+          layer: layer,
+          withRimLighting: withRimLighting,
+          glassTint: glassTint
+        )
+      }
+    } else {
+      content
+    }
   }
 }
 

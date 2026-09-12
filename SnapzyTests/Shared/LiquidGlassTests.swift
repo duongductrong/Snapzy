@@ -38,6 +38,63 @@ final class LiquidGlassTests: XCTestCase {
     XCTAssertEqual(LiquidGlassCapabilities.hasNativeLiquidGlass, expected)
   }
 
+  func testCapabilities_runtimeLegacyOverrideControlsCapabilities() {
+    let original = LiquidGlassCapabilities.runtimeLegacyOverride
+    defer { LiquidGlassCapabilities.runtimeLegacyOverride = original }
+
+    LiquidGlassCapabilities.runtimeLegacyOverride = true
+    XCTAssertTrue(LiquidGlassCapabilities.forcesLegacyGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.hasNativeLiquidGlass)
+
+    LiquidGlassCapabilities.runtimeLegacyOverride = false
+    if #available(macOS 26.0, *) {
+      XCTAssertFalse(LiquidGlassCapabilities.forcesLegacyGlass)
+      XCTAssertTrue(LiquidGlassCapabilities.hasNativeLiquidGlass)
+    }
+  }
+
+  func testCapabilities_systemSupportedProperty() {
+    let expected: Bool
+    if #available(macOS 26.0, *) {
+      expected = true
+    } else {
+      expected = false
+    }
+    XCTAssertEqual(LiquidGlassCapabilities.isSystemSupported, expected)
+  }
+
+  func testCapabilities_userPreferenceEnablesAndDisablesLiquidGlass() {
+    let originalPref = UserDefaults.standard.object(forKey: PreferencesKeys.useLiquidGlass)
+    let originalRuntime = LiquidGlassCapabilities.runtimeLegacyOverride
+    defer {
+      UserDefaults.standard.set(originalPref, forKey: PreferencesKeys.useLiquidGlass)
+      LiquidGlassCapabilities.runtimeLegacyOverride = originalRuntime
+    }
+    LiquidGlassCapabilities.runtimeLegacyOverride = nil
+
+    // Enabled (default)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.useLiquidGlass)
+    XCTAssertTrue(LiquidGlassCapabilities.isUserPreferenceEnabled)
+    if #available(macOS 26.0, *) {
+      XCTAssertFalse(LiquidGlassCapabilities.forcesLegacyGlass)
+      XCTAssertTrue(LiquidGlassCapabilities.hasNativeLiquidGlass)
+    }
+
+    // Disabled by user
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.useLiquidGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.isUserPreferenceEnabled)
+    XCTAssertTrue(LiquidGlassCapabilities.forcesLegacyGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.hasNativeLiquidGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system))
+  }
+
+  func testCapabilities_usesNativeGlassForRenderModes() {
+    XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .legacy))
+    if #available(macOS 26.0, *) {
+      XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .native))
+    }
+  }
+
   func testCapabilities_backdropSubstrateOnlyCompensatesOnLegacyPath() {
     let resolved = LiquidGlassTokens.backdropSubstrate(LiquidGlassTokens.baseDarkness)
     if LiquidGlassCapabilities.hasNativeLiquidGlass {
@@ -174,15 +231,6 @@ final class LiquidGlassTests: XCTestCase {
   /// appearance drew black glyphs on the Annotate toolbar's blue selected tools and on the Video
   /// Editor transport in Light theme. Ink on a tint resolves against the tint.
   func testTokens_inkOnDarkTintStaysLightInBothAppearances() throws {
-    guard LiquidGlassCapabilities.hasNativeLiquidGlass else {
-      // The composite drops `glassTint` outright, so there is no tint to resolve against.
-      XCTAssertEqual(
-        try resolve(LiquidGlassTokens.ink(onTint: .accentColor), in: .aqua),
-        try resolve(LiquidGlassTokens.inkPrimary, in: .aqua)
-      )
-      return
-    }
-
     for appearance in [NSAppearance.Name.darkAqua, .aqua] {
       for tint in [Color.accentColor, .blue, .red] {
         let resolved = try resolve(LiquidGlassTokens.ink(onTint: tint), in: appearance)
@@ -197,8 +245,6 @@ final class LiquidGlassTests: XCTestCase {
 
   /// A bright tint — a yellow or orange accent — flips the ink instead of shipping white on yellow.
   func testTokens_inkOnBrightTintFlipsDark() throws {
-    try XCTSkipUnless(LiquidGlassCapabilities.hasNativeLiquidGlass)
-
     let resolved = try resolve(LiquidGlassTokens.ink(onTint: .yellow), in: .aqua)
     XCTAssertLessThan(resolved.brightnessComponent, 0.2)
   }

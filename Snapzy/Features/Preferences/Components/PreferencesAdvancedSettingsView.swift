@@ -122,6 +122,22 @@ struct AdvancedSettingsView: View {
         }
       }
 
+      #if DEBUG
+      Section("Design System & Liquid Glass") {
+        SettingRow(
+          icon: "slider.horizontal.below.square.and.square.filled",
+          title: "Bản điều chỉnh Liquid Glass",
+          description: "So sánh hiển thị macOS 26+ (Apple Liquid Glass) và macOS 13–15 (Fallback Composite), hiệu chỉnh các tầng quang học."
+        ) {
+          Button("Mở bản điều chỉnh...") {
+            LiquidGlassPlaygroundWindowController.shared.show()
+          }
+          .buttonStyle(.borderedProminent)
+          .controlSize(.regular)
+        }
+      }
+      #endif
+
       Section(L10n.PreferencesAdvanced.diagnosticsSection) {
         SettingRow(
           icon: "doc.text.magnifyingglass",
