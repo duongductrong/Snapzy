@@ -314,8 +314,8 @@ Image(systemName: icon)
 ```
 
 This is the single place the icon-button composite is tuned — `ToolbarButton`, `BottomBarButton`,
-`ToolbarIconButtonLabel`, `AnnotationToolbarIconButton`, and the Quick Access card buttons all
-route through it, and `liquidGlassControl` is built on top of it.
+`ToolbarIconButtonLabel`, and `AnnotationToolbarIconButton` all route through it, and
+`liquidGlassControl` is built on top of it.
 
 ##### Emphasis tiers
 
@@ -332,18 +332,16 @@ route through it, and `liquidGlassControl` is built on top of it.
 > `LiquidGlassChromeEmphasis.glassTint(isActive:)`. Chrome that *materialises* on hover is fine
 > as-is: flipping `isVisible` swaps `Glass.identity` for `Glass.regular`, and that is the tell.
 
-`.overlay` is for chrome that floats over *user content* — Quick Access card buttons, the pinned
-window's zoom pill and drag handle. It pins the ink light (`inkOverlay`) rather than letting it flip
-with the drawing appearance, because a screenshot's brightness has nothing to do with Light or Dark
-Aqua.
+`.overlay` is for chrome that floats over *user content* — the pinned window's zoom pill and drag
+handle. It pins the ink light (`inkOverlay`) rather than letting it flip with the drawing appearance,
+because a capture's brightness has nothing to do with Light or Dark Aqua.
 
 > **Overlay chrome pins its own material dark.** Left untinted, `.glassEffect` resolves *light*
-> over a bright screenshot and the white glyph lands at roughly 1.5:1 — this is exactly how the
-> Quick Access card buttons shipped. The fix is a dark tint on the glass itself, not a fill behind
-> it: a tint colours the material and keeps it refracting, which a backing fill cannot do because
-> the material never sees it. Hover *deepens* the tint rather than brightening it, so the state
-> change can never cost the glyph contrast. Past `~0.55` the surface stops reading as glass and
-> turns into a grey slab, so the pair is tuned to `0.38` / `0.52`.
+> over a bright screenshot and the white glyph lands at roughly 1.5:1. The fix is a dark tint on
+> the glass itself, not a fill behind it: a tint colours the material and keeps it refracting,
+> which a backing fill cannot do because the material never sees it. Hover *deepens* the tint
+> rather than brightening it, so the state change can never cost the glyph contrast. Past `~0.55`
+> the surface stops reading as glass and turns into a grey slab, so the pair is tuned to `0.38` / `0.52`.
 
 #### 5. Grouping Sibling Surfaces
 Wrap a row of glass controls so the system samples once and lets neighbours merge optically on
@@ -431,7 +429,7 @@ because every call site uses the design system.
 | :--- | :--- |
 | **Annotate** | Toolbar icons and action buttons, quick-properties bar, bottom bar |
 | **Video Editor** | Toolbar (via `ToolbarButton`), rename field, playback transport + play/pause, bottom bar (`.liquidGlass` emphasis buttons, shared `BottomBarButton`) |
-| **Quick Access** | Card icon/text/action buttons (`.overlay` emphasis), pinned-window zoom pill, drag handle, chrome buttons, zoom picker rows |
+| **Quick Access** | Pinned-window zoom pill, drag handle, chrome buttons, zoom picker rows (card buttons use standard translucent controls) |
 | **Recording toolbar** | `ToolbarIconButtonLabel`, record/options/stop button styles, capture-area toggle, output-mode dropdown and its rows, option pills |
 | **Recording annotation toolbar** | `AnnotationToolbarIconButton` |
 | **History floating panel** | Filter pills, round control buttons, search bar and selection bar surfaces |
@@ -444,15 +442,8 @@ and glass would wash the sample out.
 Converting a surface means auditing everything that animates around it. These were real violations
 found and fixed:
 
-- `QuickAccessCardView` revealed its overlay and corner buttons with `.opacity`-combined
-  transitions, and dimmed disabled buttons with an external `.opacity()`. Transitions are now
-  scale-only (`.identity` under reduce-motion) and disabled dimming moved onto the button labels.
 - `ToolbarButton` / `BottomBarButton` now dim their own glyph when disabled, so call sites no longer
   wrap them in `.opacity()`.
 - `RecordButtonWithBadge` dimmed the whole button while preparing to record; that moved onto the
   label.
 - The History selection bar faded in with `.opacity.combined(with: .scale)`; it is scale-only now.
-
-One known exception remains: `QuickAccessCardView` applies `.opacity(cardOpacity)` to the whole card
-while it is being swiped away or dragged. It is `1.0` at rest, so it only matters mid-gesture, on a
-card that is on its way off screen.
