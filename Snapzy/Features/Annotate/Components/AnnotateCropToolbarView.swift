@@ -20,12 +20,11 @@ struct CropToolbarView: View {
   @ObservedObject var state: AnnotateState
 
   var body: some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 8) {
       // Aspect ratio picker
       aspectRatioPicker
 
-      Divider()
-        .frame(height: 20)
+      ToolbarDivider()
 
       // Grid toggle
       gridToggle
@@ -36,6 +35,7 @@ struct CropToolbarView: View {
       // Auto-crop to content (same as the `A` shortcut)
       autoCropButton
     }
+    .liquidGlassGroup(spacing: Spacing.xs)
   }
 
   // MARK: - Aspect Ratio Picker
@@ -53,8 +53,7 @@ struct CropToolbarView: View {
       }
 
       if state.cropAspectRatio != .free, state.cropAspectRatio != .square {
-        Divider()
-          .frame(height: 20)
+        ToolbarDivider()
 
         orientationToggle
       }
@@ -64,75 +63,82 @@ struct CropToolbarView: View {
   // MARK: - Orientation Toggle
 
   private var orientationToggle: some View {
-    Button {
+    CropToolbarIconButton(
+      icon: state.isCropPortraitOrientation ? "rectangle.portrait" : "rectangle",
+      isActive: false,
+      tooltip: L10n.AnnotateUI.toggleCropOrientation
+    ) {
       state.toggleCropOrientation()
-    } label: {
-      Image(systemName: state.isCropPortraitOrientation ? "rectangle.portrait" : "rectangle")
-        .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(Color.accentColor)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(Color.accentColor.opacity(0.2))
-        )
     }
-    .buttonStyle(.plain)
-    .help(L10n.AnnotateUI.toggleCropOrientation)
   }
 
   // MARK: - Grid Toggle
 
   private var gridToggle: some View {
-    Button {
+    CropToolbarIconButton(
+      icon: state.showCropGrid ? "grid" : "grid.circle",
+      isActive: state.showCropGrid,
+      tooltip: L10n.AnnotateUI.toggleRuleOfThirdsGrid
+    ) {
       state.showCropGrid.toggle()
-    } label: {
-      Image(systemName: state.showCropGrid ? "grid" : "grid.circle")
-        .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(state.showCropGrid ? Color.accentColor : Color.primary)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(state.showCropGrid ? Color.accentColor.opacity(0.2) : Color.clear)
-        )
     }
-    .buttonStyle(.plain)
-    .help(L10n.AnnotateUI.toggleRuleOfThirdsGrid)
   }
 
   // MARK: - Snap Toggle
 
   private var snapToggle: some View {
-    Button {
+    CropToolbarIconButton(
+      icon: CropToolbarSymbols.snapToEdges,
+      isActive: state.isCropEdgeSnappingEnabled,
+      tooltip: "\(L10n.AnnotateUI.cropSnapToEdges) — \(L10n.AnnotateUI.cropSnapToEdgesHint)"
+    ) {
       state.isCropEdgeSnappingEnabled.toggle()
-    } label: {
-      Image(systemName: CropToolbarSymbols.snapToEdges)
-        .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(state.isCropEdgeSnappingEnabled ? Color.accentColor : Color.primary)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(state.isCropEdgeSnappingEnabled ? Color.accentColor.opacity(0.2) : Color.clear)
-        )
     }
-    .buttonStyle(.plain)
-    .help("\(L10n.AnnotateUI.cropSnapToEdges) — \(L10n.AnnotateUI.cropSnapToEdgesHint)")
   }
 
   // MARK: - Auto-Crop Button
 
   private var autoCropButton: some View {
-    Button {
+    CropToolbarIconButton(
+      icon: "arrow.up.left.and.arrow.down.right",
+      isActive: false,
+      tooltip: L10n.AnnotateUI.autoCropToContent
+    ) {
       Task { @MainActor in
         await state.autoCropToContent()
       }
-    } label: {
-      Image(systemName: "arrow.up.left.and.arrow.down.right")
+    }
+  }
+}
+
+// MARK: - Crop Toolbar Icon Button
+
+struct CropToolbarIconButton: View {
+  let icon: String
+  var isActive: Bool = false
+  let tooltip: String
+  let action: () -> Void
+
+  @Environment(\.isEnabled) private var isEnabled
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: icon)
         .font(.system(size: 14, weight: .medium))
-        .foregroundStyle(Color.primary)
+        .foregroundColor(foregroundColor)
         .frame(width: 28, height: 28)
+        .liquidGlassControl(
+          isActive: isActive,
+          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
+        )
     }
     .buttonStyle(.plain)
-    .help(L10n.AnnotateUI.autoCropToContent)
+    .help(tooltip)
+  }
+
+  private var foregroundColor: Color {
+    guard isEnabled else { return Color.primary.opacity(0.4) }
+    return isActive ? LiquidGlassTokens.inkOnAccent : Color.primary
   }
 }
 
@@ -144,34 +150,29 @@ struct CropRatioButton: View {
   let isPortrait: Bool
   let action: () -> Void
 
-  @State private var isHovering = false
+  @Environment(\.isEnabled) private var isEnabled
 
   var body: some View {
     Button(action: action) {
       Text(displayName)
-        .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-        .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+        .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
+        .foregroundColor(foregroundColor)
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-          RoundedRectangle(cornerRadius: 4)
-            .fill(backgroundColor)
+        .frame(height: 28)
+        .liquidGlassControl(
+          isActive: isSelected,
+          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
         )
     }
     .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
   }
 
   private var displayName: String {
     isSelected ? ratio.effectiveDisplayName(isPortrait: isPortrait) : ratio.displayName
   }
 
-  private var backgroundColor: Color {
-    if isSelected {
-      return Color.accentColor.opacity(0.2)
-    } else if isHovering {
-      return Color.primary.opacity(0.1)
-    }
-    return Color.clear
+  private var foregroundColor: Color {
+    guard isEnabled else { return Color.primary.opacity(0.4) }
+    return isSelected ? LiquidGlassTokens.inkOnAccent : Color.primary
   }
 }
