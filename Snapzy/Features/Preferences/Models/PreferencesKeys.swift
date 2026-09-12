@@ -40,6 +40,7 @@ enum PreferencesKeys {
 
   /// Appearance
   static let appearanceMode = "appearanceMode"
+  static let useLiquidGlass = "appearance.useLiquidGlass"
 
   // Updates
   static let updateChannel = "updates.channel"

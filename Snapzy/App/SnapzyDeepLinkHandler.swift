@@ -96,6 +96,13 @@ struct SnapzyDeepLinkHandler {
       ShortcutOverlayManager.shared.toggle()
     case .openSettings(let tab):
       AppStatusBarController.shared.openPreferencesWindow(tab: tab)
+    case .openLiquidGlassPlayground:
+      #if DEBUG
+      LiquidGlassPlaygroundWindowController.shared.show()
+      NSApp.activate(ignoringOtherApps: true)
+      #else
+      DiagnosticLogger.shared.log(.info, category: .general, message: "Liquid Glass Playground is only available in debug builds.")
+      #endif
     }
   }
 }
@@ -120,6 +127,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case openHistory
   case showShortcuts
   case openSettings(PreferencesTab?)
+  case openLiquidGlassPlayground
 
   init?(url: URL) {
     guard url.scheme?.lowercased() == "snapzy" else { return nil }
@@ -164,6 +172,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .openVideoEditor
     case "open/cloud-uploads", "cloud-uploads", "uploads", "open-uploads":
       self = .openCloudUploads
+    case "open/liquid-glass-playground", "open/liquid-glass-preview", "open/liquid-glass", "liquid-glass-playground", "liquid-glass":
+      self = .openLiquidGlassPlayground
     case "open/history", "history", "capture-history":
       self = .openHistory
     case "show/shortcuts", "shortcuts", "keyboard-shortcuts", "show-shortcuts":
@@ -200,6 +210,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .openHistory: return "openHistory"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
+    case .openLiquidGlassPlayground: return "openLiquidGlassPlayground"
     }
   }
 

@@ -2753,6 +2753,16 @@ nonisolated enum L10n {
       defaultValue: "Choose your preferred appearance",
       comment: "General preferences setting description"
     )
+    static let liquidGlassTitle = string(
+      "preferences-general.liquid-glass-title",
+      defaultValue: "Liquid Glass Effect",
+      comment: "General preferences setting title"
+    )
+    static let liquidGlassDescription = string(
+      "preferences-general.liquid-glass-description",
+      defaultValue: "Use translucent Liquid Glass on macOS 26+. Turn off to use solid native controls.",
+      comment: "General preferences setting description"
+    )
     static let languageTitle = string(
       "preferences-general.language-title",
       defaultValue: "App Language",
