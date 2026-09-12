@@ -332,10 +332,13 @@ struct HistoryFloatingContentView: View {
     .padding(.horizontal, 14)
     .padding(.vertical, 9)
     .frame(width: 238)
-    .background(chromeSurfaceFill, in: Capsule())
-    .overlay(
-      Capsule()
-        .stroke(chromeSurfaceBorder, lineWidth: 1)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: 0.18,
+      tint: 0.06,
+      // Native glass draws its own refractive edge; a second stroke on top reads as a chalky
+      // white outline, so the specular hairline is legacy-only.
+      highlight: LiquidGlassCapabilities.hasNativeLiquidGlass ? .none : .specular
     )
     .shadow(color: chromeSurfaceShadow, radius: 7, x: 0, y: 3)
   }
@@ -428,17 +431,17 @@ struct HistoryFloatingContentView: View {
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 9)
-    .background(.ultraThinMaterial, in: Capsule())
-    .background(selectionBarTint, in: Capsule())
-    .overlay(
-      Capsule()
-        .stroke(selectionBarBorder, lineWidth: 1)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: LiquidGlassTokens.baseDarkness,
+      tint: 0.06,
+      highlight: LiquidGlassCapabilities.hasNativeLiquidGlass ? .none : .specular
     )
     .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.14), radius: 18, x: 0, y: 8)
     .fixedSize(horizontal: true, vertical: false)
     .frame(maxWidth: .infinity, alignment: .center)
     .padding(.bottom, 4)
-    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+    .transition(.scale(scale: 0.96, anchor: .bottom))
   }
 
   private var expandedGrid: some View {
@@ -541,61 +544,12 @@ struct HistoryFloatingContentView: View {
     usesExplicitCompactFilterSelection ? selectedCompactFilter : manager.defaultFilter
   }
 
-  private var selectedFilterBackground: AnyShapeStyle {
-    AnyShapeStyle(
-      LinearGradient(
-        colors: [
-          Color.accentColor.opacity(colorScheme == .dark ? 0.95 : 0.98),
-          Color.accentColor.opacity(colorScheme == .dark ? 0.82 : 0.9),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    )
-  }
-
-  private var chromeSurfaceFill: AnyShapeStyle {
-    if backgroundStyle == .solid {
-      return colorScheme == .dark
-        ? AnyShapeStyle(Color.white.opacity(0.07))
-        : AnyShapeStyle(Color.white.opacity(0.76))
-    }
-
-    return colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.07))
-      : AnyShapeStyle(Color.white.opacity(0.52))
-  }
-
-  private var chromeSurfaceBorder: Color {
-    colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.64)
-  }
-
   private var chromeSurfaceShadow: Color {
     Color.black.opacity(colorScheme == .dark ? 0.18 : 0.07)
   }
 
-  private var selectionBarTint: Color {
-    colorScheme == .dark ? Color.black.opacity(0.18) : Color.white.opacity(0.42)
-  }
-
-  private var selectionBarBorder: Color {
-    colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.7)
-  }
-
-  private var unselectedPillBackground: AnyShapeStyle {
-    colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.08))
-      : AnyShapeStyle(Color.black.opacity(0.05))
-  }
-
   private var pillCountBackground: Color {
     colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.84)
-  }
-
-  private var controlButtonBackground: AnyShapeStyle {
-    colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.08))
-      : AnyShapeStyle(Color.white.opacity(0.72))
   }
 
   private var placeholderFill: Color {
@@ -655,21 +609,12 @@ struct HistoryFloatingContentView: View {
             .background(pillCountBackground.opacity(isSelected ? 0.18 : 1), in: Capsule())
         }
       }
-      .foregroundColor(isSelected ? .white : .primary.opacity(0.82))
+      // The glass surface carries the selection tint, so the label stays neutral.
+      .foregroundColor(isSelected ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
       .padding(.horizontal, horizontalPadding)
       .padding(.vertical, verticalPadding)
       .frame(minWidth: minWidth)
-      .background(isSelected ? selectedFilterBackground : unselectedPillBackground)
-      .overlay(
-        Capsule()
-          .stroke(
-            isSelected
-              ? Color.white.opacity(0.08)
-              : chromeSurfaceBorder.opacity(colorScheme == .dark ? 0.45 : 0.7),
-            lineWidth: 1
-          )
-      )
-      .clipShape(Capsule())
+      .liquidGlassControl(isActive: isSelected, in: Capsule(style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -685,26 +630,8 @@ struct HistoryFloatingContentView: View {
       Image(systemName: systemName)
         .font(.system(size: size <= 34 ? 10.5 : 11, weight: .semibold))
         .frame(width: size, height: size)
-        .background(
-          isActive
-            ? AnyShapeStyle(Color.accentColor.opacity(colorScheme == .dark ? 0.26 : 0.16))
-            : controlButtonBackground
-        )
-        .foregroundColor(
-          isActive
-            ? Color.accentColor
-            : .primary.opacity(0.86)
-        )
-        .clipShape(Circle())
-        .overlay(
-          Circle()
-            .stroke(
-              isActive
-                ? Color.accentColor.opacity(colorScheme == .dark ? 0.45 : 0.35)
-                : Color.clear,
-              lineWidth: 1
-            )
-        )
+        .foregroundColor(isActive ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
+        .liquidGlassControl(isActive: isActive, in: Circle())
     }
     .buttonStyle(.plain)
     .help(help)

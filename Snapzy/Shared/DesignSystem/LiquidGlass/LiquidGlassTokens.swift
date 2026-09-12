@@ -84,6 +84,54 @@ enum LiquidGlassTokens {
   static let inkMuted: Color = adaptiveInk(dark: 0.46, light: 0.50)
   static let inkFaint: Color = adaptiveInk(dark: 0.24, light: 0.28)
 
+  /// Ink for `.overlay` chrome. Does *not* adapt: overlay controls pin their own glass dark
+  /// through `LiquidGlassChromeEmphasis.glassTint(isActive:)`, so they stay light in both
+  /// appearances — a screenshot's brightness has nothing to do with Light or Dark Aqua.
+  static let inkOverlay: Color = .white
+
+  /// Ink for content sitting on an accent-tinted glass surface — the `isActive` state of every
+  /// glass control. See `ink(onTint:otherwise:)`.
+  static var inkOnAccent: Color { ink(onTint: .accentColor) }
+
+  /// Ink for content sitting on a colour-tinted glass surface.
+  ///
+  /// `.glassEffect(.regular.tint(_:))` floods the surface with the tint, so ink that follows the
+  /// *app* appearance (`inkPrimary` → near-black in Light Aqua) lands as dark glyphs on a
+  /// saturated accent pill. That is what put black icons on the Annotate toolbar's selected tools
+  /// and on the Video Editor transport in Light theme. Resolve the ink from the tint's own
+  /// luminance instead, the way AppKit does for a filled control — `LiquidGlassButtonStyle`'s
+  /// `.primary` emphasis already did this by hand, which is why "Done" always looked right.
+  ///
+  /// The macOS 13–15 composite drops `glassTint` entirely; its active state is a substrate step
+  /// rather than a colour, so it keeps the appearance-adaptive ink.
+  static func ink(onTint tint: Color?, otherwise fallback: Color = inkPrimary) -> Color {
+    guard LiquidGlassCapabilities.hasNativeLiquidGlass, let tint else { return fallback }
+
+    return Color(nsColor: NSColor(name: nil) { appearance in
+      var luminance: CGFloat = 0
+      appearance.performAsCurrentDrawingAppearance {
+        luminance = relativeLuminance(of: tint)
+      }
+      // Accent blue, red and graphite all land well under this, so they keep white glyphs. Only a
+      // genuinely bright tint (a yellow or orange accent) flips to dark ink.
+      return luminance > 0.55 ? NSColor.black.withAlphaComponent(0.88) : .white
+    })
+  }
+
+  /// sRGB relative luminance (WCAG). Falls back to 0 — and therefore to white ink — for a colour
+  /// that cannot be bridged, which is the right default for the accent tints in use.
+  private static func relativeLuminance(of color: Color) -> CGFloat {
+    guard let rgb = NSColor(color).usingColorSpace(.sRGB) else { return 0 }
+
+    func channel(_ value: CGFloat) -> CGFloat {
+      value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+
+    return 0.2126 * channel(rgb.redComponent)
+      + 0.7152 * channel(rgb.greenComponent)
+      + 0.0722 * channel(rgb.blueComponent)
+  }
+
   /// Substrate fill. Darkens the composite under Dark Aqua, lightens it under Aqua, so the
   /// `substrate` opacities below read the same way in both appearances.
   static let substrateFill: Color = adaptiveNeutral(dark: .black, light: .white)

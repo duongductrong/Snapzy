@@ -96,22 +96,24 @@ struct QuickAccessPinWindowView: View {
       Text("\(state.zoomPercent)%")
         .font(.system(size: 12, weight: .semibold))
         .monospacedDigit()
-        .foregroundStyle(.white)
+        .foregroundStyle(LiquidGlassTokens.inkOverlay)
         .padding(.horizontal, 10)
         .frame(height: 28)
-        .background(
-          Capsule(style: .continuous)
-            .fill(Color.black.opacity(isZoomHovering || isZoomPickerPresented ? 0.64 : 0.54))
-        )
-        .overlay(
-          Capsule(style: .continuous)
-            .strokeBorder(Color.white.opacity(0.18), lineWidth: 1)
+        .liquidGlassChrome(
+          shape: Capsule(style: .continuous),
+          isVisible: true,
+          isActive: isZoomHovering || isZoomPickerPresented,
+          emphasis: .overlay
         )
         .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
     }
     .buttonStyle(.plain)
     .fixedSize(horizontal: true, vertical: false)
-    .onHover { isZoomHovering = $0 }
+    .onHover { hovering in
+      withAnimation(reduceMotion ? nil : LiquidGlassTokens.hoverSpring) {
+        isZoomHovering = hovering
+      }
+    }
     .popover(isPresented: $isZoomPickerPresented, arrowEdge: .top) {
       zoomPicker
     }
@@ -181,8 +183,13 @@ struct QuickAccessPinWindowView: View {
       .foregroundStyle(dragForegroundColor)
       .allowsHitTesting(false)
     )
-    .background(dragHandleFill(isActive: isDragHovering || isDragActive))
-    .overlay(dragHandleStroke(isActive: isDragHovering || isDragActive))
+    .liquidGlassChrome(
+      shape: RoundedRectangle(cornerRadius: dragHandleCornerRadius, style: .continuous),
+      isVisible: true,
+      isActive: isDragHovering || isDragActive,
+      emphasis: .overlay
+    )
+    // Rule 2: scale, not opacity — a transform never detaches the glass backdrop.
     .scaleEffect(isDragHovering || isDragActive ? 1.015 : 1)
     .shadow(color: Color.black.opacity(isDragHovering || isDragActive ? 0.18 : 0.12), radius: 7, x: 0, y: 2)
     .onHover { isDragHovering = $0 }
@@ -195,7 +202,7 @@ struct QuickAccessPinWindowView: View {
     VStack(spacing: 3) {
       ForEach(0..<3, id: \.self) { _ in
         Capsule(style: .continuous)
-          .fill(Color.primary.opacity(0.34))
+          .fill(LiquidGlassTokens.inkOverlay.opacity(0.34))
           .frame(width: 7, height: 1.3)
       }
     }
@@ -206,15 +213,15 @@ struct QuickAccessPinWindowView: View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: 12, weight: .bold))
-        .foregroundStyle(.primary)
+        .foregroundStyle(LiquidGlassTokens.inkOverlay)
         .frame(width: 28, height: 28)
-        .background(
-          Circle()
-            .fill(Color(nsColor: .windowBackgroundColor).opacity(0.84))
-        )
-        .overlay(
-          Circle()
-            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+        // Floats over the pinned capture with nothing else to mark it as a control, so the
+        // surface stays lit at rest and only brightens under the pointer.
+        .liquidGlassControl(
+          isActive: false,
+          in: Circle(),
+          emphasis: .overlay,
+          showsRestingSurface: true
         )
         .shadow(color: Color.black.opacity(0.12), radius: 6, x: 0, y: 2)
     }
@@ -223,17 +230,8 @@ struct QuickAccessPinWindowView: View {
   }
 
   private var dragForegroundColor: Color {
-    isDragHovering || isDragActive ? .primary : Color.primary.opacity(0.62)
-  }
-
-  private func dragHandleFill(isActive: Bool) -> some View {
-    RoundedRectangle(cornerRadius: dragHandleCornerRadius, style: .continuous)
-      .fill(Color(nsColor: .windowBackgroundColor).opacity(isActive ? 0.94 : 0.86))
-  }
-
-  private func dragHandleStroke(isActive: Bool) -> some View {
-    RoundedRectangle(cornerRadius: dragHandleCornerRadius, style: .continuous)
-      .strokeBorder(Color.primary.opacity(isActive ? 0.16 : 0.08), lineWidth: 1)
+    let ink = LiquidGlassTokens.inkOverlay
+    return isDragHovering || isDragActive ? ink : ink.opacity(0.62)
   }
 }
 
@@ -252,7 +250,6 @@ private struct PinWindowZoomOptionButton: View {
   let isSelected: Bool
   let action: () -> Void
 
-  @State private var isHovering = false
   private let cornerRadius = PinWindowZoomPickerMetrics.optionCornerRadius
 
   var body: some View {
@@ -276,32 +273,14 @@ private struct PinWindowZoomOptionButton: View {
             .font(.system(size: 10, weight: .bold))
         }
       }
-      .foregroundStyle(isSelected || isHovering ? .primary : .secondary)
+      .foregroundStyle(isSelected ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
       .padding(.horizontal, 8)
       .frame(height: 25)
-      .background(
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-          .fill(rowFill)
+      .liquidGlassControl(
+        isActive: isSelected,
+        in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
       )
-      .overlay(
-        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-          .strokeBorder(rowStroke, lineWidth: 1)
-      )
-      .contentShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
     }
     .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-    .animation(.easeInOut(duration: 0.12), value: isHovering)
-  }
-
-  private var rowFill: Color {
-    if isSelected {
-      return Color.primary.opacity(0.1)
-    }
-    return isHovering ? Color.primary.opacity(0.075) : Color.clear
-  }
-
-  private var rowStroke: Color {
-    isSelected || isHovering ? Color.primary.opacity(0.08) : Color.clear
   }
 }

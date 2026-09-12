@@ -73,7 +73,11 @@ struct QuickAccessCardView: View {
       // visually fight the swipe gesture).
       if isHovering && !isSwiping && canPerformCardActions && hasVisibleOverlayActions {
         hoverOverlay
-          .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
+          // Rule 2: the overlay now carries Liquid Glass buttons, so it may not fade in. An
+          // `.opacity` transition promotes the subtree to an offscreen buffer, which severs
+          // backdrop sampling and flashes the glass into an opaque slab. Scale folds into a
+          // transform instead; reduce-motion gets no transition at all rather than a fade.
+          .transition(reduceMotion ? .identity : .scale(scale: 0.95))
       }
 
       // Corner buttons (only visible on hover, hidden during cloud upload and swipe).
@@ -531,9 +535,12 @@ struct QuickAccessCardView: View {
 
   private var hoverOverlay: some View {
     ZStack {
-      // Dimming overlay
+      // Dimming overlay. It settles the thumbnail behind the buttons, but it is not what makes
+      // them legible: `.glassEffect` barely shifts for a scrim this thin, so the buttons carry
+      // their own contrast in the `.overlay` emphasis tint (see "Emphasis tiers" in
+      // docs/LIQUID_GLASS.md).
       RoundedRectangle(cornerRadius: cornerRadius)
-        .fill(Color.black.opacity(0.4))
+        .fill(Color.black.opacity(0.38))
 
       // Action buttons with stagger effect
       VStack(spacing: 8) {
@@ -555,17 +562,18 @@ struct QuickAccessCardView: View {
     }
       .help(actionHelpText(for: action))
       .disabled(!isActionEnabled(action))
-      .opacity(isActionEnabled(action) ? 1 : 0.6)
+      // Disabled dimming lives inside the button, on its label. A `.opacity()` out here would
+      // wrap the glass surface and detach its backdrop.
       .transition(buttonTransition(delay: delay))
   }
 
+  /// Scale-only, never opacity — see Rule 2 in `docs/LIQUID_GLASS.md`.
   private func buttonTransition(delay: Int) -> AnyTransition {
     if reduceMotion {
-      return .opacity
+      return .identity
     }
     let stagger = Double(delay) * QuickAccessAnimations.buttonStaggerDelay
     return .scale(scale: 0.6)
-      .combined(with: .opacity)
       .animation(QuickAccessAnimations.buttonReveal.delay(stagger))
   }
 
@@ -599,16 +607,15 @@ struct QuickAccessCardView: View {
     .transition(cornerButtonTransition(delay: delay))
     .padding(6)
     .disabled(!isActionEnabled(action))
-    .opacity(isActionEnabled(action) ? 1 : 0.6)
   }
 
+  /// Scale-only, never opacity — see Rule 2 in `docs/LIQUID_GLASS.md`.
   private func cornerButtonTransition(delay: Int) -> AnyTransition {
     if reduceMotion {
-      return .opacity
+      return .identity
     }
     let stagger = Double(delay) * QuickAccessAnimations.buttonStaggerDelay
     return .scale(scale: 0.5)
-      .combined(with: .opacity)
       .animation(QuickAccessAnimations.buttonReveal.delay(stagger))
   }
 

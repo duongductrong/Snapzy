@@ -259,6 +259,8 @@ struct VideoControlsView: View {
 
       timeLabel(state.formattedDuration, alignment: .leading)
     }
+    // Transport siblings merge optically on macOS 26+ and sample once.
+    .liquidGlassGroup(spacing: controlsLayout.centerSpacing)
   }
 
   @ViewBuilder
@@ -273,14 +275,22 @@ struct VideoControlsView: View {
     }
   }
 
+  /// The transport is the one always-lit surface in the editor, so it keeps its glass at rest
+  /// rather than materialising on hover — it is the primary control of the window.
   private var playPauseButton: some View {
     Button(action: { state.togglePlayback() }) {
       Image(systemName: playbackState.isPlaying ? "pause.fill" : "play.fill")
         .font(.system(size: controlsLayout.playIconSize, weight: .bold))
-        .foregroundColor(.black.opacity(0.9))
+        // Accent-tinted glass, so the glyph is resolved against the tint rather than the app
+        // appearance — adaptive ink drew a black triangle on the blue transport in Light theme.
+        .foregroundColor(LiquidGlassTokens.inkOnAccent)
         .frame(width: controlsLayout.playButtonSize, height: controlsLayout.playButtonSize)
-        .background(Color.white)
-        .clipShape(Circle())
+        .liquidGlassChrome(
+          shape: Circle(),
+          isVisible: true,
+          isActive: true,
+          glassTint: .accentColor
+        )
     }
     .buttonStyle(.plain)
     .keyboardShortcut(.space, modifiers: [])
@@ -290,12 +300,12 @@ struct VideoControlsView: View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: controlsLayout.transportIconSize, weight: .semibold))
-        .foregroundColor(.secondary)
+        .foregroundColor(LiquidGlassTokens.inkBody)
         .frame(
           width: controlsLayout.transportButtonSize,
           height: controlsLayout.transportButtonSize
         )
-        .contentShape(Rectangle())
+        .liquidGlassControl(isActive: false, in: Circle())
     }
     .buttonStyle(.plain)
   }

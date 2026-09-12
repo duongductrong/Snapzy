@@ -38,12 +38,8 @@ struct ToolbarCaptureAreaToggle: View {
             width: ToolbarConstants.iconButtonSize,
             height: ToolbarConstants.iconButtonSize
           )
-          .background(
-            RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-              .fill(Color.primary.opacity(isFullscreenHovered ? 0.1 : 0))
-          )
-          .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-          .animation(ToolbarConstants.hoverAnimation, value: isFullscreenHovered)
+          .liquidGlassChrome(shape: ToolbarConstants.buttonShape, isVisible: isFullscreenHovered)
+          .animation(LiquidGlassTokens.hoverSpring, value: isFullscreenHovered)
       }
       .buttonStyle(.plain)
       .onHover { isFullscreenHovered = $0 }
@@ -63,12 +59,8 @@ struct ToolbarCaptureAreaToggle: View {
             width: ToolbarConstants.iconButtonSize,
             height: ToolbarConstants.iconButtonSize
           )
-          .background(
-            RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-              .fill(Color.primary.opacity(isAreaHovered ? 0.1 : 0))
-          )
-          .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-          .animation(ToolbarConstants.hoverAnimation, value: isAreaHovered)
+          .liquidGlassChrome(shape: ToolbarConstants.buttonShape, isVisible: isAreaHovered)
+          .animation(LiquidGlassTokens.hoverSpring, value: isAreaHovered)
       }
       .buttonStyle(.plain)
       .onHover { isAreaHovered = $0 }
@@ -88,12 +80,8 @@ struct ToolbarCaptureAreaToggle: View {
             width: ToolbarConstants.iconButtonSize,
             height: ToolbarConstants.iconButtonSize
           )
-          .background(
-            RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-              .fill(Color.primary.opacity(isApplicationHovered ? 0.1 : 0))
-          )
-          .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-          .animation(ToolbarConstants.hoverAnimation, value: isApplicationHovered)
+          .liquidGlassChrome(shape: ToolbarConstants.buttonShape, isVisible: isApplicationHovered)
+          .animation(LiquidGlassTokens.hoverSpring, value: isApplicationHovered)
       }
       .buttonStyle(.plain)
       .onHover { isApplicationHovered = $0 }

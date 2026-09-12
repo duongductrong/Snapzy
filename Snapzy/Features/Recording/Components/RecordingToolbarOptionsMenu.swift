@@ -27,15 +27,18 @@ struct ToolbarOptionsMenu: View {
       .foregroundColor(.primary)
       .padding(.horizontal, 10)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(isHovered || showPopover ? 0.1 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.buttonShape,
+        isVisible: isHovered || showPopover,
+        isActive: showPopover
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.hoverAnimation, value: isHovered)
+      .animation(LiquidGlassTokens.hoverSpring, value: isHovered)
+      .animation(LiquidGlassTokens.hoverSpring, value: showPopover)
     }
     .buttonStyle(.plain)
-    .onHover { isHovered = $0 }
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
+    }
     .popover(isPresented: $showPopover, arrowEdge: .bottom) {
       ToolbarOptionsPopoverContent(state: state)
     }
@@ -192,22 +195,22 @@ private struct OptionPill: View {
   let isSelected: Bool
   let action: () -> Void
 
-  @State private var isHovered = false
-
   var body: some View {
     Button(action: action) {
       Text(title)
         .font(.system(size: 11, weight: isSelected ? .semibold : .regular))
-        .foregroundColor(isSelected ? .white : .primary)
+        // The surface carries the accent tint when selected, so the label is resolved against
+        // that tint rather than against the app appearance — and never tinted itself, which
+        // would put accent-coloured text on accent glass.
+        .foregroundColor(isSelected ? LiquidGlassTokens.inkOnAccent : .primary)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(isSelected ? Color.accentColor : Color.primary.opacity(isHovered ? 0.1 : 0.05))
+        .liquidGlassControl(
+          isActive: isSelected,
+          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
         )
     }
     .buttonStyle(.plain)
-    .onHover { isHovered = $0 }
   }
 }
 

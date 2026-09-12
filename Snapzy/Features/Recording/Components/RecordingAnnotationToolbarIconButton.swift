@@ -19,25 +19,26 @@ struct AnnotationToolbarIconButton: View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: 13, weight: .medium))
-        .foregroundColor(.primary.opacity(isSelected || isHovered ? 1.0 : 0.85))
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(backgroundColor)
+        // Selected chrome is accent-tinted glass, so its glyph resolves against the tint instead
+        // of the app appearance; hovered chrome is untinted and keeps the label colour.
+        .foregroundColor(
+          isSelected
+            ? LiquidGlassTokens.inkOnAccent
+            : .primary.opacity(isHovered ? 1.0 : 0.85)
         )
-        .contentShape(RoundedRectangle(cornerRadius: 6))
-        .animation(ToolbarConstants.hoverAnimation, value: isHovered)
+        .frame(width: 28, height: 28)
+        .liquidGlassChrome(
+          shape: ToolbarConstants.buttonShape,
+          isVisible: isSelected || isHovered,
+          isActive: isSelected,
+          glassTint: isSelected ? .accentColor : nil
+        )
+        .animation(LiquidGlassTokens.hoverSpring, value: isHovered)
+        .animation(LiquidGlassTokens.hoverSpring, value: isSelected)
     }
     .buttonStyle(.plain)
-    .onHover { isHovered = $0 }
-  }
-
-  private var backgroundColor: Color {
-    if isSelected {
-      return Color.primary.opacity(0.12)
-    } else if isHovered {
-      return Color.primary.opacity(0.1)
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
     }
-    return .clear
   }
 }
