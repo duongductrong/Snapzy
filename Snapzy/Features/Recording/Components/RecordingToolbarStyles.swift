@@ -25,9 +25,16 @@ enum ToolbarConstants {
   static let hoverAnimation: Animation = .easeInOut(duration: 0.15)
   static let pressAnimation: Animation = .easeInOut(duration: 0.1)
 
-  /// Shared hit/glass shape for every toolbar control, so chrome and hit target never drift.
+  /// Shared hit/glass shape for the icon-only toolbar controls, so chrome and hit target never
+  /// drift. Labelled controls use `textButtonShape`.
   static var buttonShape: RoundedRectangle {
     Radius.rect(buttonCornerRadius)
+  }
+
+  /// Labelled toolbar actions (`Options`, `Record`, `Stop`) are text buttons, so they take the
+  /// app's pill shape; the pill derives its radius from the control's height by construction.
+  static var textButtonShape: Capsule {
+    Capsule(style: .continuous)
   }
 }
 
@@ -55,7 +62,7 @@ struct RecordButtonStyle: ButtonStyle {
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .liquidGlassChrome(
-        shape: ToolbarConstants.buttonShape,
+        shape: ToolbarConstants.textButtonShape,
         isVisible: configuration.isPressed,
         isActive: configuration.isPressed
       )
@@ -73,7 +80,7 @@ struct OptionsButtonStyle: ButtonStyle {
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .liquidGlassChrome(
-        shape: ToolbarConstants.buttonShape,
+        shape: ToolbarConstants.textButtonShape,
         isVisible: configuration.isPressed,
         isActive: configuration.isPressed
       )
@@ -120,7 +127,7 @@ struct StopButtonStyle: ButtonStyle {
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
       .liquidGlassChrome(
-        shape: ToolbarConstants.buttonShape,
+        shape: ToolbarConstants.textButtonShape,
         isVisible: configuration.isPressed,
         isActive: configuration.isPressed
       )

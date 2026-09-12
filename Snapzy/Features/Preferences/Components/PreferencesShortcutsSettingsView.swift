@@ -163,7 +163,7 @@ struct ShortcutsSettingsView: View {
               }
               .padding(10)
               .background(
-                RoundedRectangle(cornerRadius: 8)
+                Radius.rect(Radius.card)
                   .fill(Color.orange.opacity(0.06))
               )
 
@@ -1470,7 +1470,7 @@ private struct ReadOnlyShortcutRow: View {
           .padding(.horizontal, 12)
           .padding(.vertical, 6)
           .background(
-            RoundedRectangle(cornerRadius: 6)
+            Radius.rect(Radius.ornament)
               .fill(Color.gray.opacity(0.1))
           )
       }

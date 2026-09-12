@@ -12,6 +12,14 @@ import SwiftUI
 struct SnapzyOnboardingPermissionsView: View {
   @ObservedObject var state: SnapzyOnboardingState
 
+  /// Height of the per-row grant button. The frame and the shape both derive from it.
+  static let grantButtonHeight: CGFloat = 32
+  /// Grant button shape. A labelled action, so it is a pill; the pill derives its own radius
+  /// from the button's height, so the frame and the shape cannot drift.
+  static var grantButtonShape: Capsule {
+    Capsule(style: .continuous)
+  }
+
   @ObservedObject private var screenCaptureManager = ScreenCaptureManager.shared
   @ObservedObject private var identityManager = AppIdentityManager.shared
   private let fileAccessManager = SandboxFileAccessManager.shared
@@ -160,10 +168,10 @@ struct SnapzyOnboardingPermissionsView: View {
     .padding(SnapzySpace.xxl)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(
-      RoundedRectangle(cornerRadius: SnapzyRadius.card + 2, style: .continuous)
+      Radius.rect(SnapzyRadius.card)
         .fill(Color.white.opacity(0.035))
         .overlay(
-          RoundedRectangle(cornerRadius: SnapzyRadius.card + 2, style: .continuous)
+          Radius.rect(SnapzyRadius.card)
             .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5)
         )
     )
@@ -283,17 +291,19 @@ private struct PermissionCard: View {
             .foregroundStyle(SnapzyGlassInk.body)
         }
       } else {
+        let shape = SnapzyOnboardingPermissionsView.grantButtonShape
+
         Button(action: onAction) {
           Text(actionTitle)
             .font(.system(size: SnapzyOnboardingType.body, weight: .semibold))
             .foregroundStyle(SnapzyGlassInk.primary)
             .padding(.horizontal, SnapzySpace.xl)
-            .frame(height: 32)
+            .frame(height: SnapzyOnboardingPermissionsView.grantButtonHeight)
             .background(
-              RoundedRectangle(cornerRadius: SnapzyRadius.control, style: .continuous)
+              shape
                 .fill(Color.white.opacity(0.14))
                 .overlay(
-                  RoundedRectangle(cornerRadius: SnapzyRadius.control, style: .continuous)
+                  shape
                     .strokeBorder(Color.white.opacity(0.16), lineWidth: 0.5)
                 )
             )
@@ -304,10 +314,10 @@ private struct PermissionCard: View {
     .padding(SnapzySpace.xxl)
     .frame(maxWidth: .infinity, minHeight: 250, alignment: .topLeading)
     .background(
-      RoundedRectangle(cornerRadius: SnapzyRadius.card + 2, style: .continuous)
+      Radius.rect(SnapzyRadius.card)
         .fill(Color.white.opacity(0.05))
         .overlay(
-          RoundedRectangle(cornerRadius: SnapzyRadius.card + 2, style: .continuous)
+          Radius.rect(SnapzyRadius.card)
             .strokeBorder(Color.white.opacity(0.10), lineWidth: 0.5)
         )
     )
@@ -339,7 +349,7 @@ private struct PrivacyPromise: View {
         .foregroundStyle(SnapzyGlassInk.body)
         .frame(width: 26, height: 26)
         .background(
-          RoundedRectangle(cornerRadius: 7, style: .continuous)
+          Radius.rect(Radius.tile)
             .fill(Color.white.opacity(0.10))
         )
 

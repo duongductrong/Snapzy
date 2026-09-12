@@ -21,13 +21,13 @@ struct SnapzyKeycapChip: View {
       .frame(minWidth: height, minHeight: height)
       .background {
         ZStack {
-          RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+          Radius.rect(Radius.ornament)
             .fill(Color.black.opacity(0.24))
 
-          RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+          Radius.rect(Radius.ornament)
             .fill(Color.white.opacity(emphasis ? 0.20 : 0.08))
 
-          RoundedRectangle(cornerRadius: 5.5, style: .continuous)
+          Radius.rect(Radius.ornament)
             .strokeBorder(
               LinearGradient(
                 colors: [

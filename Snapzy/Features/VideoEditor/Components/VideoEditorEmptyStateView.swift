@@ -72,14 +72,14 @@ struct VideoEditorEmptyStateView: View {
     }
     .frame(width: 400, height: 250)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      Radius.rect(Radius.panel)
         .strokeBorder(
           style: StrokeStyle(lineWidth: 2, dash: [8, 4])
         )
         .foregroundColor(isTargeted ? .accentColor : .secondary.opacity(0.5))
     )
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      Radius.rect(Radius.panel)
         .fill(isTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
     )
     .onDrop(of: supportedTypes, isTargeted: $isTargeted) { providers in

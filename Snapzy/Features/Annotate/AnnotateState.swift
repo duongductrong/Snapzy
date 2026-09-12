@@ -4486,7 +4486,7 @@ final class AnnotateState: ObservableObject {
         strokeColor: .clear,
         fillColor: .clear,
         strokeWidth: 3,
-        cornerRadius: 14,
+        cornerRadius: 14, // radius-lint:allow — annotation content default, not chrome
         opacity: 1.0,
         spotlightOpacity: spotlightOpacity
       )
@@ -4510,7 +4510,7 @@ final class AnnotateState: ObservableObject {
       strokeColor: strokeColor,
       fillColor: .clear,
       strokeWidth: 3,
-      cornerRadius: 0,
+      cornerRadius: 0, // radius-lint:allow — watermark content default, not chrome
       fontSize: 36,
       fontName: "SF Pro",
       opacity: 0.22,

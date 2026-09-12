@@ -111,7 +111,7 @@ struct SpeedTimelineTrack: View {
 
   var body: some View {
     ZStack(alignment: .leading) {
-      RoundedRectangle(cornerRadius: 4)
+      Radius.rect(Radius.ornament)
         .fill(Color.black.opacity(0.15))
         .frame(height: trackHeight)
 
@@ -432,10 +432,10 @@ private struct SpeedBlockVisual: View {
 
   var body: some View {
     ZStack(alignment: .leading) {
-      RoundedRectangle(cornerRadius: 6)
+      Radius.controlRect(forHeight: 28)
         .fill(blockFillColor)
         .overlay(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.controlRect(forHeight: 28)
             .strokeBorder(borderColor, style: borderStyle)
         )
         .shadow(color: isSelected ? SpeedColors.fill(for: segment.rate).opacity(0.4) : .clear, radius: 4, y: 2)
@@ -475,7 +475,7 @@ private struct SpeedBlockVisual: View {
     ZStack {
       Rectangle()
         .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
-      RoundedRectangle(cornerRadius: 1)
+      Radius.rect(Radius.ornament)
         .fill(isSelected ? Color.white.opacity(0.8) : Color.white.opacity(0.4))
         .frame(width: 3, height: 14)
     }
@@ -523,7 +523,7 @@ private struct SpeedRatePicker: View {
               .frame(maxWidth: .infinity)
               .padding(.vertical, 5)
               .background(
-                RoundedRectangle(cornerRadius: 5)
+                Capsule(style: .continuous)
                   .fill(isCurrent(preset) ? SpeedColors.fill(for: preset).opacity(0.9) : Color.gray.opacity(0.15))
               )
               .foregroundColor(isCurrent(preset) ? .white : .primary)
@@ -552,10 +552,10 @@ private struct SpeedPlaceholderView: View {
   let xPosition: CGFloat
 
   var body: some View {
-    RoundedRectangle(cornerRadius: 6)
+    Radius.controlRect(forHeight: 28)
       .fill(SpeedColors.speedUp.opacity(0.2))
       .overlay(
-        RoundedRectangle(cornerRadius: 6)
+        Radius.controlRect(forHeight: 28)
           .strokeBorder(
             SpeedColors.speedUp.opacity(0.5),
             style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])

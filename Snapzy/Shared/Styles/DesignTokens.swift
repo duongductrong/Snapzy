@@ -29,11 +29,10 @@ enum Size {
   static let colorSwatch: CGFloat = 32
   static let colorSwatchSmall: CGFloat = 24
 
-  // Corner radii — legacy ramp, kept at its original values so existing surfaces do not move.
-  //
-  // Prefer `Radius` (RadiusTokens.swift). These names describe a size, not a use, which is how a
-  // 32pt recording button and a 12pt badge both ended up asking for `radiusSm`. `Radius` keys
-  // control roundness to control height instead, via `Radius.control(forHeight:)`.
+  // Corner radii — legacy t-shirt naming. The app-wide sweep moved every call site onto `Radius`
+  // (RadiusTokens.swift); these remain as pass-throughs for compatibility and are not for new code.
+  // A name that describes a size rather than a use is how a 32pt recording button and a 12pt badge
+  // both ended up asking for `radiusSm`.
   static let radiusXs = Radius.ornament
   /// No `Radius` equivalent by design — every 6pt site is either an ornament (`Radius.ornament`)
   /// or an under-rounded control (`Radius.control(forHeight:)`). Migrate rather than alias.

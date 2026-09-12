@@ -98,11 +98,11 @@ struct VideoExportSettingsPanel: View {
     }
     .padding(12)
     .background(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
+      Radius.rect(Radius.card)
         .fill(Color.white.opacity(0.04))
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
+      Radius.rect(Radius.card)
         .stroke(Color.white.opacity(0.08), lineWidth: 1)
     )
     .animation(.spring(response: 0.24, dampingFraction: 0.9), value: expandedTab)
@@ -142,11 +142,11 @@ struct VideoExportSettingsPanel: View {
       .padding(.horizontal, 12)
       .padding(.vertical, 9)
       .background(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Capsule(style: .continuous)
           .fill(isExpanded ? Color.accentColor.opacity(0.14) : Color.white.opacity(0.05))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Capsule(style: .continuous)
           .stroke(isExpanded ? Color.accentColor.opacity(0.32) : Color.white.opacity(0.08), lineWidth: 1)
       )
     }
@@ -181,11 +181,11 @@ struct VideoExportSettingsPanel: View {
     .padding(14)
     .frame(maxWidth: .infinity, alignment: .leading)
     .background(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.tile)
         .fill(Color.white.opacity(0.03))
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.tile)
         .stroke(Color.white.opacity(0.06), lineWidth: 1)
     )
     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -212,7 +212,7 @@ struct VideoExportSettingsPanel: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
         .background(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Capsule(style: .continuous)
             .fill(
               state.exportSettings.quality == quality
                 ? Color.accentColor.opacity(0.22)
@@ -220,7 +220,7 @@ struct VideoExportSettingsPanel: View {
             )
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Capsule(style: .continuous)
             .stroke(
               state.exportSettings.quality == quality ? Color.accentColor.opacity(0.36) : Color.clear,
               lineWidth: 1
@@ -272,7 +272,7 @@ struct VideoExportSettingsPanel: View {
             .foregroundColor(.accentColor)
             .frame(width: 20, height: 20)
             .background(
-              RoundedRectangle(cornerRadius: 6, style: .continuous)
+              Radius.rect(Radius.tile)
                 .fill(Color.accentColor.opacity(0.14))
             )
 
@@ -320,11 +320,11 @@ struct VideoExportSettingsPanel: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Capsule(style: .continuous)
             .fill(isSelected ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.06))
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Capsule(style: .continuous)
             .stroke(isSelected ? Color.accentColor.opacity(0.32) : Color.white.opacity(0.08), lineWidth: 1)
         )
     }
@@ -377,7 +377,7 @@ struct VideoExportSettingsPanel: View {
           .foregroundColor(state.exportSettings.aspectRatioLocked ? .accentColor : .secondary)
           .frame(width: 28, height: 28)
           .background(Color.white.opacity(0.06))
-          .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+          .clipShape(Radius.controlRect(forHeight: 28))
       }
       .buttonStyle(.plain)
 
@@ -433,7 +433,7 @@ struct VideoExportSettingsPanel: View {
       .padding(.horizontal, 12)
       .padding(.vertical, 7)
       .background(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        Capsule(style: .continuous)
           .fill(
             state.exportSettings.audioMode == mode
               ? Color.accentColor.opacity(0.22)
@@ -441,7 +441,7 @@ struct VideoExportSettingsPanel: View {
           )
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        Capsule(style: .continuous)
           .stroke(
             state.exportSettings.audioMode == mode ? Color.accentColor.opacity(0.36) : Color.clear,
             lineWidth: 1

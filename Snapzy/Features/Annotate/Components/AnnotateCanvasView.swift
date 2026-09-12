@@ -201,7 +201,7 @@ struct AnnotateCanvasView: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
       .background(Color.red.opacity(0.9))
-      .cornerRadius(8)
+      .cornerRadius(Radius.card)
       .padding(.bottom, 20)
       .transition(.move(edge: .bottom).combined(with: .opacity))
       .animation(.easeInOut(duration: 0.3), value: showDropError)
