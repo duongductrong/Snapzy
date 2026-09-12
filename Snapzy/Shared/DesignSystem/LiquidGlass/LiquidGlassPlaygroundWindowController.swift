@@ -54,12 +54,15 @@ final class LiquidGlassPlaygroundWindowController: NSObject, NSWindowDelegate {
     let hostingView = NSHostingView(rootView: LiquidGlassPlaygroundView())
     let window = NSWindow(
       contentRect: CGRect(origin: .zero, size: Self.defaultSize),
-      styleMask: [.titled, .closable, .miniaturizable, .resizable],
+      styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
       backing: .buffered,
       defer: false
     )
 
     window.title = "Snapzy Design Studio"
+    window.titleVisibility = .hidden
+    window.titlebarAppearsTransparent = true
+    window.backgroundColor = NSColor(red: 0.08, green: 0.09, blue: 0.12, alpha: 1.0)
     window.minSize = Self.minSize
     window.contentView = hostingView
     window.delegate = self
