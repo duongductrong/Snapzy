@@ -145,11 +145,11 @@ struct AnnotateCombineControlsView: View {
       .frame(maxWidth: .infinity, minHeight: Self.directionButtonHeight)
       .foregroundColor(state.combineDirection == direction ? .white : SidebarColors.labelSecondary)
       .background(
-        Radius.controlRect(forHeight: Self.directionButtonHeight)
+        Capsule(style: .continuous)
           .fill(state.combineDirection == direction ? Color.accentColor.opacity(0.75) : SidebarColors.itemDefault)
       )
       .overlay(
-        Radius.controlRect(forHeight: Self.directionButtonHeight)
+        Capsule(style: .continuous)
           .stroke(state.combineDirection == direction ? Color.accentColor : Color.clear, lineWidth: 1)
       )
     }

@@ -48,14 +48,14 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(10)
-    .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(cardBackground, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
+      Radius.rect(Radius.card)
         .stroke(cardBorderColor, lineWidth: isSelected ? 1.8 : 1)
     )
     .overlay(historyDragInteractionBridge)
     .shadow(color: cardShadowColor, radius: isSelected ? 14 : 3, x: 0, y: isSelected ? 8 : 2)
-    .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .contentShape(Radius.rect(Radius.card))
     .scaleEffect(isSelected ? 1.01 : (isHovering ? 1.005 : 1))
     .animation(.spring(response: 0.24, dampingFraction: 0.9), value: isSelected)
     .animation(.easeOut(duration: 0.16), value: isHovering)
@@ -92,7 +92,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   private var preview: some View {
     GeometryReader { geometry in
       ZStack(alignment: .bottomTrailing) {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .fill(previewBackground)
 
         if isVisible, let thumbnailImage {
@@ -139,9 +139,9 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
           HistoryCloudUploadOverlayView(state: uploadState)
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(Radius.rect(Radius.tile))
       .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .stroke(previewBorderColor, lineWidth: 1)
       )
     }

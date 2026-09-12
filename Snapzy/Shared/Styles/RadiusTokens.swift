@@ -22,18 +22,45 @@ import SwiftUI
 ///
 /// ### Shape families
 ///
-/// Radius is only half the system. The shape a control takes says what kind of control it is:
+/// Radius is only half the system. The shape a control takes says what *class* of control it is,
+/// and the app uses exactly three. Picking a shape is a semantic decision; picking its radius is
+/// then automatic.
 ///
-/// - `Capsule` — terminal text actions (`Done`, `Save As`, `Apply`) and selection tracks
-///   (the segmented control and its sliding indicator). The pill *is* the "this commits" signal.
-/// - `RoundedRectangle(cornerRadius: Radius.control(forHeight:), style: .continuous)` — every
-///   other interactive control: icon buttons, toggle chips, selects, ratio buttons, fields.
-/// - `Circle` — only where the content is inherently round (colour swatches, radio dots).
+/// **1. `Capsule` — the pill family.** Every button that carries a label, because a label reads
+/// as a pill and the pill is the app's soft, friendly action shape:
+/// - terminal actions (`Done`, `Save As`, `Apply`, `Cancel` in an action row) and ordinary
+///   labelled actions — `Restore`, `Continue`, `Open All Links`, `Check for Updates`, the
+///   language picker, the legacy VS button styles;
+/// - selects and menus that show text (the zoom picker, the pinned window's zoom menu);
+/// - selection tracks (the segmented control and its sliding indicator);
+/// - search fields;
+/// - filter and tag pills;
+/// - non-interactive status badges.
 ///
-/// A square icon button is deliberately *not* promoted to a capsule: at 28×28 a capsule is a
-/// circle, which reads as a different control class (destructive/media transport) and loses the
-/// glyph's optical alignment. `controlM` closes most of the gap to the neighbouring `Done` pill
-/// while keeping the button legibly rectangular.
+/// The last three are strong platform conventions, and making a badge fully round is what keeps
+/// it from being mistaken for the button beside it.
+///
+/// **2. `Circle` — round chrome.** Reserved for:
+/// - chrome floating over *user content* — Quick Access cards, the pinned-screenshot window,
+///   History cards. This is the same population as `LiquidGlassChromeEmphasis.overlay`, and for
+///   the same reason: a control with no toolbar around it has to read as an object in its own
+///   right, and a disc does that where a squircle reads as a fragment of a missing bar;
+/// - media transport (play / pause / skip);
+/// - content that is inherently round (colour swatches, radio dots, step beads).
+///
+/// **3. `RoundedRectangle(cornerRadius: Radius.control(forHeight:), style: .continuous)` — the
+/// squircle ramp.** Controls with no text to justify a pill, and the default when in doubt:
+/// icon-only buttons and icon toggles, text fields that are not search (the pill belongs to
+/// buttons), and stacked icon-over-text tiles that would become lozenges as capsules.
+///
+/// The dividing line between families 2 and 3 is *what the control sits on*, not how big it is.
+/// A 28pt icon button in the Annotate toolbar is a squircle; a 28pt icon button on the pinned
+/// window, floating over a screenshot, is a circle. Both are deliberate.
+///
+/// A square icon button inside a toolbar is deliberately *not* promoted to a capsule: it has no
+/// label, and at 28×28 a capsule is a circle, which would move it into family 2 and claim it
+/// floats over content. `controlM` closes most of the gap to the neighbouring `Done` pill while
+/// keeping the button legibly rectangular.
 ///
 /// Always pass `style: .continuous`. At an identical radius, circular corners read squarer —
 /// the curvature starts abruptly instead of easing in — so mixing the two styles reintroduces

@@ -35,12 +35,12 @@ struct ExportProgressOverlay: View {
           GeometryReader { geometry in
             ZStack(alignment: .leading) {
               // Background track
-              RoundedRectangle(cornerRadius: 4)
+              Radius.rect(Radius.ornament)
                 .fill(Color.gray.opacity(0.3))
                 .frame(height: 8)
 
               // Progress fill
-              RoundedRectangle(cornerRadius: 4)
+              Radius.rect(Radius.ornament)
                 .fill(
                   LinearGradient(
                     colors: [ZoomColors.primary, ZoomColors.primaryDark],
@@ -68,7 +68,7 @@ struct ExportProgressOverlay: View {
       .padding(24)
       .frame(width: 280)
       .background(
-        RoundedRectangle(cornerRadius: 12)
+        Radius.rect(Radius.panel)
           .fill(Color(NSColor.windowBackgroundColor))
           .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
       )

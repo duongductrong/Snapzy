@@ -43,9 +43,9 @@ struct ZoomCenterPicker: View {
         )
     }
     .frame(width: pickerSize, height: pickerSize * 9 / 16)
-    .cornerRadius(6)
+    .cornerRadius(Radius.tile)
     .overlay(
-      RoundedRectangle(cornerRadius: 6)
+      Radius.rect(Radius.tile)
         .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
     )
     .contentShape(Rectangle())

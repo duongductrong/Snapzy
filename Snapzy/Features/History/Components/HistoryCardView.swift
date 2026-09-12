@@ -159,7 +159,7 @@ struct HistoryCardView: View, Equatable {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-          Capsule()
+          Capsule(style: .continuous)
             .fill(
               LinearGradient(
                 colors: [
@@ -176,7 +176,7 @@ struct HistoryCardView: View, Equatable {
   }
 
   private var cardShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: 18, style: .continuous)
+    Radius.rect(Radius.card)
   }
 
   private var cardBackground: some ShapeStyle {

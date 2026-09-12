@@ -216,11 +216,11 @@ struct HistoryBackdropView: View {
       // Content area: Symmetrical grid of capture items (landscape screenshot cards)
       HStack(spacing: 6) {
         ForEach(0..<3, id: \.self) { index in
-          RoundedRectangle(cornerRadius: 2, style: .continuous)
+          RoundedRectangle(cornerRadius: 2, style: .continuous) // radius-lint:allow — miniature illustration of the history HUD, drawn at ~1:10 scale
             .fill(previewCardFill.opacity(index == 0 ? 1.0 : 0.68))
             .frame(width: 16, height: 26)
             .overlay(
-              RoundedRectangle(cornerRadius: 2, style: .continuous)
+              RoundedRectangle(cornerRadius: 2, style: .continuous) // radius-lint:allow — miniature illustration of the history HUD, drawn at ~1:10 scale
                 .stroke(previewWindowStroke, lineWidth: 0.5)
             )
         }

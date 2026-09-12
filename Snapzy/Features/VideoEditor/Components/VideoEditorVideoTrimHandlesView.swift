@@ -40,7 +40,7 @@ struct VideoTrimHandlesView: View {
       let rightEdge = max(0, min(endHandleOffset - handleWidth / 2, timelineWidth - handleWidth)) + handleWidth
       let borderWidth = max(0, rightEdge - leftEdge)
 
-      RoundedRectangle(cornerRadius: 6)
+      Radius.rect(Radius.tile)
         .strokeBorder(Color.yellow, lineWidth: 3)
         .frame(width: borderWidth, height: handleHeight)
         .offset(x: leftEdge)
@@ -163,7 +163,7 @@ private struct TrimHandle: View {
   let isDragging: Bool
 
   var body: some View {
-    RoundedRectangle(cornerRadius: 3)
+    Radius.rect(Radius.ornament)
       .fill(isDragging ? Color.white : Color.yellow)
       .frame(width: 14, height: 60)
       .overlay(

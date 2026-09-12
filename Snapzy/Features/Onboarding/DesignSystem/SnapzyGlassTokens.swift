@@ -31,12 +31,20 @@ enum SnapzyGlassInk {
   static let faint = Color.white.opacity(0.30)
 }
 
+/// Onboarding's radii, aliased onto the app-wide scale in `Snapzy/Shared/Styles/RadiusTokens.swift`.
+///
+/// This used to be an independent fork, and it bought nothing: `control` was already
+/// `Radius.controlM`, and `card` was declared at 12 but never used raw — every call site wrote
+/// `card + 1` or `card + 2`, and `card + 2` is 14, which is `Radius.card`. The fork's only real
+/// effect was to stop onboarding and the rest of the app from moving together. `surface`,
+/// `round(_:)` and `SnapzyOnboardingMetrics.mockRadius` had no call sites at all and are gone.
+///
+/// Onboarding still has a deliberate visual language of its own — dark-locked glass, its own
+/// substrate ramp in `SnapzySurfaceGlass`. Geometry is not part of that; a corner is a corner.
 enum SnapzyRadius {
-  static let control: CGFloat = 10
-  static let card: CGFloat = 12
-  static let surface: CGFloat = 26
-  static let window: CGFloat = 28
-  static func round(_ size: CGFloat) -> CGFloat { size / 2 }
+  static let control = Radius.controlM
+  static let card = Radius.card
+  static let window = Radius.window
 }
 
 enum SnapzySurfaceGlass {
@@ -58,7 +66,10 @@ enum SnapzySurfaceGlass {
 }
 
 enum SnapzyOnboardingMetrics {
-  static let windowRadius: CGFloat = 28
+  /// Was 28 against the app's 26. The onboarding window genuinely is larger than any other
+  /// Snapzy surface, but a 2pt delta reads as a fork rather than a decision, so it now shares
+  /// `Radius.window` with every other window backdrop.
+  static let windowRadius = SnapzyRadius.window
   static let screenFill: CGFloat = 0.92
   static let screenMargin: CGFloat = 16
   static let minSize = CGSize(width: 1060, height: 720)
@@ -68,7 +79,6 @@ enum SnapzyOnboardingMetrics {
   static let columnGap: CGFloat = 40
   static let headerHeight: CGFloat = 40
   static let footerHeight: CGFloat = 44
-  static let mockRadius: CGFloat = 12
 }
 
 enum SnapzyOnboardingType {

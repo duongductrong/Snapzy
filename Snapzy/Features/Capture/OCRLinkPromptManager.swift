@@ -221,7 +221,7 @@ private struct OCRLinkPromptView: View {
               .padding(.horizontal, 8)
               .padding(.vertical, 4)
               .background(
-                Capsule()
+                Capsule(style: .continuous)
                   .fill(Color.accentColor.opacity(0.12))
               )
             }
@@ -260,9 +260,9 @@ private struct OCRLinkPromptView: View {
     .padding(.top, 8)
     .padding(.bottom, 12)
     .frame(width: OCRLinkPromptManager.panelWidth, alignment: .leading)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    .background(.regularMaterial, in: Radius.rect(Radius.panel))
     .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
+      Radius.rect(Radius.panel)
         .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
     )
     .scaleEffect(appeared ? 1.0 : 0.96)
@@ -341,7 +341,7 @@ private struct OCRLinkRowCard: View {
             .foregroundColor(isCopied ? .green : (isHoveringCopy ? .primary : .secondary))
             .frame(width: 22, height: 22)
             .background(
-              RoundedRectangle(cornerRadius: 5, style: .continuous)
+              Radius.controlRect(forHeight: 22)
                 .fill(isHoveringCopy ? Color.primary.opacity(0.1) : Color.clear)
             )
             .contentShape(Rectangle())
@@ -364,7 +364,7 @@ private struct OCRLinkRowCard: View {
           .padding(.horizontal, 7)
           .padding(.vertical, 3.5)
           .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            Capsule(style: .continuous)
               .fill(isHoveringOpen ? Color.accentColor : Color.primary.opacity(0.08))
           )
           .contentShape(Rectangle())
@@ -379,11 +379,11 @@ private struct OCRLinkRowCard: View {
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
     .background(
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
+      Radius.rect(Radius.tile)
         .fill(isHoveringRow ? Color.primary.opacity(0.06) : Color.primary.opacity(0.03))
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 8, style: .continuous)
+      Radius.rect(Radius.tile)
         .strokeBorder(isHoveringRow ? Color.accentColor.opacity(0.25) : Color.clear, lineWidth: 0.5)
     )
     .contentShape(Rectangle())
