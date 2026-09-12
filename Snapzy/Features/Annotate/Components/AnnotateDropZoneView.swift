@@ -32,13 +32,13 @@ struct AnnotateDropZoneView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(Color.secondary.opacity(0.2))
-            .cornerRadius(4)
+            .cornerRadius(Radius.ornament)
         }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(
-      RoundedRectangle(cornerRadius: 12)
+      Radius.rect(Radius.card)
         .strokeBorder(
           style: StrokeStyle(lineWidth: 2, dash: [8, 4])
         )

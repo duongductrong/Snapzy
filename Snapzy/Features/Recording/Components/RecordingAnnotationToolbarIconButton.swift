@@ -26,9 +26,11 @@ struct AnnotationToolbarIconButton: View {
             ? LiquidGlassTokens.inkOnAccent
             : .primary.opacity(isHovered ? 1.0 : 0.85)
         )
-        .frame(width: 28, height: 28)
+        // This toolbar's buttons are 28pt, not the 32pt of `ToolbarConstants.buttonShape` — the
+        // radius has to come from the actual frame or the corner reads over-rounded.
+        .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
         .liquidGlassChrome(
-          shape: ToolbarConstants.buttonShape,
+          shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
           isVisible: isSelected || isHovered,
           isActive: isSelected,
           glassTint: isSelected ? .accentColor : nil

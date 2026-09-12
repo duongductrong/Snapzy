@@ -29,9 +29,13 @@ private struct LiquidGlassGroupModifier: ViewModifier {
   @Environment(\.liquidGlassRenderMode) private var renderMode
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
+  }
+
   @ViewBuilder
   func body(content: Content) -> some View {
-    if #available(macOS 26.0, *), LiquidGlassCapabilities.usesNativeGlass(for: renderMode) {
+    if #available(macOS 26.0, *), usesNativeGlass {
       GlassEffectContainer(spacing: spacing) { content }
     } else {
       content
@@ -45,9 +49,13 @@ private struct LiquidGlassIDModifier<ID: Hashable & Sendable>: ViewModifier {
   @Environment(\.liquidGlassRenderMode) private var renderMode
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
+  }
+
   @ViewBuilder
   func body(content: Content) -> some View {
-    if #available(macOS 26.0, *), LiquidGlassCapabilities.usesNativeGlass(for: renderMode) {
+    if #available(macOS 26.0, *), usesNativeGlass {
       content.glassEffectID(id, in: namespace)
     } else {
       content

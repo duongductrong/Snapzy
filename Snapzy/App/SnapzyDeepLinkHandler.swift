@@ -101,7 +101,7 @@ struct SnapzyDeepLinkHandler {
       LiquidGlassPlaygroundWindowController.shared.show()
       NSApp.activate(ignoringOtherApps: true)
       #else
-      DiagnosticLogger.shared.log(.info, category: .general, message: "Liquid Glass Playground is only available in debug builds.")
+      DiagnosticLogger.shared.log(.info, .preferences, "Liquid Glass Playground is only available in debug builds.")
       #endif
     }
   }

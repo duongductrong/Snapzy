@@ -241,9 +241,13 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
   @Environment(\.liquidGlassRenderMode) private var renderMode
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
+  }
+
   @ViewBuilder
   func body(content: Content) -> some View {
-    let useNative = LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+    let useNative = usesNativeGlass
 
     if #available(macOS 26.0, *), useNative {
       content.glassEffect(

@@ -63,7 +63,8 @@ struct LiquidGlassActionBar: View {
       substrate: LiquidGlassTokens.baseDarkness,
       tint: 0.04,
       highlight: .none,
-      withRimLighting: !LiquidGlassCapabilities.hasNativeLiquidGlass
+      // Native glass draws its own edge; the composite path always wants the rim here.
+      withRimLighting: true
     )
     .shadow(color: Color.black.opacity(0.20), radius: 10, y: 4)
     .animation(LiquidGlassTokens.settleSpring, value: isConfirmEnabled)
@@ -107,7 +108,7 @@ private struct LiquidGlassBarSegment: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .background(LiquidGlassTokens.veilFill.opacity((isHovered && isEnabled) ? 0.20 : 0.10))
-            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+            .clipShape(Radius.rect(Radius.ornament))
             .opacity(isEnabled ? 1.0 : 0.35)
         }
       }
@@ -119,7 +120,7 @@ private struct LiquidGlassBarSegment: View {
         substrate: LiquidGlassTokens.controlSubstrateHover,
         tint: 0.10,
         highlight: .none,
-        withRimLighting: (isHovered && isEnabled) && !LiquidGlassCapabilities.hasNativeLiquidGlass,
+        withRimLighting: isHovered && isEnabled,
         isInteractive: true
       )
       .contentShape(Capsule(style: .continuous))
