@@ -19,16 +19,20 @@ struct QuickAccessActionButton: View {
     Button(action: action) {
       Image(systemName: icon)
         .font(.system(size: 14, weight: .medium))
-        .foregroundColor(.white)
+        .foregroundColor(LiquidGlassTokens.inkOverlay)
         .frame(width: 32, height: 32)
-        .background(
-          Circle()
-            .fill(isHovering ? Color.white.opacity(0.3) : Color.black.opacity(0.5))
+        // Stays lit at rest: the button overlays the capture itself, so there is nothing else to
+        // signal it is interactive.
+        .liquidGlassChrome(
+          shape: Circle(),
+          isVisible: true,
+          isActive: isHovering,
+          emphasis: .overlay
         )
     }
     .buttonStyle(.plain)
     .onHover { hovering in
-      withAnimation(.easeInOut(duration: 0.15)) {
+      withAnimation(LiquidGlassTokens.hoverSpring) {
         isHovering = hovering
       }
     }

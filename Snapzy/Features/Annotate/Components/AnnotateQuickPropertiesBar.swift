@@ -636,7 +636,7 @@ private struct QuickToolPicker: View {
         } label: {
           Image(systemName: tool.icon)
             .font(.system(size: 12, weight: .semibold))
-            .foregroundColor(selectedTool == tool ? .primary : .secondary)
+            .foregroundColor(selectedTool == tool ? LiquidGlassTokens.inkOnAccent : .secondary)
             .frame(width: buttonWidth, height: 26)
             .liquidGlassControl(isActive: selectedTool == tool)
         }
@@ -1460,7 +1460,7 @@ private struct QuickTextPresentationControl: View {
           } label: {
             Image(systemName: presentation.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedPresentation == presentation ? .primary : .secondary)
+              .foregroundColor(selectedPresentation == presentation ? LiquidGlassTokens.inkOnAccent : .secondary)
               .frame(width: buttonWidth, height: 24)
               .liquidGlassControl(isActive: selectedPresentation == presentation)
           }
@@ -1486,7 +1486,7 @@ private struct QuickTextSnapControl: View {
       } label: {
         Image(systemName: CropToolbarSymbols.snapToEdges)
           .font(.system(size: 12, weight: .semibold))
-          .foregroundColor(isEnabled ? .primary : .secondary)
+          .foregroundColor(isEnabled ? LiquidGlassTokens.inkOnAccent : .secondary)
           .frame(width: buttonWidth, height: 24)
           .liquidGlassControl(isActive: isEnabled)
       }
@@ -1530,7 +1530,7 @@ private struct QuickWatermarkStyleControl: View {
           } label: {
             Image(systemName: style.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedStyle == style ? .primary : .secondary)
+              .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
               .frame(width: buttonWidth, height: 24)
               .liquidGlassControl(isActive: selectedStyle == style)
           }
@@ -1664,7 +1664,7 @@ private struct QuickBlurTypeControl: View {
           } label: {
             Image(systemName: blurType.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selectedType == blurType ? .primary : .secondary)
+              .foregroundColor(selectedType == blurType ? LiquidGlassTokens.inkOnAccent : .secondary)
               .frame(width: buttonWidth, height: 24)
               .liquidGlassControl(isActive: selectedType == blurType)
           }
@@ -1725,7 +1725,7 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: style.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(selectedStyle == style ? .primary : .secondary)
+                .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
                 .frame(width: buttonWidth, height: 24)
                 .liquidGlassControl(isActive: selectedStyle == style)
             }
@@ -1744,7 +1744,7 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: bendDirection.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(bendDirection == .alternate ? .primary : .secondary)
+                .foregroundColor(bendDirection == .alternate ? LiquidGlassTokens.inkOnAccent : .secondary)
                 .frame(width: buttonWidth, height: 24)
                 .liquidGlassControl(isActive: bendDirection == .alternate)
             }
@@ -1768,7 +1768,7 @@ private struct QuickArrowStyleControl: View {
             } label: {
               Image(systemName: type.icon)
                 .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(selectedType == type ? .primary : .secondary)
+                .foregroundColor(selectedType == type ? LiquidGlassTokens.inkOnAccent : .secondary)
                 .frame(width: buttonWidth, height: 24)
                 .liquidGlassControl(isActive: selectedType == type)
             }
@@ -1799,7 +1799,7 @@ private struct QuickArrowStyleControl: View {
           } label: {
             Image(systemName: head.icon)
               .font(.system(size: 12, weight: .semibold))
-              .foregroundColor(selection.wrappedValue == head ? .primary : .secondary)
+              .foregroundColor(selection.wrappedValue == head ? LiquidGlassTokens.inkOnAccent : .secondary)
               .frame(width: buttonWidth, height: 24)
               .liquidGlassControl(isActive: selection.wrappedValue == head)
           }
@@ -1824,7 +1824,7 @@ private struct QuickLineStyleControl: View {
             selectedStyle = style
           } label: {
             LineStyleIcon(style: style)
-              .foregroundColor(selectedStyle == style ? .primary : .secondary)
+              .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
               .frame(width: buttonWidth, height: 24)
               .liquidGlassControl(isActive: selectedStyle == style)
           }

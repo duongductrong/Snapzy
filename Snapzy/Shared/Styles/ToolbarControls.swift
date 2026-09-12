@@ -2,22 +2,16 @@
 //  ToolbarControls.swift
 //  Snapzy
 //
-//  Shared toolbar icon button and divider, with an opt-in Liquid Glass treatment.
+//  Shared toolbar and bottom-bar icon buttons, on the Liquid Glass design system.
 //
 
 import SwiftUI
 
-// MARK: - Toolbar Item Style
+// MARK: - Toolbar Button
 
-/// Visual treatment for `ToolbarButton`. Opt in to `.glass` for toolbars that already use the
-/// Liquid Glass design system, so a single row does not mix two button languages.
-enum ToolbarButtonTreatment {
-  case standard
-  case glass
-}
-
+/// Toolbar icon button. Resting buttons stay bare so a row does not read as a wall of pills —
+/// glass only materialises under the pointer or on the active tool.
 struct ToolbarButton: View {
-  var treatment: ToolbarButtonTreatment = .standard
   let icon: String
   var selectedIcon: String? = nil
   let isSelected: Bool
@@ -36,17 +30,14 @@ struct ToolbarButton: View {
         .font(.system(size: 14, weight: .medium))
         .foregroundColor(foregroundColor)
         .frame(width: 28, height: 28)
-        .modifier(ToolbarButtonBackground(
-          treatment: treatment,
-          isEnabled: isEnabled,
-          isSelected: isSelected,
-          isHovering: isHovering,
-          highlightColor: highlightColor
-        ))
-        // An SF Symbol only hit-tests its own glyph, and the glass surface contributes no
-        // hit-testable content, so the click target has to be declared explicitly. Without this
-        // the padding around the icon is dead and only a direct hit on the glyph activates.
-        .contentShape(RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous))
+        // Disabled buttons never show glass. Their dimming is applied to the glyph colour below,
+        // never as an `.opacity()` around this surface — that would detach the backdrop (Rule 2).
+        .liquidGlassChrome(
+          shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
+          isVisible: showsGlass,
+          isActive: isSelected,
+          glassTint: isSelected ? selectedGlassTint : nil
+        )
         .overlay(alignment: .topTrailing) {
           if let selectedBadgeIcon, isSelected {
             Image(systemName: selectedBadgeIcon)
@@ -61,16 +52,14 @@ struct ToolbarButton: View {
     .buttonStyle(.plain)
     .onHover { hovering in
       // Disabling a hovered button never delivers an exit event, so clear it explicitly.
-      let next = isEnabled && hovering
-      switch treatment {
-      case .standard:
-        isHovering = next
-      case .glass:
-        // The glass surface appears on hover, so it needs to ease in rather than pop.
-        withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = next }
-      }
+      // The glass surface appears on hover, so it needs to ease in rather than pop.
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = isEnabled && hovering }
     }
-    .animation(treatment == .glass ? LiquidGlassTokens.hoverSpring : nil, value: isSelected)
+    .animation(LiquidGlassTokens.hoverSpring, value: isSelected)
+  }
+
+  private var showsGlass: Bool {
+    isEnabled && (isSelected || isHovering)
   }
 
   private var displayedIcon: String {
@@ -80,57 +69,23 @@ struct ToolbarButton: View {
     return icon
   }
 
+  /// Disabled dimming lives here rather than in a caller's `.opacity()`. An `.opacity()` wrapped
+  /// around the button would enclose its glass surface, promoting it to an offscreen buffer and
+  /// severing backdrop sampling (Rule 2).
   private var foregroundColor: Color {
-    if isSelected {
-      if let selectedForegroundColor { return selectedForegroundColor }
-      // On glass the tint is carried by the surface, so tinting the glyph too would put e.g.
-      // a blue icon on blue glass. Keep the glyph neutral and let the surface signal selection.
-      return treatment == .glass ? .primary : highlightColor
-    }
-    return .primary
-  }
-}
+    // A disabled button renders no glass (`showsGlass`), so there is no tint to resolve against
+    // and the glyph keeps the adaptive ink, dimmed.
+    guard isEnabled else { return Color.primary.opacity(Self.disabledInk) }
 
-/// Toolbar icon backgrounds. The glass surface wraps the icon so `.glassEffect` composites behind
-/// it, and stays in the hierarchy as `Glass.identity` while resting — conditionally inserting it
-/// would bring an implicit `.opacity` transition, which severs glass backdrop sampling.
-private struct ToolbarButtonBackground: ViewModifier {
-  let treatment: ToolbarButtonTreatment
-  let isEnabled: Bool
-  let isSelected: Bool
-  let isHovering: Bool
-  let highlightColor: Color
-
-  func body(content: Content) -> some View {
-    switch treatment {
-    case .standard:
-      content.background(RoundedRectangle(cornerRadius: 6).fill(standardFill))
-    case .glass:
-      // Resting icon buttons stay bare so the row does not read as a wall of pills; glass only
-      // materialises under the pointer or on the active tool. Disabled buttons never show it —
-      // callers dim them with `.opacity()`, which does not mix with glass.
-      content.liquidGlassSurface(
-        shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
-        isVisible: isVisible,
-        substrate: isSelected ? 0.24 : 0.14,
-        tint: isSelected ? 0.10 : 0.05,
-        highlight: .none,
-        withRimLighting: isVisible && !LiquidGlassCapabilities.hasNativeLiquidGlass,
-        isInteractive: true,
-        glassTint: isSelected ? selectedGlassTint : nil
-      )
-    }
+    // The tint is carried by the surface, so tinting the glyph too would put e.g. a blue icon on
+    // blue glass. It still has to survive that surface: an accent-tinted pill is dark in both
+    // appearances, so a selected glyph reads white rather than following the app appearance —
+    // `.primary` put black icons on the blue pills in Light theme.
+    guard isSelected else { return .primary }
+    return selectedForegroundColor ?? LiquidGlassTokens.ink(onTint: selectedGlassTint)
   }
 
-  private var isVisible: Bool {
-    isEnabled && (isSelected || isHovering)
-  }
-
-  private var standardFill: Color {
-    if isSelected { return highlightColor.opacity(0.3) }
-    if isHovering { return Color.primary.opacity(0.1) }
-    return .clear
-  }
+  fileprivate static let disabledInk: Double = 0.4
 
   /// `.primary` is the default highlight and is a label colour, not a tint — fall back to the
   /// accent so a selected tool still reads as selected on native glass.
@@ -138,6 +93,39 @@ private struct ToolbarButtonBackground: ViewModifier {
     highlightColor == .primary ? .accentColor : highlightColor
   }
 }
+
+// MARK: - Bottom Bar Button
+
+/// Bottom-bar icon button. Same chrome as `ToolbarButton` without the selected state, shared by
+/// the Annotate and Video Editor bottom bars.
+struct BottomBarButton: View {
+  let icon: String
+  let tooltip: String
+  let action: () -> Void
+
+  @Environment(\.isEnabled) private var isEnabled
+  @State private var isHovering = false
+
+  var body: some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 14))
+        .foregroundColor(isEnabled ? .primary : Color.primary.opacity(ToolbarButton.disabledInk))
+        .frame(width: 28, height: 28)
+        .liquidGlassChrome(
+          shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
+          isVisible: isEnabled && isHovering
+        )
+    }
+    .buttonStyle(.plain)
+    .onHover { hovering in
+      withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = isEnabled && hovering }
+    }
+    .help(tooltip)
+  }
+}
+
+// MARK: - Divider
 
 struct ToolbarDivider: View {
   var body: some View {

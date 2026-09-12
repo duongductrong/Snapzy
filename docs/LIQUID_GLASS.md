@@ -99,7 +99,7 @@ SNAPZY_FORCE_LEGACY_GLASS=1
 
 ---
 
-## 4. Two Rules of Liquid Glass
+## 4. Three Rules of Liquid Glass
 
 ### Rule 1: Glass contributes no hit-testable content
 
@@ -131,6 +131,33 @@ When you animate `.opacity` on a SwiftUI subtree, SwiftUI promotes that subtree 
 1. **Fade the Window**: Animate `NSWindow.animator().alphaValue` instead of view opacity.
 2. **Use Scale or Offset**: Animate `.scaleEffect` or `.offset`, which SwiftUI folds into transformation matrices without layer detachment.
 3. **Fade Color Fills**: Animate the opacity of the fill color (`Color.black.opacity(val)`) rather than `.opacity()` on the container.
+
+### Rule 3: Ink on a tinted surface is resolved against the tint, never the appearance
+
+`.glassEffect(.regular.tint(_:))` floods the surface with its tint, and an accent or red tint is
+dark in *both* appearances. Adaptive ink (`inkPrimary`, `.primary`, `.label`) follows the app
+appearance instead, so in Light theme it resolves near-black and lands black glyphs on a blue pill
+— around 3:1, failing AA. Every selected control in the app shipped that way: the Annotate
+toolbar's tools, the quick-properties bar, the Video Editor transport, the recording toolbar's
+output rows, the segmented control.
+
+Ask `LiquidGlassTokens` for the ink instead of hardcoding it:
+
+```swift
+Image(systemName: icon)
+  .foregroundColor(isSelected ? LiquidGlassTokens.inkOnAccent : .primary)
+  .liquidGlassChrome(shape: shape, isVisible: showsGlass, isActive: isSelected,
+                     glassTint: isSelected ? .accentColor : nil)
+```
+
+- `LiquidGlassTokens.ink(onTint:otherwise:)` picks the ink from the tint's sRGB luminance, so a
+  yellow or orange system accent flips to dark glyphs instead of shipping white-on-yellow.
+- It returns the adaptive fallback when there is **no** tint, and on macOS 13–15, where the
+  composite drops `glassTint` entirely and signals state with a substrate step instead.
+- `LiquidGlassTokens.inkOnAccent` is the shorthand for the accent tint every `isActive` control uses.
+
+The glyph still never carries the tint itself — an accent icon on accent glass disappears. The
+surface tints; the ink contrasts.
 
 ---
 
@@ -256,27 +283,80 @@ hover state and declares the hit target:
 Button { select(style) } label: {
   Image(systemName: style.icon)
     .font(.system(size: 12, weight: .semibold))
-    .foregroundColor(selectedStyle == style ? .primary : .secondary)
+    .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
     .frame(width: buttonWidth, height: 24)
     .liquidGlassControl(isActive: selectedStyle == style)
 }
 .buttonStyle(.plain)
 ```
-Note the glyph is `.primary` when active, not `.accentColor`: the surface carries the accent tint,
-so tinting the glyph too would put an accent icon on accent glass.
+Note the glyph is never `.accentColor` when active — the surface carries the accent tint, so
+tinting the glyph too would put an accent icon on accent glass. It is not `.primary` either: see
+Rule 3, active glyphs take `LiquidGlassTokens.inkOnAccent`.
 
-#### 4. Grouping Sibling Surfaces
+`liquidGlassControl` also has a shape-generic overload (`in: Circle()`, `in: Capsule()`) for round
+and pill controls.
+
+#### 4. Caller-Owned Chrome (`.liquidGlassChrome`)
+
+`liquidGlassControl` tracks its own hover, which is what a self-contained property-bar control
+wants. Toolbar and card buttons instead derive visibility from state the parent already holds, so
+they drive the surface directly:
+
+```swift
+Image(systemName: icon)
+  .frame(width: 28, height: 28)
+  .liquidGlassChrome(
+    shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
+    isVisible: isEnabled && (isSelected || isHovering),
+    isActive: isSelected,
+    glassTint: isSelected ? .accentColor : nil
+  )
+```
+
+This is the single place the icon-button composite is tuned — `ToolbarButton`, `BottomBarButton`,
+`ToolbarIconButtonLabel`, `AnnotationToolbarIconButton`, and the Quick Access card buttons all
+route through it, and `liquidGlassControl` is built on top of it.
+
+##### Emphasis tiers
+
+| Emphasis | Resting substrate (13–15) | Active substrate (13–15) | Native glass tint | Ink |
+| :--- | :--- | :--- | :--- | :--- |
+| **`.standard`** | `0.14` | `0.24` | none (caller supplies selection tint) | `inkPrimary` at rest, `inkOnAccent` once the caller tints it |
+| **`.overlay`** | `0.34` | `0.44` | black `0.38` → `0.52` on hover | `inkOverlay` (always light — the tint pins the glass dark) |
+
+> **On the native path, the tint is the only knob you have.** `substrate` and `tint` are macOS
+> 13–15 composite knobs that `.glassEffect` ignores outright, and a fill placed *behind* the
+> surface is not part of what the material samples either — measured side by side, a black `0.42`
+> fill behind a glass capsule is indistinguishable from no fill at all. `.interactive()` adds no
+> pointer response on macOS either. So persistent chrome signals state through
+> `LiquidGlassChromeEmphasis.glassTint(isActive:)`. Chrome that *materialises* on hover is fine
+> as-is: flipping `isVisible` swaps `Glass.identity` for `Glass.regular`, and that is the tell.
+
+`.overlay` is for chrome that floats over *user content* — Quick Access card buttons, the pinned
+window's zoom pill and drag handle. It pins the ink light (`inkOverlay`) rather than letting it flip
+with the drawing appearance, because a screenshot's brightness has nothing to do with Light or Dark
+Aqua.
+
+> **Overlay chrome pins its own material dark.** Left untinted, `.glassEffect` resolves *light*
+> over a bright screenshot and the white glyph lands at roughly 1.5:1 — this is exactly how the
+> Quick Access card buttons shipped. The fix is a dark tint on the glass itself, not a fill behind
+> it: a tint colours the material and keeps it refracting, which a backing fill cannot do because
+> the material never sees it. Hover *deepens* the tint rather than brightening it, so the state
+> change can never cost the glyph contrast. Past `~0.55` the surface stops reading as glass and
+> turns into a grey slab, so the pair is tuned to `0.38` / `0.52`.
+
+#### 5. Grouping Sibling Surfaces
 Wrap a row of glass controls so the system samples once and lets neighbours merge optically on
 macOS 26+ (passthrough on macOS 13–15):
 ```swift
 HStack(spacing: 4) {
-  ToolbarButton(treatment: .glass, icon: "crop", isSelected: isCropping) { beginCrop() }
-  ToolbarButton(treatment: .glass, icon: "pencil", isSelected: isDrawing) { draw() }
+  ToolbarButton(icon: "crop", isSelected: isCropping) { beginCrop() }
+  ToolbarButton(icon: "pencil", isSelected: isDrawing) { draw() }
 }
 .liquidGlassGroup(spacing: Spacing.xs)
 ```
 
-#### 5. Window Backdrop (`LiquidGlassWindowBackdrop`)
+#### 6. Window Backdrop (`LiquidGlassWindowBackdrop`)
 For borderless HUD panels, floating tools, and onboarding windows:
 - `.hudWindow` vibrancy backdrop.
 - Directional vertical scrim (`0.46` $\rightarrow$ `0.38` $\rightarrow$ `0.44`) for high header contrast.
@@ -341,11 +421,38 @@ Snapzy/Shared/DesignSystem/LiquidGlass/
 └── LiquidGlassPreview.swift           # Interactive demo and playground (DEBUG only)
 ```
 
-Shared toolbar icon buttons live outside this folder in
-`Snapzy/Shared/Styles/ToolbarControls.swift`. `ToolbarButton` takes a `treatment:` parameter that
-defaults to `.standard`; pass `.glass` to opt a toolbar into the design system. `BottomBarButton`
-(`Snapzy/Features/Annotate/Components/AnnotateBottomBarView.swift`) takes the same parameter.
+Shared icon buttons live outside this folder in `Snapzy/Shared/Styles/ToolbarControls.swift`.
+`ToolbarButton` and `BottomBarButton` are glass-only — there is no longer a `treatment:` opt-in,
+because every call site uses the design system.
 
-The Annotate window is fully converted: toolbar icons and action buttons, the quick-properties bar
-controls, and the bottom bar. The Video Editor deliberately still passes no `treatment:`, so it
-keeps the pre-existing look — flipping it is a one-line change per call site.
+### Converted surfaces
+
+| Surface | What moved to glass |
+| :--- | :--- |
+| **Annotate** | Toolbar icons and action buttons, quick-properties bar, bottom bar |
+| **Video Editor** | Toolbar (via `ToolbarButton`), rename field, playback transport + play/pause, bottom bar (`.liquidGlass` emphasis buttons, shared `BottomBarButton`) |
+| **Quick Access** | Card icon/text/action buttons (`.overlay` emphasis), pinned-window zoom pill, drag handle, chrome buttons, zoom picker rows |
+| **Recording toolbar** | `ToolbarIconButtonLabel`, record/options/stop button styles, capture-area toggle, output-mode dropdown and its rows, option pills |
+| **Recording annotation toolbar** | `AnnotationToolbarIconButton` |
+| **History floating panel** | Filter pills, round control buttons, search bar and selection bar surfaces |
+
+Colour swatches and stroke-width pickers keep their solid fills on purpose: they *encode* a colour,
+and glass would wash the sample out.
+
+### Rule 2 fixes made during the rollout
+
+Converting a surface means auditing everything that animates around it. These were real violations
+found and fixed:
+
+- `QuickAccessCardView` revealed its overlay and corner buttons with `.opacity`-combined
+  transitions, and dimmed disabled buttons with an external `.opacity()`. Transitions are now
+  scale-only (`.identity` under reduce-motion) and disabled dimming moved onto the button labels.
+- `ToolbarButton` / `BottomBarButton` now dim their own glyph when disabled, so call sites no longer
+  wrap them in `.opacity()`.
+- `RecordButtonWithBadge` dimmed the whole button while preparing to record; that moved onto the
+  label.
+- The History selection bar faded in with `.opacity.combined(with: .scale)`; it is scale-only now.
+
+One known exception remains: `QuickAccessCardView` applies `.opacity(cardOpacity)` to the whole card
+while it is being swiped away or dragged. It is `1.0` at rest, so it only matters mid-gesture, on a
+card that is on its way off screen.

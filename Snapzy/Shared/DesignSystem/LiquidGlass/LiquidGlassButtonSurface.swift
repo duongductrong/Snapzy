@@ -132,14 +132,24 @@ struct LiquidGlassButtonSurface: View {
     guard isEnabled else { return LiquidGlassTokens.inkFaint }
     switch emphasis {
     case .primary, .destructive:
-      // A saturated accent/red tint is dark in both appearances, so the label stays white —
-      // this matches `.glassProminent`. Adaptive ink would put near-black text on accent blue
-      // in Light Aqua, which lands around 3:1 and fails AA at 12pt.
-      return currentGlassTint == nil ? LiquidGlassTokens.inkPrimary : .white
+      // The label is resolved against the tint, not the app appearance — this matches
+      // `.glassProminent`. Adaptive ink would put near-black text on accent blue in Light Aqua,
+      // which lands around 3:1 and fails AA at 12pt. On macOS 13–15 there *is* no tint (the
+      // composite drops `glassTint`) and the pill is a light substrate in Aqua, so the ink falls
+      // back to adaptive there — pinning it white is what made those buttons unreadable.
+      return LiquidGlassTokens.ink(onTint: currentGlassTint)
     case .secondary:
-      return isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody
+      // `isActive` is what turns on the accent tint; plain hover leaves the glass untinted, so
+      // only the active state hands its ink over to the tint.
+      return LiquidGlassTokens.ink(
+        onTint: currentGlassTint,
+        otherwise: isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody
+      )
     case .contextPill:
-      return isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkMuted
+      return LiquidGlassTokens.ink(
+        onTint: currentGlassTint,
+        otherwise: isVisuallyActive ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkMuted
+      )
     }
   }
 }

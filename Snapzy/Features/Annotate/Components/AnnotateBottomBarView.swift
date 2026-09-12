@@ -367,13 +367,12 @@ struct AnnotateBottomBarView: View {
     return HStack(spacing: 12) {
       BottomBarButton(
         icon: "plus.rectangle.on.rectangle",
-        tooltip: L10n.AnnotateUI.newWindow,
-        treatment: .glass
+        tooltip: L10n.AnnotateUI.newWindow
       ) {
         AnnotateManager.shared.openEmptyAnnotation()
       }
 
-      BottomBarButton(icon: "square.and.arrow.up", tooltip: L10n.Common.share, treatment: .glass) {
+      BottomBarButton(icon: "square.and.arrow.up", tooltip: L10n.Common.share) {
         share()
       }
 
@@ -389,8 +388,7 @@ struct AnnotateBottomBarView: View {
             : tooltipText(
               state.cloudKey != nil ? L10n.AnnotateUI.reuploadToCloud : L10n.AnnotateUI.uploadToCloud,
               shortcut: cloudUploadShortcut
-            ),
-          treatment: .glass
+            )
         ) {
           if state.cloudKey != nil && needsReUpload {
             showOverwriteConfirmation = true
@@ -399,7 +397,6 @@ struct AnnotateBottomBarView: View {
           }
         }
         .disabled(isCloudUploading || alreadyUploaded)
-        .opacity(alreadyUploaded ? 0.6 : 1)
       }
 
       BottomBarButton(
@@ -407,25 +404,22 @@ struct AnnotateBottomBarView: View {
         tooltip: tooltipText(
           state.isPinned ? L10n.AnnotateUI.unpinWindow : L10n.AnnotateUI.pinWindow,
           shortcut: togglePinShortcut
-        ),
-        treatment: .glass
+        )
       ) {
         pin()
       }
 
       BottomBarButton(
         icon: "doc.on.doc",
-        tooltip: tooltipText(L10n.AnnotateUI.copyToClipboard, shortcut: copyAndCloseShortcut),
-        treatment: .glass
+        tooltip: tooltipText(L10n.AnnotateUI.copyToClipboard, shortcut: copyAndCloseShortcut)
       ) {
         copyToClipboard()
       }
 
-      BottomBarButton(icon: "trash", tooltip: L10n.Common.deleteAction, treatment: .glass) {
+      BottomBarButton(icon: "trash", tooltip: L10n.Common.deleteAction) {
         confirmAndDeleteImage()
       }
       .disabled(state.sourceURL == nil)
-      .opacity(state.sourceURL == nil ? 0.5 : 1)
     }
     // One effect container for the whole row: the glass is evaluated in a single pass instead of
     // once per button, and neighbours merge when they light up together.
@@ -662,72 +656,6 @@ struct AnnotateBottomBarView: View {
           context: ["fileName": sourceURL.lastPathComponent]
         )
       }
-    }
-  }
-}
-
-// MARK: - Bottom Bar Button
-
-struct BottomBarButton: View {
-  let icon: String
-  let tooltip: String
-  var treatment: ToolbarButtonTreatment = .standard
-  let action: () -> Void
-
-  @Environment(\.isEnabled) private var isEnabled
-  @State private var isHovering = false
-
-  var body: some View {
-    Button(action: action) {
-      Image(systemName: icon)
-        .font(.system(size: 14))
-        .foregroundColor(.primary)
-        .frame(width: 28, height: 28)
-        .modifier(BottomBarButtonBackground(
-          treatment: treatment,
-          isEnabled: isEnabled,
-          isHovering: isHovering
-        ))
-        // An SF Symbol only hit-tests its own glyph, and a glass surface contributes no
-        // hit-testable content, so the click target has to be declared explicitly.
-        .contentShape(RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous))
-    }
-    .buttonStyle(.plain)
-    .onHover { hovering in
-      let next = isEnabled && hovering
-      switch treatment {
-      case .standard:
-        isHovering = next
-      case .glass:
-        withAnimation(LiquidGlassTokens.hoverSpring) { isHovering = next }
-      }
-    }
-    .help(tooltip)
-  }
-}
-
-private struct BottomBarButtonBackground: ViewModifier {
-  let treatment: ToolbarButtonTreatment
-  let isEnabled: Bool
-  let isHovering: Bool
-
-  func body(content: Content) -> some View {
-    switch treatment {
-    case .standard:
-      content.background(
-        RoundedRectangle(cornerRadius: 6)
-          .fill(isHovering ? Color.primary.opacity(0.15) : Color.clear)
-      )
-    case .glass:
-      content.liquidGlassSurface(
-        shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
-        isVisible: isEnabled && isHovering,
-        substrate: 0.14,
-        tint: 0.05,
-        highlight: .none,
-        withRimLighting: isEnabled && isHovering && !LiquidGlassCapabilities.hasNativeLiquidGlass,
-        isInteractive: true
-      )
     }
   }
 }
