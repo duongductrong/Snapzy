@@ -112,7 +112,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
 - Visibility: `showMenuBarIcon` pref toggles the status item (`syncStatusItemVisibility`).
 - Preferences activation-policy dance (`presentPreferencesWindow`): elevates `.accessory` → `.regular` so Snapzy appears in the app menu/Cmd+Tab, triggers the Settings scene (synthesized `⌘,` key equivalent on macOS 14+, `showSettingsWindow:` before), tracks the window (12 retry passes), and reverts to `.accessory` in `windowDidClose` when no other normal windows remain. While recording, the tracked Preferences window is added to the recorder's runtime exclusion list so Snapzy's own window isn't captured.
 
-Known leftover: `reportProblemAction` (calls `CrashReportService.presentAlert()`) and the stored `didDetectCrash` flag exist, but **no menu item is wired to them** in `buildMenu()` — problem reporting currently lives in Preferences → About (and Preferences → General → Help). See [UPDATES.md](UPDATES.md).
+Known leftover: `reportProblemAction` (calls `CrashReportService.presentAlert()`) and the stored `didDetectCrash` flag exist, but **no menu item is wired to them** in `buildMenu()` — problem reporting currently lives in Preferences → General → Help and the About support links (GitHub issues). See [UPDATES.md](UPDATES.md).
 
 ## App identity
 

@@ -1,36 +1,44 @@
 //
-//  CheckForUpdatesView.swift
+//  UpdatesCheckForUpdatesView.swift
 //  Snapzy
 //
-//  SwiftUI view for "Check for Updates..." menu item
+//  Reusable "Check for Updates" button + Sparkle status view model
 //
 
-import SwiftUI
-import Sparkle
 import Combine
+import Sparkle
+import SwiftUI
 
 final class CheckForUpdatesViewModel: ObservableObject {
-    @Published var canCheckForUpdates = false
+  private let updater: SPUUpdater
 
-    init(updater: SPUUpdater) {
-        updater.publisher(for: \.canCheckForUpdates)
-            .assign(to: &$canCheckForUpdates)
-    }
+  @Published var canCheckForUpdates = false
+  @Published var lastUpdateCheckDate: Date?
+
+  init(updater: SPUUpdater) {
+    self.updater = updater
+    updater.publisher(for: \.canCheckForUpdates)
+      .assign(to: &$canCheckForUpdates)
+    updater.publisher(for: \.lastUpdateCheckDate)
+      .assign(to: &$lastUpdateCheckDate)
+  }
+
+  func checkForUpdates() {
+    updater.checkForUpdates()
+  }
 }
 
-struct CheckForUpdatesView: View {
-    @ObservedObject private var viewModel: CheckForUpdatesViewModel
-    private let updater: SPUUpdater
+struct CheckForUpdatesView<Label: View>: View {
+  @ObservedObject private var viewModel: CheckForUpdatesViewModel
+  private let label: () -> Label
 
-    init(updater: SPUUpdater) {
-        self.updater = updater
-        self.viewModel = CheckForUpdatesViewModel(updater: updater)
-    }
+  init(viewModel: CheckForUpdatesViewModel, @ViewBuilder label: @escaping () -> Label) {
+    self.viewModel = viewModel
+    self.label = label
+  }
 
-    var body: some View {
-        Button(L10n.Menu.checkForUpdates) {
-            updater.checkForUpdates()
-        }
-        .disabled(!viewModel.canCheckForUpdates)
-    }
+  var body: some View {
+    Button(action: viewModel.checkForUpdates, label: label)
+      .disabled(!viewModel.canCheckForUpdates)
+  }
 }

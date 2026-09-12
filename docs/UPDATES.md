@@ -24,7 +24,7 @@ flowchart TD
 - `SUEnableInstallerLauncherService` = true, paired with the mach-lookup entitlements `$(PRODUCT_BUNDLE_IDENTIFIER)-spks` / `-spki` (see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)).
 - Entry points:
   - Menu bar → Check for Updates → `UpdaterManager.shared.checkForUpdates()`.
-  - Settings → About → Check for Updates button + last-checked label (`AboutSettingsView`).
+  - Settings → About → Check for Updates button + version/last-checked label directly under the hero branding (`AboutSettingsView.heroSection`); button disables while Sparkle is checking (`CheckForUpdatesView`).
   - Settings → General → Updates: auto-check / auto-download toggles bound to `SPUUpdater` (`automaticallyChecksForUpdates`, `automaticallyDownloadsUpdates`); each change schedules a TOML sync.
   - `CheckForUpdatesView` (`Snapzy/Features/Updates/UpdatesCheckForUpdatesView.swift`) — reusable Sparkle check button.
 - Channel picker: `UpdateChannelSectionView` (`PreferencesUpdateChannelSection.swift`) in Settings → About.
@@ -56,7 +56,7 @@ flowchart TD
 - `CrashReportService.presentAlert()` (`Snapzy/Features/CrashReport/CrashReportService.swift`): builds the archive, shows an informational alert with a draggable zip accessory (`CrashReportAccessoryView`), Submit opens `https://snapzy.app/bug-report`.
 - Archive contents: `README.txt` (generated summary) + `diagnostic-logs/snapzy_*.txt` for every retained log; older archives in the temp folder are cleaned up on each build. `ZipArchiveWriter` is a local dependency-free zip implementation.
 - Entry points:
-  - Settings → About → **Report a Problem** (full alert + bundle).
+  - Settings → About → **Report a Bug** (support link, opens GitHub issues directly — no bundle).
   - Settings → General → Help → **Report Issue** (opens the bug-report page directly, no bundle).
   - Status bar: `AppStatusBarController.reportProblemAction` calls `CrashReportService.presentAlert()` but is **not wired into `buildMenu()`** — see Unresolved questions.
 - Privacy: the zip is never sent automatically; the user attaches it manually on the report page.
