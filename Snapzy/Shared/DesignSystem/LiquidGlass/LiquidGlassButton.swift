@@ -59,7 +59,7 @@ struct LiquidGlassActionButton: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 1)
             .background(LiquidGlassTokens.veilFill.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 3.5))
+            .clipShape(Radius.rect(Radius.ornament))
         }
       }
     }

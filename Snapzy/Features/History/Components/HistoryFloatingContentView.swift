@@ -336,9 +336,10 @@ struct HistoryFloatingContentView: View {
       shape: Capsule(style: .continuous),
       substrate: 0.18,
       tint: 0.06,
-      // Native glass draws its own refractive edge; a second stroke on top reads as a chalky
-      // white outline, so the specular hairline is legacy-only.
-      highlight: LiquidGlassCapabilities.hasNativeLiquidGlass ? .none : .specular
+      // The native branch draws its own refractive edge and ignores `highlight`; the composite
+      // path resolves the specular hairline. Reading the capability statically here would leave a
+      // stale `.none` behind after a live toggle.
+      highlight: .specular
     )
     .shadow(color: chromeSurfaceShadow, radius: 7, x: 0, y: 3)
   }
@@ -435,7 +436,9 @@ struct HistoryFloatingContentView: View {
       shape: Capsule(style: .continuous),
       substrate: LiquidGlassTokens.baseDarkness,
       tint: 0.06,
-      highlight: LiquidGlassCapabilities.hasNativeLiquidGlass ? .none : .specular
+      // Native ignores `highlight`; resolving it statically made the composite path lose its
+      // hairline after a live toggle-off.
+      highlight: .specular
     )
     .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.14), radius: 18, x: 0, y: 8)
     .fixedSize(horizontal: true, vertical: false)

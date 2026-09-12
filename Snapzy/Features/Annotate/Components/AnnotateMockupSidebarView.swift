@@ -147,12 +147,12 @@ struct MockupSidebarView: View {
         Button {
             state.backgroundStyle = .gradient(preset)
         } label: {
-            RoundedRectangle(cornerRadius: 4)
+            Radius.rect(Radius.ornament)
                 .fill(LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
                 .frame(width: 32, height: 32)
                 .overlay {
                     if case .gradient(let current) = state.backgroundStyle, current == preset {
-                        RoundedRectangle(cornerRadius: 4)
+                        Radius.rect(Radius.ornament)
                             .stroke(Color.white, lineWidth: 2)
                     }
                 }

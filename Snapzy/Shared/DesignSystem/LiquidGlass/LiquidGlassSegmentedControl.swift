@@ -18,7 +18,7 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private var usesNativeGlass: Bool {
-    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
   }
 
   var body: some View {

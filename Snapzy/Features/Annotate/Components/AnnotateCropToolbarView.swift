@@ -114,6 +114,10 @@ struct CropToolbarView: View {
 // MARK: - Crop Toolbar Icon Button
 
 struct CropToolbarIconButton: View {
+  /// Matches `ControlMetrics.toolbarButton`: the crop toolbar takes over the same bottom-bar slot
+  /// as `BottomBarButton`, so the two have to share a height *and* a corner radius.
+  static let height = ControlMetrics.toolbarButton
+
   let icon: String
   var isActive: Bool = false
   let tooltip: String
@@ -126,10 +130,10 @@ struct CropToolbarIconButton: View {
       Image(systemName: icon)
         .font(.system(size: 14, weight: .medium))
         .foregroundColor(foregroundColor)
-        .frame(width: 28, height: 28)
+        .frame(width: Self.height, height: Self.height)
         .liquidGlassControl(
           isActive: isActive,
-          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
+          in: Radius.controlRect(forHeight: Self.height)
         )
     }
     .buttonStyle(.plain)
@@ -145,6 +149,8 @@ struct CropToolbarIconButton: View {
 // MARK: - Aspect Ratio Button
 
 struct CropRatioButton: View {
+  static let height = ControlMetrics.toolbarButton
+
   let ratio: CropAspectRatio
   let isSelected: Bool
   let isPortrait: Bool
@@ -158,10 +164,10 @@ struct CropRatioButton: View {
         .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
         .foregroundColor(foregroundColor)
         .padding(.horizontal, 8)
-        .frame(height: 28)
+        .frame(height: Self.height)
         .liquidGlassControl(
           isActive: isSelected,
-          in: RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous)
+          in: Radius.controlRect(forHeight: Self.height)
         )
     }
     .buttonStyle(.plain)

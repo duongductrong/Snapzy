@@ -8,6 +8,14 @@
 import AppKit
 import SwiftUI
 
+/// Control heights the Annotate sidebar is laid out at, so its corner radii stay derived rather
+/// than guessed. The sidebar's buttons, selects and preset rows all land on one 26–30pt step.
+enum AnnotateSidebarMetrics {
+  static let control: CGFloat = 28
+  static let inlineFieldHeight: CGFloat = 18
+  static var controlRadius: CGFloat { Radius.control(forHeight: control) }
+}
+
 private struct AnnotateSidebarSnapshot: Equatable {
   let editorMode: AnnotateState.EditorMode
   let backgroundStyle: BackgroundStyle
@@ -151,11 +159,11 @@ struct AnnotateSidebarView: View, Equatable {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 7)
         .background(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Radius.rect(AnnotateSidebarMetrics.controlRadius)
             .fill(state.isNoneCanvasEffectsActive ? Color.accentColor.opacity(0.25) : SidebarColors.itemDefault)
         )
         .overlay(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Radius.rect(AnnotateSidebarMetrics.controlRadius)
             .stroke(
               state.isNoneCanvasEffectsActive ? Color.accentColor : Color.clear,
               lineWidth: Size.strokeSelected
@@ -187,11 +195,11 @@ struct AnnotateSidebarView: View, Equatable {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
       .background(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.rect(AnnotateSidebarMetrics.controlRadius)
           .fill(SidebarColors.itemDefault)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.rect(AnnotateSidebarMetrics.controlRadius)
           .stroke(
             state.selectedCanvasPresetId != nil ? Color.accentColor.opacity(0.7) : Color.clear,
             lineWidth: Size.strokeDefault
@@ -316,11 +324,11 @@ struct AnnotateSidebarView: View, Equatable {
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
       .background(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.rect(AnnotateSidebarMetrics.controlRadius)
           .fill(SidebarColors.itemDefault)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.rect(AnnotateSidebarMetrics.controlRadius)
           .stroke(Color.orange.opacity(0.5), lineWidth: Size.strokeDefault)
       )
     }
@@ -625,11 +633,11 @@ struct AspectRatioOptionButton: View {
         .minimumScaleFactor(0.8)
         .frame(maxWidth: .infinity, minHeight: 30)
         .background(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Radius.rect(AnnotateSidebarMetrics.controlRadius)
             .fill(backgroundColor)
         )
         .overlay(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Radius.rect(AnnotateSidebarMetrics.controlRadius)
             .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: Size.strokeSelected)
         )
     }
@@ -734,7 +742,7 @@ struct CompactSliderRow: View {
           .padding(.horizontal, Spacing.xs)
           .padding(.vertical, 2)
           .background(
-            RoundedRectangle(cornerRadius: Size.radiusXs)
+            Radius.rect(Radius.control(forHeight: AnnotateSidebarMetrics.inlineFieldHeight))
               .fill(SidebarColors.itemDefault)
           )
           .focused($isTextFieldFocused)

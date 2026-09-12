@@ -433,7 +433,7 @@ struct LiquidGlassPlaygroundView: View {
 
   // Optical Tuning State
   @State private var tuning = LiquidGlassTuning.default
-  @State private var isAppForcedLegacy = LiquidGlassCapabilities.forcesLegacyGlass
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var useLiquidGlass = true
 
   // Simulator State
   @State private var simulateDisabled = false
@@ -561,6 +561,9 @@ struct LiquidGlassPlaygroundView: View {
     .animation(.easeInOut(duration: 0.22), value: isInspectorVisible)
     .animation(.easeInOut(duration: 0.20), value: displayMode)
     .animation(.easeInOut(duration: 0.18), value: selectedCategory)
+    .onAppear {
+      LiquidGlassCapabilities.runtimeLegacyOverride = nil
+    }
   }
 
   // MARK: - Sidebar
@@ -1109,10 +1112,10 @@ struct LiquidGlassPlaygroundView: View {
 
       studioCard(
         "Geometry & Hairline Physics",
-        subtitle: "Bán kính bo cong và viền vật lý 0.5pt",
-        codeSnippet: "// Geometry Tokens\nlet controlRadius: CGFloat = 8\nlet cardRadius: CGFloat = 12\nlet specularTop = 0.22\nlet specularBottom = 0.06"
+        subtitle: "Bán kính bo cong theo chiều cao control và viền vật lý 0.5pt",
+        codeSnippet: Self.radiusSnippet
       ) {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
           HStack {
             Text("Specular Hairline 0.5pt:")
               .font(.system(size: 11, weight: .medium))
@@ -1122,28 +1125,73 @@ struct LiquidGlassPlaygroundView: View {
               .foregroundStyle(.secondary)
           }
 
+          // Rendered from `Radius` rather than described in prose, so the strip cannot go stale
+          // the way the old hardcoded "controlRadius: 8" caption did.
+          HStack(alignment: .bottom, spacing: 10) {
+            ForEach(Self.radiusRamp, id: \.height) { step in
+              radiusSample(height: step.height, label: step.label)
+            }
+          }
+
           HStack(spacing: 8) {
-            Text("Control Radius: 8pt")
-              .font(.system(size: 10.5))
-              .padding(.horizontal, 8)
-              .padding(.vertical, 4)
-              .background(Capsule().fill(.secondary.opacity(0.15)))
-
-            Text("Card Radius: 12pt")
-              .font(.system(size: 10.5))
-              .padding(.horizontal, 8)
-              .padding(.vertical, 4)
-              .background(Capsule().fill(.secondary.opacity(0.15)))
-
-            Text("Capsule: 999pt")
-              .font(.system(size: 10.5))
-              .padding(.horizontal, 8)
-              .padding(.vertical, 4)
-              .background(Capsule().fill(.secondary.opacity(0.15)))
+            radiusChip("card", Radius.card)
+            radiusChip("panel", Radius.panel)
+            radiusChip("window", Radius.window)
+            Text("Capsule — chỉ cho nút hành động & thanh chọn")
+              .font(.system(size: 10))
+              .foregroundStyle(.secondary)
           }
         }
       }
     }
+  }
+
+  private struct RadiusStep {
+    let height: CGFloat
+    let label: String
+  }
+
+  /// The control heights the app actually ships, so the strip doubles as an audit.
+  private static let radiusRamp: [RadiusStep] = [
+    RadiusStep(height: 18, label: "keycap"),
+    RadiusStep(height: 24, label: "chip"),
+    RadiusStep(height: 28, label: "toolbar"),
+    RadiusStep(height: 32, label: "recording"),
+    RadiusStep(height: 38, label: "stacked"),
+  ]
+
+  private static var radiusSnippet: String {
+    let rows = radiusRamp
+      .map { "// \($0.label) \(Int($0.height))pt → \(Int(Radius.control(forHeight: $0.height)))pt" }
+      .joined(separator: "\n")
+    return """
+    // Radius is derived from control height (~\(Radius.controlRoundness) × h)
+    \(rows)
+    let shape = Radius.controlRect(forHeight: 28)
+    """
+  }
+
+  private func radiusSample(height: CGFloat, label: String) -> some View {
+    let radius = Radius.control(forHeight: height)
+    return VStack(spacing: 4) {
+      Radius.rect(radius)
+        .fill(Color.secondary.opacity(0.22))
+        .overlay(Radius.rect(radius).strokeBorder(Color.white.opacity(0.25), lineWidth: 0.5))
+        .frame(width: max(height, 44), height: height)
+      Text("\(Int(height))→\(Int(radius))")
+        .font(.system(size: 9, weight: .semibold).monospacedDigit())
+      Text(label)
+        .font(.system(size: 9))
+        .foregroundStyle(.secondary)
+    }
+  }
+
+  private func radiusChip(_ name: String, _ radius: CGFloat) -> some View {
+    Text("\(name) \(Int(radius))pt")
+      .font(.system(size: 10.5))
+      .padding(.horizontal, 8)
+      .padding(.vertical, 4)
+      .background(Radius.rect(Radius.controlXS).fill(.secondary.opacity(0.15)))
   }
 
   private func tokenSwatch(name: String, color: Color, subtitle: String) -> some View {
@@ -1784,18 +1832,27 @@ struct LiquidGlassPlaygroundView: View {
 
   private var inspectorGlobalSection: some View {
     VStack(alignment: .leading, spacing: 8) {
-      Toggle("Ép macOS 13–15 toàn app", isOn: $isAppForcedLegacy)
+      Toggle("Hiệu ứng Liquid Glass", isOn: $useLiquidGlass)
         .toggleStyle(.switch)
         .controlSize(.small)
-        .onChange(of: isAppForcedLegacy) { forced in
-          LiquidGlassCapabilities.runtimeLegacyOverride = forced
+        .onChange(of: useLiquidGlass) { _ in
+          LiquidGlassCapabilities.runtimeLegacyOverride = nil
+          SnapzyConfigurationSyncCoordinator.shared.scheduleSync(reason: .explicitChange)
         }
 
-      Text(isAppForcedLegacy
-           ? "Toàn bộ cửa sổ Snapzy đang dùng Solid Native Fallback."
-           : "Ứng dụng dùng macOS 26+ Apple Glass (hoặc Solid Fallback trên macOS cũ).")
+      HStack(spacing: 4) {
+        Image(systemName: "arrow.triangle.2.circlepath")
+          .font(.system(size: 9))
+        Text("Đồng bộ trực tiếp từ Cài đặt chung")
+          .font(.system(size: 9.5))
+      }
+      .foregroundStyle(.secondary)
+
+      Text(useLiquidGlass
+           ? "Ứng dụng dùng macOS 26+ Apple Glass (hoặc Solid Fallback trên macOS cũ)."
+           : "Toàn bộ cửa sổ Snapzy đang dùng Solid Native Fallback.")
         .font(.system(size: 10))
-        .foregroundStyle(isAppForcedLegacy ? .orange : .secondary)
+        .foregroundStyle(useLiquidGlass ? Color.secondary : Color.orange)
         .lineSpacing(1.5)
     }
   }

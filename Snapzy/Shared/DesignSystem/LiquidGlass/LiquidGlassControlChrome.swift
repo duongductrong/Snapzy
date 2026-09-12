@@ -90,11 +90,14 @@ extension View {
   /// Apply this to a control's *label content*, inside the `Button`. It owns its own hover state,
   /// so call sites stay declarative, and it declares an explicit hit target — a glass surface
   /// contributes no hit-testable content, so without one only the glyph responds to clicks.
-  func liquidGlassControl(isActive: Bool, cornerRadius: CGFloat = 7) -> some View {
-    liquidGlassControl(
-      isActive: isActive,
-      in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-    )
+  /// The default radius is the property-chip step (`Radius.controlS`). For a control at any other
+  /// height, pass `Radius.control(forHeight:)` rather than a literal — roundness is proportional
+  /// to height in this design system, so a fixed default silently under-rounds taller controls.
+  func liquidGlassControl(
+    isActive: Bool,
+    cornerRadius: CGFloat = Radius.control(forHeight: ControlMetrics.propertyChip)
+  ) -> some View {
+    liquidGlassControl(isActive: isActive, in: Radius.rect(cornerRadius))
   }
 
   /// Shape-generic variant, for circular and capsule controls.
@@ -142,7 +145,8 @@ extension View {
       substrate: isActive ? emphasis.activeSubstrate : emphasis.restingSubstrate,
       tint: isActive ? emphasis.activeTint : emphasis.restingTint,
       highlight: .none,
-      withRimLighting: isVisible && !LiquidGlassCapabilities.hasNativeLiquidGlass,
+      // Native glass draws its own edge; the composite path wants the rim whenever visible.
+      withRimLighting: isVisible,
       isInteractive: true,
       // A caller-supplied tint is a statement about state (selected, destructive) and outranks
       // the emphasis default, which is only there to keep the material legible.

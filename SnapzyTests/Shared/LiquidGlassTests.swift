@@ -88,11 +88,63 @@ final class LiquidGlassTests: XCTestCase {
     XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system))
   }
 
+  func testCapabilities_playgroundSyncsUserPreferenceWithoutOverrideConflict() {
+    let originalPref = UserDefaults.standard.object(forKey: PreferencesKeys.useLiquidGlass)
+    let originalRuntime = LiquidGlassCapabilities.runtimeLegacyOverride
+    defer {
+      UserDefaults.standard.set(originalPref, forKey: PreferencesKeys.useLiquidGlass)
+      LiquidGlassCapabilities.runtimeLegacyOverride = originalRuntime
+    }
+
+    // Simulate stale override from legacy playground session
+    LiquidGlassCapabilities.runtimeLegacyOverride = true
+    XCTAssertTrue(LiquidGlassCapabilities.forcesLegacyGlass)
+
+    // User action in General settings clears override and applies preference
+    LiquidGlassCapabilities.runtimeLegacyOverride = nil
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.useLiquidGlass)
+    XCTAssertTrue(LiquidGlassCapabilities.isUserPreferenceEnabled)
+    if #available(macOS 26.0, *) {
+      XCTAssertFalse(LiquidGlassCapabilities.forcesLegacyGlass)
+      XCTAssertTrue(LiquidGlassCapabilities.hasNativeLiquidGlass)
+    }
+
+    // Toggle off via General settings
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.useLiquidGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.isUserPreferenceEnabled)
+    XCTAssertTrue(LiquidGlassCapabilities.forcesLegacyGlass)
+    XCTAssertFalse(LiquidGlassCapabilities.hasNativeLiquidGlass)
+  }
+
   func testCapabilities_usesNativeGlassForRenderModes() {
     XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .legacy))
     if #available(macOS 26.0, *) {
       XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .native))
     }
+  }
+
+  func testCapabilities_scopedResolutionHonoursReactiveUserPreference() {
+    let originalRuntime = LiquidGlassCapabilities.runtimeLegacyOverride
+    defer { LiquidGlassCapabilities.runtimeLegacyOverride = originalRuntime }
+    LiquidGlassCapabilities.runtimeLegacyOverride = nil
+
+    // The scoped resolver takes the preference as a parameter so surfaces that already host a
+    // `@AppStorage` read stay reactive and never re-read `UserDefaults` inside their body.
+    XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: false))
+    XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .legacy, userEnabled: true))
+
+    if #available(macOS 26.0, *) {
+      XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: true))
+      // A scoped `.native` mode is an explicit playground/test override and outranks the toggle.
+      XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .native, userEnabled: false))
+    } else {
+      XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: true))
+      XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .native, userEnabled: false))
+    }
+
+    // The developer override still forces the composite path on the app-wide scope.
+    LiquidGlassCapabilities.runtimeLegacyOverride = true
+    XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: true))
   }
 
   func testCapabilities_backdropSubstrateOnlyCompensatesOnLegacyPath() {

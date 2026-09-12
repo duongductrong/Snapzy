@@ -114,10 +114,16 @@ enum LiquidGlassCapabilities {
   }
 
   /// Evaluates whether native glass is active given a scoped render mode.
-  static func usesNativeGlass(for mode: LiquidGlassRenderMode) -> Bool {
+  ///
+  /// `userEnabled` is the caller's reactive `@AppStorage` read of `PreferencesKeys.useLiquidGlass`.
+  /// It is passed in rather than re-read here so SwiftUI records a dependency on the preference at
+  /// the call site — reading `isUserPreferenceEnabled` inside a view body does not invalidate that
+  /// view when the toggle flips, which is exactly what left the effect stuck on the old path.
+  static func usesNativeGlass(for mode: LiquidGlassRenderMode, userEnabled: Bool) -> Bool {
     switch mode {
     case .system:
-      return hasNativeLiquidGlass
+      guard userEnabled, isSystemSupported else { return false }
+      return !developerForcedLegacy
     case .native:
       if #available(macOS 26.0, *) {
         return true
@@ -126,6 +132,23 @@ enum LiquidGlassCapabilities {
     case .legacy:
       return false
     }
+  }
+
+  /// Non-reactive convenience for tests, previews, and call sites that already observe the setting.
+  static func usesNativeGlass(for mode: LiquidGlassRenderMode) -> Bool {
+    usesNativeGlass(for: mode, userEnabled: isUserPreferenceEnabled)
+  }
+
+  /// Developer-only override (`-SnapzyForceLegacyGlass` or the legacy runtime flag).
+  private static var developerForcedLegacy: Bool {
+    if let runtimeLegacyOverride {
+      return runtimeLegacyOverride
+    }
+    #if DEBUG
+      return argumentForcesLegacy
+    #else
+      return false
+    #endif
   }
 }
 
@@ -166,11 +189,13 @@ enum LiquidGlassTokens {
   static let glareTrailingResting: Double = 0.12
   static let glareTrailingHover: Double = 0.24
 
-  // Radii
-  static let controlRadius: CGFloat = 10
-  static let cardRadius: CGFloat = 14
-  static let surfaceRadius: CGFloat = 20
-  static let windowRadius: CGFloat = 26
+  // Radii — thin aliases onto the app-wide scale in RadiusTokens.swift, so glass surfaces and
+  // plain chrome cannot drift apart. `controlRadius` is the non-capsule text-button radius, which
+  // is the 28pt control step.
+  static let controlRadius = Radius.controlM
+  static let cardRadius = Radius.card
+  static let surfaceRadius = Radius.panel
+  static let windowRadius = Radius.window
 
   // Spring physics
   static let hoverSpring: Animation = .spring(response: 0.28, dampingFraction: 0.75)

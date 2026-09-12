@@ -50,9 +50,9 @@ struct PresetButton: View {
             VStack(spacing: 6) {
                 presetThumbnail
                     .frame(width: 80, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .clipShape(Radius.rect(Radius.tile))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 6)
+                        Radius.rect(Radius.tile)
                             .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
                     }
                     .scaleEffect(isHovered ? 1.05 : 1.0)
@@ -80,7 +80,7 @@ struct PresetButton: View {
             )
 
             // Mini mockup preview
-            RoundedRectangle(cornerRadius: 3)
+            Radius.rect(Radius.ornament)
                 .fill(Color.white)
                 .frame(width: 40, height: 28)
                 .rotation3DEffect(

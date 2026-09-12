@@ -59,6 +59,7 @@ struct GeneralSettingsView: View {
           Toggle("", isOn: $useLiquidGlass)
             .labelsHidden()
             .onChange(of: useLiquidGlass) { _ in
+              LiquidGlassCapabilities.runtimeLegacyOverride = nil
               SnapzyConfigurationSyncCoordinator.shared.scheduleSync(reason: .explicitChange)
             }
         }

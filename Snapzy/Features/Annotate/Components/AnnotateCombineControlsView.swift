@@ -21,6 +21,10 @@ struct AnnotateCombineModePicker: View {
 }
 
 struct AnnotateCombineControlsView: View {
+  /// Tall stacked icon+label buttons; their radius is derived from this so the three arrangement
+  /// choices keep the same roundness as the rest of the sidebar's controls.
+  static let directionButtonHeight: CGFloat = 38
+
   @ObservedObject var state: AnnotateState
 
   var body: some View {
@@ -94,7 +98,7 @@ struct AnnotateCombineControlsView: View {
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Radius.rect(Radius.tile)
             .fill(SidebarColors.itemDefault)
         )
       }
@@ -138,14 +142,14 @@ struct AnnotateCombineControlsView: View {
           .font(Typography.labelSmall)
           .lineLimit(1)
       }
-      .frame(maxWidth: .infinity, minHeight: 38)
+      .frame(maxWidth: .infinity, minHeight: Self.directionButtonHeight)
       .foregroundColor(state.combineDirection == direction ? .white : SidebarColors.labelSecondary)
       .background(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.controlRect(forHeight: Self.directionButtonHeight)
           .fill(state.combineDirection == direction ? Color.accentColor.opacity(0.75) : SidebarColors.itemDefault)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusSm)
+        Radius.controlRect(forHeight: Self.directionButtonHeight)
           .stroke(state.combineDirection == direction ? Color.accentColor : Color.clear, lineWidth: 1)
       )
     }

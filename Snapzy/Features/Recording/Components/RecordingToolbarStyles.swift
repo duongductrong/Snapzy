@@ -13,8 +13,10 @@ import SwiftUI
 enum ToolbarConstants {
   static let iconButtonSize: CGFloat = 32
   static let iconSize: CGFloat = 15
-  static let buttonCornerRadius: CGFloat = 6
-  static let toolbarCornerRadius: CGFloat = 14
+  /// Derived, not chosen: at 32pt the previous 6pt corner was the squarest control in the app
+  /// (ratio 0.19) while the record/stop pills beside it were fully rounded. See `Radius`.
+  static let buttonCornerRadius = Radius.control(forHeight: iconButtonSize)
+  static let toolbarCornerRadius = Radius.card
   static let dividerHeight: CGFloat = 20
   static let itemSpacing: CGFloat = 4
   static let groupSpacing: CGFloat = 2
@@ -25,7 +27,7 @@ enum ToolbarConstants {
 
   /// Shared hit/glass shape for every toolbar control, so chrome and hit target never drift.
   static var buttonShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: buttonCornerRadius, style: .continuous)
+    Radius.rect(buttonCornerRadius)
   }
 }
 
@@ -137,7 +139,7 @@ struct StopButtonStyle: ButtonStyle {
   }
   .padding()
   .background(.ultraThinMaterial)
-  .clipShape(RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius))
+  .clipShape(Radius.rect(ToolbarConstants.toolbarCornerRadius))
 }
 
 #Preview("Toolbar Divider") {

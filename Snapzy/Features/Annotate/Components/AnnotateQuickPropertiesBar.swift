@@ -593,6 +593,14 @@ struct AnnotateQuickPropertiesBar: View {
   }
 }
 
+/// Control heights in the quick-properties bar. The bar mixes two rows: a 26pt tool row that has
+/// to line up with the main toolbar, and 24pt property chips that read tighter on purpose because
+/// they are much denser. Both derive their corner radius from these, via `Radius`.
+enum QuickPropertiesMetrics {
+  static let toolRow: CGFloat = 26
+  static let chip = ControlMetrics.propertyChip
+}
+
 private struct QuickSelectionStyleControl: View {
   let selectedTool: AnnotationToolType
   let tools: [AnnotationToolType]
@@ -633,8 +641,11 @@ private struct QuickToolPicker: View {
           Image(systemName: tool.icon)
             .font(.system(size: 12, weight: .semibold))
             .foregroundColor(selectedTool == tool ? LiquidGlassTokens.inkOnAccent : .secondary)
-            .frame(width: buttonWidth, height: 26)
-            .liquidGlassControl(isActive: selectedTool == tool)
+            .frame(width: buttonWidth, height: QuickPropertiesMetrics.toolRow)
+            .liquidGlassControl(
+              isActive: selectedTool == tool,
+              cornerRadius: Radius.control(forHeight: QuickPropertiesMetrics.toolRow)
+            )
         }
         .buttonStyle(.plain)
         .disabled(!isEnabled)
@@ -673,8 +684,11 @@ private struct QuickPropertiesColorPopoverControl: View {
               .font(.system(size: 8, weight: .bold))
               .foregroundColor(.secondary)
           }
-          .frame(width: 42, height: 26)
-          .liquidGlassControl(isActive: false)
+          .frame(width: 42, height: QuickPropertiesMetrics.toolRow)
+          .liquidGlassControl(
+            isActive: false,
+            cornerRadius: Radius.control(forHeight: QuickPropertiesMetrics.toolRow)
+          )
         }
         .buttonStyle(.plain)
         .help(title)
@@ -1457,7 +1471,7 @@ private struct QuickTextPresentationControl: View {
             Image(systemName: presentation.icon)
               .font(.system(size: 12, weight: .semibold))
               .foregroundColor(selectedPresentation == presentation ? LiquidGlassTokens.inkOnAccent : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
               .liquidGlassControl(isActive: selectedPresentation == presentation)
           }
           .buttonStyle(.plain)
@@ -1483,7 +1497,7 @@ private struct QuickTextSnapControl: View {
         Image(systemName: CropToolbarSymbols.snapToEdges)
           .font(.system(size: 12, weight: .semibold))
           .foregroundColor(isEnabled ? LiquidGlassTokens.inkOnAccent : .secondary)
-          .frame(width: buttonWidth, height: 24)
+          .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
           .liquidGlassControl(isActive: isEnabled)
       }
       .buttonStyle(.plain)
@@ -1506,7 +1520,7 @@ private struct QuickWatermarkTextControl: View {
         .foregroundColor(SidebarColors.labelPrimary)
         .lineLimit(1)
         .padding(.horizontal, 8)
-        .frame(height: 24)
+        .frame(height: QuickPropertiesMetrics.chip)
         .liquidGlassControl(isActive: false)
     }
   }
@@ -1527,7 +1541,7 @@ private struct QuickWatermarkStyleControl: View {
             Image(systemName: style.icon)
               .font(.system(size: 12, weight: .semibold))
               .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
               .liquidGlassControl(isActive: selectedStyle == style)
           }
           .buttonStyle(.plain)
@@ -1661,7 +1675,7 @@ private struct QuickBlurTypeControl: View {
             Image(systemName: blurType.icon)
               .font(.system(size: 12, weight: .semibold))
               .foregroundColor(selectedType == blurType ? LiquidGlassTokens.inkOnAccent : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
               .liquidGlassControl(isActive: selectedType == blurType)
           }
           .buttonStyle(.plain)
@@ -1685,7 +1699,7 @@ private struct QuickAutoRedactControl: View {
         Image(systemName: state.isSensitiveRedactionScanning ? "hourglass" : "shield.lefthalf.filled")
           .font(.system(size: 12, weight: .semibold))
           .foregroundColor(state.isSensitiveRedactionScanning ? .accentColor : .secondary)
-          .frame(width: buttonWidth, height: 24)
+          .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
           .liquidGlassControl(isActive: false)
       }
       .buttonStyle(.plain)
@@ -1722,7 +1736,7 @@ private struct QuickArrowStyleControl: View {
               Image(systemName: style.icon)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
-                .frame(width: buttonWidth, height: 24)
+                .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
                 .liquidGlassControl(isActive: selectedStyle == style)
             }
             .buttonStyle(.plain)
@@ -1741,7 +1755,7 @@ private struct QuickArrowStyleControl: View {
               Image(systemName: bendDirection.icon)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(bendDirection == .alternate ? LiquidGlassTokens.inkOnAccent : .secondary)
-                .frame(width: buttonWidth, height: 24)
+                .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
                 .liquidGlassControl(isActive: bendDirection == .alternate)
             }
             .buttonStyle(.plain)
@@ -1765,7 +1779,7 @@ private struct QuickArrowStyleControl: View {
               Image(systemName: type.icon)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundColor(selectedType == type ? LiquidGlassTokens.inkOnAccent : .secondary)
-                .frame(width: buttonWidth, height: 24)
+                .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
                 .liquidGlassControl(isActive: selectedType == type)
             }
             .buttonStyle(.plain)
@@ -1796,7 +1810,7 @@ private struct QuickArrowStyleControl: View {
             Image(systemName: head.icon)
               .font(.system(size: 12, weight: .semibold))
               .foregroundColor(selection.wrappedValue == head ? LiquidGlassTokens.inkOnAccent : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
               .liquidGlassControl(isActive: selection.wrappedValue == head)
           }
           .buttonStyle(.plain)
@@ -1821,7 +1835,7 @@ private struct QuickLineStyleControl: View {
           } label: {
             LineStyleIcon(style: style)
               .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
               .liquidGlassControl(isActive: selectedStyle == style)
           }
           .buttonStyle(.plain)
