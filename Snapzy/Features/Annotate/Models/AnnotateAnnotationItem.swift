@@ -912,6 +912,78 @@ nonisolated struct ArrowGeometry: Equatable {
     )
   }
 
+  /// Returns a copy with updated endpoints while preserving the control point's
+  /// normalized position relative to the endpoint chord.
+  ///
+  /// The longitudinal progress and signed normal offset are both normalized by
+  /// the old chord length, then reconstructed using the new chord. This keeps a
+  /// manually adjusted curve's shape stable when either endpoint is moved.
+  func withEndpoints(start newStart: CGPoint, end newEnd: CGPoint) -> ArrowGeometry {
+    let newControlPoint: CGPoint?
+    if style == .straight {
+      newControlPoint = nil
+    } else if let currentControlPoint = resolvedControlPoint {
+      newControlPoint = Self.controlPointPreservingRelativeShape(
+        currentControlPoint,
+        oldStart: start,
+        oldEnd: end,
+        newStart: newStart,
+        newEnd: newEnd
+      )
+    } else {
+      newControlPoint = nil
+    }
+
+    return ArrowGeometry(
+      start: newStart,
+      end: newEnd,
+      style: style,
+      controlPoint: newControlPoint,
+      arrowType: arrowType,
+      startHead: startHead,
+      endHead: endHead
+    )
+  }
+
+  /// Returns a copy with a directly manipulated control point. Crossing the
+  /// endpoint chord synchronizes the curved style with the actual bend side.
+  /// A control point on the chord has no meaningful side, so the current style
+  /// is retained until the point moves clearly to one side.
+  func withControlPoint(_ newControlPoint: CGPoint) -> ArrowGeometry {
+    guard style != .straight else { return self }
+
+    let updatedStyle: ArrowStyle
+    let chordLength = hypot(end.x - start.x, end.y - start.y)
+    if chordLength <= 0.0001 {
+      updatedStyle = style
+    } else {
+      let direction = CGPoint(
+        x: (end.x - start.x) / chordLength,
+        y: (end.y - start.y) / chordLength
+      )
+      let normal = CGPoint(x: -direction.y, y: direction.x)
+      let midpoint = CGPoint(x: (start.x + end.x) / 2, y: (start.y + end.y) / 2)
+      let signedOffset = (newControlPoint - midpoint).x * normal.x
+        + (newControlPoint - midpoint).y * normal.y
+
+      if abs(signedOffset) <= 0.0001 {
+        updatedStyle = style
+      } else {
+        updatedStyle = signedOffset > 0 ? .curvedLeft : .curvedRight
+      }
+    }
+
+    return ArrowGeometry(
+      start: start,
+      end: end,
+      style: updatedStyle,
+      controlPoint: newControlPoint,
+      arrowType: arrowType,
+      startHead: startHead,
+      endHead: endHead
+    )
+  }
+
   func withStyle(_ newStyle: ArrowStyle) -> ArrowGeometry {
     if newStyle == style {
       return self
@@ -1013,6 +1085,38 @@ nonisolated struct ArrowGeometry: Equatable {
       let side = offsetFromMidpoint.x * normal.x + offsetFromMidpoint.y * normal.y
       return side < 0 ? .alternate : .primary
     }
+  }
+
+  private static func controlPointPreservingRelativeShape(
+    _ controlPoint: CGPoint,
+    oldStart: CGPoint,
+    oldEnd: CGPoint,
+    newStart: CGPoint,
+    newEnd: CGPoint
+  ) -> CGPoint {
+    let oldVector = oldEnd - oldStart
+    let oldLength = hypot(oldVector.x, oldVector.y)
+    guard oldLength > 0.0001 else {
+      return controlPoint
+    }
+
+    let oldUnit = oldVector * (1 / oldLength)
+    let oldNormal = CGPoint(x: -oldUnit.y, y: oldUnit.x)
+    let controlOffset = controlPoint - oldStart
+    let longitudinalProgress = (controlOffset.x * oldUnit.x + controlOffset.y * oldUnit.y) / oldLength
+    let signedNormalOffset = (controlOffset.x * oldNormal.x + controlOffset.y * oldNormal.y) / oldLength
+
+    let newVector = newEnd - newStart
+    let newLength = hypot(newVector.x, newVector.y)
+    guard newLength > 0.0001 else {
+      return controlPoint
+    }
+
+    let newUnit = newVector * (1 / newLength)
+    let newNormal = CGPoint(x: -newUnit.y, y: newUnit.x)
+    return newStart
+      + newUnit * (longitudinalProgress * newLength)
+      + newNormal * (signedNormalOffset * newLength)
   }
 
   private static func defaultCurveControlPoint(
@@ -1495,6 +1599,17 @@ extension AnnotationItem {
       padding = max(6, properties.strokeWidth / 2)
     }
     var result = resizeBounds.insetBy(dx: -padding, dy: -padding)
+    if case .arrow(let geometry) = type,
+       geometry.style != .straight,
+       let controlPoint = geometry.resolvedControlPoint {
+      let controlPointBounds = CGRect(
+        x: controlPoint.x - padding,
+        y: controlPoint.y - padding,
+        width: padding * 2,
+        height: padding * 2
+      )
+      result = result.union(controlPointBounds)
+    }
     if case .text = type,
        properties.textPresentation == .callout,
        let tailTarget = properties.calloutTailTarget {

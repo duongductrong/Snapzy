@@ -416,6 +416,113 @@ final class AnnotateSelectionEditingTests: XCTestCase {
     XCTAssertEqual(updated.bounds, CGRect(x: 10, y: 10, width: 50, height: 10))
   }
 
+  @MainActor
+  func testUpdateArrowControlPointMutatesControlOnlyAndSynchronizesStyle() throws {
+    let state = makeAnnotateState()
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 20, y: 40),
+      end: CGPoint(x: 140, y: 40),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 70, y: 90),
+      arrowType: .classic,
+      startHead: .circle,
+      endHead: .arrow
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(geometry),
+      bounds: geometry.bounds(),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [arrow]
+
+    state.updateArrowControlPoint(id: arrow.id, controlPoint: CGPoint(x: 100, y: -10))
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    guard case .arrow(let updatedGeometry) = updated.type else {
+      return XCTFail("Expected arrow annotation")
+    }
+    XCTAssertEqual(updatedGeometry.start, geometry.start)
+    XCTAssertEqual(updatedGeometry.end, geometry.end)
+    XCTAssertEqual(updatedGeometry.style, .curvedRight)
+    XCTAssertEqual(updatedGeometry.arrowType, .classic)
+    XCTAssertEqual(updatedGeometry.startHead, .circle)
+    XCTAssertEqual(updatedGeometry.endHead, .arrow)
+    XCTAssertEqual(updatedGeometry.resolvedControlPoint, CGPoint(x: 100, y: -10))
+    XCTAssertTrue(state.hasUnsavedChanges)
+  }
+
+  @MainActor
+  func testUpdateArrowEndpointPreservesCustomizedRelativeCurveShape() throws {
+    let state = makeAnnotateState()
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 0, y: 0),
+      end: CGPoint(x: 100, y: 0),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 25, y: 40)
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(geometry),
+      bounds: geometry.bounds(),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [arrow]
+
+    state.updateArrowEndpoint(id: arrow.id, end: CGPoint(x: 50, y: 100))
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    guard case .arrow(let updatedGeometry) = updated.type else {
+      return XCTFail("Expected arrow annotation")
+    }
+    let originalControl = try XCTUnwrap(geometry.resolvedControlPoint)
+    let updatedControl = try XCTUnwrap(updatedGeometry.resolvedControlPoint)
+
+    XCTAssertEqual(updatedGeometry.start, geometry.start)
+    XCTAssertEqual(updatedGeometry.end, CGPoint(x: 50, y: 100))
+    XCTAssertEqual(
+      baselineProgress(originalControl, start: geometry.start, end: geometry.end),
+      baselineProgress(updatedControl, start: updatedGeometry.start, end: updatedGeometry.end),
+      accuracy: 0.001
+    )
+    XCTAssertEqual(
+      normalizedSignedPerpendicularDistance(originalControl, start: geometry.start, end: geometry.end),
+      normalizedSignedPerpendicularDistance(updatedControl, start: updatedGeometry.start, end: updatedGeometry.end),
+      accuracy: 0.001
+    )
+  }
+
+  @MainActor
+  func testCurvedArrowSelectionBoundsIncludeControlPointForSelectionChrome() {
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 20, y: 20),
+      end: CGPoint(x: 120, y: 20),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 70, y: 300)
+    )
+    let arrow = AnnotationItem(
+      type: .arrow(geometry),
+      bounds: geometry.bounds(),
+      properties: AnnotationProperties()
+    )
+
+    XCTAssertGreaterThanOrEqual(arrow.selectionBounds.maxY, 300)
+  }
+
+  private func normalizedSignedPerpendicularDistance(_ point: CGPoint, start: CGPoint, end: CGPoint) -> CGFloat {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    let length = max(hypot(dx, dy), 0.0001)
+    let normal = CGPoint(x: -dy / length, y: dx / length)
+    let offset = CGPoint(x: point.x - start.x, y: point.y - start.y)
+    return (offset.x * normal.x + offset.y * normal.y) / length
+  }
+
+  private func baselineProgress(_ point: CGPoint, start: CGPoint, end: CGPoint) -> CGFloat {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    let lengthSquared = max(dx * dx + dy * dy, 0.0001)
+    return ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared
+  }
+
   // MARK: - Arrow style switching
 
   @MainActor

@@ -3537,22 +3537,32 @@ final class AnnotateState: ObservableObject {
   }
 
   /// Move an arrow's start/end endpoint (Figma-style line editing).
-  /// Style, display type, and heads are preserved; the curve control point is
-  /// re-derived from the new endpoints so curved arrows follow the drag.
+  /// Style, display type, and heads are preserved; curved arrows keep the
+  /// control point's relative position to the endpoint chord.
   func updateArrowEndpoint(id: UUID, start newStart: CGPoint? = nil, end newEnd: CGPoint? = nil) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .arrow(let geometry) = annotations[index].type else { return }
 
     let updatedStart = newStart ?? geometry.start
     let updatedEnd = newEnd ?? geometry.end
-    let updated = ArrowGeometry(
-      start: updatedStart,
-      end: updatedEnd,
-      style: geometry.style,
-      arrowType: geometry.arrowType,
-      startHead: geometry.startHead,
-      endHead: geometry.endHead
-    )
+    let updated = geometry.withEndpoints(start: updatedStart, end: updatedEnd)
+    annotations[index].type = .arrow(updated)
+    annotations[index].bounds = updated.bounds()
+    hasUnsavedChanges = true
+  }
+
+  /// Move a curved arrow's quadratic Bezier control point.
+  /// The canvas clamps the requested point to its active drawing bounds before
+  /// calling this method; the model keeps the point and synchronizes the
+  /// curved style with its actual side of the endpoint chord.
+  func updateArrowControlPoint(id: UUID, controlPoint: CGPoint) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .arrow(let geometry) = annotations[index].type,
+          geometry.style != .straight else { return }
+
+    let updated = geometry.withControlPoint(controlPoint)
+    guard updated != geometry else { return }
+
     annotations[index].type = .arrow(updated)
     annotations[index].bounds = updated.bounds()
     hasUnsavedChanges = true
