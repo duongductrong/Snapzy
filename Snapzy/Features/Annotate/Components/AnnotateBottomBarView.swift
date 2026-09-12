@@ -176,6 +176,10 @@ struct AnnotateBottomBarView: View {
 
   // MARK: - Zoom Picker
 
+  private var zoomShape: RoundedRectangle {
+    Radius.controlRect(forHeight: ControlMetrics.bottomBarControl)
+  }
+
   private var zoomPicker: some View {
     Menu {
       ForEach(state.zoomMenuPresetPercents, id: \.self) { percent in
@@ -208,16 +212,19 @@ struct AnnotateBottomBarView: View {
       }
       .foregroundColor(isZoomHovered ? .primary : .secondary)
       .padding(.horizontal, 10)
-      .frame(height: 28)
+      .frame(height: ControlMetrics.bottomBarControl)
+      // A select is not a terminal action, so it takes the rounded-rect control shape rather than
+      // the capsule the bar reserves for `Done`-class buttons and the mode track. That also puts
+      // it on the same radius as the `BottomBarButton`s it sits beside.
       .background(
-        Capsule(style: .continuous)
+        zoomShape
           .fill(Color.secondary.opacity(isZoomHovered ? 0.18 : 0.10))
       )
       .overlay(
-        Capsule(style: .continuous)
+        zoomShape
           .strokeBorder(Color.secondary.opacity(isZoomHovered ? 0.28 : 0.14), lineWidth: 0.5)
       )
-      .contentShape(Capsule(style: .continuous))
+      .contentShape(zoomShape)
       .onHover { hovering in
         withAnimation(LiquidGlassTokens.hoverSpring) {
           isZoomHovered = hovering

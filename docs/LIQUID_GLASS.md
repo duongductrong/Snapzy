@@ -161,6 +161,85 @@ surface tints; the ink contrasts.
 
 ---
 
+## 4b. Corner Radius Scale
+
+Radius lives in `Snapzy/Shared/Styles/RadiusTokens.swift` (`enum Radius`) and is shared by glass
+and non-glass chrome alike. `LiquidGlassTokens.controlRadius`/`cardRadius`/`surfaceRadius`/
+`windowRadius` are pass-throughs onto it, not a second scale.
+
+### The rule: roundness is a function of control height
+
+A fixed radius applied across sizes makes small controls look circular and large ones look boxy.
+Every control token sits near **`0.36 × height`**, so a 24pt chip and a 32pt button read as the
+same family:
+
+| Token | Value | Control height |
+| :--- | :--- | :--- |
+| `controlXS` | 6 | ≤ 19pt — keycaps, inline badges, mini toggles |
+| `controlS` | 8 | 20–25pt — property-bar chips, segment buttons |
+| `controlM` | 10 | 26–30pt — toolbar/bottom-bar icon buttons, selects, fields |
+| `controlL` | 12 | 31–36pt — recording toolbar buttons |
+| `controlXL` | 14 | ≥ 37pt — stacked icon+label buttons |
+
+**Do not pick a token by eye.** State the height you already know:
+
+```swift
+.frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
+.liquidGlassChrome(
+  shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
+  isVisible: showsGlass
+)
+```
+
+`Radius.control(forHeight:)` snaps `height × 0.36` to the nearest ramp entry; ties resolve
+downward. `ControlMetrics` holds the heights the shared chrome is built at, so a height and its
+radius cannot drift apart.
+
+Containers are **not** proportional — a 400pt inspector does not want a 144pt radius — so they stay
+semantic: `ornament` 4 (badges, keycap plates, hairline frames), `tile` 8 (grid thumbnails, preset
+tiles), `card` 14 (cards, rows, floating bars), `panel` 20 (popovers, inspectors), `window` 26.
+
+### Shape families
+
+Radius is only half the system. The shape a control takes states what class of control it is:
+
+| Shape | Reserved for |
+| :--- | :--- |
+| `Capsule` | Terminal text actions (`Done`, `Save As`, `Apply`) and selection tracks (the segmented control and its sliding indicator). The pill *is* the "this commits" signal. |
+| `Radius.controlRect(forHeight:)` | Every other interactive control: icon buttons, toggle chips, **selects and dropdowns**, ratio buttons, text fields. |
+| `Circle` | Only where the content is inherently round — colour swatches, radio dots. |
+
+A square icon button is deliberately not promoted to a capsule: at 28×28 a capsule *is* a circle,
+which reads as a different control class (destructive, media transport) and loses the glyph's
+optical alignment. `controlM` closes most of the gap to the neighbouring `Done` pill while keeping
+the button legibly rectangular.
+
+A select is not a terminal action, so the Annotate zoom picker takes the rounded-rect control
+shape rather than a capsule — which also puts it on the same radius as the `BottomBarButton`s
+beside it.
+
+Grid cells that share an edge (the sidebar's 3×3 alignment picker) stay at `ornament`: a
+control-sized radius on abutting tiles opens visible gaps between them.
+
+### Always `.continuous`
+
+At an identical radius, circular corners read *squarer* — the curvature starts abruptly instead of
+easing in — so mixing the two styles reintroduces the inconsistency the scale exists to remove.
+`Radius.rect(_:)` and `Radius.controlRect(forHeight:)` pin it for you; prefer them over a bare
+`RoundedRectangle`.
+
+### Legacy
+
+`Size.radiusXs/Sm/Md/Lg` (DesignTokens.swift) predate this and name a size rather than a use,
+which is how a 32pt recording button and a 12pt badge both ended up asking for `radiusSm`. They
+are kept at their original values so untouched surfaces do not move. New code uses `Radius`;
+migrate a legacy call site when you are already editing its surface.
+
+The scale is rendered live in the Liquid Glass playground under **Overview & Tokens →
+Geometry & Hairline Physics**, so it cannot go stale.
+
+---
+
 ## 5. Component System
 
 ### A. Liquid Glass Button (`LiquidGlassButton` / `LiquidGlassButtonStyle`)
@@ -419,7 +498,8 @@ Snapzy/Shared/DesignSystem/LiquidGlass/
 └── LiquidGlassPreview.swift           # Interactive demo and playground (DEBUG only)
 ```
 
-Shared icon buttons live outside this folder in `Snapzy/Shared/Styles/ToolbarControls.swift`.
+Shared icon buttons live outside this folder in `Snapzy/Shared/Styles/ToolbarControls.swift`,
+and the corner-radius scale in `Snapzy/Shared/Styles/RadiusTokens.swift` (see §4b).
 `ToolbarButton` and `BottomBarButton` are glass-only — there is no longer a `treatment:` opt-in,
 because every call site uses the design system.
 

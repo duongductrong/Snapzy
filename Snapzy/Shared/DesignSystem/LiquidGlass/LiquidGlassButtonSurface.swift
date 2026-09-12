@@ -21,7 +21,7 @@ struct LiquidGlassButtonSurface: View {
   @State private var isHovered = false
 
   private var usesNativeGlass: Bool {
-    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
   }
 
   private var isVisuallyActive: Bool { (isHovered && isEnabled) || isActive }
@@ -179,7 +179,7 @@ private struct LiquidGlassButtonBackground: ViewModifier {
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private var usesNativeGlass: Bool {
-    LiquidGlassCapabilities.usesNativeGlass(for: renderMode)
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
   }
 
   func body(content: Content) -> some View {

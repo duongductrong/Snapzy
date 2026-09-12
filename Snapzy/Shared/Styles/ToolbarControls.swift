@@ -29,11 +29,13 @@ struct ToolbarButton: View {
       Image(systemName: displayedIcon)
         .font(.system(size: 14, weight: .medium))
         .foregroundColor(foregroundColor)
-        .frame(width: 28, height: 28)
+        .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
         // Disabled buttons never show glass. Their dimming is applied to the glyph colour below,
         // never as an `.opacity()` around this surface — that would detach the backdrop (Rule 2).
         .liquidGlassChrome(
-          shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
+          // Derived from the frame, not picked: at 28pt the old 8pt corner read square next to
+          // the capsule `Done` button sharing the toolbar. See `Radius`.
+          shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
           isVisible: showsGlass,
           isActive: isSelected,
           glassTint: isSelected ? selectedGlassTint : nil
@@ -111,9 +113,9 @@ struct BottomBarButton: View {
       Image(systemName: icon)
         .font(.system(size: 14))
         .foregroundColor(isEnabled ? .primary : Color.primary.opacity(ToolbarButton.disabledInk))
-        .frame(width: 28, height: 28)
+        .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
         .liquidGlassChrome(
-          shape: RoundedRectangle(cornerRadius: Size.radiusMd, style: .continuous),
+          shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
           isVisible: isEnabled && isHovering
         )
     }
