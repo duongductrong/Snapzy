@@ -155,24 +155,8 @@ struct HistoryCardView: View, Equatable {
     Button(action: openDefaultEditor) {
       Label(L10n.Common.restore, systemImage: "arrow.uturn.backward")
         .font(.system(size: 11, weight: .semibold))
-        .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-          Capsule(style: .continuous)
-            .fill(
-              LinearGradient(
-                colors: [
-                  Color.accentColor.opacity(0.98),
-                  Color.accentColor.opacity(0.82),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-              )
-            )
-        )
     }
-    .buttonStyle(.plain)
+    .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
   }
 
   private var cardShape: RoundedRectangle {
