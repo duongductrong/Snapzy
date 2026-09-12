@@ -294,6 +294,30 @@ final class LiquidGlassTests: XCTestCase {
     XCTAssertEqual(currentSelection, "Record")
   }
 
+  func testLiquidGlassSegmentedControl_editorModeSwitching() {
+    var mode = AnnotateState.EditorMode.annotate
+    let binding = Binding<AnnotateState.EditorMode>(
+      get: { mode },
+      set: { mode = $0 }
+    )
+
+    let control = LiquidGlassSegmentedControl(
+      items: AnnotateState.EditorMode.allCases,
+      selection: binding
+    ) { item in
+      Text(item.rawValue)
+    }
+
+    XCTAssertEqual(control.items, [.annotate, .mockup, .preview])
+    XCTAssertEqual(mode, .annotate)
+
+    binding.wrappedValue = .mockup
+    XCTAssertEqual(mode, .mockup)
+
+    binding.wrappedValue = .preview
+    XCTAssertEqual(mode, .preview)
+  }
+
   func testLiquidGlassActionBar_dispatchesBothActions() {
     var cancelCalled = false
     var confirmCalled = false
