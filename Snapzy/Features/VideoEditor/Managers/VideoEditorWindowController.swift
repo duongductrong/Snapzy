@@ -765,7 +765,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     let alert = NSAlert()
     alert.messageText = L10n.AnnotateUI.uploadToCloud
-    alert.informativeText = "Would you like to upload the exported video to cloud?"
+    alert.informativeText = L10n.VideoEditor.uploadToCloudMessage
     alert.alertStyle = .informational
     alert.addButton(withTitle: L10n.AnnotateUI.uploadToCloud)
     alert.addButton(withTitle: L10n.Common.cancel)
