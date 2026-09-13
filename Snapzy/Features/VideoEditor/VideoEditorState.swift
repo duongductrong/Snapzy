@@ -5,8 +5,8 @@
 //  Central state management for video editor
 //
 
-import AVFoundation
 import AppKit
+import AVFoundation
 import Combine
 import SwiftUI
 
@@ -79,7 +79,6 @@ final class VideoEditorPlaybackState: ObservableObject {
 /// Observable state for video editor window
 @MainActor
 final class VideoEditorState: ObservableObject {
-
   private struct AutoFocusPathInput: Equatable {
     let zoomType: ZoomType
     let zoomLevel: CGFloat
@@ -165,6 +164,7 @@ final class VideoEditorState: ObservableObject {
   @Published var speedSegments: [SpeedSegment] = [] {
     didSet { cachedSequenceMap = nil }
   }
+
   @Published var selectedSpeedId: UUID? = nil
 
   // MARK: - Timeline Clips (the sequence)
@@ -176,6 +176,7 @@ final class VideoEditorState: ObservableObject {
   @Published private(set) var clips: [TimelineClip] = [] {
     didSet { invalidateTimelineCaches() }
   }
+
   @Published private(set) var selectedClipId: UUID? = nil
   @Published private(set) var canSplitAtPlayhead: Bool = false
   @Published private(set) var canDeleteSelectedClip: Bool = false
@@ -217,11 +218,7 @@ final class VideoEditorState: ObservableObject {
   /// Sequence → output map (speed applied). Cached.
   var sequenceMap: TimelineSequenceMap {
     if let cached = cachedSequenceMap { return cached }
-    let map = TimelineSequenceMap(
-      placements: playbackPlacements,
-      sequenceDuration: sequenceDuration,
-      speedSegments: speedSegments
-    )
+    let map = TimelineSequenceMap(clips: clips, speedSegments: speedSegments)
     cachedSequenceMap = map
     return map
   }
@@ -287,75 +284,22 @@ final class VideoEditorState: ObservableObject {
     return playbackPlacement.sequenceTime(atSource: context.sourceTime)
   }
 
-  /// Primary-asset time under a sequence time, or nil when an inserted clip plays there.
-  ///
-  /// Zoom, Follow Mouse, and speed are authored against the primary recording, so they
-  /// only apply where primary material is on screen.
-  func primarySourceTime(atSequence t: TimeInterval) -> TimeInterval? {
-    guard let context = sourceContext(atSequence: t), context.clip.isPrimary else { return nil }
-    return context.sourceTime
+  /// Project an effect range from the stable structural timeline onto the compact
+  /// playable/export sequence. Trimmed slots disappear here; clip identity remains
+  /// the only mapping key, so a reorder cannot move the effect block itself.
+  func projectToPlaybackSequence(timelineRange: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>] {
+    TimelineSequence.project(
+      timelineRange: timelineRange,
+      from: placements,
+      to: playbackPlacements
+    )
   }
 
-  /// Primary-source time under a sequence time, falling back to the nearest primary
-  /// material when an inserted clip is on screen.
-  ///
-  /// Zoom and speed are authored against the primary recording, so an author gesture
-  /// made over an inserted clip has to land somewhere sensible rather than nowhere.
-  func primarySourceTimeOrNearest(atSequence t: TimeInterval) -> TimeInterval {
-    if let direct = primarySourceTime(atSequence: t) { return direct }
-
-    let primaries = placements.filter { $0.clip.isPrimary && $0.activeEnd > $0.activeStart }
-    guard !primaries.isEmpty else { return 0 }
-
-    // Nearest active primary material by sequence distance. The structural slot,
-    // rather than the active range, is used for the distance so a click in either
-    // trimmed edge resolves to the closest playable frame.
-    var nearestSourceTime: TimeInterval?
-    var nearestDistance = TimeInterval.greatestFiniteMagnitude
-    for placement in primaries {
-      let candidate: TimeInterval
-      let distance: TimeInterval
-      if t < placement.activeStart {
-        candidate = placement.clip.sourceStart
-        distance = placement.activeStart - t
-      } else if t >= placement.activeEnd {
-        candidate = placement.clip.sourceEnd
-        distance = t - placement.activeEnd
-      } else {
-        candidate = placement.sourceTime(at: t)
-        distance = 0
-      }
-
-      if distance < nearestDistance {
-        nearestDistance = distance
-        nearestSourceTime = candidate
-      }
-    }
-
-    return nearestSourceTime ?? 0
-  }
-
-  /// Project a primary-source range onto the sequence axis. Effects follow their
-  /// material, so a range can appear in several places (or nowhere).
-  func projectToSequence(sourceRange: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>] {
-    TimelineSequence.project(sourceRange: sourceRange, in: placements)
-  }
-
-  /// Project a primary-source range onto the playable/export sequence. Unlike
-  /// `projectToSequence`, inactive trim slots are collapsed on this axis.
-  func projectToPlaybackSequence(sourceRange: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>] {
-    TimelineSequence.project(sourceRange: sourceRange, in: playbackPlacements)
-  }
-
-  /// Sequence span for a primary-source range, collapsing multiple projections into
-  /// one span. Used to place source-authored overlays (zoom, speed) on the sequence
-  /// axis so they sit over their material after splits and reorders.
-  ///
-  /// Returns nil when the range's material is no longer in the sequence.
-  func sequenceSpan(forPrimarySource range: ClosedRange<TimeInterval>) -> ClosedRange<TimeInterval>? {
-    let pieces = projectToSequence(sourceRange: range)
-    guard let first = pieces.first, let last = pieces.last else { return nil }
-    return first.lowerBound...last.upperBound
+  /// True when a structural sequence time sits over any active video material.
+  /// Effect tracks are independent from clip identity, so inserted clips are valid
+  /// hosts too; trimmed-out slot edges remain unavailable for direct add gestures.
+  func isPlayableMaterial(atSequence t: TimeInterval) -> Bool {
+    sourceContext(atSequence: t) != nil
   }
 
   /// True when at least one enabled speed segment changes playback rate.
@@ -376,6 +320,7 @@ final class VideoEditorState: ObservableObject {
       player.isMuted = isMuted
     }
   }
+
   private var initialIsMuted: Bool = false
 
   /// Sync player preview audio with export audio mode and custom volume settings.
@@ -401,11 +346,11 @@ final class VideoEditorState: ObservableObject {
       do {
         let audioTracks = try await assetSnapshot.loadTracks(withMediaType: .audio)
         guard let self,
-              self.exportSettings == settingsSnapshot,
-              self.exportSettings.audioMode == .custom
+              exportSettings == settingsSnapshot,
+              exportSettings.audioMode == .custom
         else { return }
 
-        self.player.currentItem?.audioMix = VideoEditorAudioMixFactory.makeAudioMix(
+        player.currentItem?.audioMix = VideoEditorAudioMixFactory.makeAudioMix(
           for: audioTracks,
           settings: settingsSnapshot,
           roles: audioTrackRolesSnapshot
@@ -459,6 +404,7 @@ final class VideoEditorState: ObservableObject {
       handleBackgroundStyleChange()
     }
   }
+
   @Published var backgroundPadding: CGFloat = 0
 
   // MARK: - Cached Background Images (Performance Optimization)
@@ -484,7 +430,7 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Export Settings
 
-  @Published var exportSettings: ExportSettings = ExportSettings()
+  @Published var exportSettings: ExportSettings = .init()
   @Published private(set) var estimatedFileSize: Int64 = 0
 
   // MARK: - Unsaved Changes
@@ -497,9 +443,10 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundPadding: CGFloat = 0
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
-  private var initialExportSettings: ExportSettings = ExportSettings()
+  private var initialExportSettings: ExportSettings = .init()
 
   // MARK: - Cloud State
+
   @Published var cloudURL: URL?
   @Published var cloudKey: String?
   @Published var quickAccessItemId: UUID?
@@ -590,12 +537,12 @@ final class VideoEditorState: ObservableObject {
   }
 
   var resolutionString: String {
-    guard naturalSize.width > 0 && naturalSize.height > 0 else { return "—" }
+    guard naturalSize.width > 0, naturalSize.height > 0 else { return "—" }
     return "\(Int(naturalSize.width)) × \(Int(naturalSize.height))"
   }
 
   var aspectRatioString: String {
-    guard naturalSize.width > 0 && naturalSize.height > 0 else { return "—" }
+    guard naturalSize.width > 0, naturalSize.height > 0 else { return "—" }
     let gcdValue = gcd(Int(naturalSize.width), Int(naturalSize.height))
     let w = Int(naturalSize.width) / gcdValue
     let h = Int(naturalSize.height) / gcdValue
@@ -641,15 +588,15 @@ final class VideoEditorState: ObservableObject {
     let initialMetadata = Self.loadRecordingMetadata(for: url, originalURL: originalURL)
     let editorAssetURL = Self.editorAssetURL(for: url, metadata: initialMetadata)
 
-    self.sourceURL = url
+    sourceURL = url
     self.originalURL = originalURL ?? url
-    self.assetURL = editorAssetURL
-    self.asset = AVAsset(url: editorAssetURL)
+    assetURL = editorAssetURL
+    asset = AVAsset(url: editorAssetURL)
     let item = AVPlayerItem(asset: asset)
-    self.primaryPlayerItem = item
-    self.player = AVPlayer(playerItem: item)
-    self.zoomTransitionDuration = Self.loadZoomTransitionDuration()
-    self.recordingMetadata = initialMetadata
+    primaryPlayerItem = item
+    player = AVPlayer(playerItem: item)
+    zoomTransitionDuration = Self.loadZoomTransitionDuration()
+    recordingMetadata = initialMetadata
 
     setupTimeObserver()
     setupEndObserver()
@@ -677,14 +624,14 @@ final class VideoEditorState: ObservableObject {
     return audioSourceURL
   }
 
-  static func audioTrackRoles(for audioTracks: [AVAssetTrack], metadata: RecordingMetadata?) -> [VideoEditorAudioTrackRole] {
+  static func audioTrackRoles(for audioTracks: [AVAssetTrack],
+                              metadata: RecordingMetadata?) -> [VideoEditorAudioTrackRole] {
     let count = audioTracks.count
     guard count > 0 else { return [] }
 
     if let metadata,
        metadata.audioSourceURL != nil,
-       !metadata.audioSourceTracks.isEmpty
-    {
+       !metadata.audioSourceTracks.isEmpty {
       let rolesByTrackID = Dictionary(
         uniqueKeysWithValues: metadata.audioSourceTracks.map { ($0.trackID, $0.role) }
       )
@@ -698,19 +645,19 @@ final class VideoEditorState: ObservableObject {
 
     if let metadata,
        metadata.audioSourceURL != nil,
-       metadata.audioSourceTrackRoles.count == count
-    {
+       metadata.audioSourceTrackRoles.count == count {
       return metadata.audioSourceTrackRoles.map(Self.videoEditorAudioTrackRole)
     }
 
     return VideoEditorAudioTrackRole.roles(forAudioTrackCount: count)
   }
 
-  static func audioTrackRoles(forAudioTrackCount count: Int, metadata: RecordingMetadata?) -> [VideoEditorAudioTrackRole] {
+  static func audioTrackRoles(forAudioTrackCount count: Int,
+                              metadata: RecordingMetadata?) -> [VideoEditorAudioTrackRole] {
     if let metadata,
        metadata.audioSourceURL != nil,
        metadata.audioSourceTrackRoles.count == count {
-      return metadata.audioSourceTrackRoles.map(Self.videoEditorAudioTrackRole)
+      return metadata.audioSourceTrackRoles.map(videoEditorAudioTrackRole)
     }
 
     return VideoEditorAudioTrackRole.roles(forAudioTrackCount: count)
@@ -719,9 +666,9 @@ final class VideoEditorState: ObservableObject {
   private static func videoEditorAudioTrackRole(_ role: RecordingAudioSourceTrackRole) -> VideoEditorAudioTrackRole {
     switch role {
     case .systemAudio:
-      return .systemAudio
+      .systemAudio
     case .microphone:
-      return .microphone
+      .microphone
     }
   }
 
@@ -746,7 +693,15 @@ final class VideoEditorState: ObservableObject {
         naturalSize = metadata.size
         gifFrameCount = metadata.frameCount
         gifDuration = metadata.duration
-        DiagnosticLogger.shared.log(.info, .editor, "GIF metadata loaded", context: ["size": "\(Int(metadata.size.width))x\(Int(metadata.size.height))", "frames": "\(metadata.frameCount)"])
+        DiagnosticLogger.shared.log(
+          .info,
+          .editor,
+          "GIF metadata loaded",
+          context: [
+            "size": "\(Int(metadata.size.width))x\(Int(metadata.size.height))",
+            "frames": "\(metadata.frameCount)",
+          ]
+        )
       } else if let image = SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL, {
         NSImage(contentsOf: sourceURL)
       }) {
@@ -787,7 +742,7 @@ final class VideoEditorState: ObservableObject {
         "duration": String(format: "%.1fs", CMTimeGetSeconds(loadedDuration)),
         "size": "\(Int(naturalSize.width))x\(Int(naturalSize.height))",
         "audioTracks": "\(audioTrackCount)",
-        "audioTrackRoles": audioTrackRoles.map(\.id).joined(separator: ",")
+        "audioTrackRoles": audioTrackRoles.map(\.id).joined(separator: ","),
       ])
       // Calculate initial file size estimate after metadata loads
       recalculateEstimatedFileSize()
@@ -801,15 +756,15 @@ final class VideoEditorState: ObservableObject {
 
   /// Source asset currently loaded into the player, so clips cut from the same
   /// asset do not force a reload at every boundary.
-  private var activeItemSource: TimelineClip.Source? = nil
+  private var activeItemSource: TimelineClip.Source?
   /// Clip currently feeding the player, so a tick knows which placement it is in.
-  private var activeClipId: UUID? = nil
+  private var activeClipId: UUID?
   /// True while a handoff seek into the next clip is still completing. Ticks and
   /// item-end notifications delivered in that window still reflect the previous
   /// clip's position, so they must be dropped instead of acted on.
   private var handoffSeekInFlight = false
   /// Pre-drag snapshot for clip trim gestures (one undo entry per gesture).
-  private var clipTrimOriginal: TimelineClip? = nil
+  private var clipTrimOriginal: TimelineClip?
   private let primaryPlayerItem: AVPlayerItem
 
   func play() {
@@ -827,9 +782,9 @@ final class VideoEditorState: ObservableObject {
 
   /// Playback rate for the speed segment under a SEQUENCE time.
   ///
-  /// Returns 1.0 when no speed segments are active, or when an inserted clip is on
-  /// screen — speed is authored against the primary recording only. Drives the live
-  /// preview via `player.rate`; export remains the frame-accurate path.
+  /// The effect is authored on the structural timeline and is projected to the
+  /// compact playable axis only for rate lookup. This keeps inserted clips and
+  /// reordered clips under the same independent speed track as the preview/export.
   func currentPreviewRate(at time: CMTime) -> Float {
     guard hasSpeedSegments else { return 1.0 }
     let t = CMTimeGetSeconds(time)
@@ -952,16 +907,15 @@ final class VideoEditorState: ObservableObject {
       }
     }
 
-    let resolved: TimeInterval
-    switch (before, after) {
+    let resolved: TimeInterval = switch (before, after) {
     case let (before?, after?):
-      resolved = clamped - before <= after - clamped ? before : after
+      clamped - before <= after - clamped ? before : after
     case let (before?, nil):
-      resolved = before
+      before
     case let (nil, after?):
-      resolved = after
+      after
     case (nil, nil):
-      resolved = clamped
+      clamped
     }
     return CMTime(seconds: resolved, preferredTimescale: 600)
   }
@@ -984,7 +938,7 @@ final class VideoEditorState: ObservableObject {
     if CMTimeCompare(currentTime, clampedStart) < 0 {
       seek(to: clampedStart)
     }
-    if recordUndo && CMTimeCompare(oldValue, clampedStart) != 0 {
+    if recordUndo, CMTimeCompare(oldValue, clampedStart) != 0 {
       recordAction(.trimStart(old: oldValue, new: clampedStart))
     }
   }
@@ -1005,7 +959,7 @@ final class VideoEditorState: ObservableObject {
     if CMTimeCompare(currentTime, clampedEnd) > 0 {
       seek(to: clampedEnd)
     }
-    if recordUndo && CMTimeCompare(oldValue, clampedEnd) != 0 {
+    if recordUndo, CMTimeCompare(oldValue, clampedEnd) != 0 {
       recordAction(.trimEnd(old: oldValue, new: clampedEnd))
     }
   }
@@ -1057,7 +1011,7 @@ final class VideoEditorState: ObservableObject {
       return FrameExtractionProfile(frameCount: 25, tolerance: .zero, strategyLabel: "default-no-track")
     }
 
-    let estimatedDataRate = (try? await track.load(.estimatedDataRate)) ?? 0
+    let estimatedDataRate = await (try? track.load(.estimatedDataRate)) ?? 0
     let pixelCount = naturalSize.width * naturalSize.height
 
     // Guardrail: heavier files (high resolution / high bitrate) get lighter extraction to keep UI responsive.
@@ -1105,7 +1059,7 @@ final class VideoEditorState: ObservableObject {
           // each frame off-center by up to half a cell, a drift that grows
           // with the zoom level.
           var slots: [CGImage?] = Array(repeating: nil, count: safeCount)
-          for i in 0..<safeCount {
+          for i in 0 ..< safeCount {
             let progress = (Double(i) + 0.5) / Double(safeCount)
             let time = CMTime(seconds: totalSeconds * progress, preferredTimescale: 600)
             if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
@@ -1118,7 +1072,7 @@ final class VideoEditorState: ObservableObject {
           // Forward pass covers interior/trailing holes; the backward pass
           // covers any leading holes with the first decodable frame.
           var lastGood: CGImage?
-          for i in 0..<safeCount {
+          for i in 0 ..< safeCount {
             if let image = slots[i] {
               lastGood = image
             } else {
@@ -1222,12 +1176,30 @@ final class VideoEditorState: ObservableObject {
       isMuted = old
       redoStack.append(.toggleMute(old: !old, new: old))
 
-    case .updateBackground(let oldStyle, let newStyle, let oldPadding, let newPadding, let oldShadow, let newShadow, let oldCorner, let newCorner):
+    case .updateBackground(
+      let oldStyle,
+      let newStyle,
+      let oldPadding,
+      let newPadding,
+      let oldShadow,
+      let newShadow,
+      let oldCorner,
+      let newCorner
+    ):
       backgroundStyle = oldStyle
       backgroundPadding = oldPadding
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
-      redoStack.append(.updateBackground(oldStyle: newStyle, newStyle: oldStyle, oldPadding: newPadding, newPadding: oldPadding, oldShadow: newShadow, newShadow: oldShadow, oldCorner: newCorner, newCorner: oldCorner))
+      redoStack.append(.updateBackground(
+        oldStyle: newStyle,
+        newStyle: oldStyle,
+        oldPadding: newPadding,
+        newPadding: oldPadding,
+        oldShadow: newShadow,
+        newShadow: oldShadow,
+        oldCorner: newCorner,
+        newCorner: oldCorner
+      ))
 
     case .addClip(let clip, let index):
       removeClipSilently(id: clip.id)
@@ -1251,7 +1223,6 @@ final class VideoEditorState: ObservableObject {
       removeClipSilently(id: second.id)
       insertClipSilently(original, at: index)
       redoStack.append(.splitClip(original: original, index: index, first: first, second: second))
-
     }
   }
 
@@ -1308,12 +1279,30 @@ final class VideoEditorState: ObservableObject {
       isMuted = old
       undoStack.append(.toggleMute(old: !old, new: old))
 
-    case .updateBackground(let oldStyle, let newStyle, let oldPadding, let newPadding, let oldShadow, let newShadow, let oldCorner, let newCorner):
+    case .updateBackground(
+      let oldStyle,
+      let newStyle,
+      let oldPadding,
+      let newPadding,
+      let oldShadow,
+      let newShadow,
+      let oldCorner,
+      let newCorner
+    ):
       backgroundStyle = oldStyle
       backgroundPadding = oldPadding
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
-      undoStack.append(.updateBackground(oldStyle: newStyle, newStyle: oldStyle, oldPadding: newPadding, newPadding: oldPadding, oldShadow: newShadow, newShadow: oldShadow, oldCorner: newCorner, newCorner: oldCorner))
+      undoStack.append(.updateBackground(
+        oldStyle: newStyle,
+        newStyle: oldStyle,
+        oldPadding: newPadding,
+        newPadding: oldPadding,
+        oldShadow: newShadow,
+        newShadow: oldShadow,
+        oldCorner: newCorner,
+        newCorner: oldCorner
+      ))
 
     case .addClip(let clip, let index):
       removeClipSilently(id: clip.id)
@@ -1337,7 +1326,6 @@ final class VideoEditorState: ObservableObject {
       insertClipSilently(first, at: index)
       insertClipSilently(second, at: index + 1)
       undoStack.append(.splitClip(original: original, index: index, first: first, second: second))
-
     }
   }
 
@@ -1363,7 +1351,12 @@ final class VideoEditorState: ObservableObject {
 
   /// Rename the source file
   func renameFile(to newName: String) throws {
-    DiagnosticLogger.shared.log(.info, .editor, "Renaming file", context: ["from": sourceURL.lastPathComponent, "to": newName])
+    DiagnosticLogger.shared.log(
+      .info,
+      .editor,
+      "Renaming file",
+      context: ["from": sourceURL.lastPathComponent, "to": newName]
+    )
     let oldSourceURL = sourceURL
     let directory = sourceURL.deletingLastPathComponent()
     let sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(oldSourceURL)
@@ -1385,7 +1378,11 @@ final class VideoEditorState: ObservableObject {
     guard newURL != sourceURL else { return }
 
     guard !FileManager.default.fileExists(atPath: newURL.path) else {
-      throw NSError(domain: "VideoEditor", code: 2, userInfo: [NSLocalizedDescriptionKey: "A file with this name already exists"])
+      throw NSError(
+        domain: "VideoEditor",
+        code: 2,
+        userInfo: [NSLocalizedDescriptionKey: "A file with this name already exists"]
+      )
     }
 
     try FileManager.default.moveItem(at: sourceAccess.url, to: newURL)
@@ -1405,17 +1402,24 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Zoom Management
 
-  /// Add a new zoom segment at the specified time. Accepts TIMELINE time (extended
-  /// axis) and converts to original asset coordinates — identity when no cuts exist.
+  /// Add a new zoom segment at the specified structural timeline time.
   @discardableResult
   func addZoom(at time: TimeInterval) -> UUID {
-    DiagnosticLogger.shared.log(.debug, .editor, "Adding zoom segment", context: ["time": String(format: "%.2f", time), "type": hasMouseTrackingData ? "auto" : "manual"])
-    let videoDuration = CMTimeGetSeconds(duration)
+    let canUseAutoFocus = sourceContext(atSequence: time)?.clip.isPrimary == true
+    DiagnosticLogger.shared.log(
+      .debug,
+      .editor,
+      "Adding zoom segment",
+      context: [
+        "time": String(format: "%.2f", time),
+        "type": hasMouseTrackingData && canUseAutoFocus ? "auto" : "manual",
+      ]
+    )
+    let videoDuration = CMTimeGetSeconds(timelineDuration)
     guard videoDuration > 0 else { return UUID() }
-    let originalTime = primarySourceTimeOrNearest(atSequence: time)
-    let defaultZoomType: ZoomType = hasMouseTrackingData ? .auto : .manual
+    let defaultZoomType: ZoomType = hasMouseTrackingData && canUseAutoFocus ? .auto : .manual
     let segment = ZoomSegment(
-      startTime: max(0, originalTime - ZoomSegment.defaultDuration / 2),
+      startTime: max(0, time - ZoomSegment.defaultDuration / 2),
       duration: ZoomSegment.defaultDuration,
       zoomLevel: ZoomSegment.defaultZoomLevel,
       zoomCenter: CGPoint(x: 0.5, y: 0.5),
@@ -1454,33 +1458,33 @@ final class VideoEditorState: ObservableObject {
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
 
     var segment = zoomSegments[index]
-    let videoDuration = CMTimeGetSeconds(self.duration)
+    let videoDuration = CMTimeGetSeconds(timelineDuration)
 
-    if let startTime = startTime {
+    if let startTime {
       segment.startTime = max(0, min(startTime, videoDuration - ZoomSegment.minDuration))
     }
-    if let duration = duration {
+    if let duration {
       segment.duration = max(ZoomSegment.minDuration, min(duration, videoDuration - segment.startTime))
     }
-    if let zoomLevel = zoomLevel {
+    if let zoomLevel {
       segment.zoomLevel = max(ZoomSegment.minZoomLevel, min(zoomLevel, ZoomSegment.maxZoomLevel))
     }
-    if let zoomCenter = zoomCenter {
+    if let zoomCenter {
       segment.zoomCenter = CGPoint(
         x: max(0, min(zoomCenter.x, 1)),
         y: max(0, min(zoomCenter.y, 1))
       )
     }
-    if let zoomType = zoomType {
+    if let zoomType {
       segment.zoomType = zoomType
     }
-    if let followSpeed = followSpeed {
+    if let followSpeed {
       segment.followSpeed = AutoFocusSettings.clampFollowSpeed(followSpeed)
     }
-    if let focusMargin = focusMargin {
+    if let focusMargin {
       segment.focusMargin = AutoFocusSettings.clampFocusMargin(focusMargin)
     }
-    if let isEnabled = isEnabled {
+    if let isEnabled {
       segment.isEnabled = isEnabled
     }
 
@@ -1499,13 +1503,22 @@ final class VideoEditorState: ObservableObject {
     let effectiveDuration = ZoomCalculator.clampTransitionDuration(
       transitionDuration ?? zoomTransitionDuration
     )
-    // Zoom segments live on the ORIGINAL timeline; the playhead is on the extended
-    // timeline (cuts removed + merged clips). Convert before resolving camera state.
-    let originalTime = primarySourceTimeOrNearest(atSequence: time)
+    // Zoom segments are authored directly on the structural timeline. Auto-focus
+    // samples are the one source-bound input; map them to the current clip sequence.
+    // The mapper holds the last center across inserted clips instead of interpolating
+    // through missing source data.
+    let activeSegment = ZoomCalculator.activeSegment(at: time, in: zoomSegments)
+    var resolvedPaths = autoFocusPaths
+    if let activeSegment, activeSegment.isAutoMode {
+      resolvedPaths[activeSegment.id] = VideoEditorAutoFocusEngine.timelinePath(
+        autoFocusPath(for: activeSegment),
+        placements: placements
+      )
+    }
     return VideoEditorAutoFocusEngine.resolvedCameraState(
-      at: originalTime,
+      at: time,
       segments: zoomSegments,
-      autoFocusPaths: autoFocusPaths,
+      autoFocusPaths: resolvedPaths,
       transitionDuration: effectiveDuration
     )
   }
@@ -1534,15 +1547,15 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Speed Segment Mutators (Timelapse)
 
-  /// Clamp a desired absolute range to the trim window and to gaps between other enabled
-  /// speed segments (no overlap). Returns nil when the remaining room is smaller than the
-  /// minimum segment duration.
+  /// Clamp a desired absolute range to the structural timeline and to gaps between
+  /// other enabled speed segments (no overlap). Returns nil when the remaining room
+  /// is smaller than the minimum segment duration.
   private func clampedSpeedRange(
     _ range: ClosedRange<TimeInterval>,
     excluding id: UUID?
   ) -> (start: TimeInterval, duration: TimeInterval)? {
-    let lowerBound = CMTimeGetSeconds(trimStart)
-    let upperBound = CMTimeGetSeconds(trimEnd)
+    let lowerBound = 0.0
+    let upperBound = CMTimeGetSeconds(timelineDuration)
     guard upperBound - lowerBound >= SpeedSegment.minDuration else { return nil }
 
     var start = max(lowerBound, range.lowerBound)
@@ -1571,17 +1584,17 @@ final class VideoEditorState: ObservableObject {
     return (start, end - start)
   }
 
-  /// Add a speed segment centered at a time, using default duration + rate. Accepts
-  /// TIMELINE time (extended axis) and converts to original coordinates.
+  /// Add a speed segment centered at a structural timeline time, using the default
+  /// duration and rate.
   @discardableResult
   func addSpeed(at time: TimeInterval) -> UUID? {
     guard !isGIF else { return nil }
     let half = SpeedSegment.defaultDuration / 2
-    let originalTime = primarySourceTimeOrNearest(atSequence: time)
-    return addSpeed(range: (originalTime - half)...(originalTime + half), rate: SpeedSegment.defaultRate)
+    return addSpeed(range: (time - half) ... (time + half), rate: SpeedSegment.defaultRate)
   }
 
-  /// Add a speed segment for an explicit range + rate. Clamps to trim + neighbours.
+  /// Add a speed segment for an explicit structural timeline range + rate. Clamps to
+  /// the timeline and neighbouring speed segments.
   @discardableResult
   func addSpeed(range: ClosedRange<TimeInterval>, rate: Double) -> UUID? {
     guard let (start, duration) = clampedSpeedRange(range, excluding: nil) else {
@@ -1589,7 +1602,12 @@ final class VideoEditorState: ObservableObject {
       return nil
     }
     let segment = SpeedSegment(startTime: start, duration: duration, rate: SpeedSegment.clampRate(rate))
-    DiagnosticLogger.shared.log(.debug, .editor, "Adding speed segment", context: ["start": String(format: "%.2f", start), "rate": String(format: "%.2f", segment.rate)])
+    DiagnosticLogger.shared.log(
+      .debug,
+      .editor,
+      "Adding speed segment",
+      context: ["start": String(format: "%.2f", start), "rate": String(format: "%.2f", segment.rate)]
+    )
     speedSegments.append(segment)
     selectedSpeedId = segment.id
     recordAction(.addSpeed(segment: segment))
@@ -1605,8 +1623,9 @@ final class VideoEditorState: ObservableObject {
     recordAction(.removeSpeed(segment: segment))
   }
 
-  /// Update a speed segment's rate and/or range. Range changes are clamped against the trim
-  /// window + neighbours; an update that loses all room is ignored.
+  /// Update a speed segment's rate and/or range. Range changes are clamped against the
+  /// structural timeline bounds and neighbouring segments; an update that loses all room
+  /// is ignored.
   func updateSpeed(
     id: UUID,
     rate: Double? = nil,
@@ -1617,13 +1636,13 @@ final class VideoEditorState: ObservableObject {
     let old = speedSegments[index]
     var new = old
 
-    if let rate = rate { new.rate = SpeedSegment.clampRate(rate) }
+    if let rate { new.rate = SpeedSegment.clampRate(rate) }
 
     if startTime != nil || duration != nil {
       let desiredStart = startTime ?? old.startTime
       let desiredDuration = duration ?? old.duration
       guard let (clampedStart, clampedDuration) = clampedSpeedRange(
-        desiredStart...(desiredStart + desiredDuration),
+        desiredStart ... (desiredStart + desiredDuration),
         excluding: id
       ) else { return }
       new.startTime = clampedStart
@@ -1748,7 +1767,7 @@ final class VideoEditorState: ObservableObject {
       "source": String(format: "%.2f", cutPoint),
     ])
 
-    clips.replaceSubrange(placement.index...placement.index, with: [first, second])
+    clips.replaceSubrange(placement.index ... placement.index, with: [first, second])
     recordAction(.splitClip(original: original, index: placement.index, first: first, second: second))
     // The playhead sits on the new boundary, which belongs to the second half.
     selectedClipId = second.id
@@ -1884,7 +1903,7 @@ final class VideoEditorState: ObservableObject {
       let seconds = CMTimeGetSeconds(assetDuration)
       guard seconds > TimelineClip.minDuration else {
         DiagnosticLogger.shared.log(.warning, .editor, "Inserted clip rejected (too short)", context: [
-          "file": url.lastPathComponent
+          "file": url.lastPathComponent,
         ])
         return nil
       }
@@ -1935,17 +1954,14 @@ final class VideoEditorState: ObservableObject {
     return speedSegments.first { $0.id == id }
   }
 
-  /// Get the active zoom segment at a given time (enabled segments only - for playback)
+  /// Get the active zoom segment at a structural timeline time (enabled segments only).
   func activeZoomSegment(at time: TimeInterval) -> ZoomSegment? {
     ZoomCalculator.activeSegment(at: time, in: zoomSegments)
   }
 
-  /// Get the active zoom segment under a structural timeline time. Zoom segments are
-  /// authored in primary source time, so the timeline coordinate must be projected
-  /// before resolving the segment.
+  /// Get the active zoom segment under a structural timeline time.
   func activeZoomSegment(atTimeline time: TimeInterval) -> ZoomSegment? {
-    guard let sourceTime = primarySourceTime(atSequence: time) else { return nil }
-    return activeZoomSegment(at: sourceTime)
+    activeZoomSegment(at: time)
   }
 
   /// Get any zoom segment at a given time (including disabled - for UI interaction)
@@ -2030,7 +2046,7 @@ final class VideoEditorState: ObservableObject {
     // Include background padding in canvas size calculation
     let canvasWidth: CGFloat
     let canvasHeight: CGFloat
-    if backgroundStyle != .none && backgroundPadding > 0 {
+    if backgroundStyle != .none, backgroundPadding > 0 {
       canvasWidth = exportSize.width + (backgroundPadding * 2)
       canvasHeight = exportSize.height + (backgroundPadding * 2)
     } else {
@@ -2044,12 +2060,10 @@ final class VideoEditorState: ObservableObject {
     let qualityMultiplier = Double(exportSettings.quality.bitrateMultiplier)
 
     // Audio adjustment (rough estimate: audio is ~10% of file)
-    let audioMultiplier: Double = {
-      switch exportSettings.audioMode {
-      case .mute: return 0.9 // Remove audio portion
-      case .keep, .custom: return 1.0
-      }
-    }()
+    let audioMultiplier = switch exportSettings.audioMode {
+    case .mute: 0.9 // Remove audio portion
+    case .keep, .custom: 1.0
+    }
 
     // Primary estimate
     var estimated = Double(sourceSize) * trimRatio * dimensionRatio * qualityMultiplier * audioMultiplier
@@ -2066,7 +2080,7 @@ final class VideoEditorState: ObservableObject {
       queue: .main
     ) { [weak self] time in
       MainActor.assumeIsolated {
-        guard let self = self, !self.playbackState.isScrubbing else { return }
+        guard let self, !self.playbackState.isScrubbing else { return }
         // A handoff seek is landing; the reported time is still the outgoing
         // clip's coordinates.
         guard !self.handoffSeekInFlight else { return }
@@ -2105,7 +2119,7 @@ final class VideoEditorState: ObservableObject {
 
     // Live timelapse preview: keep player.rate aligned with the speed segment under
     // the playhead while playing. player.rate == 0 means paused → leave it.
-    if isPlaying && hasSpeedSegments && player.rate != 0 {
+    if isPlaying, hasSpeedSegments, player.rate != 0 {
       let desiredRate = currentPreviewRate(at: CMTime(seconds: sequenceTime, preferredTimescale: 600))
       if abs(player.rate - desiredRate) > 0.001 {
         player.rate = desiredRate
@@ -2137,16 +2151,16 @@ final class VideoEditorState: ObservableObject {
     ) { [weak self] _ in
       Task { @MainActor [weak self] in
         // A newer handoff owns the transport if the active clip moved on again.
-        guard let self, self.activeClipId == nextId else { return }
-        self.handoffSeekInFlight = false
+        guard let self, activeClipId == nextId else { return }
+        handoffSeekInFlight = false
         // When consecutive clips share one player item (same source asset), the
         // item often sits parked at its end with rate == 0 — e.g. after a reorder
         // made a clip whose range reaches the asset end play first. The seek
         // alone resumes from a stalled transport, so playback must restart.
-        guard self.isPlaying, self.player.rate == 0 else { return }
-        self.player.play()
-        if self.hasSpeedSegments {
-          self.player.rate = self.currentPreviewRate(at: self.currentTime)
+        guard isPlaying, player.rate == 0 else { return }
+        player.play()
+        if hasSpeedSegments {
+          player.rate = currentPreviewRate(at: currentTime)
         }
       }
     }
@@ -2217,10 +2231,10 @@ final class VideoEditorState: ObservableObject {
     $zoomSegments
       .removeDuplicates()
       .sink { [weak self] segments in
-        guard let self = self else { return }
-        self.rebuildAutoFocusPaths(for: segments)
+        guard let self else { return }
+        rebuildAutoFocusPaths(for: segments)
         // Pass segments directly from publisher to avoid timing issues
-        self.updateHasUnsavedChanges(currentZoomSegments: segments)
+        updateHasUnsavedChanges(currentZoomSegments: segments)
       }
       .store(in: &cancellables)
 
@@ -2315,7 +2329,7 @@ final class VideoEditorState: ObservableObject {
 
     SystemWallpaperManager.shared.loadPreviewImage(for: url) { [weak self] image in
       Task { @MainActor in
-        guard let self = self else { return }
+        guard let self else { return }
         // Race condition guard: only apply if still loading this URL
         guard self.loadingBackgroundURL == url else { return }
 
@@ -2394,7 +2408,7 @@ final class VideoEditorState: ObservableObject {
 
   /// Apply Gaussian blur to image (computed once, reused during render)
   private func applyGaussianBlur(to image: NSImage?, radius: CGFloat) -> NSImage? {
-    guard let image = image,
+    guard let image,
           let tiffData = image.tiffRepresentation,
           let ciImage = CIImage(data: tiffData) else { return nil }
 

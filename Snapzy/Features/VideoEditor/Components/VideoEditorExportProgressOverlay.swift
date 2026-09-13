@@ -1,5 +1,5 @@
 //
-//  ExportProgressOverlay.swift
+//  VideoEditorExportProgressOverlay.swift
 //  Snapzy
 //
 //  Modal overlay showing export progress with progress bar

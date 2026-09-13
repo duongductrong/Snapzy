@@ -44,7 +44,7 @@ struct VideoColorSwatchGrid: View {
   @State private var draftCustomColor = Color.red
 
   private let colors: [Color] = [
-    .red, .orange, .yellow, .green, .blue, .purple, .pink, .gray, .white, .black
+    .red, .orange, .yellow, .green, .blue, .purple, .pink, .gray, .white, .black,
   ]
 
   var body: some View {
@@ -103,7 +103,7 @@ struct VideoSliderRow: View {
   let label: String
   @Binding var value: CGFloat
   let range: ClosedRange<CGFloat>
-  var onDragging: ((Bool, CGFloat) -> Void)? = nil
+  var onDragging: ((Bool, CGFloat) -> Void)?
 
   @State private var localValue: CGFloat = 0
   @State private var isDragging: Bool = false
@@ -202,7 +202,7 @@ struct VideoDefaultWallpaperButton: View {
   var body: some View {
     Button(action: action) {
       Group {
-        if let thumbnail = thumbnail {
+        if let thumbnail {
           Image(nsImage: thumbnail)
             .resizable()
             .aspectRatio(1, contentMode: .fill)
@@ -253,7 +253,7 @@ struct VideoCustomWallpaperButton: View {
     ZStack(alignment: .topLeading) {
       Button(action: action) {
         Group {
-          if let thumbnail = thumbnail {
+          if let thumbnail {
             Image(nsImage: thumbnail)
               .resizable()
               .aspectRatio(1, contentMode: .fill)

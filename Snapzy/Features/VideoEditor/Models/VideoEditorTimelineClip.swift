@@ -47,8 +47,13 @@ struct TimelineClip: Identifiable, Equatable, Hashable {
   /// Shortest a clip may be trimmed. Splitting also refuses to create anything shorter.
   static let minDuration: TimeInterval = 0.1
 
-  var duration: TimeInterval { max(0, sourceEnd - sourceStart) }
-  var slotDuration: TimeInterval { max(0, slotEnd - slotStart) }
+  var duration: TimeInterval {
+    max(0, sourceEnd - sourceStart)
+  }
+
+  var slotDuration: TimeInterval {
+    max(0, slotEnd - slotStart)
+  }
 
   var isPrimary: Bool {
     if case .primary = source { return true }
@@ -61,10 +66,14 @@ struct TimelineClip: Identifiable, Equatable, Hashable {
   }
 
   /// Source range as a range value, for intersection math.
-  var sourceRange: ClosedRange<TimeInterval> { sourceStart...max(sourceStart, sourceEnd) }
+  var sourceRange: ClosedRange<TimeInterval> {
+    sourceStart ... max(sourceStart, sourceEnd)
+  }
 
   /// Full structural source slot as a range value.
-  var slotRange: ClosedRange<TimeInterval> { slotStart...max(slotStart, slotEnd) }
+  var slotRange: ClosedRange<TimeInterval> {
+    slotStart ... max(slotStart, slotEnd)
+  }
 
   init(
     id: UUID = UUID(),
@@ -117,9 +126,9 @@ struct TimelineClip: Identifiable, Equatable, Hashable {
 
 // MARK: - Sequence Layout
 
-/// Pure math laying clips out on the sequence axis and mapping between sequence
-/// time (what the playhead and every timeline view use) and source time (what the
-/// player and the exporter need).
+/// Pure math laying clips out on the structural/playable axes and mapping between
+/// sequence time (what the playhead and effect tracks use) and source time (what
+/// the player and exporter need).
 enum TimelineSequence {
   /// A clip together with the span it occupies on the sequence axis.
   struct Placement: Identifiable, Equatable {
@@ -132,8 +141,13 @@ enum TimelineSequence {
     let sourceAxisStart: TimeInterval
     let sourceAxisEnd: TimeInterval
 
-    var id: UUID { clip.id }
-    var duration: TimeInterval { max(0, end - start) }
+    var id: UUID {
+      clip.id
+    }
+
+    var duration: TimeInterval {
+      max(0, end - start)
+    }
 
     var activeStart: TimeInterval {
       start + max(0, min(clip.sourceStart - sourceAxisStart, duration))
@@ -233,25 +247,37 @@ enum TimelineSequence {
     placements.first(where: { $0.containsActive(sequenceTime) })
   }
 
-  /// Project a range expressed in PRIMARY source time onto the sequence axis.
-  ///
-  /// Zoom, speed, and auto-focus stay authored in primary source time, so they
-  /// follow their material when a clip moves. A range spanning material that was
-  /// cut out — or duplicated — yields several pieces, hence the array.
+  /// Project an effect range authored on the structural timeline onto the compact
+  /// playable sequence. Structural slots keep trimmed footage visible for stable
+  /// editing, while playable placements collapse those inactive edges. The clip ID
+  /// is the join key, so cuts, swaps, and inserted clips never reinterpret the
+  /// effect's authored position as source time.
   static func project(
-    sourceRange: ClosedRange<TimeInterval>,
-    in placements: [Placement]
+    timelineRange: ClosedRange<TimeInterval>,
+    from timelinePlacements: [Placement],
+    to playablePlacements: [Placement]
   ) -> [ClosedRange<TimeInterval>] {
-    var pieces: [ClosedRange<TimeInterval>] = []
-    for placement in placements where placement.clip.isPrimary {
-      let low = max(sourceRange.lowerBound, placement.clip.sourceStart)
-      let high = min(sourceRange.upperBound, placement.clip.sourceEnd)
-      guard high - low > 0.0001 else { continue }
-      pieces.append(
-        placement.sequenceTime(atSource: low)...placement.sequenceTime(atSource: high)
-      )
+    guard timelineRange.upperBound - timelineRange.lowerBound > 0.0001 else {
+      return []
     }
-    return merged(pieces)
+
+    var projected: [ClosedRange<TimeInterval>] = []
+    for placement in timelinePlacements {
+      let start = max(timelineRange.lowerBound, placement.activeStart)
+      let end = min(timelineRange.upperBound, placement.activeEnd)
+      guard end - start > 0.0001,
+            let playable = playablePlacements.first(where: { $0.clip.id == placement.clip.id })
+      else { continue }
+
+      let sourceStart = placement.sourceTime(at: start)
+      let sourceEnd = placement.sourceTime(at: end)
+      let playableStart = playable.sequenceTime(atSource: sourceStart)
+      let playableEnd = playable.sequenceTime(atSource: sourceEnd)
+      guard playableEnd - playableStart > 0.0001 else { continue }
+      projected.append(playableStart ... playableEnd)
+    }
+
+    return merged(projected)
   }
 
   /// Collapse pieces that meet, so a range crossing an untouched split renders as
@@ -263,25 +289,11 @@ enum TimelineSequence {
     for range in sorted.dropFirst() {
       let last = result[result.count - 1]
       if range.lowerBound - last.upperBound <= 0.0001 {
-        result[result.count - 1] = last.lowerBound...max(last.upperBound, range.upperBound)
+        result[result.count - 1] = last.lowerBound ... max(last.upperBound, range.upperBound)
       } else {
         result.append(range)
       }
     }
     return result
-  }
-
-  /// First sequence time showing a given primary source time, if it is still in the
-  /// sequence at all. Used to keep the playhead on the same frame across edits.
-  static func sequenceTime(
-    forPrimarySource sourceTime: TimeInterval,
-    in placements: [Placement]
-  ) -> TimeInterval? {
-    for placement in placements where placement.clip.isPrimary {
-      if placement.clip.contains(sourceTime: sourceTime) {
-        return placement.sequenceTime(atSource: sourceTime)
-      }
-    }
-    return nil
   }
 }

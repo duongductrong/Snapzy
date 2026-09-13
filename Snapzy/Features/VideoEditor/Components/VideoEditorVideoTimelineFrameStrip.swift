@@ -1,5 +1,5 @@
 //
-//  VideoTimelineFrameStrip.swift
+//  VideoEditorVideoTimelineFrameStrip.swift
 //  Snapzy
 //
 //  Horizontal strip of video frame thumbnails
@@ -32,7 +32,7 @@ struct VideoTimelineFrameStrip: View {
         // inside its cell (never scaled to fill, which crops the frame) so the
         // whole frame stays visible at every zoom level.
         HStack(spacing: 0) {
-          ForEach(0..<thumbnails.count, id: \.self) { index in
+          ForEach(0 ..< thumbnails.count, id: \.self) { index in
             Image(nsImage: thumbnails[index])
               .resizable()
               .aspectRatio(contentMode: .fit)

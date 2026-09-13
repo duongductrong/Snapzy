@@ -44,6 +44,9 @@ struct SpeedTimelineTrack: View {
   @State private var dragSegmentId: UUID?
   @State private var dragInitialStartTime: TimeInterval = 0
   @State private var dragInitialEndTime: TimeInterval = 0
+  /// Grab offset on the independent structural effect track, captured at drag begin.
+  /// Keeping this in one coordinate system prevents seam/reorder jumps.
+  @State private var dragGrabTimelineOffset: TimeInterval = 0
   @State private var dragPreviewSegment: SpeedSegment?
   @State private var lastDragModelUpdateTime: TimeInterval = 0
 
@@ -93,26 +96,15 @@ struct SpeedTimelineTrack: View {
     CMTimeGetSeconds(state.timelineDuration)
   }
 
-  /// Segments are authored in PRIMARY SOURCE time, which is a different axis once the
-  /// sequence has been split or reordered. Clamps and new-segment math use this.
-  private var sourceDuration: TimeInterval {
-    CMTimeGetSeconds(state.duration)
+  /// Structural timeline time under a pointer x. The effect track uses this same
+  /// coordinate for drawing, hit testing, and mutation.
+  private func sequenceTime(atX x: CGFloat) -> TimeInterval? {
+    guard videoDuration > 0, timelineWidth > 0 else { return nil }
+    return (x / timelineWidth) * videoDuration
   }
 
-  /// Sequence time under a pointer x, converted back to primary source time.
-  private func sourceTime(atX x: CGFloat) -> TimeInterval {
-    guard videoDuration > 0, timelineWidth > 0 else { return 0 }
-    let sequenceTime = (x / timelineWidth) * videoDuration
-    return state.primarySourceTimeOrNearest(atSequence: sequenceTime)
-  }
-
-  private var pixelsPerSecond: CGFloat {
-    guard videoDuration > 0 else { return 1 }
-    return timelineWidth / videoDuration
-  }
-
-  private var hoverTime: TimeInterval {
-    sourceTime(atX: hoverLocation.x)
+  private var hoverSequenceTime: TimeInterval? {
+    sequenceTime(atX: hoverLocation.x)
   }
 
   private var hoverState: HoverState {
@@ -131,7 +123,12 @@ struct SpeedTimelineTrack: View {
   }
 
   private var shouldShowPlaceholder: Bool {
-    isHovering && !isHoveringOverSegment && dragMode == .none
+    guard isHovering, dragMode == .none, !isHoveringOverSegment,
+          let hoverSequence = hoverSequenceTime
+    else { return false }
+    // Do not offer a block over an inactive trim slot, but inserted video is a valid
+    // host because effects are independent from clip identity.
+    return state.isPlayableMaterial(atSequence: hoverSequence)
   }
 
   private var placeholderWidth: CGFloat {
@@ -168,27 +165,30 @@ struct SpeedTimelineTrack: View {
       .allowsHitTesting(false)
 
       // Speed blocks (visual only - gestures handled at track level).
-      // Dead segments — material no longer in the sequence — are not drawn.
+      // Blocks stay on the structural effect track. Playback/export later projects
+      // their ranges over active clip material and collapses trim gaps.
       ForEach(visibleSegments) { segment in
         let displaySegment = dragPreviewSegment?.id == segment.id ? (dragPreviewSegment ?? segment) : segment
-        let segmentLayout = layout(for: displaySegment)
-        SpeedBlockVisual(
-          segment: displaySegment,
-          isSelected: state.selectedSpeedId == segment.id,
-          isDragging: dragSegmentId == segment.id,
-          isHovered: hover.segmentId == segment.id,
-          isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
-          overlapsZoom: overlapsEnabledZoom(displaySegment),
-          blockX: segmentLayout.visualStartX,
-          blockWidth: segmentLayout.visualWidth
-        )
-        .popover(isPresented: ratePickerBinding(for: segment.id), arrowEdge: .top) {
-          SpeedRatePicker(
-            rate: segment.rate,
-            onSelect: { newRate in
-              state.updateSpeed(id: segment.id, rate: newRate)
-            }
+        if let span = displaySpan(for: displaySegment) {
+          let paddedLayout = paddedLayout(for: span)
+          SpeedBlockVisual(
+            segment: displaySegment,
+            isSelected: state.selectedSpeedId == segment.id,
+            isDragging: dragSegmentId == segment.id,
+            isHovered: hover.segmentId == segment.id,
+            isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
+            overlapsZoom: overlapsEnabledZoom(displaySegment),
+            blockX: paddedLayout.visualStartX,
+            blockWidth: paddedLayout.visualWidth
           )
+          .popover(isPresented: ratePickerBinding(for: segment.id), arrowEdge: .top) {
+            SpeedRatePicker(
+              rate: segment.rate,
+              onSelect: { newRate in
+                state.updateSpeed(id: segment.id, rate: newRate)
+              }
+            )
+          }
         }
       }
 
@@ -267,7 +267,7 @@ struct SpeedTimelineTrack: View {
         if dragMode == .none {
           beginDrag(at: value.startLocation)
         }
-        continueDrag(translation: value.translation)
+        continueDrag(at: value.location)
       }
       .onEnded { _ in
         endDrag()
@@ -280,14 +280,14 @@ struct SpeedTimelineTrack: View {
       return
     }
 
-    let leftHandleEnd = segmentLayout.visualStartX + handleWidth
-    let rightHandleStart = segmentLayout.visualEndX - handleWidth
-
     dragSegmentId = segment.id
     dragInitialStartTime = segment.startTime
     dragInitialEndTime = segment.endTime
     dragPreviewSegment = segment
     lastDragModelUpdateTime = 0
+
+    let leftHandleEnd = segmentLayout.visualStartX + handleWidth
+    let rightHandleStart = segmentLayout.visualEndX - handleWidth
 
     if location.x <= leftHandleEnd {
       dragMode = .startEdge
@@ -295,24 +295,30 @@ struct SpeedTimelineTrack: View {
       dragMode = .endEdge
     } else {
       dragMode = .position
+      // Anchor the grab directly on the effect track. No clip/source conversion is
+      // involved, so crossing a seam remains a continuous 1:1 drag.
+      let pointerSequence = sequenceTime(atX: location.x) ?? 0
+      dragGrabTimelineOffset = pointerSequence - segment.startTime
     }
 
     state.selectSpeed(id: segment.id)
   }
 
-  private func continueDrag(translation: CGSize) {
+  private func continueDrag(at location: CGPoint) {
     guard let segmentId = dragSegmentId,
-          let segment = state.speedSegments.first(where: { $0.id == segmentId }) else {
+          let segment = state.speedSegments.first(where: { $0.id == segmentId })
+    else {
       return
     }
 
-    let deltaSeconds = translation.width / pixelsPerSecond
-    let preview = previewSegment(from: segment, deltaSeconds: deltaSeconds)
+    guard let pointerSequence = sequenceTime(atX: location.x) else { return }
+
+    let preview = previewSegment(from: segment, anchorTimeline: pointerSequence)
     dragPreviewSegment = preview
     commitDragPreviewIfNeeded(preview)
   }
 
-  private func previewSegment(from segment: SpeedSegment, deltaSeconds: TimeInterval) -> SpeedSegment {
+  private func previewSegment(from segment: SpeedSegment, anchorTimeline: TimeInterval) -> SpeedSegment {
     var preview = segment
     let initialDuration = dragInitialEndTime - dragInitialStartTime
 
@@ -321,23 +327,16 @@ struct SpeedTimelineTrack: View {
       return preview
 
     case .position:
-      let newStart = dragInitialStartTime + deltaSeconds
-      let maxStart = max(0, sourceDuration - initialDuration)
-      let clampedStart = max(0, min(newStart, maxStart))
-      preview.startTime = clampedStart
+      preview.startTime = anchorTimeline - dragGrabTimelineOffset
       preview.duration = initialDuration
 
     case .startEdge:
-      let newStart = dragInitialStartTime + deltaSeconds
-      let clampedStart = max(0, min(newStart, dragInitialEndTime - SpeedSegment.minDuration))
-      preview.startTime = clampedStart
-      preview.duration = max(SpeedSegment.minDuration, dragInitialEndTime - clampedStart)
+      preview.startTime = anchorTimeline
+      preview.duration = max(SpeedSegment.minDuration, dragInitialEndTime - anchorTimeline)
 
     case .endEdge:
-      let newEnd = dragInitialEndTime + deltaSeconds
-      let clampedEnd = max(dragInitialStartTime + SpeedSegment.minDuration, min(newEnd, sourceDuration))
       preview.startTime = dragInitialStartTime
-      preview.duration = max(SpeedSegment.minDuration, clampedEnd - dragInitialStartTime)
+      preview.duration = max(SpeedSegment.minDuration, anchorTimeline - dragInitialStartTime)
     }
 
     return preview
@@ -368,13 +367,15 @@ struct SpeedTimelineTrack: View {
   // MARK: - Tap Handling
 
   private func handleTap(at location: CGPoint) {
-    let tappedTime = sourceTime(atX: location.x)
-
     if let (segment, _) = interactionSegment(atX: location.x) {
       state.selectSpeed(id: segment.id)
-    } else {
-      state.addSpeed(at: tappedTime)
+      return
     }
+    // Add on any active video clip; the effect track is independent from clip source.
+    guard let tappedSequence = sequenceTime(atX: location.x),
+          state.isPlayableMaterial(atSequence: tappedSequence)
+    else { return }
+    state.addSpeed(at: tappedSequence)
   }
 
   private func handleDoubleTap(at location: CGPoint) {
@@ -388,7 +389,7 @@ struct SpeedTimelineTrack: View {
   @ViewBuilder
   private var trackContextMenu: some View {
     Button {
-      let addTime = isHovering ? hoverTime : CMTimeGetSeconds(state.currentTime)
+      let addTime = hoverSequenceTime ?? CMTimeGetSeconds(state.currentTime)
       state.addSpeed(at: addTime)
     } label: {
       Label(
@@ -444,61 +445,55 @@ struct SpeedTimelineTrack: View {
 
   // MARK: - Layout & Hit Testing
 
-  /// Padded visual span used for drawing: blocks below `minVisualBlockWidth`
-  /// stretch to stay grabbable and the start is clamped inside the track.
-  private func layout(for segment: SpeedSegment) -> SegmentLayout {
+  /// True-time span of a segment on the independent structural timeline. Trimmed
+  /// slots remain visible in this editing axis, so reorder does not alter the span.
+  private func displaySpan(for segment: SpeedSegment) -> ClosedRange<TimeInterval>? {
+    guard videoDuration > 0 else { return nil }
+    let start = max(0, min(segment.startTime, videoDuration))
+    let end = min(videoDuration, max(start, segment.endTime))
+    guard end - start > 0.0001 else { return nil }
+    return start ... end
+  }
+
+  /// Padded visual span for drawing: blocks below `minVisualBlockWidth` stretch to
+  /// stay grabbable and the start is clamped inside the track.
+  private func paddedLayout(for span: ClosedRange<TimeInterval>) -> SegmentLayout {
     guard videoDuration > 0, timelineWidth > 0 else {
       return SegmentLayout(visualStartX: 0, visualEndX: minVisualBlockWidth, visualWidth: minVisualBlockWidth)
     }
-
-    // The segment is authored in source time; draw it wherever its material now
-    // sits on the sequence. Material that was deleted collapses to zero width.
-    let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime)
-    let logicalStartX = ((span?.lowerBound ?? 0) / videoDuration) * timelineWidth
-    let logicalWidth = (((span?.upperBound ?? 0) - (span?.lowerBound ?? 0)) / videoDuration) * timelineWidth
+    let logicalStartX = (span.lowerBound / videoDuration) * timelineWidth
+    let logicalWidth = ((span.upperBound - span.lowerBound) / videoDuration) * timelineWidth
     let visualWidth = min(timelineWidth, max(minVisualBlockWidth, logicalWidth))
     let maxStartX = max(0, timelineWidth - visualWidth)
     let visualStartX = max(0, min(logicalStartX, maxStartX))
-
     return SegmentLayout(visualStartX: visualStartX, visualEndX: visualStartX + visualWidth, visualWidth: visualWidth)
   }
 
-  /// True-time span of a segment on the sequence axis, or nil when its material
-  /// is no longer in the sequence — a dead segment has nowhere true to sit.
-  private func logicalLayout(for segment: SpeedSegment) -> SegmentLayout? {
-    guard videoDuration > 0, timelineWidth > 0 else { return nil }
-    guard let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime) else {
-      return nil
-    }
-    let startX = (span.lowerBound / videoDuration) * timelineWidth
-    let endX = (span.upperBound / videoDuration) * timelineWidth
-    guard endX - startX > 0.01 else { return nil }
-    return SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX)
-  }
-
-  /// Segments whose material is still on the timeline — the drawable set.
+  /// Segments with somewhere true to sit — the drawable set.
   private var visibleSegments: [SpeedSegment] {
-    state.speedSegments.filter { logicalLayout(for: $0) != nil }
+    state.speedSegments.filter { displaySpan(for: $0) != nil }
   }
 
-  /// Hit test under a pointer x. True-time spans answer first so what a block
-  /// covers in time is what it activates; padded visuals are the fallback for
+  /// Hit test under a pointer x. The true span answers first so what a block
+  /// covers in time is what it activates; the padded visual is the fallback for
   /// narrow blocks, resolved by nearest centre. Dead segments never answer.
   private func interactionSegment(atX x: CGFloat) -> (segment: SpeedSegment, layout: SegmentLayout)? {
-    let logicalHits: [(segment: SpeedSegment, layout: SegmentLayout)] = state.speedSegments.compactMap { segment in
-      guard let layout = logicalLayout(for: segment),
-            x >= layout.visualStartX, x <= layout.visualEndX
-      else { return nil }
+    let trueHits: [(segment: SpeedSegment, layout: SegmentLayout)] = state.speedSegments.compactMap { segment in
+      guard let span = displaySpan(for: segment) else { return nil }
+      let startX = (span.lowerBound / videoDuration) * timelineWidth
+      let endX = (span.upperBound / videoDuration) * timelineWidth
+      guard endX - startX > 0.01, x >= startX, x <= endX else { return nil }
+      return (segment, SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX))
+    }
+    if let hit = resolveCandidate(trueHits, atX: x) { return hit }
+
+    let paddedHits: [(segment: SpeedSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
+      guard let span = displaySpan(for: segment) else { return nil }
+      let layout = paddedLayout(for: span)
+      guard x >= layout.visualStartX, x <= layout.visualEndX else { return nil }
       return (segment, layout)
     }
-    if let hit = resolveCandidate(logicalHits, atX: x) { return hit }
-
-    let visualHits: [(segment: SpeedSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
-      let segmentLayout = layout(for: segment)
-      guard x >= segmentLayout.visualStartX, x <= segmentLayout.visualEndX else { return nil }
-      return (segment, segmentLayout)
-    }
-    return resolveCandidate(visualHits, atX: x)
+    return resolveCandidate(paddedHits, atX: x)
   }
 
   /// Selected segment wins, then the one whose centre is nearest the pointer,
@@ -526,10 +521,13 @@ struct SpeedTimelineTrack: View {
     }.first
   }
 
-  /// True when the segment's range intersects an enabled zoom segment (informational cue).
+  /// True when the segment's timeline range intersects an enabled zoom range
+  /// (informational cue).
   private func overlapsEnabledZoom(_ segment: SpeedSegment) -> Bool {
-    state.zoomSegments.contains { zoom in
-      zoom.isEnabled && segment.startTime < zoom.endTime && segment.endTime > zoom.startTime
+    let speedStart = segment.startTime
+    let speedEnd = segment.endTime
+    return state.zoomSegments.contains { zoom in
+      zoom.isEnabled && speedStart < zoom.endTime && speedEnd > zoom.startTime
     }
   }
 }

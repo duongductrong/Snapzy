@@ -10,8 +10,9 @@
 //
 //  OUTPUT time — playable sequence time with speed segments applied.
 //
-//  Speed segments stay authored in PRIMARY SOURCE time and are projected onto the
-//  playable sequence, so they follow their material when a clip is moved or reordered.
+//  Speed segments are authored in structural timeline time. They are projected onto
+//  the playable sequence only for preview/export, so clip edits cannot move the block
+//  that the user placed on the independent effect track.
 //
 
 import CoreMedia
@@ -24,9 +25,14 @@ struct TimelineSequenceMap: Equatable {
     let seqDuration: TimeInterval
     let rate: Double
 
-    var seqEnd: TimeInterval { seqStart + seqDuration }
+    var seqEnd: TimeInterval {
+      seqStart + seqDuration
+    }
+
     /// Length this span occupies in output time.
-    var scaledDuration: TimeInterval { seqDuration / rate }
+    var scaledDuration: TimeInterval {
+      seqDuration / rate
+    }
   }
 
   /// Contiguous, sorted spans tiling `[0, sequenceDuration]`.
@@ -44,7 +50,8 @@ struct TimelineSequenceMap: Equatable {
 
   init(clips: [TimelineClip], speedSegments: [SpeedSegment]) {
     self.init(
-      placements: TimelineSequence.playableLayout(clips),
+      timelinePlacements: TimelineSequence.layout(clips),
+      playablePlacements: TimelineSequence.playableLayout(clips),
       sequenceDuration: TimelineSequence.playableDuration(clips),
       speedSegments: speedSegments
     )
@@ -55,22 +62,38 @@ struct TimelineSequenceMap: Equatable {
     sequenceDuration: TimeInterval,
     speedSegments: [SpeedSegment]
   ) {
+    self.init(
+      timelinePlacements: placements,
+      playablePlacements: placements,
+      sequenceDuration: sequenceDuration,
+      speedSegments: speedSegments
+    )
+  }
+
+  init(
+    timelinePlacements: [TimelineSequence.Placement],
+    playablePlacements: [TimelineSequence.Placement],
+    sequenceDuration: TimeInterval,
+    speedSegments: [SpeedSegment]
+  ) {
     self.sequenceDuration = max(0, sequenceDuration)
 
     guard self.sequenceDuration > 0.0001 else {
       self.spans = []
-      self.outputDuration = 0
+      outputDuration = 0
       return
     }
 
-    // Project each enabled segment onto the sequence. A segment spanning material
-    // that was cut out yields several pieces.
+    // Resolve each segment from the independent structural effect track onto the
+    // active playback axis. A range can be shortened by trimmed-out slots, but it
+    // never follows a source clip or gets clamped to a dominant reordered piece.
     var rated: [(range: ClosedRange<TimeInterval>, rate: Double)] = []
     for segment in speedSegments where segment.isEnabled && segment.rate != 1.0 {
       let rate = SpeedSegment.clampRate(segment.rate)
       let pieces = TimelineSequence.project(
-        sourceRange: segment.startTime...max(segment.startTime, segment.endTime),
-        in: placements
+        timelineRange: segment.startTime ... max(segment.startTime, segment.endTime),
+        from: timelinePlacements,
+        to: playablePlacements
       )
       for piece in pieces {
         rated.append((piece, rate))
@@ -97,7 +120,7 @@ struct TimelineSequenceMap: Equatable {
     }
 
     self.spans = spans
-    self.outputDuration = spans.reduce(0) { $0 + $1.scaledDuration }
+    outputDuration = spans.reduce(0) { $0 + $1.scaledDuration }
   }
 
   // MARK: - Mapping

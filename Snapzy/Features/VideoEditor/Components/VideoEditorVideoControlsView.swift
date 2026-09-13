@@ -5,8 +5,8 @@
 //  Playback controls with play/pause button and time display
 //
 
-import AVFoundation
 import AppKit
+import AVFoundation
 import SwiftUI
 
 private enum VideoControlsSection: Hashable {
@@ -305,7 +305,6 @@ struct VideoControlsView: View {
     .liquidGlassGroup(spacing: controlsLayout.centerSpacing)
   }
 
-  @ViewBuilder
   private var rightActions: some View {
     HStack(spacing: controlsLayout.metadataSpacing) {
       statusMetadata

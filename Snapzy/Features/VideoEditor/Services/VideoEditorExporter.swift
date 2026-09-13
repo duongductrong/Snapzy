@@ -11,7 +11,6 @@ import Foundation
 /// Handles video trimming and export operations
 @MainActor
 enum VideoEditorExporter {
-
   // MARK: - Export Methods
 
   /// Export trimmed video to specified URL (with zoom effects if present)
@@ -28,7 +27,7 @@ enum VideoEditorExporter {
       "hasSpeed": "\(state.hasSpeedSegments)",
       "clips": "\(state.clips.count)",
       "hasInsertedClips": "\(state.hasInsertedClips)",
-      "quality": state.exportSettings.quality.exportPreset
+      "quality": state.exportSettings.quality.exportPreset,
     ])
     let outputAccess = SandboxFileAccessManager.shared.beginAccessingURL(outputURL.deletingLastPathComponent())
     defer { outputAccess.stop() }
@@ -79,7 +78,7 @@ enum VideoEditorExporter {
     print("📹 [Export] Standard export starting")
     DiagnosticLogger.shared.log(.info, .export, "Standard export", context: [
       "trim": "\(String(format: "%.1f", CMTimeGetSeconds(state.trimStart)))s-\(String(format: "%.1f", CMTimeGetSeconds(state.trimEnd)))s",
-      "output": outputURL.lastPathComponent
+      "output": outputURL.lastPathComponent,
     ])
 
     guard let exportSession = AVAssetExportSession(
@@ -133,20 +132,28 @@ enum VideoEditorExporter {
 
         // Apply preferred transform first, then scale, then center
         let preferredTransform = try await videoTrack.load(.preferredTransform)
-        layerInstruction.setTransform(preferredTransform.concatenating(scaleTransform).concatenating(centerTransform), at: .zero)
+        layerInstruction.setTransform(
+          preferredTransform.concatenating(scaleTransform).concatenating(centerTransform),
+          at: .zero
+        )
 
         instruction.layerInstructions = [layerInstruction]
         videoComposition.instructions = [instruction]
 
         exportSession.videoComposition = videoComposition
         print("📹 [Export] Applied custom dimensions: \(targetSize)")
-        DiagnosticLogger.shared.log(.debug, .export, "Applied custom dimensions", context: ["size": "\(Int(targetSize.width))x\(Int(targetSize.height))"])
+        DiagnosticLogger.shared.log(
+          .debug,
+          .export,
+          "Applied custom dimensions",
+          context: ["size": "\(Int(targetSize.width))x\(Int(targetSize.height))"]
+        )
       }
     }
 
     // Start progress monitoring
     let progressTask = Task {
-      while !Task.isCancelled && exportSession.status == .exporting {
+      while !Task.isCancelled, exportSession.status == .exporting {
         progress(exportSession.progress)
         try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
       }
@@ -191,7 +198,7 @@ enum VideoEditorExporter {
     DiagnosticLogger.shared.log(.info, .export, "Zoom export started", context: [
       "zoomSegments": "\(state.zoomSegments.count)",
       "trim": "\(String(format: "%.1f", CMTimeGetSeconds(state.trimStart)))s-\(String(format: "%.1f", CMTimeGetSeconds(state.trimEnd)))s",
-      "size": "\(Int(state.naturalSize.width))x\(Int(state.naturalSize.height))"
+      "size": "\(Int(state.naturalSize.width))x\(Int(state.naturalSize.height))",
     ])
     print("🔍 [ZoomExport] Starting export with zooms")
     print("🔍 [ZoomExport] Output URL: \(outputURL)")
@@ -221,15 +228,18 @@ enum VideoEditorExporter {
     let placements = state.playbackPlacements
     let sequenceMap = state.sequenceMap
     let speedMap: TimelineSequenceMap? = state.hasSpeedSegments ? sequenceMap : nil
-    print("🔍 [ZoomExport] Sequence: \(clips.count) clip(s), \(String(format: "%.2f", sequenceMap.sequenceDuration))s → output \(String(format: "%.2f", sequenceMap.outputDuration))s")
+    print(
+      "🔍 [ZoomExport] Sequence: \(clips.count) clip(s), \(String(format: "%.2f", sequenceMap.sequenceDuration))s → output \(String(format: "%.2f", sequenceMap.outputDuration))s"
+    )
 
-    // Zoom segments are authored in PRIMARY SOURCE time. Project them onto the sequence
-    // (so they follow their material through splits and reorders), then apply speed.
-    // A zoom whose material was deleted projects to nothing and is dropped.
+    // Zoom segments are authored on the independent structural timeline. Project
+    // their ranges onto active playable material only at export time, then apply
+    // speed on the same compact sequence axis. A segment entirely over trimmed-out
+    // slots is dropped; reorder never changes the authored effect position.
     let outputSeconds = sequenceMap.outputDuration
     let adjustedZooms = state.zoomSegments.compactMap { segment -> ZoomSegment? in
       let pieces = state.projectToPlaybackSequence(
-        sourceRange: segment.startTime...(segment.startTime + segment.duration)
+        timelineRange: segment.startTime ... segment.endTime
       )
       guard let firstPiece = pieces.first, let lastPiece = pieces.last else { return nil }
 
@@ -241,9 +251,9 @@ enum VideoEditorExporter {
 
     let adjustedAutoFocusPaths = Dictionary(
       uniqueKeysWithValues: adjustedZooms
-        .filter { $0.isAutoMode }
+        .filter(\.isAutoMode)
         .map { segment -> (UUID, [AutoFocusCameraSample]) in
-          // Trim-relative → sequence (dropping deleted frames) → output.
+          // Trim-relative source path → playable sequence (clip-aware) → output.
           var path = VideoEditorAutoFocusEngine.trimmedPath(
             state.autoFocusPath(for: segment),
             trimStart: trimStartSeconds,
@@ -257,13 +267,18 @@ enum VideoEditorExporter {
           if let map = speedMap {
             path = VideoEditorAutoFocusEngine.scaledPath(path, map: map)
           }
+          // The path can cover the whole recording, while this effect owns only its
+          // authored output range. Keep the compositor from interpolating outside it.
+          path = path.filter { $0.time >= segment.startTime && $0.time <= segment.endTime }
           return (segment.id, path)
         }
     )
 
     print("🔍 [ZoomExport] Adjusted zooms count: \(adjustedZooms.count)")
     for (index, zoom) in adjustedZooms.enumerated() {
-      print("🔍 [ZoomExport] Zoom[\(index)]: start=\(zoom.startTime)s, duration=\(zoom.duration)s, level=\(zoom.zoomLevel)x, enabled=\(zoom.isEnabled)")
+      print(
+        "🔍 [ZoomExport] Zoom[\(index)]: start=\(zoom.startTime)s, duration=\(zoom.duration)s, level=\(zoom.zoomLevel)x, enabled=\(zoom.isEnabled)"
+      )
     }
 
     // Create composition
@@ -300,11 +315,10 @@ enum VideoEditorExporter {
           duration: clipDuration
         )
 
-        let track: AVAssetTrack?
-        if clip.isPrimary {
-          track = sourceVideoTrack
+        let track: AVAssetTrack? = if clip.isPrimary {
+          sourceVideoTrack
         } else {
-          track = try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
+          try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
         }
         guard let track else {
           // A clip with no video track still has to hold its slot, or everything after
@@ -334,7 +348,7 @@ enum VideoEditorExporter {
     // Apply per-segment speed scaling to the video track (reverse order so earlier ranges
     // are not shifted by later scaling). Composition time is already trim-relative, so the
     // map's span coordinates map directly.
-    if let speedMap = speedMap {
+    if let speedMap {
       applySpeedScaling(to: compositionVideoTrack, map: speedMap, logPrefix: "[ZoomExport] video")
     }
 
@@ -387,10 +401,12 @@ enum VideoEditorExporter {
     // Use actual composition duration to prevent frame boundary issues
     let actualCompositionDuration = composition.duration
     let compositionTimeRange = CMTimeRange(start: .zero, duration: actualCompositionDuration)
-    print("🔍 [ZoomExport] Composition time range: start=\(CMTimeGetSeconds(compositionTimeRange.start))s, duration=\(CMTimeGetSeconds(compositionTimeRange.duration))s")
+    print(
+      "🔍 [ZoomExport] Composition time range: start=\(CMTimeGetSeconds(compositionTimeRange.start))s, duration=\(CMTimeGetSeconds(compositionTimeRange.duration))s"
+    )
 
     // Validate the scaled composition duration matches the expected output length.
-    if let speedMap = speedMap {
+    if let speedMap {
       let actualSeconds = CMTimeGetSeconds(actualCompositionDuration)
       // The sequence map already covers every clip, inserted ones included.
       let expectedSeconds = speedMap.outputDuration
@@ -437,13 +453,15 @@ enum VideoEditorExporter {
     exportSession.outputURL = outputURL
     exportSession.outputFileType = outputFileType(for: state.fileExtension)
     exportSession.videoComposition = videoComposition
-    if let audioMix = audioMix {
+    if let audioMix {
       exportSession.audioMix = audioMix
     }
-    print("🔍 [ZoomExport] Export session configured with output type: \(exportSession.outputFileType?.rawValue ?? "nil")")
+    print(
+      "🔍 [ZoomExport] Export session configured with output type: \(exportSession.outputFileType?.rawValue ?? "nil")"
+    )
 
     let progressTask = Task {
-      while !Task.isCancelled && exportSession.status == .exporting {
+      while !Task.isCancelled, exportSession.status == .exporting {
         progress(exportSession.progress)
         print("🔍 [ZoomExport] Export progress: \(Int(exportSession.progress * 100))%")
         try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds for less spam
@@ -483,7 +501,12 @@ enum VideoEditorExporter {
     }
 
     print("✅ [ZoomExport] Export completed successfully!")
-    DiagnosticLogger.shared.log(.info, .export, "Zoom export completed", context: ["output": outputURL.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .export,
+      "Zoom export completed",
+      context: ["output": outputURL.lastPathComponent]
+    )
   }
 
   /// Export video without audio track
@@ -567,12 +590,12 @@ enum VideoEditorExporter {
     try? FileManager.default.removeItem(at: outputURL)
     exportSession.outputURL = outputURL
     exportSession.outputFileType = outputFileType(for: state.fileExtension)
-    if let videoComposition = videoComposition {
+    if let videoComposition {
       exportSession.videoComposition = videoComposition
     }
 
     let progressTask = Task {
-      while !Task.isCancelled && exportSession.status == .exporting {
+      while !Task.isCancelled, exportSession.status == .exporting {
         progress(exportSession.progress)
         try? await Task.sleep(nanoseconds: 100_000_000)
       }
@@ -594,7 +617,12 @@ enum VideoEditorExporter {
       }
       throw exportSession.error ?? ExportError.exportFailed
     }
-    DiagnosticLogger.shared.log(.info, .export, "Video-only export completed", context: ["output": outputURL.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .export,
+      "Video-only export completed",
+      context: ["output": outputURL.lastPathComponent]
+    )
   }
 
   /// Replace original file with trimmed version
@@ -606,7 +634,12 @@ enum VideoEditorExporter {
     print("📹 [ReplaceOriginal] Temp URL: \(tempURL)")
     print("📹 [ReplaceOriginal] Source URL: \(state.sourceURL)")
     print("📹 [ReplaceOriginal] Original URL (target): \(state.originalURL)")
-    DiagnosticLogger.shared.log(.info, .export, "Replace original started", context: ["file": state.originalURL.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .export,
+      "Replace original started",
+      context: ["file": state.originalURL.lastPathComponent]
+    )
 
     try await exportTrimmed(state: state, to: tempURL, progress: progress)
 
@@ -624,7 +657,8 @@ enum VideoEditorExporter {
 
     // Replace original with temp file - use originalURL for correct target
     let targetDirectoryAccess = SandboxFileAccessManager.shared.beginAccessingURL(
-      state.originalURL.deletingLastPathComponent())
+      state.originalURL.deletingLastPathComponent()
+    )
     defer { targetDirectoryAccess.stop() }
 
     let targetURL = targetDirectoryAccess.url.appendingPathComponent(state.originalURL.lastPathComponent)
@@ -728,7 +762,7 @@ enum VideoEditorExporter {
           try compositionAudioTrack.insertTimeRange(sourceRange, of: sourceAudioTrack, at: cursor)
         } else if trackIndex == 0,
                   let clipAudio = try await state.clipAsset(for: clip)
-                    .loadTracks(withMediaType: .audio).first {
+                  .loadTracks(withMediaType: .audio).first {
           // Inserted clips carry a single audio track; it rides the first lane.
           try compositionAudioTrack.insertTimeRange(sourceRange, of: clipAudio, at: cursor)
         } else {
@@ -747,7 +781,7 @@ enum VideoEditorExporter {
     // Time-scale audio with the same spans as video so A/V stays in sync. Spans are in
     // base coordinates, matching the composition layout (merged clips sit after the
     // scaled primary span so they are unaffected).
-    if let speedMap = speedMap {
+    if let speedMap {
       for track in compositionAudioTracks {
         applySpeedScaling(to: track, map: speedMap, logPrefix: "\(logPrefix) audio")
       }
@@ -796,7 +830,7 @@ enum VideoEditorExporter {
     speedMap: TimelineSequenceMap?,
     logPrefix: String
   ) -> AVMutableAudioMix? {
-    guard let speedMap = speedMap, !speedMap.isIdentity else { return baseMix }
+    guard let speedMap, !speedMap.isIdentity else { return baseMix }
 
     let mix = baseMix ?? AVMutableAudioMix()
     let existing = (mix.inputParameters as? [AVMutableAudioMixInputParameters]) ?? []
@@ -844,18 +878,17 @@ enum VideoEditorExporter {
   ) -> AVMutableAudioMix? {
     guard settings.audioMode == .custom else { return nil }
 
-    let resolvedRoles: [VideoEditorAudioTrackRole]
-    if roles.count == audioTracks.count {
-      resolvedRoles = roles
+    let resolvedRoles: [VideoEditorAudioTrackRole] = if roles.count == audioTracks.count {
+      roles
     } else {
-      resolvedRoles = VideoEditorAudioTrackRole.roles(forAudioTrackCount: audioTracks.count)
+      VideoEditorAudioTrackRole.roles(forAudioTrackCount: audioTracks.count)
     }
     let mix = VideoEditorAudioMixFactory.makeAudioMix(
       for: audioTracks,
       settings: settings,
       roles: resolvedRoles
     )
-    zip(audioTracks, resolvedRoles).forEach { _, role in
+    for (_, role) in zip(audioTracks, resolvedRoles) {
       let volume = settings.effectiveVolume(for: role)
       print("\(logPrefix) Applied \(role.localizedLabel) volume: \(volume)")
     }
@@ -914,11 +947,11 @@ enum VideoEditorExporter {
   private static func outputFileType(for extension: String) -> AVFileType {
     switch `extension`.lowercased() {
     case "mp4":
-      return .mp4
+      .mp4
     case "mov":
-      return .mov
+      .mov
     default:
-      return .mp4
+      .mp4
     }
   }
 
@@ -929,7 +962,7 @@ enum VideoEditorExporter {
     }
 
     let minFrameDuration = try await videoTrack.load(.minFrameDuration)
-    if minFrameDuration.isValid && minFrameDuration.seconds > 0 {
+    if minFrameDuration.isValid, minFrameDuration.seconds > 0 {
       return minFrameDuration
     }
 
@@ -945,9 +978,9 @@ enum VideoEditorExporter {
     var errorDescription: String? {
       switch self {
       case .sessionCreationFailed:
-        return L10n.VideoExport.sessionCreationFailed
+        L10n.VideoExport.sessionCreationFailed
       case .exportFailed:
-        return L10n.VideoExport.exportFailed
+        L10n.VideoExport.exportFailed
       }
     }
   }

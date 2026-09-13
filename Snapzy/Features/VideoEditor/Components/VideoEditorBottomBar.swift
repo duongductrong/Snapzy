@@ -78,7 +78,7 @@ struct VideoEditorBottomBar: View {
               icon: alreadyUploadedToCloud ? "checkmark.icloud" : "icloud.and.arrow.up",
               tooltip: tooltip
             ) {
-              if state.cloudKey != nil && !alreadyUploadedToCloud {
+              if state.cloudKey != nil, !alreadyUploadedToCloud {
                 showOverwriteConfirmation = true
               } else {
                 handleCloudUpload()
@@ -121,7 +121,7 @@ struct VideoEditorBottomBar: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .videoEditorCloudUpload)) { _ in
       // ⌘U keyboard shortcut triggers cloud upload
-      guard shouldShowCloudButton && !isCloudUploading && !alreadyUploadedToCloud else { return }
+      guard shouldShowCloudButton, !isCloudUploading, !alreadyUploadedToCloud else { return }
       if state.cloudKey != nil {
         showOverwriteConfirmation = true
       } else {

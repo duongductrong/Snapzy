@@ -1,5 +1,5 @@
 //
-//  ZoomSettingsPopover.swift
+//  VideoEditorZoomSettingsPopover.swift
 //  Snapzy
 //
 //  Settings popover for editing selected zoom segment properties
@@ -13,7 +13,7 @@ struct ZoomSettingsPopover: View {
   let previewImage: NSImage?
 
   @State private var localZoomLevel: CGFloat = 2.0
-  @State private var localCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
   private var selectedSegment: ZoomSegment? {
     state.selectedZoomSegment
@@ -92,8 +92,8 @@ struct ZoomSettingsPopover: View {
           .foregroundColor(.secondary)
 
         Slider(
-          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel),
-          in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel
+          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
+          in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
           if !isEditing {
             applyZoomLevel()
@@ -252,10 +252,7 @@ struct ZoomSettingsPopover: View {
 
 #Preview {
   ZoomSettingsPopover(
-    state: {
-      let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test.mov"))
-      return state
-    }(),
+    state: VideoEditorState(url: URL(fileURLWithPath: "/tmp/test.mov")),
     previewImage: nil
   )
   .background(Color(NSColor.windowBackgroundColor))

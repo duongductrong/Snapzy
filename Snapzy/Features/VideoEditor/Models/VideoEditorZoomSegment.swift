@@ -1,5 +1,5 @@
 //
-//  ZoomSegment.swift
+//  VideoEditorZoomSegment.swift
 //  Snapzy
 //
 //  Data model for zoom segments in video timeline
@@ -10,10 +10,11 @@ import Foundation
 /// Represents a zoom effect segment on the video timeline
 struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
   let id: UUID
-  var startTime: TimeInterval      // seconds from video start
-  var duration: TimeInterval       // zoom duration in seconds
-  var zoomLevel: CGFloat           // 1.0 (100%) to 4.0 (400%)
-  var zoomCenter: CGPoint          // normalized 0-1 for x,y position
+  /// Seconds on the editor's structural timeline, independent of clip source time.
+  var startTime: TimeInterval
+  var duration: TimeInterval // zoom duration in seconds
+  var zoomLevel: CGFloat // 1.0 (100%) to 4.0 (400%)
+  var zoomCenter: CGPoint // normalized 0-1 for x,y position
   var zoomType: ZoomType
   var followSpeed: Double
   var focusMargin: CGFloat
@@ -85,20 +86,20 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
 // MARK: - Zoom Type
 
 enum ZoomType: String, Codable, CaseIterable, Equatable {
-  case auto    // follow recorded mouse path within the zoom item's range
-  case manual  // user-defined camera framing
+  case auto // follow recorded mouse path within the zoom item's range
+  case manual // user-defined camera framing
 
   var displayName: String {
     switch self {
-    case .auto: return L10n.VideoEditor.auto
-    case .manual: return L10n.VideoEditor.manual
+    case .auto: L10n.VideoEditor.auto
+    case .manual: L10n.VideoEditor.manual
     }
   }
 
   var iconName: String {
     switch self {
-    case .auto: return "cursorarrow.click"
-    case .manual: return "hand.tap"
+    case .auto: "cursorarrow.click"
+    case .manual: "hand.tap"
     }
   }
 }
@@ -139,20 +140,20 @@ extension ZoomSegment {
   /// Formatted zoom level string (e.g., "2x", "1.5x")
   var formattedZoomLevel: String {
     if zoomLevel == floor(zoomLevel) {
-      return String(format: "%.0fx", zoomLevel)
+      String(format: "%.0fx", zoomLevel)
     } else {
-      return String(format: "%.1fx", zoomLevel)
+      String(format: "%.1fx", zoomLevel)
     }
   }
 
   /// Formatted duration string
   var formattedDuration: String {
     if duration < 1 {
-      return String(format: "%.1fs", duration)
+      String(format: "%.1fs", duration)
     } else if duration == floor(duration) {
-      return String(format: "%.0fs", duration)
+      String(format: "%.0fs", duration)
     } else {
-      return String(format: "%.1fs", duration)
+      String(format: "%.1fs", duration)
     }
   }
 }

@@ -6,11 +6,10 @@
 //
 
 import CoreGraphics
-import XCTest
 @testable import Snapzy
+import XCTest
 
 final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
-
   func testCalculateCropRect_flipsYAndClampsToFrameBounds() {
     let rect = ZoomCalculator.calculateCropRect(
       center: CGPoint(x: 0.25, y: 0.25),
@@ -68,6 +67,22 @@ final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
     XCTAssertEqual(active?.id, latest.id)
   }
 
+  func testZoomTimelineRange_staysIndependentAfterClipReorder() {
+    let first = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 0, sourceEnd: 5)
+    let second = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 5, sourceEnd: 10)
+    let clips = [second, first]
+    let zoom = ZoomSegment(startTime: 1, duration: 2)
+
+    let pieces = TimelineSequence.project(
+      timelineRange: zoom.startTime ... zoom.endTime,
+      from: TimelineSequence.layout(clips),
+      to: TimelineSequence.playableLayout(clips)
+    )
+
+    XCTAssertEqual(pieces, [1 ... 3])
+    XCTAssertEqual(ZoomCalculator.activeSegment(at: 2, in: [zoom])?.id, zoom.id)
+  }
+
   func testHasOverlap_honorsExcludedSegment() {
     let existing = ZoomSegment(id: UUID(), startTime: 2, duration: 3)
 
@@ -93,12 +108,18 @@ final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
       captureSize: CGSize(width: 100, height: 100),
       samplesPerSecond: 60,
       mouseSamples: [
-        RecordedMouseSample(time: 0, normalizedX: 0.5, normalizedY: 0.5, isInsideCapture: true)
+        RecordedMouseSample(time: 0, normalizedX: 0.5, normalizedY: 0.5, isInsideCapture: true),
       ]
     )
 
-    XCTAssertTrue(VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: ZoomSegment(startTime: 0, zoomType: .manual)).isEmpty)
-    XCTAssertTrue(VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: ZoomSegment(startTime: 0, zoomType: .auto)).isEmpty)
+    XCTAssertTrue(VideoEditorAutoFocusEngine.buildPath(
+      from: metadata,
+      segment: ZoomSegment(startTime: 0, zoomType: .manual)
+    ).isEmpty)
+    XCTAssertTrue(VideoEditorAutoFocusEngine.buildPath(
+      from: metadata,
+      segment: ZoomSegment(startTime: 0, zoomType: .auto)
+    ).isEmpty)
   }
 
   func testAutoFocusBuildPath_canonicalizesBottomLeftCoordinatesAndClampsInitialCenter() throws {
@@ -130,7 +151,7 @@ final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
     XCTAssertGreaterThanOrEqual(path.last?.time ?? 0, 0.2)
   }
 
-  func testAutoFocusTrimmedPath_interpolatesBoundarySamplesAndRebasesTime() throws {
+  func testAutoFocusTrimmedPath_interpolatesBoundarySamplesAndRebasesTime() {
     let path = [
       AutoFocusCameraSample(time: 0, center: CGPoint(x: 0.2, y: 0.2)),
       AutoFocusCameraSample(time: 1, center: CGPoint(x: 0.4, y: 0.6)),
@@ -174,6 +195,44 @@ final class VideoEditorZoomAndAutoFocusTests: XCTestCase {
     assertEqual(state.zoomLevel, 2)
     assertEqual(state.center.x, 0.75)
     assertEqual(state.center.y, 0.25)
+  }
+
+  func testAutoFocusTimelinePath_followsPrimaryMaterialAfterReorder() throws {
+    let first = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 0, sourceEnd: 5)
+    let second = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 5, sourceEnd: 10)
+    let placements = TimelineSequence.layout([second, first])
+    let path = [
+      AutoFocusCameraSample(time: 1, center: CGPoint(x: 0.2, y: 0.3)),
+      AutoFocusCameraSample(time: 6, center: CGPoint(x: 0.8, y: 0.7)),
+    ]
+
+    let mapped = VideoEditorAutoFocusEngine.timelinePath(path, placements: placements)
+
+    let firstMapped = try XCTUnwrap(mapped.first(where: { abs($0.time - 1) < 0.0001 }))
+    let secondMapped = try XCTUnwrap(mapped.first(where: { abs($0.time - 6) < 0.0001 }))
+    assertEqual(firstMapped.center.x, 0.8)
+    assertEqual(secondMapped.center.x, 0.2)
+  }
+
+  func testAutoFocusSequencePath_holdsCenterAcrossInsertedClip() throws {
+    let first = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 0, sourceEnd: 5)
+    let inserted = TimelineClip(
+      source: .file(url: URL(fileURLWithPath: "/tmp/intro.mov")),
+      sourceDuration: 2
+    )
+    let second = TimelineClip(source: .primary, sourceDuration: 10, sourceStart: 5, sourceEnd: 10)
+    let placements = TimelineSequence.playableLayout([first, inserted, second])
+    let path = [
+      AutoFocusCameraSample(time: 0, center: CGPoint(x: 0.2, y: 0.3)),
+      AutoFocusCameraSample(time: 10, center: CGPoint(x: 0.8, y: 0.7)),
+    ]
+
+    let mapped = VideoEditorAutoFocusEngine.sequencePath(path, placements: placements, trimStart: 0)
+    let insertedStart = try XCTUnwrap(mapped.first(where: { abs($0.time - 5) < 0.0001 }))
+    let insertedEnd = try XCTUnwrap(mapped.first(where: { abs($0.time - 7) < 0.0001 }))
+
+    assertEqual(insertedStart.center.x, insertedEnd.center.x)
+    assertEqual(insertedStart.center.y, insertedEnd.center.y)
   }
 
   private func assertEqual(
