@@ -41,7 +41,17 @@ flowchart TD
 
 - Visual timeline `Components/VideoEditorVideoTimelineView.swift` with frame-strip thumbnails (`VideoEditorVideoTimelineFrameStrip`) and trim handles (`VideoEditorVideoTrimHandlesView`).
 - Frame extraction uses an adaptive `FrameExtractionProfile` — 12 / 16 / 25 frames depending on track/duration, default 25 with zero tolerance.
+- Thumbnails are sampled at each timeline cell's center (`(i + 0.5) / count × duration`), so cell `i` of the frame strip represents the time window `[i/count, (i+1)/count)` of the duration and stays aligned with the ruler and playhead at every zoom level. A failed decode falls back to the neighboring slot's frame so the slot count and time mapping stay exact.
 - Minimum trim duration 1 s; handle drags clamp the playhead and record undoable `EditorAction.trimStart/trimEnd`.
+
+## Timeline Zoom / Pan
+
+- The timeline maps the full duration onto `contentWidth = viewportWidth × zoomLevel`; every child (ruler, frame strip, trim handles, zoom/speed tracks, playhead, scrub gesture) keeps its `time/duration × width` math and simply receives the scaled width.
+- `VideoEditorTimelineViewport` (`Models/VideoEditorTimelineViewport.swift`) owns the zoom window: `zoomLevel` (1 = fit, cap 20× and at least 1 s visible), `scrollOffset`, and playhead-anchored zoom math. It lives on `state.timelineViewport` and is UI-only (not undoable, not persisted).
+- Zoom in/out: pinch on the timeline (anchored at the playhead), ⌘+scroll wheel over the timeline (anchored at the cursor), the −/%/+ cluster in the playback controls bar's right section (`TimelineZoomControls`, tap the % to fit), or ⌘= / ⌘- / ⌘0 (fit).
+- Pan: plain scroll inside the timeline — two-finger/trackpad scrolling pans 1:1 (content follows the fingers) and a mouse wheel's vertical notches scroll the timeline forward/back (wheel down reveals later content), with momentum tail events included. Coarse (non-precise) wheel deltas are amplified (`VideoEditorTimelineViewport.pan`).
+- Scroll handling lives in `TimelineScrollCatcher` (`Components/VideoEditorTimelineScrollCatcher.swift`): a non-hit-testable background view running a local `NSEvent` monitor scoped to the timeline bounds. The timeline is an offset-panned container driven by `viewport.scrollOffset` (no `ScrollView`), so zoom anchoring and playhead follow write the offset directly.
+- While playing, the viewport page-scrolls to keep the playhead visible (skipped while scrubbing — the user is in control).
 
 ## Zoom Segments
 
@@ -114,6 +124,7 @@ flowchart TD
 | `Snapzy/Features/VideoEditor/Managers/VideoEditorWindowController.swift` | Save/replace/copy/GIF flows, unsaved-changes alert, post-export upload offer |
 | `Snapzy/Features/VideoEditor/VideoEditorState.swift` | Central editor model, playback, trim/zoom/speed mutations, undo/redo |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorZoomSegment.swift` | Zoom segment model and clamps |
+| `Snapzy/Features/VideoEditor/Models/VideoEditorTimelineViewport.swift` | Timeline zoom/scroll window state and mapping math |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorSpeedSegment.swift` | Speed segment model and rate presets |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorAutoFocusSettings.swift` | Follow Mouse tunables (followSpeed, focusMargin) |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorExportSettings.swift` | Dimension presets, audio roles/mix factory, quality presets |

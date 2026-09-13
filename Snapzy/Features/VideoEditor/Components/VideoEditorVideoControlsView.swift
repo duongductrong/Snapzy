@@ -200,10 +200,6 @@ struct VideoControlsView: View {
     }
   }
 
-  private var hasStatusMetadata: Bool {
-    !state.zoomSegments.isEmpty || isAutoZoomActiveAtCurrentTime || state.hasUnsavedChanges
-  }
-
   private var isAutoZoomActiveAtCurrentTime: Bool {
     state.activeZoomSegment(at: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
   }
@@ -243,13 +239,15 @@ struct VideoControlsView: View {
 
   @ViewBuilder
   private var rightActions: some View {
-    if hasStatusMetadata {
-      HStack(spacing: controlsLayout.metadataSpacing) {
-        statusMetadata
-      }
-    } else {
-      Color.clear
-        .frame(width: 0, height: 1)
+    HStack(spacing: controlsLayout.metadataSpacing) {
+      statusMetadata
+
+      // Timeline zoom cluster lives with the other transport controls so it
+      // never occludes the ruler or tracks underneath it.
+      TimelineZoomControls(
+        viewport: state.timelineViewport,
+        anchorTime: CMTimeGetSeconds(playbackState.currentTime)
+      )
     }
   }
 

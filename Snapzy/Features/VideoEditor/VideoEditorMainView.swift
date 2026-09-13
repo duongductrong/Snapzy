@@ -15,14 +15,16 @@ struct VideoEditorMainView: View {
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
 
-
-  // Computed property for current frame preview
+  /// Computed property for current frame preview
   private var currentFrameImage: NSImage? {
     guard !state.frameThumbnails.isEmpty else { return nil }
     let duration = CMTimeGetSeconds(state.duration)
     guard duration > 0 else { return nil }
     let progress = CMTimeGetSeconds(state.currentTime) / duration
-    let index = Int(progress * Double(state.frameThumbnails.count - 1))
+    // Thumbnails are sampled at the center of each timeline cell
+    // (VideoEditorState.generateFrameThumbnails), so the slot containing the
+    // playhead is Int(progress * count) — the same frame shown in the strip.
+    let index = Int(progress * Double(state.frameThumbnails.count))
     let clampedIndex = max(0, min(index, state.frameThumbnails.count - 1))
     return state.frameThumbnails[clampedIndex]
   }
@@ -77,6 +79,30 @@ struct VideoEditorMainView: View {
         .opacity(0)
         .frame(width: 0, height: 0)
         .disabled(state.selectedZoomId == nil)
+
+        // Timeline zoom in (⌘= / ⌘+)
+        Button("") {
+          state.timelineViewport.zoomIn(anchorTime: CMTimeGetSeconds(state.currentTime))
+        }
+        .keyboardShortcut("=", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Timeline zoom out (⌘-)
+        Button("") {
+          state.timelineViewport.zoomOut(anchorTime: CMTimeGetSeconds(state.currentTime))
+        }
+        .keyboardShortcut("-", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Timeline fit (⌘0)
+        Button("") {
+          state.timelineViewport.fit()
+        }
+        .keyboardShortcut("0", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
       }
     }
     .overlay {
