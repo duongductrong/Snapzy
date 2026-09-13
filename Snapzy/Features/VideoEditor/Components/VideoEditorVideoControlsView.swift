@@ -121,28 +121,6 @@ private enum VideoControlsLayoutStyle {
     case .regular, .expanded: 11
     }
   }
-
-  var badgeHorizontalPadding: CGFloat {
-    switch self {
-    case .compact: 5
-    case .regular: 6
-    case .expanded: 7
-    }
-  }
-
-  var badgeVerticalPadding: CGFloat {
-    switch self {
-    case .compact: 2
-    case .regular, .expanded: 3
-    }
-  }
-
-  var trimFontSize: CGFloat {
-    switch self {
-    case .compact: 11
-    case .regular, .expanded: 12
-    }
-  }
 }
 
 private struct VideoControlsSectionWidthKey: PreferenceKey {
@@ -320,58 +298,45 @@ struct VideoControlsView: View {
   @ViewBuilder
   private var statusMetadata: some View {
     if !state.zoomSegments.isEmpty {
-      HStack(spacing: 4) {
-        Image(systemName: "plus.magnifyingglass")
-          .font(.system(size: controlsLayout.badgeIconSize))
-          .foregroundColor(ZoomColors.primary)
-
-        Text("\(state.zoomSegments.count)")
-          .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
-          .foregroundColor(ZoomColors.primary)
-      }
-      .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
-      .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(Capsule().fill(ZoomColors.primary.opacity(0.15)))
+      statusBadge(systemName: "plus.magnifyingglass", text: "\(state.zoomSegments.count)")
     }
 
     if isAutoZoomActiveAtCurrentTime {
-      HStack(spacing: 4) {
-        Image(systemName: "camera.metering.center.weighted")
-          .font(.system(size: controlsLayout.badgeIconSize))
-          .foregroundColor(.green)
-
-        Text(L10n.VideoEditor.auto)
-          .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
-          .foregroundColor(.green)
-      }
-      .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
-      .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(Capsule().fill(Color.green.opacity(0.12)))
+      statusBadge(systemName: "camera.metering.center.weighted", text: L10n.VideoEditor.auto)
     }
 
     if state.hasUnsavedChanges {
-      HStack(spacing: 4) {
-        Image(systemName: "scissors")
-          .font(.system(size: controlsLayout.trimFontSize))
-          .foregroundColor(.yellow)
-
-        Text(state.formattedTrimmedDuration)
-          .font(.system(size: controlsLayout.trimFontSize, design: .monospaced))
-          .foregroundColor(.yellow)
-      }
+      statusBadge(systemName: "scissors", text: state.formattedTrimmedDuration)
     }
 
     // Output length reflects per-segment speed scaling (timelapse).
     if state.hasSpeedSegments {
-      HStack(spacing: 4) {
-        Image(systemName: "gauge.with.dots.needle.67percent")
-          .font(.system(size: controlsLayout.trimFontSize))
-          .foregroundColor(.orange)
-
-        Text(state.formattedOutputDuration)
-          .font(.system(size: controlsLayout.trimFontSize, design: .monospaced))
-          .foregroundColor(.orange)
-      }
+      statusBadge(systemName: "gauge.with.dots.needle.67percent", text: state.formattedOutputDuration)
     }
+  }
+
+  /// Uniform neutral stat chip for the controls bar — secondary glyph + primary value on one
+  /// quiet glass capsule, matching the GIF info metadata badges. All metadata shares one
+  /// treatment so the row reads as instrument readouts, not a set of colored alerts.
+  private func statusBadge(systemName: String, text: String) -> some View {
+    HStack(spacing: 5) {
+      Image(systemName: systemName)
+        .font(.system(size: controlsLayout.badgeIconSize, weight: .medium))
+        .foregroundColor(.secondary)
+
+      Text(text)
+        .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
+        .foregroundColor(.primary)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .monospacedDigit()
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: false
+    )
   }
 }
