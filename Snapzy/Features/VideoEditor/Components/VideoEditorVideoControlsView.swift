@@ -6,6 +6,7 @@
 //
 
 import AVFoundation
+import AppKit
 import SwiftUI
 
 private enum VideoControlsSection: Hashable {
@@ -213,8 +214,75 @@ struct VideoControlsView: View {
   }
 
   private var leftActions: some View {
-    Color.clear
-      .frame(width: 0, height: 1)
+    // Clip-editing (cut) controls share one quiet glass capsule — same treatment and
+    // metrics as the zoom cluster on the trailing edge — so the row reads as a
+    // matching pair of grouped instrument chips.
+    HStack(spacing: 4) {
+      cutButton(icon: "scissors", isDisabled: !state.canSplitAtPlayhead) {
+        state.splitAtPlayhead()
+      }
+      .keyboardShortcut("s", modifiers: [])
+      .help(L10n.VideoEditor.splitAtPlayheadHint)
+
+      cutButton(icon: "trash", isDisabled: !state.canDeleteSelectedClip) {
+        state.deleteSelectedClip()
+      }
+      .keyboardShortcut(.delete, modifiers: [])
+      .help(L10n.VideoEditor.deleteClipHint)
+
+      cutButton(icon: "plus.viewfinder", isDisabled: false) {
+        insertClipsViaPicker()
+      }
+      .help(L10n.VideoEditor.addClipHint)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: false
+    )
+  }
+
+  /// Icon control inside the cut group capsule, sized down from the transport cluster
+  /// (which is tuned for the big play button) to the compact chip scale of
+  /// `TimelineZoomControls`. Disabled dimming lives on the glyph only, never as an
+  /// `.opacity()` around the glass surface (Rule 2).
+  private func cutButton(
+    icon: String,
+    isDisabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(isDisabled ? Color.primary.opacity(0.4) : .primary)
+        // Square frames keep each hit target equal and give the glyphs even breathing
+        // room, so the group's rhythm does not follow each symbol's natural width.
+        .frame(width: 16, height: 14)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+  }
+
+  private func insertClipsViaPicker() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = true
+    panel.canChooseDirectories = false
+    panel.allowsMultipleSelection = true
+    panel.allowedFileTypes = ["mov", "mp4", "m4v"]
+    panel.message = L10n.VideoEditor.addClipPickerMessage
+    guard panel.runModal() == .OK else { return }
+    // Insert at the playhead, keeping the picker's order for a multi-file selection.
+    Task { @MainActor in
+      var index = state.insertionIndexAtPlayhead
+      for url in panel.urls {
+        if await state.insertClip(url: url, at: index) != nil {
+          index += 1
+        }
+      }
+    }
   }
 
   private var centerTransport: some View {

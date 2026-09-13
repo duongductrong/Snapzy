@@ -76,10 +76,6 @@ struct VideoEditorToolbarView: View {
       ToolbarDivider()
 
       if !state.isGIF {
-        editActionsGroup
-
-        ToolbarDivider()
-
         leftSidebarToggleButton
 
         ToolbarDivider()
@@ -105,48 +101,6 @@ struct VideoEditorToolbarView: View {
       .disabled(!state.canRedo)
       .keyboardShortcut("z", modifiers: [.command, .shift])
       .help(L10n.VideoEditor.redoShortcutHint)
-    }
-  }
-
-  private var editActionsGroup: some View {
-    HStack(spacing: 4) {
-      ToolbarButton(icon: "scissors", isSelected: false) {
-        state.splitAtPlayhead()
-      }
-      .disabled(!state.canSplitAtPlayhead)
-      .keyboardShortcut("s", modifiers: [])
-      .help(L10n.VideoEditor.splitAtPlayheadHint)
-
-      ToolbarButton(icon: "trash", isSelected: false) {
-        state.deleteSelectedClip()
-      }
-      .disabled(!state.canDeleteSelectedClip)
-      .keyboardShortcut(.delete, modifiers: [])
-      .help(L10n.VideoEditor.deleteClipHint)
-
-      ToolbarButton(icon: "plus.viewfinder", isSelected: false) {
-        insertClipsViaPicker()
-      }
-      .help(L10n.VideoEditor.addClipHint)
-    }
-  }
-
-  private func insertClipsViaPicker() {
-    let panel = NSOpenPanel()
-    panel.canChooseFiles = true
-    panel.canChooseDirectories = false
-    panel.allowsMultipleSelection = true
-    panel.allowedFileTypes = ["mov", "mp4", "m4v"]
-    panel.message = L10n.VideoEditor.addClipPickerMessage
-    guard panel.runModal() == .OK else { return }
-    // Insert at the playhead, keeping the picker's order for a multi-file selection.
-    Task { @MainActor in
-      var index = state.insertionIndexAtPlayhead
-      for url in panel.urls {
-        if await state.insertClip(url: url, at: index) != nil {
-          index += 1
-        }
-      }
     }
   }
 

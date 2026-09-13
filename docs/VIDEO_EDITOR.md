@@ -93,11 +93,11 @@ edge footage inactive, so the handles and neighboring clips stay aligned.
 
 | Action | Trigger | Effect |
 | --- | --- | --- |
-| Split | `S`, toolbar scissors, or clip context menu | clip under the playhead becomes two clips at that frame; both halves must clear `minDuration` |
-| Delete | `⌫`, toolbar trash, or context menu | clip removed, everything after it ripples left; never leaves the timeline empty |
+| Split | `S`, timeline scissors, or clip context menu | clip under the playhead becomes two clips at that frame; both halves must clear `minDuration` |
+| Delete | `⌫`, timeline trash, or context menu | clip removed, everything after it ripples left; never leaves the timeline empty |
 | Move | drag a clip body past its neighbour | reorder; gaps always close, so the export can never contain black frames |
 | Trim | drag a selected clip's yellow edge handle | non-destructive in/out change inside its fixed slot; unused edge footage stays visible and inactive |
-| Insert | toolbar `+` | `.file` clip inserted at `state.insertionIndexAtPlayhead` — on a clip boundary if the playhead sits on one, otherwise after the clip on screen |
+| Insert | timeline `+` | `.file` clip inserted at `state.insertionIndexAtPlayhead` — on a clip boundary if the playhead sits on one, otherwise after the clip on screen |
 
 All five are undoable: `EditorAction.addClip` / `removeClip` / `updateClip` / `moveClip` /
 `splitClip`. A trim drag collapses into one entry via `beginClipTrim` / `endClipTrim`.
