@@ -105,7 +105,7 @@ struct HistoryCardView: View, Equatable {
           VStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
               .font(.system(size: 16))
-            Text("File missing")
+            Text(L10n.PreferencesHistory.fileMissing)
               .font(.caption2.weight(.semibold))
           }
           .foregroundColor(.white)
