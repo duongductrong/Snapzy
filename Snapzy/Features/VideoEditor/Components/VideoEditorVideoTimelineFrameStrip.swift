@@ -28,14 +28,18 @@ struct VideoTimelineFrameStrip: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black.opacity(0.2))
       } else {
-        // Frame thumbnails
+        // Frame thumbnails — one cell per extraction slot; the image fits
+        // inside its cell (never scaled to fill, which crops the frame) so the
+        // whole frame stays visible at every zoom level.
         HStack(spacing: 0) {
           ForEach(0..<thumbnails.count, id: \.self) { index in
             Image(nsImage: thumbnails[index])
               .resizable()
-              .aspectRatio(contentMode: .fill)
-              .frame(width: geometry.size.width / CGFloat(thumbnails.count))
-              .clipped()
+              .aspectRatio(contentMode: .fit)
+              .frame(
+                width: geometry.size.width / CGFloat(thumbnails.count),
+                height: geometry.size.height
+              )
           }
         }
       }

@@ -8627,6 +8627,21 @@ nonisolated enum L10n {
       defaultValue: "Extracting frames...",
       comment: "Loading label shown while the video timeline frame strip is extracting thumbnails"
     )
+    static let zoomIn = string(
+      "video-editor-timeline.zoom-in",
+      defaultValue: "Zoom In",
+      comment: "Tooltip for the video editor timeline zoom-in control"
+    )
+    static let zoomOut = string(
+      "video-editor-timeline.zoom-out",
+      defaultValue: "Zoom Out",
+      comment: "Tooltip for the video editor timeline zoom-out control"
+    )
+    static let fit = string(
+      "video-editor-timeline.fit",
+      defaultValue: "Fit",
+      comment: "Label for the video editor timeline fit-to-window zoom control"
+    )
   }
 
   enum VideoExport {

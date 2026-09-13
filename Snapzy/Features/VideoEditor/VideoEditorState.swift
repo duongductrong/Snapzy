@@ -103,6 +103,8 @@ final class VideoEditorState: ObservableObject {
   let asset: AVAsset
   let player: AVPlayer
   let playbackState = VideoEditorPlaybackState()
+  /// Timeline zoom/scroll window (UI-only, not undoable).
+  let timelineViewport = VideoEditorTimelineViewport()
 
   // MARK: - Metadata
 
@@ -765,18 +767,43 @@ final class VideoEditorState: ObservableObject {
           generator.requestedTimeToleranceBefore = tolerance
           generator.requestedTimeToleranceAfter = tolerance
 
-          var images: [CGImage] = []
-          images.reserveCapacity(safeCount)
-
+          // Sample each cell's center so thumbnail i represents the time window
+          // [i/count, (i+1)/count) of the duration — the same window the strip
+          // lays out (VideoTimelineFrameStrip tiles cells of width
+          // contentWidth/count). Endpoint sampling (i/(count-1)) instead drew
+          // each frame off-center by up to half a cell, a drift that grows
+          // with the zoom level.
+          var slots: [CGImage?] = Array(repeating: nil, count: safeCount)
           for i in 0..<safeCount {
-            let progress = safeCount > 1 ? Double(i) / Double(safeCount - 1) : 0
+            let progress = (Double(i) + 0.5) / Double(safeCount)
             let time = CMTime(seconds: totalSeconds * progress, preferredTimescale: 600)
             if let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) {
-              images.append(cgImage)
+              slots[i] = cgImage
             }
           }
 
-          continuation.resume(returning: images)
+          // Fill decode holes from the neighboring slot so the slot count — and
+          // therefore the time mapping — stays exact even when a frame fails.
+          // Forward pass covers interior/trailing holes; the backward pass
+          // covers any leading holes with the first decodable frame.
+          var lastGood: CGImage?
+          for i in 0..<safeCount {
+            if let image = slots[i] {
+              lastGood = image
+            } else {
+              slots[i] = lastGood
+            }
+          }
+          var nextGood: CGImage?
+          for i in stride(from: safeCount - 1, through: 0, by: -1) {
+            if let image = slots[i] {
+              nextGood = image
+            } else {
+              slots[i] = nextGood
+            }
+          }
+
+          continuation.resume(returning: slots.compactMap { $0 })
         }
       }
     }
