@@ -254,17 +254,60 @@ enum VideoEditorAutoFocusEngine {
     return deduplicated(trimmed)
   }
 
-  /// Remap a trim-relative path onto the scaled (speed-adjusted) timeline. `toScaled` is
-  /// monotonic increasing so sample order is preserved.
+  /// Remap a SEQUENCE-relative path onto the output (speed-scaled) timeline.
+  /// `toOutput` is monotonic increasing so sample order is preserved.
   static func scaledPath(
     _ path: [AutoFocusCameraSample],
-    map: SpeedTimeMap
+    map: TimelineSequenceMap
   ) -> [AutoFocusCameraSample] {
     guard !path.isEmpty else { return [] }
     let scaled = path.map { sample in
-      AutoFocusCameraSample(time: map.toScaled(sample.time), center: sample.center)
+      AutoFocusCameraSample(time: map.toOutput(sample.time), center: sample.center)
     }
     return deduplicated(scaled)
+  }
+
+  /// Remap a trim-relative path onto the SEQUENCE timeline.
+  ///
+  /// Samples whose source frame is no longer in the sequence are dropped, and the rest
+  /// are re-anchored to sequence coordinates — so the focus path follows its material
+  /// wherever the clip holding it ended up after splits and reorders.
+  static func sequencePath(
+    _ path: [AutoFocusCameraSample],
+    placements: [TimelineSequence.Placement],
+    trimStart: TimeInterval
+  ) -> [AutoFocusCameraSample] {
+    guard !path.isEmpty else { return [] }
+    let primaries = placements.filter { $0.clip.isPrimary }
+    guard !primaries.isEmpty else { return [] }
+
+    var adjusted: [AutoFocusCameraSample] = []
+    for sample in path {
+      let absolute = trimStart + sample.time
+      guard let placement = primaries.first(where: { $0.clip.contains(sourceTime: absolute) }) else {
+        continue
+      }
+      adjusted.append(
+        AutoFocusCameraSample(
+          time: placement.sequenceTime(atSource: absolute),
+          center: sample.center
+        )
+      )
+    }
+    guard !adjusted.isEmpty else { return [] }
+    // Reordering can hand samples back out of order.
+    adjusted.sort { $0.time < $1.time }
+
+    // Anchor at both ends so focus starts and finishes settled.
+    if let first = adjusted.first, first.time > 0.0001 {
+      adjusted.insert(AutoFocusCameraSample(time: 0, center: first.center), at: 0)
+    }
+    let sequenceEnd = placements.last?.end ?? adjusted[adjusted.count - 1].time
+    if let last = adjusted.last, sequenceEnd - last.time > 0.0001 {
+      adjusted.append(AutoFocusCameraSample(time: sequenceEnd, center: last.center))
+    }
+
+    return deduplicated(adjusted)
   }
 
   private static func center(at time: TimeInterval, in path: [AutoFocusCameraSample]) -> CGPoint {

@@ -69,16 +69,50 @@ struct VideoEditorMainView: View {
         .opacity(0)
         .frame(width: 0, height: 0)
 
-        // Delete selected zoom (Delete key)
+        // Split at playhead (S key)
+        Button("") {
+          state.splitAtPlayhead()
+        }
+        .keyboardShortcut("s", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .disabled(!state.canSplitAtPlayhead)
+
+        // Delete selected zoom / speed / clip (Delete key) — priority:
+        // zoom selection → speed selection → clip.
         Button("") {
           if let id = state.selectedZoomId {
             state.removeZoom(id: id)
+          } else if let id = state.selectedSpeedId {
+            state.removeSpeed(id: id)
+          } else {
+            state.deleteSelectedClip()
           }
         }
         .keyboardShortcut(.delete, modifiers: [])
         .opacity(0)
         .frame(width: 0, height: 0)
-        .disabled(state.selectedZoomId == nil)
+        .disabled(
+          state.selectedZoomId == nil &&
+          state.selectedSpeedId == nil &&
+          !state.canDeleteSelectedClip
+        )
+
+        // Set trim start at playhead (I key)
+        Button("") {
+          state.setTrimStart(state.currentTime)
+        }
+        .keyboardShortcut("i", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Set trim end at playhead (O key)
+        Button("") {
+          state.setTrimEnd(state.currentTime)
+        }
+        .keyboardShortcut("o", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
 
         // Timeline zoom in (⌘= / ⌘+)
         Button("") {

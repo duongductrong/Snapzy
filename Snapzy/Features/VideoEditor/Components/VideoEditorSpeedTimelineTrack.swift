@@ -88,8 +88,22 @@ struct SpeedTimelineTrack: View {
 
   // MARK: - Computed Properties
 
+  /// The track's drawing axis: sequence time, matching the ruler and playhead.
   private var videoDuration: TimeInterval {
+    CMTimeGetSeconds(state.timelineDuration)
+  }
+
+  /// Segments are authored in PRIMARY SOURCE time, which is a different axis once the
+  /// sequence has been split or reordered. Clamps and new-segment math use this.
+  private var sourceDuration: TimeInterval {
     CMTimeGetSeconds(state.duration)
+  }
+
+  /// Sequence time under a pointer x, converted back to primary source time.
+  private func sourceTime(atX x: CGFloat) -> TimeInterval {
+    guard videoDuration > 0, timelineWidth > 0 else { return 0 }
+    let sequenceTime = (x / timelineWidth) * videoDuration
+    return state.primarySourceTimeOrNearest(atSequence: sequenceTime)
   }
 
   private var pixelsPerSecond: CGFloat {
@@ -98,8 +112,7 @@ struct SpeedTimelineTrack: View {
   }
 
   private var hoverTime: TimeInterval {
-    guard videoDuration > 0 else { return 0 }
-    return (hoverLocation.x / timelineWidth) * videoDuration
+    sourceTime(atX: hoverLocation.x)
   }
 
   private var hoverState: HoverState {
@@ -154,7 +167,9 @@ struct SpeedTimelineTrack: View {
       .help(L10n.VideoEditor.speedTrackTooltip)
       .allowsHitTesting(false)
 
-      ForEach(state.speedSegments) { segment in
+      // Speed blocks (visual only - gestures handled at track level).
+      // Dead segments — material no longer in the sequence — are not drawn.
+      ForEach(visibleSegments) { segment in
         let displaySegment = dragPreviewSegment?.id == segment.id ? (dragPreviewSegment ?? segment) : segment
         let segmentLayout = layout(for: displaySegment)
         SpeedBlockVisual(
@@ -307,7 +322,7 @@ struct SpeedTimelineTrack: View {
 
     case .position:
       let newStart = dragInitialStartTime + deltaSeconds
-      let maxStart = max(0, videoDuration - initialDuration)
+      let maxStart = max(0, sourceDuration - initialDuration)
       let clampedStart = max(0, min(newStart, maxStart))
       preview.startTime = clampedStart
       preview.duration = initialDuration
@@ -320,7 +335,7 @@ struct SpeedTimelineTrack: View {
 
     case .endEdge:
       let newEnd = dragInitialEndTime + deltaSeconds
-      let clampedEnd = max(dragInitialStartTime + SpeedSegment.minDuration, min(newEnd, videoDuration))
+      let clampedEnd = max(dragInitialStartTime + SpeedSegment.minDuration, min(newEnd, sourceDuration))
       preview.startTime = dragInitialStartTime
       preview.duration = max(SpeedSegment.minDuration, clampedEnd - dragInitialStartTime)
     }
@@ -353,7 +368,7 @@ struct SpeedTimelineTrack: View {
   // MARK: - Tap Handling
 
   private func handleTap(at location: CGPoint) {
-    let tappedTime = (location.x / timelineWidth) * videoDuration
+    let tappedTime = sourceTime(atX: location.x)
 
     if let (segment, _) = interactionSegment(atX: location.x) {
       state.selectSpeed(id: segment.id)
@@ -429,13 +444,18 @@ struct SpeedTimelineTrack: View {
 
   // MARK: - Layout & Hit Testing
 
+  /// Padded visual span used for drawing: blocks below `minVisualBlockWidth`
+  /// stretch to stay grabbable and the start is clamped inside the track.
   private func layout(for segment: SpeedSegment) -> SegmentLayout {
     guard videoDuration > 0, timelineWidth > 0 else {
       return SegmentLayout(visualStartX: 0, visualEndX: minVisualBlockWidth, visualWidth: minVisualBlockWidth)
     }
 
-    let logicalStartX = (segment.startTime / videoDuration) * timelineWidth
-    let logicalWidth = (segment.duration / videoDuration) * timelineWidth
+    // The segment is authored in source time; draw it wherever its material now
+    // sits on the sequence. Material that was deleted collapses to zero width.
+    let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime)
+    let logicalStartX = ((span?.lowerBound ?? 0) / videoDuration) * timelineWidth
+    let logicalWidth = (((span?.upperBound ?? 0) - (span?.lowerBound ?? 0)) / videoDuration) * timelineWidth
     let visualWidth = min(timelineWidth, max(minVisualBlockWidth, logicalWidth))
     let maxStartX = max(0, timelineWidth - visualWidth)
     let visualStartX = max(0, min(logicalStartX, maxStartX))
@@ -443,21 +463,58 @@ struct SpeedTimelineTrack: View {
     return SegmentLayout(visualStartX: visualStartX, visualEndX: visualStartX + visualWidth, visualWidth: visualWidth)
   }
 
+  /// True-time span of a segment on the sequence axis, or nil when its material
+  /// is no longer in the sequence — a dead segment has nowhere true to sit.
+  private func logicalLayout(for segment: SpeedSegment) -> SegmentLayout? {
+    guard videoDuration > 0, timelineWidth > 0 else { return nil }
+    guard let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime) else {
+      return nil
+    }
+    let startX = (span.lowerBound / videoDuration) * timelineWidth
+    let endX = (span.upperBound / videoDuration) * timelineWidth
+    guard endX - startX > 0.01 else { return nil }
+    return SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX)
+  }
+
+  /// Segments whose material is still on the timeline — the drawable set.
+  private var visibleSegments: [SpeedSegment] {
+    state.speedSegments.filter { logicalLayout(for: $0) != nil }
+  }
+
+  /// Hit test under a pointer x. True-time spans answer first so what a block
+  /// covers in time is what it activates; padded visuals are the fallback for
+  /// narrow blocks, resolved by nearest centre. Dead segments never answer.
   private func interactionSegment(atX x: CGFloat) -> (segment: SpeedSegment, layout: SegmentLayout)? {
-    let containing = state.speedSegments.compactMap { segment -> (segment: SpeedSegment, layout: SegmentLayout)? in
+    let logicalHits: [(segment: SpeedSegment, layout: SegmentLayout)] = state.speedSegments.compactMap { segment in
+      guard let layout = logicalLayout(for: segment),
+            x >= layout.visualStartX, x <= layout.visualEndX
+      else { return nil }
+      return (segment, layout)
+    }
+    if let hit = resolveCandidate(logicalHits, atX: x) { return hit }
+
+    let visualHits: [(segment: SpeedSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
       let segmentLayout = layout(for: segment)
       guard x >= segmentLayout.visualStartX, x <= segmentLayout.visualEndX else { return nil }
-      return (segment: segment, layout: segmentLayout)
+      return (segment, segmentLayout)
     }
+    return resolveCandidate(visualHits, atX: x)
+  }
 
-    guard !containing.isEmpty else { return nil }
+  /// Selected segment wins, then the one whose centre is nearest the pointer,
+  /// then the later index — a deterministic rule for overlapping spans.
+  private func resolveCandidate(
+    _ candidates: [(segment: SpeedSegment, layout: SegmentLayout)],
+    atX x: CGFloat
+  ) -> (segment: SpeedSegment, layout: SegmentLayout)? {
+    guard !candidates.isEmpty else { return nil }
 
     if let selectedId = state.selectedSpeedId,
-       let selected = containing.first(where: { $0.segment.id == selectedId }) {
+       let selected = candidates.first(where: { $0.segment.id == selectedId }) {
       return selected
     }
 
-    return containing.sorted { lhs, rhs in
+    return candidates.sorted { lhs, rhs in
       let leftDistance = abs(lhs.layout.centerX - x)
       let rightDistance = abs(rhs.layout.centerX - x)
       if leftDistance != rightDistance {

@@ -8,6 +8,7 @@
 import AVFoundation
 import AppKit
 import Combine
+import SwiftUI
 
 // MARK: - Editor Action (Undo/Redo Support)
 
@@ -28,6 +29,11 @@ enum EditorAction: Equatable {
     oldShadow: CGFloat, newShadow: CGFloat,
     oldCorner: CGFloat, newCorner: CGFloat
   )
+  case addClip(clip: TimelineClip, index: Int)
+  case removeClip(clip: TimelineClip, index: Int)
+  case updateClip(old: TimelineClip, new: TimelineClip)
+  case moveClip(id: UUID, fromIndex: Int, toIndex: Int)
+  case splitClip(original: TimelineClip, index: Int, first: TimelineClip, second: TimelineClip)
 }
 
 /// Playback state changes frequently, so it stays isolated from the broader editor model.
@@ -114,46 +120,253 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Trim Range
 
-  @Published var trimStart: CMTime = .zero {
-    didSet { invalidateSpeedMap() }
+  /// Trim window on the PRIMARY asset.
+  ///
+  /// For video the clip sequence is the source of truth, so this is derived: the
+  /// earliest primary in-point and the latest primary out-point. GIF has no clip
+  /// sequence (no `AVAsset`), so it keeps its own storage.
+  var trimStart: CMTime {
+    get {
+      if isGIF { return gifTrimStart }
+      let starts = clips.filter(\.isPrimary).map(\.sourceStart)
+      return CMTime(seconds: starts.min() ?? 0, preferredTimescale: 600)
+    }
+    set {
+      guard !isGIF else {
+        gifTrimStart = newValue
+        return
+      }
+      guard let first = clips.first(where: \.isPrimary) else { return }
+      updateClip(id: first.id, sourceStart: CMTimeGetSeconds(newValue))
+    }
   }
-  @Published var trimEnd: CMTime = .zero {
-    didSet { invalidateSpeedMap() }
+
+  var trimEnd: CMTime {
+    get {
+      if isGIF { return gifTrimEnd }
+      let ends = clips.filter(\.isPrimary).map(\.sourceEnd)
+      return CMTime(seconds: ends.max() ?? CMTimeGetSeconds(duration), preferredTimescale: 600)
+    }
+    set {
+      guard !isGIF else {
+        gifTrimEnd = newValue
+        return
+      }
+      guard let last = clips.last(where: \.isPrimary) else { return }
+      updateClip(id: last.id, sourceEnd: CMTimeGetSeconds(newValue))
+    }
   }
+
+  private var gifTrimStart: CMTime = .zero
+  private var gifTrimEnd: CMTime = .zero
 
   // MARK: - Speed Segments (Timelapse)
 
   @Published var speedSegments: [SpeedSegment] = [] {
-    didSet { invalidateSpeedMap() }
+    didSet { cachedSequenceMap = nil }
   }
   @Published var selectedSpeedId: UUID? = nil
 
-  private var cachedSpeedTimeMap: SpeedTimeMap?
+  // MARK: - Timeline Clips (the sequence)
 
-  /// Cached original↔scaled time map. Rebuilt lazily after any change to
-  /// `speedSegments`, `trimStart`, or `trimEnd`.
-  var speedTimeMap: SpeedTimeMap {
-    if let cached = cachedSpeedTimeMap { return cached }
-    let map = SpeedTimeMap(
-      speedSegments: speedSegments,
-      trimStart: CMTimeGetSeconds(trimStart),
-      trimEnd: CMTimeGetSeconds(trimEnd)
+  /// The ordered sequence of clips — the single source of truth for the timeline.
+  ///
+  /// Seeded with one primary clip spanning the whole asset. Splitting divides a clip,
+  /// deleting ripples the rest left, and an inserted video is just another element.
+  @Published private(set) var clips: [TimelineClip] = [] {
+    didSet { invalidateTimelineCaches() }
+  }
+  @Published private(set) var selectedClipId: UUID? = nil
+  @Published private(set) var canSplitAtPlayhead: Bool = false
+  @Published private(set) var canDeleteSelectedClip: Bool = false
+
+  /// Frame strips for inserted clips. The primary recording's strip lives in
+  /// `frameThumbnails`; this covers every other asset on the timeline.
+  let clipThumbnailCache = VideoEditorClipThumbnailCache()
+
+  private var cachedPlacements: [TimelineSequence.Placement]?
+  private var cachedSequenceMap: TimelineSequenceMap?
+  /// Assets backing `.file` clips, keyed by URL so duplicated clips share one asset.
+  private var clipAssets: [URL: AVAsset] = [:]
+
+  private func invalidateTimelineCaches() {
+    cachedPlacements = nil
+    cachedSequenceMap = nil
+    recalculateEstimatedFileSize()
+  }
+
+  /// Clips laid out on the structural timeline axis. Trimmed-out footage remains
+  /// inside its owning placement and is marked inactive by the clip strip.
+  var placements: [TimelineSequence.Placement] {
+    if let cached = cachedPlacements { return cached }
+    let laid = TimelineSequence.layout(clips)
+    cachedPlacements = laid
+    return laid
+  }
+
+  /// Clips laid out on the playable/export axis, with inactive trim slots collapsed.
+  var playbackPlacements: [TimelineSequence.Placement] {
+    TimelineSequence.playableLayout(clips)
+  }
+
+  /// Length of the playable/export sequence.
+  var sequenceDuration: TimeInterval {
+    TimelineSequence.playableDuration(clips)
+  }
+
+  /// Sequence → output map (speed applied). Cached.
+  var sequenceMap: TimelineSequenceMap {
+    if let cached = cachedSequenceMap { return cached }
+    let map = TimelineSequenceMap(
+      placements: playbackPlacements,
+      sequenceDuration: sequenceDuration,
+      speedSegments: speedSegments
     )
-    cachedSpeedTimeMap = map
+    cachedSequenceMap = map
     return map
   }
 
-  private func invalidateSpeedMap() { cachedSpeedTimeMap = nil }
+  /// Structural timeline axis length. GIF has no clip sequence, so it falls back to
+  /// its duration. Inactive trim slots stay on this axis for stable visual placement.
+  var timelineDuration: CMTime {
+    if isGIF { return duration }
+    return CMTime(seconds: TimelineSequence.duration(clips), preferredTimescale: 600)
+  }
+
+  var formattedTimelineDuration: String {
+    formatTime(timelineDuration)
+  }
+
+  /// True once the user has split, deleted, reordered, or inserted anything — i.e. the
+  /// sequence is no longer a single primary clip and needs the composition export path.
+  var hasSequenceEdits: Bool {
+    clips.count > 1 || clips.contains { !$0.isPrimary }
+  }
+
+  /// True when any clip comes from a file the user added.
+  var hasInsertedClips: Bool {
+    clips.contains { !$0.isPrimary }
+  }
+
+  var selectedClip: TimelineClip? {
+    guard let id = selectedClipId else { return nil }
+    return clips.first { $0.id == id }
+  }
+
+  // MARK: - Sequence Lookups
+
+  /// Placement covering a sequence time.
+  func placement(atSequence t: TimeInterval) -> TimelineSequence.Placement? {
+    TimelineSequence.placement(at: t, in: placements)
+  }
+
+  /// Active placement holding the playhead. A structural placement can exist
+  /// without an active placement while the playhead is over trimmed-out footage.
+  var activePlacement: TimelineSequence.Placement? {
+    TimelineSequence.activePlacement(at: CMTimeGetSeconds(currentTime), in: placements)
+  }
+
+  /// Sequence start of a clip.
+  func sequenceStart(ofClip id: UUID) -> TimeInterval? {
+    placements.first { $0.clip.id == id }?.start
+  }
+
+  /// Which clip plays at a sequence time, and where in its source asset.
+  func sourceContext(atSequence t: TimeInterval) -> (clip: TimelineClip, sourceTime: TimeInterval)? {
+    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return nil }
+    return (placement.clip, placement.sourceTime(at: t))
+  }
+
+  /// Convert a structural timeline time into the compact playable sequence used
+  /// by speed scaling and export. Returns nil while the structural playhead is
+  /// over trimmed-out footage.
+  func playbackSequenceTime(atTimeline t: TimeInterval) -> TimeInterval? {
+    guard let context = sourceContext(atSequence: t),
+          let playbackPlacement = playbackPlacements.first(where: { $0.clip.id == context.clip.id })
+    else { return nil }
+    return playbackPlacement.sequenceTime(atSource: context.sourceTime)
+  }
+
+  /// Primary-asset time under a sequence time, or nil when an inserted clip plays there.
+  ///
+  /// Zoom, Follow Mouse, and speed are authored against the primary recording, so they
+  /// only apply where primary material is on screen.
+  func primarySourceTime(atSequence t: TimeInterval) -> TimeInterval? {
+    guard let context = sourceContext(atSequence: t), context.clip.isPrimary else { return nil }
+    return context.sourceTime
+  }
+
+  /// Primary-source time under a sequence time, falling back to the nearest primary
+  /// material when an inserted clip is on screen.
+  ///
+  /// Zoom and speed are authored against the primary recording, so an author gesture
+  /// made over an inserted clip has to land somewhere sensible rather than nowhere.
+  func primarySourceTimeOrNearest(atSequence t: TimeInterval) -> TimeInterval {
+    if let direct = primarySourceTime(atSequence: t) { return direct }
+
+    let primaries = placements.filter { $0.clip.isPrimary && $0.activeEnd > $0.activeStart }
+    guard !primaries.isEmpty else { return 0 }
+
+    // Nearest active primary material by sequence distance. The structural slot,
+    // rather than the active range, is used for the distance so a click in either
+    // trimmed edge resolves to the closest playable frame.
+    var nearestSourceTime: TimeInterval?
+    var nearestDistance = TimeInterval.greatestFiniteMagnitude
+    for placement in primaries {
+      let candidate: TimeInterval
+      let distance: TimeInterval
+      if t < placement.activeStart {
+        candidate = placement.clip.sourceStart
+        distance = placement.activeStart - t
+      } else if t >= placement.activeEnd {
+        candidate = placement.clip.sourceEnd
+        distance = t - placement.activeEnd
+      } else {
+        candidate = placement.sourceTime(at: t)
+        distance = 0
+      }
+
+      if distance < nearestDistance {
+        nearestDistance = distance
+        nearestSourceTime = candidate
+      }
+    }
+
+    return nearestSourceTime ?? 0
+  }
+
+  /// Project a primary-source range onto the sequence axis. Effects follow their
+  /// material, so a range can appear in several places (or nowhere).
+  func projectToSequence(sourceRange: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>] {
+    TimelineSequence.project(sourceRange: sourceRange, in: placements)
+  }
+
+  /// Project a primary-source range onto the playable/export sequence. Unlike
+  /// `projectToSequence`, inactive trim slots are collapsed on this axis.
+  func projectToPlaybackSequence(sourceRange: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>] {
+    TimelineSequence.project(sourceRange: sourceRange, in: playbackPlacements)
+  }
+
+  /// Sequence span for a primary-source range, collapsing multiple projections into
+  /// one span. Used to place source-authored overlays (zoom, speed) on the sequence
+  /// axis so they sit over their material after splits and reorders.
+  ///
+  /// Returns nil when the range's material is no longer in the sequence.
+  func sequenceSpan(forPrimarySource range: ClosedRange<TimeInterval>) -> ClosedRange<TimeInterval>? {
+    let pieces = projectToSequence(sourceRange: range)
+    guard let first = pieces.first, let last = pieces.last else { return nil }
+    return first.lowerBound...last.upperBound
+  }
 
   /// True when at least one enabled speed segment changes playback rate.
   var hasSpeedSegments: Bool {
     speedSegments.contains { $0.isEnabled && $0.rate != 1.0 }
   }
 
-  /// Final output length after trim + speed scaling. Equals `trimmedDuration` when no
-  /// speed segments are active.
+  /// Final exported length: the sequence with speed scaling applied.
   var effectiveOutputDuration: CMTime {
-    hasSpeedSegments ? speedTimeMap.scaledCMDuration() : trimmedDuration
+    if isGIF { return trimmedDuration }
+    return CMTime(seconds: sequenceMap.outputDuration, preferredTimescale: 600)
   }
 
   // MARK: - Audio Control
@@ -277,10 +490,9 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Unsaved Changes
 
   @Published var hasUnsavedChanges: Bool = false
-  private var initialTrimStart: CMTime = .zero
-  private var initialTrimEnd: CMTime = .zero
   private var initialZoomSegments: [ZoomSegment] = []
   private var initialSpeedSegments: [SpeedSegment] = []
+  private var initialClips: [TimelineClip] = []
   private var initialBackgroundStyle: BackgroundStyle = .none
   private var initialBackgroundPadding: CGFloat = 0
   private var initialBackgroundShadowIntensity: CGFloat = 0
@@ -343,7 +555,7 @@ final class VideoEditorState: ObservableObject {
   }
 
   var isAutoZoomActiveAtCurrentTime: Bool {
-    activeZoomSegment(at: CMTimeGetSeconds(currentTime))?.isAutoMode == true
+    activeZoomSegment(atTimeline: CMTimeGetSeconds(currentTime))?.isAutoMode == true
   }
 
   var filename: String {
@@ -433,7 +645,9 @@ final class VideoEditorState: ObservableObject {
     self.originalURL = originalURL ?? url
     self.assetURL = editorAssetURL
     self.asset = AVAsset(url: editorAssetURL)
-    self.player = AVPlayer(playerItem: AVPlayerItem(asset: asset))
+    let item = AVPlayerItem(asset: asset)
+    self.primaryPlayerItem = item
+    self.player = AVPlayer(playerItem: item)
     self.zoomTransitionDuration = Self.loadZoomTransitionDuration()
     self.recordingMetadata = initialMetadata
 
@@ -547,10 +761,14 @@ final class VideoEditorState: ObservableObject {
     do {
       let loadedDuration = try await asset.load(.duration)
       duration = loadedDuration
-      trimStart = .zero
-      trimEnd = loadedDuration
-      initialTrimStart = .zero
-      initialTrimEnd = loadedDuration
+
+      // Seed the sequence with one clip spanning the whole recording.
+      let seed = TimelineClip(source: .primary, sourceDuration: CMTimeGetSeconds(loadedDuration))
+      clips = [seed]
+      initialClips = clips
+      selectedClipId = seed.id
+      activeClipId = seed.id
+      activeItemSource = .primary
 
       if let track = try await asset.loadTracks(withMediaType: .video).first {
         let size = try await track.load(.naturalSize)
@@ -581,7 +799,25 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Playback Control
 
+  /// Source asset currently loaded into the player, so clips cut from the same
+  /// asset do not force a reload at every boundary.
+  private var activeItemSource: TimelineClip.Source? = nil
+  /// Clip currently feeding the player, so a tick knows which placement it is in.
+  private var activeClipId: UUID? = nil
+  /// True while a handoff seek into the next clip is still completing. Ticks and
+  /// item-end notifications delivered in that window still reflect the previous
+  /// clip's position, so they must be dropped instead of acted on.
+  private var handoffSeekInFlight = false
+  /// Pre-drag snapshot for clip trim gestures (one undo entry per gesture).
+  private var clipTrimOriginal: TimelineClip? = nil
+  private let primaryPlayerItem: AVPlayerItem
+
   func play() {
+    let playableTime = normalizedTimelineTime(currentTime)
+    if CMTimeCompare(playableTime, currentTime) != 0 {
+      playbackState.setCurrentTime(playableTime)
+      seekPlayerInternally(to: CMTimeGetSeconds(playableTime))
+    }
     // Preserve pitch when playing speed-scaled regions (matches export's .spectral choice).
     player.currentItem?.audioTimePitchAlgorithm = .spectral
     // Start playback at the rate of the speed segment under the playhead (1.0 when none).
@@ -589,14 +825,16 @@ final class VideoEditorState: ObservableObject {
     playbackState.setPlaying(true)
   }
 
-  /// Playback rate for the speed segment under a given absolute asset time. Returns 1.0 when
-  /// no speed segments are active. Used to drive the live preview via `player.rate` so the
-  /// editor keeps its absolute-asset-time coordinate system (playhead, trim, zoom overlay,
-  /// thumbnails all unchanged). Export remains the frame-accurate path (see VideoEditorExporter).
+  /// Playback rate for the speed segment under a SEQUENCE time.
+  ///
+  /// Returns 1.0 when no speed segments are active, or when an inserted clip is on
+  /// screen — speed is authored against the primary recording only. Drives the live
+  /// preview via `player.rate`; export remains the frame-accurate path.
   func currentPreviewRate(at time: CMTime) -> Float {
     guard hasSpeedSegments else { return 1.0 }
-    let trimRelative = CMTimeGetSeconds(time) - CMTimeGetSeconds(trimStart)
-    return Float(speedTimeMap.rate(atOriginal: max(0, trimRelative)))
+    let t = CMTimeGetSeconds(time)
+    guard let playbackTime = playbackSequenceTime(atTimeline: t) else { return 1.0 }
+    return Float(sequenceMap.rate(atSequence: playbackTime))
   }
 
   func pause() {
@@ -618,18 +856,22 @@ final class VideoEditorState: ObservableObject {
     recordAction(.toggleMute(old: oldValue, new: isMuted))
   }
 
+  /// Seek to a STRUCTURAL timeline time. Inactive trim slots remain addressable for
+  /// stable layout, but the time is normalized to the nearest active frame.
   func seek(to time: CMTime) {
-    let clampedTime = clampTime(time)
+    let clampedTime = normalizedTimelineTime(time)
     playbackState.setCurrentTime(clampedTime)
-    player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    seekPlayerInternally(to: CMTimeGetSeconds(clampedTime))
+    updateClipActionAvailability()
   }
 
   func stepTimeline(by seconds: Double) {
     let step = CMTime(seconds: seconds, preferredTimescale: 600)
     let steppedTime = CMTimeAdd(currentTime, step)
-    let clampedTime = clampTime(steppedTime)
+    let clampedTime = normalizedTimelineTime(steppedTime)
     playbackState.setCurrentTime(clampedTime)
-    player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    seekPlayerInternally(to: CMTimeGetSeconds(clampedTime))
+    updateClipActionAvailability()
   }
 
   // MARK: - Scrubbing
@@ -639,55 +881,144 @@ final class VideoEditorState: ObservableObject {
     pause()
   }
 
+  /// Scrubbing follows the structural timeline but snaps over inactive trim slots,
+  /// keeping the playhead on playable material.
   func scrub(to time: CMTime) {
-    let clampedTime = clampTime(time)
+    let clampedTime = normalizedTimelineTime(time)
     playbackState.setCurrentTime(clampedTime)
-    player.seek(to: clampedTime, toleranceBefore: .zero, toleranceAfter: .zero)
+    seekPlayerInternally(to: CMTimeGetSeconds(clampedTime))
+    updateClipActionAvailability()
   }
 
   func endScrubbing() {
     playbackState.setScrubbing(false)
   }
 
-  // MARK: - Trim Control
+  // MARK: - Player Item Management (clip sequence)
 
-  func setTrimStart(_ time: CMTime, recordUndo: Bool = true) {
-    let oldValue = trimStart
-    let minDuration = CMTime(seconds: 1.0, preferredTimescale: 600)
-    let maxStart = CMTimeSubtract(trimEnd, minDuration)
-    let clampedStart = CMTimeClampToRange(time, range: CMTimeRange(start: .zero, end: maxStart))
-    trimStart = clampedStart
+  /// Point the player at whichever clip covers a sequence time, seeking to that
+  /// clip's own source time.
+  private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
+    guard let context = sourceContext(atSequence: sequenceSeconds) else { return }
+    activeClipId = context.clip.id
+    activateItemIfNeeded(for: context.clip)
+    player.seek(
+      to: CMTime(seconds: context.sourceTime, preferredTimescale: 600),
+      toleranceBefore: .zero,
+      toleranceAfter: .zero
+    )
+  }
 
-    // If current time is before new start, seek to start
-    if CMTimeCompare(currentTime, trimStart) < 0 {
-      seek(to: trimStart)
+  /// Swap the player item when the sequence crosses into a different source asset.
+  ///
+  /// Keyed on `source`, not clip id: consecutive clips cut from the same asset share
+  /// one item, so an ordinary split costs a seek rather than a reload.
+  private func activateItemIfNeeded(for clip: TimelineClip) {
+    guard activeItemSource != clip.source else { return }
+    let wasPlaying = isPlaying
+    let previousRate = player.rate
+
+    let item = clip.isPrimary ? primaryPlayerItem : AVPlayerItem(asset: clipAsset(for: clip))
+    player.replaceCurrentItem(with: item)
+    activeItemSource = clip.source
+
+    if wasPlaying {
+      player.currentItem?.audioTimePitchAlgorithm = .spectral
+      // Inserted clips have no speed authoring, so they always resume at 1x.
+      player.rate = clip.isPrimary ? max(previousRate, 1.0) : 1.0
+    }
+  }
+
+  /// Clamp to the sequence axis.
+  private func clampTimelineTime(_ time: CMTime) -> CMTime {
+    CMTimeClampToRange(time, range: CMTimeRange(start: .zero, end: timelineDuration))
+  }
+
+  /// Snap a structural timeline time to the nearest active clip material. Trimmed
+  /// slots remain visible for alignment, but they are not playable or exportable.
+  private func normalizedTimelineTime(_ time: CMTime) -> CMTime {
+    let clamped = CMTimeGetSeconds(clampTimelineTime(time))
+    guard sourceContext(atSequence: clamped) == nil else {
+      return CMTime(seconds: clamped, preferredTimescale: 600)
     }
 
+    var before: TimeInterval?
+    var after: TimeInterval?
+    for placement in placements where placement.activeEnd > placement.activeStart {
+      if placement.activeEnd <= clamped {
+        before = max(before ?? 0, placement.activeEnd - 0.0001)
+      } else if placement.activeStart >= clamped {
+        after = min(after ?? TimeInterval.greatestFiniteMagnitude, placement.activeStart)
+      }
+    }
+
+    let resolved: TimeInterval
+    switch (before, after) {
+    case let (before?, after?):
+      resolved = clamped - before <= after - clamped ? before : after
+    case let (before?, nil):
+      resolved = before
+    case let (nil, after?):
+      resolved = after
+    case (nil, nil):
+      resolved = clamped
+    }
+    return CMTime(seconds: resolved, preferredTimescale: 600)
+  }
+
+  // MARK: - Trim Control
+
+  /// Trim the sequence's first primary clip. GIF keeps its own stored window.
+  func setTrimStart(_ time: CMTime, recordUndo: Bool = true) {
+    guard isGIF else {
+      guard let first = clips.first(where: \.isPrimary) else { return }
+      updateClip(id: first.id, sourceStart: CMTimeGetSeconds(time))
+      return
+    }
+
+    let oldValue = gifTrimStart
+    let minDuration = CMTime(seconds: 1.0, preferredTimescale: 600)
+    let maxStart = CMTimeSubtract(gifTrimEnd, minDuration)
+    let clampedStart = CMTimeClampToRange(time, range: CMTimeRange(start: .zero, end: maxStart))
+    gifTrimStart = clampedStart
+    if CMTimeCompare(currentTime, clampedStart) < 0 {
+      seek(to: clampedStart)
+    }
     if recordUndo && CMTimeCompare(oldValue, clampedStart) != 0 {
       recordAction(.trimStart(old: oldValue, new: clampedStart))
     }
   }
 
+  /// Trim the sequence's last primary clip. GIF keeps its own stored window.
   func setTrimEnd(_ time: CMTime, recordUndo: Bool = true) {
-    let oldValue = trimEnd
-    let minDuration = CMTime(seconds: 1.0, preferredTimescale: 600)
-    let minEnd = CMTimeAdd(trimStart, minDuration)
-    let clampedEnd = CMTimeClampToRange(time, range: CMTimeRange(start: minEnd, end: duration))
-    trimEnd = clampedEnd
-
-    // If current time is after new end, seek to end
-    if CMTimeCompare(currentTime, trimEnd) > 0 {
-      seek(to: trimEnd)
+    guard isGIF else {
+      guard let last = clips.last(where: \.isPrimary) else { return }
+      updateClip(id: last.id, sourceEnd: CMTimeGetSeconds(time))
+      return
     }
 
+    let oldValue = gifTrimEnd
+    let minDuration = CMTime(seconds: 1.0, preferredTimescale: 600)
+    let minEnd = CMTimeAdd(gifTrimStart, minDuration)
+    let clampedEnd = CMTimeClampToRange(time, range: CMTimeRange(start: minEnd, end: duration))
+    gifTrimEnd = clampedEnd
+    if CMTimeCompare(currentTime, clampedEnd) > 0 {
+      seek(to: clampedEnd)
+    }
     if recordUndo && CMTimeCompare(oldValue, clampedEnd) != 0 {
       recordAction(.trimEnd(old: oldValue, new: clampedEnd))
     }
   }
 
+  /// Collapse the sequence back to one full-length primary clip.
   func resetTrim() {
-    trimStart = .zero
-    trimEnd = duration
+    guard !isGIF else {
+      gifTrimStart = .zero
+      gifTrimEnd = duration
+      return
+    }
+    clips = [TimelineClip(source: .primary, sourceDuration: CMTimeGetSeconds(duration))]
+    selectedClipId = clips.first?.id
   }
 
   // MARK: - Frame Extraction
@@ -813,11 +1144,10 @@ final class VideoEditorState: ObservableObject {
 
   func markAsSaved() {
     hasUnsavedChanges = false
-    initialTrimStart = trimStart
-    initialTrimEnd = trimEnd
     initialIsMuted = isMuted
     initialZoomSegments = zoomSegments
     initialSpeedSegments = speedSegments
+    initialClips = clips
     initialBackgroundStyle = backgroundStyle
     initialBackgroundPadding = backgroundPadding
     initialBackgroundShadowIntensity = backgroundShadowIntensity
@@ -898,6 +1228,30 @@ final class VideoEditorState: ObservableObject {
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
       redoStack.append(.updateBackground(oldStyle: newStyle, newStyle: oldStyle, oldPadding: newPadding, newPadding: oldPadding, oldShadow: newShadow, newShadow: oldShadow, oldCorner: newCorner, newCorner: oldCorner))
+
+    case .addClip(let clip, let index):
+      removeClipSilently(id: clip.id)
+      redoStack.append(.removeClip(clip: clip, index: index))
+
+    case .removeClip(let clip, let index):
+      insertClipSilently(clip, at: index)
+      redoStack.append(.addClip(clip: clip, index: index))
+
+    case .updateClip(let old, let new):
+      replaceClipSilently(id: new.id, with: old)
+      redoStack.append(.updateClip(old: new, new: old))
+
+    case .moveClip(let id, let fromIndex, let toIndex):
+      moveClipSilently(id: id, to: fromIndex)
+      redoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
+
+    case .splitClip(let original, let index, let first, let second):
+      // Rejoin: drop both halves and restore the clip they came from.
+      removeClipSilently(id: first.id)
+      removeClipSilently(id: second.id)
+      insertClipSilently(original, at: index)
+      redoStack.append(.splitClip(original: original, index: index, first: first, second: second))
+
     }
   }
 
@@ -960,6 +1314,30 @@ final class VideoEditorState: ObservableObject {
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
       undoStack.append(.updateBackground(oldStyle: newStyle, newStyle: oldStyle, oldPadding: newPadding, newPadding: oldPadding, oldShadow: newShadow, newShadow: oldShadow, oldCorner: newCorner, newCorner: oldCorner))
+
+    case .addClip(let clip, let index):
+      removeClipSilently(id: clip.id)
+      undoStack.append(.removeClip(clip: clip, index: index))
+
+    case .removeClip(let clip, let index):
+      insertClipSilently(clip, at: index)
+      undoStack.append(.addClip(clip: clip, index: index))
+
+    case .updateClip(let old, let new):
+      replaceClipSilently(id: new.id, with: old)
+      undoStack.append(.updateClip(old: new, new: old))
+
+    case .moveClip(let id, let fromIndex, let toIndex):
+      moveClipSilently(id: id, to: fromIndex)
+      undoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
+
+    case .splitClip(let original, let index, let first, let second):
+      // Re-split: the undo handler rejoined the halves, so redo has to divide again.
+      removeClipSilently(id: original.id)
+      insertClipSilently(first, at: index)
+      insertClipSilently(second, at: index + 1)
+      undoStack.append(.splitClip(original: original, index: index, first: first, second: second))
+
     }
   }
 
@@ -1027,14 +1405,17 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Zoom Management
 
-  /// Add a new zoom segment at the specified time
+  /// Add a new zoom segment at the specified time. Accepts TIMELINE time (extended
+  /// axis) and converts to original asset coordinates — identity when no cuts exist.
   @discardableResult
   func addZoom(at time: TimeInterval) -> UUID {
     DiagnosticLogger.shared.log(.debug, .editor, "Adding zoom segment", context: ["time": String(format: "%.2f", time), "type": hasMouseTrackingData ? "auto" : "manual"])
     let videoDuration = CMTimeGetSeconds(duration)
+    guard videoDuration > 0 else { return UUID() }
+    let originalTime = primarySourceTimeOrNearest(atSequence: time)
     let defaultZoomType: ZoomType = hasMouseTrackingData ? .auto : .manual
     let segment = ZoomSegment(
-      startTime: max(0, time - ZoomSegment.defaultDuration / 2),
+      startTime: max(0, originalTime - ZoomSegment.defaultDuration / 2),
       duration: ZoomSegment.defaultDuration,
       zoomLevel: ZoomSegment.defaultZoomLevel,
       zoomCenter: CGPoint(x: 0.5, y: 0.5),
@@ -1118,8 +1499,11 @@ final class VideoEditorState: ObservableObject {
     let effectiveDuration = ZoomCalculator.clampTransitionDuration(
       transitionDuration ?? zoomTransitionDuration
     )
+    // Zoom segments live on the ORIGINAL timeline; the playhead is on the extended
+    // timeline (cuts removed + merged clips). Convert before resolving camera state.
+    let originalTime = primarySourceTimeOrNearest(atSequence: time)
     return VideoEditorAutoFocusEngine.resolvedCameraState(
-      at: time,
+      at: originalTime,
       segments: zoomSegments,
       autoFocusPaths: autoFocusPaths,
       transitionDuration: effectiveDuration
@@ -1187,11 +1571,14 @@ final class VideoEditorState: ObservableObject {
     return (start, end - start)
   }
 
-  /// Add a speed segment centered at a time, using default duration + rate.
+  /// Add a speed segment centered at a time, using default duration + rate. Accepts
+  /// TIMELINE time (extended axis) and converts to original coordinates.
   @discardableResult
   func addSpeed(at time: TimeInterval) -> UUID? {
+    guard !isGIF else { return nil }
     let half = SpeedSegment.defaultDuration / 2
-    return addSpeed(range: (time - half)...(time + half), rate: SpeedSegment.defaultRate)
+    let originalTime = primarySourceTimeOrNearest(atSequence: time)
+    return addSpeed(range: (originalTime - half)...(originalTime + half), rate: SpeedSegment.defaultRate)
   }
 
   /// Add a speed segment for an explicit range + rate. Clamps to trim + neighbours.
@@ -1271,6 +1658,277 @@ final class VideoEditorState: ObservableObject {
     }
   }
 
+  // MARK: - Clip Management (split, delete, move, trim, insert)
+
+  /// Mutators that do not touch the undo stack. Undo/redo replays through these;
+  /// the public operations below wrap them with `recordAction`.
+  private func insertClipSilently(_ clip: TimelineClip, at index: Int) {
+    clips.insert(clip, at: max(0, min(index, clips.count)))
+  }
+
+  private func removeClipSilently(id: UUID) {
+    clips.removeAll { $0.id == id }
+    if selectedClipId == id { selectedClipId = nil }
+  }
+
+  private func replaceClipSilently(id: UUID, with clip: TimelineClip) {
+    guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
+    clips[index] = clip
+  }
+
+  private func moveClipSilently(id: UUID, to index: Int) {
+    guard let from = clips.firstIndex(where: { $0.id == id }) else { return }
+    let target = max(0, min(index, clips.count - 1))
+    guard target != from else { return }
+    let clip = clips.remove(at: from)
+    clips.insert(clip, at: target)
+  }
+
+  func selectClip(id: UUID?) {
+    selectedClipId = id
+    updateClipActionAvailability()
+  }
+
+  /// The clip a delete/split acts on: the explicit selection, else the one under
+  /// the playhead.
+  var targetClip: TimelineClip? {
+    selectedClip ?? activePlacement?.clip
+  }
+
+  /// Backing asset for a clip. `.file` assets are cached per URL so duplicated
+  /// clips share one decoder.
+  func clipAsset(for clip: TimelineClip) -> AVAsset {
+    switch clip.source {
+    case .primary:
+      return asset
+    case .file(let url):
+      if let cached = clipAssets[url] { return cached }
+      let loaded = AVAsset(url: url)
+      clipAssets[url] = loaded
+      return loaded
+    }
+  }
+
+  // MARK: Split
+
+  /// Split the clip under the playhead into two clips at that frame.
+  ///
+  /// Both halves must clear `TimelineClip.minDuration`, so splitting right at a clip
+  /// edge is a no-op rather than creating a sliver.
+  func splitAtPlayhead() {
+    guard !isGIF else { return }
+    let t = CMTimeGetSeconds(currentTime)
+    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return }
+
+    let original = placement.clip
+    let cutPoint = placement.sourceTime(at: t)
+    guard cutPoint - original.sourceStart >= TimelineClip.minDuration,
+          original.sourceEnd - cutPoint >= TimelineClip.minDuration
+    else { return }
+
+    let first = TimelineClip(
+      source: original.source,
+      sourceDuration: original.sourceDuration,
+      sourceStart: original.sourceStart,
+      sourceEnd: cutPoint,
+      slotStart: original.slotStart,
+      slotEnd: cutPoint
+    )
+    let second = TimelineClip(
+      source: original.source,
+      sourceDuration: original.sourceDuration,
+      sourceStart: cutPoint,
+      sourceEnd: original.sourceEnd,
+      slotStart: cutPoint,
+      slotEnd: original.slotEnd
+    )
+
+    DiagnosticLogger.shared.log(.debug, .editor, "Split clip", context: [
+      "at": String(format: "%.2f", t),
+      "source": String(format: "%.2f", cutPoint),
+    ])
+
+    clips.replaceSubrange(placement.index...placement.index, with: [first, second])
+    recordAction(.splitClip(original: original, index: placement.index, first: first, second: second))
+    // The playhead sits on the new boundary, which belongs to the second half.
+    selectedClipId = second.id
+    updateClipActionAvailability()
+  }
+
+  // MARK: Delete (ripple)
+
+  /// Remove a clip; everything after it slides left to close the gap.
+  func removeClip(id: UUID) {
+    guard !isGIF else { return }
+    guard clips.count > 1 else { return } // never leave an empty timeline
+    guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
+
+    let clip = clips[index]
+    let gapStart = sequenceStart(ofClip: id) ?? 0
+    clips.remove(at: index)
+    recordAction(.removeClip(clip: clip, index: index))
+
+    DiagnosticLogger.shared.log(.debug, .editor, "Removed clip", context: [
+      "index": "\(index)",
+      "duration": String(format: "%.2fs", clip.duration),
+    ])
+
+    // Select the clip that slid into the gap and park the playhead on it.
+    selectedClipId = clips.indices.contains(index) ? clips[index].id : clips.last?.id
+    let structuralDuration = CMTimeGetSeconds(timelineDuration)
+    seek(to: CMTime(seconds: min(gapStart, structuralDuration), preferredTimescale: 600))
+    updateClipActionAvailability()
+  }
+
+  /// Delete the selected clip, falling back to the one under the playhead.
+  func deleteSelectedClip() {
+    guard let clip = targetClip else { return }
+    removeClip(id: clip.id)
+  }
+
+  // MARK: Move (reorder)
+
+  /// Reorder a clip to an absolute index. Neighbours shift to close the gap, so the
+  /// sequence stays gapless.
+  func moveClip(id: UUID, toIndex: Int) {
+    guard !isGIF else { return }
+    guard let from = clips.firstIndex(where: { $0.id == id }) else { return }
+    let target = max(0, min(toIndex, clips.count - 1))
+    guard target != from else { return }
+
+    let clip = clips.remove(at: from)
+    clips.insert(clip, at: target)
+    recordAction(.moveClip(id: id, fromIndex: from, toIndex: target))
+    updateClipActionAvailability()
+  }
+
+  /// Nudge a clip one slot left or right.
+  func moveClip(id: UUID, by delta: Int) {
+    guard let from = clips.firstIndex(where: { $0.id == id }) else { return }
+    moveClip(id: id, toIndex: from + delta)
+  }
+
+  // MARK: Trim (non-destructive)
+
+  /// Adjust a clip's in/out points within its own source asset.
+  ///
+  /// Bounded by the clip's fixed structural slot, so dragging an edge outward restores
+  /// frames trimmed away earlier without crossing a neighboring clip's slot.
+  func updateClip(id: UUID, sourceStart: TimeInterval? = nil, sourceEnd: TimeInterval? = nil) {
+    guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
+    let old = clips[index]
+    guard sourceStart != nil || sourceEnd != nil else { return }
+
+    var newStart = sourceStart ?? old.sourceStart
+    var newEnd = sourceEnd ?? old.sourceEnd
+
+    if sourceStart != nil {
+      newStart = max(old.slotStart, min(newStart, newEnd - TimelineClip.minDuration))
+    }
+    if sourceEnd != nil {
+      newEnd = min(old.slotEnd, max(newEnd, newStart + TimelineClip.minDuration))
+    }
+
+    let new = TimelineClip(
+      id: old.id,
+      source: old.source,
+      sourceDuration: old.sourceDuration,
+      sourceStart: newStart,
+      sourceEnd: newEnd,
+      slotStart: old.slotStart,
+      slotEnd: old.slotEnd
+    )
+    guard new != old else { return }
+    clips[index] = new
+
+    // A drag records one entry when it ends, not one per gesture tick.
+    if clipTrimOriginal == nil {
+      recordAction(.updateClip(old: old, new: new))
+    }
+    updateClipActionAvailability()
+  }
+
+  /// Start a trim drag. Captures the pre-drag clip so the gesture collapses into a
+  /// single undo entry.
+  func beginClipTrim(id: UUID) {
+    clipTrimOriginal = clips.first { $0.id == id }
+  }
+
+  func endClipTrim() {
+    defer { clipTrimOriginal = nil }
+    guard let old = clipTrimOriginal,
+          let new = clips.first(where: { $0.id == old.id }),
+          new != old
+    else { return }
+    recordAction(.updateClip(old: old, new: new))
+  }
+
+  // MARK: Insert
+
+  /// Where a new video lands: on a clip boundary the playhead sits on, otherwise
+  /// right after the clip currently on screen.
+  var insertionIndexAtPlayhead: Int {
+    let t = CMTimeGetSeconds(currentTime)
+    guard let placement = placement(atSequence: t) else { return clips.count }
+    return abs(t - placement.start) < 0.01 ? placement.index : placement.index + 1
+  }
+
+  /// Insert a video file into the sequence. Defaults to the playhead position, which
+  /// is what makes "add a clip between the cuts" work.
+  @discardableResult
+  func insertClip(url: URL, at index: Int? = nil) async -> UUID? {
+    guard !isGIF else { return nil }
+    let loaded = AVAsset(url: url)
+    do {
+      let assetDuration = try await loaded.load(.duration)
+      let seconds = CMTimeGetSeconds(assetDuration)
+      guard seconds > TimelineClip.minDuration else {
+        DiagnosticLogger.shared.log(.warning, .editor, "Inserted clip rejected (too short)", context: [
+          "file": url.lastPathComponent
+        ])
+        return nil
+      }
+
+      clipAssets[url] = loaded
+      let clip = TimelineClip(source: .file(url: url), sourceDuration: seconds)
+      let target = max(0, min(index ?? insertionIndexAtPlayhead, clips.count))
+      clips.insert(clip, at: target)
+      recordAction(.addClip(clip: clip, index: target))
+      selectedClipId = clip.id
+
+      DiagnosticLogger.shared.log(.info, .editor, "Inserted clip", context: [
+        "file": url.lastPathComponent,
+        "index": "\(target)",
+        "duration": String(format: "%.1fs", seconds),
+      ])
+      updateClipActionAvailability()
+      return clip.id
+    } catch {
+      DiagnosticLogger.shared.logError(.editor, error, "Failed to load inserted clip duration")
+      return nil
+    }
+  }
+
+  // MARK: Availability
+
+  private func updateClipActionAvailability() {
+    guard !isGIF else {
+      canSplitAtPlayhead = false
+      canDeleteSelectedClip = false
+      return
+    }
+
+    if let placement = activePlacement {
+      let cutPoint = placement.sourceTime(at: CMTimeGetSeconds(currentTime))
+      canSplitAtPlayhead = cutPoint - placement.clip.sourceStart >= TimelineClip.minDuration
+        && placement.clip.sourceEnd - cutPoint >= TimelineClip.minDuration
+    } else {
+      canSplitAtPlayhead = false
+    }
+
+    canDeleteSelectedClip = clips.count > 1 && targetClip != nil
+  }
+
   /// Currently selected speed segment, if any.
   var selectedSpeedSegment: SpeedSegment? {
     guard let id = selectedSpeedId else { return nil }
@@ -1280,6 +1938,14 @@ final class VideoEditorState: ObservableObject {
   /// Get the active zoom segment at a given time (enabled segments only - for playback)
   func activeZoomSegment(at time: TimeInterval) -> ZoomSegment? {
     ZoomCalculator.activeSegment(at: time, in: zoomSegments)
+  }
+
+  /// Get the active zoom segment under a structural timeline time. Zoom segments are
+  /// authored in primary source time, so the timeline coordinate must be projected
+  /// before resolving the segment.
+  func activeZoomSegment(atTimeline time: TimeInterval) -> ZoomSegment? {
+    guard let sourceTime = primarySourceTime(atSequence: time) else { return nil }
+    return activeZoomSegment(at: sourceTime)
   }
 
   /// Get any zoom segment at a given time (including disabled - for UI interaction)
@@ -1353,9 +2019,9 @@ final class VideoEditorState: ObservableObject {
     let sourceDuration = CMTimeGetSeconds(duration)
     guard sourceDuration > 0 else { return 0 }
 
-    // Calculate trim ratio
-    let trimmedDurationSec = CMTimeGetSeconds(trimmedDuration)
-    let trimRatio = trimmedDurationSec / sourceDuration
+    // Whole sequence after trim, deletions, and speed scaling.
+    let outputSeconds = sequenceMap.outputDuration
+    let trimRatio = outputSeconds / sourceDuration
 
     // Calculate dimension ratio (including background padding)
     let exportSize = exportSettings.exportSize(from: naturalSize)
@@ -1385,8 +2051,9 @@ final class VideoEditorState: ObservableObject {
       }
     }()
 
-    // Calculate estimated size
-    let estimated = Double(sourceSize) * trimRatio * dimensionRatio * qualityMultiplier * audioMultiplier
+    // Primary estimate
+    var estimated = Double(sourceSize) * trimRatio * dimensionRatio * qualityMultiplier * audioMultiplier
+
     return Int64(max(estimated, 1024)) // Minimum 1KB
   }
 
@@ -1400,22 +2067,86 @@ final class VideoEditorState: ObservableObject {
     ) { [weak self] time in
       MainActor.assumeIsolated {
         guard let self = self, !self.playbackState.isScrubbing else { return }
-        self.playbackState.setCurrentTime(time)
+        // A handoff seek is landing; the reported time is still the outgoing
+        // clip's coordinates.
+        guard !self.handoffSeekInFlight else { return }
+        self.handlePlaybackTick(itemTime: CMTimeGetSeconds(time))
+      }
+    }
+  }
 
-        // Stop at trim end
-        if CMTimeCompare(time, self.trimEnd) >= 0 {
-          self.pause()
-          self.seek(to: self.trimStart)
-          return
-        }
+  /// Periodic playback tick. `itemTime` is in the ACTIVE source asset's coordinates,
+  /// so it has to be folded back onto the sequence axis before it reaches the playhead.
+  private func handlePlaybackTick(itemTime: Double) {
+    guard let placement = placements.first(where: { $0.clip.id == activeClipId }) else {
+      // The sequence changed under us (clip deleted or reordered mid-playback).
+      seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
+      return
+    }
 
-        // Live timelapse preview: keep player.rate aligned with the speed segment under the
-        // playhead while playing. player.rate == 0 means paused → leave it.
-        if self.isPlaying && self.hasSpeedSegments && self.player.rate != 0 {
-          let desiredRate = self.currentPreviewRate(at: time)
-          if abs(self.player.rate - desiredRate) > 0.001 {
-            self.player.rate = desiredRate
-          }
+    let clip = placement.clip
+
+    // While a handoff seek is in flight the observer still reports the previous
+    // clip's item time, which belongs to the old coordinate range. Acting on it
+    // would evaluate the old position against the new clip and could end the
+    // sequence prematurely (e.g. after reordering so a clip whose range reaches
+    // the asset end plays first).
+    guard itemTime >= clip.sourceStart - 0.05, itemTime <= clip.sourceEnd + 0.05 else { return }
+
+    // Reached this clip's out-point — hand off to the next one.
+    if itemTime >= clip.sourceEnd - 0.01 {
+      advanceToClip(after: placement)
+      return
+    }
+
+    let sequenceTime = placement.sequenceTime(atSource: itemTime)
+    playbackState.setCurrentTime(CMTime(seconds: sequenceTime, preferredTimescale: 600))
+    updateClipActionAvailability()
+
+    // Live timelapse preview: keep player.rate aligned with the speed segment under
+    // the playhead while playing. player.rate == 0 means paused → leave it.
+    if isPlaying && hasSpeedSegments && player.rate != 0 {
+      let desiredRate = currentPreviewRate(at: CMTime(seconds: sequenceTime, preferredTimescale: 600))
+      if abs(player.rate - desiredRate) > 0.001 {
+        player.rate = desiredRate
+      }
+    }
+  }
+
+  /// Continue into the clip after `placement`, or stop and rewind at the end of the
+  /// sequence.
+  private func advanceToClip(after placement: TimelineSequence.Placement) {
+    let nextIndex = placement.index + 1
+    guard nextIndex < clips.count else {
+      pause()
+      seek(to: .zero)
+      return
+    }
+
+    let next = clips[nextIndex]
+    let nextId = next.id
+    activeClipId = nextId
+    activateItemIfNeeded(for: next)
+    // The seek completes asynchronously; until it lands, ticks and end
+    // notifications still report the outgoing clip's coordinates.
+    handoffSeekInFlight = true
+    player.seek(
+      to: CMTime(seconds: next.sourceStart, preferredTimescale: 600),
+      toleranceBefore: .zero,
+      toleranceAfter: .zero
+    ) { [weak self] _ in
+      Task { @MainActor [weak self] in
+        // A newer handoff owns the transport if the active clip moved on again.
+        guard let self, self.activeClipId == nextId else { return }
+        self.handoffSeekInFlight = false
+        // When consecutive clips share one player item (same source asset), the
+        // item often sits parked at its end with rate == 0 — e.g. after a reorder
+        // made a clip whose range reaches the asset end play first. The seek
+        // alone resumes from a stalled transport, so playback must restart.
+        guard self.isPlaying, self.player.rate == 0 else { return }
+        self.player.play()
+        if self.hasSpeedSegments {
+          self.player.rate = self.currentPreviewRate(at: self.currentTime)
         }
       }
     }
@@ -1432,25 +2163,53 @@ final class VideoEditorState: ObservableObject {
   }
 
   private func setupEndObserver() {
+    // Observe every item, not just the one loaded at setup: the player swaps items
+    // whenever the sequence crosses into a different source asset.
     endObserver = NotificationCenter.default.addObserver(
       forName: .AVPlayerItemDidPlayToEndTime,
-      object: player.currentItem,
+      object: nil,
       queue: .main
-    ) { [weak self] _ in
+    ) { [weak self] notification in
       MainActor.assumeIsolated {
-        self?.pause()
-        self?.seek(to: self?.trimStart ?? .zero)
+        guard let self else { return }
+        // A handoff seek is already repositioning playback — any end notification
+        // in this window belongs to the previous clip's play-through.
+        guard !self.handoffSeekInFlight else { return }
+        guard let item = notification.object as? AVPlayerItem, item === self.player.currentItem else { return }
+        // Consecutive clips from one asset share an item, so an end notification
+        // can arrive after the playhead already moved into a later clip. Only
+        // honor it while the item is genuinely still parked at its end AND the
+        // clip on screen is the one whose material reaches that end; otherwise
+        // the periodic tick owns the handoff and this notification is stale.
+        let itemTime = CMTimeGetSeconds(self.player.currentTime())
+        let itemDuration = CMTimeGetSeconds(item.duration)
+        guard let placement = self.placements.first(where: { $0.clip.id == self.activeClipId }),
+              itemTime >= itemDuration - 0.1,
+              placement.clip.sourceEnd >= placement.clip.sourceDuration - 0.05
+        else { return }
+        self.advanceToClip(after: placement)
       }
     }
   }
 
   private func setupChangeTracking() {
     // Track trim and mute changes
-    Publishers.CombineLatest3($trimStart, $trimEnd, $isMuted)
-      .dropFirst(3)
-      .sink { [weak self] _, _, _ in
+    $isMuted
+      .dropFirst()
+      .sink { [weak self] _ in
         self?.updateHasUnsavedChanges()
         self?.recalculateEstimatedFileSize()
+      }
+      .store(in: &cancellables)
+
+    // Clip sequence changes cover trim, split, delete, reorder, and insert.
+    $clips
+      .removeDuplicates()
+      .dropFirst()
+      .sink { [weak self] _ in
+        self?.updateHasUnsavedChanges()
+        self?.recalculateEstimatedFileSize()
+        self?.updateClipActionAvailability()
       }
       .store(in: &cancellables)
 
@@ -1504,8 +2263,8 @@ final class VideoEditorState: ObservableObject {
       return
     }
 
-    let startChanged = CMTimeCompare(trimStart, initialTrimStart) != 0
-    let endChanged = CMTimeCompare(trimEnd, initialTrimEnd) != 0
+    // Trim now lives inside the clip sequence, so `clipsChanged` covers it.
+    let clipsChanged = clips != initialClips
     let muteChanged = isMuted != initialIsMuted
     // Use passed segments if available, otherwise read from self
     let segments = currentZoomSegments ?? zoomSegments
@@ -1518,12 +2277,8 @@ final class VideoEditorState: ObservableObject {
     let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
     let exportSettingsChanged = exportSettings != initialExportSettings
-
-    hasUnsavedChanges = startChanged || endChanged || muteChanged || zoomsChanged || speedsChanged || backgroundChanged || exportSettingsChanged
-  }
-
-  private func clampTime(_ time: CMTime) -> CMTime {
-    CMTimeClampToRange(time, range: CMTimeRange(start: trimStart, end: trimEnd))
+    hasUnsavedChanges = clipsChanged || muteChanged || zoomsChanged || speedsChanged
+      || backgroundChanged || exportSettingsChanged
   }
 
   private func formatTime(_ time: CMTime) -> String {

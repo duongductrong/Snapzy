@@ -2,13 +2,13 @@
 //  VideoEditorVideoTimelineView.swift
 //  Snapzy
 //
-//  Timeline container with time ruler, frame strip, playhead, trim handles, and zoom/speed tracks
+//  Timeline container with time ruler, clip strip, playhead, and zoom/speed tracks
 //
 
 import AVFoundation
 import SwiftUI
 
-/// Timeline view with time ruler, frame previews, playhead indicator, trim handles, and zoom/speed tracks
+/// Timeline view with time ruler, the clip sequence strip, playhead, and zoom/speed tracks
 struct VideoTimelineView: View {
   @ObservedObject var state: VideoEditorState
   @ObservedObject private var viewport: VideoEditorTimelineViewport
@@ -48,7 +48,7 @@ struct VideoTimelineView: View {
         .overlay(alignment: .topLeading) {
           TimelinePlayheadView(
             playbackState: playbackState,
-            duration: state.duration,
+            duration: state.timelineDuration,
             timelineWidth: viewport.contentWidth,
             totalHeight: totalHeight
           )
@@ -65,8 +65,10 @@ struct VideoTimelineView: View {
           syncViewport(width: newWidth)
         }
         .onChange(of: state.duration) { _ in
-          viewport.durationSeconds = max(0, CMTimeGetSeconds(state.duration))
-          viewport.clampScroll()
+          syncViewportDuration()
+        }
+        .onChange(of: state.clips) { _ in
+          syncViewportDuration()
         }
         .onChange(of: playheadContentX) { newX in
           followPlayheadIfNeeded(newX)
@@ -82,25 +84,33 @@ struct VideoTimelineView: View {
 
     return VStack(spacing: spacing) {
       // Time ruler — measuring-tape ticks and labels along the container's top edge
-      TimelineRulerView(duration: state.duration, timelineWidth: contentWidth)
+      TimelineRulerView(duration: state.timelineDuration, timelineWidth: contentWidth)
         .contentShape(Rectangle())
         .gesture(scrubGesture(timelineWidth: contentWidth))
 
-      // Frame strip with trim handles
-      ZStack(alignment: .leading) {
-        // Frame thumbnail strip
+      // Clip sequence: one block per clip, selectable, draggable, trimmable.
+      //
+      // The blocks own the pointer: a drag reorders once the sequence has
+      // multiple clips, and scrubs the playhead while it is still a single
+      // clip. A plain click inside a block selects and moves the playhead, and
+      // the ruler above remains the always-available scrub surface.
+      if state.isGIF {
         VideoTimelineFrameStrip(
           thumbnails: state.frameThumbnails,
           isLoading: state.isExtractingFrames
         )
-
-        // Trim handles overlay
-        VideoTrimHandlesView(state: state, timelineWidth: contentWidth, trackHeight: frameStripHeight)
+        .frame(height: frameStripHeight)
+        .contentShape(Rectangle())
+        .gesture(scrubGesture(timelineWidth: contentWidth))
+      } else {
+        VideoEditorClipStripView(
+          state: state,
+          thumbnailCache: state.clipThumbnailCache,
+          timelineWidth: contentWidth,
+          trackHeight: frameStripHeight
+        )
+        .frame(height: frameStripHeight)
       }
-      .frame(height: frameStripHeight)
-      .clipShape(Radius.rect(Radius.tile))
-      .contentShape(Rectangle())
-      .gesture(scrubGesture(timelineWidth: contentWidth))
 
       // Zoom timeline track
       if state.isZoomTrackVisible {
@@ -118,7 +128,11 @@ struct VideoTimelineView: View {
 
   private func syncViewport(width: CGFloat) {
     viewport.viewportWidth = width
-    viewport.durationSeconds = max(0, CMTimeGetSeconds(state.duration))
+    syncViewportDuration()
+  }
+
+  private func syncViewportDuration() {
+    viewport.durationSeconds = max(0, CMTimeGetSeconds(state.timelineDuration))
     viewport.clampScroll()
   }
 
@@ -172,9 +186,10 @@ struct VideoTimelineView: View {
         if !state.playbackState.isScrubbing {
           state.startScrubbing()
         }
+        let axisSeconds = max(0.0001, CMTimeGetSeconds(state.timelineDuration))
         let progress = max(0, min(value.location.x / timelineWidth, 1))
         let newTime = CMTime(
-          seconds: progress * CMTimeGetSeconds(state.duration),
+          seconds: progress * axisSeconds,
           preferredTimescale: 600
         )
         state.scrub(to: newTime)
