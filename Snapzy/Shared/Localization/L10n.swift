@@ -7192,6 +7192,61 @@ nonisolated enum L10n {
       defaultValue: "Redo (⌘⇧Z)",
       comment: "Tooltip for redo in the video editor toolbar"
     )
+    static let splitAtPlayheadHint = string(
+      "video-editor.split-at-playhead-hint",
+      defaultValue: "Split at Playhead (S)",
+      comment: "Tooltip for the split button in the video editor toolbar"
+    )
+    static let deleteClipHint = string(
+      "video-editor.delete-clip-hint",
+      defaultValue: "Delete Clip (⌫)",
+      comment: "Tooltip for the delete-clip button in the video editor toolbar"
+    )
+    static let addClipHint = string(
+      "video-editor.add-clip-hint",
+      defaultValue: "Insert Video at Playhead",
+      comment: "Tooltip for the insert-video button in the video editor toolbar"
+    )
+    static let addClipPickerMessage = string(
+      "video-editor.add-clip-picker-message",
+      defaultValue: "Choose videos to insert into the timeline",
+      comment: "Message shown in the open panel when picking videos to insert"
+    )
+    static let splitAtPlayhead = string(
+      "video-editor.split-at-playhead",
+      defaultValue: "Split Here",
+      comment: "Context menu label for splitting a clip at the playhead"
+    )
+    static let clipTrimStartHint = string(
+      "video-editor.clip-trim-start-hint",
+      defaultValue: "Drag to change where this clip starts",
+      comment: "Tooltip for a clip's leading trim handle on the video editor timeline"
+    )
+    static let clipTrimEndHint = string(
+      "video-editor.clip-trim-end-hint",
+      defaultValue: "Drag to change where this clip ends",
+      comment: "Tooltip for a clip's trailing trim handle on the video editor timeline"
+    )
+    static let clipPrimaryLabel = string(
+      "video-editor.clip-primary-label",
+      defaultValue: "Recording",
+      comment: "Tooltip label for a clip cut from the original recording"
+    )
+    static let moveClipLeft = string(
+      "video-editor.move-clip-left",
+      defaultValue: "Move Clip Left",
+      comment: "Context menu label for reordering a merged clip left"
+    )
+    static let moveClipRight = string(
+      "video-editor.move-clip-right",
+      defaultValue: "Move Clip Right",
+      comment: "Context menu label for reordering a merged clip right"
+    )
+    static let removeClip = string(
+      "video-editor.remove-clip",
+      defaultValue: "Remove Clip",
+      comment: "Context menu label for removing a merged clip"
+    )
     static let aspectRatio = string(
       "video-editor.aspect-ratio",
       defaultValue: "Aspect Ratio",

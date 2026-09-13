@@ -201,7 +201,7 @@ struct VideoControlsView: View {
   }
 
   private var isAutoZoomActiveAtCurrentTime: Bool {
-    state.activeZoomSegment(at: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
+    state.activeZoomSegment(atTimeline: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
   }
 
   private var reservedSideWidth: CGFloat {

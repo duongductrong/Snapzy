@@ -26,6 +26,8 @@ enum VideoEditorExporter {
       "hasBackground": "\(state.backgroundStyle != .none && state.backgroundPadding > 0)",
       "hasCustomAudio": "\(state.exportSettings.audioMode == .custom)",
       "hasSpeed": "\(state.hasSpeedSegments)",
+      "clips": "\(state.clips.count)",
+      "hasInsertedClips": "\(state.hasInsertedClips)",
       "quality": state.exportSettings.quality.exportPreset
     ])
     let outputAccess = SandboxFileAccessManager.shared.beginAccessingURL(outputURL.deletingLastPathComponent())
@@ -36,11 +38,14 @@ enum VideoEditorExporter {
     let hasBackground = state.backgroundStyle != .none && state.backgroundPadding > 0
     let hasCustomAudio = state.exportSettings.audioMode == .custom
     let hasSpeed = state.hasSpeedSegments
+    // Anything beyond a single untouched primary clip needs the composition path.
+    let hasSequenceEdits = state.hasSequenceEdits
 
-    // If visual effects, custom audio, or speed scaling are enabled, use composition-based
-    // export. Speed scaling requires the composition path even with no other effects
-    // (and even when muted — audio is simply dropped while the video is still time-scaled).
-    if hasCameraEffects || hasBackground || hasCustomAudio || hasSpeed {
+    // If visual effects, custom audio, speed scaling, or a multi-clip sequence are in
+    // play, use composition-based export. Speed scaling requires the composition path
+    // even with no other effects (and even when muted — audio is simply dropped while
+    // the video is still time-scaled).
+    if hasCameraEffects || hasBackground || hasCustomAudio || hasSpeed || hasSequenceEdits {
       try await exportWithZooms(state: state, to: scopedOutputURL, progress: progress)
       try await normalizeExportAudioForCompatibilityIfNeeded(
         at: scopedOutputURL,
@@ -205,42 +210,50 @@ enum VideoEditorExporter {
     let hasTrimChanges = trimStartSeconds > 0.1 || (fullDuration - trimEndSeconds) > 0.1
     print("🔍 [ZoomExport] Has trim changes: \(hasTrimChanges)")
 
-    let timeRange = CMTimeRange(start: state.trimStart, end: state.trimEnd)
-
-    // Speed (timelapse) map: original (trim-relative) → scaled timeline. Nil when no speed
-    // segments are active so the zoom/auto-focus paths stay on the existing (trim-relative)
-    // timeline exactly as before.
-    let speedMap: SpeedTimeMap? = state.hasSpeedSegments ? state.speedTimeMap : nil
-    if let speedMap = speedMap {
-      print("🔍 [ZoomExport] Speed scaling active — original \(String(format: "%.2f", speedMap.originalDuration))s → scaled \(String(format: "%.2f", speedMap.scaledDuration))s, spans: \(speedMap.spans.count)")
+    // The sequence is inserted clip by clip; composition time == SEQUENCE time before
+    // speed scaling, then OUTPUT time after it.
+    let clips = state.clips
+    guard !clips.isEmpty, state.sequenceDuration > 0.0001 else {
+      DiagnosticLogger.shared.log(.error, .export, "Export rejected: empty timeline sequence")
+      throw ExportError.exportFailed
     }
 
-    // Adjust zoom times relative to trim start, then map into the scaled timeline so the
-    // per-frame compositor (which samples by composition/scaled time) stays aligned.
-    let adjustedZooms = state.zoomSegments.map { segment -> ZoomSegment in
+    let placements = state.playbackPlacements
+    let sequenceMap = state.sequenceMap
+    let speedMap: TimelineSequenceMap? = state.hasSpeedSegments ? sequenceMap : nil
+    print("🔍 [ZoomExport] Sequence: \(clips.count) clip(s), \(String(format: "%.2f", sequenceMap.sequenceDuration))s → output \(String(format: "%.2f", sequenceMap.outputDuration))s")
+
+    // Zoom segments are authored in PRIMARY SOURCE time. Project them onto the sequence
+    // (so they follow their material through splits and reorders), then apply speed.
+    // A zoom whose material was deleted projects to nothing and is dropped.
+    let outputSeconds = sequenceMap.outputDuration
+    let adjustedZooms = state.zoomSegments.compactMap { segment -> ZoomSegment? in
+      let pieces = state.projectToPlaybackSequence(
+        sourceRange: segment.startTime...(segment.startTime + segment.duration)
+      )
+      guard let firstPiece = pieces.first, let lastPiece = pieces.last else { return nil }
+
       var adjusted = segment
-      adjusted.startTime = segment.startTime - trimStartSeconds
-      if let map = speedMap {
-        let trimRelStart = max(0, min(adjusted.startTime, map.originalDuration))
-        let trimRelEnd = max(0, min(adjusted.startTime + adjusted.duration, map.originalDuration))
-        let scaledStart = map.toScaled(trimRelStart)
-        adjusted.startTime = scaledStart
-        adjusted.duration = max(0, map.toScaled(trimRelEnd) - scaledStart)
-      }
+      adjusted.startTime = sequenceMap.toOutput(firstPiece.lowerBound)
+      adjusted.duration = max(0, sequenceMap.toOutput(lastPiece.upperBound) - adjusted.startTime)
       return adjusted
-    }.filter { $0.startTime + $0.duration > 0 && $0.startTime < CMTimeGetSeconds(state.effectiveOutputDuration) }
+    }.filter { $0.startTime + $0.duration > 0 && $0.startTime < outputSeconds }
 
     let adjustedAutoFocusPaths = Dictionary(
       uniqueKeysWithValues: adjustedZooms
         .filter { $0.isAutoMode }
         .map { segment -> (UUID, [AutoFocusCameraSample]) in
+          // Trim-relative → sequence (dropping deleted frames) → output.
           var path = VideoEditorAutoFocusEngine.trimmedPath(
             state.autoFocusPath(for: segment),
             trimStart: trimStartSeconds,
             trimEnd: trimEndSeconds
           )
-          // Map trim-relative keyframe timestamps into the scaled timeline so focus
-          // animation tracks the same frames after speed scaling.
+          path = VideoEditorAutoFocusEngine.sequencePath(
+            path,
+            placements: placements,
+            trimStart: trimStartSeconds
+          )
           if let map = speedMap {
             path = VideoEditorAutoFocusEngine.scaledPath(path, map: map)
           }
@@ -277,8 +290,36 @@ enum VideoEditorExporter {
     print("🔍 [ZoomExport] Composition video track ID: \(compositionVideoTrack.trackID)")
 
     do {
-      try compositionVideoTrack.insertTimeRange(timeRange, of: sourceVideoTrack, at: .zero)
-      print("🔍 [ZoomExport] Inserted video time range: \(CMTimeGetSeconds(timeRange.start))s - \(CMTimeGetSeconds(timeRange.end))s (duration: \(CMTimeGetSeconds(timeRange.duration))s)")
+      // One pass over the sequence: each clip contributes its own source window from its
+      // own asset, in timeline order.
+      var cursor = CMTime.zero
+      for clip in clips {
+        let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
+        let sourceRange = CMTimeRange(
+          start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+          duration: clipDuration
+        )
+
+        let track: AVAssetTrack?
+        if clip.isPrimary {
+          track = sourceVideoTrack
+        } else {
+          track = try await state.clipAsset(for: clip).loadTracks(withMediaType: .video).first
+        }
+        guard let track else {
+          // A clip with no video track still has to hold its slot, or everything after
+          // it would slide earlier than the timeline says.
+          compositionVideoTrack.insertEmptyTimeRange(
+            CMTimeRange(start: cursor, duration: clipDuration)
+          )
+          cursor = CMTimeAdd(cursor, clipDuration)
+          continue
+        }
+
+        try compositionVideoTrack.insertTimeRange(sourceRange, of: track, at: cursor)
+        cursor = CMTimeAdd(cursor, clipDuration)
+      }
+      print("🔍 [ZoomExport] Inserted \(clips.count) clip(s); composition duration \(CMTimeGetSeconds(cursor))s")
     } catch {
       print("❌ [ZoomExport] ERROR inserting video time range: \(error)")
       DiagnosticLogger.shared.logError(.export, error, "Failed to insert video time range")
@@ -301,7 +342,7 @@ enum VideoEditorExporter {
     let audioMix = try await addAudioTracks(
       to: composition,
       from: state.asset,
-      timeRange: timeRange,
+      state: state,
       settings: state.exportSettings,
       roles: state.audioTrackRoles,
       speedMap: speedMap,
@@ -351,7 +392,8 @@ enum VideoEditorExporter {
     // Validate the scaled composition duration matches the expected output length.
     if let speedMap = speedMap {
       let actualSeconds = CMTimeGetSeconds(actualCompositionDuration)
-      let expectedSeconds = speedMap.scaledDuration
+      // The sequence map already covers every clip, inserted ones included.
+      let expectedSeconds = speedMap.outputDuration
       if abs(actualSeconds - expectedSeconds) > 0.1 {
         DiagnosticLogger.shared.log(.warning, .export, "Speed-scaled composition duration mismatch", context: [
           "actual": String(format: "%.3f", actualSeconds),
@@ -643,10 +685,10 @@ enum VideoEditorExporter {
   private static func addAudioTracks(
     to composition: AVMutableComposition,
     from asset: AVAsset,
-    timeRange: CMTimeRange,
+    state: VideoEditorState,
     settings: ExportSettings,
     roles: [VideoEditorAudioTrackRole],
-    speedMap: SpeedTimeMap?,
+    speedMap: TimelineSequenceMap?,
     logPrefix: String
   ) async throws -> AVMutableAudioMix? {
     guard settings.shouldIncludeAudio else {
@@ -660,8 +702,12 @@ enum VideoEditorExporter {
       return nil
     }
 
+    let clips = state.clips
     var compositionAudioTracks: [AVMutableCompositionTrack] = []
-    for sourceAudioTrack in sourceAudioTracks {
+
+    // One composition track per source audio track (mic / system / …). Each walks the
+    // whole sequence so inserted clips stay interleaved rather than appended.
+    for (trackIndex, sourceAudioTrack) in sourceAudioTracks.enumerated() {
       guard let compositionAudioTrack = composition.addMutableTrack(
         withMediaType: .audio,
         preferredTrackID: kCMPersistentTrackID_Invalid
@@ -670,11 +716,37 @@ enum VideoEditorExporter {
         throw ExportError.exportFailed
       }
 
-      try compositionAudioTrack.insertTimeRange(timeRange, of: sourceAudioTrack, at: .zero)
+      var cursor = CMTime.zero
+      for clip in clips {
+        let clipDuration = CMTime(seconds: clip.duration, preferredTimescale: 600)
+        let sourceRange = CMTimeRange(
+          start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+          duration: clipDuration
+        )
+
+        if clip.isPrimary {
+          try compositionAudioTrack.insertTimeRange(sourceRange, of: sourceAudioTrack, at: cursor)
+        } else if trackIndex == 0,
+                  let clipAudio = try await state.clipAsset(for: clip)
+                    .loadTracks(withMediaType: .audio).first {
+          // Inserted clips carry a single audio track; it rides the first lane.
+          try compositionAudioTrack.insertTimeRange(sourceRange, of: clipAudio, at: cursor)
+        } else {
+          // Silence keeps this lane aligned with the others.
+          compositionAudioTrack.insertEmptyTimeRange(
+            CMTimeRange(start: cursor, duration: clipDuration)
+          )
+        }
+
+        cursor = CMTimeAdd(cursor, clipDuration)
+      }
+
       compositionAudioTracks.append(compositionAudioTrack)
     }
 
-    // Time-scale audio with the same spans as video so A/V stays in sync.
+    // Time-scale audio with the same spans as video so A/V stays in sync. Spans are in
+    // base coordinates, matching the composition layout (merged clips sit after the
+    // scaled primary span so they are unaffected).
     if let speedMap = speedMap {
       for track in compositionAudioTracks {
         applySpeedScaling(to: track, map: speedMap, logPrefix: "\(logPrefix) audio")
@@ -701,13 +773,13 @@ enum VideoEditorExporter {
   /// (last → first) so scaling a later range does not shift the position of earlier ranges.
   private static func applySpeedScaling(
     to track: AVMutableCompositionTrack,
-    map: SpeedTimeMap,
+    map: TimelineSequenceMap,
     logPrefix: String
   ) {
     for span in map.spans.reversed() where span.rate != 1.0 {
       let range = CMTimeRange(
-        start: CMTime(seconds: span.origStart, preferredTimescale: 600),
-        duration: CMTime(seconds: span.origDuration, preferredTimescale: 600)
+        start: CMTime(seconds: span.seqStart, preferredTimescale: 600),
+        duration: CMTime(seconds: span.seqDuration, preferredTimescale: 600)
       )
       let newDuration = CMTime(seconds: span.scaledDuration, preferredTimescale: 600)
       track.scaleTimeRange(range, toDuration: newDuration)
@@ -721,7 +793,7 @@ enum VideoEditorExporter {
   private static func applyPitchPreservation(
     to baseMix: AVMutableAudioMix?,
     tracks: [AVMutableCompositionTrack],
-    speedMap: SpeedTimeMap?,
+    speedMap: TimelineSequenceMap?,
     logPrefix: String
   ) -> AVMutableAudioMix? {
     guard let speedMap = speedMap, !speedMap.isIdentity else { return baseMix }
