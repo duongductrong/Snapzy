@@ -40,8 +40,14 @@ struct VideoTimelineFrameStrip: View {
         }
       }
     }
-    .frame(height: 50)
-    .cornerRadius(Radius.tile)
+    .frame(maxHeight: .infinity)
+    .clipShape(Radius.rect(Radius.tile))
+    .overlay(
+      // Same hairline rim the recessed lane wells use, so the content track
+      // and the effect tracks read as one timeline family.
+      Radius.rect(Radius.tile)
+        .strokeBorder(Color.white.opacity(0.07), lineWidth: 1)
+    )
     .clipped()
   }
 }

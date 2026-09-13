@@ -32,7 +32,8 @@ struct SpeedTimelineTrack: View {
   @ObservedObject var state: VideoEditorState
   let timelineWidth: CGFloat
 
-  private let trackHeight: CGFloat = 32
+  private let trackHeight: CGFloat = 40
+  private let blockHeight: CGFloat = 32
   private let handleWidth: CGFloat = 8
   private let minVisualBlockWidth: CGFloat = 64
   private let dragModelUpdateInterval: TimeInterval = 1.0 / 30.0
@@ -50,6 +51,7 @@ struct SpeedTimelineTrack: View {
 
   @State private var isHovering: Bool = false
   @State private var hoverLocation: CGPoint = .zero
+  @State private var activeCursor: NSCursor?
 
   // MARK: - Rate Picker
 
@@ -60,6 +62,18 @@ struct SpeedTimelineTrack: View {
     case position
     case startEdge
     case endEdge
+  }
+
+  private enum SegmentEdge {
+    case start
+    case end
+  }
+
+  private struct HoverState {
+    let segmentId: UUID?
+    let edge: SegmentEdge?
+
+    static let none = HoverState(segmentId: nil, edge: nil)
   }
 
   private struct SegmentLayout {
@@ -88,6 +102,17 @@ struct SpeedTimelineTrack: View {
     return (hoverLocation.x / timelineWidth) * videoDuration
   }
 
+  private var hoverState: HoverState {
+    guard isHovering, dragMode == .none,
+          let (segment, segmentLayout) = interactionSegment(atX: hoverLocation.x)
+    else { return .none }
+
+    let isOnStartEdge = hoverLocation.x <= segmentLayout.visualStartX + handleWidth
+    let isOnEndEdge = hoverLocation.x >= segmentLayout.visualEndX - handleWidth
+    let edge: SegmentEdge? = isOnStartEdge ? .start : (isOnEndEdge ? .end : nil)
+    return HoverState(segmentId: segment.id, edge: edge)
+  }
+
   private var isHoveringOverSegment: Bool {
     interactionSegment(atX: hoverLocation.x) != nil
   }
@@ -110,9 +135,10 @@ struct SpeedTimelineTrack: View {
   // MARK: - Body
 
   var body: some View {
+    let hover = hoverState
+
     ZStack(alignment: .leading) {
-      Radius.rect(Radius.ornament)
-        .fill(Color.black.opacity(0.15))
+      TimelineTrackLaneWell()
         .frame(height: trackHeight)
 
       HStack {
@@ -135,6 +161,8 @@ struct SpeedTimelineTrack: View {
           segment: displaySegment,
           isSelected: state.selectedSpeedId == segment.id,
           isDragging: dragSegmentId == segment.id,
+          isHovered: hover.segmentId == segment.id,
+          isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
           overlapsZoom: overlapsEnabledZoom(displaySegment),
           blockX: segmentLayout.visualStartX,
           blockWidth: segmentLayout.visualWidth
@@ -154,6 +182,7 @@ struct SpeedTimelineTrack: View {
       }
     }
     .frame(height: trackHeight)
+    .clipShape(Radius.rect(Radius.tile))
     .contentShape(Rectangle())
     .gesture(unifiedDragGesture)
     .onTapGesture(count: 2) { location in
@@ -167,13 +196,43 @@ struct SpeedTimelineTrack: View {
       case .active(let location):
         isHovering = true
         hoverLocation = location
+        updateCursor(at: location)
       case .ended:
         isHovering = false
+        clearCursor()
       }
     }
     .contextMenu {
       trackContextMenu
     }
+  }
+
+  // MARK: - Cursor
+
+  private func updateCursor(at location: CGPoint) {
+    guard dragMode == .none else { return }
+
+    if let (_, segmentLayout) = interactionSegment(atX: location.x) {
+      let isOnEdge =
+        location.x <= segmentLayout.visualStartX + handleWidth
+          || location.x >= segmentLayout.visualEndX - handleWidth
+      setCursor(isOnEdge ? .resizeLeftRight : .pointingHand)
+    } else {
+      setCursor(.crosshair)
+    }
+  }
+
+  private func setCursor(_ cursor: NSCursor) {
+    guard activeCursor !== cursor else { return }
+    activeCursor?.pop()
+    cursor.push()
+    activeCursor = cursor
+  }
+
+  private func clearCursor() {
+    guard let activeCursor else { return }
+    activeCursor.pop()
+    self.activeCursor = nil
   }
 
   // MARK: - Rate Picker Binding
@@ -424,80 +483,121 @@ private struct SpeedBlockVisual: View {
   let segment: SpeedSegment
   let isSelected: Bool
   let isDragging: Bool
+  let isHovered: Bool
+  let isEdgeHovered: Bool
   let overlapsZoom: Bool
   let blockX: CGFloat
   let blockWidth: CGFloat
 
   private let handleWidth: CGFloat = 8
+  private let blockHeight: CGFloat = 32
+  /// Minimum block width that fits icon + rate label without clipping.
+  private let compactContentThreshold: CGFloat = 72
+  /// Minimum block width that fits icon + rate label + zoom-overlap cue without clipping.
+  private let extendedContentThreshold: CGFloat = 88
 
   var body: some View {
     ZStack(alignment: .leading) {
-      Radius.controlRect(forHeight: 28)
-        .fill(blockFillColor)
-        .overlay(
-          Radius.controlRect(forHeight: 28)
-            .strokeBorder(borderColor, style: borderStyle)
-        )
-        .shadow(color: isSelected ? SpeedColors.fill(for: segment.rate).opacity(0.4) : .clear, radius: 4, y: 2)
+      TimelineSegmentChrome(
+        height: blockHeight,
+        baseColor: blockFillColor,
+        isHovered: isHovered && !isDragging && !isSelected,
+        isSelected: isSelected,
+        isDragging: isDragging,
+        borderColor: stateBorderColor,
+        borderStyle: StrokeStyle(lineWidth: stateBorderWidth, dash: stateBorderDash),
+        cornerRadius: Radius.tile
+      )
+      .shadow(
+        color: Color.black.opacity(isSelected || isDragging ? 0.35 : 0.22),
+        radius: isSelected || isDragging ? 3 : 2,
+        y: 1
+      )
 
-      HStack(spacing: 4) {
+      blockContent
+
+      handleIndicator()
+        .offset(x: 0)
+
+      handleIndicator()
+        .offset(x: blockWidth - handleWidth)
+    }
+    .frame(width: blockWidth, height: blockHeight)
+    .offset(x: blockX)
+    .opacity(segment.isEnabled ? 1.0 : 0.5)
+    .scaleEffect(isDragging ? 1.02 : 1.0)
+    .animation(.easeOut(duration: 0.15), value: isDragging)
+    .animation(.easeOut(duration: 0.12), value: isHovered)
+    .allowsHitTesting(false)
+  }
+
+  private var stateBorderColor: Color {
+    if isSelected { return .white }
+    if overlapsZoom { return Color.red.opacity(0.8) }
+    if isEdgeHovered { return Color.white.opacity(0.55) }
+    return .clear
+  }
+
+  private var stateBorderWidth: CGFloat {
+    isSelected || overlapsZoom ? 1.5 : 1
+  }
+
+  private var stateBorderDash: [CGFloat] {
+    overlapsZoom && !isSelected ? [4, 3] : []
+  }
+
+  @ViewBuilder
+  private var blockContent: some View {
+    if blockWidth >= compactContentThreshold {
+      HStack(spacing: 3) {
         Image(systemName: segment.rate >= 1.0 ? "hare.fill" : "tortoise.fill")
           .font(.system(size: 10, weight: .semibold))
 
-        if blockWidth >= 44 {
-          Text(segment.formattedRate)
-            .font(.system(size: 10, weight: .semibold))
-        }
+        Text(segment.formattedRate)
+          .font(.system(size: 10, weight: .semibold))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
 
         Spacer(minLength: 0)
 
-        if overlapsZoom, blockWidth >= 72 {
+        if overlapsZoom, blockWidth >= extendedContentThreshold {
           Image(systemName: "plus.magnifyingglass")
             .font(.system(size: 8, weight: .medium))
             .help(L10n.VideoEditor.speedZoomOverlapHint)
         }
       }
-      .padding(.horizontal, blockWidth < 48 ? handleWidth + 2 : handleWidth + 4)
+      .padding(.horizontal, handleWidth + 4)
       .foregroundColor(.white)
-
-      handleIndicator().offset(x: 0)
-      handleIndicator().offset(x: blockWidth - handleWidth)
+    } else {
+      HStack {
+        Spacer(minLength: 0)
+        Image(systemName: segment.rate >= 1.0 ? "hare.fill" : "tortoise.fill")
+          .font(.system(size: 10, weight: .semibold))
+          .foregroundColor(.white)
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, handleWidth + 2)
     }
-    .frame(width: blockWidth, height: 28)
-    .offset(x: blockX)
-    .opacity(segment.isEnabled ? 1.0 : 0.5)
-    .scaleEffect(isDragging ? 1.02 : 1.0)
-    .animation(.easeOut(duration: 0.15), value: isDragging)
-    .allowsHitTesting(false)
   }
 
   private func handleIndicator() -> some View {
-    ZStack {
-      Rectangle()
-        .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
-      Radius.rect(Radius.ornament)
-        .fill(isSelected ? Color.white.opacity(0.8) : Color.white.opacity(0.4))
-        .frame(width: 3, height: 14)
-    }
-    .frame(width: handleWidth, height: 28)
+    TimelineSegmentHandleIndicator(
+      height: blockHeight,
+      gripOpacity: gripOpacity
+    )
+    .frame(width: handleWidth, height: blockHeight)
+  }
+
+  private var gripOpacity: Double {
+    if isEdgeHovered { return 0.85 }
+    if isSelected { return 0.8 }
+    if isHovered { return 0.55 }
+    return 0.38
   }
 
   private var blockFillColor: Color {
     if !segment.isEnabled { return SpeedColors.disabled }
-    let base = SpeedColors.fill(for: segment.rate)
-    return isDragging ? base.opacity(0.85) : base
-  }
-
-  private var borderColor: Color {
-    if isSelected { return .white }
-    if overlapsZoom { return .red.opacity(0.8) }
-    return .clear
-  }
-
-  private var borderStyle: StrokeStyle {
-    overlapsZoom && !isSelected
-      ? StrokeStyle(lineWidth: 1.5, dash: [4, 3])
-      : StrokeStyle(lineWidth: 2)
+    return SpeedColors.fill(for: segment.rate)
   }
 }
 
@@ -551,26 +651,38 @@ private struct SpeedPlaceholderView: View {
   let width: CGFloat
   let xPosition: CGFloat
 
+  private let blockHeight: CGFloat = 32
+  /// Minimum placeholder width that fits icon + label without clipping.
+  private let labelThreshold: CGFloat = 92
+
   var body: some View {
-    Radius.controlRect(forHeight: 28)
-      .fill(SpeedColors.speedUp.opacity(0.2))
+    Radius.rect(Radius.tile)
+      .fill(SpeedColors.speedUp.opacity(0.16))
       .overlay(
-        Radius.controlRect(forHeight: 28)
+        Radius.rect(Radius.tile)
           .strokeBorder(
             SpeedColors.speedUp.opacity(0.5),
             style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
           )
       )
-      .overlay(
-        HStack(spacing: 4) {
+      .overlay {
+        if width >= labelThreshold {
+          HStack(spacing: 4) {
+            Image(systemName: "gauge.with.dots.needle.67percent")
+              .font(.system(size: 10, weight: .medium))
+            Text(L10n.VideoEditor.speedClickToAdd)
+              .font(.system(size: 9, weight: .medium))
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
+          }
+          .foregroundColor(SpeedColors.speedUp.opacity(0.9))
+        } else {
           Image(systemName: "gauge.with.dots.needle.67percent")
-            .font(.system(size: 10, weight: .medium))
-          Text(L10n.VideoEditor.speedClickToAdd)
-            .font(.system(size: 9, weight: .medium))
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(SpeedColors.speedUp.opacity(0.9))
         }
-        .foregroundColor(SpeedColors.speedUp.opacity(0.9))
-      )
-      .frame(width: width, height: 28)
+      }
+      .frame(width: width, height: blockHeight)
       .offset(x: xPosition)
       .allowsHitTesting(false)
       .transition(.opacity.animation(.easeOut(duration: 0.15)))

@@ -12,6 +12,9 @@ import SwiftUI
 struct VideoTrimHandlesView: View {
   @ObservedObject var state: VideoEditorState
   let timelineWidth: CGFloat
+  /// Row height the strip occupies, so the border, dimmed regions, and handles
+  /// hug the frame strip flush instead of floating over container slivers.
+  let trackHeight: CGFloat
 
   @State private var isDraggingStart = false
   @State private var isDraggingEnd = false
@@ -19,7 +22,7 @@ struct VideoTrimHandlesView: View {
   @State private var endDragPlayheadTime: CMTime?
 
   private let handleWidth: CGFloat = 14
-  private let handleHeight: CGFloat = 60
+  private var handleHeight: CGFloat { trackHeight }
   private let playheadSnapThreshold: CGFloat = 10
 
   var body: some View {
@@ -47,12 +50,12 @@ struct VideoTrimHandlesView: View {
         .allowsHitTesting(false)
 
       // Start handle — clamped so it stays fully visible within timeline
-      TrimHandle(isStart: true, isDragging: isDraggingStart)
+      TrimHandle(isStart: true, isDragging: isDraggingStart, height: handleHeight)
         .offset(x: max(0, min(startHandleOffset - handleWidth / 2, timelineWidth - handleWidth)))
         .gesture(startHandleGesture)
 
       // End handle — clamped so it stays fully visible within timeline
-      TrimHandle(isStart: false, isDragging: isDraggingEnd)
+      TrimHandle(isStart: false, isDragging: isDraggingEnd, height: handleHeight)
         .offset(x: max(0, min(endHandleOffset - handleWidth / 2, timelineWidth - handleWidth)))
         .gesture(endHandleGesture)
     }
@@ -161,11 +164,12 @@ struct VideoTrimHandlesView: View {
 private struct TrimHandle: View {
   let isStart: Bool
   let isDragging: Bool
+  let height: CGFloat
 
   var body: some View {
     Radius.rect(Radius.ornament)
       .fill(isDragging ? Color.white : Color.yellow)
-      .frame(width: 14, height: 60)
+      .frame(width: 14, height: height)
       .overlay(
         Image(systemName: isStart ? "chevron.compact.left" : "chevron.compact.right")
           .font(.system(size: 16, weight: .bold))

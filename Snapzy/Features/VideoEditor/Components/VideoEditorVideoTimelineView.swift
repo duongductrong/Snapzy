@@ -1,5 +1,5 @@
 //
-//  VideoTimelineView.swift
+//  VideoEditorVideoTimelineView.swift
 //  Snapzy
 //
 //  Timeline container with frame strip, playhead, trim handles, and zoom track
@@ -13,13 +13,13 @@ struct VideoTimelineView: View {
   @ObservedObject var state: VideoEditorState
 
   private let frameStripHeight: CGFloat = 64
-  private let zoomTrackHeight: CGFloat = 32
+  private let segmentTrackHeight: CGFloat = 40
   private let spacing: CGFloat = 6
 
   private var totalHeight: CGFloat {
     var height = frameStripHeight
-    if state.isZoomTrackVisible { height += spacing + zoomTrackHeight }
-    if state.isSpeedTrackVisible && !state.isGIF { height += spacing + zoomTrackHeight }
+    if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
+    if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
     return height
   }
 
@@ -37,7 +37,7 @@ struct VideoTimelineView: View {
           )
 
           // Trim handles overlay
-          VideoTrimHandlesView(state: state, timelineWidth: timelineWidth)
+          VideoTrimHandlesView(state: state, timelineWidth: timelineWidth, trackHeight: frameStripHeight)
 
           // Playhead indicator (extends across both tracks)
           TimelinePlayheadView(
@@ -58,14 +58,12 @@ struct VideoTimelineView: View {
         }
 
         // Speed (timelapse) timeline track — video only; GIF export does not apply timeline edits.
-        if state.isSpeedTrackVisible && !state.isGIF {
+        if state.isSpeedTrackVisible, !state.isGIF {
           SpeedTimelineTrack(state: state, timelineWidth: timelineWidth)
         }
       }
     }
     .frame(height: totalHeight)
-    .background(Color.black.opacity(0.2))
-    .cornerRadius(Radius.tile)
   }
 
   // MARK: - Scrub Gesture

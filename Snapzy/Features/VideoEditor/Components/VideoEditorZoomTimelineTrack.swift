@@ -13,7 +13,8 @@ struct ZoomTimelineTrack: View {
   @ObservedObject var state: VideoEditorState
   let timelineWidth: CGFloat
 
-  private let trackHeight: CGFloat = 32
+  private let trackHeight: CGFloat = 40
+  private let blockHeight: CGFloat = 32
   private let handleWidth: CGFloat = 8
   private let minVisualBlockWidth: CGFloat = 64
   private let dragModelUpdateInterval: TimeInterval = 1.0 / 30.0
@@ -31,12 +32,25 @@ struct ZoomTimelineTrack: View {
 
   @State private var isHovering: Bool = false
   @State private var hoverLocation: CGPoint = .zero
+  @State private var activeCursor: NSCursor?
 
   private enum DragMode {
     case none
     case position // Dragging entire segment
     case startEdge // Dragging left edge
     case endEdge // Dragging right edge
+  }
+
+  private enum SegmentEdge {
+    case start
+    case end
+  }
+
+  private struct HoverState {
+    let segmentId: UUID?
+    let edge: SegmentEdge?
+
+    static let none = HoverState(segmentId: nil, edge: nil)
   }
 
   private struct SegmentLayout {
@@ -67,6 +81,17 @@ struct ZoomTimelineTrack: View {
     return (hoverLocation.x / timelineWidth) * videoDuration
   }
 
+  private var hoverState: HoverState {
+    guard isHovering, dragMode == .none,
+          let (segment, segmentLayout) = interactionSegment(atX: hoverLocation.x)
+    else { return .none }
+
+    let isOnStartEdge = hoverLocation.x <= segmentLayout.visualStartX + handleWidth
+    let isOnEndEdge = hoverLocation.x >= segmentLayout.visualEndX - handleWidth
+    let edge: SegmentEdge? = isOnStartEdge ? .start : (isOnEndEdge ? .end : nil)
+    return HoverState(segmentId: segment.id, edge: edge)
+  }
+
   private var isHoveringOverSegment: Bool {
     interactionSegment(atX: hoverLocation.x) != nil
   }
@@ -91,10 +116,11 @@ struct ZoomTimelineTrack: View {
   // MARK: - Body
 
   var body: some View {
+    let hover = hoverState
+
     ZStack(alignment: .leading) {
-      // Track background
-      Radius.rect(Radius.ornament)
-        .fill(Color.black.opacity(0.15))
+      // Track background (recessed lane)
+      TimelineTrackLaneWell()
         .frame(height: trackHeight)
 
       // Track label
@@ -118,6 +144,8 @@ struct ZoomTimelineTrack: View {
           segment: displaySegment,
           isSelected: state.selectedZoomId == segment.id,
           isDragging: dragSegmentId == segment.id,
+          isHovered: hover.segmentId == segment.id,
+          isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
           blockX: segmentLayout.visualStartX,
           blockWidth: segmentLayout.visualWidth
         )
@@ -132,6 +160,7 @@ struct ZoomTimelineTrack: View {
       }
     }
     .frame(height: trackHeight)
+    .clipShape(Radius.rect(Radius.tile))
     .contentShape(Rectangle())
     .gesture(unifiedDragGesture)
     .onTapGesture(count: 2) { location in
@@ -145,13 +174,43 @@ struct ZoomTimelineTrack: View {
       case .active(let location):
         isHovering = true
         hoverLocation = location
+        updateCursor(at: location)
       case .ended:
         isHovering = false
+        clearCursor()
       }
     }
     .contextMenu {
       trackContextMenu
     }
+  }
+
+  // MARK: - Cursor
+
+  private func updateCursor(at location: CGPoint) {
+    guard dragMode == .none else { return }
+
+    if let (_, segmentLayout) = interactionSegment(atX: location.x) {
+      let isOnEdge =
+        location.x <= segmentLayout.visualStartX + handleWidth
+          || location.x >= segmentLayout.visualEndX - handleWidth
+      setCursor(isOnEdge ? .resizeLeftRight : .pointingHand)
+    } else {
+      setCursor(.crosshair)
+    }
+  }
+
+  private func setCursor(_ cursor: NSCursor) {
+    guard activeCursor !== cursor else { return }
+    activeCursor?.pop()
+    cursor.push()
+    activeCursor = cursor
+  }
+
+  private func clearCursor() {
+    guard let activeCursor else { return }
+    activeCursor.pop()
+    self.activeCursor = nil
   }
 
   // MARK: - Unified Drag Gesture
@@ -401,79 +460,114 @@ private struct ZoomBlockVisual: View {
   let segment: ZoomSegment
   let isSelected: Bool
   let isDragging: Bool
+  let isHovered: Bool
+  let isEdgeHovered: Bool
   let blockX: CGFloat
   let blockWidth: CGFloat
 
   private let handleWidth: CGFloat = 8
+  private let blockHeight: CGFloat = 32
+  /// Minimum block width that fits icon + zoom level without clipping.
+  private let compactContentThreshold: CGFloat = 64
+  /// Minimum block width that fits icon + zoom level + type badge without clipping.
+  private let extendedContentThreshold: CGFloat = 110
 
   var body: some View {
     ZStack(alignment: .leading) {
-      // Main block background
-      Radius.controlRect(forHeight: 28)
-        .fill(blockFillColor)
-        .overlay(
-          Radius.controlRect(forHeight: 28)
-            .strokeBorder(isSelected ? Color.white : Color.clear, lineWidth: 2)
-        )
-        .shadow(color: isSelected ? ZoomColors.primary.opacity(0.4) : .clear, radius: 4, y: 2)
+      TimelineSegmentChrome(
+        height: blockHeight,
+        baseColor: blockFillColor,
+        isHovered: isHovered && !isDragging && !isSelected,
+        isSelected: isSelected,
+        isDragging: isDragging,
+        borderColor: stateBorderColor,
+        borderStyle: StrokeStyle(lineWidth: isSelected ? 1.5 : 1),
+        cornerRadius: Radius.tile
+      )
+      .shadow(
+        color: Color.black.opacity(isSelected || isDragging ? 0.35 : 0.22),
+        radius: isSelected || isDragging ? 3 : 2,
+        y: 1
+      )
 
-      // Content
-      HStack(spacing: 4) {
-        Image(systemName: "plus.magnifyingglass")
-          .font(.system(size: 10, weight: .semibold))
+      blockContent
 
-        if blockWidth >= 48 {
-          Text(segment.formattedZoomLevel)
-            .font(.system(size: 10, weight: .semibold))
-        }
-
-        Spacer(minLength: 0)
-
-        if blockWidth >= 96 {
-          Text(segment.zoomType.displayName)
-            .font(.system(size: 8, weight: .medium))
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(Color.white.opacity(0.2)))
-        }
-      }
-      .padding(.horizontal, blockWidth < 48 ? handleWidth + 2 : handleWidth + 4)
-      .foregroundColor(.white)
-
-      // Left handle indicator
       handleIndicator()
         .offset(x: 0)
 
-      // Right handle indicator
       handleIndicator()
         .offset(x: blockWidth - handleWidth)
     }
-    .frame(width: blockWidth, height: 28)
+    .frame(width: blockWidth, height: blockHeight)
     .offset(x: blockX)
     .opacity(segment.isEnabled ? 1.0 : 0.5)
     .scaleEffect(isDragging ? 1.02 : 1.0)
     .animation(.easeOut(duration: 0.15), value: isDragging)
+    .animation(.easeOut(duration: 0.12), value: isHovered)
     .allowsHitTesting(false) // Parent handles all gestures
   }
 
-  private func handleIndicator() -> some View {
-    ZStack {
-      Rectangle()
-        .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
+  private var stateBorderColor: Color {
+    if isSelected { return .white }
+    if isEdgeHovered { return Color.white.opacity(0.55) }
+    return .clear
+  }
 
-      Radius.rect(Radius.ornament)
-        .fill(isSelected ? Color.white.opacity(0.8) : Color.white.opacity(0.4))
-        .frame(width: 3, height: 14)
+  @ViewBuilder
+  private var blockContent: some View {
+    if blockWidth >= compactContentThreshold {
+      HStack(spacing: 3) {
+        Image(systemName: "plus.magnifyingglass")
+          .font(.system(size: 10, weight: .semibold))
+
+        Text(segment.formattedZoomLevel)
+          .font(.system(size: 10, weight: .semibold))
+          .lineLimit(1)
+          .minimumScaleFactor(0.75)
+
+        Spacer(minLength: 0)
+
+        if blockWidth >= extendedContentThreshold {
+          Text(segment.zoomType.displayName)
+            .font(.system(size: 8, weight: .medium))
+            .lineLimit(1)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.white.opacity(0.22)))
+        }
+      }
+      .padding(.horizontal, handleWidth + 4)
+      .foregroundColor(.white)
+    } else {
+      HStack {
+        Spacer(minLength: 0)
+        Image(systemName: "plus.magnifyingglass")
+          .font(.system(size: 10, weight: .semibold))
+          .foregroundColor(.white)
+        Spacer(minLength: 0)
+      }
+      .padding(.horizontal, handleWidth + 2)
     }
-    .frame(width: handleWidth, height: 28)
+  }
+
+  private func handleIndicator() -> some View {
+    TimelineSegmentHandleIndicator(
+      height: blockHeight,
+      gripOpacity: gripOpacity
+    )
+    .frame(width: handleWidth, height: blockHeight)
+  }
+
+  private var gripOpacity: Double {
+    if isEdgeHovered { return 0.85 }
+    if isSelected { return 0.8 }
+    if isHovered { return 0.55 }
+    return 0.38
   }
 
   private var blockFillColor: Color {
     if !segment.isEnabled {
       return ZoomColors.disabled
-    }
-    if isDragging {
-      return ZoomColors.primaryDark
     }
     return ZoomColors.primary
   }
@@ -486,26 +580,38 @@ private struct ZoomPlaceholderView: View {
   let width: CGFloat
   let xPosition: CGFloat
 
+  private let blockHeight: CGFloat = 32
+  /// Minimum placeholder width that fits icon + label without clipping.
+  private let labelThreshold: CGFloat = 92
+
   var body: some View {
-    Radius.controlRect(forHeight: 28)
-      .fill(ZoomColors.primary.opacity(0.2))
+    Radius.rect(Radius.tile)
+      .fill(ZoomColors.primary.opacity(0.16))
       .overlay(
-        Radius.controlRect(forHeight: 28)
+        Radius.rect(Radius.tile)
           .strokeBorder(
             ZoomColors.primary.opacity(0.5),
             style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
           )
       )
-      .overlay(
-        HStack(spacing: 4) {
+      .overlay {
+        if width >= labelThreshold {
+          HStack(spacing: 4) {
+            Image(systemName: "plus.magnifyingglass")
+              .font(.system(size: 10, weight: .medium))
+            Text(L10n.VideoEditor.clickToAdd)
+              .font(.system(size: 9, weight: .medium))
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
+          }
+          .foregroundColor(ZoomColors.primary.opacity(0.85))
+        } else {
           Image(systemName: "plus.magnifyingglass")
-            .font(.system(size: 10, weight: .medium))
-          Text(L10n.VideoEditor.clickToAdd)
-            .font(.system(size: 9, weight: .medium))
+            .font(.system(size: 11, weight: .medium))
+            .foregroundColor(ZoomColors.primary.opacity(0.85))
         }
-        .foregroundColor(ZoomColors.primary.opacity(0.8))
-      )
-      .frame(width: width, height: 28)
+      }
+      .frame(width: width, height: blockHeight)
       .offset(x: xPosition)
       .allowsHitTesting(false)
       .transition(.opacity.animation(.easeOut(duration: 0.15)))
