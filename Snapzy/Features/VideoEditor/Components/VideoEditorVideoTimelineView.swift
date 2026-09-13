@@ -2,13 +2,13 @@
 //  VideoEditorVideoTimelineView.swift
 //  Snapzy
 //
-//  Timeline container with frame strip, playhead, trim handles, and zoom track
+//  Timeline container with time ruler, frame strip, playhead, trim handles, and zoom/speed tracks
 //
 
 import AVFoundation
 import SwiftUI
 
-/// Timeline view with frame previews, playhead indicator, trim handles, and zoom track
+/// Timeline view with time ruler, frame previews, playhead indicator, trim handles, and zoom/speed tracks
 struct VideoTimelineView: View {
   @ObservedObject var state: VideoEditorState
 
@@ -17,7 +17,7 @@ struct VideoTimelineView: View {
   private let spacing: CGFloat = 6
 
   private var totalHeight: CGFloat {
-    var height = frameStripHeight
+    var height = TimelineRulerView.height + spacing + frameStripHeight
     if state.isZoomTrackVisible { height += spacing + segmentTrackHeight }
     if state.isSpeedTrackVisible, !state.isGIF { height += spacing + segmentTrackHeight }
     return height
@@ -27,40 +27,47 @@ struct VideoTimelineView: View {
     GeometryReader { geometry in
       let timelineWidth = geometry.size.width
 
-      VStack(spacing: spacing) {
-        // Frame strip with trim handles and playhead
-        ZStack(alignment: .leading) {
-          // Frame thumbnail strip
-          VideoTimelineFrameStrip(
-            thumbnails: state.frameThumbnails,
-            isLoading: state.isExtractingFrames
-          )
+      ZStack(alignment: .topLeading) {
+        VStack(spacing: spacing) {
+          // Time ruler — measuring-tape ticks and labels along the container's top edge
+          TimelineRulerView(duration: state.duration, timelineWidth: timelineWidth)
+            .contentShape(Rectangle())
+            .gesture(scrubGesture(timelineWidth: timelineWidth))
 
-          // Trim handles overlay
-          VideoTrimHandlesView(state: state, timelineWidth: timelineWidth, trackHeight: frameStripHeight)
+          // Frame strip with trim handles
+          ZStack(alignment: .leading) {
+            // Frame thumbnail strip
+            VideoTimelineFrameStrip(
+              thumbnails: state.frameThumbnails,
+              isLoading: state.isExtractingFrames
+            )
 
-          // Playhead indicator (extends across both tracks)
-          TimelinePlayheadView(
-            playbackState: state.playbackState,
-            duration: state.duration,
-            timelineWidth: timelineWidth,
-            totalHeight: totalHeight
-          )
+            // Trim handles overlay
+            VideoTrimHandlesView(state: state, timelineWidth: timelineWidth, trackHeight: frameStripHeight)
+          }
+          .frame(height: frameStripHeight)
+          .clipShape(Radius.rect(Radius.tile))
+          .contentShape(Rectangle())
+          .gesture(scrubGesture(timelineWidth: timelineWidth))
+
+          // Zoom timeline track
+          if state.isZoomTrackVisible {
+            ZoomTimelineTrack(state: state, timelineWidth: timelineWidth)
+          }
+
+          // Speed (timelapse) timeline track — video only; GIF export does not apply timeline edits.
+          if state.isSpeedTrackVisible, !state.isGIF {
+            SpeedTimelineTrack(state: state, timelineWidth: timelineWidth)
+          }
         }
-        .frame(height: frameStripHeight)
-        .clipShape(Radius.rect(Radius.tile))
-        .contentShape(Rectangle())
-        .gesture(scrubGesture(timelineWidth: timelineWidth))
 
-        // Zoom timeline track
-        if state.isZoomTrackVisible {
-          ZoomTimelineTrack(state: state, timelineWidth: timelineWidth)
-        }
-
-        // Speed (timelapse) timeline track — video only; GIF export does not apply timeline edits.
-        if state.isSpeedTrackVisible, !state.isGIF {
-          SpeedTimelineTrack(state: state, timelineWidth: timelineWidth)
-        }
+        // Playhead indicator (drawn last so it spans the ruler and every track)
+        TimelinePlayheadView(
+          playbackState: state.playbackState,
+          duration: state.duration,
+          timelineWidth: timelineWidth,
+          totalHeight: totalHeight
+        )
       }
     }
     .frame(height: totalHeight)
@@ -93,12 +100,24 @@ private struct TimelinePlayheadView: View {
   let timelineWidth: CGFloat
   let totalHeight: CGFloat
 
+  /// Arrow cap seated in the ruler lane at the top of the playhead line,
+  /// Screen-Studio style. The line hangs from the cap's apex.
+  private static let arrowWidth: CGFloat = 11
+  private static let arrowHeight: CGFloat = 7
+
   var body: some View {
-    Rectangle()
-      .fill(Color.red)
-      .frame(width: 2, height: totalHeight)
-      .offset(x: playheadOffset - 1)
-      .allowsHitTesting(false)
+    VStack(spacing: 0) {
+      PlayheadArrowCap()
+        .fill(Color.red)
+        .frame(width: Self.arrowWidth, height: Self.arrowHeight)
+
+      Rectangle()
+        .fill(Color.red)
+        .frame(width: 2, height: max(0, totalHeight - Self.arrowHeight))
+    }
+    .shadow(color: Color.black.opacity(0.30), radius: 1.5, y: 0.5)
+    .offset(x: playheadOffset - Self.arrowWidth / 2)
+    .allowsHitTesting(false)
   }
 
   private var playheadOffset: CGFloat {
@@ -106,5 +125,18 @@ private struct TimelinePlayheadView: View {
     guard durationSeconds > 0 else { return 0 }
     let progress = CMTimeGetSeconds(playbackState.currentTime) / durationSeconds
     return CGFloat(progress) * timelineWidth
+  }
+}
+
+/// Downward-pointing triangle cap drawn above the playhead line; its apex
+/// aligns with the tick the playhead sits on.
+private struct PlayheadArrowCap: Shape {
+  func path(in rect: CGRect) -> Path {
+    var path = Path()
+    path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+    path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
+    path.closeSubpath()
+    return path
   }
 }
