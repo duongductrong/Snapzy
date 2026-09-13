@@ -99,13 +99,6 @@ struct VideoEditorMainView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .layoutPriority(1)
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
-        .padding(.bottom, 12)
-
-      Divider()
-
-      VideoEditorGIFSettingsPanel(state: state)
-        .windowContentHPadding()
-        .padding(.top, 8)
         .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -121,10 +114,6 @@ struct VideoEditorMainView: View {
       VideoTimelineView(state: state)
         .windowContentHPadding()
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
-
-      VideoExportSettingsPanel(state: state)
-        .windowContentHPadding()
-        .padding(.top, 8)
         .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)

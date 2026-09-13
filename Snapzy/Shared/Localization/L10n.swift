@@ -1146,6 +1146,11 @@ nonisolated enum L10n {
       defaultValue: "Size",
       comment: "Generic size field label"
     )
+    static let scale = string(
+      "common.scale",
+      defaultValue: "Scale",
+      comment: "Generic scale field label"
+    )
     static let format = string(
       "common.format",
       defaultValue: "Format",
