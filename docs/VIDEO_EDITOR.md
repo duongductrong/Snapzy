@@ -22,11 +22,12 @@ uses three related time bases:
 time ↔ source time. `layout(_:)` is the structural layout and `playableLayout(_:)` is the
 compact playback/export layout.
 
-Zoom, speed, and Follow Mouse stay authored in **primary source time** and are *projected*
-onto the structural timeline for display (`state.projectToSequence(sourceRange:)`) and onto
-the playable sequence for export (`state.projectToPlaybackSequence(sourceRange:)`). Effects
-therefore follow their material and do not shift when an unrelated trim edge is adjusted.
-Material that was deleted projects to nothing and its effects drop out.
+Zoom and speed are authored directly in **structural timeline time**, independently from
+the source time of any clip. Their blocks therefore stay at the position the user chose
+when clips are cut, swapped, inserted, or reordered. Only playback/export performs a
+structural → playable projection (`TimelineSequence.project(timelineRange:from:to:)`) to
+remove inactive trim slots. An effect spanning a trim gap applies to every active piece on
+both sides; an effect entirely inside inactive footage has no rendered material.
 
 With one untouched primary clip (`!state.hasSequenceEdits`), all three axes equal source time,
 so behavior matches the pre-sequence editor exactly.
@@ -147,18 +148,22 @@ off at each clip's active out-point and rewinds at the end.
 - Transitions: ease-in-out cubic (`ZoomCalculator.easeInOutCubic`), `transitionDuration` default 0.4 s clamped to 0.15–0.75 and to 45 % of the segment per edge; the editor-wide `state.zoomTransitionDuration` is user-adjustable in the right sidebar.
 - `Services/VideoEditorZoomCalculator.swift` computes per-frame zoom progress/crop rects; shared by preview and the export compositor.
 - UI: zoom timeline track (`VideoEditorZoomTimelineTrack` + `VideoEditorZoomBlockView`), center picker (`VideoEditorZoomCenterPicker`, with presets top-left/top-right/bottom-left/bottom-right/center), live preview overlay (`VideoEditorZoomPreviewOverlay`), settings popover (`VideoEditorZoomSettingsPopover`).
-- Track interaction: a tap on a zoom block activates it for editing (selects it and opens the right sidebar), a double-tap re-opens the configuration, and a drag moves/resizes it. Hit-testing prefers a block's **true-time span** over its padded visual, so narrow stretched blocks never steal activation from a neighbour. Segments follow source material on the stable structural axis; portions over inactive/deleted material are omitted from the projection.
+- Track interaction: a tap on a zoom block activates it for editing (selects it and opens the right sidebar), a double-tap re-opens the configuration, and a drag moves/resizes it. Hit-testing prefers a block's **true-time span** over its padded visual, so narrow stretched blocks never steal activation from a neighbour.
+- The block is never resolved through a clip's source range. Reordering `[A][B]` to `[B][A]` leaves a zoom at the same structural timeline position; moving it across a seam is a continuous pointer-driven operation with no re-hosting or source-time jump. This also allows a manual zoom to cover an inserted clip.
+- Preview and export project the direct timeline range onto active material only when needed. A trim gap can remove rendered frames from the range without mutating or moving the authored block.
+- Tap-to-add is offered over any active video clip, including inserted clips. The placeholder is hidden over an inactive trim edge, while context-menu/drag editing can still place a range that bridges a trim gap.
 
 ## Follow Mouse (Smart Camera)
 
 - `Services/VideoEditorAutoFocusEngine.swift` `buildPath` consumes `RecordingMetadata` (see [`RECORDING.md`](RECORDING.md)) and reconstructs a smooth camera path: dead-zone around the current center with adaptive shrink under motion, exponential smoothing, cursor-speed clamp, last-visible-position fallback when the cursor leaves the capture, resample to ≤60 Hz, all clamped to the frame.
 - `AutoFocusSettings` (`Models/VideoEditorAutoFocusSettings.swift`): `followSpeed` range 0.2–1.0 (default 0.55), `focusMargin` range 0.2–0.9 (default 0.45), `defaultZoomLevel` 2.0.
-- New zoom segments default to `.auto` when mouse metadata exists; otherwise manual.
+- New zoom segments default to `.auto` when mouse metadata exists and the playhead is over primary material; otherwise they use `.manual`. An auto segment that crosses inserted media holds its last known center because inserted media has no recorded cursor path. Primary auto-focus samples are remapped to the current structural clip order without interpolating through unrelated source frames.
 
 ## Speed (Timelapse) Segments
 
 - `SpeedSegment` (`Models/VideoEditorSpeedSegment.swift`): `rate` 0.25–8x (presets 0.25/0.5/1/2/4/8), min duration 0.5 s; segments cannot overlap (state-level validation).
-- `TimelineSequenceMap` (`Services/VideoEditorTimelineTimeMap.swift`) is the single playable-sequence↔output time-mapping authority reused by export, preview, and the file-size estimate. Speed segments are authored in primary source time and projected onto active material, so trimming a neighboring edge does not shift the segment or create a structural gap.
+- `TimelineSequenceMap` (`Services/VideoEditorTimelineTimeMap.swift`) is the single playable-sequence↔output time-mapping authority reused by export, preview, and the file-size estimate. Speed segments are authored in structural timeline time and projected onto active material only for playback/export, so cuts, trims, inserts, and reorder do not move the block.
+- The speed track mirrors the zoom track's interaction model: one direct timeline block per segment, pointer-driven drags that remain continuous across clip seams, and tap-to-add available on every active video clip (see [Zoom Segments](#zoom-segments)).
 - Export applies `scaleTimeRange` to composition video + audio tracks in reverse segment order, remaps zoom times and auto-focus keyframes into the scaled timeline, and preserves audio pitch via `audioTimePitchAlgorithm = .spectral`.
 - Live preview is approximate: it drives `AVPlayer.rate` per active segment instead of rebuilding a scaled composition.
 - Video only — the GIF save path does not bake timeline edits, so the speed track is hidden for GIF sources.
@@ -186,7 +191,7 @@ off at each clip's active out-point and rewinds at the end.
 
 - Composition build is one pass over `state.clips`: each clip contributes its active source window from its own asset at the running playable-sequence cursor. Trimmed-out slot edges are not exported; speed spans then scale the compact composition in place. A clip with no video track still inserts an empty range so later clips keep their playable slots.
 - Audio walks the same sequence per source audio track (mic / system / …). Inserted-clip audio rides lane 0; the other lanes get `insertEmptyTimeRange` for that span so every lane stays aligned.
-- Zoom segments and auto-focus paths are remapped source → sequence → output (`VideoEditorAutoFocusEngine.sequencePath` drops samples whose frames were deleted, then `scaledPath` applies speed). A zoom whose material is gone is dropped entirely.
+- Zoom segments are remapped structural timeline → playable sequence → output. Auto-focus paths separately remap source samples into the hosting primary placements; inserted clip spans hold the last camera center instead of interpolating unrelated source samples, then `scaledPath` applies speed. A zoom whose range has no active material is dropped entirely.
 - Custom dimensions: `ExportDimensionPreset` + `VideoEditorExportLayout` (`Models/VideoEditorExportSettings.swift`), even-aligned pixel sizes; quality presets live in the same export settings model.
 - Save flow (`VideoEditorWindowController.showSaveConfirmation`): temp captures save directly to a chosen destination; saved files prompt Replace Original vs Save As Copy.
   - Replace original: export to temp, move original to `.<name>.backup`, atomic `replaceItemAt` swap, restore from backup on failure; recording metadata for the replaced file is deleted. Permission-denied falls back to a Save As Copy prompt.

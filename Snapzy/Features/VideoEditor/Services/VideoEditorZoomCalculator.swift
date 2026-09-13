@@ -1,24 +1,23 @@
 //
-//  ZoomCalculator.swift
+//  VideoEditorZoomCalculator.swift
 //  Snapzy
 //
 //  Utility functions for zoom calculations and animations
 //
 
-import Foundation
 import CoreGraphics
+import Foundation
 
 /// Utility enum for zoom-related calculations
 enum ZoomCalculator {
-
   // MARK: - Transition Configuration
 
-  static let transitionDurationRange: ClosedRange<TimeInterval> = 0.15...0.75
+  static let transitionDurationRange: ClosedRange<TimeInterval> = 0.15 ... 0.75
   static let defaultTransitionDuration: TimeInterval = 0.4
   static let fastTransitionDuration: TimeInterval = 0.25
   static let balancedTransitionDuration: TimeInterval = 0.4
   static let smoothTransitionDuration: TimeInterval = 0.6
-  static let neutralCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  static let neutralCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
   // MARK: - Crop Rect Calculation
 

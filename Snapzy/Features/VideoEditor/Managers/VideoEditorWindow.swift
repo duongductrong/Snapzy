@@ -29,10 +29,10 @@ class VideoEditorWindow: NSWindow {
     )
     configure()
   }
-  
+
   override func layoutIfNeeded() {
     super.layoutIfNeeded()
-    
+
     layoutTrafficLights()
   }
 
@@ -85,6 +85,11 @@ class VideoEditorWindow: NSWindow {
     backgroundColor = WindowSurfacePalette.backgroundColor(for: themeManager.preferredAppearance)
   }
 
-  override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { true }
+  override var canBecomeKey: Bool {
+    true
+  }
+
+  override var canBecomeMain: Bool {
+    true
+  }
 }

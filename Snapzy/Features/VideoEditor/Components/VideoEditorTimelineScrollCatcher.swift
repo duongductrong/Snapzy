@@ -16,17 +16,17 @@ import SwiftUI
 struct TimelineScrollCatcher: NSViewRepresentable {
   let viewport: VideoEditorTimelineViewport
 
-  func makeNSView(context: Context) -> TimelineScrollEventCatcherView {
+  func makeNSView(context _: Context) -> TimelineScrollEventCatcherView {
     let view = TimelineScrollEventCatcherView()
     view.viewport = viewport
     return view
   }
 
-  func updateNSView(_ nsView: TimelineScrollEventCatcherView, context: Context) {
+  func updateNSView(_ nsView: TimelineScrollEventCatcherView, context _: Context) {
     nsView.viewport = viewport
   }
 
-  static func dismantleNSView(_ nsView: TimelineScrollEventCatcherView, coordinator: ()) {
+  static func dismantleNSView(_ nsView: TimelineScrollEventCatcherView, coordinator _: ()) {
     nsView.cleanup()
   }
 }
@@ -48,7 +48,7 @@ final class TimelineScrollEventCatcherView: NSView {
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) {
+  required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
@@ -59,7 +59,9 @@ final class TimelineScrollEventCatcherView: NSView {
     }
   }
 
-  override func hitTest(_ point: NSPoint) -> NSView? { nil }
+  override func hitTest(_: NSPoint) -> NSView? {
+    nil
+  }
 
   // MARK: - Monitor
 
@@ -67,7 +69,7 @@ final class TimelineScrollEventCatcherView: NSView {
     guard monitor == nil else { return }
 
     monitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
-      guard let self, self.handleScroll(event) else { return event }
+      guard let self, handleScroll(event) else { return event }
       return nil
     }
   }

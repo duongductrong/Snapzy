@@ -9,15 +9,14 @@
 import CoreGraphics
 import Foundation
 import ImageIO
-import UniformTypeIdentifiers
 import os.log
+import UniformTypeIdentifiers
 
 private let logger = Logger(subsystem: "Snapzy", category: "GIFResizer")
 
 /// Resizes an animated GIF to target dimensions using ImageIO
 @MainActor
 final class GIFResizer {
-
   /// Resize a GIF file to the specified dimensions
   /// - Parameters:
   ///   - sourceURL: URL of the source GIF
@@ -32,7 +31,8 @@ final class GIFResizer {
   ) throws {
     let sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(sourceURL)
     let outputDirAccess = SandboxFileAccessManager.shared.beginAccessingURL(
-      outputURL.deletingLastPathComponent())
+      outputURL.deletingLastPathComponent()
+    )
     defer {
       sourceAccess.stop()
       outputDirAccess.stop()
@@ -77,7 +77,7 @@ final class GIFResizer {
       kCGImagePropertyGIFDictionary as String: [
         kCGImagePropertyGIFLoopCount as String: loopCount,
         kCGImagePropertyGIFHasGlobalColorMap as String: true,
-      ]
+      ],
     ]
     CGImageDestinationSetProperties(destination, destGIFProperties as CFDictionary)
 
@@ -85,7 +85,7 @@ final class GIFResizer {
     let targetHeight = Int(targetSize.height)
 
     // Process each frame
-    for i in 0..<frameCount {
+    for i in 0 ..< frameCount {
       guard let sourceImage = CGImageSourceCreateImageAtIndex(source, i, nil) else {
         continue
       }
@@ -131,7 +131,7 @@ final class GIFResizer {
         kCGImagePropertyGIFDictionary as String: [
           kCGImagePropertyGIFDelayTime as String: delayTime,
           kCGImagePropertyGIFUnclampedDelayTime as String: delayTime,
-        ]
+        ],
       ]
       CGImageDestinationAddImage(destination, resizedImage, outputFrameProperties as CFDictionary)
 
@@ -171,7 +171,7 @@ final class GIFResizer {
 
     // Calculate total duration from frame delays
     var totalDuration: Double = 0
-    for i in 0..<frameCount {
+    for i in 0 ..< frameCount {
       let props = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any]
       let gifProps = props?[kCGImagePropertyGIFDictionary as String] as? [String: Any]
       let delay = gifProps?[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double
@@ -217,10 +217,10 @@ enum GIFResizeError: Error, LocalizedError {
 
   var errorDescription: String? {
     switch self {
-    case .cannotReadSource: return L10n.GIF.cannotReadSource
-    case .noFrames: return L10n.GIF.noFramesInGIF
-    case .cannotCreateDestination: return L10n.GIF.cannotCreateOutputFile
-    case .finalizationFailed: return L10n.GIF.finalizeResizedFailed
+    case .cannotReadSource: L10n.GIF.cannotReadSource
+    case .noFrames: L10n.GIF.noFramesInGIF
+    case .cannotCreateDestination: L10n.GIF.cannotCreateOutputFile
+    case .finalizationFailed: L10n.GIF.finalizeResizedFailed
     }
   }
 }

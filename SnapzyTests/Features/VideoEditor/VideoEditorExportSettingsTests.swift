@@ -8,17 +8,21 @@
 import AppKit
 import AVFoundation
 import CoreGraphics
-import XCTest
 @testable import Snapzy
+import XCTest
 
 final class VideoEditorExportSettingsTests: XCTestCase {
-
   private class MockVideoEditorWindow: VideoEditorWindow {
     var stubbedIsKeyWindow = false
     var stubbedIsMainWindow = false
 
-    override var isKeyWindow: Bool { stubbedIsKeyWindow }
-    override var isMainWindow: Bool { stubbedIsMainWindow }
+    override var isKeyWindow: Bool {
+      stubbedIsKeyWindow
+    }
+
+    override var isMainWindow: Bool {
+      stubbedIsMainWindow
+    }
   }
 
   @MainActor
@@ -29,7 +33,7 @@ final class VideoEditorExportSettingsTests: XCTestCase {
     defer { window.close() }
 
     let activeLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
-    
+
     // 1. Neither key nor main -> should be normal
     window.stubbedIsKeyWindow = false
     window.stubbedIsMainWindow = false

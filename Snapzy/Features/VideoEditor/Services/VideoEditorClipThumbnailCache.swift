@@ -7,8 +7,8 @@
 //  covers the other assets, keyed by URL so duplicated clips share one strip.
 //
 
-import AVFoundation
 import AppKit
+import AVFoundation
 import Combine
 import Foundation
 
@@ -35,8 +35,8 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
     Task { [weak self] in
       let images = await Self.generate(url: url, count: Self.frameCount)
       guard let self else { return }
-      self.strips[url] = images
-      self.inFlight.remove(url)
+      strips[url] = images
+      inFlight.remove(url)
     }
   }
 
@@ -68,7 +68,7 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
 
           // Sample each cell's centre, matching how the strip tiles its cells.
           var images: [NSImage] = []
-          for index in 0..<safeCount {
+          for index in 0 ..< safeCount {
             let progress = (Double(index) + 0.5) / Double(safeCount)
             let time = CMTime(seconds: seconds * progress, preferredTimescale: 600)
             guard let cgImage = try? generator.copyCGImage(at: time, actualTime: nil) else { continue }

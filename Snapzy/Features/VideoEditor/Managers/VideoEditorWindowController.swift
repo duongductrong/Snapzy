@@ -14,7 +14,6 @@ import UniformTypeIdentifiers
 /// Manages video editor window lifecycle
 @MainActor
 final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
-
   private let fileAccessManager = SandboxFileAccessManager.shared
   private let tempCaptureManager = TempCaptureManager.shared
   private let quickAccessItemID: UUID?
@@ -30,15 +29,15 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with QuickAccessItem (existing behavior)
   init(item: QuickAccessItem) {
-    self.quickAccessItemID = item.id
-    self.sourceFileAccess = fileAccessManager.beginAccessingURL(item.url)
-    self.sourceURL = item.url
+    quickAccessItemID = item.id
+    sourceFileAccess = fileAccessManager.beginAccessingURL(item.url)
+    sourceURL = item.url
     let state = VideoEditorState(url: item.url)
     state.quickAccessItemId = item.id
     state.cloudURL = item.cloudURL
     state.cloudKey = item.cloudKey
     self.state = state
-    self.isEmptyState = false
+    isEmptyState = false
 
     super.init(window: Self.createWindow())
     window?.delegate = self
@@ -47,11 +46,11 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with URL directly (for drag & drop from external sources)
   init(url: URL) {
-    self.quickAccessItemID = nil
-    self.sourceFileAccess = fileAccessManager.beginAccessingURL(url)
-    self.sourceURL = url
-    self.state = VideoEditorState(url: url)
-    self.isEmptyState = false
+    quickAccessItemID = nil
+    sourceFileAccess = fileAccessManager.beginAccessingURL(url)
+    sourceURL = url
+    state = VideoEditorState(url: url)
+    isEmptyState = false
 
     super.init(window: Self.createWindow())
     window?.delegate = self
@@ -60,14 +59,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   /// Initialize with URL and optional original URL (for drag & drop with temp copy)
   init(url: URL, originalURL: URL?) {
-    self.quickAccessItemID = nil
-    self.sourceFileAccess = fileAccessManager.beginAccessingURL(url)
-    if let originalURL = originalURL, originalURL != url {
-      self.originalFileAccess = fileAccessManager.beginAccessingURL(originalURL)
+    quickAccessItemID = nil
+    sourceFileAccess = fileAccessManager.beginAccessingURL(url)
+    if let originalURL, originalURL != url {
+      originalFileAccess = fileAccessManager.beginAccessingURL(originalURL)
     }
-    self.sourceURL = url
-    self.state = VideoEditorState(url: url, originalURL: originalURL)
-    self.isEmptyState = false
+    sourceURL = url
+    state = VideoEditorState(url: url, originalURL: originalURL)
+    isEmptyState = false
 
     super.init(window: Self.createWindow())
     window?.delegate = self
@@ -75,14 +74,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   /// Initialize with empty state (for drag & drop workflow)
-  override init(window: NSWindow?) {
-    self.quickAccessItemID = nil
-    self.sourceURL = nil
-    self.state = nil
-    self.isEmptyState = true
+  override init(window _: NSWindow?) {
+    quickAccessItemID = nil
+    sourceURL = nil
+    state = nil
+    isEmptyState = true
 
     super.init(window: Self.createWindow())
-    self.window?.delegate = self
+    window?.delegate = self
     setupEmptyContent()
   }
 
@@ -92,7 +91,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   @available(*, unavailable)
-  required init?(coder: NSCoder) {
+  required init?(coder _: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
 
@@ -112,7 +111,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func setupContent() {
-    guard let state = state else {
+    guard let state else {
       setupEmptyContent()
       return
     }
@@ -172,7 +171,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private var isTempCaptureSource: Bool {
-    guard let state = state else { return false }
+    guard let state else { return false }
     return tempCaptureManager.isTempFile(state.sourceURL)
   }
 
@@ -184,7 +183,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   func windowShouldClose(_ sender: NSWindow) -> Bool {
     // Empty state can always close
-    guard let state = state else { return true }
+    guard let state else { return true }
 
     guard state.hasUnsavedChanges else {
       state.pause()
@@ -195,7 +194,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     return false
   }
 
-  func windowWillClose(_ notification: Notification) {
+  func windowWillClose(_: Notification) {
     window?.alphaValue = 0
     if let itemId = quickAccessItemID {
       QuickAccessManager.shared.setWindowOpen(id: itemId, isOpen: false)
@@ -215,14 +214,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else { return }
+      guard let self else { return }
 
       switch response {
       case .alertFirstButtonReturn:
-        self.showSaveConfirmation()
+        showSaveConfirmation()
 
       case .alertSecondButtonReturn:
-        self.forceClose()
+        forceClose()
 
       default:
         break
@@ -233,7 +232,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Save Confirmation
 
   private func showSaveConfirmation() {
-    guard let window = self.window, let state = state else { return }
+    guard let window, let state else { return }
 
     // Temp capture flow: save directly to destination location.
     if isTempCaptureSource {
@@ -257,14 +256,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else { return }
+      guard let self else { return }
 
       switch response {
       case .alertFirstButtonReturn:
-        self.performReplaceOriginal()
+        performReplaceOriginal()
 
       case .alertSecondButtonReturn:
-        self.performSaveAsCopy()
+        performSaveAsCopy()
 
       default:
         break
@@ -275,9 +274,10 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Temp Capture Save Flow
 
   private func saveTempCaptureToDestination() {
-    guard let state = state else { return }
+    guard let state else { return }
     guard let exportDirectory = fileAccessManager.ensureExportDirectoryForOperation(
-      promptMessage: L10n.Recording.chooseSaveLocationMessage)
+      promptMessage: L10n.Recording.chooseSaveLocationMessage
+    )
     else {
       return
     }
@@ -295,7 +295,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func showTempSaveCollisionAlert(destinationURL: URL) {
-    guard let window = window else { return }
+    guard let window else { return }
 
     let alert = NSAlert()
     alert.messageText = L10n.VideoEditor.fileAlreadyExistsTitle
@@ -306,15 +306,15 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else { return }
+      guard let self else { return }
 
       switch response {
       case .alertFirstButtonReturn:
-        self.exportTempCapture(to: destinationURL, overwriteIfNeeded: true)
+        exportTempCapture(to: destinationURL, overwriteIfNeeded: true)
       case .alertSecondButtonReturn:
-        self.showTempSaveAsPanel(
+        showTempSaveAsPanel(
           defaultDirectory: destinationURL.deletingLastPathComponent(),
-          suggestedFilename: self.defaultSaveAsFilename(for: destinationURL)
+          suggestedFilename: defaultSaveAsFilename(for: destinationURL)
         )
       default:
         break
@@ -323,7 +323,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func showTempSaveAsPanel(defaultDirectory: URL, suggestedFilename: String) {
-    guard let window = window, let state = state else { return }
+    guard let window, let state else { return }
 
     let savePanel = NSSavePanel()
     savePanel.title = state.isGIF ? L10n.VideoEditor.saveGIFTitle : L10n.VideoEditor.saveVideoTitle
@@ -342,7 +342,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func defaultSaveAsFilename(for destinationURL: URL) -> String {
-    guard let state = state else { return destinationURL.lastPathComponent }
+    guard let state else { return destinationURL.lastPathComponent }
     if state.isGIF {
       let baseName = destinationURL.deletingPathExtension().lastPathComponent
       return "\(baseName)_copy.gif"
@@ -351,7 +351,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func exportTempCapture(to destinationURL: URL, overwriteIfNeeded: Bool = false) {
-    guard let state = state else { return }
+    guard let state else { return }
     let sourceURL = state.sourceURL
 
     state.isExporting = true
@@ -360,7 +360,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     Task {
       do {
-        if overwriteIfNeeded && destinationURL.standardizedFileURL != sourceURL.standardizedFileURL {
+        if overwriteIfNeeded, destinationURL.standardizedFileURL != sourceURL.standardizedFileURL {
           try removeFileIfExists(at: destinationURL)
         }
 
@@ -444,7 +444,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     }
 
     NSWorkspace.shared.activateFileViewerSelecting([destinationURL])
-    self.offerPostExportUpload(for: destinationURL) { [weak self] in
+    offerPostExportUpload(for: destinationURL) { [weak self] in
       self?.forceClose()
     }
   }
@@ -463,7 +463,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - GIF Export
 
   private func showGIFSaveConfirmation() {
-    guard let window = self.window, let state = state else { return }
+    guard let window, let state else { return }
 
     let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
     let isResizing = Int(targetSize.width) != Int(state.naturalSize.width)
@@ -495,12 +495,12 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else { return }
+      guard let self else { return }
       switch response {
       case .alertFirstButtonReturn:
-        self.performGIFReplaceOriginal()
+        performGIFReplaceOriginal()
       case .alertSecondButtonReturn:
-        self.performGIFSaveAsCopy()
+        performGIFSaveAsCopy()
       default:
         break
       }
@@ -508,7 +508,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func performGIFReplaceOriginal() {
-    guard let state = state else { return }
+    guard let state else { return }
 
     let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
     let tempURL = FileManager.default.temporaryDirectory
@@ -561,7 +561,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func performGIFSaveAsCopy() {
-    guard let state = state, let window = self.window else { return }
+    guard let state, let window else { return }
 
     let savePanel = NSSavePanel()
     savePanel.title = L10n.VideoEditor.saveResizedGIFTitle
@@ -580,7 +580,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func exportGIFToCopy(outputURL: URL) {
-    guard let state = state else { return }
+    guard let state else { return }
 
     let targetSize = state.exportSettings.exportSize(from: state.naturalSize)
 
@@ -615,7 +615,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Export Actions
 
   private func performReplaceOriginal() {
-    guard let state = state else { return }
+    guard let state else { return }
 
     state.isExporting = true
     state.exportProgress = 0
@@ -656,7 +656,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func performSaveAsCopy() {
-    guard let state = state, let window = self.window else { return }
+    guard let state, let window else { return }
 
     // Show save panel to let user choose destination
     let savePanel = NSSavePanel()
@@ -674,7 +674,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func exportToCopy(outputURL: URL) {
-    guard let state = state else { return }
+    guard let state else { return }
 
     state.isExporting = true
     state.exportProgress = 0
@@ -706,24 +706,24 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
   private func progressMessage(for progress: Float) -> String {
     switch progress {
-    case 0..<0.1:
-      return L10n.VideoEditor.preparingExport
-    case 0.1..<0.3:
-      return L10n.VideoEditor.processingVideo
-    case 0.3..<0.7:
-      return L10n.VideoEditor.applyingEffects
-    case 0.7..<0.9:
-      return L10n.VideoEditor.encodingFrames
-    case 0.9..<1.0:
-      return L10n.VideoEditor.finalizing
+    case 0 ..< 0.1:
+      L10n.VideoEditor.preparingExport
+    case 0.1 ..< 0.3:
+      L10n.VideoEditor.processingVideo
+    case 0.3 ..< 0.7:
+      L10n.VideoEditor.applyingEffects
+    case 0.7 ..< 0.9:
+      L10n.VideoEditor.encodingFrames
+    case 0.9 ..< 1.0:
+      L10n.VideoEditor.finalizing
     default:
-      return L10n.VideoEditor.completing
+      L10n.VideoEditor.completing
     }
   }
 
   private func showExportError(_ error: Error) {
     DiagnosticLogger.shared.logError(.export, error, "Export error shown to user")
-    guard let window = self.window else { return }
+    guard let window else { return }
 
     let alert = NSAlert()
     alert.messageText = L10n.VideoEditor.exportFailedTitle
@@ -734,7 +734,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func showReplaceOriginalPermissionFallback(_ error: Error) {
-    guard let window = self.window else { return }
+    guard let window else { return }
 
     let alert = NSAlert()
     alert.messageText = L10n.VideoEditor.cannotReplaceOriginalTitle
@@ -744,9 +744,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else { return }
+      guard let self else { return }
       if response == .alertFirstButtonReturn {
-        self.performSaveAsCopy()
+        performSaveAsCopy()
       }
     }
   }
@@ -756,8 +756,8 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func offerPostExportUpload(for fileURL: URL, completion: @escaping () -> Void) {
     guard CloudManager.shared.isConfigured,
           QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud),
-          let window = self.window,
-          let state = state
+          let window,
+          let state
     else {
       completion()
       return
@@ -771,13 +771,13 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     alert.addButton(withTitle: L10n.Common.cancel)
 
     alert.beginSheetModal(for: window) { [weak self] response in
-      guard let self = self else {
+      guard let self else {
         completion()
         return
       }
 
       if response == .alertFirstButtonReturn {
-        self.performPostExportUpload(fileURL: fileURL, completion: completion)
+        performPostExportUpload(fileURL: fileURL, completion: completion)
       } else {
         completion()
       }
@@ -785,7 +785,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   private func performPostExportUpload(fileURL: URL, completion: @escaping () -> Void) {
-    guard let state = state else {
+    guard let state else {
       completion()
       return
     }
@@ -832,9 +832,9 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   // MARK: - Cancel Action
 
   private func handleCancel() {
-    guard let window = self.window else { return }
+    guard let window else { return }
 
-    if let state = state, state.hasUnsavedChanges {
+    if let state, state.hasUnsavedChanges {
       showUnsavedChangesAlert(for: window)
     } else {
       forceClose()

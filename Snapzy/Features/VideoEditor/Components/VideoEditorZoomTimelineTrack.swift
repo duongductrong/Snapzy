@@ -25,6 +25,9 @@ struct ZoomTimelineTrack: View {
   @State private var dragSegmentId: UUID?
   @State private var dragInitialStartTime: TimeInterval = 0
   @State private var dragInitialEndTime: TimeInterval = 0
+  /// Grab offset on the independent structural effect track, captured at drag begin.
+  /// Keeping this in one coordinate system prevents seam/reorder jumps.
+  @State private var dragGrabTimelineOffset: TimeInterval = 0
   @State private var dragPreviewSegment: ZoomSegment?
   @State private var lastDragModelUpdateTime: TimeInterval = 0
 
@@ -70,28 +73,17 @@ struct ZoomTimelineTrack: View {
     CMTimeGetSeconds(state.timelineDuration)
   }
 
-  /// Segments are authored in PRIMARY SOURCE time, which is a different axis once the
-  /// sequence has been split or reordered. Clamps and new-segment math use this.
-  private var sourceDuration: TimeInterval {
-    CMTimeGetSeconds(state.duration)
-  }
-
-  /// Sequence time under a pointer x, converted back to primary source time.
-  private func sourceTime(atX x: CGFloat) -> TimeInterval {
-    guard videoDuration > 0, timelineWidth > 0 else { return 0 }
-    let sequenceTime = (x / timelineWidth) * videoDuration
-    return state.primarySourceTimeOrNearest(atSequence: sequenceTime)
-  }
-
-  private var pixelsPerSecond: CGFloat {
-    guard videoDuration > 0 else { return 1 }
-    return timelineWidth / videoDuration
+  /// Structural timeline time under a pointer x. The effect track uses this same
+  /// coordinate for drawing, hit testing, and mutation.
+  private func sequenceTime(atX x: CGFloat) -> TimeInterval? {
+    guard videoDuration > 0, timelineWidth > 0 else { return nil }
+    return (x / timelineWidth) * videoDuration
   }
 
   // MARK: - Hover Computed Properties
 
-  private var hoverTime: TimeInterval {
-    sourceTime(atX: hoverLocation.x)
+  private var hoverSequenceTime: TimeInterval? {
+    sequenceTime(atX: hoverLocation.x)
   }
 
   private var hoverState: HoverState {
@@ -110,7 +102,12 @@ struct ZoomTimelineTrack: View {
   }
 
   private var shouldShowPlaceholder: Bool {
-    isHovering && !isHoveringOverSegment && dragMode == .none
+    guard isHovering, dragMode == .none, !isHoveringOverSegment,
+          let hoverSequence = hoverSequenceTime
+    else { return false }
+    // Do not offer a block over an inactive trim slot, but inserted video is a valid
+    // host because effects are independent from clip identity.
+    return state.isPlayableMaterial(atSequence: hoverSequence)
   }
 
   private var placeholderWidth: CGFloat {
@@ -150,20 +147,22 @@ struct ZoomTimelineTrack: View {
       .allowsHitTesting(false)
 
       // Zoom blocks (visual only - gestures handled at track level).
-      // Dead segments — material no longer in the sequence — are not drawn:
-      // they have nowhere true to sit and adjusting them does nothing.
+      // Blocks stay on the structural effect track. Playback/export later projects
+      // their ranges over active clip material and collapses trim gaps.
       ForEach(visibleSegments) { segment in
         let displaySegment = dragPreviewSegment?.id == segment.id ? dragPreviewSegment ?? segment : segment
-        let segmentLayout = layout(for: displaySegment)
-        ZoomBlockVisual(
-          segment: displaySegment,
-          isSelected: state.selectedZoomId == segment.id,
-          isDragging: dragSegmentId == segment.id,
-          isHovered: hover.segmentId == segment.id,
-          isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
-          blockX: segmentLayout.visualStartX,
-          blockWidth: segmentLayout.visualWidth
-        )
+        if let span = displaySpan(for: displaySegment) {
+          let paddedLayout = paddedLayout(for: span)
+          ZoomBlockVisual(
+            segment: displaySegment,
+            isSelected: state.selectedZoomId == segment.id,
+            isDragging: dragSegmentId == segment.id,
+            isHovered: hover.segmentId == segment.id,
+            isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
+            blockX: paddedLayout.visualStartX,
+            blockWidth: paddedLayout.visualWidth
+          )
+        }
       }
 
       // Placeholder preview for adding new zoom
@@ -237,7 +236,7 @@ struct ZoomTimelineTrack: View {
           // Determine what we're dragging based on start location
           beginDrag(at: value.startLocation)
         }
-        continueDrag(translation: value.translation)
+        continueDrag(at: value.location)
       }
       .onEnded { _ in
         endDrag()
@@ -250,15 +249,14 @@ struct ZoomTimelineTrack: View {
       return
     }
 
-    // Determine drag mode based on tap position within block
-    let leftHandleEnd = segmentLayout.visualStartX + handleWidth
-    let rightHandleStart = segmentLayout.visualEndX - handleWidth
-
     dragSegmentId = segment.id
     dragInitialStartTime = segment.startTime
     dragInitialEndTime = segment.endTime
     dragPreviewSegment = segment
     lastDragModelUpdateTime = 0
+
+    let leftHandleEnd = segmentLayout.visualStartX + handleWidth
+    let rightHandleStart = segmentLayout.visualEndX - handleWidth
 
     if location.x <= leftHandleEnd {
       dragMode = .startEdge
@@ -266,25 +264,31 @@ struct ZoomTimelineTrack: View {
       dragMode = .endEdge
     } else {
       dragMode = .position
+      // Anchor the grab directly on the effect track. No clip/source conversion is
+      // involved, so crossing a seam remains a continuous 1:1 drag.
+      let pointerSequence = sequenceTime(atX: location.x) ?? 0
+      dragGrabTimelineOffset = pointerSequence - segment.startTime
     }
 
     // Select the segment being dragged
     state.selectZoom(id: segment.id)
   }
 
-  private func continueDrag(translation: CGSize) {
+  private func continueDrag(at location: CGPoint) {
     guard let segmentId = dragSegmentId,
-          let segment = state.zoomSegments.first(where: { $0.id == segmentId }) else {
+          let segment = state.zoomSegments.first(where: { $0.id == segmentId })
+    else {
       return
     }
 
-    let deltaSeconds = translation.width / pixelsPerSecond
-    let previewSegment = previewSegment(from: segment, deltaSeconds: deltaSeconds)
+    guard let pointerSequence = sequenceTime(atX: location.x) else { return }
+
+    let previewSegment = previewSegment(from: segment, anchorTimeline: pointerSequence)
     dragPreviewSegment = previewSegment
     commitDragPreviewIfNeeded(previewSegment)
   }
 
-  private func previewSegment(from segment: ZoomSegment, deltaSeconds: TimeInterval) -> ZoomSegment {
+  private func previewSegment(from segment: ZoomSegment, anchorTimeline: TimeInterval) -> ZoomSegment {
     var preview = segment
     let initialDuration = dragInitialEndTime - dragInitialStartTime
 
@@ -293,25 +297,16 @@ struct ZoomTimelineTrack: View {
       return preview
 
     case .position:
-      let newStart = dragInitialStartTime + deltaSeconds
-      let maxStart = max(0, sourceDuration - initialDuration)
-      let clampedStart = max(0, min(newStart, maxStart))
-      preview.startTime = clampedStart
+      preview.startTime = anchorTimeline - dragGrabTimelineOffset
       preview.duration = initialDuration
 
     case .startEdge:
-      let newStart = dragInitialStartTime + deltaSeconds
-      let clampedStart = max(0, min(newStart, dragInitialEndTime - ZoomSegment.minDuration))
-      let newDuration = dragInitialEndTime - clampedStart
-      preview.startTime = clampedStart
-      preview.duration = max(ZoomSegment.minDuration, newDuration)
+      preview.startTime = anchorTimeline
+      preview.duration = max(ZoomSegment.minDuration, dragInitialEndTime - anchorTimeline)
 
     case .endEdge:
-      let newEnd = dragInitialEndTime + deltaSeconds
-      let clampedEnd = max(dragInitialStartTime + ZoomSegment.minDuration, min(newEnd, sourceDuration))
-      let newDuration = clampedEnd - dragInitialStartTime
       preview.startTime = dragInitialStartTime
-      preview.duration = max(ZoomSegment.minDuration, newDuration)
+      preview.duration = max(ZoomSegment.minDuration, anchorTimeline - dragInitialStartTime)
     }
 
     return preview
@@ -343,15 +338,17 @@ struct ZoomTimelineTrack: View {
   // MARK: - Tap Handling
 
   private func handleTap(at location: CGPoint) {
-    let tappedTime = sourceTime(atX: location.x)
-
     if let (segment, _) = interactionSegment(atX: location.x) {
       // Tapped on existing segment - activate it for editing (select + sidebar).
       state.openZoomConfiguration(id: segment.id)
-    } else {
-      // Tapped on empty area - add new zoom centered at tap position
-      state.addZoom(at: tappedTime)
+      return
     }
+    // Tapped on empty area - add new zoom centered at tap position. Inserted clips
+    // are valid hosts; inactive trim slots remain ignored for direct add gestures.
+    guard let tappedSequence = sequenceTime(atX: location.x),
+          state.isPlayableMaterial(atSequence: tappedSequence)
+    else { return }
+    state.addZoom(at: tappedSequence)
   }
 
   private func handleDoubleTap(at location: CGPoint) {
@@ -365,7 +362,7 @@ struct ZoomTimelineTrack: View {
   private var trackContextMenu: some View {
     Button {
       // Add at hover position if hovering, otherwise at playhead
-      let addTime = isHovering ? hoverTime : CMTimeGetSeconds(state.currentTime)
+      let addTime = hoverSequenceTime ?? CMTimeGetSeconds(state.currentTime)
       state.addZoom(at: addTime)
     } label: {
       Label(
@@ -418,9 +415,19 @@ struct ZoomTimelineTrack: View {
 
   // MARK: - Layout & Hit Testing
 
-  /// Padded visual span used for drawing: blocks below `minVisualBlockWidth`
-  /// stretch to stay grabbable and the start is clamped inside the track.
-  private func layout(for segment: ZoomSegment) -> SegmentLayout {
+  /// True-time span of a segment on the independent structural timeline. Trimmed
+  /// slots remain visible in this editing axis, so reorder does not alter the span.
+  private func displaySpan(for segment: ZoomSegment) -> ClosedRange<TimeInterval>? {
+    guard videoDuration > 0 else { return nil }
+    let start = max(0, min(segment.startTime, videoDuration))
+    let end = min(videoDuration, max(start, segment.endTime))
+    guard end - start > 0.0001 else { return nil }
+    return start ... end
+  }
+
+  /// Padded visual span for drawing: blocks below `minVisualBlockWidth` stretch to
+  /// stay grabbable and the start is clamped inside the track.
+  private func paddedLayout(for span: ClosedRange<TimeInterval>) -> SegmentLayout {
     guard videoDuration > 0, timelineWidth > 0 else {
       return SegmentLayout(
         visualStartX: 0,
@@ -428,12 +435,8 @@ struct ZoomTimelineTrack: View {
         visualWidth: minVisualBlockWidth
       )
     }
-
-    // The segment is authored in source time; draw it wherever its material now
-    // sits on the sequence. Material that was deleted collapses to zero width.
-    let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime)
-    let logicalStartX = ((span?.lowerBound ?? 0) / videoDuration) * timelineWidth
-    let logicalWidth = (((span?.upperBound ?? 0) - (span?.lowerBound ?? 0)) / videoDuration) * timelineWidth
+    let logicalStartX = (span.lowerBound / videoDuration) * timelineWidth
+    let logicalWidth = ((span.upperBound - span.lowerBound) / videoDuration) * timelineWidth
     let visualWidth = min(timelineWidth, max(minVisualBlockWidth, logicalWidth))
     let maxStartX = max(0, timelineWidth - visualWidth)
     let visualStartX = max(0, min(logicalStartX, maxStartX))
@@ -445,44 +448,31 @@ struct ZoomTimelineTrack: View {
     )
   }
 
-  /// True-time span of a segment on the sequence axis, or nil when its material
-  /// is no longer in the sequence — a dead segment has nowhere true to sit.
-  private func logicalLayout(for segment: ZoomSegment) -> SegmentLayout? {
-    guard videoDuration > 0, timelineWidth > 0 else { return nil }
-    guard let span = state.sequenceSpan(forPrimarySource: segment.startTime...segment.endTime) else {
-      return nil
-    }
-    let startX = (span.lowerBound / videoDuration) * timelineWidth
-    let endX = (span.upperBound / videoDuration) * timelineWidth
-    guard endX - startX > 0.01 else { return nil }
-    return SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX)
-  }
-
-  /// Segments whose material is still on the timeline — the drawable set.
+  /// Segments with somewhere true to sit — the drawable set.
   private var visibleSegments: [ZoomSegment] {
-    state.zoomSegments.filter { logicalLayout(for: $0) != nil }
+    state.zoomSegments.filter { displaySpan(for: $0) != nil }
   }
 
-  /// Hit test under a pointer x. True-time spans answer first so what a block
-  /// covers in time is what it activates; padded visuals are the fallback for
+  /// Hit test under a pointer x. The true span answers first so what a block
+  /// covers in time is what it activates; the padded visual is the fallback for
   /// narrow blocks, resolved by nearest centre. Dead segments never answer.
   private func interactionSegment(atX x: CGFloat) -> (segment: ZoomSegment, layout: SegmentLayout)? {
-    let logicalHits: [(segment: ZoomSegment, layout: SegmentLayout)] = state.zoomSegments.compactMap { segment in
-      guard let layout = logicalLayout(for: segment),
-            x >= layout.visualStartX, x <= layout.visualEndX
-      else { return nil }
+    let trueHits: [(segment: ZoomSegment, layout: SegmentLayout)] = state.zoomSegments.compactMap { segment in
+      guard let span = displaySpan(for: segment) else { return nil }
+      let startX = (span.lowerBound / videoDuration) * timelineWidth
+      let endX = (span.upperBound / videoDuration) * timelineWidth
+      guard endX - startX > 0.01, x >= startX, x <= endX else { return nil }
+      return (segment, SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX))
+    }
+    if let hit = resolveCandidate(trueHits, atX: x) { return hit }
+
+    let paddedHits: [(segment: ZoomSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
+      guard let span = displaySpan(for: segment) else { return nil }
+      let layout = paddedLayout(for: span)
+      guard x >= layout.visualStartX, x <= layout.visualEndX else { return nil }
       return (segment, layout)
     }
-    if let hit = resolveCandidate(logicalHits, atX: x) { return hit }
-
-    let visualHits: [(segment: ZoomSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
-      let segmentLayout = layout(for: segment)
-      guard x >= segmentLayout.visualStartX, x <= segmentLayout.visualEndX else {
-        return nil
-      }
-      return (segment, segmentLayout)
-    }
-    return resolveCandidate(visualHits, atX: x)
+    return resolveCandidate(paddedHits, atX: x)
   }
 
   /// Selected segment wins, then the one whose centre is nearest the pointer,

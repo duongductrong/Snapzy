@@ -1,5 +1,5 @@
 //
-//  ZoomCenterPicker.swift
+//  VideoEditorZoomCenterPicker.swift
 //  Snapzy
 //
 //  Mini preview with draggable crosshair for selecting zoom center point

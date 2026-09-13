@@ -12,7 +12,6 @@ import UniformTypeIdentifiers
 /// Manages video editor window instances
 @MainActor
 final class VideoEditorManager {
-
   static let shared = VideoEditorManager()
 
   private var windowControllers: [UUID: VideoEditorWindowController] = [:]
@@ -40,8 +39,8 @@ final class VideoEditorManager {
   /// Switch back to accessory mode (menu bar only) if no windows open
   private func becomeAccessoryAppIfNeeded() {
     DispatchQueue.main.async { [weak self] in
-      guard let self = self else { return }
-      guard !self.hasOpenWindows else { return }
+      guard let self else { return }
+      guard !hasOpenWindows else { return }
       guard !AnnotateManager.shared.hasOpenWindows else { return }
       NSApp.revertActivationPolicyToAccessoryIfNeeded()
     }
@@ -98,7 +97,8 @@ final class VideoEditorManager {
     guard isVideoFile(url) else { return }
 
     // If Quick Access has this item, reuse it to link the video editor window
-    if let existingItem = QuickAccessManager.shared.items.first(where: { $0.url.standardizedFileURL.path == url.standardizedFileURL.path }) {
+    if let existingItem = QuickAccessManager.shared.items
+      .first(where: { $0.url.standardizedFileURL.path == url.standardizedFileURL.path }) {
       openEditor(for: existingItem)
       return
     }
@@ -113,7 +113,12 @@ final class VideoEditorManager {
     // Switch to regular app mode for Cmd+Tab visibility
     becomeRegularApp()
 
-    DiagnosticLogger.shared.log(.info, .editor, "Opening video editor for URL", context: ["file": url.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .editor,
+      "Opening video editor for URL",
+      context: ["file": url.lastPathComponent]
+    )
 
     let controller = VideoEditorWindowController(url: url, originalURL: originalURL)
     urlWindowControllers[url] = controller

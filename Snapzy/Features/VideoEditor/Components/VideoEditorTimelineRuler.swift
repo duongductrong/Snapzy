@@ -66,7 +66,7 @@ struct TimelineRulerView: View {
     let quarterSpacing = quarterStep * pixelsPerSecond
 
     let quarterCount = max(0, Int((durationSeconds / quarterStep).rounded(.up)))
-    for quarterIndex in 0...quarterCount {
+    for quarterIndex in 0 ... quarterCount {
       let time = TimeInterval(quarterIndex) * quarterStep
       guard time <= durationSeconds + 1e-6 else { break }
 

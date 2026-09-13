@@ -121,7 +121,7 @@ struct VideoEditorEmptyStateView: View {
 
     // First, extract the original URL using loadItem (provides actual file URL)
     provider.loadItem(forTypeIdentifier: videoType.identifier, options: nil) { item, error in
-      if let error = error {
+      if let error {
         DiagnosticLogger.shared.logError(
           .editor,
           error,
@@ -129,7 +129,7 @@ struct VideoEditorEmptyStateView: View {
           context: ["type": videoType.identifier]
         )
         DispatchQueue.main.async {
-          self.showError(message: L10n.VideoEditor.failedToLoadFile(error.localizedDescription))
+          showError(message: L10n.VideoEditor.failedToLoadFile(error.localizedDescription))
         }
         return
       }
@@ -159,7 +159,7 @@ struct VideoEditorEmptyStateView: View {
 
       // Now load file representation to get a working copy
       _ = provider.loadFileRepresentation(forTypeIdentifier: videoType.identifier) { tempURL, repError in
-        if let repError = repError {
+        if let repError {
           DiagnosticLogger.shared.logError(
             .editor,
             repError,
@@ -167,15 +167,15 @@ struct VideoEditorEmptyStateView: View {
             context: ["type": videoType.identifier]
           )
           DispatchQueue.main.async {
-            self.showError(message: L10n.VideoEditor.failedToLoadFile(repError.localizedDescription))
+            showError(message: L10n.VideoEditor.failedToLoadFile(repError.localizedDescription))
           }
           return
         }
 
-        guard let tempURL = tempURL else {
+        guard let tempURL else {
           DiagnosticLogger.shared.log(.warning, .editor, "Video editor drop file representation missing temp URL")
           DispatchQueue.main.async {
-            self.showError(message: L10n.VideoEditor.couldNotReadFile)
+            showError(message: L10n.VideoEditor.couldNotReadFile)
           }
           return
         }
@@ -203,7 +203,7 @@ struct VideoEditorEmptyStateView: View {
           )
 
           DispatchQueue.main.async {
-            self.validateAndLoad(url: destURL, originalURL: originalURL)
+            validateAndLoad(url: destURL, originalURL: originalURL)
           }
         } catch {
           DiagnosticLogger.shared.logError(
@@ -213,7 +213,7 @@ struct VideoEditorEmptyStateView: View {
             context: ["fileName": tempURL.lastPathComponent]
           )
           DispatchQueue.main.async {
-            self.showError(message: L10n.VideoEditor.failedToPrepareFile(error.localizedDescription))
+            showError(message: L10n.VideoEditor.failedToPrepareFile(error.localizedDescription))
           }
         }
       }

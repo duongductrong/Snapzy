@@ -1,5 +1,5 @@
 //
-//  VideoDetailsSidebarView.swift
+//  VideoEditorVideoDetailsSidebarView.swift
 //  Snapzy
 //
 //  Video details sidebar with comprehensive metadata
@@ -72,17 +72,26 @@ struct VideoDetailsSidebarView: View {
         if !state.zoomSegments.isEmpty {
           SidebarSection(title: L10n.VideoEditor.zoomEffects) {
             DetailRow(label: L10n.VideoEditor.segments, value: "\(state.zoomSegments.count)")
-            DetailRow(label: L10n.Common.enabled, value: "\(state.zoomSegments.filter { $0.isEnabled }.count)")
+            DetailRow(label: L10n.Common.enabled, value: "\(state.zoomSegments.filter(\.isEnabled).count)")
           }
         }
 
         if state.hasMouseTrackingData {
           SidebarSection(title: L10n.VideoEditor.smartCamera) {
-            DetailRow(label: L10n.VideoEditor.mouseSamples, value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)")
+            DetailRow(
+              label: L10n.VideoEditor.mouseSamples,
+              value: "\(state.recordingMetadata?.mouseSamples.count ?? 0)"
+            )
             DetailRow(label: L10n.VideoEditor.sampleRate, value: "\(state.recordingMetadata?.samplesPerSecond ?? 0) Hz")
-            DetailRow(label: L10n.VideoEditor.coordSpace, value: state.recordingMetadata?.coordinateSpace.rawValue ?? "—")
+            DetailRow(
+              label: L10n.VideoEditor.coordSpace,
+              value: state.recordingMetadata?.coordinateSpace.rawValue ?? "—"
+            )
             DetailRow(label: L10n.VideoEditor.autoSegments, value: "\(state.autoZoomSegmentCount)")
-            DetailRow(label: L10n.Common.status, value: state.isAutoZoomActiveAtCurrentTime ? L10n.Common.active : L10n.Common.ready)
+            DetailRow(
+              label: L10n.Common.status,
+              value: state.isAutoZoomActiveAtCurrentTime ? L10n.Common.active : L10n.Common.ready
+            )
           }
         }
 

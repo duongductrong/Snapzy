@@ -94,8 +94,8 @@ struct VideoEditorMainView: View {
         .frame(width: 0, height: 0)
         .disabled(
           state.selectedZoomId == nil &&
-          state.selectedSpeedId == nil &&
-          !state.canDeleteSelectedClip
+            state.selectedSpeedId == nil &&
+            !state.canDeleteSelectedClip
         )
 
         // Set trim start at playhead (I key)

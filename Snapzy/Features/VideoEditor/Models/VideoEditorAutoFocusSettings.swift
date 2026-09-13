@@ -9,9 +9,9 @@ import CoreGraphics
 import Foundation
 
 struct AutoFocusSettings: Equatable {
-  static let zoomRange: ClosedRange<CGFloat> = 1.0...4.0
-  static let followSpeedRange: ClosedRange<Double> = 0.2...1.0
-  static let focusMarginRange: ClosedRange<CGFloat> = 0.2...0.9
+  static let zoomRange: ClosedRange<CGFloat> = 1.0 ... 4.0
+  static let followSpeedRange: ClosedRange<Double> = 0.2 ... 1.0
+  static let focusMarginRange: ClosedRange<CGFloat> = 0.2 ... 0.9
   static let defaultZoomLevel: CGFloat = 2.0
   static let defaultFollowSpeed: Double = 0.55
   static let defaultFocusMargin: CGFloat = 0.45

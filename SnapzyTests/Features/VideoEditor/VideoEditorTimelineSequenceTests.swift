@@ -9,11 +9,10 @@
 //
 
 import CoreMedia
-import XCTest
 @testable import Snapzy
+import XCTest
 
 final class VideoEditorTimelineSequenceTests: XCTestCase {
-
   private let eps = 0.0005
 
   // MARK: - Helpers
@@ -52,7 +51,7 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     TimelineSequenceMap(clips: clips, speedSegments: speeds)
   }
 
-  // MARK: - SpeedSegment (unchanged model, still the authoring unit)
+  // MARK: - SpeedSegment (structural timeline authoring unit)
 
   func testSpeedSegment_clampsRateToSupportedRange() {
     XCTAssertEqual(SpeedSegment(startTime: 0, rate: 100).rate, SpeedSegment.maxRate, accuracy: eps)
@@ -167,9 +166,9 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     XCTAssertEqual(placements[1].index, 1)
   }
 
-  func testLayout_retainsTrimmedSlotAndMarksOnlyItsActiveMiddle() {
+  func testLayout_retainsTrimmedSlotAndMarksOnlyItsActiveMiddle() throws {
     let clip = primary(sourceDuration: 20, 5, 15)
-    let placement = try! XCTUnwrap(TimelineSequence.layout([
+    let placement = try XCTUnwrap(TimelineSequence.layout([
       TimelineClip(
         source: clip.source,
         sourceDuration: clip.sourceDuration,
@@ -177,7 +176,7 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
         sourceEnd: clip.sourceEnd,
         slotStart: 0,
         slotEnd: 20
-      )
+      ),
     ]).first)
 
     XCTAssertEqual(placement.start, 0, accuracy: eps)
@@ -189,7 +188,7 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     XCTAssertFalse(placement.containsActive(18))
   }
 
-  func testPlayableLayout_collapsesInactiveTrimSlot() {
+  func testPlayableLayout_collapsesInactiveTrimSlot() throws {
     let clip = TimelineClip(
       source: .primary,
       sourceDuration: 20,
@@ -198,7 +197,7 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
       slotStart: 0,
       slotEnd: 20
     )
-    let placement = try! XCTUnwrap(TimelineSequence.playableLayout([clip]).first)
+    let placement = try XCTUnwrap(TimelineSequence.playableLayout([clip]).first)
 
     XCTAssertEqual(placement.start, 0, accuracy: eps)
     XCTAssertEqual(placement.end, 10, accuracy: eps)
@@ -234,20 +233,42 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     XCTAssertEqual(TimelineSequence.placement(at: 8, in: placements)?.index, 1)
   }
 
-  // MARK: - TimelineSequence.project
+  // MARK: - Structural effect projection
 
-  func testProject_mapsSourceRangeOntoSequence() {
-    let clips = [primary(sourceDuration: 10, 0, 4), primary(sourceDuration: 10, 6, 10)]
-    let placements = TimelineSequence.layout(clips)
+  func testProjectTimelineRange_staysAtAuthoredPositionAfterReorder() {
+    let first = primary(sourceDuration: 10, 0, 5)
+    let second = primary(sourceDuration: 10, 5, 10)
+    let timeline = TimelineSequence.layout([second, first])
+    let playable = TimelineSequence.playableLayout([second, first])
 
-    // Source [7,9] lives in the second clip, which starts at sequence 4 (source 6).
-    let pieces = TimelineSequence.project(sourceRange: 7...9, in: placements)
-    XCTAssertEqual(pieces.count, 1)
-    XCTAssertEqual(pieces[0].lowerBound, 5, accuracy: eps)
-    XCTAssertEqual(pieces[0].upperBound, 7, accuracy: eps)
+    let pieces = TimelineSequence.project(
+      timelineRange: 1 ... 3,
+      from: timeline,
+      to: playable
+    )
+
+    XCTAssertEqual(pieces, [1 ... 3])
   }
 
-  func testProject_keepsEffectAtItsStructuralSourcePositionAcrossTrim() {
+  func testProjectTimelineRange_canTargetInsertedClip() {
+    let clips = [
+      primary(sourceDuration: 10, 0, 5),
+      inserted("intro", sourceDuration: 2),
+      primary(sourceDuration: 10, 5, 10),
+    ]
+    let timeline = TimelineSequence.layout(clips)
+    let playable = TimelineSequence.playableLayout(clips)
+
+    let pieces = TimelineSequence.project(
+      timelineRange: 5.25 ... 6.75,
+      from: timeline,
+      to: playable
+    )
+
+    XCTAssertEqual(pieces, [5.25 ... 6.75])
+  }
+
+  func testProjectTimelineRange_collapsesTrimmedSlotsOnlyAtPlayback() {
     let clip = TimelineClip(
       source: .primary,
       sourceDuration: 20,
@@ -256,56 +277,16 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
       slotStart: 0,
       slotEnd: 20
     )
+    let timeline = TimelineSequence.layout([clip])
+    let playable = TimelineSequence.playableLayout([clip])
+
     let pieces = TimelineSequence.project(
-      sourceRange: 9...11,
-      in: TimelineSequence.layout([clip])
+      timelineRange: 3 ... 8,
+      from: timeline,
+      to: playable
     )
 
-    XCTAssertEqual(pieces.count, 1)
-    XCTAssertEqual(pieces[0].lowerBound, 9, accuracy: eps)
-    XCTAssertEqual(pieces[0].upperBound, 11, accuracy: eps)
-  }
-
-  func testProject_dropsMaterialThatWasDeleted() {
-    let clips = [primary(sourceDuration: 10, 0, 4), primary(sourceDuration: 10, 6, 10)]
-    let placements = TimelineSequence.layout(clips)
-    // Source [4.5, 5.5] sits entirely inside the deleted region.
-    XCTAssertTrue(TimelineSequence.project(sourceRange: 4.5...5.5, in: placements).isEmpty)
-  }
-
-  func testProject_splitsARangeThatSpansADeletedRegion() {
-    let clips = [primary(sourceDuration: 10, 0, 4), primary(sourceDuration: 10, 6, 10)]
-    let placements = TimelineSequence.layout(clips)
-
-    // Source [3,7] survives as [3,4] and [6,7] → sequence [3,4] and [4,5], which meet
-    // and therefore merge into one piece.
-    let pieces = TimelineSequence.project(sourceRange: 3...7, in: placements)
-    XCTAssertEqual(pieces.count, 1)
-    XCTAssertEqual(pieces[0].lowerBound, 3, accuracy: eps)
-    XCTAssertEqual(pieces[0].upperBound, 5, accuracy: eps)
-  }
-
-  func testProject_followsMaterialAfterReorder() {
-    // Same two halves, order swapped: source [0,4] now plays second.
-    let clips = [primary(sourceDuration: 10, 6, 10), primary(sourceDuration: 10, 0, 4)]
-    let placements = TimelineSequence.layout(clips)
-
-    let pieces = TimelineSequence.project(sourceRange: 0...4, in: placements)
-    XCTAssertEqual(pieces.count, 1)
-    XCTAssertEqual(pieces[0].lowerBound, 4, accuracy: eps)
-    XCTAssertEqual(pieces[0].upperBound, 8, accuracy: eps)
-  }
-
-  func testProject_ignoresInsertedClips() {
-    // Zoom/speed are authored against the recording, so an inserted clip contributes
-    // no projection even though it occupies sequence time.
-    let clips = [inserted("intro", sourceDuration: 5), primary(sourceDuration: 10)]
-    let placements = TimelineSequence.layout(clips)
-
-    let pieces = TimelineSequence.project(sourceRange: 0...2, in: placements)
-    XCTAssertEqual(pieces.count, 1)
-    XCTAssertEqual(pieces[0].lowerBound, 5, accuracy: eps) // pushed right by the intro
-    XCTAssertEqual(pieces[0].upperBound, 7, accuracy: eps)
+    XCTAssertEqual(pieces, [0 ... 3])
   }
 
   // MARK: - TimelineSequenceMap identity
@@ -341,18 +322,18 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     let m = map([primary(sourceDuration: 10)], [SpeedSegment(startTime: 2, duration: 4, rate: 2)])
     XCTAssertEqual(m.outputDuration, 8, accuracy: eps)
 
-    XCTAssertEqual(m.toOutput(0), 0, accuracy: eps)    // before region
-    XCTAssertEqual(m.toOutput(2), 2, accuracy: eps)    // region start unchanged
-    XCTAssertEqual(m.toOutput(4), 3, accuracy: eps)    // midpoint: 2 + 2/2
-    XCTAssertEqual(m.toOutput(6), 4, accuracy: eps)    // region end: 2 + 4/2
-    XCTAssertEqual(m.toOutput(10), 8, accuracy: eps)   // after region: 4 + 4
+    XCTAssertEqual(m.toOutput(0), 0, accuracy: eps) // before region
+    XCTAssertEqual(m.toOutput(2), 2, accuracy: eps) // region start unchanged
+    XCTAssertEqual(m.toOutput(4), 3, accuracy: eps) // midpoint: 2 + 2/2
+    XCTAssertEqual(m.toOutput(6), 4, accuracy: eps) // region end: 2 + 4/2
+    XCTAssertEqual(m.toOutput(10), 8, accuracy: eps) // after region: 4 + 4
   }
 
   func testSingle05xSegment_doublesSpanAndLengthensTotal() {
     let m = map([primary(sourceDuration: 10)], [SpeedSegment(startTime: 2, duration: 4, rate: 0.5)])
     XCTAssertEqual(m.outputDuration, 14, accuracy: eps)
     XCTAssertEqual(m.toOutput(2), 2, accuracy: eps)
-    XCTAssertEqual(m.toOutput(6), 10, accuracy: eps)   // 2 + 4/0.5
+    XCTAssertEqual(m.toOutput(6), 10, accuracy: eps) // 2 + 4/0.5
     XCTAssertEqual(m.toOutput(10), 14, accuracy: eps)
   }
 
@@ -423,13 +404,14 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
   // MARK: - Trim window clipping & offset
 
   func testTrimmedClip_offsetsSpeedSegmentsOntoSequenceCoordinates() {
-    // Clip keeps source [5,15] → sequence [0,10]; segment at source [7,11] → seq [2,6].
+    // Structural slot [0,10] keeps its own coordinate; segment [7,11] projects to
+    // the active/playable source portion [7,10] → playable [7,10].
     let clip = primary(sourceDuration: 20, 5, 15)
     let m = map([clip], [SpeedSegment(startTime: 7, duration: 4, rate: 2)])
     XCTAssertEqual(m.sequenceDuration, 10, accuracy: eps)
-    XCTAssertEqual(m.outputDuration, 8, accuracy: eps)
-    XCTAssertEqual(m.toOutput(2), 2, accuracy: eps)
-    XCTAssertEqual(m.toOutput(6), 4, accuracy: eps)
+    XCTAssertEqual(m.outputDuration, 8.5, accuracy: eps)
+    XCTAssertEqual(m.toOutput(6), 6, accuracy: eps)
+    XCTAssertEqual(m.toOutput(10), 8.5, accuracy: eps)
   }
 
   func testTrimmedSlot_speedMapUsesOnlyActiveMaterial() {
@@ -456,37 +438,64 @@ final class VideoEditorTimelineSequenceTests: XCTestCase {
     XCTAssertEqual(m.outputDuration, 7, accuracy: eps)
   }
 
-  func testSpeedFollowsItsMaterialAcrossACut() {
-    // Delete source [4,6]. A 2x segment over source [6,10] lands on sequence [4,8]
-    // and still halves to 2 s, so total = 4 + 2 = 6 s.
+  func testSpeedUsesStructuralPositionAfterACut() {
+    // The effect remains at structural [6,10]. The cut sequence is [0,4] + [4,8],
+    // so only its final two seconds are inside the structural timeline and rate-scaled.
     let clips = [primary(sourceDuration: 10, 0, 4), primary(sourceDuration: 10, 6, 10)]
     let m = map(clips, [SpeedSegment(startTime: 6, duration: 4, rate: 2)])
     XCTAssertEqual(m.sequenceDuration, 8, accuracy: eps)
-    XCTAssertEqual(m.outputDuration, 6, accuracy: eps)
-    XCTAssertEqual(m.rate(atSequence: 5), 2.0, accuracy: eps)
-    XCTAssertEqual(m.rate(atSequence: 2), 1.0, accuracy: eps)
+    XCTAssertEqual(m.outputDuration, 7, accuracy: eps)
+    XCTAssertEqual(m.rate(atSequence: 5), 1.0, accuracy: eps)
+    XCTAssertEqual(m.rate(atSequence: 6), 2.0, accuracy: eps)
   }
 
-  func testSpeedOverDeletedMaterial_hasNoEffect() {
+  func testSpeedSegmentUsesIndependentTimelineAfterClipReorder() {
+    let first = primary(sourceDuration: 10, 0, 5)
+    let second = primary(sourceDuration: 10, 5, 10)
+    let speed = SpeedSegment(startTime: 1, duration: 2, rate: 2)
+
+    let m = map([second, first], [speed])
+
+    XCTAssertEqual(m.rate(atSequence: 1), 2.0, accuracy: eps)
+    XCTAssertEqual(m.rate(atSequence: 6), 1.0, accuracy: eps)
+  }
+
+  func testSpeedUsesTimelinePositionAfterDeletedSourceMaterial() {
     let clips = [primary(sourceDuration: 10, 0, 4), primary(sourceDuration: 10, 6, 10)]
     let m = map(clips, [SpeedSegment(startTime: 4.2, duration: 1.5, rate: 4)])
-    XCTAssertTrue(m.isIdentity)
-    XCTAssertEqual(m.outputDuration, 8, accuracy: eps)
+    XCTAssertFalse(m.isIdentity)
+    XCTAssertEqual(m.rate(atSequence: 4.5), 4.0, accuracy: eps)
+    XCTAssertEqual(m.outputDuration, 6.875, accuracy: eps)
   }
 
-  func testInsertedClipPlaysAt1xEvenUnderASpeedSegment() {
-    // The inserted clip occupies sequence [0,5]; the recording's speed segment at
-    // source [0,4] projects to sequence [5,9] and must not touch the intro.
+  func testInsertedClipCanBeSpeedControlledOnIndependentTimeline() {
+    // The inserted clip occupies structural [0,5]. A segment at structural [0,4]
+    // intentionally controls that inserted material instead of following primary
+    // source time to the right.
     let clips = [inserted("intro", sourceDuration: 5), primary(sourceDuration: 10)]
     let m = map(clips, [SpeedSegment(startTime: 0, duration: 4, rate: 2)])
     XCTAssertEqual(m.sequenceDuration, 15, accuracy: eps)
-    XCTAssertEqual(m.rate(atSequence: 2), 1.0, accuracy: eps)   // inside the intro
-    XCTAssertEqual(m.rate(atSequence: 6), 2.0, accuracy: eps)   // inside the 2x span
-    XCTAssertEqual(m.outputDuration, 13, accuracy: eps)         // 15 - 4/2
+    XCTAssertEqual(m.rate(atSequence: 2), 2.0, accuracy: eps) // inside the intro
+    XCTAssertEqual(m.rate(atSequence: 6), 1.0, accuracy: eps) // after the span
+    XCTAssertEqual(m.outputDuration, 13, accuracy: eps) // 15 - 4/2
   }
 
   func testOutputCMDuration_matchesOutputSeconds() {
     let m = map([primary(sourceDuration: 8)], [SpeedSegment(startTime: 0, duration: 4, rate: 2)])
     XCTAssertEqual(CMTimeGetSeconds(m.outputCMDuration()), m.outputDuration, accuracy: 0.01)
+  }
+
+  func testSpeedMap_afterReorder_keepsAuthoredTimelineSpan() {
+    // [A2][A1] does not move a structural [3.5,6] effect. The span crosses the
+    // clip seam continuously and remains exactly 2.5 seconds long.
+    let a1 = primary(sourceDuration: 10, 0, 5)
+    let a2 = primary(sourceDuration: 10, 5, 10)
+    let m = map([a2, a1], [SpeedSegment(startTime: 3.5, duration: 2.5, rate: 2)])
+
+    XCTAssertEqual(m.rate(atSequence: 1), 1.0, accuracy: eps) // inside A2
+    XCTAssertEqual(m.rate(atSequence: 5), 2.0, accuracy: eps) // across the seam
+    XCTAssertEqual(m.rate(atSequence: 6), 1.0, accuracy: eps) // after the span
+    // Output: 3.5 s at 1x + 1.25 s at 2x + 4 s at 1x = 8.75 s.
+    XCTAssertEqual(m.outputDuration, 8.75, accuracy: eps)
   }
 }

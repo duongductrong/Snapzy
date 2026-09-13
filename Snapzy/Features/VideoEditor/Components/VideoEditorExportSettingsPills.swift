@@ -1,5 +1,5 @@
 //
-//  VideoEditorExportSettingsDrawer.swift
+//  VideoEditorExportSettingsPills.swift
 //  Snapzy
 //
 //  Export settings for the video editor bottom bar: a pill row (Quality / Dimensions / Audio
@@ -635,7 +635,7 @@ private struct DimensionsEditor: View {
         var settings = state.exportSettings
         let oldWidth = settings.customWidth
         settings.customWidth = max(16, newValue)
-        if settings.aspectRatioLocked && oldWidth > 0 {
+        if settings.aspectRatioLocked, oldWidth > 0 {
           let ratio = CGFloat(settings.customHeight) / CGFloat(oldWidth)
           settings.customHeight = Int(CGFloat(settings.customWidth) * ratio)
         }
@@ -651,7 +651,7 @@ private struct DimensionsEditor: View {
         var settings = state.exportSettings
         let oldHeight = settings.customHeight
         settings.customHeight = max(16, newValue)
-        if settings.aspectRatioLocked && oldHeight > 0 {
+        if settings.aspectRatioLocked, oldHeight > 0 {
           let ratio = CGFloat(settings.customWidth) / CGFloat(oldHeight)
           settings.customWidth = Int(CGFloat(settings.customHeight) * ratio)
         }
@@ -710,7 +710,7 @@ private struct AudioEditor: View {
         .lineLimit(1)
         .frame(width: 120, alignment: .leading)
 
-      Slider(value: volumeBinding(for: role).stepped(by: 0.05, in: 0...2), in: 0...2)
+      Slider(value: volumeBinding(for: role).stepped(by: 0.05, in: 0 ... 2), in: 0 ... 2)
         .controlSize(.small)
 
       Text("\(Int(state.exportSettings.audioVolume(for: role) * 100))%")

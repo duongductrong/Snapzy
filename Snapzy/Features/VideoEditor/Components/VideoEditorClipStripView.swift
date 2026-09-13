@@ -8,8 +8,8 @@
 //  reorder, trim from either edge, and delete.
 //
 
-import AVFoundation
 import AppKit
+import AVFoundation
 import SwiftUI
 
 struct VideoEditorClipStripView: View {
@@ -61,15 +61,15 @@ struct VideoEditorClipStripView: View {
     /// Set by an edge-handle trim drag so body gestures leave the session alone.
     var isTrimming = false
     var targetIndex: Int
-  /// In/out points as they stood when a trim drag began. Translation is cumulative,
-  /// so it must be applied to a fixed anchor rather than to the live clip — which
-  /// SwiftUI may have already re-rendered mid-gesture.
-  var anchorStart: TimeInterval = 0
-  var anchorEnd: TimeInterval = 0
-  /// Pointer x in the strip's stable coordinate space when the trim drag began.
-  /// Measured here rather than in the handle's own space: the handle repositions
-  /// on every tick, so a local measurement would feed back into itself and jitter.
-  var anchorX: CGFloat = 0
+    /// In/out points as they stood when a trim drag began. Translation is cumulative,
+    /// so it must be applied to a fixed anchor rather than to the live clip — which
+    /// SwiftUI may have already re-rendered mid-gesture.
+    var anchorStart: TimeInterval = 0
+    var anchorEnd: TimeInterval = 0
+    /// Pointer x in the strip's stable coordinate space when the trim drag began.
+    /// Measured here rather than in the handle's own space: the handle repositions
+    /// on every tick, so a local measurement would feed back into itself and jitter.
+    var anchorX: CGFloat = 0
   }
 
   private var axisDuration: TimeInterval {
@@ -90,7 +90,7 @@ struct VideoEditorClipStripView: View {
     ZStack(alignment: .leading) {
       Color.black.opacity(0.2)
 
-      if state.isExtractingFrames && state.frameThumbnails.isEmpty {
+      if state.isExtractingFrames, state.frameThumbnails.isEmpty {
         loadingRow
       } else {
         ForEach(state.placements) { placement in
@@ -276,9 +276,9 @@ struct VideoEditorClipStripView: View {
   private func images(for clip: TimelineClip) -> [NSImage] {
     switch clip.source {
     case .primary:
-      return state.frameThumbnails
+      state.frameThumbnails
     case .file(let url):
-      return thumbnailCache.strip(for: url)
+      thumbnailCache.strip(for: url)
     }
   }
 
