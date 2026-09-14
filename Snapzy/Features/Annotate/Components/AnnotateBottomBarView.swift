@@ -281,80 +281,74 @@ struct AnnotateBottomBarView: View {
     }
   }
 
-  // MARK: - Drag Handle (CleanShot-style)
+  // MARK: - Drag Handle (Liquid Glass)
 
   @State private var isDragHovering = false
 
   private func dragHandle(width: CGFloat, isCompact: Bool) -> some View {
     let dragState = state.dragToAppPreparationState
+    let isPreparing = dragState == .preparing
+    let isReady = dragState == .ready
+    let isLit = isPreparing || (isReady && isDragHovering)
 
     return AnnotateDragHandleView(state: state)
       .frame(width: width, height: centeredDragHeight)
-      .overlay(
-        HStack(spacing: isCompact ? 0 : 6) {
-          if dragState == .preparing {
+      .overlay {
+        HStack(spacing: isCompact ? 8 : 7) {
+          if isPreparing {
             ProgressView()
               .controlSize(.small)
               .scaleEffect(0.7)
-              .tint(isDragHovering ? .primary : .secondary)
+          } else if isCompact {
+            dragGrip
           } else {
-            Image(systemName: "hand.draw")
-              .font(.system(size: 13, weight: .medium))
-              .foregroundColor(isDragHovering ? .primary : .secondary)
-          }
+            dragGrip
 
-          if !isCompact {
             Text(L10n.AnnotateUI.dragToApp)
               .font(.system(size: 12, weight: .medium))
-              .foregroundColor(dragLabelColor(for: dragState))
+
+            dragGrip
           }
         }
+        .foregroundColor(dragInk(for: dragState))
         .allowsHitTesting(false)
+      }
+      .liquidGlassChrome(
+        shape: Capsule(style: .continuous),
+        isVisible: true,
+        isActive: isLit
       )
-      .background(
-        Capsule()
-          .fill(dragBackgroundColor(for: dragState))
-      )
-      .overlay(
-        Capsule()
-          .strokeBorder(dragBorderColor(for: dragState), lineWidth: 1)
-      )
-      .onHover { isDragHovering = $0 }
-      .animation(.easeInOut(duration: 0.15), value: isDragHovering)
-      .animation(.easeInOut(duration: 0.15), value: dragState)
+      // Rule 2: scale, not opacity — a transform never detaches the glass backdrop.
+      .scaleEffect(isLit ? 1.02 : 1)
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) {
+          isDragHovering = hovering
+        }
+      }
+      .animation(LiquidGlassTokens.hoverSpring, value: dragState)
+      .animation(LiquidGlassTokens.hoverSpring, value: isDragHovering)
       .help(L10n.AnnotateUI.dragToAppHelp)
   }
 
-  private func dragLabelColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
-    switch state {
-    case .ready:
-      return isDragHovering ? .primary : .secondary
-    case .preparing:
-      return .primary
-    case .unavailable:
-      return .secondary.opacity(0.6)
+  private var dragGrip: some View {
+    VStack(spacing: 3) {
+      ForEach(0..<3, id: \.self) { _ in
+        Capsule(style: .continuous)
+          .fill(LiquidGlassTokens.inkBody.opacity(0.5))
+          .frame(width: 7, height: 1.3)
+      }
     }
+    .frame(width: 10)
   }
 
-  private func dragBackgroundColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
+  private func dragInk(for state: AnnotateState.DragToAppPreparationState) -> Color {
     switch state {
     case .ready:
-      return isDragHovering ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06)
+      return isDragHovering ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody
     case .preparing:
-      return Color.accentColor.opacity(isDragHovering ? 0.12 : 0.08)
+      return LiquidGlassTokens.inkPrimary
     case .unavailable:
-      return Color.primary.opacity(0.04)
-    }
-  }
-
-  private func dragBorderColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
-    switch state {
-    case .ready:
-      return Color.primary.opacity(isDragHovering ? 0.2 : 0.1)
-    case .preparing:
-      return Color.accentColor.opacity(isDragHovering ? 0.35 : 0.22)
-    case .unavailable:
-      return Color.primary.opacity(0.08)
+      return LiquidGlassTokens.inkFaint
     }
   }
 
