@@ -6536,6 +6536,11 @@ nonisolated enum L10n {
       defaultValue: "Exporting Video",
       comment: "Title shown in the video editor export progress overlay"
     )
+    static let savingVideo = string(
+      "video-editor.saving-video",
+      defaultValue: "Saving Video",
+      comment: "Title shown while the Video Editor replaces the current video with saved edits"
+    )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
       defaultValue: "Zoom Settings",

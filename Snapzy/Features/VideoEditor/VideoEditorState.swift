@@ -105,6 +105,11 @@ final class VideoEditorState: ObservableObject {
   /// Original file URL to replace (used for "Replace Original" functionality)
   private(set) var originalURL: URL
   private(set) var assetURL: URL
+  /// The source used to render the current authoring recipe. For a restored
+  /// session this is the private master snapshot, not the already-rendered file.
+  var editingSourceURL: URL {
+    assetURL
+  }
   let asset: AVAsset
   let player: AVPlayer
   let playbackState = VideoEditorPlaybackState()
@@ -427,6 +432,7 @@ final class VideoEditorState: ObservableObject {
   @Published var isExporting: Bool = false
   @Published var exportProgress: Float = 0
   @Published var exportStatusMessage: String = "Preparing..."
+  @Published var progressOperation: VideoEditorProgressOperation = .exportVideo
 
   // MARK: - Export Settings
 
@@ -470,6 +476,8 @@ final class VideoEditorState: ObservableObject {
   private var endObserver: NSObjectProtocol?
   private var cancellables = Set<AnyCancellable>()
   private var autoFocusPathInputs: [UUID: AutoFocusPathInput] = [:]
+  private let restoredSessionData: VideoEditorSessionData?
+  private var didRestoreSession = false
 
   // MARK: - Computed Properties
 
@@ -584,13 +592,20 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Initialization
 
-  init(url: URL, originalURL: URL? = nil) {
-    let initialMetadata = Self.loadRecordingMetadata(for: url, originalURL: originalURL)
-    let editorAssetURL = Self.editorAssetURL(for: url, metadata: initialMetadata)
+  init(
+    url: URL,
+    originalURL: URL? = nil,
+    sessionData: VideoEditorSessionData? = nil
+  ) {
+    let initialMetadata = sessionData?.recordingMetadata
+      ?? Self.loadRecordingMetadata(for: url, originalURL: originalURL)
+    let editorAssetURL = sessionData?.sourceSnapshotURL
+      ?? Self.editorAssetURL(for: url, metadata: initialMetadata)
 
     sourceURL = url
     self.originalURL = originalURL ?? url
     assetURL = editorAssetURL
+    restoredSessionData = sessionData
     asset = AVAsset(url: editorAssetURL)
     let item = AVPlayerItem(asset: asset)
     primaryPlayerItem = item
@@ -689,7 +704,7 @@ final class VideoEditorState: ObservableObject {
 
     // GIF files can't be loaded by AVAsset — use GIFResizer metadata
     if isGIF {
-      if let metadata = GIFResizer.metadata(for: sourceURL) {
+      if let metadata = GIFResizer.metadata(for: editingSourceURL) {
         naturalSize = metadata.size
         gifFrameCount = metadata.frameCount
         gifDuration = metadata.duration
@@ -702,28 +717,21 @@ final class VideoEditorState: ObservableObject {
             "frames": "\(metadata.frameCount)",
           ]
         )
-      } else if let image = SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL, {
-        NSImage(contentsOf: sourceURL)
+      } else if let image = SandboxFileAccessManager.shared.withScopedAccess(to: editingSourceURL, {
+        NSImage(contentsOf: editingSourceURL)
       }) {
         naturalSize = CGSize(
           width: image.representations.first?.pixelsWide ?? Int(image.size.width),
           height: image.representations.first?.pixelsHigh ?? Int(image.size.height)
         )
       }
+      _ = restoreSessionIfNeeded()
       return
     }
 
     do {
       let loadedDuration = try await asset.load(.duration)
       duration = loadedDuration
-
-      // Seed the sequence with one clip spanning the whole recording.
-      let seed = TimelineClip(source: .primary, sourceDuration: CMTimeGetSeconds(loadedDuration))
-      clips = [seed]
-      initialClips = clips
-      selectedClipId = seed.id
-      activeClipId = seed.id
-      activeItemSource = .primary
 
       if let track = try await asset.loadTracks(withMediaType: .video).first {
         let size = try await track.load(.naturalSize)
@@ -738,6 +746,15 @@ final class VideoEditorState: ObservableObject {
       let audioTracks = try await asset.loadTracks(withMediaType: .audio)
       let audioTrackCount = audioTracks.count
       audioTrackRoles = Self.audioTrackRoles(for: audioTracks, metadata: recordingMetadata)
+      if !restoreSessionIfNeeded(primaryDuration: CMTimeGetSeconds(loadedDuration)) {
+        // Seed the sequence with one clip spanning the whole recording.
+        let seed = TimelineClip(source: .primary, sourceDuration: CMTimeGetSeconds(loadedDuration))
+        clips = [seed]
+        initialClips = clips
+        selectedClipId = seed.id
+        activeClipId = seed.id
+        activeItemSource = .primary
+      }
       DiagnosticLogger.shared.log(.info, .editor, "Video metadata loaded", context: [
         "duration": String(format: "%.1fs", CMTimeGetSeconds(loadedDuration)),
         "size": "\(Int(naturalSize.width))x\(Int(naturalSize.height))",
@@ -749,6 +766,121 @@ final class VideoEditorState: ObservableObject {
     } catch {
       DiagnosticLogger.shared.logError(.editor, error, "Failed to load video metadata")
       print("Failed to load video metadata: \(error)")
+    }
+  }
+
+  /// Restore the non-destructive recipe after the master asset has loaded its
+  /// duration. The current `sourceURL` remains the visible/replacement target;
+  /// `asset` is already backed by the session's private source snapshot.
+  @discardableResult
+  private func restoreSessionIfNeeded(primaryDuration: TimeInterval? = nil) -> Bool {
+    guard !didRestoreSession else {
+      return restoredSessionData != nil && (!clips.isEmpty || isGIF)
+    }
+    didRestoreSession = true
+
+    guard let sessionData = restoredSessionData else { return false }
+
+    if !isGIF {
+      guard let primaryDuration,
+            primaryDuration.isFinite,
+            primaryDuration > 0,
+            !sessionData.clips.isEmpty,
+            sessionData.clips.allSatisfy({ isRestorableClip($0, primaryDuration: primaryDuration) })
+      else {
+        DiagnosticLogger.shared.log(
+          .warning,
+          .editor,
+          "Video Editor session ignored; timeline source validation failed"
+        )
+        return false
+      }
+
+      clips = sessionData.clips
+      let structuralDuration = TimelineSequence.duration(clips)
+      zoomSegments = sessionData.zoomSegments.compactMap { segment in
+        guard segment.startTime.isFinite,
+              segment.duration.isFinite,
+              segment.startTime < structuralDuration
+        else {
+          return nil
+        }
+        return segment.clamped(to: structuralDuration)
+      }
+      speedSegments = sessionData.speedSegments.compactMap { segment in
+        guard segment.startTime.isFinite,
+              segment.duration.isFinite,
+              segment.startTime < structuralDuration
+        else {
+          return nil
+        }
+        return segment.clamped(to: structuralDuration)
+      }
+      selectedClipId = clips.first?.id
+      activeClipId = clips.first?.id
+      activeItemSource = clips.first?.source
+    } else {
+      zoomSegments = []
+      speedSegments = []
+    }
+
+    backgroundStyle = sessionData.backgroundStyle
+    backgroundPadding = sessionData.backgroundPadding
+    backgroundShadowIntensity = sessionData.backgroundShadowIntensity
+    backgroundCornerRadius = sessionData.backgroundCornerRadius
+    backgroundAlignment = sessionData.backgroundAlignment
+    backgroundAspectRatio = sessionData.backgroundAspectRatio
+    exportSettings = sessionData.exportSettings
+    isMuted = sessionData.isMuted
+    rebuildAutoFocusPaths(for: zoomSegments)
+
+    // Restored values are the new clean baseline. A later user change should
+    // produce the normal unsaved-document state and a new session snapshot.
+    markAsSaved()
+    updateClipActionAvailability()
+    syncPlayerAudioWithExportSettings()
+    recalculateEstimatedFileSize()
+
+    DiagnosticLogger.shared.log(.info, .editor, "Video Editor session restored", context: [
+      "clips": "\(clips.count)",
+      "zooms": "\(zoomSegments.count)",
+      "speeds": "\(speedSegments.count)",
+    ])
+    return true
+  }
+
+  private func isRestorableClip(
+    _ clip: TimelineClip,
+    primaryDuration: TimeInterval
+  ) -> Bool {
+    let values = [
+      clip.sourceDuration,
+      clip.sourceStart,
+      clip.sourceEnd,
+      clip.slotStart,
+      clip.slotEnd,
+    ]
+    guard values.allSatisfy(\.isFinite),
+          clip.sourceDuration > 0,
+          clip.sourceStart >= 0,
+          clip.sourceStart < clip.sourceEnd,
+          clip.slotStart >= 0,
+          clip.slotStart < clip.slotEnd,
+          clip.sourceStart >= clip.slotStart - 0.05,
+          clip.sourceEnd <= clip.slotEnd + 0.05,
+          clip.sourceEnd <= clip.sourceDuration + 0.05,
+          clip.slotEnd <= clip.sourceDuration + 0.05,
+          clip.duration >= TimelineClip.minDuration - 0.0001,
+          clip.slotDuration >= TimelineClip.minDuration - 0.0001
+    else {
+      return false
+    }
+
+    switch clip.source {
+    case .primary:
+      return abs(clip.sourceDuration - primaryDuration) <= 0.05
+    case .file(let url):
+      return FileManager.default.fileExists(atPath: url.path)
     }
   }
 
@@ -1041,7 +1173,7 @@ final class VideoEditorState: ObservableObject {
   ) async -> [CGImage] {
     let safeCount = max(frameCount, 1)
     let targetSize = CGSize(width: 120, height: 68)
-    let inputURL = sourceURL
+    let inputURL = editingSourceURL
 
     return await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
@@ -2357,7 +2489,11 @@ final class VideoEditorState: ObservableObject {
       return
     }
 
-    recordingMetadata = Self.loadRecordingMetadata(for: sourceURL, originalURL: originalURL)
+    if let restoredSessionData {
+      recordingMetadata = restoredSessionData.recordingMetadata
+    } else {
+      recordingMetadata = Self.loadRecordingMetadata(for: sourceURL, originalURL: originalURL)
+    }
 
     rebuildAutoFocusPaths(for: zoomSegments)
   }

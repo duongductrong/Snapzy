@@ -18,6 +18,7 @@ final class CaptureHistoryRetentionService {
   private var timer: Timer?
   var userDefaults: UserDefaults = .standard
   var annotationSessionStore: AnnotationSessionStore = .shared
+  var videoEditorSessionStore: VideoEditorSessionStore = .shared
 
   private init() {}
 
@@ -99,6 +100,7 @@ final class CaptureHistoryRetentionService {
     // Clean up orphaned thumbnails
     await cleanupOrphanedThumbnails()
     cleanupOrphanedAnnotationSessions()
+    cleanupOrphanedVideoEditorSessions()
 
     logger.info("Retention sweep completed")
     DiagnosticLogger.shared.log(
@@ -197,6 +199,7 @@ final class CaptureHistoryRetentionService {
 
     HistoryThumbnailGenerator.shared.clearAllThumbnails()
     annotationSessionStore.deleteAllSessions()
+    videoEditorSessionStore.deleteAllSessions()
     logger.info("All history cleared by user request")
     DiagnosticLogger.shared.log(.info, .history, "All capture history cleared by user request")
   }
@@ -273,5 +276,19 @@ final class CaptureHistoryRetentionService {
         .map(\.filePath)
     )
     annotationSessionStore.cleanup(keepingScreenshotFilePaths: activeScreenshotPaths)
+  }
+
+  private func cleanupOrphanedVideoEditorSessions() {
+    guard CaptureHistoryStore.shared.isDatabaseAvailable else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .history,
+        "Capture history video editor session cleanup skipped; database unavailable"
+      )
+      return
+    }
+
+    let activeMediaPaths = Set(CaptureHistoryStore.shared.records.map(\.filePath))
+    videoEditorSessionStore.cleanup(keepingMediaFilePaths: activeMediaPaths)
   }
 }

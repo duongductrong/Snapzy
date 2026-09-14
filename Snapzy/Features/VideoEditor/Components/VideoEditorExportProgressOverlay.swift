@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-/// Modal overlay displayed during video export
+/// Modal overlay displayed while the editor saves, exports, or uploads a video.
 struct ExportProgressOverlay: View {
   @ObservedObject var state: VideoEditorState
 
@@ -26,7 +26,7 @@ struct ExportProgressOverlay: View {
           .modifier(PulseEffectModifier())
 
         // Title
-        Text(L10n.VideoEditor.exportingVideo)
+        Text(state.progressOperation.title)
           .font(.system(size: 16, weight: .semibold))
           .foregroundColor(.primary)
 

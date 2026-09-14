@@ -95,7 +95,7 @@ enum VideoEditorExportLayout {
 
 // MARK: - Export Quality
 
-enum ExportQuality: String, CaseIterable, Identifiable {
+enum ExportQuality: String, CaseIterable, Identifiable, Codable {
   case low = "Low"
   case medium = "Medium"
   case high = "High"
@@ -133,7 +133,7 @@ enum ExportQuality: String, CaseIterable, Identifiable {
 
 // MARK: - Audio Export Mode
 
-enum AudioExportMode: String, CaseIterable, Identifiable {
+enum AudioExportMode: String, CaseIterable, Identifiable, Codable {
   case keep = "Keep Original"
   case mute = "Mute"
   case custom = "Custom Volume"
@@ -262,7 +262,7 @@ enum VideoEditorAudioMixFactory {
 
 // MARK: - Export Dimensions
 
-enum ExportDimensionPreset: String, CaseIterable, Identifiable {
+enum ExportDimensionPreset: String, CaseIterable, Identifiable, Codable {
   case original = "Original"
   case ratio1x1 = "1:1"
   case ratio4x3 = "4:3"
@@ -370,7 +370,7 @@ enum ExportDimensionPreset: String, CaseIterable, Identifiable {
 
 // MARK: - Export Settings Container
 
-struct ExportSettings: Equatable {
+struct ExportSettings: Equatable, Codable {
   static let minimumAudioVolume: Float = 0
   static let maximumAudioVolume: Float = 2
 
