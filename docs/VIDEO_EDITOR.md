@@ -233,7 +233,7 @@ off at each clip's active out-point and rewinds at the end.
 
 ## Bottom Bar (HEAD)
 
-`Components/VideoEditorBottomBar.swift`: **Cancel** | optional cloud-upload button (only when `CloudManager.shared.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`; label flips to re-upload when a cloud key exists; disabled while the card was already uploaded) | **Convert/Save** (⌘S; title is "Save" for temp captures, "Convert" otherwise) with an export progress strip (`VideoEditorExportProgressOverlay` during export). ⌘U uploads directly (`VideoEditorMainView`).
+`Components/VideoEditorBottomBar.swift`: **Cancel** | optional cloud-upload button (only when `CloudManager.shared.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`; label flips to re-upload when a cloud key exists; disabled while the card was already uploaded) | **Convert/Save** (⌘S; title is "Save" for temp captures, "Convert" otherwise) with a monochrome glass progress card (`VideoEditorExportProgressOverlay`: circular progress ring + percent on a Liquid Glass panel; native glass on macOS 26+, layered material fallback on macOS 13–15). ⌘U uploads directly (`VideoEditorMainView`).
 
 ## Key Files
 
