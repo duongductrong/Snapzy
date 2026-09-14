@@ -2,95 +2,97 @@
 //  VideoEditorExportProgressOverlay.swift
 //  Snapzy
 //
-//  Modal overlay showing export progress with progress bar
+//  Modal overlay showing save/export progress as a circular ring on a glass card.
 //
 
 import SwiftUI
 
 /// Modal overlay displayed while the editor saves, exports, or uploads a video.
+///
+/// Monochrome by design: grays and labels everywhere, with the system accent reserved for the
+/// single progress ring. The card surface is the shared Liquid Glass composite, so macOS 26+
+/// renders native glass and macOS 13–15 fall back to the layered material automatically.
+/// Entry/exit motion is owned by the call site (`VideoEditorMainView`).
 struct ExportProgressOverlay: View {
   @ObservedObject var state: VideoEditorState
 
+  /// Spring for progress updates, kept below 14 so it also runs on macOS 13.
+  private static let motion = Animation.spring(response: 0.4, dampingFraction: 0.85)
+
   var body: some View {
     ZStack {
-      // Dimmed background
-      Color.black.opacity(0.6)
+      Rectangle()
+        .fill(Color.black.opacity(0.4))
         .ignoresSafeArea()
 
-      // Progress card
-      VStack(spacing: 16) {
-        // Icon
-        Image(systemName: "film")
-          .font(.system(size: 32))
-          .foregroundColor(ZoomColors.primary)
-          .modifier(PulseEffectModifier())
+      card
+    }
+  }
 
-        // Title
+  private var card: some View {
+    VStack(spacing: 20) {
+      progressRing
+
+      VStack(spacing: 6) {
         Text(state.progressOperation.title)
-          .font(.system(size: 16, weight: .semibold))
+          .font(.system(size: 15, weight: .semibold))
           .foregroundColor(.primary)
 
-        // Progress bar
-        VStack(spacing: 8) {
-          GeometryReader { geometry in
-            ZStack(alignment: .leading) {
-              // Background track
-              Radius.rect(Radius.ornament)
-                .fill(Color.gray.opacity(0.3))
-                .frame(height: 8)
-
-              // Progress fill
-              Radius.rect(Radius.ornament)
-                .fill(
-                  LinearGradient(
-                    colors: [ZoomColors.primary, ZoomColors.primaryDark],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                  )
-                )
-                .frame(width: max(0, geometry.size.width * CGFloat(state.exportProgress)), height: 8)
-                .animation(.easeInOut(duration: 0.2), value: state.exportProgress)
-            }
-          }
-          .frame(height: 8)
-
-          // Percentage
-          Text("\(Int(state.exportProgress * 100))%")
-            .font(.system(size: 13, weight: .medium, design: .monospaced))
-            .foregroundColor(.secondary)
-        }
-
-        // Status message
         Text(state.exportStatusMessage)
           .font(.system(size: 12))
           .foregroundColor(.secondary)
+          .lineLimit(1)
+          .truncationMode(.tail)
       }
-      .padding(24)
-      .frame(width: 280)
-      .background(
-        Radius.rect(Radius.panel)
-          .fill(Color(NSColor.windowBackgroundColor))
-          .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-      )
     }
-    .transition(.opacity)
+    .padding(28)
+    .frame(width: 264)
+    .liquidGlassSurface(shape: Radius.rect(Radius.panel))
+    .shadow(color: .black.opacity(0.25), radius: 24, y: 12)
+  }
+
+  // MARK: - Progress Ring
+
+  private var progressRing: some View {
+    ZStack {
+      Circle()
+        .stroke(Color.primary.opacity(0.08), style: StrokeStyle(lineWidth: 6))
+
+      Circle()
+        .trim(from: 0, to: max(0.02, CGFloat(state.exportProgress)))
+        .stroke(
+          ZoomColors.primary,
+          style: StrokeStyle(lineWidth: 6, lineCap: .round)
+        )
+        .rotationEffect(.degrees(-90))
+        .animation(Self.motion, value: state.exportProgress)
+    }
+    .frame(width: 64, height: 64)
+    .overlay {
+      percentLabel
+    }
+  }
+
+  private var percentLabel: some View {
+    Text("\(Int((state.exportProgress * 100).rounded()))%")
+      .font(.system(size: 14, weight: .semibold, design: .rounded))
+      .monospacedDigit()
+      .foregroundColor(.primary)
+      .modifier(NumericTextTransitionModifier())
+      .animation(Self.motion, value: state.exportProgress)
   }
 }
 
-// MARK: - Pulse Effect Modifier (macOS 13 compat)
+// MARK: - Numeric Text Transition (macOS 13 compat)
 
-/// Uses `.symbolEffect(.pulse)` on macOS 14+, simple opacity animation on macOS 13
-private struct PulseEffectModifier: ViewModifier {
-  @State private var isAnimating = false
-
+/// Cross-fades digits on macOS 14+ via `.contentTransition(.numericText())`,
+/// plain render on macOS 13 where the transition is unavailable.
+private struct NumericTextTransitionModifier: ViewModifier {
   func body(content: Content) -> some View {
     if #available(macOS 14.0, *) {
-      content.symbolEffect(.pulse, options: .repeating)
+      content.contentTransition(.numericText())
     } else {
       content
-        .opacity(isAnimating ? 0.4 : 1.0)
-        .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isAnimating)
-        .onAppear { isAnimating = true }
     }
   }
 }
@@ -103,7 +105,7 @@ private struct PulseEffectModifier: ViewModifier {
       let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test.mov"))
       state.isExporting = true
       state.exportProgress = 0.65
-      state.exportStatusMessage = "Processing zoom effects..."
+      state.exportStatusMessage = L10n.VideoEditor.exporting
       return state
     }()
   )

@@ -143,8 +143,10 @@ struct VideoEditorMainView: View {
       // Export progress overlay
       if state.isExporting {
         ExportProgressOverlay(state: state)
+          .transition(.opacity.combined(with: .scale(scale: 0.96)))
       }
     }
+    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: state.isExporting)
     .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()
