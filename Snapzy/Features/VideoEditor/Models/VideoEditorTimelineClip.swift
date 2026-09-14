@@ -22,9 +22,9 @@ import Foundation
 /// The clip also keeps a fixed source slot. The slot is the structural span that
 /// remains visible on the timeline; `sourceStart`/`sourceEnd` are the active part
 /// that plays and exports.
-struct TimelineClip: Identifiable, Equatable, Hashable {
+struct TimelineClip: Identifiable, Equatable, Hashable, Codable {
   /// Which asset backs this clip.
-  enum Source: Equatable, Hashable {
+  enum Source: Equatable, Hashable, Codable {
     /// The recording being edited (`state.asset` / `state.sourceURL`).
     case primary
     /// A video appended or inserted by the user.

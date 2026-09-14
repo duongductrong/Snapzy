@@ -25,6 +25,17 @@ final class VideoEditorExportSettingsTests: XCTestCase {
     }
   }
 
+  func testVideoEditorSaveTargetKeepsTemporaryCapturesInQuickAccess() {
+    XCTAssertEqual(
+      VideoEditorSaveTarget.resolve(isTempCapture: true),
+      .quickAccessTemp
+    )
+    XCTAssertEqual(
+      VideoEditorSaveTarget.resolve(isTempCapture: false),
+      .destination
+    )
+  }
+
   @MainActor
   func testVideoEditorWindowFocusSyncKeepsInactiveWindowAtRestingLevel() {
     let window = MockVideoEditorWindow(

@@ -42,7 +42,7 @@ flowchart TD
     C -->|URL| E["VideoEditorWindowController(url:, originalURL:)"]
     C -->|Empty drop state| F["VideoEditorWindowController() + VideoEditorEmptyStateView"]
 
-    D --> G["VideoEditorState loads asset (editor sidecar asset when present)"]
+    D --> G["VideoEditorState loads saved edit recipe + private source when present"]
     E --> G
     F -->|Video dropped| E
     G --> H{"RecordingMetadata available?"}
@@ -66,6 +66,14 @@ flowchart TD
 - `VideoEditorState` (`VideoEditorState.swift`) is the central model: asset, trim range, zoom/speed segments, background, export settings, undo stacks. `VideoEditorPlaybackState` holds playhead/playing/scrubbing.
 - Playback position comes from an `AVPlayer` periodic time observer at 1/30 s; an item-end observer loops playback within the trim range.
 - When a Snapzy recording has an editor audio source sidecar, the state's asset URL is swapped to the multitrack sidecar (`editorAssetURL(for:metadata:)`) while save/replace keeps targeting the user-facing compatible file.
+
+## Reopen and Continue Editing
+
+- Every successful in-place Video Editor Save persists a versioned edit recipe in `Application Support/Snapzy/VideoEditorSessions/`. The recipe includes the ordered cut/trim timeline, zoom blocks, speed blocks, background, audio/export settings, and recording metadata.
+- The first commit also preserves a private source snapshot captured before rendering. When the file is reopened from Quick Access, History, or a direct URL, `VideoEditorState` loads that snapshot as its editing asset while keeping the current rendered file as the replacement target. A later Save therefore applies the recipe to the original source again instead of applying edits to an already-rendered export.
+- The sidecar is keyed by the current media path and validated against its size, modification time, and extension. A missing, invalid, or incompatible sidecar falls back to opening the flattened media as a legacy session.
+- Temporary capture (`after capture → save = false`) commits the rendered file at its temp URL and keeps the recipe with the Quick Access card. Quick Access Save later promotes both the media and its editor session package to the export destination. Saved capture (`save = true`) keeps the package keyed at the existing destination.
+- Session packages are removed with explicit capture deletion and are swept with history retention when their media path is no longer active; clearing all history clears the packages as well.
 
 ## Trim
 
@@ -193,16 +201,18 @@ off at each clip's active out-point and rewinds at the end.
 - Audio walks the same sequence per source audio track (mic / system / …). Inserted-clip audio rides lane 0; the other lanes get `insertEmptyTimeRange` for that span so every lane stays aligned.
 - Zoom segments are remapped structural timeline → playable sequence → output. Auto-focus paths separately remap source samples into the hosting primary placements; inserted clip spans hold the last camera center instead of interpolating unrelated source samples, then `scaledPath` applies speed. A zoom whose range has no active material is dropped entirely.
 - Custom dimensions: `ExportDimensionPreset` + `VideoEditorExportLayout` (`Models/VideoEditorExportSettings.swift`), even-aligned pixel sizes; quality presets live in the same export settings model.
-- Save flow (`VideoEditorWindowController.showSaveConfirmation`): temp captures save directly to a chosen destination; saved files prompt Replace Original vs Save As Copy.
-  - Replace original: export to temp, move original to `.<name>.backup`, atomic `replaceItemAt` swap, restore from backup on failure; recording metadata for the replaced file is deleted. Permission-denied falls back to a Save As Copy prompt.
+- Save flow (`VideoEditorWindowController.showSaveConfirmation`): the editor commits to the current source; it does not promote a temporary Quick Access capture.
+  - Temp capture (`after capture → save = false`): export to staging, replace the existing temp URL using the same backup/swap path, refresh the linked Quick Access thumbnail, and close. The card remains available; its Save action later moves the edited file to the export destination and updates history/metadata.
+  - Saved capture (`after capture → save = true`): prompt Replace Original vs Save As Copy. Replace Original commits to the existing destination using the same backup/swap path; Save As Copy opens `NSSavePanel`. Permission-denied falls back to a Save As Copy prompt.
+  - In-place edits re-copy the edited recording when copy-after-capture is enabled and mark an existing linked cloud upload stale. A failed commit leaves the editor and current file in place.
   - Save as copy: `_trimmed` suffix suggestion (`generateCopyFilename`, counter on collision) + `NSSavePanel`.
-- After a successful export, `offerPostExportUpload` offers a cloud upload — gated by `CloudManager.shared.isConfigured` **and** `QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`. Accepting uploads via `CloudManager.upload`, copies the public URL to the pasteboard, and syncs the cloud URL back to the linked Quick Access item.
+- After a successful saved-file export, `offerPostExportUpload` offers a cloud upload — gated by `CloudManager.shared.isConfigured` **and** `QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`. Temporary in-place commits do not offer promotion/upload; the Quick Access card remains the owner of the later save/upload actions. Accepting an offered upload uses `CloudManager.upload`, copies the public URL to the pasteboard, and syncs the cloud URL back to the linked Quick Access item.
 
 ## GIF Editing
 
 - GIF mode is dimension-change only — no trim, zoom, or speed; saving with unchanged dimensions shows a "no changes" alert.
 - `Services/GIFResizer.swift`: ImageIO per-frame resize that preserves loop count and frame delays; `GIFMetadata` reads source properties; `VideoEditorAnimatedGIFView` renders the animated preview.
-- Replace-original and save-as-copy (`_resized.gif`) flows mirror video.
+- Temporary GIFs resize into staging and replace their current Quick Access file in place; saved GIFs keep the Replace Original / Save As Copy choice. Both use the `_resized.gif` copy naming convention.
 
 ## Undo / Redo
 
@@ -232,6 +242,7 @@ off at each clip's active out-point and rewinds at the end.
 | `Snapzy/Features/VideoEditor/VideoEditorManager.swift` | Window lifecycle, activation policy, Quick Access countdown pause |
 | `Snapzy/Features/VideoEditor/Managers/VideoEditorWindowController.swift` | Save/replace/copy/GIF flows, unsaved-changes alert, post-export upload offer |
 | `Snapzy/Features/VideoEditor/VideoEditorState.swift` | Central editor model, playback, trim/cut/zoom/speed/clip mutations, undo/redo |
+| `Snapzy/Features/VideoEditor/Models/VideoEditorSessionData.swift` | Versioned edit recipe and recording metadata bridge for reopenable sessions |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorTimelineClip.swift` | `TimelineClip` model + `TimelineSequence` layout/projection math |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorTimelineTimeMap.swift` | `TimelineSequenceMap` — sequence ↔ output (speed) mapping |
 | `Snapzy/Features/VideoEditor/Models/VideoEditorZoomSegment.swift` | Zoom segment model and clamps |
@@ -242,6 +253,7 @@ off at each clip's active out-point and rewinds at the end.
 | `Snapzy/Features/VideoEditor/Services/VideoEditorAutoFocusEngine.swift` | Smart Camera path reconstruction from `RecordingMetadata` |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCalculator.swift` | Per-frame zoom progress/crop math, easing, transition clamps |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorExporter.swift` | Export routing, composition build, replace/copy, audio normalization |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorSessionStore.swift` | Private source snapshots, sidecar validation, package moves, and cleanup |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer |
 | `Snapzy/Features/VideoEditor/Services/GIFResizer.swift` | ImageIO GIF resize preserving loop/delays |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorClipStripView.swift` | The clip sequence strip: select, reorder, trim, split, delete |

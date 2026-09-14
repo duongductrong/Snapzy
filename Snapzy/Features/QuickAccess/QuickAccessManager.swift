@@ -519,6 +519,8 @@ final class QuickAccessManager: ObservableObject {
     activityHoldItemIds.remove(id)
     // Clear annotation session cache for this item
     AnnotateManager.shared.clearSessionData(for: id)
+    VideoEditorManager.shared.clearSessionData(for: id)
+    VideoEditorManager.shared.clearSessionData(for: url)
     // Fast animation (0.15s) for immediate perceived response
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
@@ -583,6 +585,7 @@ final class QuickAccessManager: ObservableObject {
           context: ["fileName": url.lastPathComponent]
         )
         AnnotationSessionStore.shared.deleteSession(for: url)
+        VideoEditorSessionStore.shared.deleteSession(for: url)
         tempCaptureManager.deleteTempFile(at: url)
       }
     }
@@ -592,6 +595,7 @@ final class QuickAccessManager: ObservableObject {
   /// Used after drag-to-app so the receiving app can still read the file.
   /// Orphaned temp files get cleaned up on next launch via cleanupOrphanedFiles().
   func dismissCard(id: UUID) {
+    let itemURL = items.first(where: { $0.id == id })?.url
     DiagnosticLogger.shared.log(
       .debug,
       .action,
@@ -604,6 +608,10 @@ final class QuickAccessManager: ObservableObject {
     activityHoldItemIds.remove(id)
     // Clear annotation session cache for this item
     AnnotateManager.shared.clearSessionData(for: id)
+    VideoEditorManager.shared.clearSessionData(for: id)
+    if let itemURL {
+      VideoEditorManager.shared.clearSessionData(for: itemURL)
+    }
     withAnimation(.spring(response: 0.15, dampingFraction: 0.8)) {
       items.removeAll { $0.id == id }
     }
@@ -794,19 +802,7 @@ final class QuickAccessManager: ObservableObject {
       return
     }
     let existing = items[index]
-    let thumbnail = newThumbnail ?? existing.thumbnail
-    items[index] = QuickAccessItem(
-      id: existing.id,
-      url: newURL,
-      thumbnail: thumbnail,
-      capturedAt: existing.capturedAt,
-      itemType: existing.itemType,
-      duration: existing.duration,
-      cloudURL: existing.cloudURL,
-      cloudKey: existing.cloudKey,
-      isCloudStale: existing.isCloudStale,
-      isPinned: existing.isPinned
-    )
+    items[index] = existing.replacingURL(newURL, thumbnail: newThumbnail)
     pinWindowManager.update(item: items[index])
     DiagnosticLogger.shared.log(
       .info,
@@ -824,18 +820,7 @@ final class QuickAccessManager: ObservableObject {
     let existing = items[index]
     let maxSize: CGFloat = 200
     let thumbnail = scaleThumbnail(image, maxSize: maxSize)
-    items[index] = QuickAccessItem(
-      id: existing.id,
-      url: existing.url,
-      thumbnail: thumbnail,
-      capturedAt: existing.capturedAt,
-      itemType: existing.itemType,
-      duration: existing.duration,
-      cloudURL: existing.cloudURL,
-      cloudKey: existing.cloudKey,
-      isCloudStale: existing.isCloudStale,
-      isPinned: existing.isPinned
-    )
+    items[index] = existing.replacingThumbnail(thumbnail)
     pinWindowManager.update(item: items[index], imageOverride: image)
     logger.info("Thumbnail updated directly for item \(id)")
   }
@@ -852,18 +837,7 @@ final class QuickAccessManager: ObservableObject {
     }
     guard let index = items.firstIndex(where: { $0.id == id }) else { return }
     let existing = items[index]
-    items[index] = QuickAccessItem(
-      id: existing.id,
-      url: existing.url,
-      thumbnail: thumbnail,
-      capturedAt: existing.capturedAt,
-      itemType: existing.itemType,
-      duration: existing.duration,
-      cloudURL: existing.cloudURL,
-      cloudKey: existing.cloudKey,
-      isCloudStale: existing.isCloudStale,
-      isPinned: existing.isPinned
-    )
+    items[index] = existing.replacingThumbnail(thumbnail)
     if let fullResImage {
       pinWindowManager.update(item: items[index], imageOverride: fullResImage)
     }
@@ -974,18 +948,7 @@ final class QuickAccessManager: ObservableObject {
     // Re-check index (item may have been removed during async thumbnail generation)
     guard let freshIndex = items.firstIndex(where: { $0.id == id }) else { return }
     let existing = items[freshIndex]
-    items[freshIndex] = QuickAccessItem(
-      id: existing.id,
-      url: existing.url,
-      thumbnail: newThumbnail,
-      capturedAt: existing.capturedAt,
-      itemType: existing.itemType,
-      duration: existing.duration,
-      cloudURL: existing.cloudURL,
-      cloudKey: existing.cloudKey,
-      isCloudStale: existing.isCloudStale,
-      isPinned: existing.isPinned
-    )
+    items[freshIndex] = existing.replacingThumbnail(newThumbnail)
     pinWindowManager.update(item: items[freshIndex])
     logger.info("Thumbnail refreshed for \(url.lastPathComponent)")
     DiagnosticLogger.shared.log(
@@ -1058,6 +1021,8 @@ final class QuickAccessManager: ObservableObject {
       cancelDismissTimer(for: item.id)
       // Clear annotation session cache
       AnnotateManager.shared.clearSessionData(for: item.id)
+      VideoEditorManager.shared.clearSessionData(for: item.id)
+      VideoEditorManager.shared.clearSessionData(for: item.url)
     }
     pinWindowManager.closeAll()
     items.removeAll()
@@ -1161,6 +1126,9 @@ final class QuickAccessManager: ObservableObject {
     //    "file missing" ghost entry in the history panel.
     CaptureHistoryStore.shared.removeByFilePath(url.path)
     AnnotationSessionStore.shared.deleteSession(for: url)
+    VideoEditorSessionStore.shared.deleteSession(for: url)
+    VideoEditorManager.shared.clearSessionData(for: id)
+    VideoEditorManager.shared.clearSessionData(for: url)
 
     removeItem(id: id)
 
@@ -1235,6 +1203,7 @@ final class QuickAccessManager: ObservableObject {
     }
     let tempURL = item.url
     let cachedSessionData = AnnotateManager.shared.getSessionData(for: id)
+    let cachedVideoSessionData = VideoEditorManager.shared.getSessionData(for: id)
     DiagnosticLogger.shared.log(
       .info,
       .action,
@@ -1268,6 +1237,10 @@ final class QuickAccessManager: ObservableObject {
            AnnotationSessionStore.shared.shouldPersist(for: savedURL) {
           AnnotationSessionStore.shared.persist(cachedSessionData, for: savedURL)
         }
+        if !VideoEditorSessionStore.shared.moveSession(from: tempURL, to: savedURL),
+           let cachedVideoSessionData {
+          VideoEditorSessionStore.shared.persist(cachedVideoSessionData, for: savedURL)
+        }
 
         let captureType: CaptureType = item.isVideo ? .recording : .screenshot
         PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
@@ -1293,6 +1266,8 @@ final class QuickAccessManager: ObservableObject {
         )
       }
       AnnotateManager.shared.clearSessionData(for: id)
+      VideoEditorManager.shared.clearSessionData(for: id)
+      VideoEditorManager.shared.clearSessionData(for: tempURL)
     }
   }
 
@@ -1639,17 +1614,7 @@ final class QuickAccessManager: ObservableObject {
 
       if let index = items.firstIndex(where: { $0.id == id }) {
         let existing = items[index]
-        items[index] = QuickAccessItem(
-          id: existing.id,
-          url: existing.url,
-          thumbnail: newThumbnail,
-          capturedAt: existing.capturedAt,
-          itemType: existing.itemType,
-          duration: existing.duration,
-          cloudURL: existing.cloudURL,
-          cloudKey: existing.cloudKey,
-          isCloudStale: existing.isCloudStale
-        )
+        items[index] = existing.replacingThumbnail(newThumbnail)
         logger.info("Thumbnail retry succeeded for \(url.lastPathComponent)")
         DiagnosticLogger.shared.log(
           .debug,
