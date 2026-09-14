@@ -8,7 +8,10 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// Empty state view displayed when no video is loaded
+/// Empty state view displayed when no video is loaded.
+///
+/// Monochrome and quiet: the plain window background, one dashed drop card, and the
+/// app's Liquid Glass buttons. Drag-over is the only state that changes the scene.
 struct VideoEditorEmptyStateView: View {
   /// Callback with (workingURL, originalURL) - originalURL is the user's actual file for "Replace Original"
   var onVideoDropped: (URL, URL?) -> Void
@@ -27,17 +30,13 @@ struct VideoEditorEmptyStateView: View {
 
       Spacer()
 
-      // Cancel button at bottom
-      HStack {
-        Spacer()
-        Button(L10n.Common.cancel) {
-          NSApp.keyWindow?.close()
-        }
-        .keyboardShortcut(.cancelAction)
-        .padding()
-      }
+      footer
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .onDrop(of: supportedTypes, isTargeted: $isTargeted) { providers in
+      handleDrop(providers: providers)
+    }
+    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: isTargeted)
     .alert(L10n.VideoEditor.invalidFileTitle, isPresented: $showError) {
       Button(L10n.Common.ok, role: .cancel) {}
     } message: {
@@ -45,17 +44,18 @@ struct VideoEditorEmptyStateView: View {
     }
   }
 
-  private var dropZone: some View {
-    VStack(spacing: 16) {
-      // Video icon
-      Image(systemName: "film")
-        .font(.system(size: 48, weight: .light))
-        .foregroundColor(isTargeted ? .accentColor : .secondary)
+  // MARK: - Drop Zone
 
-      // Instructions
-      VStack(spacing: 4) {
+  private var dropZone: some View {
+    VStack(spacing: Spacing.lg) {
+      Image(systemName: "film")
+        .font(.system(size: 44, weight: .light))
+        .foregroundColor(isTargeted ? Color.primary.opacity(0.8) : .secondary)
+        .scaleEffect(isTargeted ? 1.08 : 1)
+
+      VStack(spacing: Spacing.xs) {
         Text(L10n.VideoEditor.dropVideoHereToEdit)
-          .font(.headline)
+          .font(.system(size: 16, weight: .semibold))
           .foregroundColor(.primary)
 
         Text(L10n.VideoEditor.supportsVideoFormats)
@@ -63,30 +63,56 @@ struct VideoEditorEmptyStateView: View {
           .foregroundColor(.secondary)
       }
 
-      // Browse button
-      Button(L10n.VideoEditor.browseFiles) {
-        browseForVideo()
+      LiquidGlassActionButton(
+        title: L10n.VideoEditor.browseFiles,
+        icon: "folder",
+        emphasis: .secondary,
+        action: { browseForVideo() }
+      )
+      .keyboardShortcut(.defaultAction)
+    }
+    .padding(.horizontal, Spacing.xl)
+    .padding(.vertical, Spacing.lg)
+    .frame(width: 420)
+    .background(
+      Radius.rect(Radius.panel)
+        .fill(Color.primary.opacity(isTargeted ? 0.05 : 0.02))
+    )
+    .overlay(
+      Radius.rect(Radius.panel).strokeBorder(
+        Color.primary.opacity(isTargeted ? 0.45 : 0.15),
+        style: StrokeStyle(lineWidth: isTargeted ? 2 : 1, dash: [6, 5])
+      )
+    )
+    .contentShape(Radius.rect(Radius.panel))
+    .onTapGesture {
+      browseForVideo()
+    }
+    .onHover { hovering in
+      if hovering {
+        NSCursor.pointingHand.push()
+      } else {
+        NSCursor.pop()
       }
-      .buttonStyle(.bordered)
-      .padding(.top, 8)
     }
-    .frame(width: 400, height: 250)
-    .background(
-      Radius.rect(Radius.panel)
-        .strokeBorder(
-          style: StrokeStyle(lineWidth: 2, dash: [8, 4])
-        )
-        .foregroundColor(isTargeted ? .accentColor : .secondary.opacity(0.5))
-    )
-    .background(
-      Radius.rect(Radius.panel)
-        .fill(isTargeted ? Color.accentColor.opacity(0.1) : Color.clear)
-    )
-    .onDrop(of: supportedTypes, isTargeted: $isTargeted) { providers in
-      handleDrop(providers: providers)
-    }
-    .animation(.easeInOut(duration: 0.2), value: isTargeted)
   }
+
+  // MARK: - Footer
+
+  private var footer: some View {
+    HStack {
+      Spacer()
+      LiquidGlassActionButton(
+        title: L10n.Common.cancel,
+        emphasis: .secondary,
+        action: { NSApp.keyWindow?.close() }
+      )
+      .keyboardShortcut(.cancelAction)
+    }
+    .padding(Spacing.md)
+  }
+
+  // MARK: - Drop Handling
 
   private func handleDrop(providers: [NSItemProvider]) -> Bool {
     guard let provider = providers.first else {
