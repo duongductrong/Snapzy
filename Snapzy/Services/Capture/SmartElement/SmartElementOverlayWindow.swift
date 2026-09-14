@@ -32,7 +32,9 @@ final class SmartElementOverlayWindow: NSPanel, SmartElementOverlayWindowProvidi
     acceptsMouseMovedEvents = true
     hidesOnDeactivate = false
     becomesKeyOnlyIfNeeded = true
-    sharingType = .none
+    // Smart Element dismisses its overlays before capture; keep them shareable so remote
+    // display clients can render the dimming and highlighted target during selection.
+    sharingType = .readOnly
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     contentView = overlayView
     overlayView.delegate = self
