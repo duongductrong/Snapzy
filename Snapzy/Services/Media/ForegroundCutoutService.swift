@@ -15,6 +15,8 @@ enum ForegroundAutoCropDecision: String, Codable, Sendable {
   case skippedTouchesEdge
   case skippedSubjectTooSmall
   case skippedNotMeaningful
+  /// Vision found no subject; Capture Subject kept the locked preview pixels.
+  case skippedNoSubjectFallback
 }
 
 struct ForegroundAutoCropPolicy: Sendable {
@@ -64,17 +66,33 @@ final class ForegroundCutoutService {
   /// Extract foreground and evaluate whether auto-crop can be applied safely.
   /// - Parameters:
   ///   - image: Source image in display pixel coordinates.
-  func extractForegroundResult(from image: CGImage) async throws -> ForegroundCutoutResult {
-    try await extractForegroundResult(from: image, policy: ForegroundAutoCropPolicy())
+  ///   - fallbackToOriginalWhenNoSubject: When true, return the original image
+  ///     instead of throwing if Vision finds no subject. Capture Subject uses
+  ///     this so a locked preview still saves. Annotate Remove Background
+  ///     leaves the default (`false`) so the failure stays visible.
+  func extractForegroundResult(
+    from image: CGImage,
+    fallbackToOriginalWhenNoSubject: Bool = false
+  ) async throws -> ForegroundCutoutResult {
+    try await extractForegroundResult(
+      from: image,
+      policy: ForegroundAutoCropPolicy(),
+      fallbackToOriginalWhenNoSubject: fallbackToOriginalWhenNoSubject
+    )
   }
 
   /// Extract foreground and evaluate whether auto-crop can be applied safely.
   /// - Parameters:
   ///   - image: Source image in display pixel coordinates.
   ///   - policy: Heuristics used to decide if auto-crop is safe and meaningful.
+  ///   - fallbackToOriginalWhenNoSubject: When true, return the original image
+  ///     instead of throwing if Vision finds no subject. Capture Subject uses
+  ///     this so a locked preview still saves. Annotate Remove Background
+  ///     leaves the default (`false`) so the failure stays visible.
   func extractForegroundResult(
     from image: CGImage,
-    policy: ForegroundAutoCropPolicy
+    policy: ForegroundAutoCropPolicy,
+    fallbackToOriginalWhenNoSubject: Bool = false
   ) async throws -> ForegroundCutoutResult {
     guard #available(macOS 14.0, *) else {
       throw ForegroundCutoutError.unsupportedOS
@@ -89,7 +107,11 @@ final class ForegroundCutoutService {
 
     do {
       let result = try await Task.detached(priority: .userInitiated) {
-        try Self.extractForegroundResultSync(from: image, policy: policy)
+        try Self.extractForegroundResultSync(
+          from: image,
+          policy: policy,
+          fallbackToOriginalWhenNoSubject: fallbackToOriginalWhenNoSubject
+        )
       }.value
 
       DiagnosticLogger.shared.log(
@@ -201,15 +223,24 @@ final class ForegroundCutoutService {
   @available(macOS 14.0, *)
   private nonisolated static func extractForegroundResultSync(
     from image: CGImage,
-    policy: ForegroundAutoCropPolicy
+    policy: ForegroundAutoCropPolicy,
+    fallbackToOriginalWhenNoSubject: Bool
   ) throws -> ForegroundCutoutResult {
-    let fullCanvasImage = try extractForegroundSync(from: image, cropToSubject: false)
-    let (suggestedRect, decision) = evaluateAutoCropSuggestion(for: fullCanvasImage, policy: policy)
-    return ForegroundCutoutResult(
-      fullCanvasImage: fullCanvasImage,
-      suggestedAutoCropRect: suggestedRect,
-      autoCropDecision: decision
-    )
+    do {
+      let fullCanvasImage = try extractForegroundSync(from: image, cropToSubject: false)
+      let (suggestedRect, decision) = evaluateAutoCropSuggestion(for: fullCanvasImage, policy: policy)
+      return ForegroundCutoutResult(
+        fullCanvasImage: fullCanvasImage,
+        suggestedAutoCropRect: suggestedRect,
+        autoCropDecision: decision
+      )
+    } catch ForegroundCutoutError.noSubjectDetected where fallbackToOriginalWhenNoSubject {
+      return ForegroundCutoutResult(
+        fullCanvasImage: image,
+        suggestedAutoCropRect: nil,
+        autoCropDecision: .skippedNoSubjectFallback
+      )
+    }
   }
 
   private nonisolated static func evaluateAutoCropSuggestion(
