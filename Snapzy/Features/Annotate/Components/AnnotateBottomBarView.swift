@@ -247,7 +247,8 @@ struct AnnotateBottomBarView: View {
   private var modeToggle: some View {
     LiquidGlassSegmentedControl(
       items: AnnotateState.EditorMode.allCases,
-      selection: $state.editorMode
+      selection: $state.editorMode,
+      activeGlassTint: nil
     ) { mode in
       HStack(spacing: 5) {
         Image(systemName: modeIcon(for: mode))

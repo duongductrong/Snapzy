@@ -138,9 +138,9 @@ When you animate `.opacity` on a SwiftUI subtree, SwiftUI promotes that subtree 
 dark in *both* appearances. Adaptive ink (`inkPrimary`, `.primary`, `.label`) follows the app
 appearance instead, so in Light theme it resolves near-black and lands black glyphs on a blue pill
 — around 3:1, failing AA. Tinted selected controls must therefore resolve their ink against the
-tint. Annotate's toolbar and quick-properties controls intentionally omit that tint: their active
-surface stays neutral and translucent so selection feedback does not pull attention away from the
-canvas.
+tint. Annotate's toolbar, quick-properties controls, and editor-mode switch intentionally omit
+that tint: their active surfaces stay neutral and translucent so selection feedback does not pull
+attention away from the canvas.
 
 Ask `LiquidGlassTokens` for the ink instead of hardcoding it:
 
@@ -333,12 +333,15 @@ Snapzy provides two segmented paradigms for different interaction models:
 Ideal for view modes, filtering, and tab selection:
 - Capsule/rounded container with dark translucent backing.
 - Continuous sliding indicator pill driven by SwiftUI `.matchedGeometryEffect` and spring animation.
-- Clean typography: active tab highlights to `.white`, inactive stays at `0.72` opacity.
+- Quiet typography: active labels use adaptive ink on neutral glass when no tint is supplied;
+  inactive labels stay muted until hovered. The default remains accent-tinted for intentionally
+  prominent segmented controls; pass `nil` for a contextual mode switch.
 
 ```swift
 LiquidGlassSegmentedControl(
   items: ["Capture", "Record", "OCR"],
-  selection: $selectedMode
+  selection: $selectedMode,
+  activeGlassTint: nil
 ) { mode in
   Text(mode)
 }
