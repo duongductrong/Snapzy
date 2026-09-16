@@ -94,11 +94,17 @@ extension View {
   /// other height, pass `Radius.control(forHeight:)` rather than a literal — roundness is
   /// proportional to height in this design system, so a fixed default silently under-rounds taller
   /// controls. Labelled buttons are not in this family: they use `Capsule(style: .continuous)`.
+  /// Pass `activeGlassTint: nil` when the active state should stay neutral and translucent.
   func liquidGlassControl(
     isActive: Bool,
-    cornerRadius: CGFloat = Radius.control(forHeight: ControlMetrics.propertyChip)
+    cornerRadius: CGFloat = Radius.control(forHeight: ControlMetrics.propertyChip),
+    activeGlassTint: Color? = .accentColor
   ) -> some View {
-    liquidGlassControl(isActive: isActive, in: Radius.rect(cornerRadius))
+    liquidGlassControl(
+      isActive: isActive,
+      in: Radius.rect(cornerRadius),
+      activeGlassTint: activeGlassTint
+    )
   }
 
   /// Shape-generic variant, for circular and capsule controls.
@@ -107,18 +113,21 @@ extension View {
   /// button floating over a screenshot has nothing else to signal that it is clickable, so its
   /// surface has to stay lit rather than materialise on hover. Pair it with an emphasis whose
   /// `glassTint(isActive:)` moves; persistent chrome has no appear/disappear tell, and
-  /// `substrate`/`tint` cannot stand in for one because `.glassEffect` ignores them.
+  /// `substrate`/`tint` cannot stand in for one because `.glassEffect` ignores them. Pass
+  /// `activeGlassTint: nil` for a neutral active surface.
   func liquidGlassControl<S: InsettableShape>(
     isActive: Bool,
     in shape: S,
     emphasis: LiquidGlassChromeEmphasis = .standard,
-    showsRestingSurface: Bool = false
+    showsRestingSurface: Bool = false,
+    activeGlassTint: Color? = .accentColor
   ) -> some View {
     modifier(LiquidGlassControlChrome(
       isActive: isActive,
       shape: shape,
       emphasis: emphasis,
-      showsRestingSurface: showsRestingSurface
+      showsRestingSurface: showsRestingSurface,
+      activeGlassTint: activeGlassTint
     ))
   }
 
@@ -163,6 +172,7 @@ private struct LiquidGlassControlChrome<S: InsettableShape>: ViewModifier {
   let shape: S
   let emphasis: LiquidGlassChromeEmphasis
   let showsRestingSurface: Bool
+  let activeGlassTint: Color?
 
   @Environment(\.isEnabled) private var isEnabled
   @State private var isHovering = false
@@ -174,7 +184,7 @@ private struct LiquidGlassControlChrome<S: InsettableShape>: ViewModifier {
         isVisible: showsGlass,
         isActive: isLit,
         emphasis: emphasis,
-        glassTint: isActive ? .accentColor : nil
+        glassTint: isActive ? activeGlassTint : nil
       )
       .onHover { hovering in
         // Disabling a hovered control never delivers an exit event, so clear it explicitly.
