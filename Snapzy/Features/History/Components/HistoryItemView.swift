@@ -195,13 +195,14 @@ struct HistoryItemView: View, Equatable {
   private func checkFileExistence() {
     let url = record.fileURL
     let path = record.filePath
-    Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
-      }
-      await MainActor.run {
-        self.fileExists = exists
-      }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    Task { @MainActor in
+      let exists = await Task.detached(priority: .utility) {
+        defer { access.stop() }
+        return FileManager.default.fileExists(atPath: path)
+      }.value
+      guard !Task.isCancelled else { return }
+      fileExists = exists
     }
   }
 

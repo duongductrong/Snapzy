@@ -8,7 +8,7 @@
 import Foundation
 
 /// Represents a zoom effect segment on the video timeline
-struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
+nonisolated struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
   let id: UUID
   /// Seconds on the editor's structural timeline, independent of clip source time.
   var startTime: TimeInterval
@@ -85,7 +85,7 @@ struct ZoomSegment: Identifiable, Codable, Equatable, Hashable {
 
 // MARK: - Zoom Type
 
-enum ZoomType: String, Codable, CaseIterable, Equatable {
+nonisolated enum ZoomType: String, Codable, CaseIterable, Equatable {
   case auto // follow recorded mouse path within the zoom item's range
   case manual // user-defined camera framing
 

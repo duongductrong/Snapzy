@@ -141,7 +141,7 @@ struct LivePassthroughCursorRestorer {
   /// System seam: zero the suppression interval on the shared combined-session event
   /// source state — the state the WindowServer consults when suppressing local events
   /// after a warp. Fails soft (no-op) if the source cannot be created.
-  private static func liveSetSuppressionInterval(_ seconds: CFTimeInterval) {
+  private nonisolated static func liveSetSuppressionInterval(_ seconds: CFTimeInterval) {
     guard let source = CGEventSource(stateID: .combinedSessionState) else { return }
     source.localEventsSuppressionInterval = seconds
   }

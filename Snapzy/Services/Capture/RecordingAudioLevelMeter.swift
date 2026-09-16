@@ -12,16 +12,16 @@ import AVFoundation
 import Combine
 import CoreMedia
 
-enum AudioLevelSource {
+nonisolated enum AudioLevelSource {
   case system
   case microphone
 }
 
 /// Thread-safe audio-level meter. `ingest(_:source:)` is safe to call from the
 /// `nonisolated` capture delegate queues; only the final `level` publish hops to main.
-final class RecordingAudioLevelMeter: ObservableObject, @unchecked Sendable {
+nonisolated final class RecordingAudioLevelMeter: ObservableObject, @unchecked Sendable {
   /// Smoothed, normalized level in `0...1`, published on the main thread ~30Hz.
-  @Published private(set) var level: Float = 0
+  @MainActor @Published private(set) var level: Float = 0
 
   private let queue = DispatchQueue(label: "com.trongduong.snapzy.recording.audiolevel", qos: .userInteractive)
 

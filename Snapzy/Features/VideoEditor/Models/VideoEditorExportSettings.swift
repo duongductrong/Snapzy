@@ -8,7 +8,7 @@
 import AVFoundation
 import Foundation
 
-enum VideoEditorExportLayout {
+nonisolated enum VideoEditorExportLayout {
   private static let minimumEvenDimension = 2
 
   static func evenSize(_ size: CGSize) -> CGSize {
@@ -95,7 +95,7 @@ enum VideoEditorExportLayout {
 
 // MARK: - Export Quality
 
-enum ExportQuality: String, CaseIterable, Identifiable, Codable {
+nonisolated enum ExportQuality: String, CaseIterable, Identifiable, Codable {
   case low = "Low"
   case medium = "Medium"
   case high = "High"
@@ -133,7 +133,7 @@ enum ExportQuality: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - Audio Export Mode
 
-enum AudioExportMode: String, CaseIterable, Identifiable, Codable {
+nonisolated enum AudioExportMode: String, CaseIterable, Identifiable, Codable {
   case keep = "Keep Original"
   case mute = "Mute"
   case custom = "Custom Volume"
@@ -161,7 +161,7 @@ enum AudioExportMode: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - Audio Track Roles
 
-enum VideoEditorAudioTrackRole: Equatable, Identifiable {
+nonisolated enum VideoEditorAudioTrackRole: Equatable, Identifiable {
   case mixed
   case systemAudio
   case microphone
@@ -262,7 +262,7 @@ enum VideoEditorAudioMixFactory {
 
 // MARK: - Export Dimensions
 
-enum ExportDimensionPreset: String, CaseIterable, Identifiable, Codable {
+nonisolated enum ExportDimensionPreset: String, CaseIterable, Identifiable, Codable {
   case original = "Original"
   case ratio1x1 = "1:1"
   case ratio4x3 = "4:3"
@@ -370,7 +370,7 @@ enum ExportDimensionPreset: String, CaseIterable, Identifiable, Codable {
 
 // MARK: - Export Settings Container
 
-struct ExportSettings: Equatable, Codable {
+nonisolated struct ExportSettings: Equatable, Codable {
   static let minimumAudioVolume: Float = 0
   static let maximumAudioVolume: Float = 2
 

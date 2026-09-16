@@ -216,16 +216,12 @@ struct SnapzyOnboardingPermissionsView: View {
   private func startProbeTimer() {
     stopProbeTimer()
     guard !screenCaptureManager.hasPermission else { return }
-    probeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak screenCaptureManager] timer in
-      guard let screenCaptureManager else {
-        timer.invalidate()
-        return
-      }
-      if screenCaptureManager.hasPermission {
-        timer.invalidate()
-        return
-      }
+    probeTimer = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { _ in
       Task { @MainActor in
+        if screenCaptureManager.hasPermission {
+          stopProbeTimer()
+          return
+        }
         await refreshPermissions()
       }
     }

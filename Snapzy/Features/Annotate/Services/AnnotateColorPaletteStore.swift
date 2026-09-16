@@ -9,14 +9,14 @@ import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 
-enum AnnotateColorPaletteRole: String, CaseIterable, Codable {
+nonisolated enum AnnotateColorPaletteRole: String, CaseIterable, Codable {
   case canvasBackground
   case annotationStroke
   case annotationFill
   case textBackground
 }
 
-struct AnnotateColorDragPayload: Codable {
+nonisolated struct AnnotateColorDragPayload: Codable {
   let red: Double
   let green: Double
   let blue: Double
@@ -90,7 +90,7 @@ struct AnnotateColorDragPayload: Codable {
     return true
   }
 
-  static func parsePlainText(_ text: String) -> AnnotateColorDragPayload? {
+  nonisolated static func parsePlainText(_ text: String) -> AnnotateColorDragPayload? {
     let parts = text.split(separator: "|", maxSplits: 1).map(String.init)
     guard parts.count == 2,
           parts[0] == plainTextMarker,

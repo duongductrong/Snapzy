@@ -68,8 +68,8 @@ enum ActiveWindowResolver {
     let focusedWindow = focusedWindowRef as! AXUIElement
 
     guard
-      let position = axValue(of: focusedWindow, attribute: kAXPositionAttribute, type: .cgPoint, as: CGPoint.self),
-      let size = axValue(of: focusedWindow, attribute: kAXSizeAttribute, type: .cgSize, as: CGSize.self)
+      let position = pointValue(of: focusedWindow, attribute: kAXPositionAttribute),
+      let size = sizeValue(of: focusedWindow, attribute: kAXSizeAttribute)
     else {
       return nil
     }
@@ -89,12 +89,31 @@ enum ActiveWindowResolver {
     ).integral
   }
 
-  private static func axValue<T>(
+  private static func pointValue(
     of element: AXUIElement,
     attribute: String,
-    type: AXValueType,
-    as valueType: T.Type
-  ) -> T? {
+  ) -> CGPoint? {
+    guard let axValue = axValue(of: element, attribute: attribute, type: .cgPoint) else { return nil }
+    var value = CGPoint.zero
+    guard AXValueGetValue(axValue, .cgPoint, &value) else { return nil }
+    return value
+  }
+
+  private static func sizeValue(
+    of element: AXUIElement,
+    attribute: String
+  ) -> CGSize? {
+    guard let axValue = axValue(of: element, attribute: attribute, type: .cgSize) else { return nil }
+    var value = CGSize.zero
+    guard AXValueGetValue(axValue, .cgSize, &value) else { return nil }
+    return value
+  }
+
+  private static func axValue(
+    of element: AXUIElement,
+    attribute: String,
+    type: AXValueType
+  ) -> AXValue? {
     var rawValue: CFTypeRef?
     guard AXUIElementCopyAttributeValue(element, attribute as CFString, &rawValue) == .success,
       let rawValue,
@@ -104,10 +123,7 @@ enum ActiveWindowResolver {
     }
     let axValue = rawValue as! AXValue
     guard AXValueGetType(axValue) == type else { return nil }
-
-    var value = T.self == CGPoint.self ? CGPoint.zero as! T : CGSize.zero as! T
-    guard AXValueGetValue(axValue, type, &value) else { return nil }
-    return value
+    return axValue
   }
 
   private static func frameDistance(_ lhs: CGRect, _ rhs: CGRect) -> CGFloat {

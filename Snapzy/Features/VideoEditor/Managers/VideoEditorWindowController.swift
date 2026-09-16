@@ -426,7 +426,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         if let quickAccessItemID {
           await QuickAccessManager.shared.refreshItemThumbnail(id: quickAccessItemID)
         }
-        await PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
+        PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
           for: .recording,
           url: originalAccess.url
         )
@@ -530,7 +530,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
         if let quickAccessItemID {
           await QuickAccessManager.shared.refreshItemThumbnail(id: quickAccessItemID)
         }
-        await PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
+        PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
           for: .recording,
           url: state.originalURL
         )
@@ -750,8 +750,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   private func offerPostExportUpload(for fileURL: URL, completion: @escaping () -> Void) {
     guard CloudManager.shared.isConfigured,
           QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud),
-          let window,
-          let state
+          let window
     else {
       completion()
       return

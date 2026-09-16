@@ -13,7 +13,7 @@ import Foundation
 /// region faster (timelapse / speed-up), `rate < 1` plays it slower (slow-motion).
 /// Times are absolute seconds on the editor's structural timeline, matching
 /// `ZoomSegment`; they do not follow a clip's source material after reorder.
-struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
+nonisolated struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
   let id: UUID
   var startTime: TimeInterval // structural timeline seconds (absolute)
   var duration: TimeInterval // segment length in seconds

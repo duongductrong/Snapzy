@@ -77,7 +77,7 @@ final class TimelineScrollEventCatcherView: NSView {
   // MARK: - Event Handling
 
   private func handleScroll(_ event: NSEvent) -> Bool {
-    guard let viewport, event.window === window else { return false }
+    guard viewport != nil, event.window === window else { return false }
 
     let location = convert(event.locationInWindow, from: nil)
     guard bounds.contains(location) else { return false }

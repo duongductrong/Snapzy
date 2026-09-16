@@ -10,7 +10,7 @@ import Security
 
 /// Storage seam for custom OCR model API keys. Keeps `CustomOCRModelStore`
 /// and `RemoteOCRProvider` testable with in-memory fakes.
-protocol OCRKeychainStoring: Sendable {
+nonisolated protocol OCRKeychainStoring: Sendable {
   func readKey(for modelID: UUID) -> String?
   func saveKey(_ key: String, for modelID: UUID) throws
   func deleteKey(for modelID: UUID)
@@ -36,7 +36,7 @@ enum OCRKeychainError: LocalizedError, Equatable {
 /// keychain (`kSecAttrAccessibleWhenUnlocked`), falling back to the file-based
 /// keychain when the data-protection entitlement is unavailable (unsigned dev
 /// builds). Account = model UUID string.
-struct OCRKeychainStore: OCRKeychainStoring {
+nonisolated struct OCRKeychainStore: OCRKeychainStoring {
   private static let service = "com.trongduong.snapzy.ocr"
 
   private struct Location: Equatable {

@@ -345,7 +345,7 @@ struct VideoEditorClipStripView: View {
             anchorX: value.location.x
           )
         }
-        guard var session = drag, session.clipId == clip.id, session.isTrimming, pixelsPerSecond > 0 else { return }
+        guard let session = drag, session.clipId == clip.id, session.isTrimming, pixelsPerSecond > 0 else { return }
 
         let delta = TimeInterval((value.location.x - session.anchorX) / pixelsPerSecond)
         if isLeading {

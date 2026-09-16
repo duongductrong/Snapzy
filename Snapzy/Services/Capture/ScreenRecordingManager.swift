@@ -146,7 +146,7 @@ enum RecordingVideoEncodingSettings {
   }
 }
 
-enum RecordingAudioEncodingSettings {
+nonisolated enum RecordingAudioEncodingSettings {
   static let sampleRate = 48_000
   static let channelCount = 2
   static let systemAudioBitrate = 128_000
@@ -359,15 +359,23 @@ enum RecordingAudioCompatibilityExporter {
     audioInputVolume: Float
   ) async throws {
     try? FileManager.default.removeItem(at: outputURL)
+    // AVFoundation's asset objects are deliberately confined to the serial worker below.
+    // The box documents that invariant at the DispatchQueue boundary instead of weakening
+    // the whole AVFoundation import with @preconcurrency.
+    let inputs = NormalizationAssetInputs(
+      asset: asset,
+      videoTrack: videoTrack,
+      audioTracks: audioTracks
+    )
 
     try await withCheckedThrowingContinuation { continuation in
       let workerQueue = DispatchQueue(label: "com.trongduong.snapzy.recording.audio-compatibility", qos: .utility)
       workerQueue.async {
         do {
           try writeNormalizedFileSynchronously(
-            asset: asset,
-            videoTrack: videoTrack,
-            audioTracks: audioTracks,
+            asset: inputs.asset,
+            videoTrack: inputs.videoTrack,
+            audioTracks: inputs.audioTracks,
             duration: duration,
             preferredTransform: preferredTransform,
             sourceFormatHint: sourceFormatHint,
@@ -380,6 +388,18 @@ enum RecordingAudioCompatibilityExporter {
           continuation.resume(throwing: error)
         }
       }
+    }
+  }
+
+  private final class NormalizationAssetInputs: @unchecked Sendable {
+    let asset: AVAsset
+    let videoTrack: AVAssetTrack
+    let audioTracks: [AVAssetTrack]
+
+    init(asset: AVAsset, videoTrack: AVAssetTrack, audioTracks: [AVAssetTrack]) {
+      self.asset = asset
+      self.videoTrack = videoTrack
+      self.audioTracks = audioTracks
     }
   }
 
@@ -1983,11 +2003,11 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
   private func startTimer() {
     timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-      Task { @MainActor in
+      MainActor.assumeIsolated {
         self?.updateElapsedTime()
       }
     }
-    }
+  }
 
   private func updateElapsedTime() {
     guard let start = startTime, state == .recording else { return }
