@@ -3,7 +3,7 @@ name: Release Publish
 on:
   pull_request:
     types: [closed]
-    branches: [master]
+    branches: [master, beta]
 
 concurrency:
   group: release-publish
@@ -30,22 +30,47 @@ jobs:
     steps:
       - name: Extract version
         id: version
+        env:
+          RELEASE_BRANCH: ${{ github.event.pull_request.head.ref }}
+          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
         run: |
-          BRANCH="${{ github.event.pull_request.head.ref }}"
-          VERSION="${BRANCH#release/v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if [[ "$VERSION" == *-* ]]; then
-            echo "is_beta=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "is_beta=false" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
+
+          VERSION="${RELEASE_BRANCH#release/v}"
+          if [ "$VERSION" = "$RELEASE_BRANCH" ] || [ -z "$VERSION" ]; then
+            echo "::error::Could not extract a release version from '$RELEASE_BRANCH'"
+            exit 1
           fi
-          echo "Release version: v${VERSION}"
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          case "$VERSION" in
+            *-beta.[0-9]*)
+              IS_BETA=true
+              ;;
+            *)
+              IS_BETA=false
+              ;;
+          esac
+          echo "is_beta=$IS_BETA" >> "$GITHUB_OUTPUT"
+          echo "target_branch=$TARGET_BRANCH" >> "$GITHUB_OUTPUT"
+
+          case "$TARGET_BRANCH:$IS_BETA" in
+            master:false|beta:true)
+              ;;
+            *)
+              echo "::error::Release channel does not match target branch: v${VERSION} -> ${TARGET_BRANCH}"
+              echo "::error::Stable releases must target master; beta releases must target beta."
+              exit 1
+              ;;
+          esac
+
+          echo "Release version: v${VERSION} (${TARGET_BRANCH} channel)"
 
       - name: Checkout
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: master
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract changelog
@@ -612,12 +637,18 @@ jobs:
           ED_SIGNATURE: ${{ steps.sparkle_sign.outputs.signature }}
           RELEASE_NOTES_PATH: ${{ steps.release_notes.outputs.release_notes_path }}
           CHANNEL: ${{ steps.version.outputs.is_beta == 'true' && 'beta' || '' }}
+          TARGET_BRANCH: ${{ steps.version.outputs.target_branch }}
         run: |
           set -euo pipefail
           DMG_PATH="${dmg_path:?dmg_path is not set}"
           if [ -z "$ED_SIGNATURE" ]; then
             echo "::error::ED_SIGNATURE is empty — refusing to publish. The app sets SUPublicEDKey, so an appcast item without an EdDSA signature would be rejected by all clients."
             exit 1
+          fi
+          if [ "$TARGET_BRANCH" = "beta" ]; then
+            # appcast.xml is served from master for both stable and opted-in beta clients.
+            git fetch origin master --no-tags
+            git show origin/master:appcast.xml > appcast.xml
           fi
           RELEASE_NOTES_HTML="$(cat "$RELEASE_NOTES_PATH")"
           chmod +x scripts/update-appcast.sh
@@ -652,18 +683,53 @@ jobs:
             "${{ steps.version.outputs.version }}" \
             "${{ steps.build.outputs.number }}"
 
-      - name: Commit appcast and cask update
+      - name: Commit release metadata
+        env:
+          TARGET_BRANCH: ${{ steps.version.outputs.target_branch }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          IS_BETA: ${{ steps.version.outputs.is_beta }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # The build ran from the exact release merge commit. Attach the
+          # metadata commit to the PR target branch before pushing it.
+          git checkout -B "$TARGET_BRANCH" "$MERGE_SHA"
           git add appcast.xml Casks/snapzy.rb README.md docs/*.md
           if git diff --cached --quiet; then
             echo "No appcast/cask/readme/docs changes to commit"
-            exit 0
-          fi
-          if [ "${{ steps.version.outputs.is_beta }}" = "true" ]; then
-            git commit -m "chore: update appcast and docs for v${{ steps.version.outputs.version }}"
           else
-            git commit -m "chore: update appcast, cask, readme, and docs for v${{ steps.version.outputs.version }}"
+            if [ "$IS_BETA" = "true" ]; then
+              git commit -m "chore: update appcast and docs for v${VERSION}"
+            else
+              git commit -m "chore: update appcast, cask, readme, and docs for v${VERSION}"
+            fi
+            git push origin "HEAD:$TARGET_BRANCH"
           fi
-          git push origin master
+
+      - name: Sync beta appcast to stable feed
+        if: steps.version.outputs.is_beta == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          APPCAST_SOURCE: ${{ github.workspace }}/appcast.xml
+        run: |
+          set -euo pipefail
+          git fetch origin master --no-tags
+          METADATA_WORKTREE="$RUNNER_TEMP/snapzy-master-metadata"
+          cleanup() {
+            git worktree remove --force "$METADATA_WORKTREE" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          git worktree add --detach "$METADATA_WORKTREE" origin/master
+          cp "$APPCAST_SOURCE" "$METADATA_WORKTREE/appcast.xml"
+          git -C "$METADATA_WORKTREE" config user.name "github-actions[bot]"
+          git -C "$METADATA_WORKTREE" config user.email "github-actions[bot]@users.noreply.github.com"
+          git -C "$METADATA_WORKTREE" add appcast.xml
+          if git -C "$METADATA_WORKTREE" diff --cached --quiet; then
+            echo "Canonical master appcast is already current"
+          else
+            git -C "$METADATA_WORKTREE" commit -m "chore: publish beta appcast for v${VERSION}"
+            git -C "$METADATA_WORKTREE" push origin "HEAD:master"
+          fi

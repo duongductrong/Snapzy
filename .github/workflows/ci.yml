@@ -2,9 +2,9 @@ name: CI Build Check
 
 on:
   push:
-    branches: [master]
+    branches: [master, beta]
   pull_request:
-    branches: [master]
+    branches: [master, beta]
 
 concurrency:
   group: ci-${{ github.ref }}
