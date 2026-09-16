@@ -311,6 +311,22 @@ final class LiquidGlassTests: XCTestCase {
     }
   }
 
+  func testToolbarButton_supportsNeutralAndTintedActiveGlass() {
+    let neutralButton = ToolbarButton(
+      icon: "pencil",
+      isSelected: true,
+      activeGlassTint: nil
+    ) {}
+    let tintedButton = ToolbarButton(
+      icon: "pencil",
+      isSelected: true,
+      activeGlassTint: .accentColor
+    ) {}
+
+    XCTAssertNil(neutralButton.activeGlassTint)
+    XCTAssertNotNil(tintedButton.activeGlassTint)
+  }
+
   func testLiquidGlassActionButton_actionDispatch() {
     var didCallAction = false
     let actionButton = LiquidGlassActionButton(

@@ -74,7 +74,8 @@ struct AnnotateToolbarView: View {
     HStack(spacing: 4) {
       ToolbarButton(
         icon: "crop",
-        isSelected: state.selectedTool == .crop
+        isSelected: state.selectedTool == .crop,
+        activeGlassTint: nil
       ) {
         state.beginCropInteraction()
       }
@@ -83,7 +84,7 @@ struct AnnotateToolbarView: View {
       ToolbarButton(
         icon: "rectangle.on.rectangle",
         isSelected: state.showSidebar,
-        highlightColor: .blue
+        activeGlassTint: nil
       ) {
         state.toggleSidebarVisibility()
       }
@@ -132,7 +133,7 @@ struct AnnotateToolbarView: View {
     ToolbarButton(
       icon: state.isCutoutProcessing ? "hourglass" : "wand.and.stars",
       isSelected: state.isCutoutApplied,
-      highlightColor: .blue
+      activeGlassTint: nil
     ) {
       state.toggleBackgroundCutout()
     }
@@ -153,7 +154,8 @@ struct AnnotateToolbarView: View {
   private func annotationToolButton(for tool: AnnotationToolType) -> some View {
     ToolbarButton(
       icon: tool.icon,
-      isSelected: state.selectedTool == tool
+      isSelected: state.selectedTool == tool,
+      activeGlassTint: nil
     ) {
       state.activateTool(tool)
     }

@@ -115,7 +115,7 @@ struct VideoEditorToolbarView: View {
         icon: "info.circle",
         selectedIcon: "info.circle.fill",
         isSelected: state.isVideoInfoSidebarVisible,
-        highlightColor: ZoomColors.primary
+        activeGlassTint: ZoomColors.primary
       ) {
         state.toggleVideoInfoSidebar()
       }
@@ -133,7 +133,7 @@ struct VideoEditorToolbarView: View {
     ToolbarButton(
       icon: "rectangle.on.rectangle",
       isSelected: state.isLeftSidebarVisible,
-      highlightColor: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary
     ) {
       state.toggleLeftSidebar()
     }
@@ -145,7 +145,7 @@ struct VideoEditorToolbarView: View {
     ToolbarButton(
       icon: "sidebar.right",
       isSelected: state.isRightSidebarVisible,
-      highlightColor: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary
     ) {
       state.toggleRightSidebar()
     }

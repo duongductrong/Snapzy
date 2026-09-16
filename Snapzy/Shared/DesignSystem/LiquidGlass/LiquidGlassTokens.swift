@@ -213,8 +213,9 @@ enum LiquidGlassTokens {
   /// appearances — a screenshot's brightness has nothing to do with Light or Dark Aqua.
   static let inkOverlay: Color = .white
 
-  /// Ink for content sitting on an accent-tinted glass surface — the `isActive` state of every
-  /// glass control. See `ink(onTint:otherwise:)`.
+  /// Ink for content sitting on an accent-tinted glass surface. Use this only when the active
+  /// surface actually carries an accent tint; untinted active surfaces use `inkPrimary`.
+  /// See `ink(onTint:otherwise:)`.
   static var inkOnAccent: Color { ink(onTint: .accentColor) }
 
   /// Ink for content sitting on a colour-tinted glass surface.

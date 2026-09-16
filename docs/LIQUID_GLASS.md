@@ -137,24 +137,27 @@ When you animate `.opacity` on a SwiftUI subtree, SwiftUI promotes that subtree 
 `.glassEffect(.regular.tint(_:))` floods the surface with its tint, and an accent or red tint is
 dark in *both* appearances. Adaptive ink (`inkPrimary`, `.primary`, `.label`) follows the app
 appearance instead, so in Light theme it resolves near-black and lands black glyphs on a blue pill
-— around 3:1, failing AA. Every selected control in the app shipped that way: the Annotate
-toolbar's tools, the quick-properties bar, the Video Editor transport, the recording toolbar's
-output rows, the segmented control.
+— around 3:1, failing AA. Tinted selected controls must therefore resolve their ink against the
+tint. Annotate's toolbar and quick-properties controls intentionally omit that tint: their active
+surface stays neutral and translucent so selection feedback does not pull attention away from the
+canvas.
 
 Ask `LiquidGlassTokens` for the ink instead of hardcoding it:
 
 ```swift
+let activeGlassTint: Color? = nil // use .accentColor only for intentionally tinted chrome
 Image(systemName: icon)
-  .foregroundColor(isSelected ? LiquidGlassTokens.inkOnAccent : .primary)
+  .foregroundColor(isSelected ? LiquidGlassTokens.ink(onTint: activeGlassTint) : .primary)
   .liquidGlassChrome(shape: shape, isVisible: showsGlass, isActive: isSelected,
-                     glassTint: isSelected ? .accentColor : nil)
+                     glassTint: isSelected ? activeGlassTint : nil)
 ```
 
 - `LiquidGlassTokens.ink(onTint:otherwise:)` picks the ink from the tint's sRGB luminance, so a
   yellow or orange system accent flips to dark glyphs instead of shipping white-on-yellow.
 - It returns the adaptive fallback when there is **no** tint, and on macOS 13–15, where the
   composite drops `glassTint` entirely and signals state with a substrate step instead.
-- `LiquidGlassTokens.inkOnAccent` is the shorthand for the accent tint every `isActive` control uses.
+- `LiquidGlassTokens.inkOnAccent` is the shorthand when the active surface is accent-tinted; an
+  untinted active surface should use `LiquidGlassTokens.inkPrimary` (or `ink(onTint: nil)`).
 
 The glyph still never carries the tint itself — an accent icon on accent glass disappears. The
 surface tints; the ink contrasts.
@@ -396,20 +399,22 @@ VStack {
 #### 3. Compact Property-Bar Controls
 `.liquidGlassControl(isActive:)` replaces the fill-plus-stroke chrome used by small toggle and
 segment buttons. Apply it to the control's **label content**, inside the `Button` — it owns its own
-hover state and declares the hit target:
+hover state and declares the hit target. Its `activeGlassTint` defaults to `.accentColor` for
+existing tinted controls; pass `nil` for neutral, translucent active chrome:
 ```swift
 Button { select(style) } label: {
   Image(systemName: style.icon)
     .font(.system(size: 12, weight: .semibold))
-    .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkOnAccent : .secondary)
+    .foregroundColor(selectedStyle == style ? LiquidGlassTokens.inkPrimary : .secondary)
     .frame(width: buttonWidth, height: 24)
-    .liquidGlassControl(isActive: selectedStyle == style)
+    .liquidGlassControl(isActive: selectedStyle == style, activeGlassTint: nil)
 }
 .buttonStyle(.plain)
 ```
-Note the glyph is never `.accentColor` when active — the surface carries the accent tint, so
-tinting the glyph too would put an accent icon on accent glass. It is not `.primary` either: see
-Rule 3, active glyphs take `LiquidGlassTokens.inkOnAccent`.
+The neutral Annotate variant keeps the active glyph appearance-adaptive and carries no accent in
+the glass surface. When a control chooses an accent tint, the glyph is still never
+`.accentColor`: tinting it too would put an accent icon on accent glass; use
+`LiquidGlassTokens.inkOnAccent` or `ink(onTint:)` instead.
 
 `liquidGlassControl` also has a shape-generic overload (`in: Circle()`, `in: Capsule()`) for round
 and pill controls.
@@ -439,7 +444,7 @@ This is the single place the icon-button composite is tuned — `ToolbarButton`,
 
 | Emphasis | Resting substrate (13–15) | Active substrate (13–15) | Native glass tint | Ink |
 | :--- | :--- | :--- | :--- | :--- |
-| **`.standard`** | `0.14` | `0.24` | none (caller supplies selection tint) | `inkPrimary` at rest, `inkOnAccent` once the caller tints it |
+| **`.standard`** | `0.14` | `0.24` | none from emphasis; controls default to `.accentColor` | `inkPrimary` for neutral chrome, `inkOnAccent`/`ink(onTint:)` for tinted chrome |
 | **`.overlay`** | `0.34` | `0.44` | black `0.38` → `0.52` on hover | `inkOverlay` (always light — the tint pins the glass dark) |
 
 > **On the native path, the tint is the only knob you have.** `substrate` and `tint` are macOS

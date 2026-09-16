@@ -15,7 +15,10 @@ struct ToolbarButton: View {
   let icon: String
   var selectedIcon: String? = nil
   let isSelected: Bool
+  /// Kept for optional selected badge icons; active surface tint is controlled separately below.
   var highlightColor: Color = .primary
+  /// Optional tint for the selected surface. `nil` keeps the active glass neutral and translucent.
+  var activeGlassTint: Color? = .accentColor
   var selectedForegroundColor: Color? = nil
   var selectedBadgeIcon: String? = nil
 
@@ -38,7 +41,7 @@ struct ToolbarButton: View {
           shape: Radius.controlRect(forHeight: ControlMetrics.toolbarButton),
           isVisible: showsGlass,
           isActive: isSelected,
-          glassTint: isSelected ? selectedGlassTint : nil
+          glassTint: isSelected ? activeGlassTint : nil
         )
         .overlay(alignment: .topTrailing) {
           if let selectedBadgeIcon, isSelected {
@@ -80,20 +83,13 @@ struct ToolbarButton: View {
     guard isEnabled else { return Color.primary.opacity(Self.disabledInk) }
 
     // The tint is carried by the surface, so tinting the glyph too would put e.g. a blue icon on
-    // blue glass. It still has to survive that surface: an accent-tinted pill is dark in both
-    // appearances, so a selected glyph reads white rather than following the app appearance —
-    // `.primary` put black icons on the blue pills in Light theme.
+    // blue glass. A neutral surface has no tint to resolve against, so its selected glyph stays
+    // appearance-adaptive through `inkPrimary`.
     guard isSelected else { return .primary }
-    return selectedForegroundColor ?? LiquidGlassTokens.ink(onTint: selectedGlassTint)
+    return selectedForegroundColor ?? LiquidGlassTokens.ink(onTint: activeGlassTint)
   }
 
   fileprivate static let disabledInk: Double = 0.4
-
-  /// `.primary` is the default highlight and is a label colour, not a tint — fall back to the
-  /// accent so a selected tool still reads as selected on native glass.
-  private var selectedGlassTint: Color {
-    highlightColor == .primary ? .accentColor : highlightColor
-  }
 }
 
 // MARK: - Bottom Bar Button
