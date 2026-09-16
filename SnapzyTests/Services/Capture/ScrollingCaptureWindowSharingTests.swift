@@ -102,8 +102,8 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
 
   func testHUDWindowContentSize_usesMinimumForCompactContent() {
     XCTAssertEqual(
-      ScrollingCaptureHUDWindow.resolvedContentSize(for: CGSize(width: 240.1, height: 32.4)),
-      CGSize(width: 380, height: 44)
+      ScrollingCaptureHUDWindow.resolvedContentSize(for: CGSize(width: 120.1, height: 32.4)),
+      CGSize(width: 180, height: 34)
     )
   }
 
