@@ -2204,7 +2204,7 @@ final class VideoEditorState: ObservableObject {
     }
 
     // Primary estimate
-    var estimated = Double(sourceSize) * trimRatio * dimensionRatio * qualityMultiplier * audioMultiplier
+    let estimated = Double(sourceSize) * trimRatio * dimensionRatio * qualityMultiplier * audioMultiplier
 
     return Int64(max(estimated, 1024)) // Minimum 1KB
   }

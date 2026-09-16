@@ -15,7 +15,7 @@ import Foundation
 /// `VideoEditorSessionStore`. The current capture/destination URL is deliberately
 /// not used as the authoring source after the first commit because it already
 /// contains the previous render.
-struct VideoEditorSessionData: Equatable {
+nonisolated struct VideoEditorSessionData: Equatable {
   var sourceSnapshotURL: URL
   var recordingMetadata: RecordingMetadata?
   var clips: [TimelineClip]

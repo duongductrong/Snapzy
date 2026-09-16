@@ -26,7 +26,11 @@ Build and run with `Cmd+R`.
 ## Build from the terminal
 
 ```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
+xcodebuild -project Snapzy.xcodeproj \
+  -scheme Snapzy \
+  -configuration Debug \
+  -destination "platform=macOS,arch=$(uname -m)" \
+  build
 ```
 
 Output: `~/Library/Developer/Xcode/DerivedData/Snapzy-*/Build/Products/Debug/Snapzy.app`
@@ -41,6 +45,8 @@ The script builds the Debug app at
 `.build/xcode-derived-data/Build/Products/Debug/Snapzy Debug.app`. This local
 build uses app name `Snapzy Debug` and bundle ID `com.trongduong.snapzy.debug`
 so macOS Privacy permissions stay separate from the published `Snapzy` app.
+The helper targets the host architecture explicitly to avoid Xcode's multiple-
+destination warning; set `DESTINATION` to override it when needed.
 
 Reset local Debug permissions with:
 
@@ -60,7 +66,11 @@ Unit tests live in `SnapzyTests/`, a peer folder of `Snapzy/`. Keep XCTest files
 there so they belong to the `SnapzyTests` target instead of the app target.
 
 ```bash
-xcodebuild test -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug
+xcodebuild test \
+  -project Snapzy.xcodeproj \
+  -scheme Snapzy \
+  -configuration Debug \
+  -destination "platform=macOS,arch=$(uname -m)"
 ```
 
 The shared `Snapzy` scheme uses `Snapzy.xctestplan`, which includes the

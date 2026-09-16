@@ -66,7 +66,7 @@ enum CropContentAnalyzer {
 
   // MARK: - Rasterization
 
-  private enum Axis { case vertical, horizontal }
+  private nonisolated enum Axis { case vertical, horizontal }
 
   /// Draw the image into an RGBA buffer at the analysis size. Buffer row 0 is
   /// the image top row (CGBitmapContext draw preserves top-down order).
@@ -122,7 +122,7 @@ enum CropContentAnalyzer {
   // MARK: - Peak extraction
 
   /// Mean per-pixel gradient below which a border is treated as noise.
-  private static let noiseFloor: CGFloat = 255 * 3 * 0.05
+  private nonisolated static let noiseFloor: CGFloat = 255 * 3 * 0.05
 
   /// Peak indices with strength >= max(20% of max strength, noise floor),
   /// non-maximum suppressed: descending strength, keep only peaks farther

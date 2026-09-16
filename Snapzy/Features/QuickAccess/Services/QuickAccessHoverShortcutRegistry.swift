@@ -46,8 +46,8 @@ final class QuickAccessHoverShortcutRegistry {
   /// events are always returned to the system.
   private static let disarmDelay: TimeInterval = 0.25
 
-  init(store: QuickAccessActionShortcutStore = .shared) {
-    self.store = store
+  init(store: QuickAccessActionShortcutStore? = nil) {
+    self.store = store ?? .shared
     observeStore()
   }
 

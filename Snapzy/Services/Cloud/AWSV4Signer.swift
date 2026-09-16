@@ -10,7 +10,7 @@ import CommonCrypto
 import Foundation
 
 /// AWS Signature Version 4 request signer
-enum AWSV4Signer {
+nonisolated enum AWSV4Signer {
 
   // MARK: - Public API
 

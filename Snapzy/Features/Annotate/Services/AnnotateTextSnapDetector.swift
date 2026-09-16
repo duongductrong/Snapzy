@@ -12,7 +12,7 @@ import Foundation
 import Vision
 
 /// One detected line of text, in annotation image points (bottom-left origin).
-struct AnnotateTextLine: Equatable, Sendable {
+nonisolated struct AnnotateTextLine: Equatable, Sendable {
   /// Line box in image points.
   let bounds: CGRect
   /// Sorted x positions of every word's leading and trailing edge, clamped to
@@ -21,7 +21,7 @@ struct AnnotateTextLine: Equatable, Sendable {
 }
 
 /// Detected text lines of one image, ordered top → bottom (descending midY).
-struct AnnotateTextLineProfile: Equatable, Sendable {
+nonisolated struct AnnotateTextLineProfile: Equatable, Sendable {
   let lines: [AnnotateTextLine]
 
   static let empty = AnnotateTextLineProfile(lines: [])
@@ -29,7 +29,7 @@ struct AnnotateTextLineProfile: Equatable, Sendable {
   var isEmpty: Bool { lines.isEmpty }
 }
 
-enum AnnotateTextSnapDetector {
+nonisolated enum AnnotateTextSnapDetector {
   /// Lines shorter than this (in image points) are noise for highlighting.
   private static let minimumLineWidth: CGFloat = 6
   private static let minimumLineHeight: CGFloat = 4
@@ -62,7 +62,7 @@ enum AnnotateTextSnapDetector {
       return .empty
     }
 
-    guard let observations = request.results as? [VNRecognizedTextObservation] else {
+    guard let observations = request.results else {
       return .empty
     }
 
@@ -130,7 +130,7 @@ enum AnnotateTextSnapDetector {
   }
 }
 
-private extension String {
+private nonisolated extension String {
   /// Ranges of whitespace-delimited words, in order.
   func wordRanges() -> [Range<String.Index>] {
     var ranges: [Range<String.Index>] = []

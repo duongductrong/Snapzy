@@ -8,6 +8,7 @@
 import AppKit
 import AVFoundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum VideoControlsSection: Hashable {
   case left
@@ -271,7 +272,7 @@ struct VideoControlsView: View {
     panel.canChooseFiles = true
     panel.canChooseDirectories = false
     panel.allowsMultipleSelection = true
-    panel.allowedFileTypes = ["mov", "mp4", "m4v"]
+    panel.allowedContentTypes = ["mov", "mp4", "m4v"].compactMap { UTType(filenameExtension: $0) }
     panel.message = L10n.VideoEditor.addClipPickerMessage
     guard panel.runModal() == .OK else { return }
     // Insert at the playhead, keeping the picker's order for a multi-file selection.

@@ -80,32 +80,35 @@ final class CaptureStorageManager {
     }
 
     return await Task.detached {
-      let fm = FileManager.default
-      guard
-        let enumerator = fm.enumerator(
-          at: dirURL,
-          includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
-          options: [.skipsHiddenFiles],
-          errorHandler: nil
-        )
-      else {
-        return Int64(0)
-      }
-
-      var totalSize: Int64 = 0
-      for case let fileURL as URL in enumerator {
-        guard
-          let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
-          values.isRegularFile == true,
-          let size = values.fileSize
-        else {
-          continue
-        }
-        totalSize += Int64(size)
-      }
-
-      return totalSize
+      Self.calculateCacheSizeSynchronously(at: dirURL)
     }.value
+  }
+
+  private nonisolated static func calculateCacheSizeSynchronously(at directoryURL: URL) -> Int64 {
+    let fm = FileManager.default
+    guard
+      let enumerator = fm.enumerator(
+        at: directoryURL,
+        includingPropertiesForKeys: [.fileSizeKey, .isRegularFileKey],
+        options: [.skipsHiddenFiles],
+        errorHandler: nil
+      )
+    else {
+      return 0
+    }
+
+    var totalSize: Int64 = 0
+    while let fileURL = enumerator.nextObject() as? URL {
+      guard
+        let values = try? fileURL.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey]),
+        values.isRegularFile == true,
+        let size = values.fileSize
+      else {
+        continue
+      }
+      totalSize += Int64(size)
+    }
+    return totalSize
   }
 
   /// Formats a byte count into a human-readable string (e.g. "12.3 MB").

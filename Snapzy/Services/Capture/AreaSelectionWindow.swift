@@ -644,27 +644,33 @@ final class AreaSelectionController: NSObject {
       forName: NSWorkspace.activeSpaceDidChangeNotification,
       object: nil,
       queue: .main
-    ) { @MainActor [weak self] _ in
-      self?.handleSessionSpaceOrActivationChange()
-      self?.recaptureBackdropsForLuma(reason: .spaceChange)
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.handleSessionSpaceOrActivationChange()
+        self?.recaptureBackdropsForLuma(reason: .spaceChange)
+      }
     }
 
     sessionAppActivationObserver = NotificationCenter.default.addObserver(
       forName: NSApplication.didBecomeActiveNotification,
       object: nil,
       queue: .main
-    ) { @MainActor [weak self] _ in
-      self?.handleSessionSpaceOrActivationChange()
-      self?.recaptureBackdropsForLuma(reason: .appActivation)
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.handleSessionSpaceOrActivationChange()
+        self?.recaptureBackdropsForLuma(reason: .appActivation)
+      }
     }
 
     sessionAppSwitchObserver = NSWorkspace.shared.notificationCenter.addObserver(
       forName: NSWorkspace.didActivateApplicationNotification,
       object: nil,
       queue: .main
-    ) { @MainActor [weak self] _ in
-      self?.handleSessionSpaceOrActivationChange()
-      self?.recaptureBackdropsForLuma(reason: .appActivation)
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.handleSessionSpaceOrActivationChange()
+        self?.recaptureBackdropsForLuma(reason: .appActivation)
+      }
     }
 
     // Ensure pool is ready (lazy initialization if not called at app launch)

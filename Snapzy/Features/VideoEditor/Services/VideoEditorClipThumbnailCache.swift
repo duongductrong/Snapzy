@@ -20,8 +20,8 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
 
   /// Frames per inserted clip. Lower than the primary strip's budget: inserted clips
   /// are usually short and several can be on screen at once.
-  private static let frameCount = 12
-  private static let targetSize = CGSize(width: 120, height: 68)
+  private nonisolated static let frameCount = 12
+  private nonisolated static let targetSize = CGSize(width: 120, height: 68)
 
   func strip(for url: URL) -> [NSImage] {
     strips[url] ?? []
@@ -49,17 +49,15 @@ final class VideoEditorClipThumbnailCache: ObservableObject {
 
   private nonisolated static func generate(url: URL, count: Int) async -> [NSImage] {
     let safeCount = max(count, 1)
+    let durationAsset = AVAsset(url: url)
+    guard let duration = try? await durationAsset.load(.duration) else { return [] }
+    let seconds = CMTimeGetSeconds(duration)
+    guard seconds > 0 else { return [] }
 
     return await withCheckedContinuation { continuation in
       DispatchQueue.global(qos: .utility).async {
         autoreleasepool {
           let asset = AVAsset(url: url)
-          let seconds = CMTimeGetSeconds(asset.duration)
-          guard seconds > 0 else {
-            continuation.resume(returning: [])
-            return
-          }
-
           let generator = AVAssetImageGenerator(asset: asset)
           generator.appliesPreferredTrackTransform = true
           generator.maximumSize = targetSize

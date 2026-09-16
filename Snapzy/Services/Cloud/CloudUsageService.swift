@@ -10,7 +10,7 @@ import Combine
 import Foundation
 import os.log
 
-private let logger = Logger(subsystem: "Snapzy", category: "CloudUsageService")
+private nonisolated let logger = Logger(subsystem: "Snapzy", category: "CloudUsageService")
 
 private struct CloudUsageCacheEntry: Codable {
   static let currentSchemaVersion = 1
@@ -393,7 +393,7 @@ final class CloudUsageService: ObservableObject {
             .cloud,
             error,
             "Cloud usage fetch failed",
-            context: usageContext(for: config)
+            context: self.usageContext(for: config)
           )
         }
       }
@@ -570,7 +570,7 @@ final class CloudUsageService: ObservableObject {
 
 /// Lightweight XML parser for ListObjectsV2 response.
 /// Extracts <Size> values, <KeyCount>, and <NextContinuationToken>.
-final class ListObjectsV2Parser: NSObject, XMLParserDelegate {
+nonisolated final class ListObjectsV2Parser: NSObject, XMLParserDelegate {
 
   struct Result {
     var totalSize: Int64 = 0
@@ -631,7 +631,7 @@ final class ListObjectsV2Parser: NSObject, XMLParserDelegate {
 // MARK: - Lifecycle Rule Parser
 
 /// Parses lifecycle configuration XML to find the Snapzy auto-expire rule.
-final class LifecycleRuleParser: NSObject, XMLParserDelegate {
+nonisolated final class LifecycleRuleParser: NSObject, XMLParserDelegate {
 
   private var insideRule = false
   private var currentElement = ""
