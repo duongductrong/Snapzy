@@ -907,8 +907,10 @@ final class VideoEditorState: ObservableObject {
     }
     // Preserve pitch when playing speed-scaled regions (matches export's .spectral choice).
     player.currentItem?.audioTimePitchAlgorithm = .spectral
-    // Start playback at the rate of the speed segment under the playhead (1.0 when none).
-    player.rate = currentPreviewRate(at: currentTime)
+    // Persist the requested rate as AVPlayer's resume/default rate and explicitly start
+    // playback. Assigning only `rate` is transient: a later `play()`/item handoff can
+    // restore AVPlayer's default 1x rate and silently lose the speed effect.
+    applyPreviewRate(currentPreviewRate(at: currentTime), startPlayback: true)
     playbackState.setPlaying(true)
   }
 
@@ -988,7 +990,7 @@ final class VideoEditorState: ObservableObject {
   private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
     guard let context = sourceContext(atSequence: sequenceSeconds) else { return }
     activeClipId = context.clip.id
-    activateItemIfNeeded(for: context.clip)
+    activateItemIfNeeded(for: context.clip, previewTime: sequenceSeconds)
     player.seek(
       to: CMTime(seconds: context.sourceTime, preferredTimescale: 600),
       toleranceBefore: .zero,
@@ -1000,7 +1002,7 @@ final class VideoEditorState: ObservableObject {
   ///
   /// Keyed on `source`, not clip id: consecutive clips cut from the same asset share
   /// one item, so an ordinary split costs a seek rather than a reload.
-  private func activateItemIfNeeded(for clip: TimelineClip) {
+  private func activateItemIfNeeded(for clip: TimelineClip, previewTime: TimeInterval? = nil) {
     guard activeItemSource != clip.source else { return }
     let wasPlaying = isPlaying
     let previousRate = player.rate
@@ -1011,8 +1013,12 @@ final class VideoEditorState: ObservableObject {
 
     if wasPlaying {
       player.currentItem?.audioTimePitchAlgorithm = .spectral
-      // Inserted clips have no speed authoring, so they always resume at 1x.
-      player.rate = clip.isPrimary ? max(previousRate, 1.0) : 1.0
+      let resumedRate = if let previewTime {
+        currentPreviewRate(at: CMTime(seconds: previewTime, preferredTimescale: 600))
+      } else {
+        max(previousRate, 1.0)
+      }
+      applyPreviewRate(resumedRate, startPlayback: true)
     }
   }
 
@@ -2205,6 +2211,20 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Private Methods
 
+  /// Apply a preview rate consistently to AVPlayer's persistent resume rate and its
+  /// current transport. `defaultRate` matters whenever AVPlayer starts or resumes
+  /// playback through `play()` (including after an item handoff).
+  private func applyPreviewRate(_ rate: Float, startPlayback: Bool) {
+    let targetRate = rate.isFinite && rate > 0 ? rate : 1.0
+    player.defaultRate = targetRate
+
+    if startPlayback || player.rate == 0 {
+      player.play()
+    } else if abs(player.rate - targetRate) > 0.001 {
+      player.rate = targetRate
+    }
+  }
+
   private func setupTimeObserver() {
     let interval = CMTime(seconds: 1.0 / 30.0, preferredTimescale: 600)
     timeObserver = player.addPeriodicTimeObserver(
@@ -2249,13 +2269,11 @@ final class VideoEditorState: ObservableObject {
     playbackState.setCurrentTime(CMTime(seconds: sequenceTime, preferredTimescale: 600))
     updateClipActionAvailability()
 
-    // Live timelapse preview: keep player.rate aligned with the speed segment under
-    // the playhead while playing. player.rate == 0 means paused → leave it.
-    if isPlaying, hasSpeedSegments, player.rate != 0 {
+    // Live timelapse preview: keep both the current transport and AVPlayer's resume
+    // rate aligned with the speed segment under the playhead.
+    if isPlaying {
       let desiredRate = currentPreviewRate(at: CMTime(seconds: sequenceTime, preferredTimescale: 600))
-      if abs(player.rate - desiredRate) > 0.001 {
-        player.rate = desiredRate
-      }
+      applyPreviewRate(desiredRate, startPlayback: false)
     }
   }
 
@@ -2271,8 +2289,10 @@ final class VideoEditorState: ObservableObject {
 
     let next = clips[nextIndex]
     let nextId = next.id
+    let nextTime = placements.first(where: { $0.clip.id == nextId })?.activeStart
+      ?? CMTimeGetSeconds(currentTime)
     activeClipId = nextId
-    activateItemIfNeeded(for: next)
+    activateItemIfNeeded(for: next, previewTime: nextTime)
     // The seek completes asynchronously; until it lands, ticks and end
     // notifications still report the outgoing clip's coordinates.
     handoffSeekInFlight = true
@@ -2285,15 +2305,15 @@ final class VideoEditorState: ObservableObject {
         // A newer handoff owns the transport if the active clip moved on again.
         guard let self, activeClipId == nextId else { return }
         handoffSeekInFlight = false
-        // When consecutive clips share one player item (same source asset), the
-        // item often sits parked at its end with rate == 0 — e.g. after a reorder
-        // made a clip whose range reaches the asset end play first. The seek
-        // alone resumes from a stalled transport, so playback must restart.
-        guard isPlaying, player.rate == 0 else { return }
-        player.play()
-        if hasSpeedSegments {
-          player.rate = currentPreviewRate(at: currentTime)
-        }
+        guard isPlaying else { return }
+
+        // The seek can leave the new item paused even when the old item was playing.
+        // Resolve the rate at the next clip's structural start so a speed block that
+        // begins at a clip seam is applied before the first frame of that clip.
+        applyPreviewRate(
+          currentPreviewRate(at: CMTime(seconds: nextTime, preferredTimescale: 600)),
+          startPlayback: true
+        )
       }
     }
   }
