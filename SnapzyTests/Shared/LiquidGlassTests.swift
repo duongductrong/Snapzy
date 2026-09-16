@@ -371,12 +371,14 @@ final class LiquidGlassTests: XCTestCase {
 
     let control = LiquidGlassSegmentedControl(
       items: AnnotateState.EditorMode.allCases,
-      selection: binding
+      selection: binding,
+      activeGlassTint: nil
     ) { item in
       Text(item.rawValue)
     }
 
     XCTAssertEqual(control.items, [.annotate, .mockup, .preview])
+    XCTAssertNil(control.activeGlassTint)
     XCTAssertEqual(mode, .annotate)
 
     binding.wrappedValue = .mockup

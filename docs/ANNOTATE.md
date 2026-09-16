@@ -158,7 +158,8 @@ source image.
 
 ## Bottom Bar
 
-- Left: zoom picker + mode segmented toggle (annotate/mockup/preview).
+- Left: zoom picker + quiet mode segmented toggle (annotate/mockup/preview) with a neutral active
+  glass state that keeps focus on the canvas.
 - Center: drag handle (compacts when tight).
 - Right: new window, share (`NSSharingServicePicker`), cloud upload, pin (⌃⌘P), copy&close (⌘⇧C), delete (confirm; clears history record + sidecar + QA card, trashes file).
 - Cloud button gated by `CloudManager.shared.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`; ⌘U posts `annotateCloudUpload`; overwrite confirmation when item has a `cloudKey` and is stale. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference — manual uploads here stay.

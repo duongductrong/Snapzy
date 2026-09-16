@@ -10,6 +10,8 @@ import SwiftUI
 struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
   let items: [Item]
   @Binding var selection: Item
+  /// Tint applied to the selected segment. Pass `nil` for a neutral, translucent active state.
+  var activeGlassTint: Color? = .accentColor
   @ViewBuilder let label: (Item) -> Content
 
   @Namespace private var segmentNamespace
@@ -28,17 +30,17 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
         let isHovered = hoveredItem == item
 
         Button {
-          withAnimation(LiquidGlassTokens.hoverSpring) {
+          withAnimation(
+            isQuietSelection ? LiquidGlassTokens.settleSpring : LiquidGlassTokens.hoverSpring
+          ) {
             selection = item
           }
         } label: {
           label(item)
             .font(.system(size: 11.5, weight: isSelected ? .semibold : .medium))
-            // The selected pill is accent-tinted glass, so its label resolves against the tint;
-            // unselected labels have no surface and follow the app appearance.
             .foregroundStyle(
               isSelected
-                ? LiquidGlassTokens.inkOnAccent
+                ? LiquidGlassTokens.ink(onTint: activeGlassTint)
                 : (isHovered ? LiquidGlassTokens.inkBody : LiquidGlassTokens.inkMuted)
             )
             .padding(.horizontal, 12)
@@ -46,26 +48,31 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
             .liquidGlassSurface(
               shape: Capsule(style: .continuous),
               isVisible: isSelected,
-              substrate: LiquidGlassTokens.controlSubstrateHover,
-              tint: 0.14,
+              substrate: isQuietSelection
+                ? LiquidGlassTokens.controlSubstrateResting
+                : LiquidGlassTokens.controlSubstrateHover,
+              tint: isQuietSelection ? 0.06 : 0.14,
               highlight: .none,
               withRimLighting: isSelected && !usesNativeGlass,
               isInteractive: true,
-              glassTint: .accentColor
+              glassTint: activeGlassTint
             )
             .liquidGlassID(item, in: segmentNamespace)
             .contentShape(Capsule(style: .continuous))
             .shadow(
-              color: !usesNativeGlass && isSelected ? Color.black.opacity(0.18) : .clear,
-              radius: 2,
+              color: !usesNativeGlass && isSelected
+                ? Color.black.opacity(isQuietSelection ? 0.08 : 0.18)
+                : .clear,
+              radius: isQuietSelection ? 1 : 2,
               y: 1
             )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
         .background {
           if !isSelected, isHovered {
             Capsule(style: .continuous)
-              .fill(LiquidGlassTokens.veilFill.opacity(0.06))
+              .fill(LiquidGlassTokens.veilFill.opacity(isQuietSelection ? 0.04 : 0.06))
           }
         }
         .onHover { hovering in
@@ -75,15 +82,25 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
         }
       }
     }
-    .padding(3)
+    .padding(isQuietSelection ? 2 : 3)
     .liquidGlassGroup(spacing: 2)
     .liquidGlassSurface(
       shape: Capsule(style: .continuous),
-      substrate: LiquidGlassTokens.baseDarkness,
-      tint: 0.02,
+      substrate: isQuietSelection
+        ? LiquidGlassTokens.controlSubstrateResting
+        : LiquidGlassTokens.baseDarkness,
+      tint: isQuietSelection ? 0.01 : 0.02,
       highlight: .none,
       withRimLighting: !usesNativeGlass
     )
-    .shadow(color: Color.black.opacity(0.15), radius: 6, y: 3)
+    .shadow(
+      color: Color.black.opacity(isQuietSelection ? 0.08 : 0.15),
+      radius: isQuietSelection ? 4 : 6,
+      y: isQuietSelection ? 2 : 3
+    )
+  }
+
+  private var isQuietSelection: Bool {
+    activeGlassTint == nil
   }
 }
