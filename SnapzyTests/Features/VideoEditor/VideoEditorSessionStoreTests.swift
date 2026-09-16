@@ -190,6 +190,50 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertFalse(state.hasUnsavedChanges)
   }
 
+  func testVideoEditorPreview_appliesSpeedRateAtPlayhead() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-speed.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 0 ... 2, rate: 4))
+    XCTAssertEqual(state.currentPreviewRate(at: .zero), 4, accuracy: 0.001)
+
+    state.play()
+    defer { state.pause() }
+
+    for _ in 0 ..< 20 where state.player.timeControlStatus != .playing {
+      try await Task.sleep(nanoseconds: 25_000_000)
+    }
+
+    XCTAssertEqual(state.player.timeControlStatus, .playing)
+    XCTAssertEqual(state.player.rate, 4, accuracy: 0.001)
+    XCTAssertEqual(state.player.defaultRate, 4, accuracy: 0.001)
+    if let timebase = state.player.currentItem?.timebase {
+      XCTAssertEqual(CMTimebaseGetRate(timebase), 4, accuracy: 0.1)
+    } else {
+      XCTFail("Expected the preview player item to have a timebase")
+    }
+  }
+
+  func testVideoEditorPreview_updatesRateWhenPlayheadEntersSpeedSegment() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-speed-transition.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 4))
+    state.play()
+    defer { state.pause() }
+
+    let deadline = Date().addingTimeInterval(3)
+    while state.playbackState.currentTime.seconds < 1.05, Date() < deadline {
+      try await Task.sleep(nanoseconds: 25_000_000)
+    }
+
+    XCTAssertGreaterThanOrEqual(state.playbackState.currentTime.seconds, 1.05)
+    XCTAssertEqual(state.player.rate, 4, accuracy: 0.001)
+    XCTAssertEqual(state.player.defaultRate, 4, accuracy: 0.001)
+  }
+
   // MARK: - Helpers
 
   private func makeSessionData(sourceSnapshotURL: URL) -> VideoEditorSessionData {
