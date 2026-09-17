@@ -139,6 +139,7 @@ enum ControlMetrics {
   static let toolbarButton: CGFloat = 28
   /// Compact property-bar chips and segments.
   static let propertyChip: CGFloat = 24
-  /// Bottom-bar pills: zoom select, mode toggle, drag handle.
-  static let bottomBarControl: CGFloat = 28
+  /// Bottom-bar text pills: zoom select and mode toggle. Kept equal to icon actions so the
+  /// left and right sides of the bar share one visual baseline.
+  static let bottomBarControl: CGFloat = toolbarButton
 }

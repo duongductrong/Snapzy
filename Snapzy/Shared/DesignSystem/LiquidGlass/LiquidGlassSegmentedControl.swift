@@ -12,6 +12,9 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
   @Binding var selection: Item
   /// Tint applied to the selected segment. Pass `nil` for a neutral, translucent active state.
   var activeGlassTint: Color? = .accentColor
+  /// Optional total control height, including the inset around the selected segment. Bottom-bar
+  /// callers provide `ControlMetrics.bottomBarControl` to align with the action buttons.
+  var controlHeight: CGFloat? = nil
   @ViewBuilder let label: (Item) -> Content
 
   @Namespace private var segmentNamespace
@@ -45,6 +48,7 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
             )
             .padding(.horizontal, 12)
             .padding(.vertical, 5)
+            .frame(height: controlHeight.map { max(0, $0 - trackInset * 2) })
             .liquidGlassSurface(
               shape: Capsule(style: .continuous),
               isVisible: isSelected,
@@ -82,7 +86,8 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
         }
       }
     }
-    .padding(isQuietSelection ? 2 : 3)
+    .padding(trackInset)
+    .frame(height: controlHeight)
     .liquidGlassGroup(spacing: 2)
     .liquidGlassSurface(
       shape: Capsule(style: .continuous),
@@ -102,5 +107,9 @@ struct LiquidGlassSegmentedControl<Item: Hashable, Content: View>: View {
 
   private var isQuietSelection: Bool {
     activeGlassTint == nil
+  }
+
+  private var trackInset: CGFloat {
+    isQuietSelection ? 2 : 3
   }
 }

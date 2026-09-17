@@ -196,7 +196,9 @@ same family:
 
 `Radius.control(forHeight:)` snaps `height × 0.36` to the nearest ramp entry; ties resolve
 downward. `ControlMetrics` holds the heights the shared chrome is built at, so a height and its
-radius cannot drift apart.
+radius cannot drift apart. The Annotate bottom-bar zoom picker and mode switch both use
+`ControlMetrics.bottomBarControl`, which is intentionally equal to the 28pt
+`ControlMetrics.toolbarButton` action height.
 
 Containers are **not** proportional — a 400pt inspector does not want a 144pt radius — so they stay
 semantic: `ornament` 4 (badges, keycap plates, hairline frames, progress tracks), `tile` 8 (grid

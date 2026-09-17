@@ -65,6 +65,7 @@ final class RadiusTokensTests: XCTestCase {
     XCTAssertEqual(Radius.control(forHeight: ControlMetrics.propertyChip), Radius.controlS)
     XCTAssertEqual(Radius.control(forHeight: ControlMetrics.toolbarButton), Radius.controlM)
     XCTAssertEqual(Radius.control(forHeight: ControlMetrics.bottomBarControl), Radius.controlM)
+    XCTAssertEqual(ControlMetrics.bottomBarControl, ControlMetrics.toolbarButton)
     XCTAssertEqual(Radius.control(forHeight: 32), Radius.controlL)
   }
 
