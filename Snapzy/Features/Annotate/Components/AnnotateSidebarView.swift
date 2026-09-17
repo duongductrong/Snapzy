@@ -153,11 +153,12 @@ struct AnnotateSidebarView: View, Equatable {
       state.resetCanvasEffectsToNone()
     } label: {
       Text(L10n.Common.none)
-        .font(Typography.labelMedium)
+        .font(Typography.labelSmall)
         .foregroundColor(SidebarColors.labelPrimary)
         .frame(minWidth: 50)
         .padding(.horizontal, Spacing.sm)
         .padding(.vertical, 7)
+        .frame(height: AnnotateSidebarMetrics.control)
         .background(
           Capsule(style: .continuous)
             .fill(state.isNoneCanvasEffectsActive ? Color.accentColor.opacity(0.25) : SidebarColors.itemDefault)
@@ -194,6 +195,7 @@ struct AnnotateSidebarView: View, Equatable {
       }
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
+      .frame(height: AnnotateSidebarMetrics.control)
       .background(
         Capsule(style: .continuous)
           .fill(SidebarColors.itemDefault)
@@ -323,6 +325,7 @@ struct AnnotateSidebarView: View, Equatable {
       .foregroundColor(SidebarColors.labelPrimary)
       .padding(.horizontal, Spacing.sm)
       .padding(.vertical, 7)
+      .frame(height: AnnotateSidebarMetrics.control)
       .background(
         Capsule(style: .continuous)
           .fill(SidebarColors.itemDefault)
