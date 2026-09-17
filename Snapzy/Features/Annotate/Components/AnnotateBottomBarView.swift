@@ -57,11 +57,20 @@ struct AnnotateBottomBarView: View {
   @State private var measuredLeftWidth: CGFloat = 0
   @State private var measuredRightWidth: CGFloat = 0
   @State private var isZoomHovered = false
+  @Environment(\.liquidGlassRenderMode) private var liquidGlassRenderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private let centeredDragFullWidth: CGFloat = 160
   private let centeredDragCompactWidth: CGFloat = 44
   private let centeredDragHeight: CGFloat = 32
   private let centeredDragSideGap: CGFloat = 12
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(
+      for: liquidGlassRenderMode,
+      userEnabled: isLiquidGlassEnabled
+    )
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -210,25 +219,28 @@ struct AnnotateBottomBarView: View {
         Image(systemName: "chevron.down")
           .font(.system(size: 8, weight: .semibold))
       }
-      .foregroundColor(isZoomHovered ? .primary : .secondary)
+      .foregroundStyle(isZoomHovered ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody)
       .padding(.horizontal, 10)
       .frame(height: ControlMetrics.bottomBarControl)
-      // A labelled select is a text button, so it takes the same capsule as `Done` and the mode
-      // track; only the icon-only `BottomBarButton`s keep the squircle ramp.
-      .background(
-        zoomShape
-          .fill(Color.secondary.opacity(isZoomHovered ? 0.18 : 0.10))
-      )
-      .overlay(
-        zoomShape
-          .strokeBorder(Color.secondary.opacity(isZoomHovered ? 0.28 : 0.14), lineWidth: 0.5)
-      )
       .contentShape(zoomShape)
+      .liquidGlassSurface(
+        shape: zoomShape,
+        substrate: isZoomHovered
+          ? LiquidGlassTokens.controlSubstrateHover
+          : LiquidGlassTokens.controlSubstrateResting,
+        tint: isZoomHovered ? 0.06 : 0.01,
+        highlight: .none,
+        withRimLighting: !usesNativeGlass,
+        isInteractive: true,
+        glassTint: nil
+      )
+      .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
       .onHover { hovering in
         withAnimation(LiquidGlassTokens.hoverSpring) {
           isZoomHovered = hovering
         }
       }
+      .animation(LiquidGlassTokens.hoverSpring, value: isZoomHovered)
     }
     .menuStyle(.borderlessButton)
     .menuIndicator(.hidden)
@@ -248,7 +260,8 @@ struct AnnotateBottomBarView: View {
     LiquidGlassSegmentedControl(
       items: AnnotateState.EditorMode.allCases,
       selection: $state.editorMode,
-      activeGlassTint: nil
+      activeGlassTint: nil,
+      controlHeight: ControlMetrics.bottomBarControl
     ) { mode in
       HStack(spacing: 5) {
         Image(systemName: modeIcon(for: mode))
