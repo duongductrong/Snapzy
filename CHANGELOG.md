@@ -4,6 +4,19 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.1] - 2026-09-18
+
+### Features
+-  Added stroke border support to spotlight annotations (c41ad18c)
+
+### Bug Fixes
+-  retry release asset upload on transient GitHub errors (0cdea528)
+-  Fixed recording annotation tool shortcuts bug (#579) (8beafc0a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.32.0] - 2026-09-16
 
 ### Features
