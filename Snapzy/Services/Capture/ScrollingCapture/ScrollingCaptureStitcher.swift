@@ -119,26 +119,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       self.pixels = pixels
     }
 
-    func rowDifference(
-      comparedTo other: RasterImage,
-      row: Int,
-      otherRow: Int,
-      xStart: Int,
-      xEnd: Int,
-      columnStride: Int
-    ) -> Double {
-      blockDifference(
-        comparedTo: other,
-        startRow: row,
-        otherStartRow: otherRow,
-        rowCount: 1,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: columnStride,
-        rowStride: 1
-      )
-    }
-
     func blockDifference(
       comparedTo other: RasterImage,
       startRow: Int,
@@ -329,12 +309,24 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private var cachedMergedImage: CGImage?
   private var lastMatch: Match?
   private var matchNotFoundCount = 0
-  /// Rows at the bottom of the content area of `lastRaster` that belong to the
-  /// output but are not committed yet. Pages fade or dim content near the
-  /// bottom edge for as long as it sits there, so rows are only committed once
-  /// a later frame has carried them `edgeClearance` rows clear of that edge.
-  /// Until then they are rendered from the newest frame.
-  private var tailRowCount = 0
+  /// First row of `lastRaster` that belongs to the output but is not committed
+  /// yet; the tail runs from here to the bottom of the content area. Pages fade
+  /// or dim content near the bottom edge for as long as it sits there, so rows
+  /// are only committed once a later frame has carried them `edgeClearance`
+  /// rows clear of that edge. Until then they are rendered from the newest
+  /// frame, along with the footer band below them.
+  ///
+  /// Anchored to its first row rather than stored as a count, so a footer
+  /// estimate that grows mid-capture shortens the tail instead of shifting it.
+  private var tailStartRow: Int?
+  private var lastLuma: ScrollingCaptureLumaPlane?
+  /// Votes on which rows are fixed chrome, gathered across frame pairs that
+  /// moved.
+  private var stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
+  /// Rounds after which the chrome estimate is frozen for the capture.
+  private static let settledStickyRounds = 8
+  /// Rows of movement needed before a frame pair can vote on chrome.
+  private static let minimumStickyMeasurementDelta = 8
   /// Deepest bottom-edge treatment measured on this page, in pixels.
   private var measuredDimmedDepth: Int?
   private var dimmingMeasurementCount = 0
@@ -353,7 +345,16 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private(set) var acceptedFrameCount = 0
 
   var outputHeight: Int {
-    contentSlices.reduce(0) { $0 + $1.rowCount } + tailRowCount
+    renderedSlices.reduce(0) { $0 + $1.rowCount }
+  }
+
+  private var tailRowCount: Int {
+    guard let tailStartRow, let lastRaster else { return 0 }
+    return max(0, lastRaster.height - footerHeight - tailStartRow)
+  }
+
+  private var chromeHasSettled: Bool {
+    stickyVotes.rounds >= Self.settledStickyRounds
   }
 
   func start(with image: CGImage) -> ScrollingCaptureStitchUpdate? {
@@ -370,7 +371,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     cachedMergedImage = image
     lastMatch = nil
     matchNotFoundCount = 0
-    tailRowCount = 0
+    tailStartRow = nil
+    lastLuma = nil
+    stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
     measuredDimmedDepth = nil
     dimmingMeasurementCount = 0
     acceptedFrameCount = 1
@@ -411,12 +414,15 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       return currentUpdate(outcome: .ignoredAlignmentFailed, includeMergedImage: renderMergedImage)
     }
 
-    let inferredHeaderHeight = headerHeight == 0
-      ? detectStaticBandHeight(previous: lastRaster, current: raster, fromTop: true)
-      : headerHeight
-    let inferredFooterHeight = footerHeight == 0
-      ? detectStaticBandHeight(previous: lastRaster, current: raster, fromTop: false)
-      : footerHeight
+    let previousLuma = lastLuma ?? lastRaster.makeLumaPlane()
+    let currentLuma = raster.makeLumaPlane()
+    // Until the votes settle, this pair's own estimate keeps chrome that has
+    // not been voted in yet out of the matching region.
+    let pairStickyEdges = chromeHasSettled
+      ? ScrollingCaptureStickyEdges.none
+      : ScrollingCaptureStickyEdgeDetector.detect(previous: previousLuma, current: currentLuma)
+    let inferredHeaderHeight = max(headerHeight, pairStickyEdges.top)
+    let inferredFooterHeight = max(footerHeight, pairStickyEdges.bottom)
     let inferredLeadingStaticWidth = leadingStaticWidth == 0
       ? detectStaticSideBandWidth(previous: lastRaster, current: raster, fromLeading: true)
       : leadingStaticWidth
@@ -594,23 +600,34 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
+    let votedStickyEdges = voteOnStickyEdgesIfNeeded(
+      previous: previousLuma,
+      current: currentLuma,
+      deltaY: match.deltaY
+    )
+
     measureEdgeDimmingIfNeeded(
-      previous: lastRaster,
-      current: raster,
+      previous: previousLuma,
+      current: currentLuma,
       deltaY: match.deltaY,
-      headerHeight: inferredHeaderHeight,
-      footerHeight: inferredFooterHeight,
+      headerHeight: max(inferredHeaderHeight, votedStickyEdges.top),
+      footerHeight: max(inferredFooterHeight, votedStickyEdges.bottom),
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth
     )
 
     if mergeDirection == .unresolved {
       mergeDirection = match.direction
-      headerHeight = inferredHeaderHeight
-      footerHeight = inferredFooterHeight
+      headerHeight = max(inferredHeaderHeight, votedStickyEdges.top)
+      footerHeight = max(inferredFooterHeight, votedStickyEdges.bottom)
       leadingStaticWidth = inferredLeadingStaticWidth
       trailingStaticWidth = inferredTrailingStaticWidth
       bootstrapContentSlices(with: baseRaster)
+    } else {
+      // Chrome only grows, and stops changing once the votes settle: any strip
+      // cut with a band too short repeats that chrome down the capture.
+      headerHeight = max(headerHeight, votedStickyEdges.top)
+      footerHeight = max(footerHeight, votedStickyEdges.bottom)
     }
 
     let remainingHeight = maxOutputHeight - outputHeight
@@ -647,6 +664,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
 
     advanceTail(from: lastRaster, to: raster, deltaY: match.deltaY, acceptedDelta: acceptedDelta)
     self.lastRaster = raster
+    self.lastLuma = currentLuma
     self.lastMatch = Match(
       direction: match.direction,
       deltaY: acceptedDelta,
@@ -821,25 +839,47 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     )
   }
 
+  /// The base frame keeps its header, which is genuine content the first time
+  /// it is seen. Its own bottom rows are edge-treated like any other frame's,
+  /// so they stay in the tail until a later frame carries them clear.
   private func bootstrapContentSlices(with baseRaster: RasterImage) {
-    let contentStart = headerHeight
-    let contentHeight = max(1, baseRaster.height - headerHeight - footerHeight)
-    // The base frame's own bottom rows are edge-treated like any other frame's,
-    // so they stay in the tail until a later frame carries them clear.
-    tailRowCount = min(edgeClearance, contentHeight - 1)
-    contentSlices = [
-      ContentSlice(raster: baseRaster, startRow: contentStart, rowCount: contentHeight - tailRowCount)
-    ]
+    let contentBottom = baseRaster.height - footerHeight
+    let contentHeight = max(1, contentBottom - headerHeight)
+    let tailStart = contentBottom - min(edgeClearance, contentHeight - 1)
+    tailStartRow = tailStart
+    contentSlices = [ContentSlice(raster: baseRaster, startRow: 0, rowCount: tailStart)]
   }
 
-  /// Committed slices followed by the uncommitted tail, drawn from the newest
-  /// accepted frame.
+  /// Committed slices, then the uncommitted tail and the footer band, both
+  /// drawn from the newest accepted frame. Fixed chrome along the bottom is
+  /// kept out of every strip, so it appears once, at the end, in the state the
+  /// capture finished in.
   private var renderedSlices: [ContentSlice] {
-    guard tailRowCount > 0, let lastRaster else { return contentSlices }
+    guard mergeDirection != .unresolved, let lastRaster else { return contentSlices }
     let contentBottom = lastRaster.height - footerHeight
-    return contentSlices + [
-      ContentSlice(raster: lastRaster, startRow: contentBottom - tailRowCount, rowCount: tailRowCount)
-    ]
+    var slices = contentSlices
+    if tailRowCount > 0 {
+      slices.append(
+        ContentSlice(raster: lastRaster, startRow: contentBottom - tailRowCount, rowCount: tailRowCount)
+      )
+    }
+    if footerHeight > 0 {
+      slices.append(ContentSlice(raster: lastRaster, startRow: contentBottom, rowCount: footerHeight))
+    }
+    return slices
+  }
+
+  /// Votes with frame pairs that really moved until the estimate settles.
+  /// - Returns: the chrome the votes support so far.
+  private func voteOnStickyEdgesIfNeeded(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    deltaY: Int
+  ) -> ScrollingCaptureStickyEdges {
+    if !chromeHasSettled, deltaY >= Self.minimumStickyMeasurementDelta {
+      stickyVotes.add(ScrollingCaptureStickyEdgeDetector.chromeRows(previous: previous, current: current))
+    }
+    return stickyVotes.edges(frameHeight: current.height)
   }
 
   /// Rows the tail must be carried clear of the bottom edge before it is
@@ -856,8 +896,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   /// depth only ever grows, since a band that reaches further on one pair
   /// reaches that far.
   private func measureEdgeDimmingIfNeeded(
-    previous: RasterImage,
-    current: RasterImage,
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
     deltaY: Int,
     headerHeight: Int,
     footerHeight: Int,
@@ -876,8 +916,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     )
     guard
       let depth = ScrollingCaptureEdgeDimmingDetector.dimmedDepth(
-        previous: previous.makeLumaPlane(),
-        current: current.makeLumaPlane(),
+        previous: previous,
+        current: current,
         offset: deltaY,
         headerHeight: headerHeight,
         footerHeight: footerHeight,
@@ -899,35 +939,34 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     deltaY: Int,
     acceptedDelta: Int
   ) {
+    let previousContentBottom = previous.height - footerHeight
     let contentBottom = current.height - footerHeight
-    let usableHeight = contentBottom - headerHeight
-    var tail = tailRowCount
+    var tailStart = min(tailStartRow ?? previousContentBottom, previousContentBottom)
 
-    // Tail rows that scroll off the top of the content area in `current` can
-    // only come from `previous`.
-    let overflow = max(0, tail + deltaY - usableHeight)
-    if overflow > 0 {
-      let previousContentBottom = previous.height - footerHeight
-      commitRows(from: previous, startRow: previousContentBottom - tail, rowCount: overflow)
-      tail -= overflow
+    // Tail rows that scroll under the header in `current` can only come from
+    // `previous`.
+    let hiddenEnd = min(headerHeight + deltaY, previousContentBottom)
+    if hiddenEnd > tailStart {
+      commitRows(from: previous, startRow: tailStart, rowCount: hiddenEnd - tailStart)
+      tailStart = hiddenEnd
     }
 
-    let tailTop = contentBottom - deltaY - tail
-    var pending = tail + acceptedDelta
+    var tailTop = min(tailStart - deltaY, contentBottom)
 
     // The height limit clipped this step, so nothing will follow it.
     if acceptedDelta < deltaY {
-      commitRows(from: current, startRow: tailTop, rowCount: pending)
-      tailRowCount = 0
+      let clippedEnd = contentBottom - deltaY + acceptedDelta
+      commitRows(from: current, startRow: tailTop, rowCount: clippedEnd - tailTop)
+      tailStartRow = contentBottom
       return
     }
 
-    let clean = pending - edgeClearance
+    let clean = contentBottom - edgeClearance - tailTop
     if clean > 0 {
       commitRows(from: current, startRow: tailTop, rowCount: clean)
-      pending -= clean
+      tailTop += clean
     }
-    tailRowCount = pending
+    tailStartRow = tailTop
   }
 
   private func commitRows(from raster: RasterImage, startRow: Int, rowCount: Int) {
@@ -952,40 +991,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     case .unresolved:
       return nil
     }
-  }
-
-  private func detectStaticBandHeight(
-    previous: RasterImage,
-    current: RasterImage,
-    fromTop: Bool
-  ) -> Int {
-    let maxBandHeight = min(previous.height / 5, 160)
-    let step = max(2, min(8, previous.height / 180))
-    let xInset = max(20, previous.width / 18)
-    let xStart = xInset
-    let xEnd = previous.width - xInset
-    let columnStride = max(2, (xEnd - xStart) / 44)
-    var bandHeight = 0
-
-    for offset in stride(from: 0, to: maxBandHeight, by: step) {
-      let row = fromTop ? offset : previous.height - 1 - offset
-      let difference = previous.rowDifference(
-        comparedTo: current,
-        row: row,
-        otherRow: row,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: columnStride
-      )
-
-      if difference < 5.0 {
-        bandHeight = offset + step
-      } else if offset >= step * 2 {
-        break
-      }
-    }
-
-    return min(max(0, bandHeight), maxBandHeight)
   }
 
   private func contentDifference(

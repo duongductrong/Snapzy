@@ -58,7 +58,8 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
       TestImageFactory.texturedScrollingFrame(width: width, height: merged.height, logicalYOffset: 0)
     )
     let cleanRows = merged.height - height / 3
-    XCTAssertEqual(try rows(of: merged, count: cleanRows), try rows(of: reference, count: cleanRows))
+    XCTAssertEqual(TestImageFactory.rgbaRows(of: merged, rowCount: cleanRows),
+      TestImageFactory.rgbaRows(of: reference, rowCount: cleanRows))
   }
 
   func testStitch_unfadedPage_matchesReferenceExactly() throws {
@@ -70,7 +71,8 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
       TestImageFactory.texturedScrollingFrame(width: width, height: height + step * steps, logicalYOffset: 0)
     )
     XCTAssertEqual(merged.height, reference.height)
-    XCTAssertEqual(try rows(of: merged, count: merged.height), try rows(of: reference, count: reference.height))
+    XCTAssertEqual(TestImageFactory.rgbaRows(of: merged, rowCount: merged.height),
+      TestImageFactory.rgbaRows(of: reference, rowCount: reference.height))
   }
 
   func testStitch_outputHeightIncludesUncommittedTail() throws {
@@ -128,28 +130,5 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
 
   private func lumaPlane(offset: Int, fadeDepth: Int) throws -> ScrollingCaptureLumaPlane {
     try XCTUnwrap(ScrollingCaptureLumaPlane(cgImage: try frame(offset: offset, fadeDepth: fadeDepth)))
-  }
-
-  /// RGBA bytes of the first `count` rows, drawn into a known pixel format.
-  private func rows(of image: CGImage, count: Int) throws -> [UInt8] {
-    let bytesPerRow = image.width * 4
-    var pixels = [UInt8](repeating: 0, count: image.height * bytesPerRow)
-    let drew = pixels.withUnsafeMutableBytes { buffer -> Bool in
-      guard
-        let context = CGContext(
-          data: buffer.baseAddress,
-          width: image.width,
-          height: image.height,
-          bitsPerComponent: 8,
-          bytesPerRow: bytesPerRow,
-          space: CGColorSpaceCreateDeviceRGB(),
-          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
-        )
-      else { return false }
-      context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
-      return true
-    }
-    XCTAssertTrue(drew)
-    return Array(pixels[0..<(count * bytesPerRow)])
   }
 }

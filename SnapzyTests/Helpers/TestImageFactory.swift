@@ -261,6 +261,65 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a textured scrolling frame with fixed chrome: a header across the
+  /// top and a footer along the bottom. When `footerChromeWidth` is set, only
+  /// that many trailing columns of the footer are fixed, like a floating
+  /// banner, and content scrolls past beside it.
+  static func chromeScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    headerHeight: Int,
+    footerHeight: Int,
+    footerChromeWidth: Int? = nil
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let footerTop = height - footerHeight
+    let chromeStartColumn = width - (footerChromeWidth ?? width)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let cell: Int
+        if y < headerHeight {
+          cell = (y &* 2_654_435_761) ^ ((x / 5) &* 40_503)
+        } else if y >= footerTop, x >= chromeStartColumn {
+          cell = ((y - footerTop) &* 97_531) ^ ((x / 7) &* 2_246_822_519)
+        } else {
+          cell = ((logicalYOffset + y) &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        }
+        let value = UInt8(abs(cell) % 200 + 28)
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8(Int(value) * 7 / 8)
+        pixels[offset + 2] = UInt8(Int(value) * 3 / 4)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// RGBA bytes of the first `rowCount` rows of `image`, drawn into a known
+  /// pixel format so images from different sources compare byte for byte.
+  static func rgbaRows(of image: CGImage, rowCount: Int) -> [UInt8] {
+    let bytesPerRow = image.width * 4
+    var pixels = [UInt8](repeating: 0, count: image.height * bytesPerRow)
+    pixels.withUnsafeMutableBytes { buffer in
+      let context = CGContext(
+        data: buffer.baseAddress,
+        width: image.width,
+        height: image.height,
+        bitsPerComponent: 8,
+        bytesPerRow: bytesPerRow,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+      )
+      context?.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    }
+    return Array(pixels[0..<(min(rowCount, image.height) * bytesPerRow)])
+  }
+
   /// Create a soft-edged dark radial blob on a uniform background. The edge
   /// falloff is wide enough that per-pixel-pair gradients stay below the edge
   /// detector's noise floor, so `CropContentAnalyzer` finds no content borders
