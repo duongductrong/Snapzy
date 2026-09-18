@@ -8,7 +8,7 @@ For trigger plumbing shared with other capture modes, see [`CAPTURE.md`](CAPTURE
 
 - Entry point: `ScreenCaptureViewModel.captureScrolling()` (`Snapzy/Features/Capture/CaptureViewModel.swift`), fired from the menu bar, the global shortcut (default `⇧⌘6`), or `snapzy://capture/scrolling`.
 - The entry resolves the save directory (`SandboxFileAccessManager.ensureExportDirectoryForOperation` → `TempCaptureManager.resolveSaveDirectory(for: .screenshot)`), hides own windows when excluded, then starts `AreaSelectionController.startSelection(mode: .scrollingCapture)`.
-- The user drags a rect around **only the moving content** (fixed headers/footers confuse stitching).
+- The user drags a rect around the scrolling content. The rect can also cover a whole app window: fixed toolbars, headers, footers, floating banners, and static sidebars are detected and kept out of the stitched strips.
 - The rect, save directory, `ImageFormat`, and prefetched `SCShareableContent` task are handed to `ScrollingCaptureCoordinator.beginSession(rect:saveDirectory:format:prefetchedContentTask:onSessionEnded:)`.
 - The subsystem is intentionally self-contained: session model, region overlay, HUD, preview rail, frame source, commit scheduling, stitcher, and metrics all live under `Services/Capture/ScrollingCapture/`. Treat the folder as one unit.
 
@@ -17,7 +17,7 @@ For trigger plumbing shared with other capture modes, see [`CAPTURE.md`](CAPTURE
 ```mermaid
 flowchart TD
     A["captureScrolling()"] --> B["AreaSelectionController.startSelection(mode: .scrollingCapture)"]
-    B --> C["User selects only moving content"]
+    B --> C["User selects scrolling content or a whole window"]
     C --> D["ScrollingCaptureCoordinator.beginSession()"]
 
     D --> E["Prewarm region capture context (ScreenCaptureManager.prepareAreaCapture)"]
@@ -82,12 +82,14 @@ flowchart TD
 `ScrollingCaptureStitcher` is a nonisolated vertical stitcher confined to the coordinator's serial processing queue. It keeps the base raster, the last frame's raster, accepted `ContentSlice`s, detected static bands, the merge direction, and a cached merged image.
 
 - **Hot path**: a fast row/block-difference guided match (`bestMatch` in `.guided` mode) scores candidate deltas with strided pixel sampling, using the expected delta window from scroll accumulation.
-- **Static band detection**: top/bottom static bands (fixed headers/footers) and leading/trailing static side bands are inferred from the first accepted frame pair and locked once the merge direction resolves; matching skips those regions so pinned UI does not break alignment.
+- **Fixed chrome detection** (`ScrollingCaptureStickyEdges.swift`): each row near the top and bottom is judged by the share of its contrasty pixels that stayed put (at least 40%), so partial-width chrome such as a floating banner counts. Rows are voted on across frame pairs that moved at least 8 px, and the header/footer bands only grow until 8 rounds have been cast, then stay frozen. Bands can reach 30% of the frame height each. Until the votes settle, each pair's own estimate keeps unvoted chrome out of matching.
+- **Static side columns**: leading/trailing columns are voted on the same way (at least 60% of contrasty pixels stayed put, up to 45% of the width per side), so a window sidebar is excluded from matching and Vision regions. Sides are detected before rows, and rows are judged only between the side bands, because a sidebar stays put in every row and would otherwise make ordinary content look like chrome.
+- **Bottom-edge fade** (`ScrollingCaptureEdgeDimmingDetector.swift`): pages fade or dim content near the bottom of the viewport for as long as it sits there. The stitcher measures how deep that treatment reaches on the first 8 moving frame pairs (rows whose content differs once carried `deltaY` rows higher), and keeps an uncommitted tail of the newest frame. Rows are committed only after a later frame has carried them `edgeClearance` rows clear of the edge: the measured depth plus 60 px, at least 80 px, at most a third of the content height. The tail is anchored to its first row, so a footer band that grows mid-capture shortens it instead of shifting it.
 - **Vision as recovery, not default**: `VNTranslationalImageRegistration` estimates alignment for cross-validation (`fastGuidedMatchDisagreesWithVision` triggers a `.guidedVision` re-match) and for `.recoveryVision` search when the fast path finds nothing. Alignment path is reported per commit: `initial-frame`, `fast-guided`, `guided-vision`, `recovery-vision`, `no-movement`, `duplicate-boundary`, `alignment-failed`, `height-limit`.
 - **Duplicate-boundary rejection**: near-zero frame difference with no strong Vision movement and no match (or a likely duplicate boundary) yields `ignoredNoMovement` with `likelyReachedBoundary = true`, which powers end-of-content guidance and auto-finish.
 - **Safety**: `ScrollingCaptureStitchSafety` marks each update `confirmed`, `tentative(reason)`, or `unsafe(reason)`; final output is built from accepted slices only.
 - **Outcomes**: `initialized`, `appended(deltaY)`, `ignoredNoMovement`, `ignoredAlignmentFailed`, `reachedHeightLimit`. Appends clamp to the remaining `maxOutputHeight` budget (`ScrollingCaptureConfiguration.maxOutputHeight = 32768` px).
-- **Output**: `mergedImage()` concatenates accepted slices into the final `CGImage` (cached until the next append); `previewImage(maxPixelWidth:maxPixelHeight:)` renders the downscaled rail thumbnail (2x render scale) so the visible preview grows as slices are accepted.
+- **Output**: `mergedImage()` concatenates the committed slices, then the uncommitted tail and the footer band from the newest accepted frame, into the final `CGImage` (cached until the next append). The header stays once at the top as part of the first frame, and the footer appears once at the end in the state the capture finished in. `outputHeight` counts all of it, so the preview and the height limit never lag behind. The final tail is the one place a fading page can still show through. `previewImage(maxPixelWidth:maxPixelHeight:)` renders the downscaled rail thumbnail (2x render scale) from the same slices.
 
 ## Auto Scroll
 
@@ -153,7 +155,9 @@ grep 'ScrollingCaptureDebug' "$HOME/Library/Logs/Snapzy/snapzy_$(date +%F).txt"
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureCoordinator.swift` | Session orchestration: windows, scroll monitoring, commit lane, auto scroll, finish/save |
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureAutoScrollController.swift` | Closed-loop Auto Scroll state machine: one bounded step, settle, one commit |
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureTypes.swift` | `ScrollingCaptureSessionModel`, phases, runtime states, truth states, guidance, auto-scroll policy |
-| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Vertical stitcher: fast guided match, Vision recovery, static bands, safety, merged/preview output |
+| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureStitcher.swift` | Vertical stitcher: fast guided match, Vision recovery, chrome/side votes, edge-fade tail, safety, merged/preview output |
+| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureStickyEdges.swift` | Per-row and per-column voting for fixed header/footer chrome and static side columns |
+| `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureEdgeDimmingDetector.swift` | Luma plane for row comparisons and per-page bottom-edge fade depth measurement |
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureFrameSource.swift` | Region-scoped `SCStream` publishing timestamped frames |
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureFrameRing.swift` | Bounded frame history (capacity 8) shared by preview and commit lanes |
 | `Snapzy/Services/Capture/ScrollingCapture/ScrollingCaptureCommitScheduler.swift` | Serial commit lane coalescing to the latest pending request |
