@@ -47,9 +47,17 @@ nonisolated enum ScrollingCaptureStickyEdgeDetector {
   static func detect(
     previous: ScrollingCaptureLumaPlane,
     current: ScrollingCaptureLumaPlane,
+    columnStart: Int = 0,
+    columnEnd: Int? = nil,
     maximumFraction: Double = 0.3
   ) -> ScrollingCaptureStickyEdges {
-    let samples = chromeRows(previous: previous, current: current, maximumFraction: maximumFraction)
+    let samples = chromeRows(
+      previous: previous,
+      current: current,
+      columnStart: columnStart,
+      columnEnd: columnEnd,
+      maximumFraction: maximumFraction
+    )
     guard !samples.isEmpty else { return .none }
     var accumulator = ScrollingCaptureStickyEdgeAccumulator()
     for _ in 0..<ScrollingCaptureStickyEdgeAccumulator.minimumVotes {
@@ -61,24 +69,32 @@ nonisolated enum ScrollingCaptureStickyEdgeDetector {
   /// Verdict per row of the candidate top and bottom regions: true where the row
   /// looks like fixed chrome, false where it scrolled, and absent where it
   /// carries too little contrast to say.
+  ///
+  /// Rows are judged over `columnStart..<columnEnd`, which should leave out
+  /// static side columns: a sidebar stays put in every row, and would push
+  /// ordinary content rows toward the chrome threshold.
   static func chromeRows(
     previous: ScrollingCaptureLumaPlane,
     current: ScrollingCaptureLumaPlane,
+    columnStart: Int = 0,
+    columnEnd: Int? = nil,
     maximumFraction: Double = 0.3
   ) -> [Int: Bool] {
     guard previous.width == current.width, previous.height == current.height else { return [:] }
 
     let height = previous.height
-    let width = previous.width
+    let firstColumn = max(0, columnStart)
+    let lastColumn = min(previous.width, columnEnd ?? previous.width)
+    guard lastColumn - firstColumn > minimumContrastySamples else { return [:] }
     let limit = Int(Double(height) * maximumFraction)
-    let columnStep = max(1, width / 80)
+    let columnStep = max(1, (lastColumn - firstColumn) / 80)
 
     func isChrome(row: Int) -> Bool? {
       var contrasty = 0
       var stayed = 0
-      for column in stride(from: 0, to: width, by: columnStep) {
+      for column in stride(from: firstColumn, to: lastColumn, by: columnStep) {
         let value = current.value(x: column, y: row)
-        let neighbour = current.value(x: min(width - 1, column + columnStep), y: row)
+        let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
         guard abs(value - neighbour) >= contrastFloor else { continue }
         contrasty += 1
         if abs(value - previous.value(x: column, y: row)) <= sameRowTolerance {
@@ -96,6 +112,89 @@ nonisolated enum ScrollingCaptureStickyEdgeDetector {
       if mirrored > row, let verdict = isChrome(row: mirrored) { samples[mirrored] = verdict }
     }
     return samples
+  }
+
+  /// Share of a column's contrasty pixels that must stay put for the column to
+  /// count as static. Higher than the row threshold: a sidebar spans the whole
+  /// content height, so a real one reads close to all of it.
+  static let staticColumnFraction = 0.6
+  /// Widest share of the frame either side band may claim. A window capture
+  /// can hold a wide sidebar, but the scrolling area has to remain.
+  static let maximumSideFraction = 0.45
+
+  /// Single-pair estimate of static columns along the leading and trailing
+  /// edges, judged over rows `rowStart..<rowEnd` so fixed header and footer
+  /// rows do not make every column look frozen.
+  static func detectSides(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    rowStart: Int,
+    rowEnd: Int
+  ) -> ScrollingCaptureStaticSides {
+    let samples = staticColumns(previous: previous, current: current, rowStart: rowStart, rowEnd: rowEnd)
+    guard !samples.isEmpty else { return .none }
+    var accumulator = ScrollingCaptureStickyEdgeAccumulator()
+    for _ in 0..<ScrollingCaptureStickyEdgeAccumulator.minimumVotes {
+      accumulator.add(samples)
+    }
+    return accumulator.sides(frameWidth: previous.width)
+  }
+
+  /// Verdict per column of the candidate leading and trailing regions: true
+  /// where the column stayed put, false where it scrolled, and absent where it
+  /// carries too little contrast to say.
+  static func staticColumns(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    rowStart: Int,
+    rowEnd: Int
+  ) -> [Int: Bool] {
+    guard previous.width == current.width, previous.height == current.height else { return [:] }
+
+    let width = previous.width
+    let firstRow = max(0, rowStart)
+    let lastRow = min(previous.height, rowEnd)
+    guard lastRow - firstRow > minimumContrastySamples else { return [:] }
+    let limit = Int(Double(width) * maximumSideFraction)
+    let rowStep = max(1, (lastRow - firstRow) / 80)
+
+    func isStatic(column: Int) -> Bool? {
+      var contrasty = 0
+      var stayed = 0
+      for row in stride(from: firstRow, to: lastRow, by: rowStep) {
+        let value = current.value(x: column, y: row)
+        let neighbour = current.value(x: column, y: min(lastRow - 1, row + rowStep))
+        guard abs(value - neighbour) >= contrastFloor else { continue }
+        contrasty += 1
+        if abs(value - previous.value(x: column, y: row)) <= sameRowTolerance {
+          stayed += 1
+        }
+      }
+      guard contrasty >= minimumContrastySamples else { return nil }
+      return Double(stayed) / Double(contrasty) >= staticColumnFraction
+    }
+
+    var samples: [Int: Bool] = [:]
+    for column in 0..<limit {
+      if let verdict = isStatic(column: column) { samples[column] = verdict }
+      let mirrored = width - 1 - column
+      if mirrored > column, let verdict = isStatic(column: mirrored) { samples[mirrored] = verdict }
+    }
+    return samples
+  }
+}
+
+/// Widths in image pixels of static columns along the leading and trailing
+/// edges of a viewport, such as a window sidebar.
+nonisolated struct ScrollingCaptureStaticSides: Equatable {
+  var leading: Int
+  var trailing: Int
+
+  static let none = ScrollingCaptureStaticSides(leading: 0, trailing: 0)
+
+  init(leading: Int, trailing: Int) {
+    self.leading = max(0, leading)
+    self.trailing = max(0, trailing)
   }
 }
 
@@ -129,7 +228,28 @@ nonisolated struct ScrollingCaptureStickyEdgeAccumulator {
   }
 
   func edges(frameHeight: Int, maximumFraction: Double = 0.3) -> ScrollingCaptureStickyEdges {
-    guard frameHeight > 0 else { return .none }
+    let bands = bandDepths(length: frameHeight, maximumFraction: maximumFraction, maximumTotalFraction: 0.5)
+    return ScrollingCaptureStickyEdges(top: bands.leading, bottom: bands.trailing)
+  }
+
+  /// Static side columns the votes support, for votes cast by column.
+  func sides(frameWidth: Int) -> ScrollingCaptureStaticSides {
+    let bands = bandDepths(
+      length: frameWidth,
+      maximumFraction: ScrollingCaptureStickyEdgeDetector.maximumSideFraction,
+      maximumTotalFraction: 0.7
+    )
+    return ScrollingCaptureStaticSides(leading: bands.leading, trailing: bands.trailing)
+  }
+
+  /// Band depths from both ends of the voted axis, or zero for both when they
+  /// would claim more than `maximumTotalFraction` of it.
+  private func bandDepths(
+    length frameHeight: Int,
+    maximumFraction: Double,
+    maximumTotalFraction: Double
+  ) -> (leading: Int, trailing: Int) {
+    guard frameHeight > 0 else { return (0, 0) }
     let limit = Int(Double(frameHeight) * maximumFraction)
 
     func settled(_ row: Int) -> Bool? {
@@ -163,7 +283,7 @@ nonisolated struct ScrollingCaptureStickyEdgeAccumulator {
 
     let top = padded(bandDepth(Array(0..<limit)))
     let bottom = padded(bandDepth((0..<limit).map { frameHeight - 1 - $0 }))
-    guard Double(top + bottom) < Double(frameHeight) * 0.5 else { return .none }
-    return ScrollingCaptureStickyEdges(top: top, bottom: bottom)
+    guard Double(top + bottom) < Double(frameHeight) * maximumTotalFraction else { return (0, 0) }
+    return (top, bottom)
   }
 }

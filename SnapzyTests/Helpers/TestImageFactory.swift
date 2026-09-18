@@ -300,6 +300,41 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a frame of a whole app window: a fixed toolbar across the top, a
+  /// fixed textured sidebar along the leading edge, and textured content
+  /// scrolling beside it.
+  static func windowScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    toolbarHeight: Int,
+    sidebarWidth: Int
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let cell: Int
+        if y < toolbarHeight {
+          cell = (y &* 2_654_435_761) ^ ((x / 5) &* 40_503)
+        } else if x < sidebarWidth {
+          cell = ((y / 3) &* 1_103_515_245) ^ ((x / 4) &* 12_345)
+        } else {
+          cell = ((logicalYOffset + y) &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        }
+        let value = UInt8(abs(cell) % 200 + 28)
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8(Int(value) * 7 / 8)
+        pixels[offset + 2] = UInt8(Int(value) * 3 / 4)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// RGBA bytes of the first `rowCount` rows of `image`, drawn into a known
   /// pixel format so images from different sources compare byte for byte.
   static func rgbaRows(of image: CGImage, rowCount: Int) -> [UInt8] {

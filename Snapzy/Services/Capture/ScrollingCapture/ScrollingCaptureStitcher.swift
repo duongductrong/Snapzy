@@ -323,6 +323,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   /// Votes on which rows are fixed chrome, gathered across frame pairs that
   /// moved.
   private var stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
+  /// Votes on which side columns stay put, cast column by column.
+  private var sideVotes = ScrollingCaptureStickyEdgeAccumulator()
   /// Rounds after which the chrome estimate is frozen for the capture.
   private static let settledStickyRounds = 8
   /// Rows of movement needed before a frame pair can vote on chrome.
@@ -357,6 +359,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     stickyVotes.rounds >= Self.settledStickyRounds
   }
 
+  private var sidesHaveSettled: Bool {
+    sideVotes.rounds >= Self.settledStickyRounds
+  }
+
   func start(with image: CGImage) -> ScrollingCaptureStitchUpdate? {
     guard let raster = RasterImage(cgImage: image) else { return nil }
 
@@ -374,6 +380,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     tailStartRow = nil
     lastLuma = nil
     stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
+    sideVotes = ScrollingCaptureStickyEdgeAccumulator()
     measuredDimmedDepth = nil
     dimmingMeasurementCount = 0
     acceptedFrameCount = 1
@@ -417,18 +424,30 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let previousLuma = lastLuma ?? lastRaster.makeLumaPlane()
     let currentLuma = raster.makeLumaPlane()
     // Until the votes settle, this pair's own estimate keeps chrome that has
-    // not been voted in yet out of the matching region.
+    // not been voted in yet out of the matching region. Static side columns,
+    // such as a window sidebar, never match at a real scroll offset and would
+    // dilute every score. They are found first, because a sidebar stays put in
+    // every row and would otherwise make ordinary rows look like chrome.
+    let pairStaticSides = sidesHaveSettled
+      ? ScrollingCaptureStaticSides.none
+      : ScrollingCaptureStickyEdgeDetector.detectSides(
+        previous: previousLuma,
+        current: currentLuma,
+        rowStart: headerHeight,
+        rowEnd: raster.height - footerHeight
+      )
+    let inferredLeadingStaticWidth = max(leadingStaticWidth, pairStaticSides.leading)
+    let inferredTrailingStaticWidth = max(trailingStaticWidth, pairStaticSides.trailing)
     let pairStickyEdges = chromeHasSettled
       ? ScrollingCaptureStickyEdges.none
-      : ScrollingCaptureStickyEdgeDetector.detect(previous: previousLuma, current: currentLuma)
+      : ScrollingCaptureStickyEdgeDetector.detect(
+        previous: previousLuma,
+        current: currentLuma,
+        columnStart: inferredLeadingStaticWidth,
+        columnEnd: raster.width - inferredTrailingStaticWidth
+      )
     let inferredHeaderHeight = max(headerHeight, pairStickyEdges.top)
     let inferredFooterHeight = max(footerHeight, pairStickyEdges.bottom)
-    let inferredLeadingStaticWidth = leadingStaticWidth == 0
-      ? detectStaticSideBandWidth(previous: lastRaster, current: raster, fromLeading: true)
-      : leadingStaticWidth
-    let inferredTrailingStaticWidth = trailingStaticWidth == 0
-      ? detectStaticSideBandWidth(previous: lastRaster, current: raster, fromLeading: false)
-      : trailingStaticWidth
     let visionAlignmentEstimate = estimateVisionAlignment(
       previous: lastRaster,
       current: raster,
@@ -603,7 +622,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let votedStickyEdges = voteOnStickyEdgesIfNeeded(
       previous: previousLuma,
       current: currentLuma,
-      deltaY: match.deltaY
+      deltaY: match.deltaY,
+      columnStart: inferredLeadingStaticWidth,
+      columnEnd: raster.width - inferredTrailingStaticWidth
     )
 
     measureEdgeDimmingIfNeeded(
@@ -616,18 +637,30 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       trailingStaticWidth: inferredTrailingStaticWidth
     )
 
+    // Side columns only steer matching, never where strips are cut, so they can
+    // keep growing with the votes.
+    let votedStaticSides = voteOnStaticSidesIfNeeded(
+      previous: previousLuma,
+      current: currentLuma,
+      deltaY: match.deltaY,
+      rowStart: max(inferredHeaderHeight, votedStickyEdges.top),
+      rowEnd: raster.height - max(inferredFooterHeight, votedStickyEdges.bottom)
+    )
+
     if mergeDirection == .unresolved {
       mergeDirection = match.direction
       headerHeight = max(inferredHeaderHeight, votedStickyEdges.top)
       footerHeight = max(inferredFooterHeight, votedStickyEdges.bottom)
-      leadingStaticWidth = inferredLeadingStaticWidth
-      trailingStaticWidth = inferredTrailingStaticWidth
+      leadingStaticWidth = max(inferredLeadingStaticWidth, votedStaticSides.leading)
+      trailingStaticWidth = max(inferredTrailingStaticWidth, votedStaticSides.trailing)
       bootstrapContentSlices(with: baseRaster)
     } else {
       // Chrome only grows, and stops changing once the votes settle: any strip
       // cut with a band too short repeats that chrome down the capture.
       headerHeight = max(headerHeight, votedStickyEdges.top)
       footerHeight = max(footerHeight, votedStickyEdges.bottom)
+      leadingStaticWidth = max(leadingStaticWidth, votedStaticSides.leading)
+      trailingStaticWidth = max(trailingStaticWidth, votedStaticSides.trailing)
     }
 
     let remainingHeight = maxOutputHeight - outputHeight
@@ -874,12 +907,41 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private func voteOnStickyEdgesIfNeeded(
     previous: ScrollingCaptureLumaPlane,
     current: ScrollingCaptureLumaPlane,
-    deltaY: Int
+    deltaY: Int,
+    columnStart: Int,
+    columnEnd: Int
   ) -> ScrollingCaptureStickyEdges {
     if !chromeHasSettled, deltaY >= Self.minimumStickyMeasurementDelta {
-      stickyVotes.add(ScrollingCaptureStickyEdgeDetector.chromeRows(previous: previous, current: current))
+      stickyVotes.add(
+        ScrollingCaptureStickyEdgeDetector.chromeRows(
+          previous: previous,
+          current: current,
+          columnStart: columnStart,
+          columnEnd: columnEnd
+        )
+      )
     }
     return stickyVotes.edges(frameHeight: current.height)
+  }
+
+  private func voteOnStaticSidesIfNeeded(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    deltaY: Int,
+    rowStart: Int,
+    rowEnd: Int
+  ) -> ScrollingCaptureStaticSides {
+    if !sidesHaveSettled, deltaY >= Self.minimumStickyMeasurementDelta {
+      sideVotes.add(
+        ScrollingCaptureStickyEdgeDetector.staticColumns(
+          previous: previous,
+          current: current,
+          rowStart: rowStart,
+          rowEnd: rowEnd
+        )
+      )
+    }
+    return sideVotes.sides(frameWidth: current.width)
   }
 
   /// Rows the tail must be carried clear of the bottom edge before it is
@@ -1844,46 +1906,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     guard deltaY <= maxUsefulDelta else { return nil }
 
     return deltaY
-  }
-
-  private func detectStaticSideBandWidth(
-    previous: RasterImage,
-    current: RasterImage,
-    fromLeading: Bool
-  ) -> Int {
-    let maxBandWidth = min(previous.width / 6, 120)
-    let step = max(2, min(8, previous.width / 220))
-    let yInset = max(24, previous.height / 16)
-    let yStart = yInset
-    let yEnd = previous.height - yInset
-    let rowCount = yEnd - yStart
-    guard rowCount > 24 else { return 0 }
-
-    var bandWidth = 0
-
-    for width in stride(from: step, through: maxBandWidth, by: step) {
-      let xStart = fromLeading ? 0 : previous.width - width
-      let xEnd = fromLeading ? width : previous.width
-
-      let difference = previous.blockDifference(
-        comparedTo: current,
-        startRow: yStart,
-        otherStartRow: yStart,
-        rowCount: rowCount,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: 2,
-        rowStride: 3
-      )
-
-      if difference < 5.0 {
-        bandWidth = width
-      } else if width >= step * 3 {
-        break
-      }
-    }
-
-    return min(max(0, bandWidth), maxBandWidth)
   }
 
   private func matchingColumnBounds(
