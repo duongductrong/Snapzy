@@ -10,7 +10,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 -  Added stroke border support to spotlight annotations (c41ad18c)
 
 ### Bug Fixes
--  retry release asset upload on transient GitHub errors (0cdea528)
 -  Fixed recording annotation tool shortcuts bug (#579) (8beafc0a)
 
 ### Contributors
