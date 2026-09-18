@@ -87,7 +87,50 @@ final class ScrollingCaptureWindowCaptureTests: XCTestCase {
     XCTAssertEqual(contentColumns(of: merged), contentColumns(of: reference))
   }
 
+  func testStitch_sparsePageSmallScroll_isNotMistakenForBoundary() throws {
+    let step = 16
+    let stitcher = ScrollingCaptureStitcher()
+    _ = stitcher.start(with: try sparseFrame(offset: 0))
+
+    for index in 1...6 {
+      let update = try XCTUnwrap(
+        stitcher.append(try sparseFrame(offset: index * step), maxOutputHeight: 10_000, expectedSignedDeltaPixels: step)
+      )
+      XCTAssertFalse(update.likelyReachedBoundary, "Step \(index) was reported as the end of the page")
+      guard case .appended(let deltaY) = update.outcome else {
+        return XCTFail("Step \(index) did not append: \(update.outcome)")
+      }
+      XCTAssertEqual(deltaY, step)
+    }
+
+    let merged = try XCTUnwrap(stitcher.mergedImage())
+    let reference = try XCTUnwrap(
+      TestImageFactory.sparseTextScrollingFrame(width: width, height: height + step * 6, logicalYOffset: 0)
+    )
+    XCTAssertEqual(
+      TestImageFactory.rgbaRows(of: merged, rowCount: merged.height),
+      TestImageFactory.rgbaRows(of: reference, rowCount: reference.height)
+    )
+  }
+
+  func testStitch_sparsePageWithoutScroll_isStillABoundary() throws {
+    let stitcher = ScrollingCaptureStitcher()
+    let frame = try sparseFrame(offset: 0)
+    _ = stitcher.start(with: frame)
+
+    let update = try XCTUnwrap(stitcher.append(frame, maxOutputHeight: 10_000, expectedSignedDeltaPixels: 16))
+
+    guard case .ignoredNoMovement = update.outcome else {
+      return XCTFail("Expected no movement, got \(update.outcome)")
+    }
+    XCTAssertTrue(update.likelyReachedBoundary)
+  }
+
   // MARK: - Helpers
+
+  private func sparseFrame(offset: Int) throws -> CGImage {
+    try XCTUnwrap(TestImageFactory.sparseTextScrollingFrame(width: width, height: height, logicalYOffset: offset))
+  }
 
   private func frame(offset: Int) throws -> CGImage {
     try XCTUnwrap(

@@ -335,6 +335,43 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a frame of a mostly blank page: short lines of text-like texture
+  /// every `lineSpacing` rows on a flat light background.
+  static func sparseTextScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    lineSpacing: Int = 28,
+    lineHeight: Int = 7
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let margin = width / 12
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let line = logicalY / lineSpacing
+      let isTextRow = logicalY % lineSpacing < lineHeight
+      // Lines end at different lengths, like real paragraphs.
+      let lineEnd = width - margin - (abs(line &* 2_654_435_761) % (width / 3))
+
+      for x in 0..<width {
+        var value: UInt8 = 244
+        if isTextRow, x >= margin, x < lineEnd, (x / 9) % 5 != 4 {
+          let cell = (logicalY &* 73_856_093) ^ ((x / 2) &* 19_349_663)
+          value = UInt8(abs(cell) % 150 + 20)
+        }
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = value
+        pixels[offset + 2] = value
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// RGBA bytes of the first `rowCount` rows of `image`, drawn into a known
   /// pixel format so images from different sources compare byte for byte.
   static func rgbaRows(of image: CGImage, rowCount: Int) -> [UInt8] {
