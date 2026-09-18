@@ -226,6 +226,41 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a scrolling frame whose rows carry contrast along their width, like
+  /// text on a page. The bottom `fadeDepth` rows are washed toward white, the
+  /// way pages fade content that sits against the bottom of a scroll view.
+  static func texturedScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    fadeDepth: Int = 0,
+    fadeStrength: Double = 0.6
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let distanceFromBottom = height - 1 - y
+      let fade = fadeDepth > 0 && distanceFromBottom < fadeDepth
+        ? fadeStrength * Double(fadeDepth - distanceFromBottom) / Double(fadeDepth)
+        : 0
+
+      for x in 0..<width {
+        let cell = (logicalY &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        let base = Double(abs(cell) % 200 + 28)
+        let value = UInt8((base + (255 - base) * fade).rounded())
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8((Int(value) * 7 / 8))
+        pixels[offset + 2] = UInt8((Int(value) * 3 / 4))
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// Create a soft-edged dark radial blob on a uniform background. The edge
   /// falloff is wide enough that per-pixel-pair gradients stay below the edge
   /// detector's noise floor, so `CropContentAnalyzer` finds no content borders

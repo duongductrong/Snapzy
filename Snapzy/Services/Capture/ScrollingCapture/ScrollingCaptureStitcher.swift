@@ -197,6 +197,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       Self.makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
     }
 
+    func makeLumaPlane() -> ScrollingCaptureLumaPlane {
+      ScrollingCaptureLumaPlane(rgbaPixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow)
+    }
+
     func makeCroppedCGImage(
       xStart: Int,
       xEnd: Int,
@@ -325,11 +329,31 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private var cachedMergedImage: CGImage?
   private var lastMatch: Match?
   private var matchNotFoundCount = 0
+  /// Rows at the bottom of the content area of `lastRaster` that belong to the
+  /// output but are not committed yet. Pages fade or dim content near the
+  /// bottom edge for as long as it sits there, so rows are only committed once
+  /// a later frame has carried them `edgeClearance` rows clear of that edge.
+  /// Until then they are rendered from the newest frame.
+  private var tailRowCount = 0
+  /// Deepest bottom-edge treatment measured on this page, in pixels.
+  private var measuredDimmedDepth: Int?
+  private var dimmingMeasurementCount = 0
+
+  /// Pages that show no measurable treatment still keep a little lag, which
+  /// absorbs a partly drawn row at the boundary.
+  private static let minimumEdgeClearance = 80
+  /// Added to the measured depth, since its last rows are the least certain.
+  private static let edgeClearanceMargin = 60
+  /// Rows of movement needed before a frame pair can say anything about the
+  /// edge treatment.
+  private static let minimumDimmingMeasurementDelta = 8
+  /// Measurements after which the depth estimate is treated as settled.
+  private static let maximumDimmingMeasurements = 8
 
   private(set) var acceptedFrameCount = 0
 
   var outputHeight: Int {
-    contentSlices.reduce(0) { $0 + $1.rowCount }
+    contentSlices.reduce(0) { $0 + $1.rowCount } + tailRowCount
   }
 
   func start(with image: CGImage) -> ScrollingCaptureStitchUpdate? {
@@ -346,6 +370,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     cachedMergedImage = image
     lastMatch = nil
     matchNotFoundCount = 0
+    tailRowCount = 0
+    measuredDimmedDepth = nil
+    dimmingMeasurementCount = 0
     acceptedFrameCount = 1
 
     return ScrollingCaptureStitchUpdate(
@@ -567,6 +594,16 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
+    measureEdgeDimmingIfNeeded(
+      previous: lastRaster,
+      current: raster,
+      deltaY: match.deltaY,
+      headerHeight: inferredHeaderHeight,
+      footerHeight: inferredFooterHeight,
+      leadingStaticWidth: inferredLeadingStaticWidth,
+      trailingStaticWidth: inferredTrailingStaticWidth
+    )
+
     if mergeDirection == .unresolved {
       mergeDirection = match.direction
       headerHeight = inferredHeaderHeight
@@ -591,7 +628,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     }
 
     let acceptedDelta = min(match.deltaY, remainingHeight)
-    guard let sliceStart = sliceStartRow(for: match.direction, in: raster, deltaY: acceptedDelta) else {
+    guard sliceStartRow(for: match.direction, in: raster, deltaY: match.deltaY) != nil else {
       matchNotFoundCount += 1
       return currentUpdate(
         outcome: .ignoredAlignmentFailed,
@@ -608,7 +645,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
-    contentSlices.append(ContentSlice(raster: raster, startRow: sliceStart, rowCount: acceptedDelta))
+    advanceTail(from: lastRaster, to: raster, deltaY: match.deltaY, acceptedDelta: acceptedDelta)
     self.lastRaster = raster
     self.lastMatch = Match(
       direction: match.direction,
@@ -655,7 +692,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     var mergedPixels = [UInt8](repeating: 0, count: height * bytesPerRow)
     var destinationRow = 0
 
-    for slice in contentSlices {
+    for slice in renderedSlices {
       slice.raster.copyRows(
         startRow: slice.startRow,
         rowCount: slice.rowCount,
@@ -707,7 +744,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     context.interpolationQuality = .medium
 
     var destinationRow = 0
-    for slice in contentSlices {
+    for slice in renderedSlices {
       guard
         let sliceImage = slice.raster.makeCroppedCGImage(
           xStart: 0,
@@ -787,7 +824,115 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private func bootstrapContentSlices(with baseRaster: RasterImage) {
     let contentStart = headerHeight
     let contentHeight = max(1, baseRaster.height - headerHeight - footerHeight)
-    contentSlices = [ContentSlice(raster: baseRaster, startRow: contentStart, rowCount: contentHeight)]
+    // The base frame's own bottom rows are edge-treated like any other frame's,
+    // so they stay in the tail until a later frame carries them clear.
+    tailRowCount = min(edgeClearance, contentHeight - 1)
+    contentSlices = [
+      ContentSlice(raster: baseRaster, startRow: contentStart, rowCount: contentHeight - tailRowCount)
+    ]
+  }
+
+  /// Committed slices followed by the uncommitted tail, drawn from the newest
+  /// accepted frame.
+  private var renderedSlices: [ContentSlice] {
+    guard tailRowCount > 0, let lastRaster else { return contentSlices }
+    let contentBottom = lastRaster.height - footerHeight
+    return contentSlices + [
+      ContentSlice(raster: lastRaster, startRow: contentBottom - tailRowCount, rowCount: tailRowCount)
+    ]
+  }
+
+  /// Rows the tail must be carried clear of the bottom edge before it is
+  /// committed. Capped so it never holds back more than a third of the frame.
+  private var edgeClearance: Int {
+    guard let baseRaster else { return 0 }
+    let usableHeight = baseRaster.height - headerHeight - footerHeight
+    guard usableHeight > 0 else { return 0 }
+    let measured = (measuredDimmedDepth ?? 0) + Self.edgeClearanceMargin
+    return min(max(Self.minimumEdgeClearance, measured), usableHeight / 3)
+  }
+
+  /// Measured on the first few frame pairs that really moved, then frozen. The
+  /// depth only ever grows, since a band that reaches further on one pair
+  /// reaches that far.
+  private func measureEdgeDimmingIfNeeded(
+    previous: RasterImage,
+    current: RasterImage,
+    deltaY: Int,
+    headerHeight: Int,
+    footerHeight: Int,
+    leadingStaticWidth: Int,
+    trailingStaticWidth: Int
+  ) {
+    guard
+      dimmingMeasurementCount < Self.maximumDimmingMeasurements,
+      deltaY >= Self.minimumDimmingMeasurementDelta
+    else { return }
+
+    let columns = matchingColumnBounds(
+      width: previous.width,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth
+    )
+    guard
+      let depth = ScrollingCaptureEdgeDimmingDetector.dimmedDepth(
+        previous: previous.makeLumaPlane(),
+        current: current.makeLumaPlane(),
+        offset: deltaY,
+        headerHeight: headerHeight,
+        footerHeight: footerHeight,
+        xStart: columns?.0 ?? 0,
+        xEnd: columns?.1
+      )
+    else { return }
+
+    dimmingMeasurementCount += 1
+    measuredDimmedDepth = max(measuredDimmedDepth ?? 0, depth)
+  }
+
+  /// Moves the uncommitted tail from `previous` into `current`, which shows the
+  /// content `deltaY` rows higher, and commits every tail row that now sits at
+  /// least `edgeClearance` rows above the bottom edge.
+  private func advanceTail(
+    from previous: RasterImage,
+    to current: RasterImage,
+    deltaY: Int,
+    acceptedDelta: Int
+  ) {
+    let contentBottom = current.height - footerHeight
+    let usableHeight = contentBottom - headerHeight
+    var tail = tailRowCount
+
+    // Tail rows that scroll off the top of the content area in `current` can
+    // only come from `previous`.
+    let overflow = max(0, tail + deltaY - usableHeight)
+    if overflow > 0 {
+      let previousContentBottom = previous.height - footerHeight
+      commitRows(from: previous, startRow: previousContentBottom - tail, rowCount: overflow)
+      tail -= overflow
+    }
+
+    let tailTop = contentBottom - deltaY - tail
+    var pending = tail + acceptedDelta
+
+    // The height limit clipped this step, so nothing will follow it.
+    if acceptedDelta < deltaY {
+      commitRows(from: current, startRow: tailTop, rowCount: pending)
+      tailRowCount = 0
+      return
+    }
+
+    let clean = pending - edgeClearance
+    if clean > 0 {
+      commitRows(from: current, startRow: tailTop, rowCount: clean)
+      pending -= clean
+    }
+    tailRowCount = pending
+  }
+
+  private func commitRows(from raster: RasterImage, startRow: Int, rowCount: Int) {
+    guard rowCount > 0 else { return }
+    contentSlices.append(ContentSlice(raster: raster, startRow: startRow, rowCount: rowCount))
   }
 
   private func sliceStartRow(
