@@ -23,6 +23,19 @@ final class QuickAccessPinWindow: NSPanel {
   private var localKeyMonitor: Any?
   private var globalKeyMonitor: Any?
 
+  // Manual window dragging (macOS 27+). The system no longer initiates
+  // background window drags for SwiftUI hosting views, so pinned windows
+  // cannot be repositioned via isMovableByWindowBackground alone. Verified
+  // with an interactive repro on macOS 27.0 (build 26A428): plain NSView
+  // content still drags fine, NSHostingView content does not.
+  private var manualDragOffset: NSPoint?
+  private var manualDragStartScreenPoint: NSPoint?
+  private var manualDragHasMoved = false
+
+  private static let manualWindowDragEnabled: Bool =
+    ProcessInfo.processInfo.operatingSystemVersion.majorVersion >= 27
+  private static let manualWindowDragThreshold: CGFloat = 4
+
   init(contentRect: NSRect, state: QuickAccessPinWindowState) {
     pinState = state
     super.init(
@@ -50,6 +63,14 @@ final class QuickAccessPinWindow: NSPanel {
     switch event.type {
     case .scrollWheel where handleScrollZoomIfNeeded(event):
       return
+    case .leftMouseDown:
+      beginManualWindowDragIfNeeded(with: event)
+      super.sendEvent(event)
+    case .leftMouseDragged where continueManualWindowDrag():
+      return
+    case .leftMouseUp:
+      endManualWindowDrag()
+      super.sendEvent(event)
     default:
       super.sendEvent(event)
     }
@@ -192,6 +213,56 @@ final class QuickAccessPinWindow: NSPanel {
     guard isMouseMonitorsSuspended else { return }
     isMouseMonitorsSuspended = false
     installMouseMonitors()
+  }
+
+  // MARK: - Manual Window Drag
+
+  private func beginManualWindowDragIfNeeded(with event: NSEvent) {
+    guard Self.manualWindowDragEnabled, manualDragOffset == nil else { return }
+    guard let pinState, !pinState.isLocked else { return }
+    // The bottom drag handle owns its own file-drag session; leave it alone.
+    guard !isOverFileDragHandle(event) else { return }
+
+    manualDragOffset = event.locationInWindow
+    manualDragStartScreenPoint = NSEvent.mouseLocation
+    manualDragHasMoved = false
+  }
+
+  private func continueManualWindowDrag() -> Bool {
+    guard let offset = manualDragOffset, let startScreenPoint = manualDragStartScreenPoint else {
+      return false
+    }
+
+    let screenPoint = NSEvent.mouseLocation
+    if !manualDragHasMoved {
+      let dx = screenPoint.x - startScreenPoint.x
+      let dy = screenPoint.y - startScreenPoint.y
+      guard sqrt(dx * dx + dy * dy) >= Self.manualWindowDragThreshold else {
+        return true
+      }
+      manualDragHasMoved = true
+    }
+
+    setFrameOrigin(NSPoint(x: screenPoint.x - offset.x, y: screenPoint.y - offset.y))
+    return true
+  }
+
+  private func endManualWindowDrag() {
+    manualDragOffset = nil
+    manualDragStartScreenPoint = nil
+    manualDragHasMoved = false
+  }
+
+  private func isOverFileDragHandle(_ event: NSEvent) -> Bool {
+    guard let hitView = contentView?.hitTest(event.locationInWindow) else { return false }
+    var view: NSView? = hitView
+    while let current = view {
+      if current is QuickAccessPinDragHandleNSView {
+        return true
+      }
+      view = current.superview
+    }
+    return false
   }
 
   private func handleEscapeIfNeeded(_ event: NSEvent) -> Bool {
