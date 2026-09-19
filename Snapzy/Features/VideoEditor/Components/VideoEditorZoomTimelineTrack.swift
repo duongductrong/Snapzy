@@ -176,7 +176,10 @@ struct ZoomTimelineTrack: View {
     .frame(height: trackHeight)
     .clipShape(Radius.rect(Radius.tile))
     .contentShape(Rectangle())
-    .gesture(unifiedDragGesture)
+    // The track owns the drag. Giving it priority prevents the tap/context
+    // recognizers from competing for the same mouse sequence and leaving the
+    // terminal event to the window responder chain.
+    .highPriorityGesture(unifiedDragGesture)
     .onTapGesture(count: 2) { location in
       handleDoubleTap(at: location)
     }
@@ -216,15 +219,18 @@ struct ZoomTimelineTrack: View {
 
   private func setCursor(_ cursor: NSCursor) {
     guard activeCursor !== cursor else { return }
-    activeCursor?.pop()
-    cursor.push()
     activeCursor = cursor
+    // `push`/`pop` use one process-global stack. SwiftUI can recreate or
+    // overlap hover responders during a drag, which makes that stack
+    // unbalanced. Setting the current cursor is idempotent and has no stack
+    // ownership to leak across view updates.
+    cursor.set()
   }
 
   private func clearCursor() {
-    guard let activeCursor else { return }
-    activeCursor.pop()
+    guard activeCursor != nil else { return }
     self.activeCursor = nil
+    NSCursor.arrow.set()
   }
 
   // MARK: - Unified Drag Gesture
