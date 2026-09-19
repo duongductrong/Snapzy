@@ -85,7 +85,7 @@ flowchart TD
 
 ## Preferences Surface
 
-Settings → Quick Access: position (left/right), overlay size, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
+Settings → Quick Access: position (left/right), overlay size, sound effects, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
 
 ## Related docs
 

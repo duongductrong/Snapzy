@@ -75,7 +75,7 @@ enum SnapzyConfigurationImporter {
     collectMenuBar(&reader, mutations: &mutations)
     collectCapture(&reader, defaults: defaults, keychainStore: keychainStore, mutations: &mutations)
     collectRecording(&reader, defaults: defaults, mutations: &mutations)
-    collectQuickAccess(&reader, mutations: &mutations)
+    collectQuickAccess(&reader, defaults: defaults, mutations: &mutations)
     collectHistory(&reader, defaults: defaults, mutations: &mutations)
     collectCloud(&reader, defaults: defaults, mutations: &mutations)
     collectAnnotate(&reader, defaults: defaults, mutations: &mutations)
@@ -330,10 +330,14 @@ enum SnapzyConfigurationImporter {
 
   private static func collectQuickAccess(
     _ reader: inout SnapzyConfigurationReader,
+    defaults: UserDefaults,
     mutations: inout [() -> Void]
   ) {
     let manager = QuickAccessManager.shared
     collectBool(&reader, "quick_access", "enabled", mutations: &mutations) { manager.isEnabled = $0 }
+    collectBool(&reader, "quick_access", "play_sounds", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.quickAccessPlaySounds)
+    }
     if let position = reader.string("quick_access", "position") {
       guard let value = QuickAccessPosition(rawValue: position) else {
         reader.error("quick_access.position is invalid")

@@ -1171,6 +1171,28 @@
         }
       }
     },
+    "preferences-quick-access.sound-effects-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play sounds when the overlay appears or an action completes"
+          }
+        }
+      }
+    },
+    "preferences-quick-access.sound-effects-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sound Effects"
+          }
+        }
+      }
+    },
     "preferences-quick-access.hide-card-when-window-open-description": {
       "extractionState": "stale",
       "localizations": {

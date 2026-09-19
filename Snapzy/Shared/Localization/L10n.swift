@@ -3057,6 +3057,16 @@ nonisolated enum L10n {
       defaultValue: "Show preview after capture",
       comment: "Quick access preferences setting description"
     )
+    static let soundEffectsTitle = string(
+      "preferences-quick-access.sound-effects-title",
+      defaultValue: "Sound Effects",
+      comment: "Quick access preferences setting title"
+    )
+    static let soundEffectsDescription = string(
+      "preferences-quick-access.sound-effects-description",
+      defaultValue: "Play sounds when the overlay appears or an action completes",
+      comment: "Quick access preferences setting description"
+    )
     static let autoCloseTitle = string(
       "preferences-quick-access.auto-close-title",
       defaultValue: "Auto-close",

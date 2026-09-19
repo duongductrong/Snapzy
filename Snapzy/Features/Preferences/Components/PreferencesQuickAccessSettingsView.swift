@@ -10,6 +10,7 @@ import SwiftUI
 struct QuickAccessSettingsView: View {
   @ObservedObject private var manager = QuickAccessManager.shared
   @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
+  @AppStorage(PreferencesKeys.quickAccessPlaySounds) private var playSounds = true
 
   @State private var positionIsLeft: Bool = false
 
@@ -72,6 +73,11 @@ struct QuickAccessSettingsView: View {
           .pickerStyle(.menu)
           .fixedSize()
           .frame(width: 150, alignment: .trailing)
+        }
+
+        SettingRow(icon: "speaker.wave.2", title: L10n.PreferencesQuickAccess.soundEffectsTitle, description: L10n.PreferencesQuickAccess.soundEffectsDescription) {
+          Toggle("", isOn: $playSounds)
+            .labelsHidden()
         }
 
         if manager.autoDismissEnabled {

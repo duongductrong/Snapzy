@@ -20,7 +20,7 @@ enum SnapzyConfigurationExporter {
     writeMenuBar(&writer)
     writeCapture(&writer, defaults: defaults)
     writeRecording(&writer, defaults: defaults)
-    writeQuickAccess(&writer)
+    writeQuickAccess(&writer, defaults: defaults)
     writeHistory(&writer, defaults: defaults)
     writeCloud(&writer, defaults: defaults)
     writeAnnotate(&writer, defaults: defaults)
@@ -136,12 +136,13 @@ enum SnapzyConfigurationExporter {
     writer.value("hold_duration", defaults.doubleValue(PreferencesKeys.annotationShortcutHoldDuration, default: 0.3))
   }
 
-  private static func writeQuickAccess(_ writer: inout SimpleTOMLWriter) {
+  private static func writeQuickAccess(_ writer: inout SimpleTOMLWriter, defaults: UserDefaults) {
     let manager = QuickAccessManager.shared
     let actionStore = QuickAccessActionConfigurationStore.shared
 
     writer.section("quick_access")
     writer.value("enabled", manager.isEnabled)
+    writer.value("play_sounds", defaults.boolValue(PreferencesKeys.quickAccessPlaySounds, default: true))
     writer.value("position", manager.position.rawValue)
     writer.value("auto_dismiss", manager.autoDismissEnabled)
     writer.value("auto_dismiss_delay", manager.autoDismissDelay)

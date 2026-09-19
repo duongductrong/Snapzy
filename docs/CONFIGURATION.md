@@ -174,6 +174,7 @@ video_editor_zoom_transition_duration = 0.4
 
 [quick_access]
 enabled = true
+play_sounds = true
 position = "topTrailing"
 auto_dismiss = true
 auto_dismiss_delay = 8.0

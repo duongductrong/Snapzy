@@ -113,6 +113,7 @@ enum PreferencesKeys {
   static let quickAccessSwipeRightAction = "quickAccess.swipe.action.right"
   static let quickAccessHideCardWhenWindowOpen = "quickAccess.hideCardWhenWindowOpen"
   static let quickAccessAnimationStyle = "quickAccess.animationStyle"
+  static let quickAccessPlaySounds = "quickAccess.playSounds"
 
   // Recording
   static let recordingFormat = "recording.format"

@@ -324,6 +324,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     remember_last_tool = true
 
     [quick_access]
+    play_sounds = false
     trackpad_swipe_mode = "natural"
     swipe_left_action = "pinToScreen"
     swipe_right_action = "none"
@@ -353,6 +354,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.annotateRememberLastTool) as? Bool, true)
     
     // quick access
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessPlaySounds) as? Bool, false)
     XCTAssertEqual(QuickAccessTrackpadSwipeModeStore.shared.mode, .natural)
     XCTAssertEqual(QuickAccessSwipeActionStore.shared.swipeLeftAction, .pinToScreen)
     XCTAssertNil(QuickAccessSwipeActionStore.shared.swipeRightAction)

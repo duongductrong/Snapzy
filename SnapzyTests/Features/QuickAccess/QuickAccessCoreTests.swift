@@ -16,6 +16,24 @@ final class QuickAccessCoreTests: XCTestCase {
   private static var retainedActionStores: [QuickAccessActionConfigurationStore] = []
   private static var retainedPinWindowStates: [QuickAccessPinWindowState] = []
 
+  func testQuickAccessSound_respectsGlobalAndQuickAccessPreferences() {
+    let defaults = UserDefaultsFactory.make()
+
+    XCTAssertTrue(QuickAccessSound.appear.shouldPlay(reduceMotion: false, defaults: defaults))
+
+    defaults.set(false, forKey: PreferencesKeys.quickAccessPlaySounds)
+    XCTAssertFalse(QuickAccessSound.appear.shouldPlay(reduceMotion: false, defaults: defaults))
+    XCTAssertTrue(QuickAccessSound.failed.shouldPlay(reduceMotion: false, defaults: defaults))
+
+    defaults.set(true, forKey: PreferencesKeys.quickAccessPlaySounds)
+    defaults.set(false, forKey: PreferencesKeys.playSounds)
+    XCTAssertFalse(QuickAccessSound.appear.shouldPlay(reduceMotion: false, defaults: defaults))
+    XCTAssertFalse(QuickAccessSound.failed.shouldPlay(reduceMotion: false, defaults: defaults))
+
+    defaults.set(true, forKey: PreferencesKeys.playSounds)
+    XCTAssertFalse(QuickAccessSound.appear.shouldPlay(reduceMotion: true, defaults: defaults))
+  }
+
   func testQuickAccessItem_formatsVideoDurationAndOmitsInvalidDurations() {
     let thumbnail = NSImage(size: CGSize(width: 16, height: 16))
     let video = QuickAccessItem(

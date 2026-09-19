@@ -32,9 +32,7 @@ enum QuickAccessSound {
   /// Play the sound effect asynchronously (non-blocking)
   /// - Parameter reduceMotion: When true, sounds are disabled for accessibility
   func play(reduceMotion: Bool = false) {
-    guard !reduceMotion else { return }
-    let soundsEnabled = UserDefaults.standard.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true
-    guard soundsEnabled else { return }
+    guard shouldPlay(reduceMotion: reduceMotion) else { return }
     let soundName = self.soundName
     let vol = self.volume
     // Fire-and-forget async playback - never blocks UI
@@ -42,6 +40,22 @@ enum QuickAccessSound {
       guard let sound = Self.cachedSounds[soundName]?.copy() as? NSSound else { return }
       sound.volume = vol
       sound.play()
+    }
+  }
+
+  func shouldPlay(
+    reduceMotion: Bool,
+    defaults: UserDefaults = .standard
+  ) -> Bool {
+    guard !reduceMotion else { return false }
+    let soundsEnabled = defaults.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true
+    guard soundsEnabled else { return false }
+
+    switch self {
+    case .complete, .failed:
+      return true
+    case .appear, .dismiss, .copy, .save, .delete:
+      return defaults.object(forKey: PreferencesKeys.quickAccessPlaySounds) as? Bool ?? true
     }
   }
 
