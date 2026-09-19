@@ -288,6 +288,12 @@ final class RecordingCoordinator: ObservableObject {
       "isActive": "\(isActive)",
       "recorderState": "\(recorder.state)",
     ])
+
+    guard recorder.state != .idle else {
+      cleanup()
+      return
+    }
+
     Task {
       await recorder.cancelRecording()
       cleanup()
@@ -321,6 +327,7 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWindow = toolbar
 
     showRegionOverlay(for: rect, interactionEnabled: captureMode != .application)
+    toolbar.bringToFrontForInteraction()
     setupEscapeMonitors()
   }
 
