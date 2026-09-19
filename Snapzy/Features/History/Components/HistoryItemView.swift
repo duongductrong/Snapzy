@@ -196,8 +196,10 @@ struct HistoryItemView: View, Equatable {
     let url = record.fileURL
     let path = record.filePath
     Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
+      let exists = await MainActor.run {
+        SandboxFileAccessManager.shared.withScopedAccess(to: url) {
+          FileManager.default.fileExists(atPath: path)
+        }
       }
       await MainActor.run {
         self.fileExists = exists

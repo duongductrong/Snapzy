@@ -76,6 +76,52 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Checkerboard background with optional solid rects painted on top.
+  /// Adjacent cells differ by `oddGray - evenGray`, so a flood-fill whose
+  /// color tolerance sits between that delta and the object contrast will
+  /// peel the noise and still keep the object.
+  static func checkerboardWithRects(
+    width: Int,
+    height: Int,
+    evenGray: UInt8,
+    oddGray: UInt8,
+    rects: [(rect: CGRect, gray: UInt8)] = []
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let gray = ((x + y) % 2 == 0) ? evenGray : oddGray
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = gray
+        pixels[offset + 1] = gray
+        pixels[offset + 2] = gray
+        pixels[offset + 3] = 255
+      }
+    }
+
+    for entry in rects {
+      let minX = max(0, Int(entry.rect.minX.rounded(.down)))
+      let minY = max(0, Int(entry.rect.minY.rounded(.down)))
+      let maxX = min(width, Int(entry.rect.maxX.rounded(.up)))
+      let maxY = min(height, Int(entry.rect.maxY.rounded(.up)))
+      guard minX < maxX, minY < maxY else { continue }
+
+      for y in minY..<maxY {
+        for x in minX..<maxX {
+          let offset = y * bytesPerRow + x * 4
+          pixels[offset] = entry.gray
+          pixels[offset + 1] = entry.gray
+          pixels[offset + 2] = entry.gray
+          pixels[offset + 3] = 255
+        }
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// Create a vertical gradient image.
   /// Top row starts at `topGray`, bottom row ends at `bottomGray`.
   static func verticalGradient(
