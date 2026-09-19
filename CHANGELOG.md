@@ -4,6 +4,19 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.32.3-beta.1] - 2026-09-19
+
+### Features
+-  Add Sound Effects Toggle to Quick Access (#586) (1862794d)
+
+### Bug Fixes
+-  Restore pinned window dragging on macOS 27 (#584) (d082a7a4)
+
+### Contributors
+- @archibald-nice
+- @github-actions[bot]
+- @rvanhorn
+
 ## [1.32.2] - 2026-09-19
 
 ### Bug Fixes
