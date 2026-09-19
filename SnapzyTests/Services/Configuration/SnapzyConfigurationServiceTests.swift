@@ -84,6 +84,12 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "quick_access", "two_finger_swipe_to_dismiss")?.boolValue, false)
   }
 
+  func testDefaultDocumentIncludesQuickAccessSoundSetting() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "quick_access", "play_sounds")?.boolValue, true)
+  }
+
   func testExportIncludesQuickAccessSoundSetting() throws {
     let defaults = UserDefaultsFactory.make()
     defaults.set(false, forKey: PreferencesKeys.quickAccessPlaySounds)

@@ -740,7 +740,7 @@ struct QuickAccessCardView: View {
         }
 
         isCloudUploading = false
-        SoundManager.play("Pop")
+        QuickAccessSound.copy.play(reduceMotion: reduceMotion)
         DiagnosticLogger.shared.log(
           .info,
           .cloud,

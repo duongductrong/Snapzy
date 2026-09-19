@@ -1096,7 +1096,7 @@ final class QuickAccessManager: ObservableObject {
         context: ["fileName": item.url.lastPathComponent]
       )
       dismissCard(id: id)
-      SoundManager.play("Pop")
+      QuickAccessSound.copy.play()
       return
     }
 
@@ -1130,7 +1130,7 @@ final class QuickAccessManager: ObservableObject {
     // File-based clipboard: the file must stay on disk so the receiving app
     // can read it at paste time. Orphaned temp files are cleaned on next launch.
 
-    SoundManager.play("Pop")
+    QuickAccessSound.copy.play()
   }
 
   /// Delete item from disk and remove from stack
