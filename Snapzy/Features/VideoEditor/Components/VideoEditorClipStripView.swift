@@ -321,7 +321,11 @@ struct VideoEditorClipStripView: View {
     .contentShape(Rectangle())
     .highPriorityGesture(trimGesture(clip: clip, isLeading: isLeading))
     .onHover { hovering in
-      if hovering { NSCursor.resizeLeftRight.push() } else { NSCursor.pop() }
+      if hovering {
+        NSCursor.resizeLeftRight.set()
+      } else {
+        NSCursor.arrow.set()
+      }
     }
     .help(isLeading ? L10n.VideoEditor.clipTrimStartHint : L10n.VideoEditor.clipTrimEndHint)
   }

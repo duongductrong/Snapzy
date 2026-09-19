@@ -76,21 +76,30 @@ final class TimelineScrollEventCatcherView: NSView {
 
   // MARK: - Event Handling
 
-  private func handleScroll(_ event: NSEvent) -> Bool {
+  // Internal so the event-routing contract can be exercised without dispatching
+  // synthetic events through NSApp in headless test runs.
+  func handleScroll(_ event: NSEvent) -> Bool {
     guard viewport != nil, event.window === window else { return false }
 
     let location = convert(event.locationInWindow, from: nil)
     guard bounds.contains(location) else { return false }
     guard event.scrollingDeltaX.isFinite, event.scrollingDeltaY.isFinite else { return false }
 
+    // Trackpads can emit phase/momentum bookkeeping events with no movement.
+    // There is no timeline work to perform for those events, so returning true
+    // here would make the local monitor return nil and consume them anyway.
+    guard event.scrollingDeltaX != 0 || event.scrollingDeltaY != 0 else { return false }
+
     if event.modifierFlags.contains(.command),
        let factor = VideoEditorTimelineViewport.scrollZoomFactor(
          deltaY: event.scrollingDeltaY,
          hasPreciseScrollingDeltas: event.hasPreciseScrollingDeltas
        ) {
-      isZoomGesture = true
-      zoom(by: factor, cursorX: location.x)
-      return true
+      let didZoom = zoom(by: factor, cursorX: location.x)
+      // Only claim the gesture when the viewport actually changed. A zoom
+      // already at its cap must remain pass-through, including its momentum.
+      isZoomGesture = didZoom
+      return didZoom
     }
 
     if isZoomGesture, !event.momentumPhase.isEmpty {
@@ -98,26 +107,36 @@ final class TimelineScrollEventCatcherView: NSView {
     }
     isZoomGesture = false
 
-    pan(event: event)
-    return true
+    return pan(event: event)
   }
 
   /// Zoom keeping the time under the cursor pinned at the cursor position.
-  private func zoom(by factor: CGFloat, cursorX: CGFloat) {
-    guard let viewport else { return }
+  @discardableResult
+  private func zoom(by factor: CGFloat, cursorX: CGFloat) -> Bool {
+    guard let viewport else { return false }
+
+    let previousZoomLevel = viewport.zoomLevel
+    let previousScrollOffset = viewport.scrollOffset
 
     let anchorViewportX = max(0, min(cursorX, max(0, viewport.viewportWidth)))
     let anchorTime = viewport.time(for: viewport.scrollOffset + anchorViewportX)
     viewport.zoom(by: factor, anchorTime: anchorTime, anchorViewportX: anchorViewportX)
+
+    return viewport.zoomLevel != previousZoomLevel || viewport.scrollOffset != previousScrollOffset
   }
 
-  private func pan(event: NSEvent) {
-    guard let viewport else { return }
+  @discardableResult
+  private func pan(event: NSEvent) -> Bool {
+    guard let viewport else { return false }
+
+    let previousScrollOffset = viewport.scrollOffset
 
     let multiplier: CGFloat = event.hasPreciseScrollingDeltas ? 1 : Self.coarseScrollMultiplier
     viewport.pan(
       byContentDeltaX: event.scrollingDeltaX * multiplier,
       contentDeltaY: event.scrollingDeltaY * multiplier
     )
+
+    return viewport.scrollOffset != previousScrollOffset
   }
 }

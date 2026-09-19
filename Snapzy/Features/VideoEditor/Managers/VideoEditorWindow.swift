@@ -17,6 +17,7 @@ extension Notification.Name {
 /// Custom NSWindow for video editing with dark mode appearance
 class VideoEditorWindow: NSWindow {
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+  private static let copyKeyCode: UInt16 = 8 // kVK_ANSI_C
   private var restingLevel: NSWindow.Level = .normal
   private var themeObserver: AnyCancellable?
 
@@ -91,5 +92,27 @@ class VideoEditorWindow: NSWindow {
 
   override var canBecomeMain: Bool {
     true
+  }
+
+  /// Do not let an unhandled copy key equivalent fall through to NSWindow's
+  /// default `keyDown`, which emits the macOS alert sound. SwiftUI/text
+  /// responders still get first refusal through `super`; this only consumes a
+  /// Command-C that no responder in the editor can handle.
+  override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    if super.performKeyEquivalent(with: event) {
+      return true
+    }
+
+    let modifiers = event.modifierFlags.intersection([
+      .command, .shift, .option, .control, .function,
+    ])
+    guard event.type == .keyDown,
+          modifiers == .command,
+          event.keyCode == Self.copyKeyCode
+    else {
+      return false
+    }
+
+    return true
   }
 }

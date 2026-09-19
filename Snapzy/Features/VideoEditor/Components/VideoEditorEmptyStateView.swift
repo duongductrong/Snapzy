@@ -90,9 +90,9 @@ struct VideoEditorEmptyStateView: View {
     }
     .onHover { hovering in
       if hovering {
-        NSCursor.pointingHand.push()
+        NSCursor.pointingHand.set()
       } else {
-        NSCursor.pop()
+        NSCursor.arrow.set()
       }
     }
   }
