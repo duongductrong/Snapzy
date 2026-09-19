@@ -2393,7 +2393,9 @@ final class AreaSelectionWindow: NSPanel {
     isFloatingPanel = true
     isOpaque = false
     backgroundColor = NSColor(white: 0, alpha: 0.005)
-    sharingType = .none
+    // Keep selection chrome visible to remote-display clients. Snapzy hides this window
+    // explicitly around its own snapshots so the overlay is never baked into output.
+    sharingType = .readOnly
     level = .screenSaver
     ignoresMouseEvents = false
     acceptsMouseMovedEvents = true
