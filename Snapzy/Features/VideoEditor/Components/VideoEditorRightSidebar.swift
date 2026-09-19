@@ -35,7 +35,7 @@ struct ZoomSettingsContent: View {
   let previewImage: NSImage?
 
   @State private var localZoomLevel: CGFloat = ZoomSegment.defaultZoomLevel
-  @State private var localCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
   @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
   @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
@@ -121,9 +121,8 @@ struct ZoomSettingsContent: View {
           .font(.system(size: 9, weight: .semibold))
           .padding(.horizontal, 6)
           .padding(.vertical, 3)
-          .background((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18))
+          .background(Capsule().fill((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18)))
           .foregroundColor(segment.isAutoMode ? .green : ZoomColors.primary)
-          .cornerRadius(4)
       }
 
       HStack(spacing: 8) {
@@ -189,9 +188,9 @@ struct ZoomSettingsContent: View {
           : Color.white.opacity(0.08)
       )
       .foregroundColor(isDisabled ? .secondary : .primary)
-      .cornerRadius(8)
+      .clipShape(Capsule(style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 8)
+        Capsule(style: .continuous)
           .strokeBorder(isSelected ? ZoomColors.primary.opacity(0.45) : Color.clear, lineWidth: 1)
       )
     }
@@ -213,8 +212,7 @@ struct ZoomSettingsContent: View {
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.white.opacity(0.06))
-    .cornerRadius(8)
+    .background(Radius.rect(Radius.card).fill(Color.white.opacity(0.06)))
   }
 
   private var emptyState: some View {
@@ -256,8 +254,8 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
 
         Slider(
-          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel),
-          in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel
+          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
+          in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
           if !isEditing {
             applyZoomLevel()
@@ -284,7 +282,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 17))
           }
           .buttonStyle(.plain)
         }
@@ -306,7 +304,10 @@ struct ZoomSettingsContent: View {
           .monospacedDigit()
       }
 
-      Slider(value: $localFollowSpeed.stepped(by: 0.05, in: AutoFocusSettings.followSpeedRange), in: AutoFocusSettings.followSpeedRange) { isEditing in
+      Slider(
+        value: $localFollowSpeed.stepped(by: 0.05, in: AutoFocusSettings.followSpeedRange),
+        in: AutoFocusSettings.followSpeedRange
+      ) { isEditing in
         if !isEditing {
           applyFollowSpeed()
         }
@@ -380,7 +381,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 17))
           }
           .buttonStyle(.plain)
         }
@@ -407,7 +408,10 @@ struct ZoomSettingsContent: View {
           .monospacedDigit()
       }
 
-      Slider(value: $localFocusMargin.stepped(by: 0.05, in: AutoFocusSettings.focusMarginRange), in: AutoFocusSettings.focusMarginRange) { isEditing in
+      Slider(
+        value: $localFocusMargin.stepped(by: 0.05, in: AutoFocusSettings.focusMarginRange),
+        in: AutoFocusSettings.focusMarginRange
+      ) { isEditing in
         if !isEditing {
           applyFocusMargin()
         }
@@ -448,7 +452,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 24))
           }
           .buttonStyle(.plain)
           .help(preset.name)
@@ -476,7 +480,7 @@ struct ZoomSettingsContent: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.white.opacity(0.1))
-        .cornerRadius(4)
+        .clipShape(Radius.controlRect(forHeight: 20))
       }
       .buttonStyle(.plain)
 
@@ -492,7 +496,7 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.red)
           .padding(6)
           .background(Color.red.opacity(0.1))
-          .cornerRadius(4)
+          .clipShape(Radius.controlRect(forHeight: 24))
       }
       .buttonStyle(.plain)
     }

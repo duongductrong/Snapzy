@@ -270,7 +270,7 @@ final class AnnotateState: ObservableObject {
   // MARK: - Editor Mode
 
   /// Editor mode determines whether user is annotating or applying mockup transforms
-  nonisolated enum EditorMode: String, CaseIterable {
+  nonisolated enum EditorMode: String, CaseIterable, Sendable {
     case annotate  // Normal annotation editing (flat image)
     case mockup    // 3D perspective transforms with controls
     case preview   // Preview combined result (hides all editing UI)
@@ -4486,7 +4486,7 @@ final class AnnotateState: ObservableObject {
         strokeColor: .clear,
         fillColor: .clear,
         strokeWidth: 3,
-        cornerRadius: 14,
+        cornerRadius: 14, // radius-lint:allow — annotation content default, not chrome
         opacity: 1.0,
         spotlightOpacity: spotlightOpacity
       )
@@ -4510,7 +4510,7 @@ final class AnnotateState: ObservableObject {
       strokeColor: strokeColor,
       fillColor: .clear,
       strokeWidth: 3,
-      cornerRadius: 0,
+      cornerRadius: 0, // radius-lint:allow — watermark content default, not chrome
       fontSize: 36,
       fontName: "SF Pro",
       opacity: 0.22,

@@ -129,7 +129,7 @@ struct QuickAccessSettingsView: View {
       }
 
       if manager.twoFingerSwipeToDismissEnabled {
-        Section(L10n.PreferencesQuickAccess.trackpadSwipeModeTitle) {
+        Section(L10n.PreferencesQuickAccess.swipeActionsSection) {
           SettingRow(
             icon: "arrow.left.arrow.right",
             title: L10n.PreferencesQuickAccess.trackpadSwipeModeTitle,

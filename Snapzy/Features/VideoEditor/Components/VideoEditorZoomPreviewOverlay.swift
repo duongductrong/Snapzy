@@ -287,8 +287,7 @@ struct ZoomableVideoPlayerSection: View {
       .foregroundColor(.white)
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
-      .background(Color.purple.opacity(0.8))
-      .cornerRadius(4)
+      .background(Capsule().fill(Color.purple.opacity(0.8)))
       .padding(8)
       .transition(.opacity.combined(with: .scale(scale: 0.8)))
     }

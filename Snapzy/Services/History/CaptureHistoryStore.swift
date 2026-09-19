@@ -66,7 +66,9 @@ final class CaptureHistoryStore: ObservableObject {
           DiagnosticLogger.shared.logError(.history, error, "Capture history database observation failed")
         },
         onChange: { [weak self] newRecords in
-          self?.records = newRecords
+          MainActor.assumeIsolated {
+            self?.records = newRecords
+          }
         }
       )
     } else {
@@ -78,7 +80,9 @@ final class CaptureHistoryStore: ObservableObject {
           DiagnosticLogger.shared.logError(.history, error, "Capture history database observation failed")
         },
         onChange: { [weak self] newRecords in
-          self?.records = newRecords
+          MainActor.assumeIsolated {
+            self?.records = newRecords
+          }
         }
       )
     }

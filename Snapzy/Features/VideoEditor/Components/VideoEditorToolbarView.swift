@@ -60,6 +60,7 @@ struct VideoEditorToolbarView: View {
         .frame(width: reservedSideWidth, alignment: .trailing)
     }
     .windowToolbarPadding()
+    .liquidGlassGroup(spacing: Spacing.xs)
     .onPreferenceChange(VideoEditorToolbarSectionWidthKey.self) { widths in
       leftSectionWidth = widths[.left] ?? 0
       rightSectionWidth = widths[.right] ?? 0
@@ -91,7 +92,6 @@ struct VideoEditorToolbarView: View {
         state.undo()
       }
       .disabled(!state.canUndo)
-      .opacity(state.canUndo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command])
       .help(L10n.VideoEditor.undoShortcutHint)
 
@@ -99,7 +99,6 @@ struct VideoEditorToolbarView: View {
         state.redo()
       }
       .disabled(!state.canRedo)
-      .opacity(state.canRedo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command, .shift])
       .help(L10n.VideoEditor.redoShortcutHint)
     }
@@ -116,7 +115,7 @@ struct VideoEditorToolbarView: View {
         icon: "info.circle",
         selectedIcon: "info.circle.fill",
         isSelected: state.isVideoInfoSidebarVisible,
-        highlightColor: ZoomColors.primary
+        activeGlassTint: ZoomColors.primary
       ) {
         state.toggleVideoInfoSidebar()
       }
@@ -134,7 +133,7 @@ struct VideoEditorToolbarView: View {
     ToolbarButton(
       icon: "rectangle.on.rectangle",
       isSelected: state.isLeftSidebarVisible,
-      highlightColor: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary
     ) {
       state.toggleLeftSidebar()
     }
@@ -146,7 +145,7 @@ struct VideoEditorToolbarView: View {
     ToolbarButton(
       icon: "sidebar.right",
       isSelected: state.isRightSidebarVisible,
-      highlightColor: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary
     ) {
       state.toggleRightSidebar()
     }
@@ -165,8 +164,11 @@ struct VideoEditorToolbarView: View {
           .frame(width: 200)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(Color.primary.opacity(0.08))
-          .clipShape(RoundedRectangle(cornerRadius: 6))
+          .liquidGlassChrome(
+            shape: Radius.controlRect(forHeight: 24),
+            isVisible: true,
+            isActive: true
+          )
           .onAppear {
             editingFilename = filenameWithoutExtension
           }

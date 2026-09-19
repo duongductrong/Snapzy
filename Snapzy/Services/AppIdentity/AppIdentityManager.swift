@@ -9,7 +9,7 @@ import Combine
 import Foundation
 import Security
 
-enum AppBundleIdentity {
+nonisolated enum AppBundleIdentity {
   static let releaseIdentifier = "com.trongduong.snapzy"
   static let debugIdentifier = "com.trongduong.snapzy.debug"
 
@@ -19,7 +19,7 @@ enum AppBundleIdentity {
   static let isDebugBuild = false
   #endif
 
-  static let expected = isDebugBuild ? debugIdentifier : releaseIdentifier
+  nonisolated static let expected = isDebugBuild ? debugIdentifier : releaseIdentifier
 
   static func matches(_ identifier: String?, debugBuild: Bool = isDebugBuild) -> Bool {
     // Local development builds may retain the normal app identity and signing

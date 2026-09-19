@@ -26,7 +26,8 @@ final class SingleFrameStreamCaptureSession: NSObject, @unchecked Sendable {
 
   /// Shared CIContext: immutable and documented thread-safe for concurrent rendering;
   /// avoids per-frame allocation on delivered frames.
-  private static let sharedCIContext = CIContext()
+  // CIContext is internally thread-safe and is shared by the nonisolated frame callback.
+  private nonisolated static let sharedCIContext = CIContext()
 
   private let lock = NSLock()
   private nonisolated(unsafe) var continuation: CheckedContinuation<CGImage, Error>?

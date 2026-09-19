@@ -40,6 +40,7 @@ enum PreferencesKeys {
 
   /// Appearance
   static let appearanceMode = "appearanceMode"
+  static let useLiquidGlass = "appearance.useLiquidGlass"
 
   // Updates
   static let updateChannel = "updates.channel"
@@ -121,7 +122,7 @@ enum PreferencesKeys {
   static let recordingQuality = "recording.quality"
   static let recordingCaptureAudio = "recording.captureAudio"
   static let recordingCaptureMicrophone = "recording.captureMicrophone"
-  static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"
+  nonisolated static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"
   static let recordingCaptureCamera = "recording.captureCamera"
   static let recordingCameraDeviceID = "recording.cameraDeviceID"
   static let recordingShortcut = "recordingShortcut"
@@ -178,6 +179,6 @@ enum PreferencesKeys {
   static let cloudPasswordEnabled = "cloud.passwordEnabled"
   static let cloudPasswordSkipped = "cloud.passwordSkipped"
   static let cloudUsageStatsCache = "cloud.usageStatsCache"
-  static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
+  nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
   static let cloudGoogleFolderId = "cloud.google.folderId"
 }

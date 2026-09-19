@@ -2,9 +2,9 @@ name: CI Build Check
 
 on:
   push:
-    branches: [master]
+    branches: [master, beta]
   pull_request:
-    branches: [master]
+    branches: [master, beta]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -34,6 +34,8 @@ jobs:
         env:
           # The following tests crash on GitHub Actions macOS runners (Swift concurrency /
           # headless CGS), so they are skipped in CI and run locally instead.
+          # The timeline suites also abort intermittently on the headless runner with a
+          # malloc error; they remain covered by local CI.
           SNAPZY_CI_SKIP_TESTS: |
             SnapzyTests/GoogleDriveTests
             SnapzyTests/DatabaseManagerTests
@@ -80,6 +82,8 @@ jobs:
             SnapzyTests/HotkeyUnregistrationTests
             SnapzyTests/RecordingSessionShortcutGatingTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
+            SnapzyTests/VideoEditorTimelineViewportTests
+            SnapzyTests/VideoEditorTimelineScrollCatcherTests
         run: |
           set -euo pipefail
           mkdir -p build

@@ -76,7 +76,7 @@ struct MockupCanvasView: View {
     // MARK: - Drop Overlay
 
     private var dropOverlay: some View {
-        RoundedRectangle(cornerRadius: 12)
+        Radius.rect(Radius.card)
             .stroke(Color.accentColor, lineWidth: 3)
             .background(Color.accentColor.opacity(0.1))
             .padding(8)

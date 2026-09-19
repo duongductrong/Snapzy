@@ -56,8 +56,8 @@ final class UpdaterManager: NSObject, SPUUpdaterDelegate {
   }
 
   func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
-    let version = item.displayVersionString ?? "?"
-    let build = item.versionString ?? "?"
+    let version = item.displayVersionString
+    let build = item.versionString
     DiagnosticLogger.shared.log(.info, .update, "Update available: v\(version) (\(build))")
   }
 
@@ -66,12 +66,12 @@ final class UpdaterManager: NSObject, SPUUpdaterDelegate {
   }
 
   func updater(_ updater: SPUUpdater, didDownloadUpdate item: SUAppcastItem) {
-    let version = item.displayVersionString ?? "?"
+    let version = item.displayVersionString
     DiagnosticLogger.shared.log(.info, .update, "Downloaded update: v\(version)")
   }
 
   func updater(_ updater: SPUUpdater, willInstallUpdate item: SUAppcastItem) {
-    let version = item.displayVersionString ?? "?"
+    let version = item.displayVersionString
     DiagnosticLogger.shared.log(.info, .update, "Installing update: v\(version)")
   }
 
@@ -84,7 +84,7 @@ final class UpdaterManager: NSObject, SPUUpdaterDelegate {
   }
 
   func updater(_ updater: SPUUpdater, didCancelInstallUpdateOnQuit item: SUAppcastItem) {
-    let version = item.displayVersionString ?? "?"
+    let version = item.displayVersionString
     DiagnosticLogger.shared.log(.warning, .update, "User cancelled install on quit: v\(version)")
   }
 }

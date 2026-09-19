@@ -139,7 +139,7 @@ struct QuickAccessSettingsPreviewCard: View {
     ZStack {
       previewThumbnail
 
-      RoundedRectangle(cornerRadius: 16)
+      Radius.rect(Radius.card)
         .fill(Color.black.opacity(0.38))
 
       VStack(spacing: 8) {
@@ -152,9 +152,9 @@ struct QuickAccessSettingsPreviewCard: View {
       cornerSlots
     }
     .frame(width: cardWidth, height: cardHeight)
-    .clipShape(RoundedRectangle(cornerRadius: 16))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 16)
+      Radius.rect(Radius.card)
         .stroke(Color.white.opacity(0.2), lineWidth: 1)
     )
     .shadow(color: Color.black.opacity(0.16), radius: 10, x: 0, y: 5)
@@ -164,13 +164,13 @@ struct QuickAccessSettingsPreviewCard: View {
     ZStack {
       previewThumbnail
 
-      RoundedRectangle(cornerRadius: 16)
+      Radius.rect(Radius.card)
         .fill(Color.black.opacity(0.1))
     }
     .frame(width: cardWidth, height: cardHeight)
-    .clipShape(RoundedRectangle(cornerRadius: 16))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 16)
+      Radius.rect(Radius.card)
         .stroke(Color.white.opacity(0.18), lineWidth: 1)
     )
     .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
@@ -179,11 +179,11 @@ struct QuickAccessSettingsPreviewCard: View {
   }
 
   private var removalDropArea: some View {
-    RoundedRectangle(cornerRadius: 20)
+    Radius.rect(Radius.panel)
       .fill(Color.clear)
       .overlay {
         if isRemoveTargeted {
-          RoundedRectangle(cornerRadius: 20)
+          Radius.rect(Radius.panel)
             .stroke(
               Color(nsColor: .systemRed).opacity(0.65),
               style: StrokeStyle(lineWidth: 1, dash: [6, 5])

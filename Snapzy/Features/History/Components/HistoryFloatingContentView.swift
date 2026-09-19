@@ -332,10 +332,14 @@ struct HistoryFloatingContentView: View {
     .padding(.horizontal, 14)
     .padding(.vertical, 9)
     .frame(width: 238)
-    .background(chromeSurfaceFill, in: Capsule())
-    .overlay(
-      Capsule()
-        .stroke(chromeSurfaceBorder, lineWidth: 1)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: 0.18,
+      tint: 0.06,
+      // The native branch draws its own refractive edge and ignores `highlight`; the composite
+      // path resolves the specular hairline. Reading the capability statically here would leave a
+      // stale `.none` behind after a live toggle.
+      highlight: .specular
     )
     .shadow(color: chromeSurfaceShadow, radius: 7, x: 0, y: 3)
   }
@@ -428,17 +432,19 @@ struct HistoryFloatingContentView: View {
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 9)
-    .background(.ultraThinMaterial, in: Capsule())
-    .background(selectionBarTint, in: Capsule())
-    .overlay(
-      Capsule()
-        .stroke(selectionBarBorder, lineWidth: 1)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: LiquidGlassTokens.baseDarkness,
+      tint: 0.06,
+      // Native ignores `highlight`; resolving it statically made the composite path lose its
+      // hairline after a live toggle-off.
+      highlight: .specular
     )
     .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.32 : 0.14), radius: 18, x: 0, y: 8)
     .fixedSize(horizontal: true, vertical: false)
     .frame(maxWidth: .infinity, alignment: .center)
     .padding(.bottom, 4)
-    .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .bottom)))
+    .transition(.scale(scale: 0.96, anchor: .bottom))
   }
 
   private var expandedGrid: some View {
@@ -479,26 +485,26 @@ struct HistoryFloatingContentView: View {
       LazyVGrid(columns: expandedColumns, spacing: 12) {
         ForEach(0..<8, id: \.self) { _ in
           VStack(spacing: 8) {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            Radius.rect(Radius.tile)
               .fill(placeholderFill)
               .aspectRatio(16 / 10, contentMode: .fit)
 
             VStack(alignment: .leading, spacing: 7) {
-              RoundedRectangle(cornerRadius: 5, style: .continuous)
+              Radius.rect(Radius.ornament)
                 .fill(placeholderFill)
                 .frame(height: 12)
 
               HStack(spacing: 8) {
-                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                Radius.rect(Radius.ornament)
                   .fill(placeholderFill)
                   .frame(width: 96, height: 10)
               }
             }
           }
           .padding(10)
-          .background(placeholderCardFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+          .background(placeholderCardFill, in: Radius.rect(Radius.card))
           .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
+            Radius.rect(Radius.card)
               .stroke(placeholderStroke, lineWidth: 1)
           )
           .redacted(reason: .placeholder)
@@ -541,61 +547,12 @@ struct HistoryFloatingContentView: View {
     usesExplicitCompactFilterSelection ? selectedCompactFilter : manager.defaultFilter
   }
 
-  private var selectedFilterBackground: AnyShapeStyle {
-    AnyShapeStyle(
-      LinearGradient(
-        colors: [
-          Color.accentColor.opacity(colorScheme == .dark ? 0.95 : 0.98),
-          Color.accentColor.opacity(colorScheme == .dark ? 0.82 : 0.9),
-        ],
-        startPoint: .top,
-        endPoint: .bottom
-      )
-    )
-  }
-
-  private var chromeSurfaceFill: AnyShapeStyle {
-    if backgroundStyle == .solid {
-      return colorScheme == .dark
-        ? AnyShapeStyle(Color.white.opacity(0.07))
-        : AnyShapeStyle(Color.white.opacity(0.76))
-    }
-
-    return colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.07))
-      : AnyShapeStyle(Color.white.opacity(0.52))
-  }
-
-  private var chromeSurfaceBorder: Color {
-    colorScheme == .dark ? Color.white.opacity(0.08) : Color.white.opacity(0.64)
-  }
-
   private var chromeSurfaceShadow: Color {
     Color.black.opacity(colorScheme == .dark ? 0.18 : 0.07)
   }
 
-  private var selectionBarTint: Color {
-    colorScheme == .dark ? Color.black.opacity(0.18) : Color.white.opacity(0.42)
-  }
-
-  private var selectionBarBorder: Color {
-    colorScheme == .dark ? Color.white.opacity(0.16) : Color.white.opacity(0.7)
-  }
-
-  private var unselectedPillBackground: AnyShapeStyle {
-    colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.08))
-      : AnyShapeStyle(Color.black.opacity(0.05))
-  }
-
   private var pillCountBackground: Color {
     colorScheme == .dark ? Color.white.opacity(0.12) : Color.white.opacity(0.84)
-  }
-
-  private var controlButtonBackground: AnyShapeStyle {
-    colorScheme == .dark
-      ? AnyShapeStyle(Color.white.opacity(0.08))
-      : AnyShapeStyle(Color.white.opacity(0.72))
   }
 
   private var placeholderFill: Color {
@@ -655,21 +612,12 @@ struct HistoryFloatingContentView: View {
             .background(pillCountBackground.opacity(isSelected ? 0.18 : 1), in: Capsule())
         }
       }
-      .foregroundColor(isSelected ? .white : .primary.opacity(0.82))
+      // The glass surface carries the selection tint, so the label stays neutral.
+      .foregroundColor(isSelected ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
       .padding(.horizontal, horizontalPadding)
       .padding(.vertical, verticalPadding)
       .frame(minWidth: minWidth)
-      .background(isSelected ? selectedFilterBackground : unselectedPillBackground)
-      .overlay(
-        Capsule()
-          .stroke(
-            isSelected
-              ? Color.white.opacity(0.08)
-              : chromeSurfaceBorder.opacity(colorScheme == .dark ? 0.45 : 0.7),
-            lineWidth: 1
-          )
-      )
-      .clipShape(Capsule())
+      .liquidGlassControl(isActive: isSelected, in: Capsule(style: .continuous))
     }
     .buttonStyle(.plain)
   }
@@ -685,26 +633,8 @@ struct HistoryFloatingContentView: View {
       Image(systemName: systemName)
         .font(.system(size: size <= 34 ? 10.5 : 11, weight: .semibold))
         .frame(width: size, height: size)
-        .background(
-          isActive
-            ? AnyShapeStyle(Color.accentColor.opacity(colorScheme == .dark ? 0.26 : 0.16))
-            : controlButtonBackground
-        )
-        .foregroundColor(
-          isActive
-            ? Color.accentColor
-            : .primary.opacity(0.86)
-        )
-        .clipShape(Circle())
-        .overlay(
-          Circle()
-            .stroke(
-              isActive
-                ? Color.accentColor.opacity(colorScheme == .dark ? 0.45 : 0.35)
-                : Color.clear,
-              lineWidth: 1
-            )
-        )
+        .foregroundColor(isActive ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
+        .liquidGlassControl(isActive: isActive, in: Circle())
     }
     .buttonStyle(.plain)
     .help(help)

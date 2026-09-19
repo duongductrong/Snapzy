@@ -105,7 +105,7 @@ struct HistoryCardView: View, Equatable {
           VStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
               .font(.system(size: 16))
-            Text("File missing")
+            Text(L10n.PreferencesHistory.fileMissing)
               .font(.caption2.weight(.semibold))
           }
           .foregroundColor(.white)
@@ -155,28 +155,12 @@ struct HistoryCardView: View, Equatable {
     Button(action: openDefaultEditor) {
       Label(L10n.Common.restore, systemImage: "arrow.uturn.backward")
         .font(.system(size: 11, weight: .semibold))
-        .foregroundColor(.white)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(
-          Capsule()
-            .fill(
-              LinearGradient(
-                colors: [
-                  Color.accentColor.opacity(0.98),
-                  Color.accentColor.opacity(0.82),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-              )
-            )
-        )
     }
-    .buttonStyle(.plain)
+    .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
   }
 
   private var cardShape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: 18, style: .continuous)
+    Radius.rect(Radius.card)
   }
 
   private var cardBackground: some ShapeStyle {
@@ -268,13 +252,14 @@ struct HistoryCardView: View, Equatable {
   private func checkFileExistence() {
     let url = record.fileURL
     let path = record.filePath
-    Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
-      }
-      await MainActor.run {
-        self.fileExists = exists
-      }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    Task { @MainActor in
+      let exists = await Task.detached(priority: .utility) {
+        defer { access.stop() }
+        return FileManager.default.fileExists(atPath: path)
+      }.value
+      guard !Task.isCancelled else { return }
+      fileExists = exists
     }
   }
 

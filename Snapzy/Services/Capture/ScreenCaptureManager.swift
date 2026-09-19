@@ -1678,7 +1678,7 @@ final class ScreenCaptureManager: ObservableObject {
   /// When only one display intersects, the caller can use the optimized
   /// single-display path; when ≥2 intersect, the caller switches to the
   /// multi-display composite path. Exposed (internal) for unit-testing.
-  nonisolated static func displayIDsIntersecting(_ rect: CGRect) -> Set<CGDirectDisplayID> {
+  static func displayIDsIntersecting(_ rect: CGRect) -> Set<CGDirectDisplayID> {
     var result = Set<CGDirectDisplayID>()
     for screen in NSScreen.screens {
       guard let displayID = screen.displayID else { continue }

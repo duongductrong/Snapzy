@@ -248,11 +248,11 @@ private struct HistoryBackgroundStyleThumbnail: View {
   let isSelected: Bool
 
   var body: some View {
-    HistoryBackdropView(style: style, cornerRadius: 8, compact: true)
+    HistoryBackdropView(style: style, cornerRadius: Radius.tile, compact: true)
       .frame(width: 72, height: 52)
-      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .clipShape(Radius.rect(Radius.tile))
       .overlay(
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
+        Radius.rect(Radius.tile)
           .stroke(isSelected ? Color.accentColor : borderColor, lineWidth: isSelected ? 2 : 1)
       )
       .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)

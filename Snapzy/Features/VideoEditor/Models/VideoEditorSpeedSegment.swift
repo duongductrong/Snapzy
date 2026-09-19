@@ -1,5 +1,5 @@
 //
-//  SpeedSegment.swift
+//  VideoEditorSpeedSegment.swift
 //  Snapzy
 //
 //  Data model for speed (timelapse) segments in video timeline
@@ -11,12 +11,13 @@ import Foundation
 ///
 /// A speed segment time-scales a region of the recorded video: `rate > 1` plays the
 /// region faster (timelapse / speed-up), `rate < 1` plays it slower (slow-motion).
-/// Times are absolute (video-relative) seconds, matching `ZoomSegment`.
-struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
+/// Times are absolute seconds on the editor's structural timeline, matching
+/// `ZoomSegment`; they do not follow a clip's source material after reorder.
+nonisolated struct SpeedSegment: Identifiable, Codable, Equatable, Hashable {
   let id: UUID
-  var startTime: TimeInterval      // seconds from video start (absolute)
-  var duration: TimeInterval       // segment length in seconds
-  var rate: Double                 // 0.25...8.0 (>1 faster, <1 slower)
+  var startTime: TimeInterval // structural timeline seconds (absolute)
+  var duration: TimeInterval // segment length in seconds
+  var rate: Double // 0.25...8.0 (>1 faster, <1 slower)
   var isEnabled: Bool
 
   // MARK: - Computed Properties
@@ -96,20 +97,20 @@ extension SpeedSegment {
   /// Formatted rate string (e.g., "2x", "0.5x"), mirroring `ZoomSegment.formattedZoomLevel`.
   var formattedRate: String {
     if rate == floor(rate) {
-      return String(format: "%.0fx", rate)
+      String(format: "%.0fx", rate)
     } else {
-      return String(format: "%.2gx", rate)
+      String(format: "%.2gx", rate)
     }
   }
 
   /// Formatted duration string.
   var formattedDuration: String {
     if duration < 1 {
-      return String(format: "%.1fs", duration)
+      String(format: "%.1fs", duration)
     } else if duration == floor(duration) {
-      return String(format: "%.0fs", duration)
+      String(format: "%.0fs", duration)
     } else {
-      return String(format: "%.1fs", duration)
+      String(format: "%.1fs", duration)
     }
   }
 }
