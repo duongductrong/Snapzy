@@ -57,7 +57,7 @@ struct QuickAccessPinWindowView: View {
         .opacity(state.isLocked ? 0 : 1)
         .allowsHitTesting(!state.isLocked)
 
-      lockButton
+      interactiveRegion(lockButton)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         .padding(controlInset)
     }
@@ -65,18 +65,26 @@ struct QuickAccessPinWindowView: View {
 
   private var unlockedControls: some View {
     ZStack {
-      chromeButton(systemName: "xmark", help: L10n.PreferencesQuickAccess.unpinAction, action: onClose)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(controlInset)
+      interactiveRegion(
+        chromeButton(systemName: "xmark", help: L10n.PreferencesQuickAccess.unpinAction, action: onClose)
+      )
+      .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+      .padding(controlInset)
 
-      zoomMenu
+      interactiveRegion(zoomMenu)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(.top, controlInset)
 
-      dragHandle
+      interactiveRegion(dragHandle)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         .padding(.bottom, controlInset)
     }
+  }
+
+  /// Wraps interactive chrome so background-window dragging never starts on
+  /// a control, keeping both drags and clicks exclusive to the control.
+  private func interactiveRegion<V: View>(_ content: V) -> some View {
+    content.background(PinWindowDragExclusionRepresentable())
   }
 
   private var lockButton: some View {
@@ -304,4 +312,21 @@ private struct PinWindowZoomOptionButton: View {
   private var rowStroke: Color {
     isSelected || isHovering ? Color.primary.opacity(0.08) : Color.clear
   }
+}
+
+/// NSView marker that opts a region of the pin window out of background
+/// window dragging. `QuickAccessPinWindow` hit-tests for this class before
+/// starting a native-or-manual background drag, so chrome controls keep
+/// their clicks and future interactive controls only need to be wrapped in
+/// `PinWindowDragExclusionRepresentable`.
+final class PinWindowDragExclusionView: NSView {
+  override var mouseDownCanMoveWindow: Bool { false }
+}
+
+struct PinWindowDragExclusionRepresentable: NSViewRepresentable {
+  func makeNSView(context: Context) -> PinWindowDragExclusionView {
+    PinWindowDragExclusionView(frame: .zero)
+  }
+
+  func updateNSView(_ nsView: PinWindowDragExclusionView, context: Context) {}
 }
