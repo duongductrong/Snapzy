@@ -171,17 +171,26 @@ struct SpeedTimelineTrack: View {
         let displaySegment = dragPreviewSegment?.id == segment.id ? (dragPreviewSegment ?? segment) : segment
         if let span = displaySpan(for: displaySegment) {
           let paddedLayout = paddedLayout(for: span)
-          SpeedBlockVisual(
-            segment: displaySegment,
-            isSelected: state.selectedSpeedId == segment.id,
-            isDragging: dragSegmentId == segment.id,
-            isHovered: hover.segmentId == segment.id,
-            isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
-            overlapsZoom: overlapsEnabledZoom(displaySegment),
-            blockX: paddedLayout.visualStartX,
-            blockWidth: paddedLayout.visualWidth
-          )
-          .popover(isPresented: ratePickerBinding(for: segment.id), arrowEdge: .top) {
+          TimelineSegmentPopoverAnchor(
+            layout: TimelineSegmentPopoverAnchorLayout(
+              leading: paddedLayout.visualStartX,
+              segmentWidth: paddedLayout.visualWidth,
+              trackWidth: timelineWidth
+            ),
+            height: trackHeight,
+            isPresented: ratePickerBinding(for: segment.id),
+            arrowEdge: .top
+          ) {
+            SpeedBlockVisual(
+              segment: displaySegment,
+              isSelected: state.selectedSpeedId == segment.id,
+              isDragging: dragSegmentId == segment.id,
+              isHovered: hover.segmentId == segment.id,
+              isEdgeHovered: hover.segmentId == segment.id && hover.edge != nil,
+              overlapsZoom: overlapsEnabledZoom(displaySegment),
+              blockWidth: paddedLayout.visualWidth
+            )
+          } popoverContent: {
             SpeedRatePicker(
               rate: segment.rate,
               onSelect: { newRate in
@@ -538,6 +547,68 @@ struct SpeedTimelineTrack: View {
   }
 }
 
+/// The normal-flow frame used by a timeline segment and its popover source.
+/// Keeping this geometry explicit prevents visual offsets from diverging from
+/// the frame SwiftUI uses to place presentations.
+struct TimelineSegmentPopoverAnchorLayout: Equatable {
+  let leading: CGFloat
+  let segmentWidth: CGFloat
+  let trackWidth: CGFloat
+
+  var contentFrame: CGRect {
+    let safeTrackWidth = max(0, trackWidth)
+    let safeSegmentWidth = min(max(0, segmentWidth), safeTrackWidth)
+    let maxLeading = max(0, safeTrackWidth - safeSegmentWidth)
+    let safeLeading = max(0, min(leading, maxLeading))
+    return CGRect(x: safeLeading, y: 0, width: safeSegmentWidth, height: 0)
+  }
+}
+
+/// Places a timeline segment in normal layout flow so SwiftUI popovers use the
+/// same anchor as the segment's rendered position. An `offset` would move only
+/// the pixels and leave the popover source frame at the track's leading edge.
+struct TimelineSegmentPopoverAnchor<Content: View, PopoverContent: View>: View {
+  let layout: TimelineSegmentPopoverAnchorLayout
+  let height: CGFloat
+  @Binding var isPresented: Bool
+  let arrowEdge: Edge
+  let content: Content
+  let popoverContent: PopoverContent
+
+  init(
+    layout: TimelineSegmentPopoverAnchorLayout,
+    height: CGFloat,
+    isPresented: Binding<Bool>,
+    arrowEdge: Edge,
+    @ViewBuilder content: () -> Content,
+    @ViewBuilder popoverContent: () -> PopoverContent
+  ) {
+    self.layout = layout
+    self.height = height
+    _isPresented = isPresented
+    self.arrowEdge = arrowEdge
+    self.content = content()
+    self.popoverContent = popoverContent()
+  }
+
+  var body: some View {
+    HStack(spacing: 0) {
+      Color.clear
+        .frame(width: layout.contentFrame.minX)
+        .allowsHitTesting(false)
+
+      content
+        .frame(width: layout.contentFrame.width)
+        .popover(isPresented: $isPresented, arrowEdge: arrowEdge) {
+          popoverContent
+        }
+
+      Spacer(minLength: 0)
+    }
+    .frame(width: layout.trackWidth, height: height, alignment: .leading)
+  }
+}
+
 // MARK: - Speed Block Visual (No Gestures)
 
 private struct SpeedBlockVisual: View {
@@ -547,7 +618,6 @@ private struct SpeedBlockVisual: View {
   let isHovered: Bool
   let isEdgeHovered: Bool
   let overlapsZoom: Bool
-  let blockX: CGFloat
   let blockWidth: CGFloat
 
   private let handleWidth: CGFloat = 8
@@ -584,7 +654,6 @@ private struct SpeedBlockVisual: View {
         .offset(x: blockWidth - handleWidth)
     }
     .frame(width: blockWidth, height: blockHeight)
-    .offset(x: blockX)
     .opacity(segment.isEnabled ? 1.0 : 0.5)
     .scaleEffect(isDragging ? 1.02 : 1.0)
     .animation(.easeOut(duration: 0.15), value: isDragging)
