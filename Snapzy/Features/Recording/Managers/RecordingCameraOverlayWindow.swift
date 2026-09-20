@@ -302,28 +302,53 @@ final class RecordingCameraOverlayWindow: NSPanel {
 
   private let cameraSession: RecordingCameraCaptureSession
   private let recordingRect: CGRect
+  private let previewView: RecordingCameraPreviewView
   private var isDragging = false
   private var dragOffset = CGPoint.zero
 
-  init(recordingRect: CGRect, deviceID: String?) throws {
+  private(set) var shape: RecordingCameraShape
+  private(set) var sizePreset: RecordingCameraSize
+  private(set) var isMirrored: Bool
+
+  var onConfigurationChanged: (@MainActor (RecordingCameraShape, RecordingCameraSize, Bool) -> Void)?
+  var onCloseRequested: (@MainActor () -> Void)?
+
+  init(
+    recordingRect: CGRect,
+    deviceID: String?,
+    shape: RecordingCameraShape? = nil,
+    sizePreset: RecordingCameraSize? = nil,
+    isMirrored: Bool? = nil
+  ) throws {
     guard let device = RecordingCameraDeviceProvider.captureDevice(matching: deviceID) else {
       throw RecordingCameraOverlayError.noDevice
     }
 
-    let previewView = RecordingCameraPreviewView()
+    let resolvedShape = shape ?? RecordingCameraSettingsProvider.storedShape()
+    let resolvedSize = sizePreset ?? RecordingCameraSettingsProvider.storedSize()
+    let resolvedMirrored = isMirrored ?? RecordingCameraSettingsProvider.storedMirrored()
+
+    self.shape = resolvedShape
+    self.sizePreset = resolvedSize
+    self.isMirrored = resolvedMirrored
+    self.recordingRect = recordingRect
+
+    let previewView = RecordingCameraPreviewView(shape: resolvedShape, isMirrored: resolvedMirrored)
     let cameraSession = try RecordingCameraCaptureSession(device: device) { [weak previewView] isAvailable in
       previewView?.setCameraAvailable(isAvailable)
     }
     self.cameraSession = cameraSession
-    self.recordingRect = recordingRect
+    self.previewView = previewView
+
+    let initialFrame = Self.overlayFrame(
+      in: recordingRect,
+      shape: resolvedShape,
+      size: resolvedSize,
+      edgeInset: Self.edgeInset
+    )
 
     super.init(
-      contentRect: Self.overlayFrame(in: recordingRect),
-      // While a recording runs Snapzy is a background app, so a click on a
-      // plain window makes AppKit run the app-activation path and look for a
-      // window to make key — which this overlay refuses. `.nonactivatingPanel`
-      // takes the overlay out of that path entirely: the click moves the
-      // preview without activating Snapzy or touching key-window state.
+      contentRect: initialFrame,
       styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: false
@@ -343,6 +368,56 @@ final class RecordingCameraOverlayWindow: NSPanel {
     cameraSession.start()
   }
 
+  func updateShape(_ newShape: RecordingCameraShape, animate: Bool = true) {
+    guard newShape != shape else { return }
+    shape = newShape
+    UserDefaults.standard.set(newShape.rawValue, forKey: PreferencesKeys.recordingCameraShape)
+    applyConfiguration(animate: animate)
+  }
+
+  func updateSize(_ newSize: RecordingCameraSize, animate: Bool = true) {
+    guard newSize != sizePreset else { return }
+    sizePreset = newSize
+    UserDefaults.standard.set(newSize.rawValue, forKey: PreferencesKeys.recordingCameraSize)
+    applyConfiguration(animate: animate)
+  }
+
+  func setMirrored(_ mirrored: Bool) {
+    guard mirrored != isMirrored else { return }
+    isMirrored = mirrored
+    UserDefaults.standard.set(mirrored, forKey: PreferencesKeys.recordingCameraMirrored)
+    previewView.setMirrored(mirrored)
+    onConfigurationChanged?(shape, sizePreset, isMirrored)
+  }
+
+  private func applyConfiguration(animate: Bool) {
+    let newSize = sizePreset.clampedSize(for: shape, in: recordingRect, edgeInset: Self.edgeInset)
+    let newOrigin = RecordingCameraOverlayPlacement.resizedOrigin(
+      currentFrame: frame,
+      newSize: newSize,
+      recordingRect: recordingRect,
+      edgeInset: Self.edgeInset
+    )
+    let newFrame = CGRect(origin: newOrigin, size: newSize)
+
+    previewView.updateAppearance(shape: shape, size: newSize)
+
+    if animate {
+      NSAnimationContext.runAnimationGroup { context in
+        context.duration = 0.22
+        context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+        animator().setFrame(newFrame, display: true)
+      } completionHandler: { [weak self] in
+        self?.invalidateShadow()
+      }
+    } else {
+      setFrame(newFrame, display: true)
+      invalidateShadow()
+    }
+
+    onConfigurationChanged?(shape, sizePreset, isMirrored)
+  }
+
   /// The overlay owns the entire left-button gesture. Routing it here instead
   /// of through the content view keeps AppKit's default mouse handling — the
   /// window-move machinery, the title-bar double-click action, first-responder
@@ -356,6 +431,12 @@ final class RecordingCameraOverlayWindow: NSPanel {
       continueDragging(with: event)
     case .leftMouseUp where isDragging:
       endDragging()
+    case .rightMouseDown:
+      if let menu = previewView.menu(for: event) {
+        NSMenu.popUpContextMenu(menu, with: event, for: previewView)
+        return
+      }
+      super.sendEvent(event)
     default:
       super.sendEvent(event)
     }
@@ -409,28 +490,28 @@ final class RecordingCameraOverlayWindow: NSPanel {
   }
 
   nonisolated static func overlayFrame(in recordingRect: CGRect) -> CGRect {
-    let usableWidth = max(1, recordingRect.width - edgeInset * 2)
-    let usableHeight = max(1, recordingRect.height - edgeInset * 2)
+    overlayFrame(
+      in: recordingRect,
+      shape: .rectangle,
+      size: .medium,
+      edgeInset: edgeInset
+    )
+  }
 
-    var width = min(maximumWidth, max(minimumWidth, recordingRect.width * widthFraction))
-    var height = width / aspectRatio
-
-    if width > usableWidth {
-      width = usableWidth
-      height = width / aspectRatio
-    }
-    if height > usableHeight {
-      height = usableHeight
-      width = height * aspectRatio
-    }
-
-    let horizontalInset = min(edgeInset, max(0, (recordingRect.width - width) / 2))
-    let verticalInset = min(edgeInset, max(0, (recordingRect.height - height) / 2))
+  nonisolated static func overlayFrame(
+    in recordingRect: CGRect,
+    shape: RecordingCameraShape,
+    size: RecordingCameraSize,
+    edgeInset: CGFloat = edgeInset
+  ) -> CGRect {
+    let clampedSize = size.clampedSize(for: shape, in: recordingRect, edgeInset: edgeInset)
+    let horizontalInset = min(edgeInset, max(0, (recordingRect.width - clampedSize.width) / 2))
+    let verticalInset = min(edgeInset, max(0, (recordingRect.height - clampedSize.height) / 2))
     return CGRect(
-      x: recordingRect.maxX - horizontalInset - width,
+      x: recordingRect.maxX - horizontalInset - clampedSize.width,
       y: recordingRect.minY + verticalInset,
-      width: width,
-      height: height
+      width: clampedSize.width,
+      height: clampedSize.height
     )
   }
 
@@ -462,38 +543,53 @@ final class RecordingCameraOverlayWindow: NSPanel {
   override var canBecomeMain: Bool {
     false
   }
+
+  @objc func selectShapeFromMenu(_ sender: NSMenuItem) {
+    guard let shape = sender.representedObject as? RecordingCameraShape else { return }
+    updateShape(shape)
+  }
+
+  @objc func selectSizeFromMenu(_ sender: NSMenuItem) {
+    guard let size = sender.representedObject as? RecordingCameraSize else { return }
+    updateSize(size)
+  }
+
+  @objc func toggleMirrorFromMenu() {
+    setMirrored(!isMirrored)
+  }
+
+  @objc func turnOffFromMenu() {
+    onCloseRequested?()
+  }
 }
 
 private final class RecordingCameraPreviewView: NSView {
   private let previewLayer = AVCaptureVideoPreviewLayer()
+  private let disconnectedVisualEffect = NSVisualEffectView()
+  private let disconnectedIcon = NSImageView()
   private let unavailableLabel = NSTextField(wrappingLabelWithString: L10n.Camera.disconnected)
+  private let disconnectedStack = NSStackView()
 
-  init() {
+  private var currentShape: RecordingCameraShape
+  private var isMirrored: Bool
+
+  init(shape: RecordingCameraShape, isMirrored: Bool) {
+    currentShape = shape
+    self.isMirrored = isMirrored
     super.init(frame: .zero)
 
     wantsLayer = true
-    layer?.backgroundColor = NSColor.black.cgColor
-    layer?.cornerRadius = 18
-    layer?.cornerCurve = .continuous
+    layer?.backgroundColor = NSColor.black.withAlphaComponent(0.25).cgColor
+    layer?.cornerRadius = shape.cornerRadius(for: bounds.size)
+    layer?.cornerCurve = shape.cornerCurve
     layer?.masksToBounds = true
-    layer?.borderWidth = 2
-    layer?.borderColor = NSColor.white.withAlphaComponent(0.85).cgColor
+    layer?.borderWidth = 0.75
+    layer?.borderColor = NSColor.white.withAlphaComponent(0.18).cgColor
 
     previewLayer.videoGravity = .resizeAspectFill
     layer?.addSublayer(previewLayer)
 
-    unavailableLabel.alignment = .center
-    unavailableLabel.textColor = .white
-    unavailableLabel.font = .systemFont(ofSize: 13, weight: .medium)
-    unavailableLabel.isHidden = true
-    unavailableLabel.translatesAutoresizingMaskIntoConstraints = false
-    addSubview(unavailableLabel)
-    NSLayoutConstraint.activate([
-      unavailableLabel.centerXAnchor.constraint(equalTo: centerXAnchor),
-      unavailableLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-      unavailableLabel.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 12),
-      unavailableLabel.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -12),
-    ])
+    setupDisconnectedView()
   }
 
   @available(*, unavailable)
@@ -501,13 +597,71 @@ private final class RecordingCameraPreviewView: NSView {
     fatalError("init(coder:) not supported")
   }
 
+  private func setupDisconnectedView() {
+    disconnectedVisualEffect.material = .hudWindow
+    disconnectedVisualEffect.blendingMode = .withinWindow
+    disconnectedVisualEffect.state = .active
+    disconnectedVisualEffect.isHidden = true
+    addSubview(disconnectedVisualEffect)
+
+    disconnectedStack.orientation = .vertical
+    disconnectedStack.alignment = .centerX
+    disconnectedStack.spacing = 8
+    disconnectedStack.translatesAutoresizingMaskIntoConstraints = false
+
+    if let iconImage = NSImage(systemSymbolName: "video.slash.fill", accessibilityDescription: nil) {
+      let config = NSImage.SymbolConfiguration(pointSize: 22, weight: .regular)
+      disconnectedIcon.image = iconImage.withSymbolConfiguration(config)
+    }
+    disconnectedIcon.contentTintColor = NSColor.white.withAlphaComponent(0.65)
+
+    unavailableLabel.alignment = .center
+    unavailableLabel.textColor = NSColor.white.withAlphaComponent(0.85)
+    unavailableLabel.font = .systemFont(ofSize: 12, weight: .medium)
+
+    disconnectedStack.addArrangedSubview(disconnectedIcon)
+    disconnectedStack.addArrangedSubview(unavailableLabel)
+    disconnectedVisualEffect.addSubview(disconnectedStack)
+
+    NSLayoutConstraint.activate([
+      disconnectedStack.centerXAnchor.constraint(equalTo: disconnectedVisualEffect.centerXAnchor),
+      disconnectedStack.centerYAnchor.constraint(equalTo: disconnectedVisualEffect.centerYAnchor),
+      disconnectedStack.leadingAnchor.constraint(
+        greaterThanOrEqualTo: disconnectedVisualEffect.leadingAnchor,
+        constant: 12
+      ),
+      disconnectedStack.trailingAnchor.constraint(
+        lessThanOrEqualTo: disconnectedVisualEffect.trailingAnchor,
+        constant: -12
+      ),
+    ])
+  }
+
   func attach(session: AVCaptureSession) {
     previewLayer.session = session
+    setMirrored(isMirrored)
   }
 
   func setCameraAvailable(_ isAvailable: Bool) {
     previewLayer.isHidden = !isAvailable
-    unavailableLabel.isHidden = isAvailable
+    disconnectedVisualEffect.isHidden = isAvailable
+    setMirrored(isMirrored)
+  }
+
+  func setMirrored(_ mirrored: Bool) {
+    isMirrored = mirrored
+    guard let connection = previewLayer.connection, connection.isVideoMirroringSupported else { return }
+    connection.automaticallyAdjustsVideoMirroring = false
+    connection.isVideoMirrored = mirrored
+  }
+
+  func updateAppearance(shape: RecordingCameraShape, size: CGSize) {
+    currentShape = shape
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    layer?.cornerCurve = shape.cornerCurve
+    layer?.cornerRadius = shape.cornerRadius(for: size)
+    CATransaction.commit()
   }
 
   override func layout() {
@@ -515,6 +669,10 @@ private final class RecordingCameraPreviewView: NSView {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
     previewLayer.frame = bounds
+    disconnectedVisualEffect.frame = bounds
+    layer?.cornerRadius = currentShape.cornerRadius(for: bounds.size)
+    layer?.cornerCurve = currentShape.cornerCurve
+    setMirrored(isMirrored)
     CATransaction.commit()
   }
 
@@ -534,5 +692,71 @@ private final class RecordingCameraPreviewView: NSView {
 
   override func hitTest(_: NSPoint) -> NSView? {
     self
+  }
+
+  override func menu(for _: NSEvent) -> NSMenu? {
+    guard let window = window as? RecordingCameraOverlayWindow else { return nil }
+    let menu = NSMenu(title: "Camera")
+
+    // Shape Section
+    let shapeHeader = NSMenuItem(title: L10n.Camera.shape, action: nil, keyEquivalent: "")
+    shapeHeader.isEnabled = false
+    menu.addItem(shapeHeader)
+
+    for shapeCase in RecordingCameraShape.allCases {
+      let item = NSMenuItem(
+        title: shapeCase.displayName,
+        action: #selector(RecordingCameraOverlayWindow.selectShapeFromMenu(_:)),
+        keyEquivalent: ""
+      )
+      item.target = window
+      item.representedObject = shapeCase
+      item.state = (window.shape == shapeCase) ? .on : .off
+      menu.addItem(item)
+    }
+
+    menu.addItem(NSMenuItem.separator())
+
+    // Size Section
+    let sizeHeader = NSMenuItem(title: L10n.Camera.size, action: nil, keyEquivalent: "")
+    sizeHeader.isEnabled = false
+    menu.addItem(sizeHeader)
+
+    for sizeCase in RecordingCameraSize.allCases {
+      let item = NSMenuItem(
+        title: sizeCase.displayName,
+        action: #selector(RecordingCameraOverlayWindow.selectSizeFromMenu(_:)),
+        keyEquivalent: ""
+      )
+      item.target = window
+      item.representedObject = sizeCase
+      item.state = (window.sizePreset == sizeCase) ? .on : .off
+      menu.addItem(item)
+    }
+
+    menu.addItem(NSMenuItem.separator())
+
+    // Mirror Camera
+    let mirrorItem = NSMenuItem(
+      title: L10n.Camera.mirrorCamera,
+      action: #selector(RecordingCameraOverlayWindow.toggleMirrorFromMenu),
+      keyEquivalent: ""
+    )
+    mirrorItem.target = window
+    mirrorItem.state = window.isMirrored ? .on : .off
+    menu.addItem(mirrorItem)
+
+    menu.addItem(NSMenuItem.separator())
+
+    // Turn Off Camera
+    let turnOffItem = NSMenuItem(
+      title: L10n.Camera.turnOffCamera,
+      action: #selector(RecordingCameraOverlayWindow.turnOffFromMenu),
+      keyEquivalent: ""
+    )
+    turnOffItem.target = window
+    menu.addItem(turnOffItem)
+
+    return menu
   }
 }

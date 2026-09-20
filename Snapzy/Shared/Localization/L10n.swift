@@ -577,10 +577,6 @@ nonisolated enum L10n {
       )
     }
 
-
-
-
-
     static let exportFailed = string(
       "preferences-advanced.export-failed",
       defaultValue: "Config export failed.",
@@ -4803,6 +4799,56 @@ nonisolated enum L10n {
       defaultValue: "Continuity Camera",
       comment: "Camera picker suffix for an iPhone Continuity Camera device"
     )
+    static let shape = string(
+      "camera.shape",
+      defaultValue: "Shape",
+      comment: "Camera shape menu section title"
+    )
+    static let shapeRectangle = string(
+      "camera.shape.rectangle",
+      defaultValue: "Default (Rectangle)",
+      comment: "Camera rectangle shape option"
+    )
+    static let shapeSquare = string(
+      "camera.shape.square",
+      defaultValue: "Square",
+      comment: "Camera square shape option"
+    )
+    static let shapeCircle = string(
+      "camera.shape.circle",
+      defaultValue: "Circle",
+      comment: "Camera circle shape option"
+    )
+    static let size = string(
+      "camera.size",
+      defaultValue: "Size",
+      comment: "Camera size menu section title"
+    )
+    static let sizeSmall = string(
+      "camera.size.small",
+      defaultValue: "Small",
+      comment: "Camera small size option"
+    )
+    static let sizeMedium = string(
+      "camera.size.medium",
+      defaultValue: "Medium",
+      comment: "Camera medium size option"
+    )
+    static let sizeLarge = string(
+      "camera.size.large",
+      defaultValue: "Large",
+      comment: "Camera large size option"
+    )
+    static let mirrorCamera = string(
+      "camera.mirror-camera",
+      defaultValue: "Mirror Camera",
+      comment: "Camera mirror horizontal toggle option"
+    )
+    static let turnOffCamera = string(
+      "camera.turn-off-camera",
+      defaultValue: "Turn Off Camera",
+      comment: "Action to turn off camera from overlay context menu"
+    )
   }
 
   enum CloudTransfer {
@@ -5739,7 +5785,6 @@ nonisolated enum L10n {
         minimumLength
       )
     }
-
 
     static func configurationSavedButPasswordSetupFailed(_ message: String) -> String {
       format(
@@ -7028,7 +7073,6 @@ nonisolated enum L10n {
         details
       )
     }
-
 
     static let gifInfo = string(
       "video-editor.gif-info",

@@ -252,6 +252,61 @@ final class RecordingConfigurationTests: XCTestCase {
     XCTAssertNil(RecordingCameraDeviceProvider.captureDevice(matching: "missing-camera-id"))
   }
 
+  func testRecordingCameraShapesAndSizes() {
+    let recordingRect = CGRect(x: 0, y: 0, width: 1000, height: 800)
+
+    for shape in RecordingCameraShape.allCases {
+      for size in RecordingCameraSize.allCases {
+        let clamped = size.clampedSize(for: shape, in: recordingRect)
+        if shape == .rectangle {
+          XCTAssertEqual(clamped.width / clamped.height, 16.0 / 9.0, accuracy: 0.01)
+          XCTAssertEqual(shape.cornerCurve, .continuous)
+        } else {
+          XCTAssertEqual(clamped.width, clamped.height, accuracy: 0.01)
+          if shape == .square {
+            XCTAssertEqual(shape.cornerCurve, .continuous)
+          } else {
+            XCTAssertEqual(shape.cornerCurve, .circular)
+            XCTAssertEqual(shape.cornerRadius(for: clamped), clamped.width / 2.0, accuracy: 0.01)
+          }
+        }
+      }
+    }
+  }
+
+  func testRecordingCameraOverlayPlacement_resizedOrigin_anchorsSnapPoint() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let currentFrame = CGRect(x: 656, y: 224, width: 220, height: 124) // snapped near bottom right
+    let newSize = CGSize(width: 180, height: 180) // square or circle
+
+    let newOrigin = RecordingCameraOverlayPlacement.resizedOrigin(
+      currentFrame: currentFrame,
+      newSize: newSize,
+      recordingRect: recordingRect,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    let expectedBottomRight = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .bottomRight,
+      recordingRect: recordingRect,
+      overlaySize: newSize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    XCTAssertEqual(newOrigin.x, expectedBottomRight.x, accuracy: 0.001)
+    XCTAssertEqual(newOrigin.y, expectedBottomRight.y, accuracy: 0.001)
+  }
+
+  func testRecordingCameraSettingsProvider_persistsAndRetrieves() {
+    defaults.set(RecordingCameraShape.circle.rawValue, forKey: PreferencesKeys.recordingCameraShape)
+    defaults.set(RecordingCameraSize.large.rawValue, forKey: PreferencesKeys.recordingCameraSize)
+    defaults.set(true, forKey: PreferencesKeys.recordingCameraMirrored)
+
+    XCTAssertEqual(RecordingCameraSettingsProvider.storedShape(defaults: defaults), .circle)
+    XCTAssertEqual(RecordingCameraSettingsProvider.storedSize(defaults: defaults), .large)
+    XCTAssertTrue(RecordingCameraSettingsProvider.storedMirrored(defaults: defaults))
+  }
+
   func testMouseHighlightConfiguration_defaults() {
     let config = MouseHighlightConfiguration(defaults: defaults)
 

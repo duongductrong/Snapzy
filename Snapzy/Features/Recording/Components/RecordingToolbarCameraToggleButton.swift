@@ -44,6 +44,51 @@ struct RecordingToolbarCameraToggleButton: View {
           )
         }
       }
+
+      if state.captureCamera {
+        Divider()
+
+        Menu {
+          ForEach(RecordingCameraShape.allCases) { shape in
+            Button {
+              selectShape(shape)
+            } label: {
+              menuItemLabel(
+                title: shape.displayName,
+                isSelected: state.cameraShape == shape
+              )
+            }
+          }
+        } label: {
+          Text(L10n.Camera.shape)
+        }
+
+        Menu {
+          ForEach(RecordingCameraSize.allCases) { size in
+            Button {
+              selectSize(size)
+            } label: {
+              menuItemLabel(
+                title: size.displayName,
+                isSelected: state.cameraSize == size
+              )
+            }
+          }
+        } label: {
+          Text(L10n.Camera.size)
+        }
+
+        Divider()
+
+        Button {
+          toggleMirrored()
+        } label: {
+          menuItemLabel(
+            title: L10n.Camera.mirrorCamera,
+            isSelected: state.cameraMirrored
+          )
+        }
+      }
     } label: {
       ToolbarIconButtonLabel(
         systemName: systemName,
@@ -90,6 +135,22 @@ struct RecordingToolbarCameraToggleButton: View {
   private func selectNoCamera() {
     state.captureCamera = false
     UserDefaults.standard.set(false, forKey: PreferencesKeys.recordingCaptureCamera)
+  }
+
+  private func selectShape(_ shape: RecordingCameraShape) {
+    state.cameraShape = shape
+    UserDefaults.standard.set(shape.rawValue, forKey: PreferencesKeys.recordingCameraShape)
+  }
+
+  private func selectSize(_ size: RecordingCameraSize) {
+    state.cameraSize = size
+    UserDefaults.standard.set(size.rawValue, forKey: PreferencesKeys.recordingCameraSize)
+  }
+
+  private func toggleMirrored() {
+    let newMirrored = !state.cameraMirrored
+    state.cameraMirrored = newMirrored
+    UserDefaults.standard.set(newMirrored, forKey: PreferencesKeys.recordingCameraMirrored)
   }
 
   private func selectCameraDevice(_ device: RecordingCameraDevice) {

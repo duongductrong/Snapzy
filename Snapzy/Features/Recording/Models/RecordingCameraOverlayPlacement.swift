@@ -149,6 +149,38 @@ enum RecordingCameraOverlayPlacement {
     }
   }
 
+  static func resizedOrigin(
+    currentFrame: CGRect,
+    newSize: CGSize,
+    recordingRect: CGRect,
+    edgeInset: CGFloat = defaultEdgeInset
+  ) -> CGPoint {
+    if let currentSnap = snapPoint(
+      for: currentFrame.origin,
+      recordingRect: recordingRect,
+      overlaySize: currentFrame.size,
+      edgeInset: edgeInset
+    ) {
+      return targetOrigin(
+        for: currentSnap,
+        recordingRect: recordingRect,
+        overlaySize: newSize,
+        edgeInset: edgeInset
+      )
+    }
+
+    let centerOrigin = CGPoint(
+      x: currentFrame.midX - newSize.width / 2,
+      y: currentFrame.midY - newSize.height / 2
+    )
+    return resolvedOrigin(
+      for: centerOrigin,
+      recordingRect: recordingRect,
+      overlaySize: newSize,
+      edgeInset: edgeInset
+    )
+  }
+
   private static func clampedOrigin(_ origin: CGPoint, within bounds: CGRect) -> CGPoint {
     CGPoint(
       x: min(max(origin.x, bounds.minX), bounds.maxX),

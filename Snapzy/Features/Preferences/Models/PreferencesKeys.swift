@@ -42,7 +42,7 @@ enum PreferencesKeys {
   static let appearanceMode = "appearanceMode"
   static let useLiquidGlass = "appearance.useLiquidGlass"
 
-  // Updates
+  /// Updates
   static let updateChannel = "updates.channel"
 
   // Shortcuts
@@ -128,6 +128,9 @@ enum PreferencesKeys {
   nonisolated static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"
   static let recordingCaptureCamera = "recording.captureCamera"
   static let recordingCameraDeviceID = "recording.cameraDeviceID"
+  static let recordingCameraShape = "recording.cameraShape"
+  static let recordingCameraSize = "recording.cameraSize"
+  static let recordingCameraMirrored = "recording.cameraMirrored"
   static let recordingShortcut = "recordingShortcut"
   static let recordingLastAreaRect = "recording.lastAreaRect"
   static let recordingRememberLastArea = "recording.rememberLastArea"
