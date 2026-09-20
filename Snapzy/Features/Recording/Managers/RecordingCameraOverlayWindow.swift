@@ -293,14 +293,17 @@ private final nonisolated class RecordingCameraCaptureSession: @unchecked Sendab
 }
 
 @MainActor
-final class RecordingCameraOverlayWindow: NSWindow {
+final class RecordingCameraOverlayWindow: NSPanel {
   nonisolated static let maximumWidth: CGFloat = 280
   nonisolated static let minimumWidth: CGFloat = 120
   nonisolated static let widthFraction: CGFloat = 0.28
   nonisolated static let aspectRatio: CGFloat = 16.0 / 9.0
-  nonisolated static let edgeInset: CGFloat = 24
+  nonisolated static let edgeInset: CGFloat = RecordingCameraOverlayPlacement.defaultEdgeInset
 
   private let cameraSession: RecordingCameraCaptureSession
+  private let recordingRect: CGRect
+  private var isDragging = false
+  private var dragOffset = CGPoint.zero
 
   init(recordingRect: CGRect, deviceID: String?) throws {
     guard let device = RecordingCameraDeviceProvider.captureDevice(matching: deviceID) else {
@@ -312,10 +315,16 @@ final class RecordingCameraOverlayWindow: NSWindow {
       previewView?.setCameraAvailable(isAvailable)
     }
     self.cameraSession = cameraSession
+    self.recordingRect = recordingRect
 
     super.init(
       contentRect: Self.overlayFrame(in: recordingRect),
-      styleMask: [.borderless],
+      // While a recording runs Snapzy is a background app, so a click on a
+      // plain window makes AppKit run the app-activation path and look for a
+      // window to make key — which this overlay refuses. `.nonactivatingPanel`
+      // takes the overlay out of that path entirely: the click moves the
+      // preview without activating Snapzy or touching key-window state.
+      styleMask: [.borderless, .nonactivatingPanel],
       backing: .buffered,
       defer: false
     )
@@ -334,7 +343,67 @@ final class RecordingCameraOverlayWindow: NSWindow {
     cameraSession.start()
   }
 
+  /// The overlay owns the entire left-button gesture. Routing it here instead
+  /// of through the content view keeps AppKit's default mouse handling — the
+  /// window-move machinery, the title-bar double-click action, first-responder
+  /// changes — out of the drag completely; each of those paths can answer a
+  /// borderless, non-key window with the system alert sound.
+  override func sendEvent(_ event: NSEvent) {
+    switch event.type {
+    case .leftMouseDown:
+      beginDragging(with: event)
+    case .leftMouseDragged where isDragging:
+      continueDragging(with: event)
+    case .leftMouseUp where isDragging:
+      endDragging()
+    default:
+      super.sendEvent(event)
+    }
+  }
+
+  private func beginDragging(with event: NSEvent) {
+    let mouseLocation = convertPoint(toScreen: event.locationInWindow)
+    dragOffset = CGPoint(
+      x: mouseLocation.x - frame.minX,
+      y: mouseLocation.y - frame.minY
+    )
+    isDragging = true
+    NSCursor.closedHand.set()
+  }
+
+  private func continueDragging(with event: NSEvent) {
+    let mouseLocation = convertPoint(toScreen: event.locationInWindow)
+    updateDragOrigin(
+      CGPoint(
+        x: mouseLocation.x - dragOffset.x,
+        y: mouseLocation.y - dragOffset.y
+      )
+    )
+  }
+
+  private func endDragging() {
+    guard isDragging else { return }
+    isDragging = false
+    NSCursor.openHand.set()
+  }
+
+  func updateDragOrigin(_ proposedOrigin: CGPoint) {
+    let resolvedOrigin = RecordingCameraOverlayPlacement.resolvedOrigin(
+      for: proposedOrigin,
+      recordingRect: recordingRect,
+      overlaySize: frame.size,
+      edgeInset: Self.edgeInset
+    )
+
+    // Keep the window frame in lockstep with the pointer while the button is
+    // held. An asynchronous NSWindow animation can leave WindowServer hit
+    // testing a stale frame and retarget the next drag/up event to another
+    // window. The resolved origin still applies the same clamp and snap rules.
+    setFrameOrigin(resolvedOrigin)
+  }
+
   override func close() {
+    endDragging()
     cameraSession.stop()
     super.close()
   }
@@ -372,7 +441,17 @@ final class RecordingCameraOverlayWindow: NSWindow {
     isReleasedWhenClosed = false
     level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-    ignoresMouseEvents = true
+    isFloatingPanel = true
+    becomesKeyOnlyIfNeeded = true
+    // Panels hide on deactivation by default; the overlay has to stay visible
+    // for the whole recording no matter which app is frontmost.
+    hidesOnDeactivate = false
+    // `sendEvent` owns the mouse-down/dragged/up sequence, so AppKit keeps
+    // tracking this window after the pointer leaves its frame. Disable the
+    // server-side window drag path as well.
+    isMovable = false
+    isMovableByWindowBackground = false
+    ignoresMouseEvents = false
     sharingType = .readOnly
   }
 
@@ -437,5 +516,23 @@ private final class RecordingCameraPreviewView: NSView {
     CATransaction.setDisableActions(true)
     previewLayer.frame = bounds
     CATransaction.commit()
+  }
+
+  override func acceptsFirstMouse(for _: NSEvent?) -> Bool {
+    true
+  }
+
+  /// Prevent AppKit from treating a mouse-down in this view as a native window drag.
+  override var mouseDownCanMoveWindow: Bool {
+    false
+  }
+
+  override func resetCursorRects() {
+    super.resetCursorRects()
+    addCursorRect(bounds, cursor: .openHand)
+  }
+
+  override func hitTest(_: NSPoint) -> NSView? {
+    self
   }
 }

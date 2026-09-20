@@ -6,12 +6,11 @@
 //
 
 import AppKit
-import XCTest
 @testable import Snapzy
+import XCTest
 
 @MainActor
 final class RecordingConfigurationTests: XCTestCase {
-
   private var defaults: UserDefaults!
 
   override func setUp() async throws {
@@ -143,9 +142,110 @@ final class RecordingConfigurationTests: XCTestCase {
     let selectionRect = CGRect(x: 100, y: 200, width: 800, height: 600)
 
     let frame = RecordingCameraOverlayWindow.overlayFrame(in: selectionRect)
+    let expectedBottomRight = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .bottomRight,
+      recordingRect: selectionRect,
+      overlaySize: frame.size,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
 
     XCTAssertTrue(selectionRect.contains(frame))
     XCTAssertEqual(frame.width / frame.height, RecordingCameraOverlayWindow.aspectRatio, accuracy: 0.001)
+    XCTAssertEqual(frame.origin, expectedBottomRight)
+  }
+
+  func testRecordingCameraOverlayPlacement_resolvesAllEightSnapPoints() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+
+    for snapPoint in RecordingCameraOverlaySnapPoint.allCases {
+      let target = RecordingCameraOverlayPlacement.targetOrigin(
+        for: snapPoint,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+      let proposedOrigin = CGPoint(x: target.x + 12, y: target.y - 10)
+
+      let resolved = RecordingCameraOverlayPlacement.resolvedOrigin(
+        for: proposedOrigin,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+
+      XCTAssertEqual(resolved.x, target.x, accuracy: 0.001, "Failed to snap to \(snapPoint)")
+      XCTAssertEqual(resolved.y, target.y, accuracy: 0.001, "Failed to snap to \(snapPoint)")
+    }
+  }
+
+  func testRecordingCameraOverlayPlacement_snapsAtThresholdButNotBeyondIt() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+    let target = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .topLeft,
+      recordingRect: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    let atThreshold = CGPoint(
+      x: target.x + RecordingCameraOverlayPlacement.snapThreshold,
+      y: target.y
+    )
+    let beyondThreshold = CGPoint(
+      x: target.x + RecordingCameraOverlayPlacement.snapThreshold + 0.1,
+      y: target.y
+    )
+
+    XCTAssertEqual(
+      RecordingCameraOverlayPlacement.snapPoint(
+        for: atThreshold,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      ),
+      .topLeft
+    )
+    XCTAssertNil(
+      RecordingCameraOverlayPlacement.snapPoint(
+        for: beyondThreshold,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+    )
+  }
+
+  func testRecordingCameraOverlayPlacement_preservesFreeDragAndClampsToRecordingRect() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+    let freeDragOrigin = CGPoint(x: 380, y: 470)
+
+    XCTAssertEqual(
+      RecordingCameraOverlayPlacement.resolvedOrigin(
+        for: freeDragOrigin,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      ),
+      freeDragOrigin
+    )
+
+    let bounds = RecordingCameraOverlayPlacement.originBounds(
+      in: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+    let clamped = RecordingCameraOverlayPlacement.resolvedOrigin(
+      for: CGPoint(x: -1_000, y: 1_000),
+      recordingRect: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    XCTAssertEqual(clamped.x, bounds.minX, accuracy: 0.001)
+    XCTAssertEqual(clamped.y, bounds.maxY, accuracy: 0.001)
   }
 
   func testRecordingCameraDeviceProvider_doesNotReplaceMissingCamera() {
