@@ -790,9 +790,6 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
 
-        // Setup annotation overlay (must be after recording starts so window exists)
-        setupAnnotationOverlay(for: rect)
-
         // Setup click highlight overlay (must be after recording starts)
         setupClickHighlightOverlay(for: rect)
 
@@ -801,6 +798,11 @@ final class RecordingCoordinator: ObservableObject {
 
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
+        window.contentView?.layoutSubtreeIfNeeded()
+
+        // Set up annotation after the status bar has a live hosting view. The anchor reporter can
+        // then synchronously seed the current offset, while its later layout updates remain live.
+        setupAnnotationOverlay(for: rect)
         finishRecordingStartAttempt()
 
       } catch let error as RecordingError {
@@ -939,6 +941,10 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
+        window.contentView?.layoutSubtreeIfNeeded()
+        // Keep the retry path in sync with the normal path: the status-bar anchor must exist
+        // before the annotation toolbar is created.
+        setupAnnotationOverlay(for: rect)
         finishRecordingStartAttempt()
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
       } catch let error as RecordingError {
@@ -1301,12 +1307,22 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWin.anchorButtonCenterXOffset = window.annotateButtonCenterXOffset
     annotationToolbarWindow = toolbarWin
 
-    // Update popover anchor offset when SwiftUI layout reports button position
+    // Update popover anchor offset when the status-bar anchor reporter reports button position.
     window.onAnnotateButtonOffsetChanged = { [weak toolbarWin] offset in
       toolbarWin?.anchorButtonCenterXOffset = offset
       if annotationState.isAnnotationEnabled {
-        toolbarWin?.positionRelativeToAnchor()
+        if toolbarWin?.isVisible == true {
+          toolbarWin?.positionRelativeToAnchor()
+        } else {
+          toolbarWin?.showPopover()
+        }
       }
+    }
+
+    // Cover the narrow startup window where annotation was enabled before the popover received
+    // its anchor callback (for example, a global shortcut arriving during recording startup).
+    if annotationState.isAnnotationEnabled {
+      toolbarWin.showPopover()
     }
 
     // Start auto-clear timer

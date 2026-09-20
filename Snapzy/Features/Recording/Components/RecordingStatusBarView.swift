@@ -8,14 +8,56 @@
 //  Layout: [≡] | [● 00:00:00] | [⏸] [✏️] | [↺] | [🗑] | [Stop]
 //
 
+import AppKit
 import SwiftUI
 
-// MARK: - Preference Key for annotate button position
+// MARK: - AppKit anchor reporter
 
-private struct AnnotateButtonCenterXKey: PreferenceKey {
-  static var defaultValue: CGFloat = 0
-  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-    value = nextValue()
+/// A transparent AppKit node is used instead of a SwiftUI PreferenceKey because native Liquid
+/// Glass can isolate preferences emitted from descendants of a glass control/container.
+private final class RecordingToolbarAnchorReportingView: NSView {
+  var onLayout: ((CGFloat) -> Void)?
+  private var lastReportedCenterX: CGFloat?
+
+  override func hitTest(_: NSPoint) -> NSView? {
+    nil
+  }
+
+  override func viewDidMoveToWindow() {
+    super.viewDidMoveToWindow()
+    reportAnchorPosition()
+  }
+
+  override func layout() {
+    super.layout()
+    reportAnchorPosition()
+  }
+
+  func reportAnchorPosition() {
+    guard let contentView = window?.contentView else { return }
+    guard bounds.width > 0, bounds.height > 0 else { return }
+    let frameInContentView = convert(bounds, to: contentView)
+    let centerX = frameInContentView.midX
+    guard centerX.isFinite else { return }
+    guard lastReportedCenterX.map({ abs($0 - centerX) > 0.01 }) ?? true else { return }
+
+    lastReportedCenterX = centerX
+    onLayout?(centerX)
+  }
+}
+
+private struct RecordingToolbarAnchorReporter: NSViewRepresentable {
+  let onLayout: (CGFloat) -> Void
+
+  func makeNSView(context _: Context) -> RecordingToolbarAnchorReportingView {
+    let view = RecordingToolbarAnchorReportingView()
+    view.onLayout = onLayout
+    return view
+  }
+
+  func updateNSView(_ nsView: RecordingToolbarAnchorReportingView, context _: Context) {
+    nsView.onLayout = onLayout
+    nsView.reportAnchorPosition()
   }
 }
 
@@ -28,7 +70,7 @@ struct RecordingStatusBarView: View {
   let onRestart: () -> Void
   let onStop: () -> Void
 
-  /// Reports the center-X of the annotate button in local coordinate space
+  /// Reports the center-X of the annotate button relative to the hosting window's content view.
   var onAnnotateButtonLayout: ((CGFloat) -> Void)?
 
   @State private var indicatorOpacity: Double = 1.0
@@ -84,22 +126,28 @@ struct RecordingStatusBarView: View {
       )
 
       // Annotate toggle button
-      ToolbarIconButton(
-        systemName: annotationState.isAnnotationEnabled
-          ? "pencil.tip.crop.circle.fill"
-          : "pencil.tip.crop.circle",
-        action: { annotationState.isAnnotationEnabled.toggle() },
-        accessibilityLabel: annotationState.isAnnotationEnabled
-          ? L10n.RecordingToolbar.disableAnnotations
-          : L10n.RecordingToolbar.enableAnnotations
-      )
-      .background(
-        GeometryReader { geo in
-          Color.clear.preference(
-            key: AnnotateButtonCenterXKey.self,
-            value: geo.frame(in: .named("statusBar")).midX
-          )
+      // Keep the reporter as a sibling of the button so its AppKit frame is the actual trigger
+      // frame, independent of the button's native Liquid Glass subtree.
+      ZStack {
+        ToolbarIconButton(
+          systemName: annotationState.isAnnotationEnabled
+            ? "pencil.tip.crop.circle.fill"
+            : "pencil.tip.crop.circle",
+          action: { annotationState.isAnnotationEnabled.toggle() },
+          accessibilityLabel: annotationState.isAnnotationEnabled
+            ? L10n.RecordingToolbar.disableAnnotations
+            : L10n.RecordingToolbar.enableAnnotations
+        )
+
+        RecordingToolbarAnchorReporter { centerX in
+          onAnnotateButtonLayout?(centerX)
         }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+      }
+      .frame(
+        width: ToolbarConstants.iconButtonSize,
+        height: ToolbarConstants.iconButtonSize
       )
 
       RecordingToolbarDivider()
@@ -129,7 +177,6 @@ struct RecordingStatusBarView: View {
       .accessibilityLabel(L10n.RecordingToolbar.stopRecordingAccessibility(recorder.formattedDuration))
       .accessibilityHint(L10n.RecordingToolbar.stopRecordingHint)
     }
-    .coordinateSpace(name: "statusBar")
     .padding(.horizontal, ToolbarConstants.horizontalPadding)
     .padding(.vertical, ToolbarConstants.verticalPadding)
     .liquidGlassGroup(spacing: ToolbarConstants.itemSpacing)
@@ -145,9 +192,6 @@ struct RecordingStatusBarView: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
       }
-    }
-    .onPreferenceChange(AnnotateButtonCenterXKey.self) { centerX in
-      onAnnotateButtonLayout?(centerX)
     }
     .accessibilityElement(children: .contain)
     .accessibilityLabel(L10n.RecordingToolbar.statusBarAccessibility)

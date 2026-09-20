@@ -360,6 +360,7 @@ final class RecordingToolbarWindow: NSWindow {
   ///   it mid-recording stays in sync with the menu bar stop control.
   func showRecordingStatusBar(recorder: ScreenRecordingManager, visible: Bool = true) {
     mode = .recording
+    annotateButtonCenterXOffset = 0
 
     let view = RecordingStatusBarView(
       recorder: recorder,
@@ -370,11 +371,10 @@ final class RecordingToolbarWindow: NSWindow {
       onRestart: { [weak self] in self?.onRestart?() },
       onStop: { [weak self] in self?.onStop?() },
       onAnnotateButtonLayout: { [weak self] centerX in
-        // centerX is relative to the SwiftUI view's coordinate space
-        // Add horizontal padding to get offset relative to window edge
-        let offset = centerX + ToolbarConstants.horizontalPadding
-        self?.annotateButtonCenterXOffset = offset
-        self?.onAnnotateButtonOffsetChanged?(offset)
+        // The reporter converts the actual trigger frame into the hosting content view, whose
+        // origin is the same as this borderless window's content origin.
+        self?.annotateButtonCenterXOffset = centerX
+        self?.onAnnotateButtonOffsetChanged?(centerX)
       }
     )
 
