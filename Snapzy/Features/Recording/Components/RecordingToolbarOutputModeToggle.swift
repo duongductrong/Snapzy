@@ -78,6 +78,10 @@ struct RecordButtonWithBadge: View {
       .foregroundColor(.primary.opacity(state.isPreparingToRecord ? 0.65 : 1))
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
+      // The glass chrome is applied to the outer button so it can merge with the adjacent
+      // output-mode control. Keep the label's hit shape explicit as well; Button otherwise
+      // falls back to the text and ignores the padded pill area.
+      .contentShape(ToolbarConstants.textButtonShape)
     }
     .buttonStyle(.plain)
     .disabled(state.isPreparingToRecord)
