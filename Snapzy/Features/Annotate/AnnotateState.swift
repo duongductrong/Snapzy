@@ -6411,12 +6411,9 @@ nonisolated enum AnnotateTextLayout {
   static let maxWidth: CGFloat = 2000
   static let maxHeight: CGFloat = 2000
   static let textFontOptions: [String] = [
-    "",
-    "Bradley Hand",
-    "Chalkboard SE",
-    "Marker Felt",
-    "Noteworthy",
-    "Menlo",
+    "",              // System Default
+    "Bradley Hand",  // 手写风格
+    "Menlo",         // 等宽 / 代码风格
   ]
 
   static func font(size: CGFloat, fontName: String? = nil) -> NSFont {

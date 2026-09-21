@@ -8279,6 +8279,29 @@
         }
       }
     },
+    "annotate.text-font-size": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Font Size"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字号"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "字號"
+          }
+        }
+      }
+    },
     "annotate.text-font-default": {
       "extractionState": "manual",
       "localizations": {

@@ -1890,22 +1890,12 @@ private struct InlineAreaPropertiesBar: View {
 
           if state.quickPropertiesSupportsTextBackground {
             if state.quickTextPresentation != .plain {
-              InlineAreaColorControl(
-                title: L10n.AnnotateUI.textBackgroundColor,
-                selectedColor: state.quickTextBackgroundBinding,
+              InlineAreaTextFillColorControl(
+                backgroundColorBinding: state.quickTextBackgroundBinding,
+                borderColorBinding: state.quickTextBorderColorBinding,
                 colors: textBackgroundColors,
-                role: .textBackground,
                 sameColorActive: state.quickTextUsesSameColorAsBackground,
-                popoverEdge: popoverEdge
-              )
-            }
-            if state.quickTextPresentation != .plain {
-              InlineAreaColorControl(
-                title: L10n.AnnotateUI.textBorderColor,
-                selectedColor: state.quickTextBorderColorBinding,
-                colors: textBackgroundColors,
-                role: .textBackground,
-                sameColorActive: false,
+                showsBorderSection: true,
                 popoverEdge: popoverEdge
               )
             }
@@ -1995,7 +1985,7 @@ private struct InlineAreaPropertiesBar: View {
 
           if state.quickPropertiesSupportsTextFontSize {
             InlineAreaSliderControl(
-              title: L10n.Common.size,
+              title: L10n.AnnotateUI.textFontSize,
               icon: "textformat.size",
               value: state.quickTextFontSizeBinding,
               range: 12 ... 72,
@@ -2024,7 +2014,8 @@ private struct InlineAreaPropertiesBar: View {
           }
 
           if state.quickPropertiesSupportsCornerRadius,
-             !state.quickPropertiesSupportsTextPresentation || state.quickTextPresentation == .plain || state.quickTextHasBackground {
+             (!state.quickPropertiesSupportsTextPresentation
+              || (state.quickTextPresentation != .plain && state.quickTextHasBackground)) {
             InlineAreaSliderControl(
               title: L10n.Common.corners,
               icon: "roundedbottom.horizontal",
@@ -2929,6 +2920,103 @@ private struct InlineAreaTextFontControl: View {
       .menuStyle(.borderlessButton)
       .fixedSize()
     }
+  }
+}
+
+private struct InlineAreaTextFillColorControl: View {
+  @Binding var backgroundColorBinding: Color
+  @Binding var borderColorBinding: Color
+  let colors: [Color]
+  let sameColorActive: Bool
+  let showsBorderSection: Bool
+  let popoverEdge: Edge
+
+  @State private var showsPopover = false
+
+  private let columns = Array(repeating: GridItem(.fixed(24), spacing: 8), count: 5)
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.textBackgroundColor) {
+      Button {
+        showsPopover.toggle()
+      } label: {
+        HStack(spacing: 5) {
+          InlineAreaColorSwatch(color: backgroundColorBinding, isSelected: false, size: 15)
+          Image(systemName: "chevron.down")
+            .font(.system(size: 8, weight: .bold))
+            .foregroundColor(InlineAreaChrome.secondaryText)
+        }
+        .frame(width: 40, height: InlineAreaChrome.propertyControlHeight)
+        .background(
+          RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+            .fill(InlineAreaChrome.itemBackground)
+        )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.textBackgroundColor)
+      .popover(isPresented: $showsPopover, arrowEdge: popoverEdge) {
+        VStack(alignment: .leading, spacing: 10) {
+          Text(L10n.AnnotateUI.textBackgroundColor)
+            .font(Typography.labelSmall)
+            .foregroundColor(.secondary)
+
+          LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
+              paletteButton(color: color, selectedColor: backgroundColorBinding) {
+                backgroundColorBinding = color
+              }
+            }
+          }
+
+          if showsBorderSection {
+            Divider()
+
+            Text(L10n.AnnotateUI.textBorderColor)
+              .font(Typography.labelSmall)
+              .foregroundColor(.secondary)
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+              ForEach(Array(colors.enumerated()), id: \.offset) { _, color in
+                paletteButton(color: color, selectedColor: borderColorBinding) {
+                  borderColorBinding = color
+                }
+              }
+            }
+          }
+
+          if sameColorActive {
+            Label(L10n.AnnotateUI.textSameColorWarning, systemImage: "exclamationmark.triangle.fill")
+              .font(Typography.labelSmall)
+              .foregroundColor(.orange)
+              .lineLimit(2)
+              .fixedSize(horizontal: false, vertical: true)
+              .padding(8)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(Color.orange.opacity(0.12))
+              )
+          }
+        }
+        .padding(12)
+        .frame(width: 196)
+      }
+    }
+  }
+
+  private func paletteButton(
+    color: Color,
+    selectedColor: Color,
+    action: @escaping () -> Void
+  ) -> some View {
+    InlineAreaColorSwatch(
+      color: color,
+      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
+      size: 18
+    )
+    .frame(width: 22, height: 22)
+    .contentShape(Rectangle())
+    .onTapGesture(perform: action)
   }
 }
 

@@ -133,8 +133,8 @@ private enum QuickPropertiesDensity {
 
   var iconControlWidth: CGFloat {
     switch self {
-    case .regular: return 128
-    case .compact: return 112
+    case .regular: return 108
+    case .compact: return 92
     }
   }
 
@@ -200,9 +200,14 @@ struct AnnotateQuickPropertiesBar: View {
       || showCornerRadius
       || showLineStyle
       || showArrowStyle
-    let shouldGateTextCornersByBackground = (showTextBackground || showTextPresentation) && state.quickTextPresentation != .plain
-    let showTextCorners = showCornerRadius
-      && (!shouldGateTextCornersByBackground || (showTextBackground && state.quickTextHasBackground))
+    let showTextCorners: Bool
+    if showTextPresentation {
+      showTextCorners = showCornerRadius
+        && state.quickTextPresentation != .plain
+        && state.quickTextHasBackground
+    } else {
+      showTextCorners = showCornerRadius
+    }
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
     let hasBeforeTextBackground = showStrokeColor || showFill
@@ -272,7 +277,7 @@ struct AnnotateQuickPropertiesBar: View {
       activePropertySlot(
         isVisible: showStrokeColor,
         isEnabled: state.quickPropertiesSupportsStrokeColor,
-        showsLeadingDivider: false,
+        showsLeadingDivider: showTextPresentation,
         width: nil
       ) {
         let isTextColorControl = state.quickPropertiesSupportsTextPresentation
@@ -310,39 +315,22 @@ struct AnnotateQuickPropertiesBar: View {
         showsLeadingDivider: hasBeforeTextBackground,
         width: nil
       ) {
-        QuickPropertiesColorPopoverControl(
-          title: L10n.AnnotateUI.textBackgroundColor,
-          selectedColor: state.quickTextBackgroundBinding,
-          colors: textBackgroundColors,
-          role: .textBackground,
-          quickColorLimit: density == .regular ? 3 : 1,
+        QuickTextFillPopoverControl(
+          backgroundColorBinding: state.quickTextBackgroundBinding,
+          borderColorBinding: state.quickTextBorderColorBinding,
+          backgroundColors: textBackgroundColors,
           sameColorActive: state.quickTextUsesSameColorAsBackground,
-          groupSpacing: density.groupSpacing
-        )
-      }
-
-      activePropertySlot(
-        isVisible: showTextBackground && state.quickTextPresentation != .plain,
-        isEnabled: state.quickPropertiesSupportsTextBackground,
-        showsLeadingDivider: showTextBackground,
-        width: nil
-      ) {
-        QuickPropertiesColorPopoverControl(
-          title: L10n.AnnotateUI.textBorderColor,
-          selectedColor: state.quickTextBorderColorBinding,
-          colors: textBackgroundColors,
-          role: .textBackground,
-          quickColorLimit: density == .regular ? 3 : 1,
-          sameColorActive: false,
-          groupSpacing: density.groupSpacing
+          showsBorderSection: state.quickTextPresentation != .plain,
+          groupSpacing: density.groupSpacing,
+          quickColorLimit: density == .regular ? 3 : 1
         )
       }
 
       activePropertySlot(
         isVisible: showTextPresentation,
         isEnabled: state.quickPropertiesSupportsTextPresentation,
-        showsLeadingDivider: false,
-        width: 156
+        showsLeadingDivider: true,
+        width: density == .regular ? 136 : 108
       ) {
         QuickTextFontControl(state: state, groupSpacing: density.groupSpacing)
       }
@@ -493,15 +481,14 @@ struct AnnotateQuickPropertiesBar: View {
 
       activePropertySlot(
         isVisible: showTextCorners,
-        isEnabled: state.quickPropertiesSupportsCornerRadius && (!shouldGateTextCornersByBackground || state.quickTextHasBackground),
+        isEnabled: state.quickPropertiesSupportsCornerRadius,
         showsLeadingDivider: hasBeforeCornerRadius,
         width: density.cornerControlWidth
       ) {
         QuickCornerRadiusControl(
           value: state.quickCornerRadiusBinding,
           sliderWidth: density.sliderWidth,
-          groupSpacing: density.groupSpacing,
-          isEnabled: !shouldGateTextCornersByBackground || state.quickTextHasBackground
+          groupSpacing: density.groupSpacing
         )
       }
 
@@ -1520,7 +1507,7 @@ private struct QuickTextFontSizeControl: View {
   let groupSpacing: CGFloat
 
   var body: some View {
-    QuickPropertiesGroup(title: L10n.Common.size, spacing: groupSpacing) {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.textFontSize, spacing: groupSpacing) {
       HStack(spacing: 6) {
         Image(systemName: "textformat.size")
           .font(.system(size: 10))
@@ -2187,5 +2174,102 @@ private struct QuickPropertiesDivider: View {
     Rectangle()
       .fill(Color(nsColor: .separatorColor))
       .frame(width: 1, height: 24)
+  }
+}
+
+private struct QuickTextFillPopoverControl: View {
+  @Binding var backgroundColorBinding: Color
+  @Binding var borderColorBinding: Color
+  let backgroundColors: [Color]
+  let sameColorActive: Bool
+  let showsBorderSection: Bool
+  let groupSpacing: CGFloat
+  let quickColorLimit: Int
+
+  @State private var showsPopover = false
+
+  private let columns = Array(repeating: GridItem(.fixed(24), spacing: 8), count: 5)
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.textBackgroundColor, spacing: groupSpacing) {
+      Button {
+        showsPopover = true
+      } label: {
+        QuickPropertiesColorSwatch(color: backgroundColorBinding, isSelected: false, size: 16)
+          .frame(width: 42, height: 26)
+          .background(
+            RoundedRectangle(cornerRadius: 7)
+              .fill(SidebarColors.itemDefault)
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: 7)
+              .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.textBackgroundColor)
+      .popover(isPresented: $showsPopover, arrowEdge: .bottom) {
+        VStack(alignment: .leading, spacing: 10) {
+          Text(L10n.AnnotateUI.textBackgroundColor)
+            .font(Typography.labelSmall)
+            .foregroundColor(.secondary)
+
+          LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(Array(backgroundColors.enumerated()), id: \.offset) { _, color in
+              paletteButton(color: color, selectedColor: backgroundColorBinding) {
+                backgroundColorBinding = color
+              }
+            }
+          }
+
+          if showsBorderSection {
+            Divider()
+
+            Text(L10n.AnnotateUI.textBorderColor)
+              .font(Typography.labelSmall)
+              .foregroundColor(.secondary)
+
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+              ForEach(Array(backgroundColors.enumerated()), id: \.offset) { _, color in
+                paletteButton(color: color, selectedColor: borderColorBinding) {
+                  borderColorBinding = color
+                }
+              }
+            }
+          }
+
+          if sameColorActive {
+            Label(L10n.AnnotateUI.textSameColorWarning, systemImage: "exclamationmark.triangle.fill")
+              .font(Typography.labelSmall)
+              .foregroundColor(.orange)
+              .lineLimit(2)
+              .fixedSize(horizontal: false, vertical: true)
+              .padding(8)
+              .frame(maxWidth: .infinity, alignment: .leading)
+              .background(
+                RoundedRectangle(cornerRadius: 7)
+                  .fill(Color.orange.opacity(0.12))
+              )
+          }
+        }
+        .padding(12)
+        .frame(width: 196)
+      }
+    }
+  }
+
+  private func paletteButton(
+    color: Color,
+    selectedColor: Color,
+    action: @escaping () -> Void
+  ) -> some View {
+    QuickPropertiesColorSwatch(
+      color: color,
+      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
+      size: 22
+    )
+    .frame(width: 24, height: 24)
+    .contentShape(Rectangle())
+    .onTapGesture(perform: action)
   }
 }

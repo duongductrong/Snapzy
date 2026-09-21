@@ -287,6 +287,8 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     func textDidChange(_ notification: Notification) {
       guard !isApplyingExternalText,
             let textView = notification.object as? NSTextView else { return }
+      // 跳过 IME 候选组合阶段，避免 frame 重算导致候选字换行
+      guard !textView.hasMarkedText() else { return }
       text.wrappedValue = textView.string
     }
 
@@ -296,6 +298,10 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
 
     func textDidEndEditing(_ notification: Notification) {
       guard let textView = notification.object as? UndoIsolatedTextView else { return }
+      // 确保 IME 候选期间积累的文字在结束时同步到 state
+      if text.wrappedValue != textView.string {
+        text.wrappedValue = textView.string
+      }
       textView.onCommit?()
     }
   }

@@ -6276,8 +6276,8 @@ nonisolated enum L10n {
     )
     static let savedTextStyle = string(
       "annotate.saved-text-style",
-      defaultValue: "Saved Text Style",
-      comment: "Label for a saved reusable text style preset"
+      defaultValue: "Presets",
+      comment: "Label for saved reusable text style presets section"
     )
     static let textSameColorWarning = string(
       "annotate.text-same-color-warning",
@@ -6288,6 +6288,11 @@ nonisolated enum L10n {
       "annotate.text-font",
       defaultValue: "Font",
       comment: "Label for the text font control"
+    )
+    static let textFontSize = string(
+      "annotate.text-font-size",
+      defaultValue: "Font Size",
+      comment: "Label for the text annotation font size slider"
     )
     static let textFontDefault = string(
       "annotate.text-font-default",
