@@ -3605,6 +3605,7 @@ final class AnnotateState: ObservableObject {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .text(let currentText) = annotations[index].type else { return }
 
+    autoSizingTextAnnotationIDs.insert(id)
     let currentBounds = annotations[index].bounds
     let newBounds = resizedTextBounds(
       id: id,

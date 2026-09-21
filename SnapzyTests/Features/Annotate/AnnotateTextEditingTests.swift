@@ -169,7 +169,7 @@ final class AnnotateTextEditingTests: XCTestCase {
     XCTAssertLessThan(updated.bounds.width, 300)
   }
 
-  func testManualTextResizeKeepsFixedWidthWhileEditing() throws {
+  func testManualTextResizeDoesNotPinWidthAndTextAutoSizes() throws {
     let state = makeAnnotateState()
     state.sourceImage = NSImage(size: CGSize(width: 600, height: 300))
     let annotation = makeTextAnnotation("")
@@ -183,7 +183,8 @@ final class AnnotateTextEditingTests: XCTestCase {
     state.updateAnnotationText(id: annotation.id, text: "This text should wrap in the width chosen by the user")
 
     let updated = try XCTUnwrap(state.annotations.first)
-    XCTAssertEqual(updated.bounds.width, 180, accuracy: 0.5)
+    XCTAssertNotEqual(updated.bounds.width, 180, accuracy: 0.5)
+    XCTAssertGreaterThan(updated.bounds.width, 140)
   }
 
   func testTextPresentationKeepsTextColorAndRetainsBackgroundChoice() throws {

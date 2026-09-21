@@ -674,13 +674,7 @@ final class DrawingCanvasNSView: NSView {
       ]
 
     case .text:
-      let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
-      var handles: [(ResizeHandle, CGRect)] = [
-        (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY), in: coordinateSpace)),
-        (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY), in: coordinateSpace)),
-        (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY), in: coordinateSpace)),
-        (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY), in: coordinateSpace)),
-      ]
+      var handles: [(ResizeHandle, CGRect)] = []
       if annotation.properties.textPresentation == .callout,
          let tailTarget = annotation.properties.calloutTailTarget {
         let point = coordinateSpace == .canvas ? imageToDisplay(tailTarget) : tailTarget

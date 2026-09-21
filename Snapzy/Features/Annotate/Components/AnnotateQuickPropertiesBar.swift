@@ -152,7 +152,7 @@ struct AnnotateQuickPropertiesBar: View {
 
   private let strokeColors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
   private let fillColors: [Color] = [.clear, .red, .orange, .yellow, .green, .blue, .purple, .white, .black]
-  private let textBackgroundColors: [Color] = [.clear, .white, .black, .yellow, .blue]
+  private let textBackgroundColors: [Color] = [.clear, .white, .black, .red, .orange, .yellow, .green, .blue, .purple, .cyan, .gray, .pink]
   private let selectionStyleTools: [AnnotationToolType] = [.selection, .rectangle, .arrow, .text, .watermark, .highlighter]
 
   private var strokeColorsForActiveTool: [Color] {
@@ -264,7 +264,7 @@ struct AnnotateQuickPropertiesBar: View {
         isVisible: showTextPresentation,
         isEnabled: state.quickPropertiesSupportsTextPresentation,
         showsLeadingDivider: false,
-        width: density.iconControlWidth
+        width: nil
       ) {
         QuickTextPresentationControl(
           buttonWidth: density.controlButtonWidth,
@@ -330,7 +330,7 @@ struct AnnotateQuickPropertiesBar: View {
         isVisible: showTextPresentation,
         isEnabled: state.quickPropertiesSupportsTextPresentation,
         showsLeadingDivider: true,
-        width: density == .regular ? 136 : 108
+        width: nil
       ) {
         QuickTextFontControl(state: state, groupSpacing: density.groupSpacing)
       }
@@ -2188,8 +2188,6 @@ private struct QuickTextFillPopoverControl: View {
 
   @State private var showsPopover = false
 
-  private let columns = Array(repeating: GridItem(.fixed(24), spacing: 8), count: 5)
-
   var body: some View {
     QuickPropertiesGroup(title: L10n.AnnotateUI.textBackgroundColor, spacing: groupSpacing) {
       Button {
@@ -2210,66 +2208,32 @@ private struct QuickTextFillPopoverControl: View {
       .help(L10n.AnnotateUI.textBackgroundColor)
       .popover(isPresented: $showsPopover, arrowEdge: .bottom) {
         VStack(alignment: .leading, spacing: 10) {
-          Text(L10n.AnnotateUI.textBackgroundColor)
-            .font(Typography.labelSmall)
-            .foregroundColor(.secondary)
-
-          LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-            ForEach(Array(backgroundColors.enumerated()), id: \.offset) { _, color in
-              paletteButton(color: color, selectedColor: backgroundColorBinding) {
-                backgroundColorBinding = color
-              }
-            }
-          }
-
+          QuickPropertiesColorPopover(
+            title: L10n.AnnotateUI.textBackgroundColor,
+            selectedColor: $backgroundColorBinding,
+            colors: backgroundColors,
+            role: .textBackground,
+            dismiss: {},
+            showsSameColorWarning: true,
+            sameColorActive: sameColorActive
+          )
           if showsBorderSection {
             Divider()
-
-            Text(L10n.AnnotateUI.textBorderColor)
-              .font(Typography.labelSmall)
-              .foregroundColor(.secondary)
-
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
-              ForEach(Array(backgroundColors.enumerated()), id: \.offset) { _, color in
-                paletteButton(color: color, selectedColor: borderColorBinding) {
-                  borderColorBinding = color
-                }
-              }
-            }
-          }
-
-          if sameColorActive {
-            Label(L10n.AnnotateUI.textSameColorWarning, systemImage: "exclamationmark.triangle.fill")
-              .font(Typography.labelSmall)
-              .foregroundColor(.orange)
-              .lineLimit(2)
-              .fixedSize(horizontal: false, vertical: true)
-              .padding(8)
-              .frame(maxWidth: .infinity, alignment: .leading)
-              .background(
-                RoundedRectangle(cornerRadius: 7)
-                  .fill(Color.orange.opacity(0.12))
-              )
+            QuickPropertiesColorPopover(
+              title: L10n.AnnotateUI.textBorderColor,
+              selectedColor: $borderColorBinding,
+              colors: backgroundColors,
+              role: .textBackground,
+              dismiss: {},
+              showsSameColorWarning: false,
+              sameColorActive: false
+            )
           }
         }
-        .padding(12)
-        .frame(width: 196)
+        .padding(8)
+        .frame(width: 212)
       }
     }
   }
 
-  private func paletteButton(
-    color: Color,
-    selectedColor: Color,
-    action: @escaping () -> Void
-  ) -> some View {
-    QuickPropertiesColorSwatch(
-      color: color,
-      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
-      size: 22
-    )
-    .frame(width: 24, height: 24)
-    .contentShape(Rectangle())
-    .onTapGesture(perform: action)
-  }
 }
