@@ -13,6 +13,7 @@ import XCTest
 @MainActor
 final class RecordingToolbarInteractionTests: XCTestCase {
   func testRecordButton_dispatchesFromPaddedSurface() throws {
+    try skipIfRunningInCI("Requires an onscreen hosting window and synthetic mouse events")
     var didRecord = false
     let state = RecordingToolbarState()
     let host = NSHostingView(
