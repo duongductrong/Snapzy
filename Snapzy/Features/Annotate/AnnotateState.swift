@@ -110,6 +110,10 @@ final class AnnotateState: ObservableObject {
     var watermarkStyle: String
     var spotlightOpacity: CGFloat?
     var lineStyle: String?
+    var textPresentation: String?
+    var calloutTailTarget: CGPoint?
+    var textBorderColor: RGBAColor?
+    var textBorderWidth: CGFloat?
 
     init?(_ properties: AnnotationProperties) {
       guard let strokeColor = RGBAColor(color: properties.strokeColor),
@@ -128,6 +132,10 @@ final class AnnotateState: ObservableObject {
       self.watermarkStyle = properties.watermarkStyle.rawValue
       self.spotlightOpacity = properties.spotlightOpacity
       self.lineStyle = properties.lineStyle.rawValue
+      self.textPresentation = properties.textPresentation.rawValue
+      self.calloutTailTarget = properties.calloutTailTarget
+      self.textBorderColor = RGBAColor(color: properties.textBorderColor)
+      self.textBorderWidth = properties.textBorderWidth > 0 ? properties.textBorderWidth : nil
     }
 
     var annotationProperties: AnnotationProperties {
@@ -142,10 +150,25 @@ final class AnnotateState: ObservableObject {
         opacity: opacity,
         rotationDegrees: rotationDegrees,
         watermarkStyle: WatermarkStyle(rawValue: watermarkStyle) ?? .single,
-        spotlightOpacity: spotlightOpacity ?? 0.5
+        spotlightOpacity: spotlightOpacity ?? 0.5,
+        textPresentation: textPresentation.flatMap(TextPresentation.init(rawValue:)) ?? .plain,
+        calloutTailTarget: calloutTailTarget,
+        textBorderColor: textBorderColor?.color ?? .clear,
+        textBorderWidth: textBorderWidth ?? 0
       )
     }
   }
+
+  private struct TextStylePresentationPresets: Codable {
+    var label: PersistedAnnotationProperties?
+    var callout: PersistedAnnotationProperties?
+  }
+
+  private struct SavedTextStylePresets: Codable {
+    var presets: [PersistedAnnotationProperties?] = [nil, nil, nil]
+  }
+
+  static let savedTextStylePresetLimit = 3
 
   private static let importedImageMaxCoverage: CGFloat = 0.7
   private static let importedImageCascadeStep: CGFloat = 24
@@ -257,6 +280,10 @@ final class AnnotateState: ObservableObject {
   private var propertySliderGestureUndoSnapshot: AnnotationSnapshot?
   private var sharedAnnotationColor: Color?
   private var sharedAnnotationParameterDefaults = SharedAnnotationParameterDefaults()
+  private var textStylePresentationPresets = TextStylePresentationPresets()
+  private var calloutConversionToast: AppToastHandle?
+  private var savedTextStylePresets = SavedTextStylePresets()
+  @Published private(set) var savedTextStylePresetVersions = [Int](repeating: 0, count: 3)
   /// New text starts as a natural-width line. Resizing it switches that item
   /// to a fixed width so deliberate wrapping is never overwritten while typing.
   private var autoSizingTextAnnotationIDs: Set<UUID> = []
@@ -1505,6 +1532,9 @@ final class AnnotateState: ObservableObject {
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
+    loadTextStylePresentationPresets()
+    loadSavedTextStylePresets()
+    refreshSavedTextStylePresetVersions()
     loadCanvasPresets()
     applyDefaultCanvasPresetForNewImageIfNeeded()
   }
@@ -1531,6 +1561,9 @@ final class AnnotateState: ObservableObject {
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
+    loadTextStylePresentationPresets()
+    loadSavedTextStylePresets()
+    refreshSavedTextStylePresetVersions()
     loadCanvasPresets()
   }
 
@@ -3590,9 +3623,16 @@ final class AnnotateState: ObservableObject {
     }
     annotations[index].bounds = newBounds
     if annotations[index].properties.textPresentation == .callout,
-       let tailTarget = annotations[index].properties.calloutTailTarget,
-       TextBubbleGeometry.isDefaultTail(tailTarget, for: currentBounds, fontSize: annotations[index].properties.fontSize) {
-      annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: newBounds, fontSize: annotations[index].properties.fontSize)
+       let tailTarget = annotations[index].properties.calloutTailTarget {
+      if TextBubbleGeometry.isDefaultTail(tailTarget, for: currentBounds, fontSize: annotations[index].properties.fontSize) {
+        annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: newBounds, fontSize: annotations[index].properties.fontSize)
+      } else {
+        annotations[index].properties.calloutTailTarget = Self.remappedPoint(
+          tailTarget,
+          from: currentBounds,
+          to: newBounds
+        )
+      }
     }
     hasUnsavedChanges = true
   }
@@ -3685,6 +3725,10 @@ final class AnnotateState: ObservableObject {
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
     lineStyle: LineDashStyle? = nil,
+    textPresentationToApply: TextPresentation? = nil,
+    textBorderColor: Color? = nil,
+    textBorderWidth: CGFloat? = nil,
+    fontName: String? = nil,
     recordsUndo: Bool = false
   ) {
     guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
@@ -3705,7 +3749,11 @@ final class AnnotateState: ObservableObject {
       rotationDegrees: rotationDegrees,
       watermarkStyle: watermarkStyle,
       spotlightOpacity: spotlightOpacity,
-      lineStyle: lineStyle
+      lineStyle: lineStyle,
+      textPresentationToApply: textPresentationToApply,
+      textBorderColor: textBorderColor,
+      textBorderWidth: textBorderWidth,
+      fontName: fontName
     ) else { return }
 
     if recordsUndo {
@@ -3741,6 +3789,19 @@ final class AnnotateState: ObservableObject {
           properties: properties,
           currentBounds: currentBounds
         )
+        if properties.textPresentation == .callout,
+           let tailTarget = annotations[index].properties.calloutTailTarget {
+          let remapped = Self.remappedPoint(
+            tailTarget,
+            from: currentBounds,
+            to: annotations[index].bounds
+          )
+          annotations[index].properties.calloutTailTarget = TextBubbleGeometry.resolvedTailTarget(
+            in: annotations[index].bounds,
+            requestedTarget: remapped,
+            fontSize: properties.fontSize
+          )
+        }
       }
     }
     if let strokeColor = colorUpdate.strokeColor {
@@ -3748,6 +3809,15 @@ final class AnnotateState: ObservableObject {
     }
     if let fillColor = colorUpdate.fillColor {
       annotations[index].properties.fillColor = fillColor
+    }
+    if let textBorderColor {
+      annotations[index].properties.textBorderColor = textBorderColor
+    }
+    if let textBorderWidth {
+      annotations[index].properties.textBorderWidth = min(max(textBorderWidth, 0), 8)
+    }
+    if let fontName {
+      annotations[index].properties.fontName = fontName
     }
     if let cornerRadius = cornerRadius {
       annotations[index].properties.cornerRadius = max(0, cornerRadius)
@@ -3766,6 +3836,19 @@ final class AnnotateState: ObservableObject {
     }
     if let lineStyle = lineStyle {
       annotations[index].properties.lineStyle = lineStyle
+    }
+    if let textPresentationToApply {
+      var properties = annotations[index].properties
+      properties.textPresentation = textPresentationToApply
+      if textPresentationToApply != .callout {
+        properties.calloutTailTarget = nil
+      }
+      if textPresentationToApply == .plain {
+        properties.fillColor = .clear
+        properties.textBorderColor = .clear
+        properties.textBorderWidth = 0
+      }
+      annotations[index].properties = properties
     }
 
     // Spotlight dimming paints the full canvas — its opacity edits need a full
@@ -3823,7 +3906,11 @@ final class AnnotateState: ObservableObject {
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
-    lineStyle: LineDashStyle? = nil
+    lineStyle: LineDashStyle? = nil,
+    textPresentationToApply: TextPresentation? = nil,
+    textBorderColor: Color? = nil,
+    textBorderWidth: CGFloat? = nil,
+    fontName: String? = nil
   ) -> Bool {
     let properties = annotation.properties
     let colorUpdate = normalizedColorUpdate(
@@ -3870,6 +3957,22 @@ final class AnnotateState: ObservableObject {
     }
     if let lineStyle,
        properties.lineStyle != lineStyle {
+      return true
+    }
+    if let textPresentationToApply,
+       properties.textPresentation != textPresentationToApply {
+      return true
+    }
+    if let textBorderColor,
+       properties.textBorderColor != textBorderColor {
+      return true
+    }
+    if let textBorderWidth,
+       properties.textBorderWidth != min(max(textBorderWidth, 0), 8) {
+      return true
+    }
+    if let fontName,
+       properties.fontName != fontName {
       return true
     }
     return false
@@ -4261,6 +4364,124 @@ final class AnnotateState: ObservableObject {
     defaults.set(data, forKey: PreferencesKeys.annotateToolParameterDefaults)
   }
 
+  private func loadTextStylePresentationPresets() {
+    guard let data = defaults.data(forKey: PreferencesKeys.annotateTextStylePresets),
+          let decoded = try? JSONDecoder().decode(TextStylePresentationPresets.self, from: data)
+    else { return }
+    textStylePresentationPresets = decoded
+  }
+
+  private func persistTextStylePresentationPresets() {
+    guard let data = try? JSONEncoder().encode(textStylePresentationPresets) else { return }
+    defaults.set(data, forKey: PreferencesKeys.annotateTextStylePresets)
+  }
+
+  private func loadSavedTextStylePresets() {
+    guard let data = defaults.data(forKey: PreferencesKeys.annotateSavedTextStylePresets),
+          let decoded = try? JSONDecoder().decode(SavedTextStylePresets.self, from: data)
+    else { return }
+    savedTextStylePresets = decoded
+  }
+
+  private func persistSavedTextStylePresets() {
+    guard let data = try? JSONEncoder().encode(savedTextStylePresets) else { return }
+    defaults.set(data, forKey: PreferencesKeys.annotateSavedTextStylePresets)
+  }
+
+  var savedTextStylePresetsCount: Int {
+    savedTextStylePresets.presets.filter { $0 != nil }.count
+  }
+
+  func saveCurrentTextStylePreset() -> Bool {
+    guard let annotation = selectedTextAnnotation else { return false }
+    var properties = annotation.properties
+    properties.calloutTailTarget = nil
+    guard let persisted = PersistedAnnotationProperties(properties) else { return false }
+    let current = sanitizedAnnotationProperties(properties, for: .text)
+
+    if let existingIndex = savedTextStylePresets.presets.indices.first(where: {
+      savedTextStylePreset(at: $0) == current
+    }) {
+      savedTextStylePresets.presets[existingIndex] = persisted
+    } else {
+      savedTextStylePresets.presets.removeLast()
+      savedTextStylePresets.presets.insert(persisted, at: 0)
+    }
+    persistSavedTextStylePresets()
+    refreshSavedTextStylePresetVersions()
+    return true
+  }
+
+  func savedTextStylePreset(at index: Int) -> AnnotationProperties? {
+    guard savedTextStylePresets.presets.indices.contains(index),
+          let persisted = savedTextStylePresets.presets[index] else { return nil }
+    return sanitizedAnnotationProperties(persisted.annotationProperties, for: .text)
+  }
+
+  func isSavedTextStylePresetSelected(at index: Int) -> Bool {
+    guard let selected = selectedTextAnnotation,
+          let preset = savedTextStylePreset(at: index) else { return false }
+    return selected.properties.matchesTextStyle(preset)
+      && AnnotateColorPaletteStore.colorsMatch(selected.properties.strokeColor, preset.strokeColor)
+      && AnnotateColorPaletteStore.colorsMatch(selected.properties.fillColor, preset.fillColor)
+      && AnnotateColorPaletteStore.colorsMatch(selected.properties.textBorderColor, preset.textBorderColor)
+  }
+
+  func applySavedTextStylePreset(at index: Int) {
+    guard let properties = savedTextStylePreset(at: index),
+          let id = selectedTextAnnotation?.id else { return }
+    saveState()
+    if var annotation = annotations.first(where: { $0.id == id }) {
+      let currentBounds = annotation.bounds
+      let currentType = annotation.type
+      annotation.properties.strokeColor = properties.strokeColor
+      annotation.properties.fillColor = properties.fillColor
+      annotation.properties.strokeWidth = properties.strokeWidth
+      annotation.properties.cornerRadius = properties.cornerRadius
+      annotation.properties.fontSize = properties.fontSize
+      annotation.properties.fontName = properties.fontName
+      annotation.properties.opacity = properties.opacity
+      annotation.properties.rotationDegrees = properties.rotationDegrees
+      annotation.properties.lineStyle = properties.lineStyle
+      annotation.properties.textPresentation = properties.textPresentation
+      annotation.properties.textBorderColor = properties.textBorderColor
+      annotation.properties.textBorderWidth = properties.textBorderWidth
+      if properties.textPresentation == .callout {
+        annotation.properties.calloutTailTarget = defaultCalloutTailTarget(for: currentBounds, fontSize: properties.fontSize)
+      } else {
+        annotation.properties.calloutTailTarget = nil
+      }
+      if case .text(let content) = currentType {
+        annotation.bounds = resizedTextBounds(
+          id: id,
+          text: content,
+          properties: annotation.properties,
+          currentBounds: currentBounds
+        )
+      }
+      if let index = annotations.firstIndex(where: { $0.id == id }) {
+        annotations[index] = annotation
+      }
+    }
+    hasUnsavedChanges = true
+    rememberActiveTextStylePresetIfNeeded()
+  }
+
+  func deleteSavedTextStylePreset(at index: Int) {
+    guard savedTextStylePresets.presets.indices.contains(index),
+          savedTextStylePresets.presets[index] != nil else { return }
+    savedTextStylePresets.presets.remove(at: index)
+    savedTextStylePresets.presets.append(nil)
+    persistSavedTextStylePresets()
+    refreshSavedTextStylePresetVersions()
+  }
+
+  private func refreshSavedTextStylePresetVersions() {
+    for index in savedTextStylePresets.presets.indices {
+      savedTextStylePresetVersions[index] += 1
+    }
+  }
+
   private func sanitizedAnnotationProperties(
     _ properties: AnnotationProperties,
     for tool: AnnotationToolType
@@ -4272,6 +4493,7 @@ final class AnnotateState: ObservableObject {
     sanitized.opacity = AnnotationProperties.clampedOpacity(properties.opacity)
     sanitized.rotationDegrees = AnnotationProperties.clampedRotationDegrees(properties.rotationDegrees)
     sanitized.spotlightOpacity = AnnotationProperties.clampedSpotlightOpacity(properties.spotlightOpacity)
+    sanitized.textBorderWidth = min(max(properties.textBorderWidth, 0), 8)
     if tool == .filledRectangle {
       sanitized.fillColor = sanitized.strokeColor
     }
@@ -4466,6 +4688,82 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  private var quickTextPresentationAnchor: TextPresentation {
+    quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties.textPresentation
+      ?? defaultAnnotationProperties(for: quickPropertiesTool).textPresentation
+  }
+
+  private func rememberTextStylePresentationPreset(for presentation: TextPresentation, properties: AnnotationProperties) {
+    guard let persisted = PersistedAnnotationProperties(properties) else { return }
+    switch textStylePresetKey(for: presentation) {
+    case .label:
+      textStylePresentationPresets.label = persisted
+    case .callout:
+      textStylePresentationPresets.callout = persisted
+    case .plain:
+      break
+    }
+    persistTextStylePresentationPresets()
+  }
+
+  private func textStylePresentationPreset(for presentation: TextPresentation) -> AnnotationProperties? {
+    let stored: PersistedAnnotationProperties?
+    switch presentation {
+    case .label:
+      stored = textStylePresentationPresets.label
+    case .callout:
+      stored = textStylePresentationPresets.callout
+    case .plain:
+      stored = nil
+    }
+    guard let stored else { return nil }
+    return sanitizedAnnotationProperties(stored.annotationProperties, for: .text)
+  }
+
+  private func applyTextStylePreset(
+    _ presentation: TextPresentation,
+    to annotation: inout AnnotationItem,
+    keepTail: Bool
+  ) {
+    var resolved = annotation.properties
+    let previousPresentation = resolved.textPresentation
+    rememberTextStylePresentationPreset(for: textStylePresetKey(for: previousPresentation), properties: resolved)
+    let previousTail = resolved.calloutTailTarget
+    resolved.textPresentation = presentation
+    resolved.calloutTailTarget = nil
+    if presentation == .callout, resolved.fillColor == .clear {
+      resolved.fillColor = .black
+    } else if presentation == .label,
+              resolved.fillColor == .clear,
+              AnnotateColorPaletteStore.isClear(resolved.textBorderColor) {
+      resolved.fillColor = .white
+    }
+    if presentation == .callout {
+      if let previousTail, previousPresentation == .label, !annotation.bounds.contains(previousTail) {
+        resolved.calloutTailTarget = TextBubbleGeometry.resolvedTailTarget(
+          in: annotation.bounds,
+          requestedTarget: previousTail,
+          fontSize: resolved.fontSize
+        )
+      } else {
+        resolved.calloutTailTarget = defaultCalloutTailTarget(for: annotation.bounds, fontSize: resolved.fontSize)
+      }
+    }
+    if presentation == .plain {
+      resolved.fillColor = .clear
+      resolved.textBorderColor = .clear
+      resolved.textBorderWidth = 0
+    }
+    annotation.properties = resolved
+  }
+
+  private func textStylePresetKey(for presentation: TextPresentation) -> TextPresentation {
+    presentation
+  }
+
   private func defaultAnnotationProperties(for tool: AnnotationToolType?) -> AnnotationProperties {
     guard let tool else {
       var properties = AnnotationProperties(strokeColor: sharedAnnotationColor ?? .red)
@@ -4619,7 +4917,7 @@ final class AnnotateState: ObservableObject {
   func recommendedTextFontSize() -> CGFloat {
     let canvasSize = effectiveContentBounds.size
     let shortSide = max(min(canvasSize.width, canvasSize.height), 1)
-    let suggested = shortSide * 0.026
+    let suggested = shortSide * 0.034
     let stepped = (suggested / 2).rounded() * 2
     return min(max(stepped, 16), 36)
   }
@@ -4640,7 +4938,9 @@ final class AnnotateState: ObservableObject {
     rotationDegrees: CGFloat? = nil,
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
-    lineStyle: LineDashStyle? = nil
+    lineStyle: LineDashStyle? = nil,
+    textBorderColor: Color? = nil,
+    textBorderWidth: CGFloat? = nil
   ) {
     var properties = defaultAnnotationProperties(for: tool)
 
@@ -4682,6 +4982,12 @@ final class AnnotateState: ObservableObject {
     }
     if let lineStyle = lineStyle {
       properties.lineStyle = lineStyle
+    }
+    if let textBorderColor {
+      properties.textBorderColor = textBorderColor
+    }
+    if let textBorderWidth {
+      properties.textBorderWidth = min(max(textBorderWidth, 0), 8)
     }
 
     let sanitized = sanitizedAnnotationProperties(properties, for: tool)
@@ -4764,6 +5070,85 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  var quickPropertiesSupportsTextCorners: Bool {
+    quickPropertiesSupportsCornerRadius && quickTextHasBackground
+  }
+
+  /// True when the current text selection or text tool default has a visible
+  /// background, so corner radius controls stay meaningful.
+  var quickTextHasBackground: Bool {
+    guard quickPropertiesSupportsTextBackground else { return false }
+    let item = quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties
+      ?? defaultAnnotationProperties(for: quickPropertiesTool)
+    let hasFill = !AnnotateColorPaletteStore.isClear(item.fillColor)
+    let hasBorder = !AnnotateColorPaletteStore.isClear(item.textBorderColor) && item.textBorderWidth > 0
+    return hasFill || hasBorder
+  }
+
+  var quickTextHasVisibleBorder: Bool {
+    guard quickPropertiesSupportsTextBackground else { return false }
+    let item = quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties
+      ?? defaultAnnotationProperties(for: quickPropertiesTool)
+    return !AnnotateColorPaletteStore.isClear(item.textBorderColor) && item.textBorderWidth > 0
+  }
+
+  /// Estimated contrast between the active text color and its background.
+  /// Used for an at-a-glance readability hint (WCAG-style relative luminance).
+  var quickTextContrastRatio: CGFloat {
+    guard let textRGBA = RGBAColor(color: quickTextStrokeColor),
+          let backgroundRGBA = RGBAColor(color: quickTextBackgroundForContrast) else {
+      return 1
+    }
+    let textLuminance = Self.relativeLuminance(red: textRGBA.red, green: textRGBA.green, blue: textRGBA.blue)
+    let backgroundLuminance = Self.relativeLuminance(red: backgroundRGBA.red, green: backgroundRGBA.green, blue: backgroundRGBA.blue)
+    let lighter = max(textLuminance, backgroundLuminance)
+    let darker = min(textLuminance, backgroundLuminance)
+    return lighter == 0 ? 21 : (lighter + 0.05) / (darker + 0.05)
+  }
+
+  /// True when the active text selection uses the same color for text and its
+  /// visible background, which makes the label impossible to read.
+  var quickTextUsesSameColorAsBackground: Bool {
+    guard quickTextHasBackground else { return false }
+    let background = quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties.fillColor
+      ?? defaultAnnotationProperties(for: quickPropertiesTool).fillColor
+    return AnnotateColorPaletteStore.colorsMatch(quickTextStrokeColor, background)
+      || quickTextContrastRatio < 1.75
+  }
+
+  var quickTextStrokeColor: Color {
+    quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties.strokeColor
+      ?? defaultAnnotationProperties(for: quickPropertiesTool).strokeColor
+  }
+
+  private var quickTextBackgroundForContrast: Color {
+    let background = quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    }).first?.properties.fillColor
+      ?? defaultAnnotationProperties(for: quickPropertiesTool).fillColor
+    return AnnotateColorPaletteStore.isClear(background) ? .white : background
+  }
+
+  nonisolated static func relativeLuminance(red: Double, green: Double, blue: Double) -> Double {
+    func channel(_ value: Double) -> Double {
+      value <= 0.03928 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue)
+  }
+
   /// Marks a sidebar property slider drag as one undo gesture. The pre-gesture
   /// snapshot is pushed once on the first actual change; a drag that changes
   /// nothing records no undo entry.
@@ -4796,6 +5181,10 @@ final class AnnotateState: ObservableObject {
     watermarkStyle: WatermarkStyle? = nil,
     spotlightOpacity: CGFloat? = nil,
     lineStyle: LineDashStyle? = nil,
+    textPresentationToApply: TextPresentation? = nil,
+    textBorderColor: Color? = nil,
+    textBorderWidth: CGFloat? = nil,
+    fontName: String? = nil,
     recordsUndo: Bool = false,
     matching predicate: ((AnnotationType) -> Bool)? = nil
   ) -> Bool {
@@ -4816,7 +5205,11 @@ final class AnnotateState: ObservableObject {
         rotationDegrees: rotationDegrees,
         watermarkStyle: watermarkStyle,
         spotlightOpacity: spotlightOpacity,
-        lineStyle: lineStyle
+        lineStyle: lineStyle,
+        textPresentationToApply: textPresentationToApply,
+        textBorderColor: textBorderColor,
+        textBorderWidth: textBorderWidth,
+        fontName: fontName
       )
     })
 
@@ -4841,7 +5234,11 @@ final class AnnotateState: ObservableObject {
         rotationDegrees: rotationDegrees,
         watermarkStyle: watermarkStyle,
         spotlightOpacity: spotlightOpacity,
-        lineStyle: lineStyle
+        lineStyle: lineStyle,
+        textPresentationToApply: textPresentationToApply,
+        textBorderColor: textBorderColor,
+        textBorderWidth: textBorderWidth,
+        fontName: fontName
       )
     }
     return true
@@ -4995,11 +5392,7 @@ final class AnnotateState: ObservableObject {
   }
 
   var quickTextPresentation: TextPresentation {
-    quickSelectionTargets(matching: {
-      if case .text = $0 { return true }
-      return false
-    }).first?.properties.textPresentation
-      ?? defaultAnnotationProperties(for: quickPropertiesTool).textPresentation
+    quickTextPresentationAnchor
   }
 
   func setTextPresentation(_ presentation: TextPresentation) {
@@ -5010,40 +5403,51 @@ final class AnnotateState: ObservableObject {
 
     guard !selected.isEmpty else {
       guard quickPropertiesTool == .text else { return }
-      var properties = defaultAnnotationProperties(for: .text)
-      properties.textPresentation = presentation
-      properties.calloutTailTarget = nil
-      if presentation != .plain, properties.fillColor == .clear {
-        properties.fillColor = .black
+      let current = defaultAnnotationProperties(for: .text)
+      rememberTextStylePresentationPreset(for: textStylePresetKey(for: current.textPresentation), properties: current)
+      var next = current
+      next.textPresentation = presentation
+      next.calloutTailTarget = nil
+      if presentation == .callout {
+        if next.fillColor == .clear {
+          next.fillColor = .black
+        }
+        next.calloutTailTarget = defaultCalloutTailTarget(
+          for: activeAnnotationBounds,
+          fontSize: next.fontSize
+        )
+      } else if presentation == .label,
+                next.fillColor == .clear,
+                AnnotateColorPaletteStore.isClear(next.textBorderColor) {
+        next.fillColor = .white
+      } else if presentation == .plain {
+        next.fillColor = .clear
+        next.textBorderColor = .clear
+        next.textBorderWidth = 0
       }
-      annotationToolProperties[.text] = properties
+      annotationToolProperties[.text] = next
+      persistAnnotationToolProperties()
+      rememberTextStylePresentationPreset(for: presentation, properties: next)
       return
     }
 
     saveState()
     for annotation in selected {
       guard let index = annotations.firstIndex(where: { $0.id == annotation.id }) else { continue }
-      annotations[index].properties.textPresentation = presentation
-      if presentation == .plain {
-        annotations[index].properties.calloutTailTarget = nil
-      } else if presentation == .callout {
-        annotations[index].properties.calloutTailTarget = annotations[index].properties.calloutTailTarget
-          ?? defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
-      } else {
-        annotations[index].properties.calloutTailTarget = nil
-      }
-      if presentation != .plain, annotations[index].properties.fillColor == .clear {
-        annotations[index].properties.fillColor = .black
-      }
+      applyTextStylePreset(
+        presentation,
+        to: &annotations[index],
+        keepTail: false
+      )
     }
     hasUnsavedChanges = true
+    rememberActiveTextStylePresetIfNeeded()
   }
 
   func prepareTextCalloutTail(for id: UUID) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .text = annotations[index].type,
-          annotations[index].properties.textPresentation == .callout,
-          annotations[index].properties.calloutTailTarget == nil else { return }
+          annotations[index].properties.textPresentation == .callout else { return }
     annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
   }
 
@@ -5051,16 +5455,53 @@ final class AnnotateState: ObservableObject {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .text = annotations[index].type,
           annotations[index].properties.textPresentation == .callout else { return }
-    annotations[index].properties.calloutTailTarget = TextBubbleGeometry.resolvedTailTarget(
+    let resolved = TextBubbleGeometry.resolvedTailTarget(
       in: annotations[index].bounds,
       requestedTarget: target,
       fontSize: annotations[index].properties.fontSize
     )
-    hasUnsavedChanges = true
+    if annotations[index].bounds.contains(resolved) {
+      annotations[index].properties.textPresentation = .label
+      annotations[index].properties.calloutTailTarget = nil
+      showCalloutConvertedToLabelToast()
+      saveState()
+      return
+    }
+    annotations[index].properties.calloutTailTarget = resolved
+    if !isApplyingPropertyEdit {
+      hasUnsavedChanges = true
+    }
+  }
+
+  private func showCalloutConvertedToLabelToast() {
+    if let toast = calloutConversionToast {
+      AppToastManager.shared.dismiss(toast)
+    }
+    calloutConversionToast = AppToastManager.shared.show(
+      message: L10n.AnnotateUI.calloutConvertedToLabelNotice,
+      style: .info,
+      position: .bottomCenter,
+      variant: .compact
+    )
   }
 
   private func defaultCalloutTailTarget(for bounds: CGRect, fontSize: CGFloat) -> CGPoint {
     TextBubbleGeometry.defaultTailTarget(for: bounds, fontSize: fontSize)
+  }
+
+  private static func remappedPoint(
+    _ point: CGPoint,
+    from oldBounds: CGRect,
+    to newBounds: CGRect
+  ) -> CGPoint {
+    func remap(_ value: CGFloat, oldMin: CGFloat, oldSize: CGFloat, newMin: CGFloat, newSize: CGFloat) -> CGFloat {
+      guard oldSize > 0, newSize > 0 else { return newMin }
+      return newMin + (value - oldMin) / oldSize * newSize
+    }
+    return CGPoint(
+      x: remap(point.x, oldMin: oldBounds.minX, oldSize: oldBounds.width, newMin: newBounds.minX, newSize: newBounds.width),
+      y: remap(point.y, oldMin: oldBounds.minY, oldSize: oldBounds.height, newMin: newBounds.minY, newSize: newBounds.height)
+    )
   }
 
   var quickTextFontSizeBinding: Binding<CGFloat> {
@@ -5080,7 +5521,7 @@ final class AnnotateState: ObservableObject {
       set: { [weak self] newSize in
         guard let self else { return }
         let clampedSize = min(max(newSize, 12), 72)
-        if !self.updateQuickSelectionProperties(
+        let didUpdateSelection = self.updateQuickSelectionProperties(
           fontSize: clampedSize,
           recordsUndo: true,
           matching: {
@@ -5091,8 +5532,17 @@ final class AnnotateState: ObservableObject {
               return false
             }
           }
-        ) {
+        )
+        if didUpdateSelection {
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else {
           self.rememberAnnotationFontSize(clampedSize, for: self.quickPropertiesTool)
+          if self.quickPropertiesTool == .text {
+            self.rememberTextStylePresentationPreset(
+              for: self.quickTextPresentation,
+              properties: self.defaultAnnotationProperties(for: .text)
+            )
+          }
         }
       }
     )
@@ -5102,28 +5552,261 @@ final class AnnotateState: ObservableObject {
     Binding(
       get: { [weak self] in
         guard let self else { return .clear }
-        return self.quickSelectionTargets(matching: {
+        let color = self.quickSelectionTargets(matching: {
           if case .text = $0 { return true }
           return false
         }).first?.properties.fillColor
           ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).fillColor
+        if !AnnotateColorPaletteStore.isClear(color),
+           self.quickTextPresentation == .plain {
+          return .clear
+        }
+        return color
       },
       set: { [weak self] newColor in
         guard let self else { return }
-        if !self.updateQuickSelectionProperties(
+        let newIsClear = AnnotateColorPaletteStore.isClear(newColor)
+        let previousColor = self.quickSelectionTargets(matching: {
+          if case .text = $0 { return true }
+          return false
+        }).first?.properties.strokeColor ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).strokeColor
+        let wasContrastWarningActive = self.quickTextUsesSameColorAsBackground
+        let didUpdateSelection = self.updateQuickSelectionProperties(
           fillColor: newColor,
           recordsUndo: true,
           matching: {
             if case .text = $0 { return true }
             return false
           }
-        ) {
-          if let tool = self.quickPropertiesTool {
-            self.updateDefaultAnnotationProperties(for: tool, fillColor: newColor)
+        )
+        if didUpdateSelection, newIsClear {
+          let target: TextPresentation = self.quickTextHasVisibleBorder ? .label : .plain
+          if self.quickTextPresentation != target {
+            self.updateQuickSelectionProperties(
+              textPresentationToApply: target,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
           }
+        }
+        if didUpdateSelection {
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else {
+          if let tool = self.quickPropertiesTool {
+            if newIsClear {
+              var defaults = self.defaultAnnotationProperties(for: tool)
+              defaults.fillColor = .clear
+              if self.quickTextHasVisibleBorder {
+                defaults.textPresentation = .label
+              } else {
+                defaults.textPresentation = .plain
+                defaults.textBorderColor = .clear
+                defaults.textBorderWidth = 0
+              }
+              self.annotationToolProperties[tool] = defaults
+              self.persistAnnotationToolProperties()
+            } else {
+              self.updateDefaultAnnotationProperties(for: tool, fillColor: newColor)
+            }
+            self.rememberTextStylePresentationPreset(
+              for: self.quickTextPresentation,
+              properties: self.defaultAnnotationProperties(for: tool)
+            )
+          }
+        }
+        if !newIsClear,
+           wasContrastWarningActive,
+           !self.quickTextUsesSameColorAsBackground,
+           !AnnotateColorPaletteStore.colorsMatch(self.quickTextStrokeColor, newColor) {
+          let suggested = self.suggestedContrastingTextColor(for: newColor, preferred: previousColor)
+          AppToastManager.shared.show(
+            message: String(format: L10n.AnnotateUI.textContrastImprovedNotice, Self.hexString(for: suggested)),
+            style: .info,
+            position: .bottomCenter,
+            variant: .compact
+          )
         }
       }
     )
+  }
+
+  private func rememberActiveTextStylePresetIfNeeded() {
+    guard let presentation = quickTextPresentationForPresetReminder,
+          let annotation = quickSelectionTargets(matching: {
+            if case .text = $0 { return true }
+            return false
+          }).first else { return }
+    rememberTextStylePresentationPreset(for: presentation, properties: annotation.properties)
+
+    var defaults = textStylePresentationPreset(for: presentation) ?? annotation.properties
+    defaults.textPresentation = presentation
+    defaults.calloutTailTarget = nil
+    annotationToolProperties[.text] = sanitizedAnnotationProperties(defaults, for: .text)
+    persistAnnotationToolProperties()
+  }
+
+  var quickTextStrokeColorBinding: Binding<Color> {
+    Binding(
+      get: { [weak self] in
+        self?.quickTextStrokeColor ?? .black
+      },
+      set: { [weak self] newColor in
+        guard let self else { return }
+        let didUpdateSelection = self.updateQuickSelectionProperties(
+          strokeColor: newColor,
+          recordsUndo: true,
+          matching: {
+            if case .text = $0 { return true }
+            return false
+          }
+        )
+        if didUpdateSelection {
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else if let tool = self.quickPropertiesTool {
+          self.updateDefaultAnnotationProperties(for: tool, strokeColor: newColor)
+          self.rememberTextStylePresentationPreset(
+            for: self.quickTextPresentation,
+            properties: self.defaultAnnotationProperties(for: tool)
+          )
+        }
+      }
+    )
+  }
+
+  var quickTextBorderColorBinding: Binding<Color> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return .clear }
+        return self.quickSelectionTargets(matching: {
+          if case .text = $0 { return true }
+          return false
+        }).first?.properties.textBorderColor
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).textBorderColor
+      },
+      set: { [weak self] newColor in
+        guard let self else { return }
+        let didUpdateSelection = self.updateQuickSelectionProperties(
+          textBorderColor: newColor,
+          recordsUndo: true,
+          matching: {
+            if case .text = $0 { return true }
+            return false
+          }
+        )
+        if didUpdateSelection {
+          if !AnnotateColorPaletteStore.isClear(newColor),
+             self.quickTextBorderWidthBinding.wrappedValue <= 0 {
+            self.updateQuickSelectionProperties(
+              textBorderWidth: 2,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
+          }
+          let isVisibleBorder = !AnnotateColorPaletteStore.isClear(newColor) && self.quickTextBorderWidthBinding.wrappedValue > 0
+          if isVisibleBorder, self.quickTextPresentation == .plain {
+            self.updateQuickSelectionProperties(
+              textPresentationToApply: .label,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
+          } else if AnnotateColorPaletteStore.isClear(newColor), !self.quickTextHasBackground, self.quickTextPresentation == .label {
+            self.updateQuickSelectionProperties(
+              textPresentationToApply: .plain,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
+          }
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else if let tool = self.quickPropertiesTool {
+          self.updateDefaultAnnotationProperties(for: tool, fillColor: nil, textBorderColor: newColor)
+          self.rememberTextStylePresentationPreset(
+            for: self.quickTextPresentation,
+            properties: self.defaultAnnotationProperties(for: tool)
+          )
+        }
+      }
+    )
+  }
+
+  var quickTextBorderWidthBinding: Binding<CGFloat> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return 0 }
+        return self.quickSelectionTargets(matching: {
+          if case .text = $0 { return true }
+          return false
+        }).first?.properties.textBorderWidth
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).textBorderWidth
+      },
+      set: { [weak self] newWidth in
+        guard let self else { return }
+        let clampedWidth = min(max(newWidth, 0), 8)
+        self.updateQuickSelectionProperties(
+          textBorderWidth: clampedWidth,
+          recordsUndo: true,
+          matching: {
+            if case .text = $0 { return true }
+            return false
+          }
+        )
+        self.rememberActiveTextStylePresetIfNeeded()
+      }
+    )
+  }
+
+  var quickTextFontNameBinding: Binding<String> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return "" }
+        return self.quickSelectionTargets(matching: {
+          if case .text = $0 { return true }
+          return false
+        }).first?.properties.fontName
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).fontName
+      },
+      set: { [weak self] newFontName in
+        guard let self else { return }
+        let resolvedName = newFontName == "SF Pro" ? "" : newFontName
+        let didUpdateSelection = self.updateQuickSelectionProperties(
+          fontName: resolvedName,
+          recordsUndo: true,
+          matching: {
+            if case .text = $0 { return true }
+            return false
+          }
+        )
+        if didUpdateSelection {
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else if let tool = self.quickPropertiesTool {
+          self.updateDefaultAnnotationProperties(for: tool, fontName: resolvedName)
+          self.rememberTextStylePresentationPreset(
+            for: self.quickTextPresentation,
+            properties: self.defaultAnnotationProperties(for: tool)
+          )
+        }
+      }
+    )
+  }
+
+  private var quickTextPresentationForPresetReminder: TextPresentation? {
+    let selected = quickSelectionTargets(matching: {
+      if case .text = $0 { return true }
+      return false
+    })
+    guard let presentation = selected.first?.properties.textPresentation else { return nil }
+    return presentation
   }
 
   var quickPropertiesSupportsBlurType: Bool {
@@ -5558,15 +6241,39 @@ final class AnnotateState: ObservableObject {
       set: { [weak self] newRadius in
         guard let self else { return }
         let clampedRadius = max(0, newRadius)
-        if !self.updateQuickSelectionProperties(
+        let didUpdateSelection = self.updateQuickSelectionProperties(
           cornerRadius: clampedRadius,
           recordsUndo: true,
           matching: { $0.toolType.supportsQuickCornerRadius }
-        ) {
+        )
+        if didUpdateSelection {
+          self.rememberActiveTextStylePresetIfNeeded()
+        } else {
           self.rememberAnnotationCornerRadius(clampedRadius, for: self.quickPropertiesTool)
+          if self.quickPropertiesTool == .text {
+            self.updateDefaultAnnotationProperties(for: .text, cornerRadius: clampedRadius)
+            self.rememberTextStylePresentationPreset(
+              for: self.quickTextPresentation,
+              properties: self.defaultAnnotationProperties(for: .text)
+            )
+          }
         }
       }
     )
+  }
+
+  private func suggestedContrastingTextColor(for background: Color, preferred: Color) -> Color {
+    guard let backgroundRGBA = RGBAColor(color: background) else { return preferred }
+    let luminance = Self.relativeLuminance(red: backgroundRGBA.red, green: backgroundRGBA.green, blue: backgroundRGBA.blue)
+    return luminance < 0.5 ? .white : .black
+  }
+
+  private static func hexString(for color: Color) -> String {
+    guard let rgba = RGBAColor(color: color) else { return "#FFFFFF" }
+    func byte(_ value: Double) -> Int {
+      min(max(Int((value * 255).rounded()), 0), 255)
+    }
+    return String(format: "#%02X%02X%02X", byte(rgba.red), byte(rgba.green), byte(rgba.blue))
   }
 
   var quickLineStyleBinding: Binding<LineDashStyle> {
@@ -5703,16 +6410,34 @@ nonisolated enum AnnotateTextLayout {
   static let defaultInitialWidth: CGFloat = 200
   static let maxWidth: CGFloat = 2000
   static let maxHeight: CGFloat = 2000
+  static let textFontOptions: [String] = [
+    "",
+    "Bradley Hand",
+    "Chalkboard SE",
+    "Marker Felt",
+    "Noteworthy",
+    "Menlo",
+  ]
 
   static func font(size: CGFloat, fontName: String? = nil) -> NSFont {
     let clampedSize = min(max(size, 8), 144)
 
     if let fontName,
+       !fontName.isEmpty,
        let namedFont = NSFont(name: fontName, size: clampedSize) {
       return namedFont
     }
 
     return NSFont.systemFont(ofSize: clampedSize)
+  }
+
+  static func textFontDisplayName(_ fontName: String?) -> String {
+    guard let fontName,
+          !fontName.isEmpty,
+          let font = NSFont(name: fontName, size: 12) else {
+      return L10n.AnnotateUI.textFontDefault
+    }
+    return font.displayName ?? font.fontName
   }
 
   static func displayFont(size: CGFloat, fontName: String? = nil, scale: CGFloat) -> NSFont {

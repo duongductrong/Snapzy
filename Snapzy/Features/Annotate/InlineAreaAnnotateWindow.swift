@@ -1857,12 +1857,22 @@ private struct InlineAreaPropertiesBar: View {
         HStack(spacing: 8) {
           contextPill
 
+          if state.quickPropertiesSupportsTextPresentation {
+            InlineAreaTextPresentationControl(
+              title: L10n.AnnotateUI.textStyleShort,
+              selectedPresentation: state.quickTextPresentation,
+              onSelect: state.setTextPresentation
+            )
+          }
+
           if state.quickPropertiesSupportsStrokeColor {
+            let isTextColorControl = state.quickPropertiesSupportsTextPresentation
             InlineAreaColorControl(
-              title: colorTitle,
-              selectedColor: state.quickStrokeColorBinding,
+              title: isTextColorControl ? L10n.AnnotateUI.textColor : colorTitle,
+              selectedColor: isTextColorControl ? state.quickTextStrokeColorBinding : state.quickStrokeColorBinding,
               colors: strokeColorsForActiveTool,
               role: .annotationStroke,
+              sameColorActive: state.quickTextUsesSameColorAsBackground,
               popoverEdge: popoverEdge
             )
           }
@@ -1873,18 +1883,36 @@ private struct InlineAreaPropertiesBar: View {
               selectedColor: state.quickFillColorBinding,
               colors: fillColors,
               role: .annotationFill,
+              sameColorActive: false,
               popoverEdge: popoverEdge
             )
           }
 
           if state.quickPropertiesSupportsTextBackground {
-            InlineAreaColorControl(
-              title: L10n.Common.background,
-              selectedColor: state.quickTextBackgroundBinding,
-              colors: textBackgroundColors,
-              role: .textBackground,
-              popoverEdge: popoverEdge
-            )
+            if state.quickTextPresentation != .plain {
+              InlineAreaColorControl(
+                title: L10n.AnnotateUI.textBackgroundColor,
+                selectedColor: state.quickTextBackgroundBinding,
+                colors: textBackgroundColors,
+                role: .textBackground,
+                sameColorActive: state.quickTextUsesSameColorAsBackground,
+                popoverEdge: popoverEdge
+              )
+            }
+            if state.quickTextPresentation != .plain {
+              InlineAreaColorControl(
+                title: L10n.AnnotateUI.textBorderColor,
+                selectedColor: state.quickTextBorderColorBinding,
+                colors: textBackgroundColors,
+                role: .textBackground,
+                sameColorActive: false,
+                popoverEdge: popoverEdge
+              )
+            }
+          }
+
+          if state.quickPropertiesSupportsTextPresentation {
+            InlineAreaTextFontControl(state: state)
           }
 
           if state.quickPropertiesSupportsBlurType {
@@ -1972,12 +2000,31 @@ private struct InlineAreaPropertiesBar: View {
               value: state.quickTextFontSizeBinding,
               range: 12 ... 72,
               step: 1,
-              displayText: "\(Int(state.quickTextFontSizeBinding.wrappedValue.rounded()))",
+              displayText: "\(Int(state.quickTextFontSizeBinding.wrappedValue.rounded()))pt",
               onEditingChanged: state.setQuickPropertiesControlEditing
             )
           }
 
-          if state.quickPropertiesSupportsCornerRadius {
+          if state.quickPropertiesSupportsTextBackground,
+             state.quickTextPresentation != .plain,
+             state.quickTextHasVisibleBorder {
+            InlineAreaSliderControl(
+              title: L10n.AnnotateUI.textBorderWidth,
+              icon: "rectangle.dashed",
+              value: state.quickTextBorderWidthBinding,
+              range: 0 ... 8,
+              step: 1,
+              displayText: "\(Int(state.quickTextBorderWidthBinding.wrappedValue.rounded()))",
+              onEditingChanged: state.setQuickPropertiesControlEditing
+            )
+          }
+
+          if state.quickPropertiesSupportsTextPresentation {
+            InlineAreaSavedTextStylesControl(state: state)
+          }
+
+          if state.quickPropertiesSupportsCornerRadius,
+             !state.quickPropertiesSupportsTextPresentation || state.quickTextPresentation == .plain || state.quickTextHasBackground {
             InlineAreaSliderControl(
               title: L10n.Common.corners,
               icon: "roundedbottom.horizontal",
@@ -2074,6 +2121,7 @@ private struct InlineAreaColorControl: View {
   @Binding var selectedColor: Color
   let colors: [Color]
   let role: AnnotateColorPaletteRole
+  let sameColorActive: Bool
   let popoverEdge: Edge
 
   @ObservedObject private var paletteStore = AnnotateColorPaletteStore.shared
@@ -2104,10 +2152,13 @@ private struct InlineAreaColorControl: View {
             title: title,
             selectedColor: $selectedColor,
             colors: colors,
-            role: role
-          ) {
-            showsPopover = false
-          }
+            role: role,
+            dismiss: {
+              showsPopover = false
+            },
+            showsSameColorWarning: title == L10n.AnnotateUI.textColor || title == L10n.AnnotateUI.textBackgroundColor,
+            sameColorActive: sameColorActive
+          )
         }
 
         ForEach(Array(paletteStore.favoriteColors(for: role).prefix(3)), id: \.self) { color in
@@ -2142,6 +2193,8 @@ private struct InlineAreaColorPopover: View {
   @State private var activeDraftTarget: ColorDraftTarget?
   @State private var originalSelectedColor: Color?
   @State private var showsFavoriteSelectionPopover = false
+  let showsSameColorWarning: Bool
+  let sameColorActive: Bool
 
   private enum ColorDraftTarget {
     case customPalette
@@ -2220,6 +2273,20 @@ private struct InlineAreaColorPopover: View {
       if activeDraftTarget == .customPalette {
         colorPickerPanel
           .padding(.top, 2)
+      }
+
+      if showsSameColorWarning && sameColorActive {
+        Label(L10n.AnnotateUI.textSameColorWarning, systemImage: "exclamationmark.triangle.fill")
+          .font(Typography.labelSmall)
+          .foregroundColor(.orange)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(8)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(
+            RoundedRectangle(cornerRadius: 7)
+              .fill(Color.orange.opacity(0.12))
+          )
       }
     }
     .padding(12)
@@ -2772,6 +2839,159 @@ private struct InlineAreaSegmentedPicker<Item: Identifiable & Equatable>: View {
           }
           .buttonStyle(.plain)
           .help(item[keyPath: tooltip])
+        }
+      }
+    }
+  }
+}
+
+private struct InlineAreaTextPresentationControl: View {
+  let title: String
+  let selectedPresentation: TextPresentation
+  let onSelect: (TextPresentation) -> Void
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: title) {
+      HStack(spacing: 4) {
+        ForEach([TextPresentation.plain, .label, .callout]) { presentation in
+          Button {
+            onSelect(presentation)
+          } label: {
+            Image(systemName: presentation.icon)
+              .font(.system(size: 12, weight: .medium))
+              .foregroundColor(
+                selectedPresentation == presentation
+                  ? InlineAreaChrome.itemSelectedForeground
+                  : InlineAreaChrome.secondaryText
+              )
+              .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
+              .background(
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .fill(
+                    selectedPresentation == presentation
+                      ? InlineAreaChrome.itemSelectedBackground
+                      : InlineAreaChrome.itemBackground
+                  )
+              )
+              .overlay(
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .stroke(
+                    selectedPresentation == presentation
+                      ? InlineAreaChrome.itemSelectedBorder
+                      : InlineAreaChrome.itemBorder,
+                    lineWidth: 1
+                  )
+              )
+          }
+          .buttonStyle(.plain)
+          .help(presentation.helpText)
+        }
+      }
+    }
+  }
+}
+
+private struct InlineAreaTextFontControl: View {
+  @ObservedObject var state: AnnotateState
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.textFont) {
+      Menu {
+        ForEach(AnnotateTextLayout.textFontOptions, id: \.self) { fontName in
+          Button {
+            state.quickTextFontNameBinding.wrappedValue = fontName
+          } label: {
+            Text(AnnotateTextLayout.textFontDisplayName(fontName.isEmpty ? nil : fontName))
+              .font(fontName.isEmpty ? .system(size: 12) : .custom(fontName, size: 12))
+          }
+        }
+      } label: {
+        HStack(spacing: 5) {
+          Image(systemName: "character")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(InlineAreaChrome.secondaryText)
+          Text(AnnotateTextLayout.textFontDisplayName(state.quickTextFontNameBinding.wrappedValue.isEmpty ? nil : state.quickTextFontNameBinding.wrappedValue))
+            .font(.system(size: 10, weight: .medium))
+            .lineLimit(1)
+            .frame(width: 92, alignment: .leading)
+        }
+        .frame(height: InlineAreaChrome.propertyControlHeight)
+        .padding(.horizontal, 7)
+        .background(
+          RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+            .fill(InlineAreaChrome.itemBackground)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+            .stroke(InlineAreaChrome.itemBorder, lineWidth: 1)
+        )
+      }
+      .menuStyle(.borderlessButton)
+      .fixedSize()
+    }
+  }
+}
+
+private struct InlineAreaSavedTextStylesControl: View {
+  @ObservedObject var state: AnnotateState
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.savedTextStyle) {
+      HStack(spacing: 4) {
+        Button {
+          _ = state.saveCurrentTextStylePreset()
+        } label: {
+          Image(systemName: "plus.square.on.square")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(InlineAreaChrome.primaryText)
+            .frame(width: 22, height: InlineAreaChrome.propertyControlHeight)
+            .background(
+              RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                .fill(Color.accentColor.opacity(0.16))
+            )
+            .overlay(
+              RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                .stroke(Color.accentColor.opacity(0.4), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .help(L10n.AnnotateUI.saveTextStyle)
+
+        ForEach(0 ..< AnnotateState.savedTextStylePresetLimit, id: \.self) { index in
+          if let properties = state.savedTextStylePreset(at: index) {
+            Button {
+              state.applySavedTextStylePreset(at: index)
+            } label: {
+              ZStack {
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .fill(state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
+                Circle()
+                  .fill(properties.fillColor)
+                  .frame(width: 10, height: 10)
+                  .overlay(
+                    Circle()
+                      .stroke(InlineAreaChrome.secondaryText.opacity(0.8), lineWidth: 1)
+                  )
+              }
+              .frame(width: 22, height: InlineAreaChrome.propertyControlHeight)
+              .overlay(
+                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                  .stroke(
+                    state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder,
+                    lineWidth: 1
+                  )
+              )
+            }
+            .buttonStyle(.plain)
+            .help(L10n.AnnotateUI.savedTextStyle + " #" + String(index + 1))
+            .contextMenu {
+              Button(role: .destructive) {
+                state.deleteSavedTextStylePreset(at: index)
+              } label: {
+                Label(L10n.Common.deleteAction, systemImage: "trash")
+              }
+            }
+          }
         }
       }
     }

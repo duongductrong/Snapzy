@@ -131,6 +131,13 @@ private enum QuickPropertiesDensity {
     }
   }
 
+  var iconControlWidth: CGFloat {
+    switch self {
+    case .regular: return 128
+    case .compact: return 112
+    }
+  }
+
   var controlButtonWidth: CGFloat {
     switch self {
     case .regular: return 28
@@ -193,11 +200,15 @@ struct AnnotateQuickPropertiesBar: View {
       || showCornerRadius
       || showLineStyle
       || showArrowStyle
+    let shouldGateTextCornersByBackground = (showTextBackground || showTextPresentation) && state.quickTextPresentation != .plain
+    let showTextCorners = showCornerRadius
+      && (!shouldGateTextCornersByBackground || (showTextBackground && state.quickTextHasBackground))
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
-    let hasBeforeTextPresentation = showStrokeColor || showFill
-    let hasBeforeTextBackground = hasBeforeTextPresentation || showTextPresentation
-    let hasBeforeTextFontSize = hasBeforeTextBackground || showTextBackground
+    let hasBeforeTextBackground = showStrokeColor || showFill
+    let hasBeforeTextPresentation = hasBeforeTextBackground || showTextBackground
+    let hasBeforeTextFontSize = hasBeforeTextPresentation || showTextPresentation
+    let hasBeforeSavedTextStyle = hasBeforeTextFontSize || showTextFontSize
     let hasBeforeWatermarkText = hasBeforeTextFontSize || showTextFontSize
     let hasBeforeWatermarkStyle = hasBeforeWatermarkText || showWatermark
     let hasBeforeWatermarkOpacity = hasBeforeWatermarkStyle || showWatermark
@@ -245,17 +256,33 @@ struct AnnotateQuickPropertiesBar: View {
       }
 
       activePropertySlot(
+        isVisible: showTextPresentation,
+        isEnabled: state.quickPropertiesSupportsTextPresentation,
+        showsLeadingDivider: false,
+        width: density.iconControlWidth
+      ) {
+        QuickTextPresentationControl(
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing,
+          selectedPresentation: state.quickTextPresentation,
+          onSelect: state.setTextPresentation
+        )
+      }
+
+      activePropertySlot(
         isVisible: showStrokeColor,
         isEnabled: state.quickPropertiesSupportsStrokeColor,
         showsLeadingDivider: false,
         width: nil
       ) {
+        let isTextColorControl = state.quickPropertiesSupportsTextPresentation
         QuickPropertiesColorPopoverControl(
-          title: colorTitle,
-          selectedColor: state.quickStrokeColorBinding,
+          title: isTextColorControl ? L10n.AnnotateUI.textColor : colorTitle,
+          selectedColor: isTextColorControl ? state.quickTextStrokeColorBinding : state.quickStrokeColorBinding,
           colors: strokeColorsForActiveTool,
           role: .annotationStroke,
           quickColorLimit: density == .regular ? 4 : 2,
+          sameColorActive: state.quickTextUsesSameColorAsBackground,
           groupSpacing: density.groupSpacing
         )
       }
@@ -272,6 +299,41 @@ struct AnnotateQuickPropertiesBar: View {
           colors: fillColors,
           role: .annotationFill,
           quickColorLimit: density == .regular ? 4 : 2,
+          sameColorActive: false,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showTextBackground && state.quickTextPresentation != .plain,
+        isEnabled: state.quickPropertiesSupportsTextBackground,
+        showsLeadingDivider: hasBeforeTextBackground,
+        width: nil
+      ) {
+        QuickPropertiesColorPopoverControl(
+          title: L10n.AnnotateUI.textBackgroundColor,
+          selectedColor: state.quickTextBackgroundBinding,
+          colors: textBackgroundColors,
+          role: .textBackground,
+          quickColorLimit: density == .regular ? 3 : 1,
+          sameColorActive: state.quickTextUsesSameColorAsBackground,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showTextBackground && state.quickTextPresentation != .plain,
+        isEnabled: state.quickPropertiesSupportsTextBackground,
+        showsLeadingDivider: showTextBackground,
+        width: nil
+      ) {
+        QuickPropertiesColorPopoverControl(
+          title: L10n.AnnotateUI.textBorderColor,
+          selectedColor: state.quickTextBorderColorBinding,
+          colors: textBackgroundColors,
+          role: .textBackground,
+          quickColorLimit: density == .regular ? 3 : 1,
+          sameColorActive: false,
           groupSpacing: density.groupSpacing
         )
       }
@@ -279,31 +341,10 @@ struct AnnotateQuickPropertiesBar: View {
       activePropertySlot(
         isVisible: showTextPresentation,
         isEnabled: state.quickPropertiesSupportsTextPresentation,
-        showsLeadingDivider: hasBeforeTextPresentation,
-        width: nil
+        showsLeadingDivider: false,
+        width: 156
       ) {
-        QuickTextPresentationControl(
-          buttonWidth: density.controlButtonWidth,
-          groupSpacing: density.groupSpacing,
-          selectedPresentation: state.quickTextPresentation,
-          onSelect: state.setTextPresentation
-        )
-      }
-
-      activePropertySlot(
-        isVisible: showTextBackground,
-        isEnabled: state.quickPropertiesSupportsTextBackground,
-        showsLeadingDivider: hasBeforeTextBackground,
-        width: nil
-      ) {
-        QuickPropertiesColorPopoverControl(
-          title: L10n.Common.background,
-          selectedColor: state.quickTextBackgroundBinding,
-          colors: textBackgroundColors,
-          role: .textBackground,
-          quickColorLimit: density == .regular ? 3 : 1,
-          groupSpacing: density.groupSpacing
-        )
+        QuickTextFontControl(state: state, groupSpacing: density.groupSpacing)
       }
 
       activePropertySlot(
@@ -317,6 +358,28 @@ struct AnnotateQuickPropertiesBar: View {
           sliderWidth: density.sliderWidth,
           groupSpacing: density.groupSpacing
         )
+      }
+
+      activePropertySlot(
+        isVisible: showTextBackground && state.quickTextPresentation != .plain && state.quickTextHasVisibleBorder,
+        isEnabled: state.quickPropertiesSupportsTextBackground,
+        showsLeadingDivider: showTextFontSize,
+        width: nil
+      ) {
+        QuickTextBorderWidthControl(
+          value: state.quickTextBorderWidthBinding,
+          sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showTextPresentation,
+        isEnabled: state.quickPropertiesSupportsTextPresentation,
+        showsLeadingDivider: hasBeforeSavedTextStyle,
+        width: nil
+      ) {
+        QuickSavedTextStylesControl(state: state)
       }
 
       activePropertySlot(
@@ -429,15 +492,16 @@ struct AnnotateQuickPropertiesBar: View {
       }
 
       activePropertySlot(
-        isVisible: showCornerRadius,
-        isEnabled: state.quickPropertiesSupportsCornerRadius,
+        isVisible: showTextCorners,
+        isEnabled: state.quickPropertiesSupportsCornerRadius && (!shouldGateTextCornersByBackground || state.quickTextHasBackground),
         showsLeadingDivider: hasBeforeCornerRadius,
         width: density.cornerControlWidth
       ) {
         QuickCornerRadiusControl(
           value: state.quickCornerRadiusBinding,
           sliderWidth: density.sliderWidth,
-          groupSpacing: density.groupSpacing
+          groupSpacing: density.groupSpacing,
+          isEnabled: !shouldGateTextCornersByBackground || state.quickTextHasBackground
         )
       }
 
@@ -661,6 +725,7 @@ private struct QuickPropertiesColorPopoverControl: View {
   let colors: [Color]
   let role: AnnotateColorPaletteRole
   let quickColorLimit: Int
+  let sameColorActive: Bool
   let groupSpacing: CGFloat
 
   @ObservedObject private var paletteStore = AnnotateColorPaletteStore.shared
@@ -699,10 +764,13 @@ private struct QuickPropertiesColorPopoverControl: View {
             title: title,
             selectedColor: $selectedColor,
             colors: colors,
-            role: role
-          ) {
-            showsPopover = false
-          }
+            role: role,
+            dismiss: {
+              showsPopover = false
+            },
+            showsSameColorWarning: title == L10n.AnnotateUI.textColor || title == L10n.AnnotateUI.textBackgroundColor,
+            sameColorActive: sameColorActive
+          )
         }
 
         ForEach(Array(paletteStore.favoriteColors(for: role).prefix(quickColorLimit)), id: \.self) { color in
@@ -737,6 +805,8 @@ private struct QuickPropertiesColorPopover: View {
   @State private var activeDraftTarget: ColorDraftTarget?
   @State private var originalSelectedColor: Color?
   @State private var showsFavoriteSelectionPopover = false
+  let showsSameColorWarning: Bool
+  let sameColorActive: Bool
 
   private enum ColorDraftTarget {
     case customPalette
@@ -818,6 +888,20 @@ private struct QuickPropertiesColorPopover: View {
       if activeDraftTarget == .customPalette {
         colorPickerPanel
           .padding(.top, 2)
+      }
+
+      if showsSameColorWarning && sameColorActive {
+        Label(L10n.AnnotateUI.textSameColorWarning, systemImage: "exclamationmark.triangle.fill")
+          .font(Typography.labelSmall)
+          .foregroundColor(.orange)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+          .padding(8)
+          .frame(maxWidth: .infinity, alignment: .leading)
+          .background(
+            RoundedRectangle(cornerRadius: 7)
+              .fill(Color.orange.opacity(0.12))
+          )
       }
     }
     .padding(12)
@@ -1463,17 +1547,23 @@ private struct QuickTextPresentationControl: View {
   let selectedPresentation: TextPresentation
   let onSelect: (TextPresentation) -> Void
 
+  private static let shortTitle = L10n.AnnotateUI.textStyleShort
+
+  private var presentations: [TextPresentation] {
+    [.plain, .label, .callout]
+  }
+
   var body: some View {
-    QuickPropertiesGroup(title: L10n.AnnotateUI.textStyle, spacing: groupSpacing) {
+    QuickPropertiesGroup(title: Self.shortTitle, spacing: groupSpacing) {
       HStack(spacing: 5) {
-        ForEach(TextPresentation.allCases) { presentation in
+        ForEach(presentations) { presentation in
           Button {
             onSelect(presentation)
           } label: {
             Image(systemName: presentation.icon)
               .font(.system(size: 12, weight: .semibold))
               .foregroundColor(selectedPresentation == presentation ? .accentColor : .secondary)
-              .frame(width: buttonWidth, height: 24)
+              .frame(width: buttonWidth + 4, height: 24)
               .background(
                 RoundedRectangle(cornerRadius: 7)
                   .fill(selectedPresentation == presentation ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
@@ -1488,6 +1578,75 @@ private struct QuickTextPresentationControl: View {
         }
       }
     }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+private struct QuickSavedTextStylesControl: View {
+  @ObservedObject var state: AnnotateState
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.savedTextStyle, spacing: 6) {
+      HStack(spacing: 4) {
+        Button {
+          _ = state.saveCurrentTextStylePreset()
+        } label: {
+          Image(systemName: "plus.square.on.square")
+            .font(.system(size: 11, weight: .semibold))
+            .frame(width: 22, height: 22)
+            .background(
+              RoundedRectangle(cornerRadius: 6)
+                .fill(Color.accentColor.opacity(0.14))
+            )
+            .overlay(
+              RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .help(L10n.AnnotateUI.saveTextStyle)
+        .accessibilityLabel(L10n.AnnotateUI.saveTextStyle)
+
+        ForEach(0 ..< AnnotateState.savedTextStylePresetLimit, id: \.self) { index in
+          if let properties = state.savedTextStylePreset(at: index) {
+            Button {
+              state.applySavedTextStylePreset(at: index)
+            } label: {
+              ZStack {
+                RoundedRectangle(cornerRadius: 6)
+                  .fill(state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+
+                Circle()
+                  .fill(properties.fillColor)
+                  .frame(width: 10, height: 10)
+                  .overlay(
+                    Circle()
+                      .stroke(Color.primary.opacity(0.45), lineWidth: 1)
+                  )
+              }
+              .frame(width: 22, height: 22)
+              .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                  .stroke(
+                    state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.55) : Color.secondary.opacity(0.18),
+                    lineWidth: 1
+                  )
+              )
+            }
+            .buttonStyle(.plain)
+            .help(L10n.AnnotateUI.savedTextStyle + " #\(index + 1)")
+            .contextMenu {
+              Button(role: .destructive) {
+                state.deleteSavedTextStylePreset(at: index)
+              } label: {
+                Label(L10n.Common.deleteAction, systemImage: "trash")
+              }
+            }
+          }
+        }
+      }
+    }
+    .fixedSize(horizontal: true, vertical: false)
   }
 }
 
@@ -1670,15 +1829,92 @@ private struct QuickCornerRadiusControl: View {
   @Binding var value: CGFloat
   let sliderWidth: CGFloat
   let groupSpacing: CGFloat
+  var isEnabled: Bool = true
 
   var body: some View {
     QuickPropertiesGroup(title: L10n.Common.corners, spacing: groupSpacing) {
       HStack(spacing: 6) {
         Image(systemName: "roundedbottom.horizontal")
           .font(.system(size: 10))
-          .foregroundColor(.secondary)
+          .foregroundColor(isEnabled ? .secondary : .secondary.opacity(0.4))
 
         Slider(value: $value.stepped(by: 1, in: 0 ... 60), in: 0 ... 60)
+          .frame(width: sliderWidth)
+          .controlSize(.small)
+          .disabled(!isEnabled)
+
+        Text("\(Int(value))")
+          .font(Typography.labelSmall)
+          .foregroundColor(isEnabled ? SidebarColors.labelSecondary : SidebarColors.labelSecondary.opacity(0.4))
+          .lineLimit(1)
+          .monospacedDigit()
+          .frame(width: 22, alignment: .trailing)
+      }
+      .opacity(isEnabled ? 1 : 0.55)
+    }
+  }
+}
+
+private struct QuickTextFontControl: View {
+  @ObservedObject var state: AnnotateState
+  let groupSpacing: CGFloat
+
+  private var currentFontName: String {
+    state.quickTextFontNameBinding.wrappedValue
+  }
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.textFont, spacing: groupSpacing) {
+      Menu {
+        ForEach(AnnotateTextLayout.textFontOptions, id: \.self) { fontName in
+          Button {
+            state.quickTextFontNameBinding.wrappedValue = fontName
+          } label: {
+            Text(AnnotateTextLayout.textFontDisplayName(fontName.isEmpty ? nil : fontName))
+              .font(fontName.isEmpty ? .system(size: 12) : .custom(fontName, size: 12))
+          }
+        }
+      } label: {
+        HStack(spacing: 5) {
+          Image(systemName: "character")
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundColor(.secondary)
+          Text(AnnotateTextLayout.textFontDisplayName(currentFontName.isEmpty ? nil : currentFontName))
+            .font(.system(size: 11, weight: .medium))
+            .lineLimit(1)
+            .frame(width: 96, alignment: .leading)
+        }
+        .frame(height: 24)
+        .padding(.horizontal, 7)
+        .background(
+          RoundedRectangle(cornerRadius: 7)
+            .fill(SidebarColors.itemDefault)
+        )
+        .overlay(
+          RoundedRectangle(cornerRadius: 7)
+            .stroke(Color.secondary.opacity(0.14), lineWidth: 1)
+        )
+      }
+      .menuStyle(.borderlessButton)
+      .fixedSize()
+    }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+private struct QuickTextBorderWidthControl: View {
+  @Binding var value: CGFloat
+  let sliderWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.textBorderWidth, spacing: groupSpacing) {
+      HStack(spacing: 6) {
+        Image(systemName: "rectangle.dashed")
+          .font(.system(size: 10, weight: .semibold))
+          .foregroundColor(.secondary)
+
+        Slider(value: $value.stepped(by: 1, in: 0 ... 8), in: 0 ... 8)
           .frame(width: sliderWidth)
           .controlSize(.small)
 
@@ -1687,7 +1923,7 @@ private struct QuickCornerRadiusControl: View {
           .foregroundColor(SidebarColors.labelSecondary)
           .lineLimit(1)
           .monospacedDigit()
-          .frame(width: 22, alignment: .trailing)
+          .frame(width: 20, alignment: .trailing)
       }
     }
   }

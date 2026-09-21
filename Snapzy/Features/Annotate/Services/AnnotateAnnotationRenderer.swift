@@ -444,27 +444,43 @@ nonisolated struct AnnotationRenderer {
     text.draw(at: textPoint, withAttributes: attributes)
   }
 
+  private static func isClearColor(_ color: Color) -> Bool {
+    NSColor(color).alphaComponent < 0.02
+  }
+
   private func drawText(_ content: String, in bounds: CGRect, properties: AnnotationProperties) {
     let displayText = content.isEmpty ? "" : content
     let font = AnnotateTextLayout.font(size: properties.fontSize, fontName: properties.fontName)
 
     // The text bounds are the bubble itself, so the surface grows in lockstep
     // with the text instead of leaving a separate, fixed-size background behind.
-    if properties.textPresentation != .plain, properties.fillColor != .clear {
-      context.setFillColor(NSColor(properties.fillColor).cgColor)
+    if properties.textPresentation != .plain {
       let bgRect = bounds.standardized
       let cornerRadius = properties.cornerRadius > 0
         ? min(properties.cornerRadius, min(bgRect.width, bgRect.height) * 0.46)
         : TextBubbleGeometry.cornerRadius(in: bgRect, fontSize: font.pointSize)
-      context.addPath(
-        TextBubbleGeometry.bubblePath(
-          in: bgRect,
-          cornerRadius: cornerRadius,
-          tailTarget: properties.textPresentation == .callout ? properties.calloutTailTarget : nil,
-          fontSize: font.pointSize
-        )
+      let bubblePath = TextBubbleGeometry.bubblePath(
+        in: bgRect,
+        cornerRadius: cornerRadius,
+        tailTarget: properties.textPresentation == .callout ? properties.calloutTailTarget : nil,
+        fontSize: font.pointSize
       )
-      context.fillPath()
+      let hasFill = !Self.isClearColor(properties.fillColor)
+      let hasBorder = !Self.isClearColor(properties.textBorderColor) && properties.textBorderWidth > 0
+      if hasFill {
+        context.setFillColor(NSColor(properties.fillColor).cgColor)
+        context.addPath(bubblePath)
+        context.fillPath()
+      }
+      if hasBorder {
+        context.saveGState()
+        context.setStrokeColor(NSColor(properties.textBorderColor).cgColor)
+        context.setLineWidth(properties.textBorderWidth)
+        context.setLineJoin(.round)
+        context.addPath(bubblePath)
+        context.strokePath()
+        context.restoreGState()
+      }
     }
 
     // Draw text with word wrapping within bounds

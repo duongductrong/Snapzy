@@ -101,8 +101,8 @@ nonisolated enum TextPresentation: String, CaseIterable, Identifiable, Equatable
 
   var helpText: String {
     switch self {
-    case .plain: "Transparent text"
-    case .label: "Text label"
+    case .plain: "Text"
+    case .label: "Text Label"
     case .callout: "Callout label"
     }
   }
@@ -152,10 +152,34 @@ nonisolated enum TextBubbleGeometry {
   }
 
   static func resolvedTailTarget(in rect: CGRect, requestedTarget: CGPoint, fontSize: CGFloat) -> CGPoint {
+    let rect = rect.standardized
     guard requestedTarget.x.isFinite, requestedTarget.y.isFinite else {
       return defaultTailTarget(for: rect, fontSize: fontSize)
     }
-    return requestedTarget
+    guard !rect.contains(requestedTarget) else {
+      return requestedTarget
+    }
+
+    // Callout tails have a short fixed segment, then a damped free extension,
+    // then a hard reach cap so the tip never turns into a runaway pointer.
+    let side = attachmentSide(for: requestedTarget, in: rect)
+    let baseHalfWidth = max(5, min(fontSize * 0.44, min(rect.width, rect.height) * 0.2))
+    let anchor = attachmentPoint(for: requestedTarget, on: side, in: rect, baseHalfWidth: baseHalfWidth)
+    let dx = requestedTarget.x - anchor.x
+    let dy = requestedTarget.y - anchor.y
+    let distance = hypot(dx, dy)
+    guard distance > 0 else { return anchor }
+    let shortTailLength = max(16, min(rect.width, rect.height) * 0.35)
+    let longestReach = min(min(rect.width, rect.height) * 2, fontSize * 4)
+    let resolvedLength: CGFloat
+    if distance <= shortTailLength {
+      resolvedLength = shortTailLength
+    } else {
+      let dampedExtension = shortTailLength + (distance - shortTailLength) * 0.45
+      resolvedLength = min(dampedExtension, longestReach)
+    }
+    let scale = resolvedLength / distance
+    return CGPoint(x: anchor.x + dx * scale, y: anchor.y + dy * scale)
   }
 
   static func bubblePath(
@@ -1471,6 +1495,8 @@ nonisolated struct AnnotationProperties: Equatable {
   var spotlightOpacity: CGFloat
   var textPresentation: TextPresentation
   var calloutTailTarget: CGPoint?
+  var textBorderColor: Color
+  var textBorderWidth: CGFloat
 
   init(
     strokeColor: Color = .red,
@@ -1485,7 +1511,9 @@ nonisolated struct AnnotationProperties: Equatable {
     watermarkStyle: WatermarkStyle = .single,
     spotlightOpacity: CGFloat = 0.5,
     textPresentation: TextPresentation = .plain,
-    calloutTailTarget: CGPoint? = nil
+    calloutTailTarget: CGPoint? = nil,
+    textBorderColor: Color = .clear,
+    textBorderWidth: CGFloat = 0
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -1500,6 +1528,8 @@ nonisolated struct AnnotationProperties: Equatable {
     self.spotlightOpacity = spotlightOpacity
     self.textPresentation = textPresentation
     self.calloutTailTarget = calloutTailTarget
+    self.textBorderColor = textBorderColor
+    self.textBorderWidth = textBorderWidth
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -1556,6 +1586,15 @@ nonisolated struct AnnotationProperties: Equatable {
 
   static func clampedRotationDegrees(_ value: CGFloat) -> CGFloat {
     min(max(value, -45), 45)
+  }
+
+  func matchesTextStyle(_ other: AnnotationProperties) -> Bool {
+    fontSize == other.fontSize
+      && fontName == other.fontName
+      && cornerRadius == other.cornerRadius
+      && textPresentation == other.textPresentation
+      && textBorderWidth == other.textBorderWidth
+      && textBorderColor == other.textBorderColor
   }
 }
 

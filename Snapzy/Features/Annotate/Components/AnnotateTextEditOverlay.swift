@@ -53,12 +53,22 @@ struct TextEditOverlay: View {
 
         ZStack(alignment: .topLeading) {
           if annotation.properties.textPresentation != .plain {
-            TextBubbleShape(
+            let bubbleShape = TextBubbleShape(
               tailTarget: annotation.properties.textPresentation == .callout ? relativeTailTarget : nil,
               fontSize: displayFont.pointSize,
               cornerRadius: annotation.properties.cornerRadius * scale
             )
+            let borderVisible = !AnnotateColorPaletteStore.isClear(annotation.properties.textBorderColor)
+              && annotation.properties.textBorderWidth > 0
+            bubbleShape
               .fill(annotation.properties.fillColor)
+            if borderVisible {
+              bubbleShape
+                .stroke(
+                  annotation.properties.textBorderColor,
+                  lineWidth: max(1, annotation.properties.textBorderWidth * scale)
+                )
+            }
           }
 
           InlineAnnotationTextEditor(

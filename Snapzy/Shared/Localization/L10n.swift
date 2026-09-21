@@ -6254,10 +6254,65 @@ nonisolated enum L10n {
       defaultValue: "Text Style",
       comment: "Section title for annotate text styling controls"
     )
+    static let textStyleShort = string(
+      "annotate.text-style-short",
+      defaultValue: "Text Style",
+      comment: "Compact label for annotate text style controls"
+    )
     static let textColor = string(
       "annotate.text-color",
       defaultValue: "Text Color",
       comment: "Label for annotate text color controls"
+    )
+    static let textBackgroundColor = string(
+      "annotate.text-background-color",
+      defaultValue: "Background Color",
+      comment: "Label for annotate text background color controls"
+    )
+    static let saveTextStyle = string(
+      "annotate.save-text-style",
+      defaultValue: "Save Text Style",
+      comment: "Button title for saving the current text style as a reusable preset"
+    )
+    static let savedTextStyle = string(
+      "annotate.saved-text-style",
+      defaultValue: "Saved Text Style",
+      comment: "Label for a saved reusable text style preset"
+    )
+    static let textSameColorWarning = string(
+      "annotate.text-same-color-warning",
+      defaultValue: "Text and background colors are the same. Choose a contrasting color.",
+      comment: "Warning shown when the selected text color matches the text background color"
+    )
+    static let textFont = string(
+      "annotate.text-font",
+      defaultValue: "Font",
+      comment: "Label for the text font control"
+    )
+    static let textFontDefault = string(
+      "annotate.text-font-default",
+      defaultValue: "System Default",
+      comment: "Default font option shown in the text font menu"
+    )
+    static let textBorderColor = string(
+      "annotate.text-border-color",
+      defaultValue: "Border Color",
+      comment: "Label for the text label border color control"
+    )
+    static let textBorderWidth = string(
+      "annotate.text-border-width",
+      defaultValue: "Border Width",
+      comment: "Label for the text label border width control"
+    )
+    static let calloutConvertedToLabelNotice = string(
+      "annotate.callout-converted-to-label-notice",
+      defaultValue: "The arrow now sits inside the label, so this was switched to a Text Label.",
+      comment: "Notice shown when dragging a callout arrow into the bubble converts it to a text label"
+    )
+    static let textContrastImprovedNotice = string(
+      "annotate.text-contrast-improved-notice",
+      defaultValue: "Colors are readable now. Try #FFFFFF or #000000 for even stronger contrast.",
+      comment: "Notice shown after fixing a low-contrast text and background pair; %@ is the suggested hex color"
     )
     static let annotation = string(
       "annotate.annotation",
