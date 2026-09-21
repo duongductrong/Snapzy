@@ -139,6 +139,17 @@ nonisolated enum TextBubbleGeometry {
     min(max(4, fontSize * 0.16), min(bounds.width, bounds.height) * 0.12)
   }
 
+  static func resolvedCornerRadius(
+    storedValue: CGFloat,
+    in bounds: CGRect,
+    fontSize: CGFloat
+  ) -> CGFloat {
+    let base = storedValue > 0
+      ? min(storedValue, min(bounds.width, bounds.height) * 0.46)
+      : cornerRadius(in: bounds, fontSize: fontSize)
+    return min(max(0, base), min(bounds.width, bounds.height) / 2)
+  }
+
   static func defaultTailTarget(for bounds: CGRect, fontSize: CGFloat) -> CGPoint {
     CGPoint(
       x: bounds.minX + bounds.width * 0.795,

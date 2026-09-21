@@ -2848,8 +2848,7 @@ private struct InlineAreaTextPresentationControl: View {
           Button {
             onSelect(presentation)
           } label: {
-            Image(systemName: presentation.icon)
-              .font(.system(size: 12, weight: .medium))
+            TextPresentationGlyph(presentation: presentation)
               .foregroundColor(
                 selectedPresentation == presentation
                   ? InlineAreaChrome.itemSelectedForeground

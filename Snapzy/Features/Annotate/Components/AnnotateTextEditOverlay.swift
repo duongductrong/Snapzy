@@ -163,9 +163,11 @@ private struct TextBubbleShape: Shape {
   let cornerRadius: CGFloat
 
   func path(in rect: CGRect) -> Path {
-    let resolvedCornerRadius = cornerRadius > 0
-      ? min(cornerRadius, min(rect.width, rect.height) * 0.46)
-      : TextBubbleGeometry.cornerRadius(in: rect, fontSize: fontSize)
+    let resolvedCornerRadius = TextBubbleGeometry.resolvedCornerRadius(
+      storedValue: cornerRadius,
+      in: rect,
+      fontSize: fontSize
+    )
     return Path(
       TextBubbleGeometry.bubblePath(
         in: rect,

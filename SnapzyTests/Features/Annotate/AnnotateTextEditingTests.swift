@@ -535,4 +535,46 @@ final class AnnotateTextEditingTests: XCTestCase {
 
     XCTAssertTrue(state.quickTextUsesSameColorAsBackground)
   }
+
+  func testCornerRadiusPreservedWhenSwitchingTextLabelToCallout() throws {
+    let state = makeAnnotateState()
+    let annotation = AnnotationItem(
+      type: .text("Label"),
+      bounds: CGRect(x: 40, y: 80, width: 140, height: 36),
+      properties: AnnotationProperties(
+        strokeColor: .black,
+        fillColor: .white,
+        cornerRadius: 18,
+        fontSize: 18,
+        textPresentation: .label
+      )
+    )
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.setTextPresentation(.callout)
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.cornerRadius, 18)
+    XCTAssertNotNil(updated.properties.calloutTailTarget)
+  }
+
+  func testSwitchingToTextLabelResizesBoundsForLargerInsets() throws {
+    let state = makeAnnotateState()
+    state.sourceImage = NSImage(size: CGSize(width: 600, height: 300))
+    var annotation = makeTextAnnotation("Short")
+    annotation.properties.fontSize = 18
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+    let originalBounds = try XCTUnwrap(state.annotations.first).bounds
+
+    state.setTextPresentation(.label)
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertNotEqual(updated.bounds.size, originalBounds.size)
+    XCTAssertGreaterThan(updated.bounds.width, 40)
+    XCTAssertGreaterThanOrEqual(updated.bounds.height, 20)
+  }
 }

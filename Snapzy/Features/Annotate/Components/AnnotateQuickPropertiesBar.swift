@@ -1547,8 +1547,7 @@ private struct QuickTextPresentationControl: View {
           Button {
             onSelect(presentation)
           } label: {
-            Image(systemName: presentation.icon)
-              .font(.system(size: 12, weight: .semibold))
+            TextPresentationGlyph(presentation: presentation)
               .foregroundColor(selectedPresentation == presentation ? .accentColor : .secondary)
               .frame(width: buttonWidth + 4, height: 24)
               .background(
@@ -1566,6 +1565,29 @@ private struct QuickTextPresentationControl: View {
       }
     }
     .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
+struct TextPresentationGlyph: View {
+  let presentation: TextPresentation
+
+  var body: some View {
+    switch presentation {
+    case .plain:
+      Text("A")
+        .font(.system(size: 11, weight: .bold))
+    case .label:
+      ZStack {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+          .fill(Color.primary.opacity(0.15))
+          .frame(width: 16, height: 13)
+        Text("A")
+          .font(.system(size: 9, weight: .bold))
+      }
+    case .callout:
+      Image(systemName: "text.bubble.fill")
+        .font(.system(size: 12, weight: .semibold))
+    }
   }
 }
 

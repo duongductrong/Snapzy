@@ -456,9 +456,11 @@ nonisolated struct AnnotationRenderer {
     // with the text instead of leaving a separate, fixed-size background behind.
     if properties.textPresentation != .plain {
       let bgRect = bounds.standardized
-      let cornerRadius = properties.cornerRadius > 0
-        ? min(properties.cornerRadius, min(bgRect.width, bgRect.height) * 0.46)
-        : TextBubbleGeometry.cornerRadius(in: bgRect, fontSize: font.pointSize)
+      let cornerRadius = TextBubbleGeometry.resolvedCornerRadius(
+        storedValue: properties.cornerRadius,
+        in: bgRect,
+        fontSize: font.pointSize
+      )
       let bubblePath = TextBubbleGeometry.bubblePath(
         in: bgRect,
         cornerRadius: cornerRadius,

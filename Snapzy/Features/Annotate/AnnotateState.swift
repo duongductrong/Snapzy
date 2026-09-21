@@ -5440,6 +5440,23 @@ final class AnnotateState: ObservableObject {
         to: &annotations[index],
         keepTail: false
       )
+      autoSizingTextAnnotationIDs.insert(annotations[index].id)
+      if case .text(let content) = annotations[index].type {
+        let currentBounds = annotations[index].bounds
+        let newBounds = resizedTextBounds(
+          id: annotations[index].id,
+          text: content,
+          properties: annotations[index].properties,
+          currentBounds: currentBounds
+        )
+        annotations[index].bounds = newBounds
+        if annotations[index].properties.textPresentation == .callout {
+          annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(
+            for: newBounds,
+            fontSize: annotations[index].properties.fontSize
+          )
+        }
+      }
     }
     hasUnsavedChanges = true
     rememberActiveTextStylePresetIfNeeded()
