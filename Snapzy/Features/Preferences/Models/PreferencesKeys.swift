@@ -120,6 +120,7 @@ enum PreferencesKeys {
   static let recordingFileNameTemplate = "recording.fileNameTemplate"
   static let recordingFPS = "recording.fps"
   static let recordingQuality = "recording.quality"
+  static let recordingMaxResolution = "recording.maxResolution"
   static let recordingCaptureAudio = "recording.captureAudio"
   static let recordingCaptureMicrophone = "recording.captureMicrophone"
   static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"

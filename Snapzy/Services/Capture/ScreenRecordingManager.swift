@@ -88,6 +88,33 @@ enum VideoQuality: String, CaseIterable, Codable {
   }
 }
 
+enum RecordingMaxResolution: String, CaseIterable, Codable {
+  case auto, native, uhd4k, qhd1440, fhd1080, hd720, sd480
+
+  var box: (width: Int, height: Int)? {
+    switch self {
+    case .auto, .native: return nil
+    case .uhd4k: return (3840, 2160)
+    case .qhd1440: return (2560, 1440)
+    case .fhd1080: return (1920, 1080)
+    case .hd720: return (1280, 720)
+    case .sd480: return (854, 480)
+    }
+  }
+
+  var displayName: String {
+    switch self {
+    case .auto: return L10n.RecordingToolbar.maxResolutionAuto
+    case .native: return L10n.RecordingToolbar.maxResolutionNative
+    case .uhd4k: return "4K"
+    case .qhd1440: return "1440p"
+    case .fhd1080: return "1080p"
+    case .hd720: return "720p"
+    case .sd480: return "480p"
+    }
+  }
+}
+
 enum RecordingVideoEncodingSettings {
   static func preferredCodec(format: VideoFormat, quality: VideoQuality) -> AVVideoCodecType {
     guard format == .mov else { return .h264 }
@@ -143,6 +170,54 @@ enum RecordingVideoEncodingSettings {
       AVVideoCompressionPropertiesKey: compression,
       AVVideoColorPropertiesKey: colorProperties,
     ]
+  }
+}
+
+/// Applies player/upload compatibility limits pre-capture to a stream configuration.
+/// `RecordingAudioCompatibilityExporter` handles the same concern post-stop on a
+/// finished file; this limiter operates at the opposite end of the pipeline.
+/// `.auto` clamps only recordings that would otherwise exceed browser compatibility
+/// limits, while `.native` never clamps and remains the deliberate escape hatch.
+enum RecordingVideoCompatibilityLimiter {
+  static func clampedOutputSize(
+    width: Int,
+    height: Int,
+    resolution: RecordingMaxResolution,
+    fps: Int
+  ) -> (width: Int, height: Int) {
+    if resolution == .auto {
+      let maxMB = min(36_864, 2_073_600 / max(fps, 1))
+      if macroblockCount(width: width, height: height) <= maxMB { return (width, height) }
+      return clampedOutputSize(width: width, height: height, resolution: .uhd4k, fps: fps)
+    }
+
+    guard var box = resolution.box else { return (width, height) }
+
+    if height > width {
+      box = (box.height, box.width)
+    }
+
+    var scale = min(1, Double(box.width) / Double(width), Double(box.height) / Double(height))
+    let maxMacroblocks = min(36_864, 2_073_600 / max(fps, 1))
+
+    for _ in 0..<8 {
+      let scaledWidth = Int(floor(Double(width) * scale))
+      let scaledHeight = Int(floor(Double(height) * scale))
+      let macroblocks = macroblockCount(width: scaledWidth, height: scaledHeight)
+      guard macroblocks > maxMacroblocks else { break }
+      scale *= sqrt(Double(maxMacroblocks) / Double(macroblocks)) * 0.999
+    }
+
+    guard scale < 1 else { return (width, height) }
+    return (evenFloor(Double(width) * scale), evenFloor(Double(height) * scale))
+  }
+
+  private static func macroblockCount(width: Int, height: Int) -> Int {
+    ((width + 15) / 16) * ((height + 15) / 16)
+  }
+
+  private static func evenFloor(_ value: Double) -> Int {
+    max(2, Int(floor(value)) / 2 * 2)
   }
 }
 
@@ -638,6 +713,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private var videoFormat: VideoFormat = .mov
   private var videoQuality: VideoQuality = .high
   private var fps: Int = 30
+  private var maxResolution: RecordingMaxResolution = .auto
   private var captureSystemAudio: Bool = true
   private var captureMicrophone: Bool = false
   private var microphoneDeviceID: String?
@@ -659,6 +735,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private struct CaptureGeometry {
     let sourceRect: CGRect
     let globalCaptureRect: CGRect
+    let nativeOutputWidth: Int
+    let nativeOutputHeight: Int
     let outputWidth: Int
     let outputHeight: Int
   }
@@ -695,6 +773,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     format: VideoFormat = .mov,
     quality: VideoQuality = .high,
     fps: Int = 30,
+    maxResolution: RecordingMaxResolution,
     captureSystemAudio: Bool = true,
     captureMicrophone: Bool = false,
     microphoneDeviceID: String? = nil,
@@ -740,6 +819,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     self.videoFormat = format
     self.videoQuality = quality
     self.fps = fps
+    self.maxResolution = maxResolution
     self.captureSystemAudio = captureSystemAudio
     self.captureMicrophone = captureMicrophone
     self.microphoneDeviceID = microphoneDeviceID
@@ -855,7 +935,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       captureGeometry = try resolveCaptureGeometry(
         display: display,
         rect: requestedRect,
-        scaleFactor: scaleFactor
+        scaleFactor: scaleFactor,
+        maxResolution: maxResolution,
+        fps: fps
       )
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "Recording geometry resolution failed", context: [
@@ -876,7 +958,10 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         captureGeometry.sourceRect.size.width,
         captureGeometry.sourceRect.size.height
       ),
+      "nativeSize": "\(captureGeometry.nativeOutputWidth)x\(captureGeometry.nativeOutputHeight)",
       "outputSize": "\(captureGeometry.outputWidth)x\(captureGeometry.outputHeight)",
+      "maxResolution": self.maxResolution.rawValue,
+      "fps": "\(fps)",
     ])
 
     // Generate output URL using user-configurable template (with legacy fallback).
@@ -1666,7 +1751,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private func resolveCaptureGeometry(
     display: SCDisplay,
     rect: CGRect,
-    scaleFactor: CGFloat
+    scaleFactor: CGFloat,
+    maxResolution: RecordingMaxResolution,
+    fps: Int
   ) throws -> CaptureGeometry {
     guard let matchingScreen = NSScreen.screens.first(where: {
       Int($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? CGDirectDisplayID ?? 0)
@@ -1722,11 +1809,22 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       height: alignedRect.height
     )
 
+    let nativeOutputWidth = max(1, Int((alignedRect.width * scaleFactor).rounded()))
+    let nativeOutputHeight = max(1, Int((alignedRect.height * scaleFactor).rounded()))
+    let outputSize = RecordingVideoCompatibilityLimiter.clampedOutputSize(
+      width: nativeOutputWidth,
+      height: nativeOutputHeight,
+      resolution: maxResolution,
+      fps: fps
+    )
+
     return CaptureGeometry(
       sourceRect: sourceRect,
       globalCaptureRect: globalCaptureRect,
-      outputWidth: max(1, Int((alignedRect.width * scaleFactor).rounded())),
-      outputHeight: max(1, Int((alignedRect.height * scaleFactor).rounded()))
+      nativeOutputWidth: nativeOutputWidth,
+      nativeOutputHeight: nativeOutputHeight,
+      outputWidth: outputSize.width,
+      outputHeight: outputSize.height
     )
   }
 
@@ -1762,6 +1860,7 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     config.queueDepth = fps >= 60 ? 8 : 5
     config.width = captureGeometry.outputWidth
     config.height = captureGeometry.outputHeight
+    config.scalesToFit = false
     config.minimumFrameInterval = CMTime(value: 1, timescale: CMTimeScale(fps))
     config.pixelFormat = kCVPixelFormatType_32BGRA
     config.showsCursor = showCursorInRecording
@@ -1772,8 +1871,8 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       captureResolutionMode = "best"
     } else {
       // Fallback for macOS 13/14.0/14.1:
-      // rely on explicit native-scaled dimensions + pixel-aligned sourceRect.
-      captureResolutionMode = "fallback-native-dimensions"
+      // rely on explicit output dimensions + pixel-aligned sourceRect.
+      captureResolutionMode = "fallback-explicit-dimensions"
     }
 
     // System audio configuration

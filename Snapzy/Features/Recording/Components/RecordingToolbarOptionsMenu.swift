@@ -76,6 +76,20 @@ private struct ToolbarOptionsPopoverContent: View {
         }
       }
 
+      // Max Resolution Section
+      SettingsSection(
+        title: L10n.RecordingToolbar.maxResolutionSection,
+        icon: "arrow.down.right.and.arrow.up.left"
+      ) {
+        Picker("", selection: $state.selectedMaxResolution) {
+          ForEach(RecordingMaxResolution.allCases, id: \.self) { resolution in
+            Text(resolution.displayName).tag(resolution)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+      }
+
       // Quality Section
       SettingsSection(title: L10n.RecordingToolbar.qualitySection, icon: "sparkles") {
         HStack(spacing: 6) {

@@ -82,6 +82,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.section("recording")
     writer.value("format", VideoFormat.mov.rawValue)
     writer.value("quality", VideoQuality.high.rawValue)
+    writer.value("max_resolution", RecordingMaxResolution.auto.rawValue)
     writer.value("fps", 30)
     writer.value("output_mode", RecordingOutputMode.video.rawValue)
     writer.value("capture_system_audio", true)

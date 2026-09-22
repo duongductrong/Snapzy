@@ -101,6 +101,7 @@ enum SnapzyConfigurationExporter {
     writer.section("recording")
     writer.value("format", RecordingToolbarPreferences.selectedFormat(defaults: defaults).rawValue)
     writer.value("quality", RecordingToolbarPreferences.selectedQuality(defaults: defaults).rawValue)
+    writer.value("max_resolution", RecordingToolbarPreferences.selectedMaxResolution(defaults: defaults).rawValue)
     writer.value("fps", defaults.integerValue(PreferencesKeys.recordingFPS, default: 30))
     writer.value("output_mode", RecordingToolbarPreferences.outputMode(defaults: defaults).rawValue)
     writer.value("capture_system_audio", RecordingToolbarPreferences.captureAudio(defaults: defaults))

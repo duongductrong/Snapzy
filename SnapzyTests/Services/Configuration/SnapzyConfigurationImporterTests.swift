@@ -32,6 +32,36 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.recordingFPS) as? Int, 60)
   }
 
+  func testImportAppliesRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "fhd1080"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.recordingMaxResolution), "fhd1080")
+  }
+
+  func testImportRejectsInvalidRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "8k"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.recordingMaxResolution))
+  }
+
   func testImportRejectsUnsupportedSchemaBeforeMutatingDefaults() {
     let defaults = UserDefaultsFactory.make()
     defaults.set("png", forKey: PreferencesKeys.screenshotFormat)

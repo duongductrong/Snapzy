@@ -44,6 +44,7 @@ final class RecordingCoordinator: ObservableObject {
   private struct ToolbarConfiguration {
     let format: VideoFormat
     let quality: VideoQuality
+    let maxResolution: RecordingMaxResolution
     let captureAudio: Bool
     let captureMicrophone: Bool
     let microphoneDeviceID: String
@@ -353,6 +354,7 @@ final class RecordingCoordinator: ObservableObject {
     return ToolbarConfiguration(
       format: toolbarWindow.selectedFormat,
       quality: toolbarWindow.selectedQuality,
+      maxResolution: toolbarWindow.selectedMaxResolution,
       captureAudio: toolbarWindow.captureAudio,
       captureMicrophone: toolbarWindow.captureMicrophone,
       microphoneDeviceID: toolbarWindow.microphoneDeviceID,
@@ -373,6 +375,7 @@ final class RecordingCoordinator: ObservableObject {
     if let configuration {
       toolbar.selectedFormat = configuration.format
       toolbar.selectedQuality = configuration.quality
+      toolbar.selectedMaxResolution = configuration.maxResolution
       toolbar.captureAudio = configuration.captureAudio
       toolbar.captureMicrophone = configuration.captureMicrophone
       toolbar.microphoneDeviceID = configuration.microphoneDeviceID
@@ -562,6 +565,7 @@ final class RecordingCoordinator: ObservableObject {
 
     let savedFormat = window.selectedFormat
     let savedQuality = window.selectedQuality
+    let maxResolution = window.selectedMaxResolution
     let savedCaptureAudio = window.captureAudio
     let savedCaptureMicrophone = window.captureMicrophone
     let savedMicrophoneDeviceID = window.microphoneDeviceID
@@ -610,6 +614,7 @@ final class RecordingCoordinator: ObservableObject {
           format: savedFormat,
           quality: savedQuality,
           fps: fps,
+          maxResolution: maxResolution,
           captureSystemAudio: savedCaptureAudio,
           captureMicrophone: savedCaptureMicrophone,
           microphoneDeviceID: savedMicrophoneDeviceID,
@@ -692,6 +697,7 @@ final class RecordingCoordinator: ObservableObject {
     // Get quality from preferences (default high)
     let qualityString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingQuality) ?? "high"
     let quality = VideoQuality(rawValue: qualityString) ?? .high
+    let maxResolution = window.selectedMaxResolution
 
     let captureSystemAudio = window.captureAudio
     let showCursor = window.state.showCursor
@@ -740,6 +746,7 @@ final class RecordingCoordinator: ObservableObject {
           format: format,
           quality: quality,
           fps: fps,
+          maxResolution: maxResolution,
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: captureMicrophone,
           microphoneDeviceID: microphoneDeviceID,
@@ -864,6 +871,7 @@ final class RecordingCoordinator: ObservableObject {
     if fps == 0 { fps = 30 }
     let qualityString = UserDefaults.standard.string(forKey: PreferencesKeys.recordingQuality) ?? "high"
     let quality = VideoQuality(rawValue: qualityString) ?? .high
+    let maxResolution = window.selectedMaxResolution
     let captureSystemAudio = window.captureAudio
     let showCursor = window.state.showCursor
     let captureCamera = window.captureCamera
@@ -890,6 +898,7 @@ final class RecordingCoordinator: ObservableObject {
           format: format,
           quality: quality,
           fps: fps,
+          maxResolution: maxResolution,
           captureSystemAudio: captureSystemAudio,
           captureMicrophone: false,
           showCursor: showCursor,

@@ -54,6 +54,15 @@ enum RecordingToolbarPreferences {
     return quality
   }
 
+  static func selectedMaxResolution(defaults: UserDefaults = .standard) -> RecordingMaxResolution {
+    guard let raw = defaults.string(forKey: PreferencesKeys.recordingMaxResolution),
+          let resolution = RecordingMaxResolution(rawValue: raw)
+    else {
+      return .auto
+    }
+    return resolution
+  }
+
   static func captureAudio(defaults: UserDefaults = .standard) -> Bool {
     defaults.object(forKey: PreferencesKeys.recordingCaptureAudio) as? Bool ?? true
   }
@@ -146,6 +155,7 @@ enum RecordingToolbarPlacement {
 final class RecordingToolbarState: ObservableObject {
   @Published var selectedFormat: VideoFormat
   @Published var selectedQuality: VideoQuality
+  @Published var selectedMaxResolution: RecordingMaxResolution
   @Published var captureAudio: Bool
   @Published var captureMicrophone: Bool
   @Published var microphoneDeviceID: String
@@ -164,6 +174,7 @@ final class RecordingToolbarState: ObservableObject {
   init() {
     self.selectedFormat = RecordingToolbarPreferences.selectedFormat()
     self.selectedQuality = RecordingToolbarPreferences.selectedQuality()
+    self.selectedMaxResolution = RecordingToolbarPreferences.selectedMaxResolution()
     self.captureAudio = RecordingToolbarPreferences.captureAudio()
     self.captureMicrophone = RecordingToolbarPreferences.captureMicrophone()
     self.microphoneDeviceID = RecordingToolbarPreferences.microphoneDeviceID()
@@ -215,6 +226,10 @@ final class RecordingToolbarWindow: NSWindow {
   var selectedQuality: VideoQuality {
     get { state.selectedQuality }
     set { state.selectedQuality = newValue }
+  }
+  var selectedMaxResolution: RecordingMaxResolution {
+    get { state.selectedMaxResolution }
+    set { state.selectedMaxResolution = newValue }
   }
   var captureAudio: Bool {
     get { state.captureAudio }

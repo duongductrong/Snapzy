@@ -3630,6 +3630,16 @@ nonisolated enum L10n {
       defaultValue: "Higher FPS for smoother motion",
       comment: "Capture preferences setting description"
     )
+    static let maxResolutionTitle = string(
+      "preferences-capture.max-resolution-title",
+      defaultValue: "Max Resolution",
+      comment: "Capture preferences setting title"
+    )
+    static let maxResolutionDescription = string(
+      "preferences-capture.max-resolution-description",
+      defaultValue: "Improves H.264 browser compatibility by limiting recording resolution.",
+      comment: "Capture preferences setting description"
+    )
     static let qualityTitle = string(
       "preferences-capture.quality-title",
       defaultValue: "Quality",
@@ -7860,6 +7870,21 @@ nonisolated enum L10n {
       "recording-toolbar.quality-low",
       defaultValue: "Low",
       comment: "Recording quality preset label"
+    )
+    static let maxResolutionSection = string(
+      "recording-toolbar.max-resolution-section",
+      defaultValue: "Max Resolution",
+      comment: "Recording toolbar options section title"
+    )
+    static let maxResolutionAuto = string(
+      "recording-toolbar.max-resolution-auto",
+      defaultValue: "Auto",
+      comment: "Recording max resolution preset label"
+    )
+    static let maxResolutionNative = string(
+      "recording-toolbar.max-resolution-native",
+      defaultValue: "Native",
+      comment: "Recording max resolution preset label"
     )
     static let fullscreenCapture = string(
       "recording-toolbar.fullscreen-capture",

@@ -163,6 +163,7 @@ open_annotate = false
 [recording]
 format = "mov"
 quality = "high"
+max_resolution = "auto"
 fps = 30
 capture_system_audio = false
 capture_microphone = false

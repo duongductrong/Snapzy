@@ -250,6 +250,9 @@ enum SnapzyConfigurationImporter {
     collectEnumString(&reader, "recording", "quality", allowed: VideoQuality.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.recordingQuality)
     }
+    collectEnumString(&reader, "recording", "max_resolution", allowed: RecordingMaxResolution.allCases.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.recordingMaxResolution)
+    }
     collectInt(&reader, "recording", "fps", range: 1...120, mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.recordingFPS)
     }
