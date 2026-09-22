@@ -2053,7 +2053,11 @@ final class ScreenCaptureManager: ObservableObject {
   ) async throws -> (image: CGImage, scaleFactor: CGFloat) {
     let contentFilter = SCContentFilter(desktopIndependentWindow: window)
     let scaleFactor = max(
-      resolvedWindowScaleFactor(window: window, fallbackDisplayID: fallbackTarget.displayID),
+      resolvedWindowScaleFactor(
+        window: window,
+        contentFilter: contentFilter,
+        fallbackDisplayID: fallbackTarget.displayID
+      ),
       Self.minimumScreenshotOutputScaleFactor
     )
     let contentRect: CGRect
@@ -2081,6 +2085,36 @@ final class ScreenCaptureManager: ObservableObject {
       contentFilter: contentFilter,
       configuration: configuration
     )
+
+    let actualPixelSize = CGSize(width: image.width, height: image.height)
+    let expectedPixelSize = WindowCaptureResolution.expectedPixelSize(
+      logicalSize: contentRect.size,
+      scaleFactor: scaleFactor
+    )
+    let actualScaleFactor = WindowCaptureResolution.actualScaleFactor(
+      pixelSize: actualPixelSize,
+      logicalSize: contentRect.size
+    )
+    if WindowCaptureResolution.isUndersized(
+      pixelSize: actualPixelSize,
+      logicalSize: contentRect.size,
+      expectedScaleFactor: scaleFactor
+    ) {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Window capture returned an undersized image; falling back to display crop",
+        context: [
+          "windowID": "\(fallbackTarget.windowID)",
+          "expected": "\(Int(expectedPixelSize.width))x\(Int(expectedPixelSize.height))",
+          "actual": "\(image.width)x\(image.height)",
+          "requestedScale": String(format: "%.3f", Double(scaleFactor)),
+          "actualScale": actualScaleFactor.map { String(format: "%.3f", Double($0)) } ?? "unknown",
+        ]
+      )
+      throw CaptureError.captureFailed("ScreenCaptureKit returned an undersized window image")
+    }
+
     let normalizedImage = await Task.detached(priority: .userInitiated) {
       Self.trimTransparentWindowFringe(from: image)
     }.value
@@ -2100,21 +2134,29 @@ final class ScreenCaptureManager: ObservableObject {
 
   private func resolvedWindowScaleFactor(
     window: SCWindow,
+    contentFilter: SCContentFilter,
     fallbackDisplayID: CGDirectDisplayID
   ) -> CGFloat {
+    // Prefer the display's backing scale. On some macOS releases,
+    // independent-window filters can transiently report a nominal 1x
+    // pointPixelScale for a Retina window; the display scale remains stable.
+    // A real 1x display still stays native because its backing scale is 1.
+    let screenScaleFactor = screenContainingWindow(
+      window,
+      fallbackDisplayID: fallbackDisplayID
+    )?.backingScaleFactor
+    let filterPointPixelScale: CGFloat?
     if #available(macOS 14.0, *) {
-      let filter = SCContentFilter(desktopIndependentWindow: window)
-      let pointPixelScale = CGFloat(filter.pointPixelScale)
-      if pointPixelScale > 0 {
-        return pointPixelScale
-      }
+      filterPointPixelScale = CGFloat(contentFilter.pointPixelScale)
+    } else {
+      filterPointPixelScale = nil
     }
 
-    if let screen = screenContainingWindow(window, fallbackDisplayID: fallbackDisplayID) {
-      return screen.backingScaleFactor
-    }
-
-    return NSScreen.main?.backingScaleFactor ?? 2.0
+    return WindowCaptureResolution.scaleFactor(
+      displayBackingScaleFactor: screenScaleFactor,
+      filterPointPixelScale: filterPointPixelScale,
+      fallback: NSScreen.main?.backingScaleFactor ?? 2.0
+    )
   }
 
   private func screenContainingWindow(
