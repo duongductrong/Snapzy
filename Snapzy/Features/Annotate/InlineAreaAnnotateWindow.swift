@@ -1899,7 +1899,10 @@ private struct InlineAreaPropertiesBar: View {
           }
 
           if state.quickPropertiesSupportsTextBackground {
-            if state.quickTextPresentation != .plain, !isNarrowTextLayout {
+            // Shown for every text presentation, including Text: the fill and
+            // border properties survive a switch to Text, and picking a colour
+            // there promotes the item back to a Text Label.
+            if !isNarrowTextLayout {
               InlineAreaTextFillColorControl(
                 state: state,
                 backgroundColorBinding: state.quickTextBackgroundBinding,
@@ -2014,7 +2017,6 @@ private struct InlineAreaPropertiesBar: View {
           }
 
           if state.quickPropertiesSupportsTextBackground,
-             state.quickTextPresentation != .plain,
              state.quickTextHasVisibleBorder,
              !isNarrowTextLayout {
             InlineAreaSliderControl(
@@ -2028,17 +2030,8 @@ private struct InlineAreaPropertiesBar: View {
             )
           }
 
-          if state.quickPropertiesSupportsTextPresentation {
-            if isNarrowTextLayout {
-              InlineAreaTextStylesMenuControl(state: state, popoverEdge: popoverEdge)
-            } else {
-              InlineAreaSavedTextStylesControl(state: state)
-            }
-          }
-
           if state.quickPropertiesSupportsCornerRadius,
-             (!state.quickPropertiesSupportsTextPresentation
-              || (!isNarrowTextLayout && state.quickTextPresentation != .plain && state.quickTextHasBackground)) {
+             (!state.quickPropertiesSupportsTextPresentation || !isNarrowTextLayout) {
             InlineAreaSliderControl(
               title: L10n.Common.corners,
               icon: "roundedbottom.horizontal",
@@ -2048,6 +2041,14 @@ private struct InlineAreaPropertiesBar: View {
               displayText: "\(Int(state.quickCornerRadiusBinding.wrappedValue.rounded()))",
               onEditingChanged: state.setQuickPropertiesControlEditing
             )
+          }
+
+          if state.quickPropertiesSupportsTextPresentation {
+            if isNarrowTextLayout {
+              InlineAreaTextStylesMenuControl(state: state, popoverEdge: popoverEdge)
+            } else {
+              InlineAreaSavedTextStylesControl(state: state)
+            }
           }
 
           if state.quickPropertiesSupportsLineStyle {
@@ -2907,15 +2908,46 @@ private struct InlineAreaTextPresentationControl: View {
 private struct InlineAreaTextFontControl: View {
   @ObservedObject var state: AnnotateState
 
+  @State private var fontPendingOverwrite: String?
+  @State private var showsOverwritePrompt = false
+
   var body: some View {
     InlineAreaPropertyGroup(title: L10n.AnnotateUI.textFont) {
       Menu {
-        ForEach(AnnotateTextLayout.textFontOptions, id: \.self) { fontName in
+        ForEach(state.textFontOptions, id: \.self) { fontName in
           Button {
             state.quickTextFontNameBinding.wrappedValue = fontName
           } label: {
             Text(AnnotateTextLayout.textFontDisplayName(fontName.isEmpty ? nil : fontName))
               .font(fontName.isEmpty ? .system(size: 12) : .custom(fontName, size: 12))
+          }
+        }
+
+        Divider()
+
+        Button(L10n.AnnotateUI.textFontSaveCurrent) {
+          requestAddingFont(state.quickTextFontNameBinding.wrappedValue)
+        }
+        .disabled(state.quickTextFontNameBinding.wrappedValue.isEmpty)
+
+        Menu(L10n.AnnotateUI.textFontAddFont) {
+          ForEach(AnnotateTextFontCatalog.installedFontFamilies, id: \.self) { family in
+            Button(family) {
+              requestAddingFont(family)
+            }
+          }
+        }
+
+        if state.savedTextFontNamesCount > 0 {
+          Divider()
+          Menu(L10n.AnnotateUI.textFontRemoveCustom) {
+            ForEach(0 ..< AnnotateState.customTextFontSlotCount, id: \.self) { slot in
+              if let name = state.savedTextFontName(at: slot) {
+                Button(state.textFontDisplayName(name), role: .destructive) {
+                  state.deleteSavedTextFont(at: slot)
+                }
+              }
+            }
           }
         }
       } label: {
@@ -2941,6 +2973,38 @@ private struct InlineAreaTextFontControl: View {
       }
       .menuStyle(.borderlessButton)
       .fixedSize()
+      .confirmationDialog(
+        L10n.AnnotateUI.textFontPresetOverwriteTitle,
+        isPresented: $showsOverwritePrompt,
+        titleVisibility: .visible
+      ) {
+        ForEach(0 ..< AnnotateState.customTextFontSlotCount, id: \.self) { slot in
+          Button(state.textFontSlotDisplayName(at: slot), role: .destructive) {
+            if let fontPendingOverwrite {
+              state.overwriteSavedTextFont(at: slot, with: fontPendingOverwrite)
+            }
+            fontPendingOverwrite = nil
+          }
+        }
+        Button(L10n.Common.cancel, role: .cancel) { fontPendingOverwrite = nil }
+      } message: {
+        Text(L10n.AnnotateUI.textFontPresetOverwriteMessage)
+      }
+    }
+  }
+
+  private func requestAddingFont(_ fontName: String) {
+    let trimmed = fontName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return }
+    // Picking one of the built-in faces from the system list just selects it:
+    // they already have a permanent home in the menu.
+    if AnnotateTextLayout.fixedTextFontOptions.contains(trimmed) {
+      state.quickTextFontNameBinding.wrappedValue = trimmed
+      return
+    }
+    if !state.saveTextFont(trimmed) {
+      fontPendingOverwrite = trimmed
+      showsOverwritePrompt = true
     }
   }
 }
@@ -3147,11 +3211,18 @@ private struct InlineAreaTextStylesMenuControl: View {
 private struct InlineAreaSavedTextStylesControl: View {
   @ObservedObject var state: AnnotateState
 
+  @State private var showsOverwritePrompt = false
+
   var body: some View {
     InlineAreaPropertyGroup(title: L10n.AnnotateUI.savedTextStyle) {
       HStack(spacing: 4) {
         Button {
-          _ = state.saveCurrentTextStylePreset()
+          switch state.saveCurrentTextStylePreset() {
+          case .saved, .unavailable:
+            break
+          case .needsOverwriteChoice:
+            showsOverwritePrompt = true
+          }
         } label: {
           Image(systemName: "plus.square.on.square")
             .font(.system(size: 11, weight: .semibold))
@@ -3171,40 +3242,66 @@ private struct InlineAreaSavedTextStylesControl: View {
 
         ForEach(0 ..< AnnotateState.savedTextStylePresetLimit, id: \.self) { index in
           if let properties = state.savedTextStylePreset(at: index) {
-            Button {
-              state.applySavedTextStylePreset(at: index)
-            } label: {
-              ZStack {
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .fill(state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
-                Circle()
-                  .fill(properties.fillColor)
-                  .frame(width: 10, height: 10)
-                  .overlay(
-                    Circle()
-                      .stroke(InlineAreaChrome.secondaryText.opacity(0.8), lineWidth: 1)
-                  )
-              }
-              .frame(width: 22, height: InlineAreaChrome.propertyControlHeight)
-              .overlay(
-                RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
-                  .stroke(
-                    state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder,
-                    lineWidth: 1
-                  )
-              )
-            }
-            .buttonStyle(.plain)
-            .help(L10n.AnnotateUI.savedTextStyle + " #" + String(index + 1))
-            .contextMenu {
-              Button(role: .destructive) {
-                state.deleteSavedTextStylePreset(at: index)
+            TextStylePresetHoverPreview(
+              name: state.savedTextStylePresetDisplayName(at: index),
+              properties: properties
+            ) {
+              Button {
+                state.applySavedTextStylePreset(at: index)
               } label: {
-                Label(L10n.Common.deleteAction, systemImage: "trash")
+                ZStack {
+                  RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                    .fill(state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBackground : InlineAreaChrome.itemBackground)
+                  Circle()
+                    .fill(properties.fillColor)
+                    .frame(width: 10, height: 10)
+                    .overlay(
+                      Circle()
+                        .stroke(InlineAreaChrome.secondaryText.opacity(0.8), lineWidth: 1)
+                    )
+                }
+                .frame(width: 22, height: InlineAreaChrome.propertyControlHeight)
+                .overlay(
+                  RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+                    .stroke(
+                      state.isSavedTextStylePresetSelected(at: index) ? InlineAreaChrome.itemSelectedBorder : InlineAreaChrome.itemBorder,
+                      lineWidth: 1
+                    )
+                )
+              }
+              .buttonStyle(.plain)
+              .help(state.savedTextStylePresetDisplayName(at: index))
+            }
+            .contextMenu {
+              // The three system presets are permanent; only the two custom
+              // slots offer deletion (T-04).
+              if state.canDeleteSavedTextStylePreset(at: index) {
+                Button(role: .destructive) {
+                  state.deleteSavedTextStylePreset(at: index)
+                } label: {
+                  Label(L10n.Common.deleteAction, systemImage: "trash")
+                }
               }
             }
           }
         }
+      }
+      .confirmationDialog(
+        L10n.AnnotateUI.textStylePresetOverwriteTitle,
+        isPresented: $showsOverwritePrompt,
+        titleVisibility: .visible
+      ) {
+        ForEach(0 ..< AnnotateState.customTextStylePresetSlotCount, id: \.self) { slot in
+          Button(
+            String(format: L10n.AnnotateUI.savedTextStyleCustomSlot, slot + 1),
+            role: .destructive
+          ) {
+            state.overwriteSavedTextStylePreset(at: slot)
+          }
+        }
+        Button(L10n.Common.cancel, role: .cancel) {}
+      } message: {
+        Text(L10n.AnnotateUI.textStylePresetOverwriteMessage)
       }
     }
   }

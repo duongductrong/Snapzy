@@ -200,20 +200,16 @@ struct AnnotateQuickPropertiesBar: View {
       || showCornerRadius
       || showLineStyle
       || showArrowStyle
-    let showTextCorners: Bool
-    if showTextPresentation {
-      showTextCorners = showCornerRadius
-        && state.quickTextPresentation != .plain
-        && state.quickTextHasBackground
-    } else {
-      showTextCorners = showCornerRadius
-    }
+    // Every container attribute (background, border, corners) stays available in
+    // all three presentations. The properties behind them survive a switch to
+    // Text now, so hiding the controls there would both break the promise and
+    // make the bar reflow every time the user toggles the presentation.
+    let showTextCorners = showCornerRadius
     let showSelectionStyle = state.quickPropertiesShowsSelectionStyle && !hasEditableStyleControls
     let showSelectionInfo = state.quickPropertiesSelectedAnnotationCount > 0 && showSelectionStyle
     let hasBeforeTextBackground = showStrokeColor || showFill
     let hasBeforeTextPresentation = hasBeforeTextBackground || showTextBackground
     let hasBeforeTextFontSize = hasBeforeTextPresentation || showTextPresentation
-    let hasBeforeSavedTextStyle = hasBeforeTextFontSize || showTextFontSize
     let hasBeforeWatermarkText = hasBeforeTextFontSize || showTextFontSize
     let hasBeforeWatermarkStyle = hasBeforeWatermarkText || showWatermark
     let hasBeforeWatermarkOpacity = hasBeforeWatermarkStyle || showWatermark
@@ -221,10 +217,13 @@ struct AnnotateQuickPropertiesBar: View {
     let hasBeforeBlurType = hasBeforeWatermarkRotation || showWatermark
     let hasBeforeSpotlightOpacity = hasBeforeBlurType || showBlurType
     let hasBeforeStrokeWidth = hasBeforeSpotlightOpacity || state.quickPropertiesSupportsSpotlightOpacity
-    let hasBeforeCornerRadius = hasBeforeStrokeWidth || showStrokeWidth
-    let hasBeforeLineStyle = hasBeforeCornerRadius || showCornerRadius
+    let hasBeforeLineStyle = hasBeforeStrokeWidth || showStrokeWidth
     let hasBeforeArrowStyle = hasBeforeLineStyle || showLineStyle
     let hasBeforeTextSnap = hasBeforeArrowStyle || showArrowStyle
+    // The saved-style presets end the row, with the corner-radius slider right
+    // before them: quick presets on the far right, fine tuning in the middle.
+    let hasBeforeCornerRadius = hasBeforeTextSnap || showTextSnap
+    let hasBeforeSavedTextStyle = hasBeforeCornerRadius || showCornerRadius
 
     return HStack(spacing: density.rowSpacing) {
       contextChip(density: density)
@@ -310,7 +309,7 @@ struct AnnotateQuickPropertiesBar: View {
       }
 
       activePropertySlot(
-        isVisible: showTextBackground && state.quickTextPresentation != .plain,
+        isVisible: showTextBackground,
         isEnabled: state.quickPropertiesSupportsTextBackground,
         showsLeadingDivider: hasBeforeTextBackground,
         width: nil
@@ -321,7 +320,7 @@ struct AnnotateQuickPropertiesBar: View {
           borderColorBinding: state.quickTextBorderColorBinding,
           backgroundColors: textBackgroundColors,
           sameColorActive: state.quickTextUsesSameColorAsBackground,
-          showsBorderSection: state.quickTextPresentation != .plain,
+          showsBorderSection: true,
           groupSpacing: density.groupSpacing,
           quickColorLimit: density == .regular ? 3 : 1
         )
@@ -369,15 +368,6 @@ struct AnnotateQuickPropertiesBar: View {
           sliderWidth: density.sliderWidth,
           groupSpacing: density.groupSpacing
         )
-      }
-
-      activePropertySlot(
-        isVisible: showTextPresentation,
-        isEnabled: state.quickPropertiesSupportsTextPresentation,
-        showsLeadingDivider: hasBeforeSavedTextStyle,
-        width: nil
-      ) {
-        QuickSavedTextStylesControl(state: state)
       }
 
       activePropertySlot(
@@ -490,19 +480,6 @@ struct AnnotateQuickPropertiesBar: View {
       }
 
       activePropertySlot(
-        isVisible: showTextCorners,
-        isEnabled: state.quickPropertiesSupportsCornerRadius,
-        showsLeadingDivider: hasBeforeCornerRadius,
-        width: density.cornerControlWidth
-      ) {
-        QuickCornerRadiusControl(
-          value: state.quickCornerRadiusBinding,
-          sliderWidth: density.sliderWidth,
-          groupSpacing: density.groupSpacing
-        )
-      }
-
-      activePropertySlot(
         isVisible: showLineStyle,
         isEnabled: state.quickPropertiesSupportsLineStyle,
         showsLeadingDivider: hasBeforeLineStyle,
@@ -545,6 +522,29 @@ struct AnnotateQuickPropertiesBar: View {
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
+      }
+
+      activePropertySlot(
+        isVisible: showTextCorners,
+        isEnabled: state.quickPropertiesSupportsCornerRadius,
+        showsLeadingDivider: hasBeforeCornerRadius,
+        width: density.cornerControlWidth
+      ) {
+        QuickCornerRadiusControl(
+          value: state.quickCornerRadiusBinding,
+          sliderWidth: density.sliderWidth,
+          groupSpacing: density.groupSpacing,
+          onEditingChanged: { isEditing in state.setQuickPropertiesControlEditing(isEditing) }
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showTextPresentation,
+        isEnabled: state.quickPropertiesSupportsTextPresentation,
+        showsLeadingDivider: hasBeforeSavedTextStyle,
+        width: nil
+      ) {
+        QuickSavedTextStylesControl(state: state)
       }
     }
     .fixedSize(horizontal: true, vertical: false)
@@ -804,6 +804,18 @@ private struct QuickPropertiesColorPopover: View {
   @State private var showsFavoriteSelectionPopover = false
   let showsSameColorWarning: Bool
   let sameColorActive: Bool
+  /// Colour to mark as selected, when it should differ from the bound value.
+  ///
+  /// Used by plain text, which keeps a stored fill it no longer draws: the
+  /// highlight has to read "none" while `selectedColor` still carries the real
+  /// colour, so that picking a swatch and cancelling a custom draft both keep
+  /// writing to the real property instead of the displayed placeholder.
+  var selectionOverride: Color? = nil
+
+  /// Colour whose palette entry is drawn as selected.
+  private var highlightedColor: Color {
+    selectionOverride ?? selectedColor
+  }
 
   private enum ColorDraftTarget {
     case customPalette
@@ -1049,7 +1061,7 @@ private struct QuickPropertiesColorPopover: View {
     QuickPropertiesPaletteColorButton(
       color: color,
       title: AnnotateColorPaletteStore.isClear(color) ? L10n.Common.none : title,
-      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
+      isSelected: AnnotateColorPaletteStore.colorsMatch(highlightedColor, color),
       sourceFavoriteRole: nil,
       overlayAction: nil,
       overlayHelp: "",
@@ -1063,7 +1075,7 @@ private struct QuickPropertiesColorPopover: View {
     QuickPropertiesPaletteColorButton(
       color: color,
       title: AnnotateColorPaletteStore.isClear(color) ? L10n.Common.none : title,
-      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
+      isSelected: AnnotateColorPaletteStore.colorsMatch(highlightedColor, color),
       sourceFavoriteRole: role,
       overlayAction: {
         paletteStore.removeFavorite(color, for: role)
@@ -1086,7 +1098,7 @@ private struct QuickPropertiesColorPopover: View {
     QuickPropertiesPaletteColorButton(
       color: color,
       title: AnnotateColorPaletteStore.isClear(color) ? L10n.Common.none : title,
-      isSelected: AnnotateColorPaletteStore.colorsMatch(selectedColor, color),
+      isSelected: AnnotateColorPaletteStore.colorsMatch(highlightedColor, color),
       sourceFavoriteRole: nil,
       overlayAction: overlayAction,
       overlayHelp: overlayHelp,
@@ -1604,11 +1616,18 @@ struct TextPresentationGlyph: View {
 private struct QuickSavedTextStylesControl: View {
   @ObservedObject var state: AnnotateState
 
+  @State private var showsOverwritePrompt = false
+
   var body: some View {
     QuickPropertiesGroup(title: L10n.AnnotateUI.savedTextStyle, spacing: 6) {
       HStack(spacing: 4) {
         Button {
-          _ = state.saveCurrentTextStylePreset()
+          switch state.saveCurrentTextStylePreset() {
+          case .saved, .unavailable:
+            break
+          case .needsOverwriteChoice:
+            showsOverwritePrompt = true
+          }
         } label: {
           Image(systemName: "plus.square.on.square")
             .font(.system(size: 11, weight: .semibold))
@@ -1628,41 +1647,66 @@ private struct QuickSavedTextStylesControl: View {
 
         ForEach(0 ..< AnnotateState.savedTextStylePresetLimit, id: \.self) { index in
           if let properties = state.savedTextStylePreset(at: index) {
-            Button {
-              state.applySavedTextStylePreset(at: index)
-            } label: {
-              ZStack {
-                RoundedRectangle(cornerRadius: 6)
-                  .fill(state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
-
-                Circle()
-                  .fill(properties.fillColor)
-                  .frame(width: 10, height: 10)
-                  .overlay(
-                    Circle()
-                      .stroke(Color.primary.opacity(0.45), lineWidth: 1)
-                  )
-              }
-              .frame(width: 22, height: 22)
-              .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                  .stroke(
-                    state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.55) : Color.secondary.opacity(0.18),
-                    lineWidth: 1
-                  )
-              )
-            }
-            .buttonStyle(.plain)
-            .help(L10n.AnnotateUI.savedTextStyle + " #\(index + 1)")
-            .contextMenu {
-              Button(role: .destructive) {
-                state.deleteSavedTextStylePreset(at: index)
+            TextStylePresetHoverPreview(
+              name: state.savedTextStylePresetDisplayName(at: index),
+              properties: properties
+            ) {
+              Button {
+                state.applySavedTextStylePreset(at: index)
               } label: {
-                Label(L10n.Common.deleteAction, systemImage: "trash")
+                ZStack {
+                  RoundedRectangle(cornerRadius: 6)
+                    .fill(state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.16) : SidebarColors.itemDefault)
+
+                  Circle()
+                    .fill(properties.fillColor)
+                    .frame(width: 10, height: 10)
+                    .overlay(
+                      Circle()
+                        .stroke(Color.primary.opacity(0.45), lineWidth: 1)
+                    )
+                }
+                .frame(width: 22, height: 22)
+                .overlay(
+                  RoundedRectangle(cornerRadius: 6)
+                    .stroke(
+                      state.isSavedTextStylePresetSelected(at: index) ? Color.accentColor.opacity(0.55) : Color.secondary.opacity(0.18),
+                      lineWidth: 1
+                    )
+                )
+              }
+              .buttonStyle(.plain)
+              .help(state.savedTextStylePresetDisplayName(at: index))
+            }
+            .contextMenu {
+              // System presets are permanent; only custom slots can be deleted.
+              if state.canDeleteSavedTextStylePreset(at: index) {
+                Button(role: .destructive) {
+                  state.deleteSavedTextStylePreset(at: index)
+                } label: {
+                  Label(L10n.Common.deleteAction, systemImage: "trash")
+                }
               }
             }
           }
         }
+      }
+      .confirmationDialog(
+        L10n.AnnotateUI.textStylePresetOverwriteTitle,
+        isPresented: $showsOverwritePrompt,
+        titleVisibility: .visible
+      ) {
+        ForEach(0 ..< AnnotateState.customTextStylePresetSlotCount, id: \.self) { slot in
+          Button(
+            String(format: L10n.AnnotateUI.savedTextStyleCustomSlot, slot + 1),
+            role: .destructive
+          ) {
+            state.overwriteSavedTextStylePreset(at: slot)
+          }
+        }
+        Button(L10n.Common.cancel, role: .cancel) {}
+      } message: {
+        Text(L10n.AnnotateUI.textStylePresetOverwriteMessage)
       }
     }
     .fixedSize(horizontal: true, vertical: false)
@@ -1848,6 +1892,7 @@ private struct QuickCornerRadiusControl: View {
   @Binding var value: CGFloat
   let sliderWidth: CGFloat
   let groupSpacing: CGFloat
+  let onEditingChanged: (Bool) -> Void
   var isEnabled: Bool = true
 
   var body: some View {
@@ -1857,10 +1902,14 @@ private struct QuickCornerRadiusControl: View {
           .font(.system(size: 10))
           .foregroundColor(isEnabled ? .secondary : .secondary.opacity(0.4))
 
-        Slider(value: $value.stepped(by: 1, in: 0 ... 60), in: 0 ... 60)
-          .frame(width: sliderWidth)
-          .controlSize(.small)
-          .disabled(!isEnabled)
+        Slider(
+          value: $value.stepped(by: 1, in: 0 ... 60),
+          in: 0 ... 60,
+          onEditingChanged: onEditingChanged
+        )
+        .frame(width: sliderWidth)
+        .controlSize(.small)
+        .disabled(!isEnabled)
 
         Text("\(Int(value))")
           .font(Typography.labelSmall)
@@ -1878,6 +1927,9 @@ private struct QuickTextFontControl: View {
   @ObservedObject var state: AnnotateState
   let groupSpacing: CGFloat
 
+  @State private var fontPendingOverwrite: String?
+  @State private var showsOverwritePrompt = false
+
   private var currentFontName: String {
     state.quickTextFontNameBinding.wrappedValue
   }
@@ -1885,12 +1937,40 @@ private struct QuickTextFontControl: View {
   var body: some View {
     QuickPropertiesGroup(title: L10n.AnnotateUI.textFont, spacing: groupSpacing) {
       Menu {
-        ForEach(AnnotateTextLayout.textFontOptions, id: \.self) { fontName in
+        ForEach(state.textFontOptions, id: \.self) { fontName in
           Button {
             state.quickTextFontNameBinding.wrappedValue = fontName
           } label: {
             Text(AnnotateTextLayout.textFontDisplayName(fontName.isEmpty ? nil : fontName))
               .font(fontName.isEmpty ? .system(size: 12) : .custom(fontName, size: 12))
+          }
+        }
+
+        Divider()
+
+        Button(L10n.AnnotateUI.textFontSaveCurrent) {
+          requestAddingFont(currentFontName)
+        }
+        .disabled(currentFontName.isEmpty)
+
+        Menu(L10n.AnnotateUI.textFontAddFont) {
+          ForEach(AnnotateTextFontCatalog.installedFontFamilies, id: \.self) { family in
+            Button(family) {
+              requestAddingFont(family)
+            }
+          }
+        }
+
+        if state.savedTextFontNamesCount > 0 {
+          Divider()
+          Menu(L10n.AnnotateUI.textFontRemoveCustom) {
+            ForEach(0 ..< AnnotateState.customTextFontSlotCount, id: \.self) { slot in
+              if let name = state.savedTextFontName(at: slot) {
+                Button(state.textFontDisplayName(name), role: .destructive) {
+                  state.deleteSavedTextFont(at: slot)
+                }
+              }
+            }
           }
         }
       } label: {
@@ -1916,8 +1996,38 @@ private struct QuickTextFontControl: View {
       }
       .menuStyle(.borderlessButton)
       .fixedSize()
+      .confirmationDialog(
+        L10n.AnnotateUI.textFontPresetOverwriteTitle,
+        isPresented: $showsOverwritePrompt,
+        titleVisibility: .visible
+      ) {
+        ForEach(0 ..< AnnotateState.customTextFontSlotCount, id: \.self) { slot in
+          Button(state.textFontSlotDisplayName(at: slot), role: .destructive) {
+            if let fontPendingOverwrite {
+              state.overwriteSavedTextFont(at: slot, with: fontPendingOverwrite)
+            }
+            fontPendingOverwrite = nil
+          }
+        }
+        Button(L10n.Common.cancel, role: .cancel) { fontPendingOverwrite = nil }
+      } message: {
+        Text(L10n.AnnotateUI.textFontPresetOverwriteMessage)
+      }
     }
     .fixedSize(horizontal: true, vertical: false)
+  }
+
+  private func requestAddingFont(_ fontName: String) {
+    let trimmed = fontName.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return }
+    if AnnotateTextLayout.fixedTextFontOptions.contains(trimmed) {
+      state.quickTextFontNameBinding.wrappedValue = trimmed
+      return
+    }
+    if !state.saveTextFont(trimmed) {
+      fontPendingOverwrite = trimmed
+      showsOverwritePrompt = true
+    }
   }
 }
 
@@ -2250,12 +2360,36 @@ private struct QuickTextFillPopoverControl: View {
 
   @State private var showsPopover = false
 
+  /// Plain text stores a fill but draws none — the renderer gates both the
+  /// bubble and its border on `textPresentation` — so while the item is plain
+  /// this control reports "none", which is what the canvas actually shows. The
+  /// tooltip says what picking a colour will do.
+  private var isLatent: Bool {
+    state.quickTextPresentation == .plain
+  }
+
+  /// Colour the swatch draws. Display-only: the stored fill stays on the
+  /// annotation so that switching back to a container finds the colour the user
+  /// chose. Reporting it here as "none" is honest about the pixels, and the
+  /// binding still carries the real value, so a pick edits the real property.
+  private var displayedBackgroundColor: Color {
+    isLatent ? .clear : backgroundColorBinding
+  }
+
+  /// Selection highlight handed to the popovers, overridden to "none" for the
+  /// same reason. Only the highlight is overridden — the bindings stay real, so
+  /// the popover's custom-colour draft and its cancel path cannot write `.clear`
+  /// back over a colour that is still stored.
+  private var popoverSelectionOverride: Color? {
+    isLatent ? .clear : nil
+  }
+
   var body: some View {
     QuickPropertiesGroup(title: L10n.AnnotateUI.textBackgroundColor, spacing: groupSpacing) {
       Button {
         showsPopover = true
       } label: {
-        QuickPropertiesColorSwatch(color: backgroundColorBinding, isSelected: false, size: 16)
+        QuickPropertiesColorSwatch(color: displayedBackgroundColor, isSelected: false, size: 16)
           .frame(width: 42, height: 26)
           .background(
             RoundedRectangle(cornerRadius: 7)
@@ -2267,7 +2401,7 @@ private struct QuickTextFillPopoverControl: View {
           )
       }
       .buttonStyle(.plain)
-      .help(L10n.AnnotateUI.textBackgroundColor)
+      .help(isLatent ? L10n.AnnotateUI.textBackgroundPlainHint : L10n.AnnotateUI.textBackgroundColor)
       .popover(isPresented: $showsPopover, arrowEdge: .bottom) {
         VStack(alignment: .leading, spacing: 10) {
           QuickPropertiesColorPopover(
@@ -2277,7 +2411,8 @@ private struct QuickTextFillPopoverControl: View {
             role: .textBackground,
             dismiss: {},
             showsSameColorWarning: true,
-            sameColorActive: sameColorActive
+            sameColorActive: sameColorActive,
+            selectionOverride: popoverSelectionOverride
           )
           if showsBorderSection {
             Divider()
@@ -2288,8 +2423,16 @@ private struct QuickTextFillPopoverControl: View {
               role: .textBackground,
               dismiss: {},
               showsSameColorWarning: false,
-              sameColorActive: false
+              sameColorActive: false,
+              selectionOverride: popoverSelectionOverride
             )
+          }
+          if isLatent {
+            Divider()
+            Text(L10n.AnnotateUI.textBackgroundPlainHint)
+              .font(.system(size: 11))
+              .foregroundStyle(.secondary)
+              .fixedSize(horizontal: false, vertical: true)
           }
         }
         .padding(8)

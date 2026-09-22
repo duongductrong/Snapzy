@@ -158,7 +158,9 @@ struct TextEditOverlay: View {
   }
 }
 
-private struct TextBubbleShape: Shape {
+/// Shared by the live editing overlay and the saved-style hover preview so both
+/// draw the same bubble as the canvas renderer.
+struct TextBubbleShape: Shape {
   let tailTarget: CGPoint?
   let fontSize: CGFloat
   let cornerRadius: CGFloat

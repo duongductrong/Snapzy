@@ -26,6 +26,10 @@ struct AnnotateMainView: View {
 
         AnnotateQuickPropertiesBar(state: state)
           .frame(height: quickPropertiesBarHeight)
+          // Scoped to the bar it animates. On the root VStack this transaction
+          // wrapped the whole window — including the AppKit-backed segmented
+          // control in the bottom bar — every time a selection was cleared.
+          .animation(.easeInOut(duration: 0.14), value: state.showsQuickPropertiesBar)
 
         Divider()
           .background(Color(nsColor: .separatorColor))
@@ -56,6 +60,5 @@ struct AnnotateMainView: View {
     }
     .preferredColorScheme(themeManager.systemAppearance)
     .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar
-    .animation(.easeInOut(duration: 0.14), value: state.showsQuickPropertiesBar)
   }
 }
