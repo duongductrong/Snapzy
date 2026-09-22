@@ -101,9 +101,9 @@ nonisolated enum TextPresentation: String, CaseIterable, Identifiable, Equatable
 
   var helpText: String {
     switch self {
-    case .plain: "Transparent text"
-    case .label: "Text label"
-    case .callout: "Callout label"
+    case .plain: L10n.AnnotateUI.textPresentationPlain
+    case .label: L10n.AnnotateUI.textPresentationLabel
+    case .callout: L10n.AnnotateUI.textPresentationCallout
     }
   }
 }
@@ -111,32 +111,288 @@ nonisolated enum TextPresentation: String, CaseIterable, Identifiable, Equatable
 /// Shared proportions for label and callout text. Keeping these in one place
 /// makes the editing overlay, on-canvas preview, and exported image agree.
 nonisolated enum TextBubbleGeometry {
+  /// One rounded corner of the outline, in the y-up space the bubble is built in
+  /// (`maxY` is the top edge).
+  ///
+  /// Corners are traversed clockwise, i.e. from `startAngle` down to
+  /// `endAngle == startAngle - 90°`, so the forward direction along an arc at
+  /// angle `a` is `(sin a, -cos a)` — the same convention as `basis(for:)`. That
+  /// is what lets a tail rooted in an arc leave the wall the way a mid-edge tail
+  /// does.
+  private enum Corner {
+    case topRight
+    case bottomRight
+    case bottomLeft
+    case topLeft
+
+    /// Angle this arc begins at, where the preceding edge hands over.
+    var startAngle: CGFloat {
+      switch self {
+      case .topRight: .pi / 2
+      case .bottomRight: 0
+      case .bottomLeft: -.pi / 2
+      case .topLeft: .pi
+      }
+    }
+
+    /// Angle this arc ends at, where the following edge takes over.
+    var endAngle: CGFloat { startAngle - .pi / 2 }
+
+    /// The arc's bisector: the outward diagonal a corner-rooted tail is confined
+    /// around.
+    var midAngle: CGFloat { startAngle - .pi / 4 }
+
+    func center(in rect: CGRect, radius: CGFloat) -> CGPoint {
+      switch self {
+      case .topRight: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius)
+      case .bottomRight: CGPoint(x: rect.maxX - radius, y: rect.minY + radius)
+      case .bottomLeft: CGPoint(x: rect.minX + radius, y: rect.minY + radius)
+      case .topLeft: CGPoint(x: rect.minX + radius, y: rect.maxY - radius)
+      }
+    }
+
+    func point(in rect: CGRect, radius: CGFloat, at angle: CGFloat) -> CGPoint {
+      let center = center(in: rect, radius: radius)
+      return CGPoint(x: center.x + radius * cos(angle), y: center.y + radius * sin(angle))
+    }
+
+    /// Point this arc begins at.
+    func start(in rect: CGRect, radius: CGFloat) -> CGPoint {
+      point(in: rect, radius: radius, at: startAngle)
+    }
+
+    /// Point this arc ends at.
+    func end(in rect: CGRect, radius: CGFloat) -> CGPoint {
+      point(in: rect, radius: radius, at: endAngle)
+    }
+
+    static func tangent(at angle: CGFloat) -> CGPoint {
+      CGPoint(x: sin(angle), y: -cos(angle))
+    }
+  }
+
   private enum TailSide {
     case minX
     case maxX
     case minY
     case maxY
+
+    /// Corner this side leaves, in traversal order.
+    var upstreamCorner: Corner {
+      switch self {
+      case .maxY: .topLeft
+      case .maxX: .topRight
+      case .minY: .bottomRight
+      case .minX: .bottomLeft
+      }
+    }
+
+    /// Corner this side runs into, in traversal order.
+    var downstreamCorner: Corner {
+      switch self {
+      case .maxY: .topRight
+      case .maxX: .bottomRight
+      case .minY: .bottomLeft
+      case .minX: .topLeft
+      }
+    }
+
+    /// `true` when this side runs vertically, so its length is `rect.height`.
+    var isVertical: Bool {
+      switch self {
+      case .minX, .maxX: true
+      case .minY, .maxY: false
+      }
+    }
+
+    /// Point this side starts at: where the upstream corner's arc ends.
+    func start(in rect: CGRect, radius: CGFloat) -> CGPoint {
+      upstreamCorner.end(in: rect, radius: radius)
+    }
+
+    /// Point this side ends at: where the downstream corner's arc begins.
+    func end(in rect: CGRect, radius: CGFloat) -> CGPoint {
+      downstreamCorner.start(in: rect, radius: radius)
+    }
+
+    /// The corner at the target's end of this side, i.e. the arc that hosts the
+    /// tail when the straight span is too short to hold its root. The two tangent
+    /// points of a side straddle the rect's midline, so that midline is the
+    /// boundary, and the pick depends on the target alone.
+    func corner(nearest target: CGPoint, in rect: CGRect) -> Corner {
+      switch self {
+      case .maxX: target.y >= rect.midY ? .topRight : .bottomRight
+      case .minX: target.y >= rect.midY ? .topLeft : .bottomLeft
+      case .maxY: target.x >= rect.midX ? .topRight : .topLeft
+      case .minY: target.x >= rect.midX ? .bottomRight : .bottomLeft
+      }
+    }
   }
 
-  private struct TailGeometry {
+  /// Half-angle of a growing tail near its root, as a slope. A tail widens with
+  /// length until `maxRootHalfWidth` caps it, which keeps a short tail readable
+  /// and stops a long one from narrowing into a needle.
+  private static let tailApexSlope = CGFloat(tan(26 * Double.pi / 180))
+  /// Hard ceiling on the root half-width, as a fraction of the shorter side.
+  private static let maxRootHalfWidthRatio: CGFloat = 0.3
+  /// How far a tail may lean away from the outward normal of the wall it leaves.
+  ///
+  /// Aiming a tail at its target is only worth so much: past this lean the tip
+  /// sits nearly in line with its own root, so the tip angle is set by the lean
+  /// rather than by the length and the wedge flattens back into the sliver the
+  /// needle report was about — a long drag towards a corner, where the root is
+  /// clamped well behind the target, is enough to get there. Bounding the lean
+  /// is what makes the tip angle hold at every target, not just every length.
+  private static let maxTailTilt = CGFloat(32 * Double.pi / 180)
+
+  /// Tail numbers that do not depend on the bubble's corner radius. Split out
+  /// because the resolved target is stored and re-resolved across font-size,
+  /// preset and presentation changes, so it must not read anything
+  /// radius-dependent.
+  private struct CalloutTailLengths {
+    /// Shortest tail: a target dragged up against the bubble still leaves a
+    /// readable wedge instead of a dot.
+    let minTailLength: CGFloat
+    /// Longest tail: a distant target becomes a guide rather than a needle.
+    let maxTailLength: CGFloat
+    /// Root half-width of the shortest tail, and the floor under clamping.
+    let baseHalfWidth: CGFloat
+  }
+
+  /// Every number the callout tail needs, derived once and read by the target
+  /// resolver, the outline builder and the hit-test path so they cannot drift
+  /// apart. Same shape as `ArrowGeometry.TaperedArrowMetrics`.
+  private struct CalloutTailMetrics {
+    let lengths: CalloutTailLengths
+    /// Corner radius actually drawn, i.e. `resolvedCornerRadius`. A large stored
+    /// radius is what makes the straight span disappear, so the tail has to know
+    /// it.
+    let radius: CGFloat
+    /// Widest root half-width the drawn geometry may use. Already capped by
+    /// whichever of the straight span and the corner arc has to host the root, so
+    /// this clamp and `attachesAtCorner` read the same number and the attachment
+    /// mode cannot flip as the tail grows mid-drag.
+    let maxRootHalfWidth: CGFloat
+    /// `true` when this side's straight span cannot hold `baseHalfWidth` clear of
+    /// both corner arcs, so the root goes into a corner arc instead.
+    let attachesAtCorner: Bool
+
+    var minTailLength: CGFloat { lengths.minTailLength }
+    var baseHalfWidth: CGFloat { lengths.baseHalfWidth }
+
+    /// Reach the drawn tail may use.
+    ///
+    /// A tail is only as blunt as its root is wide for its length, and the root
+    /// cannot outgrow the span hosting it, so the radius-free reach is capped at
+    /// whatever `maxRootHalfWidth / tan(apex)` allows. Without this a large
+    /// rounded bubble could still grow a needle: a wide corner pushes the root's
+    /// anchor far along the edge, leaving a long tail with a root narrow for its
+    /// length.
+    ///
+    /// The `minTailLength` floor keeps the interval ordered on a tiny bubble,
+    /// where the span cap can land below the shortest tail.
+    var maxTailLength: CGFloat {
+      max(min(lengths.maxTailLength, maxRootHalfWidth / TextBubbleGeometry.tailApexSlope), minTailLength)
+    }
+
+    func rootHalfWidth(forTailLength length: CGFloat) -> CGFloat {
+      min(max(length * TextBubbleGeometry.tailApexSlope, baseHalfWidth), maxRootHalfWidth)
+    }
+  }
+
+  /// Where the tail leaves the bubble and which outline segment it replaces.
+  private struct CalloutTail {
+    /// Either the root sits on the straight span of `side`, or it replaces part
+    /// of a corner arc.
+    enum Root {
+      case edge
+      case corner(Corner, entryAngle: CGFloat, exitAngle: CGFloat)
+    }
+
     let side: TailSide
+    let root: Root
     let target: CGPoint
     let entry: CGPoint
     let exit: CGPoint
-    let tangent: CGPoint
+    /// Forward wall directions at `entry` and `exit`, used for the two root
+    /// fillets. They differ when the root sits in an arc, so each fillet leaves
+    /// the wall tangentially instead of one shared direction cutting into it.
+    let entryTangent: CGPoint
+    let exitTangent: CGPoint
     let rootHalfWidth: CGFloat
   }
 
-  static func contentInsets(for presentation: TextPresentation, fontSize: CGFloat) -> CGSize {
-    guard presentation != .plain else { return CGSize(width: 4, height: 4) }
-    return CGSize(
-      width: max(9, min(fontSize * 0.55, 18)),
-      height: max(5, min(fontSize * 0.32, 10))
+  private static func calloutTailLengths(in rect: CGRect, fontSize: CGFloat) -> CalloutTailLengths {
+    let shortestSide = min(rect.width, rect.height)
+    return CalloutTailLengths(
+      minTailLength: max(12, min(shortestSide * 0.35, fontSize * 0.9)),
+      maxTailLength: min(shortestSide * 0.6, fontSize * 2.4),
+      baseHalfWidth: max(5, min(fontSize * 0.44, shortestSide * 0.2))
     )
   }
 
+  private static func calloutTailMetrics(
+    in rect: CGRect,
+    side: TailSide,
+    cornerRadius: CGFloat,
+    fontSize: CGFloat
+  ) -> CalloutTailMetrics {
+    let shortestSide = min(rect.width, rect.height)
+    let lengths = calloutTailLengths(in: rect, fontSize: fontSize)
+    let radius = resolvedCornerRadius(storedValue: cornerRadius, in: rect, fontSize: fontSize)
+    let edgeLength = side.isVertical ? rect.height : rect.width
+    // Half of the straight span: what is left of this edge once both corner arcs
+    // are taken. Both the mode test and the root cap read it, so the mode cannot
+    // flip as the tail changes length mid-drag.
+    let midEdgeHalfSpan = max(0, edgeLength / 2 - radius)
+    let attachesAtCorner = midEdgeHalfSpan < lengths.baseHalfWidth
+    // In an arc the root is a chord of the corner circle, so it can never be
+    // wider than the circle: `radius / sqrt(2)` is exactly the `delta <= 45°`
+    // bound that keeps both sub-arcs of the split corner non-empty.
+    let spanLimit = attachesAtCorner ? radius / CGFloat(2).squareRoot() : midEdgeHalfSpan
+    return CalloutTailMetrics(
+      lengths: lengths,
+      radius: radius,
+      maxRootHalfWidth: min(shortestSide * maxRootHalfWidthRatio, spanLimit),
+      attachesAtCorner: attachesAtCorner
+    )
+  }
+
+  /// Horizontal and vertical breathing room between the text and its bubble.
+  ///
+  /// One value for all three presentations: switching Text / Text Label /
+  /// Callout Label must not resize the annotation, so the insets cannot depend
+  /// on the presentation. `presentation` is kept in the signature so call sites
+  /// stay uniform with the rest of the geometry helpers.
+  static func contentInsets(for presentation: TextPresentation, fontSize: CGFloat) -> CGSize {
+    CGSize(
+      width: max(12, min(fontSize * 0.70, 24)),
+      height: max(7, min(fontSize * 0.45, 14))
+    )
+  }
+
+  /// Natural radius used when a bubble has no explicit radius of its own, e.g.
+  /// text measured before the user ever touches the corner control.
   static func cornerRadius(in bounds: CGRect, fontSize: CGFloat) -> CGFloat {
     min(max(4, fontSize * 0.16), min(bounds.width, bounds.height) * 0.12)
+  }
+
+  /// Text Label and Callout Label share this single rule so the same stored
+  /// number renders the same curvature in either presentation (T-07).
+  ///
+  /// The stored value is an absolute point value, not a proportion of the
+  /// bubble. `0` means square corners, and the value is capped at half the
+  /// shorter side so a large number yields a full pill. `fontSize` is only
+  /// accepted so call sites stay uniform with the bubble geometry helpers and
+  /// is deliberately not part of the calculation.
+  static func resolvedCornerRadius(
+    storedValue: CGFloat,
+    in bounds: CGRect,
+    fontSize: CGFloat
+  ) -> CGFloat {
+    let shortestSide = min(bounds.width, bounds.height)
+    guard shortestSide > 0 else { return 0 }
+    return min(max(0, storedValue), shortestSide / 2)
   }
 
   static func defaultTailTarget(for bounds: CGRect, fontSize: CGFloat) -> CGPoint {
@@ -151,11 +407,39 @@ nonisolated enum TextBubbleGeometry {
     return hypot(target.x - expected.x, target.y - expected.y) < 1
   }
 
+  /// Resolves a requested tail tip so the drawn tail always has a readable
+  /// length, clamped into `[minTailLength, maxTailLength]` from the bubble.
+  ///
+  /// Deliberately radius-free. The resolved point is what callers store, and a
+  /// font-size change, a style preset or a presentation switch re-resolves it;
+  /// folding the corner radius in would re-aim the tail on any of those. Where
+  /// the drawn root actually sits is the outline's business, see `calloutTail`.
+  ///
+  /// One `clamp`, so re-resolving an already-resolved target is a fixed point.
+  /// The damped extension this replaces kept shortening the tail on every
+  /// re-resolve, which is why tails shrank whenever the font size changed.
   static func resolvedTailTarget(in rect: CGRect, requestedTarget: CGPoint, fontSize: CGFloat) -> CGPoint {
+    let rect = rect.standardized
     guard requestedTarget.x.isFinite, requestedTarget.y.isFinite else {
       return defaultTailTarget(for: rect, fontSize: fontSize)
     }
-    return requestedTarget
+    guard !rect.contains(requestedTarget) else {
+      return requestedTarget
+    }
+
+    let side = attachmentSide(for: requestedTarget, in: rect)
+    let lengths = calloutTailLengths(in: rect, fontSize: fontSize)
+    // The margin is the nominal one here; where the drawn root actually sits is
+    // resolved again from the real corner radius in `calloutTail`.
+    let margin = min(lengths.baseHalfWidth + 2, min(rect.width, rect.height) * 0.42)
+    let anchor = attachmentPoint(for: requestedTarget, on: side, in: rect, margin: margin)
+    let dx = requestedTarget.x - anchor.x
+    let dy = requestedTarget.y - anchor.y
+    let distance = hypot(dx, dy)
+    guard distance > 0 else { return anchor }
+    let resolvedLength = min(max(distance, lengths.minTailLength), lengths.maxTailLength)
+    let scale = resolvedLength / distance
+    return CGPoint(x: anchor.x + dx * scale, y: anchor.y + dy * scale)
   }
 
   static func bubblePath(
@@ -167,38 +451,41 @@ nonisolated enum TextBubbleGeometry {
     let rect = rect.standardized
     guard rect.width > 0, rect.height > 0 else { return CGMutablePath() }
     guard let tailTarget,
-          let tail = tailGeometry(in: rect, requestedTarget: tailTarget, fontSize: fontSize) else {
-      return CGPath(roundedRect: rect, cornerWidth: cornerRadius * 2, cornerHeight: cornerRadius * 2, transform: nil)
+          let tail = calloutTail(
+            in: rect, requestedTarget: tailTarget, cornerRadius: cornerRadius, fontSize: fontSize
+          ) else {
+      // `cornerWidth`/`cornerHeight` are the corner *radius*, not the diameter.
+      // Passing the radius directly keeps a tail-less bubble (Text Label) at the
+      // same curvature as the hand-rolled arc path below (Callout Label) and as
+      // every other rounded shape in the app.
+      return CGPath(roundedRect: rect, cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
     }
 
     let radius = min(max(0, cornerRadius), min(rect.width, rect.height) / 2)
     let path = CGMutablePath()
-
-    let topLeft = CGPoint(x: rect.minX + radius, y: rect.maxY)
-    let topRight = CGPoint(x: rect.maxX - radius, y: rect.maxY)
-    let rightTop = CGPoint(x: rect.maxX, y: rect.maxY - radius)
-    let rightBottom = CGPoint(x: rect.maxX, y: rect.minY + radius)
-    let bottomRight = CGPoint(x: rect.maxX - radius, y: rect.minY)
-    let bottomLeft = CGPoint(x: rect.minX + radius, y: rect.minY)
-    let leftBottom = CGPoint(x: rect.minX, y: rect.minY + radius)
-    let leftTop = CGPoint(x: rect.minX, y: rect.maxY - radius)
-
-    path.move(to: topLeft)
-    appendEdge(from: topLeft, to: topRight, side: .maxY, tail: tail, path: path)
-    path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.maxY - radius), radius: radius, startAngle: .pi / 2, endAngle: 0, clockwise: true)
-    appendEdge(from: rightTop, to: rightBottom, side: .maxX, tail: tail, path: path)
-    path.addArc(center: CGPoint(x: rect.maxX - radius, y: rect.minY + radius), radius: radius, startAngle: 0, endAngle: -.pi / 2, clockwise: true)
-    appendEdge(from: bottomRight, to: bottomLeft, side: .minY, tail: tail, path: path)
-    path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.minY + radius), radius: radius, startAngle: -.pi / 2, endAngle: -.pi, clockwise: true)
-    appendEdge(from: leftBottom, to: leftTop, side: .minX, tail: tail, path: path)
-    path.addArc(center: CGPoint(x: rect.minX + radius, y: rect.maxY - radius), radius: radius, startAngle: .pi, endAngle: .pi / 2, clockwise: true)
+    path.move(to: TailSide.maxY.start(in: rect, radius: radius))
+    // Edges and corners alternate in the same order as the hand-rolled loop this
+    // replaces, and a side carrying no tail still emits the identical arc and
+    // tangency points, so a Callout matches an identical Text Label bubble
+    // corner for corner.
+    for side in [TailSide.maxY, .maxX, .minY, .minX] {
+      appendEdge(side, in: rect, radius: radius, tail: tail, path: path)
+      appendCorner(side.downstreamCorner, in: rect, radius: radius, tail: tail, path: path)
+    }
     path.closeSubpath()
     return path
   }
 
-  static func tailPath(in rect: CGRect, to requestedTarget: CGPoint, fontSize: CGFloat) -> CGPath {
+  static func tailPath(
+    in rect: CGRect,
+    to requestedTarget: CGPoint,
+    cornerRadius: CGFloat,
+    fontSize: CGFloat
+  ) -> CGPath {
     let rect = rect.standardized
-    guard let tail = tailGeometry(in: rect, requestedTarget: requestedTarget, fontSize: fontSize) else {
+    guard let tail = calloutTail(
+      in: rect, requestedTarget: requestedTarget, cornerRadius: cornerRadius, fontSize: fontSize
+    ) else {
       return CGMutablePath()
     }
 
@@ -209,74 +496,223 @@ nonisolated enum TextBubbleGeometry {
     return path
   }
 
-  private static func tailGeometry(
+  /// Builds the tail for a requested tip: resolves the tip, picks the attachment
+  /// side, then roots the tail either on that side's straight span or in the
+  /// corner arc at its end.
+  private static func calloutTail(
     in rect: CGRect,
     requestedTarget: CGPoint,
+    cornerRadius: CGFloat,
     fontSize: CGFloat
-  ) -> TailGeometry? {
+  ) -> CalloutTail? {
     guard rect.width > 0, rect.height > 0 else { return nil }
 
     let target = resolvedTailTarget(in: rect, requestedTarget: requestedTarget, fontSize: fontSize)
     // Bringing the target into the label restores the plain rounded rectangle.
     guard !rect.contains(target) else { return nil }
     let side = attachmentSide(for: target, in: rect)
-    let baseHalfWidth = max(5, min(fontSize * 0.44, min(rect.width, rect.height) * 0.2))
-    let anchor = attachmentPoint(for: target, on: side, in: rect, baseHalfWidth: baseHalfWidth)
-    let basis = basis(for: side)
+    let metrics = calloutTailMetrics(
+      in: rect, side: side, cornerRadius: cornerRadius, fontSize: fontSize
+    )
+
+    if metrics.attachesAtCorner, metrics.radius > 0,
+       let tail = cornerTail(for: target, on: side, in: rect, metrics: metrics) {
+      return tail
+    }
+
+    // The anchor stays clear of both arcs by the widest root this side can ever
+    // draw, so no tail length can spill its root into an arc part-way through a
+    // drag.
+    let anchor = attachmentPoint(
+      for: target, on: side, in: rect, margin: metrics.radius + metrics.maxRootHalfWidth
+    )
     let distance = hypot(target.x - anchor.x, target.y - anchor.y)
     guard distance > 1 else { return nil }
+    let basis = basis(for: side)
+    // The root's anchor is clamped along the edge, so a target dragged well past
+    // the side sits almost in the wall's plane from here. Leaning the tail back
+    // into the cone keeps it a wedge instead of a sliver along the edge.
+    let direction = outwardBiased(
+      normalized(target - anchor), normal: basis.outward, tangent: basis.tangent
+    )
 
-    // The root width stays compact while dragging; the visual transition from
-    // short label point to long guide comes from the same pair of Bezier walls.
-    let shortTailLimit = max(fontSize * 1.25, min(rect.width, rect.height) * 0.55)
-    let rootHalfWidth = baseHalfWidth * (distance > shortTailLimit ? 1.1 : 1)
-    return TailGeometry(
+    // The tip is placed at a length clamped in *drawn* space rather than at the
+    // resolved target: the root's anchor sits further along the edge than the
+    // resolver's nominal one, so aiming at the stored point would draw a tail
+    // longer than the reach cap allows.
+    let drawnLength = min(max(distance, metrics.minTailLength), metrics.maxTailLength)
+    let rootHalfWidth = metrics.rootHalfWidth(forTailLength: drawnLength)
+    return CalloutTail(
       side: side,
-      target: target,
+      root: .edge,
+      target: anchor + direction * drawnLength,
       entry: anchor - basis.tangent * rootHalfWidth,
       exit: anchor + basis.tangent * rootHalfWidth,
-      tangent: basis.tangent,
+      entryTangent: basis.tangent,
+      exitTangent: basis.tangent,
       rootHalfWidth: rootHalfWidth
     )
   }
 
+  /// Roots the tail in the corner arc at the target's end of `side`, because the
+  /// straight span is too short to hold the root clear of both arcs. The anchor
+  /// is the arc point facing the target, confined to the sub-span the root
+  /// replaces, and the root replaces exactly that sub-arc, so the outline stays
+  /// one continuous loop.
+  private static func cornerTail(
+    for target: CGPoint,
+    on side: TailSide,
+    in rect: CGRect,
+    metrics: CalloutTailMetrics
+  ) -> CalloutTail? {
+    let radius = metrics.radius
+    // `attachesAtCorner` needs `edgeLength / 2 - radius < baseHalfWidth` with
+    // `baseHalfWidth <= 0.2 * shortestSide`, which no non-negative radius
+    // satisfies, so this is defence in depth rather than a live branch.
+    guard radius > 0 else { return nil }
+
+    let corner = side.corner(nearest: target, in: rect)
+    let center = corner.center(in: rect, radius: radius)
+    let dx = target.x - center.x
+    let dy = target.y - center.y
+    guard hypot(dx, dy) > 1 else { return nil }
+    let raw = atan2(dy, dx)
+
+    // Two passes: the root width follows the drawn length, and the drawn length
+    // follows where the clamp puts the anchor. The first pass uses the floor root
+    // width, whose `delta` is the smallest and whose clamp window is therefore
+    // the widest, so the second pass can only narrow it and cannot oscillate.
+    let floorDelta = asin(min(max(metrics.baseHalfWidth / radius, 0), 1))
+    let firstAnchor = corner.point(
+      in: rect, radius: radius, at: clampAngle(raw: raw, into: corner, delta: floorDelta)
+    )
+    let drawnLength = min(
+      max(hypot(target.x - firstAnchor.x, target.y - firstAnchor.y), metrics.minTailLength),
+      metrics.maxTailLength
+    )
+    let rootHalfWidth = metrics.rootHalfWidth(forTailLength: drawnLength)
+    let delta = asin(min(max(rootHalfWidth / radius, 0), 1))
+    let angle = clampAngle(raw: raw, into: corner, delta: delta)
+    let anchor = corner.point(in: rect, radius: radius, at: angle)
+    guard hypot(target.x - anchor.x, target.y - anchor.y) > 1 else { return nil }
+
+    let entryAngle = angle + delta
+    let exitAngle = angle - delta
+    let radial = CGPoint(x: cos(angle), y: sin(angle))
+    return CalloutTail(
+      side: side,
+      root: .corner(corner, entryAngle: entryAngle, exitAngle: exitAngle),
+      target: anchor + outwardBiased(
+        normalized(target - anchor), normal: radial, tangent: Corner.tangent(at: angle)
+      ) * drawnLength,
+      entry: corner.point(in: rect, radius: radius, at: entryAngle),
+      exit: corner.point(in: rect, radius: radius, at: exitAngle),
+      entryTangent: Corner.tangent(at: entryAngle),
+      exitTangent: Corner.tangent(at: exitAngle),
+      rootHalfWidth: rootHalfWidth
+    )
+  }
+
+  /// Rotates `direction` back towards `normal` until it leans no more than
+  /// `maxTailTilt` away from it, keeping it on the same side of the normal.
+  ///
+  /// A projection, not a jump: a direction already inside the cone is returned
+  /// untouched, and one at the boundary is left where the clamp would put it, so
+  /// dragging the target across the boundary cannot snap the tail.
+  private static func outwardBiased(
+    _ direction: CGPoint,
+    normal: CGPoint,
+    tangent: CGPoint
+  ) -> CGPoint {
+    let outward = direction.x * normal.x + direction.y * normal.y
+    let limit = cos(maxTailTilt)
+    guard outward < limit else { return direction }
+    let along = direction.x * tangent.x + direction.y * tangent.y
+    return normal * limit + tangent * (along < 0 ? -sin(maxTailTilt) : sin(maxTailTilt))
+  }
+
+  /// Clamps a direction into `corner`'s arc while keeping the root (`delta`
+  /// either side of the anchor) inside it.
+  ///
+  /// The comparison happens in the corner's own frame, because a raw direction
+  /// can point up to 180° away and a plain `min`/`max` on the angle picks the
+  /// wrong branch across ±π.
+  private static func clampAngle(raw: CGFloat, into corner: Corner, delta: CGFloat) -> CGFloat {
+    let mid = corner.midAngle
+    let relative = atan2(sin(raw - mid), cos(raw - mid))
+    let limit = max(0, .pi / 4 - delta)
+    return mid + min(max(relative, -limit), limit)
+  }
+
   private static func appendEdge(
-    from start: CGPoint,
-    to end: CGPoint,
-    side: TailSide,
-    tail: TailGeometry,
+    _ side: TailSide,
+    in rect: CGRect,
+    radius: CGFloat,
+    tail: CalloutTail,
     path: CGMutablePath
   ) {
-    guard tail.side == side else {
-      path.addLine(to: end)
+    guard tail.side == side, case .edge = tail.root else {
+      path.addLine(to: side.end(in: rect, radius: radius))
       return
     }
     path.addLine(to: tail.entry)
     appendTail(tail, to: path)
-    path.addLine(to: end)
+    path.addLine(to: side.end(in: rect, radius: radius))
   }
 
-  private static func appendTail(_ tail: TailGeometry, to path: CGMutablePath) {
+  /// Draws one corner, split around the tail when the root lives in this arc: the
+  /// arc runs up to the entry point, the tail replaces exactly the sub-arc it
+  /// spans, and the remaining arc closes the corner.
+  ///
+  /// The removed sub-arc subtends `2 * delta` and its chord is
+  /// `2 * radius * sin(delta)`, which is exactly `2 * rootHalfWidth`, so the tail
+  /// fills the gap without overlapping and the outline stays a single
+  /// non-crossing loop.
+  private static func appendCorner(
+    _ corner: Corner,
+    in rect: CGRect,
+    radius: CGFloat,
+    tail: CalloutTail,
+    path: CGMutablePath
+  ) {
+    let center = corner.center(in: rect, radius: radius)
+    guard case .corner(let tailCorner, let entryAngle, let exitAngle) = tail.root,
+          tailCorner == corner else {
+      path.addArc(
+        center: center, radius: radius,
+        startAngle: corner.startAngle, endAngle: corner.endAngle, clockwise: true
+      )
+      return
+    }
+    path.addArc(
+      center: center, radius: radius,
+      startAngle: corner.startAngle, endAngle: entryAngle, clockwise: true
+    )
+    appendTail(tail, to: path)
+    path.addArc(
+      center: center, radius: radius,
+      startAngle: exitAngle, endAngle: corner.endAngle, clockwise: true
+    )
+  }
+
+  private static func appendTail(_ tail: CalloutTail, to path: CGMutablePath) {
     let intoTip = normalized(tail.target - tail.entry)
     let outOfTip = normalized(tail.exit - tail.target)
-    let tipInset = min(
-      max(tail.rootHalfWidth * 0.7, 2),
-      hypot(tail.target.x - tail.entry.x, tail.target.y - tail.entry.y) * 0.24
-    )
-    let rootControl = min(
-      tail.rootHalfWidth * 0.9,
-      hypot(tail.target.x - tail.entry.x, tail.target.y - tail.entry.y) * 0.3
-    )
+    let rootLength = hypot(tail.target.x - tail.entry.x, tail.target.y - tail.entry.y)
+    // The tip fillet scales with the tail, so a long guide keeps a soft point
+    // instead of a needle and a short one still ends in a crisp point.
+    let tipInset = min(max(rootLength * 0.18, 2), tail.rootHalfWidth * 0.9)
+    let rootControl = min(tail.rootHalfWidth * 0.9, rootLength * 0.3)
 
     path.addCurve(
       to: tail.target,
-      control1: tail.entry + tail.tangent * rootControl,
+      control1: tail.entry + tail.entryTangent * rootControl,
       control2: tail.target - intoTip * tipInset
     )
     path.addCurve(
       to: tail.exit,
       control1: tail.target + outOfTip * tipInset,
-      control2: tail.exit - tail.tangent * rootControl
+      control2: tail.exit - tail.exitTangent * rootControl
     )
   }
 
@@ -289,25 +725,25 @@ nonisolated enum TextBubbleGeometry {
     return normalizedY < 0 ? .minY : .maxY
   }
 
+  /// Anchor of a mid-edge tail, clamped along `side` so the root stays clear of
+  /// both corner arcs. `margin` is the distance from the side's ends that must
+  /// stay free, i.e. `radius + maxRootHalfWidth`, which is at most half the edge
+  /// length by construction, so the clamp can never invert.
   private static func attachmentPoint(
     for target: CGPoint,
     on side: TailSide,
     in rect: CGRect,
-    baseHalfWidth: CGFloat
+    margin: CGFloat
   ) -> CGPoint {
-    let inset = min(
-      max(baseHalfWidth + 2, cornerRadius(in: rect, fontSize: baseHalfWidth * 2)),
-      min(rect.width, rect.height) * 0.42
-    )
     switch side {
     case .minX:
-      return CGPoint(x: rect.minX, y: min(max(target.y, rect.minY + inset), rect.maxY - inset))
+      return CGPoint(x: rect.minX, y: min(max(target.y, rect.minY + margin), rect.maxY - margin))
     case .maxX:
-      return CGPoint(x: rect.maxX, y: min(max(target.y, rect.minY + inset), rect.maxY - inset))
+      return CGPoint(x: rect.maxX, y: min(max(target.y, rect.minY + margin), rect.maxY - margin))
     case .minY:
-      return CGPoint(x: min(max(target.x, rect.minX + inset), rect.maxX - inset), y: rect.minY)
+      return CGPoint(x: min(max(target.x, rect.minX + margin), rect.maxX - margin), y: rect.minY)
     case .maxY:
-      return CGPoint(x: min(max(target.x, rect.minX + inset), rect.maxX - inset), y: rect.maxY)
+      return CGPoint(x: min(max(target.x, rect.minX + margin), rect.maxX - margin), y: rect.maxY)
     }
   }
 
@@ -1471,6 +1907,19 @@ nonisolated struct AnnotationProperties: Equatable {
   var spotlightOpacity: CGFloat
   var textPresentation: TextPresentation
   var calloutTailTarget: CGPoint?
+  var textBorderColor: Color
+  var textBorderWidth: CGFloat
+  var isBorderEnabled: Bool
+  /// Text colour a `.plain` switch displaced, kept so leaving `.plain` can put
+  /// the user's own colour back.
+  ///
+  /// Plain text has no bubble to sit on, so a colour chosen against a filled
+  /// surface can turn unreadable; T-08 then substitutes a contrasting one. That
+  /// substitution must not be permanent — a white label on a red bubble over a
+  /// white screenshot has to go back to white when the bubble returns. `nil`
+  /// whenever no substitution is in effect, i.e. the colour on screen is the
+  /// colour the user chose.
+  var latentTextColor: Color?
 
   init(
     strokeColor: Color = .red,
@@ -1485,7 +1934,11 @@ nonisolated struct AnnotationProperties: Equatable {
     watermarkStyle: WatermarkStyle = .single,
     spotlightOpacity: CGFloat = 0.5,
     textPresentation: TextPresentation = .plain,
-    calloutTailTarget: CGPoint? = nil
+    calloutTailTarget: CGPoint? = nil,
+    textBorderColor: Color = .clear,
+    textBorderWidth: CGFloat = 0,
+    isBorderEnabled: Bool = false,
+    latentTextColor: Color? = nil
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -1500,6 +1953,10 @@ nonisolated struct AnnotationProperties: Equatable {
     self.spotlightOpacity = spotlightOpacity
     self.textPresentation = textPresentation
     self.calloutTailTarget = calloutTailTarget
+    self.textBorderColor = textBorderColor
+    self.textBorderWidth = textBorderWidth
+    self.isBorderEnabled = isBorderEnabled
+    self.latentTextColor = latentTextColor
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -1556,6 +2013,16 @@ nonisolated struct AnnotationProperties: Equatable {
 
   static func clampedRotationDegrees(_ value: CGFloat) -> CGFloat {
     min(max(value, -45), 45)
+  }
+
+  func matchesTextStyle(_ other: AnnotationProperties) -> Bool {
+    fontSize == other.fontSize
+      && fontName == other.fontName
+      && cornerRadius == other.cornerRadius
+      && textPresentation == other.textPresentation
+      && textBorderWidth == other.textBorderWidth
+      && textBorderColor == other.textBorderColor
+      && isBorderEnabled == other.isBorderEnabled
   }
 }
 
@@ -1616,6 +2083,9 @@ extension AnnotationItem {
       let tailBounds = TextBubbleGeometry.tailPath(
         in: bounds,
         to: tailTarget,
+        cornerRadius: TextBubbleGeometry.resolvedCornerRadius(
+          storedValue: properties.cornerRadius, in: bounds, fontSize: properties.fontSize
+        ),
         fontSize: properties.fontSize
       ).boundingBoxOfPath
       if !tailBounds.isNull {
@@ -1669,6 +2139,9 @@ extension AnnotationItem {
           TextBubbleGeometry.tailPath(
             in: bounds,
             to: tailTarget,
+            cornerRadius: TextBubbleGeometry.resolvedCornerRadius(
+              storedValue: properties.cornerRadius, in: bounds, fontSize: properties.fontSize
+            ),
             fontSize: properties.fontSize
           ).boundingBoxOfPath.insetBy(dx: -tolerance, dy: -tolerance)
         ).contains(point)

@@ -41,6 +41,39 @@ private extension View {
   }
 }
 
+/// The Annotate / Mockup / Preview switch.
+///
+/// A `Picker` with `.segmented` is an AppKit `NSSegmentedControl` behind the
+/// bridge, and that control re-decides how much to compress its segments every
+/// time SwiftUI hands it a new measurement. Rebuilding it on unrelated changes
+/// to `AnnotateState` therefore lets it settle on a narrower layout and keep it
+/// — the mode buttons visibly shrink. Isolating it as an `Equatable` view that
+/// compares only the selected mode (the same treatment `AnnotateSidebarView`
+/// gets) means the bridged control is measured again only when the mode itself
+/// changes. Its width is left to AppKit's own fitting size rather than a
+/// hard-coded frame, so it never sits in the compression range to begin with.
+private struct AnnotateModeToggle: View, Equatable {
+  let mode: AnnotateState.EditorMode
+  let onSelect: (AnnotateState.EditorMode) -> Void
+
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.mode == rhs.mode
+  }
+
+  var body: some View {
+    Picker("", selection: Binding(get: { mode }, set: onSelect)) {
+      Label(L10n.AnnotateUI.modeAnnotate, systemImage: "pencil.and.outline")
+        .tag(AnnotateState.EditorMode.annotate)
+      Label(L10n.AnnotateUI.modeMockup, systemImage: "cube.transparent")
+        .tag(AnnotateState.EditorMode.mockup)
+      Label(L10n.AnnotateUI.modePreview, systemImage: "eye")
+        .tag(AnnotateState.EditorMode.preview)
+    }
+    .pickerStyle(.segmented)
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
 /// Bottom bar containing zoom controls and action buttons
 struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
@@ -217,8 +250,13 @@ struct AnnotateBottomBarView: View {
       }
     } label: {
       HStack(spacing: 4) {
+        // Monospaced digits in a fixed box: the chip's width must not follow
+        // the number, or the whole left group slides sideways as the zoom
+        // crosses 100% / 9% and back, taking the mode buttons with it.
         Text("\(state.currentDisplayedZoomPercent)%")
           .font(.system(size: 12, weight: .medium))
+          .monospacedDigit()
+          .frame(width: 48, alignment: .trailing)
           .foregroundColor(.primary)
         Image(systemName: "chevron.down")
           .font(.system(size: 8))
@@ -243,16 +281,8 @@ struct AnnotateBottomBarView: View {
   }
 
   private var modeToggle: some View {
-    Picker("", selection: $state.editorMode) {
-      Label(L10n.AnnotateUI.modeAnnotate, systemImage: "pencil.and.outline")
-        .tag(AnnotateState.EditorMode.annotate)
-      Label(L10n.AnnotateUI.modeMockup, systemImage: "cube.transparent")
-        .tag(AnnotateState.EditorMode.mockup)
-      Label(L10n.AnnotateUI.modePreview, systemImage: "eye")
-        .tag(AnnotateState.EditorMode.preview)
-    }
-    .pickerStyle(.segmented)
-    .frame(width: 220)
+    AnnotateModeToggle(mode: state.editorMode) { state.editorMode = $0 }
+      .equatable()
   }
 
   // MARK: - Drag Handle (CleanShot-style)

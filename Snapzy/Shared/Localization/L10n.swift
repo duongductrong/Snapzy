@@ -6254,10 +6254,185 @@ nonisolated enum L10n {
       defaultValue: "Text Style",
       comment: "Section title for annotate text styling controls"
     )
+    static let textStyleShort = string(
+      "annotate.text-style-short",
+      defaultValue: "Text Style",
+      comment: "Compact label for annotate text style controls"
+    )
+    static let textPresentationPlain = string(
+      "annotate.text-presentation-plain",
+      defaultValue: "Text",
+      comment: "Tooltip for the plain text style button: text drawn with no background"
+    )
+    static let textPresentationLabel = string(
+      "annotate.text-presentation-label",
+      defaultValue: "Text Label",
+      comment: "Tooltip for the text label style button: text on a filled background"
+    )
+    static let textPresentationCallout = string(
+      "annotate.text-presentation-callout",
+      defaultValue: "Callout label",
+      comment: "Tooltip for the callout style button: a text bubble with a pointer tail"
+    )
+    static let textBackgroundPlainHint = string(
+      "annotate.text-background-plain-hint",
+      defaultValue: "Plain text draws no background. Picking a color switches this to a Text Label.",
+      comment: "Hint shown on the background color control while the text style is plain"
+    )
+    static let textStylePreviewSample = string(
+      "annotate.text-style-preview-sample",
+      defaultValue: "Sample text",
+      comment: "Placeholder text rendered inside the saved text style hover preview"
+    )
+    static let textStylePreviewSize = string(
+      "annotate.text-style-preview-size",
+      defaultValue: "%d pt",
+      comment: "Font size shown in the saved text style hover preview; %d is the point size"
+    )
     static let textColor = string(
       "annotate.text-color",
       defaultValue: "Text Color",
       comment: "Label for annotate text color controls"
+    )
+    static let textBackgroundColor = string(
+      "annotate.text-background-color",
+      defaultValue: "Background Color",
+      comment: "Label for annotate text background color controls"
+    )
+    static let saveTextStyle = string(
+      "annotate.save-text-style",
+      defaultValue: "Save Text Style",
+      comment: "Button title for saving the current text style as a reusable preset"
+    )
+    static let savedTextStyle = string(
+      "annotate.saved-text-style",
+      defaultValue: "Presets",
+      comment: "Label for saved reusable text style presets section"
+    )
+    static let textSameColorWarning = string(
+      "annotate.text-same-color-warning",
+      defaultValue: "Text and background colors are the same. Choose a contrasting color.",
+      comment: "Warning shown when the selected text color matches the text background color"
+    )
+    static let textFont = string(
+      "annotate.text-font",
+      defaultValue: "Font",
+      comment: "Label for the text font control"
+    )
+    static let textFontSize = string(
+      "annotate.text-font-size",
+      defaultValue: "Font Size",
+      comment: "Label for the text annotation font size slider"
+    )
+    static let textFontDefault = string(
+      "annotate.text-font-default",
+      defaultValue: "System Default",
+      comment: "Default font option shown in the text font menu"
+    )
+    static let textBorderColor = string(
+      "annotate.text-border-color",
+      defaultValue: "Border Color",
+      comment: "Label for the text label border color control"
+    )
+    static let textBorderWidth = string(
+      "annotate.text-border-width",
+      defaultValue: "Border Width",
+      comment: "Label for the text label border width control"
+    )
+    static let addTextBorder = string(
+      "annotate.add-text-border",
+      defaultValue: "Add Border",
+      comment: "Button title for adding a border to a text label or callout"
+    )
+    static let textAppearance = string(
+      "annotate.text-appearance",
+      defaultValue: "Appearance",
+      comment: "Menu title for text appearance options such as background, border, and font"
+    )
+    static let calloutConvertedToLabelNotice = string(
+      "annotate.callout-converted-to-label-notice",
+      defaultValue: "The arrow now sits inside the label, so this was switched to a Text Label.",
+      comment: "Notice shown when dragging a callout arrow into the bubble converts it to a text label"
+    )
+    static let textContrastImprovedNotice = string(
+      "annotate.text-contrast-improved-notice",
+      defaultValue: "Colors are readable now. Try #FFFFFF or #000000 for even stronger contrast.",
+      comment: "Notice shown after fixing a low-contrast text and background pair; %@ is the suggested hex color"
+    )
+    static let textBackgroundClearedNotice = string(
+      "annotate.text-background-cleared-notice",
+      defaultValue: "Background cleared",
+      comment: "Toast shown when a text label or callout background is set to transparent"
+    )
+    static let textColorAdjustedNotice = string(
+      "annotate.text-color-adjusted-notice",
+      defaultValue: "Text color adjusted for readability",
+      comment: "Toast shown when switching text to plain automatically replaced an unreadable text color"
+    )
+    static let textPresetComment = string(
+      "annotate.text-preset-comment",
+      defaultValue: "Comment",
+      comment: "Name of the built-in comment text style preset"
+    )
+    static let textPresetHighlight = string(
+      "annotate.text-preset-highlight",
+      defaultValue: "Highlight",
+      comment: "Name of the built-in highlight text style preset"
+    )
+    static let textPresetCallout = string(
+      "annotate.text-preset-callout",
+      defaultValue: "Callout",
+      comment: "Name of the built-in callout text style preset"
+    )
+    static let savedTextStyleCustomSlot = string(
+      "annotate.saved-text-style-custom-slot",
+      defaultValue: "Custom %d",
+      comment: "Name of an empty custom text style preset slot; %d is its one-based number"
+    )
+    static let textStylePresetOverwriteTitle = string(
+      "annotate.text-style-preset-overwrite-title",
+      defaultValue: "Replace a Saved Style",
+      comment: "Title of the prompt shown when both custom text style preset slots are already used"
+    )
+    static let textStylePresetOverwriteMessage = string(
+      "annotate.text-style-preset-overwrite-message",
+      defaultValue: "Both custom slots are full. Choose which one to replace.",
+      comment: "Message explaining that saving a text style preset requires replacing an existing custom slot"
+    )
+    static let textFontCustomSlot = string(
+      "annotate.text-font-custom-slot",
+      defaultValue: "Custom %d",
+      comment: "Name of an empty custom text font slot; %d is its one-based number"
+    )
+    static let textFontSaveCurrent = string(
+      "annotate.text-font-save-current",
+      defaultValue: "Save Current Font",
+      comment: "Menu item that saves the annotation font into a custom font slot"
+    )
+    static let textFontPresetOverwriteTitle = string(
+      "annotate.text-font-preset-overwrite-title",
+      defaultValue: "Replace a Saved Font",
+      comment: "Title of the prompt shown when both custom font slots are already used"
+    )
+    static let textFontPresetOverwriteMessage = string(
+      "annotate.text-font-preset-overwrite-message",
+      defaultValue: "Both custom slots are full. Choose which one to replace.",
+      comment: "Message explaining that saving a font requires replacing an existing custom slot"
+    )
+    static let textFontRemovedNotice = string(
+      "annotate.text-font-removed-notice",
+      defaultValue: "Custom font removed",
+      comment: "Toast shown after deleting a custom saved font"
+    )
+    static let textFontAddFont = string(
+      "annotate.text-font-add",
+      defaultValue: "Add Font",
+      comment: "Menu item that opens the list of installed fonts to add to the text font menu"
+    )
+    static let textFontRemoveCustom = string(
+      "annotate.text-font-remove-custom",
+      defaultValue: "Remove Custom Font",
+      comment: "Menu title listing the user's custom fonts so one can be deleted"
     )
     static let annotation = string(
       "annotate.annotation",

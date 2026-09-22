@@ -170,17 +170,39 @@ final class AnnotateImageOpsTests: XCTestCase {
     )
 
     XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .rectangle))
-    XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .text))
 
     for tool in AnnotationToolType.allCases {
       XCTAssertEqual(
         DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: rectangle, selectedTool: tool),
-        tool != .selection,
+        tool != .selection && tool != .text,
         "Unexpected canvas-priority result for \(tool)"
       )
     }
 
     XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .selection))
+  }
+
+  /// The hover affordance for an existing annotation is the hand cursor, so a
+  /// press that lands on one with the text tool selects it (dragging, editing its
+  /// properties) instead of stacking a second label on top. Creating still works
+  /// on empty canvas, where the hit test finds nothing and this check is skipped;
+  /// double-click editing is handled in `mouseDown` before it.
+  func testTextToolSelectsExistingAnnotationsInsteadOfStackingNewLabels() throws {
+    let placedLabel = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 20, y: 20, width: 120, height: 40),
+      properties: AnnotationProperties()
+    )
+
+    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: placedLabel, selectedTool: .text))
+    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: placedLabel, selectedTool: .selection))
+
+    for tool in AnnotationToolType.allCases where tool != .selection && tool != .text {
+      XCTAssertTrue(
+        DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: placedLabel, selectedTool: tool),
+        "Only the text tool yields to an existing annotation, not \(tool)"
+      )
+    }
   }
 
   func testActivatingMarkupToolClearsCombinedImageSelection() throws {

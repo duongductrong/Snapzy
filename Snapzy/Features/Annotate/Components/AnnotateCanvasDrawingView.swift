@@ -507,6 +507,14 @@ final class DrawingCanvasNSView: NSView {
   override func keyDown(with event: NSEvent) {
     let shift = event.modifierFlags.contains(.shift)
     let nudgeAmount: CGFloat = shift ? 10 : 1
+    let fineTailNudge = event.modifierFlags.contains(.option)
+    let hasCalloutTailTarget: Bool = {
+      guard let annotation = state.selectedAnnotation,
+            case .text = annotation.type,
+            annotation.properties.textPresentation == .callout,
+            annotation.properties.calloutTailTarget != nil else { return false }
+      return true
+    }()
 
     switch event.keyCode {
     case 51, 117: // Delete, Forward Delete
@@ -543,7 +551,11 @@ final class DrawingCanvasNSView: NSView {
     case 126: // Arrow Up
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: 0, dy: nudgeAmount)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 0, dy: 1, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: 0, dy: nudgeAmount)
+          }
         }
         invalidateDrawing()
       }
@@ -551,7 +563,11 @@ final class DrawingCanvasNSView: NSView {
     case 125: // Arrow Down
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: 0, dy: -nudgeAmount)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 0, dy: -1, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: 0, dy: -nudgeAmount)
+          }
         }
         invalidateDrawing()
       }
@@ -559,7 +575,11 @@ final class DrawingCanvasNSView: NSView {
     case 123: // Arrow Left
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: -nudgeAmount, dy: 0)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: -1, dy: 0, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: -nudgeAmount, dy: 0)
+          }
         }
         invalidateDrawing()
       }
@@ -567,7 +587,11 @@ final class DrawingCanvasNSView: NSView {
     case 124: // Arrow Right
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: nudgeAmount, dy: 0)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 1, dy: 0, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: nudgeAmount, dy: 0)
+          }
         }
         invalidateDrawing()
       }
@@ -674,13 +698,7 @@ final class DrawingCanvasNSView: NSView {
       ]
 
     case .text:
-      let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
-      var handles: [(ResizeHandle, CGRect)] = [
-        (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY), in: coordinateSpace)),
-        (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY), in: coordinateSpace)),
-        (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY), in: coordinateSpace)),
-        (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY), in: coordinateSpace)),
-      ]
+      var handles: [(ResizeHandle, CGRect)] = []
       if annotation.properties.textPresentation == .callout,
          let tailTarget = annotation.properties.calloutTailTarget {
         let point = coordinateSpace == .canvas ? imageToDisplay(tailTarget) : tailTarget
@@ -894,12 +912,13 @@ final class DrawingCanvasNSView: NSView {
     if state.selectedTool != .crop,
        let annotation = hitTestAnnotation(at: imagePoint),
        !Self.shouldPrioritizeCanvasMarkup(over: annotation, selectedTool: state.selectedTool) {
-      // Set local tracking synchronously to avoid race condition with mouseDragged
+      // Select synchronously, exactly as the selection tool does above. Doing it
+      // inside a `Task` landed the publish at an arbitrary point within the first
+      // drag frames, so SwiftUI re-evaluated the whole window — bottom bar and
+      // its bridged segmented control included — in the middle of the gesture,
+      // which made the mode buttons visibly jitter.
+      state.setSelectedAnnotationIds([annotation.id])
       beginAnnotationDrag(anchor: annotation, at: imagePoint)
-      // Update selection state asynchronously (for UI reflection)
-      Task { @MainActor in
-        state.selectedAnnotationId = annotation.id
-      }
       return
     }
 
@@ -929,12 +948,25 @@ final class DrawingCanvasNSView: NSView {
   }
 
   /// Existing annotations behave like canvas content while a drawing tool is
-  /// active. Only the selection tool should claim a hit for layer movement.
+  /// active: the tool claims the press and draws a new annotation on top.
+  ///
+  /// The text tool is the exception. Its hover affordance is already the hand
+  /// cursor, so a press that lands on an existing annotation must select it
+  /// (to adjust its properties or drag it) rather than stack a second text
+  /// label on top. Editing stays on double-click, which `mouseDown` handles
+  /// before reaching this check; a press on empty canvas still creates.
+  ///
+  /// Only called once a hit test already found `annotation` under the pointer.
   static func shouldPrioritizeCanvasMarkup(
     over _: AnnotationItem,
     selectedTool: AnnotationToolType
   ) -> Bool {
-    selectedTool != .selection
+    switch selectedTool {
+    case .selection, .text:
+      return false
+    default:
+      return true
+    }
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
@@ -1599,7 +1631,7 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func createTextAnnotation(at point: CGPoint) {
-    let properties = state.annotationCreationProperties(for: .text)
+    var properties = state.annotationCreationProperties(for: .text)
     let initialBounds = AnnotateTextLayout.bounds(
       text: "",
       font: AnnotateTextLayout.font(size: properties.fontSize, fontName: properties.fontName),
@@ -1613,11 +1645,23 @@ final class DrawingCanvasNSView: NSView {
       width: initialBounds.width,
       height: initialBounds.height
     )
+    // A continuing callout aims its tail the way the previous one did. Resolving
+    // it here keeps the item's first write to `annotations` its only one; the
+    // default tail is placed afterwards for a callout that had nothing to
+    // continue.
+    if properties.textPresentation == .callout {
+      properties.calloutTailTarget = state.initialCalloutTailTarget(
+        for: bounds,
+        fontSize: properties.fontSize
+      )
+    }
     // Start with empty text - user will type in the overlay
     let item = AnnotationItem(type: .text(""), bounds: bounds, properties: properties)
     state.annotations.append(item)
     state.useAutomaticTextWidth(for: item.id)
-    state.prepareTextCalloutTail(for: item.id)
+    if properties.textPresentation == .callout, properties.calloutTailTarget == nil {
+      state.prepareTextCalloutTail(for: item.id)
+    }
     state.selectedAnnotationId = item.id
     state.beginTextEditing(id: item.id, recordsUndo: false) // Enter edit mode immediately
   }
