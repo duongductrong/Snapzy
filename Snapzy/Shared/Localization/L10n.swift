@@ -6309,6 +6309,16 @@ nonisolated enum L10n {
       defaultValue: "Border Width",
       comment: "Label for the text label border width control"
     )
+    static let addTextBorder = string(
+      "annotate.add-text-border",
+      defaultValue: "Add Border",
+      comment: "Button title for adding a border to a text label or callout"
+    )
+    static let textAppearance = string(
+      "annotate.text-appearance",
+      defaultValue: "Appearance",
+      comment: "Menu title for text appearance options such as background, border, and font"
+    )
     static let calloutConvertedToLabelNotice = string(
       "annotate.callout-converted-to-label-notice",
       defaultValue: "The arrow now sits inside the label, so this was switched to a Text Label.",

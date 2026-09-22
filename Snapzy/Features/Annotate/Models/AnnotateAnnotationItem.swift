@@ -1508,6 +1508,7 @@ nonisolated struct AnnotationProperties: Equatable {
   var calloutTailTarget: CGPoint?
   var textBorderColor: Color
   var textBorderWidth: CGFloat
+  var isBorderEnabled: Bool
 
   init(
     strokeColor: Color = .red,
@@ -1524,7 +1525,8 @@ nonisolated struct AnnotationProperties: Equatable {
     textPresentation: TextPresentation = .plain,
     calloutTailTarget: CGPoint? = nil,
     textBorderColor: Color = .clear,
-    textBorderWidth: CGFloat = 0
+    textBorderWidth: CGFloat = 0,
+    isBorderEnabled: Bool = false
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -1541,6 +1543,7 @@ nonisolated struct AnnotationProperties: Equatable {
     self.calloutTailTarget = calloutTailTarget
     self.textBorderColor = textBorderColor
     self.textBorderWidth = textBorderWidth
+    self.isBorderEnabled = isBorderEnabled
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -1606,6 +1609,7 @@ nonisolated struct AnnotationProperties: Equatable {
       && textPresentation == other.textPresentation
       && textBorderWidth == other.textBorderWidth
       && textBorderColor == other.textBorderColor
+      && isBorderEnabled == other.isBorderEnabled
   }
 }
 

@@ -468,7 +468,9 @@ nonisolated struct AnnotationRenderer {
         fontSize: font.pointSize
       )
       let hasFill = !Self.isClearColor(properties.fillColor)
-      let hasBorder = !Self.isClearColor(properties.textBorderColor) && properties.textBorderWidth > 0
+      let hasBorder = properties.isBorderEnabled
+        && !Self.isClearColor(properties.textBorderColor)
+        && properties.textBorderWidth > 0
       if hasFill {
         context.setFillColor(NSColor(properties.fillColor).cgColor)
         context.addPath(bubblePath)

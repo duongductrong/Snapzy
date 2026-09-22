@@ -58,7 +58,8 @@ struct TextEditOverlay: View {
               fontSize: displayFont.pointSize,
               cornerRadius: annotation.properties.cornerRadius * scale
             )
-            let borderVisible = !AnnotateColorPaletteStore.isClear(annotation.properties.textBorderColor)
+            let borderVisible = annotation.properties.isBorderEnabled
+              && !AnnotateColorPaletteStore.isClear(annotation.properties.textBorderColor)
               && annotation.properties.textBorderWidth > 0
             bubbleShape
               .fill(annotation.properties.fillColor)

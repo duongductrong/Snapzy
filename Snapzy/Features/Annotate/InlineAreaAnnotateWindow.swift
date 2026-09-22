@@ -1837,6 +1837,12 @@ private struct InlineAreaDivider: View {
   }
 }
 
+private enum TextFillPalette {
+  static let colors: [Color] = [
+    .clear, .white, .black, .red, .orange, .yellow, .green, .blue, .purple, .cyan, .gray, .pink,
+  ]
+}
+
 private struct InlineAreaPropertiesBar: View {
   @ObservedObject var state: AnnotateState
   let maxWidth: CGFloat
@@ -1845,10 +1851,14 @@ private struct InlineAreaPropertiesBar: View {
 
   private let strokeColors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
   private let fillColors: [Color] = [.clear, .red, .orange, .yellow, .green, .blue, .purple, .white, .black]
-  private let textBackgroundColors: [Color] = [.clear, .white, .black, .red, .orange, .yellow, .green, .blue, .purple, .cyan, .gray, .pink]
+  private let textBackgroundColors: [Color] = TextFillPalette.colors
 
   private var strokeColorsForActiveTool: [Color] {
     state.quickPropertiesTool == .spotlight ? [.clear] + strokeColors : strokeColors
+  }
+
+  private var isNarrowTextLayout: Bool {
+    state.quickPropertiesSupportsTextPresentation && maxWidth < 560
   }
 
   var body: some View {
@@ -1889,8 +1899,9 @@ private struct InlineAreaPropertiesBar: View {
           }
 
           if state.quickPropertiesSupportsTextBackground {
-            if state.quickTextPresentation != .plain {
+            if state.quickTextPresentation != .plain, !isNarrowTextLayout {
               InlineAreaTextFillColorControl(
+                state: state,
                 backgroundColorBinding: state.quickTextBackgroundBinding,
                 borderColorBinding: state.quickTextBorderColorBinding,
                 colors: textBackgroundColors,
@@ -1899,9 +1910,12 @@ private struct InlineAreaPropertiesBar: View {
                 popoverEdge: popoverEdge
               )
             }
+            if !state.quickTextHasVisibleBorder, !isNarrowTextLayout {
+              InlineAreaAddTextBorderControl(state: state)
+            }
           }
 
-          if state.quickPropertiesSupportsTextPresentation {
+          if state.quickPropertiesSupportsTextPresentation, !isNarrowTextLayout {
             InlineAreaTextFontControl(state: state)
           }
 
@@ -1995,9 +2009,14 @@ private struct InlineAreaPropertiesBar: View {
             )
           }
 
+          if isNarrowTextLayout {
+            InlineAreaTextAppearanceMenuControl(state: state, popoverEdge: popoverEdge)
+          }
+
           if state.quickPropertiesSupportsTextBackground,
              state.quickTextPresentation != .plain,
-             state.quickTextHasVisibleBorder {
+             state.quickTextHasVisibleBorder,
+             !isNarrowTextLayout {
             InlineAreaSliderControl(
               title: L10n.AnnotateUI.textBorderWidth,
               icon: "rectangle.dashed",
@@ -2010,12 +2029,16 @@ private struct InlineAreaPropertiesBar: View {
           }
 
           if state.quickPropertiesSupportsTextPresentation {
-            InlineAreaSavedTextStylesControl(state: state)
+            if isNarrowTextLayout {
+              InlineAreaTextStylesMenuControl(state: state, popoverEdge: popoverEdge)
+            } else {
+              InlineAreaSavedTextStylesControl(state: state)
+            }
           }
 
           if state.quickPropertiesSupportsCornerRadius,
              (!state.quickPropertiesSupportsTextPresentation
-              || (state.quickTextPresentation != .plain && state.quickTextHasBackground)) {
+              || (!isNarrowTextLayout && state.quickTextPresentation != .plain && state.quickTextHasBackground)) {
             InlineAreaSliderControl(
               title: L10n.Common.corners,
               icon: "roundedbottom.horizontal",
@@ -2923,6 +2946,7 @@ private struct InlineAreaTextFontControl: View {
 }
 
 private struct InlineAreaTextFillColorControl: View {
+  @ObservedObject var state: AnnotateState
   @Binding var backgroundColorBinding: Color
   @Binding var borderColorBinding: Color
   let colors: [Color]
@@ -2977,6 +3001,144 @@ private struct InlineAreaTextFillColorControl: View {
         }
         .padding(8)
         .frame(width: 212)
+      }
+      .onChange(of: state.quickTextPresentation) { _ in
+        showsPopover = false
+      }
+    }
+  }
+}
+
+private struct InlineAreaAddTextBorderControl: View {
+  @ObservedObject var state: AnnotateState
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.addTextBorder) {
+      Button {
+        state.quickTextBorderEnabledBinding.wrappedValue = true
+      } label: {
+        Image(systemName: "rectangle.dashed.badge.plus")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(InlineAreaChrome.itemSelectedForeground)
+          .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
+          .background(
+            RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+              .fill(Color.accentColor.opacity(0.16))
+          )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.addTextBorder)
+    }
+  }
+}
+
+private struct InlineAreaTextAppearanceMenuControl: View {
+  @ObservedObject var state: AnnotateState
+  let popoverEdge: Edge
+
+  @State private var showsPopover = false
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.textAppearance) {
+      Button {
+        showsPopover.toggle()
+      } label: {
+        HStack(spacing: 4) {
+          Image(systemName: "paintbrush.pointed")
+            .font(.system(size: 11, weight: .semibold))
+          Text("…")
+            .font(.system(size: 11, weight: .semibold))
+        }
+        .foregroundColor(InlineAreaChrome.primaryText)
+        .frame(width: 44, height: InlineAreaChrome.propertyControlHeight)
+        .background(
+          RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+            .fill(InlineAreaChrome.itemBackground)
+        )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.textAppearance)
+      .popover(isPresented: $showsPopover, arrowEdge: popoverEdge) {
+        ScrollView(.vertical, showsIndicators: false) {
+          VStack(alignment: .leading, spacing: 12) {
+            InlineAreaColorPopover(
+              title: L10n.AnnotateUI.textBackgroundColor,
+              selectedColor: state.quickTextBackgroundBinding,
+              colors: TextFillPalette.colors,
+              role: .textBackground,
+              dismiss: {},
+              showsSameColorWarning: true,
+              sameColorActive: state.quickTextUsesSameColorAsBackground
+            )
+            Divider()
+            InlineAreaColorPopover(
+              title: L10n.AnnotateUI.textBorderColor,
+              selectedColor: state.quickTextBorderColorBinding,
+              colors: TextFillPalette.colors,
+              role: .textBackground,
+              dismiss: {},
+              showsSameColorWarning: false,
+              sameColorActive: false
+            )
+            Divider()
+            InlineAreaTextFontControl(state: state)
+            Divider()
+            InlineAreaSliderControl(
+              title: L10n.AnnotateUI.textBorderWidth,
+              icon: "rectangle.dashed",
+              value: state.quickTextBorderWidthBinding,
+              range: 0 ... 8,
+              step: 1,
+              displayText: "\(Int(state.quickTextBorderWidthBinding.wrappedValue.rounded()))",
+              onEditingChanged: state.setQuickPropertiesControlEditing
+            )
+            InlineAreaSliderControl(
+              title: L10n.Common.corners,
+              icon: "roundedbottom.horizontal",
+              value: state.quickCornerRadiusBinding,
+              range: 0 ... 60,
+              step: 1,
+              displayText: "\(Int(state.quickCornerRadiusBinding.wrappedValue.rounded()))",
+              onEditingChanged: state.setQuickPropertiesControlEditing
+            )
+          }
+          .padding(10)
+          .frame(width: 230)
+        }
+        .frame(height: 300)
+      }
+      .onChange(of: state.quickTextPresentation) { _ in
+        showsPopover = false
+      }
+    }
+  }
+}
+
+private struct InlineAreaTextStylesMenuControl: View {
+  @ObservedObject var state: AnnotateState
+  let popoverEdge: Edge
+
+  @State private var showsPopover = false
+
+  var body: some View {
+    InlineAreaPropertyGroup(title: L10n.AnnotateUI.savedTextStyle) {
+      Button {
+        showsPopover.toggle()
+      } label: {
+        Image(systemName: "square.stack.3d.up")
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(InlineAreaChrome.primaryText)
+          .frame(width: 25, height: InlineAreaChrome.propertyControlHeight)
+          .background(
+            RoundedRectangle(cornerRadius: InlineAreaChrome.controlCornerRadius, style: .continuous)
+              .fill(InlineAreaChrome.itemBackground)
+          )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.savedTextStyle)
+      .popover(isPresented: $showsPopover, arrowEdge: popoverEdge) {
+        InlineAreaSavedTextStylesControl(state: state)
+          .padding(10)
       }
     }
   }

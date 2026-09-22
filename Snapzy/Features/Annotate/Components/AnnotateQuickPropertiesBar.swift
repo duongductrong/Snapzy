@@ -316,6 +316,7 @@ struct AnnotateQuickPropertiesBar: View {
         width: nil
       ) {
         QuickTextFillPopoverControl(
+          state: state,
           backgroundColorBinding: state.quickTextBackgroundBinding,
           borderColorBinding: state.quickTextBorderColorBinding,
           backgroundColors: textBackgroundColors,
@@ -324,6 +325,15 @@ struct AnnotateQuickPropertiesBar: View {
           groupSpacing: density.groupSpacing,
           quickColorLimit: density == .regular ? 3 : 1
         )
+      }
+
+      activePropertySlot(
+        isVisible: showTextBackground && state.quickTextPresentation != .plain && !state.quickTextHasVisibleBorder,
+        isEnabled: state.quickPropertiesSupportsTextBackground,
+        showsLeadingDivider: false,
+        width: nil
+      ) {
+        QuickAddTextBorderControl(state: state, groupSpacing: density.groupSpacing)
       }
 
       activePropertySlot(
@@ -1938,6 +1948,35 @@ private struct QuickTextBorderWidthControl: View {
   }
 }
 
+private struct QuickAddTextBorderControl: View {
+  @ObservedObject var state: AnnotateState
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.addTextBorder, spacing: groupSpacing) {
+      Button {
+        state.quickTextBorderEnabledBinding.wrappedValue = true
+      } label: {
+        Image(systemName: "rectangle.dashed.badge.plus")
+          .font(.system(size: 12, weight: .semibold))
+          .foregroundColor(.accentColor)
+          .frame(width: 28, height: 24)
+          .background(
+            RoundedRectangle(cornerRadius: 7)
+              .fill(Color.accentColor.opacity(0.12))
+          )
+          .overlay(
+            RoundedRectangle(cornerRadius: 7)
+              .stroke(Color.accentColor.opacity(0.35), lineWidth: 1)
+          )
+      }
+      .buttonStyle(.plain)
+      .help(L10n.AnnotateUI.addTextBorder)
+    }
+    .fixedSize(horizontal: true, vertical: false)
+  }
+}
+
 private struct QuickBlurTypeControl: View {
   @Binding var selectedType: BlurType
   let buttonWidth: CGFloat
@@ -2200,6 +2239,7 @@ private struct QuickPropertiesDivider: View {
 }
 
 private struct QuickTextFillPopoverControl: View {
+  @ObservedObject var state: AnnotateState
   @Binding var backgroundColorBinding: Color
   @Binding var borderColorBinding: Color
   let backgroundColors: [Color]
@@ -2254,6 +2294,9 @@ private struct QuickTextFillPopoverControl: View {
         }
         .padding(8)
         .frame(width: 212)
+      }
+      .onChange(of: state.quickTextPresentation) { _ in
+        showsPopover = false
       }
     }
   }

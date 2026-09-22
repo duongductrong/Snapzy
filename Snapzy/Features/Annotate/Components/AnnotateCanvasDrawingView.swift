@@ -507,6 +507,14 @@ final class DrawingCanvasNSView: NSView {
   override func keyDown(with event: NSEvent) {
     let shift = event.modifierFlags.contains(.shift)
     let nudgeAmount: CGFloat = shift ? 10 : 1
+    let fineTailNudge = event.modifierFlags.contains(.option)
+    let hasCalloutTailTarget: Bool = {
+      guard let annotation = state.selectedAnnotation,
+            case .text = annotation.type,
+            annotation.properties.textPresentation == .callout,
+            annotation.properties.calloutTailTarget != nil else { return false }
+      return true
+    }()
 
     switch event.keyCode {
     case 51, 117: // Delete, Forward Delete
@@ -543,7 +551,11 @@ final class DrawingCanvasNSView: NSView {
     case 126: // Arrow Up
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: 0, dy: nudgeAmount)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 0, dy: 1, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: 0, dy: nudgeAmount)
+          }
         }
         invalidateDrawing()
       }
@@ -551,7 +563,11 @@ final class DrawingCanvasNSView: NSView {
     case 125: // Arrow Down
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: 0, dy: -nudgeAmount)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 0, dy: -1, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: 0, dy: -nudgeAmount)
+          }
         }
         invalidateDrawing()
       }
@@ -559,7 +575,11 @@ final class DrawingCanvasNSView: NSView {
     case 123: // Arrow Left
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: -nudgeAmount, dy: 0)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: -1, dy: 0, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: -nudgeAmount, dy: 0)
+          }
         }
         invalidateDrawing()
       }
@@ -567,7 +587,11 @@ final class DrawingCanvasNSView: NSView {
     case 124: // Arrow Right
       if state.hasSelectedAnnotations, state.editingTextAnnotationId == nil {
         Task { @MainActor in
-          state.nudgeSelectedAnnotation(dx: nudgeAmount, dy: 0)
+          if hasCalloutTailTarget {
+            state.nudgeSelectedTextCalloutTail(dx: 1, dy: 0, fine: fineTailNudge)
+          } else {
+            state.nudgeSelectedAnnotation(dx: nudgeAmount, dy: 0)
+          }
         }
         invalidateDrawing()
       }

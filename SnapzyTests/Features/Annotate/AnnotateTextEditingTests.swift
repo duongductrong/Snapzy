@@ -207,7 +207,7 @@ final class AnnotateTextEditingTests: XCTestCase {
     state.setTextPresentation(.plain)
     updated = try XCTUnwrap(state.annotations.first)
     XCTAssertEqual(updated.properties.textPresentation, .plain)
-    XCTAssertTrue(AnnotateColorPaletteStore.colorsMatch(updated.properties.fillColor, .clear))
+    XCTAssertTrue(AnnotateColorPaletteStore.colorsMatch(updated.properties.fillColor, .white))
   }
 
   func testCalloutTailFollowsItsDraggedTargetAndMovesWithText() throws {
@@ -393,7 +393,8 @@ final class AnnotateTextEditingTests: XCTestCase {
         fillColor: .white,
         textPresentation: .label,
         textBorderColor: .blue,
-        textBorderWidth: 2
+        textBorderWidth: 2,
+        isBorderEnabled: true
       )
     )
     state.annotations = [annotation]
@@ -491,7 +492,45 @@ final class AnnotateTextEditingTests: XCTestCase {
 
     let updated = try XCTUnwrap(state.annotations.first)
     XCTAssertEqual(updated.properties.textPresentation, .label)
-    XCTAssertNil(updated.properties.calloutTailTarget)
+    XCTAssertNotNil(updated.properties.calloutTailTarget)
+  }
+
+  func testSwitchingToPlainKeepsLatentContainerAndRestoresIt() throws {
+    let state = makeAnnotateState()
+    let annotation = AnnotationItem(
+      type: .text("Label"),
+      bounds: CGRect(x: 40, y: 80, width: 140, height: 36),
+      properties: AnnotationProperties(
+        strokeColor: .black,
+        fillColor: .yellow,
+        cornerRadius: 14,
+        textPresentation: .label,
+        textBorderColor: .blue,
+        textBorderWidth: 2,
+        isBorderEnabled: true
+      )
+    )
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.setTextPresentation(.plain)
+    let plain = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(plain.properties.textPresentation, .plain)
+    XCTAssertEqual(plain.properties.fillColor, .yellow)
+
+    state.setTextPresentation(.label)
+    let restored = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(restored.properties.textPresentation, .label)
+    XCTAssertEqual(restored.properties.fillColor, .yellow)
+    XCTAssertTrue(restored.properties.isBorderEnabled)
+    XCTAssertEqual(restored.properties.cornerRadius, 14)
+  }
+
+  func testResolvedCornerRadiusDoesNotDependOnPresentation() {
+    let bounds = CGRect(x: 20, y: 60, width: 180, height: 48)
+    let radius = TextBubbleGeometry.resolvedCornerRadius(storedValue: 20, in: bounds, fontSize: 18)
+    XCTAssertEqual(radius, min(20, bounds.height * 0.46), accuracy: 0.01)
   }
 
   func testFontSizeChangeRemapsCalloutTailRelativeToNewBounds() throws {

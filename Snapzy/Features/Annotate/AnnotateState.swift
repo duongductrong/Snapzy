@@ -114,6 +114,7 @@ final class AnnotateState: ObservableObject {
     var calloutTailTarget: CGPoint?
     var textBorderColor: RGBAColor?
     var textBorderWidth: CGFloat?
+    var isBorderEnabled: Bool?
 
     init?(_ properties: AnnotationProperties) {
       guard let strokeColor = RGBAColor(color: properties.strokeColor),
@@ -136,6 +137,7 @@ final class AnnotateState: ObservableObject {
       self.calloutTailTarget = properties.calloutTailTarget
       self.textBorderColor = RGBAColor(color: properties.textBorderColor)
       self.textBorderWidth = properties.textBorderWidth > 0 ? properties.textBorderWidth : nil
+      self.isBorderEnabled = properties.isBorderEnabled ? true : nil
     }
 
     var annotationProperties: AnnotationProperties {
@@ -154,7 +156,8 @@ final class AnnotateState: ObservableObject {
         textPresentation: textPresentation.flatMap(TextPresentation.init(rawValue:)) ?? .plain,
         calloutTailTarget: calloutTailTarget,
         textBorderColor: textBorderColor?.color ?? .clear,
-        textBorderWidth: textBorderWidth ?? 0
+        textBorderWidth: textBorderWidth ?? 0,
+        isBorderEnabled: isBorderEnabled ?? false
       )
     }
   }
@@ -3729,6 +3732,7 @@ final class AnnotateState: ObservableObject {
     textPresentationToApply: TextPresentation? = nil,
     textBorderColor: Color? = nil,
     textBorderWidth: CGFloat? = nil,
+    isBorderEnabled: Bool? = nil,
     fontName: String? = nil,
     recordsUndo: Bool = false
   ) {
@@ -3754,6 +3758,7 @@ final class AnnotateState: ObservableObject {
       textPresentationToApply: textPresentationToApply,
       textBorderColor: textBorderColor,
       textBorderWidth: textBorderWidth,
+      isBorderEnabled: isBorderEnabled,
       fontName: fontName
     ) else { return }
 
@@ -3817,6 +3822,9 @@ final class AnnotateState: ObservableObject {
     if let textBorderWidth {
       annotations[index].properties.textBorderWidth = min(max(textBorderWidth, 0), 8)
     }
+    if let isBorderEnabled {
+      annotations[index].properties.isBorderEnabled = isBorderEnabled
+    }
     if let fontName {
       annotations[index].properties.fontName = fontName
     }
@@ -3841,14 +3849,6 @@ final class AnnotateState: ObservableObject {
     if let textPresentationToApply {
       var properties = annotations[index].properties
       properties.textPresentation = textPresentationToApply
-      if textPresentationToApply != .callout {
-        properties.calloutTailTarget = nil
-      }
-      if textPresentationToApply == .plain {
-        properties.fillColor = .clear
-        properties.textBorderColor = .clear
-        properties.textBorderWidth = 0
-      }
       annotations[index].properties = properties
     }
 
@@ -3911,6 +3911,7 @@ final class AnnotateState: ObservableObject {
     textPresentationToApply: TextPresentation? = nil,
     textBorderColor: Color? = nil,
     textBorderWidth: CGFloat? = nil,
+    isBorderEnabled: Bool? = nil,
     fontName: String? = nil
   ) -> Bool {
     let properties = annotation.properties
@@ -3970,6 +3971,10 @@ final class AnnotateState: ObservableObject {
     }
     if let textBorderWidth,
        properties.textBorderWidth != min(max(textBorderWidth, 0), 8) {
+      return true
+    }
+    if let isBorderEnabled,
+       properties.isBorderEnabled != isBorderEnabled {
       return true
     }
     if let fontName,
@@ -4734,16 +4739,17 @@ final class AnnotateState: ObservableObject {
     rememberTextStylePresentationPreset(for: textStylePresetKey(for: previousPresentation), properties: resolved)
     let previousTail = resolved.calloutTailTarget
     resolved.textPresentation = presentation
-    resolved.calloutTailTarget = nil
-    if presentation == .callout, resolved.fillColor == .clear {
+    if presentation == .callout,
+       resolved.fillColor == .clear,
+       !resolved.isBorderEnabled {
       resolved.fillColor = .black
     } else if presentation == .label,
               resolved.fillColor == .clear,
-              AnnotateColorPaletteStore.isClear(resolved.textBorderColor) {
+              !resolved.isBorderEnabled {
       resolved.fillColor = .white
     }
     if presentation == .callout {
-      if let previousTail, previousPresentation == .label, !annotation.bounds.contains(previousTail) {
+      if let previousTail, !annotation.bounds.contains(previousTail) {
         resolved.calloutTailTarget = TextBubbleGeometry.resolvedTailTarget(
           in: annotation.bounds,
           requestedTarget: previousTail,
@@ -4752,11 +4758,6 @@ final class AnnotateState: ObservableObject {
       } else {
         resolved.calloutTailTarget = defaultCalloutTailTarget(for: annotation.bounds, fontSize: resolved.fontSize)
       }
-    }
-    if presentation == .plain {
-      resolved.fillColor = .clear
-      resolved.textBorderColor = .clear
-      resolved.textBorderWidth = 0
     }
     annotation.properties = resolved
   }
@@ -4941,7 +4942,8 @@ final class AnnotateState: ObservableObject {
     spotlightOpacity: CGFloat? = nil,
     lineStyle: LineDashStyle? = nil,
     textBorderColor: Color? = nil,
-    textBorderWidth: CGFloat? = nil
+    textBorderWidth: CGFloat? = nil,
+    isBorderEnabled: Bool? = nil
   ) {
     var properties = defaultAnnotationProperties(for: tool)
 
@@ -4989,6 +4991,9 @@ final class AnnotateState: ObservableObject {
     }
     if let textBorderWidth {
       properties.textBorderWidth = min(max(textBorderWidth, 0), 8)
+    }
+    if let isBorderEnabled {
+      properties.isBorderEnabled = isBorderEnabled
     }
 
     let sanitized = sanitizedAnnotationProperties(properties, for: tool)
@@ -5085,7 +5090,9 @@ final class AnnotateState: ObservableObject {
     }).first?.properties
       ?? defaultAnnotationProperties(for: quickPropertiesTool)
     let hasFill = !AnnotateColorPaletteStore.isClear(item.fillColor)
-    let hasBorder = !AnnotateColorPaletteStore.isClear(item.textBorderColor) && item.textBorderWidth > 0
+    let hasBorder = item.isBorderEnabled
+      && !AnnotateColorPaletteStore.isClear(item.textBorderColor)
+      && item.textBorderWidth > 0
     return hasFill || hasBorder
   }
 
@@ -5096,7 +5103,9 @@ final class AnnotateState: ObservableObject {
       return false
     }).first?.properties
       ?? defaultAnnotationProperties(for: quickPropertiesTool)
-    return !AnnotateColorPaletteStore.isClear(item.textBorderColor) && item.textBorderWidth > 0
+    return item.isBorderEnabled
+      && !AnnotateColorPaletteStore.isClear(item.textBorderColor)
+      && item.textBorderWidth > 0
   }
 
   /// Estimated contrast between the active text color and its background.
@@ -5185,6 +5194,7 @@ final class AnnotateState: ObservableObject {
     textPresentationToApply: TextPresentation? = nil,
     textBorderColor: Color? = nil,
     textBorderWidth: CGFloat? = nil,
+    isBorderEnabled: Bool? = nil,
     fontName: String? = nil,
     recordsUndo: Bool = false,
     matching predicate: ((AnnotationType) -> Bool)? = nil
@@ -5210,6 +5220,7 @@ final class AnnotateState: ObservableObject {
         textPresentationToApply: textPresentationToApply,
         textBorderColor: textBorderColor,
         textBorderWidth: textBorderWidth,
+        isBorderEnabled: isBorderEnabled,
         fontName: fontName
       )
     })
@@ -5239,6 +5250,7 @@ final class AnnotateState: ObservableObject {
         textPresentationToApply: textPresentationToApply,
         textBorderColor: textBorderColor,
         textBorderWidth: textBorderWidth,
+        isBorderEnabled: isBorderEnabled,
         fontName: fontName
       )
     }
@@ -5451,10 +5463,18 @@ final class AnnotateState: ObservableObject {
         )
         annotations[index].bounds = newBounds
         if annotations[index].properties.textPresentation == .callout {
-          annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(
-            for: newBounds,
-            fontSize: annotations[index].properties.fontSize
-          )
+          if let tailTarget = annotations[index].properties.calloutTailTarget {
+            annotations[index].properties.calloutTailTarget = TextBubbleGeometry.resolvedTailTarget(
+              in: newBounds,
+              requestedTarget: tailTarget,
+              fontSize: annotations[index].properties.fontSize
+            )
+          } else {
+            annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(
+              for: newBounds,
+              fontSize: annotations[index].properties.fontSize
+            )
+          }
         }
       }
     }
@@ -5469,6 +5489,18 @@ final class AnnotateState: ObservableObject {
     annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
   }
 
+  func nudgeSelectedTextCalloutTail(dx: CGFloat, dy: CGFloat, fine: Bool) {
+    guard let annotation = selectedAnnotation,
+          case .text = annotation.type,
+          annotation.properties.textPresentation == .callout,
+          let tail = annotation.properties.calloutTailTarget else { return }
+    let step: CGFloat = fine ? 0.5 : 2
+    updateTextCalloutTail(
+      id: annotation.id,
+      target: CGPoint(x: tail.x + dx * step, y: tail.y + dy * step)
+    )
+  }
+
   func updateTextCalloutTail(id: UUID, target: CGPoint) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .text = annotations[index].type,
@@ -5478,11 +5510,13 @@ final class AnnotateState: ObservableObject {
       requestedTarget: target,
       fontSize: annotations[index].properties.fontSize
     )
-    if annotations[index].bounds.contains(resolved) {
-      annotations[index].properties.textPresentation = .label
-      annotations[index].properties.calloutTailTarget = nil
-      showCalloutConvertedToLabelToast()
+    let hysteresis = max(3, annotations[index].properties.fontSize * 0.08)
+    let hideRect = annotations[index].bounds.insetBy(dx: hysteresis, dy: hysteresis)
+    if hideRect.contains(resolved) {
       saveState()
+      annotations[index].properties.textPresentation = .label
+      // Keep the tail as a latent property so switching back to Callout restores it.
+      showCalloutConvertedToLabelToast()
       return
     }
     annotations[index].properties.calloutTailTarget = resolved
@@ -5715,10 +5749,28 @@ final class AnnotateState: ObservableObject {
           }
         )
         if didUpdateSelection {
-          if !AnnotateColorPaletteStore.isClear(newColor),
-             self.quickTextBorderWidthBinding.wrappedValue <= 0 {
+          if !AnnotateColorPaletteStore.isClear(newColor) {
             self.updateQuickSelectionProperties(
-              textBorderWidth: 2,
+              isBorderEnabled: true,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
+            if self.quickTextBorderWidthBinding.wrappedValue <= 0 {
+              self.updateQuickSelectionProperties(
+                textBorderWidth: 2,
+                recordsUndo: false,
+                matching: {
+                  if case .text = $0 { return true }
+                  return false
+                }
+              )
+            }
+          } else {
+            self.updateQuickSelectionProperties(
+              isBorderEnabled: false,
               recordsUndo: false,
               matching: {
                 if case .text = $0 { return true }
@@ -5726,7 +5778,7 @@ final class AnnotateState: ObservableObject {
               }
             )
           }
-          let isVisibleBorder = !AnnotateColorPaletteStore.isClear(newColor) && self.quickTextBorderWidthBinding.wrappedValue > 0
+          let isVisibleBorder = self.quickTextHasVisibleBorder
           if isVisibleBorder, self.quickTextPresentation == .plain {
             self.updateQuickSelectionProperties(
               textPresentationToApply: .label,
@@ -5748,7 +5800,13 @@ final class AnnotateState: ObservableObject {
           }
           self.rememberActiveTextStylePresetIfNeeded()
         } else if let tool = self.quickPropertiesTool {
-          self.updateDefaultAnnotationProperties(for: tool, fillColor: nil, textBorderColor: newColor)
+          self.updateDefaultAnnotationProperties(
+            for: tool,
+            fillColor: nil,
+            textBorderColor: newColor,
+            textBorderWidth: AnnotateColorPaletteStore.isClear(newColor) ? 0 : max(2, self.defaultAnnotationProperties(for: tool).textBorderWidth),
+            isBorderEnabled: !AnnotateColorPaletteStore.isClear(newColor)
+          )
           self.rememberTextStylePresentationPreset(
             for: self.quickTextPresentation,
             properties: self.defaultAnnotationProperties(for: tool)
@@ -5773,12 +5831,68 @@ final class AnnotateState: ObservableObject {
         let clampedWidth = min(max(newWidth, 0), 8)
         self.updateQuickSelectionProperties(
           textBorderWidth: clampedWidth,
+          isBorderEnabled: clampedWidth > 0,
           recordsUndo: true,
           matching: {
             if case .text = $0 { return true }
             return false
           }
         )
+        if clampedWidth > 0,
+           AnnotateColorPaletteStore.isClear(self.quickTextBorderColorBinding.wrappedValue) {
+          self.quickTextBorderColorBinding.wrappedValue = .black
+        }
+        self.rememberActiveTextStylePresetIfNeeded()
+      }
+    )
+  }
+
+  var quickTextBorderEnabledBinding: Binding<Bool> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return false }
+        return self.quickSelectionTargets(matching: {
+          if case .text = $0 { return true }
+          return false
+        }).first?.properties.isBorderEnabled
+          ?? self.defaultAnnotationProperties(for: self.quickPropertiesTool).isBorderEnabled
+      },
+      set: { [weak self] isEnabled in
+        guard let self else { return }
+        self.updateQuickSelectionProperties(
+          isBorderEnabled: isEnabled,
+          recordsUndo: true,
+          matching: {
+            if case .text = $0 { return true }
+            return false
+          }
+        )
+        if isEnabled {
+          if AnnotateColorPaletteStore.isClear(self.quickTextBorderColorBinding.wrappedValue) {
+            self.quickTextBorderColorBinding.wrappedValue = .black
+          } else if self.quickTextBorderWidthBinding.wrappedValue <= 0 {
+            self.quickTextBorderWidthBinding.wrappedValue = 2
+          }
+          if self.quickTextPresentation == .plain {
+            self.updateQuickSelectionProperties(
+              textPresentationToApply: .label,
+              recordsUndo: false,
+              matching: {
+                if case .text = $0 { return true }
+                return false
+              }
+            )
+          }
+        } else {
+          self.updateQuickSelectionProperties(
+            textBorderWidth: 0,
+            recordsUndo: false,
+            matching: {
+              if case .text = $0 { return true }
+              return false
+            }
+          )
+        }
         self.rememberActiveTextStylePresetIfNeeded()
       }
     )
