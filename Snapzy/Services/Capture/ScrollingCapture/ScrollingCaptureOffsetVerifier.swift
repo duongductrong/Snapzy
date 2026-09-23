@@ -22,7 +22,7 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
   /// Mean luma difference above which a row is judged not to match. Generous,
   /// because a correct offset still differs where content animated, a caret
   /// blinked, or an image finished decoding between frames.
-  static let maximumMeanDifference = 14.0
+  static let maximumMeanDifference = 10.0
   /// Overlap smaller than this proves nothing.
   static let minimumOverlapRows = 16
   /// A row that varies by less than this, both along its width and against the

@@ -1241,6 +1241,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     func isPlausibleTravel(_ deltaY: Int, visionConfirms: Bool) -> Bool {
       guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
       if matchesExpectedStep(deltaY) { return true }
+      // A shorter move goes through the sweep instead, which commits it only
+      // when the frames confirm no competing offset.
       return deltaY > expectedDeltaPixels && visionConfirms
     }
 
@@ -1291,10 +1293,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   /// committing it pins later steps to the wrong overlap.
   private func fitsExpectedStep(_ deltaY: Int, expectedDeltaPixels: Int?) -> Bool {
     guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
-    if abs(deltaY - expectedDeltaPixels) <= max(12, expectedDeltaPixels / 10) { return true }
-    // Farther than one step happens when frames were missed; shorter than one
-    // step is an intermediate frame caught mid-scroll.
-    return deltaY > expectedDeltaPixels && deltaY <= expectedDeltaPixels * 2
+    // A page often travels a little less than it was asked to, and farther when
+    // frames were missed. Only a small fraction of the step is implausible.
+    return deltaY >= max(18, expectedDeltaPixels / 2) && deltaY <= expectedDeltaPixels * 2
   }
 
   /// Sweeps the plausible range with the verifier and takes the confirmed run
@@ -1314,10 +1315,24 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     visionAlignmentEstimate: VisionAlignmentEstimate?,
     verdict: (Int) -> ScrollingCaptureOffsetVerifier.Verdict
   ) -> Match? {
+    // The band of offsets the frames confirm is only a few pixels wide around a
+    // true offset, so a coarse sweep walks straight past it. Step by one pixel
+    // across the range the scroll plausibly travelled, and coarsely elsewhere.
     let coarseStep = max(2, (deltaRange.upperBound - deltaRange.lowerBound) / 220)
+    var probes: [Int] = []
+    if let expectedDeltaPixels, expectedDeltaPixels > 24 {
+      let fineLower = max(deltaRange.lowerBound, expectedDeltaPixels / 2)
+      let fineUpper = min(deltaRange.upperBound, expectedDeltaPixels * 2)
+      if fineLower <= fineUpper {
+        probes.append(contentsOf: fineLower...fineUpper)
+      }
+    }
+    probes.append(
+      contentsOf: stride(from: deltaRange.lowerBound, through: deltaRange.upperBound, by: coarseStep)
+    )
+
     var runs: [[Int]] = []
-    for delta in stride(from: deltaRange.lowerBound, through: deltaRange.upperBound, by: coarseStep)
-    where verdict(delta) == .verified {
+    for delta in Set(probes).sorted() where verdict(delta) == .verified {
       if var last = runs.last, let tail = last.last, delta - tail <= coarseStep * 2 {
         last.append(delta)
         runs[runs.count - 1] = last
@@ -1345,7 +1360,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
               let nearest = centers.min(by: {
                 abs($0 - expectedDeltaPixels) < abs($1 - expectedDeltaPixels)
               }),
-              abs(nearest - expectedDeltaPixels) <= max(24, expectedDeltaPixels / 8) {
+              abs(nearest - expectedDeltaPixels) <= max(96, expectedDeltaPixels / 2) {
       // Several confirmed runs with nothing to separate them: only the one the
       // page was actually asked to travel is safe to commit.
       chosenCenter = nearest
@@ -1384,6 +1399,18 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     }
 
     guard fitsExpectedStep(deltaY, expectedDeltaPixels: expectedDeltaPixels) else { return nil }
+
+    // A page often travels a little less than it was asked to, and that is
+    // worth committing. Much less than asked is what an intermediate frame
+    // caught mid-scroll looks like, and a repeating layout confirms such an
+    // offset as readily as the real one. A viewport independently verified as
+    // settled comes back through `allowsSettledPartialStep`, which lowers the
+    // expected step to what Vision measured, so a genuine short travel is
+    // committed on the retry instead.
+    if let expectedDeltaPixels, expectedDeltaPixels > 24, deltaY < expectedDeltaPixels {
+      let tolerance = max(16, expectedDeltaPixels / 5)
+      guard expectedDeltaPixels - deltaY <= tolerance else { return nil }
+    }
 
     guard let metrics = overlapMetrics(
       previous: previous,
