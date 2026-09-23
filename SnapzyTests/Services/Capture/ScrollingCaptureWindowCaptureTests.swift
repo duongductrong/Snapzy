@@ -145,7 +145,45 @@ final class ScrollingCaptureWindowCaptureTests: XCTestCase {
     }
   }
 
+  func testStitch_chromeCoversMostOfTheFrame_stillAppends() throws {
+    // A whole browser window: tab bar, address bar, page header and a prompt
+    // box are all fixed, so more than half the frame never moves. Those rows
+    // cannot agree at any offset, and judging them alongside the content voted
+    // the true offset down.
+    let header = height * 40 / 100
+    let footer = height * 20 / 100
+    let step = 40
+    let stitcher = ScrollingCaptureStitcher()
+    _ = stitcher.start(with: try chromeFrame(offset: 0, header: header, footer: footer))
+
+    for index in 1...5 {
+      let update = try XCTUnwrap(
+        stitcher.append(
+          try chromeFrame(offset: index * step, header: header, footer: footer),
+          maxOutputHeight: 30_000,
+          expectedSignedDeltaPixels: -step
+        )
+      )
+      guard case .appended(let deltaY) = update.outcome else {
+        return XCTFail("Step \(index) did not append: \(update.outcome)")
+      }
+      XCTAssertEqual(deltaY, step)
+    }
+  }
+
   // MARK: - Helpers
+
+  private func chromeFrame(offset: Int, header: Int, footer: Int) throws -> CGImage {
+    try XCTUnwrap(
+      TestImageFactory.chromeScrollingFrame(
+        width: width,
+        height: height,
+        logicalYOffset: offset,
+        headerHeight: header,
+        footerHeight: footer
+      )
+    )
+  }
 
   private func sparseFrame(offset: Int) throws -> CGImage {
     try XCTUnwrap(TestImageFactory.sparseTextScrollingFrame(width: width, height: height, logicalYOffset: offset))

@@ -106,6 +106,24 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
     var informativeRows = 0
     var matchedRows = 0
 
+    /// Whether this row of `current` is unchanged from the same row of
+    /// `previous`, which is what fixed chrome looks like.
+    func stayedPut(row: Int, contrastySamples: Int) -> Bool {
+      var unchanged = 0
+      var judged = 0
+      for column in stride(from: firstColumn, to: lastColumn, by: columnStep) {
+        let currentValue = current.value(x: column, y: row)
+        let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
+        guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
+        judged += 1
+        if abs(currentValue - previous.value(x: column, y: row)) <= maximumSampleDifference {
+          unchanged += 1
+        }
+      }
+      guard judged >= 3 else { return false }
+      return Double(unchanged) / Double(judged) >= minimumMatchingSampleFraction
+    }
+
     for row in stride(from: lower, to: upper, by: rowStep) {
       var agreeingSamples = 0
       var contrastySamples = 0
@@ -135,6 +153,11 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
       // horizontal rule is flat across but differs sharply from the row above.
       let spread = max(maximum - minimum, verticalChange)
       guard rowSamples > 0, spread >= backgroundRowSpread, contrastySamples >= 3 else { continue }
+      // A row that did not move is fixed chrome — a toolbar, a pinned header, a
+      // prompt box — and no offset makes it agree. On a window capture such
+      // rows can outnumber the scrolling content and vote down the true
+      // offset, so they say nothing either way.
+      guard !stayedPut(row: row, contrastySamples: contrastySamples) else { continue }
       informativeRows += 1
       if Double(agreeingSamples) / Double(contrastySamples) >= minimumMatchingSampleFraction {
         matchedRows += 1
