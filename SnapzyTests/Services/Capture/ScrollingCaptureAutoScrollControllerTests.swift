@@ -141,27 +141,66 @@ final class ScrollingCaptureAutoScrollControllerTests: XCTestCase {
     XCTAssertFalse(controller.canBeginStep)
   }
 
-  func testBoundaryDetectionRequiresTwoObservations() async throws {
+  func testBoundaryDetectionRequiresRepeatedObservations() async throws {
     let controller = ScrollingCaptureAutoScrollController()
-    let first = try requestCommit(on: controller)
+    let threshold = ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold
 
+    for step in 1..<threshold {
+      let quiet = try requestCommit(on: controller, isRetry: step > 1, eventAt: Double(step))
+      XCTAssertEqual(
+        controller.handleCommitResult(
+          generation: 1,
+          stepID: quiet.id,
+          update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
+        ),
+        .retryStep,
+        "quiet step \(step) should scroll again"
+      )
+    }
+
+    let last = try requestCommit(on: controller, isRetry: true, eventAt: Double(threshold))
     XCTAssertEqual(
       controller.handleCommitResult(
         generation: 1,
-        stepID: first.id,
-        update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
-      ),
-      .retryStep
-    )
-
-    let second = try requestCommit(on: controller, isRetry: true, eventAt: 2.0)
-    XCTAssertEqual(
-      controller.handleCommitResult(
-        generation: 1,
-        stepID: second.id,
+        stepID: last.id,
         update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
       ),
       .finishCapture
+    )
+  }
+
+  func testBoundaryDetectionResetsWhenAStepAppends() async throws {
+    let controller = ScrollingCaptureAutoScrollController()
+    let threshold = ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold
+
+    for step in 1..<threshold {
+      let quiet = try requestCommit(on: controller, isRetry: step > 1, eventAt: Double(step))
+      _ = controller.handleCommitResult(
+        generation: 1,
+        stepID: quiet.id,
+        update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
+      )
+    }
+
+    // The page was only slow, not finished.
+    let moved = try requestCommit(on: controller, isRetry: true, eventAt: Double(threshold))
+    XCTAssertEqual(
+      controller.handleCommitResult(
+        generation: 1,
+        stepID: moved.id,
+        update: stitchUpdate(outcome: .appended(deltaY: 160))
+      ),
+      .keepScrolling
+    )
+
+    let quiet = try requestCommit(on: controller, eventAt: Double(threshold + 1))
+    XCTAssertEqual(
+      controller.handleCommitResult(
+        generation: 1,
+        stepID: quiet.id,
+        update: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true)
+      ),
+      .retryStep
     )
   }
 

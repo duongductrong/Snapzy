@@ -119,26 +119,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       self.pixels = pixels
     }
 
-    func rowDifference(
-      comparedTo other: RasterImage,
-      row: Int,
-      otherRow: Int,
-      xStart: Int,
-      xEnd: Int,
-      columnStride: Int
-    ) -> Double {
-      blockDifference(
-        comparedTo: other,
-        startRow: row,
-        otherStartRow: otherRow,
-        rowCount: 1,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: columnStride,
-        rowStride: 1
-      )
-    }
-
     func blockDifference(
       comparedTo other: RasterImage,
       startRow: Int,
@@ -195,6 +175,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
 
     func makeCGImage() -> CGImage? {
       Self.makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+    }
+
+    func makeLumaPlane() -> ScrollingCaptureLumaPlane {
+      ScrollingCaptureLumaPlane(rgbaPixels: pixels, width: width, height: height, bytesPerRow: bytesPerRow)
     }
 
     func makeCroppedCGImage(
@@ -292,6 +276,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let bandCount: Int
     let worstBandScore: Double
     let bandVariance: Double
+    /// True when the frames themselves confirmed this offset across the whole
+    /// overlap, rather than it merely scoring well.
+    var confirmedByFrames = false
   }
 
   private struct MatchSearchResult {
@@ -325,11 +312,67 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private var cachedMergedImage: CGImage?
   private var lastMatch: Match?
   private var matchNotFoundCount = 0
+  /// First row of `lastRaster` that belongs to the output but is not committed
+  /// yet; the tail runs from here to the bottom of the content area. Pages fade
+  /// or dim content near the bottom edge for as long as it sits there, so rows
+  /// are only committed once a later frame has carried them `edgeClearance`
+  /// rows clear of that edge. Until then they are rendered from the newest
+  /// frame, along with the footer band below them.
+  ///
+  /// Anchored to its first row rather than stored as a count, so a footer
+  /// estimate that grows mid-capture shortens the tail instead of shifting it.
+  private var tailStartRow: Int?
+  private var lastLuma: ScrollingCaptureLumaPlane?
+  /// Votes on which rows are fixed chrome, gathered across frame pairs that
+  /// moved.
+  private var stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
+  /// Votes on which side columns stay put, cast column by column.
+  private var sideVotes = ScrollingCaptureStickyEdgeAccumulator()
+  /// Rounds after which the chrome estimate is frozen for the capture.
+  private static let settledStickyRounds = 8
+  /// Rows of movement needed before a frame pair can vote on chrome.
+  private static let minimumStickyMeasurementDelta = 8
+  /// Shortest travel worth committing. Below this a step is indistinguishable
+  /// from the jitter a page shows while it settles.
+  private static let minimumConfirmedDelta = 18
+  /// Deepest bottom-edge treatment measured on this page, in pixels.
+  private var measuredDimmedDepth: Int?
+  private var dimmingMeasurementCount = 0
+
+  /// Pages that show no measurable treatment still keep a little lag, which
+  /// absorbs a partly drawn row at the boundary.
+  private static let minimumEdgeClearance = 80
+  /// Added to the measured depth, since its last rows are the least certain.
+  private static let edgeClearanceMargin = 60
+  /// Rows of movement needed before a frame pair can say anything about the
+  /// edge treatment.
+  private static let minimumDimmingMeasurementDelta = 8
+  /// Measurements after which the depth estimate is treated as settled.
+  private static let maximumDimmingMeasurements = 8
 
   private(set) var acceptedFrameCount = 0
 
+  /// The newest accepted frame, for diagnostics: the pair that failed to align
+  /// is this frame and the one the commit brought in.
+  func lastAcceptedImage() -> CGImage? {
+    lastRaster?.makeCGImage()
+  }
+
   var outputHeight: Int {
-    contentSlices.reduce(0) { $0 + $1.rowCount }
+    renderedSlices.reduce(0) { $0 + $1.rowCount }
+  }
+
+  private var tailRowCount: Int {
+    guard let tailStartRow, let lastRaster else { return 0 }
+    return max(0, lastRaster.height - footerHeight - tailStartRow)
+  }
+
+  private var chromeHasSettled: Bool {
+    stickyVotes.rounds >= Self.settledStickyRounds
+  }
+
+  private var sidesHaveSettled: Bool {
+    sideVotes.rounds >= Self.settledStickyRounds
   }
 
   func start(with image: CGImage) -> ScrollingCaptureStitchUpdate? {
@@ -346,6 +389,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     cachedMergedImage = image
     lastMatch = nil
     matchNotFoundCount = 0
+    tailStartRow = nil
+    lastLuma = nil
+    stickyVotes = ScrollingCaptureStickyEdgeAccumulator()
+    sideVotes = ScrollingCaptureStickyEdgeAccumulator()
+    measuredDimmedDepth = nil
+    dimmingMeasurementCount = 0
     acceptedFrameCount = 1
 
     return ScrollingCaptureStitchUpdate(
@@ -384,18 +433,29 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       return currentUpdate(outcome: .ignoredAlignmentFailed, includeMergedImage: renderMergedImage)
     }
 
-    let inferredHeaderHeight = headerHeight == 0
-      ? detectStaticBandHeight(previous: lastRaster, current: raster, fromTop: true)
-      : headerHeight
-    let inferredFooterHeight = footerHeight == 0
-      ? detectStaticBandHeight(previous: lastRaster, current: raster, fromTop: false)
-      : footerHeight
-    let inferredLeadingStaticWidth = leadingStaticWidth == 0
-      ? detectStaticSideBandWidth(previous: lastRaster, current: raster, fromLeading: true)
-      : leadingStaticWidth
-    let inferredTrailingStaticWidth = trailingStaticWidth == 0
-      ? detectStaticSideBandWidth(previous: lastRaster, current: raster, fromLeading: false)
-      : trailingStaticWidth
+    let previousLuma = lastLuma ?? lastRaster.makeLumaPlane()
+    let currentLuma = raster.makeLumaPlane()
+    // Until the votes settle, this pair's own estimate keeps chrome that has
+    // not been voted in yet out of the matching region. Static side columns,
+    // such as a window sidebar, never match at a real scroll offset and would
+    // dilute every score. They are found first, because a sidebar stays put in
+    // every row and would otherwise make ordinary rows look like chrome.
+    let pairStaticSides = sidesHaveSettled
+      ? ScrollingCaptureStaticSides.none
+      : ScrollingCaptureStickyEdgeDetector.detectSides(
+        previous: previousLuma,
+        current: currentLuma,
+        rowStart: headerHeight,
+        rowEnd: raster.height - footerHeight
+      )
+    let inferredLeadingStaticWidth = max(leadingStaticWidth, pairStaticSides.leading)
+    let inferredTrailingStaticWidth = max(trailingStaticWidth, pairStaticSides.trailing)
+    // Chrome comes from votes only. A single frame pair is a poor witness: on a
+    // page with large flat areas it reports bands hundreds of pixels deep that
+    // are not there, which shrinks the searchable content area until a long
+    // scroll has no overlap left to match.
+    let inferredHeaderHeight = headerHeight
+    let inferredFooterHeight = footerHeight
     let visionAlignmentEstimate = estimateVisionAlignment(
       previous: lastRaster,
       current: raster,
@@ -427,11 +487,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let fastGuidedMatch = bestMatch(
       previous: lastRaster,
       current: raster,
+      previousLuma: previousLuma,
+      currentLuma: currentLuma,
       headerHeight: inferredHeaderHeight,
       footerHeight: inferredFooterHeight,
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth,
       expectedSignedDeltaPixels: matchingExpectedDelta,
+      requestedDeltaPixels: expectedDeltaPixels,
       visionAlignmentEstimate: nil,
       searchMode: .guided
     )
@@ -465,11 +528,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       let guidedVisionMatch = bestMatch(
         previous: lastRaster,
         current: raster,
+        previousLuma: previousLuma,
+        currentLuma: currentLuma,
         headerHeight: inferredHeaderHeight,
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
         expectedSignedDeltaPixels: matchingExpectedDelta,
+        requestedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .guided
       )
@@ -489,11 +555,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       match = bestMatch(
         previous: lastRaster,
         current: raster,
+        previousLuma: previousLuma,
+        currentLuma: currentLuma,
         headerHeight: inferredHeaderHeight,
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
         expectedSignedDeltaPixels: matchingExpectedDelta,
+        requestedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .recovery
       )
@@ -504,6 +573,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       let expectedDeltaPixels,
       expectedDeltaPixels > 0,
       let candidate = match,
+      // The frames confirmed this offset across the whole overlap, which beats
+      // any expectation about how far the page should have travelled: a page
+      // often moves less than it was asked to, and a short move that the frames
+      // confirm is real content, not a mid-scroll frame.
+      !candidate.confirmedByFrames,
       !isVerifiedSettledPartialMatch(candidate, expectedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate, allowed: allowsSettledPartialStep),
       stronglyContradictsKnownStep(
@@ -567,13 +641,48 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
+    let votedStickyEdges = voteOnStickyEdgesIfNeeded(
+      previous: previousLuma,
+      current: currentLuma,
+      deltaY: match.deltaY,
+      columnStart: inferredLeadingStaticWidth,
+      columnEnd: raster.width - inferredTrailingStaticWidth
+    )
+
+    measureEdgeDimmingIfNeeded(
+      previous: previousLuma,
+      current: currentLuma,
+      deltaY: match.deltaY,
+      headerHeight: max(inferredHeaderHeight, votedStickyEdges.top),
+      footerHeight: max(inferredFooterHeight, votedStickyEdges.bottom),
+      leadingStaticWidth: inferredLeadingStaticWidth,
+      trailingStaticWidth: inferredTrailingStaticWidth
+    )
+
+    // Side columns only steer matching, never where strips are cut, so they can
+    // keep growing with the votes.
+    let votedStaticSides = voteOnStaticSidesIfNeeded(
+      previous: previousLuma,
+      current: currentLuma,
+      deltaY: match.deltaY,
+      rowStart: max(inferredHeaderHeight, votedStickyEdges.top),
+      rowEnd: raster.height - max(inferredFooterHeight, votedStickyEdges.bottom)
+    )
+
     if mergeDirection == .unresolved {
       mergeDirection = match.direction
-      headerHeight = inferredHeaderHeight
-      footerHeight = inferredFooterHeight
-      leadingStaticWidth = inferredLeadingStaticWidth
-      trailingStaticWidth = inferredTrailingStaticWidth
+      headerHeight = max(inferredHeaderHeight, votedStickyEdges.top)
+      footerHeight = max(inferredFooterHeight, votedStickyEdges.bottom)
+      leadingStaticWidth = max(inferredLeadingStaticWidth, votedStaticSides.leading)
+      trailingStaticWidth = max(inferredTrailingStaticWidth, votedStaticSides.trailing)
       bootstrapContentSlices(with: baseRaster)
+    } else {
+      // Chrome only grows, and stops changing once the votes settle: any strip
+      // cut with a band too short repeats that chrome down the capture.
+      headerHeight = max(headerHeight, votedStickyEdges.top)
+      footerHeight = max(footerHeight, votedStickyEdges.bottom)
+      leadingStaticWidth = max(leadingStaticWidth, votedStaticSides.leading)
+      trailingStaticWidth = max(trailingStaticWidth, votedStaticSides.trailing)
     }
 
     let remainingHeight = maxOutputHeight - outputHeight
@@ -591,7 +700,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     }
 
     let acceptedDelta = min(match.deltaY, remainingHeight)
-    guard let sliceStart = sliceStartRow(for: match.direction, in: raster, deltaY: acceptedDelta) else {
+    guard sliceStartRow(for: match.direction, in: raster, deltaY: match.deltaY) != nil else {
       matchNotFoundCount += 1
       return currentUpdate(
         outcome: .ignoredAlignmentFailed,
@@ -608,8 +717,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
-    contentSlices.append(ContentSlice(raster: raster, startRow: sliceStart, rowCount: acceptedDelta))
+    advanceTail(from: lastRaster, to: raster, deltaY: match.deltaY, acceptedDelta: acceptedDelta)
     self.lastRaster = raster
+    self.lastLuma = currentLuma
     self.lastMatch = Match(
       direction: match.direction,
       deltaY: acceptedDelta,
@@ -655,7 +765,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     var mergedPixels = [UInt8](repeating: 0, count: height * bytesPerRow)
     var destinationRow = 0
 
-    for slice in contentSlices {
+    for slice in renderedSlices {
       slice.raster.copyRows(
         startRow: slice.startRow,
         rowCount: slice.rowCount,
@@ -707,7 +817,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     context.interpolationQuality = .medium
 
     var destinationRow = 0
-    for slice in contentSlices {
+    for slice in renderedSlices {
       guard
         let sliceImage = slice.raster.makeCroppedCGImage(
           xStart: 0,
@@ -784,10 +894,183 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     )
   }
 
+  /// The base frame keeps its header, which is genuine content the first time
+  /// it is seen. Its own bottom rows are edge-treated like any other frame's,
+  /// so they stay in the tail until a later frame carries them clear.
   private func bootstrapContentSlices(with baseRaster: RasterImage) {
-    let contentStart = headerHeight
-    let contentHeight = max(1, baseRaster.height - headerHeight - footerHeight)
-    contentSlices = [ContentSlice(raster: baseRaster, startRow: contentStart, rowCount: contentHeight)]
+    let contentBottom = baseRaster.height - footerHeight
+    let contentHeight = max(1, contentBottom - headerHeight)
+    let tailStart = contentBottom - min(edgeClearance, contentHeight - 1)
+    tailStartRow = tailStart
+    contentSlices = [ContentSlice(raster: baseRaster, startRow: 0, rowCount: tailStart)]
+  }
+
+  /// Committed slices, then the uncommitted tail and the footer band, both
+  /// drawn from the newest accepted frame. Fixed chrome along the bottom is
+  /// kept out of every strip, so it appears once, at the end, in the state the
+  /// capture finished in.
+  private var renderedSlices: [ContentSlice] {
+    guard mergeDirection != .unresolved, let lastRaster else { return contentSlices }
+    let contentBottom = lastRaster.height - footerHeight
+    var slices = contentSlices
+    if tailRowCount > 0 {
+      slices.append(
+        ContentSlice(raster: lastRaster, startRow: contentBottom - tailRowCount, rowCount: tailRowCount)
+      )
+    }
+    if footerHeight > 0 {
+      slices.append(ContentSlice(raster: lastRaster, startRow: contentBottom, rowCount: footerHeight))
+    }
+    return slices
+  }
+
+  /// Votes with frame pairs that really moved until the estimate settles.
+  /// - Returns: the chrome the votes support so far.
+  private func voteOnStickyEdgesIfNeeded(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    deltaY: Int,
+    columnStart: Int,
+    columnEnd: Int
+  ) -> ScrollingCaptureStickyEdges {
+    if !chromeHasSettled, deltaY >= Self.minimumStickyMeasurementDelta {
+      stickyVotes.add(
+        ScrollingCaptureStickyEdgeDetector.chromeRows(
+          previous: previous,
+          current: current,
+          columnStart: columnStart,
+          columnEnd: columnEnd
+        )
+      )
+    }
+    return stickyVotes.edges(frameHeight: current.height)
+  }
+
+  private func voteOnStaticSidesIfNeeded(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    deltaY: Int,
+    rowStart: Int,
+    rowEnd: Int
+  ) -> ScrollingCaptureStaticSides {
+    if !sidesHaveSettled, deltaY >= Self.minimumStickyMeasurementDelta {
+      sideVotes.add(
+        ScrollingCaptureStickyEdgeDetector.staticColumns(
+          previous: previous,
+          current: current,
+          rowStart: rowStart,
+          rowEnd: rowEnd
+        )
+      )
+    }
+    return sideVotes.sides(frameWidth: current.width)
+  }
+
+  /// Rows the tail must be carried clear of the bottom edge before it is
+  /// committed. Capped so it never holds back more than a third of the frame.
+  private var edgeClearance: Int {
+    guard let baseRaster else { return 0 }
+    let usableHeight = baseRaster.height - headerHeight - footerHeight
+    guard usableHeight > 0 else { return 0 }
+    let measured = (measuredDimmedDepth ?? 0) + Self.edgeClearanceMargin
+    return min(max(Self.minimumEdgeClearance, measured), usableHeight / 3)
+  }
+
+  /// Rows above the bottom of the content area that say nothing about an
+  /// offset, because the page draws them differently there.
+  ///
+  /// A page that fades its content out towards a pinned footer redraws the
+  /// same rows paler as they approach the edge, so the correct offset still
+  /// leaves them disagreeing. On a Gemini conversation those rows outnumbered
+  /// the ones that agreed, and the true step was voted down at 48% of the
+  /// rows — just under the bar — while no other offset came close.
+  private func verificationFooter(footerHeight: Int, headerHeight: Int, frameHeight: Int) -> Int {
+    guard let measuredDimmedDepth, measuredDimmedDepth > 0 else { return footerHeight }
+    let usableHeight = frameHeight - headerHeight - footerHeight
+    guard usableHeight > 0 else { return footerHeight }
+    return footerHeight + min(measuredDimmedDepth, usableHeight / 3)
+  }
+
+  /// Measured on the first few frame pairs that really moved, then frozen. The
+  /// depth only ever grows, since a band that reaches further on one pair
+  /// reaches that far.
+  private func measureEdgeDimmingIfNeeded(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    deltaY: Int,
+    headerHeight: Int,
+    footerHeight: Int,
+    leadingStaticWidth: Int,
+    trailingStaticWidth: Int
+  ) {
+    guard
+      dimmingMeasurementCount < Self.maximumDimmingMeasurements,
+      deltaY >= Self.minimumDimmingMeasurementDelta
+    else { return }
+
+    let columns = matchingColumnBounds(
+      width: previous.width,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth
+    )
+    guard
+      let depth = ScrollingCaptureEdgeDimmingDetector.dimmedDepth(
+        previous: previous,
+        current: current,
+        offset: deltaY,
+        headerHeight: headerHeight,
+        footerHeight: footerHeight,
+        xStart: columns?.0 ?? 0,
+        xEnd: columns?.1
+      )
+    else { return }
+
+    dimmingMeasurementCount += 1
+    measuredDimmedDepth = max(measuredDimmedDepth ?? 0, depth)
+  }
+
+  /// Moves the uncommitted tail from `previous` into `current`, which shows the
+  /// content `deltaY` rows higher, and commits every tail row that now sits at
+  /// least `edgeClearance` rows above the bottom edge.
+  private func advanceTail(
+    from previous: RasterImage,
+    to current: RasterImage,
+    deltaY: Int,
+    acceptedDelta: Int
+  ) {
+    let previousContentBottom = previous.height - footerHeight
+    let contentBottom = current.height - footerHeight
+    var tailStart = min(tailStartRow ?? previousContentBottom, previousContentBottom)
+
+    // Tail rows that scroll under the header in `current` can only come from
+    // `previous`.
+    let hiddenEnd = min(headerHeight + deltaY, previousContentBottom)
+    if hiddenEnd > tailStart {
+      commitRows(from: previous, startRow: tailStart, rowCount: hiddenEnd - tailStart)
+      tailStart = hiddenEnd
+    }
+
+    var tailTop = min(tailStart - deltaY, contentBottom)
+
+    // The height limit clipped this step, so nothing will follow it.
+    if acceptedDelta < deltaY {
+      let clippedEnd = contentBottom - deltaY + acceptedDelta
+      commitRows(from: current, startRow: tailTop, rowCount: clippedEnd - tailTop)
+      tailStartRow = contentBottom
+      return
+    }
+
+    let clean = contentBottom - edgeClearance - tailTop
+    if clean > 0 {
+      commitRows(from: current, startRow: tailTop, rowCount: clean)
+      tailTop += clean
+    }
+    tailStartRow = tailTop
+  }
+
+  private func commitRows(from raster: RasterImage, startRow: Int, rowCount: Int) {
+    guard rowCount > 0 else { return }
+    contentSlices.append(ContentSlice(raster: raster, startRow: startRow, rowCount: rowCount))
   }
 
   private func sliceStartRow(
@@ -807,40 +1090,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     case .unresolved:
       return nil
     }
-  }
-
-  private func detectStaticBandHeight(
-    previous: RasterImage,
-    current: RasterImage,
-    fromTop: Bool
-  ) -> Int {
-    let maxBandHeight = min(previous.height / 5, 160)
-    let step = max(2, min(8, previous.height / 180))
-    let xInset = max(20, previous.width / 18)
-    let xStart = xInset
-    let xEnd = previous.width - xInset
-    let columnStride = max(2, (xEnd - xStart) / 44)
-    var bandHeight = 0
-
-    for offset in stride(from: 0, to: maxBandHeight, by: step) {
-      let row = fromTop ? offset : previous.height - 1 - offset
-      let difference = previous.rowDifference(
-        comparedTo: current,
-        row: row,
-        otherRow: row,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: columnStride
-      )
-
-      if difference < 5.0 {
-        bandHeight = offset + step
-      } else if offset >= step * 2 {
-        break
-      }
-    }
-
-    return min(max(0, bandHeight), maxBandHeight)
   }
 
   private func contentDifference(
@@ -894,16 +1143,25 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private func bestMatch(
     previous: RasterImage,
     current: RasterImage,
+    previousLuma: ScrollingCaptureLumaPlane,
+    currentLuma: ScrollingCaptureLumaPlane,
     headerHeight: Int,
     footerHeight: Int,
     leadingStaticWidth: Int,
     trailingStaticWidth: Int,
     expectedSignedDeltaPixels: Int?,
+    requestedDeltaPixels: Int?,
     visionAlignmentEstimate: VisionAlignmentEstimate?,
     searchMode: MatchSearchMode
   ) -> Match? {
     let contentHeight = previous.height - headerHeight - footerHeight
     let expectedDeltaPixels = expectedSignedDeltaPixels.map(abs)
+    // A settled viewport lowers the expected step to what Vision measured, but
+    // the page may still have travelled the whole step it was asked to, so both
+    // distances are plausible and either may confirm a candidate.
+    let expectations = [expectedDeltaPixels, requestedDeltaPixels]
+      .compactMap { $0 }
+      .filter { $0 > 24 }
     guard let broadRange = broadDeltaRange(
       for: contentHeight,
       expectedDeltaPixels: expectedDeltaPixels,
@@ -945,10 +1203,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       visionAlignmentEstimate: visionAlignmentEstimate,
       searchMode: searchMode
     )
-      || isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels)
+      || isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels),
+      focusedRange != nil
     {
-      guard focusedRange != nil else { return nil }
-
+      // Widen the search when the focused window came back with nothing
+      // convincing. Whether it produces a candidate or not, the frames still
+      // get their say below.
       let broaderResult = searchBestMatch(
         previous: previous,
         current: current,
@@ -970,8 +1230,139 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       }
     }
 
+    let columns = matchingColumnBounds(
+      width: previous.width,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth
+    )
+
+    let verificationFooterHeight = verificationFooter(
+      footerHeight: footerHeight,
+      headerHeight: headerHeight,
+      frameHeight: previous.height
+    )
+
+    // The rows a pair of frames offers, measured once: the sweep below asks
+    // about every offset in the range, and reading the same pixels for each of
+    // them took seconds a frame.
+    let verificationPlan = ScrollingCaptureOffsetVerifier.plan(
+      previous: previousLuma,
+      current: currentLuma,
+      headerHeight: headerHeight,
+      footerHeight: verificationFooterHeight,
+      columnStart: columns?.0 ?? 0,
+      columnEnd: columns?.1
+    )
+
+    func verdict(_ deltaY: Int) -> ScrollingCaptureOffsetVerifier.Verdict {
+      guard let verificationPlan else { return .noEvidence }
+      return verificationPlan.verdict(offset: deltaY)
+    }
+
+    // The frames themselves are the authority: if content moved up by this
+    // offset, every row that carries contrast lines up across the whole
+    // overlap. Scores only propose candidates, because on a page with large
+    // flat areas background agrees at every offset, the sampled bands tie, and
+    // the scan settles on whichever candidate it happened to see first.
+    // The frames themselves are the authority: if content moved up by this
+    // offset, every row that carries contrast lines up across the whole
+    // overlap. Scores only propose candidates, because on a page with large
+    // flat areas background agrees at every offset, the sampled bands tie, and
+    // the scan settles on whichever candidate it happened to see first.
+    // What the scroll was asked to travel, confirmed by the frames, is the
+    // strongest evidence there is, and the scan measured it to the pixel.
+    func matchesExpectedStep(_ deltaY: Int) -> Bool {
+      expectations.contains { abs(deltaY - $0) <= max(12, $0 / 10) }
+    }
+
+    // Vision is the tie-breaker on a repeating layout, where a wrong repeat of
+    // the pattern lines up as convincingly as the true offset. It is not
+    // reliable enough on a flat page to overrule an offset the frames confirm
+    // at the distance the page was asked to travel.
+    func visionConfirms(_ deltaY: Int) -> Bool {
+      guard
+        let visionAlignmentEstimate,
+        visionAlignmentEstimate.agreementCount >= 2,
+        visionAlignmentEstimate.deltaY > 0
+      else { return false }
+      let tolerance = max(24, visionAlignmentEstimate.deltaY / 4)
+      return abs(deltaY - visionAlignmentEstimate.deltaY) <= tolerance
+    }
+
+    // The page can travel farther than one step when frames were missed, but a
+    // move shorter than the step it was asked to make is an intermediate frame
+    // caught mid-scroll: committing it pins later steps to the wrong overlap.
+    func isPlausibleTravel(_ deltaY: Int, visionConfirms: Bool) -> Bool {
+      guard let largest = expectations.max() else { return true }
+      if matchesExpectedStep(deltaY) { return true }
+      // A shorter move goes through the sweep instead, which commits it only
+      // when the frames confirm no competing offset.
+      return deltaY > largest && visionConfirms
+    }
+
+    if let best = searchResult?.best, best.direction == .appendFromBottom,
+       verdict(best.deltaY) == .verified,
+       fitsAnyExpectation(best.deltaY, expectations: expectations),
+       isPlausibleTravel(best.deltaY, visionConfirms: visionConfirms(best.deltaY)) {
+      var confirmed = best
+      confirmed.confirmedByFrames = true
+      return confirmed
+    }
+
+    let confirmed = sweptVerifiedMatch(
+      deltaRange: broadRange,
+      previous: previous,
+      current: current,
+      searchBest: searchResult?.best,
+      expectations: expectations,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth,
+      visionAlignmentEstimate: visionAlignmentEstimate,
+      verdict: verdict
+    )
+    if let confirmed {
+      return confirmed
+    }
+
+    // A viewport of blank page carries nothing to judge: the rows agree however
+    // the frames are aligned, so refusing would stall a capture over content
+    // that stitches seamlessly at any offset. Take the distance the scroll was
+    // asked to travel, as long as the frames do not contradict it.
+    if
+      let blankStep = expectations.first(where: { verdict($0) == .blank }),
+      let metrics = overlapMetrics(
+        previous: previous,
+        current: current,
+        direction: .appendFromBottom,
+        deltaY: blankStep,
+        headerHeight: headerHeight,
+        footerHeight: footerHeight,
+        leadingStaticWidth: leadingStaticWidth,
+        trailingStaticWidth: trailingStaticWidth
+      )
+    {
+      return Match(
+        direction: .appendFromBottom,
+        deltaY: blankStep,
+        pixelScore: metrics.averageDifference,
+        totalScore: metrics.averageDifference,
+        strongBandCount: metrics.strongBandCount,
+        bandCount: metrics.bandCount,
+        worstBandScore: metrics.worstDifference,
+        bandVariance: metrics.variance,
+        confirmedByFrames: true
+      )
+    }
+
+    // Nothing confirmed and no distance to fall back on. The score gates are
+    // the last resort, and only where the frames carry too little to judge:
+    // committing an offset the frames actively contradict splices together
+    // content that was never adjacent.
     guard
       let searchResult,
+      verdict(searchResult.best.deltaY) != .rejected,
       isAcceptable(
         searchResult.best,
         expectedDeltaPixels: expectedDeltaPixels,
@@ -982,8 +1373,153 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     else {
       return nil
     }
-
     return searchResult.best
+  }
+
+  /// A confirmed offset still has to be a plausible step. An intermediate frame
+  /// caught mid-scroll really did move a few pixels, so it is confirmed, but
+  /// committing it pins later steps to the wrong overlap.
+  private func fitsAnyExpectation(_ deltaY: Int, expectations: [Int]) -> Bool {
+    guard !expectations.isEmpty else { return true }
+    // A page often travels a little less than it was asked to, and farther when
+    // frames were missed. Only a small fraction of every plausible distance is
+    // implausible.
+    return expectations.contains { expectation in
+      deltaY <= expectation * 2 && deltaY >= max(18, expectation - max(16, expectation / 3))
+    }
+  }
+
+  /// Sweeps the plausible range with the verifier and takes the confirmed run
+  /// of offsets that best fits how far the scroll was expected to travel. This
+  /// is what a flat page needs: judging content rows over the whole overlap
+  /// separates offsets that the band scores cannot.
+  private func sweptVerifiedMatch(
+    deltaRange: ClosedRange<Int>,
+    previous: RasterImage,
+    current: RasterImage,
+    searchBest: Match?,
+    expectations: [Int],
+    headerHeight: Int,
+    footerHeight: Int,
+    leadingStaticWidth: Int,
+    trailingStaticWidth: Int,
+    visionAlignmentEstimate: VisionAlignmentEstimate?,
+    verdict: (Int) -> ScrollingCaptureOffsetVerifier.Verdict
+  ) -> Match? {
+    // The band of offsets the frames confirm is only a few pixels wide around a
+    // true offset, so a coarse sweep walks straight past it. Step by one pixel
+    // across the range the scroll plausibly travelled, and coarsely elsewhere.
+    let coarseStep = max(2, (deltaRange.upperBound - deltaRange.lowerBound) / 220)
+    var probes: [Int] = []
+    for expectation in expectations {
+      let fineLower = max(deltaRange.lowerBound, expectation / 2)
+      let fineUpper = min(deltaRange.upperBound, expectation * 2)
+      if fineLower <= fineUpper {
+        probes.append(contentsOf: fineLower...fineUpper)
+      }
+    }
+    // The page does not always deliver its scrolling when it is asked to, so a
+    // step can carry the one before it as well and land far outside what was
+    // expected. The scan measured this pair without any such assumption, so
+    // whatever it proposes is worth confirming.
+    for candidate in [searchBest?.deltaY, visionAlignmentEstimate?.deltaY].compactMap({ $0 }) {
+      let lower = max(deltaRange.lowerBound, candidate - 8)
+      let upper = min(deltaRange.upperBound, candidate + 8)
+      if lower <= upper {
+        probes.append(contentsOf: lower...upper)
+      }
+    }
+    // Every offset in the range, not a sample of them: the band of offsets the
+    // frames confirm can be a single pixel wide, and a coarse walk steps over
+    // it. The check reads a grid of a couple of thousand pixels, so sweeping
+    // the whole range costs less than the band search it stands in for.
+    probes.append(contentsOf: deltaRange.lowerBound...deltaRange.upperBound)
+
+    var runs: [[Int]] = []
+    for delta in Set(probes).sorted() where verdict(delta) == .verified {
+      if var last = runs.last, let tail = last.last, delta - tail <= coarseStep * 2 {
+        last.append(delta)
+        runs[runs.count - 1] = last
+      } else {
+        runs.append([delta])
+      }
+    }
+    guard !runs.isEmpty else { return nil }
+
+    let centers = runs.map { $0[$0.count / 2] }
+    let chosenCenter: Int
+    if centers.count == 1, let only = centers.first {
+      // One confirmed answer needs no tie-breaking, however far the page
+      // turned out to travel: a page often moves a fraction of the step it was
+      // asked to, and the frames have confirmed this offset over the whole
+      // overlap.
+      chosenCenter = only
+    } else if let nearest = centers.first(where: { center in
+      expectations.contains { abs(center - $0) <= max(16, $0 * 15 / 100) }
+    }) {
+      // Several confirmed offsets mean the frames alone cannot say which is
+      // real — a repeating layout lines up at more than one distance, and one
+      // of them may be an intermediate frame caught mid-scroll. Only an offset
+      // close to the step the scroll was asked to make is safe then.
+      chosenCenter = nearest
+    } else {
+      return nil
+    }
+
+    guard
+      let chosenRun = runs.first(where: { $0[$0.count / 2] == chosenCenter }),
+      let runStart = chosenRun.first,
+      let runEnd = chosenRun.last
+    else { return nil }
+
+    // A flat page confirms a wide band of offsets, so the run says which
+    // neighbourhood is right, not which pixel. The scan measured to the pixel,
+    // so its answer wins whenever it falls inside the confirmed run.
+    var deltaY = chosenCenter
+    if let searchBest, searchBest.direction == .appendFromBottom,
+       searchBest.deltaY >= runStart - coarseStep, searchBest.deltaY <= runEnd + coarseStep,
+       verdict(searchBest.deltaY) == .verified {
+      deltaY = searchBest.deltaY
+    } else if let expectation = expectations.first(where: {
+      $0 >= runStart - coarseStep && $0 <= runEnd + coarseStep && verdict($0) == .verified
+    }) {
+      // Otherwise a distance the scroll was asked to travel, when the frames
+      // confirm it, beats the middle of a band.
+      deltaY = expectation
+    } else {
+      var refined: [Int] = []
+      let lower = max(deltaRange.lowerBound, chosenCenter - coarseStep)
+      let upper = min(deltaRange.upperBound, chosenCenter + coarseStep)
+      for delta in lower...upper where verdict(delta) == .verified {
+        refined.append(delta)
+      }
+      if !refined.isEmpty { deltaY = refined[refined.count / 2] }
+    }
+
+    guard deltaY >= ScrollingCaptureStitcher.minimumConfirmedDelta else { return nil }
+
+    guard let metrics = overlapMetrics(
+      previous: previous,
+      current: current,
+      direction: .appendFromBottom,
+      deltaY: deltaY,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth
+    ) else { return nil }
+
+    return Match(
+      direction: .appendFromBottom,
+      deltaY: deltaY,
+      pixelScore: metrics.averageDifference,
+      totalScore: metrics.averageDifference,
+      strongBandCount: metrics.strongBandCount,
+      bandCount: metrics.bandCount,
+      worstBandScore: metrics.worstDifference,
+      bandVariance: metrics.variance,
+      confirmedByFrames: true
+    )
   }
 
   private func broadDeltaRange(
@@ -1694,46 +2230,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     guard deltaY <= maxUsefulDelta else { return nil }
 
     return deltaY
-  }
-
-  private func detectStaticSideBandWidth(
-    previous: RasterImage,
-    current: RasterImage,
-    fromLeading: Bool
-  ) -> Int {
-    let maxBandWidth = min(previous.width / 6, 120)
-    let step = max(2, min(8, previous.width / 220))
-    let yInset = max(24, previous.height / 16)
-    let yStart = yInset
-    let yEnd = previous.height - yInset
-    let rowCount = yEnd - yStart
-    guard rowCount > 24 else { return 0 }
-
-    var bandWidth = 0
-
-    for width in stride(from: step, through: maxBandWidth, by: step) {
-      let xStart = fromLeading ? 0 : previous.width - width
-      let xEnd = fromLeading ? width : previous.width
-
-      let difference = previous.blockDifference(
-        comparedTo: current,
-        startRow: yStart,
-        otherStartRow: yStart,
-        rowCount: rowCount,
-        xStart: xStart,
-        xEnd: xEnd,
-        columnStride: 2,
-        rowStride: 3
-      )
-
-      if difference < 5.0 {
-        bandWidth = width
-      } else if width >= step * 3 {
-        break
-      }
-    }
-
-    return min(max(0, bandWidth), maxBandWidth)
   }
 
   private func matchingColumnBounds(
