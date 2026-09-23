@@ -148,6 +148,7 @@ flowchart TD
 grep 'ScrollingCaptureDebug' "$HOME/Library/Logs/Snapzy/snapzy_$(date +%F).txt"
 ```
 
+- When a commit fails to align twice over, both frames are written to `~/Library/Logs/Snapzy/UnalignedFrames/` (diagnostics on, three pairs per session at most) and the `stitch-update` line names them in `framesDumped`. A capture that stalls on a live page cannot always be reproduced from a saved copy, and the pair is what makes the failure workable.
 - Useful events: `live-stream-started`, `live-stream-fallback`, `live-frame-sample`, `commit-frame-selected`, `stitch-update` (outcome, safety, confidence, delta error, durations), `refresh-failure`, `session-summary`.
 - Session guidance, runtime badges, preview captions, and recovery toasts are localized through `L10n.ScrollingCapture*`; keep them in sync with [`LOCALIZATION.md`](LOCALIZATION.md).
 
