@@ -126,6 +126,25 @@ final class ScrollingCaptureWindowCaptureTests: XCTestCase {
     XCTAssertTrue(update.likelyReachedBoundary)
   }
 
+  func testStitch_sparsePageLongScroll_stillAppends() throws {
+    // A step close to half the viewport, as Auto Scroll takes on a tall window.
+    // Chrome measured from a single frame pair used to report bands hundreds of
+    // pixels deep on a page this flat, leaving no overlap left to match.
+    let step = height * 45 / 100
+    let stitcher = ScrollingCaptureStitcher()
+    _ = stitcher.start(with: try sparseFrame(offset: 0))
+
+    for index in 1...4 {
+      let update = try XCTUnwrap(
+        stitcher.append(try sparseFrame(offset: index * step), maxOutputHeight: 30_000, expectedSignedDeltaPixels: -step)
+      )
+      guard case .appended(let deltaY) = update.outcome else {
+        return XCTFail("Long step \(index) did not append: \(update.outcome)")
+      }
+      XCTAssertEqual(deltaY, step)
+    }
+  }
+
   // MARK: - Helpers
 
   private func sparseFrame(offset: Int) throws -> CGImage {
