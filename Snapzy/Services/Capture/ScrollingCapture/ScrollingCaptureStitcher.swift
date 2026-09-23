@@ -482,6 +482,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       leadingStaticWidth: inferredLeadingStaticWidth,
       trailingStaticWidth: inferredTrailingStaticWidth,
       expectedSignedDeltaPixels: matchingExpectedDelta,
+      requestedDeltaPixels: expectedDeltaPixels,
       visionAlignmentEstimate: nil,
       searchMode: .guided
     )
@@ -522,6 +523,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
         expectedSignedDeltaPixels: matchingExpectedDelta,
+        requestedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .guided
       )
@@ -548,6 +550,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         leadingStaticWidth: inferredLeadingStaticWidth,
         trailingStaticWidth: inferredTrailingStaticWidth,
         expectedSignedDeltaPixels: matchingExpectedDelta,
+        requestedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate,
         searchMode: .recovery
       )
@@ -1115,11 +1118,18 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     leadingStaticWidth: Int,
     trailingStaticWidth: Int,
     expectedSignedDeltaPixels: Int?,
+    requestedDeltaPixels: Int?,
     visionAlignmentEstimate: VisionAlignmentEstimate?,
     searchMode: MatchSearchMode
   ) -> Match? {
     let contentHeight = previous.height - headerHeight - footerHeight
     let expectedDeltaPixels = expectedSignedDeltaPixels.map(abs)
+    // A settled viewport lowers the expected step to what Vision measured, but
+    // the page may still have travelled the whole step it was asked to, so both
+    // distances are plausible and either may confirm a candidate.
+    let expectations = [expectedDeltaPixels, requestedDeltaPixels]
+      .compactMap { $0 }
+      .filter { $0 > 24 }
     guard let broadRange = broadDeltaRange(
       for: contentHeight,
       expectedDeltaPixels: expectedDeltaPixels,
@@ -1217,8 +1227,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // What the scroll was asked to travel, confirmed by the frames, is the
     // strongest evidence there is, and the scan measured it to the pixel.
     func matchesExpectedStep(_ deltaY: Int) -> Bool {
-      guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return false }
-      return abs(deltaY - expectedDeltaPixels) <= max(12, expectedDeltaPixels / 10)
+      expectations.contains { abs(deltaY - $0) <= max(12, $0 / 10) }
     }
 
     // Vision is the tie-breaker on a repeating layout, where a wrong repeat of
@@ -1239,16 +1248,16 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // move shorter than the step it was asked to make is an intermediate frame
     // caught mid-scroll: committing it pins later steps to the wrong overlap.
     func isPlausibleTravel(_ deltaY: Int, visionConfirms: Bool) -> Bool {
-      guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
+      guard let largest = expectations.max() else { return true }
       if matchesExpectedStep(deltaY) { return true }
       // A shorter move goes through the sweep instead, which commits it only
       // when the frames confirm no competing offset.
-      return deltaY > expectedDeltaPixels && visionConfirms
+      return deltaY > largest && visionConfirms
     }
 
     if let best = searchResult?.best, best.direction == .appendFromBottom,
        verdict(best.deltaY) == .verified,
-       fitsExpectedStep(best.deltaY, expectedDeltaPixels: expectedDeltaPixels),
+       fitsAnyExpectation(best.deltaY, expectations: expectations),
        isPlausibleTravel(best.deltaY, visionConfirms: visionConfirms(best.deltaY)) {
       return best
     }
@@ -1258,7 +1267,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       previous: previous,
       current: current,
       searchBest: searchResult?.best,
-      expectedDeltaPixels: expectedDeltaPixels,
+      expectations: expectations,
       headerHeight: headerHeight,
       footerHeight: footerHeight,
       leadingStaticWidth: leadingStaticWidth,
@@ -1291,11 +1300,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   /// A confirmed offset still has to be a plausible step. An intermediate frame
   /// caught mid-scroll really did move a few pixels, so it is confirmed, but
   /// committing it pins later steps to the wrong overlap.
-  private func fitsExpectedStep(_ deltaY: Int, expectedDeltaPixels: Int?) -> Bool {
-    guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
+  private func fitsAnyExpectation(_ deltaY: Int, expectations: [Int]) -> Bool {
+    guard !expectations.isEmpty else { return true }
     // A page often travels a little less than it was asked to, and farther when
-    // frames were missed. Only a small fraction of the step is implausible.
-    return deltaY >= max(18, expectedDeltaPixels / 2) && deltaY <= expectedDeltaPixels * 2
+    // frames were missed. Only a small fraction of every plausible distance is
+    // implausible.
+    return expectations.contains { expectation in
+      deltaY <= expectation * 2 && deltaY >= max(18, expectation - max(16, expectation / 3))
+    }
   }
 
   /// Sweeps the plausible range with the verifier and takes the confirmed run
@@ -1307,7 +1319,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     previous: RasterImage,
     current: RasterImage,
     searchBest: Match?,
-    expectedDeltaPixels: Int?,
+    expectations: [Int],
     headerHeight: Int,
     footerHeight: Int,
     leadingStaticWidth: Int,
@@ -1320,9 +1332,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // across the range the scroll plausibly travelled, and coarsely elsewhere.
     let coarseStep = max(2, (deltaRange.upperBound - deltaRange.lowerBound) / 220)
     var probes: [Int] = []
-    if let expectedDeltaPixels, expectedDeltaPixels > 24 {
-      let fineLower = max(deltaRange.lowerBound, expectedDeltaPixels / 2)
-      let fineUpper = min(deltaRange.upperBound, expectedDeltaPixels * 2)
+    for expectation in expectations {
+      let fineLower = max(deltaRange.lowerBound, expectation / 2)
+      let fineUpper = min(deltaRange.upperBound, expectation * 2)
       if fineLower <= fineUpper {
         probes.append(contentsOf: fineLower...fineUpper)
       }
@@ -1356,13 +1368,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       // A repeating layout confirms the wrong repeat as readily as the true
       // offset, so what Vision saw decides between them.
       chosenCenter = nearest
-    } else if let expectedDeltaPixels, expectedDeltaPixels > 0,
-              let nearest = centers.min(by: {
-                abs($0 - expectedDeltaPixels) < abs($1 - expectedDeltaPixels)
-              }),
-              abs(nearest - expectedDeltaPixels) <= max(96, expectedDeltaPixels / 2) {
-      // Several confirmed runs with nothing to separate them: only the one the
-      // page was actually asked to travel is safe to commit.
+    } else if let nearest = centers.first(where: { center in
+      expectations.contains { abs(center - $0) <= max(96, $0 / 2) }
+    }) {
+      // Several confirmed runs with nothing to separate them: only one at a
+      // distance the page plausibly travelled is safe to commit.
       chosenCenter = nearest
     } else {
       return nil
@@ -1382,12 +1392,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
        searchBest.deltaY >= runStart - coarseStep, searchBest.deltaY <= runEnd + coarseStep,
        verdict(searchBest.deltaY) == .verified {
       deltaY = searchBest.deltaY
-    } else if let expectedDeltaPixels, expectedDeltaPixels > 0,
-              expectedDeltaPixels >= runStart - coarseStep, expectedDeltaPixels <= runEnd + coarseStep,
-              verdict(expectedDeltaPixels) == .verified {
-      // Otherwise the step the scroll was asked to travel, when the frames
+    } else if let expectation = expectations.first(where: {
+      $0 >= runStart - coarseStep && $0 <= runEnd + coarseStep && verdict($0) == .verified
+    }) {
+      // Otherwise a distance the scroll was asked to travel, when the frames
       // confirm it, beats the middle of a band.
-      deltaY = expectedDeltaPixels
+      deltaY = expectation
     } else {
       var refined: [Int] = []
       let lower = max(deltaRange.lowerBound, chosenCenter - coarseStep)
@@ -1398,19 +1408,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       if !refined.isEmpty { deltaY = refined[refined.count / 2] }
     }
 
-    guard fitsExpectedStep(deltaY, expectedDeltaPixels: expectedDeltaPixels) else { return nil }
-
     // A page often travels a little less than it was asked to, and that is
-    // worth committing. Much less than asked is what an intermediate frame
-    // caught mid-scroll looks like, and a repeating layout confirms such an
-    // offset as readily as the real one. A viewport independently verified as
-    // settled comes back through `allowsSettledPartialStep`, which lowers the
-    // expected step to what Vision measured, so a genuine short travel is
-    // committed on the retry instead.
-    if let expectedDeltaPixels, expectedDeltaPixels > 24, deltaY < expectedDeltaPixels {
-      let tolerance = max(16, expectedDeltaPixels / 3)
-      guard expectedDeltaPixels - deltaY <= tolerance else { return nil }
-    }
+    // worth committing. Much less than any distance it plausibly travelled is
+    // what an intermediate frame caught mid-scroll looks like, and a repeating
+    // layout confirms such an offset as readily as the real one.
+    guard fitsAnyExpectation(deltaY, expectations: expectations) else { return nil }
 
     guard let metrics = overlapMetrics(
       previous: previous,
