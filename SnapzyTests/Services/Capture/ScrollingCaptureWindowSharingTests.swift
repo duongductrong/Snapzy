@@ -2,7 +2,7 @@
 //  ScrollingCaptureWindowSharingTests.swift
 //  SnapzyTests
 //
-//  Unit tests for scrolling capture session chrome capture exclusion.
+//  Unit tests for scrolling capture session chrome and toast capture exclusion.
 //
 
 import AppKit
@@ -41,6 +41,15 @@ final class ScrollingCaptureWindowSharingTests: XCTestCase {
     defer { window.close() }
 
     XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+  }
+
+  func testToastPanel_isExcludedFromScreenCapture() {
+    // The scrolling capture hint is a toast, and it was stitched into the top
+    // of a captured page.
+    let panel = AppToastManager.makeToastPanel(contentRect: sampleAnchorRect)
+    defer { panel.close() }
+
+    XCTAssertEqual(panel.sharingType, NSWindow.SharingType.none)
   }
 
   private var sampleAnchorRect: CGRect {
