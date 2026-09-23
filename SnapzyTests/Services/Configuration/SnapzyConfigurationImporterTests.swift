@@ -311,6 +311,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     [capture.screenshot]
     freeze_area = true
+    delayed_capture_seconds = 5
     show_selection_area_overlay = false
     reverse_magnifier_zoom_direction = true
     show_magnifier_by_default = true
@@ -341,6 +342,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     
     // capture.screenshot
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotFreezeArea) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds) as? Int, 5)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, true)

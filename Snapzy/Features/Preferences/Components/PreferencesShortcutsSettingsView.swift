@@ -13,6 +13,7 @@ struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig?
   @State private var areaShortcut: ShortcutConfig?
   @State private var repeatAreaShortcut: ShortcutConfig?
+  @State private var delayedCaptureShortcut: ShortcutConfig?
   @State private var areaAnnotateShortcut: ShortcutConfig?
   @State private var activeWindowShortcut: ShortcutConfig?
   @State private var areaApplicationCaptureShortcut: CaptureOverlayShortcut?
@@ -60,6 +61,7 @@ struct ShortcutsSettingsView: View {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .fullscreen))
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .area))
     _repeatAreaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .repeatArea))
+    _delayedCaptureShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .delayedCapture))
     _areaAnnotateShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .areaAnnotate))
     _activeWindowShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .activeWindow))
     _areaApplicationCaptureShortcut = State(
@@ -368,6 +370,17 @@ struct ShortcutsSettingsView: View {
             isEnabled: globalEnabledBinding(for: .repeatArea),
             validationIssue: globalValidationIssues[.repeatArea],
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .repeatArea) }
+          )
+
+          ShortcutRecorderView(
+            label: L10n.Actions.captureDelayed,
+            icon: "timer",
+            description: L10n.PreferencesShortcuts.captureDelayedDescription,
+            shortcut: $delayedCaptureShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .delayedCapture),
+            validationIssue: globalValidationIssues[.delayedCapture],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .delayedCapture) }
           )
 
           ShortcutRecorderView(
@@ -837,6 +850,7 @@ struct ShortcutsSettingsView: View {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
     repeatAreaShortcut = .defaultRepeatArea
+    delayedCaptureShortcut = nil
     areaAnnotateShortcut = .defaultAreaAnnotate
     activeWindowShortcut = .defaultActiveWindowCapture
     areaApplicationCaptureShortcut = CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut
@@ -846,7 +860,8 @@ struct ShortcutsSettingsView: View {
     smartElementShortcut = .defaultSmartElement
 
     let captureKinds: [GlobalShortcutKind] = [
-      .fullscreen, .area, .repeatArea, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr, .smartElement,
+      .fullscreen, .area, .repeatArea, .delayedCapture, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr,
+      .smartElement,
     ]
     for kind in captureKinds {
       globalShortcutEnabled[kind] = true
@@ -858,6 +873,7 @@ struct ShortcutsSettingsView: View {
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
     manager.setRepeatAreaShortcut(.defaultRepeatArea)
+    manager.setDelayedCaptureShortcut(nil)
     manager.setAreaAnnotateShortcut(.defaultAreaAnnotate)
     manager.setActiveWindowShortcut(.defaultActiveWindowCapture)
     manager.setScrollingCaptureShortcut(.defaultScrollingCapture)
@@ -1110,6 +1126,9 @@ struct ShortcutsSettingsView: View {
       case .repeatArea:
         repeatAreaShortcut = config
         manager.setRepeatAreaShortcut(config)
+      case .delayedCapture:
+        delayedCaptureShortcut = config
+        manager.setDelayedCaptureShortcut(config)
       case .areaAnnotate:
         areaAnnotateShortcut = config
         manager.setAreaAnnotateShortcut(config)

@@ -55,6 +55,8 @@ struct SnapzyDeepLinkHandler {
       screenCaptureViewModel.captureArea()
     case .captureRepeatArea:
       screenCaptureViewModel.captureRepeatArea()
+    case .captureDelayed:
+      screenCaptureViewModel.captureDelayed()
     case .captureApplication:
       screenCaptureViewModel.captureApplication()
     case .captureActiveWindow:
@@ -104,6 +106,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case captureFullscreen
   case captureArea
   case captureRepeatArea
+  case captureDelayed
   case captureApplication
   case captureActiveWindow
   case captureAreaAnnotate
@@ -137,6 +140,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .captureArea
     case "capture/repeat-area", "repeat-area", "capture-repeat-area", "screenshot/repeat-area":
       self = .captureRepeatArea
+    case "capture/delayed", "delayed-capture", "capture-delayed", "screenshot/delayed":
+      self = .captureDelayed
     case "capture/application", "capture/window", "application-capture", "window-capture", "screenshot/window":
       self = .captureApplication
     case "capture/active-window", "capture/focused-window", "active-window-capture",
@@ -184,6 +189,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .captureFullscreen: return "captureFullscreen"
     case .captureArea: return "captureArea"
     case .captureRepeatArea: return "captureRepeatArea"
+    case .captureDelayed: return "captureDelayed"
     case .captureApplication: return "captureApplication"
     case .captureActiveWindow: return "captureActiveWindow"
     case .captureAreaAnnotate: return "captureAreaAnnotate"

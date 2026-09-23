@@ -77,6 +77,7 @@ enum SnapzyConfigurationExporter {
     writer.value("include_snapzy", defaults.boolValue(PreferencesKeys.screenshotIncludeOwnApp, default: false))
     writer.value("show_cursor", defaults.boolValue(PreferencesKeys.screenshotShowCursor, default: false))
     writer.value("freeze_area", defaults.boolValue(PreferencesKeys.screenshotFreezeArea, default: false))
+    writer.value("delayed_capture_seconds", CaptureDelayOption.current(defaults: defaults).seconds)
     writer.value("show_selection_area_overlay", defaults.boolValue(PreferencesKeys.screenshotShowSelectionAreaOverlay, default: true))
     writer.value("reverse_magnifier_zoom_direction", defaults.boolValue(PreferencesKeys.screenshotReverseMagnifierZoomDirection, default: false))
     writer.value("show_magnifier_by_default", defaults.boolValue(PreferencesKeys.screenshotShowMagnifierByDefault, default: false))

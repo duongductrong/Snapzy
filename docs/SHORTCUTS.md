@@ -57,8 +57,9 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `togglePenRecording` | Toggle pen overlay while recording | **unbound** |
 | `restartRecording` | Restart current recording | **unbound** |
 | `deleteRecording` | Delete in-progress recording | **unbound** |
+| `delayedCapture` | Delayed Capture (countdown, then frozen area selection) | **unbound** |
 
-- The four unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
+- The five unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
 
 ## Overlay shortcuts (in-overlay, not plain global hotkeys)
@@ -154,6 +155,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/fullscreen` | Capture fullscreen |
 | `snapzy://capture/area` | Capture area |
 | `snapzy://capture/repeat-area`| Repeat last area capture|
+| `snapzy://capture/delayed` | Delayed Capture (countdown → area) |
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |

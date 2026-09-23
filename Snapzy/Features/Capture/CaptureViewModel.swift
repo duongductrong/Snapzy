@@ -354,6 +354,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureArea()
     case .captureRepeatArea:
       captureRepeatArea()
+    case .captureDelayed:
+      captureDelayed()
     case .captureAreaAnnotate:
       captureAreaAnnotate()
     case .captureApplication:
@@ -547,6 +549,22 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     startInlineAreaAnnotateCapture()
   }
 
+  /// Self-timer area capture: count down (Preferences › Capture › Delayed
+  /// capture), then select an area on a frozen snapshot taken when the
+  /// countdown ends, so menus and hover states opened meanwhile are kept.
+  func captureDelayed() {
+    guard !isAreaSelectionActive else {
+      DiagnosticLogger.shared.log(.debug, .capture, "captureDelayed blocked: area selection active")
+      return
+    }
+    CaptureDelayCountdownController.shared.start(
+      seconds: CaptureDelayOption.current().seconds,
+      captureName: "delayedArea"
+    ) { [weak self] in
+      self?.startAreaCapture(initialInteractionMode: .manualRegion, forceFrozenSelection: true)
+    }
+  }
+
 
   /// Re-capture the most recently selected area screenshot rect without
   /// re-entering selection mode. Never opens the selection flow: when no
@@ -634,7 +652,12 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     }
   }
 
-  private func startAreaCapture(initialInteractionMode: AreaSelectionInteractionMode) {
+  /// - Parameter forceFrozenSelection: select against a frozen snapshot even when
+  ///   the Freeze screen preference is off (used by delayed capture).
+  private func startAreaCapture(
+    initialInteractionMode: AreaSelectionInteractionMode,
+    forceFrozenSelection: Bool = false
+  ) {
     // Prevent multiple area captures - only one at a time
     if isAreaSelectionActive {
       DiagnosticLogger.shared.log(.debug, .capture, "captureArea blocked: already active")
@@ -663,7 +686,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
     let excludeOwnApplication = !includesOwnAppInScreenshots
-    let immediateMenuBarPopoverCaptures = freezesAreaCapture
+    let freezesSelection = forceFrozenSelection || freezesAreaCapture
+    let immediateMenuBarPopoverCaptures = freezesSelection
       ? []
       : WindowSelectionQueryService.captureImmediateMenuBarPopoverCaptures(
         excludeOwnApplication: excludeOwnApplication
@@ -678,7 +702,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     // Live mode: skip the frozen snapshot so on-screen content keeps playing during selection,
     // then capture the chosen region at completion time.
-    if !freezesAreaCapture {
+    if !freezesSelection {
       startLiveAreaSelection(
         saveDirectory: resolvedSaveDirectory,
         prefetchedContentTask: prefetchedContentTask,

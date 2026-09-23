@@ -281,6 +281,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .togglePenRecording: return nil
     case .restartRecording: return nil
     case .deleteRecording: return nil
+    case .delayedCapture: return nil
     case .annotate: return .defaultAnnotate
     case .videoEditor: return .defaultVideoEditor
     case .cloudUploads: return .defaultCloudUploads

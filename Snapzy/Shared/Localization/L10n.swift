@@ -688,6 +688,11 @@ nonisolated enum L10n {
       defaultValue: "Repeat Area Screenshot",
       comment: "Action title for repeating the last area screenshot"
     )
+    static let captureDelayed = string(
+      "action.capture-delayed",
+      defaultValue: "Delayed Capture",
+      comment: "Action title for capturing an area after a countdown"
+    )
     static let captureAreaAnnotate = string(
       "action.capture-area-annotate",
       defaultValue: "Capture Markup",
@@ -781,6 +786,15 @@ nonisolated enum L10n {
   }
 
   enum Menu {
+    static func delayedCapture(_ seconds: Int) -> String {
+      format(
+        "menu.delayed-capture",
+        defaultValue: "Delayed Capture (%ds)",
+        comment: "Status bar menu item title for Delayed Capture. %d is the countdown length in seconds.",
+        seconds
+      )
+    }
+
     static func stopRecording(_ duration: String) -> String {
       format(
         "menu.stop-recording",
@@ -3486,6 +3500,24 @@ nonisolated enum L10n {
       defaultValue: "Freeze the screen while selecting. Enable to hold a still snapshot.",
       comment: "Capture preferences setting description"
     )
+    static let delayedCaptureTitle = string(
+      "preferences-capture.delayed-capture-title",
+      defaultValue: "Delayed capture countdown",
+      comment: "Capture preferences setting title"
+    )
+    static let delayedCaptureDescription = string(
+      "preferences-capture.delayed-capture-description",
+      defaultValue: "How long Delayed Capture waits before freezing the screen for area selection. Open menus or hover states during the countdown.",
+      comment: "Capture preferences setting description"
+    )
+    static func delayedCaptureSeconds(_ seconds: Int) -> String {
+      format(
+        "preferences-capture.delayed-capture-seconds",
+        defaultValue: "%d seconds",
+        comment: "Delayed capture countdown option. %d is the number of seconds.",
+        seconds
+      )
+    }
     static let livePassthroughTitle = string(
       "preferences-capture.live-passthrough-title",
       defaultValue: "Hover passthrough",
@@ -4181,6 +4213,11 @@ nonisolated enum L10n {
       "preferences-shortcuts.capture-repeat-area-description",
       defaultValue: "Capture the previously selected area again",
       comment: "Description for repeat area capture shortcut"
+    )
+    static let captureDelayedDescription = string(
+      "preferences-shortcuts.capture-delayed-description",
+      defaultValue: "Count down, then select an area on a frozen screen",
+      comment: "Description for delayed capture shortcut"
     )
     static let captureAreaAnnotateDescription = string(
       "preferences-shortcuts.capture-area-annotate-description",
@@ -8358,6 +8395,11 @@ nonisolated enum L10n {
   }
 
   enum ScreenCapture {
+    static let captureDelayCancelHint = string(
+      "screen-capture.capture-delay-cancel-hint",
+      defaultValue: "Esc to cancel",
+      comment: "Hint under the screenshot countdown"
+    )
     static let permissionDenied = string(
       "screen-capture.permission-denied",
       defaultValue: "Screen capture permission denied",

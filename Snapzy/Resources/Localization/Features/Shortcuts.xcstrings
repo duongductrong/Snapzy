@@ -781,6 +781,71 @@
         }
       }
     },
+    "preferences-shortcuts.capture-delayed-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Countdown, dann einen Bereich auf dem eingefrorenen Bildschirm auswählen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Count down, then select an area on a frozen screen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta atrás y luego selecciona un área en la pantalla congelada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compte à rebours, puis sélection d'une zone sur l'écran figé"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "カウントダウン後、フリーズした画面で範囲を選択"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카운트다운 후 정지된 화면에서 영역 선택"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Отсчёт, затем выбор области на замороженном экране"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đếm ngược, sau đó chọn vùng trên màn hình đã đóng băng"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "倒计时后在冻结的屏幕上选择区域"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "倒數後在凍結的螢幕上選取區域"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.capture-fullscreen-description": {
       "extractionState": "stale",
       "localizations": {

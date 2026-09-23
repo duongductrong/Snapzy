@@ -210,6 +210,13 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "capture", "screenshot", "freeze_area", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotFreezeArea)
     }
+    if let seconds = reader.int("capture", "screenshot", "delayed_capture_seconds") {
+      guard let option = CaptureDelayOption(rawValue: seconds) else {
+        reader.error("capture.screenshot.delayed_capture_seconds must be 3, 5, or 10")
+        return
+      }
+      mutations.append { defaults.set(option.seconds, forKey: PreferencesKeys.screenshotDelayedCaptureSeconds) }
+    }
     collectBool(&reader, "capture", "screenshot", "show_selection_area_overlay", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay)
     }

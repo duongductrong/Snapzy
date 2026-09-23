@@ -64,6 +64,7 @@ enum PreferencesKeys {
   static let screenshotShowCursor = "screenshot.showCursor"
   static let captureIncludeWindowShadow = "capture.includeWindowShadow"
   static let screenshotFreezeArea = "screenshot.freezeArea"
+  static let screenshotDelayedCaptureSeconds = "screenshot.delayedCaptureSeconds"
   static let screenshotLivePassthrough = "screenshot.livePassthrough"
   static let screenshotShowSelectionAreaOverlay = "screenshot.showSelectionAreaOverlay"
   static let screenshotReverseMagnifierZoomDirection = "screenshot.reverseMagnifierZoomDirection"
