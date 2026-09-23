@@ -1188,10 +1188,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       visionAlignmentEstimate: visionAlignmentEstimate,
       searchMode: searchMode
     )
-      || isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels)
+      || isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels),
+      focusedRange != nil
     {
-      guard focusedRange != nil else { return nil }
-
+      // Widen the search when the focused window came back with nothing
+      // convincing. Whether it produces a candidate or not, the frames still
+      // get their say below.
       let broaderResult = searchBestMatch(
         previous: previous,
         current: current,

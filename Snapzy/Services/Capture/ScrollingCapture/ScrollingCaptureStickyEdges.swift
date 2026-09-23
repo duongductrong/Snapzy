@@ -217,6 +217,10 @@ nonisolated struct ScrollingCaptureStickyEdgeAccumulator {
   /// Extra margin that scales with the band, since taller chrome carries a
   /// taller soft edge.
   static let bandMarginFraction = 0.25
+  /// Rows or columns without a verdict that a band may span before it is
+  /// considered finished. Chrome that is briefly too pale to judge stays in;
+  /// a margin of blank page does not.
+  static let maximumUnknownRun = 24
 
   mutating func add(_ samples: [Int: Bool]) {
     guard !samples.isEmpty else { return }
@@ -260,16 +264,25 @@ nonisolated struct ScrollingCaptureStickyEdgeAccumulator {
     func bandDepth(_ rows: [Int]) -> Int {
       var depth = 0
       var gap = 0
+      var unknown = 0
       for (index, row) in rows.enumerated() {
         switch settled(row) {
         case .some(true):
           depth = index + 1
           gap = 0
+          unknown = 0
         case .some(false):
           gap += 1
+          unknown = 0
           if gap > ScrollingCaptureStickyEdgeDetector.maximumGapRows { return depth }
         case .none:
-          continue
+          // A band has to be continuously supported. Blank rows and columns
+          // carry no verdict, and skipping over them lets one fixed-looking
+          // line far out in a margin drag the band across everything between:
+          // a page with wide white margins was read as a sidebar taking 61% of
+          // the frame, leaving almost nothing to align by.
+          unknown += 1
+          if unknown > Self.maximumUnknownRun { return depth }
         }
       }
       return depth

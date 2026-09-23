@@ -372,6 +372,40 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a page of centred content with wide blank margins and a thin fixed
+  /// line down the leading edge, like a window border or a scrollbar track.
+  static func centredColumnScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    edgeLineWidth: Int = 6
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let columnStart = width * 5 / 16
+    let columnEnd = width * 11 / 16
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let isTextRow = logicalY % 30 < 12
+      for x in 0..<width {
+        var value = 246
+        if x < edgeLineWidth {
+          value = 120
+        } else if isTextRow, x >= columnStart, x < columnEnd, (x / 7) % 6 != 5 {
+          value = abs((logicalY &* 73_856_093) ^ ((x / 3) &* 19_349_663)) % 170 + 20
+        }
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = UInt8(value)
+        pixels[offset + 1] = UInt8(value)
+        pixels[offset + 2] = UInt8(value)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   /// RGBA bytes of the first `rowCount` rows of `image`, drawn into a known
   /// pixel format so images from different sources compare byte for byte.
   static func rgbaRows(of image: CGImage, rowCount: Int) -> [UInt8] {

@@ -171,7 +171,55 @@ final class ScrollingCaptureWindowCaptureTests: XCTestCase {
     }
   }
 
+  func testDetectSides_blankMarginsAreNotASidebar() throws {
+    // Wide blank margins carry no verdict either way. Skipping over them let a
+    // thin fixed line at the very edge drag the band across everything in
+    // between, which read as a sidebar taking most of the frame.
+    let previous = try XCTUnwrap(
+      ScrollingCaptureLumaPlane(cgImage: try centredFrame(offset: 0))
+    )
+    let current = try XCTUnwrap(
+      ScrollingCaptureLumaPlane(cgImage: try centredFrame(offset: 60))
+    )
+
+    let sides = ScrollingCaptureStickyEdgeDetector.detectSides(
+      previous: previous,
+      current: current,
+      rowStart: 0,
+      rowEnd: height
+    )
+
+    XCTAssertLessThan(sides.leading, width / 4)
+    XCTAssertLessThan(sides.trailing, width / 4)
+  }
+
+  func testStitch_centredColumnWithBlankMargins_appendsEveryStep() throws {
+    let step = 60
+    let stitcher = ScrollingCaptureStitcher()
+    _ = stitcher.start(with: try centredFrame(offset: 0))
+
+    for index in 1...5 {
+      let update = try XCTUnwrap(
+        stitcher.append(
+          try centredFrame(offset: index * step),
+          maxOutputHeight: 30_000,
+          expectedSignedDeltaPixels: -step
+        )
+      )
+      guard case .appended(let deltaY) = update.outcome else {
+        return XCTFail("Step \(index) did not append: \(update.outcome)")
+      }
+      XCTAssertEqual(deltaY, step)
+    }
+  }
+
   // MARK: - Helpers
+
+  private func centredFrame(offset: Int) throws -> CGImage {
+    try XCTUnwrap(
+      TestImageFactory.centredColumnScrollingFrame(width: width, height: height, logicalYOffset: offset)
+    )
+  }
 
   private func chromeFrame(offset: Int, header: Int, footer: Int) throws -> CGImage {
     try XCTUnwrap(
