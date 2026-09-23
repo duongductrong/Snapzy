@@ -193,17 +193,17 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_stepDistanceStaysInsideOverlapSafeBounds() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 800),
-      192,
+      96,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 100),
-      26,
+      15,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 200),
-      48,
+      24,
       accuracy: 0.001
     )
   }
