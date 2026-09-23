@@ -45,6 +45,27 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
   /// region can hold fixed chrome that no offset makes agree.
   static let minimumMatchingRowFraction = 0.5
 
+  /// Rows sampled down the overlap, and samples taken along each row. A sparse
+  /// grid cannot separate neighbouring offsets on a page of text: both the
+  /// right offset and one a pixel away came back confirmed, and the sweep then
+  /// had a band of candidates with nothing to choose between.
+  static let rowSamples = 160
+  static let columnSamples = 64
+
+  /// What the frames say about an offset, before it is turned into a verdict.
+  struct Evidence {
+    /// Rows carrying anything at all, judgeable or not. Blank page has none.
+    var rowsWithContent: Int
+    /// Rows that carry content and are not fixed chrome.
+    var informativeRows: Int
+    /// Informative rows that agree at this offset.
+    var matchingRows: Int
+
+    var matchingFraction: Double {
+      informativeRows > 0 ? Double(matchingRows) / Double(informativeRows) : 0
+    }
+  }
+
   enum Verdict {
     case verified
     case rejected
@@ -91,100 +112,218 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
     columnEnd: Int? = nil
   ) -> Verdict {
     guard
-      offset > 0,
+      let evidence = evidence(
+        previous: previous,
+        current: current,
+        offset: offset,
+        headerHeight: headerHeight,
+        footerHeight: footerHeight,
+        columnStart: columnStart,
+        columnEnd: columnEnd
+      )
+    else {
+      let comparable = offset > 0
+        && previous.width == current.width
+        && previous.height == current.height
+      return comparable ? .noEvidence : .rejected
+    }
+
+    guard evidence.rowsWithContent >= minimumInformativeRows else { return .blank }
+    guard evidence.informativeRows >= minimumInformativeRows else { return .noEvidence }
+    return evidence.matchingFraction >= minimumMatchingRowFraction ? .verified : .rejected
+  }
+
+  /// Counts how the frames answer at `offset`.
+  ///
+  /// - Returns: nil when the overlap is too small or too narrow to judge.
+  static func evidence(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    offset: Int,
+    headerHeight: Int = 0,
+    footerHeight: Int = 0,
+    columnStart: Int = 0,
+    columnEnd: Int? = nil,
+    rowSamples: Int = ScrollingCaptureOffsetVerifier.rowSamples,
+    columnSamples: Int = ScrollingCaptureOffsetVerifier.columnSamples
+  ) -> Evidence? {
+    plan(
+      previous: previous,
+      current: current,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      columnStart: columnStart,
+      columnEnd: columnEnd,
+      rowSamples: rowSamples,
+      columnSamples: columnSamples
+    )?.evidence(offset: offset)
+  }
+
+  /// Everything about a pair of frames that does not depend on the offset:
+  /// which sampled rows carry content, which of those are fixed chrome, and
+  /// where along each row the contrast sits.
+  ///
+  /// All of it is a property of `current`, or of `current` against the same row
+  /// of `previous`, so it is measured once and reused for every offset a caller
+  /// asks about. Reading it again per offset made judging the thousand offsets
+  /// of a sweep take seconds a frame.
+  struct Plan {
+    fileprivate let previous: ScrollingCaptureLumaPlane
+    fileprivate let current: ScrollingCaptureLumaPlane
+    fileprivate let rows: [Row]
+    /// First row below the scrolling area.
+    fileprivate let contentBottom: Int
+    fileprivate let contentTop: Int
+
+    fileprivate struct Row {
+      let y: Int
+      /// Columns carrying contrast, with the value `current` holds at each.
+      let columns: [Int]
+      let values: [Int]
+      let hasContent: Bool
+      /// Carries content and is not fixed chrome, so an offset has to explain it.
+      let isInformative: Bool
+    }
+
+    /// Counts how the frames answer at `offset`.
+    func evidence(offset: Int) -> Evidence? {
+      guard offset > 0 else { return nil }
+      let upper = contentBottom - offset
+      guard upper - contentTop >= minimumOverlapRows else { return nil }
+
+      var rowsWithContent = 0
+      var informativeRows = 0
+      var matchedRows = 0
+
+      for row in rows {
+        guard row.y < upper else { break }
+        if row.hasContent { rowsWithContent += 1 }
+        guard row.isInformative else { continue }
+        informativeRows += 1
+
+        var agreeing = 0
+        for index in row.columns.indices {
+          let previousValue = previous.value(x: row.columns[index], y: row.y + offset)
+          if abs(row.values[index] - previousValue) <= maximumSampleDifference { agreeing += 1 }
+        }
+        if Double(agreeing) / Double(row.columns.count) >= minimumMatchingSampleFraction {
+          matchedRows += 1
+        }
+      }
+
+      return Evidence(
+        rowsWithContent: rowsWithContent,
+        informativeRows: informativeRows,
+        matchingRows: matchedRows
+      )
+    }
+
+    /// Judges `offset` against the two frames it was built from.
+    func verdict(offset: Int) -> Verdict {
+      guard let evidence = evidence(offset: offset) else {
+        return offset > 0 ? .noEvidence : .rejected
+      }
+      guard evidence.rowsWithContent >= minimumInformativeRows else { return .blank }
+      guard evidence.informativeRows >= minimumInformativeRows else { return .noEvidence }
+      return evidence.matchingFraction >= minimumMatchingRowFraction ? .verified : .rejected
+    }
+  }
+
+  /// Measures what the two frames say regardless of offset. Rows are sampled
+  /// over the whole scrolling area, so every offset is judged on the same rows
+  /// and their answers can be compared.
+  ///
+  /// - Returns: nil when the frames cannot be compared at all.
+  static func plan(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    headerHeight: Int = 0,
+    footerHeight: Int = 0,
+    columnStart: Int = 0,
+    columnEnd: Int? = nil,
+    rowSamples: Int = ScrollingCaptureOffsetVerifier.rowSamples,
+    columnSamples: Int = ScrollingCaptureOffsetVerifier.columnSamples
+  ) -> Plan? {
+    guard
       previous.width == current.width,
       previous.height == current.height
-    else { return .rejected }
+    else { return nil }
 
     let firstColumn = max(0, columnStart)
     let lastColumn = min(previous.width, columnEnd ?? previous.width)
     let columnSpan = lastColumn - firstColumn
-    guard columnSpan > 1 else { return .noEvidence }
+    guard columnSpan > 1 else { return nil }
 
-    // Rows of `current` that should have come from `previous`, skipping fixed
+    // Rows of `current` that could have come from `previous`, skipping fixed
     // chrome at either edge: those rows match at every offset.
-    let lower = headerHeight
-    let upper = previous.height - footerHeight - offset
-    guard upper - lower >= minimumOverlapRows else { return .noEvidence }
+    let contentTop = headerHeight
+    let contentBottom = previous.height - footerHeight
+    guard contentBottom - contentTop >= minimumOverlapRows else { return nil }
 
-    // A sparse grid cannot separate neighbouring offsets on a page of text:
-    // both the right offset and one a pixel away came back confirmed, and the
-    // sweep then had a band of candidates with nothing to choose between.
-    let rowStep = max(1, (upper - lower) / 160)
-    let columnStep = max(1, columnSpan / 64)
+    let rowStep = max(1, (contentBottom - contentTop) / max(1, rowSamples))
+    let columnStep = max(1, columnSpan / max(1, columnSamples))
 
-    var informativeRows = 0
-    var matchedRows = 0
-    /// Rows carrying anything at all, judgeable or not. Blank page has none.
-    var rowsWithContent = 0
+    var rows: [Plan.Row] = []
+    rows.reserveCapacity((contentBottom - contentTop) / rowStep + 1)
 
-    /// Whether this row of `current` is unchanged from the same row of
-    /// `previous`, which is what fixed chrome looks like.
-    func stayedPut(row: Int, contrastySamples: Int) -> Bool {
+    for row in stride(from: contentTop, to: contentBottom, by: rowStep) {
+      var columns: [Int] = []
+      var values: [Int] = []
       var unchanged = 0
-      var judged = 0
-      for column in stride(from: firstColumn, to: lastColumn, by: columnStep) {
-        let currentValue = current.value(x: column, y: row)
-        let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
-        guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
-        judged += 1
-        if abs(currentValue - previous.value(x: column, y: row)) <= unchangedSampleDifference {
-          unchanged += 1
-        }
-      }
-      guard judged >= 2 else { return false }
-      return Double(unchanged) / Double(judged) >= minimumMatchingSampleFraction
-    }
-
-    for row in stride(from: lower, to: upper, by: rowStep) {
-      var agreeingSamples = 0
-      var contrastySamples = 0
-      var rowSamples = 0
       var minimum = 255
       var maximum = 0
       var verticalChange = 0
+      var samples = 0
       let rowAbove = max(0, row - 1)
 
       for column in stride(from: firstColumn, to: lastColumn, by: columnStep) {
-        let currentValue = current.value(x: column, y: row)
-        let previousValue = previous.value(x: column, y: row + offset)
-        minimum = min(minimum, currentValue)
-        maximum = max(maximum, currentValue)
-        verticalChange = max(verticalChange, abs(currentValue - current.value(x: column, y: rowAbove)))
-        rowSamples += 1
-        let agrees = abs(currentValue - previousValue) <= maximumSampleDifference
+        let value = current.value(x: column, y: row)
+        minimum = min(minimum, value)
+        maximum = max(maximum, value)
+        verticalChange = max(verticalChange, abs(value - current.value(x: column, y: rowAbove)))
+        samples += 1
 
         // Samples that carry contrast say the most: flat background agrees
         // however the frames are aligned.
         let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
-        guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
-        contrastySamples += 1
-        if agrees { agreeingSamples += 1 }
+        guard abs(value - neighbour) >= backgroundRowSpread else { continue }
+        columns.append(column)
+        values.append(value)
+        if abs(value - previous.value(x: column, y: row)) <= unchangedSampleDifference {
+          unchanged += 1
+        }
       }
-
 
       // Both directions count: a line of text varies along its width, while a
       // horizontal rule is flat across but differs sharply from the row above.
       let spread = max(maximum - minimum, verticalChange)
-      guard rowSamples > 0, spread >= backgroundRowSpread else { continue }
-      rowsWithContent += 1
-      guard contrastySamples >= 3 else { continue }
+      guard samples > 0, spread >= backgroundRowSpread else { continue }
 
       // A row that did not move is fixed chrome — a toolbar, a pinned header, a
       // prompt box — and no offset makes it agree. On a window capture such
       // rows can outnumber the scrolling content and vote down the true
       // offset, so they say nothing either way.
-      guard !stayedPut(row: row, contrastySamples: contrastySamples) else { continue }
-      informativeRows += 1
-      if Double(agreeingSamples) / Double(contrastySamples) >= minimumMatchingSampleFraction {
-        matchedRows += 1
-      }
+      let stayedPut = columns.count >= 2
+        && Double(unchanged) / Double(columns.count) >= minimumMatchingSampleFraction
+      let isInformative = columns.count >= 3 && !stayedPut
+
+      rows.append(
+        Plan.Row(
+          y: row,
+          columns: isInformative ? columns : [],
+          values: isInformative ? values : [],
+          hasContent: true,
+          isInformative: isInformative
+        )
+      )
     }
 
-    guard rowsWithContent >= minimumInformativeRows else { return .blank }
-    guard informativeRows >= minimumInformativeRows else { return .noEvidence }
-    return Double(matchedRows) / Double(informativeRows) >= minimumMatchingRowFraction
-      ? .verified
-      : .rejected
+    return Plan(
+      previous: previous,
+      current: current,
+      rows: rows,
+      contentBottom: contentBottom,
+      contentTop: contentTop
+    )
   }
 }

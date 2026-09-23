@@ -1221,16 +1221,21 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       trailingStaticWidth: trailingStaticWidth
     )
 
+    // The rows a pair of frames offers, measured once: the sweep below asks
+    // about every offset in the range, and reading the same pixels for each of
+    // them took seconds a frame.
+    let verificationPlan = ScrollingCaptureOffsetVerifier.plan(
+      previous: previousLuma,
+      current: currentLuma,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      columnStart: columns?.0 ?? 0,
+      columnEnd: columns?.1
+    )
+
     func verdict(_ deltaY: Int) -> ScrollingCaptureOffsetVerifier.Verdict {
-      ScrollingCaptureOffsetVerifier.verdict(
-        previous: previousLuma,
-        current: currentLuma,
-        offset: deltaY,
-        headerHeight: headerHeight,
-        footerHeight: footerHeight,
-        columnStart: columns?.0 ?? 0,
-        columnEnd: columns?.1
-      )
+      guard let verificationPlan else { return .noEvidence }
+      return verificationPlan.verdict(offset: deltaY)
     }
 
     // The frames themselves are the authority: if content moved up by this
