@@ -1392,9 +1392,22 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         probes.append(contentsOf: fineLower...fineUpper)
       }
     }
-    probes.append(
-      contentsOf: stride(from: deltaRange.lowerBound, through: deltaRange.upperBound, by: coarseStep)
-    )
+    // The page does not always deliver its scrolling when it is asked to, so a
+    // step can carry the one before it as well and land far outside what was
+    // expected. The scan measured this pair without any such assumption, so
+    // whatever it proposes is worth confirming.
+    for candidate in [searchBest?.deltaY, visionAlignmentEstimate?.deltaY].compactMap({ $0 }) {
+      let lower = max(deltaRange.lowerBound, candidate - 8)
+      let upper = min(deltaRange.upperBound, candidate + 8)
+      if lower <= upper {
+        probes.append(contentsOf: lower...upper)
+      }
+    }
+    // Every offset in the range, not a sample of them: the band of offsets the
+    // frames confirm can be a single pixel wide, and a coarse walk steps over
+    // it. The check reads a grid of a couple of thousand pixels, so sweeping
+    // the whole range costs less than the band search it stands in for.
+    probes.append(contentsOf: deltaRange.lowerBound...deltaRange.upperBound)
 
     var runs: [[Int]] = []
     for delta in Set(probes).sorted() where verdict(delta) == .verified {
@@ -1478,7 +1491,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       strongBandCount: metrics.strongBandCount,
       bandCount: metrics.bandCount,
       worstBandScore: metrics.worstDifference,
-      bandVariance: metrics.variance
+      bandVariance: metrics.variance,
+      confirmedByFrames: true
     )
   }
 

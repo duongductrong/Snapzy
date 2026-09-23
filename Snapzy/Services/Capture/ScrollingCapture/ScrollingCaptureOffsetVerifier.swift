@@ -107,8 +107,11 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
     let upper = previous.height - footerHeight - offset
     guard upper - lower >= minimumOverlapRows else { return .noEvidence }
 
-    let rowStep = max(1, (upper - lower) / 64)
-    let columnStep = max(1, columnSpan / 32)
+    // A sparse grid cannot separate neighbouring offsets on a page of text:
+    // both the right offset and one a pixel away came back confirmed, and the
+    // sweep then had a band of candidates with nothing to choose between.
+    let rowStep = max(1, (upper - lower) / 160)
+    let columnStep = max(1, columnSpan / 64)
 
     var informativeRows = 0
     var matchedRows = 0
