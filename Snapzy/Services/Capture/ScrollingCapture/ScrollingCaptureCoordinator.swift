@@ -9,7 +9,9 @@ import AppKit
 import ApplicationServices
 import Combine
 import Foundation
+import ImageIO
 import ScreenCaptureKit
+import UniformTypeIdentifiers
 
 @MainActor
 final class ScrollingCaptureCoordinator {
@@ -43,6 +45,7 @@ final class ScrollingCaptureCoordinator {
   private var sessionModelObservation: AnyCancellable?
   private var latestImage: CGImage?
   private var stitcher: ScrollingCaptureStitcher?
+  private var unalignedFrameDumpCount = 0
   private var liveFrameSource: ScrollingCaptureFrameSource?
   private let liveFrameRing = ScrollingCaptureFrameRing(capacity: 8)
   private var commitScheduler: ScrollingCaptureCommitScheduler?
@@ -94,6 +97,7 @@ final class ScrollingCaptureCoordinator {
   ) {
     cancel()
     sessionGeneration += 1
+    unalignedFrameDumpCount = 0
 
     self.onSessionEnded = onSessionEnded
     let model = ScrollingCaptureSessionModel(selectedRect: rect)
@@ -1859,6 +1863,48 @@ final class ScrollingCaptureCoordinator {
     )
   }
 
+  /// Writes the two frames that would not align, so a capture that stalls on a
+  /// real page can be worked on afterwards. Diagnostics-gated, and bounded so a
+  /// long session cannot fill the log folder.
+  private func dumpUnalignedFrames(
+    commitFrame: CommitFrame,
+    update: ScrollingCaptureStitchUpdate
+  ) -> String? {
+    guard DiagnosticLogger.shared.isEnabled, unalignedFrameDumpCount < 3 else { return nil }
+    guard let previous = stitcher?.lastAcceptedImage() else { return nil }
+
+    let directory = DiagnosticLogger.shared.logDirectoryURL.appendingPathComponent("UnalignedFrames")
+    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+
+    let stamp = Self.unalignedFrameStampFormatter.string(from: Date())
+    let base = "\(stamp)-g\(sessionGeneration)-f\(update.acceptedFrameCount)"
+    guard
+      write(image: previous, to: directory.appendingPathComponent("\(base)-previous.png")),
+      write(image: commitFrame.image, to: directory.appendingPathComponent("\(base)-current.png"))
+    else {
+      return nil
+    }
+
+    unalignedFrameDumpCount += 1
+    return base
+  }
+
+  private func write(image: CGImage, to url: URL) -> Bool {
+    guard
+      let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
+    else {
+      return false
+    }
+    CGImageDestinationAddImage(destination, image, nil)
+    return CGImageDestinationFinalize(destination)
+  }
+
+  private static let unalignedFrameStampFormatter: DateFormatter = {
+    let formatter = DateFormatter()
+    formatter.dateFormat = "HHmmss"
+    return formatter
+  }()
+
   private func logScrollingCaptureStitchUpdate(
     reason: String,
     expectedSignedDeltaPixels: Int?,
@@ -1895,6 +1941,14 @@ final class ScrollingCaptureCoordinator {
     ]
 
     addOutcomeDetails(update.outcome, to: &context)
+
+    if
+      case .ignoredAlignmentFailed = update.outcome,
+      update.matchFailureCount >= 2,
+      let dumped = dumpUnalignedFrames(commitFrame: commitFrame, update: update)
+    {
+      context["framesDumped"] = dumped
+    }
 
     if sessionModel?.isAutoScrolling == true {
       context["autoScrollPhase"] = autoScrollPhaseName(autoScrollController.phase)

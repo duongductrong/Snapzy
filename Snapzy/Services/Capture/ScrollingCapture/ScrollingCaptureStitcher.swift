@@ -352,6 +352,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
 
   private(set) var acceptedFrameCount = 0
 
+  /// The newest accepted frame, for diagnostics: the pair that failed to align
+  /// is this frame and the one the commit brought in.
+  func lastAcceptedImage() -> CGImage? {
+    lastRaster?.makeCGImage()
+  }
+
   var outputHeight: Int {
     renderedSlices.reduce(0) { $0 + $1.rowCount }
   }
