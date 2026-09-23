@@ -284,14 +284,14 @@ final class ScrollingCaptureCoordinator {
 
       await self.waitForPendingPreviewRefresh()
       guard self.autoScrollTaskID == taskID, !Task.isCancelled else { return }
-      if abs(self.pendingScrollDistancePoints) > 2 || self.sessionModel?.runtimeState == .paused {
+      if abs(self.pendingScrollDistancePoints) > 2 {
         // Switching from manual scrolling must lock its last viewport before a
         // synthetic burst resets the distance and starts moving the page again.
-        let update = await self.scheduleCommitRefreshAndWait(reason: "Manual viewport before Auto Scroll")
-        guard let update, update.safety == .confirmed else {
-          self.stopAutoScrolling(reason: .userToggle)
-          return
-        }
+        // A viewport that will not lock is no reason to refuse to scroll,
+        // though: the steps that follow have their own frames to align, and
+        // giving up here is what ended a session the moment it resumed.
+        _ = await self.scheduleCommitRefreshAndWait(reason: "Manual viewport before Auto Scroll")
+        guard self.autoScrollTaskID == taskID, !Task.isCancelled else { return }
       }
       var isRetry = false
 
@@ -987,8 +987,14 @@ final class ScrollingCaptureCoordinator {
           )
         }
       case .ignoredAlignmentFailed:
-        sessionModel.runtimeState = update.matchFailureCount >= 2 ? .paused : previewRuntimeState()
-        if update.matchFailureCount >= 2 {
+        // Telling someone to slow down makes no sense while Auto Scroll is
+        // driving the page: nobody is scrolling, and the paused state it puts
+        // the session into stops Auto Scroll the next time it starts a step.
+        let isAutoScrollDriving = sessionModel.isAutoScrolling
+        sessionModel.runtimeState = update.matchFailureCount >= 2 && !isAutoScrollDriving
+          ? .paused
+          : previewRuntimeState()
+        if update.matchFailureCount >= 2, !isAutoScrollDriving {
           sessionModel.setStatus(
             L10n.ScrollingCaptureStatus.alignmentPaused,
             guidance: .slowDown
