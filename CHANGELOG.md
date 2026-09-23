@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.33.0-beta.1] - 2026-09-23
+
+### Features
+-  Add drag-to-draw support for new crop rect (#605) (e5e5ef1f)
+-  Added a maximum recording resolution to improve H.264 browser compatibility (#601) (76d09cb5)
+
+### Bug Fixes
+-  Fixed text background color by promoting plain text to label (#594) (c11cb39c)
+
+### Contributors
+- @adrianocr
+- @archibald-nice
+- @github-actions[bot]
+- @thanhthai3010
+
 ## [1.32.3] - 2026-09-20
 
 ### Features
