@@ -276,6 +276,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let bandCount: Int
     let worstBandScore: Double
     let bandVariance: Double
+    /// True when the frames themselves confirmed this offset across the whole
+    /// overlap, rather than it merely scoring well.
+    var confirmedByFrames = false
   }
 
   private struct MatchSearchResult {
@@ -329,6 +332,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private static let settledStickyRounds = 8
   /// Rows of movement needed before a frame pair can vote on chrome.
   private static let minimumStickyMeasurementDelta = 8
+  /// Shortest travel worth committing. Below this a step is indistinguishable
+  /// from the jitter a page shows while it settles.
+  private static let minimumConfirmedDelta = 18
   /// Deepest bottom-edge treatment measured on this page, in pixels.
   private var measuredDimmedDepth: Int?
   private var dimmingMeasurementCount = 0
@@ -561,6 +567,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       let expectedDeltaPixels,
       expectedDeltaPixels > 0,
       let candidate = match,
+      // The frames confirmed this offset across the whole overlap, which beats
+      // any expectation about how far the page should have travelled: a page
+      // often moves less than it was asked to, and a short move that the frames
+      // confirm is real content, not a mid-scroll frame.
+      !candidate.confirmedByFrames,
       !isVerifiedSettledPartialMatch(candidate, expectedDeltaPixels: expectedDeltaPixels,
         visionAlignmentEstimate: visionAlignmentEstimate, allowed: allowsSettledPartialStep),
       stronglyContradictsKnownStep(
@@ -1259,7 +1270,9 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
        verdict(best.deltaY) == .verified,
        fitsAnyExpectation(best.deltaY, expectations: expectations),
        isPlausibleTravel(best.deltaY, visionConfirms: visionConfirms(best.deltaY)) {
-      return best
+      var confirmed = best
+      confirmed.confirmedByFrames = true
+      return confirmed
     }
 
     let confirmed = sweptVerifiedMatch(
@@ -1304,7 +1317,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         strongBandCount: metrics.strongBandCount,
         bandCount: metrics.bandCount,
         worstBandScore: metrics.worstDifference,
-        bandVariance: metrics.variance
+        bandVariance: metrics.variance,
+        confirmedByFrames: true
       )
     }
 
@@ -1388,22 +1402,18 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let centers = runs.map { $0[$0.count / 2] }
     let chosenCenter: Int
     if centers.count == 1, let only = centers.first {
-      // One confirmed answer needs no tie-breaking.
+      // One confirmed answer needs no tie-breaking, however far the page
+      // turned out to travel: a page often moves a fraction of the step it was
+      // asked to, and the frames have confirmed this offset over the whole
+      // overlap.
       chosenCenter = only
-    } else if let visionAlignmentEstimate, visionAlignmentEstimate.agreementCount >= 2,
-              visionAlignmentEstimate.deltaY > 0,
-              let nearest = centers.min(by: {
-                abs($0 - visionAlignmentEstimate.deltaY) < abs($1 - visionAlignmentEstimate.deltaY)
-              }),
-              abs(nearest - visionAlignmentEstimate.deltaY) <= max(24, visionAlignmentEstimate.deltaY / 4) {
-      // A repeating layout confirms the wrong repeat as readily as the true
-      // offset, so what Vision saw decides between them.
-      chosenCenter = nearest
     } else if let nearest = centers.first(where: { center in
-      expectations.contains { abs(center - $0) <= max(96, $0 / 2) }
+      expectations.contains { abs(center - $0) <= max(16, $0 * 15 / 100) }
     }) {
-      // Several confirmed runs with nothing to separate them: only one at a
-      // distance the page plausibly travelled is safe to commit.
+      // Several confirmed offsets mean the frames alone cannot say which is
+      // real — a repeating layout lines up at more than one distance, and one
+      // of them may be an intermediate frame caught mid-scroll. Only an offset
+      // close to the step the scroll was asked to make is safe then.
       chosenCenter = nearest
     } else {
       return nil
@@ -1439,11 +1449,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       if !refined.isEmpty { deltaY = refined[refined.count / 2] }
     }
 
-    // A page often travels a little less than it was asked to, and that is
-    // worth committing. Much less than any distance it plausibly travelled is
-    // what an intermediate frame caught mid-scroll looks like, and a repeating
-    // layout confirms such an offset as readily as the real one.
-    guard fitsAnyExpectation(deltaY, expectations: expectations) else { return nil }
+    guard deltaY >= ScrollingCaptureStitcher.minimumConfirmedDelta else { return nil }
 
     guard let metrics = overlapMetrics(
       previous: previous,
