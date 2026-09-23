@@ -1279,11 +1279,42 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       return confirmed
     }
 
-    // The frames could not confirm anything, so fall back to the score gates
-    // rather than stalling the capture: they are no worse than the behaviour
-    // this verification replaced.
+    // A viewport of blank page carries nothing to judge: the rows agree however
+    // the frames are aligned, so refusing would stall a capture over content
+    // that stitches seamlessly at any offset. Take the distance the scroll was
+    // asked to travel, as long as the frames do not contradict it.
+    if
+      let blankStep = expectations.first(where: { verdict($0) == .blank }),
+      let metrics = overlapMetrics(
+        previous: previous,
+        current: current,
+        direction: .appendFromBottom,
+        deltaY: blankStep,
+        headerHeight: headerHeight,
+        footerHeight: footerHeight,
+        leadingStaticWidth: leadingStaticWidth,
+        trailingStaticWidth: trailingStaticWidth
+      )
+    {
+      return Match(
+        direction: .appendFromBottom,
+        deltaY: blankStep,
+        pixelScore: metrics.averageDifference,
+        totalScore: metrics.averageDifference,
+        strongBandCount: metrics.strongBandCount,
+        bandCount: metrics.bandCount,
+        worstBandScore: metrics.worstDifference,
+        bandVariance: metrics.variance
+      )
+    }
+
+    // Nothing confirmed and no distance to fall back on. The score gates are
+    // the last resort, and only where the frames carry too little to judge:
+    // committing an offset the frames actively contradict splices together
+    // content that was never adjacent.
     guard
       let searchResult,
+      verdict(searchResult.best.deltaY) != .rejected,
       isAcceptable(
         searchResult.best,
         expectedDeltaPixels: expectedDeltaPixels,

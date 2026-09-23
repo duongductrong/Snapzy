@@ -23,6 +23,10 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
   /// because a correct offset still differs where text was re-rasterised, a
   /// caret blinked, or an image finished decoding between frames.
   static let maximumSampleDifference = 24
+  /// Difference below which a sample counts as unchanged from the same place in
+  /// the previous frame. Fixed chrome is drawn identically, so this is tight:
+  /// content that merely looks similar must not be mistaken for it.
+  static let unchangedSampleDifference = 6
   /// Share of a row's contrasty samples that must agree for the row to match.
   ///
   /// Counted per sample rather than averaged over the row. A repeating layout
@@ -44,8 +48,11 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
   enum Verdict {
     case verified
     case rejected
-    /// The overlap carries too little content to judge, so the caller should
-    /// fall back to its own scoring.
+    /// The overlap is blank page: no row carries anything to see, so it stitches
+    /// seamlessly however the frames are aligned.
+    case blank
+    /// The overlap carries content, but not in a form this check can judge, so
+    /// the caller should fall back to its own scoring.
     case noEvidence
 
     var isVerified: Bool { self == .verified }
@@ -105,6 +112,8 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
 
     var informativeRows = 0
     var matchedRows = 0
+    /// Rows carrying anything at all, judgeable or not. Blank page has none.
+    var rowsWithContent = 0
 
     /// Whether this row of `current` is unchanged from the same row of
     /// `previous`, which is what fixed chrome looks like.
@@ -116,11 +125,11 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
         let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
         guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
         judged += 1
-        if abs(currentValue - previous.value(x: column, y: row)) <= maximumSampleDifference {
+        if abs(currentValue - previous.value(x: column, y: row)) <= unchangedSampleDifference {
           unchanged += 1
         }
       }
-      guard judged >= 3 else { return false }
+      guard judged >= 2 else { return false }
       return Double(unchanged) / Double(judged) >= minimumMatchingSampleFraction
     }
 
@@ -140,19 +149,24 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
         maximum = max(maximum, currentValue)
         verticalChange = max(verticalChange, abs(currentValue - current.value(x: column, y: rowAbove)))
         rowSamples += 1
+        let agrees = abs(currentValue - previousValue) <= maximumSampleDifference
 
-        // Only samples that carry contrast say anything: flat background agrees
+        // Samples that carry contrast say the most: flat background agrees
         // however the frames are aligned.
         let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
         guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
         contrastySamples += 1
-        if abs(currentValue - previousValue) <= maximumSampleDifference { agreeingSamples += 1 }
+        if agrees { agreeingSamples += 1 }
       }
+
 
       // Both directions count: a line of text varies along its width, while a
       // horizontal rule is flat across but differs sharply from the row above.
       let spread = max(maximum - minimum, verticalChange)
-      guard rowSamples > 0, spread >= backgroundRowSpread, contrastySamples >= 3 else { continue }
+      guard rowSamples > 0, spread >= backgroundRowSpread else { continue }
+      rowsWithContent += 1
+      guard contrastySamples >= 3 else { continue }
+
       // A row that did not move is fixed chrome — a toolbar, a pinned header, a
       // prompt box — and no offset makes it agree. On a window capture such
       // rows can outnumber the scrolling content and vote down the true
@@ -164,6 +178,7 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
       }
     }
 
+    guard rowsWithContent >= minimumInformativeRows else { return .blank }
     guard informativeRows >= minimumInformativeRows else { return .noEvidence }
     return Double(matchedRows) / Double(informativeRows) >= minimumMatchingRowFraction
       ? .verified
