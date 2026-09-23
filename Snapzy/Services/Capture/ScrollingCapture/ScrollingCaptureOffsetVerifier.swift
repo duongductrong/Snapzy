@@ -19,10 +19,17 @@ import Foundation
 /// they agree however the frames are aligned, and a repeated layout that
 /// matches over a narrow band does not survive the whole-overlap check.
 nonisolated enum ScrollingCaptureOffsetVerifier {
-  /// Mean luma difference above which a row is judged not to match. Generous,
-  /// because a correct offset still differs where content animated, a caret
-  /// blinked, or an image finished decoding between frames.
-  static let maximumMeanDifference = 10.0
+  /// Luma difference above which one sample is judged not to match. Generous,
+  /// because a correct offset still differs where text was re-rasterised, a
+  /// caret blinked, or an image finished decoding between frames.
+  static let maximumSampleDifference = 24
+  /// Share of a row's contrasty samples that must agree for the row to match.
+  ///
+  /// Counted per sample rather than averaged over the row. A repeating layout
+  /// lines up at a multiple of its period everywhere except the few columns
+  /// that differ, and a mean over the row hides that minority: the rows read as
+  /// matching and a wrong repeat is confirmed.
+  static let minimumMatchingSampleFraction = 0.8
   /// Overlap smaller than this proves nothing.
   static let minimumOverlapRows = 16
   /// A row that varies by less than this, both along its width and against the
@@ -100,7 +107,8 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
     var matchedRows = 0
 
     for row in stride(from: lower, to: upper, by: rowStep) {
-      var rowTotal = 0
+      var agreeingSamples = 0
+      var contrastySamples = 0
       var rowSamples = 0
       var minimum = 255
       var maximum = 0
@@ -113,16 +121,24 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
         minimum = min(minimum, currentValue)
         maximum = max(maximum, currentValue)
         verticalChange = max(verticalChange, abs(currentValue - current.value(x: column, y: rowAbove)))
-        rowTotal += abs(currentValue - previousValue)
         rowSamples += 1
+
+        // Only samples that carry contrast say anything: flat background agrees
+        // however the frames are aligned.
+        let neighbour = current.value(x: min(lastColumn - 1, column + columnStep), y: row)
+        guard abs(currentValue - neighbour) >= backgroundRowSpread else { continue }
+        contrastySamples += 1
+        if abs(currentValue - previousValue) <= maximumSampleDifference { agreeingSamples += 1 }
       }
 
       // Both directions count: a line of text varies along its width, while a
       // horizontal rule is flat across but differs sharply from the row above.
       let spread = max(maximum - minimum, verticalChange)
-      guard rowSamples > 0, spread >= backgroundRowSpread else { continue }
+      guard rowSamples > 0, spread >= backgroundRowSpread, contrastySamples >= 3 else { continue }
       informativeRows += 1
-      if Double(rowTotal) / Double(rowSamples) <= maximumMeanDifference { matchedRows += 1 }
+      if Double(agreeingSamples) / Double(contrastySamples) >= minimumMatchingSampleFraction {
+        matchedRows += 1
+      }
     }
 
     guard informativeRows >= minimumInformativeRows else { return .noEvidence }

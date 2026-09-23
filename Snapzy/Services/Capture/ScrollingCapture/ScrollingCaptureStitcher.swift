@@ -1270,11 +1270,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       return confirmed
     }
 
-    // Nothing in the overlap carries enough content to judge by, so fall back
-    // to the score gates.
+    // The frames could not confirm anything, so fall back to the score gates
+    // rather than stalling the capture: they are no worse than the behaviour
+    // this verification replaced.
     guard
       let searchResult,
-      verdict(searchResult.best.deltaY) == .noEvidence,
       isAcceptable(
         searchResult.best,
         expectedDeltaPixels: expectedDeltaPixels,
@@ -1408,7 +1408,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // expected step to what Vision measured, so a genuine short travel is
     // committed on the retry instead.
     if let expectedDeltaPixels, expectedDeltaPixels > 24, deltaY < expectedDeltaPixels {
-      let tolerance = max(16, expectedDeltaPixels / 5)
+      let tolerance = max(16, expectedDeltaPixels / 3)
       guard expectedDeltaPixels - deltaY <= tolerance else { return nil }
     }
 
