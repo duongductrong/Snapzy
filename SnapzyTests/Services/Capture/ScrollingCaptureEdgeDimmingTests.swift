@@ -13,6 +13,8 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
 
   private let width = 240
   private let height = 400
+  /// Deep enough that the faded rows outnumber the clear ones in the overlap.
+  private let fadeDepth = 280
 
   // MARK: - Detector
 
@@ -41,6 +43,41 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
     let frame = try lumaPlane(offset: 0, fadeDepth: 90)
 
     XCTAssertNil(ScrollingCaptureEdgeDimmingDetector.dimmedDepth(previous: frame, current: frame, offset: 0))
+  }
+
+  // MARK: - Verification
+
+  func testVerdict_excludingTheFadedBandConfirmsTheTrueOffset() throws {
+    let previous = try lumaPlane(offset: 0, fadeDepth: fadeDepth, fadeStrength: 1)
+    let current = try lumaPlane(offset: 40, fadeDepth: fadeDepth, fadeStrength: 1)
+
+    XCTAssertEqual(
+      ScrollingCaptureOffsetVerifier.verdict(
+        previous: previous,
+        current: current,
+        offset: 40,
+        footerHeight: fadeDepth
+      ),
+      .verified
+    )
+  }
+
+  func testVerdict_excludingTheFadedBandStillRefusesAWrongOffset() throws {
+    let previous = try lumaPlane(offset: 0, fadeDepth: fadeDepth, fadeStrength: 1)
+    let current = try lumaPlane(offset: 40, fadeDepth: fadeDepth, fadeStrength: 1)
+
+    for offset in [28, 34, 46, 52] {
+      XCTAssertEqual(
+        ScrollingCaptureOffsetVerifier.verdict(
+          previous: previous,
+          current: current,
+          offset: offset,
+          footerHeight: fadeDepth
+        ),
+        .rejected,
+        "offset \(offset) should not be confirmed"
+      )
+    }
   }
 
   // MARK: - Stitcher
@@ -117,18 +154,25 @@ final class ScrollingCaptureEdgeDimmingTests: XCTestCase {
     return try XCTUnwrap(stitcher.mergedImage())
   }
 
-  private func frame(offset: Int, fadeDepth: Int) throws -> CGImage {
+  private func frame(offset: Int, fadeDepth: Int, fadeStrength: Double = 0.6) throws -> CGImage {
     try XCTUnwrap(
       TestImageFactory.texturedScrollingFrame(
         width: width,
         height: height,
         logicalYOffset: offset,
-        fadeDepth: fadeDepth
+        fadeDepth: fadeDepth,
+        fadeStrength: fadeStrength
       )
     )
   }
 
-  private func lumaPlane(offset: Int, fadeDepth: Int) throws -> ScrollingCaptureLumaPlane {
-    try XCTUnwrap(ScrollingCaptureLumaPlane(cgImage: try frame(offset: offset, fadeDepth: fadeDepth)))
+  private func lumaPlane(offset: Int, fadeDepth: Int, fadeStrength: Double = 0.6) throws
+    -> ScrollingCaptureLumaPlane
+  {
+    try XCTUnwrap(
+      ScrollingCaptureLumaPlane(
+        cgImage: try frame(offset: offset, fadeDepth: fadeDepth, fadeStrength: fadeStrength)
+      )
+    )
   }
 }

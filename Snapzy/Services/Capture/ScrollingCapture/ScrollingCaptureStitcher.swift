@@ -976,6 +976,21 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     return min(max(Self.minimumEdgeClearance, measured), usableHeight / 3)
   }
 
+  /// Rows above the bottom of the content area that say nothing about an
+  /// offset, because the page draws them differently there.
+  ///
+  /// A page that fades its content out towards a pinned footer redraws the
+  /// same rows paler as they approach the edge, so the correct offset still
+  /// leaves them disagreeing. On a Gemini conversation those rows outnumbered
+  /// the ones that agreed, and the true step was voted down at 48% of the
+  /// rows — just under the bar — while no other offset came close.
+  private func verificationFooter(footerHeight: Int, headerHeight: Int, frameHeight: Int) -> Int {
+    guard let measuredDimmedDepth, measuredDimmedDepth > 0 else { return footerHeight }
+    let usableHeight = frameHeight - headerHeight - footerHeight
+    guard usableHeight > 0 else { return footerHeight }
+    return footerHeight + min(measuredDimmedDepth, usableHeight / 3)
+  }
+
   /// Measured on the first few frame pairs that really moved, then frozen. The
   /// depth only ever grows, since a band that reaches further on one pair
   /// reaches that far.
@@ -1221,6 +1236,12 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       trailingStaticWidth: trailingStaticWidth
     )
 
+    let verificationFooterHeight = verificationFooter(
+      footerHeight: footerHeight,
+      headerHeight: headerHeight,
+      frameHeight: previous.height
+    )
+
     // The rows a pair of frames offers, measured once: the sweep below asks
     // about every offset in the range, and reading the same pixels for each of
     // them took seconds a frame.
@@ -1228,7 +1249,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       previous: previousLuma,
       current: currentLuma,
       headerHeight: headerHeight,
-      footerHeight: footerHeight,
+      footerHeight: verificationFooterHeight,
       columnStart: columns?.0 ?? 0,
       columnEnd: columns?.1
     )
