@@ -159,13 +159,19 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   }
 
   func testAutoScrollPolicy_retriesBeforeTreatingNoMovementAsEnd() {
-    XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.stitchAction(
-        for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
-        consecutiveNoMovementCount: 1
-      ),
-      .retryStep
-    )
+    // A page that pauses to load, or swallows a step while a sticky element
+    // settles, must not be mistaken for the end of the page.
+    XCTAssertGreaterThanOrEqual(ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold, 5)
+    for count in 1..<ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold {
+      XCTAssertEqual(
+        ScrollingCaptureAutoScrollPolicy.stitchAction(
+          for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
+          consecutiveNoMovementCount: count
+        ),
+        .retryStep,
+        "quiet step \(count) should scroll again"
+      )
+    }
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
