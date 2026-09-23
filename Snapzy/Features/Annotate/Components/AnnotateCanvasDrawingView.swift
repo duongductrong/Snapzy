@@ -287,6 +287,14 @@ final class DrawingCanvasNSView: NSView {
   private var isCropResizing = false
   private var activeCropHandle: CropHandle?
   private var originalCropRect: CGRect = .zero
+  // Drag-to-draw a new crop rect (Shottr style). The rect only replaces the
+  // current crop once the pointer travels past `cropDrawActivationDistance`,
+  // so a plain click never collapses the crop.
+  private var isCropDrawing = false
+  private var cropDrawAnchor: CGPoint = .zero
+  private var cropDrawStartDisplayPoint: CGPoint = .zero
+  private var cropDrawDidMove = false
+  private let cropDrawActivationDistance: CGFloat = 4
 
   // Blur cache manager for performance optimization
   private let blurCacheManager = BlurCacheManager()
@@ -865,7 +873,7 @@ final class DrawingCanvasNSView: NSView {
 
     // Handle crop tool
     if state.selectedTool == .crop {
-      handleCropMouseDown(at: imagePoint)
+      handleCropMouseDown(at: imagePoint, displayPoint: displayPoint)
       return
     }
 
@@ -1050,6 +1058,27 @@ final class DrawingCanvasNSView: NSView {
     // Handle crop dragging
     if isCropDragging {
       handleCropDrag(to: imagePoint)
+      invalidateLiveLayers()
+      return
+    }
+
+    // Handle drawing a new crop rect
+    if isCropDrawing {
+      if !cropDrawDidMove {
+        let distance = hypot(
+          displayPoint.x - cropDrawStartDisplayPoint.x,
+          displayPoint.y - cropDrawStartDisplayPoint.y
+        )
+        guard distance >= cropDrawActivationDistance else { return }
+        cropDrawDidMove = true
+      }
+      let shiftHeld = event.modifierFlags.contains(.shift)
+      let commandHeld = event.modifierFlags.contains(.command)
+      handleCropDraw(to: imagePoint, shiftHeld: shiftHeld, commandHeld: commandHeld)
+      Task { @MainActor in
+        state.isCropResizing = true
+        state.isCropShiftLocked = shiftHeld
+      }
       invalidateLiveLayers()
       return
     }
@@ -1344,10 +1373,12 @@ final class DrawingCanvasNSView: NSView {
       return
     }
 
-    // Finish crop resizing or dragging
-    if isCropResizing || isCropDragging {
+    // Finish crop resizing, dragging or drawing
+    if isCropResizing || isCropDragging || isCropDrawing {
       isCropResizing = false
       isCropDragging = false
+      isCropDrawing = false
+      cropDrawDidMove = false
       activeCropHandle = nil
       Task { @MainActor in
         state.isCropResizing = false
@@ -2122,6 +2153,12 @@ final class DrawingCanvasNSView: NSView {
         setCursorForCropHandle(handle)
         return
       }
+      if CropDragSelection.shouldBeginDrawing(
+        at: imagePoint, cropRect: cropRect, imageBounds: state.sourceImageBounds
+      ) {
+        NSCursor.crosshair.set()
+        return
+      }
       // Check if over crop body
       if cropRect.contains(imagePoint) {
         NSCursor.openHand.set()
@@ -2224,14 +2261,15 @@ final class DrawingCanvasNSView: NSView {
 
   // MARK: - Crop Handling
 
-  private func handleCropMouseDown(at imagePoint: CGPoint) {
+  private func handleCropMouseDown(at imagePoint: CGPoint, displayPoint: CGPoint) {
     state.collapseSidebarForCropInteraction()
 
-    // Initialize crop if not set
+    // Initialize crop if not set, then let the same press draw a new rect
     if state.cropRect == nil {
       Task { @MainActor in
         state.initializeCrop()
       }
+      beginCropDrawing(at: imagePoint, displayPoint: displayPoint)
       return
     }
 
@@ -2257,6 +2295,11 @@ final class DrawingCanvasNSView: NSView {
         activeCropHandle = handle
       }
       originalCropRect = cropRect
+    } else if CropDragSelection.shouldBeginDrawing(
+      at: imagePoint, cropRect: cropRect, imageBounds: state.sourceImageBounds
+    ) {
+      // Outside the crop, or nothing chosen yet - draw a new rect
+      beginCropDrawing(at: imagePoint, displayPoint: displayPoint)
     } else if cropRect.contains(imagePoint) {
       // Clicked inside crop area - start dragging
       isCropDragging = true
@@ -2265,6 +2308,48 @@ final class DrawingCanvasNSView: NSView {
         y: imagePoint.y - cropRect.origin.y
       )
       originalCropRect = cropRect
+    }
+  }
+
+  private func beginCropDrawing(at imagePoint: CGPoint, displayPoint: CGPoint) {
+    isCropDrawing = true
+    cropDrawDidMove = false
+    cropDrawAnchor = imagePoint
+    cropDrawStartDisplayPoint = displayPoint
+  }
+
+  private func handleCropDraw(to point: CGPoint, shiftHeld: Bool, commandHeld: Bool) {
+    // ⇧ draws a square; a fixed aspect ratio from the toolbar always applies.
+    let aspectRatio: CGFloat? = if state.cropAspectRatio != .free {
+      state.cropAspectRatio.effectiveRatio(isPortrait: state.isCropPortraitOrientation)
+    } else if shiftHeld {
+      1
+    } else {
+      nil
+    }
+
+    var newRect = CropDragSelection.rect(
+      anchor: cropDrawAnchor,
+      current: point,
+      bounds: state.sourceImageBounds,
+      aspectRatio: aspectRatio
+    )
+
+    // Same snapping rules as handle resizing: only the corner under the
+    // pointer snaps, and ⌘ / a locked ratio disables it.
+    if state.isCropEdgeSnappingEnabled, !commandHeld, aspectRatio == nil,
+       let profile = state.cropEdgeProfile {
+      let snapTolerance = 10 / max(displayScale * state.zoomLevel, 0.0001)
+      newRect = CropEdgeSnapping.resolve(
+        handle: CropDragSelection.movingHandle(anchor: cropDrawAnchor, current: point),
+        proposed: newRect,
+        targets: profile,
+        tolerance: snapTolerance
+      )
+    }
+
+    Task { @MainActor in
+      state.updateCropRect(newRect)
     }
   }
 
