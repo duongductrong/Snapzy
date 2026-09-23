@@ -258,10 +258,19 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
       XCTAssertGreaterThanOrEqual(Double(plan.postedDistancePoints) / duration, 400)
     }
 
+    // Steps are deliberately short — a little scroll, a pause, then another —
+    // because a page asked for most of a viewport at once hands back frames
+    // drawn mid-scroll that no offset lines up. A tall selection therefore
+    // steps at the cap rather than in proportion to its height.
     let tallSelection = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 1000, isRetry: false)
     XCTAssertGreaterThanOrEqual(
-      tallSelection.postedDistancePoints, 200,
+      tallSelection.postedDistancePoints,
+      ScrollingCaptureAutoScrollPolicy.minStepPoints,
       "Tall selections should not stitch after every tiny scroll"
+    )
+    XCTAssertLessThanOrEqual(
+      tallSelection.postedDistancePoints,
+      ScrollingCaptureAutoScrollPolicy.maxStepPoints
     )
   }
 
