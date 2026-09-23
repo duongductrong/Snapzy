@@ -81,6 +81,10 @@ final class AreaSelectionController: NSObject {
   private var liveFallbackDisplayIDs = Set<CGDirectDisplayID>()
   private var manualSelectionDisplayActivationSettled = false
   private var interactionMode: AreaSelectionInteractionMode = .manualRegion
+  /// Display whose overlay draws the whole-display highlight in `.fullDisplay` mode. Driven by
+  /// the controller, not by each overlay's own mouse events: only the key overlay receives
+  /// `mouseMoved`, so an overlay the pointer just left would never clear its own highlight.
+  private var fullDisplayHighlightedDisplayID: CGDirectDisplayID?
   private var allowsApplicationWindowSelection = false
   private var applicationConfiguration: AreaSelectionApplicationConfiguration?
   private var displayActivationHandler: AreaSelectionDisplayActivationHandler?
@@ -121,6 +125,13 @@ final class AreaSelectionController: NSObject {
   /// app activates, so the local monitor never sees them and the selection silently resets.
   /// A global monitor still receives those events, ensuring the first gesture commits.
   private var manualSelectionGlobalMonitor: Any?
+  /// Recording sessions only. A press is parked as a pending click until it resolves as a click
+  /// or a drag (see `AreaSelectionOverlayView.hasPendingClick`), but on a nonactivating overlay
+  /// shown while another app is frontmost the first drag/up can bypass Snapzy entirely (see
+  /// `manualSelectionGlobalMonitor`). This observe-only monitor forwards exactly those
+  /// undelivered events to the overlay holding the pending press. Global monitors never see
+  /// events Snapzy itself receives, so nothing is handled twice.
+  private var pendingClickGlobalMonitor: Any?
   private var manualSelectionKeyLocalMonitor: Any?
   private var manualSelectionKeyGlobalMonitor: Any?
   /// Re-asserts the crosshair if the app regains focus mid-drag (e.g. after a background capture
@@ -609,6 +620,7 @@ final class AreaSelectionController: NSObject {
     sessionPresentationLastResortUsed.removeAll()
     allowsApplicationWindowSelection = applicationConfiguration != nil
     interactionMode = applicationConfiguration == nil ? .manualRegion : initialInteractionMode
+    fullDisplayHighlightedDisplayID = nil
     windowSelectionSnapshot = applicationConfiguration.map { configuration in
       WindowSelectionSnapshot(
         orderedCandidates: configuration.immediateMenuBarPopoverCaptures.map { capture in
@@ -725,6 +737,10 @@ final class AreaSelectionController: NSObject {
           applyBackdrop(backdrop, for: targetDisplayID)
         }
       }
+    }
+
+    if selectionMode == .recording {
+      installPendingClickMonitor()
     }
 
     if keyboardOwnerDisplayID == nil || isLivePassthroughInputActive {
@@ -1014,11 +1030,16 @@ final class AreaSelectionController: NSObject {
       selectionBackdrops.isEmpty || selectionBackdrops[displayID] != nil || liveFallbackDisplayIDs.contains(displayID)
     case .applicationWindow:
       allowsApplicationWindowSelection
+    case .fullDisplay:
+      // Picking a whole display needs no backdrop, so every display stays selectable even
+      // after the magnifier backdrop lands on the active one.
+      true
     }
   }
 
   private func isSessionKeyEvent(_ event: NSEvent) -> Bool {
-    event.keyCode == 53 || isApplicationToggleEvent(event) || isRepeatAreaEvent(event)
+    event.keyCode == 53 || isApplicationToggleEvent(event) || isFullDisplayToggleEvent(event)
+      || isRepeatAreaEvent(event)
   }
 
   private func handleSessionKeyEvent(_ event: NSEvent) -> Bool {
@@ -1027,13 +1048,28 @@ final class AreaSelectionController: NSObject {
       return true
     }
 
+    // Checked before repeat-area so the two can never both claim Return. They are disjoint
+    // today anyway: repeat-area is screenshot-only, whole-display mode is recording-only.
+    if isFullDisplayToggleEvent(event) {
+      switchInteractionMode(with: .enter)
+      return true
+    }
+
     if isRepeatAreaEvent(event) {
       return completeWithLastAreaSelection()
     }
 
     guard isApplicationToggleEvent(event) else { return false }
-    toggleInteractionMode()
+    switchInteractionMode(with: .applicationToggle)
     return true
+  }
+
+  /// Return or keypad Enter toggles whole-display mode. Recording sessions only; the key is
+  /// fixed (not remappable) and ignored with ⌘/⌥/⌃ held.
+  private func isFullDisplayToggleEvent(_ event: NSEvent) -> Bool {
+    guard selectionMode == .recording else { return false }
+    guard event.keyCode == 36 || event.keyCode == 76 else { return false } // Return, keypad Enter
+    return event.modifierFlags.intersection([.command, .option, .control]).isEmpty
   }
 
   /// Return key repeats the last area-screenshot selection instantly, reusing the
@@ -1065,19 +1101,27 @@ final class AreaSelectionController: NSObject {
     }
   }
 
-  private func toggleInteractionMode() {
-    guard manualSelectionStartPoint == nil,
-          !windowPool.values.contains(where: \.overlayView.isManualSelectionInProgress) else {
+  private func switchInteractionMode(with key: RecordingDisplaySelectionLogic.ModeKey) {
+    let isDragging = manualSelectionStartPoint != nil
+      || windowPool.values.contains(where: \.overlayView.isManualSelectionInProgress)
+    guard let nextMode = RecordingDisplaySelectionLogic.nextMode(
+      from: interactionMode,
+      key: key,
+      allowsApplicationWindow: allowsApplicationWindowSelection,
+      isDragging: isDragging
+    ) else {
       return
     }
-    let nextMode: AreaSelectionInteractionMode = interactionMode == .manualRegion
-      ? .applicationWindow
-      : .manualRegion
+    let modeName = switch nextMode {
+    case .manualRegion: "manual"
+    case .applicationWindow: "application"
+    case .fullDisplay: "fullDisplay"
+    }
     DiagnosticLogger.shared.log(
       .info,
       .capture,
       "Area selection interaction mode toggled",
-      context: ["mode": nextMode == .manualRegion ? "manual" : "application"]
+      context: ["mode": modeName]
     )
     interactionMode = nextMode
     refreshPooledWindowsForInteractionModeChange()
@@ -1089,7 +1133,26 @@ final class AreaSelectionController: NSObject {
       window.overlayView.setSelectionEnabled(selectionEnabled(for: displayID))
       window.overlayView.resetSelection()
     }
+    // `resetSelection()` cleared every overlay's highlight; recompute from scratch.
+    fullDisplayHighlightedDisplayID = nil
+    updateFullDisplayHighlight(at: NSEvent.mouseLocation)
     updateLivePassthroughDimVisibility()
+  }
+
+  /// Highlight exactly one display in `.fullDisplay` mode: the one under `screenPoint`.
+  /// Clears every highlight in any other mode. Cheap when nothing changed, so the 60 Hz
+  /// pointer-tracking tick can call it.
+  private func updateFullDisplayHighlight(at screenPoint: CGPoint) {
+    // Same edge rule as the click (`completeDisplaySelection`), so the highlighted display is
+    // always the one a click selects.
+    let targetDisplayID = interactionMode == .fullDisplay
+      ? RecordingDisplaySelectionLogic.display(containing: screenPoint, screens: screenList())?.id
+      : nil
+    guard targetDisplayID != fullDisplayHighlightedDisplayID else { return }
+    fullDisplayHighlightedDisplayID = targetDisplayID
+    for (displayID, window) in windowPool {
+      window.overlayView.setFullDisplayHighlighted(displayID == targetDisplayID)
+    }
   }
 
   private func startWindowSelectionPreparationIfNeeded() {
@@ -1351,8 +1414,21 @@ final class AreaSelectionController: NSObject {
     QuickAccessManager.shared.resumeAfterCapture()
     let rect = target.rect
     let intersectingDisplayIDs = displayIDsIntersecting(rect)
-    let displayID = target.windowTarget?.displayID
-      ?? primaryDisplayID(for: rect, fallback: window.displayID)
+    // A display target names its display outright. Resolving it by overlap could pick a
+    // neighbor, because a display frame touches its neighbors' shared edges.
+    let displayID: CGDirectDisplayID? = switch target {
+    case .display(let displayID, _):
+      displayID
+    case .window(let windowTarget):
+      windowTarget.displayID
+    case .rect:
+      primaryDisplayID(for: rect, fallback: window.displayID)
+    }
+    let targetKind = switch target {
+    case .rect: "region"
+    case .window: "window"
+    case .display: "display"
+    }
     DiagnosticLogger.shared.log(
       .info,
       .capture,
@@ -1360,7 +1436,7 @@ final class AreaSelectionController: NSObject {
       context: [
         "mode": "\(selectionMode)",
         "displayID": displayID.map { "\($0)" } ?? "unknown",
-        "target": target.windowTarget == nil ? "region" : "window",
+        "target": targetKind,
       ]
     )
     removeManualSelectionMonitor()
@@ -1383,7 +1459,12 @@ final class AreaSelectionController: NSObject {
     completion?(rect)
     completionWithMode?(rect, selectionMode)
     if let displayID {
-      let displayIDs = target.windowTarget.map { Set([$0.displayID]) } ?? intersectingDisplayIDs
+      let displayIDs: Set<CGDirectDisplayID> = switch target {
+      case .window, .display:
+        [displayID]
+      case .rect:
+        intersectingDisplayIDs
+      }
       completionWithResult?(
         AreaSelectionResult(
           target: target,
@@ -1463,6 +1544,31 @@ final class AreaSelectionController: NSObject {
     completeSelection(target: .window(windowTarget), from: window)
   }
 
+  /// Complete with the whole display under `screenPoint` (a plain click, or a click in
+  /// `.fullDisplay` mode). The point is where the button was released, which can be on a
+  /// different display than the overlay that received the press. A point in a gap between
+  /// displays falls back to the source overlay's display.
+  private func screenList() -> [(id: CGDirectDisplayID, frame: CGRect)] {
+    NSScreen.screens.compactMap { screen in
+      screen.displayID.map { (id: $0, frame: screen.frame) }
+    }
+  }
+
+  func completeDisplaySelection(at screenPoint: CGPoint, from window: AreaSelectionWindow) {
+    let resolved = RecordingDisplaySelectionLogic.display(containing: screenPoint, screens: screenList())
+      ?? window.displayID.map { (id: $0, frame: window.frame) }
+    guard let resolved else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Display selection ignored: no display under the release point",
+        context: ["screenPoint": "\(screenPoint)"]
+      )
+      return
+    }
+    completeSelection(target: .display(resolved.id, frame: resolved.frame), from: window)
+  }
+
   private func removeEscapeMonitors() {
     if let monitor = localEscapeMonitor {
       NSEvent.removeMonitor(monitor)
@@ -1507,6 +1613,7 @@ final class AreaSelectionController: NSObject {
       return
     }
     let location = NSEvent.mouseLocation
+    updateFullDisplayHighlight(at: location)
     guard let window = window(containing: location),
           let displayID = window.displayID else { return }
     // Already the key/keyboard owner — nothing to do (also the single-display fast path).
@@ -1549,6 +1656,40 @@ final class AreaSelectionController: NSObject {
   private func stopPointerTracking() {
     pointerTrackingTimer?.invalidate()
     pointerTrackingTimer = nil
+  }
+
+  private func installPendingClickMonitor() {
+    removePendingClickMonitor()
+    pendingClickGlobalMonitor = NSEvent.addGlobalMonitorForEvents(
+      matching: [.leftMouseDragged, .leftMouseUp]
+    ) { [weak self] event in
+      let eventType = event.type
+      let mouseLocation = NSEvent.mouseLocation
+      MainActor.assumeIsolated {
+        self?.forwardUndeliveredPendingClickEvent(eventType, at: mouseLocation)
+      }
+    }
+  }
+
+  private func removePendingClickMonitor() {
+    if let monitor = pendingClickGlobalMonitor {
+      NSEvent.removeMonitor(monitor)
+      pendingClickGlobalMonitor = nil
+    }
+  }
+
+  private func forwardUndeliveredPendingClickEvent(_ eventType: NSEvent.EventType, at screenPoint: CGPoint) {
+    // A committed drag belongs to the manual-selection monitors.
+    guard isPresenting, manualSelectionStartPoint == nil,
+          let source = windowPool.values.first(where: \.overlayView.hasPendingClick) else { return }
+    switch eventType {
+    case .leftMouseDragged:
+      source.overlayView.handleUndeliveredMouseDragged(atScreenPoint: screenPoint)
+    case .leftMouseUp:
+      source.overlayView.handleUndeliveredMouseUp(atScreenPoint: screenPoint)
+    default:
+      break
+    }
   }
 
   // MARK: - Live Passthrough Input
@@ -1778,7 +1919,7 @@ final class AreaSelectionController: NSObject {
           // the click/drag threshold.
           window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint)
         }
-      case .applicationWindow:
+      case .applicationWindow, .fullDisplay:
         window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint)
       }
     case .leftMouseUp:
@@ -1793,7 +1934,7 @@ final class AreaSelectionController: NSObject {
           // no-op the release into nothing.
           window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint)
         }
-      case .applicationWindow:
+      case .applicationWindow, .fullDisplay:
         window(containing: screenPoint)?.overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint)
       }
     case .rightMouseDown:
@@ -1843,6 +1984,7 @@ final class AreaSelectionController: NSObject {
     isPresenting = false
     dismissesAfterSelection = true
     stopPointerTracking()
+    removePendingClickMonitor()
     stopLivePassthroughInput()
     cancelSessionPresentationWatchdog()
     lumaRecapturingTask?.cancel()
@@ -2233,6 +2375,10 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
     completeSelection(windowTarget: target, from: window)
   }
 
+  func areaSelectionWindow(_ window: AreaSelectionWindow, didSelectDisplayAt screenPoint: CGPoint) {
+    completeDisplaySelection(at: screenPoint, from: window)
+  }
+
   func areaSelectionWindowDidCancel(_: AreaSelectionWindow) {
     cancelSelection()
   }
@@ -2349,6 +2495,8 @@ extension AreaSelectionController: CaptureEventTapDelegate {
 protocol AreaSelectionWindowDelegate: AnyObject {
   func areaSelectionWindow(_ window: AreaSelectionWindow, didSelectRect rect: CGRect)
   func areaSelectionWindow(_ window: AreaSelectionWindow, didSelectWindow target: WindowCaptureTarget)
+  /// Recording only: select the whole display under `screenPoint` (AppKit global coordinates).
+  func areaSelectionWindow(_ window: AreaSelectionWindow, didSelectDisplayAt screenPoint: CGPoint)
   func areaSelectionWindowDidCancel(_ window: AreaSelectionWindow)
   func areaSelectionWindowDidBecomeActive(_ window: AreaSelectionWindow)
   func areaSelectionWindow(_ window: AreaSelectionWindow, didReceiveKeyEvent event: NSEvent) -> Bool
@@ -2503,6 +2651,10 @@ extension AreaSelectionWindow: AreaSelectionOverlayViewDelegate {
     selectionDelegate?.areaSelectionWindow(self, didSelectWindow: target)
   }
 
+  func overlayView(_: AreaSelectionOverlayView, didSelectDisplayAt point: CGPoint) {
+    selectionDelegate?.areaSelectionWindow(self, didSelectDisplayAt: convertToScreenPoint(point))
+  }
+
   func overlayViewDidCancel(_: AreaSelectionOverlayView) {
     selectionDelegate?.areaSelectionWindowDidCancel(self)
   }
@@ -2553,6 +2705,9 @@ extension AreaSelectionWindow: AreaSelectionOverlayViewDelegate {
 protocol AreaSelectionOverlayViewDelegate: AnyObject {
   func overlayView(_ view: AreaSelectionOverlayView, didSelectRect rect: CGRect)
   func overlayView(_ view: AreaSelectionOverlayView, didSelectWindow target: WindowCaptureTarget)
+  /// Recording only: select the whole display under `point` (view coordinates; may lie outside
+  /// the view's bounds when the button was released on another display).
+  func overlayView(_ view: AreaSelectionOverlayView, didSelectDisplayAt point: CGPoint)
   func overlayViewDidCancel(_ view: AreaSelectionOverlayView)
   func overlayViewDidRequestDisplayActivation(_ view: AreaSelectionOverlayView)
   /// Signals that the user pressed inside the overlay before the per-display backdrop snapshot
@@ -2574,6 +2729,7 @@ final class AreaSelectionOverlayView: NSView {
   var selectionMode: SelectionMode = .screenshot {
     didSet {
       needsDisplay = true
+      updateModeHint()
     }
   }
 
@@ -2596,10 +2752,15 @@ final class AreaSelectionOverlayView: NSView {
   /// "Also detect specific elements" preference — layered on top of the one above, only
   /// meaningful (and only exposed as enabled in Preferences) once that one is also on.
   private var autoDetectElementUnderCursor = false
-  /// Set on mouseDown in manual-region mode when the press landed on a hovered window and
-  /// auto-detection is on — the gesture hasn't yet been classified as a click (select the
-  /// window) or a drag (fall through to manual region selection). Cleared by whichever happens.
+  /// Set on mouseDown in manual-region mode when the gesture hasn't yet been classified as a
+  /// click or a drag (fall through to manual region selection). Cleared by whichever happens.
+  /// Screenshot sessions park only a press on a window hovered by auto-detection (a click
+  /// selects that window). Recording sessions park every press: a click selects the hovered
+  /// element or window when auto-detection is on, and otherwise the whole display.
   private var pendingWindowDetectionStartPoint: CGPoint?
+  /// Whether this overlay's display is the one highlighted in `.fullDisplay` mode. Set by the
+  /// controller (see `AreaSelectionController.updateFullDisplayHighlight`).
+  private var isFullDisplayHighlighted = false
   private let windowDetectionDragThreshold: CGFloat = 4.0
   private var currentMousePosition: CGPoint = .zero
   private var windowSelectionSnapshot: WindowSelectionSnapshot?
@@ -2968,6 +3129,7 @@ final class AreaSelectionOverlayView: NSView {
     hasManualSelectionContentOnScreen = true
     pendingSelectionStartPoint = nil
     hoveredWindowCandidate = nil
+    isFullDisplayHighlighted = false
 
     // Initialize crosshair at current mouse position immediately
     if selectionEnabled {
@@ -3064,12 +3226,29 @@ final class AreaSelectionOverlayView: NSView {
       CATransaction.commit()
     }
     refreshActiveCursor()
+    if !enabled, selectionMode == .recording, interactionMode == .manualRegion,
+       let parkedPoint = pendingWindowDetectionStartPoint {
+      // A press parked while this display was still enabled (before the first backdrop
+      // landed) must survive being disabled mid-press. Hand it to the same live-fallback path
+      // a press on a disabled display takes; the controller re-enables this display and
+      // `activatePendingSelectionIfNeeded` parks the point again.
+      pendingWindowDetectionStartPoint = nil
+      pendingSelectionStartPoint = parkedPoint
+      delegate?.overlayViewDidRequestImmediateManualSelection(self)
+    }
   }
 
   func activatePendingSelectionIfNeeded() {
     guard selectionEnabled, interactionMode == .manualRegion else { return }
     guard let pendingSelectionStartPoint else { return }
     self.pendingSelectionStartPoint = nil
+    if selectionMode == .recording {
+      // Same state a press on an enabled display parks in (see `handlePrimaryMouseDown`), so
+      // a plain click on a display that had no backdrop still selects that display instead
+      // of starting a manual drag that aborts under the minimum size.
+      pendingWindowDetectionStartPoint = pendingSelectionStartPoint
+      return
+    }
     isSelecting = true
     delegate?.overlayView(self, manualSelectionBeganAt: pendingSelectionStartPoint)
     delegate?.overlayView(self, manualSelectionChangedTo: currentMousePosition)
@@ -3328,7 +3507,8 @@ final class AreaSelectionOverlayView: NSView {
   // MARK: - Magnifying Glass Zoom Implementation
 
   private func updateMagnifier(at point: CGPoint) {
-    guard isMouseOver else {
+    // The magnifier describes a point; whole-display mode picks a display.
+    guard isMouseOver, interactionMode != .fullDisplay else {
       magnifier.removeLayers()
       return
     }
@@ -3356,6 +3536,7 @@ final class AreaSelectionOverlayView: NSView {
   /// the live-passthrough event tap). Redraws at the tracked pointer position
   /// when the zoom actually changed.
   func applyMagnifierScroll(delta: CGFloat, hasPreciseScrollingDeltas: Bool) {
+    guard interactionMode != .fullDisplay else { return }
     if magnifier.handleScroll(delta: delta, hasPreciseScrollingDeltas: hasPreciseScrollingDeltas) {
       updateMagnifier(at: currentMousePosition)
     }
@@ -3904,6 +4085,11 @@ final class AreaSelectionOverlayView: NSView {
   }
 
   private func updateModeHint() {
+    if selectionMode == .recording {
+      showModeHint(recordingModeHint)
+      return
+    }
+
     guard allowsApplicationWindowSelection else {
       modeHintBackgroundLayer.isHidden = true
       modeHintTextLayer.isHidden = true
@@ -3934,6 +4120,50 @@ final class AreaSelectionOverlayView: NSView {
     let hint = interactionMode == .manualRegion
       ? L10n.ScreenCapture.applicationModeHint(shortcut.displayString)
       : L10n.ScreenCapture.manualModeHint(shortcut.displayString)
+    showModeHint(hint)
+  }
+
+  /// Recording hint, one segment per available action. The window segment is dropped when
+  /// window selection is unavailable or its shortcut is independent. With auto-detection on
+  /// in manual-region mode the whole hint hides, as in screenshots: a click there selects the
+  /// hovered window, so "Click for full screen" would be false.
+  private var recordingModeHint: String? {
+    let windowShortcut: String? = if allowsApplicationWindowSelection,
+                                     let shortcut = CaptureOverlayShortcutSettings.recordingApplicationCaptureShortcut,
+                                     !shortcut.isIndependent {
+      shortcut.displayString
+    } else {
+      nil
+    }
+    let segments: [String?]
+    switch interactionMode {
+    case .manualRegion:
+      guard !isAutoWindowDetectionActive else { return nil }
+      segments = [
+        L10n.ScreenCapture.recordingClickFullScreenHint,
+        L10n.ScreenCapture.recordingEnterDisplayHint,
+        windowShortcut.map(L10n.ScreenCapture.recordingWindowHint),
+      ]
+    case .applicationWindow:
+      segments = [
+        windowShortcut.map(L10n.ScreenCapture.manualModeHint),
+        L10n.ScreenCapture.recordingEnterDisplayHint,
+      ]
+    case .fullDisplay:
+      segments = [
+        L10n.ScreenCapture.recordingClickDisplayHint,
+        L10n.ScreenCapture.recordingEnterAreaHint,
+      ]
+    }
+    return segments.compactMap(\.self).joined(separator: " · ")
+  }
+
+  private func showModeHint(_ hint: String?) {
+    guard let hint, !hint.isEmpty else {
+      modeHintBackgroundLayer.isHidden = true
+      modeHintTextLayer.isHidden = true
+      return
+    }
     let attributes = overlayTextAttributes
     let hintSize = hint.size(withAttributes: attributes)
     let padding = NSEdgeInsets(top: 6, left: 10, bottom: 6, right: 10)
@@ -4130,7 +4360,25 @@ final class AreaSelectionOverlayView: NSView {
       }
     case .applicationWindow:
       refreshWindowHover()
+    case .fullDisplay:
+      hoveredWindowCandidate = nil
+      hideMagnifier()
+      renderFullDisplayHighlight()
     }
+  }
+
+  func setFullDisplayHighlighted(_ highlighted: Bool) {
+    isFullDisplayHighlighted = highlighted
+    guard interactionMode == .fullDisplay else { return }
+    renderFullDisplayHighlight()
+  }
+
+  /// `.fullDisplay` rendering: the highlighted display gets the selection border around its
+  /// whole bounds with no dim; every other display stays fully dimmed. The magnifier and the
+  /// coordinate bubble describe a point, so they stay hidden in this mode.
+  private func renderFullDisplayHighlight() {
+    let inset = selectionBorderWidth / 2
+    renderHighlight(localRect: isFullDisplayHighlighted ? bounds.insetBy(dx: inset, dy: inset) : nil)
   }
 
   private func refreshWindowHover() {
@@ -4201,6 +4449,14 @@ final class AreaSelectionOverlayView: NSView {
   }
 
   private func updateApplicationSelectionLayers() {
+    let highlightScreenRect: CGRect? = (isAutoElementDetectionActive ? hoveredSmartElementRect : nil)
+      ?? hoveredWindowCandidate?.target.frame
+    renderHighlight(localRect: highlightScreenRect.map { convertToLocalRect($0).intersection(bounds) })
+  }
+
+  /// Draw the selection border and dim cutout around `localRect`, or clear them when `nil`.
+  /// Shared by window/element highlighting and the `.fullDisplay` whole-display highlight.
+  private func renderHighlight(localRect: CGRect?) {
     CATransaction.begin()
     CATransaction.setDisableActions(true)
 
@@ -4209,10 +4465,7 @@ final class AreaSelectionOverlayView: NSView {
     verticalCrosshairLayer.isHidden = true
     hideSizeIndicator()
 
-    let highlightScreenRect: CGRect? = (isAutoElementDetectionActive ? hoveredSmartElementRect : nil)
-      ?? hoveredWindowCandidate?.target.frame
-    if let highlightScreenRect {
-      let localRect = convertToLocalRect(highlightScreenRect).intersection(bounds)
+    if let localRect {
       if localRect.isEmpty {
         selectionBorderLayer.isHidden = true
         dimLayer.mask = nil
@@ -4306,6 +4559,26 @@ final class AreaSelectionOverlayView: NSView {
     handlePrimaryMouseMoved(at: localPoint)
   }
 
+  /// True while a press is parked, not yet resolved as a click or a drag.
+  var hasPendingClick: Bool {
+    pendingWindowDetectionStartPoint != nil
+  }
+
+  /// Feed a drag the window server delivered to another app instead of this overlay (see
+  /// `AreaSelectionController.pendingClickGlobalMonitor`). Only acts on a parked press.
+  func handleUndeliveredMouseDragged(atScreenPoint screenPoint: CGPoint) {
+    guard !isLivePassthroughInput, hasPendingClick,
+          let localPoint = localPoint(fromScreenPoint: screenPoint) else { return }
+    handlePrimaryMouseDragged(at: localPoint)
+  }
+
+  /// Release counterpart of `handleUndeliveredMouseDragged(atScreenPoint:)`.
+  func handleUndeliveredMouseUp(atScreenPoint screenPoint: CGPoint) {
+    guard !isLivePassthroughInput, hasPendingClick,
+          let localPoint = localPoint(fromScreenPoint: screenPoint) else { return }
+    handlePrimaryMouseUp(at: localPoint)
+  }
+
   private func localPoint(fromScreenPoint screenPoint: CGPoint) -> CGPoint? {
     guard let window else { return nil }
     return convert(window.convertPoint(fromScreen: screenPoint), from: nil)
@@ -4343,10 +4616,11 @@ final class AreaSelectionOverlayView: NSView {
     applyActiveCursor()
     switch interactionMode {
     case .manualRegion:
-      if isAutoWindowDetectionActive, hoveredWindowCandidate != nil {
-        // Don't commit to a manual drag yet — the gesture might turn out to be a click on the
-        // hovered window instead. `handlePrimaryMouseDragged` resolves it once it clears the
-        // drag threshold; `handlePrimaryMouseUp` resolves it if it never does.
+      if selectionMode == .recording || (isAutoWindowDetectionActive && hoveredWindowCandidate != nil) {
+        // Don't commit to a manual drag yet — the gesture might turn out to be a click (on the
+        // hovered window, or in recording on the whole display) instead.
+        // `handlePrimaryMouseDragged` resolves it once it clears the drag threshold;
+        // `handlePrimaryMouseUp` resolves it if it never does.
         pendingWindowDetectionStartPoint = point
       } else {
         isSelecting = true
@@ -4354,6 +4628,10 @@ final class AreaSelectionOverlayView: NSView {
       }
     case .applicationWindow:
       updateWindowHover(at: point)
+    case .fullDisplay:
+      // Resolved on mouseUp; there is no rectangle to start. Parked so the controller can
+      // still forward a release that bypasses this overlay.
+      pendingWindowDetectionStartPoint = point
     }
   }
 
@@ -4374,8 +4652,12 @@ final class AreaSelectionOverlayView: NSView {
         guard distance >= windowDetectionDragThreshold else {
           // Still within the click/drag ambiguity window — keep tracking whatever window is
           // under the cursor so the highlight follows the (still not-yet-a-drag) pointer.
-          updateWindowHover(at: point)
-          updateApplicationSelectionLayers()
+          // Recording parks every press, so without auto-detection there is no window
+          // highlight to follow.
+          if isAutoWindowDetectionActive {
+            updateWindowHover(at: point)
+            updateApplicationSelectionLayers()
+          }
           return
         }
         // Crossed the threshold: this is a drag, not a click. Replay it as a manual selection
@@ -4393,6 +4675,9 @@ final class AreaSelectionOverlayView: NSView {
       updateMagnifier(at: point)
     case .applicationWindow:
       updateWindowHover(at: point)
+    case .fullDisplay:
+      // Drags are ignored; the release selects the display under the pointer.
+      break
     }
   }
 
@@ -4407,15 +4692,31 @@ final class AreaSelectionOverlayView: NSView {
     switch interactionMode {
     case .manualRegion:
       if pendingWindowDetectionStartPoint != nil {
-        // Released before crossing the drag threshold: treat it as a click on the hovered
-        // window (or, if a finer element was detected, that element) rather than an (empty,
-        // sub-threshold) manual region.
+        // Released before crossing the drag threshold: treat it as a click rather than an
+        // (empty, sub-threshold) manual region. With auto-detection on, the click selects the
+        // hovered element or window; otherwise (recording only) it selects the whole display.
         pendingWindowDetectionStartPoint = nil
-        updateWindowHover(at: point)
-        if isAutoElementDetectionActive, let hoveredSmartElementRect {
-          delegate?.overlayView(self, didSelectRect: convertToLocalRect(hoveredSmartElementRect))
-        } else if let hoveredWindowCandidate {
-          delegate?.overlayView(self, didSelectWindow: hoveredWindowCandidate.target)
+        if isAutoWindowDetectionActive {
+          updateWindowHover(at: point)
+        }
+        let resolution = RecordingDisplaySelectionLogic.clickResolution(
+          hasHoveredElement: isAutoElementDetectionActive && hoveredSmartElementRect != nil,
+          hasHoveredWindow: hoveredWindowCandidate != nil,
+          autoDetect: isAutoWindowDetectionActive
+        )
+        switch resolution {
+        case .element:
+          if let hoveredSmartElementRect {
+            delegate?.overlayView(self, didSelectRect: convertToLocalRect(hoveredSmartElementRect))
+          }
+        case .window:
+          if let hoveredWindowCandidate {
+            delegate?.overlayView(self, didSelectWindow: hoveredWindowCandidate.target)
+          }
+        case .display:
+          if selectionMode == .recording {
+            delegate?.overlayView(self, didSelectDisplayAt: point)
+          }
         }
         return
       }
@@ -4428,6 +4729,9 @@ final class AreaSelectionOverlayView: NSView {
       if let hoveredWindowCandidate {
         delegate?.overlayView(self, didSelectWindow: hoveredWindowCandidate.target)
       }
+    case .fullDisplay:
+      pendingWindowDetectionStartPoint = nil
+      delegate?.overlayView(self, didSelectDisplayAt: point)
     }
   }
 
@@ -4455,6 +4759,9 @@ final class AreaSelectionOverlayView: NSView {
       }
     case .applicationWindow:
       updateWindowHover(at: point)
+    case .fullDisplay:
+      // The controller's pointer-tracking tick moves the highlight between displays.
+      break
     }
   }
 
@@ -4466,6 +4773,9 @@ final class AreaSelectionOverlayView: NSView {
     case .applicationWindow:
       guard selectionEnabled else { return .arrow }
       return NSCursor.applicationWindowCursor
+    case .fullDisplay:
+      // No region is drawn in this mode, so no crosshair.
+      return .pointingHand
     }
   }
 

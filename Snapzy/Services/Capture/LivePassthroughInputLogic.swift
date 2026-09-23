@@ -48,7 +48,9 @@ enum LivePassthroughInputLogic {
     showsDimFromStart: Bool
   ) -> Bool {
     switch interactionMode {
-    case .applicationWindow:
+    case .applicationWindow, .fullDisplay:
+      // `.fullDisplay` is recording-only and recording never runs the tap; grouped here so
+      // the switch stays exhaustive.
       true
     case .manualRegion:
       showsDimFromStart || hasRevealedDim || isDragging

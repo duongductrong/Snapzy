@@ -8484,6 +8484,39 @@ nonisolated enum L10n {
       )
     }
 
+    static let recordingClickFullScreenHint = string(
+      "screen-capture.recording-click-full-screen-hint",
+      defaultValue: "Click for full screen",
+      comment: "Recording area selection hint segment, manual mode: a plain click records the whole display. Joined to other segments with ' · '."
+    )
+
+    static let recordingEnterDisplayHint = string(
+      "screen-capture.recording-enter-display-hint",
+      defaultValue: "Enter to pick a display",
+      comment: "Recording area selection hint segment: pressing Enter switches to whole-display mode, where a click picks the display to record. Joined to other segments with ' · '."
+    )
+
+    static func recordingWindowHint(_ shortcut: String) -> String {
+      format(
+        "screen-capture.recording-window-hint",
+        defaultValue: "%@ for a window",
+        comment: "Recording area selection hint segment, manual mode: pressing the key switches to window selection. %@ is the current single-key shortcut. Joined to other segments with ' · '.",
+        shortcut
+      )
+    }
+
+    static let recordingClickDisplayHint = string(
+      "screen-capture.recording-click-display-hint",
+      defaultValue: "Click a display to record it",
+      comment: "Recording area selection hint segment, whole-display mode: a click selects the highlighted display. Joined to other segments with ' · '."
+    )
+
+    static let recordingEnterAreaHint = string(
+      "screen-capture.recording-enter-area-hint",
+      defaultValue: "Enter for area selection",
+      comment: "Recording area selection hint segment, whole-display mode: pressing Enter returns to drawing an area. Joined to other segments with ' · '."
+    )
+
     /// Text shown before the "C" key cap in the screenshot magnifier's color panel, e.g. the
     /// "Press" in "Press [C] to Copy". Empty for languages where the natural phrasing puts
     /// nothing before the key (e.g. Japanese "[C] キーでコピー").

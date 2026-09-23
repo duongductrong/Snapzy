@@ -403,7 +403,9 @@ final class RecordingCoordinator: ObservableObject {
   ) {
     selectedRect = rect
     selectedWindowTarget = windowTarget
-    saveLastAreaRect(rect)
+    if RecordingDisplaySelectionLogic.shouldSaveLastArea(for: captureMode) {
+      saveLastAreaRect(rect)
+    }
 
     let interactionEnabled = captureMode != .application
     for overlay in regionOverlayWindows {
@@ -435,7 +437,9 @@ final class RecordingCoordinator: ObservableObject {
   /// Finalize a drag/resize: persist the rect and reposition the toolbar.
   private func finalizeDragOrResize() {
     guard let rect = selectedRect else { return }
-    saveLastAreaRect(rect)
+    if RecordingDisplaySelectionLogic.shouldSaveLastArea(for: toolbarWindow?.captureMode ?? .area) {
+      saveLastAreaRect(rect)
+    }
     toolbarWindow?.updateAnchorRect(rect)
   }
 
@@ -455,6 +459,9 @@ final class RecordingCoordinator: ObservableObject {
     switch selection.target {
     case .rect:
       captureMode = .area
+      windowTarget = nil
+    case .display:
+      captureMode = .fullscreen
       windowTarget = nil
     case .window(let target):
       captureMode = .application
@@ -485,7 +492,12 @@ final class RecordingCoordinator: ObservableObject {
     )
 
     if mode == .fullscreen {
-      let fullscreenRect = ScreenUtility.activeScreen().frame
+      // Stay on the display the user already picked (a display click, or an area mostly on
+      // it); fall back to the active screen only when nothing is selected yet.
+      let fullscreenRect = RecordingDisplaySelectionLogic.displayFrame(
+        bestMatching: selectedRect,
+        screenFrames: NSScreen.screens.map(\.frame)
+      ) ?? ScreenUtility.activeScreen().frame
       presentToolbar(
         for: fullscreenRect,
         captureMode: .fullscreen,

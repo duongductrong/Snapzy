@@ -70,6 +70,7 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 - Independent mode (modifiers ≠ 0): registered as its own global hotkey (`applicationCaptureHotkeyRef` / `applicationRecordingHotkeyRef`) firing `.captureApplication` / `.recordApplication`.
 - Keys: `shortcuts.area.applicationCapture`, `shortcuts.recording.applicationCapture`.
 - During an area-screenshot selection, **Return** instantly completes with the last selected area (per-session opt-in `allowsRepeatAreaCompletion`; OCR/cutout selections are unaffected). See [CAPTURE.md](CAPTURE.md).
+- During a recording selection, **Return** or keypad **Enter** toggles whole-display mode: the display under the pointer is highlighted and a click records it. The key is fixed (not remappable) and ignored with ⌘/⌥/⌃ held. A plain click without Enter also selects the display under the pointer. See [RECORDING.md](RECORDING.md#picking-a-target-in-the-recording-overlay).
 
 ## Recording-behavior notes
 

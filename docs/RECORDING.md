@@ -36,7 +36,20 @@ flowchart TD
 - Entry points: menu bar items (`AppStatusBarController` → `viewModel.startRecordingFlow()` / `startApplicationRecordingFlow()`), global shortcut `GlobalShortcutKind.recording` (default `⇧⌘5`, start/stop toggle via `toggleRecordingFromShortcut`), and deep links `snapzy://record/screen` / `snapzy://record/application`. Application mode enters the same flow with `.applicationWindow` as the initial interaction mode.
 - `ScreenCaptureViewModel.startRecordingFlow` (`Snapzy/Features/Capture/CaptureViewModel.swift`) hides own normal-level windows when own-app exclusion is on, then either restores the last area or runs an `AreaSelectionController` session in `.recording` mode.
 - `RecordingCoordinator` (`Snapzy/Features/Recording/RecordingCoordinator.swift`) owns toolbar/overlay UX and stop/GIF handoff. `ScreenRecordingManager` (`Snapzy/Services/Capture/ScreenRecordingManager.swift`) owns media capture, timing, and metadata persistence.
-- Remember-last-area: `RecordingCoordinator.saveLastAreaRect` persists the rect to `PreferencesKeys.recordingLastAreaRect` on selection/drag end; `loadLastAreaRect()` returns it only when it still intersects a connected `NSScreen`.
+- Remember-last-area: `RecordingCoordinator.saveLastAreaRect` persists the rect to `PreferencesKeys.recordingLastAreaRect` on selection/drag end; `loadLastAreaRect()` returns it only when it still intersects a connected `NSScreen`. Fullscreen selections are never saved (`RecordingDisplaySelectionLogic.shouldSaveLastArea`), so picking a whole display keeps the last real area. While a saved area exists, Record Screen skips the selection overlay; turn off "Remember last area" to get the overlay (and the display-picking gestures below) every time.
+
+## Picking a Target in the Recording Overlay
+
+The `.recording` selection overlay offers three ways to pick what to record:
+
+- **Area.** Drag a rectangle with the crosshair. A press only becomes a drag once the pointer moves past 4 pt (`windowDetectionDragThreshold`).
+- **Whole display, plain click.** A left click that never crosses the drag threshold selects the display under the release point. The result is `AreaSelectionTarget.display(displayID, frame:)`, which both recording consumers open as a `.fullscreen` toolbar. With "auto-detect window under cursor" on, a click on a highlighted element or window selects that instead; a click where nothing is highlighted still selects the display (`RecordingDisplaySelectionLogic.clickResolution`).
+- **Whole display, Enter mode.** Return or keypad Enter switches the overlay to `.fullDisplay`: the display under the pointer is highlighted (driven by the controller's pointer-tracking tick, so exactly one display is lit), and a click selects it. Auto-detection is ignored in this mode. Enter again returns to area selection; the window key (`A` by default) switches to window selection.
+- **Window.** The window key toggles `.applicationWindow`, unchanged.
+
+Every recording press is parked as pending until it resolves as a click or a drag, including a press on a display that had no backdrop yet (`activatePendingSelectionIfNeeded`). Escape and right-click cancel from every mode.
+
+The toolbar's Fullscreen toggle keeps the display already selected: `restartSelection(for: .fullscreen)` picks the display with the largest overlap with the current selection and falls back to the active screen only when nothing is selected.
 
 ## Capture Modes
 
