@@ -329,9 +329,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private static let settledStickyRounds = 8
   /// Rows of movement needed before a frame pair can vote on chrome.
   private static let minimumStickyMeasurementDelta = 8
-  /// Spread of confirmed offsets still treated as one answer rather than an
-  /// ambiguous overlap.
-  private static let verifiedClusterTolerance = 48
   /// Deepest bottom-edge treatment measured on this page, in pixels.
   private var measuredDimmedDepth: Int?
   private var dimmingMeasurementCount = 0
@@ -1189,63 +1186,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       }
     }
 
-    guard let searchResult else { return nil }
-
-    let accepted = isAcceptable(
-      searchResult.best,
-      expectedDeltaPixels: expectedDeltaPixels,
-      visionAlignmentEstimate: visionAlignmentEstimate,
-      searchMode: searchMode
-    )
-    let ambiguous = isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels)
-    if accepted, !ambiguous {
-      return searchResult.best
-    }
-
-    // Scores alone cannot separate offsets on a page with large flat areas:
-    // background agrees at every offset, so the sampled bands tie and the scan
-    // settles on whichever candidate it saw first. Ask the frames directly
-    // instead, judging only the rows that carry content over the whole overlap.
-    return verifiedMatch(
-      among: [searchResult.best, searchResult.runnerUp],
-      deltaRange: broadRange,
-      previous: previous,
-      current: current,
-      previousLuma: previousLuma,
-      currentLuma: currentLuma,
-      headerHeight: headerHeight,
-      footerHeight: footerHeight,
-      leadingStaticWidth: leadingStaticWidth,
-      trailingStaticWidth: trailingStaticWidth,
-      visionAlignmentEstimate: visionAlignmentEstimate
-    )
-  }
-
-  /// The first candidate the frames themselves confirm, preferring one that no
-  /// competing candidate can match. A wrong offset on a repeating layout fails
-  /// this check, because a page is never perfectly periodic end to end.
-  private func verifiedMatch(
-    among candidates: [Match?],
-    deltaRange: ClosedRange<Int>,
-    previous: RasterImage,
-    current: RasterImage,
-    previousLuma: ScrollingCaptureLumaPlane,
-    currentLuma: ScrollingCaptureLumaPlane,
-    headerHeight: Int,
-    footerHeight: Int,
-    leadingStaticWidth: Int,
-    trailingStaticWidth: Int,
-    visionAlignmentEstimate: VisionAlignmentEstimate?
-  ) -> Match? {
     let columns = matchingColumnBounds(
       width: previous.width,
       leadingStaticWidth: leadingStaticWidth,
       trailingStaticWidth: trailingStaticWidth
     )
 
-    func verifies(_ deltaY: Int) -> Bool {
-      guard deltaY > 0 else { return false }
-      return ScrollingCaptureOffsetVerifier.matches(
+    func verdict(_ deltaY: Int) -> ScrollingCaptureOffsetVerifier.Verdict {
+      ScrollingCaptureOffsetVerifier.verdict(
         previous: previousLuma,
         current: currentLuma,
         offset: deltaY,
@@ -1256,26 +1204,187 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
-    var verifiedDeltas = candidates
-      .compactMap { $0 }
-      .filter { $0.direction == .appendFromBottom && verifies($0.deltaY) }
-      .map(\.deltaY)
-
-    // Nothing the scan proposed holds up. Sweep the plausible range with the
-    // verifier itself, which is what a flat page needs: it judges content rows
-    // over the whole overlap rather than a handful of sampled bands.
-    if verifiedDeltas.isEmpty {
-      verifiedDeltas = sweepVerifiedDeltas(in: deltaRange, verifies: verifies)
+    // The frames themselves are the authority: if content moved up by this
+    // offset, every row that carries contrast lines up across the whole
+    // overlap. Scores only propose candidates, because on a page with large
+    // flat areas background agrees at every offset, the sampled bands tie, and
+    // the scan settles on whichever candidate it happened to see first.
+    // The frames themselves are the authority: if content moved up by this
+    // offset, every row that carries contrast lines up across the whole
+    // overlap. Scores only propose candidates, because on a page with large
+    // flat areas background agrees at every offset, the sampled bands tie, and
+    // the scan settles on whichever candidate it happened to see first.
+    // What the scroll was asked to travel, confirmed by the frames, is the
+    // strongest evidence there is, and the scan measured it to the pixel.
+    func matchesExpectedStep(_ deltaY: Int) -> Bool {
+      guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return false }
+      return abs(deltaY - expectedDeltaPixels) <= max(12, expectedDeltaPixels / 10)
     }
 
-    // Confirmed offsets far apart mean the overlap really is ambiguous.
+    // Vision is the tie-breaker on a repeating layout, where a wrong repeat of
+    // the pattern lines up as convincingly as the true offset. It is not
+    // reliable enough on a flat page to overrule an offset the frames confirm
+    // at the distance the page was asked to travel.
+    func visionConfirms(_ deltaY: Int) -> Bool {
+      guard
+        let visionAlignmentEstimate,
+        visionAlignmentEstimate.agreementCount >= 2,
+        visionAlignmentEstimate.deltaY > 0
+      else { return false }
+      let tolerance = max(24, visionAlignmentEstimate.deltaY / 4)
+      return abs(deltaY - visionAlignmentEstimate.deltaY) <= tolerance
+    }
+
+    // The page can travel farther than one step when frames were missed, but a
+    // move shorter than the step it was asked to make is an intermediate frame
+    // caught mid-scroll: committing it pins later steps to the wrong overlap.
+    func isPlausibleTravel(_ deltaY: Int, visionConfirms: Bool) -> Bool {
+      guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
+      if matchesExpectedStep(deltaY) { return true }
+      return deltaY > expectedDeltaPixels && visionConfirms
+    }
+
+    if let best = searchResult?.best, best.direction == .appendFromBottom,
+       verdict(best.deltaY) == .verified,
+       fitsExpectedStep(best.deltaY, expectedDeltaPixels: expectedDeltaPixels),
+       isPlausibleTravel(best.deltaY, visionConfirms: visionConfirms(best.deltaY)) {
+      return best
+    }
+
+    let confirmed = sweptVerifiedMatch(
+      deltaRange: broadRange,
+      previous: previous,
+      current: current,
+      searchBest: searchResult?.best,
+      expectedDeltaPixels: expectedDeltaPixels,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth,
+      visionAlignmentEstimate: visionAlignmentEstimate,
+      verdict: verdict
+    )
+    if let confirmed {
+      return confirmed
+    }
+
+    // Nothing in the overlap carries enough content to judge by, so fall back
+    // to the score gates.
     guard
-      let lowest = verifiedDeltas.min(),
-      let highest = verifiedDeltas.max(),
-      highest - lowest <= Self.verifiedClusterTolerance
+      let searchResult,
+      verdict(searchResult.best.deltaY) == .noEvidence,
+      isAcceptable(
+        searchResult.best,
+        expectedDeltaPixels: expectedDeltaPixels,
+        visionAlignmentEstimate: visionAlignmentEstimate,
+        searchMode: searchMode
+      ),
+      !isAmbiguous(searchResult, expectedDeltaPixels: expectedDeltaPixels)
+    else {
+      return nil
+    }
+    return searchResult.best
+  }
+
+  /// A confirmed offset still has to be a plausible step. An intermediate frame
+  /// caught mid-scroll really did move a few pixels, so it is confirmed, but
+  /// committing it pins later steps to the wrong overlap.
+  private func fitsExpectedStep(_ deltaY: Int, expectedDeltaPixels: Int?) -> Bool {
+    guard let expectedDeltaPixels, expectedDeltaPixels > 24 else { return true }
+    if abs(deltaY - expectedDeltaPixels) <= max(12, expectedDeltaPixels / 10) { return true }
+    // Farther than one step happens when frames were missed; shorter than one
+    // step is an intermediate frame caught mid-scroll.
+    return deltaY > expectedDeltaPixels && deltaY <= expectedDeltaPixels * 2
+  }
+
+  /// Sweeps the plausible range with the verifier and takes the confirmed run
+  /// of offsets that best fits how far the scroll was expected to travel. This
+  /// is what a flat page needs: judging content rows over the whole overlap
+  /// separates offsets that the band scores cannot.
+  private func sweptVerifiedMatch(
+    deltaRange: ClosedRange<Int>,
+    previous: RasterImage,
+    current: RasterImage,
+    searchBest: Match?,
+    expectedDeltaPixels: Int?,
+    headerHeight: Int,
+    footerHeight: Int,
+    leadingStaticWidth: Int,
+    trailingStaticWidth: Int,
+    visionAlignmentEstimate: VisionAlignmentEstimate?,
+    verdict: (Int) -> ScrollingCaptureOffsetVerifier.Verdict
+  ) -> Match? {
+    let coarseStep = max(2, (deltaRange.upperBound - deltaRange.lowerBound) / 220)
+    var runs: [[Int]] = []
+    for delta in stride(from: deltaRange.lowerBound, through: deltaRange.upperBound, by: coarseStep)
+    where verdict(delta) == .verified {
+      if var last = runs.last, let tail = last.last, delta - tail <= coarseStep * 2 {
+        last.append(delta)
+        runs[runs.count - 1] = last
+      } else {
+        runs.append([delta])
+      }
+    }
+    guard !runs.isEmpty else { return nil }
+
+    let centers = runs.map { $0[$0.count / 2] }
+    let chosenCenter: Int
+    if centers.count == 1, let only = centers.first {
+      // One confirmed answer needs no tie-breaking.
+      chosenCenter = only
+    } else if let visionAlignmentEstimate, visionAlignmentEstimate.agreementCount >= 2,
+              visionAlignmentEstimate.deltaY > 0,
+              let nearest = centers.min(by: {
+                abs($0 - visionAlignmentEstimate.deltaY) < abs($1 - visionAlignmentEstimate.deltaY)
+              }),
+              abs(nearest - visionAlignmentEstimate.deltaY) <= max(24, visionAlignmentEstimate.deltaY / 4) {
+      // A repeating layout confirms the wrong repeat as readily as the true
+      // offset, so what Vision saw decides between them.
+      chosenCenter = nearest
+    } else if let expectedDeltaPixels, expectedDeltaPixels > 0,
+              let nearest = centers.min(by: {
+                abs($0 - expectedDeltaPixels) < abs($1 - expectedDeltaPixels)
+              }),
+              abs(nearest - expectedDeltaPixels) <= max(24, expectedDeltaPixels / 8) {
+      // Several confirmed runs with nothing to separate them: only the one the
+      // page was actually asked to travel is safe to commit.
+      chosenCenter = nearest
+    } else {
+      return nil
+    }
+
+    guard
+      let chosenRun = runs.first(where: { $0[$0.count / 2] == chosenCenter }),
+      let runStart = chosenRun.first,
+      let runEnd = chosenRun.last
     else { return nil }
 
-    let deltaY = verifiedDeltas.sorted()[verifiedDeltas.count / 2]
+    // A flat page confirms a wide band of offsets, so the run says which
+    // neighbourhood is right, not which pixel. The scan measured to the pixel,
+    // so its answer wins whenever it falls inside the confirmed run.
+    var deltaY = chosenCenter
+    if let searchBest, searchBest.direction == .appendFromBottom,
+       searchBest.deltaY >= runStart - coarseStep, searchBest.deltaY <= runEnd + coarseStep,
+       verdict(searchBest.deltaY) == .verified {
+      deltaY = searchBest.deltaY
+    } else if let expectedDeltaPixels, expectedDeltaPixels > 0,
+              expectedDeltaPixels >= runStart - coarseStep, expectedDeltaPixels <= runEnd + coarseStep,
+              verdict(expectedDeltaPixels) == .verified {
+      // Otherwise the step the scroll was asked to travel, when the frames
+      // confirm it, beats the middle of a band.
+      deltaY = expectedDeltaPixels
+    } else {
+      var refined: [Int] = []
+      let lower = max(deltaRange.lowerBound, chosenCenter - coarseStep)
+      let upper = min(deltaRange.upperBound, chosenCenter + coarseStep)
+      for delta in lower...upper where verdict(delta) == .verified {
+        refined.append(delta)
+      }
+      if !refined.isEmpty { deltaY = refined[refined.count / 2] }
+    }
+
+    guard fitsExpectedStep(deltaY, expectedDeltaPixels: expectedDeltaPixels) else { return nil }
+
     guard let metrics = overlapMetrics(
       previous: previous,
       current: current,
@@ -1287,7 +1396,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       trailingStaticWidth: trailingStaticWidth
     ) else { return nil }
 
-    let match = Match(
+    return Match(
       direction: .appendFromBottom,
       deltaY: deltaY,
       pixelScore: metrics.averageDifference,
@@ -1297,43 +1406,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       worstBandScore: metrics.worstDifference,
       bandVariance: metrics.variance
     )
-
-    // A confirmed offset still has to agree with what Vision saw, when Vision
-    // saw anything, so a verified-but-wrong repeat cannot slip through.
-    if let visionAlignmentEstimate, visionAlignmentEstimate.deltaY > 0,
-       visionAlignmentEstimate.agreementCount >= 2 {
-      let tolerance = max(24, visionAlignmentEstimate.deltaY / 4)
-      guard abs(match.deltaY - visionAlignmentEstimate.deltaY) <= tolerance else { return nil }
-    }
-
-    return match
-  }
-
-  /// Offsets the frames themselves confirm, found by a coarse sweep and then
-  /// refined. Deliberately cheap: the verifier samples a grid of rows, so a
-  /// sweep of the whole range costs far less than the band search it rescues.
-  private func sweepVerifiedDeltas(
-    in deltaRange: ClosedRange<Int>,
-    verifies: (Int) -> Bool
-  ) -> [Int] {
-    let coarseStep = max(2, (deltaRange.upperBound - deltaRange.lowerBound) / 220)
-    var coarseHits: [Int] = []
-    for delta in stride(from: deltaRange.lowerBound, through: deltaRange.upperBound, by: coarseStep)
-    where verifies(delta) {
-      coarseHits.append(delta)
-    }
-    guard let first = coarseHits.first, let last = coarseHits.last else { return [] }
-    // Far-apart hits are reported as they are, so the caller rejects them as
-    // ambiguous rather than refining a coincidence.
-    guard last - first <= Self.verifiedClusterTolerance else { return [first, last] }
-
-    var refined: [Int] = []
-    let lower = max(deltaRange.lowerBound, first - coarseStep)
-    let upper = min(deltaRange.upperBound, last + coarseStep)
-    for delta in lower...upper where verifies(delta) {
-      refined.append(delta)
-    }
-    return refined.isEmpty ? coarseHits : refined
   }
 
   private func broadDeltaRange(

@@ -34,9 +34,18 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
   /// region can hold fixed chrome that no offset makes agree.
   static let minimumMatchingRowFraction = 0.5
 
-  /// - Parameter requiresEvidence: when true, an overlap with too few
-  ///   informative rows is reported as unverified rather than accepted.
-  /// - Returns: true when `offset` is consistent with the two frames.
+  enum Verdict {
+    case verified
+    case rejected
+    /// The overlap carries too little content to judge, so the caller should
+    /// fall back to its own scoring.
+    case noEvidence
+
+    var isVerified: Bool { self == .verified }
+  }
+
+  /// - Returns: true when `offset` is consistent with the two frames. An
+  ///   overlap with too little content to judge counts as unverified.
   static func matches(
     previous: ScrollingCaptureLumaPlane,
     current: ScrollingCaptureLumaPlane,
@@ -44,25 +53,45 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
     headerHeight: Int = 0,
     footerHeight: Int = 0,
     columnStart: Int = 0,
-    columnEnd: Int? = nil,
-    requiresEvidence: Bool = true
+    columnEnd: Int? = nil
   ) -> Bool {
+    verdict(
+      previous: previous,
+      current: current,
+      offset: offset,
+      headerHeight: headerHeight,
+      footerHeight: footerHeight,
+      columnStart: columnStart,
+      columnEnd: columnEnd
+    ).isVerified
+  }
+
+  /// Judges `offset` against the two frames it claims to describe.
+  static func verdict(
+    previous: ScrollingCaptureLumaPlane,
+    current: ScrollingCaptureLumaPlane,
+    offset: Int,
+    headerHeight: Int = 0,
+    footerHeight: Int = 0,
+    columnStart: Int = 0,
+    columnEnd: Int? = nil
+  ) -> Verdict {
     guard
       offset > 0,
       previous.width == current.width,
       previous.height == current.height
-    else { return false }
+    else { return .rejected }
 
     let firstColumn = max(0, columnStart)
     let lastColumn = min(previous.width, columnEnd ?? previous.width)
     let columnSpan = lastColumn - firstColumn
-    guard columnSpan > 1 else { return false }
+    guard columnSpan > 1 else { return .noEvidence }
 
     // Rows of `current` that should have come from `previous`, skipping fixed
     // chrome at either edge: those rows match at every offset.
     let lower = headerHeight
     let upper = previous.height - footerHeight - offset
-    guard upper - lower >= minimumOverlapRows else { return false }
+    guard upper - lower >= minimumOverlapRows else { return .noEvidence }
 
     let rowStep = max(1, (upper - lower) / 64)
     let columnStep = max(1, columnSpan / 32)
@@ -96,7 +125,9 @@ nonisolated enum ScrollingCaptureOffsetVerifier {
       if Double(rowTotal) / Double(rowSamples) <= maximumMeanDifference { matchedRows += 1 }
     }
 
-    guard informativeRows >= minimumInformativeRows else { return !requiresEvidence }
+    guard informativeRows >= minimumInformativeRows else { return .noEvidence }
     return Double(matchedRows) / Double(informativeRows) >= minimumMatchingRowFraction
+      ? .verified
+      : .rejected
   }
 }
