@@ -7,6 +7,14 @@
 
 import SwiftUI
 
+private enum SnapzyOnboardingGlassAppearance {
+  // Keep the group and its nested controls in one dark material family. The child values stay
+  // close to the group so nested glass does not read as a second, unrelated slab.
+  static let barTint = Color.black.opacity(0.52)
+  static let segmentTint = Color.black.opacity(0.48)
+  static let segmentActiveTint = Color.black.opacity(0.54)
+}
+
 struct SnapzyOnboardingActionBar: View {
   var skipTitle: String? = nil
   var continueTitle: String
@@ -58,13 +66,19 @@ struct SnapzyOnboardingActionBar: View {
     .padding(3.5)
     .frame(height: barHeight)
     .frame(minWidth: minWidth)
-    .background {
-      SnapzyGlassSurface(
-        shape: Capsule(style: .continuous),
-        substrate: SnapzySurfaceGlass.baseDarkness,
-        tint: 0.04
-      )
-    }
+    // Group only the sibling button surfaces. Keeping the outer shell outside the native glass
+    // container makes a two-button bar resolve like the single-button Finish bar.
+    .liquidGlassGroup(spacing: 0)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: SnapzySurfaceGlass.baseDarkness,
+      tint: 0.04,
+      withRimLighting: true,
+      // Keep onboarding chrome grounded over the colourful mock stage. The native path uses
+      // this as the only tint channel, while the macOS 13–15 path becomes the same solid dark
+      // surface instead of resolving to a light or accent-coloured control.
+      glassTint: SnapzyOnboardingGlassAppearance.barTint
+    )
     .clipShape(Capsule(style: .continuous))
     .shadow(color: Color.black.opacity(0.20), radius: 12, y: 5)
     .shadow(color: Color.black.opacity(0.10), radius: 2, y: 1)
@@ -80,6 +94,12 @@ private struct SnapzyOnboardingBarSegment: View {
   var action: () -> Void
 
   @State private var isHovered = false
+  @Environment(\.liquidGlassRenderMode) private var renderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(for: renderMode, userEnabled: isLiquidGlassEnabled)
+  }
 
   var body: some View {
     Button(action: {
@@ -111,7 +131,32 @@ private struct SnapzyOnboardingBarSegment: View {
       }
       .padding(.horizontal, SnapzySpace.xl + 1)
       .frame(maxHeight: .infinity)
-      .background { segmentSurface }
+      .liquidGlassSurface(
+        shape: Capsule(style: .continuous),
+        // Keep a real glass surface on every child so the group is not just an outlined shell.
+        // Hover deepens that same surface instead of inserting a new visual treatment.
+        isVisible: true,
+        substrate: SnapzySurfaceGlass.controlSubstrateHover,
+        tint: 0.10,
+        // The fallback rim below owns the child border; native glass draws its own refractive
+        // edge. Keeping this off prevents the fallback stroke from becoming a second native outline.
+        highlight: .none,
+        withRimLighting: true,
+        isInteractive: isEnabled && !isBusy,
+        glassTint: isHovered && isEnabled && !isBusy
+          ? SnapzyOnboardingGlassAppearance.segmentActiveTint
+          : SnapzyOnboardingGlassAppearance.segmentTint
+      )
+      .overlay {
+        if !usesNativeGlass {
+          LiquidGlassRimBorder(
+            shape: Capsule(style: .continuous),
+            isHovered: isHovered && isEnabled && !isBusy,
+            isEnabled: isEnabled && !isBusy,
+            emphasis: .secondary
+          )
+        }
+      }
       .contentShape(Capsule(style: .continuous))
     }
     .buttonStyle(SnapzyInteractiveButtonStyle(isEnabled: isEnabled && !isBusy))
@@ -126,18 +171,6 @@ private struct SnapzyOnboardingBarSegment: View {
       }
     }
     .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isEnabled)
-  }
-
-  @ViewBuilder
-  private var segmentSurface: some View {
-    if isHovered && isEnabled {
-      SnapzyGlassSurface(
-        shape: Capsule(style: .continuous),
-        substrate: SnapzySurfaceGlass.controlSubstrateHover,
-        tint: 0.10,
-        highlight: .custom(top: 0.24, bottom: 0.08)
-      )
-    }
   }
 }
 

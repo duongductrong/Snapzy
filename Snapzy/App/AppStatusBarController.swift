@@ -474,6 +474,20 @@ final class AppStatusBarController: ObservableObject {
     menu?.addItem(playgroundItem)
     #endif
 
+    // Replay onboarding — keep this as the last action before the final separator/Quit item.
+    let replayOnboardingItem = NSMenuItem(
+      title: L10n.PreferencesGeneral.restartOnboardingTitle,
+      action: #selector(replayOnboardingAction),
+      keyEquivalent: ""
+    )
+    replayOnboardingItem.target = self
+    replayOnboardingItem.image = NSImage(
+      systemSymbolName: "arrow.counterclockwise.circle",
+      accessibilityDescription: nil
+    )
+    replayOnboardingItem.isEnabled = true
+    menu?.addItem(replayOnboardingItem)
+
     menu?.addItem(NSMenuItem.separator())
 
     // Quit
@@ -889,6 +903,18 @@ final class AppStatusBarController: ObservableObject {
   @objc private func openPreferencesAction() {
     logMenuAction("openPreferences")
     openPreferencesWindow()
+  }
+
+  @objc private func replayOnboardingAction() {
+    logMenuAction("replayOnboarding")
+    OnboardingFlowView.resetOnboarding()
+    SnapzyOnboardingWindowController.shared.close()
+    PreferencesWindowController.shared.close()
+
+    // Let the status-bar menu finish dismissing before presenting the onboarding window.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      NotificationCenter.default.post(name: .showOnboarding, object: nil)
+    }
   }
 
   #if DEBUG
