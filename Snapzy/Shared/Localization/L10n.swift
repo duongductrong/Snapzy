@@ -7202,16 +7202,6 @@ nonisolated enum L10n {
       defaultValue: "Hide Left Sidebar (⌘B)",
       comment: "Tooltip for hiding the left background sidebar in the video editor"
     )
-    static let showRightSidebarHint = string(
-      "video-editor.show-right-sidebar-hint",
-      defaultValue: "Show Right Sidebar (⌘⇧B)",
-      comment: "Tooltip for showing the right zoom configuration sidebar in the video editor"
-    )
-    static let hideRightSidebarHint = string(
-      "video-editor.hide-right-sidebar-hint",
-      defaultValue: "Hide Right Sidebar (⌘⇧B)",
-      comment: "Tooltip for hiding the right zoom configuration sidebar in the video editor"
-    )
     static let undoShortcutHint = string(
       "video-editor.undo-shortcut-hint",
       defaultValue: "Undo (⌘Z)",

@@ -10,6 +10,15 @@ import AVFoundation
 import Combine
 import SwiftUI
 
+// MARK: - Left Sidebar Panel
+
+/// Entries of the collapsed left rail: the canvas/background configuration and
+/// the zoom item configuration (moved from the former right sidebar).
+enum VideoEditorLeftSidebarPanel: Hashable, CaseIterable {
+  case background
+  case zoom
+}
+
 // MARK: - Editor Action (Undo/Redo Support)
 
 /// Represents an undoable editor action
@@ -379,7 +388,8 @@ final class VideoEditorState: ObservableObject {
   @Published var isSpeedTrackVisible: Bool = true
   @Published var isVideoInfoSidebarVisible: Bool = false
   @Published var isLeftSidebarVisible: Bool = false
-  @Published var isRightSidebarVisible: Bool = false
+  /// Which configuration the collapsed left rail currently expands.
+  @Published var leftSidebarPanel: VideoEditorLeftSidebarPanel = .background
   @Published var zoomTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration {
     didSet {
       let clamped = ZoomCalculator.clampTransitionDuration(zoomTransitionDuration)
@@ -1670,11 +1680,12 @@ final class VideoEditorState: ObservableObject {
     selectedZoomId = id
   }
 
-  /// Select a zoom segment and open its configuration sidebar.
+  /// Select a zoom segment and open its configuration in the left sidebar rail.
   func openZoomConfiguration(id: UUID) {
     guard zoomSegments.contains(where: { $0.id == id }) else { return }
     selectedZoomId = id
-    isRightSidebarVisible = true
+    leftSidebarPanel = .zoom
+    isLeftSidebarVisible = true
   }
 
   /// Toggle zoom enabled state
@@ -2128,9 +2139,15 @@ final class VideoEditorState: ObservableObject {
     isLeftSidebarVisible.toggle()
   }
 
-  /// Toggle the right zoom configuration sidebar visibility.
-  func toggleRightSidebar() {
-    isRightSidebarVisible.toggle()
+  /// Activate a left rail entry. Tapping the visible panel's icon collapses the
+  /// sidebar; tapping another entry expands it with that panel.
+  func selectLeftSidebarPanel(_ panel: VideoEditorLeftSidebarPanel) {
+    if isLeftSidebarVisible && leftSidebarPanel == panel {
+      isLeftSidebarVisible = false
+    } else {
+      leftSidebarPanel = panel
+      isLeftSidebarVisible = true
+    }
   }
 
   // MARK: - Export Settings Methods

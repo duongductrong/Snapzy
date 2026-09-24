@@ -1,32 +1,29 @@
 //
-//  VideoEditorRightSidebar.swift
+//  VideoEditorLeftSidebar.swift
 //  Snapzy
 //
-//  Sidebars for video editor background controls and zoom configuration
+//  Left sidebar panels for video editor background controls and zoom configuration
 //
 
 import SwiftUI
 
-/// Left sidebar for background and canvas settings, matching the Annotate window pattern.
+/// Left sidebar hosting the panel selected in the collapsed rail: background
+/// and canvas settings, or zoom item configuration.
 struct VideoEditorLeftSidebar: View {
-  @ObservedObject var state: VideoEditorState
-
-  var body: some View {
-    VideoBackgroundSidebarView(state: state)
-      .frame(width: 240)
-      .frame(maxHeight: .infinity)
-  }
-}
-
-/// Right sidebar for zoom configuration and future item-specific properties.
-struct VideoEditorRightSidebar: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
   var body: some View {
-    ZoomSettingsContent(state: state, previewImage: previewImage)
-      .frame(width: 320)
-      .frame(maxHeight: .infinity)
+    switch state.leftSidebarPanel {
+    case .background:
+      VideoBackgroundSidebarView(state: state)
+        .frame(width: 240)
+        .frame(maxHeight: .infinity)
+    case .zoom:
+      ZoomSettingsContent(state: state, previewImage: previewImage)
+        .frame(width: 320)
+        .frame(maxHeight: .infinity)
+    }
   }
 }
 

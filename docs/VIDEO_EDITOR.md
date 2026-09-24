@@ -153,10 +153,10 @@ off at each clip's active out-point and rewinds at the end.
 ## Zoom Segments
 
 - `ZoomSegment` (`Models/VideoEditorZoomSegment.swift`): `duration` 0.5–30 s (default 2), `zoomLevel` 1–4x (default 2), `zoomCenter` normalized 0...1, `ZoomType.auto/.manual`, `followSpeed`, `focusMargin`. `ZoomSegment.centered(at:)` places a new segment centered on the playhead; the **Z** key adds one (`VideoEditorMainView` keyboard shortcut).
-- Transitions: ease-in-out cubic (`ZoomCalculator.easeInOutCubic`), `transitionDuration` default 0.4 s clamped to 0.15–0.75 and to 45 % of the segment per edge; the editor-wide `state.zoomTransitionDuration` is user-adjustable in the right sidebar.
+- Transitions: ease-in-out cubic (`ZoomCalculator.easeInOutCubic`), `transitionDuration` default 0.4 s clamped to 0.15–0.75 and to 45 % of the segment per edge; the editor-wide `state.zoomTransitionDuration` is user-adjustable in the left sidebar's Zoom panel.
 - `Services/VideoEditorZoomCalculator.swift` computes per-frame zoom progress/crop rects; shared by preview and the export compositor.
 - UI: zoom timeline track (`VideoEditorZoomTimelineTrack` + `VideoEditorZoomBlockView`), center picker (`VideoEditorZoomCenterPicker`, with presets top-left/top-right/bottom-left/bottom-right/center), live preview overlay (`VideoEditorZoomPreviewOverlay`), settings popover (`VideoEditorZoomSettingsPopover`).
-- Track interaction: a tap on a zoom block activates it for editing (selects it and opens the right sidebar), a double-tap re-opens the configuration, and a drag moves/resizes it. Hit-testing prefers a block's **true-time span** over its padded visual, so narrow stretched blocks never steal activation from a neighbour.
+- Track interaction: a tap on a zoom block activates it for editing (selects it and opens the left sidebar's Zoom panel), a double-tap re-opens the configuration, and a drag moves/resizes it. Hit-testing prefers a block's **true-time span** over its padded visual, so narrow stretched blocks never steal activation from a neighbour.
 - The block is never resolved through a clip's source range. Reordering `[A][B]` to `[B][A]` leaves a zoom at the same structural timeline position; moving it across a seam is a continuous pointer-driven operation with no re-hosting or source-time jump. This also allows a manual zoom to cover an inserted clip.
 - Preview and export project the direct timeline range onto active material only when needed. A trim gap can remove rendered frames from the range without mutating or moving the authored block.
 - Tap-to-add is offered over any active video clip, including inserted clips. The placeholder is hidden over an inactive trim edge, while context-menu/drag editing can still place a range that bridges a trim gap.
@@ -176,9 +176,14 @@ off at each clip's active out-point and rewinds at the end.
 - Live preview is approximate: it drives `AVPlayer.rate` per active segment instead of rebuilding a scaled composition.
 - Video only — the GIF save path does not bake timeline edits, so the speed track is hidden for GIF sources.
 
+## Left Rail and Sidebars
+
+- A slim icon rail (`Components/VideoEditorLeftRail.swift`, `VideoEditorLeftRail`) sits on the leading edge of the workspace and owns the left sidebar: **Background** (`paintpalette`) opens `VideoEditorVideoBackgroundSidebarView` (240 pt), **Zoom** (`plus.magnifyingglass`) opens `ZoomSettingsContent` (320 pt) — the configuration that used to live in the right sidebar. Inactive icons render in secondary gray; the active icon takes the accent color over a soft accent surface. Tapping the visible panel's icon collapses the sidebar; tapping another entry swaps the panel (`state.selectLeftSidebarPanel`).
+- Selecting a zoom block (`state.openZoomConfiguration`) switches the rail to the Zoom panel and expands the sidebar. The toolbar's sidebar toggle (⌘B) collapses/expands whichever panel is active; the former right-sidebar toggle and its ⌘⇧B shortcut were removed with the right sidebar. GIF mode shows neither (GIF editing is dimension-only).
+
 ## Background and Padding
 
-- `BackgroundStyle` (shared `Snapzy/Features/Annotate/Models/AnnotateBackgroundStyle.swift`): `none`, `gradient`, `wallpaper(URL)`, `blurred(URL)`, `solidColor`. Combined with padding, shadow, corner radius, alignment, and aspect controls in the left sidebar (`VideoEditorVideoBackgroundSidebarView`); background changes are undoable.
+- `BackgroundStyle` (shared `Snapzy/Features/Annotate/Models/AnnotateBackgroundStyle.swift`): `none`, `gradient`, `wallpaper(URL)`, `blurred(URL)`, `solidColor`. Combined with padding, shadow, corner radius, alignment, and aspect controls in the left sidebar's Background panel (`VideoEditorVideoBackgroundSidebarView`); background changes are undoable.
 
 ## Audio in the Editor
 
@@ -257,6 +262,8 @@ off at each clip's active out-point and rewinds at the end.
 | `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer |
 | `Snapzy/Features/VideoEditor/Services/GIFResizer.swift` | ImageIO GIF resize preserving loop/delays |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorClipStripView.swift` | The clip sequence strip: select, reorder, trim, split, delete |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorLeftRail.swift` | Collapsed left rail: Background and Zoom configuration entries |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorLeftSidebar.swift` | Left sidebar panels (background canvas settings, zoom item configuration) |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorClipThumbnailCache.swift` | Frame strips for inserted clips, cached per URL |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorBottomBar.swift` | Cancel / cloud-upload / Convert-Save bar |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata consumed by Follow Mouse and multitrack audio |

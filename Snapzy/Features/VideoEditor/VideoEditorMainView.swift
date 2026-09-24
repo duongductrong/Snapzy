@@ -183,27 +183,21 @@ struct VideoEditorMainView: View {
 
   private var videoWorkspaceRow: some View {
     HStack(spacing: 0) {
+      VideoEditorLeftRail(state: state)
+
+      Divider()
+
       if state.isLeftSidebarVisible {
-        VideoEditorLeftSidebar(state: state)
+        VideoEditorLeftSidebar(state: state, previewImage: currentFrameImage)
           .frame(maxHeight: .infinity, alignment: .top)
 
         Divider()
       }
 
       videoPlayerColumn
-
-      if state.isRightSidebarVisible {
-        Divider()
-
-        VideoEditorRightSidebar(
-          state: state,
-          previewImage: currentFrameImage
-        )
-        .frame(maxHeight: .infinity, alignment: .top)
-      }
     }
     .animation(.easeInOut(duration: 0.2), value: state.isLeftSidebarVisible)
-    .animation(.easeInOut(duration: 0.2), value: state.isRightSidebarVisible)
+    .animation(.easeInOut(duration: 0.2), value: state.leftSidebarPanel)
   }
 
   private var videoPlayerColumn: some View {
