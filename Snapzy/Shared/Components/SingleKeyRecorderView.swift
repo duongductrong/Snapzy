@@ -106,19 +106,12 @@ struct SingleKeyRecorderView: View {
       .disabled(!isEnabled)
       .help(isEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
-      ShortcutResetButton(
-        isDisabled: !isEnabled || isRecording || shortcut == defaultShortcut,
-        action: resetToDefault
+      ShortcutOptionsMenuButton(
+        isEnabled: $isEnabled,
+        isDefault: shortcut == defaultShortcut,
+        isBusy: isRecording,
+        onReset: resetToDefault
       )
-
-      HStack(spacing: 6) {
-        Text(isEnabled ? L10n.Common.on : L10n.Common.off)
-          .font(.caption)
-          .foregroundColor(.secondary)
-
-        Toggle("", isOn: $isEnabled)
-          .labelsHidden()
-      }
     }
     .padding(.vertical, 2)
     .opacity(isEnabled ? 1 : 0.62)

@@ -1326,6 +1326,11 @@ nonisolated enum L10n {
       defaultValue: "Disabled",
       comment: "Generic disabled state label"
     )
+    static let options = string(
+      "common.options",
+      defaultValue: "Options",
+      comment: "Generic options menu title"
+    )
     static func withShortcut(_ title: String, _ shortcut: String) -> String {
       L10n.format(
         "common.with-shortcut",

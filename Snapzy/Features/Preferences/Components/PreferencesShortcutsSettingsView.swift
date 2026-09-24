@@ -1317,12 +1317,12 @@ private struct CaptureOverlayShortcutRecorderRow: View {
 
       shortcutRecorderButton
 
-      ShortcutResetButton(
-        isDisabled: !isEnabled.wrappedValue || isRecording || shortcut == defaultShortcut,
-        action: resetToDefault
+      ShortcutOptionsMenuButton(
+        isEnabled: isEnabled,
+        isDefault: shortcut == defaultShortcut,
+        isBusy: isRecording,
+        onReset: resetToDefault
       )
-
-      toggleStatus
     }
     .padding(.vertical, 4)
     .opacity(rowOpacity)
@@ -1355,17 +1355,6 @@ private struct CaptureOverlayShortcutRecorderRow: View {
     .shortcutValidationHighlight(issue: validationIssue)
     .disabled(!isEnabled.wrappedValue)
     .help(isEnabled.wrappedValue ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
-  }
-
-  private var toggleStatus: some View {
-    HStack(spacing: 6) {
-      Text(isEnabled.wrappedValue ? L10n.Common.on : L10n.Common.off)
-        .font(.caption)
-        .foregroundColor(.secondary)
-
-      Toggle("", isOn: isEnabled)
-        .labelsHidden()
-    }
   }
 
   private var rowOpacity: Double {

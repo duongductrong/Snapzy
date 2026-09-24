@@ -90,21 +90,12 @@ struct ShortcutRecorderView: View {
       .disabled(!isInteractionEnabled)
       .help(isInteractionEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
-      ShortcutResetButton(
-        isDisabled: !isInteractionEnabled || isRecording || shortcut == defaultShortcut,
-        action: resetToDefault
+      ShortcutOptionsMenuButton(
+        isEnabled: toggleBinding,
+        isDefault: shortcut == defaultShortcut,
+        isBusy: isRecording,
+        onReset: resetToDefault
       )
-
-      if let toggleBinding {
-        HStack(spacing: 6) {
-          Text(toggleBinding.wrappedValue ? L10n.Common.on : L10n.Common.off)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
-          Toggle("", isOn: toggleBinding)
-            .labelsHidden()
-        }
-      }
     }
     .padding(.vertical, 4)
     .opacity(rowOpacity)
@@ -214,21 +205,39 @@ struct EmptyShortcutCTAView: View {
   }
 }
 
-struct ShortcutResetButton: View {
-  let isDisabled: Bool
-  let action: () -> Void
+/// Compact gear menu combining per-row shortcut options: enable/disable + reset to default.
+/// Stays interactive while the row's shortcut is disabled so it can be re-enabled.
+struct ShortcutOptionsMenuButton: View {
+  /// nil when the row has no enable/disable concept (menu then only offers reset)
+  var isEnabled: Binding<Bool>? = nil
+  let isDefault: Bool
+  let isBusy: Bool
+  let onReset: () -> Void
 
   var body: some View {
-    Button(action: action) {
-      Image(systemName: "arrow.counterclockwise")
+    Menu {
+      if let isEnabled {
+        Toggle(L10n.Common.enabled, isOn: isEnabled)
+        Divider()
+      }
+      Button {
+        onReset()
+      } label: {
+        Label(L10n.Common.resetToDefault, systemImage: "arrow.counterclockwise")
+      }
+      .disabled(isDefault)
+    } label: {
+      Image(systemName: "gearshape")
         .font(.system(size: 12, weight: .semibold))
-        .frame(width: 18, height: 18)
         .foregroundColor(.secondary)
+        .contentShape(Rectangle())
     }
-    .buttonStyle(.borderless)
-    .disabled(isDisabled)
-    .help(L10n.Common.resetToDefault)
-    .accessibilityLabel(L10n.Common.resetToDefault)
+    .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
+    .fixedSize()
+    .disabled(isBusy)
+    .help(L10n.Common.options)
+    .accessibilityLabel(L10n.Common.options)
   }
 }
 
