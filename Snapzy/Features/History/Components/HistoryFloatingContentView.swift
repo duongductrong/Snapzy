@@ -93,11 +93,17 @@ struct HistoryFloatingContentView: View {
   var body: some View {
     content
       .frame(width: basePanelSize.width, height: basePanelSize.height)
-      .background(HistoryBackdropView(style: backgroundStyle))
+      .background(
+        HistoryBackdropView(
+          style: backgroundStyle,
+          cornerRadius: HistoryFloatingLayout.baseCornerRadius(for: manager.presentationMode),
+          isFloatingPanel: true
+        )
+      )
       .overlay(panelBorder)
       .scaleEffect(resolvedPanelScale)
       .frame(width: scaledPanelSize.width, height: scaledPanelSize.height)
-      .preferredColorScheme(themeManager.systemAppearance)
+      .preferredColorScheme(backgroundStyle == .hud ? .dark : themeManager.systemAppearance)
       .onAppear {
         syncSelectionIfNeeded()
         syncExpandedGridPresentation(for: manager.presentationMode)
@@ -156,14 +162,30 @@ struct HistoryFloatingContentView: View {
     )
   }
 
+  @ViewBuilder
   private var panelBorder: some View {
-    panelShape
-      .strokeBorder(
-        colorScheme == .dark
-          ? Color.white.opacity(0.1)
-          : Color.white.opacity(0.72),
-        lineWidth: 1
-      )
+    if backgroundStyle == .hud {
+      // SnapzyGlassWindowBackdrop already owns onboarding's 0.5pt border.
+      EmptyView()
+    } else {
+      panelShape
+        .strokeBorder(
+          LinearGradient(
+            colors: colorScheme == .dark
+              ? [
+                Color.white.opacity(0.20),
+                Color.white.opacity(0.05),
+              ]
+              : [
+                Color.white.opacity(0.85),
+                Color.white.opacity(0.42),
+              ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+          ),
+          lineWidth: 1
+        )
+    }
   }
 
   // MARK: - Compact
@@ -617,7 +639,7 @@ struct HistoryFloatingContentView: View {
       .padding(.horizontal, horizontalPadding)
       .padding(.vertical, verticalPadding)
       .frame(minWidth: minWidth)
-      .liquidGlassControl(isActive: isSelected, in: Capsule(style: .continuous))
+      .liquidGlassControl(isActive: isSelected, in: Capsule(style: .continuous), showsRestingSurface: true)
     }
     .buttonStyle(.plain)
   }
@@ -634,7 +656,7 @@ struct HistoryFloatingContentView: View {
         .font(.system(size: size <= 34 ? 10.5 : 11, weight: .semibold))
         .frame(width: size, height: size)
         .foregroundColor(isActive ? LiquidGlassTokens.inkOnAccent : LiquidGlassTokens.inkBody)
-        .liquidGlassControl(isActive: isActive, in: Circle())
+        .liquidGlassControl(isActive: isActive, in: Circle(), showsRestingSurface: true)
     }
     .buttonStyle(.plain)
     .help(help)

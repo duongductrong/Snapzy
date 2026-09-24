@@ -248,7 +248,12 @@ private struct HistoryBackgroundStyleThumbnail: View {
   let isSelected: Bool
 
   var body: some View {
-    HistoryBackdropView(style: style, cornerRadius: Radius.tile, compact: true)
+    HistoryBackdropView(
+      style: style,
+      cornerRadius: Radius.tile,
+      compact: true,
+      isFloatingPanel: style == .hud
+    )
       .frame(width: 72, height: 52)
       .clipShape(Radius.rect(Radius.tile))
       .overlay(
