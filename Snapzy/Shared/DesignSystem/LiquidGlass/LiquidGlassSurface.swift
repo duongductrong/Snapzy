@@ -173,6 +173,10 @@ extension View {
   /// Pass `isVisible: false` to keep the surface in the hierarchy but render nothing — that maps
   /// to `Glass.identity` on native, which avoids the conditional insert/remove (and its implicit
   /// `.opacity` transition) that would otherwise sever backdrop sampling.
+  /// Use `nativeGlassTint` when the native macOS 26+ glass needs a tint while the legacy path
+  /// should retain its substrate/refraction composite.
+  /// `highlight` controls the legacy hairline. Native glass already has a refractive edge; pass
+  /// `nativeHighlight` only when a surface deliberately needs an additional matching hairline.
   func liquidGlassSurface<S: InsettableShape>(
     shape: S,
     isVisible: Bool = true,
@@ -183,7 +187,9 @@ extension View {
     layer: LiquidGlassLayer = .control,
     withRimLighting: Bool = false,
     isInteractive: Bool = false,
-    glassTint: Color? = nil
+    glassTint: Color? = nil,
+    nativeGlassTint: Color? = nil,
+    nativeHighlight: LiquidGlassHighlight? = nil
   ) -> some View {
     modifier(LiquidGlassSurfaceModifier(
       shape: shape,
@@ -195,7 +201,9 @@ extension View {
       layer: layer,
       withRimLighting: withRimLighting,
       isInteractive: isInteractive,
-      glassTint: glassTint
+      glassTint: glassTint,
+      nativeGlassTint: nativeGlassTint,
+      nativeHighlight: nativeHighlight
     ))
   }
 
@@ -209,7 +217,9 @@ extension View {
     layer: LiquidGlassLayer = .control,
     withRimLighting: Bool = false,
     isInteractive: Bool = false,
-    glassTint: Color? = nil
+    glassTint: Color? = nil,
+    nativeGlassTint: Color? = nil,
+    nativeHighlight: LiquidGlassHighlight? = nil
   ) -> some View {
     liquidGlassSurface(
       shape: shape,
@@ -220,7 +230,9 @@ extension View {
       layer: layer,
       withRimLighting: withRimLighting,
       isInteractive: isInteractive,
-      glassTint: glassTint
+      glassTint: glassTint,
+      nativeGlassTint: nativeGlassTint,
+      nativeHighlight: nativeHighlight
     )
     .contentShape(shape)
   }
@@ -237,8 +249,11 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
   let withRimLighting: Bool
   let isInteractive: Bool
   let glassTint: Color?
+  let nativeGlassTint: Color?
+  let nativeHighlight: LiquidGlassHighlight?
 
   @Environment(\.liquidGlassRenderMode) private var renderMode
+  @Environment(\.liquidGlassTuning) private var tuning
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private var usesNativeGlass: Bool {
@@ -250,14 +265,27 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
     let useNative = usesNativeGlass
 
     if #available(macOS 26.0, *), useNative {
-      content.glassEffect(
-        LiquidGlassNativeStyle.glass(
-          isVisible: isVisible,
-          isInteractive: isInteractive,
-          tint: glassTint
-        ),
-        in: shape
-      )
+      content
+        .glassEffect(
+          LiquidGlassNativeStyle.glass(
+            isVisible: isVisible,
+            isInteractive: isInteractive,
+            tint: nativeGlassTint ?? glassTint
+          ),
+          in: shape
+        )
+        .overlay {
+          if isVisible, let stops = resolvedNativeHighlightStops {
+            shape.strokeBorder(
+              LinearGradient(
+                colors: [stops.top, stops.bottom],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+              ),
+              lineWidth: LiquidGlassTokens.specularLineWidth
+            )
+          }
+        }
     } else if isVisible {
       content.background {
         LiquidGlassSurface(
@@ -274,6 +302,17 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
     } else {
       content
     }
+  }
+
+  private var resolvedNativeHighlightStops: (top: Color, bottom: Color)? {
+    guard let nativeHighlight, tuning?.isSpecularEnabled ?? true else { return nil }
+    if let tuning {
+      return (
+        Color.white.opacity(tuning.specularTopOpacity),
+        Color.white.opacity(tuning.specularBottomOpacity)
+      )
+    }
+    return nativeHighlight.stops
   }
 }
 

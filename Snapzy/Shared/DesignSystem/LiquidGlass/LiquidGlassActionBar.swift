@@ -95,7 +95,9 @@ private struct LiquidGlassBarSegment: View {
         }
 
         Text(title)
-          .font(.system(size: 12, weight: (isHovered && isEnabled) ? .semibold : .medium))
+          // Keep the label's advance width stable on the legacy path; hover feedback belongs to
+          // the glass surface and ink tint, not to a typographic re-layout.
+          .font(.system(size: 12, weight: .medium))
           .foregroundStyle(
             !isEnabled
               ? LiquidGlassTokens.inkFaint
