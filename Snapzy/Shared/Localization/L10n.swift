@@ -4356,8 +4356,8 @@ nonisolated enum L10n {
     )
     static let recorderHint = string(
       "preferences-shortcuts.recorder-hint",
-      defaultValue: "Click a shortcut button to record new keys. Use Backspace/Delete while recording to clear keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.",
-      comment: "Hint text below editable shortcut recorder rows"
+      defaultValue: "Click a shortcut to record new keys. Press Backspace/Delete while recording to clear it. Press Esc to cancel.",
+      comment: "Hint explaining how shortcut recording works"
     )
     static let setShortcut = string(
       "preferences-shortcuts.set-shortcut",
@@ -4401,8 +4401,8 @@ nonisolated enum L10n {
     )
     static let singleKeyHint = string(
       "preferences-shortcuts.single-key-hint",
-      defaultValue: "Click to record. Use Backspace/Delete while recording to clear keys. Use the row toggle to turn a shortcut off. Esc to cancel.",
-      comment: "Hint text below single-key shortcut rows"
+      defaultValue: "Click to record. Press Backspace/Delete while recording to clear it. Press Esc to cancel.",
+      comment: "Hint explaining how single-key shortcut recording works"
     )
     static let referenceDescription = string(
       "preferences-shortcuts.reference-description",

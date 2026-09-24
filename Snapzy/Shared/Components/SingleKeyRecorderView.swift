@@ -91,14 +91,11 @@ struct SingleKeyRecorderView: View {
         startRecording()
       } label: {
         if isRecording {
-          Text("...")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.accentColor)
-            .frame(minWidth: 40)
+          KeyCapRecordingView(minWidth: 72)
         } else if let key = shortcut {
           KeyCapView(symbol: String(key).uppercased())
         } else {
-          EmptyShortcutCTAView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
+          KeyCapPlaceholderView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
         }
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
@@ -113,7 +110,7 @@ struct SingleKeyRecorderView: View {
         onReset: resetToDefault
       )
     }
-    .padding(.vertical, 2)
+    .padding(.vertical, 4)
     .opacity(isEnabled ? 1 : 0.62)
     .onChange(of: isEnabled) { newValue in
       if !newValue {

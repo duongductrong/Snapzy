@@ -54,20 +54,9 @@ struct ShortcutRecorderView: View {
         .foregroundColor(.secondary)
         .frame(width: 28)
 
-      VStack(alignment: .leading, spacing: 2) {
-        Text(label)
-          .fontWeight(.medium)
-        if !description.isEmpty {
-          Text(description)
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
-        if let footnote {
-          Text(footnote)
-            .font(.caption2)
-            .foregroundColor(.secondary)
-        }
-      }
+      Text(label)
+        .fontWeight(.medium)
+        .help(rowHelpText)
 
       Spacer()
 
@@ -75,14 +64,11 @@ struct ShortcutRecorderView: View {
         startRecording()
       } label: {
         if isRecording {
-          Text(L10n.ShortcutRecorder.pressKeys)
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.accentColor)
-            .frame(minWidth: 100)
+          KeyCapRecordingView(minWidth: 100)
         } else if let shortcut {
           KeyCapGroupView(parts: shortcut.displayParts)
         } else {
-          EmptyShortcutCTAView(title: L10n.PreferencesShortcuts.setShortcut)
+          KeyCapPlaceholderView(title: L10n.PreferencesShortcuts.setShortcut)
         }
       }
       .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
@@ -115,6 +101,14 @@ struct ShortcutRecorderView: View {
       get: { isEnabled.wrappedValue },
       set: { isEnabled.wrappedValue = $0 }
     )
+  }
+
+  /// Description + footnote folded into a hover tooltip instead of inline text.
+  private var rowHelpText: String {
+    var parts: [String] = []
+    if !description.isEmpty { parts.append(description) }
+    if let footnote { parts.append(footnote) }
+    return parts.joined(separator: "\n")
   }
 
   private var rowOpacity: Double {
@@ -189,22 +183,6 @@ struct ShortcutRecorderView: View {
   }
 }
 
-struct EmptyShortcutCTAView: View {
-  let title: String
-  var minWidth: CGFloat = 104
-
-  var body: some View {
-    HStack(spacing: 5) {
-      Image(systemName: "return")
-        .font(.system(size: 11, weight: .semibold))
-      Text(title)
-        .font(.system(size: 12, weight: .medium))
-    }
-    .foregroundColor(.accentColor)
-    .frame(minWidth: minWidth)
-  }
-}
-
 /// Compact gear menu combining per-row shortcut options: enable/disable + reset to default.
 /// Stays interactive while the row's shortcut is disabled so it can be re-enabled.
 struct ShortcutOptionsMenuButton: View {
@@ -244,12 +222,13 @@ struct ShortcutOptionsMenuButton: View {
 /// Geometry shared by the recorder field, its validation highlight and the legacy button style.
 /// All three draw the same rectangle on top of each other, so they must agree on the radius.
 enum ShortcutRecorderMetrics {
-  /// A `KeyCapView` is 22pt tall and the styles add 4pt of vertical padding either side.
-  static let fieldHeight: CGFloat = 30
+  /// A `KeyCapView` is 26pt tall and the styles add 4pt of vertical padding either side.
+  static let fieldHeight: CGFloat = 34
   static var fieldRadius: CGFloat { Radius.control(forHeight: fieldHeight) }
 }
 
-/// Transparent button style for keycap-based shortcut recorder; keycaps provide visual affordance
+/// Transparent button style for keycap-based shortcut recorder; the keycap pills themselves
+/// carry the resting and recording visuals, this only adds press feedback.
 struct ShortcutKeycapButtonStyle: ButtonStyle {
   let isRecording: Bool
   var horizontalPadding: CGFloat = 6
@@ -259,17 +238,6 @@ struct ShortcutKeycapButtonStyle: ButtonStyle {
     configuration.label
       .padding(.horizontal, horizontalPadding)
       .padding(.vertical, verticalPadding)
-      .background(
-        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
-          .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
-      )
-      .overlay(
-        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
-          .strokeBorder(
-            isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
-            lineWidth: 1
-          )
-      )
       .contentShape(Radius.rect(ShortcutRecorderMetrics.fieldRadius))
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
@@ -418,17 +386,6 @@ struct ShortcutButtonStyle: ButtonStyle {
     configuration.label
       .padding(.horizontal, 6)
       .padding(.vertical, 4)
-      .background(
-        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
-          .fill(isRecording ? Color.accentColor.opacity(0.08) : Color.clear)
-      )
-      .overlay(
-        Radius.rect(ShortcutRecorderMetrics.fieldRadius)
-          .strokeBorder(
-            isRecording ? Color.accentColor.opacity(0.5) : Color.clear,
-            lineWidth: 1
-          )
-      )
       .contentShape(Radius.rect(ShortcutRecorderMetrics.fieldRadius))
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)
