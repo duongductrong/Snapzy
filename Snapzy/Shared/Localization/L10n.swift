@@ -6713,11 +6713,6 @@ nonisolated enum L10n {
       defaultValue: "Enable Zoom",
       comment: "Context menu label for enabling a zoom segment"
     )
-    static let editZoom = string(
-      "video-editor.edit-zoom",
-      defaultValue: "Edit Zoom",
-      comment: "Context menu label for editing a zoom segment"
-    )
     static let deleteZoom = string(
       "video-editor.delete-zoom",
       defaultValue: "Delete Zoom",
@@ -6932,29 +6927,10 @@ nonisolated enum L10n {
       defaultValue: "Save as Copy",
       comment: "Button title for saving an edited video as a copy"
     )
-    static let fileAlreadyExistsTitle = string(
-      "video-editor.file-already-exists-title",
-      defaultValue: "File Already Exists",
-      comment: "Alert title shown when a destination file already exists"
-    )
-    static func fileAlreadyExistsMessage(_ filename: String) -> String {
-      format(
-        "video-editor.file-already-exists-message",
-        defaultValue: "A file named \"%@\" already exists in the destination folder.",
-        comment: "Alert message shown when a destination file already exists. %@ is the file name.",
-        filename
-      )
-    }
-
     static let saveGIFTitle = string(
       "video-editor.save-gif-title",
       defaultValue: "Save GIF",
       comment: "Save panel title for GIF export"
-    )
-    static let saveVideoTitle = string(
-      "video-editor.save-video-title",
-      defaultValue: "Save Video",
-      comment: "Save panel title for video export"
     )
     static let chooseWhereToSaveFile = string(
       "video-editor.choose-where-to-save-file",
@@ -7604,15 +7580,6 @@ nonisolated enum L10n {
       defaultValue: "Stop",
       comment: "Scrolling capture HUD button title for stopping automatic scrolling"
     )
-    static func sectionsCaptured(_ count: Int) -> String {
-      format(
-        "scrolling-capture.sections-captured",
-        defaultValue: "%d section(s) captured",
-        comment: "Summary shown in the scrolling capture HUD. %d is the number of captured sections.",
-        count
-      )
-    }
-
     static let captionStartCaptureToLockFirstFrame = string(
       "scrolling-capture.caption-start-capture-to-lock-first-frame",
       defaultValue: "Start Capture to lock the first frame",
