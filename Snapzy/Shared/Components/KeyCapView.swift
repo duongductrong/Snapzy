@@ -7,45 +7,61 @@
 
 import SwiftUI
 
-/// Renders a single keyboard key as a raised keycap pill
+/// Renders a single keyboard key as a compact glass keycap.
 struct KeyCapView: View {
   let symbol: String
   var fontSize: CGFloat = 12
 
   var body: some View {
-    Text(symbol)
-      .font(.system(size: fontSize, weight: .medium, design: .rounded))
-      .foregroundColor(.primary)
+    keyLabel
       .frame(minWidth: 24, minHeight: 22)
-      .padding(.horizontal, 6)
-      .background(
-        Radius.rect(Radius.ornament)
-          .fill(Color(nsColor: .controlBackgroundColor))
-          .shadow(color: .black.opacity(0.06), radius: 0.5, x: 0, y: 0.5)
+      .liquidGlassSurface(
+        shape: Radius.rect(Radius.ornament),
+        substrate: LiquidGlassTokens.controlSubstrateResting,
+        tint: 0.02,
+        highlight: .specular
       )
-      .overlay(
-        Radius.rect(Radius.ornament)
-          .strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.5)
-      )
+  }
+
+  private var keyLabel: some View {
+    Text(symbol)
+      .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+      .foregroundStyle(LiquidGlassTokens.inkPrimary)
+      .lineLimit(1)
   }
 }
 
-/// Renders an array of key parts as keycap pills separated by "+"
+/// Renders a shortcut as one continuous badge with lightly etched key separators.
 struct KeyCapGroupView: View {
   let parts: [String]
   var fontSize: CGFloat = 12
 
   var body: some View {
-    HStack(spacing: 4) {
+    HStack(spacing: 0) {
       ForEach(Array(parts.enumerated()), id: \.offset) { index, part in
         if index > 0 {
           Text("+")
-            .font(.system(size: 10, weight: .regular))
-            .foregroundColor(.secondary)
+            .font(.system(size: 9, weight: .semibold, design: .rounded))
+            .foregroundStyle(LiquidGlassTokens.inkMuted)
+            .frame(width: 8, height: 14)
         }
-        KeyCapView(symbol: part, fontSize: fontSize)
+
+        Text(part)
+          .font(.system(size: fontSize, weight: .semibold, design: .rounded))
+          .foregroundStyle(LiquidGlassTokens.inkPrimary)
+          .lineLimit(1)
+          .frame(minWidth: 20, minHeight: 18)
       }
     }
+    .padding(.horizontal, 4)
+    .padding(.vertical, 2)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: LiquidGlassTokens.controlSubstrateResting,
+      tint: 0.02,
+      highlight: .specular
+    )
+    .fixedSize(horizontal: true, vertical: false)
   }
 }
 
