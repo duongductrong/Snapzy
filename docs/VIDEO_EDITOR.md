@@ -64,7 +64,7 @@ flowchart TD
 ## State and Playback
 
 - `VideoEditorState` (`VideoEditorState.swift`) is the central model: asset, trim range, zoom/speed segments, background, export settings, undo stacks. `VideoEditorPlaybackState` holds playhead/playing/scrubbing.
-- Playback position comes from an `AVPlayer` periodic time observer at 1/30 s; an item-end observer loops playback within the trim range.
+- Playback position comes from an `AVPlayer` time observer, limited to roughly 30 UI updates per wall second even during fast playback. An item-end observer handles the source asset's end. Space is routed by `VideoEditorWindow` through the same Play/Pause action as the transport button, while text fields retain normal Space input.
 - When a Snapzy recording has an editor audio source sidecar, the state's asset URL is swapped to the multitrack sidecar (`editorAssetURL(for:metadata:)`) while save/replace keeps targeting the user-facing compatible file.
 
 ## Reopen and Continue Editing
@@ -173,7 +173,8 @@ off at each clip's active out-point and rewinds at the end.
 - `TimelineSequenceMap` (`Services/VideoEditorTimelineTimeMap.swift`) is the single playable-sequence↔output time-mapping authority reused by export, preview, and the file-size estimate. Speed segments are authored in structural timeline time and projected onto active material only for playback/export, so cuts, trims, inserts, and reorder do not move the block.
 - The speed track mirrors the zoom track's interaction model: one direct timeline block per segment, pointer-driven drags that remain continuous across clip seams, and tap-to-add available on every active video clip (see [Zoom Segments](#zoom-segments)).
 - Export applies `scaleTimeRange` to composition video + audio tracks in reverse segment order, remaps zoom times and auto-focus keyframes into the scaled timeline, and preserves audio pitch via `audioTimePitchAlgorithm = .spectral`.
-- Live preview is approximate: it drives `AVPlayer.rate` per active segment instead of rebuilding a scaled composition.
+- With a speed track, preview builds the same speed-scaled clip sequence used by export and plays that composition at 1×. The playhead maps composition output time back to the structural timeline. This keeps the video after a 4×/8× block continuous instead of depending on an `AVPlayer.rate` callback at the edge.
+- A user seek or clip handoff parks the player until the destination position lands; Play/Pause intent is preserved independently of delayed UI callbacks. Clip or speed edits rebuild the preview composition before playback resumes.
 - Video only — the GIF save path does not bake timeline edits, so the speed track is hidden for GIF sources.
 
 ## Left Rail and Sidebars

@@ -232,6 +232,9 @@ struct SpeedTimelineTrack: View {
     .contextMenu {
       trackContextMenu
     }
+    .onDisappear {
+      if dragMode != .none { endDrag() }
+    }
   }
 
   // MARK: - Cursor
@@ -317,6 +320,7 @@ struct SpeedTimelineTrack: View {
     }
 
     state.selectSpeed(id: segment.id)
+    state.beginSpeedTrackDrag()
   }
 
   private func continueDrag(at location: CGPoint) {
@@ -373,6 +377,7 @@ struct SpeedTimelineTrack: View {
     if let dragPreviewSegment {
       commitDragPreviewIfNeeded(dragPreviewSegment, force: true)
     }
+    state.endSpeedTrackDrag()
     dragMode = .none
     dragSegmentId = nil
     dragPreviewSegment = nil

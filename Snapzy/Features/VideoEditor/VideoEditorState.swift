@@ -19,6 +19,214 @@ enum VideoEditorLeftSidebarPanel: Hashable, CaseIterable {
   case zoom
 }
 
+/// AVPlayer callbacks and schedule access are serialized on `queue`. Observer
+/// registration and removal happen on the owning editor actor.
+private nonisolated final class VideoEditorPreviewRateController: @unchecked Sendable {
+  struct Span: Sendable {
+    let start: TimeInterval
+    let end: TimeInterval
+    let rate: Float
+  }
+
+  private let player: AVPlayer
+  private let queue = DispatchQueue(label: "com.snapzy.video-editor.preview-rate", qos: .userInitiated)
+  private var spans: [Span] = []
+  private var item: AVPlayerItem?
+  private var enabled = false
+  private var wantsPlayback = false
+  private var generation = 0
+  private var boundaryObserver: Any?
+  private var periodicObserver: Any?
+  private var seekLandingTimer: DispatchSourceTimer?
+  private var pendingSeekTarget: TimeInterval?
+  private var seekLandingReady = false
+
+  init(player: AVPlayer) {
+    self.player = player
+  }
+
+  @discardableResult
+  func configure(spans: [Span], item: AVPlayerItem?, enabled: Bool, wantsPlayback: Bool) -> Int {
+    let currentGeneration = queue.sync {
+      generation += 1
+      self.spans = spans
+      self.item = item
+      self.enabled = enabled
+      self.wantsPlayback = wantsPlayback
+      self.seekLandingTimer?.cancel()
+      self.seekLandingTimer = nil
+      self.pendingSeekTarget = nil
+      self.seekLandingReady = false
+      return generation
+    }
+    removeObservers()
+
+    if item != nil, spans.contains(where: { abs($0.rate - 1) > 0.001 }) {
+      let boundaries = zip(spans, spans.dropFirst()).compactMap { previous, next -> NSValue? in
+        guard abs(previous.rate - next.rate) > 0.001 else { return nil }
+        return NSValue(time: CMTime(seconds: next.start, preferredTimescale: 600))
+      }
+      if !boundaries.isEmpty {
+        boundaryObserver = player.addBoundaryTimeObserver(
+          forTimes: boundaries,
+          queue: queue
+        ) { [weak self] in
+          self?.reconcile(expectedGeneration: currentGeneration)
+        }
+      }
+
+      // AVPlayer may omit an individual boundary callback. The separate
+      // periodic observer reads the current item position as a fallback.
+      periodicObserver = player.addPeriodicTimeObserver(
+        forInterval: CMTime(seconds: 0.1, preferredTimescale: 600),
+        queue: queue
+      ) { [weak self] _ in
+        self?.reconcile(expectedGeneration: currentGeneration)
+      }
+    }
+
+    queue.async { [weak self] in
+      self?.reconcile(expectedGeneration: currentGeneration)
+    }
+    return currentGeneration
+  }
+
+  func setEnabled(_ enabled: Bool) {
+    let currentGeneration = queue.sync {
+      self.enabled = enabled
+      return generation
+    }
+    if enabled {
+      queue.async { [weak self] in
+        self?.reconcile(expectedGeneration: currentGeneration)
+      }
+    }
+  }
+
+  func setPlaybackIntent(_ wantsPlayback: Bool) {
+    let currentGeneration = queue.sync {
+      self.wantsPlayback = wantsPlayback
+      if !wantsPlayback { enabled = false }
+      return generation
+    }
+    if wantsPlayback {
+      queue.async { [weak self] in
+        guard let self, self.generation == currentGeneration, self.seekLandingReady else { return }
+        self.startPlaybackAtCurrentTime()
+      }
+    }
+  }
+
+  /// Keep the old item parked while a seek is in flight. AVPlayer can land a seek
+  /// before its completion is delivered on the busy main queue, so check the
+  /// actual item position on our own serial queue as well.
+  func awaitSeekLanding(at sourceTime: TimeInterval, ifGeneration expectedGeneration: Int) {
+    queue.sync {
+      guard generation == expectedGeneration else { return }
+      pendingSeekTarget = sourceTime
+      seekLandingReady = false
+      seekLandingTimer?.cancel()
+      let timer = DispatchSource.makeTimerSource(queue: queue)
+      timer.schedule(deadline: .now() + .milliseconds(5), repeating: .milliseconds(5))
+      timer.setEventHandler { [weak self] in
+        self?.checkSeekLanding(expectedGeneration: expectedGeneration)
+      }
+      seekLandingTimer = timer
+      timer.resume()
+    }
+  }
+
+  /// A newer seek changes the generation; Pause clears intent.
+  func resumeAfterSeek(ifGeneration expectedGeneration: Int) {
+    queue.async { [weak self] in
+      guard let self, self.generation == expectedGeneration else { return }
+      self.finishSeekLanding()
+    }
+  }
+
+  func invalidate() {
+    queue.sync {
+      generation += 1
+      enabled = false
+      wantsPlayback = false
+      seekLandingTimer?.cancel()
+      seekLandingTimer = nil
+      pendingSeekTarget = nil
+      seekLandingReady = false
+    }
+    removeObservers()
+  }
+
+  private func removeObservers() {
+    if let boundaryObserver {
+      player.removeTimeObserver(boundaryObserver)
+      self.boundaryObserver = nil
+    }
+    if let periodicObserver {
+      player.removeTimeObserver(periodicObserver)
+      self.periodicObserver = nil
+    }
+  }
+
+  private func checkSeekLanding(expectedGeneration: Int) {
+    guard generation == expectedGeneration,
+          let pendingSeekTarget,
+          let item,
+          player.currentItem === item
+    else { return }
+    let time = player.currentTime()
+    guard time.isNumeric,
+          abs(CMTimeGetSeconds(time) - pendingSeekTarget) <= 0.05
+    else { return }
+    finishSeekLanding()
+  }
+
+  private func finishSeekLanding() {
+    seekLandingTimer?.cancel()
+    seekLandingTimer = nil
+    pendingSeekTarget = nil
+    seekLandingReady = true
+    if wantsPlayback { startPlaybackAtCurrentTime() }
+  }
+
+  private func startPlaybackAtCurrentTime() {
+    guard let item, player.currentItem === item else { return }
+    let time = player.currentTime()
+    guard time.isNumeric else { return }
+    enabled = true
+    let sourceTime = CMTimeGetSeconds(time)
+    let targetRate = spans.first(where: {
+      sourceTime >= $0.start && sourceTime < $0.end
+    })?.rate ?? 1
+    player.defaultRate = targetRate
+    if player.rate == 0 {
+      player.play()
+    } else if abs(player.rate - targetRate) > 0.001 {
+      player.rate = targetRate
+    }
+  }
+
+  private func reconcile(expectedGeneration: Int) {
+    guard generation == expectedGeneration,
+          enabled,
+          let item,
+          player.currentItem === item
+    else { return }
+    let time = player.currentTime()
+    guard time.isNumeric else { return }
+    let sourceTime = CMTimeGetSeconds(time)
+    let targetRate = spans.first(where: { sourceTime >= $0.start && sourceTime < $0.end })?.rate ?? 1
+    if abs(player.defaultRate - targetRate) > 0.001 {
+      player.defaultRate = targetRate
+    }
+    // A zero rate may be a user pause or AVPlayer waiting for media. This
+    // observer changes speed only while the transport is already moving.
+    if player.rate > 0, abs(player.rate - targetRate) > 0.001 {
+      player.rate = targetRate
+    }
+  }
+}
+
 // MARK: - Editor Action (Undo/Redo Support)
 
 /// Represents an undoable editor action
@@ -176,7 +384,10 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Speed Segments (Timelapse)
 
   @Published var speedSegments: [SpeedSegment] = [] {
-    didSet { cachedSequenceMap = nil }
+    didSet {
+      cachedSequenceMap = nil
+      scheduleSpeedPreviewRebuild()
+    }
   }
 
   @Published var selectedSpeedId: UUID? = nil
@@ -188,7 +399,10 @@ final class VideoEditorState: ObservableObject {
   /// Seeded with one primary clip spanning the whole asset. Splitting divides a clip,
   /// deleting ripples the rest left, and an inserted video is just another element.
   @Published private(set) var clips: [TimelineClip] = [] {
-    didSet { invalidateTimelineCaches() }
+    didSet {
+      invalidateTimelineCaches()
+      scheduleSpeedPreviewRebuild()
+    }
   }
 
   @Published private(set) var selectedClipId: UUID? = nil
@@ -355,11 +569,13 @@ final class VideoEditorState: ObservableObject {
     player.volume = 1.0
     let settingsSnapshot = exportSettings
     let audioTrackRolesSnapshot = audioTrackRoles
-    let assetSnapshot = asset
+    let itemSnapshot = player.currentItem
+    let assetSnapshot = itemSnapshot?.asset ?? asset
     Task { @MainActor [weak self] in
       do {
         let audioTracks = try await assetSnapshot.loadTracks(withMediaType: .audio)
         guard let self,
+              player.currentItem === itemSnapshot,
               exportSettings == settingsSnapshot,
               exportSettings.audioMode == .custom
         else { return }
@@ -483,6 +699,9 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Private
 
   private var timeObserver: Any?
+  private var timeObserverGeneration = 0
+  private var lastTimeObserverUpdate: TimeInterval = 0
+  private var previewRateController: VideoEditorPreviewRateController?
   private var endObserver: NSObjectProtocol?
   private var cancellables = Set<AnyCancellable>()
   private var autoFocusPathInputs: [UUID: AutoFocusPathInput] = [:]
@@ -620,6 +839,7 @@ final class VideoEditorState: ObservableObject {
     let item = AVPlayerItem(asset: asset)
     primaryPlayerItem = item
     player = AVPlayer(playerItem: item)
+    previewRateController = VideoEditorPreviewRateController(player: player)
     zoomTransitionDuration = Self.loadZoomTransitionDuration()
     recordingMetadata = initialMetadata
 
@@ -698,6 +918,8 @@ final class VideoEditorState: ObservableObject {
   }
 
   deinit {
+    speedPreviewBuildTask?.cancel()
+    previewRateController?.invalidate()
     if let observer = timeObserver {
       player.removeTimeObserver(observer)
     }
@@ -901,15 +1123,40 @@ final class VideoEditorState: ObservableObject {
   private var activeItemSource: TimelineClip.Source?
   /// Clip currently feeding the player, so a tick knows which placement it is in.
   private var activeClipId: UUID?
+  /// Token for the latest user/internal seek, used to ignore stale item-time ticks.
+  private var internalSeekToken: UUID?
   /// True while a handoff seek into the next clip is still completing. Ticks and
   /// item-end notifications delivered in that window still reflect the previous
   /// clip's position, so they must be dropped instead of acted on.
   private var handoffSeekInFlight = false
+  /// Identifies the active handoff so a newer user seek can supersede it safely.
+  private var handoffSeekToken: UUID?
+  /// Speed preview uses the same scaled media timeline as export, played at 1x.
+  /// This avoids AVPlayer's delayed rate change skipping frames after a fast span.
+  private var speedPreviewItem: AVPlayerItem?
+  private var speedPreviewIsPreparing = false
+  private var speedPreviewBuildFailed = false
+  private var speedPreviewRevision = 0
+  private var speedPreviewBuildTask: Task<Void, Never>?
+  private var speedTrackDragInProgress = false
+  private var speedTrackDragDidChange = false
   /// Pre-drag snapshot for clip trim gestures (one undo entry per gesture).
   private var clipTrimOriginal: TimelineClip?
   private let primaryPlayerItem: AVPlayerItem
 
   func play() {
+    if speedPreviewBuildFailed {
+      // A transient source/read error should not leave Play disabled forever.
+      playbackState.setPlaying(true)
+      scheduleSpeedPreviewRebuild()
+      return
+    }
+    if !speedPreviewIsPreparing,
+       internalSeekToken == nil,
+       !handoffSeekInFlight,
+       let playerTime = currentPlayerTimelineTime() {
+      playbackState.setCurrentTime(playerTime)
+    }
     let playableTime = normalizedTimelineTime(currentTime)
     if CMTimeCompare(playableTime, currentTime) != 0 {
       playbackState.setCurrentTime(playableTime)
@@ -920,8 +1167,17 @@ final class VideoEditorState: ObservableObject {
     // Persist the requested rate as AVPlayer's resume/default rate and explicitly start
     // playback. Assigning only `rate` is transient: a later `play()`/item handoff can
     // restore AVPlayer's default 1x rate and silently lose the speed effect.
-    applyPreviewRate(currentPreviewRate(at: currentTime), startPlayback: true)
+    let waitingForSeek = speedPreviewIsPreparing || internalSeekToken != nil || handoffSeekInFlight
     playbackState.setPlaying(true)
+    if waitingForSeek {
+      if !speedPreviewIsPreparing {
+        previewRateController?.setPlaybackIntent(true)
+      }
+      return
+    }
+    applyPreviewRate(speedPreviewItem == nil ? currentPreviewRate(at: currentTime) : 1,
+                     startPlayback: true)
+    refreshPreviewRateSchedule()
   }
 
   /// Playback rate for the speed segment under a SEQUENCE time.
@@ -936,8 +1192,34 @@ final class VideoEditorState: ObservableObject {
     return Float(sequenceMap.rate(atSequence: playbackTime))
   }
 
+  private func currentPlayerTimelineTime() -> CMTime? {
+    if speedPreviewItem === player.currentItem {
+      let time = player.currentTime()
+      guard time.isNumeric else { return nil }
+      return timelineTime(atPreviewOutput: CMTimeGetSeconds(time))
+    }
+    guard let placement = placements.first(where: { $0.clip.id == activeClipId }) else { return nil }
+    let time = player.currentTime()
+    guard time.isNumeric else { return nil }
+    let sourceTime = CMTimeGetSeconds(time)
+    guard sourceTime >= placement.clip.sourceStart - 0.05,
+          sourceTime <= placement.clip.sourceEnd + 0.01
+    else { return nil }
+    return CMTime(
+      seconds: placement.sequenceTime(atSource: sourceTime),
+      preferredTimescale: 600
+    )
+  }
+
   func pause() {
+    previewRateController?.setPlaybackIntent(false)
     player.pause()
+    if !speedPreviewIsPreparing,
+       internalSeekToken == nil,
+       !handoffSeekInFlight,
+       let playerTime = currentPlayerTimelineTime() {
+      playbackState.setCurrentTime(playerTime)
+    }
     playbackState.setPlaying(false)
   }
 
@@ -995,41 +1277,266 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Player Item Management (clip sequence)
 
+  /// Rebuild the preview media timeline when clips or speed blocks change. The
+  /// player stays parked until the current revision is ready; a superseded build
+  /// cannot install an old speed map over a newer edit.
+  private func scheduleSpeedPreviewRebuild(immediate: Bool = false) {
+    let debounceBuild = !immediate && (speedPreviewIsPreparing || speedPreviewItem != nil)
+    speedPreviewRevision += 1
+    let revision = speedPreviewRevision
+    speedPreviewBuildTask?.cancel()
+    speedPreviewBuildTask = nil
+    speedPreviewBuildFailed = false
+
+    guard !isGIF, hasSpeedSegments, !clips.isEmpty else {
+      speedPreviewIsPreparing = false
+      if speedPreviewItem != nil {
+        speedPreviewItem = nil
+        activeItemSource = nil
+        seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
+      } else {
+        refreshPreviewRateSchedule()
+      }
+      return
+    }
+
+    speedPreviewIsPreparing = true
+    previewRateController?.setPlaybackIntent(false)
+    previewRateController?.setEnabled(false)
+    player.pause()
+    internalSeekToken = nil
+    handoffSeekToken = nil
+    handoffSeekInFlight = false
+    if speedTrackDragInProgress {
+      speedTrackDragDidChange = true
+      return
+    }
+    let clipsSnapshot = clips
+    let mapSnapshot = sequenceMap
+    speedPreviewBuildTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      do {
+        // Speed handles publish updates during a drag. Coalesce those revisions
+        // into one composition so the UI does not rebuild media every frame.
+        if debounceBuild {
+          try await Task.sleep(nanoseconds: 120_000_000)
+        }
+        let item = try await makeSpeedPreviewItem(clips: clipsSnapshot, map: mapSnapshot)
+        guard !Task.isCancelled, speedPreviewRevision == revision else { return }
+        speedPreviewItem = item
+        speedPreviewIsPreparing = false
+        activeItemSource = nil
+        player.replaceCurrentItem(with: item)
+        item.audioTimePitchAlgorithm = .spectral
+        syncPlayerAudioWithExportSettings()
+        seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
+      } catch {
+        guard speedPreviewRevision == revision else { return }
+        speedPreviewIsPreparing = false
+        speedPreviewBuildFailed = true
+        playbackState.setPlaying(false)
+        DiagnosticLogger.shared.logError(.editor, error, "Speed preview composition failed")
+        speedPreviewItem = nil
+        activeItemSource = nil
+        seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
+      }
+    }
+  }
+
+  func beginSpeedTrackDrag() {
+    speedTrackDragInProgress = true
+    speedTrackDragDidChange = false
+  }
+
+  func endSpeedTrackDrag() {
+    guard speedTrackDragInProgress else { return }
+    speedTrackDragInProgress = false
+    if speedTrackDragDidChange {
+      speedTrackDragDidChange = false
+      scheduleSpeedPreviewRebuild(immediate: true)
+    }
+  }
+
+  private func makeSpeedPreviewItem(
+    clips clipsSnapshot: [TimelineClip],
+    map: TimelineSequenceMap
+  ) async throws -> AVPlayerItem {
+    let composition = AVMutableComposition()
+    guard let videoTrack = composition.addMutableTrack(
+      withMediaType: .video,
+      preferredTrackID: kCMPersistentTrackID_Invalid
+    ) else {
+      throw NSError(domain: "VideoEditorSpeedPreview", code: 1)
+    }
+
+    let primaryVideo = try await asset.loadTracks(withMediaType: .video).first
+    if let primaryVideo {
+      videoTrack.preferredTransform = try await primaryVideo.load(.preferredTransform)
+    }
+    var cursor = CMTime.zero
+    for clip in clipsSnapshot {
+      try Task.checkCancellation()
+      let range = CMTimeRange(
+        start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+        duration: CMTime(seconds: clip.duration, preferredTimescale: 600)
+      )
+      let sourceTrack = if clip.isPrimary {
+        primaryVideo
+      } else {
+        try await clipAsset(for: clip).loadTracks(withMediaType: .video).first
+      }
+      if let sourceTrack {
+        try videoTrack.insertTimeRange(range, of: sourceTrack, at: cursor)
+      } else {
+        videoTrack.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: range.duration))
+      }
+      cursor = CMTimeAdd(cursor, range.duration)
+    }
+    Self.scalePreviewTrack(videoTrack, with: map)
+
+    let primaryAudioTracks = try await asset.loadTracks(withMediaType: .audio)
+    for lane in 0 ..< max(1, primaryAudioTracks.count) {
+      try Task.checkCancellation()
+      guard let audioTrack = composition.addMutableTrack(
+        withMediaType: .audio,
+        preferredTrackID: kCMPersistentTrackID_Invalid
+      ) else { continue }
+      cursor = .zero
+      for clip in clipsSnapshot {
+        let range = CMTimeRange(
+          start: CMTime(seconds: clip.sourceStart, preferredTimescale: 600),
+          duration: CMTime(seconds: clip.duration, preferredTimescale: 600)
+        )
+        let sourceTrack: AVAssetTrack? = if clip.isPrimary {
+          lane < primaryAudioTracks.count ? primaryAudioTracks[lane] : nil
+        } else if lane == 0 {
+          try await clipAsset(for: clip).loadTracks(withMediaType: .audio).first
+        } else {
+          nil
+        }
+        if let sourceTrack {
+          try audioTrack.insertTimeRange(range, of: sourceTrack, at: cursor)
+        } else {
+          audioTrack.insertEmptyTimeRange(CMTimeRange(start: cursor, duration: range.duration))
+        }
+        cursor = CMTimeAdd(cursor, range.duration)
+      }
+      Self.scalePreviewTrack(audioTrack, with: map)
+    }
+    return AVPlayerItem(asset: composition)
+  }
+
+  private static func scalePreviewTrack(
+    _ track: AVMutableCompositionTrack,
+    with map: TimelineSequenceMap
+  ) {
+    for span in map.spans.reversed() where span.rate != 1 {
+      track.scaleTimeRange(
+        CMTimeRange(
+          start: CMTime(seconds: span.seqStart, preferredTimescale: 600),
+          duration: CMTime(seconds: span.seqDuration, preferredTimescale: 600)
+        ),
+        toDuration: CMTime(seconds: span.scaledDuration, preferredTimescale: 600)
+      )
+    }
+  }
+
+  private func timelineTime(atPreviewOutput output: TimeInterval) -> CMTime? {
+    guard output.isFinite,
+          let playable = TimelineSequence.placement(
+            at: sequenceMap.toSequence(output), in: playbackPlacements
+          ),
+          let structural = placements.first(where: { $0.clip.id == playable.clip.id })
+    else { return nil }
+    let sourceTime = playable.sourceTime(at: sequenceMap.toSequence(output))
+    return CMTime(
+      seconds: structural.sequenceTime(atSource: sourceTime),
+      preferredTimescale: 600
+    )
+  }
+
+  private func previewOutputTime(atTimeline timeline: TimeInterval) -> TimeInterval? {
+    guard let sequenceTime = playbackSequenceTime(atTimeline: timeline) else { return nil }
+    return sequenceMap.toOutput(sequenceTime)
+  }
+
   /// Point the player at whichever clip covers a sequence time, seeking to that
   /// clip's own source time.
   private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
-    guard let context = sourceContext(atSequence: sequenceSeconds) else { return }
-    activeClipId = context.clip.id
-    activateItemIfNeeded(for: context.clip, previewTime: sequenceSeconds)
+    previewRateController?.setEnabled(false)
+    player.pause()
+    // A seek supersedes any pending clip handoff, even when it lands inside that
+    // handoff's destination clip. Invalidate both the completion and its observer
+    // gate before issuing the new seek so stale completion results cannot pause or
+    // restart playback at the old clip boundary.
+    handoffSeekToken = nil
+    handoffSeekInFlight = false
+    if speedPreviewIsPreparing {
+      internalSeekToken = nil
+      return
+    }
+    let token = UUID()
+    internalSeekToken = token
+    let targetItemTime: TimeInterval
+    if speedPreviewItem === player.currentItem {
+      guard let outputTime = previewOutputTime(atTimeline: sequenceSeconds) else {
+        internalSeekToken = nil
+        return
+      }
+      targetItemTime = outputTime
+    } else if let context = sourceContext(atSequence: sequenceSeconds) {
+      activeClipId = context.clip.id
+      activateItemIfNeeded(for: context.clip)
+      targetItemTime = context.sourceTime
+    } else {
+      internalSeekToken = nil
+      setupTimeObserver()
+      refreshPreviewRateSchedule()
+      return
+    }
+    let rateGeneration = refreshPreviewRateSchedule()
+    let rateController = previewRateController
+    if let rateGeneration {
+      rateController?.awaitSeekLanding(at: targetItemTime, ifGeneration: rateGeneration)
+    }
     player.seek(
-      to: CMTime(seconds: context.sourceTime, preferredTimescale: 600),
+      to: CMTime(seconds: targetItemTime, preferredTimescale: 600),
       toleranceBefore: .zero,
       toleranceAfter: .zero
-    )
+    ) { [weak self, weak rateController] finished in
+      if finished, let rateGeneration {
+        rateController?.resumeAfterSeek(ifGeneration: rateGeneration)
+      }
+      Task { @MainActor [weak self] in
+        guard let self, internalSeekToken == token else { return }
+        internalSeekToken = nil
+        setupTimeObserver()
+        refreshPreviewRateSchedule()
+        guard finished else {
+          pause()
+          return
+        }
+        if isPlaying, player.rate == 0 {
+          applyPreviewRate(speedPreviewItem == nil ? currentPreviewRate(at: currentTime) : 1,
+                           startPlayback: true)
+        }
+      }
+    }
   }
 
   /// Swap the player item when the sequence crosses into a different source asset.
   ///
   /// Keyed on `source`, not clip id: consecutive clips cut from the same asset share
   /// one item, so an ordinary split costs a seek rather than a reload.
-  private func activateItemIfNeeded(for clip: TimelineClip, previewTime: TimeInterval? = nil) {
+  private func activateItemIfNeeded(for clip: TimelineClip) {
     guard activeItemSource != clip.source else { return }
-    let wasPlaying = isPlaying
-    let previousRate = player.rate
 
     let item = clip.isPrimary ? primaryPlayerItem : AVPlayerItem(asset: clipAsset(for: clip))
-    player.replaceCurrentItem(with: item)
-    activeItemSource = clip.source
-
-    if wasPlaying {
-      player.currentItem?.audioTimePitchAlgorithm = .spectral
-      let resumedRate = if let previewTime {
-        currentPreviewRate(at: CMTime(seconds: previewTime, preferredTimescale: 600))
-      } else {
-        max(previousRate, 1.0)
-      }
-      applyPreviewRate(resumedRate, startPlayback: true)
+    if player.currentItem !== item {
+      player.replaceCurrentItem(with: item)
     }
+    activeItemSource = clip.source
+    player.currentItem?.audioTimePitchAlgorithm = .spectral
   }
 
   /// Clamp to the sequence axis.
@@ -2242,25 +2749,92 @@ final class VideoEditorState: ObservableObject {
     }
   }
 
+  /// Prepare source-item ranges once on the main actor. Rate changes are then
+  /// driven by AVPlayer callbacks on a separate serial queue, so a busy SwiftUI
+  /// render cannot leave the outgoing speed active past its authored end.
+  @discardableResult
+  private func refreshPreviewRateSchedule() -> Int? {
+    guard let previewRateController else { return nil }
+
+    var sourceSpans: [VideoEditorPreviewRateController.Span] = []
+    if speedPreviewItem !== player.currentItem,
+       let activeClipId,
+       let placement = playbackPlacements.first(where: { $0.clip.id == activeClipId }) {
+      sourceSpans = sequenceMap.spans.compactMap { span in
+        let start = max(span.seqStart, placement.start)
+        let end = min(span.seqEnd, placement.end)
+        guard end - start > 0.000_001 else { return nil }
+        return VideoEditorPreviewRateController.Span(
+          start: placement.sourceTime(at: start),
+          end: placement.sourceTime(at: end),
+          rate: Float(span.rate)
+        )
+      }
+    }
+
+    return previewRateController.configure(
+      spans: sourceSpans,
+      item: player.currentItem,
+      enabled: isPlaying && internalSeekToken == nil && !handoffSeekInFlight,
+      wantsPlayback: isPlaying
+    )
+  }
+
   private func setupTimeObserver() {
+    if let timeObserver {
+      player.removeTimeObserver(timeObserver)
+    }
+    timeObserverGeneration += 1
+    let generation = timeObserverGeneration
+    lastTimeObserverUpdate = 0
+
     let interval = CMTime(seconds: 1.0 / 30.0, preferredTimescale: 600)
     timeObserver = player.addPeriodicTimeObserver(
       forInterval: interval,
       queue: .main
-    ) { [weak self] time in
+    ) { [weak self] _ in
       MainActor.assumeIsolated {
-        guard let self, !self.playbackState.isScrubbing else { return }
+        guard let self,
+              self.timeObserverGeneration == generation,
+              !self.playbackState.isScrubbing,
+              !self.speedPreviewIsPreparing
+        else { return }
         // A handoff seek is landing; the reported time is still the outgoing
         // clip's coordinates.
-        guard !self.handoffSeekInFlight else { return }
-        self.handlePlaybackTick(itemTime: CMTimeGetSeconds(time))
+        guard !self.handoffSeekInFlight,
+              self.internalSeekToken == nil
+        else { return }
+        // A time callback may have waited behind other main-queue work. Use the
+        // player's latest position so stale callbacks can't move the playhead or
+        // speed rate backward after the transport has already crossed a boundary.
+        let latestItemTime = self.player.currentTime()
+        guard latestItemTime.isNumeric else { return }
+        // AVPlayer's interval is measured in source time. At 8x, a 30 fps
+        // interval can publish the whole editor over 200 times per wall second.
+        let now = ProcessInfo.processInfo.systemUptime
+        guard now - self.lastTimeObserverUpdate >= 1.0 / 30.0 else { return }
+        self.lastTimeObserverUpdate = now
+        self.handlePlaybackTick(itemTime: CMTimeGetSeconds(latestItemTime))
       }
     }
   }
 
   /// Periodic playback tick. `itemTime` is in the ACTIVE source asset's coordinates,
   /// so it has to be folded back onto the sequence axis before it reaches the playhead.
-  private func handlePlaybackTick(itemTime: Double) {
+  func handlePlaybackTick(itemTime: Double) {
+    guard !speedPreviewIsPreparing else { return }
+    if speedPreviewItem === player.currentItem {
+      if itemTime >= sequenceMap.outputDuration - 0.01 {
+        pause()
+        seek(to: .zero)
+        return
+      }
+      if let time = timelineTime(atPreviewOutput: itemTime) {
+        playbackState.setCurrentTime(time)
+        updateClipActionAvailability()
+      }
+      return
+    }
     guard let placement = placements.first(where: { $0.clip.id == activeClipId }) else {
       // The sequence changed under us (clip deleted or reordered mid-playback).
       seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
@@ -2274,7 +2848,9 @@ final class VideoEditorState: ObservableObject {
     // would evaluate the old position against the new clip and could end the
     // sequence prematurely (e.g. after reordering so a clip whose range reaches
     // the asset end plays first).
-    guard itemTime >= clip.sourceStart - 0.05, itemTime <= clip.sourceEnd + 0.05 else { return }
+    guard itemTime >= clip.sourceStart - 0.05 else { return }
+
+    let sequenceTime = placement.sequenceTime(atSource: itemTime)
 
     // Reached this clip's out-point — hand off to the next one.
     if itemTime >= clip.sourceEnd - 0.01 {
@@ -2282,21 +2858,15 @@ final class VideoEditorState: ObservableObject {
       return
     }
 
-    let sequenceTime = placement.sequenceTime(atSource: itemTime)
     playbackState.setCurrentTime(CMTime(seconds: sequenceTime, preferredTimescale: 600))
     updateClipActionAvailability()
-
-    // Live timelapse preview: keep both the current transport and AVPlayer's resume
-    // rate aligned with the speed segment under the playhead.
-    if isPlaying {
-      let desiredRate = currentPreviewRate(at: CMTime(seconds: sequenceTime, preferredTimescale: 600))
-      applyPreviewRate(desiredRate, startPlayback: false)
-    }
   }
 
   /// Continue into the clip after `placement`, or stop and rewind at the end of the
   /// sequence.
   private func advanceToClip(after placement: TimelineSequence.Placement) {
+    previewRateController?.setEnabled(false)
+    player.pause()
     let nextIndex = placement.index + 1
     guard nextIndex < clips.count else {
       pause()
@@ -2309,28 +2879,48 @@ final class VideoEditorState: ObservableObject {
     let nextTime = placements.first(where: { $0.clip.id == nextId })?.activeStart
       ?? CMTimeGetSeconds(currentTime)
     activeClipId = nextId
-    activateItemIfNeeded(for: next, previewTime: nextTime)
+    activateItemIfNeeded(for: next)
     // The seek completes asynchronously; until it lands, ticks and end
     // notifications still report the outgoing clip's coordinates.
+    let handoffToken = UUID()
+    handoffSeekToken = handoffToken
     handoffSeekInFlight = true
+    let rateGeneration = refreshPreviewRateSchedule()
+    let rateController = previewRateController
+    if let rateGeneration {
+      rateController?.awaitSeekLanding(at: next.sourceStart, ifGeneration: rateGeneration)
+    }
     player.seek(
       to: CMTime(seconds: next.sourceStart, preferredTimescale: 600),
       toleranceBefore: .zero,
       toleranceAfter: .zero
-    ) { [weak self] _ in
+    ) { [weak self, weak rateController] finished in
+      if finished, let rateGeneration {
+        rateController?.resumeAfterSeek(ifGeneration: rateGeneration)
+      }
       Task { @MainActor [weak self] in
-        // A newer handoff owns the transport if the active clip moved on again.
-        guard let self, activeClipId == nextId else { return }
+        // A user seek or a newer handoff can supersede this completion. Only the
+        // owner of the current token may release the handoff gate or restart playback.
+        guard let self, handoffSeekToken == handoffToken else { return }
+        handoffSeekToken = nil
+        setupTimeObserver()
         handoffSeekInFlight = false
+        refreshPreviewRateSchedule()
+        guard activeClipId == nextId else { return }
+        guard finished else {
+          pause()
+          return
+        }
         guard isPlaying else { return }
 
-        // The seek can leave the new item paused even when the old item was playing.
-        // Resolve the rate at the next clip's structural start so a speed block that
-        // begins at a clip seam is applied before the first frame of that clip.
-        applyPreviewRate(
-          currentPreviewRate(at: CMTime(seconds: nextTime, preferredTimescale: 600)),
-          startPlayback: true
-        )
+        // The independent completion normally resumed playback already. If
+        // AVPlayer stayed paused, preserve the user's Play intent here as well.
+        if player.rate == 0 {
+          applyPreviewRate(
+            currentPreviewRate(at: CMTime(seconds: nextTime, preferredTimescale: 600)),
+            startPlayback: true
+          )
+        }
       }
     }
   }
@@ -2355,10 +2945,17 @@ final class VideoEditorState: ObservableObject {
     ) { [weak self] notification in
       MainActor.assumeIsolated {
         guard let self else { return }
-        // A handoff seek is already repositioning playback — any end notification
-        // in this window belongs to the previous clip's play-through.
-        guard !self.handoffSeekInFlight else { return }
+        // A transport seek is already repositioning playback — end notifications
+        // delivered in this window belong to the previous position or clip.
+        guard !self.handoffSeekInFlight,
+              self.internalSeekToken == nil
+        else { return }
         guard let item = notification.object as? AVPlayerItem, item === self.player.currentItem else { return }
+        if self.speedPreviewItem === item {
+          self.pause()
+          self.seek(to: .zero)
+          return
+        }
         // Consecutive clips from one asset share an item, so an end notification
         // can arrive after the playhead already moved into a later clip. Only
         // honor it while the item is genuinely still parked at its end AND the

@@ -153,11 +153,15 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
       onCancel: { [weak self] in self?.handleCancel() }
     )
     bindDocumentEditedState(to: state)
+    (window as? VideoEditorWindow)?.onTogglePlayback = { [weak state] in
+      state?.togglePlayback()
+    }
     window?.contentView = NSHostingView(rootView: mainView)
   }
 
   private func setupEmptyContent() {
     bindDocumentEditedState(to: nil)
+    (window as? VideoEditorWindow)?.onTogglePlayback = nil
     let emptyView = VideoEditorEmptyStateView { [weak self] url, originalURL in
       self?.onVideoLoaded?(url, originalURL)
     }

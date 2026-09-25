@@ -337,7 +337,6 @@ struct VideoControlsView: View {
         )
     }
     .buttonStyle(.plain)
-    .keyboardShortcut(.space, modifiers: [])
   }
 
   private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {

@@ -18,8 +18,10 @@ extension Notification.Name {
 class VideoEditorWindow: NSWindow {
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private static let copyKeyCode: UInt16 = 8 // kVK_ANSI_C
+  private static let spaceKeyCode: UInt16 = 49 // kVK_Space
   private var restingLevel: NSWindow.Level = .normal
   private var themeObserver: AnyCancellable?
+  var onTogglePlayback: (() -> Void)?
 
   init(contentRect: NSRect) {
     super.init(
@@ -92,6 +94,25 @@ class VideoEditorWindow: NSWindow {
 
   override var canBecomeMain: Bool {
     true
+  }
+
+  override func sendEvent(_ event: NSEvent) {
+    let modifiers = event.modifierFlags.intersection([
+      .command, .shift, .option, .control, .function,
+    ])
+    if event.type == .keyDown,
+       event.keyCode == Self.spaceKeyCode,
+       modifiers.isEmpty,
+       onTogglePlayback != nil,
+       !(firstResponder is NSTextView),
+       !(firstResponder is NSTextField) {
+      // AVPlayerView can otherwise consume Space before the SwiftUI shortcut and
+      // change its transport without updating the editor's playback state.
+      if !event.isARepeat { onTogglePlayback?() }
+      return
+    }
+
+    super.sendEvent(event)
   }
 
   /// Do not let an unhandled copy key equivalent fall through to NSWindow's

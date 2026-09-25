@@ -190,13 +190,14 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertFalse(state.hasUnsavedChanges)
   }
 
-  func testVideoEditorPreview_appliesSpeedRateAtPlayhead() async throws {
+  func testVideoEditorPreview_usesScaledCompositionAtPlayhead() async throws {
     let videoURL = try await makeVideoFile(named: "preview-speed.mov")
     let state = VideoEditorState(url: videoURL)
     await state.loadMetadata()
 
     XCTAssertNotNil(state.addSpeed(range: 0 ... 2, rate: 4))
     XCTAssertEqual(state.currentPreviewRate(at: .zero), 4, accuracy: 0.001)
+    try await waitForScaledPreview(state)
 
     state.play()
     defer { state.pause() }
@@ -206,21 +207,27 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     }
 
     XCTAssertEqual(state.player.timeControlStatus, .playing)
-    XCTAssertEqual(state.player.rate, 4, accuracy: 0.001)
-    XCTAssertEqual(state.player.defaultRate, 4, accuracy: 0.001)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+    XCTAssertEqual(state.player.defaultRate, 1, accuracy: 0.001)
+    XCTAssertEqual(state.sequenceMap.outputDuration, 2.5, accuracy: 0.05)
+    let start = state.currentTime.seconds
+    try await Task.sleep(nanoseconds: 150_000_000)
+    XCTAssertGreaterThan(state.currentTime.seconds - start, 0.3,
+                         "The scaled composition must advance the authored 4x portion")
     if let timebase = state.player.currentItem?.timebase {
-      XCTAssertEqual(CMTimebaseGetRate(timebase), 4, accuracy: 0.1)
+      XCTAssertEqual(CMTimebaseGetRate(timebase), 1, accuracy: 0.1)
     } else {
       XCTFail("Expected the preview player item to have a timebase")
     }
   }
 
-  func testVideoEditorPreview_updatesRateWhenPlayheadEntersSpeedSegment() async throws {
+  func testVideoEditorPreview_entersSpeedSegmentWithOneXTransport() async throws {
     let videoURL = try await makeVideoFile(named: "preview-speed-transition.mov")
     let state = VideoEditorState(url: videoURL)
     await state.loadMetadata()
 
     XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 4))
+    try await waitForScaledPreview(state)
     state.play()
     defer { state.pause() }
 
@@ -230,11 +237,399 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     }
 
     XCTAssertGreaterThanOrEqual(state.playbackState.currentTime.seconds, 1.05)
-    XCTAssertEqual(state.player.rate, 4, accuracy: 0.001)
-    XCTAssertEqual(state.player.defaultRate, 4, accuracy: 0.001)
+    XCTAssertEqual(state.currentPreviewRate(at: state.currentTime), 4, accuracy: 0.001)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+    XCTAssertEqual(state.player.defaultRate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_continuesThroughSpeedBoundariesWithZoomConfigured() async throws {
+    let videoURL = try await makeVideoFile(
+      named: "preview-speed-boundaries-with-zoom.mov",
+      duration: 119
+    )
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    _ = state.addZoom(at: 47.5)
+    XCTAssertNotNil(state.addSpeed(range: 25 ... 75, rate: 8))
+    state.seek(to: CMTime(seconds: 24.8, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 24.8)
+    XCTAssertEqual(state.player.currentTime().seconds, 24.8, accuracy: 0.05)
+
+    var furthestPlayerTime = state.player.currentTime().seconds
+    var playbackRewound = false
+    func recordPlayerTime() {
+      let playerTime = state.player.currentTime().seconds
+      if playerTime < furthestPlayerTime - 0.02 {
+        playbackRewound = true
+      }
+      furthestPlayerTime = max(furthestPlayerTime, playerTime)
+    }
+
+    state.play()
+    defer { state.pause() }
+
+    let startDeadline = Date().addingTimeInterval(2)
+    while state.currentTime.seconds < 25.1,
+          state.isPlaying,
+          Date() < startDeadline
+    {
+      recordPlayerTime()
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+    recordPlayerTime()
+
+    XCTAssertTrue(state.isPlaying, "Playback stopped at the speed segment start")
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+    XCTAssertGreaterThanOrEqual(state.currentTime.seconds, 25.1)
+
+    let endDeadline = Date().addingTimeInterval(8)
+    while state.currentTime.seconds < 75.1, state.isPlaying, Date() < endDeadline {
+      recordPlayerTime()
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+    recordPlayerTime()
+
+    XCTAssertTrue(state.isPlaying, "Playback stopped at the speed segment end")
+    XCTAssertGreaterThanOrEqual(state.currentTime.seconds, 75.1)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+    XCTAssertFalse(playbackRewound, "Playback must not seek backward and replay frames at a speed boundary")
+
+    state.togglePlayback()
+    XCTAssertFalse(state.isPlaying, "Space/play control should report the paused state")
+    state.togglePlayback()
+    XCTAssertTrue(state.isPlaying, "Space/play control should resume the preview")
+
+    let resumedFrom = state.currentTime.seconds
+    let resumeDeadline = Date().addingTimeInterval(1)
+    while state.currentTime.seconds <= resumedFrom + 0.05, Date() < resumeDeadline {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+    XCTAssertGreaterThan(state.currentTime.seconds, resumedFrom + 0.05)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_userSeekSupersedesPendingClipHandoff() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-handoff-user-seek.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    state.seek(to: CMTime(seconds: 2, preferredTimescale: 600))
+    state.splitAtPlayhead()
+    XCTAssertEqual(state.clips.count, 2)
+
+    state.seek(to: CMTime(seconds: 1.9, preferredTimescale: 600))
+    state.play()
+    // Trigger the outgoing clip's end transition, then immediately override its
+    // asynchronous seek with a user seek back into the first clip.
+    state.handlePlaybackTick(itemTime: 2)
+    state.seek(to: CMTime(seconds: 0.5, preferredTimescale: 600))
+    state.play()
+    defer { state.pause() }
+
+    let deadline = Date().addingTimeInterval(2)
+    while state.playbackState.currentTime.seconds < 0.7, Date() < deadline {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+
+    XCTAssertGreaterThan(state.playbackState.currentTime.seconds, 0.6)
+  }
+
+  func testVideoEditorPreview_userSeekIntoHandoffDestinationSupersedesPendingHandoff() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-handoff-destination-seek.mov")
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    state.seek(to: CMTime(seconds: 2, preferredTimescale: 600))
+    state.splitAtPlayhead()
+    XCTAssertEqual(state.clips.count, 2)
+
+    state.seek(to: CMTime(seconds: 1.9, preferredTimescale: 600))
+    state.play()
+    state.handlePlaybackTick(itemTime: 2)
+    state.seek(to: CMTime(seconds: 2.4, preferredTimescale: 600))
+    state.play()
+    defer { state.pause() }
+
+    let deadline = Date().addingTimeInterval(2)
+    while state.playbackState.currentTime.seconds < 2.55,
+          state.isPlaying,
+          Date() < deadline
+    {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    XCTAssertTrue(state.isPlaying, "A stale handoff completion must not pause a newer seek")
+    XCTAssertGreaterThan(state.playbackState.currentTime.seconds, 2.5)
+  }
+
+  func testVideoEditorPreview_continuesFromLatestPositionWhenTickCrossesSpeedBoundary() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-speed-boundary.mov", duration: 119)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 23 ... 76, rate: 8))
+    state.seek(to: CMTime(seconds: 75, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 75)
+
+    state.play()
+    defer { state.pause() }
+
+    // A delayed callback reports output time; the editor maps it back to the
+    // structural playhead without seeking the composed player backward.
+    state.handlePlaybackTick(itemTime: state.sequenceMap.toOutput(91))
+
+    XCTAssertEqual(state.playbackState.currentTime.seconds, 91, accuracy: 0.01)
+    XCTAssertEqual(state.currentPreviewRate(at: state.currentTime), 1, accuracy: 0.001)
+    XCTAssertTrue(state.isPlaying, "A delayed tick must not turn playback into Pause")
+    // The synthetic tick changes the displayed playhead only; actual transport
+    // time remains at its position in the scaled composition.
+  }
+
+  func testVideoEditorPreview_continuesPastSpeedBoundaryInsideTrimmedClip() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-trimmed-speed-boundary.mov", duration: 119)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clipId = try XCTUnwrap(state.clips.first?.id)
+    state.updateClip(id: clipId, sourceEnd: 80)
+    XCTAssertNotNil(state.addSpeed(range: 23 ... 76, rate: 8))
+    state.seek(to: CMTime(seconds: 75, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 75)
+    state.play()
+    defer { state.pause() }
+
+    // The active clip ends at 1:20; the tick at 1:17 is just beyond the 1:16
+    // speed edge and must continue at normal rate without replaying the edge.
+    state.handlePlaybackTick(itemTime: state.sequenceMap.toOutput(77))
+
+    XCTAssertEqual(state.playbackState.currentTime.seconds, 77, accuracy: 0.01)
+    XCTAssertEqual(state.currentPreviewRate(at: state.currentTime), 1, accuracy: 0.001)
+    XCTAssertTrue(state.isPlaying)
+  }
+
+  func testVideoEditorPreview_doesNotRunPastFastSpeedEndWhenMainQueueIsBusy() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-busy-speed-end.mov", duration: 12)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 8))
+    state.seek(to: CMTime(seconds: 1.2, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 1.2)
+
+    state.play()
+    defer { state.pause() }
+    let playbackDeadline = Date().addingTimeInterval(2)
+    while previewSequenceTime(state) < 1.25, Date() < playbackDeadline {
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+
+    // Playback uses the scaled media timeline even while UI work blocks main.
+    let blockedUntil = Date().addingTimeInterval(0.4)
+    while Date() < blockedUntil {}
+
+    XCTAssertLessThan(previewSequenceTime(state), 3,
+                      "The material after the 8x segment must not be skipped")
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_speedEndKeepsPlayingNextSecondsAtNormalRate() async throws {
+    let videoURL = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent("docs/attachments/pin-drag-macos-27-demo.mp4")
+    let segmentEnd = 5.0
+    let seekTime = 0.8
+    XCTAssertTrue(FileManager.default.fileExists(atPath: videoURL.path))
+    for rate in [4.0, 8.0] {
+      let state = VideoEditorState(url: videoURL)
+      await state.loadMetadata()
+      XCTAssertNotNil(state.addSpeed(range: 1 ... segmentEnd, rate: rate))
+      state.seek(to: CMTime(seconds: seekTime, preferredTimescale: 600))
+
+      let seekDeadline = Date().addingTimeInterval(8)
+      let expectedOutputTime = state.sequenceMap.toOutput(seekTime)
+      while (!(state.player.currentItem?.asset is AVComposition)
+             || abs(state.player.currentTime().seconds - expectedOutputTime) > 0.05),
+            Date() < seekDeadline {
+        try await Task.sleep(nanoseconds: 5_000_000)
+      }
+      XCTAssertTrue(state.player.currentItem?.asset is AVComposition)
+      XCTAssertEqual(state.player.currentTime().seconds, expectedOutputTime, accuracy: 0.05)
+      state.play()
+
+      let boundaryDeadline = Date().addingTimeInterval(5)
+      while state.sequenceMap.toSequence(state.player.currentTime().seconds) < segmentEnd,
+            Date() < boundaryDeadline {
+        try await Task.sleep(nanoseconds: 2_000_000)
+      }
+      let boundaryWallTime = ProcessInfo.processInfo.systemUptime
+      let boundarySourceTime = state.sequenceMap.toSequence(state.player.currentTime().seconds)
+      let rateAtBoundary = state.player.rate
+
+      var samples = [String]()
+      for _ in 0 ..< 10 {
+        try await Task.sleep(nanoseconds: 50_000_000)
+        samples.append(String(format: "%.2f:%.2f@%.1f/%.1f",
+                              ProcessInfo.processInfo.systemUptime - boundaryWallTime,
+                              state.sequenceMap.toSequence(state.player.currentTime().seconds),
+                              state.player.rate,
+                              state.player.defaultRate))
+      }
+      let afterSourceTime = state.sequenceMap.toSequence(state.player.currentTime().seconds)
+      let wallElapsed = ProcessInfo.processInfo.systemUptime - boundaryWallTime
+      let sourceElapsed = afterSourceTime - boundarySourceTime
+      state.pause()
+
+      XCTAssertEqual(rateAtBoundary, 1, accuracy: 0.001)
+      XCTAssertLessThan(boundarySourceTime, segmentEnd + 0.25,
+                        "The first frame after the edge must not skip material; samples=\(samples)")
+      XCTAssertEqual(sourceElapsed, wallElapsed, accuracy: 0.2,
+                     "After a \(rate)x segment, the next seconds must run at 1x; samples=\(samples)")
+    }
+  }
+
+  func testVideoEditorPreview_rebuildsAfterSpeedEditAndReturnsToSourcePlayback() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-speed-edit.mov", duration: 12)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+    let speedID = try XCTUnwrap(state.addSpeed(range: 1 ... 4, rate: 4))
+    state.seek(to: CMTime(seconds: 1.2, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 1.2)
+    state.play()
+    defer { state.pause() }
+
+    let firstItem = state.player.currentItem
+    state.updateSpeed(id: speedID, rate: 8)
+    let rebuildDeadline = Date().addingTimeInterval(5)
+    while (state.player.currentItem === firstItem || state.player.rate == 0),
+          Date() < rebuildDeadline {
+      try await Task.sleep(nanoseconds: 5_000_000)
+    }
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertTrue(state.player.currentItem?.asset is AVComposition)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+    XCTAssertEqual(state.sequenceMap.outputDuration, 9.375, accuracy: 0.05)
+
+    state.removeSpeed(id: speedID)
+    let sourceDeadline = Date().addingTimeInterval(5)
+    while (state.player.currentItem?.asset is AVComposition || state.player.rate == 0),
+          Date() < sourceDeadline {
+      try await Task.sleep(nanoseconds: 5_000_000)
+    }
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertFalse(state.player.currentItem?.asset is AVComposition)
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_seekOutOfFastSpeedResumesAtSelectedPosition() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-seek-out-of-speed.mov", duration: 12)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 8))
+    state.seek(to: CMTime(seconds: 1.2, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 1.2)
+    state.play()
+    defer { state.pause() }
+    let playDeadline = Date().addingTimeInterval(2)
+    while state.player.rate == 0, Date() < playDeadline {
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+
+    state.seek(to: CMTime(seconds: 3, preferredTimescale: 600))
+    let blockedUntil = Date().addingTimeInterval(0.4)
+    while Date() < blockedUntil {}
+
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertLessThan(previewSequenceTime(state), 4.5,
+                      "A seek outside the speed range must land at the selected position")
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_crossesClipSeamAfterFastSpeedWithoutSkipping() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-handoff-out-of-speed.mov", duration: 12)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+    state.seek(to: CMTime(seconds: 2, preferredTimescale: 600))
+    state.splitAtPlayhead()
+    XCTAssertEqual(state.clips.count, 2)
+
+    XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 8))
+    state.seek(to: CMTime(seconds: 1.2, preferredTimescale: 600))
+    try await waitForScaledPreview(state, at: 1.2)
+    state.play()
+    defer { state.pause() }
+    let playDeadline = Date().addingTimeInterval(2)
+    while previewSequenceTime(state) < 2.1, Date() < playDeadline {
+      try await Task.sleep(nanoseconds: 2_000_000)
+    }
+    XCTAssertGreaterThan(previewSequenceTime(state), 2.1,
+                         "The scaled preview must cross the split without a handoff seek")
+
+    let blockedUntil = Date().addingTimeInterval(0.4)
+    while Date() < blockedUntil {}
+
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertLessThan(previewSequenceTime(state), 3.5,
+                      "The clip after the speed region must continue at 1x")
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
+  }
+
+  func testVideoEditorPreview_playDuringPendingSeekStartsWithoutMainQueueCompletion() async throws {
+    let videoURL = try await makeVideoFile(named: "preview-play-during-seek.mov", duration: 12)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    XCTAssertNotNil(state.addSpeed(range: 1 ... 2, rate: 8))
+    try await waitForScaledPreview(state)
+    state.seek(to: CMTime(seconds: 3, preferredTimescale: 600))
+    XCTAssertEqual(state.player.rate, 0, accuracy: 0.001,
+                   "The transport must stay parked while the new position is pending")
+    state.play()
+    if abs(state.player.currentTime().seconds - state.sequenceMap.toOutput(3)) > 0.05 {
+      XCTAssertEqual(state.player.rate, 0, accuracy: 0.001,
+                     "Play must not render frames from the old position")
+    }
+    let blockedUntil = Date().addingTimeInterval(0.4)
+    while Date() < blockedUntil {}
+    defer { state.pause() }
+
+    XCTAssertTrue(state.isPlaying)
+    XCTAssertGreaterThan(previewSequenceTime(state), 3.15,
+                         "Play must resume after the seek even while UI completion is delayed")
+    XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
   }
 
   // MARK: - Helpers
+
+  private func waitForScaledPreview(
+    _ state: VideoEditorState,
+    at timelineTime: Double? = nil
+  ) async throws {
+    let deadline = Date().addingTimeInterval(5)
+    while !(state.player.currentItem?.asset is AVComposition), Date() < deadline {
+      try await Task.sleep(nanoseconds: 5_000_000)
+    }
+    XCTAssertTrue(state.player.currentItem?.asset is AVComposition)
+    if let timelineTime,
+       let sequenceTime = state.playbackSequenceTime(atTimeline: timelineTime) {
+      let outputTime = state.sequenceMap.toOutput(sequenceTime)
+      while abs(state.player.currentTime().seconds - outputTime) > 0.05,
+            Date() < deadline {
+        try await Task.sleep(nanoseconds: 5_000_000)
+      }
+      XCTAssertEqual(state.player.currentTime().seconds, outputTime, accuracy: 0.05)
+    }
+  }
+
+  private func previewSequenceTime(_ state: VideoEditorState) -> Double {
+    state.sequenceMap.toSequence(state.player.currentTime().seconds)
+  }
 
   private func makeSessionData(sourceSnapshotURL: URL) -> VideoEditorSessionData {
     let firstClipId = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
@@ -324,7 +719,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     try Data(contents.utf8).write(to: url, options: .atomic)
   }
 
-  private func makeVideoFile(named name: String) async throws -> URL {
+  private func makeVideoFile(named name: String, duration: TimeInterval = 4) async throws -> URL {
     let url = sourceDirectory.appendingPathComponent(name)
     let writer = try AVAssetWriter(outputURL: url, fileType: .mov)
     let input = AVAssetWriterInput(
@@ -351,7 +746,8 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     writer.startSession(atSourceTime: .zero)
 
     let frameRate: Int32 = 10
-    for index in 0 ..< 40 {
+    let frameCount = Int(duration * Double(frameRate))
+    for index in 0 ..< frameCount {
       while !input.isReadyForMoreMediaData {
         try await Task.sleep(nanoseconds: 1_000_000)
       }
