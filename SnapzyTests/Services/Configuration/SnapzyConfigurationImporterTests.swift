@@ -10,6 +10,17 @@ import XCTest
 
 @MainActor
 final class SnapzyConfigurationImporterTests: XCTestCase {
+  func testImportingDefaultDocumentResetsDelayedCaptureCountdown() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(10, forKey: PreferencesKeys.screenshotDelayedCaptureSeconds)
+
+    let source = SnapzyConfigurationDefaultDocument.toml()
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.integer(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds), 3)
+  }
+
   func testImportAppliesCaptureAndRecordingSettingsToProvidedDefaults() {
     let defaults = UserDefaultsFactory.make()
     let source = """

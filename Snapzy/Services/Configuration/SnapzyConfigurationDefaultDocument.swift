@@ -60,6 +60,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("include_snapzy", false)
     writer.value("show_cursor", false)
     writer.value("freeze_area", false)
+    writer.value("delayed_capture_seconds", CaptureDelayOption.defaultValue.seconds)
     writer.value("show_selection_area_overlay", true)
     writer.value("reverse_magnifier_zoom_direction", false)
 
