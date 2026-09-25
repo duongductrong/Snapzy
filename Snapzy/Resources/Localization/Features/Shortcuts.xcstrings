@@ -3127,7 +3127,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klicken Sie auf eine Verknüpfungsschaltfläche, um neue Schlüssel aufzuzeichnen. Verwenden Sie die Zeilenumschaltung, um eine Verknüpfung zu deaktivieren. Drücken Sie Esc, um den Vorgang abzubrechen."
+            "value": "Klicken Sie auf einen Kurzbefehl, um neue Tasten aufzuzeichnen. Drücken Sie während der Aufnahme Rücktaste/Entf, um die Tasten zu löschen. Drücken Sie Esc, um abzubrechen."
           }
         },
         "en": {
@@ -3139,49 +3139,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haga clic en un botón de acceso directo para registrar nuevas claves. Utilice el interruptor de fila para desactivar un acceso directo. Presione Esc para cancelar."
+            "value": "Haz clic en un atajo para grabar nuevas teclas. Pulsa Retroceso/Supr durante la grabación para borrarlas. Pulsa Esc para cancelar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cliquez sur un bouton de raccourci pour enregistrer de nouvelles clés. Utilisez la bascule de ligne pour désactiver un raccourci. Appuyez sur Échap pour annuler."
+            "value": "Cliquez sur un raccourci pour enregistrer de nouvelles touches. Appuyez sur Retour arrière/Suppr pendant l’enregistrement pour les effacer. Appuyez sur Échap pour annuler."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ショートカットボタンをクリックして新しいキーを記録します。記録中に Backspace / Delete を押すとキーを消去できます。行のトグルでショートカットをオフにできます。Esc でキャンセルします。"
+            "value": "ショートカットをクリックして新しいキーを記録します。記録中に Backspace/Delete を押すとキーを消去できます。Esc でキャンセルします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "새 키를 기록하려면 바로가기 버튼을 클릭하세요. 바로가기를 끄려면 행 토글을 사용하세요. 취소하려면 Esc를 누르세요."
+            "value": "새 키를 기록하려면 바로가기를 클릭하세요. 기록 중 Backspace/Delete를 누르면 키를 지울 수 있습니다. 취소하려면 Esc를 누르세요."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нажмите кнопку быстрого доступа, чтобы записать новые ключи. Используйте переключатель строк, чтобы отключить ярлык. Нажмите Esc для отмены."
+            "value": "Нажмите на сочетание клавиш, чтобы записать новые клавиши. Во время записи нажмите Backspace/Delete, чтобы удалить их. Нажмите Esc для отмены."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nhấn nút phím tắt để ghi tổ hợp mới. Dùng Backspace/Delete khi đang ghi để xóa phím. Dùng công tắc của hàng để tắt phím tắt. Nhấn Esc để hủy."
+            "value": "Nhấn vào phím tắt để ghi tổ hợp phím mới. Nhấn Backspace/Delete trong khi ghi để xóa tổ hợp đó. Nhấn Esc để hủy."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "点击快捷键按钮录制新的按键组合。可通过行内开关停用某项快捷键，按 Esc 取消。"
+            "value": "点击快捷键以录制新的按键。录制时按 Backspace/Delete 可清除按键。按 Esc 取消。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "按一下快速鍵按鈕以設定新的組合鍵；可用列內開關停用單一快速鍵。按 Esc 取消。"
+            "value": "按一下快速鍵以錄製新的按鍵。錄製時按 Backspace/Delete 可清除按鍵。按 Esc 取消。"
           }
         }
       }
@@ -3645,7 +3645,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Klicken Sie zum Aufzeichnen. Verwenden Sie während der Aufnahme die Rücktaste oder die Zeilenumschaltung, um eine Verknüpfung zu deaktivieren. Esc zum Abbrechen."
+            "value": "Klicken Sie zum Aufzeichnen. Drücken Sie während der Aufnahme Rücktaste/Entf, um die Tasten zu löschen. Drücken Sie Esc, um abzubrechen."
           }
         },
         "en": {
@@ -3657,49 +3657,49 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Haga clic para grabar. Utilice la tecla Retroceso mientras graba o cambie de fila para desactivar un acceso directo. Esc para cancelar."
+            "value": "Haz clic para grabar. Pulsa Retroceso/Supr durante la grabación para borrar las teclas. Pulsa Esc para cancelar."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cliquez pour enregistrer. Utilisez Retour arrière pendant l'enregistrement ou la bascule de ligne pour désactiver un raccourci. Echap pour annuler."
+            "value": "Cliquez pour enregistrer. Appuyez sur Retour arrière/Suppr pendant l’enregistrement pour effacer les touches. Appuyez sur Échap pour annuler."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "クリックして記録します。記録中に Backspace / Delete を押すとキーを消去できます。行のトグルでショートカットをオフにできます。Esc でキャンセルします。"
+            "value": "クリックして記録します。記録中に Backspace/Delete を押すとキーを消去できます。Esc でキャンセルします。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "녹음하려면 클릭하세요. 바로가기를 끄려면 녹음 중에 백스페이스를 사용하거나 행 토글을 사용하세요. 취소하려면 Esc를 누르세요."
+            "value": "기록하려면 클릭하세요. 기록 중 Backspace/Delete를 누르면 키를 지울 수 있습니다. 취소하려면 Esc를 누르세요."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Нажмите, чтобы записать. Используйте Backspace во время записи или переключатель строк, чтобы отключить ярлык. Esc для отмены."
+            "value": "Нажмите, чтобы начать запись. Во время записи нажмите Backspace/Delete, чтобы удалить клавиши. Нажмите Esc для отмены."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bấm để ghi. Dùng Backspace/Delete khi đang ghi để xóa phím. Dùng công tắc của hàng để tắt phím tắt. Esc để hủy."
+            "value": "Nhấn để ghi. Nhấn Backspace/Delete trong khi ghi để xóa tổ hợp phím. Nhấn Esc để hủy."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "单击即可录制。录制时使用退格键或行切换可关闭快捷方式。 Esc 取消。"
+            "value": "点击以录制。录制时按 Backspace/Delete 可清除按键。按 Esc 取消。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "單擊即可錄製。錄製時使用退格鍵或行切換可關閉快捷方式。 Esc 取消。"
+            "value": "按一下以錄製。錄製時按 Backspace/Delete 可清除按鍵。按 Esc 取消。"
           }
         }
       }
