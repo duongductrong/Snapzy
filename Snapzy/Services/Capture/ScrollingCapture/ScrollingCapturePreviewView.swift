@@ -3,6 +3,8 @@
 //  Snapzy
 //
 //  SwiftUI content for the scrolling capture preview rail.
+//  Uses the shared Liquid Glass surface so the rail matches the capture HUD and
+//  the rest of the app's floating panels.
 //
 
 import SwiftUI
@@ -50,6 +52,7 @@ struct ScrollingCapturePreviewView: View {
       HStack(spacing: 6) {
         Text(L10n.Common.preview)
           .font(.system(size: 12, weight: .semibold))
+          .foregroundStyle(LiquidGlassTokens.inkPrimary)
 
         Text(model.previewTruthState.badgeLabel ?? "")
           .contentTransition(.numericText())
@@ -83,10 +86,10 @@ struct ScrollingCapturePreviewView: View {
           VStack(spacing: 8) {
             Image(systemName: "photo")
               .font(.system(size: 22, weight: .medium))
-              .foregroundStyle(.secondary)
+              .foregroundStyle(LiquidGlassTokens.inkMuted)
             Text(L10n.ScrollingCapture.captionStartCaptureToLockFirstFrame + ".")
               .font(.system(size: 11))
-              .foregroundStyle(.secondary)
+              .foregroundStyle(LiquidGlassTokens.inkMuted)
               .multilineTextAlignment(.center)
           }
           .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -96,20 +99,32 @@ struct ScrollingCapturePreviewView: View {
       .animation(.easeInOut(duration: 0.25), value: previewHeight)
       .background(
         RoundedRectangle(cornerRadius: 12, style: .continuous)
-          .fill(Color.black.opacity(0.08))
+          .fill(Color.black.opacity(0.18))
+      )
+      .overlay(
+        RoundedRectangle(cornerRadius: 12, style: .continuous)
+          .strokeBorder(Color.white.opacity(0.10), lineWidth: LiquidGlassTokens.specularLineWidth)
       )
 
-      Text(model.previewCaption)
-        .font(.system(size: 11))
-        .foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
+      // The empty state already carries this message; only show a caption once a frame exists.
+      if model.activePreviewImage != nil {
+        Text(model.previewCaption)
+          .font(.system(size: 11))
+          .foregroundStyle(LiquidGlassTokens.inkBody)
+          .fixedSize(horizontal: false, vertical: true)
+          .transition(.opacity)
+      }
     }
     .padding(12)
     .frame(width: ScrollingCapturePreviewLayout.panelWidth)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: 16, style: .continuous)
-        .strokeBorder(Color.white.opacity(0.12))
+    .animation(.easeInOut(duration: 0.2), value: model.activePreviewImage != nil)
+    .liquidGlassSurface(
+      shape: Radius.rect(Radius.card),
+      substrate: LiquidGlassTokens.baseDarkness,
+      tint: 0.04,
+      highlight: .none,
+      withRimLighting: true
     )
+    .shadow(color: Color.black.opacity(0.20), radius: 10, y: 4)
   }
 }

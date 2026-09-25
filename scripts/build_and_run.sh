@@ -9,6 +9,7 @@ LOG_SUBSYSTEM="${LOG_SUBSYSTEM:-Snapzy}"
 
 MODE="run"
 CONFIGURATION="${CONFIGURATION:-Debug}"
+DESTINATION="${DESTINATION:-platform=macOS,arch=$(uname -m)}"
 LOG_LEVEL="${LOG_LEVEL:-default,error,fault}"
 CLEAN=0
 QUIET=1
@@ -201,6 +202,7 @@ run_xcodebuild() {
     -scheme "$SCHEME"
     -configuration "$CONFIGURATION"
     -derivedDataPath "$DERIVED_DATA_PATH"
+    -destination "$DESTINATION"
   )
 
   if [[ "$QUIET" -eq 1 ]]; then

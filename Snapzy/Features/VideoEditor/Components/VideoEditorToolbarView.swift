@@ -44,6 +44,7 @@ struct VideoEditorToolbarView: View {
   @State private var renameError: String?
   @State private var leftSectionWidth: CGFloat = 0
   @State private var rightSectionWidth: CGFloat = 0
+  @FocusState private var isFilenameFieldFocused: Bool
 
   var body: some View {
     HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
@@ -60,6 +61,7 @@ struct VideoEditorToolbarView: View {
         .frame(width: reservedSideWidth, alignment: .trailing)
     }
     .windowToolbarPadding()
+    .liquidGlassGroup(spacing: Spacing.xs)
     .onPreferenceChange(VideoEditorToolbarSectionWidthKey.self) { widths in
       leftSectionWidth = widths[.left] ?? 0
       rightSectionWidth = widths[.right] ?? 0
@@ -91,7 +93,6 @@ struct VideoEditorToolbarView: View {
         state.undo()
       }
       .disabled(!state.canUndo)
-      .opacity(state.canUndo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command])
       .help(L10n.VideoEditor.undoShortcutHint)
 
@@ -99,7 +100,6 @@ struct VideoEditorToolbarView: View {
         state.redo()
       }
       .disabled(!state.canRedo)
-      .opacity(state.canRedo ? 1 : 0.4)
       .keyboardShortcut("z", modifiers: [.command, .shift])
       .help(L10n.VideoEditor.redoShortcutHint)
     }
@@ -116,7 +116,7 @@ struct VideoEditorToolbarView: View {
         icon: "info.circle",
         selectedIcon: "info.circle.fill",
         isSelected: state.isVideoInfoSidebarVisible,
-        highlightColor: ZoomColors.primary
+        activeGlassTint: ZoomColors.primary
       ) {
         state.toggleVideoInfoSidebar()
       }
@@ -132,26 +132,14 @@ struct VideoEditorToolbarView: View {
 
   private var leftSidebarToggleButton: some View {
     ToolbarButton(
-      icon: "rectangle.on.rectangle",
+      icon: "sidebar.left",
       isSelected: state.isLeftSidebarVisible,
-      highlightColor: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary
     ) {
       state.toggleLeftSidebar()
     }
     .keyboardShortcut("b", modifiers: [.command])
     .help(state.isLeftSidebarVisible ? L10n.VideoEditor.hideLeftSidebarHint : L10n.VideoEditor.showLeftSidebarHint)
-  }
-
-  private var rightSidebarToggleButton: some View {
-    ToolbarButton(
-      icon: "sidebar.right",
-      isSelected: state.isRightSidebarVisible,
-      highlightColor: ZoomColors.primary
-    ) {
-      state.toggleRightSidebar()
-    }
-    .keyboardShortcut("b", modifiers: [.command, .shift])
-    .help(state.isRightSidebarVisible ? L10n.VideoEditor.hideRightSidebarHint : L10n.VideoEditor.showRightSidebarHint)
   }
 
   // MARK: - Center Section
@@ -165,15 +153,17 @@ struct VideoEditorToolbarView: View {
           .frame(width: 200)
           .padding(.horizontal, 8)
           .padding(.vertical, 4)
-          .background(Color.primary.opacity(0.08))
-          .clipShape(RoundedRectangle(cornerRadius: 6))
+          .liquidGlassChrome(
+            shape: Radius.controlRect(forHeight: 24),
+            isVisible: true,
+            isActive: true
+          )
+          .focused($isFilenameFieldFocused)
           .onAppear {
             editingFilename = filenameWithoutExtension
+            isFilenameFieldFocused = true
           }
-          .onExitCommand {
-            state.isRenamingFile = false
-            renameError = nil
-          }
+          .onExitCommand(perform: cancelRename)
       } else {
         Text(state.filename)
           .font(.system(size: 13, weight: .medium))
@@ -199,16 +189,24 @@ struct VideoEditorToolbarView: View {
       }
     }
     .frame(maxWidth: .infinity, alignment: .center)
+    .background {
+      if state.isRenamingFile {
+        Button(action: cancelRename) {
+          EmptyView()
+        }
+        .keyboardShortcut(.cancelAction)
+        .opacity(0)
+        .frame(width: 0, height: 0)
+      }
+    }
   }
 
   // MARK: - Right Section
 
+  // No trailing controls: the zoom configuration moved into the collapsed left
+  // rail. The empty spacer keeps the filename geometrically centered.
   private var rightSection: some View {
-    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {
-      if !state.isGIF {
-        rightSidebarToggleButton
-      }
-    }
+    HStack(spacing: WindowSpacingConfiguration.default.toolbarItemSpacing) {}
   }
 
   // MARK: - Helpers
@@ -237,6 +235,12 @@ struct VideoEditorToolbarView: View {
     editingFilename = filenameWithoutExtension
     renameError = nil
     state.isRenamingFile = true
+  }
+
+  private func cancelRename() {
+    isFilenameFieldFocused = false
+    state.isRenamingFile = false
+    renameError = nil
   }
 
   private func commitRename() {

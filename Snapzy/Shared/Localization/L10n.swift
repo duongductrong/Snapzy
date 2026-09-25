@@ -476,16 +476,6 @@ nonisolated enum L10n {
       defaultValue: "config.toml opened.",
       comment: "Toast shown after config.toml is opened"
     )
-    static let configSyncing = string(
-      "preferences-advanced.config-syncing",
-      defaultValue: "Syncing config.toml...",
-      comment: "Toast shown while Snapzy syncs current settings into config.toml"
-    )
-    static let configSynced = string(
-      "preferences-advanced.config-synced",
-      defaultValue: "config.toml synced.",
-      comment: "Toast shown after Snapzy syncs current settings into config.toml"
-    )
     static let configSyncNeedsConfirmation = string(
       "preferences-advanced.config-sync-needs-confirmation",
       defaultValue: "config.toml has external changes.",
@@ -587,42 +577,6 @@ nonisolated enum L10n {
       )
     }
 
-    static func openedConfig(_ path: String) -> String {
-      format(
-        "preferences-advanced.opened-config",
-        defaultValue: "Opened config.toml from %@",
-        comment: "Config file opened success message",
-        path
-      )
-    }
-
-    static func configAccessGranted(_ path: String) -> String {
-      format(
-        "preferences-advanced.config-access-granted",
-        defaultValue: "Config folder access granted. config.toml is ready at %@",
-        comment: "Config folder access success message. %@ is the config file path.",
-        path
-      )
-    }
-
-    static func openConfigMissing(_ path: String) -> String {
-      format(
-        "preferences-advanced.open-config-missing",
-        defaultValue: "No config file exists at %@. Export a backup first, then open it here.",
-        comment: "Config file missing warning message",
-        path
-      )
-    }
-
-    static func openConfigFailed(_ path: String) -> String {
-      format(
-        "preferences-advanced.open-config-failed",
-        defaultValue: "macOS could not open %@.",
-        comment: "Config file open failure message",
-        path
-      )
-    }
-
     static let exportFailed = string(
       "preferences-advanced.export-failed",
       defaultValue: "Config export failed.",
@@ -687,6 +641,11 @@ nonisolated enum L10n {
       "action.capture-repeat-area",
       defaultValue: "Repeat Area Screenshot",
       comment: "Action title for repeating the last area screenshot"
+    )
+    static let captureDelayed = string(
+      "action.capture-delayed",
+      defaultValue: "Delayed Capture",
+      comment: "Action title for capturing an area after a countdown"
     )
     static let captureAreaAnnotate = string(
       "action.capture-area-annotate",
@@ -781,6 +740,15 @@ nonisolated enum L10n {
   }
 
   enum Menu {
+    static func delayedCapture(_ seconds: Int) -> String {
+      format(
+        "menu.delayed-capture",
+        defaultValue: "Delayed Capture (%ds)",
+        comment: "Status bar menu item title for Delayed Capture. %d is the countdown length in seconds.",
+        seconds
+      )
+    }
+
     static func stopRecording(_ duration: String) -> String {
       format(
         "menu.stop-recording",
@@ -907,11 +875,6 @@ nonisolated enum L10n {
   }
 
   enum Common {
-    static let tryItOut = string(
-      "common.try-it-out",
-      defaultValue: "Try It Out",
-      comment: "Try it out button title"
-    )
     static let next = string(
       "common.next",
       defaultValue: "Next",
@@ -1052,6 +1015,7 @@ nonisolated enum L10n {
       defaultValue: "Delete",
       comment: "Generic delete button title"
     )
+    static let delete = deleteAction
     static let overwrite = string(
       "common.overwrite",
       defaultValue: "Overwrite",
@@ -1081,6 +1045,11 @@ nonisolated enum L10n {
       "common.copy",
       defaultValue: "Copy",
       comment: "Generic copy button title"
+    )
+    static let edit = string(
+      "common.edit",
+      defaultValue: "Edit",
+      comment: "Generic edit button title"
     )
     static let open = string(
       "common.open",
@@ -1131,6 +1100,11 @@ nonisolated enum L10n {
       "common.size",
       defaultValue: "Size",
       comment: "Generic size field label"
+    )
+    static let scale = string(
+      "common.scale",
+      defaultValue: "Scale",
+      comment: "Generic scale field label"
     )
     static let format = string(
       "common.format",
@@ -1351,6 +1325,11 @@ nonisolated enum L10n {
       "common.disabled",
       defaultValue: "Disabled",
       comment: "Generic disabled state label"
+    )
+    static let options = string(
+      "common.options",
+      defaultValue: "Options",
+      comment: "Generic options menu title"
     )
     static func withShortcut(_ title: String, _ shortcut: String) -> String {
       L10n.format(
@@ -2753,6 +2732,16 @@ nonisolated enum L10n {
       defaultValue: "Choose your preferred appearance",
       comment: "General preferences setting description"
     )
+    static let liquidGlassTitle = string(
+      "preferences-general.liquid-glass-title",
+      defaultValue: "Liquid Glass Effect",
+      comment: "General preferences setting title"
+    )
+    static let liquidGlassDescription = string(
+      "preferences-general.liquid-glass-description",
+      defaultValue: "Use translucent Liquid Glass on macOS 26+. Turn off to use solid native controls.",
+      comment: "General preferences setting description"
+    )
     static let languageTitle = string(
       "preferences-general.language-title",
       defaultValue: "App Language",
@@ -2797,11 +2786,6 @@ nonisolated enum L10n {
       "preferences-general.save-location-title",
       defaultValue: "Save location",
       comment: "General preferences setting title"
-    )
-    static let saveLocationDescription = string(
-      "preferences-general.save-location-description",
-      defaultValue: "Where Snapzy stores captures",
-      comment: "General preferences setting description"
     )
     static let chooseButton = string(
       "preferences-general.choose-button",
@@ -3486,6 +3470,24 @@ nonisolated enum L10n {
       defaultValue: "Freeze the screen while selecting. Enable to hold a still snapshot.",
       comment: "Capture preferences setting description"
     )
+    static let delayedCaptureTitle = string(
+      "preferences-capture.delayed-capture-title",
+      defaultValue: "Delayed capture countdown",
+      comment: "Capture preferences setting title"
+    )
+    static let delayedCaptureDescription = string(
+      "preferences-capture.delayed-capture-description",
+      defaultValue: "How long Delayed Capture waits before freezing the screen for area selection. Open menus or hover states during the countdown.",
+      comment: "Capture preferences setting description"
+    )
+    static func delayedCaptureSeconds(_ seconds: Int) -> String {
+      format(
+        "preferences-capture.delayed-capture-seconds",
+        defaultValue: "%d seconds",
+        comment: "Delayed capture countdown option. %d is the number of seconds.",
+        seconds
+      )
+    }
     static let livePassthroughTitle = string(
       "preferences-capture.live-passthrough-title",
       defaultValue: "Hover passthrough",
@@ -3804,11 +3806,6 @@ nonisolated enum L10n {
       "preferences-capture.microphone-input-description",
       defaultValue: "Choose the built-in or external microphone used for recordings",
       comment: "Capture preferences setting description"
-    )
-    static let microphoneRequiresMacOS = string(
-      "preferences-capture.microphone-requires-macos",
-      defaultValue: "Requires macOS 15.0+",
-      comment: "Capture preferences description when microphone capture is unavailable on the current macOS version"
     )
     static let removeBackground = string(
       "preferences-capture.remove-background",
@@ -4192,6 +4189,11 @@ nonisolated enum L10n {
       defaultValue: "Capture the previously selected area again",
       comment: "Description for repeat area capture shortcut"
     )
+    static let captureDelayedDescription = string(
+      "preferences-shortcuts.capture-delayed-description",
+      defaultValue: "Count down, then select an area on a frozen screen",
+      comment: "Description for delayed capture shortcut"
+    )
     static let captureAreaAnnotateDescription = string(
       "preferences-shortcuts.capture-area-annotate-description",
       defaultValue: "Select a region, annotate in place, then finish with ⌘S or Enter",
@@ -4354,8 +4356,8 @@ nonisolated enum L10n {
     )
     static let recorderHint = string(
       "preferences-shortcuts.recorder-hint",
-      defaultValue: "Click a shortcut button to record new keys. Use Backspace/Delete while recording to clear keys. Use the row toggle to turn a shortcut off. Press Esc to cancel.",
-      comment: "Hint text below editable shortcut recorder rows"
+      defaultValue: "Click a shortcut to record new keys. Press Backspace/Delete while recording to clear it. Press Esc to cancel.",
+      comment: "Hint explaining how shortcut recording works"
     )
     static let setShortcut = string(
       "preferences-shortcuts.set-shortcut",
@@ -4399,8 +4401,8 @@ nonisolated enum L10n {
     )
     static let singleKeyHint = string(
       "preferences-shortcuts.single-key-hint",
-      defaultValue: "Click to record. Use Backspace/Delete while recording to clear keys. Use the row toggle to turn a shortcut off. Esc to cancel.",
-      comment: "Hint text below single-key shortcut rows"
+      defaultValue: "Click to record. Press Backspace/Delete while recording to clear it. Press Esc to cancel.",
+      comment: "Hint explaining how single-key shortcut recording works"
     )
     static let referenceDescription = string(
       "preferences-shortcuts.reference-description",
@@ -4676,16 +4678,6 @@ nonisolated enum L10n {
       defaultValue: "Copy link",
       comment: "Tooltip for copying a cloud upload link"
     )
-    static let openInBrowser = string(
-      "preferences-cloud-history.open-in-browser",
-      defaultValue: "Open in browser",
-      comment: "Tooltip for opening a cloud upload in the browser"
-    )
-    static let removeFromHistory = string(
-      "preferences-cloud-history.remove-from-history",
-      defaultValue: "Remove from history",
-      comment: "Tooltip for removing a cloud upload from history"
-    )
   }
 
   enum Microphone {
@@ -4714,20 +4706,10 @@ nonisolated enum L10n {
       defaultValue: "Do Not Use Microphone",
       comment: "Microphone menu option to disable microphone capture"
     )
-    static let unavailableVersion = string(
-      "microphone.unavailable-version",
-      defaultValue: "Microphone unavailable on this macOS version",
-      comment: "Accessibility label when microphone capture is unavailable on current macOS version"
-    )
     static let mute = string(
       "microphone.mute",
       defaultValue: "Mute microphone",
       comment: "Accessibility label for muting the microphone"
-    )
-    static let unmute = string(
-      "microphone.unmute",
-      defaultValue: "Unmute microphone",
-      comment: "Accessibility label for unmuting the microphone"
     )
     static let on = string(
       "microphone.on",
@@ -4748,11 +4730,6 @@ nonisolated enum L10n {
       "microphone.choose-input",
       defaultValue: "Choose a microphone input",
       comment: "Accessibility hint for the microphone options menu button"
-    )
-    static let doubleTapToToggle = string(
-      "microphone.double-tap-toggle",
-      defaultValue: "Double-tap to toggle",
-      comment: "Accessibility hint for toggling microphone capture"
     )
     static let systemDefault = string(
       "microphone.system-default",
@@ -4826,6 +4803,56 @@ nonisolated enum L10n {
       "camera.continuity",
       defaultValue: "Continuity Camera",
       comment: "Camera picker suffix for an iPhone Continuity Camera device"
+    )
+    static let shape = string(
+      "camera.shape",
+      defaultValue: "Shape",
+      comment: "Camera shape menu section title"
+    )
+    static let shapeRectangle = string(
+      "camera.shape.rectangle",
+      defaultValue: "Default (Rectangle)",
+      comment: "Camera rectangle shape option"
+    )
+    static let shapeSquare = string(
+      "camera.shape.square",
+      defaultValue: "Square",
+      comment: "Camera square shape option"
+    )
+    static let shapeCircle = string(
+      "camera.shape.circle",
+      defaultValue: "Circle",
+      comment: "Camera circle shape option"
+    )
+    static let size = string(
+      "camera.size",
+      defaultValue: "Size",
+      comment: "Camera size menu section title"
+    )
+    static let sizeSmall = string(
+      "camera.size.small",
+      defaultValue: "Small",
+      comment: "Camera small size option"
+    )
+    static let sizeMedium = string(
+      "camera.size.medium",
+      defaultValue: "Medium",
+      comment: "Camera medium size option"
+    )
+    static let sizeLarge = string(
+      "camera.size.large",
+      defaultValue: "Large",
+      comment: "Camera large size option"
+    )
+    static let mirrorCamera = string(
+      "camera.mirror-camera",
+      defaultValue: "Mirror Camera",
+      comment: "Camera mirror horizontal toggle option"
+    )
+    static let turnOffCamera = string(
+      "camera.turn-off-camera",
+      defaultValue: "Turn Off Camera",
+      comment: "Action to turn off camera from overlay context menu"
     )
   }
 
@@ -5764,15 +5791,6 @@ nonisolated enum L10n {
       )
     }
 
-    static func lifecycleRuleFailed(_ message: String) -> String {
-      format(
-        "cloud-settings.lifecycle-rule-failed",
-        defaultValue: "Lifecycle rule failed: %@. Ensure your credentials have lifecycle management permissions.",
-        comment: "Validation error shown when applying a cloud lifecycle rule fails. %@ is the lower-level error message.",
-        message
-      )
-    }
-
     static func configurationSavedButPasswordSetupFailed(_ message: String) -> String {
       format(
         "cloud-settings.configuration-saved-password-setup-failed",
@@ -5793,11 +5811,6 @@ nonisolated enum L10n {
       "annotate.cloud-not-configured-message",
       defaultValue: "Please set up your cloud credentials in Preferences -> Cloud before uploading.",
       comment: "Alert message shown when annotate cloud upload is unavailable because cloud is not configured"
-    )
-    static let inlineUploadFailedTitle = string(
-      "annotate.inline-upload-failed-title",
-      defaultValue: "Upload Failed",
-      comment: "Alert title shown when inline area annotate upload fails"
     )
     static let moveSelection = string(
       "annotate.move-selection",
@@ -6554,11 +6567,6 @@ nonisolated enum L10n {
       defaultValue: "Auto-balance",
       comment: "Toggle label for automatically balancing canvas effects in annotate"
     )
-    static let openSidebarForMoreControls = string(
-      "annotate.open-sidebar-for-more-controls",
-      defaultValue: "Open sidebar for more annotate controls",
-      comment: "Tooltip for opening the full annotate sidebar from the quick properties bar"
-    )
     static let resetToDefaults = string(
       "annotate.reset-to-defaults",
       defaultValue: "Reset to Defaults",
@@ -6567,6 +6575,11 @@ nonisolated enum L10n {
   }
 
   enum VideoEditor {
+    static let uploadToCloudMessage = string(
+      "video-editor.upload-to-cloud-message",
+      defaultValue: "Would you like to upload the exported video to cloud?",
+      comment: "Informative message in alert asking whether to upload exported video to cloud"
+    )
     static let invalidFileTitle = string(
       "video-editor.invalid-file-title",
       defaultValue: "Invalid File",
@@ -6629,6 +6642,11 @@ nonisolated enum L10n {
       "video-editor.exporting-video",
       defaultValue: "Exporting Video",
       comment: "Title shown in the video editor export progress overlay"
+    )
+    static let savingVideo = string(
+      "video-editor.saving-video",
+      defaultValue: "Saving Video",
+      comment: "Title shown while the Video Editor replaces the current video with saved edits"
     )
     static let zoomSettings = string(
       "video-editor.zoom-settings",
@@ -6695,11 +6713,6 @@ nonisolated enum L10n {
       defaultValue: "Enable Zoom",
       comment: "Context menu label for enabling a zoom segment"
     )
-    static let editZoom = string(
-      "video-editor.edit-zoom",
-      defaultValue: "Edit Zoom",
-      comment: "Context menu label for editing a zoom segment"
-    )
     static let deleteZoom = string(
       "video-editor.delete-zoom",
       defaultValue: "Delete Zoom",
@@ -6764,21 +6777,6 @@ nonisolated enum L10n {
       "video-editor.speed-zoom-overlap-hint",
       defaultValue: "This region overlaps a zoom — the zoom plays at the adjusted speed.",
       comment: "Informational hint when a speed segment overlaps a zoom segment"
-    )
-    static let backgroundTab = string(
-      "video-editor.background-tab",
-      defaultValue: "Background",
-      comment: "Title for the video editor background sidebar tab"
-    )
-    static let zoomTab = string(
-      "video-editor.zoom-tab",
-      defaultValue: "Zoom",
-      comment: "Title for the video editor zoom sidebar tab"
-    )
-    static let unknownTab = string(
-      "video-editor.unknown-tab",
-      defaultValue: "Unknown",
-      comment: "Fallback title for an unknown video editor sidebar tab"
     )
     static let zoomItem = string(
       "video-editor.zoom-item",
@@ -6929,29 +6927,10 @@ nonisolated enum L10n {
       defaultValue: "Save as Copy",
       comment: "Button title for saving an edited video as a copy"
     )
-    static let fileAlreadyExistsTitle = string(
-      "video-editor.file-already-exists-title",
-      defaultValue: "File Already Exists",
-      comment: "Alert title shown when a destination file already exists"
-    )
-    static func fileAlreadyExistsMessage(_ filename: String) -> String {
-      format(
-        "video-editor.file-already-exists-message",
-        defaultValue: "A file named \"%@\" already exists in the destination folder.",
-        comment: "Alert message shown when a destination file already exists. %@ is the file name.",
-        filename
-      )
-    }
-
     static let saveGIFTitle = string(
       "video-editor.save-gif-title",
       defaultValue: "Save GIF",
       comment: "Save panel title for GIF export"
-    )
-    static let saveVideoTitle = string(
-      "video-editor.save-video-title",
-      defaultValue: "Save Video",
-      comment: "Save panel title for video export"
     )
     static let chooseWhereToSaveFile = string(
       "video-editor.choose-where-to-save-file",
@@ -7073,15 +7052,6 @@ nonisolated enum L10n {
         defaultValue: "Snapzy doesn't have write access to this file location. Save as a copy instead.\n\n%@",
         comment: "Alert message shown when replacing the original video file is not allowed. %@ is the lower-level error message.",
         details
-      )
-    }
-
-    static func smallerFileSizeHint(_ reduction: Int) -> String {
-      format(
-        "video-editor.smaller-file-size-hint",
-        defaultValue: "~%d%% smaller file size",
-        comment: "Hint shown for the approximate file size reduction after resizing. %d is the percentage reduction.",
-        reduction
       )
     }
 
@@ -7232,16 +7202,6 @@ nonisolated enum L10n {
       defaultValue: "Hide Left Sidebar (⌘B)",
       comment: "Tooltip for hiding the left background sidebar in the video editor"
     )
-    static let showRightSidebarHint = string(
-      "video-editor.show-right-sidebar-hint",
-      defaultValue: "Show Right Sidebar (⌘⇧B)",
-      comment: "Tooltip for showing the right zoom configuration sidebar in the video editor"
-    )
-    static let hideRightSidebarHint = string(
-      "video-editor.hide-right-sidebar-hint",
-      defaultValue: "Hide Right Sidebar (⌘⇧B)",
-      comment: "Tooltip for hiding the right zoom configuration sidebar in the video editor"
-    )
     static let undoShortcutHint = string(
       "video-editor.undo-shortcut-hint",
       defaultValue: "Undo (⌘Z)",
@@ -7251,6 +7211,61 @@ nonisolated enum L10n {
       "video-editor.redo-shortcut-hint",
       defaultValue: "Redo (⌘⇧Z)",
       comment: "Tooltip for redo in the video editor toolbar"
+    )
+    static let splitAtPlayheadHint = string(
+      "video-editor.split-at-playhead-hint",
+      defaultValue: "Split at Playhead (S)",
+      comment: "Tooltip for the split button in the video editor toolbar"
+    )
+    static let deleteClipHint = string(
+      "video-editor.delete-clip-hint",
+      defaultValue: "Delete Clip (⌫)",
+      comment: "Tooltip for the delete-clip button in the video editor toolbar"
+    )
+    static let addClipHint = string(
+      "video-editor.add-clip-hint",
+      defaultValue: "Insert Video at Playhead",
+      comment: "Tooltip for the insert-video button in the video editor toolbar"
+    )
+    static let addClipPickerMessage = string(
+      "video-editor.add-clip-picker-message",
+      defaultValue: "Choose videos to insert into the timeline",
+      comment: "Message shown in the open panel when picking videos to insert"
+    )
+    static let splitAtPlayhead = string(
+      "video-editor.split-at-playhead",
+      defaultValue: "Split Here",
+      comment: "Context menu label for splitting a clip at the playhead"
+    )
+    static let clipTrimStartHint = string(
+      "video-editor.clip-trim-start-hint",
+      defaultValue: "Drag to change where this clip starts",
+      comment: "Tooltip for a clip's leading trim handle on the video editor timeline"
+    )
+    static let clipTrimEndHint = string(
+      "video-editor.clip-trim-end-hint",
+      defaultValue: "Drag to change where this clip ends",
+      comment: "Tooltip for a clip's trailing trim handle on the video editor timeline"
+    )
+    static let clipPrimaryLabel = string(
+      "video-editor.clip-primary-label",
+      defaultValue: "Recording",
+      comment: "Tooltip label for a clip cut from the original recording"
+    )
+    static let moveClipLeft = string(
+      "video-editor.move-clip-left",
+      defaultValue: "Move Clip Left",
+      comment: "Context menu label for reordering a merged clip left"
+    )
+    static let moveClipRight = string(
+      "video-editor.move-clip-right",
+      defaultValue: "Move Clip Right",
+      comment: "Context menu label for reordering a merged clip right"
+    )
+    static let removeClip = string(
+      "video-editor.remove-clip",
+      defaultValue: "Remove Clip",
+      comment: "Context menu label for removing a merged clip"
     )
     static let aspectRatio = string(
       "video-editor.aspect-ratio",
@@ -7555,15 +7570,6 @@ nonisolated enum L10n {
       defaultValue: "Stop",
       comment: "Scrolling capture HUD button title for stopping automatic scrolling"
     )
-    static func sectionsCaptured(_ count: Int) -> String {
-      format(
-        "scrolling-capture.sections-captured",
-        defaultValue: "%d section(s) captured",
-        comment: "Summary shown in the scrolling capture HUD. %d is the number of captured sections.",
-        count
-      )
-    }
-
     static let captionStartCaptureToLockFirstFrame = string(
       "scrolling-capture.caption-start-capture-to-lock-first-frame",
       defaultValue: "Start Capture to lock the first frame",
@@ -8105,11 +8111,6 @@ nonisolated enum L10n {
       defaultValue: "Choose Folder",
       comment: "Open panel prompt shown when Snapzy asks the user to choose a folder"
     )
-    nonisolated static let desktopPicturesAccessMessage = string(
-      "file-access.desktop-pictures-access-message",
-      defaultValue: "Select the Desktop Pictures folder to grant access",
-      comment: "Open panel message shown when Snapzy asks for access to the system Desktop Pictures folder"
-    )
     static let bookmarkSaveFailedTitle = string(
       "file-access.bookmark-save-failed-title",
       defaultValue: "Folder Access Not Granted",
@@ -8383,6 +8384,11 @@ nonisolated enum L10n {
   }
 
   enum ScreenCapture {
+    static let captureDelayCancelHint = string(
+      "screen-capture.capture-delay-cancel-hint",
+      defaultValue: "Esc to cancel",
+      comment: "Hint under the screenshot countdown"
+    )
     static let permissionDenied = string(
       "screen-capture.permission-denied",
       defaultValue: "Screen capture permission denied",
@@ -8461,11 +8467,6 @@ nonisolated enum L10n {
       defaultValue: "Capture timed out. Please try again.",
       comment: "Error shown when the capture stream does not deliver a frame within the time limit"
     )
-    nonisolated static let selectedWindowUnavailable = string(
-      "screen-capture.selected-window-unavailable",
-      defaultValue: "The selected window is no longer available",
-      comment: "Error shown when application mode resolves a window target that disappeared before capture"
-    )
     static func applicationModeHint(_ shortcut: String) -> String {
       format(
         "screen-capture.application-mode-hint",
@@ -8483,6 +8484,39 @@ nonisolated enum L10n {
         shortcut
       )
     }
+
+    static let recordingClickFullScreenHint = string(
+      "screen-capture.recording-click-full-screen-hint",
+      defaultValue: "Click for full screen",
+      comment: "Recording area selection hint segment, manual mode: a plain click records the whole display. Joined to other segments with ' · '."
+    )
+
+    static let recordingEnterDisplayHint = string(
+      "screen-capture.recording-enter-display-hint",
+      defaultValue: "Enter to pick a display",
+      comment: "Recording area selection hint segment: pressing Enter switches to whole-display mode, where a click picks the display to record. Joined to other segments with ' · '."
+    )
+
+    static func recordingWindowHint(_ shortcut: String) -> String {
+      format(
+        "screen-capture.recording-window-hint",
+        defaultValue: "%@ for a window",
+        comment: "Recording area selection hint segment, manual mode: pressing the key switches to window selection. %@ is the current single-key shortcut. Joined to other segments with ' · '.",
+        shortcut
+      )
+    }
+
+    static let recordingClickDisplayHint = string(
+      "screen-capture.recording-click-display-hint",
+      defaultValue: "Click a display to record it",
+      comment: "Recording area selection hint segment, whole-display mode: a click selects the highlighted display. Joined to other segments with ' · '."
+    )
+
+    static let recordingEnterAreaHint = string(
+      "screen-capture.recording-enter-area-hint",
+      defaultValue: "Enter for area selection",
+      comment: "Recording area selection hint segment, whole-display mode: pressing Enter returns to drawing an area. Joined to other segments with ' · '."
+    )
 
     /// Text shown before the "C" key cap in the screenshot magnifier's color panel, e.g. the
     /// "Press" in "Press [C] to Copy". Empty for languages where the natural phrasing puts
@@ -8769,6 +8803,21 @@ nonisolated enum L10n {
       defaultValue: "Extracting frames...",
       comment: "Loading label shown while the video timeline frame strip is extracting thumbnails"
     )
+    static let zoomIn = string(
+      "video-editor-timeline.zoom-in",
+      defaultValue: "Zoom In",
+      comment: "Tooltip for the video editor timeline zoom-in control"
+    )
+    static let zoomOut = string(
+      "video-editor-timeline.zoom-out",
+      defaultValue: "Zoom Out",
+      comment: "Tooltip for the video editor timeline zoom-out control"
+    )
+    static let fit = string(
+      "video-editor-timeline.fit",
+      defaultValue: "Fit",
+      comment: "Label for the video editor timeline fit-to-window zoom control"
+    )
   }
 
   enum VideoExport {
@@ -9017,6 +9066,11 @@ nonisolated enum L10n {
   }
 
   enum PreferencesHistory {
+    static let fileMissing = string(
+      "preferences-history.file-missing",
+      defaultValue: "File missing",
+      comment: "Label displayed over a history item card when the underlying capture file cannot be found"
+    )
     static let floatingPanelSection = string(
       "preferences-history.floating-panel-section",
       defaultValue: "Floating Panel",

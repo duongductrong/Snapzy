@@ -29,11 +29,16 @@ enum Size {
   static let colorSwatch: CGFloat = 32
   static let colorSwatchSmall: CGFloat = 24
 
-  // Corner radii
-  static let radiusXs: CGFloat = 4
+  // Corner radii — legacy t-shirt naming. The app-wide sweep moved every call site onto `Radius`
+  // (RadiusTokens.swift); these remain as pass-throughs for compatibility and are not for new code.
+  // A name that describes a size rather than a use is how a 32pt recording button and a 12pt badge
+  // both ended up asking for `radiusSm`.
+  static let radiusXs = Radius.ornament
+  /// No `Radius` equivalent by design — every 6pt site is either an ornament (`Radius.ornament`)
+  /// or an under-rounded control (`Radius.control(forHeight:)`). Migrate rather than alias.
   static let radiusSm: CGFloat = 6
-  static let radiusMd: CGFloat = 8
-  static let radiusLg: CGFloat = 12
+  static let radiusMd = Radius.tile
+  static let radiusLg = Radius.controlL
 
   // Strokes
   static let strokeDefault: CGFloat = 1
@@ -47,78 +52,6 @@ enum Typography {
   static let labelMedium: Font = .system(size: 11, weight: .medium)
   static let sectionHeader: Font = .system(size: 11, weight: .semibold)
   static let body: Font = .system(size: 12)
-}
-
-// MARK: - Toolbar Item Style
-
-struct ToolbarButton: View {
-  let icon: String
-  var selectedIcon: String? = nil
-  let isSelected: Bool
-  var highlightColor: Color = .primary
-  var selectedForegroundColor: Color? = nil
-  var selectedBadgeIcon: String? = nil
-
-  let action: () -> Void
-
-  @State private var isHovering = false
-
-  var body: some View {
-    Button(action: action) {
-      Image(systemName: displayedIcon)
-        .font(.system(size: 14, weight: .medium))
-        .foregroundColor(foregroundColor)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(backgroundColor)
-        )
-        .overlay(alignment: .topTrailing) {
-          if let selectedBadgeIcon, isSelected {
-            Image(systemName: selectedBadgeIcon)
-              .font(.system(size: 7, weight: .bold))
-              .foregroundColor(highlightColor)
-              .frame(width: 12, height: 12)
-              .background(Circle().fill(Color.white))
-              .offset(x: 3, y: -3)
-          }
-        }
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-  }
-
-  private var backgroundColor: Color {
-    if isSelected {
-      return highlightColor.opacity(0.3)
-    } else if isHovering {
-      return Color.primary.opacity(0.1)
-    }
-    return Color.clear
-  }
-
-  private var displayedIcon: String {
-    if isSelected {
-      return selectedIcon ?? icon
-    }
-    return icon
-  }
-
-  private var foregroundColor: Color {
-    if isSelected {
-      return selectedForegroundColor ?? highlightColor
-    }
-    return .primary
-  }
-}
-
-struct ToolbarDivider: View {
-  var body: some View {
-    Rectangle()
-      .fill(Color(nsColor: .separatorColor))
-      .frame(width: 1, height: 20)
-      .padding(.horizontal, 4)
-  }
 }
 
 // MARK: - Colors (Semantic)
@@ -160,7 +93,7 @@ struct SidebarItemStyle: ViewModifier {
 
   @State private var isHovering = false
 
-  init(isSelected: Bool, cornerRadius: CGFloat = Size.radiusMd) {
+  init(isSelected: Bool, cornerRadius: CGFloat = Radius.tile) {
     self.isSelected = isSelected
     self.cornerRadius = cornerRadius
   }
@@ -168,13 +101,13 @@ struct SidebarItemStyle: ViewModifier {
   func body(content: Content) -> some View {
     content
       .aspectRatio(1, contentMode: .fit)
-      .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+      .clipShape(Radius.rect(cornerRadius))
       .overlay(
-        RoundedRectangle(cornerRadius: cornerRadius)
+        Radius.rect(cornerRadius)
           .fill(isHovering && !isSelected ? SidebarColors.itemHover.opacity(0.35) : Color.clear)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: cornerRadius)
+        Radius.rect(cornerRadius)
           .strokeBorder(borderColor, lineWidth: Size.strokeSelected)
       )
       .onHover { isHovering = $0 }
@@ -230,7 +163,7 @@ struct ActionButtonStyle: ViewModifier {
 
   @State private var isHovering = false
 
-  init(cornerRadius: CGFloat = Size.radiusMd) {
+  init(cornerRadius: CGFloat = Radius.tile) {
     self.cornerRadius = cornerRadius
   }
 
@@ -239,11 +172,11 @@ struct ActionButtonStyle: ViewModifier {
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .aspectRatio(1, contentMode: .fit)
       .background(
-        RoundedRectangle(cornerRadius: cornerRadius)
+        Radius.rect(cornerRadius)
           .fill(isHovering ? SidebarColors.actionButtonHover : SidebarColors.actionButton)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: cornerRadius)
+        Radius.rect(cornerRadius)
           .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
           .foregroundColor(isHovering ? .primary.opacity(0.5) : .primary.opacity(0.3))
       )
@@ -254,7 +187,7 @@ struct ActionButtonStyle: ViewModifier {
 // MARK: - View Extensions
 
 extension View {
-  func sidebarItemStyle(isSelected: Bool, cornerRadius: CGFloat = Size.radiusMd) -> some View {
+  func sidebarItemStyle(isSelected: Bool, cornerRadius: CGFloat = Radius.tile) -> some View {
     modifier(SidebarItemStyle(isSelected: isSelected, cornerRadius: cornerRadius))
   }
 
@@ -262,7 +195,7 @@ extension View {
     modifier(ColorSwatchStyle(isSelected: isSelected))
   }
 
-  func actionButtonStyle(cornerRadius: CGFloat = Size.radiusMd) -> some View {
+  func actionButtonStyle(cornerRadius: CGFloat = Radius.tile) -> some View {
     modifier(ActionButtonStyle(cornerRadius: cornerRadius))
   }
 }

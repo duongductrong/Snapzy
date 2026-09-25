@@ -28,12 +28,12 @@ final class TempCaptureManager {
   private let defaults: UserDefaults
 
   init(
-    preferences: PreferencesProviding = PreferencesManager.shared,
-    fileAccess: SandboxFileAccessing = SandboxFileAccessManager.shared,
+    preferences: PreferencesProviding? = nil,
+    fileAccess: SandboxFileAccessing? = nil,
     defaults: UserDefaults = .standard
   ) {
-    self.preferences = preferences
-    self.fileAccess = fileAccess
+    self.preferences = preferences ?? PreferencesManager.shared
+    self.fileAccess = fileAccess ?? SandboxFileAccessManager.shared
     self.defaults = defaults
   }
 

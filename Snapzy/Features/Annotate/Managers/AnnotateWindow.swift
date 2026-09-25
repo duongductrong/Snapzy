@@ -64,6 +64,7 @@ class AnnotateWindow: NSWindow {
   var onEscape: (() -> Bool)?
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private var restingLevel: NSWindow.Level = .normal
+  private var themeObserver: AnyCancellable?
 
   init(contentRect: NSRect) {
     super.init(
@@ -77,6 +78,7 @@ class AnnotateWindow: NSWindow {
 
   private func configure() {
     applyTheme()
+    setupThemeObserver()
 
     // Enable full-size content view
     styleMask.insert(.fullSizeContentView)
@@ -95,6 +97,14 @@ class AnnotateWindow: NSWindow {
 
     // Increase window corner radius
     configureCornerRadius()
+  }
+
+  private func setupThemeObserver() {
+    themeObserver = ThemeManager.shared.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.applyTheme()
+      }
   }
 
   /// Configure custom corner radius for the window

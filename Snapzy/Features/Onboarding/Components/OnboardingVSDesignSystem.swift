@@ -141,6 +141,13 @@ struct VSDesignSystem {
     /// Breathing room between the last piece of step content and the indicator row.
     static let pageIndicatorContentGap: CGFloat = 16
 
+    /// The three legacy button styles below are labelled actions, so they take the capsule the
+    /// rest of the app gives text buttons. A pill is already height-derived — it is the one shape
+    /// whose radius cannot drift from the control's height.
+    static var buttonShape: Capsule {
+      Capsule(style: .continuous)
+    }
+
     /// Vertical space the page indicator occupies at the bottom of the window.
     ///
     /// The indicator is drawn as an overlay in `SplashOnboardingRootView`, so it reserves
@@ -166,10 +173,10 @@ struct VSDesignSystem {
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          Capsule()
+          Metrics.buttonShape
             .fill(isDisabled ? Colors.secondaryButtonFill : Colors.buttonFill)
         )
-        .overlay(Capsule().stroke(Colors.buttonStroke, lineWidth: 1))
+        .overlay(Metrics.buttonShape.stroke(Colors.buttonStroke, lineWidth: 1))
         .opacity(configuration.isPressed ? 0.8 : 1.0)
     }
   }
@@ -184,10 +191,10 @@ struct VSDesignSystem {
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          Capsule()
+          Metrics.buttonShape
             .fill(Colors.secondaryButtonFill)
         )
-        .overlay(Capsule().stroke(Colors.secondaryButtonStroke, lineWidth: 1))
+        .overlay(Metrics.buttonShape.stroke(Colors.secondaryButtonStroke, lineWidth: 1))
         .opacity(configuration.isPressed ? 0.7 : 1.0)
     }
   }
@@ -202,10 +209,10 @@ struct VSDesignSystem {
         .padding(.vertical, 8)
         .padding(.horizontal, 20)
         .background(
-          Capsule()
+          Metrics.buttonShape
             .fill(Color.green.opacity(0.3))
         )
-        .overlay(Capsule().stroke(.green.opacity(0.5), lineWidth: 1))
+        .overlay(Metrics.buttonShape.stroke(.green.opacity(0.5), lineWidth: 1))
         .opacity(configuration.isPressed ? 0.8 : 1.0)
     }
   }

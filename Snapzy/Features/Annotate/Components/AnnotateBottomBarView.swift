@@ -56,11 +56,21 @@ struct AnnotateBottomBarView: View {
   @State private var showOverwriteConfirmation = false
   @State private var measuredLeftWidth: CGFloat = 0
   @State private var measuredRightWidth: CGFloat = 0
+  @State private var isZoomHovered = false
+  @Environment(\.liquidGlassRenderMode) private var liquidGlassRenderMode
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private let centeredDragFullWidth: CGFloat = 160
   private let centeredDragCompactWidth: CGFloat = 44
   private let centeredDragHeight: CGFloat = 32
   private let centeredDragSideGap: CGFloat = 12
+
+  private var usesNativeGlass: Bool {
+    LiquidGlassCapabilities.usesNativeGlass(
+      for: liquidGlassRenderMode,
+      userEnabled: isLiquidGlassEnabled
+    )
+  }
 
   var body: some View {
     VStack(spacing: 0) {
@@ -150,7 +160,6 @@ struct AnnotateBottomBarView: View {
   private var leftSection: some View {
     HStack(spacing: 10) {
       zoomPicker
-      canvasPanButton
       modeToggle
     }
   }
@@ -176,20 +185,8 @@ struct AnnotateBottomBarView: View {
 
   // MARK: - Zoom Picker
 
-  private var canvasPanButton: some View {
-    Button {
-      state.isCanvasPanningMode.toggle()
-    } label: {
-      Image(systemName: state.isCanvasPanningMode ? "hand.draw.fill" : "hand.draw")
-        .font(.system(size: 13, weight: .medium))
-        .frame(width: 28, height: 28)
-    }
-    .buttonStyle(.plain)
-    .foregroundColor(state.isCanvasPanningMode ? .accentColor : .secondary)
-    .background(state.isCanvasPanningMode ? Color.accentColor.opacity(0.16) : Color.primary.opacity(0.08))
-    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-    .help("Move canvas")
-    .disabled(!state.canPanInteractively)
+  private var zoomShape: Capsule {
+    Capsule(style: .continuous)
   }
 
   private var zoomPicker: some View {
@@ -218,18 +215,35 @@ struct AnnotateBottomBarView: View {
     } label: {
       HStack(spacing: 4) {
         Text("\(state.currentDisplayedZoomPercent)%")
-          .font(.system(size: 12, weight: .medium))
-          .foregroundColor(.primary)
+          .font(.system(size: 11.5, weight: .medium))
         Image(systemName: "chevron.down")
-          .font(.system(size: 8))
-          .foregroundColor(.secondary)
+          .font(.system(size: 8, weight: .semibold))
       }
+      .foregroundStyle(isZoomHovered ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody)
       .padding(.horizontal, 10)
-      .padding(.vertical, 6)
-      .background(Color.primary.opacity(0.1))
-      .cornerRadius(6)
+      .frame(height: ControlMetrics.bottomBarControl)
+      .contentShape(zoomShape)
+      .liquidGlassSurface(
+        shape: zoomShape,
+        substrate: isZoomHovered
+          ? LiquidGlassTokens.controlSubstrateHover
+          : LiquidGlassTokens.controlSubstrateResting,
+        tint: isZoomHovered ? 0.06 : 0.01,
+        highlight: .none,
+        withRimLighting: !usesNativeGlass,
+        isInteractive: true,
+        glassTint: nil
+      )
+      .shadow(color: Color.black.opacity(0.08), radius: 4, y: 2)
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) {
+          isZoomHovered = hovering
+        }
+      }
+      .animation(LiquidGlassTokens.hoverSpring, value: isZoomHovered)
     }
     .menuStyle(.borderlessButton)
+    .menuIndicator(.hidden)
     .fixedSize(horizontal: true, vertical: false)
   }
 
@@ -243,92 +257,112 @@ struct AnnotateBottomBarView: View {
   }
 
   private var modeToggle: some View {
-    Picker("", selection: $state.editorMode) {
-      Label(L10n.AnnotateUI.modeAnnotate, systemImage: "pencil.and.outline")
-        .tag(AnnotateState.EditorMode.annotate)
-      Label(L10n.AnnotateUI.modeMockup, systemImage: "cube.transparent")
-        .tag(AnnotateState.EditorMode.mockup)
-      Label(L10n.AnnotateUI.modePreview, systemImage: "eye")
-        .tag(AnnotateState.EditorMode.preview)
+    LiquidGlassSegmentedControl(
+      items: AnnotateState.EditorMode.allCases,
+      selection: $state.editorMode,
+      activeGlassTint: nil,
+      controlHeight: ControlMetrics.bottomBarControl
+    ) { mode in
+      HStack(spacing: 5) {
+        Image(systemName: modeIcon(for: mode))
+          .font(.system(size: 11, weight: .medium))
+        Text(modeTitle(for: mode))
+          .lineLimit(1)
+      }
+      .help(modeTitle(for: mode))
     }
-    .pickerStyle(.segmented)
-    .frame(width: 220)
   }
 
-  // MARK: - Drag Handle (CleanShot-style)
+  private func modeIcon(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate:
+      return "pencil.and.outline"
+    case .mockup:
+      return "cube.transparent"
+    case .preview:
+      return "eye"
+    }
+  }
+
+  private func modeTitle(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate:
+      return L10n.AnnotateUI.modeAnnotate
+    case .mockup:
+      return L10n.AnnotateUI.modeMockup
+    case .preview:
+      return L10n.AnnotateUI.modePreview
+    }
+  }
+
+  // MARK: - Drag Handle (Liquid Glass)
 
   @State private var isDragHovering = false
 
   private func dragHandle(width: CGFloat, isCompact: Bool) -> some View {
     let dragState = state.dragToAppPreparationState
+    let isPreparing = dragState == .preparing
+    let isReady = dragState == .ready
+    let isLit = isPreparing || (isReady && isDragHovering)
 
     return AnnotateDragHandleView(state: state)
       .frame(width: width, height: centeredDragHeight)
-      .overlay(
-        HStack(spacing: isCompact ? 0 : 6) {
-          if dragState == .preparing {
+      .overlay {
+        HStack(spacing: isCompact ? 8 : 7) {
+          if isPreparing {
             ProgressView()
               .controlSize(.small)
               .scaleEffect(0.7)
-              .tint(isDragHovering ? .primary : .secondary)
+          } else if isCompact {
+            dragGrip
           } else {
-            Image(systemName: "hand.draw")
-              .font(.system(size: 13, weight: .medium))
-              .foregroundColor(isDragHovering ? .primary : .secondary)
-          }
+            dragGrip
 
-          if !isCompact {
             Text(L10n.AnnotateUI.dragToApp)
               .font(.system(size: 12, weight: .medium))
-              .foregroundColor(dragLabelColor(for: dragState))
+
+            dragGrip
           }
         }
+        .foregroundColor(dragInk(for: dragState))
         .allowsHitTesting(false)
+      }
+      .liquidGlassChrome(
+        shape: Capsule(style: .continuous),
+        isVisible: true,
+        isActive: isLit
       )
-      .background(
-        Capsule()
-          .fill(dragBackgroundColor(for: dragState))
-      )
-      .overlay(
-        Capsule()
-          .strokeBorder(dragBorderColor(for: dragState), lineWidth: 1)
-      )
-      .onHover { isDragHovering = $0 }
-      .animation(.easeInOut(duration: 0.15), value: isDragHovering)
-      .animation(.easeInOut(duration: 0.15), value: dragState)
+      // Rule 2: scale, not opacity — a transform never detaches the glass backdrop.
+      .scaleEffect(isLit ? 1.02 : 1)
+      .onHover { hovering in
+        withAnimation(LiquidGlassTokens.hoverSpring) {
+          isDragHovering = hovering
+        }
+      }
+      .animation(LiquidGlassTokens.hoverSpring, value: dragState)
+      .animation(LiquidGlassTokens.hoverSpring, value: isDragHovering)
       .help(L10n.AnnotateUI.dragToAppHelp)
   }
 
-  private func dragLabelColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
-    switch state {
-    case .ready:
-      return isDragHovering ? .primary : .secondary
-    case .preparing:
-      return .primary
-    case .unavailable:
-      return .secondary.opacity(0.6)
+  private var dragGrip: some View {
+    VStack(spacing: 3) {
+      ForEach(0..<3, id: \.self) { _ in
+        Capsule(style: .continuous)
+          .fill(LiquidGlassTokens.inkBody.opacity(0.5))
+          .frame(width: 7, height: 1.3)
+      }
     }
+    .frame(width: 10)
   }
 
-  private func dragBackgroundColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
+  private func dragInk(for state: AnnotateState.DragToAppPreparationState) -> Color {
     switch state {
     case .ready:
-      return isDragHovering ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06)
+      return isDragHovering ? LiquidGlassTokens.inkPrimary : LiquidGlassTokens.inkBody
     case .preparing:
-      return Color.accentColor.opacity(isDragHovering ? 0.12 : 0.08)
+      return LiquidGlassTokens.inkPrimary
     case .unavailable:
-      return Color.primary.opacity(0.04)
-    }
-  }
-
-  private func dragBorderColor(for state: AnnotateState.DragToAppPreparationState) -> Color {
-    switch state {
-    case .ready:
-      return Color.primary.opacity(isDragHovering ? 0.2 : 0.1)
-    case .preparing:
-      return Color.accentColor.opacity(isDragHovering ? 0.35 : 0.22)
-    case .unavailable:
-      return Color.primary.opacity(0.08)
+      return LiquidGlassTokens.inkFaint
     }
   }
 
@@ -397,7 +431,6 @@ struct AnnotateBottomBarView: View {
           }
         }
         .disabled(isCloudUploading || alreadyUploaded)
-        .opacity(alreadyUploaded ? 0.6 : 1)
       }
 
       BottomBarButton(
@@ -421,8 +454,10 @@ struct AnnotateBottomBarView: View {
         confirmAndDeleteImage()
       }
       .disabled(state.sourceURL == nil)
-      .opacity(state.sourceURL == nil ? 0.5 : 1)
     }
+    // One effect container for the whole row: the glass is evaluated in a single pass instead of
+    // once per button, and neighbours merge when they light up together.
+    .liquidGlassGroup(spacing: Spacing.xs)
   }
 
   private func tooltipText(_ title: String, shortcut: String?) -> String {
@@ -656,31 +691,5 @@ struct AnnotateBottomBarView: View {
         )
       }
     }
-  }
-}
-
-// MARK: - Bottom Bar Button
-
-struct BottomBarButton: View {
-  let icon: String
-  let tooltip: String
-  let action: () -> Void
-
-  @State private var isHovering = false
-
-  var body: some View {
-    Button(action: action) {
-      Image(systemName: icon)
-        .font(.system(size: 14))
-        .foregroundColor(.primary)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(isHovering ? Color.primary.opacity(0.15) : Color.clear)
-        )
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-    .help(tooltip)
   }
 }

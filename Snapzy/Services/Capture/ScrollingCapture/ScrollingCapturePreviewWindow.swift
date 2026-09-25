@@ -34,6 +34,7 @@ final class ScrollingCapturePreviewWindow: NSPanel {
     hidesOnDeactivate = false
     ignoresMouseEvents = true
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+    appearance = ThemeManager.shared.nsAppearance
     contentView = NSHostingView(rootView: ScrollingCapturePreviewView(model: model))
     modelObservation = model.objectWillChange.sink { [weak self] _ in
       DispatchQueue.main.async {

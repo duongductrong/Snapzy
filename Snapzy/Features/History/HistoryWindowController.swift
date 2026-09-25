@@ -198,25 +198,26 @@ final class HistoryWindowController {
     let scopedAccesses = recordsToDelete.map {
       SandboxFileAccessManager.shared.beginAccessingURL($0.fileURL)
     }
-    defer {
-      scopedAccesses.forEach { $0.stop() }
-    }
 
     let existingFileURLs = recordsToDelete
       .filter { FileManager.default.fileExists(atPath: $0.filePath) }
       .map(\.fileURL)
 
     if !existingFileURLs.isEmpty {
-      do {
-        try NSWorkspace.shared.recycle(existingFileURLs)
-      } catch {
-        DiagnosticLogger.shared.logError(
-          .fileAccess,
-          error,
-          "History recycle files failed",
-          context: ["fileCount": "\(existingFileURLs.count)"]
-        )
+      NSWorkspace.shared.recycle(existingFileURLs) { _, error in
+        scopedAccesses.forEach { $0.stop() }
+        guard let error else { return }
+        MainActor.assumeIsolated {
+          DiagnosticLogger.shared.logError(
+            .fileAccess,
+            error,
+            "History recycle files failed",
+            context: ["fileCount": "\(existingFileURLs.count)"]
+          )
+        }
       }
+    } else {
+      scopedAccesses.forEach { $0.stop() }
     }
 
     let ids = recordsToDelete.map(\.id)

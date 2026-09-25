@@ -48,7 +48,7 @@ The TOML file covers portable app preferences:
 - General settings: language, appearance, sounds, URL scheme integration, show menu bar icon, login item, export folder path.
 - Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
-- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
+- Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`), show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots, hover-activated card action shortcuts.
@@ -146,6 +146,7 @@ format = "png"
 include_snapzy = false
 show_cursor = false
 freeze_area = false
+delayed_capture_seconds = 3 # Delayed Capture countdown: 3, 5, or 10
 show_selection_area_overlay = true
 reverse_magnifier_zoom_direction = false
 

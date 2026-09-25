@@ -1,5 +1,5 @@
 //
-//  ZoomSettingsPopover.swift
+//  VideoEditorZoomSettingsPopover.swift
 //  Snapzy
 //
 //  Settings popover for editing selected zoom segment properties
@@ -13,7 +13,7 @@ struct ZoomSettingsPopover: View {
   let previewImage: NSImage?
 
   @State private var localZoomLevel: CGFloat = 2.0
-  @State private var localCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
   private var selectedSegment: ZoomSegment? {
     state.selectedZoomSegment
@@ -67,8 +67,7 @@ struct ZoomSettingsPopover: View {
           .font(.system(size: 9, weight: .medium))
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
-          .background(ZoomColors.primary.opacity(0.2))
-          .cornerRadius(4)
+          .background(Capsule().fill(ZoomColors.primary.opacity(0.2)))
       }
     }
   }
@@ -93,8 +92,8 @@ struct ZoomSettingsPopover: View {
           .foregroundColor(.secondary)
 
         Slider(
-          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel),
-          in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel
+          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
+          in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
           if !isEditing {
             applyZoomLevel()
@@ -122,7 +121,7 @@ struct ZoomSettingsPopover: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 17))
           }
           .buttonStyle(.plain)
         }
@@ -159,7 +158,7 @@ struct ZoomSettingsPopover: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 24))
           }
           .buttonStyle(.plain)
           .help(preset.name)
@@ -184,7 +183,7 @@ struct ZoomSettingsPopover: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.white.opacity(0.1))
-        .cornerRadius(4)
+        .clipShape(Radius.controlRect(forHeight: 20))
       }
       .buttonStyle(.plain)
 
@@ -201,7 +200,7 @@ struct ZoomSettingsPopover: View {
           .foregroundColor(.red)
           .padding(6)
           .background(Color.red.opacity(0.1))
-          .cornerRadius(4)
+          .clipShape(Radius.controlRect(forHeight: 24))
       }
       .buttonStyle(.plain)
     }
@@ -253,10 +252,7 @@ struct ZoomSettingsPopover: View {
 
 #Preview {
   ZoomSettingsPopover(
-    state: {
-      let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test.mov"))
-      return state
-    }(),
+    state: VideoEditorState(url: URL(fileURLWithPath: "/tmp/test.mov")),
     previewImage: nil
   )
   .background(Color(NSColor.windowBackgroundColor))

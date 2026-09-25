@@ -18,6 +18,7 @@ Separated feature docs cover each runtime area in depth:
 - [`SHORTCUTS.md`](SHORTCUTS.md) — Global/overlay shortcut registration and conflicts
 - [`PREFERENCES.md`](PREFERENCES.md) — Settings tabs, preference storage, defaults
 - [`APP_LIFECYCLE.md`](APP_LIFECYCLE.md) — Launch sequence, onboarding, menu bar bootstrap
+- [`LIQUID_GLASS.md`](LIQUID_GLASS.md) — Liquid Glass architecture, 4-layer composite model, buttons, segments, custom views
 - [`UPDATES.md`](UPDATES.md) — Sparkle updater, channels, release flow
 
 ## Runtime Map
@@ -189,6 +190,8 @@ Snapzy/
 
   Shared/
     Components/
+    DesignSystem/
+      LiquidGlass/
     Extensions/
     Localization/
     Services/

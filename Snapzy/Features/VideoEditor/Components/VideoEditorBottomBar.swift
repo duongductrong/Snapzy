@@ -21,6 +21,7 @@ struct VideoEditorBottomBar: View {
   @State private var cloudUploadError: String?
   @State private var showCloudNotConfiguredAlert = false
   @State private var showOverwriteConfirmation = false
+  @State private var expandedSettingsTab: VideoEditorExportSettingsTab?
 
   private var shouldShowCloudButton: Bool {
     cloudManager.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)
@@ -34,39 +35,69 @@ struct VideoEditorBottomBar: View {
     VStack(spacing: 0) {
       Divider()
 
-      HStack(spacing: 12) {
-        // Cancel button (left)
-        Button(L10n.Common.cancel, action: onCancel)
-          .buttonStyle(.bordered)
-
-        Spacer()
-
-        if shouldShowCloudButton {
-          let tooltip = alreadyUploadedToCloud 
-            ? L10n.AnnotateUI.uploadedToCloud 
-            : (state.cloudKey != nil ? L10n.AnnotateUI.reuploadToCloud : L10n.AnnotateUI.uploadToCloud)
-
-          VideoEditorBottomBarButton(
-            icon: alreadyUploadedToCloud ? "checkmark.icloud" : "icloud.and.arrow.up",
-            tooltip: tooltip
-          ) {
-            if state.cloudKey != nil && !alreadyUploadedToCloud {
-              showOverwriteConfirmation = true
-            } else {
-              handleCloudUpload()
+      VStack(spacing: 0) {
+        // Settings drawer — expands above the pill row. It renders OUTSIDE the row's
+        // glass group: a conditional insert inside a `GlassEffectContainer` re-composites
+        // the merged glass pass and erases the sibling buttons' labels during the animation.
+        // Top gap matches the row's bottom padding so the block is vertically balanced.
+        if let settingsTab = expandedSettingsTab {
+          VideoEditorExportSettingsDrawer(
+            state: state,
+            tab: settingsTab,
+            onClose: {
+              withAnimation(LiquidGlassTokens.settleSpring) {
+                expandedSettingsTab = nil
+              }
             }
-          }
-          .disabled(isCloudUploading || alreadyUploadedToCloud)
-          .opacity(alreadyUploadedToCloud ? 0.6 : 1.0)
+          )
+          .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
+          .padding(.top, 12)
+          .transition(
+            .opacity
+              .combined(with: .move(edge: .bottom))
+          )
         }
 
-        // Primary action button (right) - always enabled
-        Button(primaryActionTitle, action: onConvert)
-          .buttonStyle(.borderedProminent)
-          .keyboardShortcut("s", modifiers: [.command])
+        HStack(spacing: 12) {
+          // Cancel button (left)
+          Button(L10n.Common.cancel, action: onCancel)
+            .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
+
+          // Export settings pills (Quality / Dimensions / Audio for video,
+          // Dimensions / GIF Info for GIF) — each toggles its drawer section.
+          VideoEditorExportSettingsBar(state: state, expandedTab: $expandedSettingsTab)
+
+          Spacer()
+
+          if shouldShowCloudButton {
+            let tooltip = alreadyUploadedToCloud
+              ? L10n.AnnotateUI.uploadedToCloud
+              : (state.cloudKey != nil ? L10n.AnnotateUI.reuploadToCloud : L10n.AnnotateUI.uploadToCloud)
+
+            BottomBarButton(
+              icon: alreadyUploadedToCloud ? "checkmark.icloud" : "icloud.and.arrow.up",
+              tooltip: tooltip
+            ) {
+              if state.cloudKey != nil, !alreadyUploadedToCloud {
+                showOverwriteConfirmation = true
+              } else {
+                handleCloudUpload()
+              }
+            }
+            .disabled(isCloudUploading || alreadyUploadedToCloud)
+          }
+
+          // Primary action button (right) - always enabled
+          Button(primaryActionTitle, action: onConvert)
+            .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
+            .keyboardShortcut("s", modifiers: [.command])
+        }
+        .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
+        .padding(.vertical, 12)
+        // One effect container for the row, so the glass is evaluated in a single pass.
+        // Stable content only — the drawer stays outside it (see comment above).
+        .liquidGlassGroup(spacing: Spacing.sm)
       }
-      .padding(.horizontal, WindowSpacingConfiguration.default.toolbarHPadding)
-      .padding(.vertical, 12)
 
       // Cloud upload progress bar (always present to avoid layout shift)
       ProgressView(value: cloudUploadProgress)
@@ -90,7 +121,7 @@ struct VideoEditorBottomBar: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: .videoEditorCloudUpload)) { _ in
       // ⌘U keyboard shortcut triggers cloud upload
-      guard shouldShowCloudButton && !isCloudUploading && !alreadyUploadedToCloud else { return }
+      guard shouldShowCloudButton, !isCloudUploading, !alreadyUploadedToCloud else { return }
       if state.cloudKey != nil {
         showOverwriteConfirmation = true
       } else {
@@ -191,32 +222,6 @@ struct VideoEditorBottomBar: View {
         )
       }
     }
-  }
-}
-
-// MARK: - VideoEditorBottomBarButton
-
-struct VideoEditorBottomBarButton: View {
-  let icon: String
-  let tooltip: String
-  let action: () -> Void
-
-  @State private var isHovering = false
-
-  var body: some View {
-    Button(action: action) {
-      Image(systemName: icon)
-        .font(.system(size: 14))
-        .foregroundColor(.primary)
-        .frame(width: 28, height: 28)
-        .background(
-          RoundedRectangle(cornerRadius: 6)
-            .fill(isHovering ? Color.primary.opacity(0.15) : Color.clear)
-        )
-    }
-    .buttonStyle(.plain)
-    .onHover { isHovering = $0 }
-    .help(tooltip)
   }
 }
 

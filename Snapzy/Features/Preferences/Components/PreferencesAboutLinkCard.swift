@@ -40,9 +40,9 @@ struct AboutLinkCard: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.md)
       .background(Color.primary.opacity(isHovering ? 0.08 : 0.04))
-      .clipShape(RoundedRectangle(cornerRadius: Size.radiusLg))
+      .clipShape(Radius.rect(Radius.card))
       .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusLg)
+        Radius.rect(Radius.card)
           .stroke(Color.primary.opacity(0.08), lineWidth: 1)
       )
       .scaleEffect(isHovering ? 1.03 : 1.0)

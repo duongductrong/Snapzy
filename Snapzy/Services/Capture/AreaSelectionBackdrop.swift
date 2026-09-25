@@ -13,6 +13,9 @@ typealias AreaSelectionResultCompletion = (AreaSelectionResult?) -> Void
 nonisolated enum AreaSelectionInteractionMode {
   case manualRegion
   case applicationWindow
+  /// Recording only: the pointer highlights the display under it and a click selects that
+  /// whole display. Entered and left with Enter.
+  case fullDisplay
 }
 
 nonisolated struct AreaSelectionBackdrop {
@@ -90,6 +93,9 @@ nonisolated struct ImmediateQuickLookCapture {
 nonisolated enum AreaSelectionTarget: Equatable {
   case rect(CGRect)
   case window(WindowCaptureTarget)
+  /// A whole display, picked in the recording overlay. `frame` is the display's `NSScreen.frame`
+  /// in the same global AppKit coordinates as `.rect`.
+  case display(CGDirectDisplayID, frame: CGRect)
 
   var rect: CGRect {
     switch self {
@@ -97,12 +103,14 @@ nonisolated enum AreaSelectionTarget: Equatable {
       rect
     case .window(let target):
       target.frame
+    case .display(_, let frame):
+      frame
     }
   }
 
   var windowTarget: WindowCaptureTarget? {
     switch self {
-    case .rect:
+    case .rect, .display:
       nil
     case .window(let target):
       target

@@ -41,16 +41,16 @@ struct ShortcutOverlayView: View {
       }
       .frame(width: 760)
       .background(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Radius.rect(Radius.panel)
           .fill(Color(nsColor: .windowBackgroundColor).opacity(0.96))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Radius.rect(Radius.panel)
           .stroke(Color.primary.opacity(0.08), lineWidth: 1)
       )
       .shadow(color: .black.opacity(0.2), radius: 16, x: 0, y: 8)
       .padding(24)
-      .onTapGesture {}  // Consume taps to prevent dismiss when interacting with card
+      .onTapGesture {} // Consume taps to prevent dismiss when interacting with card
     }
   }
 
@@ -113,27 +113,27 @@ struct ShortcutOverlayView: View {
           if index < section.items.count - 1 {
             Divider()
               .opacity(0.12)
-              .padding(.leading, 34)
+              .padding(.leading, 46)
           }
         }
       }
       .background(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Radius.rect(Radius.card)
           .fill(Color.primary.opacity(0.035))
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 10, style: .continuous)
+        Radius.rect(Radius.card)
           .stroke(Color.primary.opacity(0.06), lineWidth: 1)
       )
     }
   }
 
   private func rowView(_ item: ShortcutOverlayItem) -> some View {
-    HStack(spacing: 10) {
+    HStack(spacing: 12) {
       Image(systemName: item.icon)
         .font(.system(size: 14))
         .foregroundColor(.secondary)
-        .frame(width: 18)
+        .frame(width: 20)
 
       VStack(alignment: .leading, spacing: 2) {
         Text(item.title)
@@ -151,15 +151,15 @@ struct ShortcutOverlayView: View {
         Text(L10n.Common.off)
           .font(.system(size: 10, weight: .semibold))
           .foregroundColor(.secondary)
-          .padding(.horizontal, 6)
-          .padding(.vertical, 2)
-          .background(Capsule().fill(Color.secondary.opacity(0.15)))
+          .padding(.horizontal, 7)
+          .padding(.vertical, 3)
+          .background(Capsule().fill(Color.primary.opacity(0.07)))
       }
 
       displayView(item.display)
     }
-    .padding(.horizontal, 12)
-    .padding(.vertical, 9)
+    .padding(.horizontal, 14)
+    .padding(.vertical, 10)
     .opacity(item.isEnabled ? 1 : 0.62)
   }
 
@@ -169,16 +169,28 @@ struct ShortcutOverlayView: View {
     case .keycaps(let parts):
       KeyCapGroupView(parts: parts)
     case .text(let text):
-      Text(text)
-        .font(.system(size: 12, weight: .medium, design: .monospaced))
-        .foregroundColor(.secondary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(
-          RoundedRectangle(cornerRadius: 7, style: .continuous)
-            .fill(Color.secondary.opacity(0.12))
-        )
+      ShortcutTextBadgeView(text: text)
     }
+  }
+}
+
+private struct ShortcutTextBadgeView: View {
+  let text: String
+
+  var body: some View {
+    Text(text)
+      .font(.system(size: 12, weight: .medium, design: .monospaced))
+      .foregroundStyle(LiquidGlassTokens.inkBody)
+      .padding(.horizontal, 10)
+      .padding(.vertical, 3)
+      .frame(minHeight: 22)
+      .liquidGlassSurface(
+        shape: Capsule(style: .continuous),
+        substrate: LiquidGlassTokens.controlSubstrateResting,
+        tint: 0.02,
+        highlight: .specular
+      )
+      .fixedSize(horizontal: true, vertical: false)
   }
 }
 

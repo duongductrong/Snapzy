@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 
 // MARK: - Notifications
 
@@ -16,7 +17,11 @@ extension Notification.Name {
 /// Custom NSWindow for video editing with dark mode appearance
 class VideoEditorWindow: NSWindow {
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+  private static let copyKeyCode: UInt16 = 8 // kVK_ANSI_C
+  private static let spaceKeyCode: UInt16 = 49 // kVK_Space
   private var restingLevel: NSWindow.Level = .normal
+  private var themeObserver: AnyCancellable?
+  var onTogglePlayback: (() -> Void)?
 
   init(contentRect: NSRect) {
     super.init(
@@ -27,15 +32,16 @@ class VideoEditorWindow: NSWindow {
     )
     configure()
   }
-  
+
   override func layoutIfNeeded() {
     super.layoutIfNeeded()
-    
+
     layoutTrafficLights()
   }
 
   private func configure() {
     applyTheme()
+    setupThemeObserver()
 
     // Enable full-size content view
     styleMask.insert(.fullSizeContentView)
@@ -53,6 +59,14 @@ class VideoEditorWindow: NSWindow {
     collectionBehavior = [.managed, .participatesInCycle]
 
     applyCornerRadius()
+  }
+
+  private func setupThemeObserver() {
+    themeObserver = ThemeManager.shared.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.applyTheme()
+      }
   }
 
   func applyActiveEditorLevel() {
@@ -74,6 +88,52 @@ class VideoEditorWindow: NSWindow {
     backgroundColor = WindowSurfacePalette.backgroundColor(for: themeManager.preferredAppearance)
   }
 
-  override var canBecomeKey: Bool { true }
-  override var canBecomeMain: Bool { true }
+  override var canBecomeKey: Bool {
+    true
+  }
+
+  override var canBecomeMain: Bool {
+    true
+  }
+
+  override func sendEvent(_ event: NSEvent) {
+    let modifiers = event.modifierFlags.intersection([
+      .command, .shift, .option, .control, .function,
+    ])
+    if event.type == .keyDown,
+       event.keyCode == Self.spaceKeyCode,
+       modifiers.isEmpty,
+       onTogglePlayback != nil,
+       !(firstResponder is NSTextView),
+       !(firstResponder is NSTextField) {
+      // AVPlayerView can otherwise consume Space before the SwiftUI shortcut and
+      // change its transport without updating the editor's playback state.
+      if !event.isARepeat { onTogglePlayback?() }
+      return
+    }
+
+    super.sendEvent(event)
+  }
+
+  /// Do not let an unhandled copy key equivalent fall through to NSWindow's
+  /// default `keyDown`, which emits the macOS alert sound. SwiftUI/text
+  /// responders still get first refusal through `super`; this only consumes a
+  /// Command-C that no responder in the editor can handle.
+  override func performKeyEquivalent(with event: NSEvent) -> Bool {
+    if super.performKeyEquivalent(with: event) {
+      return true
+    }
+
+    let modifiers = event.modifierFlags.intersection([
+      .command, .shift, .option, .control, .function,
+    ])
+    guard event.type == .keyDown,
+          modifiers == .command,
+          event.keyCode == Self.copyKeyCode
+    else {
+      return false
+    }
+
+    return true
+  }
 }

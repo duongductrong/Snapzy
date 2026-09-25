@@ -21,7 +21,7 @@ on:
           - beta
 
   push:
-    branches: [master]
+    branches: [master, beta]
 
 concurrency:
   group: release-prepare-${{ github.ref }}
@@ -34,23 +34,55 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
       version_type: ${{ steps.check.outputs.version_type }}
       channel: ${{ steps.check.outputs.channel }}
+      target_branch: ${{ steps.check.outputs.target_branch }}
     steps:
       - name: Determine if release should run
         id: check
         env:
+          BRANCH_NAME: ${{ github.ref_name }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_CHANNEL: ${{ inputs.channel }}
+          INPUT_VERSION_TYPE: ${{ inputs.version_type }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          set -euo pipefail
+
+          case "$BRANCH_NAME" in
+            master)
+              EXPECTED_CHANNEL=stable
+              ;;
+            beta)
+              EXPECTED_CHANNEL=beta
+              ;;
+            *)
+              echo "::error::Release preparation must run from master or beta, got '$BRANCH_NAME'"
+              exit 1
+              ;;
+          esac
+
+          echo "target_branch=$BRANCH_NAME" >> "$GITHUB_OUTPUT"
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if [ "$INPUT_CHANNEL" != "$EXPECTED_CHANNEL" ]; then
+              echo "::error::The $BRANCH_NAME branch only accepts the $EXPECTED_CHANNEL release channel, got '$INPUT_CHANNEL'"
+              exit 1
+            fi
             echo "should_release=true" >> "$GITHUB_OUTPUT"
-            echo "version_type=${{ inputs.version_type }}" >> "$GITHUB_OUTPUT"
-            echo "channel=${{ inputs.channel || 'stable' }}" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event_name }}" = "push" ]; then
-            if printf '%s\n' "$COMMIT_MSG" | grep -qE "^release\((patch|minor|major)(-beta)?\):"; then
-              TYPE=$(printf '%s\n' "$COMMIT_MSG" | sed -nE 's/^release\((patch|minor|major)(-beta)?\):.*/\1/p' | head -n 1)
+            echo "version_type=$INPUT_VERSION_TYPE" >> "$GITHUB_OUTPUT"
+            echo "channel=$INPUT_CHANNEL" >> "$GITHUB_OUTPUT"
+          elif [ "$EVENT_NAME" = "push" ]; then
+            if [ "$BRANCH_NAME" = "beta" ]; then
+              RELEASE_PATTERN='^release\((patch|minor|major)-beta\):'
+              TYPE_PATTERN='^release\((patch|minor|major)-beta\):.*'
+              CHANNEL=beta
+            else
+              RELEASE_PATTERN='^release\((patch|minor|major)\):'
+              TYPE_PATTERN='^release\((patch|minor|major)\):.*'
               CHANNEL=stable
-              if printf '%s\n' "$COMMIT_MSG" | grep -qE "^release\((patch|minor|major)-beta\):"; then
-                CHANNEL=beta
-              fi
+            fi
+
+            if printf '%s\n' "$COMMIT_MSG" | grep -qE "$RELEASE_PATTERN"; then
+              TYPE=$(printf '%s\n' "$COMMIT_MSG" | sed -nE "s/$TYPE_PATTERN/\\1/p" | head -n 1)
               echo "should_release=true" >> "$GITHUB_OUTPUT"
               echo "version_type=$TYPE" >> "$GITHUB_OUTPUT"
               echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
@@ -59,6 +91,10 @@ jobs:
               echo "version_type=" >> "$GITHUB_OUTPUT"
               echo "channel=" >> "$GITHUB_OUTPUT"
             fi
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+            echo "version_type=" >> "$GITHUB_OUTPUT"
+            echo "channel=" >> "$GITHUB_OUTPUT"
           fi
 
   prepare:
@@ -75,6 +111,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          ref: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Bump version
@@ -131,6 +168,7 @@ jobs:
         run: |
           VERSION="v${{ steps.version.outputs.version }}"
           BRANCH="release/${VERSION}"
+          TARGET_BRANCH="${{ needs.check-release-trigger.outputs.target_branch }}"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -152,7 +190,7 @@ jobs:
           } > build/pr-body.md
 
           # Create PR (or update if already exists)
-          EXISTING_PR=$(gh pr list --head "$BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
+          EXISTING_PR=$(gh pr list --head "$BRANCH" --base "$TARGET_BRANCH" --json number --jq '.[0].number' 2>/dev/null || true)
           if [ -n "$EXISTING_PR" ]; then
             gh pr edit "$EXISTING_PR" \
               --title "chore: release ${VERSION}" \
@@ -160,7 +198,7 @@ jobs:
             echo "Updated existing PR #${EXISTING_PR}"
           else
             gh pr create \
-              --base master \
+              --base "$TARGET_BRANCH" \
               --head "$BRANCH" \
               --title "chore: release ${VERSION}" \
               --body-file build/pr-body.md

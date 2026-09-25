@@ -18,6 +18,7 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
   private var defaultsSuiteName: String!
   private var tempDirectory: URL!
   private var annotationSessionStore: AnnotationSessionStore!
+  private var videoEditorSessionStore: VideoEditorSessionStore!
 
   override func setUp() {
     super.setUp()
@@ -26,6 +27,9 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
       .appendingPathComponent("SnapzyTests_CaptureHistoryRetention_\(UUID().uuidString)", isDirectory: true)
     annotationSessionStore = AnnotationSessionStore(
       rootDirectory: tempDirectory.appendingPathComponent("AnnotationSessions", isDirectory: true)
+    )
+    videoEditorSessionStore = VideoEditorSessionStore(
+      rootDirectory: tempDirectory.appendingPathComponent("VideoEditorSessions", isDirectory: true)
     )
     defaultsSuiteName = "SnapzyTests.CaptureHistoryRetentionServiceTests.\(UUID().uuidString)"
     defaults = UserDefaults(suiteName: defaultsSuiteName)
@@ -36,6 +40,7 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     CaptureHistoryStore.shared.userDefaults = defaults
     service.userDefaults = defaults
     service.annotationSessionStore = annotationSessionStore
+    service.videoEditorSessionStore = videoEditorSessionStore
 
     CaptureHistoryStore.shared.removeAll()
     CaptureHistoryStore.shared.refreshRecords()
@@ -49,8 +54,10 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     CaptureHistoryStore.shared.userDefaults = .standard
     service.userDefaults = .standard
     service.annotationSessionStore = .shared
+    service.videoEditorSessionStore = .shared
     try? FileManager.default.removeItem(at: tempDirectory)
     annotationSessionStore = nil
+    videoEditorSessionStore = nil
     tempDirectory = nil
     super.tearDown()
   }
@@ -125,6 +132,18 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     XCTAssertNil(annotationSessionStore.load(for: sourceURL))
   }
 
+  func testClearAllHistory_removesVideoEditorSidecars() throws {
+    let sourceURL = try writeSourceFile(named: "capture.mov")
+    let masterURL = try writeSourceFile(named: "capture-master.mov")
+    let sessionData = VideoEditorSessionData(sourceSnapshotURL: masterURL)
+    XCTAssertTrue(videoEditorSessionStore.persist(sessionData, for: sourceURL))
+    XCTAssertNotNil(videoEditorSessionStore.load(for: sourceURL))
+
+    service.clearAllHistory()
+
+    XCTAssertNil(videoEditorSessionStore.load(for: sourceURL))
+  }
+
   func testSweep_cleansOrphanedAnnotationSidecars() async throws {
     let activeURL = try writeSourceFile(named: "active.png")
     let inactiveURL = try writeSourceFile(named: "inactive.png")
@@ -142,6 +161,33 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     XCTAssertNotNil(annotationSessionStore.load(for: activeURL))
     XCTAssertFalse(FileManager.default.fileExists(atPath: sidecarDirectory(for: inactiveURL).path))
     XCTAssertFalse(FileManager.default.fileExists(atPath: sidecarDirectory(for: missingURL).path))
+  }
+
+  func testSweep_cleansOrphanedVideoEditorSidecars() async throws {
+    let activeURL = try writeSourceFile(named: "active.mov")
+    let inactiveURL = try writeSourceFile(named: "inactive.mov")
+    let activeMasterURL = try writeSourceFile(named: "active-master.mov")
+    let inactiveMasterURL = try writeSourceFile(named: "inactive-master.mov")
+
+    CaptureHistoryStore.shared.add(makeRecord(filePath: activeURL.path))
+    CaptureHistoryStore.shared.refreshRecords()
+    XCTAssertTrue(
+      videoEditorSessionStore.persist(
+        VideoEditorSessionData(sourceSnapshotURL: activeMasterURL),
+        for: activeURL
+      )
+    )
+    XCTAssertTrue(
+      videoEditorSessionStore.persist(
+        VideoEditorSessionData(sourceSnapshotURL: inactiveMasterURL),
+        for: inactiveURL
+      )
+    )
+
+    await service.sweep()
+
+    XCTAssertNotNil(videoEditorSessionStore.load(for: activeURL))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: videoSessionDirectory(for: inactiveURL).path))
   }
 
   // MARK: - start / stop
@@ -204,5 +250,12 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     return tempDirectory
       .appendingPathComponent("AnnotationSessions", isDirectory: true)
       .appendingPathComponent(AnnotationSessionStore.pathHash(for: normalizedPath), isDirectory: true)
+  }
+
+  private func videoSessionDirectory(for sourceURL: URL) -> URL {
+    let normalizedPath = VideoEditorSessionStore.normalizedPath(for: sourceURL)
+    return tempDirectory
+      .appendingPathComponent("VideoEditorSessions", isDirectory: true)
+      .appendingPathComponent(VideoEditorSessionStore.pathHash(for: normalizedPath), isDirectory: true)
   }
 }

@@ -40,8 +40,9 @@ enum PreferencesKeys {
 
   /// Appearance
   static let appearanceMode = "appearanceMode"
+  static let useLiquidGlass = "appearance.useLiquidGlass"
 
-  // Updates
+  /// Updates
   static let updateChannel = "updates.channel"
 
   // Shortcuts
@@ -64,6 +65,7 @@ enum PreferencesKeys {
   static let screenshotShowCursor = "screenshot.showCursor"
   static let captureIncludeWindowShadow = "capture.includeWindowShadow"
   static let screenshotFreezeArea = "screenshot.freezeArea"
+  static let screenshotDelayedCaptureSeconds = "screenshot.delayedCaptureSeconds"
   static let screenshotLivePassthrough = "screenshot.livePassthrough"
   static let screenshotShowSelectionAreaOverlay = "screenshot.showSelectionAreaOverlay"
   static let screenshotReverseMagnifierZoomDirection = "screenshot.reverseMagnifierZoomDirection"
@@ -123,9 +125,12 @@ enum PreferencesKeys {
   static let recordingMaxResolution = "recording.maxResolution"
   static let recordingCaptureAudio = "recording.captureAudio"
   static let recordingCaptureMicrophone = "recording.captureMicrophone"
-  static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"
+  nonisolated static let recordingMicrophoneDeviceID = "recording.microphoneDeviceID"
   static let recordingCaptureCamera = "recording.captureCamera"
   static let recordingCameraDeviceID = "recording.cameraDeviceID"
+  static let recordingCameraShape = "recording.cameraShape"
+  static let recordingCameraSize = "recording.cameraSize"
+  static let recordingCameraMirrored = "recording.cameraMirrored"
   static let recordingShortcut = "recordingShortcut"
   static let recordingLastAreaRect = "recording.lastAreaRect"
   static let recordingRememberLastArea = "recording.rememberLastArea"
@@ -180,6 +185,6 @@ enum PreferencesKeys {
   static let cloudPasswordEnabled = "cloud.passwordEnabled"
   static let cloudPasswordSkipped = "cloud.passwordSkipped"
   static let cloudUsageStatsCache = "cloud.usageStatsCache"
-  static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
+  nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
   static let cloudGoogleFolderId = "cloud.google.folderId"
 }

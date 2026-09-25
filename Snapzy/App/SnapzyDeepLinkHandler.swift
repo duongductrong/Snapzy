@@ -55,6 +55,8 @@ struct SnapzyDeepLinkHandler {
       screenCaptureViewModel.captureArea()
     case .captureRepeatArea:
       screenCaptureViewModel.captureRepeatArea()
+    case .captureDelayed:
+      screenCaptureViewModel.captureDelayed()
     case .captureApplication:
       screenCaptureViewModel.captureApplication()
     case .captureActiveWindow:
@@ -96,6 +98,13 @@ struct SnapzyDeepLinkHandler {
       ShortcutOverlayManager.shared.toggle()
     case .openSettings(let tab):
       AppStatusBarController.shared.openPreferencesWindow(tab: tab)
+    case .openLiquidGlassPlayground:
+      #if DEBUG
+      LiquidGlassPlaygroundWindowController.shared.show()
+      NSApp.activate(ignoringOtherApps: true)
+      #else
+      DiagnosticLogger.shared.log(.info, .preferences, "Liquid Glass Playground is only available in debug builds.")
+      #endif
     }
   }
 }
@@ -104,6 +113,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case captureFullscreen
   case captureArea
   case captureRepeatArea
+  case captureDelayed
   case captureApplication
   case captureActiveWindow
   case captureAreaAnnotate
@@ -120,6 +130,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case openHistory
   case showShortcuts
   case openSettings(PreferencesTab?)
+  case openLiquidGlassPlayground
 
   init?(url: URL) {
     guard url.scheme?.lowercased() == "snapzy" else { return nil }
@@ -137,6 +148,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .captureArea
     case "capture/repeat-area", "repeat-area", "capture-repeat-area", "screenshot/repeat-area":
       self = .captureRepeatArea
+    case "capture/delayed", "delayed-capture", "capture-delayed", "screenshot/delayed":
+      self = .captureDelayed
     case "capture/application", "capture/window", "application-capture", "window-capture", "screenshot/window":
       self = .captureApplication
     case "capture/active-window", "capture/focused-window", "active-window-capture",
@@ -164,6 +177,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .openVideoEditor
     case "open/cloud-uploads", "cloud-uploads", "uploads", "open-uploads":
       self = .openCloudUploads
+    case "open/liquid-glass-playground", "open/liquid-glass-preview", "open/liquid-glass", "liquid-glass-playground", "liquid-glass":
+      self = .openLiquidGlassPlayground
     case "open/history", "history", "capture-history":
       self = .openHistory
     case "show/shortcuts", "shortcuts", "keyboard-shortcuts", "show-shortcuts":
@@ -184,6 +199,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .captureFullscreen: return "captureFullscreen"
     case .captureArea: return "captureArea"
     case .captureRepeatArea: return "captureRepeatArea"
+    case .captureDelayed: return "captureDelayed"
     case .captureApplication: return "captureApplication"
     case .captureActiveWindow: return "captureActiveWindow"
     case .captureAreaAnnotate: return "captureAreaAnnotate"
@@ -200,6 +216,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .openHistory: return "openHistory"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
+    case .openLiquidGlassPlayground: return "openLiquidGlassPlayground"
     }
   }
 

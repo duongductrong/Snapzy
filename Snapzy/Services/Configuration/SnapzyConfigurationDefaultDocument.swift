@@ -60,6 +60,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("include_snapzy", false)
     writer.value("show_cursor", false)
     writer.value("freeze_area", false)
+    writer.value("delayed_capture_seconds", CaptureDelayOption.defaultValue.seconds)
     writer.value("show_selection_area_overlay", true)
     writer.value("reverse_magnifier_zoom_direction", false)
 
@@ -282,6 +283,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .togglePenRecording: return nil
     case .restartRecording: return nil
     case .deleteRecording: return nil
+    case .delayedCapture: return nil
     case .annotate: return .defaultAnnotate
     case .videoEditor: return .defaultVideoEditor
     case .cloudUploads: return .defaultCloudUploads

@@ -15,14 +15,16 @@ struct VideoEditorMainView: View {
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
 
-
-  // Computed property for current frame preview
+  /// Computed property for current frame preview
   private var currentFrameImage: NSImage? {
     guard !state.frameThumbnails.isEmpty else { return nil }
     let duration = CMTimeGetSeconds(state.duration)
     guard duration > 0 else { return nil }
     let progress = CMTimeGetSeconds(state.currentTime) / duration
-    let index = Int(progress * Double(state.frameThumbnails.count - 1))
+    // Thumbnails are sampled at the center of each timeline cell
+    // (VideoEditorState.generateFrameThumbnails), so the slot containing the
+    // playhead is Int(progress * count) — the same frame shown in the strip.
+    let index = Int(progress * Double(state.frameThumbnails.count))
     let clampedIndex = max(0, min(index, state.frameThumbnails.count - 1))
     return state.frameThumbnails[clampedIndex]
   }
@@ -67,24 +69,84 @@ struct VideoEditorMainView: View {
         .opacity(0)
         .frame(width: 0, height: 0)
 
-        // Delete selected zoom (Delete key)
+        // Split at playhead (S key)
+        Button("") {
+          state.splitAtPlayhead()
+        }
+        .keyboardShortcut("s", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        .disabled(!state.canSplitAtPlayhead)
+
+        // Delete selected zoom / speed / clip (Delete key) — priority:
+        // zoom selection → speed selection → clip.
         Button("") {
           if let id = state.selectedZoomId {
             state.removeZoom(id: id)
+          } else if let id = state.selectedSpeedId {
+            state.removeSpeed(id: id)
+          } else {
+            state.deleteSelectedClip()
           }
         }
         .keyboardShortcut(.delete, modifiers: [])
         .opacity(0)
         .frame(width: 0, height: 0)
-        .disabled(state.selectedZoomId == nil)
+        .disabled(
+          state.selectedZoomId == nil &&
+            state.selectedSpeedId == nil &&
+            !state.canDeleteSelectedClip
+        )
+
+        // Set trim start at playhead (I key)
+        Button("") {
+          state.setTrimStart(state.currentTime)
+        }
+        .keyboardShortcut("i", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Set trim end at playhead (O key)
+        Button("") {
+          state.setTrimEnd(state.currentTime)
+        }
+        .keyboardShortcut("o", modifiers: [])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Timeline zoom in (⌘= / ⌘+)
+        Button("") {
+          state.timelineViewport.zoomIn(anchorTime: CMTimeGetSeconds(state.currentTime))
+        }
+        .keyboardShortcut("=", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Timeline zoom out (⌘-)
+        Button("") {
+          state.timelineViewport.zoomOut(anchorTime: CMTimeGetSeconds(state.currentTime))
+        }
+        .keyboardShortcut("-", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
+
+        // Timeline fit (⌘0)
+        Button("") {
+          state.timelineViewport.fit()
+        }
+        .keyboardShortcut("0", modifiers: [.command])
+        .opacity(0)
+        .frame(width: 0, height: 0)
       }
     }
     .overlay {
       // Export progress overlay
       if state.isExporting {
         ExportProgressOverlay(state: state)
+          .transition(.opacity.combined(with: .scale(scale: 0.96)))
       }
     }
+    .animation(.spring(response: 0.4, dampingFraction: 0.85), value: state.isExporting)
     .ignoresSafeArea(.all, edges: .top)
     .task {
       await state.loadMetadata()
@@ -99,13 +161,6 @@ struct VideoEditorMainView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .layoutPriority(1)
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
-        .padding(.bottom, 12)
-
-      Divider()
-
-      VideoEditorGIFSettingsPanel(state: state)
-        .windowContentHPadding()
-        .padding(.top, 8)
         .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -121,10 +176,6 @@ struct VideoEditorMainView: View {
       VideoTimelineView(state: state)
         .windowContentHPadding()
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
-
-      VideoExportSettingsPanel(state: state)
-        .windowContentHPadding()
-        .padding(.top, 8)
         .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -132,27 +183,21 @@ struct VideoEditorMainView: View {
 
   private var videoWorkspaceRow: some View {
     HStack(spacing: 0) {
+      VideoEditorLeftRail(state: state)
+
+      Divider()
+
       if state.isLeftSidebarVisible {
-        VideoEditorLeftSidebar(state: state)
+        VideoEditorLeftSidebar(state: state, previewImage: currentFrameImage)
           .frame(maxHeight: .infinity, alignment: .top)
 
         Divider()
       }
 
       videoPlayerColumn
-
-      if state.isRightSidebarVisible {
-        Divider()
-
-        VideoEditorRightSidebar(
-          state: state,
-          previewImage: currentFrameImage
-        )
-        .frame(maxHeight: .infinity, alignment: .top)
-      }
     }
     .animation(.easeInOut(duration: 0.2), value: state.isLeftSidebarVisible)
-    .animation(.easeInOut(duration: 0.2), value: state.isRightSidebarVisible)
+    .animation(.easeInOut(duration: 0.2), value: state.leftSidebarPanel)
   }
 
   private var videoPlayerColumn: some View {

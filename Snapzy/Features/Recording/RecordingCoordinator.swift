@@ -11,7 +11,6 @@ import SwiftUI
 
 @MainActor
 final class RecordingCoordinator: ObservableObject {
-
   static let shared = RecordingCoordinator()
 
   @Published private(set) var isActive = false
@@ -82,7 +81,8 @@ final class RecordingCoordinator: ObservableObject {
     UserDefaults.standard.bool(forKey: PreferencesKeys.recordingIncludeOwnApp)
   }
 
-  private func recordingCaptureExclusionConfiguration() -> (excludeOwnApplication: Bool, excludedWindowIDs: [CGWindowID]) {
+  private func recordingCaptureExclusionConfiguration()
+    -> (excludeOwnApplication: Bool, excludedWindowIDs: [CGWindowID]) {
     let excludeOwnApplication = !includeOwnAppInRecordings
     if excludeOwnApplication {
       return (true, [])
@@ -103,7 +103,7 @@ final class RecordingCoordinator: ObservableObject {
       "x": rect.origin.x,
       "y": rect.origin.y,
       "width": rect.width,
-      "height": rect.height
+      "height": rect.height,
     ]
     UserDefaults.standard.set(rectDict, forKey: PreferencesKeys.recordingLastAreaRect)
   }
@@ -148,7 +148,7 @@ final class RecordingCoordinator: ObservableObject {
 
   func stopFromStatusItem() {
     DiagnosticLogger.shared.log(.debug, .recording, "Stop requested from status item", context: [
-      "recorderState": "\(recorder.state)"
+      "recorderState": "\(recorder.state)",
     ])
     switch recorder.state {
     case .recording, .paused:
@@ -177,7 +177,6 @@ final class RecordingCoordinator: ObservableObject {
     guard isActive else { return }
     deleteRecording()
   }
-
 
   /// Start recording flow after area selection
   func showToolbar(
@@ -228,7 +227,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   private func isPreRecordKeyEvent(_ event: NSEvent) -> Bool {
-    if event.keyCode == 53 {  // Escape key — yield to a topmost capture-area overlay
+    if event.keyCode == 53 { // Escape key — yield to a topmost capture-area overlay
       return !isCaptureAreaOverlayPresenting
     }
     return isApplicationToggleEvent(event)
@@ -236,7 +235,7 @@ final class RecordingCoordinator: ObservableObject {
 
   @discardableResult
   private func handlePreRecordKeyEvent(_ event: NSEvent) -> Bool {
-    if event.keyCode == 53 {  // Escape key
+    if event.keyCode == 53 { // Escape key
       // LIFO: let a topmost capture-area overlay handle Escape first. Do not consume it here.
       if isCaptureAreaOverlayPresenting { return false }
       handleEscapeKey()
@@ -403,7 +402,9 @@ final class RecordingCoordinator: ObservableObject {
   ) {
     selectedRect = rect
     selectedWindowTarget = windowTarget
-    saveLastAreaRect(rect)
+    if RecordingDisplaySelectionLogic.shouldSaveLastArea(for: captureMode) {
+      saveLastAreaRect(rect)
+    }
 
     let interactionEnabled = captureMode != .application
     for overlay in regionOverlayWindows {
@@ -435,7 +436,9 @@ final class RecordingCoordinator: ObservableObject {
   /// Finalize a drag/resize: persist the rect and reposition the toolbar.
   private func finalizeDragOrResize() {
     guard let rect = selectedRect else { return }
-    saveLastAreaRect(rect)
+    if RecordingDisplaySelectionLogic.shouldSaveLastArea(for: toolbarWindow?.captureMode ?? .area) {
+      saveLastAreaRect(rect)
+    }
     toolbarWindow?.updateAnchorRect(rect)
   }
 
@@ -456,6 +459,9 @@ final class RecordingCoordinator: ObservableObject {
     case .rect:
       captureMode = .area
       windowTarget = nil
+    case .display:
+      captureMode = .fullscreen
+      windowTarget = nil
     case .window(let target):
       captureMode = .application
       windowTarget = target
@@ -473,7 +479,7 @@ final class RecordingCoordinator: ObservableObject {
     let configuration = currentToolbarConfiguration()
     DiagnosticLogger.shared.log(.info, .recording, "Recording selection restart requested", context: [
       "mode": mode.rawValue,
-      "hasToolbar": "\(toolbarWindow != nil)"
+      "hasToolbar": "\(toolbarWindow != nil)",
     ])
 
     removeEscapeMonitors()
@@ -485,7 +491,12 @@ final class RecordingCoordinator: ObservableObject {
     )
 
     if mode == .fullscreen {
-      let fullscreenRect = ScreenUtility.activeScreen().frame
+      // Stay on the display the user already picked (a display click, or an area mostly on
+      // it); fall back to the active screen only when nothing is selected yet.
+      let fullscreenRect = RecordingDisplaySelectionLogic.displayFrame(
+        bestMatching: selectedRect,
+        screenFrames: NSScreen.screens.map(\.frame)
+      ) ?? ScreenUtility.activeScreen().frame
       presentToolbar(
         for: fullscreenRect,
         captureMode: .fullscreen,
@@ -502,7 +513,7 @@ final class RecordingCoordinator: ObservableObject {
       initialInteractionMode: mode == .application ? .applicationWindow : .manualRegion
     ) { [weak self] selection in
       guard let self else { return }
-      self.handleSelectionResult(
+      handleSelectionResult(
         selection,
         configuration: configuration,
         cancellationLog: "Recording reselection cancelled"
@@ -531,7 +542,7 @@ final class RecordingCoordinator: ObservableObject {
   /// Handle capture mode toggle between area and fullscreen
   private func handleCaptureModeChange(_ mode: RecordingCaptureMode) {
     DiagnosticLogger.shared.log(.info, .recording, "Recording capture mode changed", context: [
-      "mode": "\(mode)"
+      "mode": "\(mode)",
     ])
 
     switch mode {
@@ -547,7 +558,7 @@ final class RecordingCoordinator: ObservableObject {
   /// Delete current recording and close
   private func deleteRecording() {
     DiagnosticLogger.shared.log(.info, .recording, "Recording delete requested", context: [
-      "recorderState": "\(recorder.state)"
+      "recorderState": "\(recorder.state)",
     ])
     Task {
       await recorder.cancelRecording()
@@ -589,7 +600,7 @@ final class RecordingCoordinator: ObservableObject {
       await recorder.cancelRecording()
 
       // Small delay to ensure cleanup completes
-      try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1s
+      try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s
 
       // Re-prepare and start recording with same settings
       do {
@@ -625,7 +636,8 @@ final class RecordingCoordinator: ObservableObject {
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
           excludedWindowIDs: exclusionConfig.excludedWindowIDs,
-          context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
+          context: self.selectedWindowTarget
+            .map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
         try await self.setupCameraOverlay(
@@ -687,7 +699,7 @@ final class RecordingCoordinator: ObservableObject {
     let format = window.selectedFormat
     DiagnosticLogger.shared.log(.info, .recording, "Start recording", context: [
       "format": format.rawValue,
-      "rect": "\(Int(rect.width))x\(Int(rect.height))"
+      "rect": "\(Int(rect.width))x\(Int(rect.height))",
     ])
 
     // Get FPS from preferences (default 30)
@@ -757,7 +769,8 @@ final class RecordingCoordinator: ObservableObject {
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
           excludedWindowIDs: exclusionConfig.excludedWindowIDs,
-          context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
+          context: self.selectedWindowTarget
+            .map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
 
         try await self.setupCameraOverlay(
@@ -777,9 +790,6 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
 
-        // Setup annotation overlay (must be after recording starts so window exists)
-        setupAnnotationOverlay(for: rect)
-
         // Setup click highlight overlay (must be after recording starts)
         setupClickHighlightOverlay(for: rect)
 
@@ -788,6 +798,11 @@ final class RecordingCoordinator: ObservableObject {
 
         // Switch to status bar
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
+        window.contentView?.layoutSubtreeIfNeeded()
+
+        // Set up annotation after the status bar has a live hosting view. The anchor reporter can
+        // then synchronously seed the current offset, while its later layout updates remain live.
+        setupAnnotationOverlay(for: rect)
         finishRecordingStartAttempt()
 
       } catch let error as RecordingError {
@@ -908,7 +923,8 @@ final class RecordingCoordinator: ObservableObject {
           excludeDesktopWidgets: DesktopIconManager.shared.isWidgetHidingEnabled,
           excludeOwnApplication: exclusionConfig.excludeOwnApplication,
           excludedWindowIDs: exclusionConfig.excludedWindowIDs,
-          context: self.selectedWindowTarget.map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
+          context: self.selectedWindowTarget
+            .map { CaptureContext.fromPID($0.ownerPID, windowTitle: $0.title) } ?? CaptureContext.fromFrontmostApp()
         )
         try await self.setupCameraOverlay(
           for: rect,
@@ -925,6 +941,10 @@ final class RecordingCoordinator: ObservableObject {
           overlay.setDimEnabled(dimNonSelectedArea)
         }
         window.showRecordingStatusBar(recorder: recorder, visible: isHoverBarVisiblePreference)
+        window.contentView?.layoutSubtreeIfNeeded()
+        // Keep the retry path in sync with the normal path: the status-bar anchor must exist
+        // before the annotation toolbar is created.
+        setupAnnotationOverlay(for: rect)
         finishRecordingStartAttempt()
         DiagnosticLogger.shared.log(.info, .recording, "Microphone retry recording started")
       } catch let error as RecordingError {
@@ -952,7 +972,7 @@ final class RecordingCoordinator: ObservableObject {
       let url = await recorder.stopRecording()
       DiagnosticLogger.shared.log(.info, .recording, "Recording stopped", context: [
         "hasOutput": "\(url != nil)",
-        "outputMode": "\(outputMode)"
+        "outputMode": "\(outputMode)",
       ])
       if url == nil {
         DiagnosticLogger.shared.log(.warning, .recording, "Recording stop completed without output URL")
@@ -961,7 +981,7 @@ final class RecordingCoordinator: ObservableObject {
       // Dismiss recording UI immediately (status bar, area overlay, etc.)
       cleanup()
 
-      if let url = url {
+      if let url {
         // Play sound
         SoundManager.play("Glass")
 
@@ -978,11 +998,17 @@ final class RecordingCoordinator: ObservableObject {
 
   /// Handle GIF conversion: add to QuickAccess with progress, convert, and update
   private func handleGIFConversion(videoURL: URL) async {
-    DiagnosticLogger.shared.log(.info, .recording, "GIF conversion started", context: ["file": videoURL.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .recording,
+      "GIF conversion started",
+      context: ["file": videoURL.lastPathComponent]
+    )
     let quickAccess = QuickAccessManager.shared
     let sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(videoURL)
     let outputDirectoryAccess = SandboxFileAccessManager.shared.beginAccessingURL(
-      videoURL.deletingLastPathComponent())
+      videoURL.deletingLastPathComponent()
+    )
     defer {
       sourceAccess.stop()
       outputDirectoryAccess.stop()
@@ -994,7 +1020,7 @@ final class RecordingCoordinator: ObservableObject {
     // Find the item we just added (should be first)
     guard let item = quickAccess.items.first else {
       DiagnosticLogger.shared.log(.error, .recording, "GIF conversion aborted: Quick Access item missing", context: [
-        "file": videoURL.lastPathComponent
+        "file": videoURL.lastPathComponent,
       ])
       return
     }
@@ -1030,11 +1056,11 @@ final class RecordingCoordinator: ObservableObject {
         do {
           try FileManager.default.removeItem(at: videoURL)
           DiagnosticLogger.shared.log(.debug, .recording, "GIF source video deleted", context: [
-            "file": videoURL.lastPathComponent
+            "file": videoURL.lastPathComponent,
           ])
         } catch {
           DiagnosticLogger.shared.logError(.recording, error, "Failed to delete GIF source video", context: [
-            "file": videoURL.lastPathComponent
+            "file": videoURL.lastPathComponent,
           ])
         }
         try? RecordingMetadataStore.delete(for: videoURL)
@@ -1057,7 +1083,7 @@ final class RecordingCoordinator: ObservableObject {
   private func captureScreenshot() {
     guard let rect = selectedRect else { return }
     DiagnosticLogger.shared.log(.info, .recording, "Screenshot during recording", context: [
-      "rect": "\(Int(rect.width))x\(Int(rect.height))"
+      "rect": "\(Int(rect.width))x\(Int(rect.height))",
     ])
 
     guard let saveDirectory = resolveSaveDirectoryForOperation() else {
@@ -1088,9 +1114,8 @@ final class RecordingCoordinator: ObservableObject {
     Task {
       await Task.yield()
 
-      let result: CaptureResult
-      if let selectedWindowTarget {
-        result = await captureManager.captureWindow(
+      let result: CaptureResult = if let selectedWindowTarget {
+        await captureManager.captureWindow(
           target: selectedWindowTarget,
           saveDirectory: actualSaveDirectory,
           showCursor: showsCursorInScreenshots,
@@ -1100,7 +1125,7 @@ final class RecordingCoordinator: ObservableObject {
           prefetchedContentTask: prefetchedContentTask
         )
       } else {
-        result = await captureManager.captureArea(
+        await captureManager.captureArea(
           rect: rect,
           saveDirectory: actualSaveDirectory,
           showCursor: showsCursorInScreenshots,
@@ -1115,8 +1140,8 @@ final class RecordingCoordinator: ObservableObject {
       case .success:
         DiagnosticLogger.shared.log(.info, .recording, "Screenshot during recording captured")
         SoundManager.playScreenshotCapture()
-        // PostCaptureActionHandler is triggered automatically via
-        // ScreenCaptureManager.captureCompletedPublisher → ScreenCaptureViewModel
+      // PostCaptureActionHandler is triggered automatically via
+      // ScreenCaptureManager.captureCompletedPublisher → ScreenCaptureViewModel
       case .failure(let error):
         DiagnosticLogger.shared.logError(.recording, error, "Screenshot during recording failed")
         let alert = NSAlert()
@@ -1185,7 +1210,28 @@ final class RecordingCoordinator: ObservableObject {
     }
 
     do {
-      let window = try RecordingCameraOverlayWindow(recordingRect: rect, deviceID: deviceID)
+      let shape = toolbarWindow?.cameraShape ?? RecordingCameraSettingsProvider.storedShape()
+      let sizePreset = toolbarWindow?.cameraSize ?? RecordingCameraSettingsProvider.storedSize()
+      let isMirrored = toolbarWindow?.cameraMirrored ?? RecordingCameraSettingsProvider.storedMirrored()
+
+      let window = try RecordingCameraOverlayWindow(
+        recordingRect: rect,
+        deviceID: deviceID,
+        shape: shape,
+        sizePreset: sizePreset,
+        isMirrored: isMirrored
+      )
+      window.onConfigurationChanged = { [weak self] newShape, newSize, newMirrored in
+        self?.toolbarWindow?.cameraShape = newShape
+        self?.toolbarWindow?.cameraSize = newSize
+        self?.toolbarWindow?.cameraMirrored = newMirrored
+      }
+      window.onCloseRequested = { [weak self] in
+        self?.toolbarWindow?.state.captureCamera = false
+        UserDefaults.standard.set(false, forKey: PreferencesKeys.recordingCaptureCamera)
+        self?.cleanupCameraOverlay()
+      }
+
       cameraOverlayWindow = window
       window.startPreview()
       await recorder.addExceptedWindow(windowID: window.overlayWindowID)
@@ -1204,7 +1250,7 @@ final class RecordingCoordinator: ObservableObject {
     guard !isStartingRecording, recorder.state == .idle else {
       DiagnosticLogger.shared.log(.debug, .recording, "Recording start blocked: recorder busy", context: [
         "source": source,
-        "state": "\(recorder.state)"
+        "state": "\(recorder.state)",
       ])
       return false
     }
@@ -1261,12 +1307,22 @@ final class RecordingCoordinator: ObservableObject {
     toolbarWin.anchorButtonCenterXOffset = window.annotateButtonCenterXOffset
     annotationToolbarWindow = toolbarWin
 
-    // Update popover anchor offset when SwiftUI layout reports button position
+    // Update popover anchor offset when the status-bar anchor reporter reports button position.
     window.onAnnotateButtonOffsetChanged = { [weak toolbarWin] offset in
       toolbarWin?.anchorButtonCenterXOffset = offset
       if annotationState.isAnnotationEnabled {
-        toolbarWin?.positionRelativeToAnchor()
+        if toolbarWin?.isVisible == true {
+          toolbarWin?.positionRelativeToAnchor()
+        } else {
+          toolbarWin?.showPopover()
+        }
       }
+    }
+
+    // Cover the narrow startup window where annotation was enabled before the popover received
+    // its anchor callback (for example, a global shortcut arriving during recording startup).
+    if annotationState.isAnnotationEnabled {
+      toolbarWin.showPopover()
     }
 
     // Start auto-clear timer
@@ -1320,7 +1376,7 @@ final class RecordingCoordinator: ObservableObject {
     service.start(recordingRect: rect)
     clickHighlightService = service
     DiagnosticLogger.shared.log(.info, .recording, "Click highlight overlay started", context: [
-      "windowID": "\(highlightWindow.overlayWindowID)"
+      "windowID": "\(highlightWindow.overlayWindowID)",
     ])
 
     // Add to ScreenCaptureKit's exceptingWindows so the effect is captured
@@ -1360,7 +1416,7 @@ final class RecordingCoordinator: ObservableObject {
     service.start()
     keystrokeMonitorService = service
     DiagnosticLogger.shared.log(.info, .recording, "Keystroke overlay started", context: [
-      "windowID": "\(overlayWindow.overlayWindowID)"
+      "windowID": "\(overlayWindow.overlayWindowID)",
     ])
 
     // Add to ScreenCaptureKit's exceptingWindows so keystrokes are captured
@@ -1382,7 +1438,8 @@ final class RecordingCoordinator: ObservableObject {
   /// Full update: selected rect + overlays + toolbar + persistence.
   /// Used for non-drag events (reselection, mode changes).
   private func updateSelectedRect(_ rect: CGRect) {
-    let captureMode = toolbarWindow?.captureMode == .application ? RecordingCaptureMode.area : (toolbarWindow?.captureMode ?? .area)
+    let captureMode = toolbarWindow?.captureMode == .application ? RecordingCaptureMode
+      .area : (toolbarWindow?.captureMode ?? .area)
     updateSelectedTarget(rect: rect, captureMode: captureMode, windowTarget: nil)
   }
 }
@@ -1390,31 +1447,31 @@ final class RecordingCoordinator: ObservableObject {
 // MARK: - RecordingRegionOverlayDelegate
 
 extension RecordingCoordinator: RecordingRegionOverlayDelegate {
-  func overlayDidRequestReselection(_ overlay: RecordingRegionOverlayWindow) {
+  func overlayDidRequestReselection(_: RecordingRegionOverlayWindow) {
     restartSelection(for: .area)
   }
 
-  func overlay(_ overlay: RecordingRegionOverlayWindow, didMoveRegionTo rect: CGRect) {
+  func overlay(_: RecordingRegionOverlayWindow, didMoveRegionTo rect: CGRect) {
     // Lightweight path: update overlay visuals only, skip persistence + toolbar reposition
     updateOverlayHighlightsOnly(rect)
   }
 
-  func overlayDidFinishMoving(_ overlay: RecordingRegionOverlayWindow) {
+  func overlayDidFinishMoving(_: RecordingRegionOverlayWindow) {
     // Persist rect and reposition toolbar now that drag is complete
     finalizeDragOrResize()
   }
 
-  func overlay(_ overlay: RecordingRegionOverlayWindow, didReselectWithRect rect: CGRect) {
+  func overlay(_: RecordingRegionOverlayWindow, didReselectWithRect rect: CGRect) {
     // Full update for reselection — not a continuous drag, so full sync is fine
     updateSelectedRect(rect)
   }
 
-  func overlay(_ overlay: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect) {
+  func overlay(_: RecordingRegionOverlayWindow, didResizeRegionTo rect: CGRect) {
     // Lightweight path: update overlay visuals only, skip persistence + toolbar reposition
     updateOverlayHighlightsOnly(rect)
   }
 
-  func overlayDidFinishResizing(_ overlay: RecordingRegionOverlayWindow) {
+  func overlayDidFinishResizing(_: RecordingRegionOverlayWindow) {
     // Persist rect and reposition toolbar now that resize is complete
     finalizeDragOrResize()
   }

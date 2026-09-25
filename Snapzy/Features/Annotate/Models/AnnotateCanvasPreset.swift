@@ -120,7 +120,7 @@ struct AnnotateCanvasPresetPayload: Codable, Equatable {
   }
 }
 
-struct CodableBackgroundStyle: Codable, Equatable {
+nonisolated struct CodableBackgroundStyle: Codable, Equatable {
   enum Kind: String, Codable {
     case none
     case gradient
@@ -196,7 +196,7 @@ struct CodableBackgroundStyle: Codable, Equatable {
   }
 }
 
-struct RGBAColor: Codable, Equatable {
+nonisolated struct RGBAColor: Codable, Equatable {
   var red: Double
   var green: Double
   var blue: Double

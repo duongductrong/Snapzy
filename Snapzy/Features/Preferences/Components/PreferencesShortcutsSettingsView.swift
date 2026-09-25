@@ -13,6 +13,7 @@ struct ShortcutsSettingsView: View {
   @State private var fullscreenShortcut: ShortcutConfig?
   @State private var areaShortcut: ShortcutConfig?
   @State private var repeatAreaShortcut: ShortcutConfig?
+  @State private var delayedCaptureShortcut: ShortcutConfig?
   @State private var areaAnnotateShortcut: ShortcutConfig?
   @State private var activeWindowShortcut: ShortcutConfig?
   @State private var areaApplicationCaptureShortcut: CaptureOverlayShortcut?
@@ -60,6 +61,7 @@ struct ShortcutsSettingsView: View {
     _fullscreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .fullscreen))
     _areaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .area))
     _repeatAreaShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .repeatArea))
+    _delayedCaptureShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .delayedCapture))
     _areaAnnotateShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .areaAnnotate))
     _activeWindowShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .activeWindow))
     _areaApplicationCaptureShortcut = State(
@@ -163,7 +165,7 @@ struct ShortcutsSettingsView: View {
               }
               .padding(10)
               .background(
-                RoundedRectangle(cornerRadius: 8)
+                Radius.rect(Radius.card)
                   .fill(Color.orange.opacity(0.06))
               )
 
@@ -255,11 +257,7 @@ struct ShortcutsSettingsView: View {
         }
       }
 
-      Section(L10n.PreferencesShortcuts.globalSection) {
-        Text(L10n.PreferencesShortcuts.globalSectionDescription)
-          .font(.caption)
-          .foregroundColor(.secondary)
-
+      Section {
         SettingRow(
           icon: "keyboard",
           title: L10n.PreferencesShortcuts.enableShortcutsTitle,
@@ -319,6 +317,11 @@ struct ShortcutsSettingsView: View {
           }
           .padding(.vertical, 2)
         }
+      } header: {
+        ShortcutSectionHeader(
+          title: L10n.PreferencesShortcuts.globalSection,
+          help: L10n.PreferencesShortcuts.globalSectionDescription
+        )
       }
 
       if shortcutsEnabled {
@@ -334,30 +337,27 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .fullscreen) }
           )
 
-          VStack(alignment: .leading, spacing: 4) {
-            ShortcutRecorderView(
-              label: L10n.Actions.captureArea,
-              icon: "rectangle.dashed",
-              description: L10n.PreferencesShortcuts.captureAreaDescription,
-              shortcut: $areaShortcut,
-              defaultShortcut: .defaultArea,
-              isEnabled: globalEnabledBinding(for: .area),
-              validationIssue: globalValidationIssues[.area],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
-            )
+          ShortcutRecorderView(
+            label: L10n.Actions.captureArea,
+            icon: "rectangle.dashed",
+            description: L10n.PreferencesShortcuts.captureAreaDescription,
+            shortcut: $areaShortcut,
+            defaultShortcut: .defaultArea,
+            isEnabled: globalEnabledBinding(for: .area),
+            validationIssue: globalValidationIssues[.area],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
+          )
 
-            CaptureOverlayShortcutRecorderRow(
-              label: L10n.PreferencesShortcuts.applicationCaptureTitle,
-              description: L10n.PreferencesShortcuts.applicationCaptureDescription,
-              shortcut: $areaApplicationCaptureShortcut,
-              defaultShortcut: CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut,
-              isEnabled: globalEnabledBinding(for: .area),
-              validationIssue: captureOverlayValidationIssues[.applicationCapture]
-            ) { newShortcut in
-              handleCaptureOverlayShortcutChange(newShortcut, for: .applicationCapture)
-            }
+          CaptureOverlayShortcutRecorderRow(
+            label: L10n.PreferencesShortcuts.applicationCaptureTitle,
+            description: L10n.PreferencesShortcuts.applicationCaptureDescription,
+            shortcut: $areaApplicationCaptureShortcut,
+            defaultShortcut: CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut,
+            isEnabled: globalEnabledBinding(for: .area),
+            validationIssue: captureOverlayValidationIssues[.applicationCapture]
+          ) { newShortcut in
+            handleCaptureOverlayShortcutChange(newShortcut, for: .applicationCapture)
           }
-          .padding(.vertical, 2)
 
           ShortcutRecorderView(
             label: L10n.Actions.captureRepeatArea,
@@ -368,6 +368,17 @@ struct ShortcutsSettingsView: View {
             isEnabled: globalEnabledBinding(for: .repeatArea),
             validationIssue: globalValidationIssues[.repeatArea],
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .repeatArea) }
+          )
+
+          ShortcutRecorderView(
+            label: L10n.Actions.captureDelayed,
+            icon: "timer",
+            description: L10n.PreferencesShortcuts.captureDelayedDescription,
+            shortcut: $delayedCaptureShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .delayedCapture),
+            validationIssue: globalValidationIssues[.delayedCapture],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .delayedCapture) }
           )
 
           ShortcutRecorderView(
@@ -436,100 +447,87 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .smartElement) }
           )
         } header: {
-          HStack {
-            Text(L10n.PreferencesShortcuts.captureSection)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetCaptureSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.PreferencesShortcuts.captureSection,
+            onReset: { resetCaptureSection() }
+          )
         }
 
         Section {
-          VStack(alignment: .leading, spacing: 4) {
-            ShortcutRecorderView(
-              label: L10n.Actions.recordVideo,
-              icon: "record.circle",
-              description: L10n.PreferencesShortcuts.recordVideoDescription,
-              shortcut: $recordingShortcut,
-              defaultShortcut: .defaultRecording,
-              isEnabled: globalEnabledBinding(for: .recording),
-              validationIssue: globalValidationIssues[.recording],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .recording) }
-            )
+          ShortcutRecorderView(
+            label: L10n.Actions.recordVideo,
+            icon: "record.circle",
+            description: L10n.PreferencesShortcuts.recordVideoDescription,
+            shortcut: $recordingShortcut,
+            defaultShortcut: .defaultRecording,
+            isEnabled: globalEnabledBinding(for: .recording),
+            validationIssue: globalValidationIssues[.recording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .recording) }
+          )
 
-            CaptureOverlayShortcutRecorderRow(
-              label: L10n.PreferencesShortcuts.applicationRecordingTitle,
-              description: L10n.PreferencesShortcuts.applicationRecordingDescription,
-              shortcut: $recordingApplicationCaptureShortcut,
-              defaultShortcut: CaptureOverlayShortcutSettings.defaultRecordingApplicationCaptureShortcut,
-              isEnabled: globalEnabledBinding(for: .recording),
-              validationIssue: captureOverlayValidationIssues[.applicationRecording]
-            ) { newShortcut in
-              handleCaptureOverlayShortcutChange(newShortcut, for: .applicationRecording)
-            }
-
-            ShortcutRecorderView(
-              label: L10n.Actions.pauseResumeRecording,
-              icon: "pause.circle",
-              description: L10n.PreferencesShortcuts.pauseResumeRecordingDescription,
-              footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
-              shortcut: $pauseResumeRecordingShortcut,
-              defaultShortcut: nil,
-              isEnabled: globalEnabledBinding(for: .pauseResumeRecording),
-              validationIssue: globalValidationIssues[.pauseResumeRecording],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .pauseResumeRecording) }
-            )
-
-            ShortcutRecorderView(
-              label: L10n.Actions.togglePenRecording,
-              icon: "pencil.tip.crop.circle",
-              description: L10n.PreferencesShortcuts.togglePenRecordingDescription,
-              footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
-              shortcut: $togglePenRecordingShortcut,
-              defaultShortcut: nil,
-              isEnabled: globalEnabledBinding(for: .togglePenRecording),
-              validationIssue: globalValidationIssues[.togglePenRecording],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .togglePenRecording) }
-            )
-
-            ShortcutRecorderView(
-              label: L10n.Actions.restartRecording,
-              icon: "arrow.counterclockwise.circle",
-              description: L10n.PreferencesShortcuts.restartRecordingDescription,
-              footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
-              shortcut: $restartRecordingShortcut,
-              defaultShortcut: nil,
-              isEnabled: globalEnabledBinding(for: .restartRecording),
-              validationIssue: globalValidationIssues[.restartRecording],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .restartRecording) }
-            )
-
-            ShortcutRecorderView(
-              label: L10n.Actions.deleteRecording,
-              icon: "trash.circle",
-              description: L10n.PreferencesShortcuts.deleteRecordingDescription,
-              footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
-              shortcut: $deleteRecordingShortcut,
-              defaultShortcut: nil,
-              isEnabled: globalEnabledBinding(for: .deleteRecording),
-              validationIssue: globalValidationIssues[.deleteRecording],
-              onShortcutChanged: { handleGlobalShortcutChange($0, for: .deleteRecording) }
-            )
+          CaptureOverlayShortcutRecorderRow(
+            label: L10n.PreferencesShortcuts.applicationRecordingTitle,
+            description: L10n.PreferencesShortcuts.applicationRecordingDescription,
+            shortcut: $recordingApplicationCaptureShortcut,
+            defaultShortcut: CaptureOverlayShortcutSettings.defaultRecordingApplicationCaptureShortcut,
+            isEnabled: globalEnabledBinding(for: .recording),
+            validationIssue: captureOverlayValidationIssues[.applicationRecording]
+          ) { newShortcut in
+            handleCaptureOverlayShortcutChange(newShortcut, for: .applicationRecording)
           }
-          .padding(.vertical, 2)
+
+          ShortcutRecorderView(
+            label: L10n.Actions.pauseResumeRecording,
+            icon: "pause.circle",
+            description: L10n.PreferencesShortcuts.pauseResumeRecordingDescription,
+            footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
+            shortcut: $pauseResumeRecordingShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .pauseResumeRecording),
+            validationIssue: globalValidationIssues[.pauseResumeRecording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .pauseResumeRecording) }
+          )
+
+          ShortcutRecorderView(
+            label: L10n.Actions.togglePenRecording,
+            icon: "pencil.tip.crop.circle",
+            description: L10n.PreferencesShortcuts.togglePenRecordingDescription,
+            footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
+            shortcut: $togglePenRecordingShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .togglePenRecording),
+            validationIssue: globalValidationIssues[.togglePenRecording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .togglePenRecording) }
+          )
+
+          ShortcutRecorderView(
+            label: L10n.Actions.restartRecording,
+            icon: "arrow.counterclockwise.circle",
+            description: L10n.PreferencesShortcuts.restartRecordingDescription,
+            footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
+            shortcut: $restartRecordingShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .restartRecording),
+            validationIssue: globalValidationIssues[.restartRecording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .restartRecording) }
+          )
+
+          ShortcutRecorderView(
+            label: L10n.Actions.deleteRecording,
+            icon: "trash.circle",
+            description: L10n.PreferencesShortcuts.deleteRecordingDescription,
+            footnote: L10n.PreferencesShortcuts.activeOnlyWhileRecording,
+            shortcut: $deleteRecordingShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .deleteRecording),
+            validationIssue: globalValidationIssues[.deleteRecording],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .deleteRecording) }
+          )
         } header: {
-          HStack {
-            Text(L10n.PreferencesShortcuts.recordingSection)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetRecordingSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.PreferencesShortcuts.recordingSection,
+            onReset: { resetRecordingSection() }
+          )
         }
 
         Section {
@@ -576,28 +574,15 @@ struct ShortcutsSettingsView: View {
             validationIssue: globalValidationIssues[.shortcutList],
             onShortcutChanged: { handleGlobalShortcutChange($0, for: .shortcutList) }
           )
-
-          Text(L10n.PreferencesShortcuts.recorderHint)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .padding(.top, 4)
         } header: {
-          HStack {
-            Text(L10n.PreferencesShortcuts.toolsSection)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetToolsSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.PreferencesShortcuts.toolsSection,
+            help: L10n.PreferencesShortcuts.recorderHint,
+            onReset: { resetToolsSection() }
+          )
         }
 
         Section {
-          Text(L10n.PreferencesShortcuts.historySectionDescription)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
           ShortcutRecorderView(
             label: L10n.Actions.openHistory,
             icon: "clock.arrow.circlepath",
@@ -624,22 +609,14 @@ struct ShortcutsSettingsView: View {
           .disabled(!historyFloatingManager.isEnabled)
           .opacity(historyFloatingManager.isEnabled ? 1.0 : 0.6)
         } header: {
-          HStack {
-            Text(L10n.PreferencesShortcuts.historySection)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetHistorySection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.PreferencesShortcuts.historySection,
+            help: L10n.PreferencesShortcuts.historySectionDescription,
+            onReset: { resetHistorySection() }
+          )
         }
 
         Section {
-          Text(L10n.PreferencesShortcuts.quickAccessSectionDescription)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
           ShortcutRecorderView(
             label: L10n.PreferencesShortcuts.editLatestCapture,
             icon: "pencil.tip.crop.circle",
@@ -659,24 +636,16 @@ struct ShortcutsSettingsView: View {
             }
           )
         } header: {
-          HStack {
-            Text(L10n.PreferencesShortcuts.quickAccessSection)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetQuickAccessSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.PreferencesShortcuts.quickAccessSection,
+            help: L10n.PreferencesShortcuts.quickAccessSectionDescription,
+            onReset: resetQuickAccessSection
+          )
         }
 
         QuickAccessActionShortcutsSection()
 
         Section {
-          Text(L10n.PreferencesShortcuts.annotateActionsDescription)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
           ShortcutRecorderView(
             label: L10n.ShortcutOverlay.copyAndClose,
             icon: "doc.on.doc",
@@ -731,22 +700,14 @@ struct ShortcutsSettingsView: View {
             onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .autoRedactSensitiveData) }
           )
         } header: {
-          HStack {
-            Text(L10n.ShortcutOverlay.annotateActions)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetAnnotateActionsSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.ShortcutOverlay.annotateActions,
+            help: L10n.PreferencesShortcuts.annotateActionsDescription,
+            onReset: resetAnnotateActionsSection
+          )
         }
 
         Section {
-          Text(L10n.PreferencesShortcuts.annotationToolDescription)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
           ForEach(AnnotateShortcutManager.configurableTools, id: \.self) { tool in
             SingleKeyRecorderView(
               tool: tool,
@@ -759,28 +720,18 @@ struct ShortcutsSettingsView: View {
               defaultShortcut: tool.defaultShortcut
             )
           }
-
-          Text(L10n.PreferencesShortcuts.singleKeyHint)
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .padding(.top, 4)
         } header: {
-          HStack {
-            Text(L10n.ShortcutOverlay.annotateToolKeys)
-            Spacer()
-            Button(L10n.Common.reset) {
-              resetAnnotateToolKeysSection()
-            }
-            .buttonStyle(.borderless)
-            .font(.caption)
-          }
+          ShortcutSectionHeader(
+            title: L10n.ShortcutOverlay.annotateToolKeys,
+            help: [
+              L10n.PreferencesShortcuts.annotationToolDescription,
+              L10n.PreferencesShortcuts.singleKeyHint,
+            ].joined(separator: "\n"),
+            onReset: resetAnnotateToolKeysSection
+          )
         }
 
-        Section(L10n.ShortcutOverlay.annotateReference) {
-          Text(L10n.PreferencesShortcuts.referenceDescription)
-            .font(.caption)
-            .foregroundColor(.secondary)
-
+        Section {
           ReadOnlyShortcutRow(icon: "square.and.arrow.down", label: L10n.ShortcutOverlay.saveDone, shortcut: "⌘ S")
           ReadOnlyShortcutRow(
             icon: "square.and.arrow.down.on.square",
@@ -801,6 +752,11 @@ struct ShortcutsSettingsView: View {
             icon: "arrow.up.arrow.down.arrow.left.arrow.right",
             label: L10n.ShortcutOverlay.nudgeTenPixels,
             shortcut: "⇧ ← → ↑ ↓"
+          )
+        } header: {
+          ShortcutSectionHeader(
+            title: L10n.ShortcutOverlay.annotateReference,
+            help: L10n.PreferencesShortcuts.referenceDescription
           )
         }
       }
@@ -837,6 +793,7 @@ struct ShortcutsSettingsView: View {
     fullscreenShortcut = .defaultFullscreen
     areaShortcut = .defaultArea
     repeatAreaShortcut = .defaultRepeatArea
+    delayedCaptureShortcut = nil
     areaAnnotateShortcut = .defaultAreaAnnotate
     activeWindowShortcut = .defaultActiveWindowCapture
     areaApplicationCaptureShortcut = CaptureOverlayShortcutSettings.defaultApplicationCaptureShortcut
@@ -846,7 +803,8 @@ struct ShortcutsSettingsView: View {
     smartElementShortcut = .defaultSmartElement
 
     let captureKinds: [GlobalShortcutKind] = [
-      .fullscreen, .area, .repeatArea, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr, .smartElement,
+      .fullscreen, .area, .repeatArea, .delayedCapture, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr,
+      .smartElement,
     ]
     for kind in captureKinds {
       globalShortcutEnabled[kind] = true
@@ -858,6 +816,7 @@ struct ShortcutsSettingsView: View {
     manager.setFullscreenShortcut(.defaultFullscreen)
     manager.setAreaShortcut(.defaultArea)
     manager.setRepeatAreaShortcut(.defaultRepeatArea)
+    manager.setDelayedCaptureShortcut(nil)
     manager.setAreaAnnotateShortcut(.defaultAreaAnnotate)
     manager.setActiveWindowShortcut(.defaultActiveWindowCapture)
     manager.setScrollingCaptureShortcut(.defaultScrollingCapture)
@@ -1110,6 +1069,9 @@ struct ShortcutsSettingsView: View {
       case .repeatArea:
         repeatAreaShortcut = config
         manager.setRepeatAreaShortcut(config)
+      case .delayedCapture:
+        delayedCaptureShortcut = config
+        manager.setDelayedCaptureShortcut(config)
       case .areaAnnotate:
         areaAnnotateShortcut = config
         manager.setAreaAnnotateShortcut(config)
@@ -1286,24 +1248,20 @@ private struct CaptureOverlayShortcutRecorderRow: View {
         .foregroundColor(.secondary)
         .frame(width: 28)
 
-      VStack(alignment: .leading, spacing: 2) {
-        Text(label)
-          .fontWeight(.medium)
-        Text(description)
-          .font(.caption)
-          .foregroundColor(.secondary)
-      }
+      Text(label)
+        .fontWeight(.medium)
+        .help(description)
 
       Spacer()
 
       shortcutRecorderButton
 
-      ShortcutResetButton(
-        isDisabled: !isEnabled.wrappedValue || isRecording || shortcut == defaultShortcut,
-        action: resetToDefault
+      ShortcutOptionsMenuButton(
+        isEnabled: isEnabled,
+        isDefault: shortcut == defaultShortcut,
+        isBusy: isRecording,
+        onReset: resetToDefault
       )
-
-      toggleStatus
     }
     .padding(.vertical, 4)
     .opacity(rowOpacity)
@@ -1322,31 +1280,17 @@ private struct CaptureOverlayShortcutRecorderRow: View {
       startRecording()
     } label: {
       if isRecording {
-        Text(L10n.ShortcutRecorder.pressKeys)
-          .font(.system(size: 12, weight: .medium))
-          .foregroundColor(.accentColor)
-          .frame(minWidth: 100)
-      } else if let shortcut {
-        KeyCapGroupView(parts: shortcut.displayParts)
-      } else {
-        EmptyShortcutCTAView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
-      }
+          KeyCapRecordingView(minWidth: 100)
+        } else if let shortcut {
+          KeyCapGroupView(parts: shortcut.displayParts)
+        } else {
+          KeyCapPlaceholderView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
+        }
     }
     .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
     .shortcutValidationHighlight(issue: validationIssue)
     .disabled(!isEnabled.wrappedValue)
     .help(isEnabled.wrappedValue ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
-  }
-
-  private var toggleStatus: some View {
-    HStack(spacing: 6) {
-      Text(isEnabled.wrappedValue ? L10n.Common.on : L10n.Common.off)
-        .font(.caption)
-        .foregroundColor(.secondary)
-
-      Toggle("", isOn: isEnabled)
-        .labelsHidden()
-    }
   }
 
   private var rowOpacity: Double {
@@ -1470,12 +1414,12 @@ private struct ReadOnlyShortcutRow: View {
           .padding(.horizontal, 12)
           .padding(.vertical, 6)
           .background(
-            RoundedRectangle(cornerRadius: 6)
+            Radius.rect(Radius.ornament)
               .fill(Color.gray.opacity(0.1))
           )
       }
     }
-    .padding(.vertical, 2)
+    .padding(.vertical, 4)
   }
 
   /// Split the display string (e.g. "⌘ ⇧ Z" or "← → ↑ ↓") into individual parts

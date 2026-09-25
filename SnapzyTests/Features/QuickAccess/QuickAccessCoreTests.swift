@@ -76,6 +76,64 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertFalse(QuickAccessProcessingState.failed.isProcessing)
   }
 
+  func testQuickAccessItem_thumbnailReplacementPreservesEditorSessionState() throws {
+    let id = UUID()
+    let url = URL(fileURLWithPath: "/tmp/demo.mov")
+    let cloudURL = try XCTUnwrap(URL(string: "https://example.com/demo"))
+    let thumbnail = NSImage(size: CGSize(width: 16, height: 16))
+    var item = QuickAccessItem(
+      id: id,
+      url: url,
+      thumbnail: thumbnail,
+      capturedAt: Date(),
+      itemType: .video,
+      duration: 1,
+      cloudURL: cloudURL,
+      cloudKey: "demo-key",
+      isCloudStale: true,
+      isPinned: true,
+      isWindowOpen: true
+    )
+    item.processingState = .processing(progress: 0.5)
+
+    let updated = item.replacingThumbnail(NSImage(size: CGSize(width: 32, height: 32)))
+
+    XCTAssertEqual(updated.id, id)
+    XCTAssertEqual(updated.url, url)
+    XCTAssertEqual(updated.cloudURL, cloudURL)
+    XCTAssertEqual(updated.cloudKey, "demo-key")
+    XCTAssertTrue(updated.isCloudStale)
+    XCTAssertTrue(updated.isPinned)
+    XCTAssertTrue(updated.isWindowOpen)
+    XCTAssertEqual(updated.processingState, .processing(progress: 0.5))
+    XCTAssertNotEqual(updated.thumbnailVersion, item.thumbnailVersion)
+  }
+
+  func testQuickAccessItem_urlReplacementPreservesEditorSessionState() {
+    let originalURL = URL(fileURLWithPath: "/tmp/original.mov")
+    let replacementURL = URL(fileURLWithPath: "/tmp/replacement.mov")
+    var item = QuickAccessItem(
+      id: UUID(),
+      url: originalURL,
+      thumbnail: NSImage(size: CGSize(width: 16, height: 16)),
+      capturedAt: Date(),
+      itemType: .video,
+      duration: 1,
+      cloudKey: "demo-key",
+      isPinned: true,
+      isWindowOpen: true
+    )
+    item.processingState = .complete
+
+    let updated = item.replacingURL(replacementURL)
+
+    XCTAssertEqual(updated.url, replacementURL)
+    XCTAssertEqual(updated.cloudKey, "demo-key")
+    XCTAssertTrue(updated.isPinned)
+    XCTAssertTrue(updated.isWindowOpen)
+    XCTAssertEqual(updated.processingState, .complete)
+  }
+
   func testQuickAccessCardDragPolicy_classifiesRightPanelDirections() {
     let policy = QuickAccessCardDragPolicy(dismissDirection: 1)
 

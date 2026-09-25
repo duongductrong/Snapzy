@@ -57,8 +57,9 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `togglePenRecording` | Toggle pen overlay while recording | **unbound** |
 | `restartRecording` | Restart current recording | **unbound** |
 | `deleteRecording` | Delete in-progress recording | **unbound** |
+| `delayedCapture` | Delayed Capture (countdown, then frozen area selection) | **unbound** |
 
-- The four unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
+- The five unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
 
 ## Overlay shortcuts (in-overlay, not plain global hotkeys)
@@ -70,6 +71,7 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 - Independent mode (modifiers ≠ 0): registered as its own global hotkey (`applicationCaptureHotkeyRef` / `applicationRecordingHotkeyRef`) firing `.captureApplication` / `.recordApplication`.
 - Keys: `shortcuts.area.applicationCapture`, `shortcuts.recording.applicationCapture`.
 - During an area-screenshot selection, **Return** instantly completes with the last selected area (per-session opt-in `allowsRepeatAreaCompletion`; OCR/cutout selections are unaffected). See [CAPTURE.md](CAPTURE.md).
+- During a recording selection, **Return** or keypad **Enter** toggles whole-display mode: the display under the pointer is highlighted and a click records it. The key is fixed (not remappable) and ignored with ⌘/⌥/⌃ held. A plain click without Enter also selects the display under the pointer. See [RECORDING.md](RECORDING.md#picking-a-target-in-the-recording-overlay).
 
 ## Recording-behavior notes
 
@@ -154,6 +156,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/fullscreen` | Capture fullscreen |
 | `snapzy://capture/area` | Capture area |
 | `snapzy://capture/repeat-area`| Repeat last area capture|
+| `snapzy://capture/delayed` | Delayed Capture (countdown → area) |
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |

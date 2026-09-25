@@ -233,10 +233,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(DERIVED_FILE_DIR)/SwiftFormat.disabled.stamp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swiftformat >/dev/null; then\n  # swiftformat \"${SRCROOT}/Snapzy\" \"${SRCROOT}/SnapzyTests\"\n  echo \"SwiftFormat is configured but disabled by default.\"\nelse\n  echo \"warning: SwiftFormat not installed. Install via 'brew install swiftformat'.\"\nfi\n";
+			shellScript = "if which swiftformat >/dev/null; then\n  # swiftformat \"${SRCROOT}/Snapzy\" \"${SRCROOT}/SnapzyTests\"\n  echo \"SwiftFormat is configured but disabled by default.\"\nelse\n  echo \"SwiftFormat is not installed; formatting remains disabled.\"\nfi\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

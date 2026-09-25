@@ -16,8 +16,8 @@ struct QuickAccessPreviewTextSlot: View {
 
   var body: some View {
     content
-    .overlay(slotTargetOverlay(cornerRadius: 24))
-    .contentShape(RoundedRectangle(cornerRadius: 24))
+    .overlay(slotTargetOverlay())
+    .contentShape(Capsule(style: .continuous))
     .onHover(perform: onHover)
   }
 
@@ -32,11 +32,11 @@ struct QuickAccessPreviewTextSlot: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .frame(height: 28)
-        .background(RoundedRectangle(cornerRadius: 24).fill(Color.black.opacity(0.62)))
+        .background(Capsule(style: .continuous).fill(Color.black.opacity(0.62)))
         .opacity(isEnabled ? 1 : 0.45)
         .help("\(action.settingsTitle) - \(slot.settingsTitle)")
     } else {
-      RoundedRectangle(cornerRadius: 24)
+      Capsule(style: .continuous)
         .stroke(Color.white.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
         .overlay(plusIcon(size: 11))
         .frame(width: 44, height: 28)
@@ -44,8 +44,8 @@ struct QuickAccessPreviewTextSlot: View {
     }
   }
 
-  private func slotTargetOverlay(cornerRadius: CGFloat) -> some View {
-    RoundedRectangle(cornerRadius: cornerRadius)
+  private func slotTargetOverlay() -> some View {
+    Capsule(style: .continuous)
       .stroke(
         isTargeted ? Color(nsColor: .controlAccentColor) : Color.clear,
         style: StrokeStyle(lineWidth: 2, dash: [5, 4])
@@ -117,9 +117,9 @@ struct QuickAccessPreviewActionPopover: View {
     .foregroundStyle(.primary)
     .padding(.horizontal, 10)
     .padding(.vertical, 7)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+    .background(.regularMaterial, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      Radius.rect(Radius.card)
         .stroke(isEnabled ? Color.primary.opacity(0.12) : Color.secondary.opacity(0.18), lineWidth: 1)
     )
     .opacity(isEnabled ? 1 : 0.72)

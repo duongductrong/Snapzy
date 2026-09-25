@@ -262,10 +262,16 @@ final class HistoryFloatingPanelController {
   }
 
   private func updatePanelChrome(on panel: HistoryFloatingPanel, cornerRadius: CGFloat) {
-    panel.appearance = ThemeManager.shared.nsAppearance
+    panel.appearance = effectivePanelAppearance
     containerView?.cornerRadius = cornerRadius
     panel.applyCornerRadius(cornerRadius)
     panel.invalidateShadow()
+  }
+
+  private var effectivePanelAppearance: NSAppearance? {
+    HistoryBackgroundStyle.currentStoredStyle() == .hud
+      ? NSAppearance(named: .darkAqua)
+      : ThemeManager.shared.nsAppearance
   }
 
   private func frame(for size: CGSize, position: HistoryPanelPosition) -> NSRect {
@@ -375,8 +381,11 @@ private final class HistoryFloatingContainerView: NSVisualEffectView {
 
   private func applyStyle() {
     let style = HistoryBackgroundStyle.currentStoredStyle()
-    appearance = ThemeManager.shared.nsAppearance
-    window?.appearance = ThemeManager.shared.nsAppearance
+    let resolvedAppearance: NSAppearance? = style == .hud
+      ? NSAppearance(named: .darkAqua)
+      : ThemeManager.shared.nsAppearance
+    appearance = resolvedAppearance
+    window?.appearance = resolvedAppearance
     layer?.cornerRadius = cornerRadius
     layer?.cornerCurve = .continuous
     layer?.masksToBounds = true

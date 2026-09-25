@@ -40,6 +40,8 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
   @AppStorage(PreferencesKeys.captureIncludeWindowShadow) private var captureIncludeWindowShadow = true
   @AppStorage(PreferencesKeys.screenshotFreezeArea) private var freezeAreaCapture = false
+  @AppStorage(PreferencesKeys.screenshotDelayedCaptureSeconds)
+  private var delayedCaptureSeconds = CaptureDelayOption.defaultValue.seconds
   @AppStorage(PreferencesKeys.screenshotLivePassthrough) private var livePassthrough = true
   @State private var livePassthroughAccessibilityGranted = AXIsProcessTrusted()
   @AppStorage(PreferencesKeys.screenshotShowSelectionAreaOverlay) private var showSelectionAreaOverlay = true
@@ -278,6 +280,20 @@ struct CaptureSettingsView: View {
             ) {
               Toggle("", isOn: $freezeAreaCapture)
                 .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "timer",
+              title: L10n.PreferencesCapture.delayedCaptureTitle,
+              description: L10n.PreferencesCapture.delayedCaptureDescription
+            ) {
+              Picker("", selection: $delayedCaptureSeconds) {
+                ForEach(CaptureDelayOption.allCases) { option in
+                  Text(option.displayName).tag(option.seconds)
+                }
+              }
+              .labelsHidden()
+              .pickerStyle(.menu)
             }
 
             SettingRow(

@@ -284,13 +284,21 @@ struct ZoomableVideoPlayerSection: View {
           .font(.system(size: 11, weight: .semibold))
           .monospacedDigit()
       }
-      .foregroundColor(.white)
+      // The badge floats over arbitrary video frames, so use the overlay glass treatment rather
+      // than an opaque accent fill. The overlay tint keeps the light ink readable on bright video.
+      .foregroundStyle(LiquidGlassTokens.inkOverlay)
       .padding(.horizontal, 8)
       .padding(.vertical, 4)
-      .background(Color.purple.opacity(0.8))
-      .cornerRadius(4)
+      .liquidGlassChrome(
+        shape: Capsule(style: .continuous),
+        isVisible: true,
+        emphasis: .overlay
+      )
+      .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
       .padding(8)
-      .transition(.opacity.combined(with: .scale(scale: 0.8)))
+      // Keep the transition transform-only so it does not detach the glass backdrop into an
+      // opaque layer during appearance changes.
+      .transition(.scale(scale: 0.8))
     }
   }
 

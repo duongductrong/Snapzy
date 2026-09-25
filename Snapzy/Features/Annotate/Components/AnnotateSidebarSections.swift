@@ -339,11 +339,11 @@ struct BlurTypeButton: View {
       .frame(maxWidth: .infinity)
       .padding(.vertical, Spacing.sm)
       .background(
-        RoundedRectangle(cornerRadius: Size.radiusMd)
+        Capsule(style: .continuous)
           .fill(backgroundColor)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusMd)
+        Capsule(style: .continuous)
           .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: Size.strokeDefault + 0.5)
       )
     }

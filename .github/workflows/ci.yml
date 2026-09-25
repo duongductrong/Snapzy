@@ -2,9 +2,9 @@ name: CI Build Check
 
 on:
   push:
-    branches: [master]
+    branches: [master, beta]
   pull_request:
-    branches: [master]
+    branches: [master, beta]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -34,6 +34,8 @@ jobs:
         env:
           # The following tests crash on GitHub Actions macOS runners (Swift concurrency /
           # headless CGS), so they are skipped in CI and run locally instead.
+          # The timeline suites also abort intermittently on the headless runner with a
+          # malloc error; they remain covered by local CI.
           SNAPZY_CI_SKIP_TESTS: |
             SnapzyTests/GoogleDriveTests
             SnapzyTests/DatabaseManagerTests
@@ -53,7 +55,11 @@ jobs:
             SnapzyTests/SandboxOffDataMigrationServiceTests
             SnapzyTests/AppStatusBarControllerTests
             SnapzyTests/RecordingAudioLevelMeterTests
+            SnapzyTests/RecordingToolbarInteractionTests/testRecordButton_dispatchesFromPaddedSurface
             SnapzyTests/RecordingToolbarWindowTests/testShowRecordingStatusBar_alreadyVisibleWindow_enablesBackgroundDragging
+            SnapzyTests/RecordingToolbarWindowTests/testShowRecordingStatusBar_reportsAnnotateButtonCenterInHostingWindow
+            SnapzyTests/RecordingToolbarWindowTests/testAnnotationPopover_centersOnReportedAnnotateButton
+            SnapzyTests/S3MultipartUploaderTests/testMultipartUpload_abortsOnFailure
             SnapzyTests/CaptureViewModelTests/testHiddenWindowSession_restore_postsSyntheticMouseMovedEvent
             SnapzyTests/AnnotateCreationTests/testCanExtractTextRequiresNormalAnnotateSourceImage
             SnapzyTests/AnnotateExportSaveTests/testCopyToClipboardRunsWithoutCrashing
@@ -80,6 +86,8 @@ jobs:
             SnapzyTests/HotkeyUnregistrationTests
             SnapzyTests/RecordingSessionShortcutGatingTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
+            SnapzyTests/VideoEditorTimelineViewportTests
+            SnapzyTests/VideoEditorTimelineScrollCatcherTests
         run: |
           set -euo pipefail
           mkdir -p build

@@ -8,10 +8,10 @@
 import CoreGraphics
 import Foundation
 
-struct AutoFocusSettings: Equatable {
-  static let zoomRange: ClosedRange<CGFloat> = 1.0...4.0
-  static let followSpeedRange: ClosedRange<Double> = 0.2...1.0
-  static let focusMarginRange: ClosedRange<CGFloat> = 0.2...0.9
+nonisolated struct AutoFocusSettings: Equatable {
+  static let zoomRange: ClosedRange<CGFloat> = 1.0 ... 4.0
+  static let followSpeedRange: ClosedRange<Double> = 0.2 ... 1.0
+  static let focusMarginRange: ClosedRange<CGFloat> = 0.2 ... 0.9
   static let defaultZoomLevel: CGFloat = 2.0
   static let defaultFollowSpeed: Double = 0.55
   static let defaultFocusMargin: CGFloat = 0.45
@@ -61,12 +61,12 @@ struct AutoFocusSettings: Equatable {
   }
 }
 
-struct AutoFocusCameraSample: Equatable {
+nonisolated struct AutoFocusCameraSample: Equatable {
   var time: TimeInterval
   var center: CGPoint
 }
 
-struct VideoEditorCameraState: Equatable {
+nonisolated struct VideoEditorCameraState: Equatable {
   var zoomLevel: CGFloat
   var center: CGPoint
 
