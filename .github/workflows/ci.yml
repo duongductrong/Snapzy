@@ -87,6 +87,7 @@ jobs:
             SnapzyTests/RecordingSessionShortcutGatingTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
             SnapzyTests/SnapzyOnboardingStateTests/testStep2ScreenRecordingWorkflow
+            SnapzyTests/VideoEditorSessionStoreTests/testEditorHostingReplay_preservesFinalZoomAndSpeedValues
             SnapzyTests/VideoEditorTimelineViewportTests
             SnapzyTests/VideoEditorTimelineScrollCatcherTests
         run: |

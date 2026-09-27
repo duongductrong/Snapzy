@@ -1237,6 +1237,7 @@ final class VideoEditorSessionStoreTests: XCTestCase {
   /// Runs real SwiftUI layout alongside model edits. Timings are diagnostic only:
   /// this replay does not generate pointer events or measure event-to-present latency.
   func testEditorHostingReplay_preservesFinalZoomAndSpeedValues() async throws {
+    try skipIfRunningInCI("Requires a real SwiftUI/AppKit hosting surface")
     let videoURL = try await makeVideoFile(named: "editor-hosting-replay.mov", duration: 12)
     let state = VideoEditorState(url: videoURL)
     await state.loadMetadata()
