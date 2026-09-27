@@ -13,6 +13,15 @@ import XCTest
 
 @MainActor
 final class VideoEditorWindowInputTests: XCTestCase {
+  private var testVideoURL: URL {
+    URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent("docs/attachments/pin-drag-macos-27-demo.mp4")
+  }
+
   func testUnhandledCommandCIsConsumedWithoutFallingThroughToWindowKeyDown() {
     let window = VideoEditorWindow(
       contentRect: NSRect(x: 0, y: 0, width: 400, height: 300)
@@ -37,7 +46,7 @@ final class VideoEditorWindowInputTests: XCTestCase {
   }
 
   func testEscapeCancelsRenameWhenToolbarTextFieldIsFirstResponder() throws {
-    let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test-video.mov"))
+    let state = VideoEditorState(url: testVideoURL)
     state.isRenamingFile = true
 
     let hostingView = NSHostingView(rootView: VideoEditorToolbarView(state: state))
@@ -105,7 +114,7 @@ final class VideoEditorWindowInputTests: XCTestCase {
   }
 
   func testSpaceRemainsTextInputWhenRenamingFile() throws {
-    let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test-video.mov"))
+    let state = VideoEditorState(url: testVideoURL)
     state.isRenamingFile = true
     let hostingView = NSHostingView(rootView: VideoEditorToolbarView(state: state))
     let window = VideoEditorWindow(
