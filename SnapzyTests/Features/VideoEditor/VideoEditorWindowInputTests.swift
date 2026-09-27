@@ -72,15 +72,15 @@ final class VideoEditorWindowInputTests: XCTestCase {
   }
 
   func testSpaceControlsEditorPlaybackWhenVideoViewHasFocus() throws {
-    let state = VideoEditorState(url: URL(fileURLWithPath: "/tmp/test-video.mov"))
     let playerView = AVPlayerView()
-    playerView.player = state.player
+    playerView.player = AVPlayer()
     playerView.controlsStyle = .none
+    var isPlaying = false
     let window = VideoEditorWindow(
       contentRect: NSRect(x: 0, y: 0, width: 800, height: 450)
     )
     window.contentView = playerView
-    window.onTogglePlayback = { state.togglePlayback() }
+    window.onTogglePlayback = { isPlaying.toggle() }
     window.makeKeyAndOrderFront(nil)
     defer { window.close() }
     XCTAssertTrue(window.makeFirstResponder(playerView))
@@ -99,9 +99,9 @@ final class VideoEditorWindowInputTests: XCTestCase {
     ))
     window.sendEvent(event)
 
-    XCTAssertTrue(state.isPlaying, "Space must use the editor's playback command")
+    XCTAssertTrue(isPlaying, "Space must use the editor's playback command")
     window.sendEvent(event)
-    XCTAssertFalse(state.isPlaying, "A second Space must pause the same editor transport")
+    XCTAssertFalse(isPlaying, "A second Space must pause the same editor transport")
   }
 
   func testSpaceRemainsTextInputWhenRenamingFile() throws {
