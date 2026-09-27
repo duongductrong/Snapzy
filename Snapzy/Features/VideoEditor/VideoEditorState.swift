@@ -1683,7 +1683,7 @@ final class VideoEditorState: ObservableObject {
   private func normalizedTimelineTime(_ time: CMTime) -> CMTime {
     let clamped = CMTimeGetSeconds(clampTimelineTime(time))
     guard sourceContext(atSequence: clamped) == nil else {
-      return CMTime(seconds: clamped, preferredTimescale: 600)
+      return activeTimelineTime(clamped)
     }
 
     var before: TimeInterval?
@@ -1706,7 +1706,23 @@ final class VideoEditorState: ObservableObject {
     case (nil, nil):
       clamped
     }
-    return CMTime(seconds: resolved, preferredTimescale: 600)
+    return activeTimelineTime(resolved)
+  }
+
+  /// Quantize an active timeline time to the 600 timescale without leaving active
+  /// material. Trim points are arbitrary doubles: rounding an off-grid in-point to
+  /// the nearest tick can land just before it, where the time reads as trimmed-out
+  /// footage and `seekPlayerInternally` has no clip to seek — the transport stays
+  /// parked at the item end while the playhead claims the trimmed start.
+  private func activeTimelineTime(_ seconds: TimeInterval) -> CMTime {
+    let ticks = seconds * 600
+    for candidate in [ticks.rounded(), ticks.rounded(.up), ticks.rounded(.down)] {
+      let time = CMTime(value: CMTimeValue(candidate), timescale: 600)
+      if sourceContext(atSequence: CMTimeGetSeconds(time)) != nil {
+        return time
+      }
+    }
+    return CMTime(seconds: seconds, preferredTimescale: 600)
   }
 
   // MARK: - Trim Control

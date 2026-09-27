@@ -137,7 +137,11 @@ filename badge for inserted clips.
 
 The player holds one item per *source asset*, keyed on `TimelineClip.Source` — consecutive
 clips cut from the same asset share an item, so an ordinary split costs a seek, not a reload.
-The structural playhead snaps across inactive trim slots; `handlePlaybackTick` folds the
+The structural playhead snaps across inactive trim slots (`normalizedTimelineTime`). Snapped
+times are quantized to the 600 timescale *inward* (`activeTimelineTime`): trim points are
+arbitrary doubles, and rounding an off-grid in/out point to the nearest tick can land on
+trimmed-out footage, where the internal seek finds no clip and silently leaves the transport
+parked (the "stuck at trimmed start after the end" bug). `handlePlaybackTick` folds the
 active item's source time back onto the structural axis, and `advanceToClip(after:)` hands
 off at each clip's active out-point and rewinds at the end. The rewind parks the transport
 and moves the playhead to 0 in one step (`pauseAtPendingPosition` + `seek(to: .zero)`) — the

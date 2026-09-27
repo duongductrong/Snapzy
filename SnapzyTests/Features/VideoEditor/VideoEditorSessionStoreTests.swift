@@ -654,6 +654,88 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     XCTAssertEqual(state.player.rate, 1, accuracy: 0.001)
   }
 
+  func testVideoEditorPlayback_trimmedStartRewindsAndReplays() async throws {
+    let videoURL = try await makeVideoFile(named: "trimmed-start-end-rewind.mov", duration: 2)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clip = try XCTUnwrap(state.clips.first)
+    let trimStart = 0.5337  // Off the 600-tick grid, like a dragged trim handle.
+    state.updateClip(id: clip.id, sourceStart: trimStart)
+    state.play()
+
+    let endDeadline = Date().addingTimeInterval(6)
+    while state.isPlaying, Date() < endDeadline {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+    XCTAssertFalse(state.isPlaying, "Playback should stop after the trimmed range ends")
+    XCTAssertEqual(state.playbackState.currentTime.seconds, trimStart, accuracy: 0.08)
+
+    state.play()
+    let replayDeadline = Date().addingTimeInterval(2)
+    while state.playbackState.currentTime.seconds < trimStart + 0.3, Date() < replayDeadline {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    XCTAssertTrue(state.isPlaying, "Playback should resume after the first natural end")
+    XCTAssertGreaterThanOrEqual(
+      state.playbackState.currentTime.seconds,
+      trimStart + 0.3,
+      "Replay should advance from the trimmed start"
+    )
+  }
+
+  func testVideoEditorPlayback_trimmedStartIgnoresStaleEndDuringRewind() async throws {
+    let videoURL = try await makeVideoFile(named: "trimmed-start-stale-end.mov", duration: 2)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clip = try XCTUnwrap(state.clips.first)
+    let trimStart = 0.5337
+    state.updateClip(id: clip.id, sourceStart: trimStart)
+    state.handlePlaybackTick(itemTime: 2)
+    state.player.seek(
+      to: CMTime(seconds: 1.95, preferredTimescale: 600),
+      toleranceBefore: .zero,
+      toleranceAfter: .zero,
+      completionHandler: { _ in }
+    )
+    try await Task.sleep(nanoseconds: 150_000_000)
+    state.play()
+
+    let replayDeadline = Date().addingTimeInterval(3)
+    while state.playbackState.currentTime.seconds < trimStart + 0.3, Date() < replayDeadline {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+
+    XCTAssertGreaterThanOrEqual(
+      state.playbackState.currentTime.seconds,
+      trimStart + 0.3,
+      "A stale end notification must not trap replay at the trimmed start"
+    )
+  }
+
+  func testSeek_offGridTrimPointsSnapInsideActiveMaterial() async throws {
+    let videoURL = try await makeVideoFile(named: "off-grid-trim-snap.mov", duration: 2)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clip = try XCTUnwrap(state.clips.first)
+    state.updateClip(id: clip.id, sourceStart: 0.5337, sourceEnd: 1.5337)
+
+    // Rounding to the nearest 1/600 tick would land just outside either trim point,
+    // on trimmed-out footage that the transport cannot seek to.
+    state.seek(to: .zero)
+    let start = state.playbackState.currentTime.seconds
+    XCTAssertTrue(state.isPlayableMaterial(atSequence: start), "Snapped in-point \(start) must be playable")
+    XCTAssertEqual(start, 0.5337, accuracy: 1.0 / 600)
+
+    state.seek(to: CMTime(seconds: 2, preferredTimescale: 600))
+    let end = state.playbackState.currentTime.seconds
+    XCTAssertTrue(state.isPlayableMaterial(atSequence: end), "Snapped out-point \(end) must be playable")
+    XCTAssertEqual(end, 1.5337, accuracy: 1.0 / 600)
+  }
+
   func testVideoEditorPlayback_endTickParksAtZeroWithoutEndFlashAndReplayReanchors() async throws {
     let videoURL = try await makeVideoFile(named: "playback-end-reanchor.mov", duration: 2)
     let state = VideoEditorState(url: videoURL)
@@ -756,6 +838,45 @@ final class VideoEditorSessionStoreTests: XCTestCase {
     }
     XCTAssertGreaterThanOrEqual(state.player.currentTime().seconds, 0.5,
                                 "Replay after a true end rewind must advance the transport")
+  }
+
+  /// Field repro with a trimmed in-point: the item genuinely plays to its end, then
+  /// the rewind targets the trimmed start instead of 0. Replay must advance from there.
+  func testVideoEditorPlayback_trimmedStartTransportTrulyEndsThenRewindAndReplay() async throws {
+    let videoURL = try await makeVideoFile(named: "trimmed-start-true-end.mov", duration: 2)
+    let state = VideoEditorState(url: videoURL)
+    await state.loadMetadata()
+
+    let clip = try XCTUnwrap(state.clips.first)
+    let trimStart = 0.5337
+    state.updateClip(id: clip.id, sourceStart: trimStart)
+    state.seek(to: CMTime(seconds: 1.7, preferredTimescale: 600))
+    state.play()
+    defer { state.pause() }
+
+    let blockedUntil = Date().addingTimeInterval(1.2)
+    while Date() < blockedUntil {}
+
+    let rewindDeadline = Date().addingTimeInterval(5)
+    while abs(state.playbackState.currentTime.seconds - trimStart) > 0.01, Date() < rewindDeadline {
+      try await Task.sleep(nanoseconds: 10_000_000)
+    }
+    XCTAssertEqual(state.playbackState.currentTime.seconds, trimStart, accuracy: 0.01)
+    try await Task.sleep(nanoseconds: 300_000_000)
+    let transportTime = state.player.currentTime().seconds
+    XCTAssertEqual(
+      transportTime, trimStart, accuracy: 0.1,
+      "The rewind seek must reposition the transport to the trimmed start (at \(transportTime))"
+    )
+
+    state.play()
+    let advancedDeadline = Date().addingTimeInterval(3)
+    while state.playbackState.currentTime.seconds < trimStart + 0.5, Date() < advancedDeadline {
+      try await Task.sleep(nanoseconds: 20_000_000)
+    }
+    XCTAssertTrue(state.isPlaying, "Replay after a true end rewind must keep playing")
+    XCTAssertGreaterThanOrEqual(state.playbackState.currentTime.seconds, trimStart + 0.5,
+                                "Replay after a true end rewind must advance from the trimmed start")
   }
 
   func testVideoEditorPreview_reachesCompositionEndRewindsOnceAndReplays() async throws {
