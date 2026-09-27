@@ -154,6 +154,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
     )
     bindDocumentEditedState(to: state)
     (window as? VideoEditorWindow)?.onTogglePlayback = { [weak state] in
+      guard state?.isExporting != true else { return }
       state?.togglePlayback()
     }
     window?.contentView = NSHostingView(rootView: mainView)
@@ -233,6 +234,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
   }
 
   func windowWillClose(_: Notification) {
+    state?.cancelPendingPerformanceWork()
     window?.alphaValue = 0
     if let itemId = quickAccessItemID {
       QuickAccessManager.shared.setWindowOpen(id: itemId, isOpen: false)
@@ -420,13 +422,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
           throw error
         }
 
-        state.isExporting = false
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
         }
         state.markAsSaved()
+        state.isExporting = false
         if let quickAccessItemID {
           await QuickAccessManager.shared.refreshItemThumbnail(id: quickAccessItemID)
         }
@@ -524,13 +527,14 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
             ) ?? progressOperation.initialStatusMessage
           }
         }
-        state.isExporting = false
         invalidateEditedCloudState()
         guard await persistSessionAfterCommit(for: state, preparedSource: preparedSource) else {
+          state.isExporting = false
           showExportError(VideoEditorSessionStore.StoreError.packageUnavailable)
           return
         }
         state.markAsSaved()
+        state.isExporting = false
         if let quickAccessItemID {
           await QuickAccessManager.shared.refreshItemThumbnail(id: quickAccessItemID)
         }

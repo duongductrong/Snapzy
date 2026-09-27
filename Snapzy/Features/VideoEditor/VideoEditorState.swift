@@ -40,6 +40,11 @@ private nonisolated final class VideoEditorPreviewRateController: @unchecked Sen
   private var seekLandingTimer: DispatchSourceTimer?
   private var pendingSeekTarget: TimeInterval?
   private var seekLandingReady = false
+  private var seekLandingDeadline: TimeInterval = 0
+  /// A seek whose completion never fires (a zero-tolerance request AVPlayer cannot
+  /// satisfy, e.g. the exact media start of a recording with non-zero first-frame
+  /// PTS) must not block the Play intent forever. The gate force-opens after this.
+  private static let seekLandingTimeout: TimeInterval = 2.0
 
   init(player: AVPlayer) {
     self.player = player
@@ -57,6 +62,7 @@ private nonisolated final class VideoEditorPreviewRateController: @unchecked Sen
       self.seekLandingTimer = nil
       self.pendingSeekTarget = nil
       self.seekLandingReady = false
+      self.seekLandingDeadline = 0
       return generation
     }
     removeObservers()
@@ -125,6 +131,7 @@ private nonisolated final class VideoEditorPreviewRateController: @unchecked Sen
       guard generation == expectedGeneration else { return }
       pendingSeekTarget = sourceTime
       seekLandingReady = false
+      seekLandingDeadline = ProcessInfo.processInfo.systemUptime + Self.seekLandingTimeout
       seekLandingTimer?.cancel()
       let timer = DispatchSource.makeTimerSource(queue: queue)
       timer.schedule(deadline: .now() + .milliseconds(5), repeating: .milliseconds(5))
@@ -153,6 +160,7 @@ private nonisolated final class VideoEditorPreviewRateController: @unchecked Sen
       seekLandingTimer = nil
       pendingSeekTarget = nil
       seekLandingReady = false
+      seekLandingDeadline = 0
     }
     removeObservers()
   }
@@ -175,8 +183,14 @@ private nonisolated final class VideoEditorPreviewRateController: @unchecked Sen
           player.currentItem === item
     else { return }
     let time = player.currentTime()
-    guard time.isNumeric,
-          abs(CMTimeGetSeconds(time) - pendingSeekTarget) <= 0.05
+    guard time.isNumeric else { return }
+    // The seek completion may never fire for an unsatisfiable request; open the
+    // gate after the timeout so the Play intent cannot hang.
+    if ProcessInfo.processInfo.systemUptime >= seekLandingDeadline {
+      finishSeekLanding()
+      return
+    }
+    guard abs(CMTimeGetSeconds(time) - pendingSeekTarget) <= 0.05
     else { return }
     finishSeekLanding()
   }
@@ -318,7 +332,15 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Video Source
 
-  private(set) var sourceURL: URL
+  private(set) var sourceURL: URL {
+    didSet {
+      guard sourceURL != oldValue else { return }
+      sourceSizeTask?.cancel()
+      sourceSizeTask = nil
+      cachedSourceFileSize = nil
+      recalculateEstimatedFileSize()
+    }
+  }
   /// Original file URL to replace (used for "Replace Original" functionality)
   private(set) var originalURL: URL
   private(set) var assetURL: URL
@@ -385,8 +407,11 @@ final class VideoEditorState: ObservableObject {
 
   @Published var speedSegments: [SpeedSegment] = [] {
     didSet {
+      guard speedSegments != oldValue else { return }
       cachedSequenceMap = nil
       scheduleSpeedPreviewRebuild()
+      updateHasUnsavedChanges()
+      recalculateEstimatedFileSize()
     }
   }
 
@@ -400,8 +425,11 @@ final class VideoEditorState: ObservableObject {
   /// deleting ripples the rest left, and an inserted video is just another element.
   @Published private(set) var clips: [TimelineClip] = [] {
     didSet {
+      guard clips != oldValue else { return }
       invalidateTimelineCaches()
       scheduleSpeedPreviewRebuild()
+      updateHasUnsavedChanges()
+      updateClipActionAvailability()
     }
   }
 
@@ -414,13 +442,27 @@ final class VideoEditorState: ObservableObject {
   let clipThumbnailCache = VideoEditorClipThumbnailCache()
 
   private var cachedPlacements: [TimelineSequence.Placement]?
+  private var cachedPlacementLookup: [UUID: TimelineSequence.Placement]?
   private var cachedSequenceMap: TimelineSequenceMap?
+  private var cachedPlaybackPlacements: [TimelineSequence.Placement]?
+  private var cachedSequenceDuration: TimeInterval?
+  private var cachedTimelineDuration: CMTime?
+  private var mappedAutoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
+  private var timelineLayoutRevision: UInt64 = 0
+  private var mappedAutoFocusBuildTask: Task<Void, Never>?
+  @Published private(set) var autoFocusPathRevision: UInt64 = 0
   /// Assets backing `.file` clips, keyed by URL so duplicated clips share one asset.
   private var clipAssets: [URL: AVAsset] = [:]
 
   private func invalidateTimelineCaches() {
     cachedPlacements = nil
+    cachedPlacementLookup = nil
+    cachedPlaybackPlacements = nil
+    cachedSequenceDuration = nil
+    cachedTimelineDuration = nil
     cachedSequenceMap = nil
+    timelineLayoutRevision &+= 1
+    scheduleMappedAutoFocusPaths()
     recalculateEstimatedFileSize()
   }
 
@@ -433,14 +475,28 @@ final class VideoEditorState: ObservableObject {
     return laid
   }
 
+  private func placementForClip(_ id: UUID?) -> TimelineSequence.Placement? {
+    guard let id else { return nil }
+    if cachedPlacementLookup == nil {
+      cachedPlacementLookup = Dictionary(uniqueKeysWithValues: placements.map { ($0.clip.id, $0) })
+    }
+    return cachedPlacementLookup?[id]
+  }
+
   /// Clips laid out on the playable/export axis, with inactive trim slots collapsed.
   var playbackPlacements: [TimelineSequence.Placement] {
-    TimelineSequence.playableLayout(clips)
+    if let cachedPlaybackPlacements { return cachedPlaybackPlacements }
+    let result = TimelineSequence.playableLayout(clips)
+    cachedPlaybackPlacements = result
+    return result
   }
 
   /// Length of the playable/export sequence.
   var sequenceDuration: TimeInterval {
-    TimelineSequence.playableDuration(clips)
+    if let cachedSequenceDuration { return cachedSequenceDuration }
+    let result = TimelineSequence.playableDuration(clips)
+    cachedSequenceDuration = result
+    return result
   }
 
   /// Sequence → output map (speed applied). Cached.
@@ -455,7 +511,10 @@ final class VideoEditorState: ObservableObject {
   /// its duration. Inactive trim slots stay on this axis for stable visual placement.
   var timelineDuration: CMTime {
     if isGIF { return duration }
-    return CMTime(seconds: TimelineSequence.duration(clips), preferredTimescale: 600)
+    if let cachedTimelineDuration { return cachedTimelineDuration }
+    let result = CMTime(seconds: TimelineSequence.duration(clips), preferredTimescale: 600)
+    cachedTimelineDuration = result
+    return result
   }
 
   var formattedTimelineDuration: String {
@@ -493,7 +552,7 @@ final class VideoEditorState: ObservableObject {
 
   /// Sequence start of a clip.
   func sequenceStart(ofClip id: UUID) -> TimeInterval? {
-    placements.first { $0.clip.id == id }?.start
+    placementForClip(id)?.start
   }
 
   /// Which clip plays at a sequence time, and where in its source asset.
@@ -598,7 +657,13 @@ final class VideoEditorState: ObservableObject {
 
   // MARK: - Zoom Segments
 
-  @Published var zoomSegments: [ZoomSegment] = []
+  @Published var zoomSegments: [ZoomSegment] = [] {
+    didSet {
+      guard zoomSegments != oldValue else { return }
+      rebuildAutoFocusPaths(for: zoomSegments)
+      updateHasUnsavedChanges()
+    }
+  }
   @Published var selectedZoomId: UUID? = nil
   @Published var isZoomTrackVisible: Bool = true
   @Published var isSpeedTrackVisible: Bool = true
@@ -705,6 +770,21 @@ final class VideoEditorState: ObservableObject {
   private var endObserver: NSObjectProtocol?
   private var cancellables = Set<AnyCancellable>()
   private var autoFocusPathInputs: [UUID: AutoFocusPathInput] = [:]
+  private let autoFocusWorker = VideoEditorAutoFocusWorker()
+  private var autoFocusBuildTask: Task<Void, Never>?
+  private var autoFocusRequestRevision: UInt64 = 0
+  private var metadataRevision = UUID()
+  private var zoomEditOriginals: [UUID: ZoomSegment] = [:]
+  private var speedEditOriginals: [UUID: SpeedSegment] = [:]
+  /// Undo can finish a model transaction while SwiftUI still owns its gesture.
+  /// Ignore that gesture's remaining ticks until its real end callback arrives.
+  private var interruptedZoomEdits = Set<UUID>()
+  private var interruptedSpeedEdits = Set<UUID>()
+  private var estimateTask: Task<Void, Never>?
+  private var sourceSizeTask: Task<Int64?, Never>?
+  private var cachedSourceFileSize: Int64?
+  private var estimateRevision: UInt64 = 0
+  private var isPerformanceWorkClosed = false
   private let restoredSessionData: VideoEditorSessionData?
   private var didRestoreSession = false
 
@@ -919,6 +999,10 @@ final class VideoEditorState: ObservableObject {
 
   deinit {
     speedPreviewBuildTask?.cancel()
+    autoFocusBuildTask?.cancel()
+    mappedAutoFocusBuildTask?.cancel()
+    estimateTask?.cancel()
+    sourceSizeTask?.cancel()
     previewRateController?.invalidate()
     if let observer = timeObserver {
       player.removeTimeObserver(observer)
@@ -1151,11 +1235,37 @@ final class VideoEditorState: ObservableObject {
       scheduleSpeedPreviewRebuild()
       return
     }
+    var waitingForSeek = speedPreviewIsPreparing || internalSeekToken != nil || handoffSeekInFlight
     if !speedPreviewIsPreparing,
        internalSeekToken == nil,
        !handoffSeekInFlight,
-       let playerTime = currentPlayerTimelineTime() {
-      playbackState.setCurrentTime(playerTime)
+       !isGIF {
+      // A rewind whose zero-tolerance seek did not land leaves the transport
+      // parked at the item end (or past the last active out-point) while the
+      // playhead claims 0. Playing from there would immediately hit the end and
+      // rewind again — the reported "stuck at start" loop. Re-anchor the
+      // transport to the playhead's claimed position instead of trusting the
+      // item's parked position.
+      let playableEnd = placements.last(where: { $0.activeEnd > $0.activeStart })?
+        .activeEnd ?? CMTimeGetSeconds(timelineDuration)
+      if let playerTime = currentPlayerTimelineTime() {
+        let parkedAtSequenceEnd = playerTime.seconds.isFinite
+          && abs(playerTime.seconds - playableEnd) <= 0.1
+          && abs(playerTime.seconds - CMTimeGetSeconds(playbackState.currentTime)) > 0.05
+        if parkedAtSequenceEnd {
+          waitingForSeek = true
+          let claimedTime = normalizedTimelineTime(playbackState.currentTime)
+          playbackState.setCurrentTime(claimedTime)
+          seekPlayerInternally(to: CMTimeGetSeconds(claimedTime))
+        } else {
+          playbackState.setCurrentTime(playerTime)
+        }
+      } else {
+        waitingForSeek = true
+        let claimedTime = normalizedTimelineTime(playbackState.currentTime)
+        playbackState.setCurrentTime(claimedTime)
+        seekPlayerInternally(to: CMTimeGetSeconds(claimedTime))
+      }
     }
     let playableTime = normalizedTimelineTime(currentTime)
     if CMTimeCompare(playableTime, currentTime) != 0 {
@@ -1167,7 +1277,6 @@ final class VideoEditorState: ObservableObject {
     // Persist the requested rate as AVPlayer's resume/default rate and explicitly start
     // playback. Assigning only `rate` is transient: a later `play()`/item handoff can
     // restore AVPlayer's default 1x rate and silently lose the speed effect.
-    let waitingForSeek = speedPreviewIsPreparing || internalSeekToken != nil || handoffSeekInFlight
     playbackState.setPlaying(true)
     if waitingForSeek {
       if !speedPreviewIsPreparing {
@@ -1198,7 +1307,7 @@ final class VideoEditorState: ObservableObject {
       guard time.isNumeric else { return nil }
       return timelineTime(atPreviewOutput: CMTimeGetSeconds(time))
     }
-    guard let placement = placements.first(where: { $0.clip.id == activeClipId }) else { return nil }
+    guard let placement = placementForClip(activeClipId) else { return nil }
     let time = player.currentTime()
     guard time.isNumeric else { return nil }
     let sourceTime = CMTimeGetSeconds(time)
@@ -1209,6 +1318,15 @@ final class VideoEditorState: ObservableObject {
       seconds: placement.sequenceTime(atSource: sourceTime),
       preferredTimescale: 600
     )
+  }
+
+  /// Pause without republishing the parked position to the playhead. Rewinds call
+  /// this because the player is still parked at the item end — publishing that
+  /// position would flash the playhead at the end right before the rewind lands.
+  private func pauseAtPendingPosition() {
+    previewRateController?.setPlaybackIntent(false)
+    player.pause()
+    playbackState.setPlaying(false)
   }
 
   func pause() {
@@ -1281,6 +1399,10 @@ final class VideoEditorState: ObservableObject {
   /// player stays parked until the current revision is ready; a superseded build
   /// cannot install an old speed map over a newer edit.
   private func scheduleSpeedPreviewRebuild(immediate: Bool = false) {
+    guard !isPerformanceWorkClosed else { return }
+    if speedTrackDragInProgress && speedTrackDragDidChange {
+      return
+    }
     let debounceBuild = !immediate && (speedPreviewIsPreparing || speedPreviewItem != nil)
     speedPreviewRevision += 1
     let revision = speedPreviewRevision
@@ -1344,11 +1466,13 @@ final class VideoEditorState: ObservableObject {
   }
 
   func beginSpeedTrackDrag() {
+    guard !isPerformanceWorkClosed else { return }
     speedTrackDragInProgress = true
     speedTrackDragDidChange = false
   }
 
   func endSpeedTrackDrag() {
+    guard !isPerformanceWorkClosed else { return }
     guard speedTrackDragInProgress else { return }
     speedTrackDragInProgress = false
     if speedTrackDragDidChange {
@@ -1460,6 +1584,16 @@ final class VideoEditorState: ObservableObject {
     return sequenceMap.toOutput(sequenceTime)
   }
 
+  /// Zero tolerance at the exact media start is unreliable: recordings whose first
+  /// frame PTS is not exactly 0 (common for ScreenCaptureKit captures) can reject
+  /// the request silently, leaving the transport parked and the Play intent hung.
+  /// The start of playback tolerates one frame; every other target stays frame-exact.
+  static func seekToleranceBefore(for targetItemTime: TimeInterval) -> CMTime {
+    abs(targetItemTime) <= 1.0 / 30.0
+      ? CMTime(seconds: 1.0 / 30.0, preferredTimescale: 600)
+      : .zero
+  }
+
   /// Point the player at whichever clip covers a sequence time, seeking to that
   /// clip's own source time.
   private func seekPlayerInternally(to sequenceSeconds: TimeInterval) {
@@ -1501,7 +1635,7 @@ final class VideoEditorState: ObservableObject {
     }
     player.seek(
       to: CMTime(seconds: targetItemTime, preferredTimescale: 600),
-      toleranceBefore: .zero,
+      toleranceBefore: Self.seekToleranceBefore(for: targetItemTime),
       toleranceAfter: .zero
     ) { [weak self, weak rateController] finished in
       if finished, let rateGeneration {
@@ -1778,8 +1912,18 @@ final class VideoEditorState: ObservableObject {
     updateUndoRedoState()
   }
 
+  private func finishSegmentEdits() {
+    let zoomIDs = Array(zoomEditOriginals.keys)
+    let speedIDs = Array(speedEditOriginals.keys)
+    for id in zoomIDs { endZoomEdit(id: id) }
+    for id in speedIDs { endSpeedEdit(id: id) }
+    interruptedZoomEdits.formUnion(zoomIDs)
+    interruptedSpeedEdits.formUnion(speedIDs)
+  }
+
   /// Undo the last action
   func undo() {
+    finishSegmentEdits()
     guard let action = undoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Undo", context: ["stackDepth": "\(undoStack.count)"])
     isUndoingOrRedoing = true
@@ -1883,6 +2027,7 @@ final class VideoEditorState: ObservableObject {
 
   /// Redo the last undone action
   func redo() {
+    finishSegmentEdits()
     guard let action = redoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Redo", context: ["stackDepth": "\(redoStack.count)"])
     isUndoingOrRedoing = true
@@ -1985,8 +2130,10 @@ final class VideoEditorState: ObservableObject {
   }
 
   private func updateUndoRedoState() {
-    canUndo = !undoStack.isEmpty
-    canRedo = !redoStack.isEmpty
+    let undoAvailable = !undoStack.isEmpty
+    let redoAvailable = !redoStack.isEmpty
+    if canUndo != undoAvailable { canUndo = undoAvailable }
+    if canRedo != redoAvailable { canRedo = redoAvailable }
   }
 
   private func clearUndoHistory() {
@@ -2099,6 +2246,64 @@ final class VideoEditorState: ObservableObject {
   }
 
   /// Update zoom segment properties
+  func beginZoomEdit(id: UUID) {
+    guard !isPerformanceWorkClosed else { return }
+    interruptedZoomEdits.remove(id)
+    guard zoomEditOriginals[id] == nil,
+          let segment = zoomSegments.first(where: { $0.id == id }) else { return }
+    zoomEditOriginals[id] = segment
+  }
+
+  func endZoomEdit(id: UUID) {
+    if interruptedZoomEdits.remove(id) != nil { return }
+    guard !isPerformanceWorkClosed else {
+      zoomEditOriginals.removeValue(forKey: id)
+      return
+    }
+    guard let old = zoomEditOriginals.removeValue(forKey: id),
+          let new = zoomSegments.first(where: { $0.id == id }), old != new else { return }
+    recordAction(.updateZoom(old: old, new: new))
+  }
+
+  func beginSpeedEdit(id: UUID) {
+    guard !isPerformanceWorkClosed else { return }
+    interruptedSpeedEdits.remove(id)
+    guard speedEditOriginals[id] == nil,
+          let segment = speedSegments.first(where: { $0.id == id }) else { return }
+    speedEditOriginals[id] = segment
+    beginSpeedTrackDrag()
+  }
+
+  func endSpeedEdit(id: UUID) {
+    if interruptedSpeedEdits.remove(id) != nil { return }
+    guard !isPerformanceWorkClosed else {
+      speedEditOriginals.removeValue(forKey: id)
+      return
+    }
+    if let old = speedEditOriginals.removeValue(forKey: id),
+       let new = speedSegments.first(where: { $0.id == id }), old != new {
+      recordAction(.updateSpeed(old: old, new: new))
+    }
+    endSpeedTrackDrag()
+    recalculateEstimatedFileSize(immediate: true)
+  }
+
+  func resolvedZoomSegment(id: UUID, startTime: TimeInterval, duration: TimeInterval) -> ZoomSegment? {
+    guard var segment = zoomSegments.first(where: { $0.id == id }) else { return nil }
+    let upper = CMTimeGetSeconds(timelineDuration)
+    segment.startTime = max(0, min(startTime, upper - ZoomSegment.minDuration))
+    segment.duration = max(ZoomSegment.minDuration, min(duration, upper - segment.startTime))
+    return segment
+  }
+
+  func resolvedSpeedSegment(id: UUID, startTime: TimeInterval, duration: TimeInterval) -> SpeedSegment? {
+    guard var segment = speedSegments.first(where: { $0.id == id }),
+          let range = clampedSpeedRange(startTime ... (startTime + max(0, duration)), excluding: id) else { return nil }
+    segment.startTime = range.start
+    segment.duration = range.duration
+    return segment
+  }
+
   func updateZoom(
     id: UUID,
     startTime: TimeInterval? = nil,
@@ -2110,16 +2315,19 @@ final class VideoEditorState: ObservableObject {
     focusMargin: CGFloat? = nil,
     isEnabled: Bool? = nil
   ) {
+    guard !interruptedZoomEdits.contains(id) else { return }
+    let interval = PerfSignpost.VideoEditor.beginInterval("ZoomMutation")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
     guard let index = zoomSegments.firstIndex(where: { $0.id == id }) else { return }
 
     var segment = zoomSegments[index]
-    let videoDuration = CMTimeGetSeconds(timelineDuration)
-
-    if let startTime {
-      segment.startTime = max(0, min(startTime, videoDuration - ZoomSegment.minDuration))
-    }
-    if let duration {
-      segment.duration = max(ZoomSegment.minDuration, min(duration, videoDuration - segment.startTime))
+    if startTime != nil || duration != nil,
+       let resolved = resolvedZoomSegment(
+        id: id, startTime: startTime ?? segment.startTime,
+        duration: duration ?? segment.duration
+       ) {
+      segment.startTime = resolved.startTime
+      if duration != nil { segment.duration = resolved.duration }
     }
     if let zoomLevel {
       segment.zoomLevel = max(ZoomSegment.minZoomLevel, min(zoomLevel, ZoomSegment.maxZoomLevel))
@@ -2143,7 +2351,10 @@ final class VideoEditorState: ObservableObject {
       segment.isEnabled = isEnabled
     }
 
+    let old = zoomSegments[index]
+    guard segment != old else { return }
     zoomSegments[index] = segment
+    if zoomEditOriginals[id] == nil { recordAction(.updateZoom(old: old, new: segment)) }
   }
 
   func setZoomMode(id: UUID, zoomType: ZoomType) {
@@ -2162,18 +2373,10 @@ final class VideoEditorState: ObservableObject {
     // samples are the one source-bound input; map them to the current clip sequence.
     // The mapper holds the last center across inserted clips instead of interpolating
     // through missing source data.
-    let activeSegment = ZoomCalculator.activeSegment(at: time, in: zoomSegments)
-    var resolvedPaths = autoFocusPaths
-    if let activeSegment, activeSegment.isAutoMode {
-      resolvedPaths[activeSegment.id] = VideoEditorAutoFocusEngine.timelinePath(
-        autoFocusPath(for: activeSegment),
-        placements: placements
-      )
-    }
     return VideoEditorAutoFocusEngine.resolvedCameraState(
       at: time,
       segments: zoomSegments,
-      autoFocusPaths: resolvedPaths,
+      autoFocusPaths: mappedAutoFocusPaths,
       transitionDuration: effectiveDuration
     )
   }
@@ -2272,6 +2475,7 @@ final class VideoEditorState: ObservableObject {
 
   /// Remove a speed segment by ID.
   func removeSpeed(id: UUID) {
+    endSpeedEdit(id: id)
     guard let segment = speedSegments.first(where: { $0.id == id }) else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Removing speed segment", context: ["id": id.uuidString])
     speedSegments.removeAll { $0.id == id }
@@ -2288,6 +2492,9 @@ final class VideoEditorState: ObservableObject {
     startTime: TimeInterval? = nil,
     duration: TimeInterval? = nil
   ) {
+    guard !interruptedSpeedEdits.contains(id) else { return }
+    let interval = PerfSignpost.VideoEditor.beginInterval("SpeedMutation")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
     guard let index = speedSegments.firstIndex(where: { $0.id == id }) else { return }
     let old = speedSegments[index]
     var new = old
@@ -2295,19 +2502,16 @@ final class VideoEditorState: ObservableObject {
     if let rate { new.rate = SpeedSegment.clampRate(rate) }
 
     if startTime != nil || duration != nil {
-      let desiredStart = startTime ?? old.startTime
-      let desiredDuration = duration ?? old.duration
-      guard let (clampedStart, clampedDuration) = clampedSpeedRange(
-        desiredStart ... (desiredStart + desiredDuration),
-        excluding: id
+      guard let resolved = resolvedSpeedSegment(
+        id: id, startTime: startTime ?? old.startTime, duration: duration ?? old.duration
       ) else { return }
-      new.startTime = clampedStart
-      new.duration = clampedDuration
+      new.startTime = resolved.startTime
+      new.duration = resolved.duration
     }
 
     guard new != old else { return }
     speedSegments[index] = new
-    recordAction(.updateSpeed(old: old, new: new))
+    if speedEditOriginals[id] == nil { recordAction(.updateSpeed(old: old, new: new)) }
   }
 
   /// Select a speed segment (nil clears selection).
@@ -2667,22 +2871,42 @@ final class VideoEditorState: ObservableObject {
   }
 
   /// Recalculate estimated file size based on current settings
-  func recalculateEstimatedFileSize() {
-    Task { @MainActor in
-      estimatedFileSize = await calculateEstimatedFileSize()
+  func recalculateEstimatedFileSize(immediate: Bool = false) {
+    guard !isPerformanceWorkClosed else { return }
+    estimateRevision &+= 1
+    let revision = estimateRevision
+    estimateTask?.cancel()
+    estimateTask = Task { [weak self] in
+      if !immediate {
+        do { try await Task.sleep(nanoseconds: 100_000_000) } catch { return }
+      }
+      guard !Task.isCancelled, let self else { return }
+      if cachedSourceFileSize == nil {
+        if sourceSizeTask == nil {
+          let access = SandboxFileAccessManager.shared.beginAccessingURL(sourceURL)
+          sourceSizeTask = Task.detached {
+            defer { access.stop() }
+            let attrs = try? FileManager.default.attributesOfItem(atPath: access.url.path)
+            return (attrs?[.size] as? NSNumber)?.int64Value
+          }
+        }
+        let sourceSnapshot = sourceURL
+        let size = await sourceSizeTask?.value
+        guard !Task.isCancelled, estimateRevision == revision, sourceURL == sourceSnapshot else { return }
+        cachedSourceFileSize = size
+        if size == nil { sourceSizeTask = nil }
+      }
+      guard !Task.isCancelled, estimateRevision == revision else { return }
+      let size = calculateEstimatedFileSize(sourceSize: cachedSourceFileSize ?? 0)
+      if estimatedFileSize != size { estimatedFileSize = size }
     }
   }
 
-  /// Calculate estimated file size based on export settings
-  private func calculateEstimatedFileSize() async -> Int64 {
-    // Get source file size
-    let sourceSize: Int64? = SandboxFileAccessManager.shared.withScopedAccess(to: sourceURL) {
-      guard let attrs = try? FileManager.default.attributesOfItem(atPath: sourceURL.path),
-            let sourceSize = attrs[.size] as? Int64
-      else { return nil }
-      return sourceSize
-    }
-    guard let sourceSize else { return 0 }
+  /// Formula runs against the fully stored latest recipe; filesystem I/O is cached.
+  private func calculateEstimatedFileSize(sourceSize: Int64) -> Int64 {
+    let interval = PerfSignpost.VideoEditor.beginInterval("Estimate")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
+    guard sourceSize > 0 else { return 0 }
 
     // GIF mode: estimate based on pixel ratio
     if isGIF {
@@ -2825,7 +3049,7 @@ final class VideoEditorState: ObservableObject {
     guard !speedPreviewIsPreparing else { return }
     if speedPreviewItem === player.currentItem {
       if itemTime >= sequenceMap.outputDuration - 0.01 {
-        pause()
+        pauseAtPendingPosition()
         seek(to: .zero)
         return
       }
@@ -2835,7 +3059,7 @@ final class VideoEditorState: ObservableObject {
       }
       return
     }
-    guard let placement = placements.first(where: { $0.clip.id == activeClipId }) else {
+    guard let placement = placementForClip(activeClipId) else {
       // The sequence changed under us (clip deleted or reordered mid-playback).
       seekPlayerInternally(to: CMTimeGetSeconds(currentTime))
       return
@@ -2869,14 +3093,14 @@ final class VideoEditorState: ObservableObject {
     player.pause()
     let nextIndex = placement.index + 1
     guard nextIndex < clips.count else {
-      pause()
+      pauseAtPendingPosition()
       seek(to: .zero)
       return
     }
 
     let next = clips[nextIndex]
     let nextId = next.id
-    let nextTime = placements.first(where: { $0.clip.id == nextId })?.activeStart
+    let nextTime = placementForClip(nextId)?.activeStart
       ?? CMTimeGetSeconds(currentTime)
     activeClipId = nextId
     activateItemIfNeeded(for: next)
@@ -2892,7 +3116,7 @@ final class VideoEditorState: ObservableObject {
     }
     player.seek(
       to: CMTime(seconds: next.sourceStart, preferredTimescale: 600),
-      toleranceBefore: .zero,
+      toleranceBefore: Self.seekToleranceBefore(for: next.sourceStart),
       toleranceAfter: .zero
     ) { [weak self, weak rateController] finished in
       if finished, let rateGeneration {
@@ -2952,7 +3176,18 @@ final class VideoEditorState: ObservableObject {
         else { return }
         guard let item = notification.object as? AVPlayerItem, item === self.player.currentItem else { return }
         if self.speedPreviewItem === item {
-          self.pause()
+          // This notification is delivered on the main queue and may be stale by
+          // the time it runs. The periodic observer can already have rewound the
+          // preview, or the user may have resumed playback from the beginning.
+          // Only rewind while this item is still parked at the end of its output.
+          let itemTime = CMTimeGetSeconds(self.player.currentTime())
+          let previewDuration = self.sequenceMap.outputDuration
+          guard itemTime.isFinite,
+                previewDuration.isFinite,
+                previewDuration > 0,
+                itemTime >= previewDuration - 0.1
+          else { return }
+          self.pauseAtPendingPosition()
           self.seek(to: .zero)
           return
         }
@@ -2963,7 +3198,7 @@ final class VideoEditorState: ObservableObject {
         // the periodic tick owns the handoff and this notification is stale.
         let itemTime = CMTimeGetSeconds(self.player.currentTime())
         let itemDuration = CMTimeGetSeconds(item.duration)
-        guard let placement = self.placements.first(where: { $0.clip.id == self.activeClipId }),
+        guard let placement = self.placementForClip(self.activeClipId),
               itemTime >= itemDuration - 0.1,
               placement.clip.sourceEnd >= placement.clip.sourceDuration - 0.05
         else { return }
@@ -2976,47 +3211,20 @@ final class VideoEditorState: ObservableObject {
     // Track trim and mute changes
     $isMuted
       .dropFirst()
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
         self?.updateHasUnsavedChanges()
         self?.recalculateEstimatedFileSize()
       }
       .store(in: &cancellables)
 
-    // Clip sequence changes cover trim, split, delete, reorder, and insert.
-    $clips
-      .removeDuplicates()
-      .dropFirst()
-      .sink { [weak self] _ in
-        self?.updateHasUnsavedChanges()
-        self?.recalculateEstimatedFileSize()
-        self?.updateClipActionAvailability()
-      }
-      .store(in: &cancellables)
-
-    // Track zoom changes - pass segments directly to avoid stale state reads
-    $zoomSegments
-      .removeDuplicates()
-      .sink { [weak self] segments in
-        guard let self else { return }
-        rebuildAutoFocusPaths(for: segments)
-        // Pass segments directly from publisher to avoid timing issues
-        updateHasUnsavedChanges(currentZoomSegments: segments)
-      }
-      .store(in: &cancellables)
-
-    // Track speed (timelapse) segment changes
-    $speedSegments
-      .removeDuplicates()
-      .dropFirst()
-      .sink { [weak self] _ in
-        self?.updateHasUnsavedChanges()
-        self?.recalculateEstimatedFileSize()
-      }
-      .store(in: &cancellables)
+    // Segment and clip downstream work runs in didSet, after storage and cache
+    // invalidation. @Published sinks run in willSet and would see the old recipe.
 
     // Track background changes
     Publishers.CombineLatest4($backgroundStyle, $backgroundPadding, $backgroundShadowIntensity, $backgroundCornerRadius)
       .dropFirst(4)
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] _, _, _, _ in
         self?.updateHasUnsavedChanges()
         self?.recalculateEstimatedFileSize()
@@ -3026,6 +3234,7 @@ final class VideoEditorState: ObservableObject {
     // Track export settings changes for file size estimation
     $exportSettings
       .dropFirst()
+      .receive(on: DispatchQueue.main)
       .sink { [weak self] _ in
         self?.updateHasUnsavedChanges()
         self?.recalculateEstimatedFileSize()
@@ -3039,7 +3248,7 @@ final class VideoEditorState: ObservableObject {
       let dimensionChanged = exportSettings.dimensionPreset != initialExportSettings.dimensionPreset
         || exportSettings.customWidth != initialExportSettings.customWidth
         || exportSettings.customHeight != initialExportSettings.customHeight
-      hasUnsavedChanges = dimensionChanged
+      if hasUnsavedChanges != dimensionChanged { hasUnsavedChanges = dimensionChanged }
       return
     }
 
@@ -3057,8 +3266,9 @@ final class VideoEditorState: ObservableObject {
     let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
     let exportSettingsChanged = exportSettings != initialExportSettings
-    hasUnsavedChanges = clipsChanged || muteChanged || zoomsChanged || speedsChanged
+    let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
       || backgroundChanged || exportSettingsChanged
+    if hasUnsavedChanges != changed { hasUnsavedChanges = changed }
   }
 
   private func formatTime(_ time: CMTime) -> String {
@@ -3129,51 +3339,94 @@ final class VideoEditorState: ObservableObject {
       recordingMetadata = Self.loadRecordingMetadata(for: sourceURL, originalURL: originalURL)
     }
 
+    metadataRevision = UUID()
+    autoFocusPathInputs = [:]
     rebuildAutoFocusPaths(for: zoomSegments)
   }
 
   private func rebuildAutoFocusPaths(for segments: [ZoomSegment]) {
-    guard let recordingMetadata, hasMouseTrackingData else {
-      autoFocusPaths = [:]
-      autoFocusPathInputs = [:]
+    guard !isPerformanceWorkClosed else { return }
+    let inputs = Dictionary(uniqueKeysWithValues: segments.filter(\.isAutoMode).map {
+      ($0.id, AutoFocusPathInput(segment: $0))
+    })
+    guard inputs != autoFocusPathInputs else { return }
+    PerfSignpost.VideoEditor.event("AutoFocusRequested")
+    autoFocusPathInputs = inputs
+    autoFocusRequestRevision &+= 1
+    let revision = autoFocusRequestRevision
+    autoFocusBuildTask?.cancel()
+    guard let metadata = recordingMetadata, !metadata.mouseSamples.isEmpty, !inputs.isEmpty else {
+      if !autoFocusPaths.isEmpty {
+        autoFocusPaths = [:]
+        autoFocusPathRevision &+= 1
+        scheduleMappedAutoFocusPaths()
+      }
       return
     }
-
-    var rebuiltPaths: [UUID: [AutoFocusCameraSample]] = [:]
-    var rebuiltInputs: [UUID: AutoFocusPathInput] = [:]
-
-    for segment in segments where segment.isAutoMode {
-      let input = AutoFocusPathInput(segment: segment)
-      rebuiltInputs[segment.id] = input
-
-      if autoFocusPathInputs[segment.id] == input,
-         let cachedPath = autoFocusPaths[segment.id] {
-        rebuiltPaths[segment.id] = cachedPath
-        continue
-      }
-
-      let builtPath = VideoEditorAutoFocusEngine.buildPath(
-        from: recordingMetadata,
-        segment: segment
-      )
-      rebuiltPaths[segment.id] = builtPath
-
-      let metrics = VideoEditorAutoFocusEngine.evaluatePathQuality(
-        metadata: recordingMetadata,
-        segment: segment,
-        path: builtPath
-      )
-      DiagnosticLogger.shared.log(.debug, .editor, "Auto-focus path rebuilt", context: [
-        "segmentId": segment.id.uuidString,
-        "sampleCount": "\(metrics.sampleCount)",
-        "lockAccuracy": String(format: "%.3f", metrics.lockAccuracy),
-        "visibilityRate": String(format: "%.3f", metrics.visibilityRate),
-        "meanError": String(format: "%.4f", metrics.meanError),
-      ])
+    let token = metadataRevision
+    let worker = autoFocusWorker
+    autoFocusBuildTask = Task { [weak self] in
+      // Cancel superseded requests before they enter the worker queue.
+      await Task.yield()
+      guard !Task.isCancelled else { return }
+      let paths = await worker.paths(for: segments, metadata: metadata, metadataRevision: token)
+      guard !Task.isCancelled, let self, self.autoFocusRequestRevision == revision else { return }
+      self.autoFocusPaths = paths
+      self.autoFocusPathRevision &+= 1
+      self.scheduleMappedAutoFocusPaths()
     }
+  }
 
-    autoFocusPathInputs = rebuiltInputs
-    autoFocusPaths = rebuiltPaths
+  private func scheduleMappedAutoFocusPaths() {
+    guard !isPerformanceWorkClosed else { return }
+    mappedAutoFocusBuildTask?.cancel()
+    guard !autoFocusPaths.isEmpty else {
+      if !mappedAutoFocusPaths.isEmpty {
+        mappedAutoFocusPaths = [:]
+        autoFocusPathRevision &+= 1
+      }
+      return
+    }
+    let sourceRevision = autoFocusPathRevision
+    let layoutRevision = timelineLayoutRevision
+    PerfSignpost.VideoEditor.event("AutoFocusRemapRequested")
+    let paths = autoFocusPaths
+    let layout = placements
+    let worker = autoFocusWorker
+    mappedAutoFocusBuildTask = Task { [weak self] in
+      let mapped = await worker.timelinePaths(paths, placements: layout)
+      guard !Task.isCancelled, let self,
+            self.autoFocusPathRevision == sourceRevision,
+            self.timelineLayoutRevision == layoutRevision else { return }
+      self.mappedAutoFocusPaths = mapped
+      PerfSignpost.VideoEditor.event("AutoFocusRemapInstalled")
+      self.autoFocusPathRevision &+= 1
+    }
+  }
+
+  /// Capture metadata alongside the recipe before awaiting. The worker returns
+  /// exact source paths without installing them into the changing authoring state.
+  func awaitExactAutoFocusPaths(
+    for segments: [ZoomSegment], metadata: RecordingMetadata?
+  ) async -> [UUID: [AutoFocusCameraSample]] {
+    guard let metadata else { return [:] }
+    return await autoFocusWorker.paths(
+      for: segments, metadata: metadata, metadataRevision: metadataRevision
+    )
+  }
+
+  func cancelPendingPerformanceWork() {
+    isPerformanceWorkClosed = true
+    speedPreviewRevision &+= 1
+    estimateRevision &+= 1
+    speedTrackDragInProgress = false
+    speedTrackDragDidChange = false
+    autoFocusBuildTask?.cancel()
+    mappedAutoFocusBuildTask?.cancel()
+    autoFocusRequestRevision &+= 1
+    estimateTask?.cancel()
+    sourceSizeTask?.cancel()
+    speedPreviewBuildTask?.cancel()
   }
 
   /// Apply Gaussian blur to image (computed once, reused during render)

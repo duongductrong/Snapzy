@@ -139,7 +139,13 @@ The player holds one item per *source asset*, keyed on `TimelineClip.Source` —
 clips cut from the same asset share an item, so an ordinary split costs a seek, not a reload.
 The structural playhead snaps across inactive trim slots; `handlePlaybackTick` folds the
 active item's source time back onto the structural axis, and `advanceToClip(after:)` hands
-off at each clip's active out-point and rewinds at the end.
+off at each clip's active out-point and rewinds at the end. The rewind parks the transport
+and moves the playhead to 0 in one step (`pauseAtPendingPosition` + `seek(to: .zero)`) — the
+parked end position is never published, so the playhead cannot flash at the end before
+rewinding. `play()` distrusts a transport parked at the end of playable material: if the
+item's position sits at/past the last active out-point while the playhead claims an
+earlier time (a rewind seek that never landed), Play re-anchors the transport to the
+playhead's claimed position before starting, so replay cannot loop end → rewind → parked.
 
 ## Timeline Zoom / Pan
 
@@ -224,6 +230,18 @@ off at each clip's active out-point and rewinds at the end.
 
 - In-memory `undoStack`/`redoStack` of `EditorAction` (max 50) inside `VideoEditorState`; covers zoom add/remove/update, speed add/remove/update/toggle, mute, background changes, and the clip sequence (add/remove/update/move/split — which subsumes trim). Shortcuts: ⌘Z / ⇧⌘Z (toolbar buttons in `VideoEditorToolbarView`).
 - Any recorded action sets `hasUnsavedChanges` → `isDocumentEdited` + close alert.
+- Continuous zoom/speed drags and settings gestures record one update when the interaction ends. A clamped/no-op update does not publish or add history; undo/redo finalizes any active transaction first.
+
+## Timeline interaction performance
+
+- Timeline, tracks and clip strip subscribe to their own model dependencies. Playback updates the playhead independently. Offscreen segments, clips, thumbnails and ruler ticks are culled with viewport overscan; selected items, open settings and active drags stay mounted.
+- Pointer hit testing retains true-time bounds before padded bounds, selected-item priority, nearest-center selection and later-index ties. Shared state range resolvers keep the displayed drag range consistent with committed clamping; release commits the final pointer location.
+- Speed drags keep the existing preview composition until release, then rebuild it once. Zoom center changes remain live. Repeated estimates are coalesced; source file-size lookup runs off the main actor and is cached.
+- Source autofocus reconstruction and clip-layout remapping run on a serial worker with cancellation and revision checks. Range-only zoom edits reuse source paths. Per-frame camera lookup reads the prepared timeline paths; it does not remap all recording samples. Preview holds the last ready camera path while newer work completes.
+- Export captures an immutable recipe and asset references before awaiting exact autofocus paths. Subsequent editor changes cannot mix into that export.
+- The editor disables authoring controls and shortcuts while exporting and persisting the session; the exported file and saved session use the same recipe.
+- Debug builds expose `VideoEditor` signposts when the `perf.signposts` user-default is enabled before launch. Use Instruments to measure pointer handling, model updates, path work and release settling. Close cancels pending performance work.
+- Run `scripts/run-video-editor-performance-probe.sh` for the reproducible CPU matrix, or `--quick` for a shorter equality check. The runner can attach Instruments to a running process with `--attach PID --duration 30 --template 'Time Profiler'`. CPU results isolate camera algorithms; they do not measure native pointer-to-frame latency.
 
 ## Editor Shortcuts (video only)
 

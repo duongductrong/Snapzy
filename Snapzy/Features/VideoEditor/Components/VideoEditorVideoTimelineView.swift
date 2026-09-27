@@ -10,9 +10,10 @@ import SwiftUI
 
 /// Timeline view with time ruler, the clip sequence strip, playhead, and zoom/speed tracks
 struct VideoTimelineView: View {
-  @ObservedObject var state: VideoEditorState
+  let state: VideoEditorState
+  @StateObject private var observation: VideoEditorTimelineObservation
   @ObservedObject private var viewport: VideoEditorTimelineViewport
-  @ObservedObject private var playbackState: VideoEditorPlaybackState
+  private let playbackState: VideoEditorPlaybackState
 
   private let frameStripHeight: CGFloat = 64
   private let segmentTrackHeight: CGFloat = 40
@@ -22,9 +23,10 @@ struct VideoTimelineView: View {
   private static let playheadFollowMargin: CGFloat = 24
 
   init(state: VideoEditorState) {
-    _state = ObservedObject(wrappedValue: state)
+    self.state = state
+    _observation = StateObject(wrappedValue: VideoEditorTimelineObservation(state: state, surface: .container))
     _viewport = ObservedObject(wrappedValue: state.timelineViewport)
-    _playbackState = ObservedObject(wrappedValue: state.playbackState)
+    self.playbackState = state.playbackState
   }
 
   private var totalHeight: CGFloat {
@@ -34,13 +36,9 @@ struct VideoTimelineView: View {
     return height
   }
 
-  /// Playhead position in content coordinates.
-  private var playheadContentX: CGFloat {
-    viewport.x(for: CMTimeGetSeconds(playbackState.currentTime))
-  }
-
   var body: some View {
-    GeometryReader { geometry in
+    let _ = observation.revision
+    return GeometryReader { geometry in
       let viewportWidth = geometry.size.width
 
       timelineContent
@@ -70,8 +68,8 @@ struct VideoTimelineView: View {
         .onChange(of: state.clips) { _ in
           syncViewportDuration()
         }
-        .onChange(of: playheadContentX) { newX in
-          followPlayheadIfNeeded(newX)
+        .onReceive(playbackState.$currentTime) { time in
+          followPlayheadIfNeeded(viewport.x(for: CMTimeGetSeconds(time)))
         }
     }
     .frame(height: totalHeight)
@@ -84,7 +82,7 @@ struct VideoTimelineView: View {
 
     return VStack(spacing: spacing) {
       // Time ruler — measuring-tape ticks and labels along the container's top edge
-      TimelineRulerView(duration: state.timelineDuration, timelineWidth: contentWidth)
+      TimelineRulerView(duration: state.timelineDuration, timelineWidth: contentWidth, visibleRange: renderRange)
         .contentShape(Rectangle())
         .gesture(scrubGesture(timelineWidth: contentWidth))
 
@@ -107,21 +105,30 @@ struct VideoTimelineView: View {
           state: state,
           thumbnailCache: state.clipThumbnailCache,
           timelineWidth: contentWidth,
-          trackHeight: frameStripHeight
+          trackHeight: frameStripHeight,
+          visibleRange: renderRange
         )
+        .equatable()
         .frame(height: frameStripHeight)
       }
 
       // Zoom timeline track
       if state.isZoomTrackVisible {
-        ZoomTimelineTrack(state: state, timelineWidth: contentWidth)
+        ZoomTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
       }
 
       // Speed (timelapse) timeline track — video only; GIF export does not apply timeline edits.
       if state.isSpeedTrackVisible, !state.isGIF {
-        SpeedTimelineTrack(state: state, timelineWidth: contentWidth)
+        SpeedTimelineTrack(state: state, timelineWidth: contentWidth, visibleRange: renderRange).equatable()
       }
     }
+  }
+
+  /// One viewport of overscan on either side preserves smooth panning.
+  private var renderRange: ClosedRange<CGFloat> {
+    let leading = min(viewport.contentWidth, max(0, viewport.scrollOffset - viewport.viewportWidth))
+    let trailing = max(leading, min(viewport.contentWidth, viewport.scrollOffset + 2 * viewport.viewportWidth))
+    return leading ... trailing
   }
 
   // MARK: - Viewport Sync

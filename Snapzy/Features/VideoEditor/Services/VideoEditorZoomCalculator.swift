@@ -9,7 +9,7 @@ import CoreGraphics
 import Foundation
 
 /// Utility enum for zoom-related calculations
-enum ZoomCalculator {
+nonisolated enum ZoomCalculator {
   // MARK: - Transition Configuration
 
   static let transitionDurationRange: ClosedRange<TimeInterval> = 0.15 ... 0.75

@@ -13,12 +13,25 @@ import Foundation
 enum VideoEditorExporter {
   // MARK: - Export Methods
 
+  /// Capture before suspending so an edit during path generation cannot mix recipes.
+  static func prepareSnapshot(for state: VideoEditorState) async throws -> VideoEditorExportSnapshot {
+    var snapshot = VideoEditorExportSnapshot(state: state)
+    snapshot.autoFocusPaths = await state.awaitExactAutoFocusPaths(
+      for: snapshot.zoomSegments,
+      metadata: snapshot.recordingMetadata
+    )
+    try Task.checkCancellation()
+    return snapshot
+  }
+
+
   /// Export trimmed video to specified URL (with zoom effects if present)
   static func exportTrimmed(
     state: VideoEditorState,
     to outputURL: URL,
     progress: @escaping (Float) -> Void
   ) async throws {
+    let state = try await prepareSnapshot(for: state)
     DiagnosticLogger.shared.log(.info, .export, "Video export started", context: [
       "file": state.sourceURL.lastPathComponent,
       "hasZooms": "\(state.zoomSegments.contains { $0.isEnabled })",
@@ -69,7 +82,7 @@ enum VideoEditorExporter {
 
   /// Standard export without zoom effects
   private static func exportStandard(
-    state: VideoEditorState,
+    state: VideoEditorExportSnapshot,
     to outputURL: URL,
     progress: @escaping (Float) -> Void
   ) async throws {
@@ -191,7 +204,7 @@ enum VideoEditorExporter {
 
   /// Export with zoom effects applied
   private static func exportWithZooms(
-    state: VideoEditorState,
+    state: VideoEditorExportSnapshot,
     to outputURL: URL,
     progress: @escaping (Float) -> Void
   ) async throws {
@@ -511,7 +524,7 @@ enum VideoEditorExporter {
 
   /// Export video without audio track
   private static func exportVideoOnly(
-    state: VideoEditorState,
+    state: VideoEditorExportSnapshot,
     to outputURL: URL,
     progress: @escaping (Float) -> Void
   ) async throws {
@@ -719,7 +732,7 @@ enum VideoEditorExporter {
   private static func addAudioTracks(
     to composition: AVMutableComposition,
     from asset: AVAsset,
-    state: VideoEditorState,
+    state: VideoEditorExportSnapshot,
     settings: ExportSettings,
     roles: [VideoEditorAudioTrackRole],
     speedMap: TimelineSequenceMap?,

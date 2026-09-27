@@ -139,6 +139,7 @@ struct VideoEditorMainView: View {
         .frame(width: 0, height: 0)
       }
     }
+    .disabled(state.isExporting)
     .overlay {
       // Export progress overlay
       if state.isExporting {
@@ -173,6 +174,8 @@ struct VideoEditorMainView: View {
 
       Divider()
 
+      // Keep this GeometryReader responsive to parent/window width changes;
+      // equatable-wrapping the container can freeze its initial viewport size.
       VideoTimelineView(state: state)
         .windowContentHPadding()
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)

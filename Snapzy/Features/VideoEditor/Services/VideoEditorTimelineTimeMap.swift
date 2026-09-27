@@ -18,7 +18,7 @@
 import CoreMedia
 import Foundation
 
-struct TimelineSequenceMap: Equatable {
+nonisolated struct TimelineSequenceMap: Equatable {
   /// A stretch of sequence time playing at a constant rate.
   struct Span: Equatable {
     let seqStart: TimeInterval

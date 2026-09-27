@@ -20,6 +20,7 @@ import SwiftUI
 struct TimelineRulerView: View {
   let duration: CMTime
   let timelineWidth: CGFloat
+  var visibleRange: ClosedRange<CGFloat>? = nil
 
   /// Lane height, shared with the timeline container so the playhead spans it exactly.
   static let height: CGFloat = 20
@@ -44,10 +45,17 @@ struct TimelineRulerView: View {
   private static let quarterTickColor = Color.primary.opacity(0.10)
 
   var body: some View {
-    Canvas { context, size in
-      drawRuler(in: context, size: size)
+    let range = visibleRange ?? (0 ... max(0, timelineWidth))
+    return ZStack(alignment: .leading) {
+      Canvas { context, size in
+        var translatedContext = context
+        translatedContext.translateBy(x: -range.lowerBound, y: 0)
+        drawRuler(in: translatedContext, size: CGSize(width: timelineWidth, height: size.height))
+      }
+      .frame(width: max(0, range.upperBound - range.lowerBound), height: Self.height)
+      .offset(x: range.lowerBound)
     }
-    .frame(height: Self.height)
+    .frame(width: timelineWidth, height: Self.height, alignment: .leading)
   }
 
   // MARK: - Ticks
@@ -66,7 +74,11 @@ struct TimelineRulerView: View {
     let quarterSpacing = quarterStep * pixelsPerSecond
 
     let quarterCount = max(0, Int((durationSeconds / quarterStep).rounded(.up)))
-    for quarterIndex in 0 ... quarterCount {
+    let range = visibleRange ?? (0 ... timelineWidth)
+    let firstQuarter = max(0, Int(floor(Double(range.lowerBound / pixelsPerSecond) / quarterStep)) - 1)
+    let lastQuarter = min(quarterCount, Int(ceil(Double(range.upperBound / pixelsPerSecond) / quarterStep)) + 1)
+    guard firstQuarter <= lastQuarter else { return }
+    for quarterIndex in firstQuarter ... lastQuarter {
       let time = TimeInterval(quarterIndex) * quarterStep
       guard time <= durationSeconds + 1e-6 else { break }
 

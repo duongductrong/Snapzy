@@ -31,6 +31,8 @@ struct ZoomSettingsContent: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
+  @State private var editingSegmentId: UUID?
+
   @State private var localZoomLevel: CGFloat = ZoomSegment.defaultZoomLevel
   @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
   @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
@@ -101,9 +103,14 @@ struct ZoomSettingsContent: View {
     .onAppear {
       syncLocalState()
     }
+    .onChange(of: state.selectedZoomId) { _ in
+      endContinuousEdit()
+    }
     .onChange(of: localStateSnapshot) { _ in
       syncLocalState()
     }
+    .onDisappear { endContinuousEdit() }
+    .accessibilityIdentifier("video-editor.zoom-settings")
   }
 
   private func modeSection(for segment: ZoomSegment) -> some View {
@@ -254,10 +261,14 @@ struct ZoomSettingsContent: View {
           value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
           in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
-          if !isEditing {
+          if isEditing {
+            beginContinuousEdit()
+          } else {
             applyZoomLevel()
+            endContinuousEdit()
           }
         }
+        .accessibilityIdentifier("video-editor.zoom-level")
 
         Text("4x")
           .font(.system(size: 9))
@@ -305,10 +316,14 @@ struct ZoomSettingsContent: View {
         value: $localFollowSpeed.stepped(by: 0.05, in: AutoFocusSettings.followSpeedRange),
         in: AutoFocusSettings.followSpeedRange
       ) { isEditing in
-        if !isEditing {
+        if isEditing {
+          beginContinuousEdit()
+        } else {
           applyFollowSpeed()
+          endContinuousEdit()
         }
       }
+      .accessibilityIdentifier("video-editor.follow-speed")
 
       Text(L10n.VideoEditor.followSpeedDescription)
         .font(.system(size: 10))
@@ -409,10 +424,14 @@ struct ZoomSettingsContent: View {
         value: $localFocusMargin.stepped(by: 0.05, in: AutoFocusSettings.focusMarginRange),
         in: AutoFocusSettings.focusMarginRange
       ) { isEditing in
-        if !isEditing {
+        if isEditing {
+          beginContinuousEdit()
+        } else {
           applyFocusMargin()
+          endContinuousEdit()
         }
       }
+      .accessibilityIdentifier("video-editor.focus-margin")
 
       Text(L10n.VideoEditor.focusMarginDescription)
         .font(.system(size: 10))
@@ -429,11 +448,12 @@ struct ZoomSettingsContent: View {
 
       ZoomCenterPicker(
         center: $localCenter,
-        previewImage: previewImage
+        previewImage: previewImage,
+        onEditingChanged: { editing in
+          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+        },
+        onCenterChanged: applyCenter
       )
-      .onChange(of: localCenter) { newValue in
-        applyCenter(newValue)
-      }
 
       HStack(spacing: 4) {
         ForEach(centerPresets, id: \.name) { preset in
@@ -517,6 +537,18 @@ struct ZoomSettingsContent: View {
 
   private func isNearPreset(_ point: CGPoint, _ preset: CGPoint) -> Bool {
     abs(point.x - preset.x) < 0.1 && abs(point.y - preset.y) < 0.1
+  }
+
+  private func beginContinuousEdit() {
+    guard editingSegmentId == nil, let id = state.selectedZoomId else { return }
+    editingSegmentId = id
+    state.beginZoomEdit(id: id)
+  }
+
+  private func endContinuousEdit() {
+    guard let id = editingSegmentId else { return }
+    state.endZoomEdit(id: id)
+    editingSegmentId = nil
   }
 
   private func syncLocalState() {

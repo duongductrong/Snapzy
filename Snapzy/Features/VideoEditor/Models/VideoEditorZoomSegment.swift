@@ -106,7 +106,7 @@ nonisolated enum ZoomType: String, Codable, CaseIterable, Equatable {
 
 // MARK: - Zoom Segment Extensions
 
-extension ZoomSegment {
+nonisolated extension ZoomSegment {
   var autoFocusSettings: AutoFocusSettings {
     AutoFocusSettings(
       isEnabled: zoomType == .auto,

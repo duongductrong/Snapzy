@@ -9,9 +9,21 @@ import AVFoundation
 import SwiftUI
 
 /// Timeline track for zoom segments - all gestures handled at track level
-struct ZoomTimelineTrack: View {
-  @ObservedObject var state: VideoEditorState
+struct ZoomTimelineTrack: View, Equatable {
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.state === rhs.state && lhs.timelineWidth == rhs.timelineWidth && lhs.visibleRange == rhs.visibleRange
+  }
+  let state: VideoEditorState
+  @StateObject private var observation: VideoEditorTimelineObservation
   let timelineWidth: CGFloat
+  var visibleRange: ClosedRange<CGFloat>? = nil
+
+  init(state: VideoEditorState, timelineWidth: CGFloat, visibleRange: ClosedRange<CGFloat>? = nil) {
+    self.state = state
+    self.timelineWidth = timelineWidth
+    self.visibleRange = visibleRange
+    _observation = StateObject(wrappedValue: VideoEditorTimelineObservation(state: state, surface: .zoom))
+  }
 
   private let trackHeight: CGFloat = 40
   private let blockHeight: CGFloat = 32
@@ -36,6 +48,7 @@ struct ZoomTimelineTrack: View {
   @State private var isHovering: Bool = false
   @State private var hoverLocation: CGPoint = .zero
   @State private var activeCursor: NSCursor?
+  @State private var resolvedHover: HoverState = .none
 
   private enum DragMode {
     case none
@@ -44,12 +57,12 @@ struct ZoomTimelineTrack: View {
     case endEdge // Dragging right edge
   }
 
-  private enum SegmentEdge {
+  private enum SegmentEdge: Equatable {
     case start
     case end
   }
 
-  private struct HoverState {
+  private struct HoverState: Equatable {
     let segmentId: UUID?
     let edge: SegmentEdge?
 
@@ -87,18 +100,11 @@ struct ZoomTimelineTrack: View {
   }
 
   private var hoverState: HoverState {
-    guard isHovering, dragMode == .none,
-          let (segment, segmentLayout) = interactionSegment(atX: hoverLocation.x)
-    else { return .none }
-
-    let isOnStartEdge = hoverLocation.x <= segmentLayout.visualStartX + handleWidth
-    let isOnEndEdge = hoverLocation.x >= segmentLayout.visualEndX - handleWidth
-    let edge: SegmentEdge? = isOnStartEdge ? .start : (isOnEndEdge ? .end : nil)
-    return HoverState(segmentId: segment.id, edge: edge)
+    isHovering && dragMode == .none ? resolvedHover : .none
   }
 
   private var isHoveringOverSegment: Bool {
-    interactionSegment(atX: hoverLocation.x) != nil
+    resolvedHover.segmentId != nil
   }
 
   private var shouldShowPlaceholder: Bool {
@@ -126,6 +132,7 @@ struct ZoomTimelineTrack: View {
   // MARK: - Body
 
   var body: some View {
+    let _ = observation.revision
     let hover = hoverState
 
     ZStack(alignment: .leading) {
@@ -162,6 +169,7 @@ struct ZoomTimelineTrack: View {
             blockX: paddedLayout.visualStartX,
             blockWidth: paddedLayout.visualWidth
           )
+          .equatable()
         }
       }
 
@@ -173,6 +181,7 @@ struct ZoomTimelineTrack: View {
         )
       }
     }
+    .accessibilityIdentifier("video-editor.zoom-track")
     .frame(height: trackHeight)
     .clipShape(Radius.rect(Radius.tile))
     .contentShape(Rectangle())
@@ -191,28 +200,37 @@ struct ZoomTimelineTrack: View {
       case .active(let location):
         isHovering = true
         hoverLocation = location
-        updateCursor(at: location)
+        updateHover(at: location)
       case .ended:
         isHovering = false
+        resolvedHover = .none
         clearCursor()
       }
     }
+    .onChange(of: observation.revision) { _ in
+      if isHovering { updateHover(at: hoverLocation) }
+    }
     .contextMenu {
       trackContextMenu
+    }
+    .onDisappear {
+      endDrag()
+      clearCursor()
     }
   }
 
   // MARK: - Cursor
 
-  private func updateCursor(at location: CGPoint) {
+  private func updateHover(at location: CGPoint) {
     guard dragMode == .none else { return }
-
-    if let (_, segmentLayout) = interactionSegment(atX: location.x) {
-      let isOnEdge =
-        location.x <= segmentLayout.visualStartX + handleWidth
-          || location.x >= segmentLayout.visualEndX - handleWidth
-      setCursor(isOnEdge ? .resizeLeftRight : .pointingHand)
+    if let (segment, layout) = interactionSegment(atX: location.x) {
+      let edge: SegmentEdge? = location.x <= layout.visualStartX + handleWidth ? .start
+        : (location.x >= layout.visualEndX - handleWidth ? .end : nil)
+      let hover = HoverState(segmentId: segment.id, edge: edge)
+      if hover != resolvedHover { resolvedHover = hover }
+      setCursor(edge != nil ? .resizeLeftRight : .pointingHand)
     } else {
+      if resolvedHover != .none { resolvedHover = .none }
       setCursor(.crosshair)
     }
   }
@@ -244,12 +262,14 @@ struct ZoomTimelineTrack: View {
         }
         continueDrag(at: value.location)
       }
-      .onEnded { _ in
+      .onEnded { value in
+        continueDrag(at: value.location)
         endDrag()
       }
   }
 
   private func beginDrag(at location: CGPoint) {
+    PerfSignpost.VideoEditor.event("SegmentDragBegin")
     guard let (segment, segmentLayout) = interactionSegment(atX: location.x) else {
       dragMode = .none
       return
@@ -278,9 +298,12 @@ struct ZoomTimelineTrack: View {
 
     // Select the segment being dragged
     state.selectZoom(id: segment.id)
+    state.beginZoomEdit(id: segment.id)
   }
 
   private func continueDrag(at location: CGPoint) {
+    let interval = PerfSignpost.VideoEditor.beginInterval("SegmentPointerUpdate")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
     guard let segmentId = dragSegmentId,
           let segment = state.zoomSegments.first(where: { $0.id == segmentId })
     else {
@@ -315,7 +338,7 @@ struct ZoomTimelineTrack: View {
       preview.duration = max(ZoomSegment.minDuration, anchorTimeline - dragInitialStartTime)
     }
 
-    return preview
+    return state.resolvedZoomSegment(id: segment.id, startTime: preview.startTime, duration: preview.duration) ?? segment
   }
 
   private func commitDragPreviewIfNeeded(_ segment: ZoomSegment, force: Bool = false) {
@@ -331,14 +354,18 @@ struct ZoomTimelineTrack: View {
   }
 
   private func endDrag() {
+    guard let id = dragSegmentId else { return }
+    PerfSignpost.VideoEditor.event("SegmentDragEnd")
     if let dragPreviewSegment {
       commitDragPreviewIfNeeded(dragPreviewSegment, force: true)
     }
 
+    state.endZoomEdit(id: id)
     dragMode = .none
     dragSegmentId = nil
     dragPreviewSegment = nil
     lastDragModelUpdateTime = 0
+    if isHovering { updateHover(at: hoverLocation) }
   }
 
   // MARK: - Tap Handling
@@ -456,62 +483,52 @@ struct ZoomTimelineTrack: View {
 
   /// Segments with somewhere true to sit — the drawable set.
   private var visibleSegments: [ZoomSegment] {
-    state.zoomSegments.filter { displaySpan(for: $0) != nil }
+    state.zoomSegments.filter { segment in
+      guard let span = displaySpan(for: segment) else { return false }
+      if segment.id == dragSegmentId || segment.id == state.selectedZoomId { return true }
+      guard let visibleRange else { return true }
+      let layout = paddedLayout(for: span)
+      return layout.visualEndX >= visibleRange.lowerBound && layout.visualStartX <= visibleRange.upperBound
+    }
   }
 
   /// Hit test under a pointer x. The true span answers first so what a block
   /// covers in time is what it activates; the padded visual is the fallback for
   /// narrow blocks, resolved by nearest centre. Dead segments never answer.
   private func interactionSegment(atX x: CGFloat) -> (segment: ZoomSegment, layout: SegmentLayout)? {
-    let trueHits: [(segment: ZoomSegment, layout: SegmentLayout)] = state.zoomSegments.compactMap { segment in
-      guard let span = displaySpan(for: segment) else { return nil }
+    var trueWinner: (segment: ZoomSegment, layout: SegmentLayout)?
+    var paddedWinner: (segment: ZoomSegment, layout: SegmentLayout)?
+    func preferred(_ candidate: (segment: ZoomSegment, layout: SegmentLayout),
+                   over winner: (segment: ZoomSegment, layout: SegmentLayout)?) -> Bool {
+      guard let winner else { return true }
+      if winner.segment.id == state.selectedZoomId { return false }
+      if candidate.segment.id == state.selectedZoomId { return true }
+      // Iteration follows authored order; equal distance replaces with later index.
+      return abs(candidate.layout.centerX - x) <= abs(winner.layout.centerX - x)
+    }
+    for segment in state.zoomSegments {
+      guard let span = displaySpan(for: segment) else { continue }
       let startX = (span.lowerBound / videoDuration) * timelineWidth
       let endX = (span.upperBound / videoDuration) * timelineWidth
-      guard endX - startX > 0.01, x >= startX, x <= endX else { return nil }
-      return (segment, SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX))
-    }
-    if let hit = resolveCandidate(trueHits, atX: x) { return hit }
-
-    let paddedHits: [(segment: ZoomSegment, layout: SegmentLayout)] = visibleSegments.compactMap { segment in
-      guard let span = displaySpan(for: segment) else { return nil }
-      let layout = paddedLayout(for: span)
-      guard x >= layout.visualStartX, x <= layout.visualEndX else { return nil }
-      return (segment, layout)
-    }
-    return resolveCandidate(paddedHits, atX: x)
-  }
-
-  /// Selected segment wins, then the one whose centre is nearest the pointer,
-  /// then the later index — a deterministic rule for overlapping spans.
-  private func resolveCandidate(
-    _ candidates: [(segment: ZoomSegment, layout: SegmentLayout)],
-    atX x: CGFloat
-  ) -> (segment: ZoomSegment, layout: SegmentLayout)? {
-    guard !candidates.isEmpty else { return nil }
-
-    if let selectedId = state.selectedZoomId,
-       let selected = candidates.first(where: { $0.segment.id == selectedId }) {
-      return selected
-    }
-
-    return candidates.sorted { lhs, rhs in
-      let leftDistance = abs(lhs.layout.centerX - x)
-      let rightDistance = abs(rhs.layout.centerX - x)
-      if leftDistance != rightDistance {
-        return leftDistance < rightDistance
+      if endX - startX > 0.01, x >= startX, x <= endX {
+        let candidate = (segment, SegmentLayout(visualStartX: startX, visualEndX: endX, visualWidth: endX - startX))
+        if preferred(candidate, over: trueWinner) { trueWinner = candidate }
       }
-
-      let leftIndex = state.zoomSegments.firstIndex(where: { $0.id == lhs.segment.id }) ?? -1
-      let rightIndex = state.zoomSegments.firstIndex(where: { $0.id == rhs.segment.id }) ?? -1
-      return leftIndex > rightIndex
-    }.first
+      let layout = paddedLayout(for: span)
+      if x >= layout.visualStartX, x <= layout.visualEndX {
+        let candidate = (segment, layout)
+        if preferred(candidate, over: paddedWinner) { paddedWinner = candidate }
+      }
+    }
+    return trueWinner ?? paddedWinner
   }
+
 }
 
 // MARK: - Zoom Block Visual (No Gestures)
 
 /// Visual-only zoom block - all interactions handled by parent track
-private struct ZoomBlockVisual: View {
+private struct ZoomBlockVisual: View, Equatable {
   let segment: ZoomSegment
   let isSelected: Bool
   let isDragging: Bool
@@ -548,9 +565,11 @@ private struct ZoomBlockVisual: View {
       blockContent
 
       handleIndicator()
+        .accessibilityIdentifier("video-editor.zoom-item.\(segment.id.uuidString).start-handle")
         .offset(x: 0)
 
       handleIndicator()
+        .accessibilityIdentifier("video-editor.zoom-item.\(segment.id.uuidString).end-handle")
         .offset(x: blockWidth - handleWidth)
     }
     .frame(width: blockWidth, height: blockHeight)
@@ -559,6 +578,7 @@ private struct ZoomBlockVisual: View {
     .scaleEffect(isDragging ? 1.02 : 1.0)
     .animation(.easeOut(duration: 0.15), value: isDragging)
     .animation(.easeOut(duration: 0.12), value: isHovered)
+    .accessibilityIdentifier("video-editor.zoom-item.\(segment.id.uuidString)")
     .allowsHitTesting(false) // Parent handles all gestures
   }
 

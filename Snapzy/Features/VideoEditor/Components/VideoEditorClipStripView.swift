@@ -12,25 +12,33 @@ import AppKit
 import AVFoundation
 import SwiftUI
 
-struct VideoEditorClipStripView: View {
-  @ObservedObject var state: VideoEditorState
+struct VideoEditorClipStripView: View, Equatable {
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.state === rhs.state && lhs.thumbnailCache === rhs.thumbnailCache
+      && lhs.timelineWidth == rhs.timelineWidth && lhs.trackHeight == rhs.trackHeight
+      && lhs.visibleRange == rhs.visibleRange
+  }
+  let state: VideoEditorState
+  @StateObject private var observation: VideoEditorTimelineObservation
   @ObservedObject var thumbnailCache: VideoEditorClipThumbnailCache
-  @ObservedObject private var playbackState: VideoEditorPlaybackState
 
   let timelineWidth: CGFloat
   let trackHeight: CGFloat
+  let visibleRange: ClosedRange<CGFloat>?
 
   init(
     state: VideoEditorState,
     thumbnailCache: VideoEditorClipThumbnailCache,
     timelineWidth: CGFloat,
-    trackHeight: CGFloat
+    trackHeight: CGFloat,
+    visibleRange: ClosedRange<CGFloat>? = nil
   ) {
-    _state = ObservedObject(wrappedValue: state)
+    self.state = state
+    _observation = StateObject(wrappedValue: VideoEditorTimelineObservation(state: state, surface: .clips))
     _thumbnailCache = ObservedObject(wrappedValue: thumbnailCache)
-    _playbackState = ObservedObject(wrappedValue: state.playbackState)
     self.timelineWidth = timelineWidth
     self.trackHeight = trackHeight
+    self.visibleRange = visibleRange
   }
 
   /// Visual separation between neighbouring clips. Purely cosmetic — the blocks still
@@ -87,13 +95,14 @@ struct VideoEditorClipStripView: View {
   // MARK: - Body
 
   var body: some View {
-    ZStack(alignment: .leading) {
+    let _ = observation.revision
+    return ZStack(alignment: .leading) {
       Color.black.opacity(0.2)
 
       if state.isExtractingFrames, state.frameThumbnails.isEmpty {
         loadingRow
       } else {
-        ForEach(state.placements) { placement in
+        ForEach(renderedPlacements) { placement in
           clipBlock(placement)
         }
       }
@@ -102,6 +111,14 @@ struct VideoEditorClipStripView: View {
     .coordinateSpace(name: Self.coordinateSpace)
     .onAppear { preloadInsertedThumbnails() }
     .onChange(of: state.clips) { _ in preloadInsertedThumbnails() }
+  }
+
+  private var renderedPlacements: [TimelineSequence.Placement] {
+    guard let visibleRange else { return state.placements }
+    return state.placements.filter { placement in
+      placement.clip.id == drag?.clipId || placement.clip.id == state.selectedClipId
+        || (x(for: placement.end) >= visibleRange.lowerBound && x(for: placement.start) <= visibleRange.upperBound)
+    }
   }
 
   private var loadingRow: some View {
@@ -168,6 +185,7 @@ struct VideoEditorClipStripView: View {
     .zIndex(isDragging ? 2 : (isSelected ? 1 : 0))
     .gesture(bodyGesture(placement))
     .contextMenu { contextMenu(placement) }
+    .accessibilityIdentifier("video-editor.clip-item.\(clip.id.uuidString)")
     .help(tooltip(for: clip))
   }
 
@@ -258,8 +276,15 @@ struct VideoEditorClipStripView: View {
       let fullWidth = max(blockWidth, scale * CGFloat(clip.sourceDuration))
       let cellWidth = fullWidth / CGFloat(images.count)
 
+      let sourceOffset = scale * CGFloat(clip.slotStart)
+      let placementStart = state.placements.first(where: { $0.clip.id == clip.id }).map { x(for: $0.start) + Self.clipGap / 2 } ?? 0
+      let localLower = max(0, (visibleRange?.lowerBound ?? placementStart) - placementStart)
+      let localUpper = min(blockWidth, (visibleRange?.upperBound ?? (placementStart + blockWidth)) - placementStart)
+      let first = max(0, min(images.count, Int(floor((sourceOffset + localLower) / max(CGFloat.leastNonzeroMagnitude, cellWidth)))))
+      let last = max(first, min(images.count, Int(ceil((sourceOffset + max(localLower, localUpper)) / max(CGFloat.leastNonzeroMagnitude, cellWidth)))))
       HStack(spacing: 0) {
-        ForEach(images.indices, id: \.self) { index in
+        Color.clear.frame(width: CGFloat(first) * cellWidth)
+        ForEach(first..<last, id: \.self) { index in
           Image(nsImage: images[index])
             .resizable()
             .aspectRatio(contentMode: .fit)

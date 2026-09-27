@@ -12,6 +12,8 @@ struct ZoomSettingsPopover: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
+  @State private var editingSegmentId: UUID?
+
   @State private var localZoomLevel: CGFloat = 2.0
   @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
 
@@ -46,8 +48,11 @@ struct ZoomSettingsPopover: View {
       syncLocalState()
     }
     .onChange(of: state.selectedZoomId) { _ in
+      endContinuousEdit()
       syncLocalState()
     }
+    .onDisappear { endContinuousEdit() }
+    .accessibilityIdentifier("video-editor.zoom-settings")
   }
 
   // MARK: - Sections
@@ -95,10 +100,14 @@ struct ZoomSettingsPopover: View {
           value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
           in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
-          if !isEditing {
+          if isEditing {
+            beginContinuousEdit()
+          } else {
             applyZoomLevel()
+            endContinuousEdit()
           }
         }
+        .accessibilityIdentifier("video-editor.zoom-level")
 
         Text("4x")
           .font(.system(size: 9))
@@ -137,11 +146,12 @@ struct ZoomSettingsPopover: View {
 
       ZoomCenterPicker(
         center: $localCenter,
-        previewImage: previewImage
+        previewImage: previewImage,
+        onEditingChanged: { editing in
+          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+        },
+        onCenterChanged: applyCenter
       )
-      .onChange(of: localCenter) { newValue in
-        applyCenter(newValue)
-      }
 
       // Quick position presets
       HStack(spacing: 4) {
@@ -229,6 +239,18 @@ struct ZoomSettingsPopover: View {
   }
 
   // MARK: - Actions
+
+  private func beginContinuousEdit() {
+    guard editingSegmentId == nil, let id = state.selectedZoomId else { return }
+    editingSegmentId = id
+    state.beginZoomEdit(id: id)
+  }
+
+  private func endContinuousEdit() {
+    guard let id = editingSegmentId else { return }
+    state.endZoomEdit(id: id)
+    editingSegmentId = nil
+  }
 
   private func syncLocalState() {
     if let segment = selectedSegment {

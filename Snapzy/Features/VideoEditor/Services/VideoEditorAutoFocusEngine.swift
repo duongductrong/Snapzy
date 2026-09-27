@@ -8,7 +8,7 @@
 import CoreGraphics
 import Foundation
 
-enum VideoEditorAutoFocusEngine {
+nonisolated enum VideoEditorAutoFocusEngine {
   struct AutoFocusAccuracyMetrics {
     let sampleCount: Int
     let lockAccuracy: Double
@@ -53,6 +53,7 @@ enum VideoEditorAutoFocusEngine {
     var previousCursorPoint = samples[0].point.clampedToUnitRect
 
     for sample in samples.dropFirst() {
+      if Task.isCancelled { return [] }
       let cursorPoint = sample.point.clampedToUnitRect
       if sample.isInsideCapture {
         lastVisiblePoint = cursorPoint
@@ -282,6 +283,7 @@ enum VideoEditorAutoFocusEngine {
 
     var adjusted: [AutoFocusCameraSample] = []
     for placement in placements where placement.duration > 0.0001 {
+      if Task.isCancelled { return [] }
       if placement.clip.isPrimary {
         let sourceStart = placement.clip.sourceStart
         let sourceEnd = placement.clip.sourceEnd
@@ -548,7 +550,7 @@ enum VideoEditorAutoFocusEngine {
   }
 }
 
-private extension CGPoint {
+private nonisolated extension CGPoint {
   var clampedToUnitRect: CGPoint {
     CGPoint(
       x: x.clamped(to: 0 ... 1),
@@ -557,14 +559,83 @@ private extension CGPoint {
   }
 }
 
-private extension CGFloat {
+private nonisolated extension CGFloat {
   func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
     Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
   }
 }
 
-private extension Double {
+private nonisolated extension Double {
   func clamped(to range: ClosedRange<Double>) -> Double {
     Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+  }
+}
+
+
+/// Serial CPU worker. Actor isolation keeps path generation off the main actor,
+/// while cancelled queued requests return before doing work. Paths keep the full
+/// source history: timeline ranges intentionally are not part of the cache key.
+actor VideoEditorAutoFocusWorker {
+  private struct Input: Hashable {
+    let zoomType: String
+    let zoomLevel: CGFloat
+    let followSpeed: Double
+    let focusMargin: CGFloat
+
+    init(_ segment: ZoomSegment) {
+      zoomType = segment.zoomType.rawValue
+      zoomLevel = segment.zoomLevel
+      followSpeed = segment.followSpeed
+      focusMargin = segment.focusMargin
+    }
+  }
+
+  private var metadataRevision: UUID?
+  private var cachedMetadata: RecordingMetadata?
+  private var cached: [Input: [AutoFocusCameraSample]] = [:]
+
+  func timelinePaths(
+    _ paths: [UUID: [AutoFocusCameraSample]], placements: [TimelineSequence.Placement]
+  ) -> [UUID: [AutoFocusCameraSample]] {
+    let interval = PerfSignpost.VideoEditor.beginInterval("AutoFocusRemap")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
+    var result: [UUID: [AutoFocusCameraSample]] = [:]
+    for (id, path) in paths {
+      guard !Task.isCancelled else { return [:] }
+      result[id] = VideoEditorAutoFocusEngine.timelinePath(path, placements: placements)
+    }
+    return result
+  }
+
+  func paths(
+    for segments: [ZoomSegment], metadata: RecordingMetadata, metadataRevision: UUID
+  ) -> [UUID: [AutoFocusCameraSample]] {
+    guard !Task.isCancelled else { return [:] }
+    if self.metadataRevision != metadataRevision || cachedMetadata != metadata {
+      cached = [:]
+      self.metadataRevision = metadataRevision
+      cachedMetadata = metadata
+    }
+    var result: [UUID: [AutoFocusCameraSample]] = [:]
+    for segment in segments where segment.isAutoMode {
+      guard !Task.isCancelled else { return [:] }
+      let input = Input(segment)
+      if let path = cached[input] {
+        result[segment.id] = path
+      } else {
+        let interval = PerfSignpost.VideoEditor.beginInterval("AutoFocusBuild")
+        let path = VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: segment)
+        PerfSignpost.VideoEditor.endInterval(interval)
+        guard !Task.isCancelled else { return [:] }
+        cached[input] = path
+        result[segment.id] = path
+      }
+    }
+    // Source paths depend only on camera settings, not segment identity or range.
+    // Sharing their array storage avoids rebuilding full source history for every
+    // segment with identical settings. Retain only this completed recipe's keys.
+    let inputs = Set(segments.filter(\.isAutoMode).map(Input.init))
+    cached = cached.filter { inputs.contains($0.key) }
+    return result
   }
 }
