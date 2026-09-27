@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.33.0-beta.2] - 2026-09-27
+
+### Features
+-  Click or press Enter to record a whole display (#611) (7d5d5b38)
+-  add Delayed Capture (b7110d10)
+
+### Bug Fixes
+-  Fixed reset delayed capture countdown on restore defaults (#613) (e3055542)
+
+### Contributors
+- @adrianocr
+- @duongductrong
+- @github-actions[bot]
+- @thanhthai3010
+
 ## [1.33.0-beta.1] - 2026-09-23
 
 ### Features
