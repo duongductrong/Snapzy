@@ -86,6 +86,7 @@ jobs:
             SnapzyTests/HotkeyUnregistrationTests
             SnapzyTests/RecordingSessionShortcutGatingTests
             SnapzyTests/RecordingSessionHotkeyRegistrationTests
+            SnapzyTests/SnapzyOnboardingStateTests/testStep2ScreenRecordingWorkflow
             SnapzyTests/VideoEditorTimelineViewportTests
             SnapzyTests/VideoEditorTimelineScrollCatcherTests
         run: |
