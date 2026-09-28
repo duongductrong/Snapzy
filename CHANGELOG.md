@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.0.0-beta.1] - 2026-09-28
+
+### Breaking Changes
+- Apply Liquid Glass Beta (#574) (32441ab7)
+
+### Features
+- Added breaking change detection to changelog generation (c064f987)
+
+### Chore
+- ci: allow beta channel releases from master branch (f1761d16)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.33.0-beta.2] - 2026-09-27
 
 ### Features
