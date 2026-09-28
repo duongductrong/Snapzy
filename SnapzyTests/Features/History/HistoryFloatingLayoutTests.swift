@@ -219,6 +219,73 @@ final class HistoryFloatingLayoutTests: XCTestCase {
     XCTAssertFalse(handled)
   }
 
+  func testHistoryFloatingPanelRoutesPlainArrowToFloatingContent() throws {
+    let panel = HistoryFloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100))
+    let expectation = expectation(forNotification: .historyMoveFocus, object: panel) { notification in
+      notification.userInfo?["keyCode"] as? UInt16 == 124 &&
+        notification.userInfo?["extendsSelection"] as? Bool == false
+    }
+    let event = try XCTUnwrap(makeArrowEvent(keyCode: 124, modifiers: []))
+
+    panel.keyDown(with: event)
+    wait(for: [expectation], timeout: 1.0)
+  }
+
+  func testHistoryFloatingPanelRoutesShiftArrowToFloatingContent() throws {
+    let panel = HistoryFloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100))
+    let expectation = expectation(forNotification: .historyMoveFocus, object: panel) { notification in
+      notification.userInfo?["keyCode"] as? UInt16 == 125 &&
+        notification.userInfo?["extendsSelection"] as? Bool == true
+    }
+    let event = try XCTUnwrap(makeArrowEvent(keyCode: 125, modifiers: .shift))
+
+    panel.keyDown(with: event)
+    wait(for: [expectation], timeout: 1.0)
+  }
+
+  func testHistoryFloatingPanelDoesNotRouteArrowsWhileTextInputIsActive() throws {
+    let panel = HistoryFloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100))
+    let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
+    panel.contentView?.addSubview(textView)
+    XCTAssertTrue(panel.makeFirstResponder(textView))
+
+    let observer = NotificationCenter.default.addObserver(
+      forName: .historyMoveFocus,
+      object: panel,
+      queue: nil
+    ) { _ in
+      XCTFail("Arrow events should remain with the active text input")
+    }
+    defer { NotificationCenter.default.removeObserver(observer) }
+
+    panel.keyDown(with: try XCTUnwrap(makeArrowEvent(keyCode: 123, modifiers: [])))
+  }
+
+  func testHistoryFloatingPanelKeepsEnterCopyAndDeleteRoutes() throws {
+    let panel = HistoryFloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100))
+    let activation = expectation(forNotification: .historyActivateSelection, object: panel, handler: nil)
+    panel.keyDown(with: try XCTUnwrap(makeArrowEvent(keyCode: 36, modifiers: [])))
+
+    let deletion = expectation(forNotification: .historyDeleteSelection, object: panel, handler: nil)
+    panel.keyDown(with: try XCTUnwrap(makeArrowEvent(keyCode: 51, modifiers: [])))
+
+    let copying = expectation(forNotification: .historyCopySelection, object: panel, handler: nil)
+    let copyEvent = NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: .command,
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "c",
+      charactersIgnoringModifiers: "c",
+      isARepeat: false,
+      keyCode: 8
+    )
+    XCTAssertTrue(panel.performKeyEquivalent(with: try XCTUnwrap(copyEvent)))
+    wait(for: [activation, deletion, copying], timeout: 1.0)
+  }
+
   // MARK: - Helpers
 
   private func makeDefaults(
@@ -229,5 +296,20 @@ final class HistoryFloatingLayoutTests: XCTestCase {
     let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName), file: file, line: line)
     defaults.removePersistentDomain(forName: suiteName)
     return defaults
+  }
+
+  private func makeArrowEvent(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> NSEvent? {
+    NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: modifiers,
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "",
+      charactersIgnoringModifiers: "",
+      isARepeat: false,
+      keyCode: keyCode
+    )
   }
 }

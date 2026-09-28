@@ -10,6 +10,7 @@ import SwiftUI
 struct HistoryExpandedCaptureCardView: View, Equatable {
   let record: CaptureHistoryRecord
   let isSelected: Bool
+  let isFocused: Bool
   let backgroundStyle: HistoryBackgroundStyle
   let onTap: () -> Void
   let reservedScrollAxis: QuickAccessDragScrollAxis?
@@ -17,6 +18,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   static func == (lhs: HistoryExpandedCaptureCardView, rhs: HistoryExpandedCaptureCardView) -> Bool {
     lhs.record == rhs.record &&
     lhs.isSelected == rhs.isSelected &&
+    lhs.isFocused == rhs.isFocused &&
     lhs.reservedScrollAxis == rhs.reservedScrollAxis &&
     lhs.backgroundStyle == rhs.backgroundStyle &&
     HistoryFloatingManager.shared.cloudUploadState(for: lhs.record) == HistoryFloatingManager.shared.cloudUploadState(for: rhs.record)
@@ -52,6 +54,15 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
     .overlay(
       RoundedRectangle(cornerRadius: 20, style: .continuous)
         .stroke(cardBorderColor, lineWidth: isSelected ? 1.8 : 1)
+    )
+    .overlay(
+      RoundedRectangle(cornerRadius: 23, style: .continuous)
+        .stroke(
+          Color.primary.opacity(colorScheme == .dark ? 0.9 : 0.72),
+          style: StrokeStyle(lineWidth: 2, dash: [5, 3])
+        )
+        .padding(-3)
+        .opacity(isFocused ? 1 : 0)
     )
     .overlay(historyDragInteractionBridge)
     .shadow(color: cardShadowColor, radius: isSelected ? 14 : 3, x: 0, y: isSelected ? 8 : 2)

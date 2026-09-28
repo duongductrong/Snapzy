@@ -11,7 +11,7 @@ Persistent history of screenshots, videos, and GIFs backed by GRDB SQLite, surfa
 ## Floating Panel
 
 - `HistoryFloatingManager` — panel state. Modes `compact` / `expanded`; position `topCenter` / `bottomCenter` (`HistoryPanelPosition.center` exists for config import, not in UI); panel scale 0.8–1.4 (`history.floating.scale`); `maxDisplayedItems` default 10; background `HistoryBackgroundStyle` hud / solid; toggle-mode shortcut default ⌘E (`defaultToggleModeShortcut`); pin state `isPinned` (session-based, elevated window level `floating + 2`, suppresses auto-dismiss on blur).
-- `HistoryFloatingPanel` keyboard: ⌘C copy selection, ⌘A select all, ⌘P toggle pin, ⌫ delete, Return open (all suppressed while text input active).
+- `HistoryFloatingPanel` keyboard: unmodified Left/Right moves the compact carousel focus one card at a time; expanded-grid arrows move within the four-column grid without wrapping, and Shift+arrows extend the selected range. Enter opens the focused card even during multi-selection. ⌘C copies selected records (or the focused card when none are selected), ⌘A selects all, ⌘P toggles pin, and ⌫ deletes selected records. Arrow and panel shortcuts are suppressed while text input is active.
 - Compact: type filter pills + horizontal `HistoryCompactCarouselView` cards + trailing controls (Open Full History, Pin, Close).
 - Expanded: type pills + filename search (150ms debounce, `HistorySearchViewModel`) + time filters all / 24H / 7D / 30D (`HistoryFloatingTimeFilter`) + 4-column grid + multi-select + selection bar + custom `HistoryFloatingScrollbar` + trailing controls (Collapse, Pin, Close).
 

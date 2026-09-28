@@ -13,6 +13,7 @@ extension Notification.Name {
   static let historyActivateSelection = Notification.Name("historyActivateSelection")
   static let historyDeleteSelection = Notification.Name("historyDeleteSelection")
   static let historySelectAll = Notification.Name("historySelectAll")
+  static let historyMoveFocus = Notification.Name("historyMoveFocus")
 }
 
 final class HistoryWindow: NSWindow {
