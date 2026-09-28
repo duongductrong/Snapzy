@@ -226,6 +226,206 @@ enum TestImageFactory {
     return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
   }
 
+  /// Create a scrolling frame whose rows carry contrast along their width, like
+  /// text on a page. The bottom `fadeDepth` rows are washed toward white, the
+  /// way pages fade content that sits against the bottom of a scroll view.
+  static func texturedScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    fadeDepth: Int = 0,
+    fadeStrength: Double = 0.6
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let distanceFromBottom = height - 1 - y
+      let fade = fadeDepth > 0 && distanceFromBottom < fadeDepth
+        ? fadeStrength * Double(fadeDepth - distanceFromBottom) / Double(fadeDepth)
+        : 0
+
+      for x in 0..<width {
+        let cell = (logicalY &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        let base = Double(abs(cell) % 200 + 28)
+        let value = UInt8((base + (255 - base) * fade).rounded())
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8((Int(value) * 7 / 8))
+        pixels[offset + 2] = UInt8((Int(value) * 3 / 4))
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// Create a textured scrolling frame with fixed chrome: a header across the
+  /// top and a footer along the bottom. When `footerChromeWidth` is set, only
+  /// that many trailing columns of the footer are fixed, like a floating
+  /// banner, and content scrolls past beside it.
+  static func chromeScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    headerHeight: Int,
+    footerHeight: Int,
+    footerChromeWidth: Int? = nil
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let footerTop = height - footerHeight
+    let chromeStartColumn = width - (footerChromeWidth ?? width)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let cell: Int
+        if y < headerHeight {
+          cell = (y &* 2_654_435_761) ^ ((x / 5) &* 40_503)
+        } else if y >= footerTop, x >= chromeStartColumn {
+          cell = ((y - footerTop) &* 97_531) ^ ((x / 7) &* 2_246_822_519)
+        } else {
+          cell = ((logicalYOffset + y) &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        }
+        let value = UInt8(abs(cell) % 200 + 28)
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8(Int(value) * 7 / 8)
+        pixels[offset + 2] = UInt8(Int(value) * 3 / 4)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// Create a frame of a whole app window: a fixed toolbar across the top, a
+  /// fixed textured sidebar along the leading edge, and textured content
+  /// scrolling beside it.
+  static func windowScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    toolbarHeight: Int,
+    sidebarWidth: Int
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let cell: Int
+        if y < toolbarHeight {
+          cell = (y &* 2_654_435_761) ^ ((x / 5) &* 40_503)
+        } else if x < sidebarWidth {
+          cell = ((y / 3) &* 1_103_515_245) ^ ((x / 4) &* 12_345)
+        } else {
+          cell = ((logicalYOffset + y) &* 73_856_093) ^ ((x / 6) &* 19_349_663)
+        }
+        let value = UInt8(abs(cell) % 200 + 28)
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = UInt8(Int(value) * 7 / 8)
+        pixels[offset + 2] = UInt8(Int(value) * 3 / 4)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// Create a frame of a mostly blank page: short lines of text-like texture
+  /// every `lineSpacing` rows on a flat light background.
+  static func sparseTextScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    lineSpacing: Int = 28,
+    lineHeight: Int = 7
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let margin = width / 12
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let line = logicalY / lineSpacing
+      let isTextRow = logicalY % lineSpacing < lineHeight
+      // Lines end at different lengths, like real paragraphs.
+      let lineEnd = width - margin - (abs(line &* 2_654_435_761) % (width / 3))
+
+      for x in 0..<width {
+        var value: UInt8 = 244
+        if isTextRow, x >= margin, x < lineEnd, (x / 9) % 5 != 4 {
+          let cell = (logicalY &* 73_856_093) ^ ((x / 2) &* 19_349_663)
+          value = UInt8(abs(cell) % 150 + 20)
+        }
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = value
+        pixels[offset + 1] = value
+        pixels[offset + 2] = value
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// Create a page of centred content with wide blank margins and a thin fixed
+  /// line down the leading edge, like a window border or a scrollbar track.
+  static func centredColumnScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    edgeLineWidth: Int = 6
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let columnStart = width * 5 / 16
+    let columnEnd = width * 11 / 16
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let isTextRow = logicalY % 30 < 12
+      for x in 0..<width {
+        var value = 246
+        if x < edgeLineWidth {
+          value = 120
+        } else if isTextRow, x >= columnStart, x < columnEnd, (x / 7) % 6 != 5 {
+          value = abs((logicalY &* 73_856_093) ^ ((x / 3) &* 19_349_663)) % 170 + 20
+        }
+        let offset = y * bytesPerRow + x * 4
+        pixels[offset] = UInt8(value)
+        pixels[offset + 1] = UInt8(value)
+        pixels[offset + 2] = UInt8(value)
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
+  /// RGBA bytes of the first `rowCount` rows of `image`, drawn into a known
+  /// pixel format so images from different sources compare byte for byte.
+  static func rgbaRows(of image: CGImage, rowCount: Int) -> [UInt8] {
+    let bytesPerRow = image.width * 4
+    var pixels = [UInt8](repeating: 0, count: image.height * bytesPerRow)
+    pixels.withUnsafeMutableBytes { buffer in
+      let context = CGContext(
+        data: buffer.baseAddress,
+        width: image.width,
+        height: image.height,
+        bitsPerComponent: 8,
+        bytesPerRow: bytesPerRow,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+      )
+      context?.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    }
+    return Array(pixels[0..<(min(rowCount, image.height) * bytesPerRow)])
+  }
+
   /// Create a soft-edged dark radial blob on a uniform background. The edge
   /// falloff is wide enough that per-pixel-pair gradients stay below the edge
   /// detector's noise floor, so `CropContentAnalyzer` finds no content borders

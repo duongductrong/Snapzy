@@ -2,7 +2,7 @@
 //  ScrollingCaptureWindowSharingTests.swift
 //  SnapzyTests
 //
-//  Unit tests for scrolling capture session chrome capture exclusion.
+//  Unit tests for scrolling capture session chrome and toast capture exclusion.
 //
 
 import AppKit
@@ -41,6 +41,15 @@ final class ScrollingCaptureWindowSharingTests: XCTestCase {
     defer { window.close() }
 
     XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+  }
+
+  func testToastPanel_isExcludedFromScreenCapture() {
+    // The scrolling capture hint is a toast, and it was stitched into the top
+    // of a captured page.
+    let panel = AppToastManager.makeToastPanel(contentRect: sampleAnchorRect)
+    defer { panel.close() }
+
+    XCTAssertEqual(panel.sharingType, NSWindow.SharingType.none)
   }
 
   private var sampleAnchorRect: CGRect {
@@ -159,13 +168,19 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   }
 
   func testAutoScrollPolicy_retriesBeforeTreatingNoMovementAsEnd() {
-    XCTAssertEqual(
-      ScrollingCaptureAutoScrollPolicy.stitchAction(
-        for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
-        consecutiveNoMovementCount: 1
-      ),
-      .retryStep
-    )
+    // A page that pauses to load, or swallows a step while a sticky element
+    // settles, must not be mistaken for the end of the page.
+    XCTAssertGreaterThanOrEqual(ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold, 5)
+    for count in 1..<ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold {
+      XCTAssertEqual(
+        ScrollingCaptureAutoScrollPolicy.stitchAction(
+          for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
+          consecutiveNoMovementCount: count
+        ),
+        .retryStep,
+        "quiet step \(count) should scroll again"
+      )
+    }
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stitchAction(
         for: stitchUpdate(outcome: .ignoredNoMovement, likelyReachedBoundary: true),
@@ -193,17 +208,17 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
   func testAutoScrollPolicy_stepDistanceStaysInsideOverlapSafeBounds() {
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 800),
-      192,
+      96,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 100),
-      26,
+      15,
       accuracy: 0.001
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 200),
-      48,
+      24,
       accuracy: 0.001
     )
   }
@@ -258,10 +273,19 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
       XCTAssertGreaterThanOrEqual(Double(plan.postedDistancePoints) / duration, 400)
     }
 
+    // Steps are deliberately short — a little scroll, a pause, then another —
+    // because a page asked for most of a viewport at once hands back frames
+    // drawn mid-scroll that no offset lines up. A tall selection therefore
+    // steps at the cap rather than in proportion to its height.
     let tallSelection = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: 1000, isRetry: false)
     XCTAssertGreaterThanOrEqual(
-      tallSelection.postedDistancePoints, 200,
+      tallSelection.postedDistancePoints,
+      ScrollingCaptureAutoScrollPolicy.minStepPoints,
       "Tall selections should not stitch after every tiny scroll"
+    )
+    XCTAssertLessThanOrEqual(
+      tallSelection.postedDistancePoints,
+      ScrollingCaptureAutoScrollPolicy.maxStepPoints
     )
   }
 

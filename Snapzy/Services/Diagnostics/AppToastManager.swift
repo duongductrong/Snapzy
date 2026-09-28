@@ -202,6 +202,28 @@ final class AppToastManager {
 
   private init() {}
 
+  /// A toast is Snapzy's own chrome, so it must not land in a capture or a
+  /// recording. Every other overlay the app puts on screen is excluded the same
+  /// way; the toast was not, and the scrolling-capture hint was stitched into
+  /// the top of a captured page.
+  static func makeToastPanel(contentRect: NSRect) -> NSPanel {
+    let panel = NSPanel(
+      contentRect: contentRect,
+      styleMask: [.borderless, .nonactivatingPanel],
+      backing: .buffered,
+      defer: false
+    )
+    panel.level = .statusBar
+    panel.isOpaque = false
+    panel.backgroundColor = .clear
+    panel.hasShadow = true
+    panel.hidesOnDeactivate = false
+    panel.ignoresMouseEvents = true
+    panel.sharingType = .none
+    panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+    return panel
+  }
+
   @discardableResult
   func show(
     message: String,
@@ -292,19 +314,7 @@ final class AppToastManager {
         panel.setFrame(frame, display: true, animate: true)
       }
     } else {
-      let newPanel = NSPanel(
-        contentRect: frame,
-        styleMask: [.borderless, .nonactivatingPanel],
-        backing: .buffered,
-        defer: false
-      )
-      newPanel.level = .statusBar
-      newPanel.isOpaque = false
-      newPanel.backgroundColor = .clear
-      newPanel.hasShadow = true
-      newPanel.hidesOnDeactivate = false
-      newPanel.ignoresMouseEvents = true
-      newPanel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+      let newPanel = Self.makeToastPanel(contentRect: frame)
       newPanel.contentView = NSHostingView(rootView: AppToastView(viewModel: viewModel))
       newPanel.alphaValue = 0
       newPanel.orderFrontRegardless()
