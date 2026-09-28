@@ -4,33 +4,25 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.33.0-beta.2] - 2026-09-27
+## [1.33.0] - 2026-09-28
 
 ### Features
 -  Click or press Enter to record a whole display (#611) (7d5d5b38)
 -  add Delayed Capture (b7110d10)
-
-### Bug Fixes
--  Fixed reset delayed capture countdown on restore defaults (#613) (e3055542)
-
-### Contributors
-- @adrianocr
-- @duongductrong
-- @github-actions[bot]
-- @thanhthai3010
-
-## [1.33.0-beta.1] - 2026-09-23
-
-### Features
 -  Add drag-to-draw support for new crop rect (#605) (e5e5ef1f)
 -  Added a maximum recording resolution to improve H.264 browser compatibility (#601) (76d09cb5)
 
 ### Bug Fixes
+-  Fixed reset delayed capture countdown on restore defaults (#613) (e3055542)
 -  Fixed text background color by promoting plain text to label (#594) (c11cb39c)
+
+### Chore
+- ci: allow beta channel releases from master branch (f1761d16)
 
 ### Contributors
 - @adrianocr
 - @archibald-nice
+- @duongductrong
 - @github-actions[bot]
 - @thanhthai3010
 
