@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.33.0-beta.3] - 2026-09-28
+
+### Chore
+- ci: allow beta channel releases from master branch (f1761d16)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [1.33.0-beta.2] - 2026-09-27
 
 ### Features
