@@ -79,4 +79,8 @@ enum HistoryFloatingNavigation {
     let upper = max(anchorIndex, focusedIndex)
     return (existingIDs.union(orderedIDs[lower...upper]), resolvedAnchor)
   }
+
+  static func firstSelectedID(in orderedIDs: [UUID], selectedIDs: Set<UUID>) -> UUID? {
+    orderedIDs.first(where: selectedIDs.contains)
+  }
 }

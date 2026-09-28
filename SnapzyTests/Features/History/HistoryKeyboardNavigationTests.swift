@@ -73,4 +73,18 @@ final class HistoryKeyboardNavigationTests: XCTestCase {
     XCTAssertEqual(result.selection, existing.union(ordered[0...2]))
     XCTAssertEqual(result.anchor, ordered[0])
   }
+
+  func testFirstSelectedIDUsesCurrentFilteredOrder() {
+    let selectedIDs = (0..<4).map { _ in UUID() }
+    let filteredOrder = [selectedIDs[3], selectedIDs[2], selectedIDs[1]]
+
+    XCTAssertEqual(
+      HistoryFloatingNavigation.firstSelectedID(
+        in: filteredOrder,
+        selectedIDs: [selectedIDs[1], selectedIDs[3]]
+      ),
+      selectedIDs[3]
+    )
+    XCTAssertNil(HistoryFloatingNavigation.firstSelectedID(in: filteredOrder, selectedIDs: []))
+  }
 }

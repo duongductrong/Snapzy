@@ -901,7 +901,10 @@ struct HistoryFloatingContentView: View {
     expandedSelectedIds.formIntersection(visibleIds)
 
     if let expandedLastSelectedId, !visibleIds.contains(expandedLastSelectedId) {
-      self.expandedLastSelectedId = expandedSelectedIds.first
+      self.expandedLastSelectedId = HistoryFloatingNavigation.firstSelectedID(
+        in: expandedRecordIDs,
+        selectedIDs: expandedSelectedIds
+      )
     }
   }
 
