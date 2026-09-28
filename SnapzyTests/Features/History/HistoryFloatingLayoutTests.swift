@@ -225,9 +225,15 @@ final class HistoryFloatingLayoutTests: XCTestCase {
       notification.userInfo?["keyCode"] as? UInt16 == 124 &&
         notification.userInfo?["extendsSelection"] as? Bool == false
     }
-    let event = try XCTUnwrap(makeArrowEvent(keyCode: 124, modifiers: []))
+    let event = try XCTUnwrap(
+      makeArrowEvent(
+        keyCode: 124,
+        modifiers: [.numericPad, .function, .capsLock],
+        windowNumber: panel.windowNumber
+      )
+    )
 
-    panel.keyDown(with: event)
+    panel.sendEvent(event)
     wait(for: [expectation], timeout: 1.0)
   }
 
@@ -237,15 +243,21 @@ final class HistoryFloatingLayoutTests: XCTestCase {
       notification.userInfo?["keyCode"] as? UInt16 == 125 &&
         notification.userInfo?["extendsSelection"] as? Bool == true
     }
-    let event = try XCTUnwrap(makeArrowEvent(keyCode: 125, modifiers: .shift))
+    let event = try XCTUnwrap(
+      makeArrowEvent(
+        keyCode: 125,
+        modifiers: [.numericPad, .function, .shift],
+        windowNumber: panel.windowNumber
+      )
+    )
 
-    panel.keyDown(with: event)
+    panel.sendEvent(event)
     wait(for: [expectation], timeout: 1.0)
   }
 
   func testHistoryFloatingPanelDoesNotRouteArrowsWhileTextInputIsActive() throws {
     let panel = HistoryFloatingPanel(contentRect: NSRect(x: 0, y: 0, width: 100, height: 100))
-    let textView = NSTextView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
+    let textView = ArrowTrackingTextView(frame: NSRect(x: 0, y: 0, width: 50, height: 50))
     panel.contentView?.addSubview(textView)
     XCTAssertTrue(panel.makeFirstResponder(textView))
 
@@ -258,7 +270,16 @@ final class HistoryFloatingLayoutTests: XCTestCase {
     }
     defer { NotificationCenter.default.removeObserver(observer) }
 
-    panel.keyDown(with: try XCTUnwrap(makeArrowEvent(keyCode: 123, modifiers: [])))
+    panel.sendEvent(
+      try XCTUnwrap(
+        makeArrowEvent(
+          keyCode: 123,
+          modifiers: [.numericPad, .function],
+          windowNumber: panel.windowNumber
+        )
+      )
+    )
+    XCTAssertTrue(textView.didReceiveArrowKeyDown)
   }
 
   func testHistoryFloatingPanelKeepsEnterCopyAndDeleteRoutes() throws {
@@ -298,18 +319,33 @@ final class HistoryFloatingLayoutTests: XCTestCase {
     return defaults
   }
 
-  private func makeArrowEvent(keyCode: UInt16, modifiers: NSEvent.ModifierFlags) -> NSEvent? {
+  private func makeArrowEvent(
+    keyCode: UInt16,
+    modifiers: NSEvent.ModifierFlags,
+    windowNumber: Int = 0
+  ) -> NSEvent? {
     NSEvent.keyEvent(
       with: .keyDown,
       location: .zero,
       modifierFlags: modifiers,
       timestamp: 0,
-      windowNumber: 0,
+      windowNumber: windowNumber,
       context: nil,
       characters: "",
       charactersIgnoringModifiers: "",
       isARepeat: false,
       keyCode: keyCode
     )
+  }
+}
+
+private final class ArrowTrackingTextView: NSTextView {
+  private(set) var didReceiveArrowKeyDown = false
+
+  override func keyDown(with event: NSEvent) {
+    if HistoryFloatingNavigationDirection(keyCode: event.keyCode) != nil {
+      didReceiveArrowKeyDown = true
+    }
+    super.keyDown(with: event)
   }
 }
