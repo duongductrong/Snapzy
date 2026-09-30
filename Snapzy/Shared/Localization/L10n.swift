@@ -6072,6 +6072,11 @@ nonisolated enum L10n {
       defaultValue: "Snap Highlight to Text",
       comment: "Settings title for snapping the highlighter to detected text lines"
     )
+    static let counterGestureHint = string(
+      "annotate.counter-gesture-hint",
+      defaultValue: "Click to place · Drag to point",
+      comment: "Hint for the Counter tool: click places a numbered badge; dragging adds an attached arrow"
+    )
     static let textSnap = string(
       "annotate.text-snap",
       defaultValue: "Snap",

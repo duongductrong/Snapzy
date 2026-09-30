@@ -1241,6 +1241,10 @@ extension AnnotationItem {
       )
     }
 
+    if let target = translated.properties.counterArrowTarget {
+      translated.properties.counterArrowTarget = CGPoint(x: target.x + dx, y: target.y + dy)
+    }
+
     switch translated.type {
     case .arrow(let geometry):
       let updated = geometry.translatedBy(dx: dx, dy: dy)
@@ -1311,6 +1315,12 @@ extension AnnotationItem {
     case .highlight(let points):
       copy.type = .highlight(points.map { Self.remapPoint($0, from: oldBounds, to: normalizedBounds) })
     case .counter:
+      if oldBounds.size == normalizedBounds.size, let target = copy.properties.counterArrowTarget {
+        copy.properties.counterArrowTarget = CGPoint(
+          x: target.x + normalizedBounds.minX - oldBounds.minX,
+          y: target.y + normalizedBounds.minY - oldBounds.minY
+        )
+      }
       let diameter = max(normalizedBounds.width, normalizedBounds.height)
       let controlValue = AnnotationProperties.controlValue(forCounterDiameter: diameter)
       let counterDiameter = AnnotationProperties.counterDiameter(for: controlValue)
@@ -1471,6 +1481,7 @@ nonisolated struct AnnotationProperties: Equatable {
   var spotlightOpacity: CGFloat
   var textPresentation: TextPresentation
   var calloutTailTarget: CGPoint?
+  var counterArrowTarget: CGPoint?
 
   init(
     strokeColor: Color = .red,
@@ -1485,7 +1496,8 @@ nonisolated struct AnnotationProperties: Equatable {
     watermarkStyle: WatermarkStyle = .single,
     spotlightOpacity: CGFloat = 0.5,
     textPresentation: TextPresentation = .plain,
-    calloutTailTarget: CGPoint? = nil
+    calloutTailTarget: CGPoint? = nil,
+    counterArrowTarget: CGPoint? = nil
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -1500,6 +1512,7 @@ nonisolated struct AnnotationProperties: Equatable {
     self.spotlightOpacity = spotlightOpacity
     self.textPresentation = textPresentation
     self.calloutTailTarget = calloutTailTarget
+    self.counterArrowTarget = counterArrowTarget
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -1587,6 +1600,34 @@ extension AnnotationItem {
     }
   }
 
+  /// Valid targets sit outside the badge. Tiny drags and malformed saved points
+  /// produce a plain counter, avoiding zero-length or non-finite arrow paths.
+  func normalizedCounterArrowTarget(_ target: CGPoint?) -> CGPoint? {
+    guard case .counter = type, let target,
+          target.x.isFinite, target.y.isFinite else { return nil }
+    let badge = resizeBounds
+    guard badge.midX.isFinite, badge.midY.isFinite,
+          badge.width.isFinite, badge.height.isFinite,
+          badge.width > 0, badge.height > 0 else { return nil }
+    let nx = (target.x - badge.midX) / (badge.width / 2)
+    let ny = (target.y - badge.midY) / (badge.height / 2)
+    let distance = hypot(nx, ny)
+    guard distance.isFinite, distance > 1 else { return nil }
+    return target
+  }
+
+  var counterArrowGeometry: ArrowGeometry? {
+    guard let target = normalizedCounterArrowTarget(properties.counterArrowTarget) else { return nil }
+    let badge = resizeBounds
+    let center = CGPoint(x: badge.midX, y: badge.midY)
+    let dx = target.x - center.x
+    let dy = target.y - center.y
+    let normalizedDistance = hypot(dx / (badge.width / 2), dy / (badge.height / 2))
+    let start = CGPoint(x: center.x + dx / normalizedDistance, y: center.y + dy / normalizedDistance)
+    guard start.x.isFinite, start.y.isFinite else { return nil }
+    return ArrowGeometry(start: start, end: target, style: .straight, arrowType: .tapered)
+  }
+
   var selectionBounds: CGRect {
     if case .highlight = type {
       return selectionDecorationBounds
@@ -1621,6 +1662,11 @@ extension AnnotationItem {
       if !tailBounds.isNull {
         result = result.union(tailBounds.insetBy(dx: -padding, dy: -padding))
       }
+    }
+    if let geometry = counterArrowGeometry {
+      let arrowBounds = geometry.taperedArrowPath(strokeWidth: properties.strokeWidth).boundingBoxOfPath
+      // Include the shared arrow renderer's shadow as well as selection tolerance.
+      result = result.union(arrowBounds.insetBy(dx: -7, dy: -7))
     }
     return result
   }
@@ -1677,7 +1723,13 @@ extension AnnotationItem {
 
     case .counter:
       let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
-      return pointInEllipse(point, in: counterBounds.insetBy(dx: -baseTolerance, dy: -baseTolerance))
+      if pointInEllipse(point, in: counterBounds.insetBy(dx: -baseTolerance, dy: -baseTolerance)) {
+        return true
+      }
+      guard let geometry = counterArrowGeometry else { return false }
+      let path = geometry.taperedArrowPath(strokeWidth: properties.strokeWidth)
+      if path.contains(point) { return true }
+      return path.copy(strokingWithWidth: max(0, baseTolerance) * 2, lineCap: .round, lineJoin: .round, miterLimit: 10).contains(point)
     }
   }
 
