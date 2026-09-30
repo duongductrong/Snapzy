@@ -2787,7 +2787,12 @@ final class AnnotateState: ObservableObject {
         clockwise: clockwise
       )
 
-    case .rectangle, .filledRectangle, .oval, .blur, .counter, .watermark, .embeddedImage, .spotlight:
+    case .counter:
+      rotated.properties.counterArrowTarget = annotation.properties.counterArrowTarget.map {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      }
+
+    case .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
       // Bounds-only annotations: the rotated `bounds` above is the full transform we need.
       // Watermark `rotationDegrees` is user-controlled and clamped to ±45°, so we leave it
       // unchanged while moving the watermark region with the canvas.
@@ -5075,6 +5080,16 @@ final class AnnotateState: ObservableObject {
           annotations[index].properties.textPresentation == .callout,
           annotations[index].properties.calloutTailTarget == nil else { return }
     annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
+  }
+
+  /// The canvas records the undo checkpoint once before committing its local gesture.
+  func updateCounterArrowTarget(id: UUID, target: CGPoint?) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .counter = annotations[index].type else { return }
+    let resolved = annotations[index].normalizedCounterArrowTarget(target)
+    guard annotations[index].properties.counterArrowTarget != resolved else { return }
+    annotations[index].properties.counterArrowTarget = resolved
+    hasUnsavedChanges = true
   }
 
   func updateTextCalloutTail(id: UUID, target: CGPoint) {
