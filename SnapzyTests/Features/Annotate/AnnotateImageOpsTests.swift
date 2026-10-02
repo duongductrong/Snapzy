@@ -157,30 +157,136 @@ final class AnnotateImageOpsTests: XCTestCase {
     XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 200, height: 100))
   }
 
-  func testMarkupToolsTreatExistingAnnotationsAsCanvas() throws {
-    let embeddedLayer = AnnotationItem(
-      type: .embeddedImage(UUID()),
-      bounds: CGRect(x: 300, y: 0, width: 200, height: 300),
-      properties: AnnotationProperties()
-    )
+  func testDrawingToolPressIntentTable() throws {
     let rectangle = AnnotationItem(
       type: .rectangle,
       bounds: CGRect(x: 10, y: 10, width: 40, height: 40),
       properties: AnnotationProperties()
     )
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 10, width: 80, height: 24),
+      properties: AnnotationProperties()
+    )
+    let embeddedLayer = AnnotationItem(
+      type: .embeddedImage(UUID()),
+      bounds: CGRect(x: 300, y: 0, width: 200, height: 300),
+      properties: AnnotationProperties()
+    )
 
-    XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .rectangle))
-    XCTAssertTrue(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .text))
-
-    for tool in AnnotationToolType.allCases {
-      XCTAssertEqual(
-        DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: rectangle, selectedTool: tool),
-        tool != .selection,
-        "Unexpected canvas-priority result for \(tool)"
+    func intent(
+      _ tool: AnnotationToolType,
+      _ hit: AnnotationItem?,
+      selected: Set<UUID> = [],
+      option: Bool = false
+    ) -> DrawingToolPressIntent {
+      DrawingCanvasNSView.drawingToolPressIntent(
+        tool: tool,
+        edgeHit: hit,
+        selectedIds: selected,
+        optionHeld: option
       )
     }
 
-    XCTAssertFalse(DrawingCanvasNSView.shouldPrioritizeCanvasMarkup(over: embeddedLayer, selectedTool: .selection))
+    for tool in AnnotationToolType.allCases {
+      for option in [false, true] {
+        // No edge hit always draws.
+        XCTAssertEqual(intent(tool, nil, option: option), .draw, "\(tool) no hit, option \(option)")
+        // Option always draws, even on a selected edge.
+        if option {
+          XCTAssertEqual(intent(tool, rectangle, option: true), .draw, "\(tool) unselected, option")
+          XCTAssertEqual(
+            intent(tool, rectangle, selected: [rectangle.id], option: true),
+            .draw,
+            "\(tool) selected, option"
+          )
+          continue
+        }
+
+        let unselected = intent(tool, rectangle)
+        let selected = intent(tool, rectangle, selected: [rectangle.id])
+        switch tool {
+        case .selection, .crop:
+          // Routed before the drawing-tool intent is consulted.
+          XCTAssertEqual(unselected, .draw, "\(tool) unselected")
+          XCTAssertEqual(selected, .draw, "\(tool) selected")
+        case .text, .counter:
+          XCTAssertEqual(unselected, .selectNow(item: rectangle, editTextOnClick: false), "\(tool) unselected")
+          XCTAssertEqual(selected, .moveSelection(anchor: rectangle, editTextOnClick: false), "\(tool) selected")
+        default:
+          XCTAssertEqual(unselected, .drawThenMaybeSelect(candidate: rectangle), "\(tool) unselected")
+          XCTAssertEqual(selected, .moveSelection(anchor: rectangle, editTextOnClick: false), "\(tool) selected")
+        }
+      }
+    }
+
+    // Text on an existing text selects it and edits on click; Text on a shape
+    // only selects it.
+    XCTAssertEqual(intent(.text, text), .selectNow(item: text, editTextOnClick: true))
+    XCTAssertEqual(intent(.text, rectangle), .selectNow(item: rectangle, editTextOnClick: false))
+    XCTAssertEqual(intent(.counter, text), .selectNow(item: text, editTextOnClick: false))
+    XCTAssertEqual(intent(.rectangle, text), .drawThenMaybeSelect(candidate: text))
+    // An already-selected text still drag-moves with the Text tool (rule 2),
+    // but a click without movement enters edit mode (D-2). Other tools on a
+    // selected text, and the Text tool on a selected shape, only move.
+    XCTAssertEqual(intent(.text, text, selected: [text.id]), .moveSelection(anchor: text, editTextOnClick: true))
+    XCTAssertEqual(intent(.counter, text, selected: [text.id]), .moveSelection(anchor: text, editTextOnClick: false))
+    XCTAssertEqual(intent(.rectangle, text, selected: [text.id]), .moveSelection(anchor: text, editTextOnClick: false))
+    XCTAssertEqual(
+      intent(.text, rectangle, selected: [rectangle.id]),
+      .moveSelection(anchor: rectangle, editTextOnClick: false)
+    )
+    XCTAssertEqual(intent(.text, text, selected: [text.id], option: true), .draw)
+
+    // Combined images are canvas for drawing tools (#377), even if passed in.
+    for tool in AnnotationToolType.allCases {
+      XCTAssertEqual(intent(tool, embeddedLayer), .draw, "\(tool) embedded image")
+      XCTAssertEqual(intent(tool, embeddedLayer, selected: [embeddedLayer.id]), .draw, "\(tool) selected embedded image")
+    }
+  }
+
+  func testDrawingToolHoverCursorMirrorsPressIntent() {
+    let item = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 40, height: 40),
+      properties: AnnotationProperties()
+    )
+    let cases: [(DrawingToolPressIntent, NSCursor)] = [
+      (.moveSelection(anchor: item, editTextOnClick: false), .openHand),
+      (.moveSelection(anchor: item, editTextOnClick: true), .openHand),
+      (.selectNow(item: item, editTextOnClick: true), .pointingHand),
+      (.selectNow(item: item, editTextOnClick: false), .pointingHand),
+      (.drawThenMaybeSelect(candidate: item), .pointingHand),
+      (.draw, .arrow),
+    ]
+    for (intent, expected) in cases {
+      XCTAssertTrue(DrawingCanvasNSView.drawingToolHoverCursor(for: intent) === expected, "\(intent)")
+    }
+  }
+
+  func testDrawingToolPressIntentTextEditOnClickId() {
+    let item = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 24),
+      properties: AnnotationProperties()
+    )
+    XCTAssertEqual(DrawingToolPressIntent.moveSelection(anchor: item, editTextOnClick: true).textEditOnClickId, item.id)
+    XCTAssertEqual(DrawingToolPressIntent.selectNow(item: item, editTextOnClick: true).textEditOnClickId, item.id)
+    XCTAssertNil(DrawingToolPressIntent.moveSelection(anchor: item, editTextOnClick: false).textEditOnClickId)
+    XCTAssertNil(DrawingToolPressIntent.selectNow(item: item, editTextOnClick: false).textEditOnClickId)
+    XCTAssertNil(DrawingToolPressIntent.drawThenMaybeSelect(candidate: item).textEditOnClickId)
+    XCTAssertNil(DrawingToolPressIntent.draw.textEditOnClickId)
+  }
+
+  func testDrawingToolOptionDrawsOnlyForDrawingTools() {
+    for tool in AnnotationToolType.allCases {
+      XCTAssertFalse(DrawingCanvasNSView.drawingToolOptionDraws(tool: tool, optionHeld: false), "\(tool)")
+      XCTAssertEqual(
+        DrawingCanvasNSView.drawingToolOptionDraws(tool: tool, optionHeld: true),
+        tool != .selection && tool != .crop,
+        "\(tool)"
+      )
+    }
   }
 
   func testActivatingMarkupToolClearsCombinedImageSelection() throws {

@@ -68,11 +68,11 @@ nonisolated struct AnnotationRenderer {
 
     switch annotation.type {
     case .rectangle:
-      context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
+      context.addPath(Self.roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
       strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth)
 
     case .filledRectangle:
-      context.addPath(roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
+      context.addPath(Self.roundedRectPath(in: annotation.bounds, cornerRadius: annotation.properties.cornerRadius))
       strokeCurrentPath(lineStyle: annotation.properties.lineStyle, strokeWidth: annotation.properties.strokeWidth, mode: .fillStroke)
 
     case .oval:
@@ -166,7 +166,7 @@ nonisolated struct AnnotationRenderer {
     case .rectangle:
       let currentPoint = currentPath.last ?? start
       let rect = makeRect(from: start, to: currentPoint)
-      context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
+      context.addPath(Self.roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
       strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth)
 
     case .filledRectangle:
@@ -174,7 +174,7 @@ nonisolated struct AnnotationRenderer {
       let rect = makeRect(from: start, to: currentPoint)
       let resolvedFillColor = fillColor == .clear ? strokeColor.opacity(1) : fillColor
       context.setFillColor(NSColor(resolvedFillColor).cgColor)
-      context.addPath(roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
+      context.addPath(Self.roundedRectPath(in: rect, cornerRadius: rectangleCornerRadius))
       strokeCurrentPath(lineStyle: lineStyle, strokeWidth: strokeWidth, mode: .fillStroke)
       context.setFillColor(NSColor.clear.cgColor)
 
@@ -274,8 +274,16 @@ nonisolated struct AnnotationRenderer {
     context.setAlpha(1.0)
   }
 
-  private func roundedRectPath(in rect: CGRect, cornerRadius: CGFloat) -> CGPath {
-    let clampedCornerRadius = max(0, min(cornerRadius, min(rect.width, rect.height) / 2))
+  /// Corner radius the rectangle path actually uses: never negative and never
+  /// more than half the shorter side.
+  static func clampedCornerRadius(_ cornerRadius: CGFloat, in rect: CGRect) -> CGFloat {
+    max(0, min(cornerRadius, min(rect.width, rect.height) / 2))
+  }
+
+  /// Outline of a (filled) rectangle annotation. Shared with hit testing so a
+  /// click lands on the same rounded corners the canvas draws.
+  static func roundedRectPath(in rect: CGRect, cornerRadius: CGFloat) -> CGPath {
+    let clampedCornerRadius = Self.clampedCornerRadius(cornerRadius, in: rect)
     guard clampedCornerRadius > 0 else {
       return CGPath(rect: rect, transform: nil)
     }

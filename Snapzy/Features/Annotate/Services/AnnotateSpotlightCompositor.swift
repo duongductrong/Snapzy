@@ -73,8 +73,21 @@ nonisolated enum SpotlightCompositor {
   }
 
   private static func path(for region: SpotlightRegion) -> CGPath {
-    let rect = region.rect.standardized
-    let radius = min(max(region.cornerRadius, 0), min(rect.width, rect.height) / 2)
+    outlinePath(in: region.rect, cornerRadius: region.cornerRadius)
+  }
+
+  /// Corner radius the spotlight hole actually uses: never negative and never
+  /// more than half the shorter side.
+  static func clampedCornerRadius(_ cornerRadius: CGFloat, in rect: CGRect) -> CGFloat {
+    let rect = rect.standardized
+    return min(max(cornerRadius, 0), min(rect.width, rect.height) / 2)
+  }
+
+  /// Outline of a spotlight hole and its border. Shared with hit testing so a
+  /// click lands on the same rounded corners the overlay draws.
+  static func outlinePath(in rect: CGRect, cornerRadius: CGFloat) -> CGPath {
+    let rect = rect.standardized
+    let radius = clampedCornerRadius(cornerRadius, in: rect)
     return CGPath(roundedRect: rect, cornerWidth: radius, cornerHeight: radius, transform: nil)
   }
 
