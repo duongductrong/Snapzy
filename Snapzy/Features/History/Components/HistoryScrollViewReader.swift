@@ -46,7 +46,9 @@ struct HistoryScrollViewReader: NSViewRepresentable {
   }
 
   func updateNSView(_ nsView: NSView, context: Context) {
-    // No-op: discovery and observation happen once.
+    if let scrollView = controller.scrollView {
+      context.coordinator.configureClipping(for: scrollView)
+    }
   }
 
   func makeCoordinator() -> Coordinator {
@@ -61,6 +63,7 @@ struct HistoryScrollViewReader: NSViewRepresentable {
     }
 
     func setup(scrollView: NSScrollView) {
+      configureClipping(for: scrollView)
       guard parent.controller.scrollView !== scrollView else { return }
       NotificationCenter.default.removeObserver(self)
       parent.controller.scrollView = scrollView
@@ -88,6 +91,11 @@ struct HistoryScrollViewReader: NSViewRepresentable {
         )
       }
       updateScrollInfo()
+    }
+
+    func configureClipping(for scrollView: NSScrollView) {
+      scrollView.clipsToBounds = false
+      scrollView.contentView.clipsToBounds = false
     }
 
     @objc func boundsDidChange() {

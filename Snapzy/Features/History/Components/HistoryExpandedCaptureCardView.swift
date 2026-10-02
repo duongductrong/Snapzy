@@ -7,10 +7,16 @@
 
 import SwiftUI
 
+enum HistoryExpandedCardEmphasisMode: Equatable {
+  case selection
+  case focus
+}
+
 struct HistoryExpandedCaptureCardView: View, Equatable {
   let record: CaptureHistoryRecord
   let isSelected: Bool
   let isFocused: Bool
+  let emphasisMode: HistoryExpandedCardEmphasisMode
   let backgroundStyle: HistoryBackgroundStyle
   let onTap: () -> Void
   let reservedScrollAxis: QuickAccessDragScrollAxis?
@@ -19,6 +25,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
     lhs.record == rhs.record &&
     lhs.isSelected == rhs.isSelected &&
     lhs.isFocused == rhs.isFocused &&
+    lhs.emphasisMode == rhs.emphasisMode &&
     lhs.reservedScrollAxis == rhs.reservedScrollAxis &&
     lhs.backgroundStyle == rhs.backgroundStyle &&
     HistoryFloatingManager.shared.cloudUploadState(for: lhs.record) == HistoryFloatingManager.shared.cloudUploadState(for: rhs.record)
@@ -53,22 +60,38 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
     .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     .overlay(
       RoundedRectangle(cornerRadius: 20, style: .continuous)
-        .stroke(cardBorderColor, lineWidth: isSelected ? 1.8 : 1)
-    )
-    .overlay(
-      RoundedRectangle(cornerRadius: 23, style: .continuous)
         .stroke(
-          Color.primary.opacity(colorScheme == .dark ? 0.9 : 0.72),
-          style: StrokeStyle(lineWidth: 2, dash: [5, 3])
+          cardBorderColor,
+          lineWidth: isSelected || isFocused
+            ? HistoryCardEmphasis.activeBorderWidth
+            : HistoryCardEmphasis.inactiveBorderWidth
         )
-        .padding(-3)
-        .opacity(isFocused ? 1 : 0)
     )
     .overlay(historyDragInteractionBridge)
-    .shadow(color: cardShadowColor, radius: isSelected ? 14 : 3, x: 0, y: isSelected ? 8 : 2)
+    .shadow(
+      color: cardShadowColor,
+      radius: isEmphasized
+        ? HistoryCardEmphasis.activeShadowRadius
+        : HistoryCardEmphasis.inactiveShadowRadius,
+      x: 0,
+      y: isEmphasized
+        ? HistoryCardEmphasis.activeShadowYOffset
+        : HistoryCardEmphasis.inactiveShadowYOffset
+    )
     .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    .scaleEffect(isSelected ? 1.01 : (isHovering ? 1.005 : 1))
-    .animation(.spring(response: 0.24, dampingFraction: 0.9), value: isSelected)
+    .scaleEffect(
+      isEmphasized
+        ? HistoryCardEmphasis.activeScale
+        : (isHovering ? HistoryCardEmphasis.expandedHoverScale : 1)
+    )
+    .offset(y: emphasisMode == .focus && isFocused ? HistoryCardEmphasis.focusedLiftOffset : 0)
+    .animation(
+      .spring(
+        response: HistoryCardEmphasis.springResponse,
+        dampingFraction: HistoryCardEmphasis.springDampingFraction
+      ),
+      value: isEmphasized
+    )
     .animation(.easeOut(duration: 0.16), value: isHovering)
     .onHover { hovering in
       isHovering = hovering
@@ -181,8 +204,8 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   }
 
   private var cardBorderColor: Color {
-    if isSelected {
-      return Color.accentColor.opacity(0.9)
+    if isSelected || isFocused {
+      return Color.accentColor.opacity(0.95)
     }
 
     if isHovering {
@@ -193,11 +216,21 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   }
 
   private var cardShadowColor: Color {
-    if isSelected {
-      return Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14)
-    }
+    HistoryCardEmphasis.shadowColor(
+      isActive: isEmphasized,
+      isHovering: isHovering,
+      backgroundStyle: backgroundStyle,
+      colorScheme: colorScheme
+    )
+  }
 
-    return Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08)
+  private var isEmphasized: Bool {
+    switch emphasisMode {
+    case .selection:
+      return isSelected
+    case .focus:
+      return isFocused
+    }
   }
 
   private var previewBackground: Color {

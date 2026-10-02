@@ -459,6 +459,7 @@ struct HistoryFloatingContentView: View {
               record: record,
               isSelected: expandedSelectedIds.contains(record.id),
               isFocused: expandedFocusedId == record.id,
+              emphasisMode: .focus,
               backgroundStyle: backgroundStyle,
               onTap: {
                 selectExpandedRecord(record)
@@ -467,6 +468,7 @@ struct HistoryFloatingContentView: View {
             )
             .equatable()
             .id(record.id)
+            .zIndex(expandedFocusedId == record.id ? 1 : 0)
             .contextMenu {
               HistoryContextMenu(record: record)
             }
@@ -482,7 +484,7 @@ struct HistoryFloatingContentView: View {
       .onChange(of: expandedFocusedId) { id in
         guard let id else { return }
         withAnimation(.easeInOut(duration: 0.18)) {
-          proxy.scrollTo(id, anchor: .center)
+          proxy.scrollTo(id)
         }
       }
     }
