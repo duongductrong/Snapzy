@@ -1681,6 +1681,88 @@ extension AnnotationItem {
     }
   }
 
+  /// Narrow "visible edge" hit test used by drawing tools to click-select an
+  /// existing item. Area-like shapes only claim a band around their outline so
+  /// their interior stays free for drawing new annotations on top (#535).
+  /// Stroke-based items, text and counters reuse `containsPoint`. Combined
+  /// images are canvas content for drawing tools and never claim a click.
+  /// Rounded (filled) rectangles and spotlights use their drawn rounded
+  /// outline (`roundedOutline`).
+  func edgeBandContains(_ point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    let tolerance = baseTolerance + properties.strokeWidth / 2
+
+    switch type {
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .spotlight:
+      // Rounded shapes test against the outline they are drawn with, so a
+      // click follows the visible corners, not the empty square ones.
+      if let outline = roundedOutline {
+        let band = outline.copy(
+          strokingWithWidth: tolerance * 2,
+          lineCap: .butt,
+          lineJoin: .round,
+          miterLimit: 10
+        )
+        if band.contains(point) { return true }
+        // Small shapes keep their whole visible body grabbable, as below.
+        let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+        return (inner.isNull || inner.isEmpty) && outline.contains(point)
+      }
+      let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+      guard outer.contains(point) else { return false }
+      let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+      // Small shapes have no interior left once the band is applied; the whole
+      // outer rect then counts so they stay grabbable.
+      guard !inner.isNull, !inner.isEmpty else { return true }
+      return !inner.contains(point)
+
+    case .oval:
+      let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+      guard pointInEllipse(point, in: outer) else { return false }
+      let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+      guard !inner.isNull, !inner.isEmpty else { return true }
+      return !pointInEllipse(point, in: inner)
+
+    case .embeddedImage:
+      return false
+
+    case .arrow, .line, .path, .highlight, .text, .counter:
+      return containsPoint(point, baseTolerance: baseTolerance)
+    }
+  }
+
+  /// The rounded outline a (filled) rectangle or spotlight is drawn with, from
+  /// the renderer's and the spotlight compositor's own path builders. Nil when
+  /// the corners are square or the type draws no rounded outline.
+  private var roundedOutline: CGPath? {
+    switch type {
+    case .rectangle, .filledRectangle:
+      guard AnnotationRenderer.clampedCornerRadius(properties.cornerRadius, in: bounds) > 0 else { return nil }
+      return AnnotationRenderer.roundedRectPath(in: bounds, cornerRadius: properties.cornerRadius)
+    case .spotlight:
+      guard SpotlightCompositor.clampedCornerRadius(properties.cornerRadius, in: bounds) > 0 else { return nil }
+      return SpotlightCompositor.outlinePath(in: bounds, cornerRadius: properties.cornerRadius)
+    default:
+      return nil
+    }
+  }
+
+  /// Whether the item's opaque body covers the point, so a drawing-tool click
+  /// there must not reach an item underneath. Only filled rectangles, blurs
+  /// and combined images are opaque; a rounded filled rectangle's transparent
+  /// corners are not. Spotlight is see-through inside; text and counters
+  /// already claim their whole body through `edgeBandContains`.
+  func occludesItemsBelow(at point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    switch type {
+    case .filledRectangle, .blur, .embeddedImage:
+      if let outline = roundedOutline {
+        return outline.contains(point)
+      }
+      return containsPoint(point, baseTolerance: baseTolerance)
+    default:
+      return false
+    }
+  }
+
   // MARK: - Geometry Helpers
 
   private static func bounds(containing points: [CGPoint]) -> CGRect? {
