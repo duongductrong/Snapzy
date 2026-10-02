@@ -20,6 +20,7 @@ struct HistoryFloatingContentView: View {
   @State private var selectedId: UUID? = nil
   @State private var expandedFocusedId: UUID? = nil
   @State private var expandedSelectedIds: Set<UUID> = []
+  @State private var expandedRangeBaselineIds: Set<UUID> = []
   @State private var expandedLastSelectedId: UUID?
   @State private var compactScrollOffset: CGFloat = 0
   @State private var compactSelectionRevealTrigger = 0
@@ -110,6 +111,7 @@ struct HistoryFloatingContentView: View {
         syncSelectionIfNeeded()
       }
       .onChange(of: expandedRecordIDs) { _ in
+        syncSelectionIfNeeded()
         pruneExpandedSelection()
         prefetchExpandedThumbnailsIfNeeded()
       }
@@ -799,9 +801,10 @@ struct HistoryFloatingContentView: View {
     }
 
     if manager.presentationMode == .expanded {
-      if expandedFocusedId == nil || !activeRecords.contains(where: { $0.id == expandedFocusedId }) {
-        expandedFocusedId = activeRecords.first?.id
-      }
+      expandedFocusedId = HistoryFloatingNavigation.initialFocusedID(
+        in: activeRecordIDs,
+        currentID: expandedFocusedId
+      )
       return
     }
 
@@ -822,24 +825,27 @@ struct HistoryFloatingContentView: View {
   private func selectExpandedRecord(_ record: CaptureHistoryRecord) {
     let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
-    if flags.contains(.shift), let expandedLastSelectedId,
-      let startIndex = expandedRecords.firstIndex(where: { $0.id == expandedLastSelectedId }),
-      let endIndex = expandedRecords.firstIndex(where: { $0.id == record.id })
-    {
-      let range = min(startIndex, endIndex)...max(startIndex, endIndex)
-      expandedSelectedIds.formUnion(expandedRecords[range].map(\.id))
+    if flags.contains(.shift) {
+      let rangeSelection = HistoryFloatingNavigation.inclusiveRangeIDs(
+        orderedIDs: expandedRecordIDs,
+        anchorID: expandedLastSelectedId,
+        previousFocusedID: expandedFocusedId,
+        focusedID: record.id,
+        baselineIDs: expandedRangeBaselineIds
+      )
+      expandedSelectedIds = rangeSelection.selection
+      expandedLastSelectedId = rangeSelection.anchor
     } else if flags.contains(.command) {
       if expandedSelectedIds.contains(record.id) {
         expandedSelectedIds.remove(record.id)
       } else {
         expandedSelectedIds.insert(record.id)
       }
-      expandedLastSelectedId = record.id
-    } else if flags.contains(.shift) {
-      expandedSelectedIds.insert(record.id)
+      expandedRangeBaselineIds = expandedSelectedIds
       expandedLastSelectedId = record.id
     } else {
       expandedSelectedIds = [record.id]
+      expandedRangeBaselineIds = expandedSelectedIds
       expandedLastSelectedId = record.id
     }
 
@@ -861,51 +867,48 @@ struct HistoryFloatingContentView: View {
       self.selectedId = compactRecords[targetIndex].id
       compactSelectionRevealTrigger += 1
     case .expanded:
-      guard let expandedFocusedId,
-            let currentIndex = expandedRecords.firstIndex(where: { $0.id == expandedFocusedId }),
-            let targetIndex = HistoryFloatingNavigation.expandedTargetIndex(
-              from: currentIndex,
-              direction: direction,
-              count: expandedRecords.count
-            ) else { return }
-      let nextID = expandedRecords[targetIndex].id
+      guard let expandedFocusedId else { return }
+      let transition = HistoryFloatingNavigation.expandedFocusTransition(
+        from: expandedFocusedId,
+        direction: direction,
+        orderedIDs: expandedRecordIDs,
+        selectedIDs: expandedSelectedIds,
+        extendingSelection: extendingSelection,
+        anchorID: expandedLastSelectedId,
+        baselineIDs: expandedRangeBaselineIds
+      )
+      guard let nextID = transition.focusedID else { return }
       guard nextID != expandedFocusedId else { return }
-      let previousFocusID = expandedFocusedId
       self.expandedFocusedId = nextID
-      if extendingSelection {
-        let rangeSelection = HistoryFloatingNavigation.inclusiveRangeIDs(
-          orderedIDs: expandedRecordIDs,
-          anchorID: expandedLastSelectedId,
-          previousFocusedID: previousFocusID,
-          focusedID: nextID,
-          existingIDs: expandedSelectedIds
-        )
-        expandedSelectedIds = rangeSelection.selection
-        expandedLastSelectedId = rangeSelection.anchor
-      }
+      expandedSelectedIds = transition.selectedIDs
+      expandedLastSelectedId = transition.anchorID
+      expandedRangeBaselineIds = transition.baselineIDs
     }
   }
 
   private func selectAllExpandedRecords() {
     expandedSelectedIds = Set(expandedRecords.map(\.id))
+    expandedRangeBaselineIds = expandedSelectedIds
     expandedLastSelectedId = expandedRecords.last?.id
   }
 
   private func clearExpandedSelection() {
     expandedSelectedIds.removeAll()
+    expandedRangeBaselineIds.removeAll()
     expandedLastSelectedId = nil
   }
 
   private func pruneExpandedSelection() {
-    let visibleIds = Set(expandedRecordIDs)
-    expandedSelectedIds.formIntersection(visibleIds)
-
-    if let expandedLastSelectedId, !visibleIds.contains(expandedLastSelectedId) {
-      self.expandedLastSelectedId = HistoryFloatingNavigation.firstSelectedID(
-        in: expandedRecordIDs,
-        selectedIDs: expandedSelectedIds
-      )
-    }
+    let prunedSelection = HistoryFloatingNavigation.prunedExpandedSelection(
+      orderedIDs: expandedRecordIDs,
+      selectedIDs: expandedSelectedIds,
+      baselineIDs: expandedRangeBaselineIds,
+      anchorID: expandedLastSelectedId,
+      focusedID: expandedFocusedId
+    )
+    expandedSelectedIds = prunedSelection.selection
+    expandedRangeBaselineIds = prunedSelection.baseline
+    expandedLastSelectedId = prunedSelection.anchor
   }
 
   private func openFullHistory() {
