@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.1] - 2026-10-03
+
+### Features
+- Added keyboard navigation to floating history (#616) (f8edc72e)
+
+### Contributors
+- @github-actions[bot]
+- @tukuyomil032
+
 ## [2.0.0] - 2026-09-28
 
 ### Breaking Changes
