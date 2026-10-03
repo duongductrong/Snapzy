@@ -11,6 +11,7 @@ struct QuickAccessSettingsView: View {
   @ObservedObject private var manager = QuickAccessManager.shared
   @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
   @AppStorage(PreferencesKeys.quickAccessPlaySounds) private var playSounds = true
+  @AppStorage(PreferencesKeys.quickAccessOpenInFinderAfterSave) private var openInFinderAfterSave = true
 
   @State private var positionIsLeft: Bool = false
 
@@ -112,6 +113,11 @@ struct QuickAccessSettingsView: View {
 
         SettingRow(icon: "hand.draw", title: L10n.PreferencesQuickAccess.dragAndDropTitle, description: L10n.PreferencesQuickAccess.dragAndDropDescription) {
           Toggle("", isOn: $manager.dragDropEnabled)
+            .labelsHidden()
+        }
+
+        SettingRow(icon: "folder", title: L10n.PreferencesQuickAccess.openInFinderAfterSaveTitle, description: L10n.PreferencesQuickAccess.openInFinderAfterSaveDescription) {
+          Toggle("", isOn: $openInFinderAfterSave)
             .labelsHidden()
         }
 

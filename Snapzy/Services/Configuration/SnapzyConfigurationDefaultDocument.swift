@@ -117,6 +117,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.section("quick_access")
     writer.value("enabled", true)
     writer.value("play_sounds", true)
+    writer.value("open_in_finder_after_save", true)
     writer.value("position", QuickAccessPosition.bottomRight.rawValue)
     writer.value("auto_dismiss", true)
     writer.value("auto_dismiss_delay", 10)

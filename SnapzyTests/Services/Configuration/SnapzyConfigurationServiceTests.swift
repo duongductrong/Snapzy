@@ -100,6 +100,22 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "quick_access", "play_sounds")?.boolValue, false)
   }
 
+  func testDefaultDocumentIncludesQuickAccessOpenInFinderSetting() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "quick_access", "open_in_finder_after_save")?.boolValue, true)
+  }
+
+  func testExportIncludesQuickAccessOpenInFinderSetting() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(false, forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+
+    XCTAssertEqual(document.value(at: "quick_access", "open_in_finder_after_save")?.boolValue, false)
+  }
+
   func testEnsureConfigExistsDoesNotOverwriteExistingFile() throws {
     let homeDirectory = temporaryHomeDirectory()
     defer { try? FileManager.default.removeItem(at: homeDirectory) }

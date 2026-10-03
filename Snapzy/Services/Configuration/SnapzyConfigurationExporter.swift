@@ -146,6 +146,7 @@ enum SnapzyConfigurationExporter {
     writer.section("quick_access")
     writer.value("enabled", manager.isEnabled)
     writer.value("play_sounds", defaults.boolValue(PreferencesKeys.quickAccessPlaySounds, default: true))
+    writer.value("open_in_finder_after_save", defaults.boolValue(PreferencesKeys.quickAccessOpenInFinderAfterSave, default: true))
     writer.value("position", manager.position.rawValue)
     writer.value("auto_dismiss", manager.autoDismissEnabled)
     writer.value("auto_dismiss_delay", manager.autoDismissDelay)
