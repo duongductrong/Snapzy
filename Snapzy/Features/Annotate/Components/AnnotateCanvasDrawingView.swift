@@ -203,6 +203,7 @@ enum ResizeHandle: Equatable {
   case lineStart, lineEnd
   case arrowControl
   case textCalloutTail
+  case counterArrowTip
 }
 
 private enum ResizeHandleCoordinateSpace {
@@ -267,6 +268,7 @@ final class DrawingCanvasNSView: NSView {
   private var drawingRawEndPoint: CGPoint?
   private var drawingStartDisplayPoint: CGPoint?
   private var drawingDragDistance: CGFloat = 0
+  private var drawingCounterValue: Int?
 
   // Selection and manipulation state
   private var isDraggingAnnotation = false
@@ -715,12 +717,18 @@ final class DrawingCanvasNSView: NSView {
 
     default:
       let bounds = coordinateSpace == .canvas ? imageToDisplay(annotation.resizeBounds) : annotation.resizeBounds
-      return [
+      var handles: [(ResizeHandle, CGRect)] = []
+      if case .counter = annotation.type, let geometry = annotation.counterArrowGeometry {
+        let point = coordinateSpace == .canvas ? imageToDisplay(geometry.end) : geometry.end
+        handles.append((.counterArrowTip, handleRect(at: point, in: coordinateSpace)))
+      }
+      handles.append(contentsOf: [
         (.topLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.maxY), in: coordinateSpace)),
         (.topRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.maxY), in: coordinateSpace)),
         (.bottomLeft, handleRect(at: CGPoint(x: bounds.minX, y: bounds.minY), in: coordinateSpace)),
         (.bottomRight, handleRect(at: CGPoint(x: bounds.maxX, y: bounds.minY), in: coordinateSpace)),
-      ]
+      ])
+      return handles
     }
   }
 
@@ -919,6 +927,7 @@ final class DrawingCanvasNSView: NSView {
     isDrawing = true
     drawingStartDisplayPoint = displayPoint
     drawingDragDistance = 0
+    drawingCounterValue = state.selectedTool == .counter ? state.nextCounterValue() : nil
     switch state.selectedTool {
     case .pencil, .highlighter:
       currentPath = [imagePoint]
@@ -1168,6 +1177,12 @@ final class DrawingCanvasNSView: NSView {
   }
 
   override func flagsChanged(with event: NSEvent) {
+    if isResizingAnnotation, activeResizeHandle == .counterArrowTip,
+       let resizeId = resizingAnnotationId, let point = gestureLastPoint {
+      applyGestureResize(handle: .counterArrowTip, resizeId: resizeId, imagePoint: point, event: event)
+      invalidateLiveLayers()
+      return
+    }
     guard isDrawing, dragStart != nil, drawingRawEndPoint != nil else {
       super.flagsChanged(with: event)
       return
@@ -1268,6 +1283,21 @@ final class DrawingCanvasNSView: NSView {
       gestureLocalItems[resizeId] = item
       noteGestureMutation(original: original, updated: item)
 
+    case .counterArrowTip:
+      var item = original
+      guard case .counter = item.type else { return }
+      let target = AnnotationDragConstraint.constrainedEndPoint(
+        tool: .counter,
+        arrowStyle: .straight,
+        start: CGPoint(x: original.bounds.midX, y: original.bounds.midY),
+        end: imagePoint,
+        shiftHeld: event.modifierFlags.contains(.shift),
+        bounds: activeDrawingBounds
+      )
+      item.properties.counterArrowTarget = item.normalizedCounterArrowTarget(target)
+      gestureLocalItems[resizeId] = item
+      noteGestureMutation(original: original, updated: item)
+
     case .textCalloutTail:
       var item = original
       guard case .text = item.type,
@@ -1317,6 +1347,12 @@ final class DrawingCanvasNSView: NSView {
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
 
+    // Consume the release position/modifiers for counter tips before committing.
+    if isResizingAnnotation, activeResizeHandle == .counterArrowTip,
+       let resizeId = resizingAnnotationId, gestureLastPoint != nil {
+      applyGestureResize(handle: .counterArrowTip, resizeId: resizeId, imagePoint: imagePoint, event: event)
+    }
+
     // Finish resizing
     if isResizingAnnotation {
       // Invalidate blur cache if resizing a blur annotation
@@ -1354,6 +1390,10 @@ final class DrawingCanvasNSView: NSView {
         case .arrowControl:
           if let lastPoint = gestureLastPoint {
             state.updateArrowControlPoint(id: resizeId, controlPoint: lastPoint)
+          }
+        case .counterArrowTip:
+          if let item = gestureLocalItems[resizeId] {
+            state.updateCounterArrowTarget(id: resizeId, target: item.properties.counterArrowTarget)
           }
         case .textCalloutTail:
           if let lastPoint = gestureLastPoint {
@@ -1427,6 +1467,11 @@ final class DrawingCanvasNSView: NSView {
 
     // Finish drawing (already in image coords)
     guard isDrawing, let start = dragStart else { return }
+
+    if state.selectedTool == .counter {
+      drawingRawEndPoint = imagePoint
+      updateConstrainedDrawingPreview(shiftHeld: event.modifierFlags.contains(.shift))
+    }
 
     // Capture path before clearing to avoid race condition
     let tool = state.selectedTool
@@ -1571,6 +1616,7 @@ final class DrawingCanvasNSView: NSView {
     drawingStartDisplayPoint = nil
     drawingDragDistance = 0
     currentPath = []
+    drawingCounterValue = nil
     snappedHighlightSegments = []
     clearGestureState()
   }
@@ -1593,7 +1639,8 @@ final class DrawingCanvasNSView: NSView {
       from: start,
       to: end,
       path: path,
-      state: state
+      state: state,
+      counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
     )
     if let item {
       state.saveState()
@@ -1604,6 +1651,11 @@ final class DrawingCanvasNSView: NSView {
         state.selectedAnnotationId = item.id
       }
     }
+  }
+
+  /// A fixed screen distance avoids accidental arrows at high zoom.
+  private var counterArrowMinimumDragDistance: CGFloat {
+    4 / max(displayScale * state.zoomLevel, 0.0001)
   }
 
   /// Commit text-snapped highlighter bars. A drag across several lines produces
@@ -1871,8 +1923,24 @@ final class DrawingCanvasNSView: NSView {
     guard isDrawing, let start = dragStart else { return }
     let renderer = makeRenderer(sourceImage: sourceImage, sourceCGImage: sourceCGImage, in: context)
 
-    // Special handling for blur tool preview
-    if state.selectedTool == .blur, let lastPoint = currentPath.last {
+    if state.selectedTool == .counter {
+      let item = AnnotationFactory.createAnnotation(
+        tool: .counter,
+        from: start,
+        to: currentPath.last ?? start,
+        path: [],
+        context: AnnotationFactory.CreationContext(
+          properties: state.annotationCreationProperties(for: .counter),
+          arrowStyle: .straight,
+          blurType: state.blurType,
+          counterValue: drawingCounterValue ?? 1,
+          watermarkText: state.watermarkText,
+          activeAnnotationBounds: state.activeAnnotationBounds,
+          counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
+        )
+      )
+      if let item { renderer.draw(item) }
+    } else if state.selectedTool == .blur, let lastPoint = currentPath.last {
       renderer.drawBlurPreview(
         start: start,
         currentPoint: lastPoint,
@@ -2057,7 +2125,7 @@ final class DrawingCanvasNSView: NSView {
 
     for (handle, rect) in resizeHandleRects(for: annotation, in: .image) {
       switch handle {
-      case .lineStart, .lineEnd, .arrowControl:
+      case .lineStart, .lineEnd, .arrowControl, .counterArrowTip:
         // Circular grips for line/arrow endpoint and Bezier control editing.
         context.fillEllipse(in: rect)
         context.strokeEllipse(in: rect)
@@ -2172,7 +2240,7 @@ final class DrawingCanvasNSView: NSView {
 
   private func setCursorForHandle(_ handle: ResizeHandle) {
     switch handle {
-    case .topLeft, .bottomRight, .lineStart, .lineEnd, .arrowControl, .textCalloutTail:
+    case .topLeft, .bottomRight, .lineStart, .lineEnd, .arrowControl, .textCalloutTail, .counterArrowTip:
       NSCursor.crosshair.set()
     case .topRight, .bottomLeft:
       NSCursor.crosshair.set()

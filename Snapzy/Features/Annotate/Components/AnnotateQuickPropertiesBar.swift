@@ -156,18 +156,19 @@ struct AnnotateQuickPropertiesBar: View {
     ViewThatFits(in: .horizontal) {
       barContent(density: .regular)
       barContent(density: .compact)
+      barContent(density: .compact, includesCounterHint: false)
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     .clipped()
   }
 
   @ViewBuilder
-  private func barContent(density: QuickPropertiesDensity) -> some View {
+  private func barContent(density: QuickPropertiesDensity, includesCounterHint: Bool = true) -> some View {
     // One effect container per bar, applied inside `ViewThatFits` so only the variant that is
     // actually laid out gets one: the row's glass is evaluated in a single pass rather than once
     // per control, and neighbours merge when they light up together.
     if state.showsQuickPropertiesBar {
-      activePropertiesContent(density: density)
+      activePropertiesContent(density: density, includesCounterHint: includesCounterHint)
         .liquidGlassGroup(spacing: Spacing.xs)
     } else {
       idlePropertiesContent(density: density)
@@ -175,7 +176,7 @@ struct AnnotateQuickPropertiesBar: View {
     }
   }
 
-  private func activePropertiesContent(density: QuickPropertiesDensity) -> some View {
+  private func activePropertiesContent(density: QuickPropertiesDensity, includesCounterHint: Bool) -> some View {
     let showStrokeColor = state.quickPropertiesSupportsStrokeColor
     let showFill = state.quickPropertiesSupportsFill
     let showTextBackground = state.quickPropertiesSupportsTextBackground
@@ -490,6 +491,13 @@ struct AnnotateQuickPropertiesBar: View {
           groupSpacing: density.groupSpacing
         )
       }
+
+      if includesCounterHint, state.selectedTool == .counter {
+        Text(L10n.AnnotateUI.counterGestureHint)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize()
+      }
     }
     .fixedSize(horizontal: true, vertical: false)
     .padding(.horizontal, density.horizontalPadding)
@@ -564,6 +572,7 @@ struct AnnotateQuickPropertiesBar: View {
       title: title,
       isSelectedItem: state.quickPropertiesMode == .selectedItem
     )
+    .help(state.selectedTool == .counter ? L10n.AnnotateUI.counterGestureHint : title)
   }
 
   @ViewBuilder

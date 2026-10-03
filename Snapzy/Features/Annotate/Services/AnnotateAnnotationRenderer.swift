@@ -100,6 +100,9 @@ nonisolated struct AnnotationRenderer {
       )
 
     case .counter(let value):
+      if let geometry = annotation.counterArrowGeometry {
+        drawArrow(geometry, strokeWidth: annotation.properties.strokeWidth, strokeColor: annotation.properties.strokeColor)
+      }
       drawCounter(value: value, in: annotation.bounds, properties: annotation.properties)
 
     case .blur(let blurType):

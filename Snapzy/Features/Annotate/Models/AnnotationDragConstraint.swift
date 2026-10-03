@@ -16,7 +16,7 @@ nonisolated enum AnnotationDragConstraint {
     switch tool {
     case .rectangle, .filledRectangle, .oval:
       return squareEndPoint(start: start, end: end, bounds: bounds.standardized)
-    case .line:
+    case .line, .counter:
       return snappedLineEndPoint(start: start, end: end, bounds: bounds.standardized)
     case .arrow where arrowStyle == .straight:
       return snappedLineEndPoint(start: start, end: end, bounds: bounds.standardized)
