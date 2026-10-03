@@ -33,6 +33,7 @@ enum SnapzyConfigurationExporter {
     writer.section("general")
     writer.value("language", language(defaults: defaults))
     writer.value("appearance", appearance(defaults: defaults))
+    writer.value("use_liquid_glass", defaults.object(forKey: PreferencesKeys.useLiquidGlass) as? Bool ?? true)
     writer.value("play_sounds", defaults.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true)
     writer.value("url_scheme_enabled", defaults.object(forKey: PreferencesKeys.urlSchemeEnabled) as? Bool ?? true)
     writer.value("show_menu_bar_icon", defaults.object(forKey: PreferencesKeys.showMenuBarIcon) as? Bool ?? true)

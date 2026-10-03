@@ -76,4 +76,59 @@ final class RecordingToolbarWindowTests: XCTestCase {
     XCTAssertTrue(window.isMovableByWindowBackground)
     window.close()
   }
+
+  func testShowRecordingStatusBar_reportsAnnotateButtonCenterInHostingWindow() throws {
+    try skipIfRunningInCI("Requires onscreen window and recording manager")
+    let window = RecordingToolbarWindow(anchorRect: CGRect(x: 100, y: 100, width: 400, height: 300))
+    defer { window.close() }
+    window.showRecordingStatusBar(recorder: ScreenRecordingManager.shared, visible: true)
+
+    window.contentView?.layoutSubtreeIfNeeded()
+    window.displayIfNeeded()
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.5))
+
+    XCTAssertGreaterThan(
+      window.annotateButtonCenterXOffset,
+      ToolbarConstants.horizontalPadding + ToolbarConstants.iconButtonSize,
+      "The annotation anchor must be measured from the actual trigger, not the toolbar's left padding"
+    )
+
+    XCTAssertLessThan(
+      window.annotateButtonCenterXOffset,
+      window.contentView?.bounds.width ?? 0,
+      "The annotation anchor must stay inside the hosting window"
+    )
+  }
+
+  func testAnnotationPopover_centersOnReportedAnnotateButton() throws {
+    try skipIfRunningInCI("Requires onscreen window and recording manager")
+    let screenFrame = try XCTUnwrap(NSScreen.main?.visibleFrame)
+    let window = RecordingToolbarWindow(
+      anchorRect: CGRect(
+        x: screenFrame.midX - 200,
+        y: screenFrame.midY - 150,
+        width: 400,
+        height: 300
+      )
+    )
+    defer { window.close() }
+    window.showRecordingStatusBar(recorder: ScreenRecordingManager.shared, visible: true)
+    window.contentView?.layoutSubtreeIfNeeded()
+    window.displayIfNeeded()
+    RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.5))
+
+    let popover = RecordingAnnotationToolbarWindow(annotationState: window.annotationState)
+    defer { popover.close() }
+    popover.anchorWindow = window
+    popover.anchorButtonCenterXOffset = window.annotateButtonCenterXOffset
+    popover.showPopover()
+
+    let triggerCenterX = window.frame.minX + window.annotateButtonCenterXOffset
+    XCTAssertEqual(
+      popover.frame.midX,
+      triggerCenterX,
+      accuracy: 1,
+      "The annotation popover arrow/body center must align with the pencil trigger"
+    )
+  }
 }

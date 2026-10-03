@@ -135,11 +135,11 @@ struct PermissionsView: View {
         .frame(maxWidth: 420, alignment: .leading)
         .padding(14)
         .background(
-          RoundedRectangle(cornerRadius: 12)
+          Radius.rect(Radius.card)
             .fill(Color.orange.opacity(0.12))
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 12)
+          Radius.rect(Radius.card)
             .stroke(Color.orange.opacity(0.35), lineWidth: 1)
         )
         .padding(.top, 16)

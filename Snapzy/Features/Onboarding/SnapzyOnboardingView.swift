@@ -139,8 +139,8 @@ struct SnapzyOnboardingView: View {
       Image(nsImage: NSApp.applicationIconImage)
         .resizable()
         .aspectRatio(contentMode: .fit)
-        .frame(width: 32, height: 32)
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+      .frame(width: 32, height: 32)
+      .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
 
       Text("Snapzy")
         .font(.system(size: 15, weight: .semibold))

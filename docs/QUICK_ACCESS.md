@@ -29,10 +29,10 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | Action | Behavior |
 | --- | --- |
 | `copy` | Clipboard copy + dismiss; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
-| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + sidecar move. Saved: reveal in Finder |
+| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + annotation/video-editor sidecar move. Saved: reveal in Finder |
 | `dismiss` | Card removed; temp file deleted unless a history record exists or the general pasteboard still references the file (#234 paste-integrity guard) |
 | `delete` | Removes history record + annotation sidecar, deletes temp or trashes saved file, deletes recording metadata for videos |
-| `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown |
+| `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown. Video Editor restores its persisted cut/zoom/speed recipe when available. Editor Save commits to the current file and leaves a temporary card available for this card's later Save action |
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
 
@@ -82,6 +82,15 @@ flowchart TD
 - See [POST_CAPTURE.md](POST_CAPTURE.md) for the routing matrix, [RECORDING.md](RECORDING.md) for the GIF swap, [HISTORY.md](HISTORY.md) for restore.
 - Clipboard copy runs before Quick Access work so pasteboard updates stay immediate. Exception: the re-copy after an EDITED save runs off-main (decode/encode in background, serialized) and lands ~100-300ms after the window closes — keeps the card reappear stall-free.
 - Save/copy/drag of a pinned screenshot pushes the new render into the open pin window as soon as the background render completes (~50-100ms after save-and-close). The instant 200px anti-flash thumbnail is card-only and is never sent to the pin window (pin sizing derives from the full-res image).
+
+## Editor Session Handoff
+
+- Opening Annotate or Video Editor associates the window with the Quick Access item, hides that card, and pauses the item countdown plus newer cards.
+- Editor Save is an in-place commit. For a temporary capture, the edited media stays at its temp URL and the card remains the owner of promotion. For a saved capture, Replace Original writes to the existing destination; Save As Copy is an explicit alternate.
+- Video Editor sessions persist a versioned recipe plus a private unrendered source snapshot. Reopening the card or a matching History record restores the cut/trim sequence, zoom blocks, speed blocks, and export context so another edit can continue from the original source.
+- When a temp card is promoted, `QuickAccessManager` moves the video-editor session package from the temp path to the saved destination. Deleting the card removes the package; retention cleanup removes packages whose media is no longer active.
+- The card is refreshed while the editor is still hidden, then reappears only after the editor closes. Thumbnail and URL updates preserve the item’s window, pin, processing, and cloud state.
+- Editing a cloud-linked capture marks its old cloud object stale; the card’s upload action can re-upload the edited file. Dismissing the card still controls session-cache cleanup and temp-file lifecycle.
 
 ## Preferences Surface
 

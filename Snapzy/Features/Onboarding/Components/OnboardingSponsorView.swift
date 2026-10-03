@@ -59,11 +59,11 @@ struct SponsorView: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(
-              RoundedRectangle(cornerRadius: 10)
+              Radius.rect(Radius.card)
                 .fill(VSDesignSystem.Colors.cardFill)
             )
             .overlay(
-              RoundedRectangle(cornerRadius: 10)
+              Radius.rect(Radius.card)
                 .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
             )
           }

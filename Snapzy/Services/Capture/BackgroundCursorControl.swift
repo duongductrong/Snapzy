@@ -67,7 +67,7 @@ final class BackgroundCursorControl {
   /// true on this process's main connection (which acts as both `cid` and target).
   /// Returns `false` (and logs) if the symbols are unavailable or the call reports
   /// an error, so the caller falls back cleanly to foreground-only behavior.
-  static func liveSetEnabled() -> Bool {
+  nonisolated static func liveSetEnabled() -> Bool {
     // `dlopen(nil, …)` returns the global symbol table (main program plus every
     // loaded library, including CoreGraphics via AppKit); it is a pseudo-handle
     // that must not be `dlclose`'d.

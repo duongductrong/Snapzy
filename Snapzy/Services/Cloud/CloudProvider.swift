@@ -10,7 +10,7 @@ import Foundation
 // MARK: - Provider Type
 
 /// Supported cloud storage provider types
-enum CloudProviderType: String, Codable, CaseIterable {
+nonisolated enum CloudProviderType: String, Codable, CaseIterable {
   case awsS3 = "aws_s3"
   case cloudflareR2 = "cloudflare_r2"
   case googleDrive = "google_drive"
@@ -77,7 +77,7 @@ protocol CloudProvider {
 // MARK: - Cloud Errors
 
 /// Errors that can occur during cloud operations
-enum CloudError: LocalizedError {
+nonisolated enum CloudError: LocalizedError {
   case notConfigured
   case invalidCredentials
   case uploadFailed(statusCode: Int, message: String)

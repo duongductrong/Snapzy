@@ -11,10 +11,10 @@ import AppKit
 import CryptoKit
 import os.log
 
-private let logger = Logger(subsystem: "Snapzy", category: "GoogleDriveOAuthService")
+private nonisolated let logger = Logger(subsystem: "Snapzy", category: "GoogleDriveOAuthService")
 
 /// Service handling the OAuth 2.0 Desktop Flow loopback for Google Drive
-final class GoogleDriveOAuthService: @unchecked Sendable {
+nonisolated final class GoogleDriveOAuthService: @unchecked Sendable {
   static let shared = GoogleDriveOAuthService()
 
   private init() {}
@@ -597,7 +597,7 @@ struct GoogleDriveTokens {
   let expiresIn: Int
 }
 
-private struct GoogleDriveTokenResponse: Codable {
+private nonisolated struct GoogleDriveTokenResponse: Codable {
   let accessToken: String
   let refreshToken: String?
   let expiresIn: Int

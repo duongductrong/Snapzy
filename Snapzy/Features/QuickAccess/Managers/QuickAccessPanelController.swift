@@ -14,6 +14,17 @@ import SwiftUI
 @MainActor
 final class QuickAccessPanelController {
 
+  /// AppKit invokes animation completions as Sendable closures, while the
+  /// completion action is deliberately retained for the main actor. The box
+  /// makes that queue invariant explicit at the API boundary.
+  private final class TransitionCompletion: @unchecked Sendable {
+    let action: () -> Void
+
+    init(action: @escaping () -> Void) {
+      self.action = action
+    }
+  }
+
   private enum PanelTransition {
     case entering
     case exiting
@@ -287,18 +298,19 @@ final class QuickAccessPanelController {
     transitionToken &+= 1
     let token = transitionToken
 
-    let finish = { [weak self] in
+    let completionBox = TransitionCompletion(action: completion)
+    let finish: @Sendable () -> Void = { [weak self, completionBox] in
       MainActor.assumeIsolated {
         guard let self, self.transitionToken == token else { return }
         self.transitionToken &+= 1
         self.activeTransition = nil
-        completion()
+        completionBox.action()
       }
     }
 
     NSAnimationContext.runAnimationGroup(animations, completionHandler: finish)
 
-    Task { @MainActor [weak self] in
+    Task { @MainActor in
       let watchdogSlack: TimeInterval = 0.5
       try? await Task.sleep(nanoseconds: UInt64((duration + watchdogSlack) * 1_000_000_000))
       guard !Task.isCancelled else { return }

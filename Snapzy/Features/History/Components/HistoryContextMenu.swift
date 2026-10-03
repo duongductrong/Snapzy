@@ -12,15 +12,15 @@ struct HistoryContextMenu: View {
   @ObservedObject private var manager = HistoryFloatingManager.shared
 
   var body: some View {
-    Button("Open in Finder") {
+    Button(L10n.Common.openInFinder) {
       NSWorkspace.shared.activateFileViewerSelecting([record.fileURL])
     }
 
-    Button("Copy") {
+    Button(L10n.Common.copy) {
       HistoryWindowController.shared.copyToClipboard([record])
     }
 
-    Button("Edit") {
+    Button(L10n.Common.edit) {
       HistoryWindowController.shared.openItem(record)
     }
 
@@ -35,7 +35,7 @@ struct HistoryContextMenu: View {
 
     Divider()
 
-    Button("Delete") {
+    Button(L10n.Common.delete) {
       HistoryWindowController.shared.deleteRecords([record], asksConfirmation: false)
     }
   }

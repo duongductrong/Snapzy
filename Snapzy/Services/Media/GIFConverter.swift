@@ -18,7 +18,7 @@ import UniformTypeIdentifiers
 final class GIFConverter {
 
   /// GIF generation parameters
-  struct Options {
+  nonisolated struct Options {
     /// Frame rate for the GIF (higher = smoother but larger)
     var fps: Int = 15
 
@@ -58,13 +58,8 @@ final class GIFConverter {
 
     let asset = AVURLAsset(url: videoURL)
 
-    // Get video duration
-    let duration: CMTime
-    if #available(macOS 15.0, *) {
-      duration = try await asset.load(.duration)
-    } else {
-      duration = asset.duration
-    }
+    // Get video duration through AVFoundation's async loading API.
+    let duration = try await asset.load(.duration)
     let durationSeconds = CMTimeGetSeconds(duration)
 
     guard durationSeconds > 0, durationSeconds.isFinite else {
@@ -76,20 +71,11 @@ final class GIFConverter {
     }
 
     // Get video dimensions for scaling
-    let videoTrack: AVAssetTrack?
-    if #available(macOS 15.0, *) {
-      videoTrack = try? await asset.loadTracks(withMediaType: .video).first
-    } else {
-      videoTrack = asset.tracks(withMediaType: .video).first
-    }
+    let videoTrack = try? await asset.loadTracks(withMediaType: .video).first
 
     let naturalSize: CGSize
     if let track = videoTrack {
-      if #available(macOS 15.0, *) {
-        naturalSize = (try? await track.load(.naturalSize)) ?? CGSize(width: 640, height: 480)
-      } else {
-        naturalSize = track.naturalSize
-      }
+      naturalSize = (try? await track.load(.naturalSize)) ?? CGSize(width: 640, height: 480)
     } else {
       DiagnosticLogger.shared.log(.warning, .recording, "GIF conversion found no video track; using fallback size", context: [
         "file": videoURL.lastPathComponent

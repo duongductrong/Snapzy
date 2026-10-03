@@ -53,7 +53,11 @@ By default it writes `AppIcon.appiconset` next to the input `.icon` package. To 
 ### Development Build
 
 ```bash
-xcodebuild -project Snapzy.xcodeproj -scheme Snapzy -configuration Debug build
+xcodebuild -project Snapzy.xcodeproj \
+  -scheme Snapzy \
+  -configuration Debug \
+  -destination "platform=macOS,arch=$(uname -m)" \
+  build
 ```
 
 Output: `~/Library/Developer/Xcode/DerivedData/Snapzy-*/Build/Products/Debug/Snapzy.app`

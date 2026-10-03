@@ -64,7 +64,7 @@ struct Mockup3DRenderer: View {
     // MARK: - Placeholder
 
     private var placeholderView: some View {
-        RoundedRectangle(cornerRadius: 12, style: .continuous)
+        Radius.rect(Radius.card)
             .fill(Color.gray.opacity(0.2))
             .frame(width: 300, height: 200)
             .overlay {

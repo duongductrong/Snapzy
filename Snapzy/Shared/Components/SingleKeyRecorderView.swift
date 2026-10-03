@@ -91,14 +91,11 @@ struct SingleKeyRecorderView: View {
         startRecording()
       } label: {
         if isRecording {
-          Text("...")
-            .font(.system(size: 12, weight: .medium))
-            .foregroundColor(.accentColor)
-            .frame(minWidth: 40)
+          KeyCapRecordingView(minWidth: 72)
         } else if let key = shortcut {
           KeyCapView(symbol: String(key).uppercased())
         } else {
-          EmptyShortcutCTAView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
+          KeyCapPlaceholderView(title: L10n.PreferencesShortcuts.setKey, minWidth: 72)
         }
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
@@ -106,21 +103,14 @@ struct SingleKeyRecorderView: View {
       .disabled(!isEnabled)
       .help(isEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
-      ShortcutResetButton(
-        isDisabled: !isEnabled || isRecording || shortcut == defaultShortcut,
-        action: resetToDefault
+      ShortcutOptionsMenuButton(
+        isEnabled: $isEnabled,
+        isDefault: shortcut == defaultShortcut,
+        isBusy: isRecording,
+        onReset: resetToDefault
       )
-
-      HStack(spacing: 6) {
-        Text(isEnabled ? L10n.Common.on : L10n.Common.off)
-          .font(.caption)
-          .foregroundColor(.secondary)
-
-        Toggle("", isOn: $isEnabled)
-          .labelsHidden()
-      }
     }
-    .padding(.vertical, 2)
+    .padding(.vertical, 4)
     .opacity(isEnabled ? 1 : 0.62)
     .onChange(of: isEnabled) { newValue in
       if !newValue {

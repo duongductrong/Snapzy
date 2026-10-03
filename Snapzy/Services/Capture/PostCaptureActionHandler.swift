@@ -203,30 +203,15 @@ final class PostCaptureActionHandler {
 
     if !isGIF {
       let asset = AVURLAsset(url: url)
-      let assetDuration: CMTime
-      if #available(macOS 15.0, *) {
-        assetDuration = (try? await asset.load(.duration)) ?? .invalid
-      } else {
-        assetDuration = asset.duration
-      }
+      let assetDuration = (try? await asset.load(.duration)) ?? .invalid
       let seconds = CMTimeGetSeconds(assetDuration)
       if seconds.isFinite && seconds > 0 {
         duration = seconds
       }
 
-      let videoTrack: AVAssetTrack?
-      if #available(macOS 15.0, *) {
-        videoTrack = try? await asset.loadTracks(withMediaType: .video).first
-      } else {
-        videoTrack = asset.tracks(withMediaType: .video).first
-      }
+      let videoTrack = try? await asset.loadTracks(withMediaType: .video).first
       if let track = videoTrack {
-        let naturalSize: CGSize
-        if #available(macOS 15.0, *) {
-          naturalSize = (try? await track.load(.naturalSize)) ?? .zero
-        } else {
-          naturalSize = track.naturalSize
-        }
+        let naturalSize = (try? await track.load(.naturalSize)) ?? .zero
         width = Int(naturalSize.width)
         height = Int(naturalSize.height)
       }

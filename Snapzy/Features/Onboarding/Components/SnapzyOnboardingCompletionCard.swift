@@ -56,7 +56,7 @@ struct SnapzyOnboardingCompletionCard: View {
       .resizable()
       .aspectRatio(contentMode: .fit)
       .frame(width: 56, height: 56)
-      .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+      .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
   }
 
   // MARK: - Header Section
@@ -181,7 +181,7 @@ private struct CapabilityCard: View {
           .foregroundStyle(SnapzyGlassInk.body)
           .frame(width: 26, height: 26)
           .background(
-            RoundedRectangle(cornerRadius: 7, style: .continuous)
+            Radius.rect(Radius.tile)
               .fill(Color.white.opacity(0.08))
           )
 
@@ -205,10 +205,10 @@ private struct CapabilityCard: View {
     .padding(14)
     .frame(maxWidth: .infinity, minHeight: 122, alignment: .topLeading)
     .background(
-      RoundedRectangle(cornerRadius: SnapzyRadius.card + 1, style: .continuous)
+      Radius.rect(SnapzyRadius.card)
         .fill(Color.white.opacity(isHovered ? 0.065 : 0.04))
         .overlay(
-          RoundedRectangle(cornerRadius: SnapzyRadius.card + 1, style: .continuous)
+          Radius.rect(SnapzyRadius.card)
             .strokeBorder(
               Color.white.opacity(isHovered ? 0.16 : 0.08),
               lineWidth: 0.5

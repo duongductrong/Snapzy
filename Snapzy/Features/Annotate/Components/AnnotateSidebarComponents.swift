@@ -31,7 +31,7 @@ struct GradientPresetButton: View {
 
   var body: some View {
     Button(action: action) {
-      RoundedRectangle(cornerRadius: Size.radiusMd)
+      Radius.rect(Radius.tile)
         .fill(LinearGradient(colors: preset.colors, startPoint: .topLeading, endPoint: .bottomTrailing))
         .sidebarItemStyle(isSelected: isSelected)
     }
@@ -43,7 +43,7 @@ struct GradientPresetButton: View {
 
 struct WallpaperPlaceholder: View {
   var body: some View {
-    RoundedRectangle(cornerRadius: Size.radiusMd)
+    Radius.rect(Radius.tile)
       .fill(Color.gray.opacity(0.3))
       .frame(width: Size.gridItem, height: Size.gridItem)
   }
@@ -58,7 +58,7 @@ struct WallpaperPresetButton: View {
 
   var body: some View {
     Button(action: action) {
-      RoundedRectangle(cornerRadius: Size.radiusMd)
+      Radius.rect(Radius.tile)
         .fill(preset.gradient)
         .sidebarItemStyle(isSelected: isSelected)
     }
@@ -210,7 +210,7 @@ struct GrantAccessButton: View {
 
 struct BlurredPlaceholder: View {
   var body: some View {
-    RoundedRectangle(cornerRadius: Size.radiusMd)
+    Radius.rect(Radius.tile)
       .fill(Color.gray.opacity(0.2))
       .frame(width: Size.gridItem, height: Size.gridItem)
       .blur(radius: 2)
@@ -710,7 +710,7 @@ private struct AnnotateColorSpectrumField: View {
             y: CGFloat(1 - hsba.brightness) * proxy.size.height
           )
       }
-      .clipShape(RoundedRectangle(cornerRadius: Size.radiusSm, style: .continuous))
+      .clipShape(Radius.rect(Radius.tile))
       .contentShape(Rectangle())
       .gesture(
         DragGesture(minimumDistance: 0)
@@ -918,7 +918,7 @@ struct AlignmentGrid: View {
     }
     .padding(Spacing.xs)
     .background(SidebarColors.itemDefault)
-    .cornerRadius(Size.radiusSm)
+    .cornerRadius(Radius.tile)
   }
 }
 
@@ -934,7 +934,7 @@ struct AlignmentCell: View {
       Rectangle()
         .fill(backgroundColor)
         .frame(width: 20, height: 20)
-        .cornerRadius(Size.radiusXs)
+        .cornerRadius(Radius.ornament)
     }
     .buttonStyle(.plain)
     .onHover { isHovering = $0 }

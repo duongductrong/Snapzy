@@ -665,17 +665,19 @@ nonisolated struct AnnotationRenderer {
     // NOTE: the export path never passes a blurCacheManager, so this main-isolated
     // cache is only touched from the interactive (main-actor) canvas.
     if let cacheManager = blurCacheManager {
-      if let cachedImage = cacheManager.getCachedBlur(
-        for: annotationId,
-        bounds: renderBounds,
-        sourceImage: sourceImage,
-        blurType: blurType,
-        effectValue: effectValue,
-        allowApproximateReuse: shouldAllowApproximateReuse,
-        renderSynchronously: false,
-        quality: shouldAllowApproximateReuse ? .interactive : .settled,
-        resolvedSourceCGImage: sourceCGImage
-      ) {
+      if let cachedImage = MainActor.assumeIsolated({
+        cacheManager.getCachedBlur(
+          for: annotationId,
+          bounds: renderBounds,
+          sourceImage: sourceImage,
+          blurType: blurType,
+          effectValue: effectValue,
+          allowApproximateReuse: shouldAllowApproximateReuse,
+          renderSynchronously: false,
+          quality: shouldAllowApproximateReuse ? .interactive : .settled,
+          resolvedSourceCGImage: sourceCGImage
+        )
+      }) {
         switch blurType {
         case .pixelated:
           context.saveGState()

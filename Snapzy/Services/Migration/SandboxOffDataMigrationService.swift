@@ -86,13 +86,13 @@ final class SandboxOffDataMigrationService {
 
   static let shared = SandboxOffDataMigrationService()
 
-  private let configurationProvider: () -> Configuration?
+  private let configurationProvider: @MainActor @Sendable () -> Configuration?
   private let completedKey = PreferencesKeys.sandboxOffMigrationCompleted
   private let appSupportFolderName = "Snapzy"
   private let markerFileName = ".sandbox-off-migration-completed"
 
-  init(configurationProvider: @escaping () -> Configuration? = Configuration.live) {
-    self.configurationProvider = configurationProvider
+  init(configurationProvider: (@MainActor @Sendable () -> Configuration?)? = nil) {
+    self.configurationProvider = configurationProvider ?? { Configuration.live() }
   }
 
   @discardableResult

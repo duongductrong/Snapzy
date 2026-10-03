@@ -675,7 +675,7 @@ final class AreaSelectionMagnifier {
 }
 
 private extension NSColor {
-  convenience init?(magnifierHex hex: String) {
+  nonisolated convenience init?(magnifierHex hex: String) {
     var sanitized = hex
     if sanitized.hasPrefix("#") {
       sanitized.removeFirst()

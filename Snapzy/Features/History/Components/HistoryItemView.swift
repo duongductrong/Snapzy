@@ -30,7 +30,7 @@ struct HistoryItemView: View, Equatable {
       // Thumbnail
       GeometryReader { geometry in
         ZStack {
-          RoundedRectangle(cornerRadius: 8)
+          Radius.rect(Radius.tile)
             .fill(Color.secondary.opacity(0.1))
 
           if isVisible, let image = thumbnailImage {
@@ -51,7 +51,7 @@ struct HistoryItemView: View, Equatable {
             VStack(spacing: 4) {
               Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 16))
-              Text("File missing")
+              Text(L10n.PreferencesHistory.fileMissing)
                 .font(.caption)
             }
             .foregroundColor(.white)
@@ -109,11 +109,11 @@ struct HistoryItemView: View, Equatable {
             HistoryCloudUploadOverlayView(state: uploadState)
           }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .clipShape(Radius.rect(Radius.tile))
       }
       .aspectRatio(1.0, contentMode: .fit)
       .overlay(
-        RoundedRectangle(cornerRadius: 8)
+        Radius.rect(Radius.tile)
           .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
       )
       .onHover { hovering in
@@ -195,13 +195,14 @@ struct HistoryItemView: View, Equatable {
   private func checkFileExistence() {
     let url = record.fileURL
     let path = record.filePath
-    Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
-      }
-      await MainActor.run {
-        self.fileExists = exists
-      }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    Task { @MainActor in
+      let exists = await Task.detached(priority: .utility) {
+        defer { access.stop() }
+        return FileManager.default.fileExists(atPath: path)
+      }.value
+      guard !Task.isCancelled else { return }
+      fileExists = exists
     }
   }
 

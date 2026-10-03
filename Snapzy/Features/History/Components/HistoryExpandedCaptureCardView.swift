@@ -57,9 +57,9 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(10)
-    .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(cardBackground, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
+      Radius.rect(Radius.card)
         .stroke(
           cardBorderColor,
           lineWidth: isSelected || isFocused
@@ -78,7 +78,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
         ? HistoryCardEmphasis.activeShadowYOffset
         : HistoryCardEmphasis.inactiveShadowYOffset
     )
-    .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .contentShape(Radius.rect(Radius.card))
     .scaleEffect(
       isEmphasized
         ? HistoryCardEmphasis.activeScale
@@ -126,7 +126,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   private var preview: some View {
     GeometryReader { geometry in
       ZStack(alignment: .bottomTrailing) {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .fill(previewBackground)
 
         if isVisible, let thumbnailImage {
@@ -147,7 +147,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
           VStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
               .font(.system(size: 16))
-            Text("File missing")
+            Text(L10n.PreferencesHistory.fileMissing)
               .font(.caption2.weight(.semibold))
           }
           .foregroundColor(.white)
@@ -173,9 +173,9 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
           HistoryCloudUploadOverlayView(state: uploadState)
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(Radius.rect(Radius.tile))
       .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .stroke(previewBorderColor, lineWidth: 1)
       )
     }
@@ -286,13 +286,14 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   private func checkFileExistence() {
     let url = record.fileURL
     let path = record.filePath
-    Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
-      }
-      await MainActor.run {
-        self.fileExists = exists
-      }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    Task { @MainActor in
+      let exists = await Task.detached(priority: .utility) {
+        defer { access.stop() }
+        return FileManager.default.fileExists(atPath: path)
+      }.value
+      guard !Task.isCancelled else { return }
+      fileExists = exists
     }
   }
 

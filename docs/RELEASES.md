@@ -95,6 +95,12 @@ Snapzy ships two Sparkle update channels from a single `appcast.xml`:
 
 The channel preference is stored in `updates.channel` (UserDefaults) and exported to `config.toml` under `[updates] channel`. `UpdaterManager.allowedChannels(for:)` returns `["beta"]` only when opted in.
 
+### Branch Model
+
+- `master` is the primary production and release branch, and the canonical source for `appcast.xml`. The Sparkle feed URL is served from `master` for both stable users and users who opt into beta updates.
+- Both stable releases and beta releases can be released directly from `master`.
+- `beta` is also supported as a pre-release integration branch if needed.
+
 ### Versioning Scheme
 
 | Release | Marketing version | Git tag | Build number (`sparkle:version`) |
@@ -108,16 +114,17 @@ Sparkle compares the numeric build number only — the `-beta.N` suffix is cosme
 
 Either:
 
-- **Actions → Release Prepare** → run with `channel = beta` and a bump type (`patch`/`minor`/`major`). The bump type applies to the base version when starting a new beta line; subsequent betas keep the base and increment `N` (derived from existing `vX.Y.Z-beta.*` tags).
-- Or push a commit to master titled `release(minor-beta): ...` (also `patch-beta`, `major-beta`).
+- **Actions → Release Prepare** on `master` (or `beta`) → run with `channel = beta` and a bump type (`patch`/`minor`/`major`). The bump type applies to the base version when starting a new beta line; subsequent betas keep the base and increment `N` (derived from existing `vX.Y.Z-beta.*` tags) — unless the bump type outranks the current beta base, which starts a new line (e.g. `1.33.0-beta.2` + `major` → `2.0.0-beta.1`; + `minor`/`patch` → `1.33.0-beta.3`).
+- Or push a commit to `master` (or `beta`) titled `release(minor-beta): ...` (also `patch-beta`, `major-beta`).
 
-Then merge the generated `release/vX.Y.Z-beta.N` PR. The publish pipeline will:
+Then merge the generated `release/vX.Y.Z-beta.N` PR into `master` (or `beta`). The publish pipeline will:
 
 - Build, sign, and notarize the DMG exactly like stable
 - Create the GitHub Release with **prerelease = true** (the "latest" pointer stays on stable)
 - Add a `<sparkle:channel>beta</sparkle:channel>` item to `appcast.xml`
 - **Skip** the Homebrew cask and README install-URL updates
 - Send the Discord notification prefixed with `[Beta]`
+- Commit release metadata to `master` (or to `beta` and mirror to `master`)
 
 > **Note:** merge or close a beta release PR before dispatching the next one — two open prepare runs bump from the same pbxproj state and would collide.
 
@@ -125,12 +132,14 @@ Then merge the generated `release/vX.Y.Z-beta.N` PR. The publish pipeline will:
 
 Promotion is an ordinary stable release — a full rebuild from master HEAD (the version string is baked into the signed binary, so beta artifacts cannot be re-tagged):
 
-1. Ensure master HEAD is exactly what you want to ship (last beta merged, no unwanted commits).
-2. **Actions → Release Prepare** → run with `channel = stable`. When the current version is a beta, the `-beta.N` suffix is stripped (bump type is ignored) → version `X.Y.Z`.
-3. Review the `release/vX.Y.Z` PR — the changelog spans everything since the **last stable tag**, so all beta-tested commits are included. Merge.
+1. Ensure `master` contains exactly what should ship (no unwanted commits).
+2. **Actions → Release Prepare** on `master` → run with `channel = stable`. When the current version is a beta, the `-beta.N` suffix is stripped → version `X.Y.Z`, unless the bump type outranks that base (e.g. `1.33.0-beta.2` + `major` → `2.0.0`; + `minor`/`patch` → `1.33.0`).
+3. Review the `release/vX.Y.Z` PR into `master` — the changelog spans everything since the **last stable tag**, so all beta-tested commits are included. Merge.
 4. The publish pipeline runs the full stable path: `prerelease = false`, untagged appcast item, cask + README updated, Discord notify without `[Beta]`.
 5. Verify a beta-channel install is offered `X.Y.Z` (its build number is higher than every beta).
 
+> **Breaking changes:** commits titled `BREAKING CHANGE: …`, `type!: …` / `type(scope)!: …`, or carrying a `BREAKING CHANGE:` footer are listed in a `### Breaking Changes` section at the top of the generated changelog. Commits are classified on their subject line only.
+>
 > **Changelog folding:** the stable entry is the single source of truth for the whole beta cycle. `generate-changelog.sh` filters release-automation commits (`chore: bump version …`, `chore: update appcast …`, `chore: release v…`) out of every generated changelog, and `update-changelog.sh` removes the `## [X.Y.Z-beta.N]` sections of the same base version from `CHANGELOG.md` when the stable `X.Y.Z` entry is prepended — beta entries never appear alongside their stable promotion. Beta entries of abandoned lines (different base version) are left untouched.
 
 ### Switching Back from Beta (Downgrade Policy)

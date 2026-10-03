@@ -9,7 +9,7 @@ import AppKit
 import Foundation
 
 /// Contextual metadata about the capture source, used for template token replacement.
-struct CaptureContext: Equatable {
+nonisolated struct CaptureContext: Equatable {
   let appName: String?
   let windowTitle: String?
 
@@ -25,6 +25,7 @@ struct CaptureContext: Equatable {
   }
 
   /// Creates a CaptureContext from a process ID, resolving app name from NSRunningApplication.
+  @MainActor
   static func fromPID(_ pid: Int32?, windowTitle: String? = nil) -> CaptureContext {
     guard let pid else { return CaptureContext(appName: nil, windowTitle: windowTitle) }
     let app = NSRunningApplication(processIdentifier: pid)
@@ -34,6 +35,7 @@ struct CaptureContext: Equatable {
   }
 
   /// Creates a CaptureContext from the frontmost application (for fullscreen/area captures).
+  @MainActor
   static func fromFrontmostApp() -> CaptureContext {
     guard let app = NSWorkspace.shared.frontmostApplication else { return .empty }
     let ownBundleID = Bundle.main.bundleIdentifier

@@ -202,11 +202,11 @@ private struct CompletionHintRow: View {
     .padding(.horizontal, 14)
     .padding(.vertical, 10)
     .background(
-      RoundedRectangle(cornerRadius: 8)
+      Radius.rect(Radius.card)
         .fill(VSDesignSystem.Colors.cardFill)
     )
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      Radius.rect(Radius.card)
         .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
     )
   }

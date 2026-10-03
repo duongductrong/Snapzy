@@ -19,8 +19,8 @@ final class OCRResultNotifier {
 
   private let notificationService: SystemNotificationService
 
-  init(notificationService: SystemNotificationService = .shared) {
-    self.notificationService = notificationService
+  init(notificationService: SystemNotificationService? = nil) {
+    self.notificationService = notificationService ?? .shared
   }
 
   static func isEnabled(defaults: UserDefaults = .standard) -> Bool {

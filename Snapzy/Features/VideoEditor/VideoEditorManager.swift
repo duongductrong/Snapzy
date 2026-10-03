@@ -12,7 +12,6 @@ import UniformTypeIdentifiers
 /// Manages video editor window instances
 @MainActor
 final class VideoEditorManager {
-
   static let shared = VideoEditorManager()
 
   private var windowControllers: [UUID: VideoEditorWindowController] = [:]
@@ -20,6 +19,8 @@ final class VideoEditorManager {
   private var emptyWindowController: VideoEditorWindowController?
   private var observers: [UUID: NSObjectProtocol] = [:]
   private var urlObservers: [URL: NSObjectProtocol] = [:]
+  private var sessionCache: [UUID: VideoEditorSessionData] = [:]
+  private var urlSessionCache: [URL: VideoEditorSessionData] = [:]
 
   private init() {}
 
@@ -40,8 +41,8 @@ final class VideoEditorManager {
   /// Switch back to accessory mode (menu bar only) if no windows open
   private func becomeAccessoryAppIfNeeded() {
     DispatchQueue.main.async { [weak self] in
-      guard let self = self else { return }
-      guard !self.hasOpenWindows else { return }
+      guard let self else { return }
+      guard !hasOpenWindows else { return }
       guard !AnnotateManager.shared.hasOpenWindows else { return }
       NSApp.revertActivationPolicyToAccessoryIfNeeded()
     }
@@ -63,7 +64,11 @@ final class VideoEditorManager {
 
     DiagnosticLogger.shared.log(.info, .editor, "Opening video editor", context: ["itemId": item.id.uuidString])
 
-    let controller = VideoEditorWindowController(item: item)
+    let sessionData = sessionCache[item.id] ?? VideoEditorSessionStore.shared.load(for: item.url)
+    if let sessionData, sessionCache[item.id] == nil {
+      sessionCache[item.id] = sessionData
+    }
+    let controller = VideoEditorWindowController(item: item, sessionData: sessionData)
     windowControllers[item.id] = controller
 
     // Pause Quick Access countdown for this item + newer items
@@ -98,13 +103,15 @@ final class VideoEditorManager {
     guard isVideoFile(url) else { return }
 
     // If Quick Access has this item, reuse it to link the video editor window
-    if let existingItem = QuickAccessManager.shared.items.first(where: { $0.url.standardizedFileURL.path == url.standardizedFileURL.path }) {
+    if let existingItem = QuickAccessManager.shared.items
+      .first(where: { $0.url.standardizedFileURL.path == url.standardizedFileURL.path }) {
       openEditor(for: existingItem)
       return
     }
 
     // Reuse existing window if open
-    if let existing = urlWindowControllers[url] {
+    let sessionKey = url.standardizedFileURL
+    if let existing = urlWindowControllers[sessionKey] {
       DiagnosticLogger.shared.log(.debug, .editor, "Video editor reused", context: ["file": url.lastPathComponent])
       existing.showWindow()
       return
@@ -113,10 +120,25 @@ final class VideoEditorManager {
     // Switch to regular app mode for Cmd+Tab visibility
     becomeRegularApp()
 
-    DiagnosticLogger.shared.log(.info, .editor, "Opening video editor for URL", context: ["file": url.lastPathComponent])
+    DiagnosticLogger.shared.log(
+      .info,
+      .editor,
+      "Opening video editor for URL",
+      context: ["file": url.lastPathComponent]
+    )
 
-    let controller = VideoEditorWindowController(url: url, originalURL: originalURL)
-    urlWindowControllers[url] = controller
+    let sessionLookupURL = originalURL ?? url
+    let sessionData = urlSessionCache[sessionKey]
+      ?? VideoEditorSessionStore.shared.load(for: sessionLookupURL)
+    if let sessionData, urlSessionCache[sessionKey] == nil {
+      urlSessionCache[sessionKey] = sessionData
+    }
+    let controller = VideoEditorWindowController(
+      url: url,
+      originalURL: originalURL,
+      sessionData: sessionData
+    )
+    urlWindowControllers[sessionKey] = controller
 
     // Remove from tracking when window closes
     if let window = controller.window {
@@ -126,11 +148,11 @@ final class VideoEditorManager {
         queue: .main
       ) { [weak self] _ in
         MainActor.assumeIsolated {
-          self?.cleanupURLWindow(for: url)
+          self?.cleanupURLWindow(for: sessionKey)
           self?.becomeAccessoryAppIfNeeded()
         }
       }
-      urlObservers[url] = observer
+      urlObservers[sessionKey] = observer
     }
 
     controller.showWindow()
@@ -195,6 +217,32 @@ final class VideoEditorManager {
       urlObservers.removeValue(forKey: url)
     }
     urlWindowControllers.removeValue(forKey: url)
+  }
+
+  // MARK: - Session Cache
+
+  func saveSessionData(_ sessionData: VideoEditorSessionData, for itemId: UUID) {
+    sessionCache[itemId] = sessionData
+  }
+
+  func getSessionData(for itemId: UUID) -> VideoEditorSessionData? {
+    sessionCache[itemId]
+  }
+
+  func clearSessionData(for itemId: UUID) {
+    sessionCache.removeValue(forKey: itemId)
+  }
+
+  func saveSessionData(_ sessionData: VideoEditorSessionData, for url: URL) {
+    urlSessionCache[url.standardizedFileURL] = sessionData
+  }
+
+  func getSessionData(for url: URL) -> VideoEditorSessionData? {
+    urlSessionCache[url.standardizedFileURL]
+  }
+
+  func clearSessionData(for url: URL) {
+    urlSessionCache.removeValue(forKey: url.standardizedFileURL)
   }
 
   /// Close all video editor windows

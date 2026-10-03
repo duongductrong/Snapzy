@@ -132,7 +132,7 @@ struct RecordingWaveformView: View {
             .frame(width: 340, height: 36)
             .background(scheme == .dark ? Color.black : Color.white)
             .overlay(Text("00:12  ●  Stop").font(.system(size: 13)))
-            .cornerRadius(14)
+            .cornerRadius(Radius.card)
             .environment(\.colorScheme, scheme)
         }
         Slider(value: $level, in: 0 ... 1)

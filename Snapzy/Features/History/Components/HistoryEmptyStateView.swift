@@ -31,9 +31,9 @@ struct HistoryEmptyStateView: View {
     }
     .padding(.horizontal, 30)
     .padding(.vertical, 26)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .background(.regularMaterial, in: Radius.rect(Radius.panel))
     .overlay(
-      RoundedRectangle(cornerRadius: 24, style: .continuous)
+      Radius.rect(Radius.panel)
         .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05), lineWidth: 1)
     )
     .frame(maxWidth: .infinity, maxHeight: .infinity)

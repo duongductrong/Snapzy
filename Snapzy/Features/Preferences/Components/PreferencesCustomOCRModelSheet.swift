@@ -77,7 +77,7 @@ struct PreferencesCustomOCRModelSheet: View {
             .font(.system(size: 12))
             .frame(height: 60)
             .overlay(
-              RoundedRectangle(cornerRadius: 4)
+              Radius.controlRect(forHeight: 60)
                 .stroke(Color(NSColor.separatorColor), lineWidth: 1)
             )
         }

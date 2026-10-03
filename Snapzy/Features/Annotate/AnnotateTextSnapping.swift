@@ -11,7 +11,7 @@ import CoreGraphics
 import Foundation
 
 /// One snapped highlighter bar, expressed as the rect it paints.
-struct AnnotateTextSnapSegment: Equatable {
+nonisolated struct AnnotateTextSnapSegment: Equatable {
   let rect: CGRect
 
   /// Highlights render as a polyline stroked at `strokeWidth * 3`, so the bar

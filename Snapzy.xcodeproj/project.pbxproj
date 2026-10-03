@@ -233,10 +233,11 @@
 			outputFileListPaths = (
 			);
 			outputPaths = (
+				"$(DERIVED_FILE_DIR)/SwiftFormat.disabled.stamp",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swiftformat >/dev/null; then\n  # swiftformat \"${SRCROOT}/Snapzy\" \"${SRCROOT}/SnapzyTests\"\n  echo \"SwiftFormat is configured but disabled by default.\"\nelse\n  echo \"warning: SwiftFormat not installed. Install via 'brew install swiftformat'.\"\nfi\n";
+			shellScript = "if which swiftformat >/dev/null; then\n  # swiftformat \"${SRCROOT}/Snapzy\" \"${SRCROOT}/SnapzyTests\"\n  echo \"SwiftFormat is configured but disabled by default.\"\nelse\n  echo \"SwiftFormat is not installed; formatting remains disabled.\"\nfi\ntouch \"$SCRIPT_OUTPUT_FILE_0\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -395,7 +396,7 @@
 				CODE_SIGN_ENTITLEMENTS = Snapzy/Snapzy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 194;
+				CURRENT_PROJECT_VERSION = 196;
 				DEVELOPMENT_TEAM = XMHV5GH2Z7;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -413,7 +414,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.33.0-beta.2;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy.debug;
 				PRODUCT_MODULE_NAME = Snapzy;
 				PRODUCT_NAME = "Snapzy Debug";
@@ -437,7 +438,7 @@
 				CODE_SIGN_ENTITLEMENTS = Snapzy/Snapzy.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 194;
+				CURRENT_PROJECT_VERSION = 196;
 				DEVELOPMENT_TEAM = XMHV5GH2Z7;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -454,7 +455,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 13.0;
-				MARKETING_VERSION = 1.33.0-beta.2;
+				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;

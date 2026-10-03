@@ -1321,7 +1321,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
         if let renderedImage = renderedImage, let itemId = itemId {
           QuickAccessManager.shared.updateItemThumbnail(id: itemId, image: renderedImage)
         }
-        await PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
+        PostCaptureActionHandler.shared.copyEditedCaptureToClipboardIfEnabled(
           for: .screenshot,
           url: sourceURL
         )

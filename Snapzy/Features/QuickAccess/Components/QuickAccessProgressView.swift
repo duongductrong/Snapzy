@@ -19,7 +19,7 @@ struct QuickAccessProgressView: View {
   var body: some View {
     ZStack {
       // Dimming background
-      RoundedRectangle(cornerRadius: 16)
+      Radius.rect(Radius.card)
         .fill(Color.black.opacity(0.5))
 
       // Progress indicator

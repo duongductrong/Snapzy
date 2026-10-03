@@ -23,17 +23,17 @@ struct InlineAreaAnnotateDisplay: Identifiable {
   var id: CGDirectDisplayID { displayID }
 }
 
-enum InlineAreaAnnotatePhase {
+nonisolated enum InlineAreaAnnotatePhase {
   case selecting
   case annotating
 }
 
-enum InlineAreaKeyEventSource {
+nonisolated enum InlineAreaKeyEventSource {
   case local
   case global
 }
 
-enum InlineAreaKeyAction: Equatable {
+nonisolated enum InlineAreaKeyAction: Equatable {
   case passThrough
   case cancel
   case finish
@@ -167,7 +167,9 @@ final class InlineAreaAnnotateSession: ObservableObject {
 
   deinit {
     windowSelectionTask?.cancel()
-    SmartElementQueryService.shared.cancelPendingQueries()
+    Task { @MainActor in
+      SmartElementQueryService.shared.cancelPendingQueries()
+    }
   }
 
   private func subscribeToSmartElementHighlights() {

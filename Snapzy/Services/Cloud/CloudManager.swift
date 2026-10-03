@@ -896,16 +896,17 @@ final class CloudManager: ObservableObject {
 
   /// Generate a 200px max-dimension JPEG thumbnail for video uploads
   private func saveVideoThumbnail(from fileURL: URL, recordId: UUID) {
-    let asset = AVAsset(url: fileURL)
-    let generator = AVAssetImageGenerator(asset: asset)
-    generator.appliesPreferredTrackTransform = true
-    generator.requestedTimeToleranceBefore = .zero
-    generator.requestedTimeToleranceAfter = .zero
-
     let time = CMTime(seconds: 0.0, preferredTimescale: 600)
+    let thumbnailsDirectory = self.thumbnailsDirectory
 
     DispatchQueue.global(qos: .background).async {
       do {
+        let asset = AVAsset(url: fileURL)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        generator.requestedTimeToleranceBefore = .zero
+        generator.requestedTimeToleranceAfter = .zero
+
         var actualTime = CMTime.zero
         let cgImage = try generator.copyCGImage(at: time, actualTime: &actualTime)
         let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
@@ -932,9 +933,8 @@ final class CloudManager: ObservableObject {
           return
         }
 
-        let dir = self.thumbnailsDirectory
-        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let thumbURL = dir.appendingPathComponent("\(recordId.uuidString).jpg")
+        try FileManager.default.createDirectory(at: thumbnailsDirectory, withIntermediateDirectories: true)
+        let thumbURL = thumbnailsDirectory.appendingPathComponent("\(recordId.uuidString).jpg")
         try jpegData.write(to: thumbURL, options: .atomic)
       } catch {
         DiagnosticLogger.shared.logError(

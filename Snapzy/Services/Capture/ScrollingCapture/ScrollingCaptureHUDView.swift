@@ -3,6 +3,8 @@
 //  Snapzy
 //
 //  SwiftUI content for the scrolling capture control HUD.
+//  Chrome-free: the capsule glass buttons float on their own so the HUD never reads
+//  as a second panel next to the preview rail.
 //
 
 import SwiftUI
@@ -14,83 +16,53 @@ struct ScrollingCaptureHUDView: View {
   let onCancel: () -> Void
   let onToggleAutoScroll: () -> Void
 
-  private var capturedSummary: String {
-    let count = model.acceptedFrameCount
-    return L10n.ScrollingCapture.sectionsCaptured(count)
-  }
-
-  private var headerSummary: String {
-    guard model.acceptedFrameCount > 0 else { return model.selectionSummary }
-    return "\(model.selectionSummary) • \(capturedSummary)"
-  }
-
   var body: some View {
-    HStack(spacing: 10) {
-      // MARK: - Left: Title + summary
-      VStack(alignment: .leading, spacing: 1) {
-        Text(L10n.Actions.scrollingCapture)
-          .font(.system(size: 12, weight: .semibold))
-        Text(headerSummary)
-          .font(.system(size: 10))
-          .foregroundStyle(.secondary)
-          .lineLimit(1)
-      }
-      .frame(minWidth: 120, maxWidth: 220, alignment: .leading)
-
-      Spacer(minLength: 4)
-
-      // MARK: - Divider
-      Divider()
-        .frame(height: 18)
-        .opacity(0.3)
-
-      actionButtons
-        .fixedSize(horizontal: true, vertical: false)
-        .layoutPriority(1)
-    }
-    .padding(12)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-    .overlay(
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .strokeBorder(Color.white.opacity(0.12))
-    )
+    actionButtons
+      .fixedSize(horizontal: true, vertical: false)
+      .animation(LiquidGlassTokens.settleSpring, value: model.phase)
   }
+
+  // MARK: - Actions
 
   @ViewBuilder
   private var actionButtons: some View {
-    HStack(spacing: 8) {
-      if model.phase == .ready {
+    switch model.phase {
+    case .ready:
+      HStack(spacing: 8) {
         Button(L10n.Common.cancel, action: onCancel)
-          .buttonStyle(.bordered)
-          .controlSize(.small)
+          .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
 
         Button(L10n.ScrollingCapture.startCapture, action: onStart)
-          .buttonStyle(.borderedProminent)
-          .controlSize(.small)
+          .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
           .disabled(!model.canStartCapture)
-      } else {
+      }
+      .liquidGlassGroup(spacing: 8)
+
+    case .capturing, .finalizing, .saving:
+      HStack(spacing: 8) {
         Button(L10n.Common.cancel, action: onCancel)
-          .buttonStyle(.bordered)
-          .controlSize(.small)
+          .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
           .disabled(!model.canCancelSession)
 
         Button(action: onToggleAutoScroll) {
           Label(
             model.isAutoScrolling ? L10n.ScrollingCapture.stopAutoScroll : L10n.ScrollingCapture.autoScroll,
-            systemImage: model.isAutoScrolling ? "stop.circle.fill" : "play.circle.fill"
+            systemImage: model.isAutoScrolling ? "stop.fill" : "play.fill"
           )
           .lineLimit(1)
           .fixedSize(horizontal: true, vertical: false)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(.liquidGlass(
+          emphasis: model.isAutoScrolling ? .primary : .secondary,
+          capsule: true
+        ))
         .disabled(!model.canToggleAutoScroll)
 
         Button(L10n.Common.done, action: onDone)
-          .buttonStyle(.borderedProminent)
-          .controlSize(.small)
+          .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
           .disabled(!model.canFinishCapture)
       }
+      .liquidGlassGroup(spacing: 8)
     }
   }
 }

@@ -8,7 +8,7 @@
 import AppKit
 import Foundation
 
-enum CloudUploadFloatingPosition: String, CaseIterable, Codable, Identifiable {
+nonisolated enum CloudUploadFloatingPosition: String, CaseIterable, Codable, Identifiable {
   case top
   case center
   case bottom
@@ -23,6 +23,7 @@ enum CloudUploadFloatingPosition: String, CaseIterable, Codable, Identifiable {
     ) ?? .defaultPosition
   }
 
+  @MainActor
   func calculateOrigin(for size: CGSize, on screen: NSScreen, padding: CGFloat = 20) -> CGPoint {
     let frame = screen.visibleFrame
     let x = frame.midX - size.width / 2

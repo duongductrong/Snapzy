@@ -1358,7 +1358,7 @@ extension Array where Element == AnnotationItem {
   /// at the bottom, blur/redact effects above them, and markup annotations
   /// (shapes, arrows, text, counters, …) always on top. Stable within each
   /// tier; the model array order itself is unchanged.
-  var renderOrdered: [AnnotationItem] {
+  nonisolated var renderOrdered: [AnnotationItem] {
     var embedded: [AnnotationItem] = []
     var blurs: [AnnotationItem] = []
     var markup: [AnnotationItem] = []
