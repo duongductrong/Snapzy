@@ -63,6 +63,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("delayed_capture_seconds", CaptureDelayOption.defaultValue.seconds)
     writer.value("show_selection_area_overlay", true)
     writer.value("reverse_magnifier_zoom_direction", false)
+    writer.value("include_window_shadow", WindowShadowPreference.defaultIncludeShadow)
 
     writer.section("capture.scrolling")
     writer.value("show_hints", true)
