@@ -51,7 +51,7 @@ The TOML file covers portable app preferences:
 - Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`), show selection area overlay, reverse magnifier zoom direction, scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
 - After-capture actions for screenshot and recording: `save`, `quick_access`, `copy_file`, and `open_annotate` under `[capture.after.screenshot]` / `[capture.after.recording]`. Cloud upload is not part of this matrix — it is manual-only from Quick Access, Annotate, Video Editor, and History surfaces.
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
-- Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, action order, enabled actions, card slots, hover-activated card action shortcuts.
+- Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
 - Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, and upload window position.
 - Annotate preferences.
@@ -177,6 +177,7 @@ video_editor_zoom_transition_duration = 0.4
 [quick_access]
 enabled = true
 play_sounds = true
+open_in_finder_after_save = true
 position = "topTrailing"
 auto_dismiss = true
 auto_dismiss_delay = 8.0

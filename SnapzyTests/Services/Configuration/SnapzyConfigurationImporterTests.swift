@@ -367,6 +367,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     [quick_access]
     play_sounds = false
+    open_in_finder_after_save = false
     trackpad_swipe_mode = "natural"
     swipe_left_action = "pinToScreen"
     swipe_right_action = "none"
@@ -398,6 +399,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     
     // quick access
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessPlaySounds) as? Bool, false)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave) as? Bool, false)
     XCTAssertEqual(QuickAccessTrackpadSwipeModeStore.shared.mode, .natural)
     XCTAssertEqual(QuickAccessSwipeActionStore.shared.swipeLeftAction, .pinToScreen)
     XCTAssertNil(QuickAccessSwipeActionStore.shared.swipeRightAction)

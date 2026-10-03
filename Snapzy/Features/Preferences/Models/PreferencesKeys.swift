@@ -116,6 +116,7 @@ enum PreferencesKeys {
   static let quickAccessHideCardWhenWindowOpen = "quickAccess.hideCardWhenWindowOpen"
   static let quickAccessAnimationStyle = "quickAccess.animationStyle"
   static let quickAccessPlaySounds = "quickAccess.playSounds"
+  static let quickAccessOpenInFinderAfterSave = "quickAccess.openInFinderAfterSave"
 
   // Recording
   static let recordingFormat = "recording.format"

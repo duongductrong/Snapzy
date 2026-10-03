@@ -351,6 +351,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "quick_access", "play_sounds", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.quickAccessPlaySounds)
     }
+    collectBool(&reader, "quick_access", "open_in_finder_after_save", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave)
+    }
     if let position = reader.string("quick_access", "position") {
       guard let value = QuickAccessPosition(rawValue: position) else {
         reader.error("quick_access.position is invalid")

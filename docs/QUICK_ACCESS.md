@@ -29,7 +29,7 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | Action | Behavior |
 | --- | --- |
 | `copy` | Clipboard copy + dismiss; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
-| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + annotation/video-editor sidecar move. Saved: reveal in Finder |
+| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + annotation/video-editor sidecar move, then reveal in Finder unless Open in Finder After Saving is off (`quickAccess.openInFinderAfterSave`). Saved: reveal in Finder |
 | `dismiss` | Card removed; temp file deleted unless a history record exists or the general pasteboard still references the file (#234 paste-integrity guard) |
 | `delete` | Removes history record + annotation sidecar, deletes temp or trashes saved file, deletes recording metadata for videos |
 | `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown. Video Editor restores its persisted cut/zoom/speed recipe when available. Editor Save commits to the current file and leaves a temporary card available for this card's later Save action |
@@ -94,7 +94,7 @@ flowchart TD
 
 ## Preferences Surface
 
-Settings → Quick Access: position (left/right), overlay size, sound effects, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
+Settings → Quick Access: position (left/right), overlay size, sound effects, open in Finder after saving, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
 
 ## Related docs
 

@@ -3051,6 +3051,16 @@ nonisolated enum L10n {
       defaultValue: "Play sounds when the overlay appears or an action completes",
       comment: "Quick access preferences setting description"
     )
+    static let openInFinderAfterSaveTitle = string(
+      "preferences-quick-access.open-in-finder-after-save-title",
+      defaultValue: "Open in Finder After Saving",
+      comment: "Quick access preferences setting title"
+    )
+    static let openInFinderAfterSaveDescription = string(
+      "preferences-quick-access.open-in-finder-after-save-description",
+      defaultValue: "Show the saved file in Finder when saving from the overlay",
+      comment: "Quick access preferences setting description"
+    )
     static let autoCloseTitle = string(
       "preferences-quick-access.auto-close-title",
       defaultValue: "Auto-close",
