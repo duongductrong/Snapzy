@@ -87,7 +87,9 @@ final class RecordingRegionOverlayWindow: NSPanel {
     isFloatingPanel = true
     isOpaque = false
     backgroundColor = .clear
-    sharingType = .none
+    // Remote-display clients need to see selection chrome. Snapzy's recording stream
+    // excludes these IDs explicitly, while scrolling capture excludes the whole app.
+    sharingType = .readOnly
     level = .floating
     ignoresMouseEvents = true
     hasShadow = false
@@ -274,7 +276,10 @@ final class RecordingRegionOverlayView: NSView {
   }
 
   override func resetCursorRects() {
-    addCursorRect(bounds, cursor: isInteractionEnabled ? .crosshair : .arrow)
+    addCursorRect(
+      bounds,
+      cursor: isInteractionEnabled ? .vectorScreenshotCrosshairHighContrast : .arrow
+    )
   }
 
   func refreshCursor() {
@@ -681,7 +686,7 @@ final class RecordingRegionOverlayView: NSView {
       let screenPoint = NSEvent.mouseLocation
       newSelectionStart = screenPoint
       newSelectionEnd = screenPoint
-      NSCursor.crosshair.set()
+      NSCursor.vectorScreenshotCrosshairHighContrast.set()
       installCrossDisplayMonitorIfNeeded()
     }
   }
@@ -732,7 +737,7 @@ final class RecordingRegionOverlayView: NSView {
     if localRect.contains(point) {
       NSCursor.openHand.set()
     } else {
-      NSCursor.crosshair.set()
+      NSCursor.vectorScreenshotCrosshairHighContrast.set()
     }
   }
 
