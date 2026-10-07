@@ -85,7 +85,7 @@ brew install --cask snapzy
 
 ```bash
 # Install a specific version
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.32.3/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.0.0/install.sh | bash
 ```
 
 ### Download a release
@@ -179,6 +179,7 @@ Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (s
 | Fullscreen screenshot | `snapzy://capture/fullscreen`     |
 | Area screenshot       | `snapzy://capture/area`           |
 | Repeat area screenshot | `snapzy://capture/repeat-area`   |
+| Delayed area screenshot | `snapzy://capture/delayed`      |
 | Application window    | `snapzy://capture/application`    |
 | Active window         | `snapzy://capture/active-window`  |
 | Area annotate         | `snapzy://capture/area-annotate`  |

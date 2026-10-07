@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import Combine
 import SwiftUI
 
 @MainActor
@@ -14,6 +15,7 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
   static let shared = PreferencesWindowController()
 
   private(set) var window: NSWindow?
+  private var themeObserver: AnyCancellable?
 
   var isVisible: Bool { window?.isVisible ?? false }
 
@@ -96,10 +98,26 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
     // Let the sidebar material run the full height under the titlebar behind the traffic lights
     created.titlebarAppearsTransparent = true
 
+    // Sync appearance and background with current theme
+    created.appearance = ThemeManager.shared.nsAppearance
+    created.backgroundColor = WindowSurfacePalette.backgroundColor(for: ThemeManager.shared.preferredAppearance)
+
     let rootView = PreferencesView()
     created.contentView = NSHostingView(rootView: rootView)
 
+    setupThemeObserver(for: created)
+
     return created
+  }
+
+  private func setupThemeObserver(for window: NSWindow) {
+    themeObserver = ThemeManager.shared.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { [weak window] _ in
+        guard let window else { return }
+        window.appearance = ThemeManager.shared.nsAppearance
+        window.backgroundColor = WindowSurfacePalette.backgroundColor(for: ThemeManager.shared.preferredAppearance)
+      }
   }
 
   // MARK: - NSWindowDelegate

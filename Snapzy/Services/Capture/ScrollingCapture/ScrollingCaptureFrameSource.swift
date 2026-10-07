@@ -12,6 +12,14 @@ import Foundation
 import ScreenCaptureKit
 
 final class ScrollingCaptureFrameSource: NSObject {
+  private final class StreamReference: @unchecked Sendable {
+    let stream: SCStream
+
+    init(_ stream: SCStream) {
+      self.stream = stream
+    }
+  }
+
   private let sampleQueue = DispatchQueue(
     label: "com.snapzy.scrolling-capture.preview-stream",
     qos: .userInteractive
@@ -69,9 +77,10 @@ final class ScrollingCaptureFrameSource: NSObject {
       // Best-effort teardown: stream may already be winding down.
     }
 
+    let streamReference = StreamReference(activeStream)
     Task.detached(priority: .userInitiated) {
       do {
-        try await activeStream.stopCapture()
+        try await streamReference.stream.stopCapture()
       } catch {
         // Best-effort teardown: stream may already be stopped.
       }
@@ -126,8 +135,9 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
         capturedAt: capturedAt,
         motionScore: nil
       )
+      let streamID = ObjectIdentifier(stream)
       DispatchQueue.main.async { [weak self] in
-        guard let self, self.stream === stream else { return }
+        guard let self, self.stream.map({ ObjectIdentifier($0) }) == streamID else { return }
         self.onFrame?(frame)
       }
     }
@@ -136,8 +146,9 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
 
 extension ScrollingCaptureFrameSource: SCStreamDelegate {
   nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
+    let streamID = ObjectIdentifier(stream)
     DispatchQueue.main.async { [weak self] in
-      guard let self, self.stream === stream else { return }
+      guard let self, self.stream.map({ ObjectIdentifier($0) }) == streamID else { return }
       self.onFailure?(error.localizedDescription)
     }
   }

@@ -71,7 +71,7 @@ struct OnboardingLanguageSelectionView: View {
       .padding(.horizontal, 2)
     }
     .frame(maxWidth: 400, maxHeight: 300)
-    .clipShape(RoundedRectangle(cornerRadius: 12))
+    .clipShape(Radius.rect(Radius.card))
     .mask(
       VStack(spacing: 0) {
         LinearGradient(
@@ -193,11 +193,11 @@ private struct LanguageOptionRow: View {
       .padding(.horizontal, 14)
       .padding(.vertical, 12)
       .background(
-        RoundedRectangle(cornerRadius: 10)
+        Radius.rect(Radius.card)
           .fill(isSelected ? VSDesignSystem.Colors.buttonFill : VSDesignSystem.Colors.cardFill)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 10)
+        Radius.rect(Radius.card)
           .stroke(
             isSelected ? VSDesignSystem.Colors.buttonStroke : VSDesignSystem.Colors.cardStroke,
             lineWidth: 1

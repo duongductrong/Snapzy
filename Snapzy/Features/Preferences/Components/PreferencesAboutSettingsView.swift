@@ -6,15 +6,10 @@
 //
 
 import AppKit
-import Sparkle
 import SwiftUI
 
 struct AboutSettingsView: View {
   @AppStorage(PreferencesKeys.updateChannel) private var updateChannel: String = UpdateChannel.stable.rawValue
-
-  private var updater: SPUUpdater {
-    UpdaterManager.shared.updater
-  }
 
   private var appVersion: String {
     let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
@@ -22,6 +17,7 @@ struct AboutSettingsView: View {
     return "Snapzy \(version) (\(build))"
   }
 
+  @StateObject private var updatesViewModel = CheckForUpdatesViewModel(updater: UpdaterManager.shared.updater)
   @State private var isContributorsExpanded: Bool = false
 
   var body: some View {
@@ -34,7 +30,7 @@ struct AboutSettingsView: View {
           // Card 1: Attribution & Special thanks
           attributionCard
 
-          // Card 2: App version, Updates & Support
+          // Card 2: Updates & Support
           versionAndSupportCard
 
           Spacer(minLength: 24)
@@ -55,7 +51,7 @@ struct AboutSettingsView: View {
         .resizable()
         .aspectRatio(contentMode: .fit)
         .frame(width: 96, height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
         .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 6)
         .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
 
@@ -71,8 +67,46 @@ struct AboutSettingsView: View {
           .lineLimit(2)
           .frame(maxWidth: 420)
       }
+
+      VStack(spacing: 10) {
+        versionStatusLabel
+
+        CheckForUpdatesView(viewModel: updatesViewModel) {
+          HStack(spacing: 5) {
+            Image(systemName: "arrow.triangle.2.circlepath")
+              .font(.system(size: 11, weight: .semibold))
+            Text(L10n.PreferencesAbout.checkForUpdates)
+          }
+        }
+        .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
+        .help(updatesViewModel.lastUpdateCheckDate
+          .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
+          L10n.PreferencesAbout.checkForUpdates)
+      }
+      .padding(.top, 6)
     }
     .padding(.bottom, 4)
+  }
+
+  private var versionStatusLabel: some View {
+    HStack(spacing: 6) {
+      Text(appVersion)
+        .font(.system(size: 11, weight: .regular))
+        .foregroundStyle(Color.secondary)
+
+      if let lastCheck = updatesViewModel.lastUpdateCheckDate {
+        Text("•")
+          .font(.system(size: 10))
+          .foregroundStyle(Color.secondary.opacity(0.5))
+
+        HStack(spacing: 3) {
+          Text(L10n.PreferencesAbout.checkedLabel)
+          Text(lastCheck, style: .relative)
+        }
+        .font(.system(size: 11, weight: .regular))
+        .foregroundStyle(Color.secondary)
+      }
+    }
   }
 
   // MARK: - Card 1: Attribution & Special Thanks
@@ -129,51 +163,6 @@ struct AboutSettingsView: View {
 
   private var versionAndSupportCard: some View {
     VStack(spacing: 0) {
-      // App version + Check for Updates action
-      HStack(alignment: .center) {
-        VStack(alignment: .leading, spacing: 3) {
-          Text(L10n.PreferencesAbout.appVersion)
-            .font(.system(size: 13, weight: .regular))
-            .foregroundStyle(Color.primary)
-
-          HStack(spacing: 6) {
-            Text(appVersion)
-              .font(.system(size: 11, weight: .regular))
-              .foregroundStyle(Color.secondary)
-
-            if let lastCheck = updater.lastUpdateCheckDate {
-              Text("•")
-                .font(.system(size: 10))
-                .foregroundStyle(Color.secondary.opacity(0.5))
-
-              HStack(spacing: 3) {
-                Text(L10n.PreferencesAbout.checkedLabel)
-                Text(lastCheck, style: .relative)
-              }
-              .font(.system(size: 11, weight: .regular))
-              .foregroundStyle(Color.secondary)
-            }
-          }
-        }
-
-        Spacer()
-
-        Button(action: {
-          updater.checkForUpdates()
-        }) {
-          Text(L10n.PreferencesAbout.checkForUpdates)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
-        .help(updater.lastUpdateCheckDate
-          .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
-          L10n.PreferencesAbout.checkForUpdates)
-      }
-      .padding(.horizontal, 16)
-      .padding(.vertical, 12)
-
-      divider
-
       // Update Channel
       HStack(alignment: .center) {
         Text(L10n.PreferencesAbout.updateChannelTitle)
@@ -366,10 +355,10 @@ private struct ActionLinkButtonStyle: ButtonStyle {
 private extension View {
   func cardContainer(maxWidth: CGFloat) -> some View {
     background {
-      RoundedRectangle(cornerRadius: 12, style: .continuous)
+      Radius.rect(Radius.card)
         .fill(Color.primary.opacity(0.04))
     }
-    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    .clipShape(Radius.rect(Radius.card))
     .frame(maxWidth: maxWidth)
   }
 }

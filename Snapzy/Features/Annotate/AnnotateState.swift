@@ -155,7 +155,7 @@ final class AnnotateState: ObservableObject {
         rotationDegrees: rotationDegrees,
         watermarkStyle: WatermarkStyle(rawValue: watermarkStyle) ?? .single,
         spotlightOpacity: spotlightOpacity ?? 0.5,
-        textPresentation: textPresentation.flatMap(TextPresentation.init(rawValue:)) ?? .plain,
+        textPresentation: textPresentation.flatMap { TextPresentation(rawValue: $0) } ?? .plain,
         calloutTailTarget: calloutTailTarget,
         textBorderColor: textBorderColor?.color ?? .clear,
         textBorderWidth: textBorderWidth ?? 0,
@@ -423,7 +423,7 @@ final class AnnotateState: ObservableObject {
   // MARK: - Editor Mode
 
   /// Editor mode determines whether user is annotating or applying mockup transforms
-  nonisolated enum EditorMode: String, CaseIterable {
+  nonisolated enum EditorMode: String, CaseIterable, Sendable {
     case annotate  // Normal annotation editing (flat image)
     case mockup    // 3D perspective transforms with controls
     case preview   // Preview combined result (hides all editing UI)
@@ -3870,6 +3870,19 @@ final class AnnotateState: ObservableObject {
       fillColor: fillColor
     )
 
+    // Re-selecting the current fill still matters for plain text: the
+    // promotion below is what makes the fill visible, so an equal fill value
+    // does not mean this update is a no-op.
+    let fillPromotesTextPresentation: Bool = {
+      guard let fillColor = colorUpdate.fillColor,
+            fillColor != .clear,
+            case .text = annotations[index].type,
+            annotations[index].properties.textPresentation == .plain else {
+        return false
+      }
+      return true
+    }()
+
     guard annotationPropertiesWillChange(
       annotations[index],
       strokeWidth: strokeWidth,
@@ -3887,7 +3900,7 @@ final class AnnotateState: ObservableObject {
       textBorderWidth: textBorderWidth,
       isBorderEnabled: isBorderEnabled,
       fontName: fontName
-    ) else { return }
+    ) || fillPromotesTextPresentation else { return }
 
     if recordsUndo {
       if let snapshot = propertySliderGestureUndoSnapshot {
@@ -3928,6 +3941,13 @@ final class AnnotateState: ObservableObject {
     }
     if let fillColor = colorUpdate.fillColor {
       annotations[index].properties.fillColor = fillColor
+      // The background fill only renders for label/callout presentations, so a
+      // colored fill on plain text would stay invisible. Promote it to a label.
+      if case .text = annotations[index].type,
+         fillColor != .clear,
+         annotations[index].properties.textPresentation == .plain {
+        annotations[index].properties.textPresentation = .label
+      }
     }
     if let textBorderColor {
       annotations[index].properties.textBorderColor = textBorderColor
@@ -5150,7 +5170,7 @@ final class AnnotateState: ObservableObject {
         strokeColor: .clear,
         fillColor: .clear,
         strokeWidth: 3,
-        cornerRadius: 14,
+        cornerRadius: 14, // radius-lint:allow — annotation content default, not chrome
         opacity: 1.0,
         spotlightOpacity: spotlightOpacity
       )
@@ -5190,7 +5210,7 @@ final class AnnotateState: ObservableObject {
       strokeColor: strokeColor,
       fillColor: .clear,
       strokeWidth: 3,
-      cornerRadius: 0,
+      cornerRadius: 0, // radius-lint:allow — watermark content default, not chrome
       fontSize: 36,
       fontName: "SF Pro",
       opacity: 0.22,
@@ -5377,6 +5397,12 @@ final class AnnotateState: ObservableObject {
       if let fillColor = fillColor {
         properties.fillColor = fillColor
       }
+    }
+    if tool == .text,
+       let fillColor = fillColor,
+       fillColor != .clear,
+       properties.textPresentation == .plain {
+      properties.textPresentation = .label
     }
     if let cornerRadius = cornerRadius {
       properties.cornerRadius = max(0, cornerRadius)
@@ -5942,7 +5968,7 @@ final class AnnotateState: ObservableObject {
       // so retaining the colour only means it survives the round trip.
       // `applyTextStylePreset` never wiped these either, so the two paths now
       // agree.
-      annotationToolProperties[.text] = next
+      annotationToolProperties[.text] = sanitizedAnnotationProperties(next, for: .text)
       persistAnnotationToolProperties()
       rememberTextStylePresentationPreset(for: presentation, properties: next)
       return

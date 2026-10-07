@@ -16,10 +16,6 @@ struct QuickAccessActionShortcutsSection: View {
 
   var body: some View {
     Section {
-      Text(L10n.PreferencesShortcuts.cardActionsSectionDescription)
-        .font(.caption)
-        .foregroundColor(.secondary)
-
       SettingRow(
         icon: "keyboard.badge.ellipsis",
         title: L10n.PreferencesShortcuts.cardActionsEnableTitle,
@@ -44,16 +40,14 @@ struct QuickAccessActionShortcutsSection: View {
         }
       }
     } header: {
-      HStack {
-        Text(L10n.PreferencesShortcuts.cardActionsSection)
-        Spacer()
-        Button(L10n.Common.reset) {
+      ShortcutSectionHeader(
+        title: L10n.PreferencesShortcuts.cardActionsSection,
+        help: L10n.PreferencesShortcuts.cardActionsSectionDescription,
+        onReset: {
           store.resetToDefaults()
           validationIssues.removeAll()
         }
-        .buttonStyle(.borderless)
-        .font(.caption)
-      }
+      )
     }
   }
 

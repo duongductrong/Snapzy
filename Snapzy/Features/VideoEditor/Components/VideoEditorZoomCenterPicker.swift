@@ -1,5 +1,5 @@
 //
-//  ZoomCenterPicker.swift
+//  VideoEditorZoomCenterPicker.swift
 //  Snapzy
 //
 //  Mini preview with draggable crosshair for selecting zoom center point
@@ -11,6 +11,8 @@ import SwiftUI
 struct ZoomCenterPicker: View {
   @Binding var center: CGPoint
   let previewImage: NSImage?
+  var onEditingChanged: (Bool) -> Void = { _ in }
+  var onCenterChanged: (CGPoint) -> Void = { _ in }
 
   private let pickerSize: CGFloat = 120
   private let crosshairSize: CGFloat = 24
@@ -43,13 +45,17 @@ struct ZoomCenterPicker: View {
         )
     }
     .frame(width: pickerSize, height: pickerSize * 9 / 16)
-    .cornerRadius(6)
+    .cornerRadius(Radius.tile)
     .overlay(
-      RoundedRectangle(cornerRadius: 6)
+      Radius.rect(Radius.tile)
         .strokeBorder(Color.white.opacity(0.2), lineWidth: 1)
     )
     .contentShape(Rectangle())
+    .accessibilityIdentifier("video-editor.zoom-center")
     .gesture(dragGesture)
+    .onDisappear {
+      if isDragging { onEditingChanged(false) }
+    }
   }
 
   // MARK: - Subviews
@@ -103,17 +109,25 @@ struct ZoomCenterPicker: View {
 
   // MARK: - Gesture
 
+  private func updateCenter(at location: CGPoint) {
+    let point = CGPoint(x: max(0.05, min(location.x / pickerSize, 0.95)),
+                        y: max(0.05, min(location.y / (pickerSize * 9 / 16), 0.95)))
+    guard point != center else { return }
+    center = point
+    onCenterChanged(point)
+  }
+
   private var dragGesture: some Gesture {
     DragGesture(minimumDistance: 0)
       .onChanged { value in
+        if !isDragging { onEditingChanged(true) }
         isDragging = true
-        let pickerHeight = pickerSize * 9 / 16
-        let newX = max(0.05, min(value.location.x / pickerSize, 0.95))
-        let newY = max(0.05, min(value.location.y / pickerHeight, 0.95))
-        center = CGPoint(x: newX, y: newY)
+        updateCenter(at: value.location)
       }
-      .onEnded { _ in
+      .onEnded { value in
+        updateCenter(at: value.location)
         isDragging = false
+        onEditingChanged(false)
       }
   }
 }

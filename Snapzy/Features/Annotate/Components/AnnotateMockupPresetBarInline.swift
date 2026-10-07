@@ -44,9 +44,9 @@ struct MockupPresetButtonInline: View {
             VStack(spacing: 4) {
                 presetThumbnail
                     .frame(width: 60, height: 38)
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                    .clipShape(Radius.rect(Radius.ornament))
                     .overlay {
-                        RoundedRectangle(cornerRadius: 4)
+                        Radius.rect(Radius.ornament)
                             .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1)
                     }
                     .scaleEffect(isHovered ? 1.05 : 1.0)
@@ -72,7 +72,7 @@ struct MockupPresetButtonInline: View {
                 endPoint: .bottomTrailing
             )
 
-            RoundedRectangle(cornerRadius: 2)
+            Radius.rect(Radius.ornament)
                 .fill(Color.white)
                 .frame(width: 30, height: 20)
                 .rotation3DEffect(

@@ -272,7 +272,7 @@ private struct MenuBarIconTile: View {
       }
       .frame(width: 44, height: 44)
       .overlay(
-        RoundedRectangle(cornerRadius: 10)
+        Radius.rect(Radius.tile)
           .strokeBorder(
             isSelected ? Color.accentColor : Color.clear,
             lineWidth: 2.5
@@ -283,7 +283,7 @@ private struct MenuBarIconTile: View {
           selectionBadge
         }
       }
-      .contentShape(RoundedRectangle(cornerRadius: 10))
+      .contentShape(Radius.rect(Radius.tile))
     }
     .buttonStyle(.plain)
     .onHover { isHovered = $0 }
@@ -296,20 +296,20 @@ private struct MenuBarIconTile: View {
   private var tileBackground: some View {
     if showsAddAction {
       // Dashed "add" affordance — reads as an action, not a choice.
-      RoundedRectangle(cornerRadius: 10)
+      Radius.rect(Radius.tile)
         .strokeBorder(
           style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])
         )
         .foregroundStyle(isDropTargeted ? Color.accentColor : Color.secondary.opacity(0.5))
         .background(
-          RoundedRectangle(cornerRadius: 10)
+          Radius.rect(Radius.tile)
             .fill(isDropTargeted ? Color.accentColor.opacity(0.12) : Color.clear)
         )
     } else {
-      RoundedRectangle(cornerRadius: 10)
+      Radius.rect(Radius.tile)
         .fill(fillColor)
         .overlay(
-          RoundedRectangle(cornerRadius: 10)
+          Radius.rect(Radius.tile)
             .strokeBorder(Color.primary.opacity(0.08), lineWidth: 1)
         )
     }

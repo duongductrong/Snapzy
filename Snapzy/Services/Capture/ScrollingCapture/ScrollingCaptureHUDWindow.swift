@@ -38,6 +38,7 @@ final class ScrollingCaptureHUDWindow: NSPanel {
     hasShadow = true
     hidesOnDeactivate = false
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+    appearance = ThemeManager.shared.nsAppearance
     contentView = NSHostingView(rootView: ScrollingCaptureHUDView(
       model: model,
       onStart: onStart,
@@ -71,8 +72,8 @@ final class ScrollingCaptureHUDWindow: NSPanel {
 
   nonisolated static func resolvedContentSize(for fittingSize: CGSize) -> CGSize {
     CGSize(
-      width: max(380, fittingSize.width.rounded(.up)),
-      height: max(44, fittingSize.height.rounded(.up))
+      width: max(180, fittingSize.width.rounded(.up)),
+      height: max(34, fittingSize.height.rounded(.up))
     )
   }
 

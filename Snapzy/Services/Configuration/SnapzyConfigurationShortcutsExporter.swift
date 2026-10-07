@@ -157,6 +157,7 @@ extension GlobalShortcutKind {
     case .togglePenRecording: return "toggle_pen_recording"
     case .restartRecording: return "restart_recording"
     case .deleteRecording: return "delete_recording"
+    case .delayedCapture: return "delayed_capture"
     case .annotate: return "annotate"
     case .videoEditor: return "video_editor"
     case .cloudUploads: return "cloud_uploads"

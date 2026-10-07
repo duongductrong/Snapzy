@@ -24,6 +24,8 @@ struct HistoryGridView: View {
           HistoryExpandedCaptureCardView(
             record: record,
             isSelected: selectedIds.contains(record.id),
+            isFocused: false,
+            emphasisMode: .selection,
             backgroundStyle: backgroundStyle,
             onTap: {
               handleTap(record: record)

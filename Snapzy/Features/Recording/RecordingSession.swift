@@ -14,7 +14,7 @@ import ScreenCaptureKit
 /// A thread-safe class that holds the AVAssetWriter components.
 /// This allows safe access from any thread without crossing @MainActor boundaries.
 /// Implements lazy start: session begins when first sample buffer arrives to sync timestamps.
-final class RecordingSession: @unchecked Sendable {
+nonisolated final class RecordingSession: @unchecked Sendable {
   struct VideoWriteStats {
     let receivedFrames: Int
     let appendedFrames: Int
@@ -393,7 +393,7 @@ final class RecordingSession: @unchecked Sendable {
 
     if writer.status == .writing {
       await writer.finishWriting()
-      if let error = writer.error {
+      if writer.error != nil {
         logWriterIssue("Recording writer finished with error", writer: writer)
       } else {
         DiagnosticLogger.shared.log(.debug, .recording, "Recording writer finished", context: [

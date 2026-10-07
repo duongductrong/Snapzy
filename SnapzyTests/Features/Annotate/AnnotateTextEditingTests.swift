@@ -22,7 +22,7 @@ final class AnnotateTextEditingTests: XCTestCase {
   private static var retainedAnnotateStates: [AnnotateState] = []
 
   private func makeAnnotateState() -> AnnotateState {
-    let state = AnnotateState()
+    let state = AnnotateState(appliesDefaultCanvasPresetOnNewImages: false)
     Self.retainedAnnotateStates.append(state)
     return state
   }
@@ -41,6 +41,13 @@ final class AnnotateTextEditingTests: XCTestCase {
       bounds: CGRect(x: 20, y: 20, width: 140, height: 32),
       properties: AnnotationProperties(fontSize: 18)
     )
+  }
+
+  /// Color equality is not stable across a persistence round-trip (the stored
+  /// color comes back with a named sRGB colorspace), so compare components.
+  private func rgbaComponents(_ color: Color) -> (r: CGFloat, g: CGFloat, b: CGFloat, a: CGFloat) {
+    let nsColor = NSColor(color).usingColorSpace(.sRGB) ?? NSColor(color)
+    return (nsColor.redComponent, nsColor.greenComponent, nsColor.blueComponent, nsColor.alphaComponent)
   }
 
   func testBeginTextEditingSetsEditingTargetId() {
@@ -216,6 +223,123 @@ final class AnnotateTextEditingTests: XCTestCase {
     updated = try XCTUnwrap(state.annotations.first)
     XCTAssertEqual(updated.properties.textPresentation, .plain)
     XCTAssertTrue(AnnotateColorPaletteStore.colorsMatch(updated.properties.fillColor, .white))
+  }
+
+  func testBackgroundFillPromotesPlainTextToLabelPresentation() throws {
+    let state = makeAnnotateState()
+    let annotation = makeTextAnnotation("Hello")
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.updateAnnotationProperties(id: annotation.id, fillColor: .yellow)
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.fillColor, .yellow)
+    XCTAssertEqual(updated.properties.textPresentation, .label)
+  }
+
+  func testBackgroundFillKeepsNonPlainPresentationUnchanged() throws {
+    let state = makeAnnotateState()
+    let annotation = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 20, y: 20, width: 140, height: 32),
+      properties: AnnotationProperties(fontSize: 18, textPresentation: .callout)
+    )
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.updateAnnotationProperties(id: annotation.id, fillColor: .yellow)
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.fillColor, .yellow)
+    XCTAssertEqual(updated.properties.textPresentation, .callout)
+  }
+
+  func testClearBackgroundLeavesPlainPresentationUnchanged() throws {
+    let state = makeAnnotateState()
+    let annotation = makeTextAnnotation("Hello")
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.updateAnnotationProperties(id: annotation.id, fillColor: .clear)
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.textPresentation, .plain)
+  }
+
+  func testQuickTextBackgroundPromotesSelectedPlainText() throws {
+    let state = makeAnnotateState()
+    let annotation = makeTextAnnotation("Hello")
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.quickTextBackgroundBinding.wrappedValue = .yellow
+
+    let updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.fillColor, .yellow)
+    XCTAssertEqual(updated.properties.textPresentation, .label)
+  }
+
+  func testQuickTextBackgroundPromotesDefaultPlainPresentation() {
+    let state = makeAnnotateState()
+    state.selectedTool = .text
+
+    state.quickTextBackgroundBinding.wrappedValue = .yellow
+
+    XCTAssertEqual(state.quickTextPresentation, .label)
+  }
+
+  func testSameFillSelectionPromotesPlainTextAfterPresentationReset() throws {
+    let state = makeAnnotateState()
+    let annotation = makeTextAnnotation("Hello")
+    state.annotations = [annotation]
+    state.selectedAnnotationId = annotation.id
+    state.selectedTool = .text
+
+    state.updateAnnotationProperties(id: annotation.id, fillColor: .yellow)
+    state.setTextPresentation(.plain)
+
+    var updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.fillColor, .yellow)
+    XCTAssertEqual(updated.properties.textPresentation, .plain)
+
+    state.updateAnnotationProperties(id: annotation.id, fillColor: .yellow)
+
+    updated = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(updated.properties.fillColor, .yellow)
+    XCTAssertEqual(updated.properties.textPresentation, .label)
+  }
+
+  func testPromotedTextPresentationPersistsAcrossStateReload() {
+    let defaults = UserDefaultsFactory.make()
+    let firstState = makeAnnotateState(defaults: defaults)
+    firstState.selectedTool = .text
+
+    firstState.quickTextBackgroundBinding.wrappedValue = .yellow
+    XCTAssertEqual(firstState.quickTextPresentation, .label)
+
+    let reloadedState = makeAnnotateState(defaults: defaults)
+
+    let properties = reloadedState.annotationCreationProperties(for: .text)
+    XCTAssertTrue(AnnotateColorPaletteStore.colorsMatch(properties.fillColor, .yellow))
+    XCTAssertEqual(properties.textPresentation, .label)
+  }
+
+  func testQuickTextPresentationPersistsAcrossStateReload() {
+    let defaults = UserDefaultsFactory.make()
+    let firstState = makeAnnotateState(defaults: defaults)
+    firstState.selectedTool = .text
+
+    firstState.setTextPresentation(.label)
+    XCTAssertEqual(firstState.quickTextPresentation, .label)
+
+    let reloadedState = makeAnnotateState(defaults: defaults)
+
+    XCTAssertEqual(reloadedState.annotationCreationProperties(for: .text).textPresentation, .label)
   }
 
   func testCalloutTailFollowsItsDraggedTargetAndMovesWithText() throws {

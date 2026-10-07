@@ -1,6 +1,6 @@
 # Preferences
 
-Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v1.32.3`).
+Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.1.0-beta.1`).
 
 ## Root
 
@@ -48,7 +48,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Scrolling Capture: Show Session Hints (`scrollingCapture.showHints`) + info note.
 - **Recording pane**:
   - Format: MOV / MP4 (`recording.format`).
-  - Quality: Frame Rate 30/60 (`recording.fps`), Quality (`recording.quality`, `VideoQuality`).
+  - Quality: Frame Rate 30/60 (`recording.fps`), Quality (`recording.quality`, `VideoQuality`), Max Resolution (`recording.maxResolution`, `RecordingMaxResolution`, default `auto`).
   - Behavior: Show Cursor (`recording.showCursor`), Dim Non-Selected Area (`recording.dimNonSelectedArea`, default on — darkens everything outside the recording region during recording; turn off to keep other windows fully visible/usable while recording), Remember Last Area (`recording.rememberLastArea`).
   - Controls: Hover Bar Visible (`recording.hoverBarVisible`), Show Time on Menu Bar (`recording.showTimeOnMenuBar`).
   - Mouse Highlight: size 30–100, animation 0.3–2.0 s, ripple count 1–5, color (archived `NSColor` in `recording.mouseHighlight.color`), opacity 0.2–1.0; reset-to-default.
@@ -119,11 +119,9 @@ Provider configuration, credentials, expiration, usage stats, and the Cloud Uplo
 
 ### About (`PreferencesAboutSettingsView.swift`)
 
-- App icon/name/version+build, last update check.
+- Hero: app icon/name/subtitle, then version+build + last update check, then the liquid-glass **Check for Updates** button (disabled while Sparkle is checking).
 - Creator attribution ("Made by") & Special thanks section honoring contributors (featured list in default view with inline "See more" expansion to all-time contributors using `PreferencesFlowLayout`, individual GitHub profile links for each contributor, and repository contributors anchor link).
-- Check for Updates + Report a Problem (`CrashReportService.presentAlert()`) — see [UPDATES.md](UPDATES.md).
-- Update channel picker (`UpdateChannelSectionView` / `PreferencesUpdateChannelSection.swift`) — stable/beta.
-- Sponsor links (`SponsorLinks`), website/GitHub/issues link row.
+- Card 2: inline update channel picker — stable/beta; support link rows (website, GitHub, Report a Bug, Discord, sponsor) — see [UPDATES.md](UPDATES.md).
 
 ## After-capture matrix
 

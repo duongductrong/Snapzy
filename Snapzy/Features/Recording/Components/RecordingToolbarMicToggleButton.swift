@@ -143,5 +143,5 @@ struct ToolbarMicToggleButton: View {
   }
   .padding(10)
   .background(.ultraThinMaterial)
-  .clipShape(RoundedRectangle(cornerRadius: 14))
+  .clipShape(Radius.rect(Radius.card))
 }

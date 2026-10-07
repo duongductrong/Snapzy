@@ -4,6 +4,9 @@
 # Env: EXCLUDE_PRERELEASE=1 — when no tag argument is given, skip v*-beta* tags
 #      so the range starts at the last stable tag.
 #
+# Breaking changes (`BREAKING CHANGE:` subject/footer, `type!:`) get their own
+# section at the top.
+#
 # Release-automation commits (version bumps, appcast/cask sync, release PR
 # merges) are always filtered out of the Chore section — they are pipeline
 # noise, not product changes.
@@ -28,11 +31,56 @@ else
   RANGE="HEAD"
 fi
 
-# Collect commits by category
-FEATURES=$(git log "$RANGE" --pretty=format:"%s (%h)" --grep="^feat" 2>/dev/null | sed 's/^feat[:(]//' | sed 's/^[^)]*): /: /' || true)
-FIXES=$(git log "$RANGE" --pretty=format:"%s (%h)" --grep="^fix" 2>/dev/null | sed 's/^fix[:(]//' | sed 's/^[^)]*): /: /' || true)
-CHORES=$(git log "$RANGE" --pretty=format:"%s (%h)" --grep="^chore\|^refactor\|^perf\|^style\|^ci\|^docs\|^build" 2>/dev/null \
-  | grep -vE '^chore: (bump version to v|release v|update appcast)' || true)
+# Collect commits by category, classifying on the subject line only (git's
+# --grep also matches body lines, which misfiles squash merges whose body lists
+# the original commits).
+# Breaking changes: `BREAKING CHANGE: ...` subjects, `type!:` / `type(scope)!:`
+# subjects, or a `BREAKING CHANGE:` footer in the body.
+BREAKING=""
+FEATURES=""
+FIXES=""
+CHORES=""
+
+append() {
+  # append <var> <line>
+  if [ -n "${!1}" ]; then
+    printf -v "$1" '%s\n%s' "${!1}" "$2"
+  else
+    printf -v "$1" '%s' "$2"
+  fi
+}
+
+TYPE_RE='^([a-z]+)(\([^)]*\))?(!)?:[[:space:]]*(.*)$'
+BREAKING_RE='^BREAKING[ -]CHANGE:[[:space:]]*(.*)$'
+
+while IFS=$'\x1f' read -r -d $'\x1e' HASH SUBJECT BODY; do
+  HASH="${HASH#$'\n'}"
+  [ -z "$HASH" ] && continue
+
+  if [[ "$SUBJECT" =~ $BREAKING_RE ]]; then
+    append BREAKING "${BASH_REMATCH[1]} (${HASH})"
+    continue
+  fi
+
+  if [[ "$SUBJECT" =~ $TYPE_RE ]]; then
+    TYPE="${BASH_REMATCH[1]}"
+    BANG="${BASH_REMATCH[3]}"
+    DESC="${BASH_REMATCH[4]}"
+    if [ -n "$BANG" ] || printf '%s\n' "$BODY" | grep -qE '^BREAKING[ -]CHANGE:'; then
+      append BREAKING "${DESC} (${HASH})"
+      continue
+    fi
+    case "$TYPE" in
+      feat) append FEATURES "${DESC} (${HASH})" ;;
+      fix) append FIXES "${DESC} (${HASH})" ;;
+      chore | refactor | perf | style | ci | docs | build)
+        if ! printf '%s\n' "$SUBJECT" | grep -qE '^chore: (bump version to v|release v|update appcast)'; then
+          append CHORES "${SUBJECT} (${HASH})"
+        fi
+        ;;
+    esac
+  fi
+done < <(git log "$RANGE" --pretty=format:'%h%x1f%s%x1f%b%x1e' 2>/dev/null || true)
 
 # Collect contributors
 # Prefer GitHub usernames when running in CI with gh CLI available
@@ -55,6 +103,14 @@ fi
 
 # Build changelog
 CHANGELOG=""
+
+if [ -n "$BREAKING" ]; then
+  CHANGELOG+="### Breaking Changes"$'\n'
+  while IFS= read -r line; do
+    CHANGELOG+="- ${line}"$'\n'
+  done <<< "$BREAKING"
+  CHANGELOG+=$'\n'
+fi
 
 if [ -n "$FEATURES" ]; then
   CHANGELOG+="### Features"$'\n'

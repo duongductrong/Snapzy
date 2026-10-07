@@ -203,6 +203,10 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
   }
 
   func showPopover() {
+    // The anchor is reported asynchronously by the status-bar hosting view. Do not briefly show
+    // the popover at the toolbar's left edge while that first layout is still pending.
+    guard anchorWindow != nil, anchorButtonCenterXOffset > 0 else { return }
+
     rebuildContent()
     positionRelativeToAnchor()
     orderFrontRegardless()
@@ -227,6 +231,7 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
       positionDefault()
       return
     }
+    guard anchorButtonCenterXOffset > 0 else { return }
 
     let anchorFrame = anchor.frame
     let popoverSize = frame.size

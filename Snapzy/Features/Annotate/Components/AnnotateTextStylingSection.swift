@@ -70,9 +70,9 @@ struct TextStylingSection: View {
           Text(L10n.Common.none)
             .font(.system(size: 9))
             .foregroundColor(.primary)
-            .frame(width: 36, height: 24)
+            .frame(width: 36, height: ControlMetrics.propertyChip)
             .background(
-              RoundedRectangle(cornerRadius: 4)
+              Radius.controlRect(forHeight: ControlMetrics.propertyChip)
                 .fill(AnnotateColorPaletteStore.isClear(annotation.properties.fillColor) ? Color.blue.opacity(0.3) : Color.primary.opacity(0.1))
             )
         }

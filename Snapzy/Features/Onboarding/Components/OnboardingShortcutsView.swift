@@ -108,11 +108,11 @@ struct ShortcutsView: View {
           .padding(.horizontal, 14)
           .padding(.vertical, 10)
           .background(
-            RoundedRectangle(cornerRadius: 10)
+            Radius.rect(Radius.card)
               .fill(Color.orange.opacity(conflictCardHighlight ? 0.18 : 0.08))
           )
           .overlay(
-            RoundedRectangle(cornerRadius: 10)
+            Radius.rect(Radius.card)
               .stroke(
                 Color.orange.opacity(conflictCardHighlight ? 0.6 : 0.25),
                 lineWidth: conflictCardHighlight ? 1.5 : 1
@@ -140,11 +140,11 @@ struct ShortcutsView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .background(
-          RoundedRectangle(cornerRadius: 10)
+          Radius.rect(Radius.card)
             .fill(Color.green.opacity(0.08))
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 10)
+          Radius.rect(Radius.card)
             .stroke(Color.green.opacity(0.25), lineWidth: 1)
         )
         .frame(maxWidth: 380)
@@ -453,11 +453,11 @@ private struct ShortcutGroup: View {
         }
       }
       .background(
-        RoundedRectangle(cornerRadius: 10)
+        Radius.rect(Radius.card)
           .fill(VSDesignSystem.Colors.cardFill)
       )
       .overlay(
-        RoundedRectangle(cornerRadius: 10)
+        Radius.rect(Radius.card)
           .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
       )
     }
@@ -480,11 +480,11 @@ private struct ShortcutRow: View {
         .padding(.vertical, 5)
         .padding(.horizontal, 6)
         .background(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.rect(Radius.ornament)
             .fill(VSDesignSystem.Colors.secondaryButtonFill)
         )
         .overlay(
-          RoundedRectangle(cornerRadius: 6)
+          Radius.rect(Radius.ornament)
             .stroke(VSDesignSystem.Colors.cardStroke, lineWidth: 1)
         )
 

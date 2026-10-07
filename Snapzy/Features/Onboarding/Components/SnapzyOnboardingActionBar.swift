@@ -7,6 +7,13 @@
 
 import SwiftUI
 
+private enum SnapzyOnboardingGlassAppearance {
+  // Keep the group and its nested controls in one dark material family. The child surface is
+  // only materialized on hover, so the resting two-button bar reads like the single Finish bar.
+  static let barTint = Color.black.opacity(0.52)
+  static let segmentActiveTint = Color.black.opacity(0.54)
+}
+
 struct SnapzyOnboardingActionBar: View {
   var skipTitle: String? = nil
   var continueTitle: String
@@ -58,13 +65,18 @@ struct SnapzyOnboardingActionBar: View {
     .padding(3.5)
     .frame(height: barHeight)
     .frame(minWidth: minWidth)
-    .background {
-      SnapzyGlassSurface(
-        shape: Capsule(style: .continuous),
-        substrate: SnapzySurfaceGlass.baseDarkness,
-        tint: 0.04
-      )
-    }
+    // Group only the sibling button surfaces. Keeping the outer shell outside the native glass
+    // container makes a two-button bar resolve like the single-button Finish bar.
+    .liquidGlassGroup(spacing: 0)
+    .liquidGlassSurface(
+      shape: Capsule(style: .continuous),
+      substrate: SnapzySurfaceGlass.baseDarkness,
+      tint: 0.04,
+      // Keep onboarding chrome grounded over the colourful mock stage. The native path uses
+      // this as the tint channel, while the macOS 13–15 path keeps the same four-layer optical
+      // composite used by Ruru instead of collapsing into a solid fill.
+      nativeGlassTint: SnapzyOnboardingGlassAppearance.barTint
+    )
     .clipShape(Capsule(style: .continuous))
     .shadow(color: Color.black.opacity(0.20), radius: 12, y: 5)
     .shadow(color: Color.black.opacity(0.10), radius: 2, y: 1)
@@ -94,10 +106,9 @@ private struct SnapzyOnboardingBarSegment: View {
         }
 
         Text(title)
-          .font(.system(
-            size: SnapzyOnboardingType.body + 1,
-            weight: (isHovered && isEnabled) ? .semibold : .medium
-          ))
+          // Keep the label metrics stable while the pointer moves. Hover is expressed by the
+          // glass plane, hairline and ink tint; changing weight here makes the label re-center.
+          .font(.system(size: SnapzyOnboardingType.body + 1, weight: .medium))
           .foregroundStyle(
             !isEnabled
               ? Color.white.opacity(0.30)
@@ -111,7 +122,22 @@ private struct SnapzyOnboardingBarSegment: View {
       }
       .padding(.horizontal, SnapzySpace.xl + 1)
       .frame(maxHeight: .infinity)
-      .background { segmentSurface }
+      .liquidGlassSurface(
+        shape: Capsule(style: .continuous),
+        // Match Ruru's onboarding action bar: the group owns the resting surface, while a
+        // button gets its own glass plane only while hovered. `isVisible` keeps the native
+        // identity stable instead of inserting/removing an effect view on every pointer move.
+        isVisible: isHovered && isEnabled && !isBusy,
+        substrate: SnapzySurfaceGlass.controlSubstrateHover,
+        tint: 0.10,
+        // The hotter diagonal hairline is the hover affordance on both paths. Native glass gets
+        // it explicitly here because its default refractive edge is intentionally preserved for
+        // the rest of the app.
+        highlight: .custom(top: 0.24, bottom: 0.08),
+        isInteractive: isEnabled && !isBusy,
+        nativeGlassTint: SnapzyOnboardingGlassAppearance.segmentActiveTint,
+        nativeHighlight: .custom(top: 0.24, bottom: 0.08)
+      )
       .contentShape(Capsule(style: .continuous))
     }
     .buttonStyle(SnapzyInteractiveButtonStyle(isEnabled: isEnabled && !isBusy))
@@ -126,18 +152,6 @@ private struct SnapzyOnboardingBarSegment: View {
       }
     }
     .animation(SnapzyMotionPreferences.shared.spec(.settle).animation, value: isEnabled)
-  }
-
-  @ViewBuilder
-  private var segmentSurface: some View {
-    if isHovered && isEnabled {
-      SnapzyGlassSurface(
-        shape: Capsule(style: .continuous),
-        substrate: SnapzySurfaceGlass.controlSubstrateHover,
-        tint: 0.10,
-        highlight: .custom(top: 0.24, bottom: 0.08)
-      )
-    }
   }
 }
 

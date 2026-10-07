@@ -269,17 +269,15 @@ final class SnapzyOnboardingState: ObservableObject {
       step2Stage = .recordingActive
     }
 
-    recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
-      guard let self else {
-        timer.invalidate()
-        return
-      }
-      Task { @MainActor in
+    recordingTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated {
+        guard let self else { return }
         if self.recordingSeconds < 3 {
           self.recordingSeconds += 1
         }
         if self.recordingSeconds >= 3 {
-          timer.invalidate()
+          self.recordingTimer?.invalidate()
+          self.recordingTimer = nil
           self.simulateFinishRecording()
         }
       }

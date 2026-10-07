@@ -8,7 +8,7 @@
 import SwiftUI
 
 /// OptionSet defining which corners to round
-struct RectCorner: OptionSet {
+nonisolated struct RectCorner: OptionSet {
     let rawValue: Int
 
     static let topLeft = RectCorner(rawValue: 1 << 0)

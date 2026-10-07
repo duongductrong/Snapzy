@@ -40,6 +40,8 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.screenshotShowCursor) private var screenshotShowCursor = false
   @AppStorage(PreferencesKeys.captureIncludeWindowShadow) private var captureIncludeWindowShadow = true
   @AppStorage(PreferencesKeys.screenshotFreezeArea) private var freezeAreaCapture = false
+  @AppStorage(PreferencesKeys.screenshotDelayedCaptureSeconds)
+  private var delayedCaptureSeconds = CaptureDelayOption.defaultValue.seconds
   @AppStorage(PreferencesKeys.screenshotLivePassthrough) private var livePassthrough = true
   @State private var livePassthroughAccessibilityGranted = AXIsProcessTrusted()
   @AppStorage(PreferencesKeys.screenshotShowSelectionAreaOverlay) private var showSelectionAreaOverlay = true
@@ -65,6 +67,7 @@ struct CaptureSettingsView: View {
   private var recordingFileNameTemplate = CaptureOutputKind.recording.defaultTemplate
   @AppStorage(PreferencesKeys.recordingFPS) private var fps = 30
   @AppStorage(PreferencesKeys.recordingQuality) private var quality = "high"
+  @AppStorage(PreferencesKeys.recordingMaxResolution) private var maxResolution = "auto"
   @AppStorage(PreferencesKeys.recordingCaptureAudio) private var captureAudio = true
   @AppStorage(PreferencesKeys.recordingCaptureMicrophone) private var captureMicrophone = false
   @AppStorage(PreferencesKeys.recordingMicrophoneDeviceID)
@@ -277,6 +280,20 @@ struct CaptureSettingsView: View {
             ) {
               Toggle("", isOn: $freezeAreaCapture)
                 .labelsHidden()
+            }
+
+            SettingRow(
+              icon: "timer",
+              title: L10n.PreferencesCapture.delayedCaptureTitle,
+              description: L10n.PreferencesCapture.delayedCaptureDescription
+            ) {
+              Picker("", selection: $delayedCaptureSeconds) {
+                ForEach(CaptureDelayOption.allCases) { option in
+                  Text(option.displayName).tag(option.seconds)
+                }
+              }
+              .labelsHidden()
+              .pickerStyle(.menu)
             }
 
             SettingRow(
@@ -503,6 +520,20 @@ struct CaptureSettingsView: View {
               Picker("", selection: $fps) {
                 Text("30 FPS").tag(30)
                 Text("60 FPS").tag(60)
+              }
+              .labelsHidden()
+              .pickerStyle(.menu)
+            }
+
+            SettingRow(
+              icon: "arrow.down.right.and.arrow.up.left",
+              title: L10n.PreferencesCapture.maxResolutionTitle,
+              description: L10n.PreferencesCapture.maxResolutionDescription
+            ) {
+              Picker("", selection: $maxResolution) {
+                ForEach(RecordingMaxResolution.allCases, id: \.self) { option in
+                  Text(option.displayName).tag(option.rawValue)
+                }
               }
               .labelsHidden()
               .pickerStyle(.menu)

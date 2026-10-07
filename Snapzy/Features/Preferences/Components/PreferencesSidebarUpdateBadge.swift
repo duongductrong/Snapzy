@@ -37,9 +37,9 @@ struct PreferencesSidebarUpdateBadge: View {
             .resizable()
             .scaledToFit()
             .frame(width: 28, height: 28)
-            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
             .overlay(
-              RoundedRectangle(cornerRadius: 6, style: .continuous)
+              RoundedRectangle(cornerRadius: 6, style: .continuous) // radius-lint:allow — traces the icon clip
                 .stroke(Color.primary.opacity(0.08), lineWidth: 0.5)
             )
 
@@ -63,14 +63,14 @@ struct PreferencesSidebarUpdateBadge: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background {
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Radius.rect(Radius.card)
             .fill(isHovering ? Color.primary.opacity(0.06) : Color.primary.opacity(0.035))
         }
         .overlay {
-          RoundedRectangle(cornerRadius: 8, style: .continuous)
+          Radius.rect(Radius.card)
             .strokeBorder(isHovering ? Color.primary.opacity(0.1) : Color.primary.opacity(0.06), lineWidth: 1)
         }
-        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .contentShape(Radius.rect(Radius.card))
       }
       .buttonStyle(.plain)
       .onHover { hovering in

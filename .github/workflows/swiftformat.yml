@@ -2,9 +2,9 @@ name: SwiftFormat Validation
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, beta ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, beta ]
 
 concurrency:
   group: swiftformat-${{ github.ref }}

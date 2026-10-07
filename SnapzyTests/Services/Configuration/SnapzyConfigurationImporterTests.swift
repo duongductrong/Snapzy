@@ -10,6 +10,17 @@ import XCTest
 
 @MainActor
 final class SnapzyConfigurationImporterTests: XCTestCase {
+  func testImportingDefaultDocumentResetsDelayedCaptureCountdown() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(10, forKey: PreferencesKeys.screenshotDelayedCaptureSeconds)
+
+    let source = SnapzyConfigurationDefaultDocument.toml()
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.integer(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds), 3)
+  }
+
   func testImportAppliesCaptureAndRecordingSettingsToProvidedDefaults() {
     let defaults = UserDefaultsFactory.make()
     let source = """
@@ -30,6 +41,36 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotFormat), "webp")
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowCursor) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.recordingFPS) as? Int, 60)
+  }
+
+  func testImportAppliesRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "fhd1080"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.recordingMaxResolution), "fhd1080")
+  }
+
+  func testImportRejectsInvalidRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "8k"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.recordingMaxResolution))
   }
 
   func testImportRejectsUnsupportedSchemaBeforeMutatingDefaults() {
@@ -311,6 +352,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     [capture.screenshot]
     freeze_area = true
+    delayed_capture_seconds = 5
     show_selection_area_overlay = false
     reverse_magnifier_zoom_direction = true
     show_magnifier_by_default = true
@@ -341,6 +383,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     
     // capture.screenshot
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotFreezeArea) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds) as? Int, 5)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, true)

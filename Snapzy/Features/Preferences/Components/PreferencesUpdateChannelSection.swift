@@ -46,9 +46,9 @@ struct UpdateChannelSectionView: View {
       }
     }
     .background(Color.primary.opacity(0.03))
-    .clipShape(RoundedRectangle(cornerRadius: Size.radiusLg))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: Size.radiusLg)
+      Radius.rect(Radius.card)
         .stroke(Color.primary.opacity(0.08), lineWidth: 1)
     )
     .frame(maxWidth: 420)

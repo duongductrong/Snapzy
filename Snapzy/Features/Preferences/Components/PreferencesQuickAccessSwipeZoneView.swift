@@ -164,9 +164,9 @@ struct QuickAccessPreviewSwipeZonePopover: View {
     .foregroundStyle(.primary)
     .padding(.horizontal, 10)
     .padding(.vertical, 7)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 8))
+    .background(.regularMaterial, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 8)
+      Radius.rect(Radius.card)
         .stroke(Color.primary.opacity(0.12), lineWidth: 1)
     )
     .shadow(color: Color.black.opacity(0.14), radius: 8, x: 0, y: 3)

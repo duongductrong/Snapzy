@@ -105,9 +105,9 @@ struct SnapzyOnboardingLanguagePicker: View {
       .padding(.horizontal, SnapzySpace.lg)
       .frame(height: 28)
       .background(
-        Capsule()
+        Capsule(style: .continuous)
           .fill(Color.white.opacity(0.08))
-          .overlay(Capsule().strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5))
+          .overlay(Capsule(style: .continuous).strokeBorder(Color.white.opacity(0.12), lineWidth: 0.5))
       )
     }
     .menuStyle(.borderlessButton)

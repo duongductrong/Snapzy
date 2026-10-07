@@ -8,7 +8,7 @@
 import AVFoundation
 import Foundation
 
-struct RecordingMicrophoneDevice: Identifiable, Equatable, Sendable {
+nonisolated struct RecordingMicrophoneDevice: Identifiable, Equatable, Sendable {
   static let systemDefaultID = "system-default"
 
   let id: String
@@ -36,7 +36,7 @@ struct RecordingMicrophoneDevice: Identifiable, Equatable, Sendable {
   }
 }
 
-enum RecordingMicrophoneDeviceProvider {
+nonisolated enum RecordingMicrophoneDeviceProvider {
   static func storedDeviceID(defaults: UserDefaults = .standard) -> String {
     let value = defaults.string(forKey: PreferencesKeys.recordingMicrophoneDeviceID)
     return normalizedStoredDeviceID(value)

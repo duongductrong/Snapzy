@@ -374,7 +374,7 @@ extension DragHandleNSView {
             !Task.isCancelled,
             self.fallbackGenerationSequence == generation,
             self.currentFallbackSignature == signature else { return }
-      self.prepareConcreteFallbackFileIfNeeded(for: signature)
+      _ = self.prepareConcreteFallbackFileIfNeeded(for: signature)
     }
   }
 
@@ -543,7 +543,7 @@ private struct DragFallbackSignature: Equatable {
     }
   }
 
-  private static func annotationSignature(_ annotation: AnnotationItem) -> String {
+  private nonisolated static func annotationSignature(_ annotation: AnnotationItem) -> String {
     let properties = annotation.properties
     return [
       annotation.id.uuidString,
@@ -561,7 +561,7 @@ private struct DragFallbackSignature: Equatable {
     ].joined(separator: "|")
   }
 
-  private static func annotationTypeSignature(_ type: AnnotationType) -> String {
+  private nonisolated static func annotationTypeSignature(_ type: AnnotationType) -> String {
     switch type {
     case .path(let points):
       return "path|\(points.map(pointSignature).joined(separator: ";"))"
@@ -593,16 +593,16 @@ private struct DragFallbackSignature: Equatable {
     }
   }
 
-  private static func rectSignature(_ rect: CGRect) -> String {
+  private nonisolated static func rectSignature(_ rect: CGRect) -> String {
     let standardized = rect.standardized
     return "\(quantize(standardized.origin.x)),\(quantize(standardized.origin.y)),\(quantize(standardized.size.width)),\(quantize(standardized.size.height))"
   }
 
-  private static func pointSignature(_ point: CGPoint) -> String {
+  private nonisolated static func pointSignature(_ point: CGPoint) -> String {
     "\(quantize(point.x)),\(quantize(point.y))"
   }
 
-  private static func colorSignature(_ color: Color) -> String {
+  private nonisolated static func colorSignature(_ color: Color) -> String {
     guard let rgba = RGBAColor(color: color) else {
       return String(reflecting: color)
     }
@@ -615,11 +615,11 @@ private struct DragFallbackSignature: Equatable {
     return "\(pointer)|\(quantize(image.size.width))x\(quantize(image.size.height))"
   }
 
-  private static func quantize(_ value: CGFloat) -> Int64 {
+  private nonisolated static func quantize(_ value: CGFloat) -> Int64 {
     Int64((value * 10_000).rounded())
   }
 
-  private static func quantize(_ value: Double) -> Int64 {
+  private nonisolated static func quantize(_ value: Double) -> Int64 {
     Int64((value * 10_000).rounded())
   }
 }

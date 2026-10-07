@@ -1,5 +1,5 @@
 //
-//  VideoPlayerSection.swift
+//  VideoEditorVideoPlayerSection.swift
 //  Snapzy
 //
 //  NSViewRepresentable wrapper for AVPlayerView
@@ -12,7 +12,7 @@ import SwiftUI
 struct VideoPlayerSection: NSViewRepresentable {
   let player: AVPlayer
 
-  func makeNSView(context: Context) -> AVPlayerView {
+  func makeNSView(context _: Context) -> AVPlayerView {
     let view = AVPlayerView()
     view.player = player
     view.controlsStyle = .none
@@ -21,7 +21,7 @@ struct VideoPlayerSection: NSViewRepresentable {
     return view
   }
 
-  func updateNSView(_ nsView: AVPlayerView, context: Context) {
+  func updateNSView(_: AVPlayerView, context _: Context) {
     // Player is managed by state, no updates needed
   }
 }
