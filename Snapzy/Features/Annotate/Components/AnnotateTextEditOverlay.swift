@@ -53,12 +53,23 @@ struct TextEditOverlay: View {
 
         ZStack(alignment: .topLeading) {
           if annotation.properties.textPresentation != .plain {
-            TextBubbleShape(
+            let bubbleShape = TextBubbleShape(
               tailTarget: annotation.properties.textPresentation == .callout ? relativeTailTarget : nil,
               fontSize: displayFont.pointSize,
               cornerRadius: annotation.properties.cornerRadius * scale
             )
+            let borderVisible = annotation.properties.isBorderEnabled
+              && !AnnotateColorPaletteStore.isClear(annotation.properties.textBorderColor)
+              && annotation.properties.textBorderWidth > 0
+            bubbleShape
               .fill(annotation.properties.fillColor)
+            if borderVisible {
+              bubbleShape
+                .stroke(
+                  annotation.properties.textBorderColor,
+                  lineWidth: max(1, annotation.properties.textBorderWidth * scale)
+                )
+            }
           }
 
           InlineAnnotationTextEditor(
@@ -147,15 +158,19 @@ struct TextEditOverlay: View {
   }
 }
 
-private struct TextBubbleShape: Shape {
+/// Shared by the live editing overlay and the saved-style hover preview so both
+/// draw the same bubble as the canvas renderer.
+struct TextBubbleShape: Shape {
   let tailTarget: CGPoint?
   let fontSize: CGFloat
   let cornerRadius: CGFloat
 
   func path(in rect: CGRect) -> Path {
-    let resolvedCornerRadius = cornerRadius > 0
-      ? min(cornerRadius, min(rect.width, rect.height) * 0.46)
-      : TextBubbleGeometry.cornerRadius(in: rect, fontSize: fontSize)
+    let resolvedCornerRadius = TextBubbleGeometry.resolvedCornerRadius(
+      storedValue: cornerRadius,
+      in: rect,
+      fontSize: fontSize
+    )
     return Path(
       TextBubbleGeometry.bubblePath(
         in: rect,
@@ -277,6 +292,8 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     func textDidChange(_ notification: Notification) {
       guard !isApplyingExternalText,
             let textView = notification.object as? NSTextView else { return }
+      // 跳过 IME 候选组合阶段，避免 frame 重算导致候选字换行
+      guard !textView.hasMarkedText() else { return }
       text.wrappedValue = textView.string
     }
 
@@ -286,6 +303,10 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
 
     func textDidEndEditing(_ notification: Notification) {
       guard let textView = notification.object as? UndoIsolatedTextView else { return }
+      // 确保 IME 候选期间积累的文字在结束时同步到 state
+      if text.wrappedValue != textView.string {
+        text.wrappedValue = textView.string
+      }
       textView.onCommit?()
     }
   }

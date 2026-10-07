@@ -773,8 +773,11 @@ final class AnnotateCoreTests: XCTestCase {
     XCTAssertEqual(shiftedLine.bounds, line.bounds.offsetBy(dx: 14, dy: -6))
   }
 
+  /// A text box has no user-pinnable width: `b188aad5f` removed the width handles and
+  /// made the box auto-size to its content. Editing the text therefore **grows** the
+  /// width instead of holding it, while the top-left anchor stays put.
   @MainActor
-  func testAnnotateState_updateTextKeepsWidthAndTopLeftAnchor() throws {
+  func testAnnotateState_updateTextAutoSizesWidthAndKeepsTopLeftAnchor() throws {
     let state = makeAnnotateState()
     state.sourceImage = NSImage(size: CGSize(width: 300, height: 200))
     let originalBounds = CGRect(x: 20, y: 140, width: 80, height: 28)
@@ -793,8 +796,44 @@ final class AnnotateCoreTests: XCTestCase {
     let resized = try XCTUnwrap(state.annotations.first)
     XCTAssertEqual(resized.bounds.minX, originalBounds.minX, accuracy: 0.0001)
     XCTAssertEqual(resized.bounds.maxY, originalBounds.maxY, accuracy: 0.0001)
-    XCTAssertEqual(resized.bounds.width, originalBounds.width, accuracy: 0.0001)
+    XCTAssertGreaterThan(resized.bounds.width, originalBounds.width)
+    XCTAssertLessThanOrEqual(
+      resized.bounds.maxX,
+      state.activeAnnotationBounds.maxX + 0.0001
+    )
     XCTAssertGreaterThan(resized.bounds.height, originalBounds.height)
+  }
+
+  /// Dragging a text box is a pure translation, so it must not cost the box its
+  /// content-driven width: the next edit grows from the dragged origin and the stored
+  /// width is recomputed from the text rather than replayed from the drag.
+  @MainActor
+  func testAnnotateState_updateTextAfterDraggingAnchorsToTheDraggedPosition() throws {
+    let state = makeAnnotateState()
+    state.sourceImage = NSImage(size: CGSize(width: 400, height: 300))
+    let annotation = AnnotationItem(
+      type: .text(""),
+      bounds: CGRect(x: 40, y: 200, width: 120, height: 30),
+      properties: AnnotationProperties(fontSize: 18)
+    )
+    state.annotations = [annotation]
+
+    let dragged = annotation.bounds.offsetBy(dx: 60, dy: -40)
+    state.updateAnnotationBounds(id: annotation.id, bounds: dragged)
+
+    let afterDrag = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(afterDrag.bounds, dragged)
+
+    state.updateAnnotationText(id: annotation.id, text: "A much longer textbox value")
+
+    let afterEdit = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(afterEdit.bounds.minX, dragged.minX, accuracy: 0.0001)
+    XCTAssertEqual(afterEdit.bounds.maxY, dragged.maxY, accuracy: 0.0001)
+    XCTAssertGreaterThan(afterEdit.bounds.width, dragged.width)
+    XCTAssertLessThanOrEqual(
+      afterEdit.bounds.maxX,
+      state.activeAnnotationBounds.maxX + 0.0001
+    )
   }
 
   @MainActor
@@ -846,13 +885,24 @@ final class AnnotateCoreTests: XCTestCase {
   }
 
   func testAnnotateTextLayout_textEditorInsetScalesWithCanvasZoom() {
+    let unitInset = AnnotateTextLayout.textEditorInset(scale: 1)
+
     let halfScaleInset = AnnotateTextLayout.textEditorInset(scale: 0.5)
-    XCTAssertEqual(halfScaleInset.width, AnnotateTextLayout.horizontalPadding * 0.5, accuracy: 0.0001)
-    XCTAssertEqual(halfScaleInset.height, AnnotateTextLayout.verticalPadding * 0.5, accuracy: 0.0001)
+    XCTAssertEqual(halfScaleInset.width, unitInset.width * 0.5, accuracy: 0.0001)
+    XCTAssertEqual(halfScaleInset.height, unitInset.height * 0.5, accuracy: 0.0001)
 
     let doubleScaleInset = AnnotateTextLayout.textEditorInset(scale: 2)
-    XCTAssertEqual(doubleScaleInset.width, AnnotateTextLayout.horizontalPadding * 2, accuracy: 0.0001)
-    XCTAssertEqual(doubleScaleInset.height, AnnotateTextLayout.verticalPadding * 2, accuracy: 0.0001)
+    XCTAssertEqual(doubleScaleInset.width, unitInset.width * 2, accuracy: 0.0001)
+    XCTAssertEqual(doubleScaleInset.height, unitInset.height * 2, accuracy: 0.0001)
+  }
+
+  func testAnnotateTextLayout_textEditorInsetMatchesBubbleInsets() {
+    let fontSize: CGFloat = 18
+    let inset = AnnotateTextLayout.textEditorInset(scale: 1, fontSize: fontSize)
+    let expected = TextBubbleGeometry.contentInsets(for: .label, fontSize: fontSize)
+
+    XCTAssertEqual(inset.width, expected.width, accuracy: 0.0001)
+    XCTAssertEqual(inset.height, expected.height, accuracy: 0.0001)
   }
 
   func testAnnotationFactory_createsCounterCenteredAtStart() {
@@ -2597,6 +2647,35 @@ final class AnnotateCoreTests: XCTestCase {
     state.undo()
 
     XCTAssertEqual(try XCTUnwrap(state.annotations.first).properties.strokeWidth, 3)
+    XCTAssertFalse(state.canUndo)
+  }
+
+  /// The corner-radius slider drags through many values per gesture. Bracketing
+  /// it with `setQuickPropertiesControlEditing` keeps that to one undo entry and,
+  /// more visibly, stops every tick from taking a fresh document snapshot — which
+  /// re-rendered the bars below the canvas on each frame.
+  @MainActor
+  func testCornerRadiusSliderGestureRecordsSingleUndoCheckpoint() throws {
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    let annotation = AnnotationItem(
+      type: .text("Rounded"),
+      bounds: CGRect(x: 20, y: 20, width: 180, height: 40),
+      properties: AnnotationProperties(cornerRadius: 4, textPresentation: .label)
+    )
+    state.annotations = [annotation]
+    state.setSelectedAnnotationIds([annotation.id])
+
+    state.setQuickPropertiesControlEditing(true)
+    for radius in stride(from: CGFloat(4), through: 40, by: 4) {
+      state.quickCornerRadiusBinding.wrappedValue = radius
+    }
+    state.setQuickPropertiesControlEditing(false)
+
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first).properties.cornerRadius, 40)
+
+    state.undo()
+
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first).properties.cornerRadius, 4)
     XCTAssertFalse(state.canUndo)
   }
 

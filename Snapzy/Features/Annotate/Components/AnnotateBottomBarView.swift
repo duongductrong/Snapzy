@@ -41,6 +41,53 @@ private extension View {
   }
 }
 
+/// The Annotate / Mockup / Preview switch.
+///
+/// Isolating the segmented control in an `Equatable` view means unrelated
+/// `AnnotateState` changes do not rebuild and re-measure it. Its intrinsic
+/// width stays stable without pinning it to a hard-coded frame.
+private struct AnnotateModeToggle: View, Equatable {
+  let mode: AnnotateState.EditorMode
+  let onSelect: (AnnotateState.EditorMode) -> Void
+
+  static func == (lhs: Self, rhs: Self) -> Bool {
+    lhs.mode == rhs.mode
+  }
+
+  var body: some View {
+    LiquidGlassSegmentedControl(
+      items: AnnotateState.EditorMode.allCases,
+      selection: Binding(get: { mode }, set: onSelect),
+      activeGlassTint: nil,
+      controlHeight: ControlMetrics.bottomBarControl
+    ) { selectedMode in
+      HStack(spacing: 5) {
+        Image(systemName: Self.icon(for: selectedMode))
+          .font(.system(size: 11, weight: .medium))
+        Text(Self.title(for: selectedMode))
+          .lineLimit(1)
+      }
+      .help(Self.title(for: selectedMode))
+    }
+  }
+
+  private static func icon(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate: "pencil.and.outline"
+    case .mockup: "cube.transparent"
+    case .preview: "eye"
+    }
+  }
+
+  private static func title(for mode: AnnotateState.EditorMode) -> String {
+    switch mode {
+    case .annotate: L10n.AnnotateUI.modeAnnotate
+    case .mockup: L10n.AnnotateUI.modeMockup
+    case .preview: L10n.AnnotateUI.modePreview
+    }
+  }
+}
+
 /// Bottom bar containing zoom controls and action buttons
 struct AnnotateBottomBarView: View {
   @ObservedObject var state: AnnotateState
@@ -214,8 +261,13 @@ struct AnnotateBottomBarView: View {
       }
     } label: {
       HStack(spacing: 4) {
+        // Monospaced digits in a fixed box: the chip's width must not follow
+        // the number, or the whole left group slides sideways as the zoom
+        // crosses 100% / 9% and back, taking the mode buttons with it.
         Text("\(state.currentDisplayedZoomPercent)%")
           .font(.system(size: 11.5, weight: .medium))
+          .monospacedDigit()
+          .frame(width: 48, alignment: .trailing)
         Image(systemName: "chevron.down")
           .font(.system(size: 8, weight: .semibold))
       }
@@ -257,42 +309,8 @@ struct AnnotateBottomBarView: View {
   }
 
   private var modeToggle: some View {
-    LiquidGlassSegmentedControl(
-      items: AnnotateState.EditorMode.allCases,
-      selection: $state.editorMode,
-      activeGlassTint: nil,
-      controlHeight: ControlMetrics.bottomBarControl
-    ) { mode in
-      HStack(spacing: 5) {
-        Image(systemName: modeIcon(for: mode))
-          .font(.system(size: 11, weight: .medium))
-        Text(modeTitle(for: mode))
-          .lineLimit(1)
-      }
-      .help(modeTitle(for: mode))
-    }
-  }
-
-  private func modeIcon(for mode: AnnotateState.EditorMode) -> String {
-    switch mode {
-    case .annotate:
-      return "pencil.and.outline"
-    case .mockup:
-      return "cube.transparent"
-    case .preview:
-      return "eye"
-    }
-  }
-
-  private func modeTitle(for mode: AnnotateState.EditorMode) -> String {
-    switch mode {
-    case .annotate:
-      return L10n.AnnotateUI.modeAnnotate
-    case .mockup:
-      return L10n.AnnotateUI.modeMockup
-    case .preview:
-      return L10n.AnnotateUI.modePreview
-    }
+    AnnotateModeToggle(mode: state.editorMode) { state.editorMode = $0 }
+      .equatable()
   }
 
   // MARK: - Drag Handle (Liquid Glass)
