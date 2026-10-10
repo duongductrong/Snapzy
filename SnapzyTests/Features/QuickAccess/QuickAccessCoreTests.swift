@@ -1035,6 +1035,46 @@ final class QuickAccessCoreTests: XCTestCase {
     )
   }
 
+  func testQuickAccessPinWindow_routesWindowMagnifyToImageScrollView() {
+    let image = NSImage(size: CGSize(width: 400, height: 300))
+    let state = QuickAccessPinWindowState(
+      id: UUID(),
+      url: URL(fileURLWithPath: "/tmp/pinned.png"),
+      image: image,
+      thumbnail: image,
+      baseSize: CGSize(width: 400, height: 300),
+      zoomMode: .fixedViewport
+    )
+    Self.retainedPinWindowStates.append(state)
+    let scrollView = QuickAccessPinImageScrollView(frame: NSRect(origin: .zero, size: state.baseSize))
+    scrollView.isLockedProvider = { state.isLocked }
+    scrollView.onViewportChange = { magnification, panOffset in
+      state.updateViewport(magnification: magnification, panOffset: panOffset)
+    }
+    scrollView.update(
+      image: image,
+      viewportSize: state.baseSize,
+      imageSize: state.baseSize,
+      zoomMode: .fixedViewport,
+      magnification: 1,
+      panOffset: .zero
+    )
+    let window = QuickAccessPinWindow(
+      contentRect: NSRect(x: 0, y: 0, width: 400, height: 300),
+      state: state
+    )
+    defer { window.close() }
+    window.contentView = scrollView
+    window.contentView?.layoutSubtreeIfNeeded()
+
+    window.sendEvent(QuickAccessPinMockMagnifyEvent(delta: 0.5, location: NSPoint(x: 200, y: 150)))
+    XCTAssertEqual(state.zoomFactor, 1.5, accuracy: 0.001)
+
+    state.isLocked = true
+    window.sendEvent(QuickAccessPinMockMagnifyEvent(delta: 0.5, location: NSPoint(x: 200, y: 150)))
+    XCTAssertEqual(state.zoomFactor, 1.5, accuracy: 0.001)
+  }
+
   func testQuickAccessPinWindow_lockedModeIsClickThroughExceptUnlockButton() {
     let image = NSImage(size: CGSize(width: 400, height: 300))
     let state = QuickAccessPinWindowState(
@@ -1105,8 +1145,7 @@ final class QuickAccessCoreTests: XCTestCase {
     let zoomBeforeRejectedScrolls = state.zoomFactor
     let panBeforeRejectedScrolls = state.panOffset
     for modifier in [
-      NSEvent.ModifierFlags.command,
-      .shift,
+      NSEvent.ModifierFlags.shift,
       .option,
       .control,
     ] {
@@ -1118,6 +1157,24 @@ final class QuickAccessCoreTests: XCTestCase {
       XCTAssertEqual(scrollView.scrollAction(for: event), .reject("modifiers"))
       scrollView.scrollWheel(with: event)
     }
+
+    let commandScrollEvent = QuickAccessPinMockScrollWheelEvent(
+      deltaY: 10,
+      modifierFlags: [.command],
+      hasPreciseDeltas: true
+    )
+    XCTAssertEqual(scrollView.scrollAction(for: commandScrollEvent), .magnify)
+    scrollView.scrollWheel(with: commandScrollEvent)
+    XCTAssertEqual(state.zoomFactor, zoomBeforeRejectedScrolls * 0.9, accuracy: 0.001)
+
+    let commandHorizontalScrollEvent = QuickAccessPinMockScrollWheelEvent(
+      deltaX: 10,
+      deltaY: 0,
+      modifierFlags: [.command],
+      hasPreciseDeltas: true
+    )
+    XCTAssertEqual(scrollView.scrollAction(for: commandHorizontalScrollEvent), .reject("horizontalOrZeroDelta"))
+
     let coarseEvent = QuickAccessPinMockScrollWheelEvent(
       deltaY: 10,
       hasPreciseDeltas: false
@@ -1133,7 +1190,7 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertEqual(scrollView.scrollAction(for: lockedEvent), .reject("locked"))
     scrollView.scrollWheel(with: lockedEvent)
 
-    XCTAssertEqual(state.zoomFactor, zoomBeforeRejectedScrolls, accuracy: 0.001)
+    XCTAssertEqual(state.zoomFactor, zoomBeforeRejectedScrolls * 0.9, accuracy: 0.001)
     XCTAssertEqual(state.panOffset, panBeforeRejectedScrolls)
   }
 

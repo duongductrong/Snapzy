@@ -137,7 +137,11 @@ final class QuickAccessPinWindow: NSPanel {
 
   override func sendEvent(_ event: NSEvent) {
     switch event.type {
-    case .magnify, .scrollWheel:
+    case .magnify:
+      if !routeMagnifyToImageScrollView(event) {
+        super.sendEvent(event)
+      }
+    case .scrollWheel:
       super.sendEvent(event)
     case .leftMouseDown:
       beginBackgroundDragIfEligible(with: event)
@@ -161,6 +165,21 @@ final class QuickAccessPinWindow: NSPanel {
   override func resignKey() {
     backgroundDrag.end()
     super.resignKey()
+  }
+
+  @discardableResult
+  private func routeMagnifyToImageScrollView(_ event: NSEvent) -> Bool {
+    guard let contentView, let pinState, !pinState.isLocked else { return false }
+    let hitView = contentView.hitTest(event.locationInWindow)
+    var responder: NSResponder? = hitView
+    while let current = responder {
+      if let scrollView = current as? QuickAccessPinImageScrollView {
+        scrollView.magnify(with: event)
+        return true
+      }
+      responder = current.nextResponder
+    }
+    return false
   }
 
   private var isMouseMonitorsSuspended = false
