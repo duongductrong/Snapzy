@@ -25,15 +25,17 @@ final class QuickLookCaptureTests: XCTestCase {
       captures: [quickLookCapture]
     )
 
-    let restoredPixel = pixel(in: result, x: 45, y: 35)
+    // Bottom-left frame (40, 30, 20, 30) lands on top-left rows 40..<70.
+    // Row 65 is inside that rect and outside the old mirror (rows 30..<60).
+    let restoredPixel = pixel(in: result, x: 45, y: 65)
     XCTAssertGreaterThan(restoredPixel.0, 200)
     XCTAssertGreaterThan(restoredPixel.1, 200)
     XCTAssertGreaterThan(restoredPixel.2, 200)
 
-    let untouchedPixel = pixel(in: result, x: 10, y: 10)
-    XCTAssertLessThan(untouchedPixel.0, 50)
-    XCTAssertLessThan(untouchedPixel.1, 50)
-    XCTAssertLessThan(untouchedPixel.2, 50)
+    let mirroredPixel = pixel(in: result, x: 45, y: 35)
+    XCTAssertLessThan(mirroredPixel.0, 50)
+    XCTAssertLessThan(mirroredPixel.1, 50)
+    XCTAssertLessThan(mirroredPixel.2, 50)
   }
 
   private func solidImage(width: Int, height: Int, red: CGFloat, green: CGFloat, blue: CGFloat) -> CGImage {
