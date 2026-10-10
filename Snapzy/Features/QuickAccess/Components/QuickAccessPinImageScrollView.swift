@@ -320,8 +320,40 @@ final class QuickAccessPinImageScrollView: NSScrollView {
     }
     publishViewportChange()
     if zoomMode == .windowFollowsImage {
-      stateResizeRequest?(displaySizeForZoom(target), liveAnchorFraction(windowPoint: windowPoint))
+      if window == nil {
+        stateResizeRequest?(displaySizeForZoom(target), liveAnchorFraction(windowPoint: windowPoint))
+      } else {
+        performWindowResizingZoom(target: target, contentPoint: point, windowPoint: windowPoint)
+      }
     }
+  }
+
+  private func performWindowResizingZoom(target: CGFloat, contentPoint: CGPoint, windowPoint: CGPoint) {
+    guard let window else { return }
+    let cursorBase = convert(windowPoint, to: nil)
+    let cursorScreen = window.convertToScreen(NSRect(origin: cursorBase, size: .zero)).origin
+    let documentAnchor = imageView.convert(cursorBase, from: nil)
+
+    stateResizeRequest?(displaySizeForZoom(target), liveAnchorFraction(windowPoint: windowPoint))
+    window.contentView?.layoutSubtreeIfNeeded()
+    reanchor(imagePoint: documentAnchor, atScreenPoint: cursorScreen)
+  }
+
+  private func reanchor(imagePoint: CGPoint, atScreenPoint cursorScreen: CGPoint) {
+    guard let window else { return }
+    let cursorBase = window.convertFromScreen(NSRect(origin: cursorScreen, size: .zero)).origin
+    let currentImagePoint = imageView.convert(cursorBase, from: nil)
+    let delta = NSPoint(
+      x: currentImagePoint.x - imagePoint.x,
+      y: currentImagePoint.y - imagePoint.y
+    )
+    guard abs(delta.x) > 0.001 || abs(delta.y) > 0.001 else { return }
+    let origin = contentView.bounds.origin
+    performStateApplication {
+      contentView.setBoundsOrigin(NSPoint(x: origin.x + delta.x, y: origin.y + delta.y))
+      reflectScrolledClipView(contentView)
+    }
+    publishViewportChange()
   }
 
   var stateResizeRequest: ((CGSize, CGPoint) -> Void)?
