@@ -135,6 +135,7 @@ final class HistoryFloatingPanelController {
     if reduceMotion {
       panel.alphaValue = 0
       panel.setFrame(targetFrame, display: false)
+      panel.installLocalArrowEventMonitor()
       panel.makeKeyAndOrderFront(nil)
       NSAnimationContext.runAnimationGroup({ context in
         context.duration = 0.18
@@ -150,6 +151,7 @@ final class HistoryFloatingPanelController {
 
     panel.alphaValue = 0
     panel.setFrame(transitionFrame(for: targetFrame, isShowing: true), display: false)
+    panel.installLocalArrowEventMonitor()
     panel.makeKeyAndOrderFront(nil)
 
     NSAnimationContext.runAnimationGroup({ context in
@@ -187,6 +189,7 @@ final class HistoryFloatingPanelController {
       return
     }
 
+    panel.removeLocalArrowEventMonitor()
     state = .hiding
     let targetFrame = reduceMotion ? panel.frame : transitionFrame(for: panel.frame, isShowing: false)
 

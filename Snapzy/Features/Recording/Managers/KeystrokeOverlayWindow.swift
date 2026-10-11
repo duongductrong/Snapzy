@@ -38,7 +38,7 @@ final class KeystrokeOverlayWindow: NSWindow {
     backgroundColor = .clear
     hasShadow = false
     isReleasedWhenClosed = false
-    level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+    level = .screenSaver
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     ignoresMouseEvents = true
   }

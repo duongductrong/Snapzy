@@ -232,6 +232,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "capture", "screenshot", "show_magnifier_color_panel", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotShowMagnifierColorPanel)
     }
+    collectBool(&reader, "capture", "screenshot", "include_window_shadow", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.captureIncludeWindowShadow)
+    }
     collectBool(&reader, "capture", "scrolling", "show_hints", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.scrollingCaptureShowHints)
     }
@@ -376,6 +379,17 @@ enum SnapzyConfigurationImporter {
       }
       mutations.append {
         QuickAccessTrackpadSwipeModeStore.shared.setMode(mode)
+      }
+    }
+
+    if let zoomModeString = reader.string("quick_access", "pin_zoom_mode") {
+      guard let mode = QuickAccessPinZoomMode(rawValue: zoomModeString) else {
+        reader.error("quick_access.pin_zoom_mode must be fixedViewport or windowFollowsImage")
+        return
+      }
+      mutations.append {
+        QuickAccessPinZoomModeStore.shared.setMode(mode)
+        QuickAccessPinWindowManager.shared.setPinZoomMode(mode)
       }
     }
 

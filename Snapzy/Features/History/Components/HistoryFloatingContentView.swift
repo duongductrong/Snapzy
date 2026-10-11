@@ -18,7 +18,9 @@ struct HistoryFloatingContentView: View {
   @State private var selectedCompactFilter: CaptureHistoryType? = nil
   @State private var usesExplicitCompactFilterSelection = false
   @State private var selectedId: UUID? = nil
+  @State private var expandedFocusedId: UUID? = nil
   @State private var expandedSelectedIds: Set<UUID> = []
+  @State private var expandedRangeBaselineIds: Set<UUID> = []
   @State private var expandedLastSelectedId: UUID?
   @State private var compactScrollOffset: CGFloat = 0
   @State private var compactSelectionRevealTrigger = 0
@@ -115,6 +117,7 @@ struct HistoryFloatingContentView: View {
         syncSelectionIfNeeded()
       }
       .onChange(of: expandedRecordIDs) { _ in
+        syncSelectionIfNeeded()
         pruneExpandedSelection()
         prefetchExpandedThumbnailsIfNeeded()
       }
@@ -141,6 +144,12 @@ struct HistoryFloatingContentView: View {
         guard notification.object is HistoryFloatingPanel else { return }
         guard manager.presentationMode == .expanded else { return }
         selectAllExpandedRecords()
+      }
+      .onReceive(NotificationCenter.default.publisher(for: .historyMoveFocus)) { notification in
+        guard notification.object is HistoryFloatingPanel,
+              let keyCode = notification.userInfo?["keyCode"] as? UInt16,
+              let direction = HistoryFloatingNavigationDirection(keyCode: keyCode) else { return }
+        moveFocus(direction, extendingSelection: notification.userInfo?["extendsSelection"] as? Bool == true)
       }
   }
 
@@ -470,30 +479,42 @@ struct HistoryFloatingContentView: View {
   }
 
   private var expandedGrid: some View {
-    ScrollView(.vertical, showsIndicators: false) {
-      LazyVGrid(columns: expandedColumns, spacing: 12) {
-        ForEach(expandedRecords) { record in
-          HistoryExpandedCaptureCardView(
-            record: record,
-            isSelected: expandedSelectedIds.contains(record.id),
-            backgroundStyle: backgroundStyle,
-            onTap: {
-              selectExpandedRecord(record)
-            },
-            reservedScrollAxis: expandedRecords.count > expandedColumns.count ? .vertical : nil
-          )
-          .equatable()
-          .contextMenu {
-            HistoryContextMenu(record: record)
+    ScrollViewReader { proxy in
+      ScrollView(.vertical, showsIndicators: false) {
+        LazyVGrid(columns: expandedColumns, spacing: 12) {
+          ForEach(expandedRecords) { record in
+            HistoryExpandedCaptureCardView(
+              record: record,
+              isSelected: expandedSelectedIds.contains(record.id),
+              isFocused: expandedFocusedId == record.id,
+              emphasisMode: .focus,
+              backgroundStyle: backgroundStyle,
+              onTap: {
+                selectExpandedRecord(record)
+              },
+              reservedScrollAxis: expandedRecords.count > expandedColumns.count ? .vertical : nil
+            )
+            .equatable()
+            .id(record.id)
+            .zIndex(expandedFocusedId == record.id ? 1 : 0)
+            .contextMenu {
+              HistoryContextMenu(record: record)
+            }
           }
         }
-      }
-      .padding(.horizontal, 6)
-      .padding(.top, 4)
-      .padding(.bottom, 88)
+        .padding(.horizontal, 6)
+        .padding(.top, 4)
+        .padding(.bottom, 88)
 
-      HistoryScrollViewReader(controller: scrollController)
-        .frame(height: 0)
+        HistoryScrollViewReader(controller: scrollController)
+          .frame(height: 0)
+      }
+      .onChange(of: expandedFocusedId) { id in
+        guard let id else { return }
+        withAnimation(.easeInOut(duration: 0.18)) {
+          proxy.scrollTo(id)
+        }
+      }
     }
     .overlay(
       HistoryFloatingScrollbar(controller: scrollController, scale: resolvedPanelScale)
@@ -727,6 +748,17 @@ struct HistoryFloatingContentView: View {
   private func syncSelectionIfNeeded() {
     guard !activeRecords.isEmpty else {
       selectedId = nil
+      if manager.presentationMode == .expanded {
+        expandedFocusedId = nil
+      }
+      return
+    }
+
+    if manager.presentationMode == .expanded {
+      expandedFocusedId = HistoryFloatingNavigation.initialFocusedID(
+        in: activeRecordIDs,
+        currentID: expandedFocusedId
+      )
       return
     }
 
@@ -747,48 +779,90 @@ struct HistoryFloatingContentView: View {
   private func selectExpandedRecord(_ record: CaptureHistoryRecord) {
     let flags = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
 
-    if flags.contains(.shift), let expandedLastSelectedId,
-      let startIndex = expandedRecords.firstIndex(where: { $0.id == expandedLastSelectedId }),
-      let endIndex = expandedRecords.firstIndex(where: { $0.id == record.id })
-    {
-      let range = min(startIndex, endIndex)...max(startIndex, endIndex)
-      expandedSelectedIds.formUnion(expandedRecords[range].map(\.id))
+    if flags.contains(.shift) {
+      let rangeSelection = HistoryFloatingNavigation.inclusiveRangeIDs(
+        orderedIDs: expandedRecordIDs,
+        anchorID: expandedLastSelectedId,
+        previousFocusedID: expandedFocusedId,
+        focusedID: record.id,
+        baselineIDs: expandedRangeBaselineIds
+      )
+      expandedSelectedIds = rangeSelection.selection
+      expandedLastSelectedId = rangeSelection.anchor
     } else if flags.contains(.command) {
       if expandedSelectedIds.contains(record.id) {
         expandedSelectedIds.remove(record.id)
       } else {
         expandedSelectedIds.insert(record.id)
       }
-      expandedLastSelectedId = record.id
-    } else if flags.contains(.shift) {
-      expandedSelectedIds.insert(record.id)
+      expandedRangeBaselineIds = expandedSelectedIds
       expandedLastSelectedId = record.id
     } else {
       expandedSelectedIds = [record.id]
+      expandedRangeBaselineIds = expandedSelectedIds
       expandedLastSelectedId = record.id
     }
 
-    selectedId = record.id
+    expandedFocusedId = record.id
     manager.focusPanel()
+  }
+
+  private func moveFocus(_ direction: HistoryFloatingNavigationDirection, extendingSelection: Bool) {
+    switch manager.presentationMode {
+    case .compact:
+      guard let selectedId,
+            let currentIndex = compactRecords.firstIndex(where: { $0.id == selectedId }),
+            let targetIndex = HistoryFloatingNavigation.compactTargetIndex(
+              from: currentIndex,
+              direction: direction,
+              count: compactRecords.count
+            ),
+            targetIndex != currentIndex else { return }
+      self.selectedId = compactRecords[targetIndex].id
+      compactSelectionRevealTrigger += 1
+    case .expanded:
+      guard let expandedFocusedId else { return }
+      let transition = HistoryFloatingNavigation.expandedFocusTransition(
+        from: expandedFocusedId,
+        direction: direction,
+        orderedIDs: expandedRecordIDs,
+        selectedIDs: expandedSelectedIds,
+        extendingSelection: extendingSelection,
+        anchorID: expandedLastSelectedId,
+        baselineIDs: expandedRangeBaselineIds
+      )
+      guard let nextID = transition.focusedID else { return }
+      guard nextID != expandedFocusedId else { return }
+      self.expandedFocusedId = nextID
+      expandedSelectedIds = transition.selectedIDs
+      expandedLastSelectedId = transition.anchorID
+      expandedRangeBaselineIds = transition.baselineIDs
+    }
   }
 
   private func selectAllExpandedRecords() {
     expandedSelectedIds = Set(expandedRecords.map(\.id))
+    expandedRangeBaselineIds = expandedSelectedIds
     expandedLastSelectedId = expandedRecords.last?.id
   }
 
   private func clearExpandedSelection() {
     expandedSelectedIds.removeAll()
+    expandedRangeBaselineIds.removeAll()
     expandedLastSelectedId = nil
   }
 
   private func pruneExpandedSelection() {
-    let visibleIds = Set(expandedRecordIDs)
-    expandedSelectedIds.formIntersection(visibleIds)
-
-    if let expandedLastSelectedId, !visibleIds.contains(expandedLastSelectedId) {
-      self.expandedLastSelectedId = expandedSelectedIds.first
-    }
+    let prunedSelection = HistoryFloatingNavigation.prunedExpandedSelection(
+      orderedIDs: expandedRecordIDs,
+      selectedIDs: expandedSelectedIds,
+      baselineIDs: expandedRangeBaselineIds,
+      anchorID: expandedLastSelectedId,
+      focusedID: expandedFocusedId
+    )
+    expandedSelectedIds = prunedSelection.selection
+    expandedRangeBaselineIds = prunedSelection.baseline
+    expandedLastSelectedId = prunedSelection.anchor
   }
 
   private func openFullHistory() {
@@ -801,8 +875,9 @@ struct HistoryFloatingContentView: View {
       return
     }
 
-    guard let selectedId,
-      let record = activeRecords.first(where: { $0.id == selectedId })
+    let focusedID = manager.presentationMode == .expanded ? expandedFocusedId : selectedId
+    guard let focusedID,
+      let record = activeRecords.first(where: { $0.id == focusedID })
     else { return }
 
     HistoryWindowController.shared.copyToClipboard([record])
@@ -810,14 +885,10 @@ struct HistoryFloatingContentView: View {
 
   private func openSelectedRecord() {
     if manager.presentationMode == .expanded {
-      if expandedSelectedRecords.count == 1, let record = expandedSelectedRecords.first {
-        HistoryWindowController.shared.openItem(record)
-        return
-      }
-
-      if expandedSelectedRecords.count > 1 {
-        return
-      }
+      guard let expandedFocusedId,
+            let record = activeRecords.first(where: { $0.id == expandedFocusedId }) else { return }
+      HistoryWindowController.shared.openItem(record)
+      return
     }
 
     guard let selectedId,

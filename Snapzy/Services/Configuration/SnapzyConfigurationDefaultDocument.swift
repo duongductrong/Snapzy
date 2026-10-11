@@ -63,6 +63,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("delayed_capture_seconds", CaptureDelayOption.defaultValue.seconds)
     writer.value("show_selection_area_overlay", true)
     writer.value("reverse_magnifier_zoom_direction", false)
+    writer.value("include_window_shadow", WindowShadowPreference.defaultIncludeShadow)
 
     writer.section("capture.scrolling")
     writer.value("show_hints", true)
@@ -127,6 +128,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("two_finger_swipe_to_dismiss", true)
     writer.value("swipe_sensitivity", 1.0)
     writer.value("trackpad_swipe_mode", QuickAccessTrackpadSwipeMode.inverted.rawValue)
+    writer.value("pin_zoom_mode", QuickAccessPinZoomMode.defaultMode.rawValue)
     writer.value("swipe_left_action", "dismiss")
     writer.value("swipe_right_action", "dismiss")
     writer.value("hide_card_when_window_open", true)

@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import AppKit
+import Combine
 import SwiftUI
 import XCTest
 @testable import Snapzy
@@ -1214,6 +1215,1450 @@ final class AnnotateCoreTests: XCTestCase {
     XCTAssertEqual(resized.id, existing.id)
     XCTAssertEqual(resized.bounds, CGRect(x: 50, y: 50, width: 110, height: 90))
     XCTAssertEqual(state.selectedAnnotationId, existing.id)
+  }
+
+  // MARK: - Click an annotation's edge to select it with a drawing tool
+
+  @MainActor
+  private func makeClickSelectCanvas(
+    state: AnnotateState,
+    bounds: CGRect = CGRect(x: 0, y: 0, width: 400, height: 300)
+  ) -> DrawingCanvasNSView {
+    let canvas = DrawingCanvasNSView(state: state)
+    canvas.frame = CGRect(origin: .zero, size: bounds.size)
+    canvas.displayScale = 1
+    canvas.canvasBounds = bounds
+    return canvas
+  }
+
+  @MainActor
+  private func click(_ canvas: DrawingCanvasNSView, at point: CGPoint, modifierFlags: NSEvent.ModifierFlags = []) {
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: point, modifierFlags: modifierFlags))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: point, modifierFlags: modifierFlags))
+  }
+
+  @MainActor
+  private func drag(
+    _ canvas: DrawingCanvasNSView,
+    from start: CGPoint,
+    to end: CGPoint,
+    modifierFlags: NSEvent.ModifierFlags = []
+  ) {
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: start, modifierFlags: modifierFlags))
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: end))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: end))
+  }
+
+  func testEdgeBandContainsRectangleAndFilledRectangleOnlyNearTheOutline() {
+    for type in [AnnotationType.rectangle, .filledRectangle, .blur(.pixelated), .spotlight, .watermark("W")] {
+      // Outlined shapes widen the band by half the stroke width (6 + 4 / 2 = 8);
+      // blur and watermark keep the plain 6.
+      let tolerance: CGFloat
+      switch type {
+      case .blur(_), .watermark: tolerance = 6
+      default: tolerance = 8
+      }
+      let item = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 100, height: 80),
+        properties: AnnotationProperties(strokeWidth: 4)
+      )
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 100, y: 140), baseTolerance: 6), "\(type) left edge")
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 150, y: 180 + tolerance - 2), baseTolerance: 6), "\(type) just outside top edge")
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 100 + tolerance - 1, y: 140), baseTolerance: 6), "\(type) just inside left edge")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 150, y: 140), baseTolerance: 6), "\(type) interior")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 110, y: 140), baseTolerance: 6), "\(type) inside the band")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 90, y: 140), baseTolerance: 6), "\(type) outside the band")
+      // The full hit test still claims the interior.
+      XCTAssertTrue(item.containsPoint(CGPoint(x: 150, y: 140), baseTolerance: 6), "\(type) containsPoint interior")
+    }
+  }
+
+  func testEdgeBandContainsBlurAndWatermarkIgnoreStrokeWidthButOutlinedShapesKeepIt() {
+    // For blur strokeWidth is the blur strength and watermark draws no outline,
+    // so a high value must not widen the grab band. Tolerance stays 6.
+    for type in [AnnotationType.blur(.pixelated), .watermark("W")] {
+      let item = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 100, height: 80),
+        properties: AnnotationProperties(strokeWidth: 20)
+      )
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 103, y: 140), baseTolerance: 6), "\(type) inside the band")
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 95, y: 140), baseTolerance: 6), "\(type) outside, within the band")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 110, y: 140), baseTolerance: 6), "\(type) beyond the plain band")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 90, y: 140), baseTolerance: 6), "\(type) outside the band")
+
+      // A small strong blur keeps an interior instead of becoming all edge.
+      let small = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 20, height: 20),
+        properties: AnnotationProperties(strokeWidth: 20)
+      )
+      XCTAssertFalse(small.edgeBandContains(CGPoint(x: 110, y: 110), baseTolerance: 6), "\(type) small interior")
+      XCTAssertTrue(small.edgeBandContains(CGPoint(x: 103, y: 110), baseTolerance: 6), "\(type) small edge")
+    }
+
+    // Shapes that draw an outline at that width keep the wider band.
+    for type in [AnnotationType.rectangle, .filledRectangle, .spotlight] {
+      let item = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 100, height: 80),
+        properties: AnnotationProperties(strokeWidth: 20)
+      )
+      XCTAssertTrue(item.edgeBandContains(CGPoint(x: 110, y: 140), baseTolerance: 6), "\(type) wide outline band")
+      XCTAssertFalse(item.edgeBandContains(CGPoint(x: 150, y: 140), baseTolerance: 6), "\(type) interior")
+    }
+  }
+
+  func testBlurOccludesItsWholeBodyRegardlessOfStrength() {
+    let small = AnnotationItem(
+      type: .blur(.pixelated),
+      bounds: CGRect(x: 100, y: 100, width: 20, height: 20),
+      properties: AnnotationProperties(strokeWidth: 20)
+    )
+    XCTAssertTrue(small.occludesItemsBelow(at: CGPoint(x: 110, y: 110), baseTolerance: 6))
+    // Inside the body, edge band and occlusion agree: whatever the band claims
+    // there, the body covers.
+    for x in stride(from: CGFloat(100), through: 118, by: 2) {
+      for y in stride(from: CGFloat(100), through: 118, by: 2) {
+        let point = CGPoint(x: x, y: y)
+        if small.edgeBandContains(point, baseTolerance: 6) {
+          XCTAssertTrue(small.occludesItemsBelow(at: point, baseTolerance: 6), "\(point)")
+        }
+      }
+    }
+  }
+
+  func testEdgeBandContainsTinyShapeCountsWholeOuterRect() {
+    let tiny = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 100, y: 100, width: 10, height: 10),
+      properties: AnnotationProperties(strokeWidth: 4)
+    )
+    XCTAssertTrue(tiny.edgeBandContains(CGPoint(x: 105, y: 105), baseTolerance: 6))
+    XCTAssertTrue(tiny.edgeBandContains(CGPoint(x: 94, y: 105), baseTolerance: 6))
+    XCTAssertFalse(tiny.edgeBandContains(CGPoint(x: 90, y: 105), baseTolerance: 6))
+
+    let tinyOval = AnnotationItem(
+      type: .oval,
+      bounds: CGRect(x: 100, y: 100, width: 10, height: 10),
+      properties: AnnotationProperties(strokeWidth: 4)
+    )
+    XCTAssertTrue(tinyOval.edgeBandContains(CGPoint(x: 105, y: 105), baseTolerance: 6))
+    XCTAssertFalse(tinyOval.edgeBandContains(CGPoint(x: 90, y: 90), baseTolerance: 6))
+  }
+
+  func testEdgeBandContainsOvalOnlyNearThePerimeter() {
+    let oval = AnnotationItem(
+      type: .oval,
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 60),
+      properties: AnnotationProperties(strokeWidth: 4)
+    )
+    XCTAssertTrue(oval.edgeBandContains(CGPoint(x: 100, y: 130), baseTolerance: 6), "left vertex")
+    XCTAssertTrue(oval.edgeBandContains(CGPoint(x: 150, y: 165), baseTolerance: 6), "just outside top")
+    XCTAssertFalse(oval.edgeBandContains(CGPoint(x: 150, y: 130), baseTolerance: 6), "center")
+    XCTAssertFalse(oval.edgeBandContains(CGPoint(x: 85, y: 130), baseTolerance: 6), "outside")
+    // The bounding-box corner lies outside the ellipse band.
+    XCTAssertFalse(oval.edgeBandContains(CGPoint(x: 101, y: 101), baseTolerance: 6), "bounds corner")
+  }
+
+  func testEdgeBandContainsMatchesContainsPointForStrokeTextAndCounterTypes() {
+    let arrowGeometry = ArrowGeometry(start: CGPoint(x: 10, y: 10), end: CGPoint(x: 200, y: 120), style: .straight)
+    let items = [
+      AnnotationItem(type: .arrow(arrowGeometry), bounds: arrowGeometry.bounds(), properties: AnnotationProperties()),
+      AnnotationItem(
+        type: .line(start: CGPoint(x: 10, y: 10), end: CGPoint(x: 200, y: 120)),
+        bounds: CGRect(x: 10, y: 10, width: 190, height: 110),
+        properties: AnnotationProperties()
+      ),
+      AnnotationItem(
+        type: .path([CGPoint(x: 10, y: 10), CGPoint(x: 100, y: 60), CGPoint(x: 200, y: 120)]),
+        bounds: CGRect(x: 10, y: 10, width: 190, height: 110),
+        properties: AnnotationProperties()
+      ),
+      AnnotationItem(
+        type: .highlight([CGPoint(x: 10, y: 60), CGPoint(x: 200, y: 60)]),
+        bounds: CGRect(x: 10, y: 59, width: 190, height: 2),
+        properties: AnnotationProperties()
+      ),
+      AnnotationItem(type: .text("Hi"), bounds: CGRect(x: 40, y: 40, width: 80, height: 30), properties: AnnotationProperties()),
+      AnnotationItem(type: .counter(1), bounds: CGRect(x: 90, y: 50, width: 24, height: 24), properties: AnnotationProperties()),
+    ]
+    var probes: [CGPoint] = []
+    for x in stride(from: CGFloat(0), through: 210, by: 7) {
+      for y in stride(from: CGFloat(0), through: 130, by: 7) {
+        probes.append(CGPoint(x: x, y: y))
+      }
+    }
+    for item in items {
+      var hits = 0
+      for probe in probes {
+        let expected = item.containsPoint(probe, baseTolerance: 6)
+        if expected { hits += 1 }
+        XCTAssertEqual(item.edgeBandContains(probe, baseTolerance: 6), expected, "\(item.type) at \(probe)")
+      }
+      XCTAssertGreaterThan(hits, 0, "\(item.type) probes never hit")
+    }
+  }
+
+  func testEdgeBandContainsIsAlwaysFalseForEmbeddedImages() {
+    let image = AnnotationItem(
+      type: .embeddedImage(UUID()),
+      bounds: CGRect(x: 100, y: 100, width: 200, height: 100),
+      properties: AnnotationProperties()
+    )
+    for point in [CGPoint(x: 100, y: 150), CGPoint(x: 200, y: 150), CGPoint(x: 300, y: 200)] {
+      XCTAssertFalse(image.edgeBandContains(point, baseTolerance: 6), "\(point)")
+    }
+  }
+
+  // 1
+  @MainActor
+  func testCanvasRectangleToolClickOnEdgeSelectsExistingRectangle() {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 10, y: 50))
+
+    XCTAssertEqual(state.selectedAnnotationIds, [existing.id])
+    XCTAssertEqual(state.selectedAnnotationId, existing.id)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    XCTAssertEqual(state.selectedTool, .rectangle)
+    XCTAssertFalse(state.canUndo, "A click-select must not record an undo step")
+  }
+
+  // 2
+  @MainActor
+  func testCanvasRectangleToolClickInsideExistingRectangleSelectsNothing() {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 50, y: 50))
+
+    XCTAssertFalse(state.hasSelectedAnnotations)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .rectangle)
+  }
+
+  // 3
+  @MainActor
+  func testCanvasRectangleToolDragOnSelectedEdgeMovesItWithOneUndoStep() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedAnnotationId = existing.id
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 60, y: 80))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    let moved = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(moved.id, existing.id)
+    XCTAssertEqual(moved.bounds, existing.bounds.offsetBy(dx: 50, dy: 30))
+    XCTAssertEqual(state.selectedAnnotationIds, [existing.id])
+    XCTAssertEqual(state.selectedTool, .rectangle)
+
+    state.undo()
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    XCTAssertFalse(state.canUndo, "The move must record exactly one undo step")
+  }
+
+  // 4
+  @MainActor
+  func testCanvasRectangleToolDragOnUnselectedEdgeDrawsNewRectangle() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 160, y: 120))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, existing.id)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    let created = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(created.type, .rectangle)
+    XCTAssertEqual(created.bounds, CGRect(x: 10, y: 50, width: 150, height: 70))
+    XCTAssertEqual(state.selectedAnnotationId, created.id)
+  }
+
+  // 5
+  @MainActor
+  func testCanvasArrowToolClickOnArrowShaftSelectsIt() {
+    let state = makeAnnotateState()
+    let geometry = ArrowGeometry(start: CGPoint(x: 50, y: 50), end: CGPoint(x: 250, y: 50), style: .straight)
+    let arrow = AnnotationItem(type: .arrow(geometry), bounds: geometry.bounds(), properties: AnnotationProperties())
+    state.annotations = [arrow]
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 150, y: 52))
+
+    XCTAssertEqual(state.selectedAnnotationIds, [arrow.id])
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .arrow)
+  }
+
+  // 6
+  @MainActor
+  func testCanvasTextToolClickInsideBoxPlacesNewText() async throws {
+    let state = makeAnnotateState()
+    let box = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 120, height: 120),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [box]
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 60, y: 60))
+    await Task.yield()
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].bounds, box.bounds)
+    let created = try XCTUnwrap(state.annotations.last)
+    guard case .text = created.type else {
+      return XCTFail("Expected a new text annotation, got \(created.type)")
+    }
+    XCTAssertEqual(state.editingTextAnnotationId, created.id)
+  }
+
+  // 7
+  @MainActor
+  func testCanvasTextToolClickOnExistingTextEntersEditMode() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 150, y: 115))
+
+    XCTAssertEqual(state.editingTextAnnotationId, text.id)
+    XCTAssertEqual(state.selectedAnnotationId, text.id)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .text)
+  }
+
+  // 8
+  @MainActor
+  func testCanvasCounterToolClickOnExistingCounterSelectsIt() {
+    let state = makeAnnotateState()
+    let counter = AnnotationItem(
+      type: .counter(1),
+      bounds: CGRect(x: 100, y: 100, width: 24, height: 24),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [counter]
+    state.selectedTool = .counter
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 112, y: 112))
+
+    XCTAssertEqual(state.selectedAnnotationIds, [counter.id])
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .counter)
+  }
+
+  // 9
+  @MainActor
+  func testCanvasPencilToolJitteryClickOnStrokeSelectsPath() {
+    let state = makeAnnotateState()
+    let path = AnnotationItem(
+      type: .path([CGPoint(x: 50, y: 100), CGPoint(x: 150, y: 100), CGPoint(x: 250, y: 100)]),
+      bounds: CGRect(x: 50, y: 100, width: 200, height: 0),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [path]
+    state.selectedTool = .pencil
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 150, y: 101), to: CGPoint(x: 151, y: 101))
+
+    XCTAssertEqual(state.selectedAnnotationIds, [path.id])
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .pencil)
+  }
+
+  // 9a
+  @MainActor
+  func testCanvasHighlighterClickOnHighlightNearTextSelectsInsteadOfSnapping() async throws {
+    try skipIfRunningInCI("Vision text detection is nondeterministic in CI")
+    let state = makeAnnotateState(defaults: UserDefaultsFactory.make())
+    let size = CGSize(width: 600, height: 300)
+    let image = NSImage(size: size)
+    image.lockFocus()
+    NSColor.white.setFill()
+    NSBezierPath(rect: CGRect(origin: .zero, size: size)).fill()
+    ("Highlight this sentence" as NSString).draw(
+      at: NSPoint(x: 40, y: 230),
+      withAttributes: [
+        .font: NSFont.systemFont(ofSize: 34),
+        .foregroundColor: NSColor.black
+      ]
+    )
+    image.unlockFocus()
+    state.loadImage(image)
+    state.isHighlighterTextSnappingEnabled = true
+    state.activateTool(.highlighter)
+    state.prepareTextLineProfileIfNeeded()
+
+    for _ in 0 ..< 200 where state.textLineProfile == nil {
+      try await Task.sleep(nanoseconds: 50_000_000)
+    }
+    let profile = try XCTUnwrap(state.textLineProfile, "Vision found no text in the rendered sample")
+    let line = try XCTUnwrap(profile.lines.first)
+
+    let highlight = AnnotationItem(
+      type: .highlight([
+        CGPoint(x: line.bounds.minX, y: line.bounds.midY),
+        CGPoint(x: line.bounds.maxX, y: line.bounds.midY),
+      ]),
+      bounds: CGRect(x: line.bounds.minX, y: line.bounds.midY - 1, width: line.bounds.width, height: 2),
+      properties: AnnotationProperties()
+    )
+    state.annotations.append(highlight)
+    // At a very low zoom the whole line spans under the 2-screen-point click
+    // threshold, so the gesture is a click that would otherwise resolve to a
+    // snapped bar (mouseUp snaps before the drawing commit check).
+    state.zoomLevel = 0.003
+    let canvas = makeClickSelectCanvas(state: state, bounds: CGRect(origin: .zero, size: size))
+
+    let start = CGPoint(x: line.bounds.minX, y: line.bounds.midY)
+    let end = CGPoint(x: line.bounds.maxX, y: line.bounds.midY)
+    XCTAssertFalse(
+      AnnotateTextSnapping.resolve(
+        start: start,
+        current: end,
+        path: [start, end],
+        profile: profile,
+        pointerTolerance: 8 / state.zoomLevel
+      ).isEmpty,
+      "Precondition: this gesture resolves to a snapped bar"
+    )
+
+    drag(canvas, from: start, to: end)
+
+    XCTAssertEqual(state.selectedAnnotationIds, [highlight.id])
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.selectedTool, .highlighter)
+  }
+
+  // 9b
+  @MainActor
+  func testCanvasTextToolDoubleClickOnExistingTextStaysInEditMode() async {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+    let point = CGPoint(x: 150, y: 115)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: point))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: point))
+    await Task.yield()
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: point, clickCount: 2))
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: point, clickCount: 2))
+    await Task.yield()
+    await Task.yield()
+
+    XCTAssertEqual(state.editingTextAnnotationId, text.id)
+    XCTAssertEqual(state.selectedAnnotationId, text.id)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].type, .text("Hello"))
+  }
+
+  // D-2 with a selected text: a click edits, a drag moves.
+  @MainActor
+  func testCanvasTextToolClickOnSelectedTextEntersEditMode() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    state.selectedAnnotationId = text.id
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 150, y: 115))
+
+    XCTAssertEqual(state.editingTextAnnotationId, text.id)
+    XCTAssertEqual(state.selectedAnnotationId, text.id)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].type, .text("Hello"))
+    XCTAssertEqual(state.annotations[0].bounds, text.bounds)
+    XCTAssertFalse(state.canUndo, "Entering edit mode by click must not record an undo step")
+  }
+
+  @MainActor
+  func testCanvasTextToolDragOnSelectedTextMovesItWithoutEditing() throws {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    state.selectedAnnotationId = text.id
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 150, y: 115), to: CGPoint(x: 190, y: 145))
+
+    XCTAssertNil(state.editingTextAnnotationId)
+    XCTAssertEqual(state.annotations.count, 1)
+    let moved = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(moved.id, text.id)
+    XCTAssertEqual(moved.type, .text("Hello"))
+    XCTAssertEqual(moved.bounds, text.bounds.offsetBy(dx: 40, dy: 30))
+    XCTAssertEqual(state.selectedAnnotationIds, [text.id])
+
+    state.undo()
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, text.bounds)
+    XCTAssertFalse(state.canUndo, "The move must record exactly one undo step")
+  }
+
+  @MainActor
+  func testCanvasTextToolDragOnUnselectedTextMovesItWithoutEditing() throws {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 150, y: 115), to: CGPoint(x: 190, y: 145))
+
+    XCTAssertNil(state.editingTextAnnotationId)
+    XCTAssertEqual(state.annotations.count, 1)
+    let moved = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(moved.type, .text("Hello"))
+    XCTAssertEqual(moved.bounds, text.bounds.offsetBy(dx: 40, dy: 30))
+    XCTAssertEqual(state.selectedAnnotationIds, [text.id])
+
+    state.undo()
+    XCTAssertEqual(state.annotations[0].bounds, text.bounds)
+    XCTAssertFalse(state.canUndo, "The move must record exactly one undo step")
+  }
+
+  @MainActor
+  func testCanvasRectangleToolJitterOnSelectedEdgeDoesNotMoveIt() {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedAnnotationId = existing.id
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 11, y: 50))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    XCTAssertEqual(state.selectedAnnotationIds, [existing.id])
+    XCTAssertFalse(state.canUndo, "A sub-threshold press must not record an undo step")
+  }
+
+  @MainActor
+  func testCanvasTextToolJitteryClickOnSelectedTextEntersEditMode() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    state.selectedAnnotationId = text.id
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 150, y: 115), to: CGPoint(x: 151, y: 115))
+
+    XCTAssertEqual(state.editingTextAnnotationId, text.id)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, text.bounds)
+    XCTAssertFalse(state.canUndo)
+  }
+
+  @MainActor
+  func testCanvasTextToolClickDoesNotEditTextDeletedDuringPress() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+    let point = CGPoint(x: 150, y: 115)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: point))
+    XCTAssertEqual(state.selectedAnnotationIds, [text.id])
+    state.deleteSelectedAnnotation()
+    XCTAssertTrue(state.annotations.isEmpty)
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: point))
+
+    XCTAssertNil(state.editingTextAnnotationId)
+    XCTAssertTrue(state.annotations.isEmpty)
+  }
+
+  // 10
+  @MainActor
+  func testCanvasOptionKeyAlwaysDrawsOnAnnotationEdge() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    // Option-click on an unselected edge does not select it.
+    click(canvas, at: CGPoint(x: 10, y: 50), modifierFlags: .option)
+    XCTAssertFalse(state.hasSelectedAnnotations)
+    XCTAssertEqual(state.annotations.count, 1)
+
+    // Option-drag on a selected edge draws instead of moving it.
+    state.selectedAnnotationId = existing.id
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 160, y: 120), modifierFlags: .option)
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, existing.id)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    let created = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(created.type, .rectangle)
+    XCTAssertEqual(created.bounds, CGRect(x: 10, y: 50, width: 150, height: 70))
+  }
+
+  // 11
+  @MainActor
+  func testCanvasRectangleToolDrawsOverCombinedImageWithoutSelectingIt() throws {
+    let state = makeAnnotateState()
+    let base = try XCTUnwrap(TestImageFactory.solidColor(width: 400, height: 300))
+    let secondary = try XCTUnwrap(TestImageFactory.solidColor(width: 200, height: 100))
+    state.loadImage(NSImage(cgImage: base, size: NSSize(width: 400, height: 300)))
+    XCTAssertTrue(state.importImage(NSImage(cgImage: secondary, size: NSSize(width: 200, height: 100))))
+    XCTAssertTrue(state.isCombineMode)
+    let embedded = try XCTUnwrap(state.annotations.first(where: {
+      if case .embeddedImage = $0.type { return true }
+      return false
+    }))
+    state.activateTool(.rectangle)
+
+    let contentBounds = state.effectiveContentBounds.standardized
+    let canvas = makeClickSelectCanvas(state: state, bounds: contentBounds)
+    func display(_ point: CGPoint) -> CGPoint {
+      CGPoint(x: point.x - contentBounds.minX, y: point.y - contentBounds.minY)
+    }
+
+    // A click on the image's edge does not select it.
+    let edge = CGPoint(x: embedded.bounds.minX, y: embedded.bounds.midY)
+    click(canvas, at: display(edge))
+    XCTAssertFalse(state.hasSelectedAnnotations)
+
+    // A drag starting on the image's edge draws a rectangle over it.
+    let end = CGPoint(x: embedded.bounds.midX, y: embedded.bounds.maxY - 10)
+    drag(canvas, from: display(edge), to: display(end))
+
+    XCTAssertFalse(state.isAnnotationSelected(embedded.id))
+    let created = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(created.type, .rectangle)
+    XCTAssertEqual(state.selectedAnnotationId, created.id)
+    XCTAssertEqual(state.annotations.first(where: { $0.id == embedded.id })?.bounds, embedded.bounds)
+  }
+
+  @MainActor
+  private func hover(_ canvas: DrawingCanvasNSView, at point: CGPoint, modifierFlags: NSEvent.ModifierFlags = []) {
+    canvas.mouseMoved(with: makeMouseEvent(type: .mouseMoved, location: point, modifierFlags: modifierFlags))
+  }
+
+  @MainActor
+  private func stroke(_ canvas: DrawingCanvasNSView, through points: [CGPoint], modifierFlags: NSEvent.ModifierFlags = []) {
+    guard let first = points.first, let last = points.last else { return }
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: first, modifierFlags: modifierFlags))
+    for point in points.dropFirst() {
+      canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: point))
+    }
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: last))
+  }
+
+  // MARK: F1 - a just-drawn (auto-selected) item does not steal the next stroke
+
+  @MainActor
+  func testCanvasLineToolSecondLineStartingOnJustDrawnLineDrawsInsteadOfMovingIt() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .line
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 50, y: 100), to: CGPoint(x: 200, y: 100))
+    let first = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id], "Precondition: the new line is auto-selected")
+
+    // On the stroke near B, outside B's 8-point resize handle.
+    drag(canvas, from: CGPoint(x: 190, y: 100), to: CGPoint(x: 250, y: 200))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, first.id)
+    XCTAssertEqual(state.annotations[0].bounds, first.bounds)
+    XCTAssertEqual(state.annotations[0].type, first.type)
+    let second = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(second.type, .line(start: CGPoint(x: 190, y: 100), end: CGPoint(x: 250, y: 200)))
+    XCTAssertEqual(state.selectedAnnotationIds, [second.id])
+  }
+
+  @MainActor
+  func testCanvasLineToolOptionPressOnJustDrawnEndpointHandleDrawsNewLine() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .line
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 50, y: 100), to: CGPoint(x: 200, y: 100))
+    let first = try XCTUnwrap(state.annotations.first)
+
+    // Exactly on B, which is the auto-selected line's lineEnd handle (D-3).
+    drag(canvas, from: CGPoint(x: 200, y: 100), to: CGPoint(x: 250, y: 200), modifierFlags: .option)
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].type, first.type)
+    XCTAssertEqual(state.annotations[0].bounds, first.bounds)
+    let second = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(second.type, .line(start: CGPoint(x: 200, y: 100), end: CGPoint(x: 250, y: 200)))
+  }
+
+  @MainActor
+  func testCanvasPencilStrokeStartingOnJustDrawnStrokeDrawsSecondPath() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .pencil
+    let canvas = makeClickSelectCanvas(state: state)
+
+    stroke(canvas, through: [
+      CGPoint(x: 50, y: 150), CGPoint(x: 100, y: 150), CGPoint(x: 150, y: 150), CGPoint(x: 250, y: 150),
+    ])
+    let first = try XCTUnwrap(state.annotations.first)
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id], "Precondition: the new stroke is auto-selected")
+
+    stroke(canvas, through: [CGPoint(x: 150, y: 150), CGPoint(x: 150, y: 200), CGPoint(x: 150, y: 250)])
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].id, first.id)
+    XCTAssertEqual(state.annotations[0].type, first.type)
+    XCTAssertEqual(state.annotations[0].bounds, first.bounds)
+    guard case .path(let points) = state.annotations[1].type else {
+      return XCTFail("Expected a second path, got \(state.annotations[1].type)")
+    }
+    XCTAssertEqual(points.first, CGPoint(x: 150, y: 150))
+  }
+
+  @MainActor
+  func testCanvasClickOnJustDrawnRectangleEdgeSelectsItSoADragMovesIt() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 10), to: CGPoint(x: 90, y: 90))
+    let drawn = try XCTUnwrap(state.annotations.first)
+
+    // The click makes the auto-selection explicit (same id) ...
+    click(canvas, at: CGPoint(x: 10, y: 50))
+    XCTAssertEqual(state.selectedAnnotationIds, [drawn.id])
+    XCTAssertEqual(state.annotations.count, 1)
+
+    // ... so a drag on its edge now moves it (D-1).
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 60, y: 80))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, drawn.bounds.offsetBy(dx: 50, dy: 30))
+    XCTAssertEqual(state.selectedAnnotationIds, [drawn.id])
+  }
+
+  @MainActor
+  func testCanvasSelectionToolSelectionCountsForDrawingToolDragEvenOnJustDrawnItem() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 10), to: CGPoint(x: 90, y: 90))
+    let drawn = try XCTUnwrap(state.annotations.first)
+
+    // The Selection tool click keeps the (unchanged) selection, but it is now
+    // the user's own.
+    state.selectedTool = .selection
+    click(canvas, at: CGPoint(x: 50, y: 50))
+    XCTAssertEqual(state.selectedAnnotationIds, [drawn.id])
+
+    state.selectedTool = .rectangle
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 60, y: 80))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, drawn.bounds.offsetBy(dx: 50, dy: 30))
+  }
+
+  @MainActor
+  func testCanvasSelectionToolSelectedItemMovesWithDrawingToolDrag() throws {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedTool = .selection
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 50, y: 50))
+    XCTAssertEqual(state.selectedAnnotationIds, [existing.id])
+
+    state.selectedTool = .arrow
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 60, y: 80))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds.offsetBy(dx: 50, dy: 30))
+  }
+
+  @MainActor
+  func testCanvasExplicitReselectionOfJustDrawnItemWithoutPressCountsAsSelected() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 10), to: CGPoint(x: 90, y: 90))
+    let drawn = try XCTUnwrap(state.annotations.first)
+    // E.g. select all / layers: the same single id, selected explicitly.
+    state.setSelectedAnnotationIds([drawn.id])
+
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 60, y: 80))
+
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, drawn.bounds.offsetBy(dx: 50, dy: 30))
+  }
+
+  @MainActor
+  func testCanvasHoverOnJustDrawnItemEdgePromisesSelectNotMove() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 10), to: CGPoint(x: 90, y: 90))
+    hover(canvas, at: CGPoint(x: 10, y: 50))
+    XCTAssertTrue(NSCursor.current === NSCursor.pointingHand)
+
+    click(canvas, at: CGPoint(x: 10, y: 50))
+    hover(canvas, at: CGPoint(x: 10, y: 50))
+    XCTAssertTrue(NSCursor.current === NSCursor.openHand)
+  }
+
+  // MARK: F2 - presses in the margin outside the canvas never hit the border
+
+  @MainActor
+  func testCanvasRectangleToolDragFromMarginDrawsInsteadOfMovingBorderShape() throws {
+    let state = makeAnnotateState()
+    let border = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 0, y: 50, width: 100, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [border]
+    state.selectedAnnotationId = border.id
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: -20, y: 90), to: CGPoint(x: 60, y: 200))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].bounds, border.bounds)
+    let created = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(created.type, .rectangle)
+    XCTAssertEqual(created.bounds, CGRect(x: 0, y: 90, width: 60, height: 110))
+  }
+
+  @MainActor
+  func testCanvasCounterToolClickInMarginPlacesCounterInsteadOfSelectingBorderShape() throws {
+    let state = makeAnnotateState()
+    let border = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 0, y: 50, width: 100, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [border]
+    state.selectedTool = .counter
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: -20, y: 90))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertFalse(state.isAnnotationSelected(border.id))
+    let created = try XCTUnwrap(state.annotations.last)
+    guard case .counter = created.type else {
+      return XCTFail("Expected a counter, got \(created.type)")
+    }
+  }
+
+  @MainActor
+  func testCanvasHoverInMarginDoesNotPromiseBorderShapeSelection() {
+    let state = makeAnnotateState()
+    let border = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 0, y: 50, width: 100, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [border]
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    hover(canvas, at: CGPoint(x: -5, y: 90))
+    XCTAssertTrue(NSCursor.current === NSCursor.arrow)
+    hover(canvas, at: CGPoint(x: 2, y: 90))
+    XCTAssertTrue(NSCursor.current === NSCursor.pointingHand)
+  }
+
+  @MainActor
+  func testCanvasTextToolDragOutwardFromBorderTextNeverEntersEditMode() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 0, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedAnnotationId = text.id
+    state.selectedTool = .text
+    let canvas = makeClickSelectCanvas(state: state)
+
+    // Clamping pins the drag at x = 0, so nothing moves, but it is a drag.
+    drag(canvas, from: CGPoint(x: 0, y: 115), to: CGPoint(x: -30, y: 115))
+
+    XCTAssertNil(state.editingTextAnnotationId)
+    XCTAssertEqual(state.annotations.count, 1)
+    XCTAssertEqual(state.annotations[0].bounds, text.bounds)
+  }
+
+  // MARK: F3 - an opaque body hides the items beneath it
+
+  @MainActor
+  func testCanvasArrowToolClickInsideFilledRectangleDoesNotSelectArrowBeneath() throws {
+    let state = makeAnnotateState()
+    let geometry = ArrowGeometry(start: CGPoint(x: 50, y: 150), end: CGPoint(x: 250, y: 150), style: .straight)
+    let arrow = AnnotationItem(type: .arrow(geometry), bounds: geometry.bounds(), properties: AnnotationProperties())
+    let cover = AnnotationItem(
+      type: .filledRectangle,
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 100),
+      properties: AnnotationProperties(fillColor: .red)
+    )
+    state.annotations = [arrow, cover]
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+    let canvas = makeClickSelectCanvas(state: state)
+
+    hover(canvas, at: CGPoint(x: 150, y: 150))
+    XCTAssertFalse(NSCursor.current === NSCursor.pointingHand)
+
+    click(canvas, at: CGPoint(x: 150, y: 150))
+    XCTAssertFalse(state.hasSelectedAnnotations)
+    XCTAssertEqual(state.annotations.count, 2)
+
+    // A drag there draws a new arrow.
+    drag(canvas, from: CGPoint(x: 150, y: 150), to: CGPoint(x: 180, y: 190))
+    XCTAssertEqual(state.annotations.count, 3)
+    XCTAssertEqual(state.annotations[0].bounds, arrow.bounds)
+
+    // The arrow's visible shaft outside the fill still selects it.
+    click(canvas, at: CGPoint(x: 70, y: 150))
+    XCTAssertEqual(state.selectedAnnotationIds, [arrow.id])
+  }
+
+  @MainActor
+  func testCanvasArrowToolClickThroughRoundedFilledRectangleCornerSelectsArrowBeneath() {
+    let state = makeAnnotateState()
+    // The arrow runs under the cover's rounded top-left corner.
+    let geometry = ArrowGeometry(start: CGPoint(x: 20, y: 103), end: CGPoint(x: 160, y: 103), style: .straight)
+    let arrow = AnnotationItem(type: .arrow(geometry), bounds: geometry.bounds(), properties: AnnotationProperties())
+    let cover = AnnotationItem(
+      type: .filledRectangle,
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 100),
+      properties: AnnotationProperties(fillColor: .red, cornerRadius: 40)
+    )
+    state.annotations = [arrow, cover]
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+    let canvas = makeClickSelectCanvas(state: state)
+
+    // (103, 103) is inside the cover's bounds but in its transparent corner,
+    // 12 points from the rounded outline: the arrow there is visible.
+    hover(canvas, at: CGPoint(x: 103, y: 103))
+    XCTAssertTrue(NSCursor.current === NSCursor.pointingHand)
+    click(canvas, at: CGPoint(x: 103, y: 103))
+    XCTAssertEqual(state.selectedAnnotationIds, [arrow.id])
+  }
+
+  func testOccludesItemsBelowFollowsRoundedFilledRectangleCorners() {
+    let rounded = AnnotationItem(
+      type: .filledRectangle,
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 100),
+      properties: AnnotationProperties(fillColor: .red, cornerRadius: 40)
+    )
+    XCTAssertFalse(rounded.occludesItemsBelow(at: CGPoint(x: 103, y: 103)), "transparent corner")
+    XCTAssertTrue(rounded.occludesItemsBelow(at: CGPoint(x: 150, y: 150)), "body")
+    XCTAssertTrue(rounded.occludesItemsBelow(at: CGPoint(x: 150, y: 101)), "straight side")
+
+    let square = AnnotationItem(
+      type: .filledRectangle,
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 100),
+      properties: AnnotationProperties(fillColor: .red)
+    )
+    XCTAssertTrue(square.occludesItemsBelow(at: CGPoint(x: 103, y: 103)), "radius 0 corner")
+
+    for type in [AnnotationType.rectangle, .spotlight, .oval] {
+      let open = AnnotationItem(type: type, bounds: square.bounds, properties: AnnotationProperties())
+      XCTAssertFalse(open.occludesItemsBelow(at: CGPoint(x: 150, y: 150)), "\(type) is see-through")
+    }
+  }
+
+  // MARK: m3 - blur and combined images are opaque to edge clicks
+
+  @MainActor
+  func testCanvasArrowToolClickInsideBlurDoesNotSelectBlurHiddenBeneath() {
+    let state = makeAnnotateState()
+    let hidden = AnnotationItem(
+      type: .blur(.pixelated),
+      bounds: CGRect(x: 150, y: 50, width: 150, height: 150),
+      properties: AnnotationProperties()
+    )
+    // Later blurs render above earlier ones; markup always renders above blurs.
+    let cover = AnnotationItem(
+      type: .blur(.pixelated),
+      bounds: CGRect(x: 100, y: 100, width: 100, height: 100),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [hidden, cover]
+    state.selectedTool = .arrow
+    let canvas = makeClickSelectCanvas(state: state)
+    // On the hidden blur's left edge, inside the cover's interior.
+    let point = CGPoint(x: 150, y: 150)
+
+    hover(canvas, at: point)
+    XCTAssertFalse(NSCursor.current === NSCursor.pointingHand)
+    click(canvas, at: point)
+    XCTAssertFalse(state.hasSelectedAnnotations)
+
+    // The hidden blur's edge outside the cover still selects it.
+    click(canvas, at: CGPoint(x: 150, y: 60))
+    XCTAssertEqual(state.selectedAnnotationIds, [hidden.id])
+  }
+
+  @MainActor
+  func testCanvasArrowToolClickInsideCombinedImageSelectsNothingButMarkupAboveStaysSelectable() {
+    let state = makeAnnotateState()
+    let image = AnnotationItem(
+      type: .embeddedImage(UUID()),
+      bounds: CGRect(x: 100, y: 50, width: 200, height: 200),
+      properties: AnnotationProperties()
+    )
+    let geometry = ArrowGeometry(start: CGPoint(x: 150, y: 150), end: CGPoint(x: 250, y: 150), style: .straight)
+    let arrow = AnnotationItem(type: .arrow(geometry), bounds: geometry.bounds(), properties: AnnotationProperties())
+    // Combined images render beneath all markup, whatever the array order.
+    state.annotations = [arrow, image]
+    state.selectedTool = .arrow
+    state.arrowStyle = .straight
+    let canvas = makeClickSelectCanvas(state: state)
+
+    // Inside the image, away from the arrow: nothing, including the image.
+    hover(canvas, at: CGPoint(x: 200, y: 220))
+    XCTAssertFalse(NSCursor.current === NSCursor.pointingHand)
+    click(canvas, at: CGPoint(x: 200, y: 220))
+    XCTAssertFalse(state.hasSelectedAnnotations)
+
+    // The arrow drawn over the image stays selectable.
+    hover(canvas, at: CGPoint(x: 200, y: 150))
+    XCTAssertTrue(NSCursor.current === NSCursor.pointingHand)
+    click(canvas, at: CGPoint(x: 200, y: 150))
+    XCTAssertEqual(state.selectedAnnotationIds, [arrow.id])
+  }
+
+  func testEdgeBandContainsFollowsRoundedSpotlightCorners() {
+    let rounded = AnnotationItem(
+      type: .spotlight,
+      bounds: CGRect(x: 100, y: 100, width: 200, height: 160),
+      properties: AnnotationProperties(strokeWidth: 4, cornerRadius: 60)
+    )
+    let visibleCorner = CGPoint(x: 160 - 60 / sqrt(2), y: 160 - 60 / sqrt(2))
+    XCTAssertTrue(rounded.edgeBandContains(visibleCorner, baseTolerance: 6), "visible rounded corner")
+    XCTAssertFalse(rounded.edgeBandContains(CGPoint(x: 102, y: 102), baseTolerance: 6), "empty square corner")
+    XCTAssertTrue(rounded.edgeBandContains(CGPoint(x: 100, y: 180), baseTolerance: 6), "straight side")
+    XCTAssertFalse(rounded.edgeBandContains(CGPoint(x: 200, y: 180), baseTolerance: 6), "interior")
+
+    let square = AnnotationItem(
+      type: .spotlight,
+      bounds: CGRect(x: 100, y: 100, width: 200, height: 160),
+      properties: AnnotationProperties(strokeWidth: 4, cornerRadius: 0)
+    )
+    XCTAssertTrue(square.edgeBandContains(CGPoint(x: 102, y: 102), baseTolerance: 6), "radius 0 corner")
+    XCTAssertFalse(square.edgeBandContains(visibleCorner, baseTolerance: 6), "radius 0 inside")
+    XCTAssertFalse(square.edgeBandContains(CGPoint(x: 200, y: 180), baseTolerance: 6), "radius 0 interior")
+  }
+
+  // MARK: F4 - rounded rectangles hit their rounded outline
+
+  func testEdgeBandContainsFollowsRoundedCorners() {
+    for type in [AnnotationType.rectangle, .filledRectangle] {
+      let rounded = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 200, height: 160),
+        properties: AnnotationProperties(strokeWidth: 4, cornerRadius: 60)
+      )
+      // Arc center (160, 160); its 45° point is the visible corner.
+      let visibleCorner = CGPoint(x: 160 - 60 / sqrt(2), y: 160 - 60 / sqrt(2))
+      XCTAssertTrue(rounded.edgeBandContains(visibleCorner, baseTolerance: 6), "\(type) visible rounded corner")
+      XCTAssertFalse(rounded.edgeBandContains(CGPoint(x: 102, y: 102), baseTolerance: 6), "\(type) empty square corner")
+      XCTAssertTrue(rounded.edgeBandContains(CGPoint(x: 100, y: 180), baseTolerance: 6), "\(type) straight side")
+      XCTAssertTrue(rounded.edgeBandContains(CGPoint(x: 107, y: 180), baseTolerance: 6), "\(type) just inside the side")
+      XCTAssertFalse(rounded.edgeBandContains(CGPoint(x: 200, y: 180), baseTolerance: 6), "\(type) interior")
+      XCTAssertFalse(rounded.edgeBandContains(CGPoint(x: 90, y: 180), baseTolerance: 6), "\(type) outside the band")
+
+      let square = AnnotationItem(
+        type: type,
+        bounds: CGRect(x: 100, y: 100, width: 200, height: 160),
+        properties: AnnotationProperties(strokeWidth: 4, cornerRadius: 0)
+      )
+      XCTAssertTrue(square.edgeBandContains(CGPoint(x: 102, y: 102), baseTolerance: 6), "\(type) radius 0 corner")
+      XCTAssertFalse(square.edgeBandContains(visibleCorner, baseTolerance: 6), "\(type) radius 0 inside")
+    }
+  }
+
+  func testEdgeBandContainsTinyRoundedRectangleKeepsItsBodyGrabbable() {
+    let tiny = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 100, y: 100, width: 12, height: 12),
+      properties: AnnotationProperties(strokeWidth: 4, cornerRadius: 60)
+    )
+    XCTAssertTrue(tiny.edgeBandContains(CGPoint(x: 106, y: 106), baseTolerance: 6))
+    XCTAssertFalse(tiny.edgeBandContains(CGPoint(x: 80, y: 106), baseTolerance: 6))
+  }
+
+  func testEdgeBandContainsRoundedFastPathMatchesStrokedOutlineReference() {
+    // The fast path only skips work: every point must match stroking the
+    // rounded outline and applying the small-shape rule directly.
+    func reference(_ item: AnnotationItem, outline: CGPath, _ point: CGPoint) -> Bool {
+      let tolerance = 6 + item.properties.strokeWidth / 2
+      let band = outline.copy(strokingWithWidth: tolerance * 2, lineCap: .butt, lineJoin: .round, miterLimit: 10)
+      if band.contains(point) { return true }
+      let inner = item.bounds.insetBy(dx: tolerance, dy: tolerance)
+      return (inner.isNull || inner.isEmpty) && outline.contains(point)
+    }
+
+    let shapes: [(CGRect, CGFloat, CGFloat)] = [
+      (CGRect(x: 100, y: 100, width: 200, height: 160), 60, 4),
+      (CGRect(x: 100, y: 100, width: 200, height: 160), 10, 2),
+      (CGRect(x: 100, y: 100, width: 200, height: 160), 400, 6),
+      (CGRect(x: 100, y: 100, width: 30, height: 30), 12, 4),
+      (CGRect(x: 100, y: 100, width: 12, height: 12), 60, 4),
+      (CGRect(x: 100, y: 100, width: 200, height: 10), 100, 4),
+      (CGRect(x: 100, y: 100, width: 200, height: 20), 100, 4),
+    ]
+    for type in [AnnotationType.rectangle, .filledRectangle, .spotlight] {
+      for (bounds, radius, strokeWidth) in shapes {
+        let item = AnnotationItem(
+          type: type,
+          bounds: bounds,
+          properties: AnnotationProperties(strokeWidth: strokeWidth, cornerRadius: radius)
+        )
+        let outline = type == .spotlight
+          ? SpotlightCompositor.outlinePath(in: bounds, cornerRadius: radius)
+          : AnnotationRenderer.roundedRectPath(in: bounds, cornerRadius: radius)
+        for x in stride(from: bounds.minX - 40, through: bounds.maxX + 40, by: 3) {
+          for y in stride(from: bounds.minY - 40, through: bounds.maxY + 40, by: 3) {
+            let point = CGPoint(x: x, y: y)
+            XCTAssertEqual(
+              item.edgeBandContains(point, baseTolerance: 6),
+              reference(item, outline: outline, point),
+              "\(type) \(bounds) r\(radius) at \(point)"
+            )
+          }
+        }
+      }
+    }
+  }
+
+  // MARK: F5 - Option hover refresh only where the canvas gets the pointer
+
+  @MainActor
+  func testCanvasReceivesPointerOnlyWhereWindowHitTestReachesIt() {
+    let state = makeAnnotateState()
+    let canvas = makeClickSelectCanvas(state: state)
+    let window = NSWindow(
+      contentRect: CGRect(x: 0, y: 0, width: 500, height: 300),
+      styleMask: .borderless,
+      backing: .buffered,
+      defer: false
+    )
+    let root = NSView(frame: CGRect(x: 0, y: 0, width: 500, height: 300))
+    window.contentView = root
+    defer { window.contentView = nil }
+    root.addSubview(canvas)
+    // Chrome (e.g. the sidebar) drawn over part of the canvas.
+    let chrome = NSView(frame: CGRect(x: 0, y: 0, width: 100, height: 300))
+    root.addSubview(chrome)
+
+    XCTAssertTrue(canvas.receivesPointer(atWindowPoint: CGPoint(x: 200, y: 150)))
+    XCTAssertFalse(canvas.receivesPointer(atWindowPoint: CGPoint(x: 50, y: 150)), "over chrome")
+    XCTAssertFalse(canvas.receivesPointer(atWindowPoint: CGPoint(x: 450, y: 150)), "outside the canvas")
+
+    // The zoom proxy forwards to the canvas only inside its visual bounds.
+    let bridge = CanvasInteractionBridge()
+    bridge.drawingCanvas = canvas
+    let proxy = CanvasInteractionProxyNSView(bridge: bridge)
+    proxy.frame = root.bounds
+    root.addSubview(proxy)
+    XCTAssertTrue(canvas.receivesPointer(atWindowPoint: CGPoint(x: 200, y: 150)), "through the proxy")
+    XCTAssertFalse(canvas.receivesPointer(atWindowPoint: CGPoint(x: 450, y: 150)), "proxy outside the canvas")
+  }
+
+  // MARK: F5 - hover does not promise a resize that mouseDown refuses
+
+  @MainActor
+  func testCanvasHoverOnEmbeddedImageHandleInAutoStitchDoesNotPromiseResize() throws {
+    let state = makeAnnotateState()
+    let base = try XCTUnwrap(TestImageFactory.solidColor(width: 400, height: 300))
+    let secondary = try XCTUnwrap(TestImageFactory.solidColor(width: 200, height: 100))
+    state.loadImage(NSImage(cgImage: base, size: NSSize(width: 400, height: 300)))
+    XCTAssertTrue(state.importImage(NSImage(cgImage: secondary, size: NSSize(width: 200, height: 100))))
+    let embedded = try XCTUnwrap(state.annotations.first(where: {
+      if case .embeddedImage = $0.type { return true }
+      return false
+    }))
+    state.activateTool(.rectangle)
+    state.selectedAnnotationId = embedded.id
+
+    let contentBounds = state.effectiveContentBounds.standardized
+    let canvas = makeClickSelectCanvas(state: state, bounds: contentBounds)
+    func display(_ point: CGPoint) -> CGPoint {
+      CGPoint(x: point.x - contentBounds.minX, y: point.y - contentBounds.minY)
+    }
+    // Layout changes with the mode, so read the handle from the live item.
+    func handlePoint() throws -> CGPoint {
+      let live = try XCTUnwrap(state.annotations.first(where: { $0.id == embedded.id }))
+      return display(CGPoint(x: live.bounds.maxX, y: live.bounds.maxY))
+    }
+    let idle = display(CGPoint(x: contentBounds.minX + 5, y: contentBounds.minY + 5))
+
+    // Free canvas lets the image resize, so the handle shows a resize cursor.
+    state.setCombineMode(.freeCanvas)
+    hover(canvas, at: idle)
+    let idleCursor = NSCursor.current
+    hover(canvas, at: try handlePoint())
+    XCTAssertFalse(NSCursor.current === idleCursor, "Precondition: the handle shows a resize cursor")
+
+    // Auto-stitch refuses the resize in mouseDown, so hover must not promise it.
+    state.setCombineMode(.autoStitch)
+    hover(canvas, at: try handlePoint())
+    XCTAssertTrue(NSCursor.current === idleCursor)
+  }
+
+  // MARK: F6 - while text is edited a click only commits, for every tool
+
+  @MainActor
+  func testCanvasSelectionToolHoverOnHandleWhileEditingTextShowsArrow() {
+    let state = makeAnnotateState()
+    let text = AnnotationItem(
+      type: .text("Hello"),
+      bounds: CGRect(x: 100, y: 100, width: 120, height: 30),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [text]
+    state.selectedAnnotationId = text.id
+    state.selectedTool = .selection
+    let canvas = makeClickSelectCanvas(state: state)
+    let handle = CGPoint(x: text.bounds.maxX, y: text.bounds.maxY)
+
+    hover(canvas, at: handle)
+    XCTAssertFalse(NSCursor.current === NSCursor.arrow, "Precondition: the handle shows a resize cursor")
+
+    state.beginTextEditing(id: text.id)
+    hover(canvas, at: handle)
+    XCTAssertTrue(NSCursor.current === NSCursor.arrow)
+  }
+
+  // MARK: F9 - click-selecting another item never passes through no selection
+
+  @MainActor
+  func testCanvasRectangleToolClickOnOtherEdgeSwitchesSelectionWithoutEmptyStep() {
+    let state = makeAnnotateState()
+    let first = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    let second = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 200, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [first, second]
+    state.selectedAnnotationId = first.id
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    var published: [Set<UUID>] = []
+    let observer = state.$selectedAnnotationIds.dropFirst().sink { published.append($0) }
+    defer { observer.cancel() }
+
+    click(canvas, at: CGPoint(x: 200, y: 50))
+
+    XCTAssertEqual(state.selectedAnnotationIds, [second.id])
+    XCTAssertFalse(published.contains([]), "Selection passed through empty: \(published)")
+  }
+
+  @MainActor
+  func testCanvasRectangleToolDragFromOtherEdgeKeepsSelectionUntilItBecomesADrawing() throws {
+    let state = makeAnnotateState()
+    let first = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    let second = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 200, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [first, second]
+    state.selectedAnnotationId = first.id
+    state.selectedTool = .rectangle
+    let canvas = makeClickSelectCanvas(state: state)
+
+    canvas.mouseDown(with: makeMouseEvent(type: .leftMouseDown, location: CGPoint(x: 200, y: 50)))
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id], "Kept while the press may be a click")
+    canvas.mouseDragged(with: makeMouseEvent(type: .leftMouseDragged, location: CGPoint(x: 260, y: 150)))
+    XCTAssertFalse(state.hasSelectedAnnotations, "Blurred once the press is a drawing")
+    canvas.mouseUp(with: makeMouseEvent(type: .leftMouseUp, location: CGPoint(x: 260, y: 150)))
+
+    XCTAssertEqual(state.annotations.count, 3)
+    let created = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(created.bounds, CGRect(x: 200, y: 50, width: 60, height: 100))
+    XCTAssertEqual(state.selectedAnnotationIds, [created.id])
+  }
+
+  // MARK: F11 - Counter clicks, multi-select moves, zoomed drag threshold
+
+  @MainActor
+  func testCanvasCounterToolClickPlacesCountersAndClickOnUnselectedCounterSelectsIt() throws {
+    let state = makeAnnotateState()
+    state.selectedTool = .counter
+    let canvas = makeClickSelectCanvas(state: state)
+
+    click(canvas, at: CGPoint(x: 100, y: 100))
+    XCTAssertEqual(state.annotations.count, 1)
+    let first = try XCTUnwrap(state.annotations.first)
+    guard case .counter = first.type else {
+      return XCTFail("Expected a counter, got \(first.type)")
+    }
+
+    click(canvas, at: CGPoint(x: 250, y: 200))
+    XCTAssertEqual(state.annotations.count, 2)
+    let second = try XCTUnwrap(state.annotations.last)
+    XCTAssertEqual(state.selectedAnnotationIds, [second.id])
+
+    click(canvas, at: CGPoint(x: first.bounds.midX, y: first.bounds.midY))
+    XCTAssertEqual(state.annotations.count, 2, "A click on a counter selects it instead of placing one")
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id])
+    XCTAssertEqual(state.annotations[0].bounds, first.bounds)
+  }
+
+  @MainActor
+  func testCanvasDrawingToolDragOnOneOfSeveralSelectedItemsMovesThemAll() {
+    let state = makeAnnotateState()
+    let first = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    let second = AnnotationItem(
+      type: .oval,
+      bounds: CGRect(x: 200, y: 10, width: 80, height: 60),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [first, second]
+    state.setSelectedAnnotationIds([first.id, second.id])
+    state.selectedTool = .pencil
+    let canvas = makeClickSelectCanvas(state: state)
+
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 40, y: 70))
+
+    XCTAssertEqual(state.annotations.count, 2)
+    XCTAssertEqual(state.annotations[0].bounds, first.bounds.offsetBy(dx: 30, dy: 20))
+    XCTAssertEqual(state.annotations[1].bounds, second.bounds.offsetBy(dx: 30, dy: 20))
+    XCTAssertEqual(state.selectedAnnotationIds, [first.id, second.id])
+  }
+
+  @MainActor
+  func testCanvasDrawingToolMoveThresholdUsesScreenDistanceAtZoom() {
+    let state = makeAnnotateState()
+    let existing = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 10, width: 80, height: 80),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [existing]
+    state.selectedAnnotationId = existing.id
+    state.selectedTool = .rectangle
+    state.zoomLevel = 2
+    let canvas = makeClickSelectCanvas(state: state)
+
+    // 0.75 display points × zoom 2 = 1.5 screen points: under the 2-point threshold.
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 10.75, y: 50))
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds)
+    XCTAssertFalse(state.canUndo)
+
+    // 1.5 display points × zoom 2 = 3 screen points: a move.
+    drag(canvas, from: CGPoint(x: 10, y: 50), to: CGPoint(x: 11.5, y: 50))
+    XCTAssertEqual(state.annotations[0].bounds, existing.bounds.offsetBy(dx: 1.5, dy: 0))
   }
 
   @MainActor
@@ -2904,7 +4349,8 @@ final class AnnotateCoreTests: XCTestCase {
     type: NSEvent.EventType,
     location: CGPoint,
     modifierFlags: NSEvent.ModifierFlags = [],
-    windowNumber: Int = 0
+    windowNumber: Int = 0,
+    clickCount: Int = 1
   ) -> NSEvent {
     NSEvent.mouseEvent(
       with: type,
@@ -2914,7 +4360,7 @@ final class AnnotateCoreTests: XCTestCase {
       windowNumber: windowNumber,
       context: nil,
       eventNumber: 0,
-      clickCount: 1,
+      clickCount: clickCount,
       pressure: 1
     )!
   }

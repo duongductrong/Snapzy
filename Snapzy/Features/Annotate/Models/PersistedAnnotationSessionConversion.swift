@@ -54,6 +54,7 @@ struct PersistedAnnotationProperties: Codable, Equatable {
   var watermarkStyle: String
   var spotlightOpacity: CGFloat?
   var textPresentation: String?
+  var counterArrowTarget: CGPoint?
   var calloutTailTarget: CGPoint?
   var lineStyle: String?
 
@@ -69,6 +70,7 @@ struct PersistedAnnotationProperties: Codable, Equatable {
     watermarkStyle = properties.watermarkStyle.rawValue
     spotlightOpacity = properties.spotlightOpacity
     textPresentation = properties.textPresentation.rawValue
+    counterArrowTarget = properties.counterArrowTarget
     calloutTailTarget = properties.calloutTailTarget
     lineStyle = properties.lineStyle.rawValue
   }
@@ -87,7 +89,8 @@ struct PersistedAnnotationProperties: Codable, Equatable {
       watermarkStyle: WatermarkStyle(rawValue: watermarkStyle) ?? .single,
       spotlightOpacity: spotlightOpacity ?? 0.5,
       textPresentation: TextPresentation(rawValue: textPresentation ?? "") ?? .plain,
-      calloutTailTarget: calloutTailTarget
+      calloutTailTarget: calloutTailTarget,
+      counterArrowTarget: counterArrowTarget
     )
   }
 }

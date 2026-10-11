@@ -1241,6 +1241,10 @@ extension AnnotationItem {
       )
     }
 
+    if let target = translated.properties.counterArrowTarget {
+      translated.properties.counterArrowTarget = CGPoint(x: target.x + dx, y: target.y + dy)
+    }
+
     switch translated.type {
     case .arrow(let geometry):
       let updated = geometry.translatedBy(dx: dx, dy: dy)
@@ -1311,6 +1315,12 @@ extension AnnotationItem {
     case .highlight(let points):
       copy.type = .highlight(points.map { Self.remapPoint($0, from: oldBounds, to: normalizedBounds) })
     case .counter:
+      if oldBounds.size == normalizedBounds.size, let target = copy.properties.counterArrowTarget {
+        copy.properties.counterArrowTarget = CGPoint(
+          x: target.x + normalizedBounds.minX - oldBounds.minX,
+          y: target.y + normalizedBounds.minY - oldBounds.minY
+        )
+      }
       let diameter = max(normalizedBounds.width, normalizedBounds.height)
       let controlValue = AnnotationProperties.controlValue(forCounterDiameter: diameter)
       let counterDiameter = AnnotationProperties.counterDiameter(for: controlValue)
@@ -1471,6 +1481,7 @@ nonisolated struct AnnotationProperties: Equatable {
   var spotlightOpacity: CGFloat
   var textPresentation: TextPresentation
   var calloutTailTarget: CGPoint?
+  var counterArrowTarget: CGPoint?
 
   init(
     strokeColor: Color = .red,
@@ -1485,7 +1496,8 @@ nonisolated struct AnnotationProperties: Equatable {
     watermarkStyle: WatermarkStyle = .single,
     spotlightOpacity: CGFloat = 0.5,
     textPresentation: TextPresentation = .plain,
-    calloutTailTarget: CGPoint? = nil
+    calloutTailTarget: CGPoint? = nil,
+    counterArrowTarget: CGPoint? = nil
   ) {
     self.strokeColor = strokeColor
     self.fillColor = fillColor
@@ -1500,6 +1512,7 @@ nonisolated struct AnnotationProperties: Equatable {
     self.spotlightOpacity = spotlightOpacity
     self.textPresentation = textPresentation
     self.calloutTailTarget = calloutTailTarget
+    self.counterArrowTarget = counterArrowTarget
   }
 
   static func clampedControlValue(_ value: CGFloat) -> CGFloat {
@@ -1587,6 +1600,34 @@ extension AnnotationItem {
     }
   }
 
+  /// Valid targets sit outside the badge. Tiny drags and malformed saved points
+  /// produce a plain counter, avoiding zero-length or non-finite arrow paths.
+  func normalizedCounterArrowTarget(_ target: CGPoint?) -> CGPoint? {
+    guard case .counter = type, let target,
+          target.x.isFinite, target.y.isFinite else { return nil }
+    let badge = resizeBounds
+    guard badge.midX.isFinite, badge.midY.isFinite,
+          badge.width.isFinite, badge.height.isFinite,
+          badge.width > 0, badge.height > 0 else { return nil }
+    let nx = (target.x - badge.midX) / (badge.width / 2)
+    let ny = (target.y - badge.midY) / (badge.height / 2)
+    let distance = hypot(nx, ny)
+    guard distance.isFinite, distance > 1 else { return nil }
+    return target
+  }
+
+  var counterArrowGeometry: ArrowGeometry? {
+    guard let target = normalizedCounterArrowTarget(properties.counterArrowTarget) else { return nil }
+    let badge = resizeBounds
+    let center = CGPoint(x: badge.midX, y: badge.midY)
+    let dx = target.x - center.x
+    let dy = target.y - center.y
+    let normalizedDistance = hypot(dx / (badge.width / 2), dy / (badge.height / 2))
+    let start = CGPoint(x: center.x + dx / normalizedDistance, y: center.y + dy / normalizedDistance)
+    guard start.x.isFinite, start.y.isFinite else { return nil }
+    return ArrowGeometry(start: start, end: target, style: .straight, arrowType: .tapered)
+  }
+
   var selectionBounds: CGRect {
     if case .highlight = type {
       return selectionDecorationBounds
@@ -1621,6 +1662,11 @@ extension AnnotationItem {
       if !tailBounds.isNull {
         result = result.union(tailBounds.insetBy(dx: -padding, dy: -padding))
       }
+    }
+    if let geometry = counterArrowGeometry {
+      let arrowBounds = geometry.taperedArrowPath(strokeWidth: properties.strokeWidth).boundingBoxOfPath
+      // Include the shared arrow renderer's shadow as well as selection tolerance.
+      result = result.union(arrowBounds.insetBy(dx: -7, dy: -7))
     }
     return result
   }
@@ -1677,7 +1723,121 @@ extension AnnotationItem {
 
     case .counter:
       let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
-      return pointInEllipse(point, in: counterBounds.insetBy(dx: -baseTolerance, dy: -baseTolerance))
+      if pointInEllipse(point, in: counterBounds.insetBy(dx: -baseTolerance, dy: -baseTolerance)) {
+        return true
+      }
+      guard let geometry = counterArrowGeometry else { return false }
+      let path = geometry.taperedArrowPath(strokeWidth: properties.strokeWidth)
+      if path.contains(point) { return true }
+      return path.copy(strokingWithWidth: max(0, baseTolerance) * 2, lineCap: .round, lineJoin: .round, miterLimit: 10).contains(point)
+    }
+  }
+
+  /// Narrow "visible edge" hit test used by drawing tools to click-select an
+  /// existing item. Area-like shapes only claim a band around their outline so
+  /// their interior stays free for drawing new annotations on top (#535).
+  /// Stroke-based items, text and counters reuse `containsPoint`. Combined
+  /// images are canvas content for drawing tools and never claim a click.
+  /// Rounded (filled) rectangles and spotlights use their drawn rounded
+  /// outline (`roundedOutline`). The band widens with the stroke width only for
+  /// shapes that draw an outline at that width: a blur's `strokeWidth` is its
+  /// strength and a watermark draws no outline, so both use the base tolerance.
+  func edgeBandContains(_ point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    let tolerance: CGFloat
+    switch type {
+    case .blur(_), .watermark:
+      tolerance = baseTolerance
+    default:
+      tolerance = baseTolerance + properties.strokeWidth / 2
+    }
+
+    switch type {
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .spotlight:
+      // Rounded shapes test against the outline they are drawn with, so a
+      // click follows the visible corners, not the empty square ones.
+      if let outline = roundedOutline {
+        // Hover calls this on every mouse move, so skip stroking the outline
+        // for points that cannot be in the band: outside it, or deeper inside
+        // than the tolerance plus the corner radius (the tolerance-inset rect
+        // is then non-empty, so the small-shape rule below does not apply).
+        // The rect tests lean conservative on the boundaries (`CGRect.contains`
+        // would drop the outer rect's max edges), so results match stroking.
+        let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+        guard point.x >= outer.minX, point.x <= outer.maxX,
+              point.y >= outer.minY, point.y <= outer.maxY else { return false }
+        let radius: CGFloat = type == .spotlight
+          ? SpotlightCompositor.clampedCornerRadius(properties.cornerRadius, in: bounds)
+          : AnnotationRenderer.clampedCornerRadius(properties.cornerRadius, in: bounds)
+        let deep = bounds.insetBy(dx: tolerance + radius, dy: tolerance + radius)
+        if !deep.isNull, !deep.isEmpty,
+           point.x > deep.minX, point.x < deep.maxX,
+           point.y > deep.minY, point.y < deep.maxY {
+          return false
+        }
+        let band = outline.copy(
+          strokingWithWidth: tolerance * 2,
+          lineCap: .butt,
+          lineJoin: .round,
+          miterLimit: 10
+        )
+        if band.contains(point) { return true }
+        // Small shapes keep their whole visible body grabbable, as below.
+        let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+        return (inner.isNull || inner.isEmpty) && outline.contains(point)
+      }
+      let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+      guard outer.contains(point) else { return false }
+      let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+      // Small shapes have no interior left once the band is applied; the whole
+      // outer rect then counts so they stay grabbable.
+      guard !inner.isNull, !inner.isEmpty else { return true }
+      return !inner.contains(point)
+
+    case .oval:
+      let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+      guard pointInEllipse(point, in: outer) else { return false }
+      let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+      guard !inner.isNull, !inner.isEmpty else { return true }
+      return !pointInEllipse(point, in: inner)
+
+    case .embeddedImage:
+      return false
+
+    case .arrow, .line, .path, .highlight, .text, .counter:
+      return containsPoint(point, baseTolerance: baseTolerance)
+    }
+  }
+
+  /// The rounded outline a (filled) rectangle or spotlight is drawn with, from
+  /// the renderer's and the spotlight compositor's own path builders. Nil when
+  /// the corners are square or the type draws no rounded outline.
+  private var roundedOutline: CGPath? {
+    switch type {
+    case .rectangle, .filledRectangle:
+      guard AnnotationRenderer.clampedCornerRadius(properties.cornerRadius, in: bounds) > 0 else { return nil }
+      return AnnotationRenderer.roundedRectPath(in: bounds, cornerRadius: properties.cornerRadius)
+    case .spotlight:
+      guard SpotlightCompositor.clampedCornerRadius(properties.cornerRadius, in: bounds) > 0 else { return nil }
+      return SpotlightCompositor.outlinePath(in: bounds, cornerRadius: properties.cornerRadius)
+    default:
+      return nil
+    }
+  }
+
+  /// Whether the item's opaque body covers the point, so a drawing-tool click
+  /// there must not reach an item underneath. Only filled rectangles, blurs
+  /// and combined images are opaque; a rounded filled rectangle's transparent
+  /// corners are not. Spotlight is see-through inside; text and counters
+  /// already claim their whole body through `edgeBandContains`.
+  func occludesItemsBelow(at point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    switch type {
+    case .filledRectangle, .blur, .embeddedImage:
+      if let outline = roundedOutline {
+        return outline.contains(point)
+      }
+      return containsPoint(point, baseTolerance: baseTolerance)
+    default:
+      return false
     }
   }
 

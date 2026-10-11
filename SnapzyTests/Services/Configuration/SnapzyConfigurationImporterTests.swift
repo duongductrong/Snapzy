@@ -335,6 +335,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     let originalLeftAction = QuickAccessSwipeActionStore.shared.swipeLeftAction
     let originalRightAction = QuickAccessSwipeActionStore.shared.swipeRightAction
     let originalTrackpadMode = QuickAccessTrackpadSwipeModeStore.shared.mode
+    let pinZoomModeStore = QuickAccessPinZoomModeStore.shared
+    let originalPinZoomMode = pinZoomModeStore.mode
     
     defer {
       manager.hideCardWhenWindowOpen = originalHide
@@ -342,6 +344,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
       QuickAccessSwipeActionStore.shared.setAction(.left, action: originalLeftAction)
       QuickAccessSwipeActionStore.shared.setAction(.right, action: originalRightAction)
       QuickAccessTrackpadSwipeModeStore.shared.setMode(originalTrackpadMode)
+      pinZoomModeStore.setMode(originalPinZoomMode)
+      QuickAccessPinWindowManager.shared.setPinZoomMode(originalPinZoomMode)
     }
 
     let source = """
@@ -356,6 +360,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     show_selection_area_overlay = false
     reverse_magnifier_zoom_direction = true
     show_magnifier_by_default = true
+    include_window_shadow = false
 
     [recording]
     video_editor_zoom_transition_duration = 0.55
@@ -369,6 +374,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     play_sounds = false
     open_in_finder_after_save = false
     trackpad_swipe_mode = "natural"
+    pin_zoom_mode = "windowFollowsImage"
     swipe_left_action = "pinToScreen"
     swipe_right_action = "none"
     hide_card_when_window_open = false
@@ -388,6 +394,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool, false)
     
     // recording
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.videoEditorZoomTransitionDuration) as? Double, 0.55)
@@ -401,6 +408,7 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessPlaySounds) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave) as? Bool, false)
     XCTAssertEqual(QuickAccessTrackpadSwipeModeStore.shared.mode, .natural)
+    XCTAssertEqual(pinZoomModeStore.mode, .windowFollowsImage)
     XCTAssertEqual(QuickAccessSwipeActionStore.shared.swipeLeftAction, .pinToScreen)
     XCTAssertNil(QuickAccessSwipeActionStore.shared.swipeRightAction)
     XCTAssertFalse(manager.hideCardWhenWindowOpen)
@@ -431,6 +439,14 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     """
     let result1 = SnapzyConfigurationImporter.importTOML(sourceInvalidTrackpad, defaults: defaults)
     XCTAssertTrue(result1.hasErrors)
+
+    let sourceInvalidPinZoomMode = """
+    schema_version = 1
+    [quick_access]
+    pin_zoom_mode = "invalid_mode"
+    """
+    let resultPinZoomMode = SnapzyConfigurationImporter.importTOML(sourceInvalidPinZoomMode, defaults: defaults)
+    XCTAssertTrue(resultPinZoomMode.hasErrors)
 
     let sourceInvalidLeftAction = """
     schema_version = 1

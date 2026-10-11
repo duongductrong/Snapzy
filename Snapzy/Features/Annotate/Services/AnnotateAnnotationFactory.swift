@@ -21,6 +21,7 @@ enum AnnotationFactory {
     var counterValue: Int
     var watermarkText: String
     var activeAnnotationBounds: CGRect
+    var counterArrowMinimumDragDistance: CGFloat = 4
   }
 
   static func createAnnotation(
@@ -28,7 +29,8 @@ enum AnnotationFactory {
     from start: CGPoint,
     to end: CGPoint,
     path: [CGPoint],
-    state: AnnotateState
+    state: AnnotateState,
+    counterArrowMinimumDragDistance: CGFloat = 4
   ) -> AnnotationItem? {
     createAnnotation(
       tool: tool,
@@ -45,7 +47,8 @@ enum AnnotationFactory {
         blurType: state.blurType,
         counterValue: state.nextCounterValue(),
         watermarkText: state.watermarkText,
-        activeAnnotationBounds: state.activeAnnotationBounds
+        activeAnnotationBounds: state.activeAnnotationBounds,
+        counterArrowMinimumDragDistance: counterArrowMinimumDragDistance
       )
     )
   }
@@ -58,7 +61,9 @@ enum AnnotationFactory {
     context: CreationContext
   ) -> AnnotationItem? {
 
-    let properties = context.properties
+    var properties = context.properties
+    // Arrow targets belong to individual counters, never to a tool default.
+    properties.counterArrowTarget = nil
 
     let type: AnnotationType?
 
@@ -166,7 +171,12 @@ enum AnnotationFactory {
         height: abs(end.y - start.y)
       )
     }
-    return AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
+    var item = AnnotationItem(type: annotationType, bounds: bounds, properties: properties)
+    if case .counter = annotationType,
+       hypot(end.x - start.x, end.y - start.y) >= context.counterArrowMinimumDragDistance {
+      item.properties.counterArrowTarget = item.normalizedCounterArrowTarget(end)
+    }
+    return item
   }
 
   /// Build one highlight per snapped text-line segment. The bar height is

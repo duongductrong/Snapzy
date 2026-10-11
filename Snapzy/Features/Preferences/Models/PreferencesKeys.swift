@@ -108,6 +108,7 @@ enum PreferencesKeys {
   static let floatingTwoFingerSwipeToDismissEnabled = "floatingScreenshot.twoFingerSwipeToDismissEnabled"
   static let floatingSwipeSensitivity = "floatingScreenshot.swipeSensitivity"
   static let quickAccessTrackpadSwipeMode = "quickAccess.trackpad.swipe.mode"
+  static let quickAccessPinZoomMode = "quickAccess.pin.zoom.mode"
   static let quickAccessActionOrder = "quickAccess.actions.order.v1"
   static let quickAccessEnabledActions = "quickAccess.actions.enabled.v1"
   static let quickAccessActionSlotAssignments = "quickAccess.actions.slots.v1"

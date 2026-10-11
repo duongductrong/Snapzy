@@ -12,7 +12,6 @@ struct QuickAccessPinWindowView: View {
   @ObservedObject var state: QuickAccessPinWindowState
 
   let onClose: () -> Void
-  let onZoomSizeChange: (CGSize) -> Void
   let onLockChanged: () -> Void
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -40,11 +39,8 @@ struct QuickAccessPinWindowView: View {
   }
 
   private var screenshotImage: some View {
-    Image(nsImage: state.image)
-      .resizable()
-      .aspectRatio(contentMode: .fit)
+    QuickAccessPinImageViewport(state: state)
       .frame(width: state.displaySize.width, height: state.displaySize.height)
-      .background(Color.black.opacity(0.03))
       .clipped()
       .opacity(state.isLocked && state.isMouseInside ? 0.18 : 1)
       .animation(reduceMotion ? nil : .easeInOut(duration: 0.14), value: state.isMouseInside)
@@ -137,7 +133,7 @@ struct QuickAccessPinWindowView: View {
           title: "\(percent)%",
           isSelected: percent == state.zoomPercent
         ) {
-          onZoomSizeChange(state.setZoomPercent(percent))
+          state.setZoomPercent(percent)
           isZoomPickerPresented = false
         }
       }
@@ -152,7 +148,7 @@ struct QuickAccessPinWindowView: View {
         systemImage: "arrow.down.right.and.arrow.up.left",
         isSelected: state.zoomPercent == 100
       ) {
-        onZoomSizeChange(state.resetZoom())
+        state.resetZoom()
         isZoomPickerPresented = false
       }
     }

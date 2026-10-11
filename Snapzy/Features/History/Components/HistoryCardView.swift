@@ -8,6 +8,45 @@
 import AppKit
 import SwiftUI
 
+enum HistoryCardEmphasis {
+  static let activeBorderWidth: CGFloat = 3
+  static let inactiveBorderWidth: CGFloat = 1.2
+  static let activeScale: CGFloat = 1.02
+  static let focusedLiftOffset: CGFloat = -12
+  static let expandedHoverScale: CGFloat = 1.005
+  static let springResponse: Double = 0.24
+  static let springDampingFraction: Double = 0.88
+  static let activeShadowRadius: CGFloat = 18
+  static let inactiveShadowRadius: CGFloat = 3
+  static let activeShadowYOffset: CGFloat = 8
+  static let inactiveShadowYOffset: CGFloat = 2
+
+  static func activeShadowColor(for colorScheme: ColorScheme) -> Color {
+    Color.black.opacity(colorScheme == .dark ? 0.28 : 0.12)
+  }
+
+  static func shadowColor(
+    isActive: Bool,
+    isHovering: Bool,
+    backgroundStyle: HistoryBackgroundStyle,
+    colorScheme: ColorScheme
+  ) -> Color {
+    if isActive {
+      return activeShadowColor(for: colorScheme)
+    }
+
+    if isHovering {
+      return Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08)
+    }
+
+    if backgroundStyle == .solid {
+      return Color.black.opacity(colorScheme == .dark ? 0.16 : 0.07)
+    }
+
+    return .clear
+  }
+}
+
 struct HistoryCardView: View, Equatable {
   let record: CaptureHistoryRecord
   let isSelected: Bool
@@ -48,8 +87,14 @@ struct HistoryCardView: View, Equatable {
     }
     .contentShape(Rectangle())
     .overlay(historyDragInteractionBridge)
-    .scaleEffect(isSelected ? 1.02 : (isHovering ? 1.01 : 1))
-    .animation(.spring(response: 0.24, dampingFraction: 0.88), value: isSelected)
+    .scaleEffect(isSelected ? HistoryCardEmphasis.activeScale : (isHovering ? 1.01 : 1))
+    .animation(
+      .spring(
+        response: HistoryCardEmphasis.springResponse,
+        dampingFraction: HistoryCardEmphasis.springDampingFraction
+      ),
+      value: isSelected
+    )
     .animation(.easeOut(duration: 0.18), value: isHovering)
     .onHover { hovering in
       isHovering = hovering
@@ -136,8 +181,24 @@ struct HistoryCardView: View, Equatable {
         }
       }
       .clipShape(cardShape)
-      .overlay(cardShape.stroke(cardBorderColor, lineWidth: isSelected ? 3 : 1.2))
-      .shadow(color: cardShadowColor, radius: isSelected ? 18 : 3, x: 0, y: isSelected ? 8 : 2)
+      .overlay(
+        cardShape.stroke(
+          cardBorderColor,
+          lineWidth: isSelected
+            ? HistoryCardEmphasis.activeBorderWidth
+            : HistoryCardEmphasis.inactiveBorderWidth
+        )
+      )
+      .shadow(
+        color: cardShadowColor,
+        radius: isSelected
+          ? HistoryCardEmphasis.activeShadowRadius
+          : HistoryCardEmphasis.inactiveShadowRadius,
+        x: 0,
+        y: isSelected
+          ? HistoryCardEmphasis.activeShadowYOffset
+          : HistoryCardEmphasis.inactiveShadowYOffset
+      )
     }
     .aspectRatio(16.0 / 10.0, contentMode: .fit)
   }
@@ -192,19 +253,12 @@ struct HistoryCardView: View, Equatable {
   }
 
   private var cardShadowColor: Color {
-    if isSelected {
-      return Color.black.opacity(colorScheme == .dark ? 0.28 : 0.12)
-    }
-
-    if isHovering {
-      return Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08)
-    }
-
-    if backgroundStyle == .solid {
-      return Color.black.opacity(colorScheme == .dark ? 0.16 : 0.07)
-    }
-
-    return Color.clear
+    HistoryCardEmphasis.shadowColor(
+      isActive: isSelected,
+      isHovering: isHovering,
+      backgroundStyle: backgroundStyle,
+      colorScheme: colorScheme
+    )
   }
 
   private var timeLabelColor: Color {

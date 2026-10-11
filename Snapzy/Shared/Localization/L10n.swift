@@ -2950,6 +2950,9 @@ nonisolated enum L10n {
   }
 
   enum PreferencesQuickAccess {
+    static let pinZoomSection = string("preferences-quick-access.pin-zoom-section", defaultValue: "Pinned Image", comment: "Quick access section for pinned image zoom behavior")
+    static let pinZoomModeWindow = string("preferences-quick-access.pin-zoom-mode-window", defaultValue: "Resize window with image", comment: "Pinned image zoom mode that grows the window with the image")
+    static let pinZoomModeFixed = string("preferences-quick-access.pin-zoom-mode-fixed", defaultValue: "Keep window size fixed", comment: "Pinned image zoom mode that keeps a fixed viewport")
     static let actionDisabledFootnote = string(
       "preferences-quick-access.action-disabled-footnote",
       defaultValue: "Turned off in Quick Access settings",
@@ -6078,6 +6081,11 @@ nonisolated enum L10n {
       "annotate.highlighter-text-snapping",
       defaultValue: "Snap Highlight to Text",
       comment: "Settings title for snapping the highlighter to detected text lines"
+    )
+    static let counterGestureHint = string(
+      "annotate.counter-gesture-hint",
+      defaultValue: "Click to place · Drag to point",
+      comment: "Hint for the Counter tool: click places a numbered badge; dragging adds an attached arrow"
     )
     static let textSnap = string(
       "annotate.text-snap",
