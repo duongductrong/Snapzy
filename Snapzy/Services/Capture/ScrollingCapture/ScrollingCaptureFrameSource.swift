@@ -12,6 +12,14 @@ import Foundation
 import ScreenCaptureKit
 
 final class ScrollingCaptureFrameSource: NSObject {
+  private final class StreamReference: @unchecked Sendable {
+    let stream: SCStream
+
+    init(_ stream: SCStream) {
+      self.stream = stream
+    }
+  }
+
   private let sampleQueue = DispatchQueue(
     label: "com.snapzy.scrolling-capture.preview-stream",
     qos: .userInteractive
@@ -69,9 +77,10 @@ final class ScrollingCaptureFrameSource: NSObject {
       // Best-effort teardown: stream may already be winding down.
     }
 
+    let streamReference = StreamReference(activeStream)
     Task.detached(priority: .userInitiated) {
       do {
-        try await activeStream.stopCapture()
+        try await streamReference.stream.stopCapture()
       } catch {
         // Best-effort teardown: stream may already be stopped.
       }
@@ -89,12 +98,12 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       guard type == .screen, sampleBuffer.isValid else { return }
       guard let pixelBuffer = sampleBuffer.imageBuffer else { return }
 
+      let attachments = CMSampleBufferGetSampleAttachmentsArray(
+        sampleBuffer,
+        createIfNecessary: false
+      ) as? [[SCStreamFrameInfo: Any]]
       if
-        let attachments = CMSampleBufferGetSampleAttachmentsArray(
-          sampleBuffer,
-          createIfNecessary: false
-        ) as? [[SCStreamFrameInfo: Any]],
-        let statusRaw = attachments.first?[.status] as? Int,
+        let statusRaw = attachments?.first?[.status] as? Int,
         let status = SCFrameStatus(rawValue: statusRaw),
         status != .complete
       {
@@ -102,6 +111,9 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       }
 
       let now = ProcessInfo.processInfo.systemUptime
+      guard let displayTime = attachments?.first?[.displayTime] as? UInt64, displayTime > 0 else { return }
+      let capturedAt = CMClockMakeHostTimeFromSystemUnits(displayTime).seconds
+      guard capturedAt.isFinite, capturedAt > 0 else { return }
       guard now - lastPublishedAt >= minimumPublishInterval else { return }
 
       let imageRect = CGRect(
@@ -120,11 +132,13 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
       let frame = ScrollingCaptureFrame(
         sequenceNumber: nextSequenceNumber,
         image: cgImage,
-        capturedAt: now,
+        capturedAt: capturedAt,
         motionScore: nil
       )
+      let streamID = ObjectIdentifier(stream)
       DispatchQueue.main.async { [weak self] in
-        self?.onFrame?(frame)
+        guard let self, self.stream.map({ ObjectIdentifier($0) }) == streamID else { return }
+        self.onFrame?(frame)
       }
     }
   }
@@ -132,8 +146,10 @@ extension ScrollingCaptureFrameSource: SCStreamOutput {
 
 extension ScrollingCaptureFrameSource: SCStreamDelegate {
   nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
+    let streamID = ObjectIdentifier(stream)
     DispatchQueue.main.async { [weak self] in
-      self?.onFailure?(error.localizedDescription)
+      guard let self, self.stream.map({ ObjectIdentifier($0) }) == streamID else { return }
+      self.onFailure?(error.localizedDescription)
     }
   }
 }

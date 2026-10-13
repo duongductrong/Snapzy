@@ -24,6 +24,10 @@ final class BlurCacheManager {
   private let maxCachedPixelsPerBlur: CGFloat = 1_600_000
   private let maxTotalCachedPixels: Int = 8_000_000
 
+  // Keep: nonisolated on purpose, like `CanvasInteractionBridge.deinit`; the
+  // synthesized MainActor deinit can abort on macOS 15.4+ runtimes.
+  deinit {}
+
   private struct CacheEntry {
     let image: CGImage
     let bounds: CGRect

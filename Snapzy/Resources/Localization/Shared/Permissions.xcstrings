@@ -1,656 +1,591 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "file-access.bookmark-save-failed-message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy konnte den Zugriff auf diesen Ordner nicht aufrechterhalten. Bitte wählen Sie den Ordner erneut aus und bestätigen Sie die Berechtigung."
+  "sourceLanguage": "en",
+  "strings": {
+    "file-access.bookmark-save-failed-message": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy konnte den Zugriff auf diesen Ordner nicht aufrechterhalten. Bitte wählen Sie den Ordner erneut aus und bestätigen Sie die Berechtigung."
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy could not persist access to this folder. Please choose the folder again and confirm permission."
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy could not persist access to this folder. Please choose the folder again and confirm permission."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy no pudo mantener el acceso a esta carpeta. Elija la carpeta nuevamente y confirme el permiso."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy no pudo mantener el acceso a esta carpeta. Elija la carpeta nuevamente y confirme el permiso."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy n'a pas pu conserver l'accès à ce dossier. Veuillez choisir à nouveau le dossier et confirmer l'autorisation."
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy n'a pas pu conserver l'accès à ce dossier. Veuillez choisir à nouveau le dossier et confirmer l'autorisation."
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy はこのフォルダへのアクセスを維持できませんでした。もう一度フォルダを選択し、許可を確認してください。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy はこのフォルダへのアクセスを維持できませんでした。もう一度フォルダを選択し、許可を確認してください。"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy는 이 폴더에 대한 액세스를 유지할 수 없습니다. 폴더를 다시 선택하고 권한을 확인해 주세요."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy는 이 폴더에 대한 액세스를 유지할 수 없습니다. 폴더를 다시 선택하고 권한을 확인해 주세요."
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy не удалось сохранить доступ к этой папке. Пожалуйста, выберите папку еще раз и подтвердите разрешение."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy не удалось сохранить доступ к этой папке. Пожалуйста, выберите папку еще раз и подтвердите разрешение."
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy không thể lưu quyền truy cập thư mục này. Vui lòng chọn lại thư mục và xác nhận quyền."
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy không thể lưu quyền truy cập thư mục này. Vui lòng chọn lại thư mục và xác nhận quyền."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy 无法持久访问此文件夹。请再次选择该文件夹并确认权限。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 无法持久访问此文件夹。请再次选择该文件夹并确认权限。"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy 無法持久訪問此檔案夾。請再次選擇該檔案夾並確認權限。"
-          }
-        }
-      }
-    },
-    "file-access.bookmark-save-failed-title" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ordnerzugriff nicht gewährt"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Folder Access Not Granted"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Acceso a la carpeta no concedido"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accès au dossier non accordé"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フォルダへのアクセスが許可されていません"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "폴더 액세스 권한이 부여되지 않음"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Доступ к папке не предоставлен"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chưa được cấp quyền thư mục"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未授予文件夹访问权限"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未授予檔案夾訪問權限"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 無法持久訪問此檔案夾。請再次選擇該檔案夾並確認權限。"
           }
         }
       }
     },
-    "file-access.choose-captures-folder-message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wählen Sie, wo Snapzy Screenshots und Aufnahmen speichern soll"
+    "file-access.bookmark-save-failed-title": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordnerzugriff nicht gewährt"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose where Snapzy should save screenshots and recordings"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder Access Not Granted"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elija dónde Snapzy debe guardar capturas de pantalla y grabaciones"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Acceso a la carpeta no concedido"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisissez où Snapzy doit enregistrer les captures d'écran et les enregistrements"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accès au dossier non accordé"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy がスクリーンショットと録画を保存する場所を選択します"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダへのアクセスが許可されていません"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy가 스크린샷과 녹음을 저장할 위치를 선택하세요"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 액세스 권한이 부여되지 않음"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выберите, где Snapzy должен сохранять снимки экрана и записи"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Доступ к папке не предоставлен"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn nơi Snapzy sẽ lưu ảnh chụp và bản ghi"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chưa được cấp quyền thư mục"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择 Snapzy 保存屏幕截图和录屏的位置"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未授予文件夹访问权限"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇 Snapzy 保存螢幕截圖和錄屏的位置"
-          }
-        }
-      }
-    },
-    "file-access.choose-folder-prompt" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wählen Sie Ordner"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choose Folder"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Elegir carpeta"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Choisir un dossier"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "フォルダを選択"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "폴더 선택"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выбрать папку"
-          }
-        },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn thư mục"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择文件夹"
-          }
-        },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇檔案夾"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未授予檔案夾訪問權限"
           }
         }
       }
     },
-    "file-access.desktop-pictures-access-message" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wählen Sie den Ordner „Desktop-Bilder“ aus, um Zugriff zu gewähren"
+    "file-access.choose-captures-folder-message": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie, wo Snapzy Screenshots und Aufnahmen speichern soll"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Select the Desktop Pictures folder to grant access"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose where Snapzy should save screenshots and recordings"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seleccione la carpeta Imágenes del escritorio para otorgar acceso"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elija dónde Snapzy debe guardar capturas de pantalla y grabaciones"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sélectionnez le dossier Desktop Pictures pour accorder l'accès"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisissez où Snapzy doit enregistrer les captures d'écran et les enregistrements"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アクセスを許可するには、デスクトップピクチャフォルダを選択します"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy がスクリーンショットと録画を保存する場所を選択します"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "액세스 권한을 부여하려면 Desktop Pictures 폴더를 선택하세요"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 스크린샷과 녹음을 저장할 위치를 선택하세요"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Выберите папку «Изображения рабочего стола», чтобы предоставить доступ"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выберите, где Snapzy должен сохранять снимки экрана и записи"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chọn thư mục Desktop Pictures để cấp quyền truy cập"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn nơi Snapzy sẽ lưu ảnh chụp và bản ghi"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "选择“桌面图片”文件夹以授予访问权限"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择 Snapzy 保存屏幕截图和录屏的位置"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "選擇“桌面圖片”檔案夾以授予訪問權限"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇 Snapzy 保存螢幕截圖和錄屏的位置"
           }
         }
       }
     },
-    "file-access.grant-access-prompt" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zugriff gewähren"
+    "file-access.choose-folder-prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wählen Sie Ordner"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Grant Access"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose Folder"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conceder acceso"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir carpeta"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accorder l'accès"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir un dossier"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アクセスを許可する"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォルダを選択"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "액세스 권한 부여"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 선택"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Предоставить доступ"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Выбрать папку"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cấp quyền"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chọn thư mục"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "授予访问权限"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择文件夹"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "授予訪問權限"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "選擇檔案夾"
           }
         }
       }
     },
-    "permission-row.granted" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zugegeben"
+    "file-access.grant-access-prompt": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugriff gewähren"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Granted"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grant Access"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Concedido"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conceder acceso"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Accordé"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accorder l'accès"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "許可済み"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アクセスを許可する"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "허락됨"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액세스 권한 부여"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Конечно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Предоставить доступ"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Đã cấp"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cấp quyền"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "授予"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授予访问权限"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "授予"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授予訪問權限"
           }
         }
       }
     },
-    "permission-row.optional" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optional"
+    "permission-row.granted": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugegeben"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optional"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Granted"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opcional"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Concedido"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Facultatif"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accordé"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "任意"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "許可済み"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "선택사항"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허락됨"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Необязательно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Конечно"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tùy chọn"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã cấp"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可选"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授予"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可選"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "授予"
           }
         }
       }
     },
-    "permission-row.required" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erforderlich"
+    "permission-row.optional": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Required"
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Requerido"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opcional"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obligatoire"
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Facultatif"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "必須"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任意"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "필수"
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택사항"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Обязательно"
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Необязательно"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bắt buộc"
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tùy chọn"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "必需"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可选"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "必要"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可選"
           }
         }
       }
     },
-    "preferences-permissions.intro" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy benötigt bestimmte Berechtigungen, um Ihren Bildschirm und Audio aufzunehmen."
+    "permission-row.required": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erforderlich"
           }
         },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy requires certain permissions to capture your screen and audio."
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Required"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy requiere ciertos permisos para capturar su pantalla y audio."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requerido"
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy nécessite certaines autorisations pour capturer votre écran et votre audio."
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obligatoire"
           }
         },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy が画面と音声を記録するには、いくつかの権限が必要です。"
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必須"
           }
         },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy가 화면과 오디오를 캡처하려면 특정 권한이 필요합니다."
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필수"
           }
         },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy требует определенных разрешений для захвата экрана и звука."
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Обязательно"
           }
         },
-        "vi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy cần một số quyền để chụp màn hình và ghi âm."
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bắt buộc"
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy 需要截屏、访问麦克风音频及文件等权限。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必需"
           }
         },
-        "zh-Hant" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Snapzy 需要擷取螢幕畫面、麥克風音訊與檔案等相關權限。"
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "必要"
+          }
+        }
+      }
+    },
+    "preferences-permissions.intro": {
+      "extractionState": "stale",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy benötigt bestimmte Berechtigungen, um Ihren Bildschirm und Audio aufzunehmen."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy requires certain permissions to capture your screen and audio."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy requiere ciertos permisos para capturar su pantalla y audio."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy nécessite certaines autorisations pour capturer votre écran et votre audio."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy が画面と音声を記録するには、いくつかの権限が必要です。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy가 화면과 오디오를 캡처하려면 특정 권한이 필요합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy требует определенных разрешений для захвата экрана и звука."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy cần một số quyền để chụp màn hình và ghi âm."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 需要截屏、访问麦克风音频及文件等权限。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 需要擷取螢幕畫面、麥克風音訊與檔案等相關權限。"
           }
         }
       }
     }
   },
-  "version" : "1.0"
+  "version": "1.0"
 }

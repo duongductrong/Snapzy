@@ -13,8 +13,10 @@ import SwiftUI
 enum ToolbarConstants {
   static let iconButtonSize: CGFloat = 32
   static let iconSize: CGFloat = 15
-  static let buttonCornerRadius: CGFloat = 6
-  static let toolbarCornerRadius: CGFloat = 14
+  /// Derived, not chosen: at 32pt the previous 6pt corner was the squarest control in the app
+  /// (ratio 0.19) while the record/stop pills beside it were fully rounded. See `Radius`.
+  static let buttonCornerRadius = Radius.control(forHeight: iconButtonSize)
+  static let toolbarCornerRadius = Radius.card
   static let dividerHeight: CGFloat = 20
   static let itemSpacing: CGFloat = 4
   static let groupSpacing: CGFloat = 2
@@ -22,6 +24,18 @@ enum ToolbarConstants {
   static let verticalPadding: CGFloat = 6
   static let hoverAnimation: Animation = .easeInOut(duration: 0.15)
   static let pressAnimation: Animation = .easeInOut(duration: 0.1)
+
+  /// Shared hit/glass shape for the icon-only toolbar controls, so chrome and hit target never
+  /// drift. Labelled controls use `textButtonShape`.
+  static var buttonShape: RoundedRectangle {
+    Radius.rect(buttonCornerRadius)
+  }
+
+  /// Labelled toolbar actions (`Options`, `Record`, `Stop`) are text buttons, so they take the
+  /// app's pill shape; the pill derives its radius from the control's height by construction.
+  static var textButtonShape: Capsule {
+    Capsule(style: .continuous)
+  }
 }
 
 // MARK: - Native Toolbar Button Style (for icon buttons)
@@ -47,12 +61,12 @@ struct RecordButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.textButtonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
@@ -65,12 +79,12 @@ struct OptionsButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.textButtonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
@@ -98,12 +112,8 @@ struct ToolbarIconButtonLabel: View {
         width: ToolbarConstants.iconButtonSize,
         height: ToolbarConstants.iconButtonSize
       )
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(isHovered ? 0.1 : 0))
-      )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.hoverAnimation, value: isHovered)
+      .liquidGlassChrome(shape: ToolbarConstants.buttonShape, isVisible: isHovered)
+      .animation(LiquidGlassTokens.hoverSpring, value: isHovered)
   }
 }
 
@@ -116,12 +126,12 @@ struct StopButtonStyle: ButtonStyle {
       .foregroundColor(.primary)
       .padding(.horizontal, 12)
       .padding(.vertical, 6)
-      .background(
-        RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius)
-          .fill(Color.primary.opacity(configuration.isPressed ? 0.12 : 0))
+      .liquidGlassChrome(
+        shape: ToolbarConstants.textButtonShape,
+        isVisible: configuration.isPressed,
+        isActive: configuration.isPressed
       )
-      .contentShape(RoundedRectangle(cornerRadius: ToolbarConstants.buttonCornerRadius))
-      .animation(ToolbarConstants.pressAnimation, value: configuration.isPressed)
+      .animation(LiquidGlassTokens.pressSpring, value: configuration.isPressed)
   }
 }
 
@@ -136,7 +146,7 @@ struct StopButtonStyle: ButtonStyle {
   }
   .padding()
   .background(.ultraThinMaterial)
-  .clipShape(RoundedRectangle(cornerRadius: ToolbarConstants.toolbarCornerRadius))
+  .clipShape(Radius.rect(ToolbarConstants.toolbarCornerRadius))
 }
 
 #Preview("Toolbar Divider") {

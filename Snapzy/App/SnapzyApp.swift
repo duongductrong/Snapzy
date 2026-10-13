@@ -7,6 +7,7 @@
 
 import AppKit
 import Carbon
+import CoreGraphics
 import SwiftUI
 
 // MARK: - Notification Names
@@ -21,6 +22,10 @@ struct SnapzyApp: App {
   @ObservedObject private var themeManager = ThemeManager.shared
 
   init() {
+    if CommandLine.arguments.contains("--check-screen-capture-granted") {
+      let granted = CGPreflightScreenCaptureAccess()
+      exit(granted ? 0 : 1)
+    }
     AppIdentityManager.shared.refresh()
   }
 

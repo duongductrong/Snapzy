@@ -5,8 +5,10 @@
 //  Playback controls with play/pause button and time display
 //
 
+import AppKit
 import AVFoundation
 import SwiftUI
+import UniformTypeIdentifiers
 
 private enum VideoControlsSection: Hashable {
   case left
@@ -121,28 +123,6 @@ private enum VideoControlsLayoutStyle {
     case .regular, .expanded: 11
     }
   }
-
-  var badgeHorizontalPadding: CGFloat {
-    switch self {
-    case .compact: 5
-    case .regular: 6
-    case .expanded: 7
-    }
-  }
-
-  var badgeVerticalPadding: CGFloat {
-    switch self {
-    case .compact: 2
-    case .regular, .expanded: 3
-    }
-  }
-
-  var trimFontSize: CGFloat {
-    switch self {
-    case .compact: 11
-    case .regular, .expanded: 12
-    }
-  }
 }
 
 private struct VideoControlsSectionWidthKey: PreferenceKey {
@@ -222,12 +202,8 @@ struct VideoControlsView: View {
     }
   }
 
-  private var hasStatusMetadata: Bool {
-    !state.zoomSegments.isEmpty || isAutoZoomActiveAtCurrentTime || state.hasUnsavedChanges
-  }
-
   private var isAutoZoomActiveAtCurrentTime: Bool {
-    state.activeZoomSegment(at: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
+    state.activeZoomSegment(atTimeline: CMTimeGetSeconds(playbackState.currentTime))?.isAutoMode == true
   }
 
   private var reservedSideWidth: CGFloat {
@@ -239,8 +215,75 @@ struct VideoControlsView: View {
   }
 
   private var leftActions: some View {
-    Color.clear
-      .frame(width: 0, height: 1)
+    // Clip-editing (cut) controls share one quiet glass capsule — same treatment and
+    // metrics as the zoom cluster on the trailing edge — so the row reads as a
+    // matching pair of grouped instrument chips.
+    HStack(spacing: 4) {
+      cutButton(icon: "scissors", isDisabled: !state.canSplitAtPlayhead) {
+        state.splitAtPlayhead()
+      }
+      .keyboardShortcut("s", modifiers: [])
+      .help(L10n.VideoEditor.splitAtPlayheadHint)
+
+      cutButton(icon: "trash", isDisabled: !state.canDeleteSelectedClip) {
+        state.deleteSelectedClip()
+      }
+      .keyboardShortcut(.delete, modifiers: [])
+      .help(L10n.VideoEditor.deleteClipHint)
+
+      cutButton(icon: "plus.viewfinder", isDisabled: false) {
+        insertClipsViaPicker()
+      }
+      .help(L10n.VideoEditor.addClipHint)
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: false
+    )
+  }
+
+  /// Icon control inside the cut group capsule, sized down from the transport cluster
+  /// (which is tuned for the big play button) to the compact chip scale of
+  /// `TimelineZoomControls`. Disabled dimming lives on the glyph only, never as an
+  /// `.opacity()` around the glass surface (Rule 2).
+  private func cutButton(
+    icon: String,
+    isDisabled: Bool,
+    action: @escaping () -> Void
+  ) -> some View {
+    Button(action: action) {
+      Image(systemName: icon)
+        .font(.system(size: 12, weight: .medium))
+        .foregroundColor(isDisabled ? Color.primary.opacity(0.4) : .primary)
+        // Square frames keep each hit target equal and give the glyphs even breathing
+        // room, so the group's rhythm does not follow each symbol's natural width.
+        .frame(width: 16, height: 14)
+        .contentShape(Rectangle())
+    }
+    .buttonStyle(.plain)
+    .disabled(isDisabled)
+  }
+
+  private func insertClipsViaPicker() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = true
+    panel.canChooseDirectories = false
+    panel.allowsMultipleSelection = true
+    panel.allowedContentTypes = ["mov", "mp4", "m4v"].compactMap { UTType(filenameExtension: $0) }
+    panel.message = L10n.VideoEditor.addClipPickerMessage
+    guard panel.runModal() == .OK else { return }
+    // Insert at the playhead, keeping the picker's order for a multi-file selection.
+    Task { @MainActor in
+      var index = state.insertionIndexAtPlayhead
+      for url in panel.urls {
+        if await state.insertClip(url: url, at: index) != nil {
+          index += 1
+        }
+      }
+    }
   }
 
   private var centerTransport: some View {
@@ -259,43 +302,53 @@ struct VideoControlsView: View {
 
       timeLabel(state.formattedDuration, alignment: .leading)
     }
+    // Transport siblings merge optically on macOS 26+ and sample once.
+    .liquidGlassGroup(spacing: controlsLayout.centerSpacing)
   }
 
-  @ViewBuilder
   private var rightActions: some View {
-    if hasStatusMetadata {
-      HStack(spacing: controlsLayout.metadataSpacing) {
-        statusMetadata
-      }
-    } else {
-      Color.clear
-        .frame(width: 0, height: 1)
+    HStack(spacing: controlsLayout.metadataSpacing) {
+      statusMetadata
+
+      // Timeline zoom cluster lives with the other transport controls so it
+      // never occludes the ruler or tracks underneath it.
+      TimelineZoomControls(
+        viewport: state.timelineViewport,
+        anchorTime: CMTimeGetSeconds(playbackState.currentTime)
+      )
     }
   }
 
+  /// The transport is the one always-lit surface in the editor, so it keeps its glass at rest
+  /// rather than materialising on hover — it is the primary control of the window.
   private var playPauseButton: some View {
     Button(action: { state.togglePlayback() }) {
       Image(systemName: playbackState.isPlaying ? "pause.fill" : "play.fill")
         .font(.system(size: controlsLayout.playIconSize, weight: .bold))
-        .foregroundColor(.black.opacity(0.9))
+        // Accent-tinted glass, so the glyph is resolved against the tint rather than the app
+        // appearance — adaptive ink drew a black triangle on the blue transport in Light theme.
+        .foregroundColor(LiquidGlassTokens.inkOnAccent)
         .frame(width: controlsLayout.playButtonSize, height: controlsLayout.playButtonSize)
-        .background(Color.white)
-        .clipShape(Circle())
+        .liquidGlassChrome(
+          shape: Circle(),
+          isVisible: true,
+          isActive: true,
+          glassTint: .accentColor
+        )
     }
     .buttonStyle(.plain)
-    .keyboardShortcut(.space, modifiers: [])
   }
 
   private func transportButton(systemName: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
       Image(systemName: systemName)
         .font(.system(size: controlsLayout.transportIconSize, weight: .semibold))
-        .foregroundColor(.secondary)
+        .foregroundColor(LiquidGlassTokens.inkBody)
         .frame(
           width: controlsLayout.transportButtonSize,
           height: controlsLayout.transportButtonSize
         )
-        .contentShape(Rectangle())
+        .liquidGlassControl(isActive: false, in: Circle())
     }
     .buttonStyle(.plain)
   }
@@ -310,60 +363,45 @@ struct VideoControlsView: View {
   @ViewBuilder
   private var statusMetadata: some View {
     if !state.zoomSegments.isEmpty {
-      HStack(spacing: 4) {
-        Image(systemName: "plus.magnifyingglass")
-          .font(.system(size: controlsLayout.badgeIconSize))
-          .foregroundColor(ZoomColors.primary)
-
-        Text("\(state.zoomSegments.count)")
-          .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
-          .foregroundColor(ZoomColors.primary)
-      }
-      .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
-      .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(ZoomColors.primary.opacity(0.15))
-      .cornerRadius(4)
+      statusBadge(systemName: "plus.magnifyingglass", text: "\(state.zoomSegments.count)")
     }
 
     if isAutoZoomActiveAtCurrentTime {
-      HStack(spacing: 4) {
-        Image(systemName: "camera.metering.center.weighted")
-          .font(.system(size: controlsLayout.badgeIconSize))
-          .foregroundColor(.green)
-
-        Text(L10n.VideoEditor.auto)
-          .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
-          .foregroundColor(.green)
-      }
-      .padding(.horizontal, controlsLayout.badgeHorizontalPadding)
-      .padding(.vertical, controlsLayout.badgeVerticalPadding)
-      .background(Color.green.opacity(0.12))
-      .cornerRadius(4)
+      statusBadge(systemName: "camera.metering.center.weighted", text: L10n.VideoEditor.auto)
     }
 
     if state.hasUnsavedChanges {
-      HStack(spacing: 4) {
-        Image(systemName: "scissors")
-          .font(.system(size: controlsLayout.trimFontSize))
-          .foregroundColor(.yellow)
-
-        Text(state.formattedTrimmedDuration)
-          .font(.system(size: controlsLayout.trimFontSize, design: .monospaced))
-          .foregroundColor(.yellow)
-      }
+      statusBadge(systemName: "scissors", text: state.formattedTrimmedDuration)
     }
 
     // Output length reflects per-segment speed scaling (timelapse).
     if state.hasSpeedSegments {
-      HStack(spacing: 4) {
-        Image(systemName: "gauge.with.dots.needle.67percent")
-          .font(.system(size: controlsLayout.trimFontSize))
-          .foregroundColor(.orange)
-
-        Text(state.formattedOutputDuration)
-          .font(.system(size: controlsLayout.trimFontSize, design: .monospaced))
-          .foregroundColor(.orange)
-      }
+      statusBadge(systemName: "gauge.with.dots.needle.67percent", text: state.formattedOutputDuration)
     }
+  }
+
+  /// Uniform neutral stat chip for the controls bar — secondary glyph + primary value on one
+  /// quiet glass capsule, matching the GIF info metadata badges. All metadata shares one
+  /// treatment so the row reads as instrument readouts, not a set of colored alerts.
+  private func statusBadge(systemName: String, text: String) -> some View {
+    HStack(spacing: 5) {
+      Image(systemName: systemName)
+        .font(.system(size: controlsLayout.badgeIconSize, weight: .medium))
+        .foregroundColor(.secondary)
+
+      Text(text)
+        .font(.system(size: controlsLayout.badgeFontSize, weight: .medium))
+        .foregroundColor(.primary)
+        .lineLimit(1)
+        .fixedSize(horizontal: true, vertical: false)
+        .monospacedDigit()
+    }
+    .padding(.horizontal, 10)
+    .padding(.vertical, 6)
+    .liquidGlassChrome(
+      shape: Capsule(style: .continuous),
+      isVisible: true,
+      isActive: false
+    )
   }
 }

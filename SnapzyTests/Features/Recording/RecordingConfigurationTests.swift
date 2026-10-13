@@ -6,12 +6,11 @@
 //
 
 import AppKit
-import XCTest
 @testable import Snapzy
+import XCTest
 
 @MainActor
 final class RecordingConfigurationTests: XCTestCase {
-
   private var defaults: UserDefaults!
 
   override func setUp() async throws {
@@ -22,11 +21,17 @@ final class RecordingConfigurationTests: XCTestCase {
   func testRecordingToolbarPreferences_defaults() {
     XCTAssertEqual(RecordingToolbarPreferences.selectedFormat(defaults: defaults), .mov)
     XCTAssertEqual(RecordingToolbarPreferences.selectedQuality(defaults: defaults), .high)
+    XCTAssertEqual(RecordingToolbarPreferences.selectedMaxResolution(defaults: defaults), .auto)
     XCTAssertTrue(RecordingToolbarPreferences.captureAudio(defaults: defaults))
     XCTAssertFalse(RecordingToolbarPreferences.captureMicrophone(defaults: defaults))
     XCTAssertEqual(
       RecordingToolbarPreferences.microphoneDeviceID(defaults: defaults),
       RecordingMicrophoneDevice.systemDefaultID
+    )
+    XCTAssertFalse(RecordingToolbarPreferences.captureCamera(defaults: defaults))
+    XCTAssertEqual(
+      RecordingToolbarPreferences.cameraDeviceID(defaults: defaults),
+      RecordingCameraDevice.systemDefaultID
     )
     XCTAssertEqual(RecordingToolbarPreferences.outputMode(defaults: defaults), .video)
     XCTAssertTrue(RecordingToolbarPreferences.showCursor(defaults: defaults))
@@ -37,9 +42,12 @@ final class RecordingConfigurationTests: XCTestCase {
   func testRecordingToolbarPreferences_usePersistedRecordingOptions() {
     defaults.set(VideoFormat.mp4.rawValue, forKey: PreferencesKeys.recordingFormat)
     defaults.set(VideoQuality.low.rawValue, forKey: PreferencesKeys.recordingQuality)
+    defaults.set(RecordingMaxResolution.fhd1080.rawValue, forKey: PreferencesKeys.recordingMaxResolution)
     defaults.set(false, forKey: PreferencesKeys.recordingCaptureAudio)
     defaults.set(true, forKey: PreferencesKeys.recordingCaptureMicrophone)
     defaults.set("external-mic-id", forKey: PreferencesKeys.recordingMicrophoneDeviceID)
+    defaults.set(true, forKey: PreferencesKeys.recordingCaptureCamera)
+    defaults.set("iphone-camera-id", forKey: PreferencesKeys.recordingCameraDeviceID)
     defaults.set(RecordingOutputMode.gif.rawValue, forKey: PreferencesKeys.recordingOutputMode)
     defaults.set(false, forKey: PreferencesKeys.recordingShowCursor)
     defaults.set(true, forKey: PreferencesKeys.recordingHighlightClicks)
@@ -47,9 +55,12 @@ final class RecordingConfigurationTests: XCTestCase {
 
     XCTAssertEqual(RecordingToolbarPreferences.selectedFormat(defaults: defaults), .mp4)
     XCTAssertEqual(RecordingToolbarPreferences.selectedQuality(defaults: defaults), .low)
+    XCTAssertEqual(RecordingToolbarPreferences.selectedMaxResolution(defaults: defaults), .fhd1080)
     XCTAssertFalse(RecordingToolbarPreferences.captureAudio(defaults: defaults))
     XCTAssertTrue(RecordingToolbarPreferences.captureMicrophone(defaults: defaults))
     XCTAssertEqual(RecordingToolbarPreferences.microphoneDeviceID(defaults: defaults), "external-mic-id")
+    XCTAssertTrue(RecordingToolbarPreferences.captureCamera(defaults: defaults))
+    XCTAssertEqual(RecordingToolbarPreferences.cameraDeviceID(defaults: defaults), "iphone-camera-id")
     XCTAssertEqual(RecordingToolbarPreferences.outputMode(defaults: defaults), .gif)
     XCTAssertFalse(RecordingToolbarPreferences.showCursor(defaults: defaults))
     XCTAssertTrue(RecordingToolbarPreferences.highlightClicks(defaults: defaults))
@@ -59,10 +70,12 @@ final class RecordingConfigurationTests: XCTestCase {
   func testRecordingToolbarPreferences_invalidRawValuesFallBackToSafeDefaults() {
     defaults.set("avi", forKey: PreferencesKeys.recordingFormat)
     defaults.set("ultra", forKey: PreferencesKeys.recordingQuality)
+    defaults.set("8k", forKey: PreferencesKeys.recordingMaxResolution)
     defaults.set("cinematic", forKey: PreferencesKeys.recordingOutputMode)
 
     XCTAssertEqual(RecordingToolbarPreferences.selectedFormat(defaults: defaults), .mov)
     XCTAssertEqual(RecordingToolbarPreferences.selectedQuality(defaults: defaults), .high)
+    XCTAssertEqual(RecordingToolbarPreferences.selectedMaxResolution(defaults: defaults), .auto)
     XCTAssertEqual(RecordingToolbarPreferences.outputMode(defaults: defaults), .video)
   }
 
@@ -123,6 +136,175 @@ final class RecordingConfigurationTests: XCTestCase {
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 30), 60)
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 60), 120)
     XCTAssertEqual(RecordingMouseTracker.resolvedSamplesPerSecond(for: 240), 120)
+  }
+
+  func testRecordingCameraOverlayPlacement_staysInsideSelectionAtSixteenByNine() {
+    let selectionRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+
+    let frame = RecordingCameraOverlayWindow.overlayFrame(in: selectionRect)
+    let expectedBottomRight = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .bottomRight,
+      recordingRect: selectionRect,
+      overlaySize: frame.size,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    XCTAssertTrue(selectionRect.contains(frame))
+    XCTAssertEqual(frame.width / frame.height, RecordingCameraOverlayWindow.aspectRatio, accuracy: 0.001)
+    XCTAssertEqual(frame.origin, expectedBottomRight)
+  }
+
+  func testRecordingCameraOverlayPlacement_resolvesAllEightSnapPoints() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+
+    for snapPoint in RecordingCameraOverlaySnapPoint.allCases {
+      let target = RecordingCameraOverlayPlacement.targetOrigin(
+        for: snapPoint,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+      let proposedOrigin = CGPoint(x: target.x + 12, y: target.y - 10)
+
+      let resolved = RecordingCameraOverlayPlacement.resolvedOrigin(
+        for: proposedOrigin,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+
+      XCTAssertEqual(resolved.x, target.x, accuracy: 0.001, "Failed to snap to \(snapPoint)")
+      XCTAssertEqual(resolved.y, target.y, accuracy: 0.001, "Failed to snap to \(snapPoint)")
+    }
+  }
+
+  func testRecordingCameraOverlayPlacement_snapsAtThresholdButNotBeyondIt() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+    let target = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .topLeft,
+      recordingRect: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    let atThreshold = CGPoint(
+      x: target.x + RecordingCameraOverlayPlacement.snapThreshold,
+      y: target.y
+    )
+    let beyondThreshold = CGPoint(
+      x: target.x + RecordingCameraOverlayPlacement.snapThreshold + 0.1,
+      y: target.y
+    )
+
+    XCTAssertEqual(
+      RecordingCameraOverlayPlacement.snapPoint(
+        for: atThreshold,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      ),
+      .topLeft
+    )
+    XCTAssertNil(
+      RecordingCameraOverlayPlacement.snapPoint(
+        for: beyondThreshold,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      )
+    )
+  }
+
+  func testRecordingCameraOverlayPlacement_preservesFreeDragAndClampsToRecordingRect() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let overlaySize = CGSize(width: 224, height: 126)
+    let freeDragOrigin = CGPoint(x: 380, y: 470)
+
+    XCTAssertEqual(
+      RecordingCameraOverlayPlacement.resolvedOrigin(
+        for: freeDragOrigin,
+        recordingRect: recordingRect,
+        overlaySize: overlaySize,
+        edgeInset: RecordingCameraOverlayWindow.edgeInset
+      ),
+      freeDragOrigin
+    )
+
+    let bounds = RecordingCameraOverlayPlacement.originBounds(
+      in: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+    let clamped = RecordingCameraOverlayPlacement.resolvedOrigin(
+      for: CGPoint(x: -1_000, y: 1_000),
+      recordingRect: recordingRect,
+      overlaySize: overlaySize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    XCTAssertEqual(clamped.x, bounds.minX, accuracy: 0.001)
+    XCTAssertEqual(clamped.y, bounds.maxY, accuracy: 0.001)
+  }
+
+  func testRecordingCameraDeviceProvider_doesNotReplaceMissingCamera() {
+    XCTAssertNil(RecordingCameraDeviceProvider.captureDevice(matching: "missing-camera-id"))
+  }
+
+  func testRecordingCameraShapesAndSizes() {
+    let recordingRect = CGRect(x: 0, y: 0, width: 1000, height: 800)
+
+    for shape in RecordingCameraShape.allCases {
+      for size in RecordingCameraSize.allCases {
+        let clamped = size.clampedSize(for: shape, in: recordingRect)
+        if shape == .rectangle {
+          XCTAssertEqual(clamped.width / clamped.height, 16.0 / 9.0, accuracy: 0.01)
+          XCTAssertEqual(shape.cornerCurve, .continuous)
+        } else {
+          XCTAssertEqual(clamped.width, clamped.height, accuracy: 0.01)
+          if shape == .square {
+            XCTAssertEqual(shape.cornerCurve, .continuous)
+          } else {
+            XCTAssertEqual(shape.cornerCurve, .circular)
+            XCTAssertEqual(shape.cornerRadius(for: clamped), clamped.width / 2.0, accuracy: 0.01)
+          }
+        }
+      }
+    }
+  }
+
+  func testRecordingCameraOverlayPlacement_resizedOrigin_anchorsSnapPoint() {
+    let recordingRect = CGRect(x: 100, y: 200, width: 800, height: 600)
+    let currentFrame = CGRect(x: 656, y: 224, width: 220, height: 124) // snapped near bottom right
+    let newSize = CGSize(width: 180, height: 180) // square or circle
+
+    let newOrigin = RecordingCameraOverlayPlacement.resizedOrigin(
+      currentFrame: currentFrame,
+      newSize: newSize,
+      recordingRect: recordingRect,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    let expectedBottomRight = RecordingCameraOverlayPlacement.targetOrigin(
+      for: .bottomRight,
+      recordingRect: recordingRect,
+      overlaySize: newSize,
+      edgeInset: RecordingCameraOverlayWindow.edgeInset
+    )
+
+    XCTAssertEqual(newOrigin.x, expectedBottomRight.x, accuracy: 0.001)
+    XCTAssertEqual(newOrigin.y, expectedBottomRight.y, accuracy: 0.001)
+  }
+
+  func testRecordingCameraSettingsProvider_persistsAndRetrieves() {
+    defaults.set(RecordingCameraShape.circle.rawValue, forKey: PreferencesKeys.recordingCameraShape)
+    defaults.set(RecordingCameraSize.large.rawValue, forKey: PreferencesKeys.recordingCameraSize)
+    defaults.set(true, forKey: PreferencesKeys.recordingCameraMirrored)
+
+    XCTAssertEqual(RecordingCameraSettingsProvider.storedShape(defaults: defaults), .circle)
+    XCTAssertEqual(RecordingCameraSettingsProvider.storedSize(defaults: defaults), .large)
+    XCTAssertTrue(RecordingCameraSettingsProvider.storedMirrored(defaults: defaults))
   }
 
   func testMouseHighlightConfiguration_defaults() {

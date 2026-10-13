@@ -14,6 +14,7 @@ import XCTest
 private final class RecordingOverlayDelegate: AreaSelectionOverlayViewDelegate {
   private(set) var selectedRects: [CGRect] = []
   private(set) var selectedWindows: [WindowCaptureTarget] = []
+  private(set) var selectedDisplayPoints: [CGPoint] = []
   private(set) var manualSelectionBeganPoints: [CGPoint] = []
   private(set) var manualSelectionChangedPoints: [CGPoint] = []
   private(set) var manualSelectionEndedPoints: [CGPoint] = []
@@ -25,6 +26,10 @@ private final class RecordingOverlayDelegate: AreaSelectionOverlayViewDelegate {
 
   func overlayView(_: AreaSelectionOverlayView, didSelectWindow target: WindowCaptureTarget) {
     selectedWindows.append(target)
+  }
+
+  func overlayView(_: AreaSelectionOverlayView, didSelectDisplayAt point: CGPoint) {
+    selectedDisplayPoints.append(point)
   }
 
   func overlayViewDidCancel(_: AreaSelectionOverlayView) {

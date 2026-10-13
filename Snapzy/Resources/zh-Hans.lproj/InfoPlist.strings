@@ -1,2 +1,3 @@
 "NSMicrophoneUsageDescription" = "Snapzy 需要麦克风访问权限才能在屏幕录制中录制音频。";
+"NSCameraUsageDescription" = "Snapzy 需要相机访问权限才能在屏幕录制中添加相机画面。";
 "NSScreenCaptureUsageDescription" = "Snapzy 需要屏幕录制权限才能捕获屏幕截图并录制屏幕。";

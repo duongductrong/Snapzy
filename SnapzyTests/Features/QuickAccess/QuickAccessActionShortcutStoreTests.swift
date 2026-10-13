@@ -76,7 +76,7 @@ final class QuickAccessActionShortcutStoreTests: XCTestCase {
     XCTAssertTrue(store.activeBindings.isEmpty)
   }
 
-  func testActiveBindings_dropFnCombosCarbonCannotRegister() {
+  func testActiveBindings_dropFnCombosQuickAccessDoesNotRoute() {
     let store = makeStore()
     store.setShortcut(
       ShortcutConfig(
@@ -97,6 +97,75 @@ final class QuickAccessActionShortcutStoreTests: XCTestCase {
     XCTAssertNil(
       store.action(matching: ShortcutConfig(keyCode: UInt32(kVK_ANSI_Z), modifiers: UInt32(cmdKey)))
     )
+  }
+
+  func testEventMatching_requiresExactModifiersForEveryRegisteredBinding() throws {
+    let store = makeStore()
+
+    for binding in store.activeBindings {
+      let exactEvent = try XCTUnwrap(makeKeyEvent(for: binding.shortcut))
+      XCTAssertEqual(
+        QuickAccessHoverShortcutRegistry.matchingAction(
+          for: exactEvent,
+          bindings: store.activeBindings
+        ),
+        binding.action,
+        "Exact (binding.shortcut.displayString) should trigger \(binding.action.rawValue)"
+      )
+
+      let extraShiftEvent = try XCTUnwrap(
+        makeKeyEvent(for: binding.shortcut, adding: .shift)
+      )
+      XCTAssertNil(
+        QuickAccessHoverShortcutRegistry.matchingAction(
+          for: extraShiftEvent,
+          bindings: store.activeBindings
+        ),
+        "An extra Shift must not trigger \(binding.action.rawValue)"
+      )
+    }
+  }
+
+  func testCmdShiftP_doesNotMatchQuickAccessCmdPBinding() throws {
+    let store = makeStore()
+    let cmdShiftP = try XCTUnwrap(
+      makeKeyEvent(
+        for: ShortcutConfig(keyCode: UInt32(kVK_ANSI_P), modifiers: UInt32(cmdKey)),
+        adding: .shift
+      )
+    )
+
+    XCTAssertNil(
+      QuickAccessHoverShortcutRegistry.matchingAction(
+        for: cmdShiftP,
+        bindings: store.activeBindings
+      )
+    )
+  }
+
+  func testExactBindingRepeatsStillResolveSoTheTapCanConsumeThem() throws {
+    let store = makeStore()
+    let exactRepeat = try XCTUnwrap(
+      makeKeyEvent(for: store.activeBindings[0].shortcut, isARepeat: true)
+    )
+
+    XCTAssertEqual(
+      QuickAccessHoverShortcutRegistry.matchingAction(
+        for: exactRepeat,
+        bindings: store.activeBindings
+      ),
+      store.activeBindings[0].action
+    )
+  }
+
+  func testActiveBindings_dropShortcutsWithoutRequiredModifier() {
+    let store = makeStore()
+    store.setShortcut(
+      ShortcutConfig(keyCode: UInt32(kVK_ANSI_P), modifiers: UInt32(shiftKey)),
+      for: .pinToScreen
+    )
+
+    XCTAssertFalse(store.activeBindings.contains { $0.action == .pinToScreen })
   }
 
   func testResetToDefaults_restoresClearedAndDisabledEntries() {
@@ -123,5 +192,31 @@ final class QuickAccessActionShortcutStoreTests: XCTestCase {
     XCTAssertFalse(QuickAccessActionShortcutStore.hasRequiredModifier(shiftOnly))
     XCTAssertFalse(QuickAccessActionShortcutStore.hasRequiredModifier(bare))
     XCTAssertTrue(QuickAccessActionShortcutStore.hasRequiredModifier(control))
+  }
+
+  private func makeKeyEvent(
+    for shortcut: ShortcutConfig,
+    adding extraModifiers: NSEvent.ModifierFlags = [],
+    isARepeat: Bool = false
+  ) -> NSEvent? {
+    var flags = extraModifiers
+    if shortcut.modifiers & UInt32(cmdKey) != 0 { flags.insert(.command) }
+    if shortcut.modifiers & UInt32(shiftKey) != 0 { flags.insert(.shift) }
+    if shortcut.modifiers & UInt32(optionKey) != 0 { flags.insert(.option) }
+    if shortcut.modifiers & UInt32(controlKey) != 0 { flags.insert(.control) }
+    if shortcut.modifiers & ShortcutConfig.functionCarbonModifier != 0 { flags.insert(.function) }
+
+    return NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: flags,
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "",
+      charactersIgnoringModifiers: "",
+      isARepeat: isARepeat,
+      keyCode: UInt16(shortcut.keyCode)
+    )
   }
 }

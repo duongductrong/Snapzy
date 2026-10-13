@@ -164,6 +164,41 @@ enum TestImageFactory {
   /// deterministic color signature based on its logical content position.
   /// Two frames with overlapping logical ranges produce pixel-perfect overlap,
   /// yielding deterministic `appended` outcomes with an exact `deltaY`.
+  /// Repeating visual bands plus a unique interior marker so false overlap can
+  /// be distinguished from a genuine known-step delta.
+  static func repeatedScrollingFrame(
+    width: Int,
+    height: Int,
+    logicalYOffset: Int,
+    period: Int = 48
+  ) -> CGImage? {
+    let bytesPerRow = width * 4
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+    let safePeriod = max(8, period)
+
+    for y in 0..<height {
+      let logicalY = logicalYOffset + y
+      let phase = logicalY % safePeriod
+      let repeatingR = UInt8((phase * 17) % 200 + 20)
+      let repeatingG = UInt8((phase * 43) % 200 + 20)
+      let repeatingB = UInt8((phase * 89) % 200 + 20)
+      let uniqueR = UInt8(logicalY % 256)
+      let uniqueG = UInt8((logicalY * 47) % 256)
+      let uniqueB = UInt8((logicalY * 113) % 256)
+
+      for x in 0..<width {
+        let offset = y * bytesPerRow + x * 4
+        let useUniqueMarker = x >= 40 && x < 96
+        pixels[offset] = useUniqueMarker ? uniqueR : repeatingR
+        pixels[offset + 1] = useUniqueMarker ? uniqueG : repeatingG
+        pixels[offset + 2] = useUniqueMarker ? uniqueB : repeatingB
+        pixels[offset + 3] = 255
+      }
+    }
+
+    return makeCGImage(width: width, height: height, bytesPerRow: bytesPerRow, pixels: pixels)
+  }
+
   static func scrollingFrame(
     width: Int,
     height: Int,

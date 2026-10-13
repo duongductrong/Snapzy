@@ -18,8 +18,8 @@ final class KeystrokeOverlayWindow: NSWindow {
   private var fadeOutWorkItem: DispatchWorkItem?
   private let config: KeystrokeOverlayConfiguration
 
-  init(recordingRect: CGRect, configuration: KeystrokeOverlayConfiguration = KeystrokeOverlayConfiguration()) {
-    self.config = configuration
+  init(recordingRect: CGRect, configuration: KeystrokeOverlayConfiguration? = nil) {
+    self.config = configuration ?? KeystrokeOverlayConfiguration()
     super.init(
       contentRect: recordingRect,
       styleMask: [.borderless],
@@ -38,7 +38,7 @@ final class KeystrokeOverlayWindow: NSWindow {
     backgroundColor = .clear
     hasShadow = false
     isReleasedWhenClosed = false
-    level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+    level = .screenSaver
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     ignoresMouseEvents = true
   }

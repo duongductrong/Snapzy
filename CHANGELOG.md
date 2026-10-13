@@ -4,47 +4,154 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [1.32.0-beta.5] - 2026-08-29
+## [2.1.0-beta.3] - 2026-10-10
+
+### Bug Fixes
+- Correct restored screen crop placement in screenshots (#642) (5625449d)
+
+### Contributors
+- @mvanhorn
+
+## [2.1.0-beta.2] - 2026-10-10
 
 ### Features
--  Reduce friction in window/element capture — auto-detect under cursor, layered smart element detection (#472) (a30a9a02)
-
-### Contributors
-- @github-actions[bot]
-- @lcopilot
-
-## [1.32.0-beta.4] - 2026-08-23
+- select pinned image zoom mode directly from preview tiles (8e9b9923)
 
 ### Bug Fixes
--  Fixed render canvas shadow in screenshot exports (#510) (4fa04df8)
--  keep space-to-move selection locked to the pointer (#504) (cd39ebee)
+- stabilize pinned image focal anchoring and restore gesture zoom paths (#640) (9b574164)
 
 ### Contributors
-- @RaviMaru20
+- @duongductrong
 - @github-actions[bot]
-- @vxirau
+- @tukuyomil032
 
-## [1.32.0-beta.3] - 2026-08-21
+## [2.1.0-beta.1] - 2026-10-03
 
-### Bug Fixes
--  Fixed Pin DateFormatter to Gregorian locale for filename tokens (#486) (1bacf958)
-
-### Contributors
-- @YuriNachos
-- @github-actions[bot]
-
-## [1.32.0-beta.2] - 2026-08-20
-
-### Bug Fixes
--  improve Japanese localization wording across Snapzy (#513) (2cc73e66)
+### Features
+- Added keyboard navigation to floating history (#616) (f8edc72e)
 
 ### Contributors
 - @github-actions[bot]
 - @tukuyomil032
 
-## [1.32.0-beta.1] - 2026-08-17
+## [2.0.0] - 2026-09-28
+
+### Breaking Changes
+- Apply Liquid Glass Beta (#574) (32441ab7)
+
+### Features
+- Added breaking change detection to changelog generation (c064f987)
+- Click or press Enter to record a whole display (#611) (7d5d5b38)
+- add Delayed Capture (b7110d10)
+- Add drag-to-draw support for new crop rect (#605) (e5e5ef1f)
+- Added a maximum recording resolution to improve H.264 browser compatibility (#601) (76d09cb5)
 
 ### Bug Fixes
+- Fixed reset delayed capture countdown on restore defaults (#613) (e3055542)
+- Fixed text background color by promoting plain text to label (#594) (c11cb39c)
+
+### Chore
+- ci: allow beta channel releases from master branch (f1761d16)
+
+### Contributors
+- @adrianocr
+- @archibald-nice
+- @duongductrong
+- @github-actions[bot]
+- @thanhthai3010
+
+## [1.33.0-beta.2] - 2026-09-27
+
+### Features
+-  Click or press Enter to record a whole display (#611) (7d5d5b38)
+-  add Delayed Capture (b7110d10)
+
+### Bug Fixes
+-  Fixed reset delayed capture countdown on restore defaults (#613) (e3055542)
+
+### Contributors
+- @adrianocr
+- @duongductrong
+- @github-actions[bot]
+- @thanhthai3010
+
+## [1.33.0-beta.1] - 2026-09-23
+
+### Features
+-  Add drag-to-draw support for new crop rect (#605) (e5e5ef1f)
+-  Added a maximum recording resolution to improve H.264 browser compatibility (#601) (76d09cb5)
+
+### Bug Fixes
+-  Fixed text background color by promoting plain text to label (#594) (c11cb39c)
+
+### Contributors
+- @adrianocr
+- @archibald-nice
+- @github-actions[bot]
+- @thanhthai3010
+
+## [1.32.3] - 2026-09-20
+
+### Features
+-  Add Sound Effects Toggle to Quick Access (#586) (1862794d)
+
+### Bug Fixes
+-  Fixed intermittent low-resolution window captures (#571) (cbf9811a)
+-  Restore pinned window dragging on macOS 27 (#584) (d082a7a4)
+
+### Contributors
+- @archibald-nice
+- @duongductrong
+- @github-actions[bot]
+- @rvanhorn
+
+## [1.32.2] - 2026-09-19
+
+### Bug Fixes
+- Merge pull request #588 from duongductrong/fix/quicklook-pdf-capture (c7800536)
+-  Fixed Quick Look previews in filtered captures (5e124ff6)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.32.1] - 2026-09-18
+
+### Features
+-  Added stroke border support to spotlight annotations (c41ad18c)
+
+### Bug Fixes
+-  Fixed recording annotation tool shortcuts bug (#579) (8beafc0a)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [1.32.0] - 2026-09-16
+
+### Features
+-  Added curve arrow control handle (#567) (beb8dcee)
+-  Added collapsible contributors section to About preferences (8e75afb2)
+-  Added pin action and shortcut to history floating panel (#552) (d860e7f6)
+-  Added camera overlay to screen recordings (#560) (41222250)
+-  Modernize preferences UI, settings navigation, and interactive onboarding flow (#557) (5b1e4393)
+-  Added drag-to-app to History cards with scroll-safe gesture arbitration (a8d633a8)
+-  Show progress and outcome for OCR capture (#505) (c81bd43b)
+-  Reduce friction in window/element capture — auto-detect under cursor, layered smart element detection (#472) (a30a9a02)
+
+### Bug Fixes
+-  Fixed recording-session shortcut gating timing bug (#517) (b48ee9ce)
+-  Fixed canvas hit testing under SwiftUI zoom/pan transforms (348bd768)
+-  Fixed selection chrome sizing during zoom (2dc8e9e5)
+-  Prevented corrupted seams during scrolling auto-scroll (#538) (e603c6af)
+-  Fixed selection tool active after selecting annotations (673984eb)
+-  Added AnnotateWindowEventRouter to isolate multi-window viewport (#553) (e204713b)
+-  Fixed Carbon hotkeys with CGEventTap for exact key matching (f591f320)
+-  Fixed allow drawing over existing annotations (#546) (126fc2e4)
+-  Fixed render canvas shadow in screenshot exports (#510) (4fa04df8)
+-  keep space-to-move selection locked to the pointer (#504) (cd39ebee)
+-  Fixed Pin DateFormatter to Gregorian locale for filename tokens (#486) (1bacf958)
+-  improve Japanese localization wording across Snapzy (#513) (2cc73e66)
 -  Update .gitignore content (af7095bc)
 -  Fixed percent-encode object-key path in AWS SigV4 presigned URLs (#491) (a9991aa4)
 -  Fixed surface hours in capture/video duration labels (#490) (5624a89b)
@@ -53,9 +160,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - chore: Update README, SECURITY and APP_LIFECYCLE content (8ce63ad1)
 
 ### Contributors
+- @BenjaminD2023
+- @RaviMaru20
 - @YuriNachos
 - @duongductrong
 - @github-actions[bot]
+- @lcopilot
+- @mukhtharcm
+- @tukuyomil032
+- @vxirau
 
 ## [1.31.0] - 2026-08-15
 

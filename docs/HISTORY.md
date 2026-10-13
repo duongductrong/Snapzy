@@ -10,15 +10,17 @@ Persistent history of screenshots, videos, and GIFs backed by GRDB SQLite, surfa
 
 ## Floating Panel
 
-- `HistoryFloatingManager` — panel state. Modes `compact` / `expanded`; position `topCenter` / `bottomCenter` (`HistoryPanelPosition.center` exists for config import, not in UI); panel scale 0.8–1.4 (`history.floating.scale`); `maxDisplayedItems` default 10; background `HistoryBackgroundStyle` hud / solid; toggle-mode shortcut default ⌘E (`defaultToggleModeShortcut`).
-- `HistoryFloatingPanel` keyboard: ⌘C copy selection, ⌘A select all, ⌫ delete, Return open (all suppressed while text input active).
-- Compact: type filter pills + horizontal `HistoryCompactCarouselView` cards.
-- Expanded: type pills + filename search (150ms debounce, `HistorySearchViewModel`) + time filters all / 24H / 7D / 30D (`HistoryFloatingTimeFilter`) + 4-column grid + multi-select + selection bar + custom `HistoryFloatingScrollbar`.
+- `HistoryFloatingManager` — panel state. Modes `compact` / `expanded`; position `topCenter` / `bottomCenter` (`HistoryPanelPosition.center` exists for config import, not in UI); panel scale 0.8–1.4 (`history.floating.scale`); `maxDisplayedItems` default 10; background `HistoryBackgroundStyle` hud / solid; toggle-mode shortcut default ⌘E (`defaultToggleModeShortcut`); pin state `isPinned` (session-based, elevated window level `floating + 2`, suppresses auto-dismiss on blur).
+- `HistoryFloatingPanel` keyboard: unmodified Left/Right moves the compact carousel focus one card at a time; expanded-grid arrows move within the four-column grid without wrapping. With one expanded card selected and focused, an unmodified arrow moves both selection and focus; with zero or multiple cards selected, or when a singleton selection differs from focus, it moves focus only. Shift-click and Shift+arrows share a reversible selected range, including after a singleton focus move. Enter opens the focused card even during multi-selection. ⌘C copies selected records (or the focused card when none are selected), ⌘A selects all, ⌘P toggles pin, and ⌫ deletes selected records. Search-field caret movement remains native; arrow and panel shortcuts are suppressed while text input is active.
+- Compact: type filter pills + horizontal `HistoryCompactCarouselView` cards + trailing controls (Open Full History, Pin, Close).
+- Expanded: type pills + filename search (150ms debounce, `HistorySearchViewModel`) + time filters all / 24H / 7D / 30D (`HistoryFloatingTimeFilter`) + 4-column grid + multi-select + selection bar + custom `HistoryFloatingScrollbar` + trailing controls (Collapse, Pin, Close).
 
 ## Card Actions
 
 - Context menu (`HistoryContextMenu`): Open in Finder, Copy, Edit, Upload to Cloud (only when `CloudManager.isConfigured`; live overlay states via `HistoryCloudUploadOverlayView`), Delete — destructive last.
 - Double-click opens the editor; cards expose a Restore pill.
+- Compact-carousel and expanded-grid cards also support native file drag-out. Dragging a card carries its existing screenshot, video, or GIF file directly to Finder, Messages, Mail, Notes, Slack, Discord, browser file-upload controls, editors, and other compatible drop targets. Single-click selection and double-click editor opening remain unchanged. When a scrollable list receives an unambiguous primary-axis mouse drag, the list keeps scrolling; cross-axis or diagonal card movement starts the file drag.
+- History drag is file-centric: apps that only accept inline pixel data may reject it, and cards whose source file is missing do not start a drag. History records and files remain in place after a successful drop.
 - Cloud upload here is manual; commit `dd4ccd5` removed only the after-capture auto-upload preference option, not this surface.
 
 ## Restore Flow

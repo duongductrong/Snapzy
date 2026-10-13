@@ -199,7 +199,7 @@ if [ "$STATUS" -ne 0 ]; then
   error "Tests failed with status ${STATUS}."
   if [ -f "$LOG_PATH" ]; then
     warn "Likely failures:"
-    grep -E "Test case '.*' failed|Failing tests:|\\*\\* TEST FAILED \\*\\*|error:" "$LOG_PATH" || true
+    grep -E "Test [Cc]ase '.*' (failed|skipped)|Test crashed|malloc:|Failing tests:|\\*\\* TEST FAILED \\*\\*|error:" "$LOG_PATH" || true
     warn "Last 200 log lines:"
     tail -200 "$LOG_PATH"
   fi

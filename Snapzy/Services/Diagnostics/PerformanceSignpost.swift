@@ -17,12 +17,54 @@ nonisolated private let capturePassthroughPoster = OSSignposter(
   category: "CapturePassthrough"
 )
 
+@available(macOS 12.0, *)
+nonisolated private let videoEditorPoster = OSSignposter(
+  subsystem: Bundle.main.bundleIdentifier ?? "com.snapzy.perf",
+  category: "VideoEditor"
+)
+
 /// Read once per process: signposts are a DEBUG profiling aid, so a relaunch is an
 /// acceptable cost for toggling — and the event-tap callback must not hit UserDefaults
 /// on every mouse event.
 nonisolated private let signpostsEnabled = UserDefaults.standard.bool(forKey: "perf.signposts")
 
 enum PerfSignpost {
+  /// Intervals only: avoid formatting/logging text in high-frequency input paths.
+  enum VideoEditor {
+    #if DEBUG
+    @available(macOS 12.0, *)
+    struct Interval {
+      let name: StaticString
+      let state: OSSignpostIntervalState
+    }
+    #endif
+
+    nonisolated static func beginInterval(_ name: StaticString) -> Any? {
+      #if DEBUG
+      if #available(macOS 12.0, *), signpostsEnabled {
+        return Interval(name: name, state: videoEditorPoster.beginInterval(name))
+      }
+      #endif
+      return nil
+    }
+
+    nonisolated static func endInterval(_ interval: Any?) {
+      #if DEBUG
+      if #available(macOS 12.0, *), let interval = interval as? Interval {
+        videoEditorPoster.endInterval(interval.name, interval.state)
+      }
+      #endif
+    }
+
+    nonisolated static func event(_ name: StaticString) {
+      #if DEBUG
+      if #available(macOS 12.0, *), signpostsEnabled {
+        videoEditorPoster.emitEvent(name)
+      }
+      #endif
+    }
+  }
+
   #if DEBUG
   @available(macOS 12.0, *)
   struct Interval {

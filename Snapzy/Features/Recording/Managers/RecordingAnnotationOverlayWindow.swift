@@ -22,6 +22,8 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
   private let shortcutConfig = RecordingAnnotationShortcutConfig.shared
   private var globalFlagsMonitor: Any?
   private var localFlagsMonitor: Any?
+  private var globalKeyMonitor: Any?
+  private var localKeyMonitor: Any?
   private var holdTimer: Timer?
   private var isModifierHeld = false
 
@@ -40,17 +42,21 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
     setupCanvas()
     observeState()
     startModifierMonitor()
+    startKeyMonitor()
   }
 
   deinit {
     // NSEvent.removeMonitor is thread-safe, safe from nonisolated deinit
     if let m = globalFlagsMonitor { NSEvent.removeMonitor(m) }
     if let m = localFlagsMonitor { NSEvent.removeMonitor(m) }
+    if let m = globalKeyMonitor { NSEvent.removeMonitor(m) }
+    if let m = localKeyMonitor { NSEvent.removeMonitor(m) }
     holdTimer?.invalidate()
   }
 
   override func close() {
     stopModifierMonitor()
+    stopKeyMonitor()
     toolCancellable?.cancel()
     toolCancellable = nil
     refreshCancellable?.cancel()
@@ -134,7 +140,48 @@ final class RecordingAnnotationOverlayWindow: NSWindow {
     if let m = localFlagsMonitor { NSEvent.removeMonitor(m); localFlagsMonitor = nil }
     holdTimer?.invalidate()
     holdTimer = nil
+    isModifierHeld = false
     annotationState.isShortcutModeActive = false
+  }
+
+  // MARK: - Tool Shortcut Routing
+
+  /// Tool keys must be observed both inside Snapzy (toolbar/status bar focus)
+  /// and outside Snapzy (the recorded application has focus). A global monitor
+  /// cannot consume another application's event, but it can still switch the
+  /// annotation tool; the local monitor consumes matching events addressed to
+  /// Snapzy so they do not fall through to the responder chain and beep.
+  private func startKeyMonitor() {
+    globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      MainActor.assumeIsolated {
+        _ = self?.handleToolShortcut(event)
+      }
+    }
+
+    localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      let handled = MainActor.assumeIsolated {
+        self?.handleToolShortcut(event) ?? false
+      }
+      return handled ? nil : event
+    }
+  }
+
+  private func stopKeyMonitor() {
+    if let monitor = globalKeyMonitor {
+      NSEvent.removeMonitor(monitor)
+      globalKeyMonitor = nil
+    }
+    if let monitor = localKeyMonitor {
+      NSEvent.removeMonitor(monitor)
+      localKeyMonitor = nil
+    }
+  }
+
+  @discardableResult
+  private func handleToolShortcut(_ event: NSEvent) -> Bool {
+    guard annotationState.selectTool(for: event) else { return false }
+    canvasView.refresh()
+    return true
   }
 
   private func handleFlagsChanged(_ event: NSEvent) {

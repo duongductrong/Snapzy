@@ -203,6 +203,10 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
   }
 
   func showPopover() {
+    // The anchor is reported asynchronously by the status-bar hosting view. Do not briefly show
+    // the popover at the toolbar's left edge while that first layout is still pending.
+    guard anchorWindow != nil, anchorButtonCenterXOffset > 0 else { return }
+
     rebuildContent()
     positionRelativeToAnchor()
     orderFrontRegardless()
@@ -227,6 +231,7 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
       positionDefault()
       return
     }
+    guard anchorButtonCenterXOffset > 0 else { return }
 
     let anchorFrame = anchor.frame
     let popoverSize = frame.size
@@ -269,6 +274,16 @@ final class RecordingAnnotationToolbarWindow: NSWindow {
     let x = sf.midX - size.width / 2
     let y = sf.minY + 60
     setFrameOrigin(CGPoint(x: x, y: y))
+  }
+
+  /// The popover can own first responder while it is visible. Forward tool
+  /// shortcuts here as a direct-window fallback; the annotation overlay's
+  /// local monitor handles normal AppKit event delivery before this method.
+  override func keyDown(with event: NSEvent) {
+    guard annotationState.selectTool(for: event) else {
+      super.keyDown(with: event)
+      return
+    }
   }
 
   override var canBecomeKey: Bool { true }

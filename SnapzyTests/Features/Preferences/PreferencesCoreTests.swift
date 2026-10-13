@@ -5,10 +5,21 @@
 //  Unit tests for persisted preferences value models.
 //
 
-import XCTest
 @testable import Snapzy
+import XCTest
 
+@MainActor
 final class PreferencesCoreTests: XCTestCase {
+  /// Keep MainActor ObservableObjects alive for the test process; XCTest scope
+  /// cleanup can crash while deinitializing them on the macOS 15 back-deployed
+  /// Swift concurrency runtime.
+  private static var retainedNavigationStates: [PreferencesNavigationState] = []
+
+  private func makeNavigationState(initialTab: PreferencesTab) -> PreferencesNavigationState {
+    let navigation = PreferencesNavigationState(initialTab: initialTab)
+    Self.retainedNavigationStates.append(navigation)
+    return navigation
+  }
 
   func testCloudUploadFloatingPositionStored_readsValidValueAndFallsBackToDefault() throws {
     let defaults = try makeDefaults()
@@ -100,6 +111,7 @@ final class PreferencesCoreTests: XCTestCase {
   func testPreferencesTabsRemainUniqueAndHashable() {
     let tabs: Set<PreferencesTab> = [
       .general,
+      .menuBar,
       .capture,
       .annotate,
       .quickAccess,
@@ -111,7 +123,105 @@ final class PreferencesCoreTests: XCTestCase {
       .about,
     ]
 
-    XCTAssertEqual(tabs.count, 10)
+    XCTAssertEqual(tabs.count, 11)
+    XCTAssertEqual(PreferencesTab.allCases.count, 11)
+  }
+
+  func testPreferencesTabGroups_coverAllCasesExactlyOnce() {
+    let flattened = PreferencesTab.groups.flatMap { $0 }
+    XCTAssertEqual(flattened.count, PreferencesTab.allCases.count)
+    XCTAssertEqual(Set(flattened).count, PreferencesTab.allCases.count)
+    XCTAssertEqual(PreferencesTab.groups.count, 4)
+  }
+
+  func testPreferencesTab_symbolsAndTitlesAreNonEmpty() {
+    for tab in PreferencesTab.allCases {
+      XCTAssertFalse(tab.title.isEmpty, "Expected title for tab \(tab)")
+      XCTAssertFalse(tab.symbol.isEmpty, "Expected symbol for tab \(tab)")
+      XCTAssertEqual(tab.id, tab.rawValue)
+    }
+  }
+
+  func testPreferencesNavigationState_historyStackAndNavigation() {
+    let navigation = makeNavigationState(initialTab: .general)
+    XCTAssertEqual(navigation.selectedTab, .general)
+    XCTAssertFalse(navigation.canGoBack)
+    XCTAssertFalse(navigation.canGoForward)
+
+    // Selecting current tab should not push history
+    navigation.select(.general)
+    XCTAssertFalse(navigation.canGoBack)
+
+    // Navigate to capture
+    navigation.select(.capture)
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertFalse(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general])
+
+    // Navigate to annotate
+    navigation.select(.annotate)
+    XCTAssertEqual(navigation.selectedTab, .annotate)
+    XCTAssertEqual(navigation.backStack, [.general, .capture])
+
+    // Go back to capture
+    navigation.goBack()
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.forwardStack, [.annotate])
+
+    // Go back to general
+    navigation.goBack()
+    XCTAssertEqual(navigation.selectedTab, .general)
+    XCTAssertFalse(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.forwardStack, [.annotate, .capture])
+
+    // Go forward to capture
+    navigation.goForward()
+    XCTAssertEqual(navigation.selectedTab, .capture)
+    XCTAssertTrue(navigation.canGoBack)
+    XCTAssertTrue(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general])
+    XCTAssertEqual(navigation.forwardStack, [.annotate])
+
+    // A new selection clears the forward stack
+    navigation.select(.shortcuts)
+    XCTAssertEqual(navigation.selectedTab, .shortcuts)
+    XCTAssertFalse(navigation.canGoForward)
+    XCTAssertEqual(navigation.backStack, [.general, .capture])
+  }
+
+  func testAboutContributor_propertiesAndCollections() {
+    XCTAssertFalse(AboutContributor.featured.isEmpty)
+    XCTAssertFalse(AboutContributor.all.isEmpty)
+    XCTAssertGreaterThan(AboutContributor.all.count, AboutContributor.featured.count)
+
+    let allUsernames = Set(AboutContributor.all.map(\.username))
+    XCTAssertEqual(
+      allUsernames.count,
+      AboutContributor.all.count,
+      "Usernames must be unique in all-time contributors list"
+    )
+
+    for contributor in AboutContributor.all {
+      XCTAssertFalse(contributor.name.isEmpty)
+      XCTAssertFalse(contributor.username.isEmpty)
+      XCTAssertEqual(contributor.id, contributor.username)
+      XCTAssertEqual(contributor.profileURL.absoluteString, "https://github.com/\(contributor.username)")
+    }
+
+    for featured in AboutContributor.featured {
+      XCTAssertTrue(
+        allUsernames.contains(featured.username),
+        "Featured contributor \(featured.username) should be in all contributors list"
+      )
+    }
+
+    XCTAssertFalse(L10n.PreferencesAbout.seeMore.isEmpty)
+    XCTAssertFalse(L10n.PreferencesAbout.seeLess.isEmpty)
+    XCTAssertNotEqual(L10n.PreferencesAbout.seeMore, L10n.PreferencesAbout.seeLess)
   }
 
   private func makeDefaults(

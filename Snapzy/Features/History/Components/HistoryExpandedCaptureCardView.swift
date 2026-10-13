@@ -7,15 +7,26 @@
 
 import SwiftUI
 
+enum HistoryExpandedCardEmphasisMode: Equatable {
+  case selection
+  case focus
+}
+
 struct HistoryExpandedCaptureCardView: View, Equatable {
   let record: CaptureHistoryRecord
   let isSelected: Bool
+  let isFocused: Bool
+  let emphasisMode: HistoryExpandedCardEmphasisMode
   let backgroundStyle: HistoryBackgroundStyle
   let onTap: () -> Void
+  let reservedScrollAxis: QuickAccessDragScrollAxis?
 
   static func == (lhs: HistoryExpandedCaptureCardView, rhs: HistoryExpandedCaptureCardView) -> Bool {
     lhs.record == rhs.record &&
     lhs.isSelected == rhs.isSelected &&
+    lhs.isFocused == rhs.isFocused &&
+    lhs.emphasisMode == rhs.emphasisMode &&
+    lhs.reservedScrollAxis == rhs.reservedScrollAxis &&
     lhs.backgroundStyle == rhs.backgroundStyle &&
     HistoryFloatingManager.shared.cloudUploadState(for: lhs.record) == HistoryFloatingManager.shared.cloudUploadState(for: rhs.record)
   }
@@ -46,15 +57,41 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(10)
-    .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(cardBackground, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
-        .stroke(cardBorderColor, lineWidth: isSelected ? 1.8 : 1)
+      Radius.rect(Radius.card)
+        .stroke(
+          cardBorderColor,
+          lineWidth: isSelected || isFocused
+            ? HistoryCardEmphasis.activeBorderWidth
+            : HistoryCardEmphasis.inactiveBorderWidth
+        )
     )
-    .shadow(color: cardShadowColor, radius: isSelected ? 14 : 3, x: 0, y: isSelected ? 8 : 2)
-    .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    .scaleEffect(isSelected ? 1.01 : (isHovering ? 1.005 : 1))
-    .animation(.spring(response: 0.24, dampingFraction: 0.9), value: isSelected)
+    .overlay(historyDragInteractionBridge)
+    .shadow(
+      color: cardShadowColor,
+      radius: isEmphasized
+        ? HistoryCardEmphasis.activeShadowRadius
+        : HistoryCardEmphasis.inactiveShadowRadius,
+      x: 0,
+      y: isEmphasized
+        ? HistoryCardEmphasis.activeShadowYOffset
+        : HistoryCardEmphasis.inactiveShadowYOffset
+    )
+    .contentShape(Radius.rect(Radius.card))
+    .scaleEffect(
+      isEmphasized
+        ? HistoryCardEmphasis.activeScale
+        : (isHovering ? HistoryCardEmphasis.expandedHoverScale : 1)
+    )
+    .offset(y: emphasisMode == .focus && isFocused ? HistoryCardEmphasis.focusedLiftOffset : 0)
+    .animation(
+      .spring(
+        response: HistoryCardEmphasis.springResponse,
+        dampingFraction: HistoryCardEmphasis.springDampingFraction
+      ),
+      value: isEmphasized
+    )
     .animation(.easeOut(duration: 0.16), value: isHovering)
     .onHover { hovering in
       isHovering = hovering
@@ -89,7 +126,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   private var preview: some View {
     GeometryReader { geometry in
       ZStack(alignment: .bottomTrailing) {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .fill(previewBackground)
 
         if isVisible, let thumbnailImage {
@@ -110,7 +147,7 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
           VStack(spacing: 6) {
             Image(systemName: "exclamationmark.triangle.fill")
               .font(.system(size: 16))
-            Text("File missing")
+            Text(L10n.PreferencesHistory.fileMissing)
               .font(.caption2.weight(.semibold))
           }
           .foregroundColor(.white)
@@ -136,13 +173,22 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
           HistoryCloudUploadOverlayView(state: uploadState)
         }
       }
-      .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+      .clipShape(Radius.rect(Radius.tile))
       .overlay(
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .stroke(previewBorderColor, lineWidth: 1)
       )
     }
     .aspectRatio(16 / 10, contentMode: .fit)
+  }
+
+  private var historyDragInteractionBridge: some View {
+    HistoryCardDragInteractionView(
+      record: record,
+      thumbnail: thumbnailImage,
+      isEnabled: fileExists,
+      reservedScrollAxis: reservedScrollAxis
+    )
   }
 
   private var cardBackground: AnyShapeStyle {
@@ -158,8 +204,8 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   }
 
   private var cardBorderColor: Color {
-    if isSelected {
-      return Color.accentColor.opacity(0.9)
+    if isSelected || isFocused {
+      return Color.accentColor.opacity(0.95)
     }
 
     if isHovering {
@@ -170,11 +216,21 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   }
 
   private var cardShadowColor: Color {
-    if isSelected {
-      return Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14)
-    }
+    HistoryCardEmphasis.shadowColor(
+      isActive: isEmphasized,
+      isHovering: isHovering,
+      backgroundStyle: backgroundStyle,
+      colorScheme: colorScheme
+    )
+  }
 
-    return Color.black.opacity(colorScheme == .dark ? 0.18 : 0.08)
+  private var isEmphasized: Bool {
+    switch emphasisMode {
+    case .selection:
+      return isSelected
+    case .focus:
+      return isFocused
+    }
   }
 
   private var previewBackground: Color {
@@ -230,13 +286,14 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
   private func checkFileExistence() {
     let url = record.fileURL
     let path = record.filePath
-    Task.detached(priority: .utility) {
-      let exists = SandboxFileAccessManager.shared.withScopedAccess(to: url) {
-        FileManager.default.fileExists(atPath: path)
-      }
-      await MainActor.run {
-        self.fileExists = exists
-      }
+    let access = SandboxFileAccessManager.shared.beginAccessingURL(url)
+    Task { @MainActor in
+      let exists = await Task.detached(priority: .utility) {
+        defer { access.stop() }
+        return FileManager.default.fileExists(atPath: path)
+      }.value
+      guard !Task.isCancelled else { return }
+      fileExists = exists
     }
   }
 

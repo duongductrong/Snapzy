@@ -23,7 +23,7 @@ struct QuickAccessTextButton: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(
-          RoundedRectangle(cornerRadius: 24)
+          Capsule(style: .continuous)
             .fill(buttonBackgroundColor)
         )
     }

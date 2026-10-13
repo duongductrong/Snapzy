@@ -62,6 +62,7 @@
       "file": "Features/Recording.xcstrings",
       "prefixes": [
         "gif.",
+        "camera.",
         "keystroke-position.",
         "microphone.",
         "recording.",

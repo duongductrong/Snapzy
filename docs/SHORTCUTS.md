@@ -2,7 +2,7 @@
 
 Global keyboard shortcuts, in-overlay capture shortcuts, Annotate editor shortcuts, conflict detection, the cheat-sheet overlay, and the `snapzy://` deep-link route table.
 
-Verified against `Snapzy/Services/Shortcuts/`, `Snapzy/Features/Shortcuts/`, `Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`, `Snapzy/App/SnapzyDeepLinkHandler.swift`, `Snapzy/Services/Capture/CaptureOverlayShortcutSettings.swift` at HEAD (`v1.32.0-beta.5`).
+Verified against `Snapzy/Services/Shortcuts/`, `Snapzy/Features/Shortcuts/`, `Snapzy/Features/Annotate/Services/AnnotateShortcutManager.swift`, `Snapzy/App/SnapzyDeepLinkHandler.swift`, `Snapzy/Services/Capture/CaptureOverlayShortcutSettings.swift` at HEAD (`v2.1.0-beta.3`).
 
 ## Global shortcut mechanism
 
@@ -27,7 +27,8 @@ flowchart TD
 - Delegate: `KeyboardShortcutDelegate.shortcutTriggered(ShortcutAction)` — implemented by `ScreenCaptureViewModel` (`Snapzy/Features/Capture/CaptureViewModel.swift`).
 - Global enable: `shortcutsEnabled` UserDefaults flag; `enable()` / `disable()` re-register everything. Restored at init if previously enabled.
 - Temporary suspension: `beginTemporaryShortcutSuppression()` / `endTemporaryShortcutSuppression()` — refcounted, unregisters hotkeys without touching the persisted enabled flag (used while recording shortcut input).
-- Recording-session gating: the four recording-session kinds (`pauseResumeRecording`, `togglePenRecording`, `restartRecording`, `deleteRecording`) hold a global registration **only while a recording session is active** (`ScreenRecordingManager.shared.isActive`). The manager observes `ScreenRecordingManager.shared.$state` and re-registers when `isActive` toggles (`shouldRegisterNow(for:)`), so those combos stay free for other apps while Snapzy is idle; Fn-based session bindings likewise stay out of `fnBindings` while idle. `recording` itself is **not** gated — it starts recordings and must stay global.
+- Recording-session gating: the four recording-session kinds (`pauseResumeRecording`, `togglePenRecording`, `restartRecording`, `deleteRecording`) hold a global registration **only while a recording session is active** (`ScreenRecordingManager.shared.isActive`). The manager observes `ScreenRecordingManager.shared.$state` and re-registers when session activity toggles (`shouldRegisterNow(for:)`), so those combos stay free for other apps while Snapzy is idle; Fn-based session bindings likewise stay out of `fnBindings` while idle. `recording` itself is **not** gated — it starts recordings and must stay global.
+  - The observer acts on the **emitted** state value, never on a fresh `isActive` read inside the sink: `@Published` delivers on `willSet`, so a property re-read inside the sink observes the stale pre-transition value and registration would run one transition behind (session hotkeys missing during recordings, combos left held after they end — issue #517). The emitted value is parked in `sessionActivityOverride` for the duration of the refresh it triggers.
 - Per-shortcut disable set: `shortcuts.disabledGlobalActions` (`PreferencesKeys.disabledGlobalShortcuts`).
 - Cleared/unbound set: `shortcuts.clearedGlobalActions` (`PreferencesKeys.clearedGlobalShortcuts`) — `shortcut(for:)` returns `nil` for cleared kinds.
 
@@ -56,8 +57,9 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `togglePenRecording` | Toggle pen overlay while recording | **unbound** |
 | `restartRecording` | Restart current recording | **unbound** |
 | `deleteRecording` | Delete in-progress recording | **unbound** |
+| `delayedCapture` | Delayed Capture (countdown, then frozen area selection) | **unbound** |
 
-- The four unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
+- The five unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
 
 ## Overlay shortcuts (in-overlay, not plain global hotkeys)
@@ -69,12 +71,17 @@ All 19 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 - Independent mode (modifiers ≠ 0): registered as its own global hotkey (`applicationCaptureHotkeyRef` / `applicationRecordingHotkeyRef`) firing `.captureApplication` / `.recordApplication`.
 - Keys: `shortcuts.area.applicationCapture`, `shortcuts.recording.applicationCapture`.
 - During an area-screenshot selection, **Return** instantly completes with the last selected area (per-session opt-in `allowsRepeatAreaCompletion`; OCR/cutout selections are unaffected). See [CAPTURE.md](CAPTURE.md).
+- During a recording selection, **Return** or keypad **Enter** toggles whole-display mode: the display under the pointer is highlighted and a click records it. The key is fixed (not remappable) and ignored with ⌘/⌥/⌃ held. A plain click without Enter also selects the display under the pointer. See [RECORDING.md](RECORDING.md#picking-a-target-in-the-recording-overlay).
 
 ## Recording-behavior notes
 
 - `recording` shortcut is a start/stop toggle: `toggleRecordingFromShortcut` stops the active recording (`RecordingCoordinator.stopFromStatusItem()`) or starts the recording flow otherwise.
 - `pauseResumeRecording` no-ops unless a recording is active (`state.isPauseResumeEligible` guard, logged when ignored).
 - `togglePenRecording` no-ops unless `RecordingCoordinator.shared.isActive`.
+
+## Recording annotation tool shortcuts
+
+While recording annotations are enabled, hold the configured annotation shortcut modifier (Shift by default) and press a tool key to switch tools. `RecordingAnnotationOverlayWindow` routes key-down events through `RecordingAnnotationState` using `charactersIgnoringModifiers`, with a local monitor for events addressed to Snapzy and a global monitor for events addressed to the recorded app. Matching local events are consumed; global monitors are passive and cannot suppress the recorded app's keystroke, and external-app delivery requires Accessibility permission. The visible tool set is selection, rectangle, oval, arrow, line, pencil, and highlighter.
 
 ## Quick Access card action shortcuts (hover-scoped)
 
@@ -94,10 +101,10 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
 | `dismiss` | ⌘W | `quickAccess.action.shortcut.dismiss` |
 
 - Master toggle `quickAccess.action.shortcuts.enabled` (default on); per-action disable set `quickAccess.action.shortcuts.disabled`. Cleared bindings persist the `"null"` sentinel so they do not fall back to the default on reload.
-- **Delivery**: Carbon `RegisterEventHotKey` under signature `ZQHS` (`0x5A51_4853`), registered when the first card is hovered and unregistered 250ms after hover ends (coalesced, so moving between cards costs no unregister/register round-trip — that per-crossing IPC on the main thread was a measurable regression). The panel is a `.nonactivatingPanel` with `canBecomeKey == false`, so keyboard events never reach it — the frontmost app owns the keyboard. Carbon was chosen over a global `NSEvent` monitor because it needs no Accessibility permission and **consumes** the keystroke, so ⌘C does not also copy in the app underneath.
+- **Delivery**: a session-level `CGEventTap` is installed when the first card is hovered and removed 250ms after hover ends. The tap converts each key-down to `NSEvent` and compares the complete key code + modifier set via `ShortcutConfig.matches(event:)`; only an exact registered binding is consumed. Every unregistered combination — including `⌘⇧P` when the card binding is `⌘P` — is returned unchanged to the focused app. This replaces the previous Carbon-by-action-ID path with an explicit exact-match/pass-through boundary. If Accessibility is unavailable, the code falls back to passive global/local `NSEvent` monitors: they never consume events, and external-app delivery/action triggering is best-effort because macOS may withhold those events. The panel is a `.nonactivatingPanel` with `canBecomeKey == false`, so keyboard events never route to it.
 - **Because these shadow the frontmost app while registered, teardown is mandatory** on every path: hover exit, card `onDisappear`, panel hide (`hidePanel`), `suspendForCapture()`, and item removal (`items` didSet → `invalidateHoverIfItemGone`, covering cards pulled out from under the pointer by the countdown or an opening editor). `QuickAccessManager.setHoveredItem` is the single writer of `hoveredItemID`.
 - **Dispatch**: the registry never executes actions. It publishes `(itemID, action)` through `QuickAccessManager.cardShortcutTrigger`; `QuickAccessCardView` receives it and calls its existing `performAction`, so keyboard, click, context menu, and swipe share one path and one set of availability rules (cloud configured, upload in flight, video vs screenshot).
-- **Validation** (`ShortcutValidationService.validateQuickAccessActionShortcut`): requires one of ⌘/⌥/⌃ (reject); rejects Fn (Carbon cannot express it, and the passive monitor fallback would double-fire); rejects duplicates inside this namespace; **warns** on collision with an enabled global shortcut, which the card binding shadows during hover. Collisions with Annotate keys are allowed — the two are never simultaneously active.
+- **Validation** (`ShortcutValidationService.validateQuickAccessActionShortcut`): requires one of ⌘/⌥/⌃ (reject); rejects Fn (the Quick Access router only accepts regular modifier+key bindings); rejects duplicates inside this namespace; **warns** on collision with an enabled global shortcut, which an exact card binding may consume during hover. Collisions with Annotate keys are allowed — the two are never simultaneously active.
 - Card tooltips append the binding (`actionHelpText`), and the ⇧⌘K cheat sheet lists all seven rows.
 - Separate from `quickAccess.openEditorShortcut` ("Edit latest capture", ⌘↩, off by default), which is panel-scoped and targets the newest card regardless of hover.
 
@@ -149,6 +156,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/fullscreen` | Capture fullscreen |
 | `snapzy://capture/area` | Capture area |
 | `snapzy://capture/repeat-area`| Repeat last area capture|
+| `snapzy://capture/delayed` | Delayed Capture (countdown → area) |
 | `snapzy://capture/application` | Application-window capture |
 | `snapzy://capture/active-window` | Capture active window |
 | `snapzy://capture/area-annotate` | Capture area → Annotate |

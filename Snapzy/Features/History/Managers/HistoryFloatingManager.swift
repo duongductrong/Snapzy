@@ -96,6 +96,7 @@ final class HistoryFloatingManager: ObservableObject {
   @Published var expandedFilter: CaptureHistoryType? = nil
   @Published var expandedTimeFilter: HistoryFloatingTimeFilter = .all
   @Published var searchText: String = ""
+  @Published private(set) var isPinned: Bool = false
   @Published private(set) var cloudUploadStates: [UUID: HistoryCloudUploadState] = [:]
 
   // MARK: - Private
@@ -218,8 +219,21 @@ final class HistoryFloatingManager: ObservableObject {
     showCompact()
   }
 
+  /// Toggle pinned state of the floating history panel
+  func togglePin() {
+    isPinned.toggle()
+    panelController.updatePinnedState(isPinned)
+    DiagnosticLogger.shared.log(
+      .info,
+      .history,
+      isPinned ? "Floating history pinned" : "Floating history unpinned"
+    )
+  }
+
   /// Hide the floating history panel
   func hide() {
+    isPinned = false
+    panelController.updatePinnedState(false)
     removeEscapeMonitors()
     panelController.hide()
     DiagnosticLogger.shared.log(.debug, .history, "Floating history hidden")
@@ -460,6 +474,10 @@ final class HistoryFloatingManager: ObservableObject {
       DiagnosticLogger.shared.log(.debug, .history, "Floating history resign-key ignored during modal interaction")
       return
     }
+    guard !isPinned else {
+      DiagnosticLogger.shared.log(.debug, .history, "Floating history resign-key ignored while pinned")
+      return
+    }
     hide()
   }
 
@@ -493,8 +511,9 @@ final class HistoryFloatingManager: ObservableObject {
     globalEscapeMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
       guard event.keyCode == 53 else { return }
       Task { @MainActor [weak self] in
-        guard self?.isModalInteractionActive == false else { return }
-        self?.hide()
+        guard let self else { return }
+        guard !self.isModalInteractionActive, !self.isPinned else { return }
+        self.hide()
       }
     }
   }

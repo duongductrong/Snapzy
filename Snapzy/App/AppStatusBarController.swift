@@ -461,6 +461,33 @@ final class AppStatusBarController: ObservableObject {
     prefsItem.isEnabled = true
     menu?.addItem(prefsItem)
 
+    #if DEBUG
+    // Liquid Glass Playground
+    let playgroundItem = NSMenuItem(
+      title: "Liquid Glass Playground",
+      action: #selector(openLiquidGlassPlaygroundAction),
+      keyEquivalent: ""
+    )
+    playgroundItem.target = self
+    playgroundItem.image = NSImage(systemSymbolName: "slider.horizontal.below.square.and.square.filled", accessibilityDescription: nil)
+    playgroundItem.isEnabled = true
+    menu?.addItem(playgroundItem)
+    #endif
+
+    // Replay onboarding — keep this as the last action before the final separator/Quit item.
+    let replayOnboardingItem = NSMenuItem(
+      title: L10n.PreferencesGeneral.restartOnboardingTitle,
+      action: #selector(replayOnboardingAction),
+      keyEquivalent: ""
+    )
+    replayOnboardingItem.target = self
+    replayOnboardingItem.image = NSImage(
+      systemSymbolName: "arrow.counterclockwise.circle",
+      accessibilityDescription: nil
+    )
+    replayOnboardingItem.isEnabled = true
+    menu?.addItem(replayOnboardingItem)
+
     menu?.addItem(NSMenuItem.separator())
 
     // Quit
@@ -539,6 +566,18 @@ final class AppStatusBarController: ObservableObject {
       item.target = self
       item.image = NSImage(
         systemSymbolName: "rectangle.dashed", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
+    case .captureDelayed:
+      let item = NSMenuItem(
+        title: L10n.Menu.delayedCapture(CaptureDelayOption.current().seconds),
+        action: #selector(captureDelayedAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .delayedCapture, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "timer", accessibilityDescription: nil)
       item.isEnabled = viewModel.hasPermission
       return item
 
@@ -756,6 +795,11 @@ final class AppStatusBarController: ObservableObject {
     viewModel?.captureFullscreen()
   }
 
+  @objc private func captureDelayedAction() {
+    logMenuAction("captureDelayed")
+    viewModel?.captureDelayed()
+  }
+
   @objc private func captureActiveWindowAction() {
     logMenuAction("captureActiveWindow")
     viewModel?.captureActiveWindow()
@@ -861,9 +905,28 @@ final class AppStatusBarController: ObservableObject {
     openPreferencesWindow()
   }
 
+  @objc private func replayOnboardingAction() {
+    logMenuAction("replayOnboarding")
+    OnboardingFlowView.resetOnboarding()
+    SnapzyOnboardingWindowController.shared.close()
+    PreferencesWindowController.shared.close()
+
+    // Let the status-bar menu finish dismissing before presenting the onboarding window.
+    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+      NotificationCenter.default.post(name: .showOnboarding, object: nil)
+    }
+  }
+
+  #if DEBUG
+  @objc private func openLiquidGlassPlaygroundAction() {
+    logMenuAction("openLiquidGlassPlayground")
+    LiquidGlassPlaygroundWindowController.shared.show()
+  }
+  #endif
+
   func openPreferencesWindow(tab: PreferencesTab? = nil) {
     if let tab {
-      PreferencesNavigationState.shared.selectedTab = tab
+      PreferencesNavigationState.shared.select(tab)
     }
     DiagnosticLogger.shared.log(
       .info,
@@ -871,12 +934,10 @@ final class AppStatusBarController: ObservableObject {
       "Preferences window requested",
       context: ["tab": tab.map { "\($0)" } ?? "current"]
     )
-    presentPreferencesWindow()
+    presentPreferencesWindow(tab: tab)
   }
 
-  private func presentPreferencesWindow() {
-    let existingWindowNumbers = Set(NSApp.windows.map(\.windowNumber))
-
+  private func presentPreferencesWindow(tab: PreferencesTab? = nil) {
     // Elevate to regular app so Snapzy appears in top-left menu bar
     if !didElevateForSettings {
       NSApp.setActivationPolicy(.regular)
@@ -892,19 +953,12 @@ final class AppStatusBarController: ObservableObject {
       )
     }
 
-    NSApp.activate(ignoringOtherApps: true)
+    PreferencesWindowController.shared.show(tab: tab)
 
-    // Trigger Settings scene - equivalent to SettingsLink behavior.
-    // Simulating Cmd+, fails on layouts where AppKit mirrors the Settings item's
-    // key equivalent to the physical comma key's character (e.g. "ö" on Turkish
-    // layouts, issue #311), so find and perform the menu item directly instead.
-    if #available(macOS 14.0, *) {
-      attemptToTriggerSettings(remainingAttempts: Self.settingsTriggerMaxAttempts)
-    } else {
-      NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+    if let window = PreferencesWindowController.shared.window {
+      trackedPreferencesWindow = window
+      syncTrackedPreferencesWindowExclusion()
     }
-
-    schedulePreferencesWindowTracking(excludingWindowNumbers: existingWindowNumbers)
   }
 
   // MARK: - Settings Scene Trigger

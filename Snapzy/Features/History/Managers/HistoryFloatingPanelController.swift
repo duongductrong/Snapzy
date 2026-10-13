@@ -95,6 +95,10 @@ final class HistoryFloatingPanelController {
     panel.makeKeyAndOrderFront(nil)
   }
 
+  func updatePinnedState(_ isPinned: Bool) {
+    panel?.updateWindowLevel(isPinned: isPinned)
+  }
+
   private func requestShow(_ presentation: Presentation) {
     pendingHide = false
 
@@ -114,6 +118,7 @@ final class HistoryFloatingPanelController {
     position = presentation.position
     let targetFrame = frame(for: presentation.size, position: presentation.position)
     let panel = HistoryFloatingPanel(contentRect: targetFrame)
+    panel.updateWindowLevel(isPinned: HistoryFloatingManager.shared.isPinned)
     panel.onDidResignKey = { [weak self] in
       self?.handlePanelDidResignKey()
     }
@@ -130,6 +135,7 @@ final class HistoryFloatingPanelController {
     if reduceMotion {
       panel.alphaValue = 0
       panel.setFrame(targetFrame, display: false)
+      panel.installLocalArrowEventMonitor()
       panel.makeKeyAndOrderFront(nil)
       NSAnimationContext.runAnimationGroup({ context in
         context.duration = 0.18
@@ -145,6 +151,7 @@ final class HistoryFloatingPanelController {
 
     panel.alphaValue = 0
     panel.setFrame(transitionFrame(for: targetFrame, isShowing: true), display: false)
+    panel.installLocalArrowEventMonitor()
     panel.makeKeyAndOrderFront(nil)
 
     NSAnimationContext.runAnimationGroup({ context in
@@ -182,6 +189,7 @@ final class HistoryFloatingPanelController {
       return
     }
 
+    panel.removeLocalArrowEventMonitor()
     state = .hiding
     let targetFrame = reduceMotion ? panel.frame : transitionFrame(for: panel.frame, isShowing: false)
 
@@ -257,10 +265,16 @@ final class HistoryFloatingPanelController {
   }
 
   private func updatePanelChrome(on panel: HistoryFloatingPanel, cornerRadius: CGFloat) {
-    panel.appearance = ThemeManager.shared.nsAppearance
+    panel.appearance = effectivePanelAppearance
     containerView?.cornerRadius = cornerRadius
     panel.applyCornerRadius(cornerRadius)
     panel.invalidateShadow()
+  }
+
+  private var effectivePanelAppearance: NSAppearance? {
+    HistoryBackgroundStyle.currentStoredStyle() == .hud
+      ? NSAppearance(named: .darkAqua)
+      : ThemeManager.shared.nsAppearance
   }
 
   private func frame(for size: CGSize, position: HistoryPanelPosition) -> NSRect {
@@ -370,8 +384,11 @@ private final class HistoryFloatingContainerView: NSVisualEffectView {
 
   private func applyStyle() {
     let style = HistoryBackgroundStyle.currentStoredStyle()
-    appearance = ThemeManager.shared.nsAppearance
-    window?.appearance = ThemeManager.shared.nsAppearance
+    let resolvedAppearance: NSAppearance? = style == .hud
+      ? NSAppearance(named: .darkAqua)
+      : ThemeManager.shared.nsAppearance
+    appearance = resolvedAppearance
+    window?.appearance = resolvedAppearance
     layer?.cornerRadius = cornerRadius
     layer?.cornerCurve = .continuous
     layer?.masksToBounds = true

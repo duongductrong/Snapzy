@@ -10,6 +10,17 @@ import XCTest
 
 @MainActor
 final class SnapzyConfigurationImporterTests: XCTestCase {
+  func testImportingDefaultDocumentResetsDelayedCaptureCountdown() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(10, forKey: PreferencesKeys.screenshotDelayedCaptureSeconds)
+
+    let source = SnapzyConfigurationDefaultDocument.toml()
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.integer(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds), 3)
+  }
+
   func testImportAppliesCaptureAndRecordingSettingsToProvidedDefaults() {
     let defaults = UserDefaultsFactory.make()
     let source = """
@@ -30,6 +41,36 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotFormat), "webp")
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowCursor) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.recordingFPS) as? Int, 60)
+  }
+
+  func testImportAppliesRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "fhd1080"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.recordingMaxResolution), "fhd1080")
+  }
+
+  func testImportRejectsInvalidRecordingMaxResolution() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [recording]
+    max_resolution = "8k"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.recordingMaxResolution))
   }
 
   func testImportRejectsUnsupportedSchemaBeforeMutatingDefaults() {
@@ -294,6 +335,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     let originalLeftAction = QuickAccessSwipeActionStore.shared.swipeLeftAction
     let originalRightAction = QuickAccessSwipeActionStore.shared.swipeRightAction
     let originalTrackpadMode = QuickAccessTrackpadSwipeModeStore.shared.mode
+    let pinZoomModeStore = QuickAccessPinZoomModeStore.shared
+    let originalPinZoomMode = pinZoomModeStore.mode
     
     defer {
       manager.hideCardWhenWindowOpen = originalHide
@@ -301,6 +344,8 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
       QuickAccessSwipeActionStore.shared.setAction(.left, action: originalLeftAction)
       QuickAccessSwipeActionStore.shared.setAction(.right, action: originalRightAction)
       QuickAccessTrackpadSwipeModeStore.shared.setMode(originalTrackpadMode)
+      pinZoomModeStore.setMode(originalPinZoomMode)
+      QuickAccessPinWindowManager.shared.setPinZoomMode(originalPinZoomMode)
     }
 
     let source = """
@@ -311,9 +356,11 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
 
     [capture.screenshot]
     freeze_area = true
+    delayed_capture_seconds = 5
     show_selection_area_overlay = false
     reverse_magnifier_zoom_direction = true
     show_magnifier_by_default = true
+    include_window_shadow = false
 
     [recording]
     video_editor_zoom_transition_duration = 0.55
@@ -324,7 +371,10 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     remember_last_tool = true
 
     [quick_access]
+    play_sounds = false
+    open_in_finder_after_save = false
     trackpad_swipe_mode = "natural"
+    pin_zoom_mode = "windowFollowsImage"
     swipe_left_action = "pinToScreen"
     swipe_right_action = "none"
     hide_card_when_window_open = false
@@ -340,9 +390,11 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     
     // capture.screenshot
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotFreezeArea) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotDelayedCaptureSeconds) as? Int, 5)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay) as? Bool, false)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection) as? Bool, true)
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, true)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool, false)
     
     // recording
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.videoEditorZoomTransitionDuration) as? Double, 0.55)
@@ -353,7 +405,10 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.annotateRememberLastTool) as? Bool, true)
     
     // quick access
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessPlaySounds) as? Bool, false)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave) as? Bool, false)
     XCTAssertEqual(QuickAccessTrackpadSwipeModeStore.shared.mode, .natural)
+    XCTAssertEqual(pinZoomModeStore.mode, .windowFollowsImage)
     XCTAssertEqual(QuickAccessSwipeActionStore.shared.swipeLeftAction, .pinToScreen)
     XCTAssertNil(QuickAccessSwipeActionStore.shared.swipeRightAction)
     XCTAssertFalse(manager.hideCardWhenWindowOpen)
@@ -384,6 +439,14 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     """
     let result1 = SnapzyConfigurationImporter.importTOML(sourceInvalidTrackpad, defaults: defaults)
     XCTAssertTrue(result1.hasErrors)
+
+    let sourceInvalidPinZoomMode = """
+    schema_version = 1
+    [quick_access]
+    pin_zoom_mode = "invalid_mode"
+    """
+    let resultPinZoomMode = SnapzyConfigurationImporter.importTOML(sourceInvalidPinZoomMode, defaults: defaults)
+    XCTAssertTrue(resultPinZoomMode.hasErrors)
 
     let sourceInvalidLeftAction = """
     schema_version = 1

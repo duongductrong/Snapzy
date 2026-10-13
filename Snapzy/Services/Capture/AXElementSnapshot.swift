@@ -69,8 +69,8 @@ struct AXAccessibilitySnapshotProvider: AXSnapshotProviding {
   fileprivate static func snapshot(of element: AXUIElement) -> AXElementSnapshot? {
     let role = stringAttribute(of: element, attribute: kAXRoleAttribute)
     guard
-      let position = axValue(of: element, attribute: kAXPositionAttribute, type: .cgPoint, default: CGPoint.zero),
-      let size = axValue(of: element, attribute: kAXSizeAttribute, type: .cgSize, default: CGSize.zero)
+      let position = pointValue(of: element, attribute: kAXPositionAttribute),
+      let size = sizeValue(of: element, attribute: kAXSizeAttribute)
     else {
       DiagnosticLogger.shared.log(.error, .capture, "AX element missing position or size", context: ["role": role ?? "nil"])
       return nil
@@ -107,7 +107,7 @@ struct AXAccessibilitySnapshotProvider: AXSnapshotProviding {
       CFGetTypeID(windowRef) == AXUIElementGetTypeID()
     else { return nil }
     let windowElement = windowRef as! AXUIElement
-    return axValue(of: windowElement, attribute: kAXSizeAttribute, type: .cgSize, default: CGSize.zero)
+    return sizeValue(of: windowElement, attribute: kAXSizeAttribute)
   }
 
   private static func stringAttribute(of element: AXUIElement, attribute: String) -> String? {
@@ -116,12 +116,31 @@ struct AXAccessibilitySnapshotProvider: AXSnapshotProviding {
     return value as? String
   }
 
-  private static func axValue<T>(
+  private static func pointValue(
     of element: AXUIElement,
     attribute: String,
-    type: AXValueType,
-    default defaultValue: T
-  ) -> T? {
+  ) -> CGPoint? {
+    guard let axValue = axValue(of: element, attribute: attribute, type: .cgPoint) else { return nil }
+    var value = CGPoint.zero
+    guard AXValueGetValue(axValue, .cgPoint, &value) else { return nil }
+    return value
+  }
+
+  private static func sizeValue(
+    of element: AXUIElement,
+    attribute: String
+  ) -> CGSize? {
+    guard let axValue = axValue(of: element, attribute: attribute, type: .cgSize) else { return nil }
+    var value = CGSize.zero
+    guard AXValueGetValue(axValue, .cgSize, &value) else { return nil }
+    return value
+  }
+
+  private static func axValue(
+    of element: AXUIElement,
+    attribute: String,
+    type: AXValueType
+  ) -> AXValue? {
     var raw: CFTypeRef?
     guard
       AXUIElementCopyAttributeValue(element, attribute as CFString, &raw) == .success,
@@ -130,8 +149,6 @@ struct AXAccessibilitySnapshotProvider: AXSnapshotProviding {
     else { return nil }
     let axValue = raw as! AXValue
     guard AXValueGetType(axValue) == type else { return nil }
-    var value = defaultValue
-    guard AXValueGetValue(axValue, type, &value) else { return nil }
-    return value
+    return axValue
   }
 }

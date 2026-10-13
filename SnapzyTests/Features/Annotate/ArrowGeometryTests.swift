@@ -251,6 +251,110 @@ final class ArrowGeometryTests: XCTestCase {
     XCTAssertNotNil(curved.resolvedControlPoint)
   }
 
+  func testWithControlPoint_syncsStyleToActualBendSide() throws {
+    let original = ArrowGeometry(
+      start: CGPoint(x: 0, y: 0),
+      end: CGPoint(x: 100, y: 0),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 30, y: 40),
+      arrowType: .classic,
+      startHead: .circle,
+      endHead: .arrow
+    )
+
+    let updated = original.withControlPoint(CGPoint(x: 70, y: -40))
+
+    XCTAssertEqual(updated.style, .curvedRight)
+    XCTAssertEqual(updated.start, original.start)
+    XCTAssertEqual(updated.end, original.end)
+    XCTAssertEqual(updated.arrowType, .classic)
+    XCTAssertEqual(updated.startHead, .circle)
+    XCTAssertEqual(updated.endHead, .arrow)
+    XCTAssertEqual(try XCTUnwrap(updated.resolvedControlPoint), CGPoint(x: 70, y: -40))
+  }
+
+  func testWithControlPoint_onEndpointChordRetainsCurrentStyle() {
+    let original = ArrowGeometry(
+      start: CGPoint(x: 0, y: 0),
+      end: CGPoint(x: 100, y: 0),
+      style: .curvedRight
+    )
+
+    let updated = original.withControlPoint(CGPoint(x: 50, y: 0))
+
+    XCTAssertEqual(updated.style, .curvedRight)
+    XCTAssertEqual(updated.resolvedControlPoint, CGPoint(x: 50, y: 0))
+  }
+
+  func testWithEndpoints_preservesNormalizedControlPointShape() throws {
+    let original = ArrowGeometry(
+      start: CGPoint(x: 10, y: 20),
+      end: CGPoint(x: 110, y: 20),
+      style: .curvedLeft,
+      controlPoint: CGPoint(x: 35, y: 60)
+    )
+
+    let updated = original.withEndpoints(
+      start: CGPoint(x: 30, y: 10),
+      end: CGPoint(x: 80, y: 110)
+    )
+    let originalControl = try XCTUnwrap(original.resolvedControlPoint)
+    let updatedControl = try XCTUnwrap(updated.resolvedControlPoint)
+
+    XCTAssertEqual(
+      baselineProgress(originalControl, start: original.start, end: original.end),
+      baselineProgress(updatedControl, start: updated.start, end: updated.end),
+      accuracy: 0.001
+    )
+    XCTAssertEqual(
+      normalizedSignedPerpendicularDistance(originalControl, start: original.start, end: original.end),
+      normalizedSignedPerpendicularDistance(updatedControl, start: updated.start, end: updated.end),
+      accuracy: 0.001
+    )
+    XCTAssertEqual(updated.style, original.style)
+  }
+
+  func testWithEndpoints_degenerateChordKeepsControlPointFinite() throws {
+    let controlPoint = CGPoint(x: 40, y: 80)
+    let original = ArrowGeometry(
+      start: CGPoint(x: 20, y: 20),
+      end: CGPoint(x: 20, y: 20),
+      style: .curvedRight,
+      controlPoint: controlPoint
+    )
+
+    let updated = original.withEndpoints(
+      start: CGPoint(x: 60, y: 60),
+      end: CGPoint(x: 60, y: 60)
+    )
+    let resolved = try XCTUnwrap(updated.resolvedControlPoint)
+
+    XCTAssertEqual(resolved, controlPoint)
+    XCTAssertTrue(resolved.x.isFinite)
+    XCTAssertTrue(resolved.y.isFinite)
+  }
+
+  func testControlPoint_persistenceRoundTripsCustomValue() throws {
+    let controlPoint = CGPoint(x: 31.5, y: 87.25)
+    let geometry = ArrowGeometry(
+      start: CGPoint(x: 10, y: 20),
+      end: CGPoint(x: 120, y: 40),
+      style: .curvedLeft,
+      controlPoint: controlPoint
+    )
+
+    let restored = PersistedArrowGeometry(geometry: geometry).arrowGeometry
+
+    XCTAssertEqual(try XCTUnwrap(restored.resolvedControlPoint), controlPoint)
+  }
+
+  private func normalizedSignedPerpendicularDistance(_ point: CGPoint, start: CGPoint, end: CGPoint) -> CGFloat {
+    let dx = end.x - start.x
+    let dy = end.y - start.y
+    let length = max(hypot(dx, dy), 0.0001)
+    return signedPerpendicularDistance(point, start: start, end: end) / length
+  }
+
   // MARK: - tapered / outlined geometry (reference silhouette)
 
   func testTaperedMetrics_shaftWidensTowardHead() {

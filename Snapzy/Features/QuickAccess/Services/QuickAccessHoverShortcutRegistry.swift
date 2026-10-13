@@ -2,14 +2,17 @@
 //  QuickAccessHoverShortcutRegistry.swift
 //  Snapzy
 //
-//  Registers Quick Access card action shortcuts as Carbon hotkeys, scoped to the
-//  window where the pointer is over a card.
+//  Routes Quick Access card action shortcuts only while the pointer is over a
+//  card, with exact key/modifier matching.
 //
 //  The Quick Access panel is a non-activating panel (`canBecomeKey == false`), so
 //  keyboard events never route to it — the frontmost app owns the keyboard while
-//  the user hovers a card. Carbon hotkeys are the only delivery path that both
-//  works without Accessibility permission and *consumes* the keystroke, so ⌘C on a
-//  hovered card does not also copy in the app underneath.
+//  the user hovers a card. The previous Carbon path consumed registered card
+//  events by action ID without an application-level exact-match/pass-through
+//  gate. The event-tap path below sees the complete event and consumes only an
+//  exact registered binding. When Accessibility is unavailable, the passive
+//  monitor fallback never consumes events; external-app delivery and action
+//  triggering are therefore best-effort.
 //
 //  Because these bindings shadow the frontmost app while registered, every path
 //  that ends a hover must tear them down. `QuickAccessManager` owns the hover
@@ -17,7 +20,6 @@
 //
 
 import AppKit
-import Carbon.HIToolbox
 import Combine
 import Foundation
 
@@ -27,35 +29,47 @@ final class QuickAccessHoverShortcutRegistry {
   var onTrigger: ((QuickAccessActionKind) -> Void)?
 
   private let store: QuickAccessActionShortcutStore
-  private var hotKeyRefs: [QuickAccessActionKind: EventHotKeyRef] = [:]
-  private var eventHandler: EventHandlerRef?
+  private var eventTap: CFMachPort?
+  private var runLoopSource: CFRunLoopSource?
+  private var globalKeyMonitor: Any?
+  private var localKeyMonitor: Any?
   private var isHoverActive = false
   private var isRegistered = false
   private var pendingDisarm: DispatchWorkItem?
   private var storeObservers: Set<AnyCancellable> = []
 
-  /// "ZQHS" — Quick Access hover shortcuts. Distinct from `KeyboardShortcutManager`
-  /// (`ZSFx`) and the panel-scoped edit hotkey (`QuickAccessManager.editHotKeyID`).
-  private static let hotKeySignature = OSType(0x5A51_4853)
-
-  /// Delay before bindings are physically unregistered after hover ends.
+  /// Delay before the event tap/monitors are physically removed after hover ends.
   ///
-  /// Registering/unregistering Carbon hotkeys is a synchronous WindowServer IPC
-  /// on the main thread, and moving the pointer between cards produces an
-  /// exit+enter pair within milliseconds. Coalescing turns each card crossing
-  /// into a no-op instead of a full unregister+register round-trip; the cost is
-  /// that bindings stay live for this tail after the pointer leaves the last
-  /// card (triggers are still gated by `isHoverActive`, so nothing fires).
+  /// Moving the pointer between cards produces an exit+enter pair within
+  /// milliseconds. Coalescing keeps the routing infrastructure alive across
+  /// that transition; `isHoverActive` still gates every trigger and unmatched
+  /// events are always returned to the system.
   private static let disarmDelay: TimeInterval = 0.25
 
-  init(store: QuickAccessActionShortcutStore = .shared) {
-    self.store = store
+  init(store: QuickAccessActionShortcutStore? = nil) {
+    self.store = store ?? .shared
     observeStore()
   }
 
   deinit {
-    // Carbon teardown must run on the main actor; `QuickAccessManager` holds this
-    // for the app lifetime, so rely on explicit `setHoverActive(false)` instead.
+    // QuickAccessManager owns this registry for the app lifetime, but teardown
+    // here also protects the unretained event-tap callback if that ownership
+    // ever changes.
+    pendingDisarm?.cancel()
+    if let runLoopSource {
+      CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+      CFRunLoopSourceInvalidate(runLoopSource)
+    }
+    if let eventTap {
+      CGEvent.tapEnable(tap: eventTap, enable: false)
+      CFMachPortInvalidate(eventTap)
+    }
+    if let globalKeyMonitor {
+      NSEvent.removeMonitor(globalKeyMonitor)
+    }
+    if let localKeyMonitor {
+      NSEvent.removeMonitor(localKeyMonitor)
+    }
   }
 
   // MARK: - Hover lifecycle
@@ -105,92 +119,149 @@ final class QuickAccessHoverShortcutRegistry {
   // MARK: - Registration
 
   private func registerAll() {
-    installEventHandlerIfNeeded()
-
-    for binding in store.activeBindings {
-      guard let id = Self.hotKeyID(for: binding.action) else { continue }
-      var ref: EventHotKeyRef?
-      let status = RegisterEventHotKey(
-        binding.shortcut.keyCode,
-        binding.shortcut.modifiers,
-        id,
-        GetApplicationEventTarget(),
-        0,
-        &ref
-      )
-      guard status == noErr, let ref else {
-        DiagnosticLogger.shared.log(
-          .warning,
-          .action,
-          "Quick access card shortcut registration failed",
-          context: ["action": binding.action.rawValue, "status": "\(status)"]
-        )
-        continue
-      }
-      hotKeyRefs[binding.action] = ref
+    guard !store.activeBindings.isEmpty else {
+      isRegistered = true
+      return
     }
+
+    if installEventTap() {
+      isRegistered = true
+      return
+    }
+
+    installMonitorFallback()
     isRegistered = true
   }
 
   private func unregisterAll() {
-    for ref in hotKeyRefs.values {
-      UnregisterEventHotKey(ref)
+    if let runLoopSource {
+      CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+      CFRunLoopSourceInvalidate(runLoopSource)
     }
-    hotKeyRefs.removeAll()
+    if let eventTap {
+      CGEvent.tapEnable(tap: eventTap, enable: false)
+      CFMachPortInvalidate(eventTap)
+    }
+    if let globalKeyMonitor {
+      NSEvent.removeMonitor(globalKeyMonitor)
+    }
+    if let localKeyMonitor {
+      NSEvent.removeMonitor(localKeyMonitor)
+    }
+
+    runLoopSource = nil
+    eventTap = nil
+    globalKeyMonitor = nil
+    localKeyMonitor = nil
     isRegistered = false
   }
 
-  private func installEventHandlerIfNeeded() {
-    guard eventHandler == nil else { return }
-
-    var spec = EventTypeSpec(
-      eventClass: OSType(kEventClassKeyboard),
-      eventKind: OSType(kEventHotKeyPressed)
-    )
-    let callback: EventHandlerUPP = { _, event, userData in
-      guard let userData, let event else { return OSStatus(eventNotHandledErr) }
-
-      var hotKeyID = EventHotKeyID()
-      GetEventParameter(
-        event,
-        EventParamName(kEventParamDirectObject),
-        EventParamType(typeEventHotKeyID),
-        nil,
-        MemoryLayout<EventHotKeyID>.size,
-        nil,
-        &hotKeyID
+  private func installEventTap() -> Bool {
+    let eventMask = CGEventMask(1) << CGEventMask(CGEventType.keyDown.rawValue)
+    guard let eventTap = CGEvent.tapCreate(
+      tap: .cgSessionEventTap,
+      place: .headInsertEventTap,
+      options: .defaultTap,
+      eventsOfInterest: eventMask,
+      callback: Self.tapCallback,
+      userInfo: Unmanaged.passUnretained(self).toOpaque()
+    ) else {
+      DiagnosticLogger.shared.log(
+        .debug,
+        .action,
+        "Quick access exact shortcut tap unavailable; using passive monitors"
       )
-      guard hotKeyID.signature == QuickAccessHoverShortcutRegistry.hotKeySignature else {
-        return OSStatus(eventNotHandledErr)
-      }
-      guard let action = QuickAccessHoverShortcutRegistry.action(for: hotKeyID.id) else {
-        return OSStatus(eventNotHandledErr)
-      }
-
-      let registry = Unmanaged<QuickAccessHoverShortcutRegistry>
-        .fromOpaque(userData)
-        .takeUnretainedValue()
-      DispatchQueue.main.async {
-        MainActor.assumeIsolated {
-          registry.handleTrigger(action)
-        }
-      }
-      return noErr
+      return false
     }
 
-    InstallEventHandler(
-      GetApplicationEventTarget(),
-      callback,
-      1,
-      &spec,
-      Unmanaged.passUnretained(self).toOpaque(),
-      &eventHandler
-    )
+    guard let runLoopSource = CFMachPortCreateRunLoopSource(nil, eventTap, 0) else {
+      CFMachPortInvalidate(eventTap)
+      return false
+    }
+
+    self.eventTap = eventTap
+    self.runLoopSource = runLoopSource
+    CFRunLoopAddSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
+    CGEvent.tapEnable(tap: eventTap, enable: true)
+    return true
+  }
+
+  private func installMonitorFallback() {
+    globalKeyMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) {
+      [weak self] event in
+      MainActor.assumeIsolated {
+        _ = self?.handleObservedKeyDown(event)
+      }
+    }
+
+    localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) {
+      [weak self] event in
+      let handled = MainActor.assumeIsolated {
+        self?.handleObservedKeyDown(event) ?? false
+      }
+      // Local monitors may consume an exact action for Snapzy's own windows;
+      // the global monitor is observational and cannot consume external-app
+      // events. Unregistered local events always continue to the responder.
+      return handled ? nil : event
+    }
+  }
+
+  private static let tapCallback: CGEventTapCallBack = { _, type, event, userInfo in
+    guard let userInfo else { return Unmanaged.passUnretained(event) }
+    let registry = Unmanaged<QuickAccessHoverShortcutRegistry>
+      .fromOpaque(userInfo)
+      .takeUnretainedValue()
+    return MainActor.assumeIsolated {
+      registry.handleTapEvent(type: type, event: event)
+    }
+  }
+
+  /// Routes an event from the session tap. Returning the original event keeps
+  /// every unregistered combination flowing to the focused application.
+  private func handleTapEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+      if let eventTap {
+        CGEvent.tapEnable(tap: eventTap, enable: true)
+      }
+      return Unmanaged.passUnretained(event)
+    }
+
+    guard type == .keyDown,
+          isHoverActive,
+          let keyEvent = NSEvent(cgEvent: event),
+          let action = Self.matchingAction(for: keyEvent, bindings: store.activeBindings) else {
+      return Unmanaged.passUnretained(event)
+    }
+
+    if !keyEvent.isARepeat {
+      DispatchQueue.main.async { [weak self] in
+        MainActor.assumeIsolated {
+          self?.handleTrigger(action)
+        }
+      }
+    }
+    // Consume repeats of an exact binding as well. They must not leak through
+    // to the frontmost app just because Quick Access intentionally suppresses
+    // repeated action dispatch.
+    return nil
+  }
+
+  /// Handles an AppKit monitor event. Returns whether the local event should be
+  /// consumed; global monitor callbacks remain passive by platform contract.
+  private func handleObservedKeyDown(_ event: NSEvent) -> Bool {
+    guard isHoverActive,
+          let action = Self.matchingAction(for: event, bindings: store.activeBindings) else {
+      return false
+    }
+    if !event.isARepeat {
+      handleTrigger(action)
+    }
+    return true
   }
 
   private func handleTrigger(_ action: QuickAccessActionKind) {
-    // A hotkey press can land after the pointer left the card, since Carbon
-    // delivery is async relative to the unregister call.
+    // A key event can arrive after the pointer left the card while teardown is
+    // being scheduled, so the hover state remains the final authority.
     guard isHoverActive else { return }
     onTrigger?(action)
   }
@@ -225,18 +296,16 @@ final class QuickAccessHoverShortcutRegistry {
     }
   }
 
-  // MARK: - Hotkey identity
+  // MARK: - Exact matching
 
-  /// Stable per-action ID derived from the declaration order, so a hotkey press
-  /// maps back to its action without carrying extra state.
-  private static func hotKeyID(for action: QuickAccessActionKind) -> EventHotKeyID? {
-    guard let index = QuickAccessActionKind.defaultOrder.firstIndex(of: action) else { return nil }
-    return EventHotKeyID(signature: hotKeySignature, id: UInt32(index + 1))
-  }
-
-  private static func action(for rawID: UInt32) -> QuickAccessActionKind? {
-    let index = Int(rawID) - 1
-    guard QuickAccessActionKind.defaultOrder.indices.contains(index) else { return nil }
-    return QuickAccessActionKind.defaultOrder[index]
+  /// Testable routing seam shared by the event tap and monitor fallback.
+  /// `ShortcutConfig.matches(event:)` compares the complete supported modifier
+  /// set, so a binding such as ⌘P never matches ⌘⇧P, ⌘⌥P, or ⌃⌘P.
+  static func matchingAction(
+    for event: NSEvent,
+    bindings: [(action: QuickAccessActionKind, shortcut: ShortcutConfig)]
+  ) -> QuickAccessActionKind? {
+    guard event.type == .keyDown else { return nil }
+    return bindings.first { $0.shortcut.matches(event: event) }?.action
   }
 }

@@ -1,32 +1,29 @@
 //
-//  VideoEditorRightSidebar.swift
+//  VideoEditorLeftSidebar.swift
 //  Snapzy
 //
-//  Sidebars for video editor background controls and zoom configuration
+//  Left sidebar panels for video editor background controls and zoom configuration
 //
 
 import SwiftUI
 
-/// Left sidebar for background and canvas settings, matching the Annotate window pattern.
+/// Left sidebar hosting the panel selected in the collapsed rail: background
+/// and canvas settings, or zoom item configuration.
 struct VideoEditorLeftSidebar: View {
-  @ObservedObject var state: VideoEditorState
-
-  var body: some View {
-    VideoBackgroundSidebarView(state: state)
-      .frame(width: 240)
-      .frame(maxHeight: .infinity)
-  }
-}
-
-/// Right sidebar for zoom configuration and future item-specific properties.
-struct VideoEditorRightSidebar: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
   var body: some View {
-    ZoomSettingsContent(state: state, previewImage: previewImage)
-      .frame(width: 320)
-      .frame(maxHeight: .infinity)
+    switch state.leftSidebarPanel {
+    case .background:
+      VideoBackgroundSidebarView(state: state)
+        .frame(width: 240)
+        .frame(maxHeight: .infinity)
+    case .zoom:
+      ZoomSettingsContent(state: state, previewImage: previewImage)
+        .frame(width: 320)
+        .frame(maxHeight: .infinity)
+    }
   }
 }
 
@@ -34,8 +31,10 @@ struct ZoomSettingsContent: View {
   @ObservedObject var state: VideoEditorState
   let previewImage: NSImage?
 
+  @State private var editingSegmentId: UUID?
+
   @State private var localZoomLevel: CGFloat = ZoomSegment.defaultZoomLevel
-  @State private var localCenter: CGPoint = CGPoint(x: 0.5, y: 0.5)
+  @State private var localCenter: CGPoint = .init(x: 0.5, y: 0.5)
   @State private var localFollowSpeed: Double = AutoFocusSettings.defaultFollowSpeed
   @State private var localFocusMargin: CGFloat = AutoFocusSettings.defaultFocusMargin
   @State private var localTransitionDuration: TimeInterval = ZoomCalculator.defaultTransitionDuration
@@ -104,9 +103,14 @@ struct ZoomSettingsContent: View {
     .onAppear {
       syncLocalState()
     }
+    .onChange(of: state.selectedZoomId) { _ in
+      endContinuousEdit()
+    }
     .onChange(of: localStateSnapshot) { _ in
       syncLocalState()
     }
+    .onDisappear { endContinuousEdit() }
+    .accessibilityIdentifier("video-editor.zoom-settings")
   }
 
   private func modeSection(for segment: ZoomSegment) -> some View {
@@ -121,9 +125,8 @@ struct ZoomSettingsContent: View {
           .font(.system(size: 9, weight: .semibold))
           .padding(.horizontal, 6)
           .padding(.vertical, 3)
-          .background((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18))
+          .background(Capsule().fill((segment.isAutoMode ? Color.green : ZoomColors.primary).opacity(0.18)))
           .foregroundColor(segment.isAutoMode ? .green : ZoomColors.primary)
-          .cornerRadius(4)
       }
 
       HStack(spacing: 8) {
@@ -189,9 +192,9 @@ struct ZoomSettingsContent: View {
           : Color.white.opacity(0.08)
       )
       .foregroundColor(isDisabled ? .secondary : .primary)
-      .cornerRadius(8)
+      .clipShape(Capsule(style: .continuous))
       .overlay(
-        RoundedRectangle(cornerRadius: 8)
+        Capsule(style: .continuous)
           .strokeBorder(isSelected ? ZoomColors.primary.opacity(0.45) : Color.clear, lineWidth: 1)
       )
     }
@@ -213,8 +216,7 @@ struct ZoomSettingsContent: View {
     }
     .padding(10)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color.white.opacity(0.06))
-    .cornerRadius(8)
+    .background(Radius.rect(Radius.card).fill(Color.white.opacity(0.06)))
   }
 
   private var emptyState: some View {
@@ -256,13 +258,17 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.secondary)
 
         Slider(
-          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel),
-          in: ZoomSegment.minZoomLevel...ZoomSegment.maxZoomLevel
+          value: $localZoomLevel.stepped(by: 0.1, in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel),
+          in: ZoomSegment.minZoomLevel ... ZoomSegment.maxZoomLevel
         ) { isEditing in
-          if !isEditing {
+          if isEditing {
+            beginContinuousEdit()
+          } else {
             applyZoomLevel()
+            endContinuousEdit()
           }
         }
+        .accessibilityIdentifier("video-editor.zoom-level")
 
         Text("4x")
           .font(.system(size: 9))
@@ -284,7 +290,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 17))
           }
           .buttonStyle(.plain)
         }
@@ -306,11 +312,18 @@ struct ZoomSettingsContent: View {
           .monospacedDigit()
       }
 
-      Slider(value: $localFollowSpeed.stepped(by: 0.05, in: AutoFocusSettings.followSpeedRange), in: AutoFocusSettings.followSpeedRange) { isEditing in
-        if !isEditing {
+      Slider(
+        value: $localFollowSpeed.stepped(by: 0.05, in: AutoFocusSettings.followSpeedRange),
+        in: AutoFocusSettings.followSpeedRange
+      ) { isEditing in
+        if isEditing {
+          beginContinuousEdit()
+        } else {
           applyFollowSpeed()
+          endContinuousEdit()
         }
       }
+      .accessibilityIdentifier("video-editor.follow-speed")
 
       Text(L10n.VideoEditor.followSpeedDescription)
         .font(.system(size: 10))
@@ -380,7 +393,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 17))
           }
           .buttonStyle(.plain)
         }
@@ -407,11 +420,18 @@ struct ZoomSettingsContent: View {
           .monospacedDigit()
       }
 
-      Slider(value: $localFocusMargin.stepped(by: 0.05, in: AutoFocusSettings.focusMarginRange), in: AutoFocusSettings.focusMarginRange) { isEditing in
-        if !isEditing {
+      Slider(
+        value: $localFocusMargin.stepped(by: 0.05, in: AutoFocusSettings.focusMarginRange),
+        in: AutoFocusSettings.focusMarginRange
+      ) { isEditing in
+        if isEditing {
+          beginContinuousEdit()
+        } else {
           applyFocusMargin()
+          endContinuousEdit()
         }
       }
+      .accessibilityIdentifier("video-editor.focus-margin")
 
       Text(L10n.VideoEditor.focusMarginDescription)
         .font(.system(size: 10))
@@ -428,11 +448,12 @@ struct ZoomSettingsContent: View {
 
       ZoomCenterPicker(
         center: $localCenter,
-        previewImage: previewImage
+        previewImage: previewImage,
+        onEditingChanged: { editing in
+          if editing { beginContinuousEdit() } else { endContinuousEdit() }
+        },
+        onCenterChanged: applyCenter
       )
-      .onChange(of: localCenter) { newValue in
-        applyCenter(newValue)
-      }
 
       HStack(spacing: 4) {
         ForEach(centerPresets, id: \.name) { preset in
@@ -448,7 +469,7 @@ struct ZoomSettingsContent: View {
                   ? ZoomColors.primary.opacity(0.3)
                   : Color.white.opacity(0.1)
               )
-              .cornerRadius(4)
+              .clipShape(Radius.controlRect(forHeight: 24))
           }
           .buttonStyle(.plain)
           .help(preset.name)
@@ -476,7 +497,7 @@ struct ZoomSettingsContent: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(Color.white.opacity(0.1))
-        .cornerRadius(4)
+        .clipShape(Radius.controlRect(forHeight: 20))
       }
       .buttonStyle(.plain)
 
@@ -492,7 +513,7 @@ struct ZoomSettingsContent: View {
           .foregroundColor(.red)
           .padding(6)
           .background(Color.red.opacity(0.1))
-          .cornerRadius(4)
+          .clipShape(Radius.controlRect(forHeight: 24))
       }
       .buttonStyle(.plain)
     }
@@ -516,6 +537,18 @@ struct ZoomSettingsContent: View {
 
   private func isNearPreset(_ point: CGPoint, _ preset: CGPoint) -> Bool {
     abs(point.x - preset.x) < 0.1 && abs(point.y - preset.y) < 0.1
+  }
+
+  private func beginContinuousEdit() {
+    guard editingSegmentId == nil, let id = state.selectedZoomId else { return }
+    editingSegmentId = id
+    state.beginZoomEdit(id: id)
+  }
+
+  private func endContinuousEdit() {
+    guard let id = editingSegmentId else { return }
+    state.endZoomEdit(id: id)
+    editingSegmentId = nil
   }
 
   private func syncLocalState() {

@@ -9,25 +9,25 @@ import Foundation
 @testable import Snapzy
 
 final class MockURLSession: URLSessionProtocol, @unchecked Sendable {
-  private let lock = NSLock()
+  private let stateQueue = DispatchQueue(label: "com.snapzy.tests.mock-url-session")
   private var _requests: [URLRequest] = []
-  private let responder: (URLRequest) async throws -> (Data, URLResponse)
+  private let responder: @Sendable (URLRequest) async throws -> (Data, URLResponse)
 
-  init(responder: @escaping (URLRequest) async throws -> (Data, URLResponse) = { _ in throw URLError(.unsupportedURL) }) {
+  init(responder: @escaping @Sendable (URLRequest) async throws -> (Data, URLResponse) = { _ in throw URLError(.unsupportedURL) }) {
     self.responder = responder
   }
 
   func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-    lock.lock()
-    _requests.append(request)
-    lock.unlock()
+    record(request)
     return try await responder(request)
   }
 
+  private func record(_ request: URLRequest) {
+    stateQueue.sync { _requests.append(request) }
+  }
+
   var requests: [URLRequest] {
-    lock.lock()
-    defer { lock.unlock() }
-    return _requests
+    stateQueue.sync { _requests }
   }
 
   static func makeResponse(

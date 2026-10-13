@@ -1,12 +1,12 @@
 # Preferences
 
-Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v1.32.0-beta.5`).
+Reference for the Settings window: tab structure, every section, and how preferences are stored. Verified against `Snapzy/Features/Preferences/` at HEAD (`v2.1.0-beta.3`).
 
 ## Root
 
-- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `TabView`, fixed 760×550, 10 tabs.
-- Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — set programmatically from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
-- Presented through the `Settings` scene in `SnapzyApp`; activation-policy dance handled by `AppStatusBarController` (see [APP_LIFECYCLE.md](APP_LIFECYCLE.md)).
+- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 11 categories in 4 unlabelled groups.
+- `PreferencesWindowController` (`Snapzy/Features/Preferences/PreferencesWindowController.swift`) — Dedicated `NSWindowController` directly managing window lifecycle, activation policy transitions (`.regular` ↔ `.accessory`), fullSizeContentView, and titlebar transparency.
+- Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — supports back/forward history stacks (`⌘[` and `⌘]`), last-visited tab persistence, and programmatical routing from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
 
 ## Storage pattern
 
@@ -48,7 +48,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Scrolling Capture: Show Session Hints (`scrollingCapture.showHints`) + info note.
 - **Recording pane**:
   - Format: MOV / MP4 (`recording.format`).
-  - Quality: Frame Rate 30/60 (`recording.fps`), Quality (`recording.quality`, `VideoQuality`).
+  - Quality: Frame Rate 30/60 (`recording.fps`), Quality (`recording.quality`, `VideoQuality`), Max Resolution (`recording.maxResolution`, `RecordingMaxResolution`, default `auto`).
   - Behavior: Show Cursor (`recording.showCursor`), Dim Non-Selected Area (`recording.dimNonSelectedArea`, default on — darkens everything outside the recording region during recording; turn off to keep other windows fully visible/usable while recording), Remember Last Area (`recording.rememberLastArea`).
   - Controls: Hover Bar Visible (`recording.hoverBarVisible`), Show Time on Menu Bar (`recording.showTimeOnMenuBar`).
   - Mouse Highlight: size 30–100, animation 0.3–2.0 s, ripple count 1–5, color (archived `NSColor` in `recording.mouseHighlight.color`), opacity 0.2–1.0; reset-to-default.
@@ -76,9 +76,10 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 ### Quick Access (`PreferencesQuickAccessSettingsView.swift`)
 
 - **Actions**: `QuickAccessActionCustomizationView` — action enable/order/slot assignment with live preview card (`PreferencesQuickAccessPreviewCard`); keys `quickAccess.actions.*`, `quickAccess.swipe.action.*`.
+- **Pinned Image**: clickable tiles — selecting `Resize window with image` (default `fixedViewport` alternative `windowFollowsImage`) directly on the animated side-by-side preview applies the mode to pinned windows; key `quickAccess.pin.zoom.mode`.
 - **Position**: screen edge left/right (`floatingScreenshot.position`).
 - **Appearance**: overlay size slider 0.75–1.5 (`floatingScreenshot.overlayScale`).
-- **Behaviors**: floating overlay enable (`floatingScreenshot.enabled`), Auto-Close toggle + 3–30 s slider (default 10, `floatingScreenshot.autoDismiss*`) + Pause on Hover, Hide Card When Window Open (`quickAccess.hideCardWhenWindowOpen`), Animation Style (`quickAccess.animationStyle`), Drag & Drop (`floatingScreenshot.dragDropEnabled`), Two-Finger Swipe to Dismiss + sensitivity 0.5–3.0 (`floatingScreenshot.twoFingerSwipe*`).
+- **Behaviors**: floating overlay enable (`floatingScreenshot.enabled`), Auto-Close toggle + 3–30 s slider (default 10, `floatingScreenshot.autoDismiss*`) + Pause on Hover, Hide Card When Window Open (`quickAccess.hideCardWhenWindowOpen`), Animation Style (`quickAccess.animationStyle`), Sound Effects (`quickAccess.playSounds`), Drag & Drop (`floatingScreenshot.dragDropEnabled`), Open in Finder After Saving (`quickAccess.openInFinderAfterSave`), Two-Finger Swipe to Dismiss + sensitivity 0.5–3.0 (`floatingScreenshot.twoFingerSwipe*`).
 - **Trackpad Swipe Mode**: mode picker (`quickAccess.trackpad.swipe.mode`) + swipe-action hints; visible when swipe-to-dismiss is on.
 
 ### History (`PreferencesHistorySettingsView.swift`)
@@ -119,10 +120,9 @@ Provider configuration, credentials, expiration, usage stats, and the Cloud Uplo
 
 ### About (`PreferencesAboutSettingsView.swift`)
 
-- App icon/name/version+build, last update check.
-- Check for Updates + Report a Problem (`CrashReportService.presentAlert()`) — see [UPDATES.md](UPDATES.md).
-- Update channel picker (`UpdateChannelSectionView` / `PreferencesUpdateChannelSection.swift`) — stable/beta.
-- Sponsor links (`SponsorLinks`), website/GitHub/issues link row.
+- Hero: app icon/name/subtitle, then version+build + last update check, then the liquid-glass **Check for Updates** button (disabled while Sparkle is checking).
+- Creator attribution ("Made by") & Special thanks section honoring contributors (featured list in default view with inline "See more" expansion to all-time contributors using `PreferencesFlowLayout`, individual GitHub profile links for each contributor, and repository contributors anchor link).
+- Card 2: inline update channel picker — stable/beta; support link rows (website, GitHub, Report a Bug, Discord, sponsor) — see [UPDATES.md](UPDATES.md).
 
 ## After-capture matrix
 

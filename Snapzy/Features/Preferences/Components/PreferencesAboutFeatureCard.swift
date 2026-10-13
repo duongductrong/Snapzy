@@ -23,7 +23,7 @@ struct AboutFeatureCard: View {
         .foregroundColor(iconColor)
         .frame(width: 36, height: 36)
         .background(iconColor.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: Size.radiusMd))
+        .clipShape(Radius.rect(Radius.tile))
 
       // Text
       VStack(alignment: .leading, spacing: 2) {
@@ -40,9 +40,9 @@ struct AboutFeatureCard: View {
     }
     .padding(Spacing.md)
     .background(Color.primary.opacity(isHovering ? 0.06 : 0.03))
-    .clipShape(RoundedRectangle(cornerRadius: Size.radiusLg))
+    .clipShape(Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: Size.radiusLg)
+      Radius.rect(Radius.card)
         .stroke(Color.primary.opacity(0.08), lineWidth: 1)
     )
     .scaleEffect(isHovering ? 1.02 : 1.0)

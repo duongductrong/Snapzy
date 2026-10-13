@@ -12,6 +12,7 @@ import Foundation
 /// Non-activating floating panel for capture history
 final class HistoryFloatingPanel: NSPanel {
   var onDidResignKey: (() -> Void)?
+  private var localArrowEventMonitor: Any?
 
   init(contentRect: NSRect) {
     super.init(
@@ -23,8 +24,11 @@ final class HistoryFloatingPanel: NSPanel {
     configurePanel()
   }
 
+  private static let defaultLevel: NSWindow.Level = .floating
+  private static let pinnedLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 2)
+
   private func configurePanel() {
-    level = .floating
+    level = Self.defaultLevel
     isFloatingPanel = true
     hidesOnDeactivate = false
     isOpaque = false
@@ -33,6 +37,10 @@ final class HistoryFloatingPanel: NSPanel {
     collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
     acceptsMouseMovedEvents = true
     ignoresMouseEvents = false
+  }
+
+  func updateWindowLevel(isPinned: Bool) {
+    level = isPinned ? Self.pinnedLevel : Self.defaultLevel
   }
 
   override var canBecomeKey: Bool { true }
@@ -49,6 +57,69 @@ final class HistoryFloatingPanel: NSPanel {
     DispatchQueue.main.async { [weak self] in
       self?.onDidResignKey?()
     }
+  }
+
+  override func close() {
+    removeLocalArrowEventMonitor()
+    super.close()
+  }
+
+  override func sendEvent(_ event: NSEvent) {
+    guard handleArrowNavigationEvent(event) else {
+      super.sendEvent(event)
+      return
+    }
+  }
+
+  func installLocalArrowEventMonitor() {
+    guard localArrowEventMonitor == nil else { return }
+    localArrowEventMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+      guard let self,
+            event.windowNumber == self.windowNumber,
+            self.isVisible,
+            self.isKeyWindow,
+            self.shouldHandleArrowNavigationEvent(event) else {
+        return event
+      }
+      return self.handleArrowNavigationEvent(event) ? nil : event
+    }
+  }
+
+  func removeLocalArrowEventMonitor() {
+    guard let localArrowEventMonitor else { return }
+    NSEvent.removeMonitor(localArrowEventMonitor)
+    self.localArrowEventMonitor = nil
+  }
+
+  private func shouldHandleArrowNavigationEvent(_ event: NSEvent) -> Bool {
+    guard event.type == .keyDown,
+          HistoryFloatingNavigationDirection(keyCode: event.keyCode) != nil else { return false }
+
+    let flags = navigationModifierFlags(for: event)
+    return !isTextInputActive && (flags.isEmpty || flags == .shift)
+  }
+
+  @discardableResult
+  private func handleArrowNavigationEvent(_ event: NSEvent) -> Bool {
+    guard event.type == .keyDown,
+          HistoryFloatingNavigationDirection(keyCode: event.keyCode) != nil else { return false }
+
+    let flags = navigationModifierFlags(for: event)
+    guard !isTextInputActive, flags.isEmpty || flags == .shift else { return false }
+
+    NotificationCenter.default.post(
+      name: .historyMoveFocus,
+      object: self,
+      userInfo: ["keyCode": event.keyCode, "extendsSelection": flags == .shift]
+    )
+    return true
+  }
+
+  private func navigationModifierFlags(for event: NSEvent) -> NSEvent.ModifierFlags {
+    let navigationModifiers: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
+    return event.modifierFlags
+      .intersection(.deviceIndependentFlagsMask)
+      .intersection(navigationModifiers)
   }
 
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
@@ -73,6 +144,15 @@ final class HistoryFloatingPanel: NSPanel {
       }
 
       NotificationCenter.default.post(name: .historySelectAll, object: self)
+      return true
+    }
+
+    if event.keyCode == 35 && flags == .command {
+      if isTextInputActive {
+        return super.performKeyEquivalent(with: event)
+      }
+
+      HistoryFloatingManager.shared.togglePin()
       return true
     }
 
@@ -106,4 +186,5 @@ final class HistoryFloatingPanel: NSPanel {
 
     super.keyDown(with: event)
   }
+
 }

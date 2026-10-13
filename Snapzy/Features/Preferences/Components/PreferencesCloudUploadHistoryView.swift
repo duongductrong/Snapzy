@@ -700,10 +700,10 @@ struct CloudUploadHistoryView: View {
       }
       .padding(.horizontal, 16)
       .padding(.vertical, 6)
-      .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-      .background(Color.orange.opacity(colorScheme == .dark ? 0.18 : 0.11), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+      .background(.ultraThinMaterial, in: Radius.rect(Radius.card))
+      .background(Color.orange.opacity(colorScheme == .dark ? 0.18 : 0.11), in: Radius.rect(Radius.card))
       .overlay(
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
+        Radius.rect(Radius.card)
           .stroke(Color.orange.opacity(0.22), lineWidth: 1)
       )
     }
@@ -748,9 +748,9 @@ struct CloudUploadHistoryView: View {
       Spacer()
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
-    .background(chromeSurfaceFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(chromeSurfaceFill, in: Radius.rect(Radius.panel))
     .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
+      Radius.rect(Radius.panel)
         .stroke(chromeSurfaceBorder, lineWidth: 1)
     )
   }
@@ -856,13 +856,13 @@ private struct CloudUploadExpandedCardView: View {
       .frame(maxWidth: .infinity, alignment: .leading)
     }
     .padding(10)
-    .background(cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .background(cardBackground, in: Radius.rect(Radius.card))
     .overlay(
-      RoundedRectangle(cornerRadius: 20, style: .continuous)
+      Radius.rect(Radius.card)
         .stroke(cardBorderColor, lineWidth: 1)
     )
     .shadow(color: cardShadowColor, radius: isHovering ? 12 : 8, x: 0, y: isHovering ? 7 : 5)
-    .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    .contentShape(Radius.rect(Radius.card))
     .scaleEffect(isHovering ? 1.005 : 1)
     .onHover { isHovering = $0 }
     .animation(.easeOut(duration: 0.16), value: isHovering)
@@ -875,10 +875,10 @@ private struct CloudUploadExpandedCardView: View {
 
   private var preview: some View {
     ZStack {
-      CloudUploadPreview(record: record, iconSize: 30, cornerRadius: 16)
+      CloudUploadPreview(record: record, iconSize: 30, cornerRadius: Radius.tile)
 
       if isHovering {
-        RoundedRectangle(cornerRadius: 16, style: .continuous)
+        Radius.rect(Radius.tile)
           .fill(Color.black.opacity(0.34))
 
         HStack(spacing: 12) {

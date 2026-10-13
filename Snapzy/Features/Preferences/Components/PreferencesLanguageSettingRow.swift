@@ -32,7 +32,7 @@ struct PreferencesLanguageSettingRow: View {
       }
       .labelsHidden()
       .pickerStyle(.menu)
-      .controlSize(.small)
+      .controlSize(.regular)
       .disabled(isRelaunching)
     }
     .alert(L10n.PreferencesGeneral.languageRelaunchConfirmationTitle, isPresented: $showRelaunchConfirmation) {

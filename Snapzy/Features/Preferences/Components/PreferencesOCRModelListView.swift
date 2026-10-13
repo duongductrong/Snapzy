@@ -27,7 +27,7 @@ struct PreferencesOCRModelListView: View {
         Button(L10n.PreferencesCapture.ocrModelAddCustom) {
           viewModel.sheetRequest = .init(editing: nil)
         }
-        .controlSize(.small)
+        .controlSize(.regular)
       }
     }
     .sheet(item: $viewModel.sheetRequest) { request in

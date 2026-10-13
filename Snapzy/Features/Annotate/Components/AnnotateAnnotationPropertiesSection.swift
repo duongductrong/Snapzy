@@ -50,6 +50,11 @@ struct AnnotationPropertiesSection: View {
     }
   }
 
+  private var strokeColors: [Color] {
+    let colors: [Color] = [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
+    return annotation?.type.toolType == .spotlight ? [.clear] + colors : colors
+  }
+
   // MARK: - Subviews
 
   private var strokeColorPicker: some View {
@@ -60,7 +65,7 @@ struct AnnotationPropertiesSection: View {
 
       ColorPickerRow(
         selectedColor: strokeColorBinding,
-        colors: [.red, .orange, .yellow, .green, .blue, .purple, .white, .black]
+        colors: strokeColors
       )
     }
   }

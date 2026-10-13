@@ -56,6 +56,10 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     let homeDirectory = temporaryHomeDirectory()
     defer { try? FileManager.default.removeItem(at: homeDirectory) }
     let url = SnapzyConfigurationPaths.suggestedConfigURL(homeDirectory: homeDirectory)
+    let manager = QuickAccessManager.shared
+    let originalTwoFingerSwipe = manager.twoFingerSwipeToDismissEnabled
+    manager.twoFingerSwipeToDismissEnabled = true
+    defer { manager.twoFingerSwipeToDismissEnabled = originalTwoFingerSwipe }
 
     let returnedURL = try SnapzyConfigurationService.shared.ensureConfigExists(at: url)
 
@@ -78,6 +82,42 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     let document = try SimpleTOMLParser.parse(source)
 
     XCTAssertEqual(document.value(at: "quick_access", "two_finger_swipe_to_dismiss")?.boolValue, false)
+  }
+
+  func testDefaultDocumentIncludesQuickAccessSoundSetting() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "quick_access", "play_sounds")?.boolValue, true)
+    XCTAssertEqual(
+      document.value(at: "quick_access", "pin_zoom_mode")?.stringValue,
+      QuickAccessPinZoomMode.defaultMode.rawValue
+    )
+  }
+
+  func testExportIncludesQuickAccessSoundSetting() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(false, forKey: PreferencesKeys.quickAccessPlaySounds)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+
+    XCTAssertEqual(document.value(at: "quick_access", "play_sounds")?.boolValue, false)
+  }
+
+  func testDefaultDocumentIncludesQuickAccessOpenInFinderSetting() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "quick_access", "open_in_finder_after_save")?.boolValue, true)
+  }
+
+  func testExportIncludesQuickAccessOpenInFinderSetting() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(false, forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave)
+
+    let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    let document = try SimpleTOMLParser.parse(source)
+
+    XCTAssertEqual(document.value(at: "quick_access", "open_in_finder_after_save")?.boolValue, false)
   }
 
   func testEnsureConfigExistsDoesNotOverwriteExistingFile() throws {
@@ -320,6 +360,7 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     defaults.set(false, forKey: PreferencesKeys.screenshotShowSelectionAreaOverlay)
     defaults.set(true, forKey: PreferencesKeys.screenshotReverseMagnifierZoomDirection)
     defaults.set(true, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    defaults.set(false, forKey: PreferencesKeys.captureIncludeWindowShadow)
     defaults.set(0.65, forKey: PreferencesKeys.videoEditorZoomTransitionDuration)
     defaults.set(false, forKey: PreferencesKeys.annotateCombineSaveAsEdit)
     defaults.set(AnnotationToolType.arrow.rawValue, forKey: PreferencesKeys.annotateDefaultTool)
@@ -331,12 +372,15 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     let originalLeftAction = QuickAccessSwipeActionStore.shared.swipeLeftAction
     let originalRightAction = QuickAccessSwipeActionStore.shared.swipeRightAction
     let originalTrackpadMode = QuickAccessTrackpadSwipeModeStore.shared.mode
+    let pinZoomModeStore = QuickAccessPinZoomModeStore.shared
+    let originalPinZoomMode = pinZoomModeStore.mode
 
     manager.hideCardWhenWindowOpen = false
     manager.animationStyle = .scale
     QuickAccessSwipeActionStore.shared.setAction(.left, action: .pinToScreen)
     QuickAccessSwipeActionStore.shared.setAction(.right, action: nil)
     QuickAccessTrackpadSwipeModeStore.shared.setMode(.natural)
+    pinZoomModeStore.setMode(.windowFollowsImage)
 
     defer {
       manager.hideCardWhenWindowOpen = originalHide
@@ -344,6 +388,7 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
       QuickAccessSwipeActionStore.shared.setAction(.left, action: originalLeftAction)
       QuickAccessSwipeActionStore.shared.setAction(.right, action: originalRightAction)
       QuickAccessTrackpadSwipeModeStore.shared.setMode(originalTrackpadMode)
+      pinZoomModeStore.setMode(originalPinZoomMode)
     }
 
     let source = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
@@ -354,11 +399,16 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "capture", "screenshot", "show_selection_area_overlay")?.boolValue, false)
     XCTAssertEqual(document.value(at: "capture", "screenshot", "reverse_magnifier_zoom_direction")?.boolValue, true)
     XCTAssertEqual(document.value(at: "capture", "screenshot", "show_magnifier_by_default")?.boolValue, true)
+    XCTAssertEqual(document.value(at: "capture", "screenshot", "include_window_shadow")?.boolValue, false)
     XCTAssertEqual(document.value(at: "recording", "video_editor_zoom_transition_duration")?.doubleValue, 0.65)
     XCTAssertEqual(document.value(at: "annotate", "combine_save_as_edit")?.boolValue, false)
     XCTAssertEqual(document.value(at: "annotate", "default_tool")?.stringValue, "arrow")
     XCTAssertEqual(document.value(at: "annotate", "remember_last_tool")?.boolValue, true)
     XCTAssertEqual(document.value(at: "quick_access", "trackpad_swipe_mode")?.stringValue, "natural")
+    XCTAssertEqual(
+      document.value(at: "quick_access", "pin_zoom_mode")?.stringValue,
+      QuickAccessPinZoomMode.windowFollowsImage.rawValue
+    )
     XCTAssertEqual(document.value(at: "quick_access", "swipe_left_action")?.stringValue, "pinToScreen")
     XCTAssertEqual(document.value(at: "quick_access", "swipe_right_action")?.stringValue, "none")
     XCTAssertEqual(document.value(at: "quick_access", "hide_card_when_window_open")?.boolValue, false)

@@ -13,6 +13,9 @@ typealias AreaSelectionResultCompletion = (AreaSelectionResult?) -> Void
 nonisolated enum AreaSelectionInteractionMode {
   case manualRegion
   case applicationWindow
+  /// Recording only: the pointer highlights the display under it and a click selects that
+  /// whole display. Entered and left with Enter.
+  case fullDisplay
 }
 
 nonisolated struct AreaSelectionBackdrop {
@@ -73,9 +76,26 @@ nonisolated struct ImmediateMenuBarPopoverCapture {
   let scaleFactor: CGFloat
 }
 
+/// A Quick Look preview captured before Snapzy presents selection UI.
+///
+/// Quick Look is rendered by `QuickLookUIService` as a transient WindowServer
+/// window. ScreenCaptureKit can enumerate that window but may report it as
+/// off-screen, so the preview must be retained from a display snapshot and
+/// restored over the filtered capture.
+nonisolated struct ImmediateQuickLookCapture {
+  let windowID: CGWindowID
+  let displayID: CGDirectDisplayID
+  let frame: CGRect
+  let image: CGImage
+  let scaleFactor: CGFloat
+}
+
 nonisolated enum AreaSelectionTarget: Equatable {
   case rect(CGRect)
   case window(WindowCaptureTarget)
+  /// A whole display, picked in the recording overlay. `frame` is the display's `NSScreen.frame`
+  /// in the same global AppKit coordinates as `.rect`.
+  case display(CGDirectDisplayID, frame: CGRect)
 
   var rect: CGRect {
     switch self {
@@ -83,12 +103,14 @@ nonisolated enum AreaSelectionTarget: Equatable {
       rect
     case .window(let target):
       target.frame
+    case .display(_, let frame):
+      frame
     }
   }
 
   var windowTarget: WindowCaptureTarget? {
     switch self {
-    case .rect:
+    case .rect, .display:
       nil
     case .window(let target):
       target

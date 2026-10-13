@@ -21,8 +21,8 @@ struct QuickAccessCardShortcutTrigger {
 final class QuickAccessActionShortcutStore: ObservableObject {
   static let shared = QuickAccessActionShortcutStore()
 
-  /// Shipping defaults. Every entry carries at least one of ⌘/⌥/⌃ because these
-  /// register as Carbon hotkeys that consume the keystroke while a card is hovered.
+  /// Shipping defaults. Every entry carries at least one of ⌘/⌥/⌃ because the
+  /// hover router may consume an exact matching keystroke while a card is hovered.
   static let defaultShortcuts: [QuickAccessActionKind: ShortcutConfig] = [
     .copy: ShortcutConfig(keyCode: UInt32(kVK_ANSI_C), modifiers: UInt32(cmdKey)),
     .saveOrOpen: ShortcutConfig(keyCode: UInt32(kVK_ANSI_S), modifiers: UInt32(cmdKey)),
@@ -88,13 +88,15 @@ final class QuickAccessActionShortcutStore: ObservableObject {
 
   /// Bindings the registry should hold while a card is hovered.
   ///
-  /// Fn combos are dropped: `RegisterEventHotKey` cannot express Fn, and the
-  /// passive `NSEvent` fallback would let the keystroke reach the frontmost app too.
+  /// Fn combos and bindings without ⌘/⌥/⌃ are dropped because Quick Access
+  /// action shortcuts are validated as regular modifier+key bindings;
+  /// unsupported bindings must never create a broad global key observer.
   var activeBindings: [(action: QuickAccessActionKind, shortcut: ShortcutConfig)] {
     guard isEnabled else { return [] }
     return QuickAccessActionKind.defaultOrder.compactMap { action in
       guard isEnabled(for: action),
             let shortcut = shortcuts[action],
+            Self.hasRequiredModifier(shortcut),
             !Self.containsFunctionModifier(shortcut) else { return nil }
       return (action, shortcut)
     }
@@ -108,8 +110,8 @@ final class QuickAccessActionShortcutStore: ObservableObject {
     config.modifiers & ShortcutConfig.functionCarbonModifier != 0
   }
 
-  /// Carbon hotkeys swallow the keystroke system-wide while registered, so a
-  /// binding without ⌘/⌥/⌃ would eat ordinary typing during hover.
+  /// A hover router without a command/option/control modifier could consume
+  /// ordinary typing while the pointer is over a card.
   static func hasRequiredModifier(_ config: ShortcutConfig) -> Bool {
     config.modifiers & UInt32(cmdKey | optionKey | controlKey) != 0
   }

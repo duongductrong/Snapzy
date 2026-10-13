@@ -6,6 +6,7 @@
 //  Supports per-tool auto-clear (time-based and count-based)
 //
 
+import AppKit
 import Combine
 import SwiftUI
 
@@ -76,6 +77,23 @@ final class RecordingAnnotationState: ObservableObject {
 
   func clearMode(for tool: AnnotationToolType) -> AnnotationClearMode {
     toolClearModes[tool] ?? .persist
+  }
+
+  /// Select a recording annotation tool from the active modifier shortcut mode.
+  /// `charactersIgnoringModifiers` is required because Control and Option can
+  /// otherwise transform the character before it reaches the event handler.
+  @discardableResult
+  func selectTool(for event: NSEvent) -> Bool {
+    guard isAnnotationEnabled, isShortcutModeActive else { return false }
+    guard let character = (event.charactersIgnoringModifiers ?? event.characters)?
+      .lowercased().first else { return false }
+    guard let matchedTool = AnnotateShortcutManager.shared.tool(for: character),
+          Self.availableTools.contains(matchedTool) else {
+      return false
+    }
+
+    selectedTool = matchedTool
+    return true
   }
 
   // MARK: - Annotation Management

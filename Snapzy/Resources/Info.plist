@@ -41,6 +41,10 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Snapzy needs microphone access to record audio with your screen recordings.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Snapzy needs camera access to add a camera overlay to your screen recordings.</string>
+	<key>NSCameraUseContinuityCameraDeviceType</key>
+	<true/>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Snapzy needs screen recording permission to capture screenshots and record your screen.</string>
 	<key>SUFeedURL</key>

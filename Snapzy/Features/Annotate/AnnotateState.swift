@@ -108,6 +108,7 @@ final class AnnotateState: ObservableObject {
     var opacity: CGFloat
     var rotationDegrees: CGFloat
     var watermarkStyle: String
+    var textPresentation: String?
     var spotlightOpacity: CGFloat?
     var lineStyle: String?
 
@@ -126,6 +127,7 @@ final class AnnotateState: ObservableObject {
       self.opacity = properties.opacity
       self.rotationDegrees = properties.rotationDegrees
       self.watermarkStyle = properties.watermarkStyle.rawValue
+      self.textPresentation = properties.textPresentation.rawValue
       self.spotlightOpacity = properties.spotlightOpacity
       self.lineStyle = properties.lineStyle.rawValue
     }
@@ -142,7 +144,8 @@ final class AnnotateState: ObservableObject {
         opacity: opacity,
         rotationDegrees: rotationDegrees,
         watermarkStyle: WatermarkStyle(rawValue: watermarkStyle) ?? .single,
-        spotlightOpacity: spotlightOpacity ?? 0.5
+        spotlightOpacity: spotlightOpacity ?? 0.5,
+        textPresentation: textPresentation.flatMap { TextPresentation(rawValue: $0) } ?? .plain
       )
     }
   }
@@ -270,7 +273,7 @@ final class AnnotateState: ObservableObject {
   // MARK: - Editor Mode
 
   /// Editor mode determines whether user is annotating or applying mockup transforms
-  nonisolated enum EditorMode: String, CaseIterable {
+  nonisolated enum EditorMode: String, CaseIterable, Sendable {
     case annotate  // Normal annotation editing (flat image)
     case mockup    // 3D perspective transforms with controls
     case preview   // Preview combined result (hides all editing UI)
@@ -2784,7 +2787,12 @@ final class AnnotateState: ObservableObject {
         clockwise: clockwise
       )
 
-    case .rectangle, .filledRectangle, .oval, .blur, .counter, .watermark, .embeddedImage, .spotlight:
+    case .counter:
+      rotated.properties.counterArrowTarget = annotation.properties.counterArrowTarget.map {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      }
+
+    case .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
       // Bounds-only annotations: the rotated `bounds` above is the full transform we need.
       // Watermark `rotationDegrees` is user-controlled and clamped to ±45°, so we leave it
       // unchanged while moving the watermark region with the canvas.
@@ -3537,22 +3545,32 @@ final class AnnotateState: ObservableObject {
   }
 
   /// Move an arrow's start/end endpoint (Figma-style line editing).
-  /// Style, display type, and heads are preserved; the curve control point is
-  /// re-derived from the new endpoints so curved arrows follow the drag.
+  /// Style, display type, and heads are preserved; curved arrows keep the
+  /// control point's relative position to the endpoint chord.
   func updateArrowEndpoint(id: UUID, start newStart: CGPoint? = nil, end newEnd: CGPoint? = nil) {
     guard let index = annotations.firstIndex(where: { $0.id == id }),
           case .arrow(let geometry) = annotations[index].type else { return }
 
     let updatedStart = newStart ?? geometry.start
     let updatedEnd = newEnd ?? geometry.end
-    let updated = ArrowGeometry(
-      start: updatedStart,
-      end: updatedEnd,
-      style: geometry.style,
-      arrowType: geometry.arrowType,
-      startHead: geometry.startHead,
-      endHead: geometry.endHead
-    )
+    let updated = geometry.withEndpoints(start: updatedStart, end: updatedEnd)
+    annotations[index].type = .arrow(updated)
+    annotations[index].bounds = updated.bounds()
+    hasUnsavedChanges = true
+  }
+
+  /// Move a curved arrow's quadratic Bezier control point.
+  /// The canvas clamps the requested point to its active drawing bounds before
+  /// calling this method; the model keeps the point and synchronizes the
+  /// curved style with its actual side of the endpoint chord.
+  func updateArrowControlPoint(id: UUID, controlPoint: CGPoint) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .arrow(let geometry) = annotations[index].type,
+          geometry.style != .straight else { return }
+
+    let updated = geometry.withControlPoint(controlPoint)
+    guard updated != geometry else { return }
+
     annotations[index].type = .arrow(updated)
     annotations[index].bounds = updated.bounds()
     hasUnsavedChanges = true
@@ -3684,6 +3702,19 @@ final class AnnotateState: ObservableObject {
       fillColor: fillColor
     )
 
+    // Re-selecting the current fill still matters for plain text: the
+    // promotion below is what makes the fill visible, so an equal fill value
+    // does not mean this update is a no-op.
+    let fillPromotesTextPresentation: Bool = {
+      guard let fillColor = colorUpdate.fillColor,
+            fillColor != .clear,
+            case .text = annotations[index].type,
+            annotations[index].properties.textPresentation == .plain else {
+        return false
+      }
+      return true
+    }()
+
     guard annotationPropertiesWillChange(
       annotations[index],
       strokeWidth: strokeWidth,
@@ -3696,7 +3727,7 @@ final class AnnotateState: ObservableObject {
       watermarkStyle: watermarkStyle,
       spotlightOpacity: spotlightOpacity,
       lineStyle: lineStyle
-    ) else { return }
+    ) || fillPromotesTextPresentation else { return }
 
     if recordsUndo {
       if let snapshot = propertySliderGestureUndoSnapshot {
@@ -3738,6 +3769,13 @@ final class AnnotateState: ObservableObject {
     }
     if let fillColor = colorUpdate.fillColor {
       annotations[index].properties.fillColor = fillColor
+      // The background fill only renders for label/callout presentations, so a
+      // colored fill on plain text would stay invisible. Promote it to a label.
+      if case .text = annotations[index].type,
+         fillColor != .clear,
+         annotations[index].properties.textPresentation == .plain {
+        annotations[index].properties.textPresentation = .label
+      }
     }
     if let cornerRadius = cornerRadius {
       annotations[index].properties.cornerRadius = max(0, cornerRadius)
@@ -3773,12 +3811,18 @@ final class AnnotateState: ObservableObject {
     color: Color,
     recordsUndo: Bool = false
   ) {
+    let isSpotlight = annotations.first(where: { $0.id == id })?.type.toolType == .spotlight
     updateAnnotationProperties(
       id: id,
       strokeColor: color,
       recordsUndo: recordsUndo
     )
-    if isQuickPropertiesSyncEnabled {
+    if isSpotlight {
+      updateDefaultAnnotationProperties(for: .spotlight, strokeColor: color)
+      if !isTransparentColor(color), isQuickPropertiesSyncEnabled {
+        rememberSharedAnnotationColor(color)
+      }
+    } else if isQuickPropertiesSyncEnabled {
       rememberSharedAnnotationColor(color)
     }
   }
@@ -4165,6 +4209,13 @@ final class AnnotateState: ObservableObject {
     applySharedAnnotationColorToToolDefaults(color)
   }
 
+  private func isTransparentColor(_ color: Color) -> Bool {
+    guard let rgba = RGBAColor(color: color) else {
+      return color == .clear
+    }
+    return rgba.alpha <= 0.001
+  }
+
   private func loadSharedAnnotationParameterDefaults() {
     guard let data = defaults.data(forKey: PreferencesKeys.annotateParameterDefaults),
           let decoded = try? JSONDecoder().decode(SharedAnnotationParameterDefaults.self, from: data)
@@ -4314,6 +4365,11 @@ final class AnnotateState: ObservableObject {
   }
 
   private func rememberAnnotationPrimaryColor(_ color: Color, for tool: AnnotationToolType?) {
+    if tool == .spotlight {
+      updateDefaultAnnotationProperties(for: .spotlight, strokeColor: color)
+      guard !isTransparentColor(color) else { return }
+    }
+
     guard !isQuickPropertiesSyncEnabled else {
       rememberSharedAnnotationColor(color)
       return
@@ -4416,6 +4472,12 @@ final class AnnotateState: ObservableObject {
 
   private func applySharedAnnotationColorToToolDefaults(_ color: Color) {
     for tool in AnnotationToolType.allCases where tool.supportsQuickStrokeColor {
+      if tool == .spotlight {
+        guard let spotlightProperties = annotationToolProperties[.spotlight],
+              !isTransparentColor(spotlightProperties.strokeColor) else {
+          continue
+        }
+      }
       var properties = defaultAnnotationProperties(for: tool)
       properties.strokeColor = color
       if tool == .filledRectangle {
@@ -4449,10 +4511,10 @@ final class AnnotateState: ObservableObject {
   private func baseAnnotationProperties(for tool: AnnotationToolType) -> AnnotationProperties {
     if tool == .spotlight {
       var properties = AnnotationProperties(
-        strokeColor: sharedAnnotationColor ?? .red,
+        strokeColor: .clear,
         fillColor: .clear,
         strokeWidth: 3,
-        cornerRadius: 14,
+        cornerRadius: 14, // radius-lint:allow — annotation content default, not chrome
         opacity: 1.0,
         spotlightOpacity: spotlightOpacity
       )
@@ -4476,7 +4538,7 @@ final class AnnotateState: ObservableObject {
       strokeColor: strokeColor,
       fillColor: .clear,
       strokeWidth: 3,
-      cornerRadius: 0,
+      cornerRadius: 0, // radius-lint:allow — watermark content default, not chrome
       fontSize: 36,
       fontName: "SF Pro",
       opacity: 0.22,
@@ -4493,7 +4555,7 @@ final class AnnotateState: ObservableObject {
   ) {
     let sharedProperties = baseAnnotationProperties(for: tool)
 
-    if tool.supportsQuickStrokeColor {
+    if tool.supportsQuickStrokeColor, tool != .spotlight {
       properties.strokeColor = sharedProperties.strokeColor
       if tool == .filledRectangle {
         properties.fillColor = sharedProperties.strokeColor
@@ -4624,6 +4686,12 @@ final class AnnotateState: ObservableObject {
       if let fillColor = fillColor {
         properties.fillColor = fillColor
       }
+    }
+    if tool == .text,
+       let fillColor = fillColor,
+       fillColor != .clear,
+       properties.textPresentation == .plain {
+      properties.textPresentation = .label
     }
     if let cornerRadius = cornerRadius {
       properties.cornerRadius = max(0, cornerRadius)
@@ -4983,6 +5051,7 @@ final class AnnotateState: ObservableObject {
         properties.fillColor = .black
       }
       annotationToolProperties[.text] = properties
+      persistAnnotationToolProperties()
       return
     }
 
@@ -5011,6 +5080,16 @@ final class AnnotateState: ObservableObject {
           annotations[index].properties.textPresentation == .callout,
           annotations[index].properties.calloutTailTarget == nil else { return }
     annotations[index].properties.calloutTailTarget = defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
+  }
+
+  /// The canvas records the undo checkpoint once before committing its local gesture.
+  func updateCounterArrowTarget(id: UUID, target: CGPoint?) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .counter = annotations[index].type else { return }
+    let resolved = annotations[index].normalizedCounterArrowTarget(target)
+    guard annotations[index].properties.counterArrowTarget != resolved else { return }
+    annotations[index].properties.counterArrowTarget = resolved
+    hasUnsavedChanges = true
   }
 
   func updateTextCalloutTail(id: UUID, target: CGPoint) {
@@ -5444,13 +5523,20 @@ final class AnnotateState: ObservableObject {
       },
       set: { [weak self] newColor in
         guard let self else { return }
+        let selectedStrokeTargets = self.quickSelectionTargets(matching: { $0.supportsQuickStrokeColor })
+        let hasSpotlightTarget = selectedStrokeTargets.contains { $0.type.toolType == .spotlight }
         let didUpdateSelection = self.updateQuickSelectionProperties(
           strokeColor: newColor,
           recordsUndo: true,
           matching: { $0.supportsQuickStrokeColor }
         )
         if didUpdateSelection {
-          if self.isQuickPropertiesSyncEnabled {
+          if hasSpotlightTarget {
+            self.updateDefaultAnnotationProperties(for: .spotlight, strokeColor: newColor)
+          }
+          if self.isQuickPropertiesSyncEnabled && !(
+            hasSpotlightTarget && self.isTransparentColor(newColor)
+          ) {
             self.rememberSharedAnnotationColor(newColor)
           }
         } else {

@@ -7,15 +7,37 @@
 
 import SwiftUI
 
+extension QuickAccessPinZoomMode {
+  var title: String {
+    switch self {
+    case .windowFollowsImage: L10n.PreferencesQuickAccess.pinZoomModeWindow
+    case .fixedViewport: L10n.PreferencesQuickAccess.pinZoomModeFixed
+    }
+  }
+}
+
 struct QuickAccessSettingsView: View {
   @ObservedObject private var manager = QuickAccessManager.shared
   @ObservedObject private var trackpadSwipeModeStore = QuickAccessTrackpadSwipeModeStore.shared
+  @ObservedObject private var pinZoomModeStore = QuickAccessPinZoomModeStore.shared
+  @AppStorage(PreferencesKeys.quickAccessPlaySounds) private var playSounds = true
+  @AppStorage(PreferencesKeys.quickAccessOpenInFinderAfterSave) private var openInFinderAfterSave = true
 
   @State private var positionIsLeft: Bool = false
 
   var body: some View {
     Form {
       QuickAccessActionCustomizationView(manager: manager)
+
+      Section(L10n.PreferencesQuickAccess.pinZoomSection) {
+        PinZoomModeComparisonPreview(
+          selectedMode: pinZoomModeStore.mode,
+          onSelect: { mode in
+            pinZoomModeStore.setMode(mode)
+            QuickAccessPinWindowManager.shared.setPinZoomMode(mode)
+          }
+        )
+      }
 
       Section(L10n.PreferencesQuickAccess.positionSection) {
         SettingRow(icon: "rectangle.leadinghalf.inset.filled", title: L10n.PreferencesQuickAccess.screenEdgeTitle, description: L10n.PreferencesQuickAccess.screenEdgeDescription) {
@@ -74,6 +96,11 @@ struct QuickAccessSettingsView: View {
           .frame(width: 150, alignment: .trailing)
         }
 
+        SettingRow(icon: "speaker.wave.2", title: L10n.PreferencesQuickAccess.soundEffectsTitle, description: L10n.PreferencesQuickAccess.soundEffectsDescription) {
+          Toggle("", isOn: $playSounds)
+            .labelsHidden()
+        }
+
         if manager.autoDismissEnabled {
           HStack(spacing: 12) {
             Image(systemName: "clock")
@@ -109,6 +136,11 @@ struct QuickAccessSettingsView: View {
             .labelsHidden()
         }
 
+        SettingRow(icon: "folder", title: L10n.PreferencesQuickAccess.openInFinderAfterSaveTitle, description: L10n.PreferencesQuickAccess.openInFinderAfterSaveDescription) {
+          Toggle("", isOn: $openInFinderAfterSave)
+            .labelsHidden()
+        }
+
         SettingRow(icon: "hand.point.right", title: L10n.PreferencesQuickAccess.twoFingerSwipeTitle, description: L10n.PreferencesQuickAccess.twoFingerSwipeDescription) {
           Toggle("", isOn: $manager.twoFingerSwipeToDismissEnabled)
             .labelsHidden()
@@ -129,7 +161,7 @@ struct QuickAccessSettingsView: View {
       }
 
       if manager.twoFingerSwipeToDismissEnabled {
-        Section(L10n.PreferencesQuickAccess.trackpadSwipeModeTitle) {
+        Section(L10n.PreferencesQuickAccess.swipeActionsSection) {
           SettingRow(
             icon: "arrow.left.arrow.right",
             title: L10n.PreferencesQuickAccess.trackpadSwipeModeTitle,

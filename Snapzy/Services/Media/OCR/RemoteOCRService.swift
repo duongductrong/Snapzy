@@ -175,7 +175,9 @@ struct RemoteOCRProvider: OCRProvider {
   }
 
   private static func jpegData(from image: CGImage) -> Data? {
-    NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.9])
+    autoreleasepool {
+      NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.9])
+    }
   }
 
   private static func makeProbeImage() -> CGImage? {

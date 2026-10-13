@@ -5,6 +5,7 @@
 //  Unit tests for RecordingAnnotationState append, clear, count limit, and cleanup.
 //
 
+import AppKit
 import CoreGraphics
 import XCTest
 @testable import Snapzy
@@ -96,5 +97,51 @@ final class RecordingAnnotationStateTests: XCTestCase {
   func testStartStopCleanupTimer_noCrash() {
     state.startCleanupTimer()
     state.stopCleanupTimer()
+  }
+
+  /// Regression for issue #576: both annotation responders delegate tool
+  /// selection to the shared state, which must preserve the original key when
+  /// Control or Option transforms the event's display character.
+  @MainActor
+  func testSelectTool_routesControlModifiedShortcut() throws {
+    state.isAnnotationEnabled = true
+    state.isShortcutModeActive = true
+    let event = try XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [.control],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "\u{12}",
+      charactersIgnoringModifiers: "r",
+      isARepeat: false,
+      keyCode: 15 // R
+    ))
+
+    XCTAssertTrue(state.selectTool(for: event))
+    XCTAssertEqual(state.selectedTool, .rectangle)
+  }
+
+  @MainActor
+  func testSelectTool_routesShortcutWithoutAppKitEventDispatch() throws {
+    state.isAnnotationEnabled = true
+    state.isShortcutModeActive = true
+    let event = try XCTUnwrap(NSEvent.keyEvent(
+      with: .keyDown,
+      location: .zero,
+      modifierFlags: [.shift],
+      timestamp: 0,
+      windowNumber: 0,
+      context: nil,
+      characters: "r",
+      charactersIgnoringModifiers: "r",
+      isARepeat: false,
+      keyCode: 15 // R
+    ))
+
+    XCTAssertTrue(state.selectTool(for: event))
+
+    XCTAssertEqual(state.selectedTool, .rectangle)
   }
 }

@@ -398,6 +398,8 @@ private extension KeyboardShortcutManager {
       setRestartRecordingShortcut(config)
     case .deleteRecording:
       setDeleteRecordingShortcut(config)
+    case .delayedCapture:
+      setDelayedCaptureShortcut(config)
     case .annotate:
       setAnnotateShortcut(config)
     case .videoEditor:

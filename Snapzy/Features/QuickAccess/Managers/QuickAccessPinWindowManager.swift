@@ -40,6 +40,10 @@ final class QuickAccessPinWindowManager {
     controllers[item.id]?.update(item: item, imageOverride: imageOverride)
   }
 
+  func setPinZoomMode(_ mode: QuickAccessPinZoomMode) {
+    for controller in controllers.values { controller.setZoomMode(mode) }
+  }
+
   func close(id: UUID) {
     controllers.removeValue(forKey: id)?.close()
   }
@@ -72,33 +76,30 @@ private final class QuickAccessPinWindowController {
   private let state: QuickAccessPinWindowState
   private let window: QuickAccessPinWindow
 
-  private var targetZoomFactor: CGFloat = 1
-  private var zoomTimer: Timer?
-  private var zoomCenter: CGPoint?
-
   init(item: QuickAccessItem) {
     id = item.id
 
     let image = Self.loadImage(for: item)
     let screen = ScreenUtility.activeScreen()
-    let sizes = QuickAccessPinWindowSizing.sizes(for: image.size, on: screen)
+    let mode = QuickAccessPinZoomModeStore.shared.mode
+    let baseSize = QuickAccessPinWindowSizing.size(for: image.size, visibleSize: screen.visibleFrame.size, mode: mode)
     state = QuickAccessPinWindowState(
       id: item.id,
       url: item.url,
       image: image,
       thumbnail: item.thumbnail,
-      baseSize: sizes.base,
-      maxSize: sizes.max
+      baseSize: baseSize,
+      zoomMode: mode
     )
 
     let frame = QuickAccessPinWindowSizing.centeredFrame(size: state.displaySize, on: screen)
     window = QuickAccessPinWindow(contentRect: frame, state: state)
+    state.onWindowResize = { [weak self] size, anchorFraction in
+      self?.resize(to: size, preservingAnchorFraction: anchorFraction, animated: false)
+    }
     window.contentView = hostingView(size: state.displaySize)
     window.onEscapeRequested = { [weak self] in
       self?.handleUserClose()
-    }
-    window.onZoomStepRequested = { [weak self] step in
-      self?.handleZoomStep(step)
     }
   }
 
@@ -113,23 +114,19 @@ private final class QuickAccessPinWindowController {
   }
 
   func update(item: QuickAccessItem, imageOverride: NSImage? = nil) {
-    stopZoomAnimationLoop()
     let image = imageOverride ?? Self.loadImage(for: item)
     let screen = window.screen ?? ScreenUtility.activeScreen()
-    let sizes = QuickAccessPinWindowSizing.sizes(for: image.size, on: screen)
+    let baseSize = QuickAccessPinWindowSizing.size(for: image.size, visibleSize: screen.visibleFrame.size, mode: state.zoomMode)
     let newSize = state.update(
       url: item.url,
       image: image,
       thumbnail: item.thumbnail,
-      baseSize: sizes.base,
-      maxSize: sizes.max
+      baseSize: baseSize
     )
-    targetZoomFactor = state.zoomFactor
     resize(to: newSize, animated: false)
   }
 
   func close() {
-    stopZoomAnimationLoop()
     window.close()
   }
 
@@ -141,23 +138,17 @@ private final class QuickAccessPinWindowController {
     window.resumeMouseMonitors()
   }
 
-  private func hostingView(size: CGSize) -> QuickAccessPinHostingView {
+  private func hostingView(size: CGSize) -> NSHostingView<QuickAccessPinWindowView> {
     let view = QuickAccessPinWindowView(
       state: state,
       onClose: { [weak self] in
         self?.handleUserClose()
       },
-      onZoomSizeChange: { [weak self] _ in
-        self?.resizeForCurrentZoom(animated: true)
-      },
       onLockChanged: { [weak self] in
         self?.window.updateMousePassthrough()
       }
     )
-    let hostingView = QuickAccessPinHostingView(rootView: view)
-    hostingView.onMagnify = { [weak self] magnification in
-      self?.window.requestMagnifyZoom(magnification: magnification)
-    }
+    let hostingView = NSHostingView(rootView: view)
     hostingView.frame = NSRect(origin: .zero, size: size)
     return hostingView
   }
@@ -170,7 +161,7 @@ private final class QuickAccessPinWindowController {
 
   private func resize(to size: CGSize, animated: Bool) {
     let currentFrame = window.frame
-    let center = zoomCenter ?? CGPoint(x: currentFrame.midX, y: currentFrame.midY)
+    let center = CGPoint(x: currentFrame.midX, y: currentFrame.midY)
     let proposedFrame = NSRect(
       x: center.x - size.width / 2,
       y: center.y - size.height / 2,
@@ -184,99 +175,35 @@ private final class QuickAccessPinWindowController {
     window.updateMousePassthrough()
   }
 
-  private func handleZoomStep(_ step: CGFloat) {
-    if zoomTimer == nil {
-      targetZoomFactor = state.zoomFactor
-      let currentFrame = window.frame
-      zoomCenter = CGPoint(x: currentFrame.midX, y: currentFrame.midY)
-    }
-    syncSizingForCurrentScreen()
-    let newTarget = targetZoomFactor + step
-    targetZoomFactor = state.clampedZoomFactor(newTarget)
-    startZoomAnimationLoop()
-  }
-
-  private func startZoomAnimationLoop() {
-    guard zoomTimer == nil else { return }
-    let timer = Timer(timeInterval: 1.0 / 120.0, repeats: true) { [weak self] _ in
-      MainActor.assumeIsolated {
-        self?.tickZoomAnimation()
-      }
-    }
-    zoomTimer = timer
-    RunLoop.main.add(timer, forMode: .common)
-  }
-
-  private func stopZoomAnimationLoop() {
-    zoomTimer?.invalidate()
-    zoomTimer = nil
-    zoomCenter = nil
-  }
-
-  private func tickZoomAnimation() {
-    let diff = targetZoomFactor - state.zoomFactor
-    if abs(diff) < 0.001 {
-      state.updateZoomFactor(targetZoomFactor)
-      stopZoomAnimationLoop()
-    } else {
-      state.updateZoomFactor(state.zoomFactor + diff * 0.2)
-    }
-    resize(to: state.displaySize, animated: false)
-  }
-
-  private func resizeForCurrentZoom(animated: Bool) {
-    stopZoomAnimationLoop()
-    targetZoomFactor = state.zoomFactor
-    syncSizingForCurrentScreen()
-    resize(to: state.displaySize, animated: animated)
-  }
-
-  private func syncSizingForCurrentScreen() {
+  func setZoomMode(_ mode: QuickAccessPinZoomMode) {
     let screen = window.screen ?? ScreenUtility.activeScreen()
-    let sizes = QuickAccessPinWindowSizing.sizes(for: state.image.size, on: screen)
-    _ = state.updateSizing(baseSize: sizes.base, maxSize: sizes.max)
+    let size = QuickAccessPinWindowSizing.size(for: state.image.size, visibleSize: screen.visibleFrame.size, mode: mode)
+    guard state.setZoomMode(mode, baseSize: size) else { return }
+    let frame = QuickAccessPinWindowSizing.resizedFrame(
+      window.frame,
+      to: size,
+      within: screen.visibleFrame
+    )
+    window.setFrame(frame, display: true, animate: false)
+    window.contentView?.frame = NSRect(origin: .zero, size: size)
+    window.updateMousePassthrough()
+  }
+
+  private func resize(to size: CGSize, preservingAnchorFraction fraction: CGPoint, animated: Bool) {
+    let oldFrame = window.frame
+    let frame = QuickAccessPinWindowSizing.resizedFrame(
+      oldFrame,
+      to: size,
+      preservingAnchorFraction: fraction
+    )
+    window.setFrame(frame, display: true, animate: animated)
+    window.contentView?.frame = NSRect(origin: .zero, size: size)
+    window.updateMousePassthrough()
   }
 
   private static func loadImage(for item: QuickAccessItem) -> NSImage {
     let access = SandboxFileAccessManager.shared.beginAccessingURL(item.url)
     defer { access.stop() }
     return NSImage(contentsOf: item.url) ?? item.thumbnail
-  }
-}
-
-@MainActor
-private final class QuickAccessPinHostingView: NSHostingView<QuickAccessPinWindowView> {
-  var onMagnify: ((CGFloat) -> Void)?
-
-  private var lastMagnification: CGFloat = 0
-
-  required init(rootView: QuickAccessPinWindowView) {
-    super.init(rootView: rootView)
-    setupGestureRecognizer()
-  }
-
-  required init?(coder: NSCoder) {
-    super.init(coder: coder)
-    setupGestureRecognizer()
-  }
-
-  private func setupGestureRecognizer() {
-    let recognizer = NSMagnificationGestureRecognizer(target: self, action: #selector(handleMagnificationGesture(_:)))
-    addGestureRecognizer(recognizer)
-  }
-
-  @objc private func handleMagnificationGesture(_ sender: NSMagnificationGestureRecognizer) {
-    switch sender.state {
-    case .began:
-      lastMagnification = 0
-    case .changed:
-      let delta = sender.magnification - lastMagnification
-      lastMagnification = sender.magnification
-      onMagnify?(delta)
-    case .ended, .cancelled:
-      lastMagnification = 0
-    default:
-      break
-    }
   }
 }

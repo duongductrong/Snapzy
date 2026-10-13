@@ -257,6 +257,66 @@ enum WindowSelectionQueryService {
     return captures
   }
 
+  /// Retain visible Quick Look previews before Snapzy presents selection UI.
+  ///
+  /// On recent macOS releases Quick Look is backed by `QuickLookUIService` and
+  /// appears in the WindowServer display image, but its `SCWindow` can report
+  /// `isOnScreen == false`. Capturing its pixels from the display snapshot is
+  /// therefore more reliable than asking ScreenCaptureKit for the window.
+  static func captureImmediateQuickLookCaptures() -> [ImmediateQuickLookCapture] {
+    var captures: [ImmediateQuickLookCapture] = []
+    var displaySnapshots: [CGDirectDisplayID: CGImage] = [:]
+
+    for info in rawWindowInfoList(includeOffscreen: true) {
+      guard isQuickLookWindow(info), let quartzBounds = info.quartzBounds else { continue }
+
+      let frame = appKitGlobalRect(fromQuartzGlobalRect: quartzBounds).integral
+      guard frame.width > 32, frame.height > 32, info.alpha > 0 else { continue }
+      guard let displayID = displayID(for: frame),
+            let display = NSScreen.screens.first(where: { $0.displayID == displayID })
+      else { continue }
+
+      let displayImage: CGImage
+      if let snapshot = displaySnapshots[displayID] {
+        displayImage = snapshot
+      } else if let snapshot = CGDisplayCreateImage(displayID) {
+        displaySnapshots[displayID] = snapshot
+        displayImage = snapshot
+      } else {
+        continue
+      }
+
+      guard let cropRect = WindowCaptureSelectionPolicy.displaySnapshotCropRect(
+        frame: frame,
+        displayFrame: display.frame,
+        imagePixelWidth: displayImage.width,
+        imagePixelHeight: displayImage.height
+      ), let croppedImage = displayImage.cropping(to: cropRect) else {
+        continue
+      }
+
+      let capturedFrame = frame.intersection(display.frame)
+      guard !capturedFrame.isEmpty else { continue }
+
+      let scaleFactor = max(
+        CGFloat(croppedImage.width) / max(capturedFrame.width, 1),
+        CGFloat(croppedImage.height) / max(capturedFrame.height, 1),
+        1
+      )
+      captures.append(
+        ImmediateQuickLookCapture(
+          windowID: info.windowID,
+          displayID: displayID,
+          frame: capturedFrame,
+          image: croppedImage,
+          scaleFactor: scaleFactor
+        )
+      )
+    }
+
+    return captures
+  }
+
   static func resolveWindow(
     windowID: CGWindowID,
     prefetchedContentTask: ShareableContentPrefetchTask?
@@ -334,10 +394,24 @@ enum WindowSelectionQueryService {
     )
   }
 
-  nonisolated private static func rawWindowInfoList() -> [RawWindowInfo] {
+  private static func isQuickLookWindow(_ info: RawWindowInfo) -> Bool {
+    let ownerName = info.ownerName?.lowercased() ?? ""
+    if ownerName.contains("quicklook") {
+      return true
+    }
+
+    guard let ownerPID = info.ownerPID else { return false }
+    return NSRunningApplication(processIdentifier: ownerPID)?.bundleIdentifier?.lowercased()
+      == "com.apple.quicklook.quicklookuiservice"
+  }
+
+  nonisolated private static func rawWindowInfoList(includeOffscreen: Bool = false) -> [RawWindowInfo] {
+    let options: CGWindowListOption = includeOffscreen
+      ? [.optionAll, .excludeDesktopElements]
+      : [.optionOnScreenOnly, .excludeDesktopElements]
     guard
       let rawWindowInfo = CGWindowListCopyWindowInfo(
-        [.optionOnScreenOnly, .excludeDesktopElements],
+        options,
         kCGNullWindowID
       ) as? [[String: Any]]
     else {

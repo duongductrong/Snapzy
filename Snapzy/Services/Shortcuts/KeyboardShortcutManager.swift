@@ -481,6 +481,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case togglePenRecording
   case restartRecording
   case deleteRecording
+  case delayedCapture
   case annotate
   case videoEditor
   case cloudUploads
@@ -525,6 +526,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.restartRecording
     case .deleteRecording:
       return L10n.Actions.deleteRecording
+    case .delayedCapture:
+      return L10n.Actions.captureDelayed
     case .annotate:
       return L10n.Actions.openAnnotate
     case .videoEditor:
@@ -550,6 +553,7 @@ enum ShortcutAction {
   case captureFullscreen
   case captureArea
   case captureRepeatArea
+  case captureDelayed
   case captureAreaAnnotate
   case captureApplication
   case captureActiveWindow
@@ -606,6 +610,7 @@ final class KeyboardShortcutManager {
   private(set) var togglePenRecordingShortcut: ShortcutConfig
   private(set) var restartRecordingShortcut: ShortcutConfig
   private(set) var deleteRecordingShortcut: ShortcutConfig
+  private(set) var delayedCaptureShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var clearedShortcuts: Set<GlobalShortcutKind> = []
@@ -626,10 +631,23 @@ final class KeyboardShortcutManager {
   /// tests can substitute a stub to exercise session gating deterministically.
   var isRecordingSessionActive: () -> Bool = { ScreenRecordingManager.shared.isActive }
 
+  /// Authoritative session-activity truth for the current observation-driven refresh.
+  ///
+  /// `@Published` delivers on `willSet`: the sink fires BEFORE the new value is
+  /// committed to `ScreenRecordingManager.state`, so re-reading
+  /// `ScreenRecordingManager.shared.isActive` from inside the sink observes the
+  /// stale pre-transition value (session kinds stayed unregistered during a
+  /// recording and registered after it ended — issue #517). The publisher's
+  /// emitted value is the committed truth; it is parked here only for the
+  /// duration of the refresh it triggered (synchronous, main-actor confined).
+  private var sessionActivityOverride: Bool?
+
   /// Whether a binding for `kind` should hold a global registration right now.
   /// Session-scoped kinds register only while a recording session is active.
   func shouldRegisterNow(for kind: GlobalShortcutKind) -> Bool {
-    !Self.recordingSessionKinds.contains(kind) || isRecordingSessionActive()
+    guard Self.recordingSessionKinds.contains(kind) else { return true }
+    if let sessionActivityOverride { return sessionActivityOverride }
+    return isRecordingSessionActive()
   }
 
   private var fullscreenHotkeyRef: EventHotKeyRef?
@@ -653,6 +671,7 @@ final class KeyboardShortcutManager {
   private var togglePenRecordingHotkeyRef: EventHotKeyRef?
   private var restartRecordingHotkeyRef: EventHotKeyRef?
   private var deleteRecordingHotkeyRef: EventHotKeyRef?
+  private var delayedCaptureHotkeyRef: EventHotKeyRef?
 
   /// Fn-containing bindings can't be expressed via Carbon `RegisterEventHotKey`;
   /// they are dispatched through key event monitors instead.
@@ -682,6 +701,7 @@ final class KeyboardShortcutManager {
   private let restartRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464A), id: 19)    // "ZSFJ"
   private let deleteRecordingHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464B), id: 20)     // "ZSFK"
   private let repeatAreaHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464C), id: 21)         // "ZSFL"
+  private let delayedCaptureHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464D), id: 22)     // "ZSFM"
 
   private var eventHandler: EventHandlerRef?
 
@@ -705,6 +725,7 @@ final class KeyboardShortcutManager {
   private let togglePenRecordingShortcutKey = "togglePenRecordingShortcut"
   private let restartRecordingShortcutKey = "restartRecordingShortcut"
   private let deleteRecordingShortcutKey = "deleteRecordingShortcut"
+  private let delayedCaptureShortcutKey = "delayedCaptureShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
   private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
   private let clearedShortcutsKey = PreferencesKeys.clearedGlobalShortcuts
@@ -729,6 +750,7 @@ final class KeyboardShortcutManager {
     togglePenRecordingShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     restartRecordingShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     deleteRecordingShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
+    delayedCaptureShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     loadShortcuts()
     loadDisabledShortcuts()
     loadClearedShortcuts()
@@ -795,14 +817,22 @@ final class KeyboardShortcutManager {
   /// Re-register shortcuts when a recording session starts or ends so
   /// session-scoped kinds only hold their global hotkeys while a session is
   /// active. `state` is only mutated on the main actor, so the sink fires
-  /// synchronously on main and registration stays in lockstep with the session.
+  /// synchronously on main.
+  ///
+  /// The sink acts on the EMITTED value, not on a fresh property read:
+  /// `@Published` fires on willSet, so `ScreenRecordingManager.shared.isActive`
+  /// would still answer with the previous state here (see
+  /// `sessionActivityOverride`).
   private func observeRecordingSessionState() {
     ScreenRecordingManager.shared.$state
       .map { $0 != .idle }
       .removeDuplicates()
       .dropFirst()
-      .sink { [weak self] _ in
-        self?.refreshShortcutRegistration()
+      .sink { [weak self] isActive in
+        guard let self else { return }
+        self.sessionActivityOverride = isActive
+        self.refreshShortcutRegistration()
+        self.sessionActivityOverride = nil
       }
       .store(in: &cancellables)
   }
@@ -831,6 +861,7 @@ final class KeyboardShortcutManager {
     case .togglePenRecording: return togglePenRecordingShortcut
     case .restartRecording: return restartRecordingShortcut
     case .deleteRecording: return deleteRecordingShortcut
+    case .delayedCapture: return delayedCaptureShortcut
     case .annotate: return annotateShortcut
     case .videoEditor: return videoEditorShortcut
     case .cloudUploads: return cloudUploadsShortcut
@@ -962,6 +993,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .deleteRecording) {
         deleteRecordingShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update delayed capture shortcut (unbound by default)
+  func setDelayedCaptureShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .delayedCapture) {
+        delayedCaptureShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -1122,6 +1164,11 @@ final class KeyboardShortcutManager {
     } else if let data = try? encoder.encode(deleteRecordingShortcut) {
       UserDefaults.standard.set(data, forKey: deleteRecordingShortcutKey)
     }
+    if clearedShortcuts.contains(.delayedCapture) {
+      UserDefaults.standard.removeObject(forKey: delayedCaptureShortcutKey)
+    } else if let data = try? encoder.encode(delayedCaptureShortcut) {
+      UserDefaults.standard.set(data, forKey: delayedCaptureShortcutKey)
+    }
     if let annotateData = try? encoder.encode(annotateShortcut) {
       UserDefaults.standard.set(annotateData, forKey: annotateShortcutKey)
     }
@@ -1202,6 +1249,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: deleteRecordingData)
     {
       deleteRecordingShortcut = config
+    }
+    if let delayedCaptureData = UserDefaults.standard.data(forKey: delayedCaptureShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: delayedCaptureData)
+    {
+      delayedCaptureShortcut = config
     }
     if let annotateData = UserDefaults.standard.data(forKey: annotateShortcutKey),
       let config = try? decoder.decode(ShortcutConfig.self, from: annotateData)
@@ -1301,6 +1353,11 @@ final class KeyboardShortcutManager {
       clearedShortcuts.insert(.deleteRecording)
       didMutate = true
     }
+    if UserDefaults.standard.data(forKey: delayedCaptureShortcutKey) == nil,
+       !clearedShortcuts.contains(.delayedCapture) {
+      clearedShortcuts.insert(.delayedCapture)
+      didMutate = true
+    }
     if didMutate {
       saveClearedShortcuts()
     }
@@ -1391,6 +1448,9 @@ final class KeyboardShortcutManager {
     case deleteRecordingHotkeyID.id:
       actionName = "delete-recording"
       action = .deleteRecording
+    case delayedCaptureHotkeyID.id:
+      actionName = "delayed-capture"
+      action = .captureDelayed
     case applicationRecordingHotkeyID.id:
       actionName = "application-recording"
       action = .recordApplication
@@ -1501,6 +1561,12 @@ final class KeyboardShortcutManager {
       hotkeyID: deleteRecordingHotkeyID,
       ref: &deleteRecordingHotkeyRef
     )
+    registerShortcutIfNeeded(
+      kind: .delayedCapture,
+      config: shortcut(for: .delayedCapture),
+      hotkeyID: delayedCaptureHotkeyID,
+      ref: &delayedCaptureHotkeyRef
+    )
     registerOverlayShortcutIfNeeded(
       label: "application-capture",
       parentKind: .area,
@@ -1571,7 +1637,7 @@ final class KeyboardShortcutManager {
   /// combo plus its current disposition (registered / fn-monitor / session-gated /
   /// disabled / cleared / skipped).
   private func logRegistrationAudit() {
-    let sessionActive = isRecordingSessionActive()
+    let sessionActive = sessionActivityOverride ?? isRecordingSessionActive()
     let entries = GlobalShortcutKind.allCases.map { kind -> String in
       guard isShortcutEnabled(for: kind) else { return "\(kind.rawValue)=disabled" }
       guard let config = shortcut(for: kind) else { return "\(kind.rawValue)=cleared" }
@@ -1783,6 +1849,10 @@ final class KeyboardShortcutManager {
     if let ref = deleteRecordingHotkeyRef {
       UnregisterEventHotKey(ref)
       deleteRecordingHotkeyRef = nil
+    }
+    if let ref = delayedCaptureHotkeyRef {
+      UnregisterEventHotKey(ref)
+      delayedCaptureHotkeyRef = nil
     }
     if let ref = applicationCaptureHotkeyRef {
       UnregisterEventHotKey(ref)

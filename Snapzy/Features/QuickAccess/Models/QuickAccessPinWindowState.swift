@@ -19,23 +19,52 @@ final class QuickAccessPinWindowState: ObservableObject {
   @Published var isLocked = false
   @Published var isMouseInside = false
   @Published private(set) var zoomFactor: CGFloat = 1
+  @Published private(set) var panOffset: CGPoint = .zero
+  @Published private(set) var zoomMode: QuickAccessPinZoomMode
 
   private(set) var baseSize: CGSize
-  private(set) var maxSize: CGSize
+  var onWindowResize: ((CGSize, CGPoint) -> Void)?
 
-  private let absoluteMinimumZoomFactor: CGFloat = 0.4
+  static let minimumZoomFactor: CGFloat = 0.4
+  static let maximumZoomFactor: CGFloat = 8
 
-  init(id: UUID, url: URL, image: NSImage, thumbnail: NSImage, baseSize: CGSize, maxSize: CGSize) {
+  static func windowFollowsImageDisplaySize(baseSize: CGSize, zoomFactor: CGFloat) -> CGSize {
+    let factor = min(max(zoomFactor, minimumZoomFactor), maximumZoomFactor)
+    let minimumSize = QuickAccessPinWindowSizing.minimumInteractiveSize
+    return CGSize(
+      width: max(baseSize.width * factor, minimumSize.width),
+      height: max(baseSize.height * factor, minimumSize.height)
+    )
+  }
+
+  init(id: UUID, url: URL, image: NSImage, thumbnail: NSImage, baseSize: CGSize, zoomMode: QuickAccessPinZoomMode = .defaultMode) {
     self.id = id
     self.url = url
     self.image = image
     self.thumbnail = thumbnail
     self.baseSize = baseSize
-    self.maxSize = maxSize
+    self.zoomMode = zoomMode
   }
 
   var displaySize: CGSize {
-    CGSize(width: baseSize.width * zoomFactor, height: baseSize.height * zoomFactor)
+    zoomMode == .windowFollowsImage
+      ? Self.windowFollowsImageDisplaySize(baseSize: baseSize, zoomFactor: zoomFactor)
+      : baseSize
+  }
+
+  var imageDisplaySize: CGSize {
+    if zoomMode == .windowFollowsImage {
+      let fittedSize = QuickAccessPinImageGeometry.fittedContentSize(
+        imageSize: image.size,
+        viewportSize: baseSize
+      )
+      return CGSize(width: fittedSize.width * zoomFactor, height: fittedSize.height * zoomFactor)
+    }
+    return QuickAccessPinImageGeometry.fixedViewportContentSize(
+      imageSize: image.size,
+      viewportSize: baseSize,
+      zoomFactor: zoomFactor
+    )
   }
 
   var zoomPercent: Int {
@@ -43,9 +72,9 @@ final class QuickAccessPinWindowState: ObservableObject {
   }
 
   var zoomMenuPercents: [Int] {
-    var percents = [50, 75, 100, 125, 150, 200].filter { percent in
+    var percents = [40, 50, 75, 100, 125, 150, 200, 400, 800].filter { percent in
       let factor = CGFloat(percent) / 100
-      return factor >= minimumZoomFactor - 0.001 && factor <= maximumZoomFactor + 0.001
+      return factor >= Self.minimumZoomFactor - 0.001 && factor <= Self.maximumZoomFactor + 0.001
     }
     if !percents.contains(zoomPercent) {
       percents.append(zoomPercent)
@@ -54,62 +83,72 @@ final class QuickAccessPinWindowState: ObservableObject {
     return percents
   }
 
-  var minimumZoomFactor: CGFloat {
-    guard baseSize.width > 0, baseSize.height > 0 else { return 1 }
-    let interactiveSize = QuickAccessPinWindowSizing.minimumInteractiveSize
-    let interactiveFloor = max(
-      interactiveSize.width / baseSize.width,
-      interactiveSize.height / baseSize.height
-    )
-    let floor = max(absoluteMinimumZoomFactor, interactiveFloor)
-    return min(floor, maximumZoomFactor)
+  func setZoomPercent(_ percent: Int) {
+    updateZoomFactor(CGFloat(percent) / 100)
   }
 
-  var maximumZoomFactor: CGFloat {
-    guard baseSize.width > 0, baseSize.height > 0 else { return 1 }
-    let screenLimit = min(maxSize.width / baseSize.width, maxSize.height / baseSize.height)
-    return max(1, min(2, screenLimit))
+  func resetZoom() {
+    zoomFactor = 1
+    panOffset = .zero
+    if zoomMode == .windowFollowsImage { onWindowResize?(baseSize, CGPoint(x: 0.5, y: 0.5)) }
   }
 
-  func setZoomPercent(_ percent: Int) -> CGSize {
-    setZoomFactor(CGFloat(percent) / 100)
+  @discardableResult
+  func setZoomMode(_ mode: QuickAccessPinZoomMode, baseSize: CGSize) -> Bool {
+    guard zoomMode != mode else { return false }
+    zoomMode = mode
+    self.baseSize = baseSize
+    zoomFactor = 1
+    panOffset = .zero
+    return true
   }
 
-  func resetZoom() -> CGSize {
-    setZoomFactor(1)
-  }
-
-  func applyZoomStep(_ step: CGFloat) -> CGSize {
-    guard step.isFinite, step != 0 else { return displaySize }
-    return setZoomFactor(zoomFactor + step)
-  }
-
-  func update(url: URL, image: NSImage, thumbnail: NSImage, baseSize: CGSize, maxSize: CGSize) -> CGSize {
+  func update(url: URL, image: NSImage, thumbnail: NSImage, baseSize: CGSize) -> CGSize {
     self.url = url
     self.image = image
     self.thumbnail = thumbnail
-    return updateSizing(baseSize: baseSize, maxSize: maxSize)
+    return updateSizing(baseSize: baseSize)
   }
 
-  func updateSizing(baseSize: CGSize, maxSize: CGSize) -> CGSize {
+  func updateSizing(baseSize: CGSize) -> CGSize {
     self.baseSize = baseSize
-    self.maxSize = maxSize
     zoomFactor = clampedZoomFactor(zoomFactor)
+    panOffset = clampedPanOffset(panOffset)
     return displaySize
   }
 
   func updateZoomFactor(_ factor: CGFloat) {
+    guard factor.isFinite else { return }
     zoomFactor = clampedZoomFactor(factor)
+    panOffset = clampedPanOffset(panOffset)
+    if zoomMode == .windowFollowsImage {
+      onWindowResize?(displaySize, CGPoint(x: 0.5, y: 0.5))
+    }
   }
 
-  @discardableResult
-  private func setZoomFactor(_ factor: CGFloat) -> CGSize {
-    zoomFactor = clampedZoomFactor(factor)
-    return displaySize
+  func updateViewport(magnification: CGFloat, panOffset: CGPoint) {
+    guard magnification.isFinite, panOffset.x.isFinite, panOffset.y.isFinite else { return }
+    let clampedMagnification = clampedZoomFactor(magnification)
+    if abs(zoomFactor - clampedMagnification) > 0.000_1 {
+      zoomFactor = clampedMagnification
+    }
+    let newPanOffset = clampedPanOffset(panOffset)
+    if abs(self.panOffset.x - newPanOffset.x) > 0.000_1
+      || abs(self.panOffset.y - newPanOffset.y) > 0.000_1 {
+      self.panOffset = newPanOffset
+    }
+  }
+
+  private func clampedPanOffset(_ offset: CGPoint) -> CGPoint {
+    guard zoomMode == .fixedViewport else { return .zero }
+    return QuickAccessPinImageGeometry.clampedPanOffset(
+      offset,
+      viewportSize: baseSize,
+      contentSize: imageDisplaySize
+    )
   }
 
   func clampedZoomFactor(_ factor: CGFloat) -> CGFloat {
-    min(max(factor, minimumZoomFactor), maximumZoomFactor)
+    min(max(factor, Self.minimumZoomFactor), Self.maximumZoomFactor)
   }
 }
-

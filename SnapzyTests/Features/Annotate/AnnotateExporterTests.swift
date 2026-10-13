@@ -244,6 +244,38 @@ final class AnnotateExporterTests: XCTestCase {
     XCTAssertEqual(intermediateEdgePixels, 0)
   }
 
+  func testRenderFinalImage_rendersSpotlightBorder() throws {
+    let state = AnnotateState()
+    Self.retainedAnnotateStates.append(state)
+    state.loadImage(try makeSolidImage(width: 100, height: 100))
+    state.padding = 0
+    state.shadowIntensity = 0
+    state.cornerRadius = 0
+    state.aspectRatio = .free
+    state.backgroundStyle = .solidColor(.white)
+    state.annotations = [
+      AnnotationItem(
+        type: .spotlight,
+        bounds: CGRect(x: 20, y: 20, width: 60, height: 60),
+        properties: AnnotationProperties(
+          strokeColor: .red,
+          strokeWidth: 4,
+          cornerRadius: 0,
+          spotlightOpacity: 0.5
+        )
+      ),
+    ]
+
+    let rendered = try XCTUnwrap(AnnotateExporter.renderFinalImage(state: state))
+    let renderedCG = try XCTUnwrap(AnnotateExporter.bestCGImage(from: rendered))
+    let bytes = try rgbaBytes(from: renderedCG)
+    let border = rgbaPixel(in: bytes, x: 20, y: 50, width: renderedCG.width)
+
+    XCTAssertGreaterThan(border[0], 200)
+    XCTAssertLessThan(border[1], 100)
+    XCTAssertLessThan(border[2], 100)
+  }
+
   private func makeSolidImage(
     width: Int,
     height: Int,

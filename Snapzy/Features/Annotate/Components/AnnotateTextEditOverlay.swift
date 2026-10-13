@@ -13,6 +13,7 @@ struct TextEditOverlay: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
   let canvasBounds: CGRect
+  var interactionBridge: CanvasInteractionBridge?
 
   @State private var editingText: String = ""
 
@@ -69,7 +70,8 @@ struct TextEditOverlay: View {
             onCommit: { commitEdit(id: editingId) },
             onCancel: cancelEdit,
             onUndo: { state.undo() },
-            onRedo: { state.redo() }
+            onRedo: { state.redo() },
+            interactionBridge: interactionBridge
           )
         }
           .frame(
@@ -175,6 +177,7 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
   let onCancel: () -> Void
   let onUndo: () -> Void
   let onRedo: () -> Void
+  var interactionBridge: CanvasInteractionBridge?
 
   func makeCoordinator() -> Coordinator {
     Coordinator(text: $text)
@@ -207,6 +210,8 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     textView.font = font
     textView.textColor = textColor
     context.coordinator.focusedEditingId = editingId
+    textView.interactionBridge = interactionBridge
+    interactionBridge?.textEditor = textView
     textView.requestInitialFocus()
 
     return textView
@@ -218,6 +223,8 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     textView.onCancel = onCancel
     textView.onUndo = onUndo
     textView.onRedo = onRedo
+    textView.interactionBridge = interactionBridge
+    interactionBridge?.textEditor = textView
 
     if textView.string != text {
       context.coordinator.isApplyingExternalText = true
@@ -246,6 +253,10 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
   }
 
   static func dismantleNSView(_ textView: UndoIsolatedTextView, coordinator: Coordinator) {
+    if textView.interactionBridge?.textEditor === textView {
+      textView.interactionBridge?.textEditor = nil
+    }
+    textView.interactionBridge = nil
     textView.onCommit = nil
     textView.onCancel = nil
     textView.onUndo = nil
@@ -284,6 +295,7 @@ private struct InlineAnnotationTextEditor: NSViewRepresentable {
     var onCancel: (() -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
+    weak var interactionBridge: CanvasInteractionBridge?
     private var wantsInitialFocus = false
     private var hasPendingInputMethodPlacementRefresh = false
 

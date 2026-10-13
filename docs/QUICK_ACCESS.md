@@ -29,14 +29,14 @@ Default slots (`QuickAccessActionSlot.defaultAssignments`): centerTop copy, cent
 | Action | Behavior |
 | --- | --- |
 | `copy` | Clipboard copy + dismiss; temp file kept on disk for paste-time reads (orphans cleaned next launch) |
-| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + sidecar move. Saved: reveal in Finder |
+| `saveOrOpen` | Temp: `TempCaptureManager.saveToExportLocation` move + history path update + annotation/video-editor sidecar move, then reveal in Finder unless Open in Finder After Saving is off (`quickAccess.openInFinderAfterSave`). Saved: reveal in Finder |
 | `dismiss` | Card removed; temp file deleted unless a history record exists or the general pasteboard still references the file (#234 paste-integrity guard) |
 | `delete` | Removes history record + annotation sidecar, deletes temp or trashes saved file, deletes recording metadata for videos |
-| `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown |
+| `edit` | Opens Annotate (screenshots) or Video Editor (video/GIF); pauses countdown. Video Editor restores its persisted cut/zoom/speed recipe when available. Editor Save commits to the current file and leaves a temporary card available for this card's later Save action |
 | `uploadToCloud` | Manual `CloudManager.upload`, copies public link, deletes old key on re-upload; gated by `CloudManager.isConfigured` |
 | `pinToScreen` | Opens always-on-top pin window (screenshots only) |
 
-Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘⌫ delete, ⌘W dismiss). Bindings are Carbon hotkeys registered only while `QuickAccessManager.hoveredItemID` is set, and the trigger routes back into `performAction` so keyboard and click share one path. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
+Keyboard: hovering a card arms its action shortcuts (⌘C copy, ⌘S save/open, ⌘E edit, ⌘U upload, ⌘P pin, ⌘⌫ delete, ⌘W dismiss). Bindings are routed only while `QuickAccessManager.hoveredItemID` is set, matched against the full key code + modifier set, and exact matches route back into `performAction` so keyboard and click share one path. Unregistered combinations always pass through to the focused app. Full mechanics, teardown paths, and validation rules: [SHORTCUTS.md](SHORTCUTS.md).
 
 Customization: `QuickAccessActionConfigurationStore` — context-menu order (`quickAccess.actions.order.v1`), enabled set (`...enabled.v1`), slot assignments (`...slots.v1`). Settings → Quick Access preview card supports drag-to-slot + swipe zones + reset. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference option; the manual `uploadToCloud` card action stays, additionally gated by `isEnabled(.uploadToCloud)`.
 
@@ -57,8 +57,12 @@ Customization: `QuickAccessActionConfigurationStore` — context-menu order (`qu
 ## Pin Windows
 
 - `QuickAccessPinWindowManager` + `QuickAccessPinWindow` + `QuickAccessPinWindowState` — screenshots only, always-on-top.
-- Zoom: pinch + ⌘-scroll; factor clamped between min(0.4 floor, raised to minimum-interactive-size 240×180) and max(`min(2, screenLimit)`), i.e. ≤2x; zoom preset capsule menu.
-- Lock mode: click-through except the unlock button; image fades to 0.18 on hover. Esc closes when unlocked.
+- Zoom presentation is selected in Settings → Quick Access → Pinned Image. `QuickAccessPinZoomModeStore` persists `fixedViewport` by default or `windowFollowsImage`; a setting change resets zoom/pan and updates all open pins while preserving their centers.
+- Both modes use `NSScrollView` for image display. Pinch events are handled by the image document view over the image and by the scroll view over empty viewport space. Pinch zoom is clamped to 0.4x–8x, with 800% in the capsule menu. Fit returns to 100%; window-follows-image mode restores its initial window size, and fixed mode centers the image.
+- Window follows image: the initial image keeps its aspect ratio and fits within 80% of the screen’s visible area. At 40% zoom, the window keeps a 240×180 minimum interactive frame and centers the image at its selected magnification, so exact pointer anchoring gives way to centering while the image is smaller than that minimum frame. Pinch and vertical scrolling zoom at the pointer and resize the window around that focal point; horizontal scrolling does not zoom. Images remain within the window, so image panning is unnecessary.
+- Fixed viewport: the initial image is scaled to at most 80% of the screen width and the viewport height is capped at 80% of the visible screen. Unmodified precise two-finger scrolling pans only when the image overflows. Coarse and non-⌘-modified scrolling do not manipulate the image; ⌘-scroll zooms in both modes. Pan is clamped to image bounds, centering axes where the image is smaller.
+- Lock mode: click-through except the unlock button; image fades to 0.18 on hover. Locked pins reject zoom and pan. A normal one-finger background drag moves the unlocked window; Esc closes an unlocked pin.
+- The Quick Access preferences compare both modes with a synchronized SwiftUI illustration of a fictional long page. The page is drawn from shapes and contains no bundled screenshot or photo.
 - Drag-out handle (`QuickAccessPinDragHandleView`) re-exports the current rendered image to `Captures/PinDrags/` — saved edits included even while file write is in flight.
 - Closing unpins the QA item and restarts its countdown. Transient `pinScreenshot(url:)` supports pinning arbitrary files.
 
@@ -83,9 +87,18 @@ flowchart TD
 - Clipboard copy runs before Quick Access work so pasteboard updates stay immediate. Exception: the re-copy after an EDITED save runs off-main (decode/encode in background, serialized) and lands ~100-300ms after the window closes — keeps the card reappear stall-free.
 - Save/copy/drag of a pinned screenshot pushes the new render into the open pin window as soon as the background render completes (~50-100ms after save-and-close). The instant 200px anti-flash thumbnail is card-only and is never sent to the pin window (pin sizing derives from the full-res image).
 
+## Editor Session Handoff
+
+- Opening Annotate or Video Editor associates the window with the Quick Access item, hides that card, and pauses the item countdown plus newer cards.
+- Editor Save is an in-place commit. For a temporary capture, the edited media stays at its temp URL and the card remains the owner of promotion. For a saved capture, Replace Original writes to the existing destination; Save As Copy is an explicit alternate.
+- Video Editor sessions persist a versioned recipe plus a private unrendered source snapshot. Reopening the card or a matching History record restores the cut/trim sequence, zoom blocks, speed blocks, and export context so another edit can continue from the original source.
+- When a temp card is promoted, `QuickAccessManager` moves the video-editor session package from the temp path to the saved destination. Deleting the card removes the package; retention cleanup removes packages whose media is no longer active.
+- The card is refreshed while the editor is still hidden, then reappears only after the editor closes. Thumbnail and URL updates preserve the item’s window, pin, processing, and cloud state.
+- Editing a cloud-linked capture marks its old cloud object stale; the card’s upload action can re-upload the edited file. Dismissing the card still controls session-cache cleanup and temp-file lifecycle.
+
 ## Preferences Surface
 
-Settings → Quick Access: position (left/right), overlay size, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
+Settings → Quick Access: position (left/right), overlay size, sound effects, open in Finder after saving, auto-close delay + pause on hover, two-finger swipe (mode, sensitivity, per-direction actions), action customization. See [PREFERENCES.md](PREFERENCES.md).
 
 ## Related docs
 

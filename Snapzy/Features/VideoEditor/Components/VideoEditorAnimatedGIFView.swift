@@ -1,5 +1,5 @@
 //
-//  AnimatedGIFView.swift
+//  VideoEditorAnimatedGIFView.swift
 //  Snapzy
 //
 //  NSViewRepresentable wrapper for displaying animated GIFs
@@ -13,7 +13,7 @@ import SwiftUI
 struct AnimatedGIFView: NSViewRepresentable {
   let url: URL
 
-  func makeNSView(context: Context) -> NSImageView {
+  func makeNSView(context _: Context) -> NSImageView {
     let imageView = NSImageView()
     imageView.imageScaling = .scaleProportionallyUpOrDown
     imageView.animates = true
@@ -28,7 +28,7 @@ struct AnimatedGIFView: NSViewRepresentable {
     return imageView
   }
 
-  func updateNSView(_ nsView: NSImageView, context: Context) {
+  func updateNSView(_ nsView: NSImageView, context _: Context) {
     // Re-load if URL changes
     if let image = NSImage(contentsOf: url) {
       nsView.image = image

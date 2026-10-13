@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
   @AppStorage(PreferencesKeys.playSounds) private var playSounds = true
   @AppStorage(PreferencesKeys.showMenuBarIcon) private var showMenuBarIcon = true
   @AppStorage(PreferencesKeys.exportLocation) private var exportLocation = ""
+  @AppStorage(PreferencesKeys.useLiquidGlass) private var useLiquidGlass = true
   @Environment(\.openWindow) private var openWindow
   @ObservedObject private var themeManager = ThemeManager.shared
 
@@ -53,6 +54,15 @@ struct GeneralSettingsView: View {
         SettingRow(icon: "circle.lefthalf.filled", title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
           AppearanceModePicker(selection: $themeManager.preferredAppearance)
         }
+
+        SettingRow(icon: "sparkles", title: L10n.PreferencesGeneral.liquidGlassTitle, description: L10n.PreferencesGeneral.liquidGlassDescription) {
+          Toggle("", isOn: $useLiquidGlass)
+            .labelsHidden()
+            .onChange(of: useLiquidGlass) { _ in
+              LiquidGlassCapabilities.runtimeLegacyOverride = nil
+              SnapzyConfigurationSyncCoordinator.shared.scheduleSync(reason: .explicitChange)
+            }
+        }
       }
 
       Section(L10n.PreferencesGeneral.storageSection) {
@@ -61,7 +71,7 @@ struct GeneralSettingsView: View {
             chooseExportLocation()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       }
 
@@ -107,7 +117,7 @@ struct GeneralSettingsView: View {
             restartOnboarding()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
 
         SettingRow(
@@ -119,7 +129,7 @@ struct GeneralSettingsView: View {
             openBugReportPage()
           }
           .buttonStyle(.bordered)
-          .controlSize(.small)
+          .controlSize(.regular)
         }
       }
     }

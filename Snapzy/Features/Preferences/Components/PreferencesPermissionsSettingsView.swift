@@ -112,6 +112,7 @@ struct PermissionsSettingsView: View {
               Text(L10n.Onboarding.refreshStatus)
             }
           }
+          .controlSize(.regular)
           .disabled(isChecking)
         }
         .padding(.top, 4)
@@ -155,12 +156,9 @@ struct PermissionsSettingsView: View {
           Text(name)
             .fontWeight(.medium)
           if isRequired {
-            StatusBadge(
-              label: L10n.PermissionRow.required,
-              systemImage: "exclamationmark.circle.fill",
-              tint: .orange
-            )
-            .help(L10n.PermissionRow.required)
+            Text(L10n.PermissionRow.required)
+              .font(.caption)
+              .foregroundStyle(.secondary)
           }
         }
         Text(description)
@@ -170,17 +168,17 @@ struct PermissionsSettingsView: View {
 
       Spacer()
 
-      StatusBadge(
-        label: statusLabel,
-        systemImage: statusIcon,
-        tint: statusColor
-      )
+      Label(statusLabel, systemImage: statusIcon)
+        .font(.callout)
+        .foregroundStyle(statusColor)
+        .symbolRenderingMode(.hierarchical)
+        .lineLimit(1)
 
       Button(L10n.Common.openSettings) {
         openSystemSettings(settingsURL)
       }
       .buttonStyle(.bordered)
-      .controlSize(.small)
+      .controlSize(.regular)
     }
     .padding(.vertical, 4)
   }

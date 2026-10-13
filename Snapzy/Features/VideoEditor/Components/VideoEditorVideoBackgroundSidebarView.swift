@@ -54,11 +54,11 @@ struct VideoBackgroundSidebarView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, Spacing.sm)
         .background(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Capsule(style: .continuous)
             .fill(state.backgroundStyle == .none ? Color.accentColor.opacity(0.3) : SidebarColors.itemDefault)
         )
         .overlay(
-          RoundedRectangle(cornerRadius: Size.radiusSm)
+          Capsule(style: .continuous)
             .stroke(state.backgroundStyle == .none ? Color.accentColor : Color.clear, lineWidth: Size.strokeSelected)
         )
     }

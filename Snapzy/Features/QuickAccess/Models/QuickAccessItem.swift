@@ -104,6 +104,36 @@ struct QuickAccessItem: Identifiable, Equatable {
     itemType == .video
   }
 
+  /// Return a copy with a new thumbnail while preserving the item's session
+  /// and persistence state.
+  func replacingThumbnail(_ thumbnail: NSImage) -> QuickAccessItem {
+    replacing(url: url, thumbnail: thumbnail)
+  }
+
+  /// Return a copy with a new URL and optional thumbnail while preserving the
+  /// item's session and persistence state.
+  func replacingURL(_ url: URL, thumbnail: NSImage? = nil) -> QuickAccessItem {
+    replacing(url: url, thumbnail: thumbnail ?? self.thumbnail)
+  }
+
+  private func replacing(url: URL, thumbnail: NSImage) -> QuickAccessItem {
+    var updated = QuickAccessItem(
+      id: id,
+      url: url,
+      thumbnail: thumbnail,
+      capturedAt: capturedAt,
+      itemType: itemType,
+      duration: duration,
+      cloudURL: cloudURL,
+      cloudKey: cloudKey,
+      isCloudStale: isCloudStale,
+      isPinned: isPinned,
+      isWindowOpen: isWindowOpen
+    )
+    updated.processingState = processingState
+    return updated
+  }
+
   /// Formatted duration string for display (e.g., "01:30s", "1:01:01s")
   var formattedDuration: String? {
     guard let duration = duration, duration.isFinite, duration >= 0 else {

@@ -1,229 +1,369 @@
 //
-//  AboutSettingsView.swift
+//  PreferencesAboutSettingsView.swift
 //  Snapzy
 //
-//  About tab with app info and sponsor CTA.
+//  Redesigned About tab following clean, card-based Hand Mirror aesthetic.
 //
 
 import AppKit
-import Sparkle
 import SwiftUI
 
 struct AboutSettingsView: View {
-  private var updater: SPUUpdater {
-    UpdaterManager.shared.updater
-  }
+  @AppStorage(PreferencesKeys.updateChannel) private var updateChannel: String = UpdateChannel.stable.rawValue
 
   private var appVersion: String {
     let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
     let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
-    return "\(version) (\(build))"
+    return "Snapzy \(version) (\(build))"
   }
 
+  @StateObject private var updatesViewModel = CheckForUpdatesViewModel(updater: UpdaterManager.shared.updater)
+  @State private var isContributorsExpanded: Bool = false
+
   var body: some View {
-    // Scroll when content exceeds the window (e.g. beta warning + long locales),
-    // stay vertically centered when it fits
     GeometryReader { proxy in
       ScrollView {
-        VStack(spacing: 0) {
-          Spacer(minLength: 0)
+        VStack(spacing: 20) {
+          // Hero Icon & Title
           heroSection
-          Spacer(minLength: 0)
+
+          // Card 1: Attribution & Special thanks
+          attributionCard
+
+          // Card 2: Updates & Support
+          versionAndSupportCard
+
+          Spacer(minLength: 24)
         }
         .frame(maxWidth: .infinity, minHeight: proxy.size.height)
+        .padding(.horizontal, 28)
+        .padding(.top, 28)
+        .padding(.bottom, 28)
       }
     }
   }
 
+  // MARK: - Hero Section
+
   private var heroSection: some View {
-    VStack(spacing: Spacing.md) {
+    VStack(spacing: 10) {
       Image(nsImage: NSApp.applicationIconImage)
         .resizable()
+        .aspectRatio(contentMode: .fit)
         .frame(width: 96, height: 96)
-        .clipShape(RoundedRectangle(cornerRadius: 22))
-        .shadow(color: .black.opacity(0.2), radius: 10, y: 5)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous)) // radius-lint:allow — clips the app icon bitmap; matches the icon's own corner
+        .shadow(color: Color.black.opacity(0.18), radius: 14, x: 0, y: 6)
+        .shadow(color: Color.black.opacity(0.06), radius: 3, x: 0, y: 1)
 
-      VStack(spacing: Spacing.xs) {
+      VStack(spacing: 3) {
         Text(verbatim: "Snapzy")
-          .font(.system(size: 28, weight: .bold, design: .rounded))
+          .font(.system(size: 24, weight: .bold, design: .rounded))
+          .foregroundStyle(Color.primary)
 
         Text(L10n.PreferencesAbout.appSubtitle)
           .font(.subheadline)
-          .foregroundColor(.secondary)
+          .foregroundStyle(Color.secondary)
+          .multilineTextAlignment(.center)
+          .lineLimit(2)
+          .frame(maxWidth: 420)
       }
 
-      HStack(spacing: Spacing.sm) {
-        Text(L10n.PreferencesAbout.version(appVersion))
-          .font(.caption)
-          .foregroundColor(.secondary)
+      VStack(spacing: 10) {
+        versionStatusLabel
 
-        if let lastCheck = updater.lastUpdateCheckDate {
-          Text("•")
-            .foregroundColor(.secondary.opacity(0.5))
-          Text(L10n.PreferencesAbout.checkedLabel)
-            .font(.caption)
-            .foregroundColor(.secondary)
-          Text(lastCheck, style: .relative)
-            .font(.caption)
-            .foregroundColor(.secondary)
-        }
-      }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, Spacing.xs)
-      .background(Color.primary.opacity(0.05))
-      .clipShape(Capsule())
-
-      HStack(spacing: Spacing.sm) {
-        Button(action: { updater.checkForUpdates() }) {
-          HStack(spacing: Spacing.sm) {
+        CheckForUpdatesView(viewModel: updatesViewModel) {
+          HStack(spacing: 5) {
             Image(systemName: "arrow.triangle.2.circlepath")
+              .font(.system(size: 11, weight: .semibold))
             Text(L10n.PreferencesAbout.checkForUpdates)
           }
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.regular)
-
-        Button(action: { CrashReportService.presentAlert() }) {
-          HStack(spacing: Spacing.sm) {
-            Image(systemName: "exclamationmark.triangle")
-            Text(L10n.PreferencesAbout.reportProblem)
-          }
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
+        .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
+        .help(updatesViewModel.lastUpdateCheckDate
+          .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
+          L10n.PreferencesAbout.checkForUpdates)
       }
-
-      UpdateChannelSectionView()
-
-      sponsorSection
-
-      HStack(spacing: Spacing.md) {
-        Link(destination: URL(string: "https://snapzy.app")!) {
-          Image(systemName: "globe")
-            .font(.system(size: 14))
-            .foregroundColor(.secondary)
-        }
-        .buttonStyle(.plain)
-        .help(L10n.PreferencesAbout.website)
-
-        Link(destination: URL(string: "https://github.com/duongductrong")!) {
-          Image(systemName: "person.crop.circle")
-            .font(.system(size: 14))
-            .foregroundColor(.secondary)
-        }
-        .buttonStyle(.plain)
-        .help(L10n.PreferencesAbout.github)
-
-        Link(destination: URL(string: "https://github.com/duongductrong/Snapzy/issues")!) {
-          Image(systemName: "ant.fill")
-            .font(.system(size: 14))
-            .foregroundColor(.secondary)
-        }
-        .buttonStyle(.plain)
-        .help(L10n.PreferencesAbout.reportBug)
-      }
-      .padding(.top, Spacing.xs)
+      .padding(.top, 6)
     }
-    .frame(maxWidth: .infinity)
-    .padding(.vertical, Spacing.md)
+    .padding(.bottom, 4)
   }
 
-  private var sponsorSection: some View {
-    VStack(alignment: .center, spacing: Spacing.sm) {
-      Text(L10n.PreferencesAbout.supportTitle)
-        .font(.system(size: 11, weight: .bold))
-        .foregroundColor(.secondary)
+  private var versionStatusLabel: some View {
+    HStack(spacing: 6) {
+      Text(appVersion)
+        .font(.system(size: 11, weight: .regular))
+        .foregroundStyle(Color.secondary)
 
-      VStack(spacing: 0) {
-        let links = SponsorLinks.all
-        ForEach(Array(links.enumerated()), id: \.element.id) { index, link in
-          SponsorRowView(link: link)
+      if let lastCheck = updatesViewModel.lastUpdateCheckDate {
+        Text("•")
+          .font(.system(size: 10))
+          .foregroundStyle(Color.secondary.opacity(0.5))
 
-          if index < links.count - 1 {
-            Divider()
-              .padding(.horizontal, Spacing.md)
-          }
+        HStack(spacing: 3) {
+          Text(L10n.PreferencesAbout.checkedLabel)
+          Text(lastCheck, style: .relative)
         }
+        .font(.system(size: 11, weight: .regular))
+        .foregroundStyle(Color.secondary)
       }
-      .background(Color.primary.opacity(0.03))
-      .clipShape(RoundedRectangle(cornerRadius: Size.radiusLg))
-      .overlay(
-        RoundedRectangle(cornerRadius: Size.radiusLg)
-          .stroke(Color.primary.opacity(0.08), lineWidth: 1)
-      )
-
-      Text(L10n.PreferencesAbout.supportDescription)
-        .font(.system(size: 10.5))
-        .foregroundColor(.secondary)
-        .multilineTextAlignment(.center)
-        .lineLimit(nil)
-        .frame(maxWidth: 360)
     }
-    .frame(maxWidth: 420)
   }
-}
 
-struct SponsorRowView: View {
-  let link: SponsorLink
-  @State private var isHovering = false
+  // MARK: - Card 1: Attribution & Special Thanks
 
-  var body: some View {
-    Button {
-      NSWorkspace.shared.open(link.url)
-    } label: {
-      HStack(spacing: Spacing.md) {
-        // Icon with a nice colored gradient background
-        ZStack {
-          LinearGradient(
-            colors: [link.color.opacity(0.8), link.color],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-          )
-
-          Image(systemName: link.systemImage)
-            .font(.system(size: 13, weight: .bold))
-            .foregroundColor(.white)
-        }
-        .frame(width: 30, height: 30)
-        .clipShape(RoundedRectangle(cornerRadius: 7))
-        .shadow(color: link.color.opacity(0.15), radius: 2, x: 0, y: 1)
-
-        // Title and description
-        VStack(alignment: .leading, spacing: 2) {
-          Text(link.title)
-            .font(.system(size: 13, weight: .medium))
-            .foregroundColor(.primary)
-
-          Text(link.subtitle)
-            .font(.system(size: 11))
-            .foregroundColor(.secondary)
-        }
+  private var attributionCard: some View {
+    VStack(spacing: 0) {
+      // Made by
+      HStack(alignment: .center) {
+        Text(L10n.PreferencesAbout.madeBy)
+          .font(.system(size: 13, weight: .regular))
+          .foregroundStyle(Color.primary)
 
         Spacer()
 
-        // Action button styled text
-        Text(link.actionTitle)
-          .font(.system(size: 11, weight: .semibold))
-          .padding(.horizontal, 10)
-          .padding(.vertical, 4)
-          .background(isHovering ? Color.accentColor : Color.primary.opacity(0.06))
-          .foregroundColor(isHovering ? .white : .primary)
-          .clipShape(Capsule())
-          .animation(.easeInOut(duration: 0.12), value: isHovering)
+        Link(destination: URL(string: "https://github.com/duongductrong")!) {
+          Text("Trong Duong")
+            .font(.system(size: 13, weight: .medium))
+            .foregroundStyle(Color.primary)
+        }
+        .buttonStyle(.plain)
       }
-      .padding(.horizontal, Spacing.md)
-      .padding(.vertical, 10)
-      .contentShape(Rectangle()) // Entire row is clickable
-      .background(isHovering ? Color.primary.opacity(0.04) : Color.clear)
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+
+      divider
+
+      // Special thanks
+      HStack(alignment: .top) {
+        HStack(spacing: 4) {
+          Text(L10n.PreferencesAbout.specialThanks)
+            .font(.system(size: 13, weight: .regular))
+            .foregroundStyle(Color.primary)
+
+          Link(destination: URL(string: "https://github.com/duongductrong/Snapzy/graphs/contributors")!) {
+            Image(systemName: "arrow.up.right")
+              .font(.system(size: 10, weight: .semibold))
+              .foregroundStyle(Color.secondary)
+          }
+          .buttonStyle(.plain)
+          .help(L10n.PreferencesAbout.viewAllContributors)
+        }
+
+        Spacer(minLength: 20)
+
+        specialThanksContent
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+    }
+    .cardContainer(maxWidth: 480)
+  }
+
+  // MARK: - Card 2: Version & Support
+
+  private var versionAndSupportCard: some View {
+    VStack(spacing: 0) {
+      // Update Channel
+      HStack(alignment: .center) {
+        Text(L10n.PreferencesAbout.updateChannelTitle)
+          .font(.system(size: 13, weight: .regular))
+          .foregroundStyle(Color.primary)
+
+        Spacer()
+
+        Picker("", selection: $updateChannel) {
+          Text(L10n.PreferencesAbout.updateChannelStable).tag(UpdateChannel.stable.rawValue)
+          Text(L10n.PreferencesAbout.updateChannelBeta).tag(UpdateChannel.beta.rawValue)
+        }
+        .pickerStyle(.menu)
+        .labelsHidden()
+        .fixedSize()
+        .controlSize(.regular)
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+
+      if updateChannel == UpdateChannel.beta.rawValue {
+        HStack(alignment: .top, spacing: 6) {
+          Image(systemName: "exclamationmark.triangle.fill")
+            .font(.caption)
+            .foregroundColor(.orange)
+          Text(L10n.PreferencesAbout.updateChannelBetaWarning)
+            .font(.caption)
+            .foregroundColor(.orange)
+            .multilineTextAlignment(.leading)
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 10)
+      }
+
+      divider
+
+      // Support & Links
+      HStack(alignment: .top) {
+        Text(L10n.PreferencesAbout.support)
+          .font(.system(size: 13, weight: .regular))
+          .foregroundStyle(Color.primary)
+
+        Spacer(minLength: 20)
+
+        VStack(alignment: .trailing, spacing: 8) {
+          supportLink(title: L10n.PreferencesAbout.website, url: "https://snapzy.app")
+          supportLink(title: L10n.PreferencesAbout.github, url: "https://github.com/duongductrong/Snapzy")
+          supportLink(title: L10n.PreferencesAbout.reportBug, url: "https://github.com/duongductrong/Snapzy/issues")
+          supportLink(title: L10n.PreferencesAbout.discordCommunity, url: "https://discord.gg/xkWDAuJkZu")
+          supportLink(
+            title: "\(L10n.PreferencesAbout.supportTitle) ❤️",
+            url: "https://github.com/sponsors/duongductrong",
+            isHighlighted: true
+          )
+        }
+      }
+      .padding(.horizontal, 16)
+      .padding(.vertical, 12)
+    }
+    .cardContainer(maxWidth: 480)
+    .onChange(of: updateChannel) { _ in
+      SnapzyConfigurationSyncCoordinator.shared.scheduleSync(reason: .explicitChange)
+      UpdaterManager.shared.checkForUpdates()
+    }
+  }
+
+  // MARK: - Helpers
+
+  private var divider: some View {
+    Rectangle()
+      .fill(Color.primary.opacity(0.08))
+      .frame(height: 0.5)
+      .padding(.horizontal, 12)
+  }
+
+  private func supportLink(title: String, url: String, isHighlighted: Bool = false) -> some View {
+    Link(destination: URL(string: url)!) {
+      HStack(spacing: 4) {
+        Text(title)
+          .font(.system(size: 13, weight: .medium))
+          .foregroundStyle(isHighlighted ? Color.red.opacity(0.9) : Color.accentColor)
+
+        Image(systemName: "arrow.up.right")
+          .font(.system(size: 10, weight: .semibold))
+          .foregroundStyle(isHighlighted ? Color.red.opacity(0.8) : Color.accentColor.opacity(0.8))
+      }
     }
     .buttonStyle(.plain)
-    .onHover { hovering in
-      isHovering = hovering
+  }
+
+  // MARK: - Special Thanks Content
+
+  @ViewBuilder
+  private var specialThanksContent: some View {
+    if isContributorsExpanded {
+      VStack(alignment: .trailing, spacing: 8) {
+        PreferencesFlowLayout(horizontalSpacing: 4, verticalSpacing: 4, alignment: .trailing) {
+          ForEach(Array(AboutContributor.all.enumerated()), id: \.element.id) { index, contributor in
+            contributorLink(
+              contributor: contributor,
+              suffix: index < AboutContributor.all.count - 1 ? "," : ""
+            )
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+
+        Button {
+          withAnimation(.easeInOut(duration: 0.2)) {
+            isContributorsExpanded = false
+          }
+        } label: {
+          HStack(spacing: 3) {
+            Text(L10n.PreferencesAbout.seeLess)
+              .font(.system(size: 11, weight: .medium))
+            Image(systemName: "chevron.up")
+              .font(.system(size: 9, weight: .semibold))
+          }
+          .foregroundStyle(Color.accentColor)
+        }
+        .buttonStyle(ActionLinkButtonStyle())
+      }
+    } else {
+      VStack(alignment: .trailing, spacing: 3) {
+        ForEach(AboutContributor.featured) { contributor in
+          contributorLink(contributor: contributor, suffix: ",")
+        }
+
+        Text(L10n.PreferencesAbout.allContributors)
+          .font(.system(size: 12, weight: .regular))
+          .foregroundStyle(Color.secondary)
+
+        Button {
+          withAnimation(.easeInOut(duration: 0.2)) {
+            isContributorsExpanded = true
+          }
+        } label: {
+          HStack(spacing: 3) {
+            Text(L10n.PreferencesAbout.seeMore)
+              .font(.system(size: 11, weight: .medium))
+            Image(systemName: "chevron.down")
+              .font(.system(size: 9, weight: .semibold))
+          }
+          .foregroundStyle(Color.accentColor)
+        }
+        .buttonStyle(ActionLinkButtonStyle())
+        .padding(.top, 2)
+      }
     }
+  }
+
+  private func contributorLink(contributor: AboutContributor, suffix: String = "") -> some View {
+    Link(destination: contributor.profileURL) {
+      Text(contributor.name + suffix)
+        .font(.system(size: 12, weight: .regular))
+    }
+    .buttonStyle(ContributorLinkButtonStyle())
+    .help(contributor.profileURL.absoluteString)
+  }
+}
+
+// MARK: - Button Styles
+
+private struct ContributorLinkButtonStyle: ButtonStyle {
+  @State private var isHovered = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .foregroundStyle(isHovered ? Color.primary : Color.secondary)
+      .underline(isHovered)
+      .opacity(configuration.isPressed ? 0.7 : 1.0)
+      .onHover { hovering in
+        isHovered = hovering
+      }
+  }
+}
+
+private struct ActionLinkButtonStyle: ButtonStyle {
+  @State private var isHovered = false
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .opacity(configuration.isPressed ? 0.6 : (isHovered ? 0.8 : 1.0))
+      .underline(isHovered)
+      .onHover { hovering in
+        isHovered = hovering
+      }
+  }
+}
+
+private extension View {
+  func cardContainer(maxWidth: CGFloat) -> some View {
+    background {
+      Radius.rect(Radius.card)
+        .fill(Color.primary.opacity(0.04))
+    }
+    .clipShape(Radius.rect(Radius.card))
+    .frame(maxWidth: maxWidth)
   }
 }
 
 #Preview {
   AboutSettingsView()
-    .frame(width: 700, height: 550)
+    .frame(width: 700, height: 600)
 }

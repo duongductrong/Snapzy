@@ -9,12 +9,11 @@ import XCTest
 @testable import Snapzy
 
 final class RemoteOCRServiceTests: XCTestCase {
-  private var keychain: FakeOCRKeychainStore!
   private let modelID = UUID(uuidString: "00000000-0000-0000-0000-000000000042")!
 
-  override func setUp() {
-    super.setUp()
-    keychain = FakeOCRKeychainStore()
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    try skipIfRunningInCI("Remote OCR tests require local environment")
   }
 
   private func makeModel(
@@ -40,7 +39,8 @@ final class RemoteOCRServiceTests: XCTestCase {
 
   private func makeProvider(
     model: CustomOCRModel? = nil,
-    session: MockURLSession
+    session: MockURLSession,
+    keychain: FakeOCRKeychainStore = FakeOCRKeychainStore()
   ) -> RemoteOCRProvider {
     RemoteOCRProvider(model: model ?? makeModel(), keychainStore: keychain, session: session)
   }
@@ -49,8 +49,9 @@ final class RemoteOCRServiceTests: XCTestCase {
     statusCode: Int = 200,
     data: Data? = nil
   ) -> MockURLSession {
-    MockURLSession { _ in
-      MockURLSession.makeResponse(statusCode: statusCode, data: data ?? self.completionData(content: "ok"))
+    let responseData = data ?? completionData(content: "ok")
+    return MockURLSession { _ in
+      MockURLSession.makeResponse(statusCode: statusCode, data: responseData)
     }
   }
 
@@ -146,9 +147,10 @@ final class RemoteOCRServiceTests: XCTestCase {
   // MARK: - Auth header
 
   func testAuthorizationHeaderIncludedWhenKeyExists() async throws {
+    let keychain = FakeOCRKeychainStore()
     keychain.seedKey("sk-live", for: modelID)
     let session = makeSession()
-    let provider = makeProvider(session: session)
+    let provider = makeProvider(session: session, keychain: keychain)
 
     _ = try await provider.recognize(OCRRequest(image: makeImage()))
 

@@ -13,7 +13,6 @@ import SwiftUI
 final class RecordingAnnotationCanvasView: NSView {
 
   let state: RecordingAnnotationState
-  private let shortcutManager = AnnotateShortcutManager.shared
 
   private var isDrawing = false
   private var drawStart: CGPoint = .zero
@@ -131,15 +130,9 @@ final class RecordingAnnotationCanvasView: NSView {
 
   override func keyDown(with event: NSEvent) {
     // Tool shortcuts — only when shortcut mode is active (modifier held)
-    if state.isShortcutModeActive,
-       let char = event.characters?.lowercased().first {
-      let tools = RecordingAnnotationState.availableTools
-      if let matchedTool = shortcutManager.tool(for: char),
-         tools.contains(matchedTool) {
-        state.selectedTool = matchedTool
-        needsDisplay = true
-        return
-      }
+    if state.selectTool(for: event) {
+      needsDisplay = true
+      return
     }
 
     switch event.keyCode {

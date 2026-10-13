@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 
 // MARK: - Notifications
 
@@ -31,6 +32,26 @@ extension Notification.Name {
   static let annotatePanScroll = Notification.Name("annotatePanScroll")
 }
 
+/// Routes full-editor notifications to the view tree belonging to one window.
+/// The weak reference keeps the SwiftUI content from retaining a closed window.
+final class AnnotateWindowEventRouter {
+  private weak var window: NSWindow?
+
+  init(window: NSWindow) {
+    self.window = window
+  }
+
+  func publisher(for name: Notification.Name) -> AnyPublisher<Notification, Never> {
+    NotificationCenter.default.publisher(for: name)
+      .filter { [weak self] notification in
+        guard let object = notification.object as? NSWindow,
+              let window = self?.window else { return false }
+        return object === window
+      }
+      .eraseToAnyPublisher()
+  }
+}
+
 enum AnnotateObjectShortcut: Equatable {
   case copy
   case paste
@@ -43,6 +64,7 @@ class AnnotateWindow: NSWindow {
   var onEscape: (() -> Bool)?
   private static let activeEditorLevel = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
   private var restingLevel: NSWindow.Level = .normal
+  private var themeObserver: AnyCancellable?
 
   init(contentRect: NSRect) {
     super.init(
@@ -56,6 +78,7 @@ class AnnotateWindow: NSWindow {
 
   private func configure() {
     applyTheme()
+    setupThemeObserver()
 
     // Enable full-size content view
     styleMask.insert(.fullSizeContentView)
@@ -74,6 +97,14 @@ class AnnotateWindow: NSWindow {
 
     // Increase window corner radius
     configureCornerRadius()
+  }
+
+  private func setupThemeObserver() {
+    themeObserver = ThemeManager.shared.objectWillChange
+      .receive(on: RunLoop.main)
+      .sink { [weak self] _ in
+        self?.applyTheme()
+      }
   }
 
   /// Configure custom corner radius for the window

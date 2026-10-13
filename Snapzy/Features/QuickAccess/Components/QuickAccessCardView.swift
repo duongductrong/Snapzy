@@ -30,7 +30,7 @@ struct QuickAccessCardView: View {
   @State private var cloudUploadProgress: Double = 0
   @Environment(\.accessibilityReduceMotion) var reduceMotion
 
-  private let cornerRadius: CGFloat = 16
+  private let cornerRadius = Radius.card
 
   /// Scaled card dimensions based on overlay scale setting
   private var scaledWidth: CGFloat { QuickAccessLayout.scaledCardWidth(CGFloat(manager.overlayScale)) }
@@ -284,7 +284,9 @@ struct QuickAccessCardView: View {
 
         handleSwipeEnded(translation: finalTranslation, velocity: finalVelocity)
       },
-      swipeSensitivity: CGFloat(manager.swipeSensitivity)
+      swipeSensitivity: CGFloat(manager.swipeSensitivity),
+      dragOnly: false,
+      reservedScrollAxis: nil
     )
   }
 
@@ -499,7 +501,7 @@ struct QuickAccessCardView: View {
           .padding(.horizontal, 6)
           .padding(.vertical, 2)
           .background(
-            RoundedRectangle(cornerRadius: 4)
+            Capsule()
               .fill(Color.black.opacity(0.7))
           )
           .padding(6)
@@ -738,7 +740,7 @@ struct QuickAccessCardView: View {
         }
 
         isCloudUploading = false
-        SoundManager.play("Pop")
+        QuickAccessSound.copy.play(reduceMotion: reduceMotion)
         DiagnosticLogger.shared.log(
           .info,
           .cloud,

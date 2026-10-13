@@ -55,7 +55,7 @@ public struct FeatureIntroView: View {
       bottomBar
     }
     .frame(width: 320, height: 420)
-    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+    .background(.regularMaterial, in: Radius.rect(Radius.panel))
   }
 
   @ViewBuilder
@@ -88,9 +88,9 @@ public struct FeatureIntroView: View {
               .font(.system(size: 24, weight: .medium, design: .rounded))
               .frame(width: 44, height: 44)
               .background(Color.primary.opacity(0.1))
-              .cornerRadius(8)
+              .cornerRadius(Radius.tile)
               .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                Radius.rect(Radius.tile)
                   .stroke(Color.primary.opacity(0.1), lineWidth: 1)
               )
           }

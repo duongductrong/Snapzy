@@ -18,8 +18,8 @@ final class MouseClickHighlightWindow: NSWindow {
   private var holdCircleView: HoldCircleView?
   private let config: MouseHighlightConfiguration
 
-  init(recordingRect: CGRect, configuration: MouseHighlightConfiguration = MouseHighlightConfiguration()) {
-    self.config = configuration
+  init(recordingRect: CGRect, configuration: MouseHighlightConfiguration? = nil) {
+    self.config = configuration ?? MouseHighlightConfiguration()
     super.init(
       contentRect: recordingRect,
       styleMask: [.borderless],

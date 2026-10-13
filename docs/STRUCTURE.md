@@ -18,6 +18,7 @@ Separated feature docs cover each runtime area in depth:
 - [`SHORTCUTS.md`](SHORTCUTS.md) — Global/overlay shortcut registration and conflicts
 - [`PREFERENCES.md`](PREFERENCES.md) — Settings tabs, preference storage, defaults
 - [`APP_LIFECYCLE.md`](APP_LIFECYCLE.md) — Launch sequence, onboarding, menu bar bootstrap
+- [`LIQUID_GLASS.md`](LIQUID_GLASS.md) — Liquid Glass architecture, 4-layer composite model, buttons, segments, custom views
 - [`UPDATES.md`](UPDATES.md) — Sparkle updater, channels, release flow
 
 ## Runtime Map
@@ -189,6 +190,8 @@ Snapzy/
 
   Shared/
     Components/
+    DesignSystem/
+      LiquidGlass/
     Extensions/
     Localization/
     Services/
@@ -240,6 +243,7 @@ SnapzyUITests/
 | `Features/Capture/` | High-level screenshot, OCR, cutout, scrolling-capture, and recording entry actions |
 | `Features/Recording/` | Recording toolbar, overlays, live annotation, stop/GIF handoff |
 | `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app, pinned screenshot windows |
+| `Features/History/` | Floating capture history panel, compact/expanded cards, restore flow, and direct file drag-out |
 | `Features/Annotate/` | Image editor, export, crop, blur, mockup, cutout-aware editing, inline area annotate |
 | `Features/VideoEditor/` | Trim, zoom, speed (timelapse) segments, background, Smart Camera, GIF/video export |
 | `Features/Preferences/` | General, Capture, Quick Access, Shortcuts, Permissions, History storage/retention, Cloud, Advanced, About tabs |
@@ -323,7 +327,7 @@ SnapzyUITests/
 - `TempCaptureManager` is where the `Save` after-capture toggle becomes real behavior. Recording uses an internal per-session processing directory first, then moves the final video to export or the temp capture root after AVAssetWriter finishes.
 - `DatabaseManager` is initialized before launch cleanup and schedulers run. If `snapzy.db` cannot open or migrate, `AppDelegate` presents repair/reset/quit recovery UI; reset archives existing DB files into `DatabaseRecovery-<yyyyMMdd-HHmmss>[-N]/` before creating a fresh database.
 - `QuickAccessActionConfigurationStore` owns user-configurable Quick Access action visibility, context-menu order, and card slot assignments. Settings → Quick Access lets users reorder the context menu from the list, then drag actions onto explicit preview slots for the live hover card layout.
-- `QuickAccessDraggableView` owns Quick Access card gestures: mouse swipe-to-dismiss, drag-to-app, and optional two-finger horizontal swipe-to-dismiss on the preview card.
+- `QuickAccessDraggableView` owns the shared AppKit file-drag bridge. Quick Access cards add side-aware mouse swipe-to-dismiss and optional two-finger horizontal swipe-to-dismiss; History cards use its drag-only mode with primary-axis scroll arbitration so direct file drag does not affect selection, editor gestures, or unambiguous list scrolling.
 - `RecordingCoordinator` owns the toolbar/overlay UX. `ScreenRecordingManager` owns the media pipeline.
 - `ScrollingCaptureCoordinator` is its own subsystem. Treat `Services/Capture/ScrollingCapture/*` as a unit.
 - `ScrollingCaptureFrameSource` publishes timestamped region frames into `ScrollingCaptureFrameRing`, so live preview and commit/stitch decisions share one bounded frame timeline before falling back to still area capture.
@@ -411,7 +415,7 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 - Two-finger swipe-to-dismiss is scoped to the Quick Access preview card and follows the same side-aware dismiss direction as mouse swipe: rightward on right-side panels, leftward on left-side panels.
 - Committed screenshot annotations are stored as sidecar packages in Application Support. History/Quick Access restore uses those packages to reopen editable annotations after the rendered screenshot has been saved, while delete, clear-history, retention sweep, and temp-to-export save paths remove or move sidecars with the source file.
 - Sidecar persistence is intentionally commit-based. There is no continuous annotation autosave or draft recovery package for an unsaved Annotate window during app quit.
-- Quick Access screenshot pin opens an independent always-on-top pin window with fit-based sizing, a minimum interactive footprint, compact zoom/drag controls, pinch and Command-scroll zoom, close or Esc-to-unpin, drag-to-app from the current pinned image, and a lock mode that fades the screenshot while allowing pointer interaction with windows underneath except for the unlock control.
+- Quick Access screenshot pins use independently sized always-on-top windows with selectable image-following or fixed-viewport zoom, direct pinch zoom, mode-specific vertical-scroll zoom or precise-scroll panning, close or Esc-to-unpin, drag-to-app from the current pinned image, and a lock mode that fades the screenshot while allowing pointer interaction with windows underneath except for the unlock control.
 - Annotate, Video Editor, GIF conversion, and cloud upload pause Quick Access countdowns for the active item and resume them when the activity ends.
 - During recording, the menu bar item no longer turns into a left-click stop button. It keeps the normal menu path available, adds a live timer to the status item, and exposes stop plus pause/resume from the active menu section.
 - The recording shortcut (`GlobalShortcutKind.recording`, default `⇧⌘5`) is a start/stop toggle handled in `CaptureViewModel.toggleRecordingFromShortcut(...)`. An optional `GlobalShortcutKind.pauseResumeRecording` ships unbound (seeded into `clearedShortcuts` on first launch) and, when bound via Preferences → Shortcuts → Recording, dispatches to `ScreenRecordingManager.togglePause()` only while a recording is active.

@@ -2,7 +2,7 @@
 //  QuickAccessDraggableView.swift
 //  Snapzy
 //
-//  AppKit bridge for Quick Access card swipe and drag-to-app behavior.
+//  Shared AppKit bridge for Quick Access gestures and History drag-to-app behavior.
 //
 
 import AppKit
@@ -12,12 +12,75 @@ enum QuickAccessCardDragIntent: Equatable {
   case undetermined
   case swipeToDismiss
   case dragToApp
+  case reservedForScroll
+}
+
+enum QuickAccessDragScrollAxis: Equatable {
+  case horizontal
+  case vertical
 }
 
 struct QuickAccessCardDragPolicy {
   static let directionThreshold: CGFloat = 30
+  static let directDragDistanceThreshold: CGFloat = 6
+  static let scrollAxisDominanceRatio: CGFloat = 1.35
   static let dismissDistanceThreshold: CGFloat = 80
   static let dismissVelocityThreshold: CGFloat = 300
+
+  static func shouldBeginDirectDrag(
+    horizontalTranslation: CGFloat,
+    verticalTranslation: CGFloat,
+    reservedScrollAxis: QuickAccessDragScrollAxis? = nil
+  ) -> Bool {
+    guard horizontalTranslation.isFinite, verticalTranslation.isFinite else {
+      return false
+    }
+
+    let distanceSquared =
+      horizontalTranslation * horizontalTranslation + verticalTranslation * verticalTranslation
+    guard distanceSquared >= directDragDistanceThreshold * directDragDistanceThreshold else {
+      return false
+    }
+
+    return !isPrimaryScrollGesture(
+      horizontalTranslation: horizontalTranslation,
+      verticalTranslation: verticalTranslation,
+      reservedScrollAxis: reservedScrollAxis
+    )
+  }
+
+  static func isPrimaryScrollGesture(
+    horizontalTranslation: CGFloat,
+    verticalTranslation: CGFloat,
+    reservedScrollAxis: QuickAccessDragScrollAxis?
+  ) -> Bool {
+    guard horizontalTranslation.isFinite,
+          verticalTranslation.isFinite,
+          let reservedScrollAxis else {
+      return false
+    }
+
+    let distanceSquared =
+      horizontalTranslation * horizontalTranslation + verticalTranslation * verticalTranslation
+    guard distanceSquared >= directDragDistanceThreshold * directDragDistanceThreshold else {
+      return false
+    }
+
+    let scrollTranslation: CGFloat
+    let crossAxisTranslation: CGFloat
+    switch reservedScrollAxis {
+    case .horizontal:
+      scrollTranslation = abs(horizontalTranslation)
+      crossAxisTranslation = abs(verticalTranslation)
+    case .vertical:
+      scrollTranslation = abs(verticalTranslation)
+      crossAxisTranslation = abs(horizontalTranslation)
+    }
+
+    // Let the containing list keep an unambiguous primary-axis drag. A
+    // diagonal or cross-axis movement remains eligible for direct export.
+    return scrollTranslation > crossAxisTranslation * Self.scrollAxisDominanceRatio
+  }
 
   let dismissDirection: CGFloat
 
@@ -91,6 +154,8 @@ struct QuickAccessDraggableView: NSViewRepresentable {
   let onSwipeChanged: (CGFloat) -> Void
   let onSwipeEnded: (CGFloat, CGFloat) -> Void
   let swipeSensitivity: CGFloat
+  let dragOnly: Bool
+  let reservedScrollAxis: QuickAccessDragScrollAxis?
 
   func makeNSView(context: Context) -> QuickAccessDragMonitorView {
     QuickAccessDragMonitorView(
@@ -104,7 +169,9 @@ struct QuickAccessDraggableView: NSViewRepresentable {
       onDragStarted: onDragStarted,
       onDragEnded: onDragEnded,
       onSwipeChanged: onSwipeChanged,
-      onSwipeEnded: onSwipeEnded
+      onSwipeEnded: onSwipeEnded,
+      dragOnly: dragOnly,
+      reservedScrollAxis: reservedScrollAxis
     )
   }
 
@@ -113,6 +180,8 @@ struct QuickAccessDraggableView: NSViewRepresentable {
     nsView.thumbnail = thumbnail
     nsView.dismissDirection = dismissDirection
     nsView.dragDropEnabled = dragDropEnabled
+    nsView.dragOnly = dragOnly
+    nsView.reservedScrollAxis = reservedScrollAxis
     nsView.twoFingerSwipeToDismissEnabled = twoFingerSwipeToDismissEnabled
     nsView.swipeMode = swipeMode
     nsView.swipeSensitivity = swipeSensitivity
@@ -128,6 +197,8 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
   var thumbnail: NSImage
   var dismissDirection: CGFloat
   var dragDropEnabled: Bool
+  var dragOnly: Bool
+  var reservedScrollAxis: QuickAccessDragScrollAxis?
   var twoFingerSwipeToDismissEnabled: Bool
   var swipeMode: QuickAccessTrackpadSwipeMode
   var swipeSensitivity: CGFloat
@@ -139,6 +210,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
   private var isDragging = false
   private var eventMonitor: Any?
   private var mouseDownLocation: NSPoint?
+  private var mouseDownEvent: NSEvent?
   private var gestureIntent: QuickAccessCardDragIntent = .undetermined
   private var lastDragSample: (timestamp: TimeInterval, translation: CGFloat)?
   private var latestVelocity: CGFloat = 0
@@ -159,12 +231,16 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     onDragStarted: @escaping () -> Void,
     onDragEnded: @escaping (Bool) -> Void,
     onSwipeChanged: @escaping (CGFloat) -> Void,
-    onSwipeEnded: @escaping (CGFloat, CGFloat) -> Void
+    onSwipeEnded: @escaping (CGFloat, CGFloat) -> Void,
+    dragOnly: Bool = false,
+    reservedScrollAxis: QuickAccessDragScrollAxis? = nil
   ) {
     self.fileURL = fileURL
     self.thumbnail = thumbnail
     self.dismissDirection = dismissDirection
     self.dragDropEnabled = dragDropEnabled
+    self.dragOnly = dragOnly
+    self.reservedScrollAxis = reservedScrollAxis
     self.twoFingerSwipeToDismissEnabled = twoFingerSwipeToDismissEnabled
     self.swipeMode = swipeMode
     self.swipeSensitivity = swipeSensitivity
@@ -244,6 +320,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     guard bounds.contains(location) else { return }
 
     mouseDownLocation = location
+    mouseDownEvent = event
     gestureIntent = .undetermined
     latestVelocity = 0
     lastDragSample = (event.timestamp, 0)
@@ -254,18 +331,48 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
 
     let location = convert(event.locationInWindow, from: nil)
     let translation = location.x - mouseDownLocation.x
+    let verticalTranslation = location.y - mouseDownLocation.y
     updateVelocity(translation: translation, timestamp: event.timestamp)
 
     let policy = QuickAccessCardDragPolicy(dismissDirection: dismissDirection)
     if gestureIntent == .undetermined {
+      if dragOnly {
+        guard dragDropEnabled else {
+          return
+        }
+
+        if QuickAccessCardDragPolicy.isPrimaryScrollGesture(
+          horizontalTranslation: translation,
+          verticalTranslation: verticalTranslation,
+          reservedScrollAxis: reservedScrollAxis
+        ) {
+          gestureIntent = .reservedForScroll
+          return
+        }
+
+        guard QuickAccessCardDragPolicy.shouldBeginDirectDrag(
+          horizontalTranslation: translation,
+          verticalTranslation: verticalTranslation,
+          reservedScrollAxis: reservedScrollAxis
+        ) else {
+          return
+        }
+
+        gestureIntent = .dragToApp
+        beginFileDrag()
+        return
+      }
+
       gestureIntent = policy.intent(forHorizontalTranslation: translation)
 
       if gestureIntent == .dragToApp {
         guard dragDropEnabled else { return }
-        beginFileDrag(with: event)
+        beginFileDrag()
         return
       }
     }
+
+    guard gestureIntent != .reservedForScroll else { return }
 
     if gestureIntent == .swipeToDismiss {
       onSwipeChanged(translation)
@@ -289,6 +396,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
 
   private func resetTracking() {
     mouseDownLocation = nil
+    mouseDownEvent = nil
     gestureIntent = .undetermined
     lastDragSample = nil
     latestVelocity = 0
@@ -411,11 +519,18 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
 
   // MARK: - Drag Initiation
 
-  private func beginFileDrag(with event: NSEvent) {
-    guard !isDragging else { return }
+  private func beginFileDrag() {
+    guard !isDragging, fileURL.isFileURL, let mouseDownEvent, let mouseDownLocation else { return }
+
+    sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(fileURL)
+    guard FileManager.default.fileExists(atPath: fileURL.path) else {
+      sourceAccess?.stop()
+      sourceAccess = nil
+      resetTracking()
+      return
+    }
 
     isDragging = true
-    sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(fileURL)
     onDragStarted()
 
     let dragItem = NSDraggingItem(pasteboardWriter: fileURL as NSURL)
@@ -430,23 +545,22 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     )
     dragImage.unlockFocus()
 
-    let mouseLocation = convert(event.locationInWindow, from: nil)
     dragItem.setDraggingFrame(
       NSRect(
-        x: mouseLocation.x - imageSize.width / 2,
-        y: mouseLocation.y - imageSize.height / 2,
+        x: mouseDownLocation.x - imageSize.width / 2,
+        y: mouseDownLocation.y - imageSize.height / 2,
         width: imageSize.width,
         height: imageSize.height
       ),
       contents: dragImage
     )
 
-    let session = beginDraggingSession(with: [dragItem], event: event, source: self)
+    let session = beginDraggingSession(with: [dragItem], event: mouseDownEvent, source: self)
     session.animatesToStartingPositionsOnCancelOrFail = true
     DiagnosticLogger.shared.log(
       .info,
       .action,
-      "Quick access drag started",
+      "Native file drag started",
       context: ["fileName": fileURL.lastPathComponent]
     )
   }
@@ -473,7 +587,7 @@ final class QuickAccessDragMonitorView: NSView, NSDraggingSource {
     DiagnosticLogger.shared.log(
       .info,
       .action,
-      "Quick access drag ended",
+      "Native file drag ended",
       context: [
         "operation": "\(operation.rawValue)",
         "success": success ? "true" : "false",

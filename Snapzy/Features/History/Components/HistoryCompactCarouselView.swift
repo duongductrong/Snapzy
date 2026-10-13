@@ -39,6 +39,7 @@ struct HistoryCompactCarouselView: View {
             record: record,
             isSelected: selectedId == record.id,
             onTap: { onSelect(record) },
+            reservedScrollAxis: metrics.isScrollable ? .horizontal : nil,
             backgroundStyle: backgroundStyle
           )
           .equatable()

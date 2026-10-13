@@ -132,9 +132,9 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickStrokeColor: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .counter, .watermark, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .spotlight, .counter, .watermark, .pencil:
       return true
-    case .selection, .crop, .blur, .spotlight, .mockup:
+    case .selection, .crop, .blur, .mockup:
       return false
     }
   }
@@ -145,9 +145,9 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickStrokeWidth: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .counter, .pencil:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .spotlight, .counter, .pencil:
       return true
-    case .selection, .crop, .text, .watermark, .spotlight, .mockup:
+    case .selection, .crop, .text, .watermark, .mockup:
       return false
     }
   }
@@ -163,9 +163,9 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
 
   var supportsQuickLineStyle: Bool {
     switch self {
-    case .rectangle, .filledRectangle, .oval, .arrow, .line:
+    case .rectangle, .filledRectangle, .oval, .arrow, .line, .spotlight:
       return true
-    case .selection, .crop, .text, .highlighter, .blur, .counter, .watermark, .pencil, .spotlight, .mockup:
+    case .selection, .crop, .text, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
       return false
     }
   }

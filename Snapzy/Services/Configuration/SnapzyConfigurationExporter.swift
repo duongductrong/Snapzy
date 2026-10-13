@@ -20,7 +20,7 @@ enum SnapzyConfigurationExporter {
     writeMenuBar(&writer)
     writeCapture(&writer, defaults: defaults)
     writeRecording(&writer, defaults: defaults)
-    writeQuickAccess(&writer)
+    writeQuickAccess(&writer, defaults: defaults)
     writeHistory(&writer, defaults: defaults)
     writeCloud(&writer, defaults: defaults)
     writeAnnotate(&writer, defaults: defaults)
@@ -33,6 +33,7 @@ enum SnapzyConfigurationExporter {
     writer.section("general")
     writer.value("language", language(defaults: defaults))
     writer.value("appearance", appearance(defaults: defaults))
+    writer.value("use_liquid_glass", defaults.object(forKey: PreferencesKeys.useLiquidGlass) as? Bool ?? true)
     writer.value("play_sounds", defaults.object(forKey: PreferencesKeys.playSounds) as? Bool ?? true)
     writer.value("url_scheme_enabled", defaults.object(forKey: PreferencesKeys.urlSchemeEnabled) as? Bool ?? true)
     writer.value("show_menu_bar_icon", defaults.object(forKey: PreferencesKeys.showMenuBarIcon) as? Bool ?? true)
@@ -77,10 +78,12 @@ enum SnapzyConfigurationExporter {
     writer.value("include_snapzy", defaults.boolValue(PreferencesKeys.screenshotIncludeOwnApp, default: false))
     writer.value("show_cursor", defaults.boolValue(PreferencesKeys.screenshotShowCursor, default: false))
     writer.value("freeze_area", defaults.boolValue(PreferencesKeys.screenshotFreezeArea, default: false))
+    writer.value("delayed_capture_seconds", CaptureDelayOption.current(defaults: defaults).seconds)
     writer.value("show_selection_area_overlay", defaults.boolValue(PreferencesKeys.screenshotShowSelectionAreaOverlay, default: true))
     writer.value("reverse_magnifier_zoom_direction", defaults.boolValue(PreferencesKeys.screenshotReverseMagnifierZoomDirection, default: false))
     writer.value("show_magnifier_by_default", defaults.boolValue(PreferencesKeys.screenshotShowMagnifierByDefault, default: false))
     writer.value("show_magnifier_color_panel", defaults.boolValue(PreferencesKeys.screenshotShowMagnifierColorPanel, default: true))
+    writer.value("include_window_shadow", defaults.boolValue(PreferencesKeys.captureIncludeWindowShadow, default: WindowShadowPreference.defaultIncludeShadow))
 
     writer.section("capture.scrolling")
     writer.value("show_hints", defaults.boolValue(PreferencesKeys.scrollingCaptureShowHints, default: true))
@@ -101,6 +104,7 @@ enum SnapzyConfigurationExporter {
     writer.section("recording")
     writer.value("format", RecordingToolbarPreferences.selectedFormat(defaults: defaults).rawValue)
     writer.value("quality", RecordingToolbarPreferences.selectedQuality(defaults: defaults).rawValue)
+    writer.value("max_resolution", RecordingToolbarPreferences.selectedMaxResolution(defaults: defaults).rawValue)
     writer.value("fps", defaults.integerValue(PreferencesKeys.recordingFPS, default: 30))
     writer.value("output_mode", RecordingToolbarPreferences.outputMode(defaults: defaults).rawValue)
     writer.value("capture_system_audio", RecordingToolbarPreferences.captureAudio(defaults: defaults))
@@ -136,12 +140,14 @@ enum SnapzyConfigurationExporter {
     writer.value("hold_duration", defaults.doubleValue(PreferencesKeys.annotationShortcutHoldDuration, default: 0.3))
   }
 
-  private static func writeQuickAccess(_ writer: inout SimpleTOMLWriter) {
+  private static func writeQuickAccess(_ writer: inout SimpleTOMLWriter, defaults: UserDefaults) {
     let manager = QuickAccessManager.shared
     let actionStore = QuickAccessActionConfigurationStore.shared
 
     writer.section("quick_access")
     writer.value("enabled", manager.isEnabled)
+    writer.value("play_sounds", defaults.boolValue(PreferencesKeys.quickAccessPlaySounds, default: true))
+    writer.value("open_in_finder_after_save", defaults.boolValue(PreferencesKeys.quickAccessOpenInFinderAfterSave, default: true))
     writer.value("position", manager.position.rawValue)
     writer.value("auto_dismiss", manager.autoDismissEnabled)
     writer.value("auto_dismiss_delay", manager.autoDismissDelay)
@@ -151,6 +157,7 @@ enum SnapzyConfigurationExporter {
     writer.value("two_finger_swipe_to_dismiss", manager.twoFingerSwipeToDismissEnabled)
     writer.value("swipe_sensitivity", manager.swipeSensitivity)
     writer.value("trackpad_swipe_mode", QuickAccessTrackpadSwipeModeStore.shared.mode.rawValue)
+    writer.value("pin_zoom_mode", QuickAccessPinZoomModeStore.shared.mode.rawValue)
     writer.value("swipe_left_action", QuickAccessSwipeActionStore.shared.swipeLeftAction?.rawValue ?? "none")
     writer.value("swipe_right_action", QuickAccessSwipeActionStore.shared.swipeRightAction?.rawValue ?? "none")
     writer.value("hide_card_when_window_open", manager.hideCardWhenWindowOpen)

@@ -61,10 +61,12 @@ enum AnnotateImageDropLoader {
 /// Canvas view for displaying and annotating the image
 struct AnnotateCanvasView: View {
   @ObservedObject var state: AnnotateState
+  let eventRouter: AnnotateWindowEventRouter
   @FocusState private var isCanvasFocused: Bool
   @State private var isDragOver = false
   @State private var showDropError = false
   @State private var dropErrorMessage = ""
+  @StateObject private var canvasInteractionBridge = CanvasInteractionBridge()
 
   /// Supported image types for drag-drop
   static let supportedImageTypes: [UTType] = [
@@ -106,7 +108,7 @@ struct AnnotateCanvasView: View {
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateScrollZoom)) { notification in
+    .onReceive(eventRouter.publisher(for: .annotateScrollZoom)) { notification in
       guard state.hasImage,
             let delta = notification.userInfo?["delta"] as? CGFloat else { return }
       let step = delta * 0.1
@@ -114,47 +116,47 @@ struct AnnotateCanvasView: View {
         state.zoomLevel = state.clampedZoom(state.zoomLevel + step)
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateMagnifyZoom)) { notification in
+    .onReceive(eventRouter.publisher(for: .annotateMagnifyZoom)) { notification in
       guard state.hasImage,
             let magnification = notification.userInfo?["magnification"] as? CGFloat else { return }
       withAnimation(.easeOut(duration: 0.1)) {
         state.zoomLevel = state.clampedZoom(state.zoomLevel + magnification)
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomIn)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateZoomIn)) { _ in
       guard state.hasImage else { return }
       withAnimation(.easeOut(duration: 0.15)) {
         state.zoomLevel = state.clampedZoom(state.zoomLevel + 0.25)
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomOut)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateZoomOut)) { _ in
       guard state.hasImage else { return }
       withAnimation(.easeOut(duration: 0.15)) {
         state.zoomLevel = state.clampedZoom(state.zoomLevel - 0.25)
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateZoomReset)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateZoomReset)) { _ in
       guard state.hasImage else { return }
       withAnimation(.easeOut(duration: 0.15)) {
         state.zoomLevel = 1.0
       }
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateSpaceDown)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateSpaceDown)) { _ in
       guard state.hasImage,
             state.canPanInteractively,
             state.editingTextAnnotationId == nil else { return }
       state.isSpacePanning = true
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotateSpaceUp)) { _ in
+    .onReceive(eventRouter.publisher(for: .annotateSpaceUp)) { _ in
       state.isSpacePanning = false
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotatePanDrag)) { notification in
+    .onReceive(eventRouter.publisher(for: .annotatePanDrag)) { notification in
       guard state.isSpacePanning || state.isCanvasPanningMode,
             let dx = notification.userInfo?["deltaX"] as? CGFloat,
             let dy = notification.userInfo?["deltaY"] as? CGFloat else { return }
       state.pan(by: CGSize(width: dx, height: dy))
     }
-    .onReceive(NotificationCenter.default.publisher(for: .annotatePanScroll)) { notification in
+    .onReceive(eventRouter.publisher(for: .annotatePanScroll)) { notification in
       guard state.hasImage,
             state.canPanInteractively,
             state.editingTextAnnotationId == nil,
@@ -199,7 +201,7 @@ struct AnnotateCanvasView: View {
       .padding(.horizontal, 16)
       .padding(.vertical, 10)
       .background(Color.red.opacity(0.9))
-      .cornerRadius(8)
+      .cornerRadius(Radius.card)
       .padding(.bottom, 20)
       .transition(.move(edge: .bottom).combined(with: .opacity))
       .animation(.easeInOut(duration: 0.3), value: showDropError)
@@ -312,15 +314,21 @@ struct AnnotateCanvasView: View {
         Group {
           sourceImageLayer(visibleBounds: foregroundBounds, scale: scale)
 
-          CanvasDrawingView(state: state, displayScale: scale, canvasBounds: foregroundBounds)
-            .frame(width: foregroundWidth, height: foregroundHeight)
+          CanvasDrawingView(
+            state: state,
+            displayScale: scale,
+            canvasBounds: foregroundBounds,
+            interactionBridge: canvasInteractionBridge
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
 
           // Text editing overlay (when editing a text annotation)
           if state.editingTextAnnotationId != nil {
             TextEditOverlay(
               state: state,
               scale: scale,
-              canvasBounds: foregroundBounds
+              canvasBounds: foregroundBounds,
+              interactionBridge: canvasInteractionBridge
             )
             .frame(width: foregroundWidth, height: foregroundHeight)
             .clipped()
@@ -347,6 +355,22 @@ struct AnnotateCanvasView: View {
       ))
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
+      // AppKit conversion exposes the layout transform, not a Core Animation
+      // presentation transform. Apply zoom atomically so a pointer cannot be
+      // mapped through a completed transform while pixels are mid-animation.
+      .animation(nil, value: state.zoomLevel)
+
+      // Keep AppKit input aligned with the transformed visual footprint. SwiftUI
+      // scales the canvas layer but leaves the representable's hit frame at its
+      // fit size, which otherwise makes portions of a zoomed tall capture inert.
+      // Native text input is registered with the bridge and receives priority
+      // within its transformed bounds. Perspective mockups have non-rectangular
+      // projected bounds, so the rectangular proxy yields to their existing interaction
+      // path rather than accepting clicks in visually empty corners.
+      if !shouldShowMockupTransforms {
+        CanvasInteractionProxy(bridge: canvasInteractionBridge)
+          .frame(width: containerSize.width, height: containerSize.height)
+      }
     }
     .contentShape(Rectangle())
     .contextMenu {

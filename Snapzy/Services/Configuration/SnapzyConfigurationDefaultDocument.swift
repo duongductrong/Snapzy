@@ -60,8 +60,10 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("include_snapzy", false)
     writer.value("show_cursor", false)
     writer.value("freeze_area", false)
+    writer.value("delayed_capture_seconds", CaptureDelayOption.defaultValue.seconds)
     writer.value("show_selection_area_overlay", true)
     writer.value("reverse_magnifier_zoom_direction", false)
+    writer.value("include_window_shadow", WindowShadowPreference.defaultIncludeShadow)
 
     writer.section("capture.scrolling")
     writer.value("show_hints", true)
@@ -82,6 +84,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.section("recording")
     writer.value("format", VideoFormat.mov.rawValue)
     writer.value("quality", VideoQuality.high.rawValue)
+    writer.value("max_resolution", RecordingMaxResolution.auto.rawValue)
     writer.value("fps", 30)
     writer.value("output_mode", RecordingOutputMode.video.rawValue)
     writer.value("capture_system_audio", true)
@@ -114,6 +117,8 @@ enum SnapzyConfigurationDefaultDocument {
   private static func writeQuickAccess(_ writer: inout SimpleTOMLWriter) {
     writer.section("quick_access")
     writer.value("enabled", true)
+    writer.value("play_sounds", true)
+    writer.value("open_in_finder_after_save", true)
     writer.value("position", QuickAccessPosition.bottomRight.rawValue)
     writer.value("auto_dismiss", true)
     writer.value("auto_dismiss_delay", 10)
@@ -123,6 +128,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("two_finger_swipe_to_dismiss", true)
     writer.value("swipe_sensitivity", 1.0)
     writer.value("trackpad_swipe_mode", QuickAccessTrackpadSwipeMode.inverted.rawValue)
+    writer.value("pin_zoom_mode", QuickAccessPinZoomMode.defaultMode.rawValue)
     writer.value("swipe_left_action", "dismiss")
     writer.value("swipe_right_action", "dismiss")
     writer.value("hide_card_when_window_open", true)
@@ -280,6 +286,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .togglePenRecording: return nil
     case .restartRecording: return nil
     case .deleteRecording: return nil
+    case .delayedCapture: return nil
     case .annotate: return .defaultAnnotate
     case .videoEditor: return .defaultVideoEditor
     case .cloudUploads: return .defaultCloudUploads

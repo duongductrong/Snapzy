@@ -8,7 +8,7 @@
 import CoreGraphics
 import Foundation
 
-enum VideoEditorAutoFocusEngine {
+nonisolated enum VideoEditorAutoFocusEngine {
   struct AutoFocusAccuracyMetrics {
     let sampleCount: Int
     let lockAccuracy: Double
@@ -30,7 +30,10 @@ enum VideoEditorAutoFocusEngine {
     let cropHalfWidth = 0.5 / zoomLevel
     let cropHalfHeight = 0.5 / zoomLevel
     let safeHalfWidth = max(cropHalfWidth * settings.focusMargin.clamped(to: AutoFocusSettings.focusMarginRange), 0.02)
-    let safeHalfHeight = max(cropHalfHeight * settings.focusMargin.clamped(to: AutoFocusSettings.focusMarginRange), 0.02)
+    let safeHalfHeight = max(
+      cropHalfHeight * settings.focusMargin.clamped(to: AutoFocusSettings.focusMarginRange),
+      0.02
+    )
 
     var lastVisiblePoint = samples.first(where: \.isInsideCapture)?.point.clampedToUnitRect
       ?? CGPoint(x: 0.5, y: 0.5)
@@ -43,13 +46,14 @@ enum VideoEditorAutoFocusEngine {
     let minimumDelta = 1.0 / Double(max(metadata.samplesPerSecond, 1))
     let maxResampleStep: TimeInterval = 1.0 / 60.0
     var path: [AutoFocusCameraSample] = [
-      AutoFocusCameraSample(time: samples[0].time, center: currentCenter)
+      AutoFocusCameraSample(time: samples[0].time, center: currentCenter),
     ]
 
     var previousTime = samples[0].time
     var previousCursorPoint = samples[0].point.clampedToUnitRect
 
     for sample in samples.dropFirst() {
+      if Task.isCancelled { return [] }
       let cursorPoint = sample.point.clampedToUnitRect
       if sample.isInsideCapture {
         lastVisiblePoint = cursorPoint
@@ -69,7 +73,7 @@ enum VideoEditorAutoFocusEngine {
         deltaTime: deltaTime
       )
 
-      for step in 1...stepCount {
+      for step in 1 ... stepCount {
         let progress = CGFloat(step) / CGFloat(stepCount)
         let interpolatedCursor = interpolate(
           from: previousCursorPoint,
@@ -149,7 +153,7 @@ enum VideoEditorAutoFocusEngine {
         lockedSamples += 1
       }
 
-      if abs(dx) <= cropHalfWidth && abs(dy) <= cropHalfHeight {
+      if abs(dx) <= cropHalfWidth, abs(dy) <= cropHalfHeight {
         visibleSamples += 1
       }
     }
@@ -254,17 +258,112 @@ enum VideoEditorAutoFocusEngine {
     return deduplicated(trimmed)
   }
 
-  /// Remap a trim-relative path onto the scaled (speed-adjusted) timeline. `toScaled` is
-  /// monotonic increasing so sample order is preserved.
+  /// Remap a SEQUENCE-relative path onto the output (speed-scaled) timeline.
+  /// `toOutput` is monotonic increasing so sample order is preserved.
   static func scaledPath(
     _ path: [AutoFocusCameraSample],
-    map: SpeedTimeMap
+    map: TimelineSequenceMap
   ) -> [AutoFocusCameraSample] {
     guard !path.isEmpty else { return [] }
     let scaled = path.map { sample in
-      AutoFocusCameraSample(time: map.toScaled(sample.time), center: sample.center)
+      AutoFocusCameraSample(time: map.toOutput(sample.time), center: sample.center)
     }
     return deduplicated(scaled)
+  }
+
+  /// Remap an absolute source-time path onto the structural timeline. This is used
+  /// by live preview, where the playhead remains on the stable structural axis.
+  /// Primary placements contribute source samples; inserted clips hold the last
+  /// known center so an auto segment does not jump while crossing an inserted clip.
+  static func timelinePath(
+    _ path: [AutoFocusCameraSample],
+    placements: [TimelineSequence.Placement]
+  ) -> [AutoFocusCameraSample] {
+    guard !path.isEmpty else { return [] }
+
+    var adjusted: [AutoFocusCameraSample] = []
+    for placement in placements where placement.duration > 0.0001 {
+      if Task.isCancelled { return [] }
+      if placement.clip.isPrimary {
+        let sourceStart = placement.clip.sourceStart
+        let sourceEnd = placement.clip.sourceEnd
+        adjusted.append(
+          AutoFocusCameraSample(
+            time: placement.activeStart,
+            center: center(at: sourceStart, in: path)
+          )
+        )
+
+        adjusted.append(contentsOf: path.compactMap { sample in
+          guard sample.time > sourceStart, sample.time < sourceEnd else { return nil }
+          return AutoFocusCameraSample(
+            time: placement.sequenceTime(atSource: sample.time),
+            center: sample.center
+          )
+        })
+
+        adjusted.append(
+          AutoFocusCameraSample(
+            time: placement.activeEnd,
+            center: center(at: sourceEnd, in: path)
+          )
+        )
+      } else {
+        let holdCenter = adjusted.last?.center ?? center(at: 0, in: path)
+        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter))
+        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter))
+      }
+    }
+
+    return deduplicated(adjusted.sorted { $0.time < $1.time })
+  }
+
+  /// Remap a trim-relative path onto the SEQUENCE timeline.
+  ///
+  /// Primary samples follow their hosting clip after cuts/reorders. Inserted clips do
+  /// not have cursor metadata, so the last known camera center is held across them
+  /// instead of interpolating between unrelated source frames.
+  static func sequencePath(
+    _ path: [AutoFocusCameraSample],
+    placements: [TimelineSequence.Placement],
+    trimStart: TimeInterval
+  ) -> [AutoFocusCameraSample] {
+    guard !path.isEmpty else { return [] }
+    var adjusted: [AutoFocusCameraSample] = []
+    for placement in placements where placement.duration > 0.0001 {
+      if placement.clip.isPrimary {
+        let relativeStart = placement.clip.sourceStart - trimStart
+        let relativeEnd = placement.clip.sourceEnd - trimStart
+        adjusted.append(
+          AutoFocusCameraSample(
+            time: placement.start,
+            center: center(at: relativeStart, in: path)
+          )
+        )
+        adjusted.append(contentsOf: path.compactMap { sample in
+          guard sample.time > relativeStart, sample.time < relativeEnd else { return nil }
+          let absolute = trimStart + sample.time
+          return AutoFocusCameraSample(
+            time: placement.sequenceTime(atSource: absolute),
+            center: sample.center
+          )
+        })
+        adjusted.append(
+          AutoFocusCameraSample(
+            time: placement.end,
+            center: center(at: relativeEnd, in: path)
+          )
+        )
+      } else {
+        let holdCenter = adjusted.last?.center ?? center(at: 0, in: path)
+        adjusted.append(AutoFocusCameraSample(time: placement.start, center: holdCenter))
+        adjusted.append(AutoFocusCameraSample(time: placement.end, center: holdCenter))
+      }
+    }
+    guard !adjusted.isEmpty else { return [] }
+    adjusted.sort { $0.time < $1.time }
+
+    return deduplicated(adjusted)
   }
 
   private static func center(at time: TimeInterval, in path: [AutoFocusCameraSample]) -> CGPoint {
@@ -297,7 +396,7 @@ enum VideoEditorAutoFocusEngine {
     let previous = path[low]
     let next = path[high]
     let duration = max(next.time - previous.time, 0.0001)
-    let progress = ((time - previous.time) / duration).clamped(to: 0...1)
+    let progress = ((time - previous.time) / duration).clamped(to: 0 ... 1)
 
     return CGPoint(
       x: previous.center.x + (next.center.x - previous.center.x) * progress,
@@ -312,7 +411,7 @@ enum VideoEditorAutoFocusEngine {
   ) -> CGFloat {
     let responseRate = 2.0 + (followSpeed * 10.0) + (Double(motionIntensity) * 6.0)
     let alpha = 1.0 - exp(-responseRate * deltaTime)
-    return CGFloat(alpha).clamped(to: 0...1)
+    return CGFloat(alpha).clamped(to: 0 ... 1)
   }
 
   private static func deadZoneAdjustedCenter(
@@ -350,8 +449,8 @@ enum VideoEditorAutoFocusEngine {
     cropHalfHeight: CGFloat
   ) -> CGPoint {
     CGPoint(
-      x: center.x.clamped(to: cropHalfWidth...(1 - cropHalfWidth)),
-      y: center.y.clamped(to: cropHalfHeight...(1 - cropHalfHeight))
+      x: center.x.clamped(to: cropHalfWidth ... (1 - cropHalfWidth)),
+      y: center.y.clamped(to: cropHalfHeight ... (1 - cropHalfHeight))
     )
   }
 
@@ -360,8 +459,7 @@ enum VideoEditorAutoFocusEngine {
 
     for sample in path {
       if let lastSample = deduplicatedPath.last,
-         abs(lastSample.time - sample.time) < 0.0001
-      {
+         abs(lastSample.time - sample.time) < 0.0001 {
         deduplicatedPath[deduplicatedPath.count - 1] = sample
       } else {
         deduplicatedPath.append(sample)
@@ -408,9 +506,9 @@ enum VideoEditorAutoFocusEngine {
   ) -> CGPoint {
     switch coordinateSpace {
     case .topLeftNormalized:
-      return sample.normalizedPoint
+      sample.normalizedPoint
     case .bottomLeftNormalized:
-      return CGPoint(
+      CGPoint(
         x: sample.normalizedX,
         y: 1 - sample.normalizedY
       )
@@ -422,7 +520,7 @@ enum VideoEditorAutoFocusEngine {
     to current: CGPoint,
     deltaTime: TimeInterval
   ) -> CGPoint {
-    let maxSpeed: CGFloat = 4.0  // normalized units per second
+    let maxSpeed: CGFloat = 4.0 // normalized units per second
     let minDelta = max(deltaTime, 0.0001)
     let maxDistance = maxSpeed * CGFloat(minDelta)
     let distance = hypot(current.x - previous.x, current.y - previous.y)
@@ -430,7 +528,7 @@ enum VideoEditorAutoFocusEngine {
       return current.clampedToUnitRect
     }
 
-    let progress = (maxDistance / distance).clamped(to: 0...1)
+    let progress = (maxDistance / distance).clamped(to: 0 ... 1)
     return interpolate(from: previous, to: current, progress: progress).clampedToUnitRect
   }
 
@@ -441,7 +539,7 @@ enum VideoEditorAutoFocusEngine {
   ) -> CGFloat {
     let minDelta = max(deltaTime, 0.0001)
     let speed = hypot(current.x - previous.x, current.y - previous.y) / CGFloat(minDelta)
-    return (speed / 1.2).clamped(to: 0...1)
+    return (speed / 1.2).clamped(to: 0 ... 1)
   }
 
   private static func interpolate(from start: CGPoint, to end: CGPoint, progress: CGFloat) -> CGPoint {
@@ -452,23 +550,92 @@ enum VideoEditorAutoFocusEngine {
   }
 }
 
-private extension CGPoint {
+private nonisolated extension CGPoint {
   var clampedToUnitRect: CGPoint {
     CGPoint(
-      x: x.clamped(to: 0...1),
-      y: y.clamped(to: 0...1)
+      x: x.clamped(to: 0 ... 1),
+      y: y.clamped(to: 0 ... 1)
     )
   }
 }
 
-private extension CGFloat {
+private nonisolated extension CGFloat {
   func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
     Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
   }
 }
 
-private extension Double {
+private nonisolated extension Double {
   func clamped(to range: ClosedRange<Double>) -> Double {
     Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+  }
+}
+
+
+/// Serial CPU worker. Actor isolation keeps path generation off the main actor,
+/// while cancelled queued requests return before doing work. Paths keep the full
+/// source history: timeline ranges intentionally are not part of the cache key.
+actor VideoEditorAutoFocusWorker {
+  private struct Input: Hashable {
+    let zoomType: String
+    let zoomLevel: CGFloat
+    let followSpeed: Double
+    let focusMargin: CGFloat
+
+    init(_ segment: ZoomSegment) {
+      zoomType = segment.zoomType.rawValue
+      zoomLevel = segment.zoomLevel
+      followSpeed = segment.followSpeed
+      focusMargin = segment.focusMargin
+    }
+  }
+
+  private var metadataRevision: UUID?
+  private var cachedMetadata: RecordingMetadata?
+  private var cached: [Input: [AutoFocusCameraSample]] = [:]
+
+  func timelinePaths(
+    _ paths: [UUID: [AutoFocusCameraSample]], placements: [TimelineSequence.Placement]
+  ) -> [UUID: [AutoFocusCameraSample]] {
+    let interval = PerfSignpost.VideoEditor.beginInterval("AutoFocusRemap")
+    defer { PerfSignpost.VideoEditor.endInterval(interval) }
+    var result: [UUID: [AutoFocusCameraSample]] = [:]
+    for (id, path) in paths {
+      guard !Task.isCancelled else { return [:] }
+      result[id] = VideoEditorAutoFocusEngine.timelinePath(path, placements: placements)
+    }
+    return result
+  }
+
+  func paths(
+    for segments: [ZoomSegment], metadata: RecordingMetadata, metadataRevision: UUID
+  ) -> [UUID: [AutoFocusCameraSample]] {
+    guard !Task.isCancelled else { return [:] }
+    if self.metadataRevision != metadataRevision || cachedMetadata != metadata {
+      cached = [:]
+      self.metadataRevision = metadataRevision
+      cachedMetadata = metadata
+    }
+    var result: [UUID: [AutoFocusCameraSample]] = [:]
+    for segment in segments where segment.isAutoMode {
+      guard !Task.isCancelled else { return [:] }
+      let input = Input(segment)
+      if let path = cached[input] {
+        result[segment.id] = path
+      } else {
+        let interval = PerfSignpost.VideoEditor.beginInterval("AutoFocusBuild")
+        let path = VideoEditorAutoFocusEngine.buildPath(from: metadata, segment: segment)
+        PerfSignpost.VideoEditor.endInterval(interval)
+        guard !Task.isCancelled else { return [:] }
+        cached[input] = path
+        result[segment.id] = path
+      }
+    }
+    // Source paths depend only on camera settings, not segment identity or range.
+    // Sharing their array storage avoids rebuilding full source history for every
+    // segment with identical settings. Retain only this completed recipe's keys.
+    let inputs = Set(segments.filter(\.isAutoMode).map(Input.init))
+    cached = cached.filter { inputs.contains($0.key) }
+    return result
   }
 }

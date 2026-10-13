@@ -15,6 +15,7 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("snapzy://capture/fullscreen", .captureFullscreen),
       ("snapzy://capture/area", .captureArea),
       ("snapzy://capture/repeat-area", .captureRepeatArea),
+      ("snapzy://capture/delayed", .captureDelayed),
       ("snapzy://capture/application", .captureApplication),
       ("snapzy://capture/area-annotate", .captureAreaAnnotate),
       ("snapzy://capture/scrolling", .captureScrolling),
@@ -113,6 +114,8 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
   func testSettingsTabRoutesParseExpectedTabs() throws {
     let cases: [(String, PreferencesTab)] = [
       ("general", .general),
+      ("menubar", .menuBar),
+      ("menu-bar", .menuBar),
       ("capture", .capture),
       ("annotate", .annotate),
       ("quick-access", .quickAccess),
