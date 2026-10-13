@@ -1248,9 +1248,11 @@ final class QuickAccessManager: ObservableObject {
           url: savedURL
         )
 
-        let fileAccess = fileAccessManager.beginAccessingURL(savedURL)
-        defer { fileAccess.stop() }
-        NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
+        if UserDefaults.standard.object(forKey: PreferencesKeys.quickAccessOpenInFinderAfterSave) as? Bool ?? true {
+          let fileAccess = fileAccessManager.beginAccessingURL(savedURL)
+          defer { fileAccess.stop() }
+          NSWorkspace.shared.selectFile(savedURL.path, inFileViewerRootedAtPath: "")
+        }
         DiagnosticLogger.shared.log(
           .info,
           .action,

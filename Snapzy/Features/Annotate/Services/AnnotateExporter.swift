@@ -596,7 +596,7 @@ final class AnnotateExporter {
       if case .spotlight = annotation.type { continue }
       // Only include annotations that intersect with crop bounds
       if let cropRect = snapshot.cropRect {
-        guard annotation.bounds.intersects(cropRect) else { continue }
+        guard annotation.selectionBounds.intersects(cropRect) else { continue }
       }
       let offsetAnnotation = offsetAnnotationForExport(
         annotation,
@@ -750,109 +750,21 @@ final class AnnotateExporter {
     imageX: CGFloat,
     imageY: CGFloat
   ) -> AnnotationItem {
-    var result = annotation
-    result.bounds = CGRect(
-      x: annotation.bounds.origin.x - cropOrigin.x + imageX,
-      y: annotation.bounds.origin.y - cropOrigin.y + imageY,
-      width: annotation.bounds.width,
-      height: annotation.bounds.height
-    )
-
-    // Offset internal points for types that store coordinates
-    switch annotation.type {
-    case .arrow(let geometry):
-      result.type = .arrow(
-        geometry.translatedBy(
-          dx: -cropOrigin.x + imageX,
-          dy: -cropOrigin.y + imageY
-        )
-      )
-    case .line(let start, let end):
-      result.type = .line(
-        start: CGPoint(x: start.x - cropOrigin.x + imageX, y: start.y - cropOrigin.y + imageY),
-        end: CGPoint(x: end.x - cropOrigin.x + imageX, y: end.y - cropOrigin.y + imageY)
-      )
-    case .path(let points):
-      result.type = .path(points.map {
-        CGPoint(x: $0.x - cropOrigin.x + imageX, y: $0.y - cropOrigin.y + imageY)
-      })
-    case .highlight(let points):
-      result.type = .highlight(points.map {
-        CGPoint(x: $0.x - cropOrigin.x + imageX, y: $0.y - cropOrigin.y + imageY)
-      })
-    default:
-      break
-    }
-
-    return result
+    annotation.translatedBy(dx: -cropOrigin.x + imageX, dy: -cropOrigin.y + imageY)
   }
 
-  /// Offset annotation for crop, accounting for crop origin and padding
+  /// Offset annotation for crop, accounting for crop origin and padding.
   nonisolated private static func offsetAnnotationForCrop(
     _ annotation: AnnotationItem,
     cropOrigin: CGPoint,
     padding: CGFloat
   ) -> AnnotationItem {
-    var result = annotation
-    result.bounds = CGRect(
-      x: annotation.bounds.origin.x - cropOrigin.x + padding,
-      y: annotation.bounds.origin.y - cropOrigin.y + padding,
-      width: annotation.bounds.width,
-      height: annotation.bounds.height
-    )
-
-    // Offset internal points for types that store coordinates
-    switch annotation.type {
-    case .arrow(let geometry):
-      result.type = .arrow(
-        geometry.translatedBy(
-          dx: -cropOrigin.x + padding,
-          dy: -cropOrigin.y + padding
-        )
-      )
-    case .line(let start, let end):
-      result.type = .line(
-        start: CGPoint(x: start.x - cropOrigin.x + padding, y: start.y - cropOrigin.y + padding),
-        end: CGPoint(x: end.x - cropOrigin.x + padding, y: end.y - cropOrigin.y + padding)
-      )
-    case .path(let points):
-      result.type = .path(points.map {
-        CGPoint(x: $0.x - cropOrigin.x + padding, y: $0.y - cropOrigin.y + padding)
-      })
-    case .highlight(let points):
-      result.type = .highlight(points.map {
-        CGPoint(x: $0.x - cropOrigin.x + padding, y: $0.y - cropOrigin.y + padding)
-      })
-    default:
-      break
-    }
-
-    return result
+    annotation.translatedBy(dx: -cropOrigin.x + padding, dy: -cropOrigin.y + padding)
   }
 
-  /// Offset an annotation by padding, including internal points for lines/arrows
+  /// Offset an annotation and all of its embedded points by padding.
   nonisolated private static func offsetAnnotation(_ annotation: AnnotationItem, by padding: CGFloat) -> AnnotationItem {
-    var result = annotation
-    result.bounds = annotation.bounds.offsetBy(dx: padding, dy: padding)
-
-    // Also offset internal points for types that store coordinates
-    switch annotation.type {
-    case .arrow(let geometry):
-      result.type = .arrow(geometry.translatedBy(dx: padding, dy: padding))
-    case .line(let start, let end):
-      result.type = .line(
-        start: CGPoint(x: start.x + padding, y: start.y + padding),
-        end: CGPoint(x: end.x + padding, y: end.y + padding)
-      )
-    case .path(let points):
-      result.type = .path(points.map { CGPoint(x: $0.x + padding, y: $0.y + padding) })
-    case .highlight(let points):
-      result.type = .highlight(points.map { CGPoint(x: $0.x + padding, y: $0.y + padding) })
-    default:
-      break
-    }
-
-    return result
+    annotation.translatedBy(dx: padding, dy: padding)
   }
 
   /// Snapshot-based background draw. The wallpaper/blurred image arrives pre-resolved
@@ -1109,7 +1021,7 @@ final class AnnotateExporter {
     )
     for annotation in snapshot.annotations.renderOrdered {
       if let cropRect = snapshot.cropRect {
-        guard annotation.bounds.intersects(cropRect) else { continue }
+        guard annotation.selectionBounds.intersects(cropRect) else { continue }
       }
       let offsetAnnotation = offsetAnnotationForCrop(
         annotation,

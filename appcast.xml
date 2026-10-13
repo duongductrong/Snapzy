@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.1.0-beta.3</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>199</sparkle:version>
+      <sparkle:shortVersionString>2.1.0-beta.3</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Sat, 10 Oct 2026 15:59:32 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>🐛 Bug Fixes</h3><ul><li>Correct restored screen crop placement in screenshots (5625449d)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.1.0-beta.3/Snapzy-v2.1.0-beta.3.dmg"
+        sparkle:edSignature="bn+psC1n7ymeCpX9pvIzc22rB3le+j8XBJa+osCNv3dm+zNXewy2RWfBbibfyKchXOCAQBPp9Y44mjjhr1sECA=="
+        length="49838666"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.1.0-beta.1</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>197</sparkle:version>

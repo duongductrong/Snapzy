@@ -4,6 +4,27 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.3] - 2026-10-10
+
+### Bug Fixes
+- Correct restored screen crop placement in screenshots (#642) (5625449d)
+
+### Contributors
+- @mvanhorn
+
+## [2.1.0-beta.2] - 2026-10-10
+
+### Features
+- select pinned image zoom mode directly from preview tiles (8e9b9923)
+
+### Bug Fixes
+- stabilize pinned image focal anchoring and restore gesture zoom paths (#640) (9b574164)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @tukuyomil032
+
 ## [2.1.0-beta.1] - 2026-10-03
 
 ### Features

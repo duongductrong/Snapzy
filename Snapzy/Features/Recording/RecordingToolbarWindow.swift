@@ -325,6 +325,13 @@ final class RecordingToolbarWindow: NSWindow {
     NotificationCenter.default.removeObserver(self)
   }
 
+  override func close() {
+    // A closed bar may outlive its session in a suspended start task. Stop observing so a later
+    // preference write cannot order it back on screen.
+    NotificationCenter.default.removeObserver(self)
+    super.close()
+  }
+
   private func configureWindow() {
     isOpaque = false
     backgroundColor = .clear

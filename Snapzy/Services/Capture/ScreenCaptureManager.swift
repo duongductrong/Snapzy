@@ -1493,18 +1493,25 @@ final class ScreenCaptureManager: ObservableObject {
   // MARK: - Utility
 
   /// Restore Quick Look previews that ScreenCaptureKit omits from a filtered
-  /// display capture. The retained crop and the destination use top-left image
-  /// pixel coordinates, matching the coordinate convention used by the area
-  /// crop code.
+  /// display capture.
+  ///
+  /// Retained frames are AppKit global rectangles (origin at the bottom left).
+  /// This context is untransformed, so it draws in that same bottom-left space:
+  /// destination Y is the frame's bottom, `frame.minY - screenFrame.minY`.
+  /// `WindowCaptureSelectionPolicy.displaySnapshotCropRect` keeps a top-left
+  /// crop because `CGImage` pixels start at the top. Using that top-left Y as
+  /// the destination places the retained crop at its vertical mirror.
   nonisolated static func imageByCompositingQuickLookWindows(
     baseImage: CGImage,
     screenFrame: CGRect,
     captures: [ImmediateQuickLookCapture]
   ) -> CGImage {
+    // `CGRect.width` and `height` are absolute. A negative stored size would
+    // otherwise pass and be composited against the standardized frame.
     guard
       !captures.isEmpty,
-      screenFrame.width > 0,
-      screenFrame.height > 0,
+      screenFrame.size.width > 0,
+      screenFrame.size.height > 0,
       baseImage.width > 0,
       baseImage.height > 0
     else {
@@ -1536,7 +1543,7 @@ final class ScreenCaptureManager: ObservableObject {
 
       let destinationRect = CGRect(
         x: (frame.minX - screenFrame.minX) * scaleX,
-        y: (screenFrame.maxY - frame.maxY) * scaleY,
+        y: (frame.minY - screenFrame.minY) * scaleY,
         width: frame.width * scaleX,
         height: frame.height * scaleY
       ).integral.intersection(baseBounds)

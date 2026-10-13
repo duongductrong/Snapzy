@@ -8711,6 +8711,72 @@
         }
       }
     },
+    "annotate.counter-gesture-hint": {
+      "comment": "Hint for the Counter tool: click places a numbered badge; dragging adds an attached arrow",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klicken zum Platzieren · Ziehen zum Zeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click to place · Drag to point"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clic para colocar · Arrastra para señalar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cliquer pour placer · Glisser pour pointer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリックで配置・ドラッグで指示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클릭하여 배치 · 드래그하여 가리키기"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Щёлкните для номера · Потяните для стрелки"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bấm để đặt số · Kéo để thêm mũi tên"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单击放置编号 · 拖动添加箭头"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按一下放置編號 · 拖曳新增箭頭"
+          }
+        }
+      }
+    },
     "annotate.tool.counter": {
       "extractionState": "stale",
       "localizations": {
