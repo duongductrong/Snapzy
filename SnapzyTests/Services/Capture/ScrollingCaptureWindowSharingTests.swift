@@ -213,7 +213,7 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
     )
     XCTAssertEqual(
       ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 100),
-      15,
+      16,
       accuracy: 0.001
     )
     XCTAssertEqual(
@@ -221,6 +221,26 @@ final class ScrollingCaptureAutoScrollPolicyTests: XCTestCase {
       24,
       accuracy: 0.001
     )
+    XCTAssertEqual(
+      ScrollingCaptureAutoScrollPolicy.stepDistancePoints(regionHeight: 40),
+      14,
+      accuracy: 0.001
+    )
+  }
+
+  func testAutoScrollPolicy_smallSelectionStillPostsMoreThanOneTick() {
+    // A single 8 pt tick is 8 px on a 1x display, which the stitcher never
+    // aligned, so every other step failed and Auto Scroll stopped.
+    for regionHeight: CGFloat in [80, 100, 140] {
+      for isRetry in [false, true] {
+        let plan = ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: regionHeight, isRetry: isRetry)
+        XCTAssertGreaterThanOrEqual(
+          plan.postedDistancePoints,
+          ScrollingCaptureAutoScrollPolicy.minStepPoints,
+          "region \(regionHeight) pt, retry \(isRetry)"
+        )
+      }
+    }
   }
 
   func testAutoScrollPolicy_tickCountMatchesWheelDelta() {

@@ -310,8 +310,13 @@ enum ScrollingCaptureAutoScrollPolicy {
   static let freshFrameTimeoutNanoseconds: UInt64 = 600_000_000
   static let targetViewportFraction: CGFloat = 0.12
   static let maxSafeViewportFraction: CGFloat = 0.15
-  static let minStepPoints: CGFloat = 24
+  /// Two wheel ticks. A single tick is 8 px on a 1x display, which never
+  /// aligned; two ticks aligned on every region height tried.
+  static let minStepPoints: CGFloat = 16
   static let maxStepPoints: CGFloat = 120
+  /// Hard ceiling for small selections, where the minimum step outweighs the
+  /// viewport fractions above. Still leaves most of the viewport overlapping.
+  static let maxSmallRegionFraction: CGFloat = 0.35
 
   static func canToggle(
     phase: ScrollingCapturePhase,
@@ -338,10 +343,12 @@ enum ScrollingCaptureAutoScrollPolicy {
 
   static func stepDistancePoints(regionHeight: CGFloat) -> CGFloat {
     let height = max(1, regionHeight)
-    let preferred = height * targetViewportFraction
-    let maxSafe = height * maxSafeViewportFraction
-    let clampedPreferred = min(maxStepPoints, max(minStepPoints, preferred))
-    return min(clampedPreferred, max(1, maxSafe))
+    let preferred = min(height * targetViewportFraction, height * maxSafeViewportFraction)
+    // The minimum wins over the viewport fractions: on a small selection they
+    // would ask for a single wheel tick, a move the stitcher could not align,
+    // and every other step failed until Auto Scroll stopped.
+    let step = min(maxStepPoints, max(minStepPoints, preferred))
+    return min(step, max(1, height * maxSmallRegionFraction))
   }
 
   static func tickCount(forStepDistancePoints step: CGFloat) -> Int {
@@ -352,7 +359,7 @@ enum ScrollingCaptureAutoScrollPolicy {
 
   static func stepPlan(regionHeight: CGFloat, isRetry: Bool) -> StepPlan {
     let fullStep = stepDistancePoints(regionHeight: regionHeight)
-    let step = isRetry ? max(1, fullStep * 0.55) : fullStep
+    let step = isRetry ? min(fullStep, max(minStepPoints, fullStep * 0.55)) : fullStep
     let ticks = tickCount(forStepDistancePoints: step)
     return StepPlan(
       tickCount: ticks,
