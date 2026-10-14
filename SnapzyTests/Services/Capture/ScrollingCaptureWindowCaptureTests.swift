@@ -215,6 +215,121 @@ final class ScrollingCaptureWindowCaptureTests: XCTestCase {
 
   // MARK: - Helpers
 
+  func testStitch_blankViewportThatStopped_reachesTheEnd() throws {
+    // Blank page scrolling and blank page standing still look the same, so the
+    // stitcher may cross some of it, but not forever: a page that ends in white
+    // space used to be extended until the height limit, and Auto Scroll never
+    // saw the end.
+    let blank = try XCTUnwrap(
+      TestImageFactory.solidColor(width: width, height: height, red: 255, green: 255, blue: 255)
+    )
+    let stitcher = ScrollingCaptureStitcher()
+    _ = stitcher.start(with: blank)
+
+    var appendedRows = 0
+    var quietSteps = 0
+    for _ in 0 ..< 30 {
+      let update = try XCTUnwrap(stitcher.append(blank, maxOutputHeight: 10_000, expectedSignedDeltaPixels: 48))
+      switch update.outcome {
+      case .appended(let deltaY):
+        XCTAssertEqual(quietSteps, 0, "Appended again after reporting the end")
+        appendedRows += deltaY
+      case .ignoredNoMovement:
+        XCTAssertTrue(update.likelyReachedBoundary)
+        quietSteps += 1
+      default:
+        XCTFail("Unexpected outcome \(update.outcome)")
+      }
+    }
+
+    XCTAssertLessThanOrEqual(appendedRows, height)
+    XCTAssertGreaterThanOrEqual(quietSteps, ScrollingCaptureAutoScrollPolicy.noMovementFinishThreshold)
+  }
+
+  func testStitch_contentAfterBlankStretch_resetsTheBlankAllowance() throws {
+    // A page whose content scrolls into a long blank stretch and stops there.
+    let contentRows = 520
+    func pageFrame(offset: Int) throws -> CGImage {
+      let content = try XCTUnwrap(
+        TestImageFactory.texturedScrollingFrame(width: width, height: height, logicalYOffset: offset)
+      )
+      let context = try XCTUnwrap(
+        CGContext(
+          data: nil,
+          width: width,
+          height: height,
+          bitsPerComponent: 8,
+          bytesPerRow: width * 4,
+          space: CGColorSpaceCreateDeviceRGB(),
+          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+      )
+      context.draw(content, in: CGRect(x: 0, y: 0, width: width, height: height))
+      let blankFromRow = max(0, contentRows - offset)
+      if blankFromRow < height {
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height - blankFromRow))
+      }
+      return try XCTUnwrap(context.makeImage())
+    }
+
+    let step = 40
+    let stitcher = ScrollingCaptureStitcher()
+    _ = try stitcher.start(with: pageFrame(offset: 0))
+    var offset = 0
+    while offset < contentRows {
+      offset += step
+      let update = try XCTUnwrap(
+        stitcher.append(pageFrame(offset: offset), maxOutputHeight: 10_000, expectedSignedDeltaPixels: step)
+      )
+      guard case .appended = update.outcome else {
+        return XCTFail("Scrolling content at \(offset) did not append: \(update.outcome)")
+      }
+    }
+
+    let heightAtEnd = try XCTUnwrap(
+      stitcher.append(pageFrame(offset: offset), maxOutputHeight: 10_000)
+    ).outputHeight
+    var finalUpdate: ScrollingCaptureStitchUpdate?
+    for _ in 0 ..< 20 {
+      finalUpdate = try XCTUnwrap(
+        stitcher.append(pageFrame(offset: offset), maxOutputHeight: 10_000, expectedSignedDeltaPixels: step)
+      )
+    }
+
+    let update = try XCTUnwrap(finalUpdate)
+    guard case .ignoredNoMovement = update.outcome else {
+      return XCTFail("A stalled blank end kept appending: \(update.outcome)")
+    }
+    XCTAssertTrue(update.likelyReachedBoundary)
+    XCTAssertLessThanOrEqual(update.outputHeight - heightAtEnd, height)
+  }
+
+  func testStitch_minimumAutoScrollStepOnA1xDisplay_appendsEveryStep() throws {
+    // The smallest step Auto Scroll posts, at 1 px per point. A single 8 px
+    // tick never aligned here.
+    let frameHeight = 140
+    let step = Int(
+      ScrollingCaptureAutoScrollPolicy.stepPlan(regionHeight: CGFloat(frameHeight), isRetry: true).postedDistancePoints
+    )
+    XCTAssertGreaterThan(step, 8)
+    let stitcher = ScrollingCaptureStitcher()
+    _ = try stitcher.start(with: XCTUnwrap(
+      TestImageFactory.sparseTextScrollingFrame(width: width, height: frameHeight, logicalYOffset: 0)
+    ))
+
+    for index in 1 ... 10 {
+      let image = try XCTUnwrap(
+        TestImageFactory.sparseTextScrollingFrame(width: width, height: frameHeight, logicalYOffset: index * step)
+      )
+      let update = try XCTUnwrap(stitcher.append(image, maxOutputHeight: 10_000, expectedSignedDeltaPixels: step))
+      guard case .appended(let deltaY) = update.outcome else {
+        return XCTFail("Step \(index) did not append: \(update.outcome)")
+      }
+      XCTAssertEqual(deltaY, step)
+    }
+  }
+
   private func centredFrame(offset: Int) throws -> CGImage {
     try XCTUnwrap(
       TestImageFactory.centredColumnScrollingFrame(width: width, height: height, logicalYOffset: offset)

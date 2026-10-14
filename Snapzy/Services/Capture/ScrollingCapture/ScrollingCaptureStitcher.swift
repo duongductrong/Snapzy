@@ -279,6 +279,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     /// True when the frames themselves confirmed this offset across the whole
     /// overlap, rather than it merely scoring well.
     var confirmedByFrames = false
+    /// True when the overlap was blank page and the offset is only the distance
+    /// the scroll was asked to travel: the frames could not tell it apart from
+    /// a page that did not move.
+    var isBlankOverlap = false
   }
 
   private struct MatchSearchResult {
@@ -335,6 +339,10 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   /// Shortest travel worth committing. Below this a step is indistinguishable
   /// from the jitter a page shows while it settles.
   private static let minimumConfirmedDelta = 18
+  /// Rows appended in a row over blank page, where the frames cannot tell a
+  /// scroll from a page that stopped. Bounded so a page that ends in white
+  /// space, or a selection over a blank area, still reaches its end.
+  private var consecutiveBlankRows = 0
   /// Deepest bottom-edge treatment measured on this page, in pixels.
   private var measuredDimmedDepth: Int?
   private var dimmingMeasurementCount = 0
@@ -395,6 +403,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     sideVotes = ScrollingCaptureStickyEdgeAccumulator()
     measuredDimmedDepth = nil
     dimmingMeasurementCount = 0
+    consecutiveBlankRows = 0
     acceptedFrameCount = 1
 
     return ScrollingCaptureStitchUpdate(
@@ -641,6 +650,29 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
 
+    // Blank page scrolling past and blank page standing still look the same.
+    // Crossing up to one viewport of it keeps a capture moving over a gap
+    // between sections; past that it is treated as the end, or a page that
+    // ends in white space would be extended with blank rows until the height
+    // limit, and Auto Scroll would never see the end.
+    if match.isBlankOverlap,
+       consecutiveBlankRows + match.deltaY > blankCrossingLimit(frameHeight: raster.height) {
+      return currentUpdate(
+        outcome: .ignoredNoMovement,
+        includeMergedImage: renderMergedImage,
+        likelyReachedBoundary: true,
+        alignmentDebug: ScrollingCaptureAlignmentDebugInfo(
+          path: .duplicateBoundary,
+          usedVisionEstimate: visionAlignmentEstimate != nil,
+          confidence: matcherConfidence(for: match),
+          pixelScore: match.pixelScore,
+          totalScore: match.totalScore,
+          appendDeltaY: nil,
+          visionAgreementCount: visionAlignmentEstimate?.agreementCount ?? 0
+        )
+      )
+    }
+
     let votedStickyEdges = voteOnStickyEdgesIfNeeded(
       previous: previousLuma,
       current: currentLuma,
@@ -731,6 +763,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       bandVariance: match.bandVariance
     )
     self.matchNotFoundCount = 0
+    consecutiveBlankRows = match.isBlankOverlap ? consecutiveBlankRows + acceptedDelta : 0
     acceptedFrameCount += 1
     cachedMergedImage = nil
 
@@ -964,6 +997,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       )
     }
     return sideVotes.sides(frameWidth: current.width)
+  }
+
+  /// Blank rows that may be appended in a row: one viewport of content area.
+  private func blankCrossingLimit(frameHeight: Int) -> Int {
+    max(1, frameHeight - headerHeight - footerHeight)
   }
 
   /// Rows the tail must be carried clear of the bottom edge before it is
@@ -1264,11 +1302,6 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // overlap. Scores only propose candidates, because on a page with large
     // flat areas background agrees at every offset, the sampled bands tie, and
     // the scan settles on whichever candidate it happened to see first.
-    // The frames themselves are the authority: if content moved up by this
-    // offset, every row that carries contrast lines up across the whole
-    // overlap. Scores only propose candidates, because on a page with large
-    // flat areas background agrees at every offset, the sampled bands tie, and
-    // the scan settles on whichever candidate it happened to see first.
     // What the scroll was asked to travel, confirmed by the frames, is the
     // strongest evidence there is, and the scan measured it to the pixel.
     func matchesExpectedStep(_ deltaY: Int) -> Bool {
@@ -1352,7 +1385,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
         bandCount: metrics.bandCount,
         worstBandScore: metrics.worstDifference,
         bandVariance: metrics.variance,
-        confirmedByFrames: true
+        confirmedByFrames: true,
+        isBlankOverlap: true
       )
     }
 
