@@ -64,6 +64,12 @@ final class ScrollingCaptureCoordinator {
   private let autoScrollController = ScrollingCaptureAutoScrollController()
   private var settledAutoScrollFrame: ScrollingCaptureFrame?
   private var settledAutoScrollStill: CGImage?
+  /// Manual travel, in signed pixels, that happened after the last accepted
+  /// frame and could not be locked before Auto Scroll took over. Until a step
+  /// appends, the stitcher is comparing against a stale frame, so this distance
+  /// is added to the step's expectation and only an offset that fits it may be
+  /// committed.
+  private var unlockedManualTravelPixels = 0
   private var prepareCaptureContextTask: Task<Void, Never>?
   private var preparedCaptureContext: ScreenCaptureManager.PreparedAreaCaptureContext?
   private var captureScaleFactor: CGFloat = 2
@@ -279,19 +285,29 @@ final class ScrollingCaptureCoordinator {
           self.autoScrollTaskID = nil
           self.settledAutoScrollFrame = nil
           self.settledAutoScrollStill = nil
+          self.unlockedManualTravelPixels = 0
         }
       }
 
       await self.waitForPendingPreviewRefresh()
       guard self.autoScrollTaskID == taskID, !Task.isCancelled else { return }
+      self.unlockedManualTravelPixels = 0
       if abs(self.pendingScrollDistancePoints) > 2 {
         // Switching from manual scrolling must lock its last viewport before a
         // synthetic burst resets the distance and starts moving the page again.
         // A viewport that will not lock is no reason to refuse to scroll,
         // though: the steps that follow have their own frames to align, and
-        // giving up here is what ended a session the moment it resumed.
-        _ = await self.scheduleCommitRefreshAndWait(reason: "Manual viewport before Auto Scroll")
+        // giving up here is what ended a session the moment it resumed. The
+        // first step then has to explain the manual travel as well as its own.
+        let manualTravelPixels = Int(round(self.pendingScrollDistancePoints * self.captureScaleFactor))
+        let update = await self.scheduleCommitRefreshAndWait(reason: "Manual viewport before Auto Scroll")
         guard self.autoScrollTaskID == taskID, !Task.isCancelled else { return }
+        switch update?.outcome {
+        case .ignoredAlignmentFailed, nil:
+          self.unlockedManualTravelPixels = manualTravelPixels
+        default:
+          break
+        }
       }
       var isRetry = false
 
@@ -377,10 +393,17 @@ final class ScrollingCaptureCoordinator {
 
         // Keep the prior fixed across capture/alignment retries: the page must not
         // move again until this viewport has been accepted.
-        let expectedSignedDeltaPixels = self.autoScrollController.expectedSignedDeltaPixels(
+        var expectedSignedDeltaPixels = self.autoScrollController.expectedSignedDeltaPixels(
           observedDistancePoints: self.pendingScrollDistancePoints,
           scaleFactor: self.captureScaleFactor
         )
+        if
+          let stepPixels = expectedSignedDeltaPixels,
+          self.unlockedManualTravelPixels != 0,
+          (stepPixels < 0) == (self.unlockedManualTravelPixels < 0)
+        {
+          expectedSignedDeltaPixels = stepPixels + self.unlockedManualTravelPixels
+        }
         var update: ScrollingCaptureStitchUpdate?
         var action: ScrollingCaptureAutoScrollStitchAction
         repeat {
@@ -408,6 +431,9 @@ final class ScrollingCaptureCoordinator {
             reason: "Auto-scroll step",
             expectedSignedDeltaPixelsOverride: expectedSignedDeltaPixels
           )
+          if Self.advancedCapture(update) {
+            self.unlockedManualTravelPixels = 0
+          }
           guard
             self.autoScrollTaskID == taskID,
             self.sessionModel?.phase == .capturing,
@@ -1549,6 +1575,7 @@ final class ScrollingCaptureCoordinator {
   ) async -> (ScrollingCaptureStitchUpdate?, ScrollingCaptureStitcher?) {
     let currentStitcher = stitcher
     let maxOutputHeight = maxOutputHeight
+    let requiresExpectedTravel = autoScrollController.activeStep != nil && unlockedManualTravelPixels != 0
     let allowsSettledPartialStep = autoScrollController.activeStep != nil
       && (settledAutoScrollFrame != nil || settledAutoScrollStill != nil)
 
@@ -1561,7 +1588,8 @@ final class ScrollingCaptureCoordinator {
               maxOutputHeight: maxOutputHeight,
               expectedSignedDeltaPixels: expectedSignedDeltaPixels,
               renderMergedImage: renderMergedImage,
-              allowsSettledPartialStep: allowsSettledPartialStep
+              allowsSettledPartialStep: allowsSettledPartialStep,
+              requiresExpectedTravel: requiresExpectedTravel
             )
             continuation.resume(returning: (update, currentStitcher))
           } else {
@@ -1867,6 +1895,16 @@ final class ScrollingCaptureCoordinator {
         "inputSize": imageSizeString(commitFrame.image)
       ]
     )
+  }
+
+  /// Whether a commit moved the stitcher on to a new last frame.
+  private static func advancedCapture(_ update: ScrollingCaptureStitchUpdate?) -> Bool {
+    switch update?.outcome {
+    case .appended, .reachedHeightLimit, .initialized:
+      return true
+    case .ignoredNoMovement, .ignoredAlignmentFailed, nil:
+      return false
+    }
   }
 
   /// Writes the two frames that would not align, so a capture that stalls on a
