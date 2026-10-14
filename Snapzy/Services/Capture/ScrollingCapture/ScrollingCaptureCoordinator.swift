@@ -1870,32 +1870,42 @@ final class ScrollingCaptureCoordinator {
   }
 
   /// Writes the two frames that would not align, so a capture that stalls on a
-  /// real page can be worked on afterwards. Diagnostics-gated, and bounded so a
-  /// long session cannot fill the log folder.
+  /// real page can be worked on afterwards. The frames are raw screen content,
+  /// so this needs a hidden developer switch on top of diagnostics, and it is
+  /// bounded so a long session cannot fill the log folder.
   private func dumpUnalignedFrames(
     commitFrame: CommitFrame,
     update: ScrollingCaptureStitchUpdate
   ) -> String? {
-    guard DiagnosticLogger.shared.isEnabled, unalignedFrameDumpCount < 3 else { return nil }
-    guard let previous = stitcher?.lastAcceptedImage() else { return nil }
+    guard
+      DiagnosticLogger.shared.isEnabled,
+      UserDefaults.standard.bool(forKey: PreferencesKeys.diagnosticsDumpUnalignedScrollingFrames),
+      unalignedFrameDumpCount < 3,
+      let stitcher
+    else { return nil }
 
-    let directory = DiagnosticLogger.shared.logDirectoryURL.appendingPathComponent("UnalignedFrames")
-    try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
+    let directory = DiagnosticLogger.shared.unalignedScrollingFramesDirectoryURL
     let stamp = Self.unalignedFrameStampFormatter.string(from: Date())
     let base = "\(stamp)-g\(sessionGeneration)-f\(update.acceptedFrameCount)"
-    guard
-      write(image: previous, to: directory.appendingPathComponent("\(base)-previous.png")),
-      write(image: commitFrame.image, to: directory.appendingPathComponent("\(base)-current.png"))
-    else {
-      return nil
-    }
-
+    let current = commitFrame.image
     unalignedFrameDumpCount += 1
+
+    // The stitcher is confined to the processing queue, and encoding two
+    // full-resolution PNGs is slow enough to stall the session UI, so neither
+    // happens here.
+    processingQueue.async {
+      guard let previous = stitcher.lastAcceptedImage() else { return }
+      DispatchQueue.global(qos: .utility).async {
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        Self.write(image: previous, to: directory.appendingPathComponent("\(base)-previous.png"))
+        Self.write(image: current, to: directory.appendingPathComponent("\(base)-current.png"))
+      }
+    }
     return base
   }
 
-  private func write(image: CGImage, to url: URL) -> Bool {
+  @discardableResult
+  private nonisolated static func write(image: CGImage, to url: URL) -> Bool {
     guard
       let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
     else {

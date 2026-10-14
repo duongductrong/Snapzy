@@ -82,6 +82,26 @@ final class LogCleanupScheduler {
       let filePath = logDir.appendingPathComponent(file)
       try? fm.removeItem(at: filePath)
     }
+
+    deleteFiles(in: logger.unalignedScrollingFramesDirectoryURL, modifiedBefore: earliestKeptDay)
+  }
+
+  /// Frame dumps are screen content, so they never outlive the logs.
+  private func deleteFiles(in directory: URL, modifiedBefore cutoff: Date) {
+    let fm = FileManager.default
+    guard
+      let files = try? fm.contentsOfDirectory(
+        at: directory,
+        includingPropertiesForKeys: [.contentModificationDateKey],
+        options: [.skipsHiddenFiles]
+      )
+    else { return }
+
+    for file in files {
+      let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?.contentModificationDate
+      guard let modified, modified < cutoff else { continue }
+      try? fm.removeItem(at: file)
+    }
   }
 
   private static func date(fromLogFileName fileName: String) -> Date? {

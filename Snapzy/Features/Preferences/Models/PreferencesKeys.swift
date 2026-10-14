@@ -158,6 +158,10 @@ enum PreferencesKeys {
   nonisolated static let diagnosticsEnabled = "diagnostics.enabled"
   static let diagnosticsRetentionDays = "diagnostics.retentionDays"
   static let diagnosticsSessionActive = "diagnostics.sessionActive"
+  /// Hidden developer switch: writes scrolling-capture frame pairs that would
+  /// not align to the log folder. Off unless set with `defaults write`, since
+  /// the frames are raw screen content.
+  static let diagnosticsDumpUnalignedScrollingFrames = "diagnostics.scrollingCapture.dumpUnalignedFrames"
 
   // History
   static let historyEnabled = "history.enabled"

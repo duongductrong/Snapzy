@@ -106,6 +106,12 @@ final class DiagnosticLogger {
     return libraryLogs
   }
 
+  /// Where scrolling capture writes frame pairs that would not align, when
+  /// that developer switch is on. Cleared on the same retention as the logs.
+  var unalignedScrollingFramesDirectoryURL: URL {
+    logDirectoryURL.appendingPathComponent("UnalignedFrames")
+  }
+
   /// Path to today's log file.
   var currentLogFileURL: URL {
     logDirectoryURL.appendingPathComponent(logFileName(for: Date()))
