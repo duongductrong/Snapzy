@@ -119,6 +119,26 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       self.pixels = pixels
     }
 
+    init(width: Int, height: Int, bytesPerRow: Int, pixels: [UInt8]) {
+      self.width = width
+      self.height = height
+      self.bytesPerRow = bytesPerRow
+      self.pixels = pixels
+    }
+
+    /// A copy of `rowCount` rows from `startRow`, so a committed strip does not
+    /// keep the whole frame it was cut from alive.
+    func rows(startRow: Int, rowCount: Int) -> RasterImage {
+      let start = startRow * bytesPerRow
+      let end = start + rowCount * bytesPerRow
+      return RasterImage(
+        width: width,
+        height: rowCount,
+        bytesPerRow: bytesPerRow,
+        pixels: Array(pixels[start ..< end])
+      )
+    }
+
     func blockDifference(
       comparedTo other: RasterImage,
       startRow: Int,
@@ -305,6 +325,29 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let deltaSpread: Int
   }
 
+  /// The offset verification for one frame pair, shared by every search of
+  /// that pair. The plan depends only on the pair and the regions left out of
+  /// it, and the sweeps of the guided and recovery searches ask about the same
+  /// offsets again.
+  private final class OffsetVerification {
+    private let plan: ScrollingCaptureOffsetVerifier.Plan?
+    private var verdicts: [ScrollingCaptureOffsetVerifier.Verdict?]
+
+    init(plan: ScrollingCaptureOffsetVerifier.Plan?, maximumOffset: Int) {
+      self.plan = plan
+      verdicts = Array(repeating: nil, count: max(0, maximumOffset) + 1)
+    }
+
+    func verdict(_ offset: Int) -> ScrollingCaptureOffsetVerifier.Verdict {
+      guard let plan else { return .noEvidence }
+      guard verdicts.indices.contains(offset) else { return plan.verdict(offset: offset) }
+      if let known = verdicts[offset] { return known }
+      let verdict = plan.verdict(offset: offset)
+      verdicts[offset] = verdict
+      return verdict
+    }
+  }
+
   private var baseRaster: RasterImage?
   private var lastRaster: RasterImage?
   private var contentSlices: [ContentSlice] = []
@@ -432,7 +475,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     maxOutputHeight: Int,
     expectedSignedDeltaPixels: Int? = nil,
     renderMergedImage: Bool = true,
-    allowsSettledPartialStep: Bool = false
+    allowsSettledPartialStep: Bool = false,
+    requiresExpectedTravel: Bool = false
   ) -> ScrollingCaptureStitchUpdate? {
     guard let lastRaster, let baseRaster else { return start(with: image) }
     guard let raster = RasterImage(cgImage: image) else { return nil }
@@ -465,6 +509,14 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     // scroll has no overlap left to match.
     let inferredHeaderHeight = headerHeight
     let inferredFooterHeight = footerHeight
+    let verification = makeOffsetVerification(
+      previousLuma: previousLuma,
+      currentLuma: currentLuma,
+      headerHeight: inferredHeaderHeight,
+      footerHeight: inferredFooterHeight,
+      leadingStaticWidth: inferredLeadingStaticWidth,
+      trailingStaticWidth: inferredTrailingStaticWidth
+    )
     let visionAlignmentEstimate = estimateVisionAlignment(
       previous: lastRaster,
       current: raster,
@@ -496,8 +548,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     let fastGuidedMatch = bestMatch(
       previous: lastRaster,
       current: raster,
-      previousLuma: previousLuma,
-      currentLuma: currentLuma,
+      verification: verification,
+      requiresExpectedTravel: requiresExpectedTravel,
       headerHeight: inferredHeaderHeight,
       footerHeight: inferredFooterHeight,
       leadingStaticWidth: inferredLeadingStaticWidth,
@@ -537,8 +589,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       let guidedVisionMatch = bestMatch(
         previous: lastRaster,
         current: raster,
-        previousLuma: previousLuma,
-        currentLuma: currentLuma,
+        verification: verification,
+        requiresExpectedTravel: requiresExpectedTravel,
         headerHeight: inferredHeaderHeight,
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
@@ -564,8 +616,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       match = bestMatch(
         previous: lastRaster,
         current: raster,
-        previousLuma: previousLuma,
-        currentLuma: currentLuma,
+        verification: verification,
+        requiresExpectedTravel: requiresExpectedTravel,
         headerHeight: inferredHeaderHeight,
         footerHeight: inferredFooterHeight,
         leadingStaticWidth: inferredLeadingStaticWidth,
@@ -1108,7 +1160,43 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
 
   private func commitRows(from raster: RasterImage, startRow: Int, rowCount: Int) {
     guard rowCount > 0 else { return }
-    contentSlices.append(ContentSlice(raster: raster, startRow: startRow, rowCount: rowCount))
+    // Copy the rows rather than keep the frame: a long capture commits a strip
+    // from every frame, and holding each whole frame made memory grow with the
+    // number of steps instead of with the output.
+    contentSlices.append(
+      ContentSlice(raster: raster.rows(startRow: startRow, rowCount: rowCount), startRow: 0, rowCount: rowCount)
+    )
+  }
+
+  private func makeOffsetVerification(
+    previousLuma: ScrollingCaptureLumaPlane,
+    currentLuma: ScrollingCaptureLumaPlane,
+    headerHeight: Int,
+    footerHeight: Int,
+    leadingStaticWidth: Int,
+    trailingStaticWidth: Int
+  ) -> OffsetVerification {
+    let columns = matchingColumnBounds(
+      width: previousLuma.width,
+      leadingStaticWidth: leadingStaticWidth,
+      trailingStaticWidth: trailingStaticWidth
+    )
+    // The rows a pair of frames offers, measured once: the sweeps ask about
+    // every offset in the range, and reading the same pixels for each of them
+    // took seconds a frame.
+    let plan = ScrollingCaptureOffsetVerifier.plan(
+      previous: previousLuma,
+      current: currentLuma,
+      headerHeight: headerHeight,
+      footerHeight: verificationFooter(
+        footerHeight: footerHeight,
+        headerHeight: headerHeight,
+        frameHeight: previousLuma.height
+      ),
+      columnStart: columns?.0 ?? 0,
+      columnEnd: columns?.1
+    )
+    return OffsetVerification(plan: plan, maximumOffset: previousLuma.height)
   }
 
   private func sliceStartRow(
@@ -1181,8 +1269,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
   private func bestMatch(
     previous: RasterImage,
     current: RasterImage,
-    previousLuma: ScrollingCaptureLumaPlane,
-    currentLuma: ScrollingCaptureLumaPlane,
+    verification: OffsetVerification,
+    requiresExpectedTravel: Bool,
     headerHeight: Int,
     footerHeight: Int,
     leadingStaticWidth: Int,
@@ -1268,33 +1356,8 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       }
     }
 
-    let columns = matchingColumnBounds(
-      width: previous.width,
-      leadingStaticWidth: leadingStaticWidth,
-      trailingStaticWidth: trailingStaticWidth
-    )
-
-    let verificationFooterHeight = verificationFooter(
-      footerHeight: footerHeight,
-      headerHeight: headerHeight,
-      frameHeight: previous.height
-    )
-
-    // The rows a pair of frames offers, measured once: the sweep below asks
-    // about every offset in the range, and reading the same pixels for each of
-    // them took seconds a frame.
-    let verificationPlan = ScrollingCaptureOffsetVerifier.plan(
-      previous: previousLuma,
-      current: currentLuma,
-      headerHeight: headerHeight,
-      footerHeight: verificationFooterHeight,
-      columnStart: columns?.0 ?? 0,
-      columnEnd: columns?.1
-    )
-
     func verdict(_ deltaY: Int) -> ScrollingCaptureOffsetVerifier.Verdict {
-      guard let verificationPlan else { return .noEvidence }
-      return verificationPlan.verdict(offset: deltaY)
+      verification.verdict(deltaY)
     }
 
     // The frames themselves are the authority: if content moved up by this
@@ -1322,9 +1385,11 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       return abs(deltaY - visionAlignmentEstimate.deltaY) <= tolerance
     }
 
-    // The page can travel farther than one step when frames were missed, but a
-    // move shorter than the step it was asked to make is an intermediate frame
-    // caught mid-scroll: committing it pins later steps to the wrong overlap.
+    /// The scan's own proposal is taken without a sweep only at the distance the
+    /// scroll was asked to travel, or farther when Vision agrees (frames were
+    /// missed). A shorter move may be an intermediate frame caught mid-scroll,
+    /// so it goes through the sweep, which commits it only when no competing
+    /// offset is confirmed.
     func isPlausibleTravel(_ deltaY: Int, visionConfirms: Bool) -> Bool {
       guard let largest = expectations.max() else { return true }
       if matchesExpectedStep(deltaY) { return true }
@@ -1353,6 +1418,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
       leadingStaticWidth: leadingStaticWidth,
       trailingStaticWidth: trailingStaticWidth,
       visionAlignmentEstimate: visionAlignmentEstimate,
+      requiresExpectedTravel: requiresExpectedTravel,
       verdict: verdict
     )
     if let confirmed {
@@ -1438,6 +1504,7 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     leadingStaticWidth: Int,
     trailingStaticWidth: Int,
     visionAlignmentEstimate: VisionAlignmentEstimate?,
+    requiresExpectedTravel: Bool,
     verdict: (Int) -> ScrollingCaptureOffsetVerifier.Verdict
   ) -> Match? {
     // The band of offsets the frames confirm is only a few pixels wide around a
@@ -1481,16 +1548,22 @@ nonisolated final class ScrollingCaptureStitcher: @unchecked Sendable {
     guard !runs.isEmpty else { return nil }
 
     let centers = runs.map { $0[$0.count / 2] }
+    func distanceToExpectation(_ center: Int) -> Int {
+      expectations.map { abs(center - $0) }.min() ?? Int.max
+    }
     let chosenCenter: Int
-    if centers.count == 1, let only = centers.first {
+    if centers.count == 1, let only = centers.first,
+       !requiresExpectedTravel || fitsAnyExpectation(only, expectations: expectations) {
       // One confirmed answer needs no tie-breaking, however far the page
       // turned out to travel: a page often moves a fraction of the step it was
       // asked to, and the frames have confirmed this offset over the whole
-      // overlap.
+      // overlap. Unless the previous frame is known to be stale, as after a
+      // manual scroll that would not lock: then an offset far from the travel
+      // can be a repeat of the layout, and committing it skips content.
       chosenCenter = only
-    } else if let nearest = centers.first(where: { center in
+    } else if let nearest = centers.filter({ center in
       expectations.contains { abs(center - $0) <= max(16, $0 * 15 / 100) }
-    }) {
+    }).min(by: { distanceToExpectation($0) < distanceToExpectation($1) }) {
       // Several confirmed offsets mean the frames alone cannot say which is
       // real — a repeating layout lines up at more than one distance, and one
       // of them may be an intermediate frame caught mid-scroll. Only an offset
