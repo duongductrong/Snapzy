@@ -68,9 +68,9 @@ final class AnnotateShortcutManagerTests: XCTestCase {
   // MARK: - Conflicts
 
   func testConflictingTool_findsConflict() {
-    manager.setShortcut("x", for: .rectangle)
-    manager.setShortcut("x", for: .oval)
-    XCTAssertEqual(manager.conflictingTool(for: "x", excluding: .oval), .rectangle)
+    manager.setShortcut("z", for: .rectangle)
+    manager.setShortcut("z", for: .oval)
+    XCTAssertEqual(manager.conflictingTool(for: "z", excluding: .oval), .rectangle)
   }
 
   func testConflictingTool_findsNumericConflict() {
@@ -80,15 +80,15 @@ final class AnnotateShortcutManagerTests: XCTestCase {
   }
 
   func testConflictingTool_excludesSelf() {
-    manager.setShortcut("x", for: .rectangle)
-    XCTAssertNil(manager.conflictingTool(for: "x", excluding: .rectangle))
+    manager.setShortcut("z", for: .rectangle)
+    XCTAssertNil(manager.conflictingTool(for: "z", excluding: .rectangle))
   }
 
   func testConflictingTool_ignoresDisabledTools() {
-    manager.setShortcut("x", for: .rectangle)
+    manager.setShortcut("z", for: .rectangle)
     manager.setShortcutEnabled(false, for: .rectangle)
-    manager.setShortcut("x", for: .oval)
-    XCTAssertNil(manager.conflictingTool(for: "x", excluding: .oval))
+    manager.setShortcut("z", for: .oval)
+    XCTAssertNil(manager.conflictingTool(for: "z", excluding: .oval))
   }
 
   // MARK: - Reset

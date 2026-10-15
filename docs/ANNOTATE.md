@@ -43,17 +43,18 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 
 ## Tools & Shortcuts
 
-`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 15 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
+`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 16 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
 
 | Tool | Key | Tool | Key | Tool | Key |
 | --- | --- | --- | --- | --- | --- |
 | selection | `v` | arrow | `a` | blur | `b` |
 | crop | `c` | line | `l` | spotlight | `s` |
-| rectangle | `r` | text | `t` | counter | `n` |
-| filledRectangle | `f` | highlighter | `h` | watermark | `w` |
-| oval | `o` | pencil | `p` | mockup | `m` |
+| cutOut | `x` | text | `t` | counter | `n` |
+| rectangle | `r` | highlighter | `h` | watermark | `w` |
+| filledRectangle | `f` | pencil | `p` | mockup | `m` |
+| oval | `o` | | | | |
 
-- `drawableTools` shared with inline overlay so surfaces stay in sync; `supportsQuickPropertiesBar` false for selection/crop/mockup.
+- `drawableTools` shared with inline overlay so surfaces stay in sync; `supportsQuickPropertiesBar` false for selection/crop/cutOut/mockup.
 - While a drawing tool is active, clicking an existing annotation's edge (a shape's outline, an arrow or line, a text box, a counter) selects it without leaving the tool; the quick properties bar then edits that item, and dragging its edge or handles moves or resizes it. Drags that start anywhere else — including inside an existing shape, on the item just drawn (until it is clicked or otherwise selected), or in the margin outside the image — draw a new annotation. A click inside an opaque item (filled rectangle, blur, combined image) never selects what lies beneath it. Hold Option to always draw, even on a selected item's resize handle. Combined images are never selected by drawing tools.
 - In the full annotation window, `⌘C` copies selected annotation items to the session-local editable clipboard, `⌘V` pastes independent items centered under the canvas cursor when available, and `⌘D` duplicates the selection. Repeated pastes add a predictable 10pt diagonal offset; duplicated items use the same fixed offset (all clamped to the editable canvas when possible). Each operation is one annotation undo/redo checkpoint. Text editors and input fields keep native copy/paste behavior, and the inline overlay keeps `⌘C` for copying the rendered image.
 - Annotate sessions — both the inline screenshot overlay and full editor windows (`AnnotateWindowController`) — start with `annotate.defaultTool` (selection by default). When `annotate.rememberLastTool` is enabled, explicit toolbar or keyboard tool choices on either surface are stored in `annotate.lastUsedTool` and take precedence in the next session. Combine-mode activation and annotation-selection tool switches still force Selection and are never remembered.
@@ -92,9 +93,19 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - Crop edge snapping: while dragging resize handles in Free mode, edges snap to detected content borders (`CropContentAnalyzer` edge profile, computed once per image on crop entry). Toggle in `CropToolbarView` or Settings → Annotate (`annotate.cropSnapToEdgesEnabled`, default on); hold ⌘ mid-drag to temporarily bypass. Snapping skips fixed-aspect/Shift-locked resizes and body moves.
 - Crop auto-crop to content: `A` (or the toolbar button) tightens the current crop rect to detected content borders; falls back to Vision subject-mask bounds on macOS 14+ when edge analysis finds nothing (`ForegroundCutoutService.extractForegroundResult` reuse). Toasts when nothing is detected; Esc still restores the pre-crop rect. A crop rect expanded beyond the source image tightens to the image bounds on the out-of-bounds side(s).
 
+## Cut Out (Remove / Add a Strip)
+
+Toolbar `scissors` button or `x` (`Services/AnnotateCutOutTransform.swift`, pure). From issue #653: remove a full-crossing horizontal band (image shrinks vertically) or vertical band (shrinks horizontally) and join the halves — Snagit Cut Out parity.
+
+- Orientation (`cutOutToolbar` H/V toggles) + mode (`cutOutToolbar` −/+: remove/insert). Drag across the canvas draws a full-crossing strip (drag's cross-axis span is discarded, extents forced); dimmed strip + `−N px` badge preview; Enter / toolbar Cut commits, Esc restores the previous tool. Mode stays active so several gaps can be cut in sequence (batch tall-page workflow).
+- Commit builds a new `sourceImage` (and background-cutout overlay when applied) through one CGContext pass, integral-pixel slices so no seams; insert mode leaves the strip transparent (PNG alpha) exactly like crop-expansion. Retina point-size contract preserved.
+- Annotations follow: point-based types (arrows, lines, paths, highlights) shift per point so geometry reconstructs across the band; bounds-based shapes (rectangles, ovals, blur, spotlight, text, counters, embedded images) follow the majority-of-area half, and crossing shapes stay whole (predictable, no data loss — effectively Snagit's semantics). `cropRect`, `originalCropRect`, `cutoutAutoAppliedCropRect` follow the same rule.
+- One undo per commit via the image-transform snapshot (same entry as rotation); committed cuts bake into the saved file, so there is no sidecar schema change (schema v1).
+- Known limits: shapes crossing the band are translated, not split; embedded-image bitmaps translate without being cut; and the inline area-annotate overlay does not include the tool (same deliberate exclusion as crop).
+
 ## Undo/Redo
 
-- `UndoEntry` = `.annotations(AnnotationSnapshot)` | `.rotation(RotationSnapshot)` — rotation undo never disturbs the annotation path.
+- `UndoEntry` = `.annotations(AnnotationSnapshot)` | `.imageTransform(ImageTransformSnapshot)` — image-transform undo (90° rotation + cut-out strips) never disturbs the annotation path.
 - Annotation snapshots include selection and embedded-layer metadata so object paste/duplicate undo is atomic and redo reselects the newly created items.
 - Text-edit commits as one transaction; quick-properties slider gestures scoped to a single checkpoint (`quickPropertiesGestureUndoSnapshot`).
 
@@ -168,7 +179,7 @@ source image.
 
 ## Rotation & Canvas Presets
 
-- Rotate 90° left/right from toolbar; dedicated `RotationSnapshot` undo entries.
+- Rotate 90° left/right from toolbar; dedicated image-transform (`ImageTransformSnapshot`) undo entries, shared with the Cut Out tool.
 - `AnnotateCanvasPresetStore` (`annotate.canvasPresets.v1`): background style, blur effect, spacing, shadow, corner radius, aspect ratio + orientation. One preset can be default (`annotate.defaultCanvasPresetId.v1`).
 - Default preset auto-applies to new screenshots during post-capture via `ScreenshotPresetAutoApplier` — lightweight `AnnotateExporter.renderCanvasEffects` without constructing full `AnnotateState`, returns editable session data. Inline area annotate does NOT auto-apply.
 

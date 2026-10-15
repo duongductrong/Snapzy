@@ -348,6 +348,17 @@ struct AnnotateCanvasView: View {
           .frame(width: foregroundWidth, height: foregroundHeight)
           .offset(x: offset.x, y: offset.y)
         }
+
+        // Cut out overlay - strip highlight + size badge while the tool is active.
+        if state.selectedTool == .cutOut && state.isCutOutActive {
+          CutOutOverlayView(
+            state: state,
+            scale: scale,
+            canvasBounds: foregroundBounds
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
+          .offset(x: offset.x, y: offset.y)
+        }
       }
       .modifier(CombineCanvasClipModifier(
         isEnabled: state.isCombineMode,
@@ -600,6 +611,8 @@ struct AnnotateCanvasView: View {
 
     if tool == .crop {
       state.beginCropInteraction()
+    } else if tool == .cutOut {
+      state.beginCutOutInteraction()
     } else {
       // Commit any active text edit before switching
       if state.editingTextAnnotationId != nil {

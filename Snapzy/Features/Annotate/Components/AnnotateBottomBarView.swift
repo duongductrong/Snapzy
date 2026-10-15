@@ -10,6 +10,7 @@ import SwiftUI
 private enum AnnotateBottomActionRegistration: Equatable {
   case annotateDefault
   case crop
+  case cutOut
 }
 
 private enum AnnotateBottomBarMeasuredSide: Hashable {
@@ -373,6 +374,9 @@ struct AnnotateBottomBarView: View {
     if state.selectedTool == .crop && state.isCropActive {
       return .crop
     }
+    if state.selectedTool == .cutOut && state.isCutOutActive {
+      return .cutOut
+    }
 
     return .annotateDefault
   }
@@ -385,6 +389,9 @@ struct AnnotateBottomBarView: View {
         .transition(.opacity.combined(with: .move(edge: .trailing)))
     case .crop:
       CropToolbarView(state: state)
+        .transition(.opacity.combined(with: .move(edge: .trailing)))
+    case .cutOut:
+      CutOutToolbarView(state: state)
         .transition(.opacity.combined(with: .move(edge: .trailing)))
     }
   }

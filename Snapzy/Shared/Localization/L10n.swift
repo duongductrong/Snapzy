@@ -5987,6 +5987,46 @@ nonisolated enum L10n {
       defaultValue: "Crop",
       comment: "Tooltip for entering crop mode in annotate"
     )
+    static let cutOut = string(
+      "annotate.cut-out",
+      defaultValue: "Cut Out",
+      comment: "Tooltip for entering the cut out mode in annotate"
+    )
+    static let cutOutHint = string(
+      "annotate.cut-out-hint",
+      defaultValue: "Drag on the image to select a strip",
+      comment: "Hint shown in cut out mode before a strip is drawn"
+    )
+    static let cutOutHorizontal = string(
+      "annotate.cut-out-horizontal",
+      defaultValue: "Horizontal strip",
+      comment: "Cut out orientation toggle: horizontal band, image shrinks vertically"
+    )
+    static let cutOutVertical = string(
+      "annotate.cut-out-vertical",
+      defaultValue: "Vertical strip",
+      comment: "Cut out orientation toggle: vertical band, image shrinks horizontally"
+    )
+    static let cutOutRemove = string(
+      "annotate.cut-out-remove",
+      defaultValue: "Remove and join",
+      comment: "Cut out mode: remove the strip and join the halves"
+    )
+    static let cutOutInsert = string(
+      "annotate.cut-out-insert",
+      defaultValue: "Add empty space",
+      comment: "Cut out mode: push content apart and add an empty strip"
+    )
+    static let cutOutRemoveBadge = string(
+      "annotate.cut-out-remove-badge",
+      defaultValue: "−%@",
+      comment: "Strip size badge in remove mode. %@ is the pixel dimension"
+    )
+    static let cutOutInsertBadge = string(
+      "annotate.cut-out-insert-badge",
+      defaultValue: "+%@",
+      comment: "Strip size badge in insert mode. %@ is the pixel dimension"
+    )
     static let rotateLeft = string(
       "annotate.rotate-left",
       defaultValue: "Rotate left 90°",
@@ -8218,6 +8258,11 @@ nonisolated enum L10n {
     static let cropTool = string(
       "annotate.tool.crop",
       defaultValue: "Crop",
+      comment: "Annotation tool display name"
+    )
+    static let cutOutTool = string(
+      "annotate.tool.cut-out",
+      defaultValue: "Cut Out",
       comment: "Annotation tool display name"
     )
     static let rectangleTool = string(

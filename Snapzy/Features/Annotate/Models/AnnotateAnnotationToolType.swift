@@ -11,6 +11,7 @@ import Foundation
 nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
   case selection
   case crop
+  case cutOut
   case rectangle
   case filledRectangle
   case oval
@@ -51,6 +52,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .selection: return "cursorarrow"
     case .crop: return "crop"
+    case .cutOut: return "scissors"
     case .rectangle: return "rectangle"
     case .filledRectangle: return "rectangle.fill"
     case .oval: return "circle"
@@ -72,6 +74,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .selection: return "v"
     case .crop: return "c"
+    case .cutOut: return "x"
     case .rectangle: return "r"
     case .filledRectangle: return "f"
     case .oval: return "o"
@@ -93,6 +96,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .selection: return L10n.Annotate.selectionTool
     case .crop: return L10n.Annotate.cropTool
+    case .cutOut: return L10n.Annotate.cutOutTool
     case .rectangle: return L10n.Annotate.rectangleTool
     case .filledRectangle: return L10n.Annotate.filledRectangleTool
     case .oval: return L10n.Annotate.ovalTool
@@ -113,7 +117,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .blur, .spotlight, .counter, .watermark, .pencil:
       return true
-    case .selection, .crop, .mockup:
+    case .selection, .crop, .cutOut, .mockup:
       return false
     }
   }
@@ -125,7 +129,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .blur, .spotlight, .watermark:
       return true
-    case .selection, .crop, .text, .highlighter, .counter, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .text, .highlighter, .counter, .pencil, .mockup:
       return false
     }
   }
@@ -134,7 +138,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .text, .highlighter, .spotlight, .counter, .watermark, .pencil:
       return true
-    case .selection, .crop, .blur, .mockup:
+    case .selection, .crop, .cutOut, .blur, .mockup:
       return false
     }
   }
@@ -147,7 +151,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .highlighter, .blur, .spotlight, .counter, .pencil:
       return true
-    case .selection, .crop, .text, .watermark, .mockup:
+    case .selection, .crop, .cutOut, .text, .watermark, .mockup:
       return false
     }
   }
@@ -156,7 +160,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .text, .spotlight:
       return true
-    case .selection, .crop, .oval, .arrow, .line, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .oval, .arrow, .line, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
       return false
     }
   }
@@ -165,7 +169,7 @@ nonisolated enum AnnotationToolType: String, CaseIterable, Identifiable {
     switch self {
     case .rectangle, .filledRectangle, .oval, .arrow, .line, .spotlight:
       return true
-    case .selection, .crop, .text, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
+    case .selection, .crop, .cutOut, .text, .highlighter, .blur, .counter, .watermark, .pencil, .mockup:
       return false
     }
   }
