@@ -14,6 +14,8 @@ struct AnnotateSelectionChromeMetrics {
   static let selectionLineWidth: CGFloat = 1
   static let selectionDashLength: CGFloat = 4
   static let selectionHaloWidth: CGFloat = 4
+  /// Gap between an item's top edge and the center of its rotation handle.
+  static let rotationHandleOffset: CGFloat = 22
 
   private let fitScale: CGFloat
   private let zoomScale: CGFloat

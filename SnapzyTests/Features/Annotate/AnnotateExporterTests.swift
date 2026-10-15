@@ -276,6 +276,44 @@ final class AnnotateExporterTests: XCTestCase {
     XCTAssertLessThan(border[2], 100)
   }
 
+  func testRenderFinalImage_rendersRotatedFilledRectangle() throws {
+    let state = AnnotateState()
+    Self.retainedAnnotateStates.append(state)
+    state.loadImage(try makeSolidImage(width: 100, height: 100))
+    state.padding = 0
+    state.shadowIntensity = 0
+    state.cornerRadius = 0
+    state.aspectRatio = .free
+    state.backgroundStyle = .solidColor(.white)
+    // A horizontal 80×10 bar through the center, rotated a quarter turn so it
+    // ends up vertical. Both samples are symmetric around the center, so the
+    // check holds regardless of rotation direction or vertical flip.
+    state.annotations = [
+      AnnotationItem(
+        type: .filledRectangle,
+        bounds: CGRect(x: 10, y: 45, width: 80, height: 10),
+        properties: AnnotationProperties(
+          strokeColor: .red,
+          fillColor: .red,
+          strokeWidth: 1,
+          rotationDegrees: 90
+        )
+      ),
+    ]
+
+    let rendered = try XCTUnwrap(AnnotateExporter.renderFinalImage(state: state))
+    let renderedCG = try XCTUnwrap(AnnotateExporter.bestCGImage(from: rendered))
+    let bytes = try rgbaBytes(from: renderedCG)
+    let alongRotatedBar = rgbaPixel(in: bytes, x: 50, y: 20, width: renderedCG.width)
+    let alongOriginalBar = rgbaPixel(in: bytes, x: 20, y: 50, width: renderedCG.width)
+
+    XCTAssertGreaterThan(alongRotatedBar[0], 200)
+    XCTAssertLessThan(alongRotatedBar[1], 100)
+    // The source image is mid-gray; outside the rotated bar no red is drawn.
+    XCTAssertGreaterThan(alongOriginalBar[1], 100)
+    XCTAssertLessThan(alongOriginalBar[0], 200)
+  }
+
   private func makeSolidImage(
     width: Int,
     height: Int,

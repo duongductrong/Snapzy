@@ -1570,6 +1570,63 @@ nonisolated struct AnnotationProperties: Equatable {
   static func clampedRotationDegrees(_ value: CGFloat) -> CGFloat {
     min(max(value, -45), 45)
   }
+
+  /// Wraps any angle into the half-open range (-180, 180]; non-finite input becomes 0.
+  static func normalizedRotationDegrees(_ value: CGFloat) -> CGFloat {
+    guard value.isFinite else { return 0 }
+    var wrapped = value.truncatingRemainder(dividingBy: 360)
+    if wrapped > 180 { wrapped -= 360 }
+    if wrapped <= -180 { wrapped += 360 }
+    return wrapped
+  }
+}
+
+// MARK: - Rotation
+
+extension AnnotationType {
+  /// Box-shaped types that rotate rigidly around their bounds center. Watermark
+  /// keeps its own in-bounds rotation and is not part of this.
+  nonisolated var supportsRotation: Bool {
+    switch self {
+    case .text, .embeddedImage, .rectangle, .filledRectangle, .oval:
+      true
+    default:
+      false
+    }
+  }
+
+  /// Rotatable types accept any angle (wrapped into -180…180); everything else
+  /// keeps the watermark ±45° limit.
+  nonisolated func clampedRotationDegrees(_ value: CGFloat) -> CGFloat {
+    supportsRotation
+      ? AnnotationProperties.normalizedRotationDegrees(value)
+      : AnnotationProperties.clampedRotationDegrees(value)
+  }
+}
+
+extension AnnotationItem {
+  /// Maps the unrotated local frame onto the canvas, rotating around the
+  /// bounds center. `nil` when the item is not rotated.
+  nonisolated var rotationTransform: CGAffineTransform? {
+    guard type.supportsRotation else { return nil }
+    let degrees = AnnotationProperties.normalizedRotationDegrees(properties.rotationDegrees)
+    guard degrees != 0 else { return nil }
+    let center = CGPoint(x: bounds.midX, y: bounds.midY)
+    return CGAffineTransform(translationX: center.x, y: center.y)
+      .rotated(by: degrees * .pi / 180)
+      .translatedBy(x: -center.x, y: -center.y)
+  }
+
+  /// The item in its own unrotated frame: rotation cleared and the callout tail
+  /// target mapped into that frame, so drawing or hit-testing it under
+  /// `rotationTransform` keeps the tail tip pinned to its canvas point.
+  nonisolated var unrotatedLocalItem: AnnotationItem {
+    guard let transform = rotationTransform else { return self }
+    var local = self
+    local.properties.rotationDegrees = 0
+    local.properties.calloutTailTarget = properties.calloutTailTarget?.applying(transform.inverted())
+    return local
+  }
 }
 
 // MARK: - Hit Testing
@@ -1629,6 +1686,9 @@ extension AnnotationItem {
   }
 
   var selectionBounds: CGRect {
+    if let transform = rotationTransform {
+      return unrotatedLocalItem.selectionBounds.applying(transform)
+    }
     if case .highlight = type {
       return selectionDecorationBounds
     }
@@ -1686,6 +1746,9 @@ extension AnnotationItem {
 
   /// Check if point hits this annotation with appropriate tolerance
   func containsPoint(_ point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    if let transform = rotationTransform {
+      return unrotatedLocalItem.containsPoint(point.applying(transform.inverted()), baseTolerance: baseTolerance)
+    }
     let tolerance = baseTolerance + properties.strokeWidth / 2
 
     switch type {
@@ -1743,6 +1806,9 @@ extension AnnotationItem {
   /// shapes that draw an outline at that width: a blur's `strokeWidth` is its
   /// strength and a watermark draws no outline, so both use the base tolerance.
   func edgeBandContains(_ point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    if let transform = rotationTransform {
+      return unrotatedLocalItem.edgeBandContains(point.applying(transform.inverted()), baseTolerance: baseTolerance)
+    }
     let tolerance: CGFloat
     switch type {
     case .blur(_), .watermark:
@@ -1830,6 +1896,9 @@ extension AnnotationItem {
   /// corners are not. Spotlight is see-through inside; text and counters
   /// already claim their whole body through `edgeBandContains`.
   func occludesItemsBelow(at point: CGPoint, baseTolerance: CGFloat = 6) -> Bool {
+    if let transform = rotationTransform {
+      return unrotatedLocalItem.occludesItemsBelow(at: point.applying(transform.inverted()), baseTolerance: baseTolerance)
+    }
     switch type {
     case .filledRectangle, .blur, .embeddedImage:
       if let outline = roundedOutline {

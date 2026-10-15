@@ -1,1350 +1,1371 @@
 {
-  "sourceLanguage": "en",
-  "version": "1.0",
-  "strings": {
-    "combine.arrangement": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Arrangement"
+  "sourceLanguage" : "en",
+  "strings" : {
+    "combine.arrangement" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anordnung"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "配置"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrangement"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "排列"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disposición"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "排列"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disposition"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anordnung"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "配置"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disposición"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "배치"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Disposition"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Расположение"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "배치"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cách sắp xếp"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Расположение"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排列"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cách sắp xếp"
-          }
-        }
-      }
-    },
-    "combine.auto-stitch": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auto Stitch"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動結合"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自动拼接"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自動拼接"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatisches Zusammenfügen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unión automática"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Assemblage automatique"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자동 결합"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Автосклейка"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tự động ghép"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "排列"
           }
         }
       }
     },
-    "combine.copy-to-clipboard": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copy to Clipboard"
+    "combine.auto-stitch" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatisches Zusammenfügen"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "クリップボードにコピー"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Auto Stitch"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "复制到剪贴板"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unión automática"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "複製到剪貼簿"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Assemblage automatique"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In die Zwischenablage kopieren"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動結合"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copiar al portapapeles"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 결합"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Copier dans le presse-papiers"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автосклейка"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "클립보드에 복사"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động ghép"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Скопировать в буфер обмена"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动拼接"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sao chép vào bộ nhớ tạm"
-          }
-        }
-      }
-    },
-    "combine.free-canvas": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Free Canvas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自由配置"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自由画布"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自由畫布"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Freie Leinwand"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lienzo libre"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zone libre"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자유 캔버스"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Свободный холст"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khung vẽ tự do"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動拼接"
           }
         }
       }
     },
-    "combine.horizontal": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontal"
+    "combine.copy-to-clipboard" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In die Zwischenablage kopieren"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "横に並べる"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copy to Clipboard"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "横向"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copiar al portapapeles"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "橫向"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Copier dans le presse-papiers"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontal"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードにコピー"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontal"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드에 복사"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horizontal"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопировать в буфер обмена"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "가로"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sao chép vào bộ nhớ tạm"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По горизонтали"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "复制到剪贴板"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ngang"
-          }
-        }
-      }
-    },
-    "combine.image-gap": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Image Gap"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像の間隔"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "图片间距"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "圖片間距"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bildabstand"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espacio entre imágenes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espacement des images"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지 간격"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Интервал между изображениями"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khoảng cách ảnh"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "複製到剪貼簿"
           }
         }
       }
     },
-    "combine.image-index": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Image %d"
+    "combine.free-canvas" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Freie Leinwand"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像 %d"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Free Canvas"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "图片 %d"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lienzo libre"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "圖片 %d"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zone libre"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bild %d"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由配置"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imagen %d"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자유 캔버스"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Image %d"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Свободный холст"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지 %d"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khung vẽ tự do"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Изображение %d"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由画布"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ảnh %d"
-          }
-        }
-      }
-    },
-    "combine.images": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Images"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "图片"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "圖片"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bilder"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Imágenes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Images"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Изображения"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ảnh"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自由畫布"
           }
         }
       }
     },
-    "combine.mode": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combine mode"
+    "combine.horizontal" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結合モード"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拼图模式"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拼圖模式"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Horizontal"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kombinationsmodus"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "横に並べる"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modo de combinación"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "가로"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mode de combinaison"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По горизонтали"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결합 모드"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ngang"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Режим объединения"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "横向"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chế độ ghép"
-          }
-        }
-      }
-    },
-    "combine.move-earlier": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Move Earlier"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前に移動"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向前移动"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向前移動"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nach vorne verschieben"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mover antes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Déplacer vers l'avant"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앞으로 이동"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Переместить назад"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Di chuyển lên trước"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "橫向"
           }
         }
       }
     },
-    "combine.move-later": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Move Later"
+    "combine.image-gap" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bildabstand"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "後ろに移動"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image Gap"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向后移动"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacio entre imágenes"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "向後移動"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacement des images"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nach hinten verschieben"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像の間隔"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mover después"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미지 간격"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Déplacer vers l'arrière"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал между изображениями"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "뒤로 이동"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoảng cách ảnh"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Переместить вперед"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图片间距"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Di chuyển ra sau"
-          }
-        }
-      }
-    },
-    "combine.open": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combine Images"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像を結合"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拼图"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "拼圖"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bilder kombinieren"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combinar imágenes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combiner les images"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지 결합"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Объединить изображения"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ghép ảnh"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖片間距"
           }
         }
       }
     },
-    "combine.picker-confirm": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combine"
+    "combine.image-index" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bild %d"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結合する"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image %d"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开始拼图"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagen %d"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始拼圖"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Image %d"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kombinieren"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像 %d"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combinar"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미지 %d"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Combiner"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображение %d"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결합"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ảnh %d"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Объединить"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图片 %d"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ghép"
-          }
-        }
-      }
-    },
-    "combine.picker-message": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Select two or more images."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2枚以上の画像を選択してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请选择至少两张图片。"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "請選擇至少兩張圖片。"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wählen Sie zwei oder mehr Bilder aus."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecciona dos o más imágenes."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sélectionnez au moins deux images."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "두 개 이상의 이미지를 선택하세요."
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите два или более изображений."
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chọn từ hai ảnh trở lên."
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖片 %d"
           }
         }
       }
     },
-    "combine.picker-title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose Images to Combine"
+    "combine.images" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結合する画像を選択"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择要拼接的图片"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imágenes"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇要拼接的圖片"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bilder zum Kombinieren auswählen"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elegir imágenes para combinar"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미지"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisir les images à combiner"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображения"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결합할 이미지 선택"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ảnh"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите изображения для объединения"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图片"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chọn ảnh để ghép"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "圖片"
           }
         }
       }
     },
-    "combine.save-message": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choose how to export the stitched result."
+    "combine.mode" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kombinationsmodus"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "つなぎ合わせた結果の書き出し方法を選択してください。"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combine mode"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "选择如何导出拼接后的图片。"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Modo de combinación"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選擇如何匯出拼接後的圖片。"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode de combinaison"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wählen Sie, wie das zusammengefügte Ergebnis exportiert werden soll."
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結合モード"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Elige cómo exportar el resultado combinado."
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결합 모드"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Choisissez comment exporter le résultat assemblé."
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Режим объединения"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결합된 결과를 내보낼 방법을 선택하세요."
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chế độ ghép"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Выберите способ экспорта объединенного результата."
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拼图模式"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chọn cách xuất kết quả ghép ảnh."
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拼圖模式"
           }
         }
       }
     },
-    "combine.save-title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save Combined Image"
+    "combine.move-earlier" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach vorne verschieben"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "結合画像を保存"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move Earlier"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存拼图"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover antes"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存拼圖"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer vers l'avant"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kombiniertes Bild speichern"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "前に移動"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar imagen combinada"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앞으로 이동"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrer l'image combinée"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переместить назад"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결합된 이미지 저장"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di chuyển lên trước"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранить объединенное изображение"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向前移动"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lưu ảnh đã ghép"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向前移動"
           }
         }
       }
     },
-    "combine.save-to-file": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Save to File…"
+    "combine.move-later" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nach hinten verschieben"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイルに保存…"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Move Later"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存为文件…"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mover después"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "儲存為檔案…"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Déplacer vers l'arrière"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "In Datei speichern…"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "後ろに移動"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar en archivo…"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "뒤로 이동"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Enregistrer dans un fichier…"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переместить вперед"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일로 저장…"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Di chuyển ra sau"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Сохранить в файл…"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向后移动"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lưu thành tệp…"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "向後移動"
           }
         }
       }
     },
-    "combine.smart": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Smart"
+    "combine.open" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder kombinieren"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "スマート"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combine Images"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "智能"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combinar imágenes"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "智慧"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combiner les images"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intelligent"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像を結合"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Inteligente"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미지 결합"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Intelligent"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Объединить изображения"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "스마트"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghép ảnh"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Умный"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拼图"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thông minh"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拼圖"
           }
         }
       }
     },
-    "combine.spacing": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Spacing"
+    "combine.picker-confirm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kombinieren"
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "間隔"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combine"
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "间距"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combinar"
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "間距"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Combiner"
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abstand"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結合する"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espaciado"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결합"
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Espacement"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Объединить"
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "간격"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ghép"
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Интервал"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始拼图"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Khoảng cách"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "開始拼圖"
           }
         }
       }
     },
-    "combine.vertical": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertical"
+    "combine.picker-message" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wählen Sie zwei oder mehr Bilder aus."
           }
         },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縦に並べる"
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Select two or more images."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "纵向"
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Selecciona dos o más imágenes."
           }
         },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "縱向"
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sélectionnez au moins deux images."
           }
         },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertikal"
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "2枚以上の画像を選択してください。"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertical"
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "두 개 이상의 이미지를 선택하세요."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vertical"
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите два или более изображений."
           }
         },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "세로"
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn từ hai ảnh trở lên."
           }
         },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "По вертикали"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请选择至少两张图片。"
           }
         },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dọc"
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "請選擇至少兩張圖片。"
+          }
+        }
+      }
+    },
+    "combine.picker-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder zum Kombinieren auswählen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose Images to Combine"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elegir imágenes para combinar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisir les images à combiner"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結合する画像を選択"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결합할 이미지 선택"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите изображения для объединения"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn ảnh để ghép"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择要拼接的图片"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇要拼接的圖片"
+          }
+        }
+      }
+    },
+    "combine.save-message" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wählen Sie, wie das zusammengefügte Ergebnis exportiert werden soll."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose how to export the stitched result."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Elige cómo exportar el resultado combinado."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choisissez comment exporter le résultat assemblé."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "つなぎ合わせた結果の書き出し方法を選択してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결합된 결과를 내보낼 방법을 선택하세요."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Выберите способ экспорта объединенного результата."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chọn cách xuất kết quả ghép ảnh."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "选择如何导出拼接后的图片。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "選擇如何匯出拼接後的圖片。"
+          }
+        }
+      }
+    },
+    "combine.save-title" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kombiniertes Bild speichern"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save Combined Image"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar imagen combinada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer l'image combinée"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "結合画像を保存"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "결합된 이미지 저장"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить объединенное изображение"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu ảnh đã ghép"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存拼图"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存拼圖"
+          }
+        }
+      }
+    },
+    "combine.save-to-file" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In Datei speichern…"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save to File…"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guardar en archivo…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enregistrer dans un fichier…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイルに保存…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "파일로 저장…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сохранить в файл…"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lưu thành tệp…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存为文件…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "儲存為檔案…"
+          }
+        }
+      }
+    },
+    "combine.smart" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intelligent"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Smart"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inteligente"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Intelligent"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スマート"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스마트"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Умный"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Thông minh"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智能"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "智慧"
+          }
+        }
+      }
+    },
+    "combine.spacing" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abstand"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Spacing"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espaciado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Espacement"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間隔"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "간격"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Интервал"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Khoảng cách"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "间距"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "間距"
+          }
+        }
+      }
+    },
+    "combine.vertical" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertikal"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertical"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertical"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vertical"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縦に並べる"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "세로"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "По вертикали"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dọc"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纵向"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "縱向"
           }
         }
       }
     }
-  }
+  },
+  "version" : "1.0"
 }
