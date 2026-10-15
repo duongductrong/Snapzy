@@ -127,7 +127,7 @@ enum AnnotationFactory {
       let text = context.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
       type = .watermark(text.isEmpty ? "Snapzy" : text)
 
-    case .selection, .crop, .text, .mockup:
+    case .selection, .crop, .cutOut, .text, .mockup:
       return nil
     }
 

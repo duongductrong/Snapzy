@@ -360,6 +360,12 @@ final class DrawingCanvasNSView: NSView {
   // so a plain click never collapses the crop.
   private var isCropDrawing = false
   private var cropDrawAnchor: CGPoint = .zero
+
+  // Cut out strip drawing gesture (shares the crop activation threshold).
+  private var isCutOutDrawing = false
+  private var cutOutDrawDidMove = false
+  private var cutOutDrawAnchor: CGPoint = .zero
+  private var cutOutDrawStartDisplayPoint: CGPoint = .zero
   private var cropDrawStartDisplayPoint: CGPoint = .zero
   private var cropDrawDidMove = false
   private let cropDrawActivationDistance: CGFloat = 4
@@ -624,6 +630,14 @@ final class DrawingCanvasNSView: NSView {
       }
 
     case 53: // Escape
+      // Cancel cut out first — mode tools share the shared bottom slot one at a time.
+      if state.isCutOutInteractionActive {
+        Task { @MainActor in
+          state.cancelCutOut()
+        }
+        invalidateDrawing()
+        return
+      }
       // Cancel crop if active
       if state.isCropInteractionActive {
         Task { @MainActor in
@@ -637,7 +651,14 @@ final class DrawingCanvasNSView: NSView {
       }
       invalidateDrawing()
 
-    case 36: // Enter - confirm crop
+    case 36: // Enter - confirm crop / commit cut out
+      if state.isCutOutInteractionActive, state.cutOutPreviewStrip != nil {
+        Task { @MainActor in
+          state.commitCutOut()
+        }
+        invalidateDrawing()
+        return
+      }
       if state.isCropInteractionActive {
         Task { @MainActor in
           state.confirmCropInteraction()
@@ -708,6 +729,8 @@ final class DrawingCanvasNSView: NSView {
         Task { @MainActor in
           if matchedTool == .crop {
             state.beginCropInteraction()
+          } else if matchedTool == .cutOut {
+            state.beginCutOutInteraction()
           } else {
             // Commit any active text edit before switching
             if state.editingTextAnnotationId != nil {
@@ -1033,6 +1056,17 @@ final class DrawingCanvasNSView: NSView {
       return
     }
 
+    // Handle cut out tool — start a new strip (drawn strip is full-crossing).
+    if state.selectedTool == .cutOut {
+      state.collapseSidebarForCropInteraction()
+      isCutOutDrawing = true
+      cutOutDrawDidMove = false
+      cutOutDrawAnchor = imagePoint
+      cutOutDrawStartDisplayPoint = displayPoint
+      invalidateDrawing()
+      return
+    }
+
     // Selection uses image coordinates
     if state.selectedTool == .selection {
       if let annotation = hitTestAnnotation(at: imagePoint) {
@@ -1284,6 +1318,34 @@ final class DrawingCanvasNSView: NSView {
       Task { @MainActor in
         state.isCropResizing = true
         state.isCropShiftLocked = shiftHeld
+      }
+      invalidateLiveLayers()
+      return
+    }
+
+    // Handle drawing a cut out strip (full-crossing via image bounds)
+    if isCutOutDrawing {
+      if !cutOutDrawDidMove {
+        let distance = hypot(
+          displayPoint.x - cutOutDrawStartDisplayPoint.x,
+          displayPoint.y - cutOutDrawStartDisplayPoint.y
+        )
+        guard distance >= cropDrawActivationDistance else { return }
+        cutOutDrawDidMove = true
+      }
+      let dragRect = CropDragSelection.rect(
+        anchor: cutOutDrawAnchor,
+        current: imagePoint,
+        bounds: state.sourceImageBounds,
+        aspectRatio: nil
+      )
+      let strip = AnnotateCutOutTransform.fullCrossingStrip(
+        from: dragRect,
+        orientation: state.cutOutOrientation,
+        imageBounds: state.sourceImageBounds
+      )
+      Task { @MainActor in
+        state.updateCutOutStrip(strip)
       }
       invalidateLiveLayers()
       return
@@ -1639,6 +1701,15 @@ final class DrawingCanvasNSView: NSView {
         state.isCropResizing = false
         state.isCropShiftLocked = false
       }
+      invalidateDrawing()
+      return
+    }
+
+    // Finish cut out strip drawing — the strip stays committed in state until
+    // the user commits via Enter / toolbar Button, or redraws it.
+    if isCutOutDrawing {
+      isCutOutDrawing = false
+      cutOutDrawDidMove = false
       invalidateDrawing()
       return
     }
@@ -2430,7 +2501,7 @@ final class DrawingCanvasNSView: NSView {
   /// location is not meaningful for flagsChanged; use the live pointer.
   private func refreshHoverCursorForModifierChange(_ event: NSEvent) {
     guard !isDrawing, !isDraggingAnnotation, !isResizingAnnotation, !isSelectingArea,
-          !isCropResizing, !isCropDragging, !isCropDrawing,
+          !isCropResizing, !isCropDragging, !isCropDrawing, !isCutOutDrawing,
           let window else { return }
     let windowPoint = window.mouseLocationOutsideOfEventStream
     guard receivesPointer(atWindowPoint: windowPoint) else { return }
@@ -2473,6 +2544,13 @@ final class DrawingCanvasNSView: NSView {
   private func updateCursor(at displayPoint: CGPoint, optionHeld: Bool) {
     let imagePoint = displayToImage(displayPoint)
     let isDrawingTool = state.selectedTool != .selection && state.selectedTool != .crop
+
+    // Cut out always draws a full-crossing strip — crosshair everywhere on the
+    // canvas, no annotation affordances while the mode is active.
+    if state.selectedTool == .cutOut {
+      NSCursor.crosshair.set()
+      return
+    }
 
     // A click while editing text only commits the edit (mouseDown checks this
     // before resize handles, for every tool), so promise nothing else.

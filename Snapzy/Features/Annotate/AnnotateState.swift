@@ -45,9 +45,10 @@ final class AnnotateState: ObservableObject {
     }
   }
 
-  /// Snapshot of every piece of state mutated by an image rotation. Used as a dedicated
-  /// undo entry so rotation undo never disturbs the annotation-only undo path.
-  private struct RotationSnapshot {
+  /// Snapshot of every piece of state mutated by an image transform (90°
+  /// rotation, cut-out strip operations). Used as a dedicated undo entry so
+  /// these transforms never disturb the annotation-only undo path.
+  private struct ImageTransformSnapshot {
     var sourceImage: NSImage?
     var cutoutImage: NSImage?
     var isCutoutApplied: Bool
@@ -65,7 +66,7 @@ final class AnnotateState: ObservableObject {
 
   private enum UndoEntry {
     case annotations(AnnotationSnapshot)
-    case rotation(RotationSnapshot)
+    case imageTransform(ImageTransformSnapshot)
   }
 
   private struct TextEditingUndoTransaction {
@@ -231,6 +232,13 @@ final class AnnotateState: ObservableObject {
       if oldValue == .crop, selectedTool != .crop {
         restoreSidebarAfterCropInteractionIfNeeded()
       }
+      // Leaving cut-out by switching tool discards the preview and the restore context.
+      if oldValue == .cutOut, selectedTool != .cutOut {
+        cutOutPreviewStrip = nil
+        isCutOutActive = false
+        cutOutInteractionContext = nil
+        restoreSidebarAfterCropInteractionIfNeeded()
+      }
       // Text snapping needs the line profile ready before the first drag.
       if selectedTool == .highlighter {
         prepareTextLineProfileIfNeeded()
@@ -347,7 +355,7 @@ final class AnnotateState: ObservableObject {
     let destination = index + offset
     guard orderedImages.indices.contains(destination) else { return }
 
-    pushRotationUndo(currentRotationSnapshot())
+    pushImageTransformUndo(currentImageTransformSnapshot())
     let moved = orderedImages.remove(at: index)
     orderedImages.insert(moved, at: destination)
     self.sourceImage = orderedImages[0]
@@ -1424,6 +1432,30 @@ final class AnnotateState: ObservableObject {
   /// belongs to; guards against stale async results and repeat computation.
   private var textLineProfileImageID: ObjectIdentifier?
 
+  // MARK: - Cut Out State
+
+  /// Whether cut-out mode is actively editing (a strip can be drawn/committed).
+  @Published var isCutOutActive: Bool = false
+  /// Strip being drawn or previewed, in image points, standardized. nil = none.
+  @Published var cutOutPreviewStrip: CGRect?
+  /// Horizontal strip bands the full image width (image shrinks vertically);
+  /// vertical strips shrink horizontally.
+  @Published var cutOutOrientation: CutOutOrientation = .horizontal
+  /// Remove joins the halves; insert pushes content apart and adds space.
+  @Published var cutOutMode: CutOutMode = .remove
+  /// Context to restore after leaving cut-out mode (same shape as crop's).
+  private var cutOutInteractionContext: CropInteractionContext?
+
+  var isCutOutInteractionActive: Bool { selectedTool == .cutOut && isCutOutActive }
+
+  /// True when the user may enter cut-out mode or commit a strip. Conflicts
+  /// with crop (rect is in the same image coordinate space) and the combine /
+  /// mockup surfaces, which own their own layout of the source image.
+  var canApplyCutOut: Bool {
+    hasImage && editorMode == .annotate && !isCombineMode
+      && !isCropActive && !isCutoutProcessing && !isOCRProcessing
+  }
+
   // MARK: - Mockup State
 
   @Published var mockupRotationX: Double = 0
@@ -1574,7 +1606,13 @@ final class AnnotateState: ObservableObject {
     originalCropRect = nil
     cropInteractionContext = nil
     isCropActive = false
-    selectedTool = selectedTool == .crop ? .selection : selectedTool
+    cutOutInteractionContext = nil
+    isCutOutActive = false
+    cutOutPreviewStrip = nil
+    selectedTool = switch selectedTool {
+    case .crop, .cutOut: AnnotationToolType.selection
+    default: selectedTool
+    }
   }
 
   /// Import an image from a file URL.
@@ -1819,6 +1857,9 @@ final class AnnotateState: ObservableObject {
     originalCropRect = nil
     cropInteractionContext = nil
     isCropActive = false
+    cutOutInteractionContext = nil
+    isCutOutActive = false
+    cutOutPreviewStrip = nil
     editorMode = .annotate
     hasUnsavedChanges = false
     isDefaultCanvasPresetAutoApplied = false
@@ -2486,9 +2527,9 @@ final class AnnotateState: ObservableObject {
     hasUnsavedChanges = true
   }
 
-  private func pushRotationUndo(_ snapshot: RotationSnapshot) {
-    DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["kind": "rotation"])
-    undoStack.append(.rotation(snapshot))
+  private func pushImageTransformUndo(_ snapshot: ImageTransformSnapshot) {
+    DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["kind": "imageTransform"])
+    undoStack.append(.imageTransform(snapshot))
     capUndoStack()
     redoStack.removeAll()
     canUndo = true
@@ -2512,9 +2553,9 @@ final class AnnotateState: ObservableObject {
     case .annotations(let snapshot):
       redoStack.append(.annotations(currentSnapshot()))
       applySnapshot(snapshot)
-    case .rotation(let snapshot):
-      redoStack.append(.rotation(currentRotationSnapshot()))
-      applyRotationSnapshot(snapshot)
+    case .imageTransform(let snapshot):
+      redoStack.append(.imageTransform(currentImageTransformSnapshot()))
+      applyImageTransformSnapshot(snapshot)
     }
     canUndo = !undoStack.isEmpty
     canRedo = true
@@ -2530,9 +2571,9 @@ final class AnnotateState: ObservableObject {
     case .annotations(let snapshot):
       undoStack.append(.annotations(currentSnapshot()))
       applySnapshot(snapshot)
-    case .rotation(let snapshot):
-      undoStack.append(.rotation(currentRotationSnapshot()))
-      applyRotationSnapshot(snapshot)
+    case .imageTransform(let snapshot):
+      undoStack.append(.imageTransform(currentImageTransformSnapshot()))
+      applyImageTransformSnapshot(snapshot)
     }
     canUndo = true
     canRedo = !redoStack.isEmpty
@@ -2550,8 +2591,8 @@ final class AnnotateState: ObservableObject {
     )
   }
 
-  private func currentRotationSnapshot() -> RotationSnapshot {
-    RotationSnapshot(
+  private func currentImageTransformSnapshot() -> ImageTransformSnapshot {
+    ImageTransformSnapshot(
       sourceImage: sourceImage,
       cutoutImage: cutoutImage,
       isCutoutApplied: isCutoutApplied,
@@ -2633,7 +2674,7 @@ final class AnnotateState: ObservableObject {
     refreshCombineLayout()
   }
 
-  private func applyRotationSnapshot(_ snapshot: RotationSnapshot) {
+  private func applyImageTransformSnapshot(_ snapshot: ImageTransformSnapshot) {
     sourceImage = snapshot.sourceImage
     cutoutImage = snapshot.cutoutImage
     isCutoutApplied = snapshot.isCutoutApplied
@@ -2664,6 +2705,12 @@ final class AnnotateState: ObservableObject {
       }
     }
 
+    // An undo restores a differently-sized image; a stale strip would propose
+    // the wrong band, so drop the preview while cut-out stays in mode.
+    if cutOutPreviewStrip != nil {
+      cutOutPreviewStrip = nil
+    }
+
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
 
@@ -2679,9 +2726,9 @@ final class AnnotateState: ObservableObject {
   // MARK: - Rotation
 
   /// True when the user can rotate the source image 90°. Disabled while no image is loaded,
-  /// while crop is being actively edited, or while a background-cutout request is in flight.
+  /// while crop or cut-out is being actively edited, or while a background-cutout request is in flight.
   var canRotateImage: Bool {
-    hasImage && !isCropActive && !isCutoutProcessing
+    hasImage && !isCropActive && !isCutOutActive && !isCutoutProcessing
   }
 
   /// Rotate the source image 90° clockwise (or counter-clockwise) and bring all annotations,
@@ -2705,7 +2752,7 @@ final class AnnotateState: ObservableObject {
     ])
 
     let oldSize = CGSize(width: imageWidth, height: imageHeight)
-    pushRotationUndo(currentRotationSnapshot())
+    pushImageTransformUndo(currentImageTransformSnapshot())
 
     sourceImage = rotatedSource
     if let cutoutImage {
@@ -3000,9 +3047,169 @@ final class AnnotateState: ObservableObject {
     cropInteractionContext = nil
     originalCropRect = nil
 
-    let restoredTool = context?.selectedTool == .crop ? AnnotationToolType.selection : (context?.selectedTool ?? .selection)
+    let restoredTool: AnnotationToolType
+    switch context?.selectedTool {
+    case .crop, .cutOut, nil: restoredTool = .selection
+    case .some(let tool): restoredTool = tool
+    }
     selectedTool = restoredTool
     setSelectedAnnotationIds(context?.selectedAnnotationIds ?? [])
+  }
+
+  // MARK: - Cut Out
+
+  /// Activate cut-out from direct user interaction (toolbar/shortcut/canvas).
+  /// Mirrors `beginCropInteraction()`: stash the pre-mode context, collapse the
+  /// sidebar, deselect, and force the tool.
+  func beginCutOutInteraction() {
+    guard canApplyCutOut else { return }
+    if editingTextAnnotationId != nil {
+      commitTextEditing()
+    }
+    if cutOutInteractionContext == nil {
+      cutOutInteractionContext = CropInteractionContext(
+        selectedTool: selectedTool == .cutOut ? .selection : selectedTool,
+        selectedAnnotationIds: selectedAnnotationIds,
+        cropRect: cropRect,
+        didCutoutAutoApplyCrop: didCutoutAutoApplyCrop,
+        cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect
+      )
+    }
+
+    collapseSidebarForCropInteraction()
+    deselectAnnotation()
+    selectedTool = .cutOut
+    isCutOutActive = true
+  }
+
+  /// Preview/update the strip being drawn (image points, full-crossing).
+  func updateCutOutStrip(_ rect: CGRect) {
+    guard canApplyCutOut else { return }
+    cutOutPreviewStrip = rect.standardized.isNull ? nil : rect.standardized
+  }
+
+  /// Leave cut-out mode and restore the tool/selection captured at entry.
+  func cancelCutOut() {
+    cutOutPreviewStrip = nil
+    isCutOutActive = false
+    restoreSidebarAfterCropInteractionIfNeeded()
+
+    // Read the context before `selectedTool`'s didSet also clears it.
+    let context = cutOutInteractionContext
+    cutOutInteractionContext = nil
+    guard let context else { return }
+    selectedTool = context.selectedTool == .cutOut ? .selection : context.selectedTool
+    setSelectedAnnotationIds(context.selectedAnnotationIds)
+  }
+
+  /// Commit the drawn strip: cut/insert the source image (and background
+  /// cutout overlay), translate the content on the far side, push one
+  /// image-transform undo entry, and stay in mode so several strips can be
+  /// processed in a row.
+  func commitCutOut() {
+    guard canApplyCutOut, let strip = cutOutPreviewStrip, let image = sourceImage else {
+      cutOutPreviewStrip = nil
+      return
+    }
+
+    let orientation = cutOutOrientation
+    let mode = cutOutMode
+    let imageBounds = sourceImageBounds
+    let fullStrip = AnnotateCutOutTransform.fullCrossingStrip(
+      from: strip,
+      orientation: orientation,
+      imageBounds: imageBounds
+    )
+
+    guard let newSource = AnnotateCutOutTransform.apply(
+      to: image,
+      strip: fullStrip,
+      orientation: orientation,
+      mode: mode
+    ) else {
+      DiagnosticLogger.shared.log(.info, .annotate, "Cut out rejected", context: [
+        "reason": "strip covers whole image",
+        "strip": "\(Int(fullStrip.width))x\(Int(fullStrip.height))"
+      ])
+      cutOutPreviewStrip = nil
+      return
+    }
+
+    DiagnosticLogger.shared.log(.info, .annotate, "Cut out committed", context: [
+      "orientation": orientation == .horizontal ? "horizontal" : "vertical",
+      "mode": mode == .remove ? "remove" : "insert",
+      "strip": "\(Int(fullStrip.width))x\(Int(fullStrip.height))"
+    ])
+    pushImageTransformUndo(currentImageTransformSnapshot())
+    deselectAnnotation()
+
+    sourceImage = newSource
+    if let cutout = cutoutImage {
+      // Same strip, same dimensions, so this mirrors the source result. If it
+      // ever refuses, drop the overlay instead of leaving a misaligned cover.
+      if let alignedCutout = AnnotateCutOutTransform.apply(to: cutout, strip: fullStrip, orientation: orientation, mode: mode) {
+        cutoutImage = alignedCutout
+      } else {
+        cutoutImage = nil
+        isCutoutApplied = false
+      }
+    }
+
+    // Translate annotations across the strip: point-based geometry shifts per
+    // point so shapes reconstruct faithfully across the joined band;
+    // bounds-based shapes follow the majority-of-area half.
+    let offset = AnnotateCutOutTransform.shiftOffset(strip: fullStrip, orientation: orientation, mode: mode)
+    func shiftPoint(_ p: CGPoint) -> CGPoint {
+      guard AnnotateCutOutTransform.isFarSidePoint(p, strip: fullStrip, orientation: orientation, mode: mode) else {
+        return p
+      }
+      return CGPoint(x: p.x + offset.width, y: p.y + offset.height)
+    }
+    func shiftRect(_ r: CGRect) -> CGRect {
+      AnnotateCutOutTransform.shiftRect(r, strip: fullStrip, orientation: orientation, mode: mode)
+    }
+
+    annotations = annotations.map { item -> AnnotationItem in
+      var moved = item
+      switch item.type {
+      case .arrow(let geometry):
+        let shifted = ArrowGeometry(
+          start: shiftPoint(geometry.start),
+          end: shiftPoint(geometry.end),
+          style: geometry.style,
+          controlPoint: geometry.resolvedControlPoint.map(shiftPoint),
+          arrowType: geometry.arrowType,
+          startHead: geometry.startHead,
+          endHead: geometry.endHead
+        )
+        moved.type = .arrow(shifted)
+        moved.bounds = shifted.bounds()
+      case .line(let start, let end):
+        let newStart = shiftPoint(start)
+        let newEnd = shiftPoint(end)
+        moved.type = .line(start: newStart, end: newEnd)
+      case .path, .highlight:
+        moved.bounds = shiftRect(item.bounds)
+      case .counter:
+        moved.properties.counterArrowTarget = item.properties.counterArrowTarget.map(shiftPoint)
+        moved.bounds = shiftRect(item.bounds)
+      case .text:
+        moved.properties.calloutTailTarget = item.properties.calloutTailTarget.map(shiftPoint)
+        moved.bounds = shiftRect(item.bounds)
+      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark:
+        moved.bounds = shiftRect(item.bounds)
+      }
+
+      return moved
+    }
+
+    // Crop state follows the joined image space with the same majority rule.
+    cropRect = cropRect.map(shiftRect)
+    originalCropRect = originalCropRect.map(shiftRect)
+    cutoutAutoAppliedCropRect = cutoutAutoAppliedCropRect.map(shiftRect)
+
+    cutOutPreviewStrip = nil
+    hasUnsavedChanges = true
   }
 
   /// Update crop rect with bounds constraint
@@ -4758,7 +4965,7 @@ final class AnnotateState: ObservableObject {
 
   private var quickPropertiesSelectionAnnotations: [AnnotationItem] {
     guard editorMode == .annotate,
-          selectedTool != .crop else { return [] }
+          selectedTool != .crop, selectedTool != .cutOut else { return [] }
     return selectedAnnotations
   }
 
@@ -4883,7 +5090,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesSupportsArrowStyle: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
@@ -4988,7 +5195,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesSupportsTextFontSize: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
@@ -5009,7 +5216,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesSupportsTextBackground: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
@@ -5173,7 +5380,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesSupportsBlurType: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
@@ -5201,7 +5408,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesSupportsWatermark: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
@@ -5343,6 +5550,7 @@ final class AnnotateState: ObservableObject {
 
     guard editorMode == .annotate,
           selectedTool != .crop,
+          selectedTool != .cutOut,
           selectedTool.supportsQuickPropertiesBar else {
       return nil
     }
@@ -5355,7 +5563,7 @@ final class AnnotateState: ObservableObject {
 
   var quickPropertiesShowsSelectionStyle: Bool {
     guard editorMode == .annotate,
-          selectedTool != .crop else {
+          selectedTool != .crop, selectedTool != .cutOut else {
       return false
     }
 
