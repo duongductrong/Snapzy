@@ -286,21 +286,21 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
             )
           }
         }
-    } else if isVisible {
-      content.background {
-        LiquidGlassSurface(
-          shape: shape,
-          substrate: substrate,
-          dim: dim,
-          tint: tint,
-          highlight: highlight,
-          layer: layer,
-          withRimLighting: withRimLighting,
-          glassTint: glassTint
-        )
-      }
     } else {
-      content
+      content.background {
+        if isVisible {
+          LiquidGlassSurface(
+            shape: shape,
+            substrate: substrate,
+            dim: dim,
+            tint: tint,
+            highlight: highlight,
+            layer: layer,
+            withRimLighting: withRimLighting,
+            glassTint: glassTint
+          )
+        }
+      }
     }
   }
 
