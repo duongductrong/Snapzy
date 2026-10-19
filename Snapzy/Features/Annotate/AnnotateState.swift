@@ -3084,8 +3084,21 @@ final class AnnotateState: ObservableObject {
 
   /// Preview/update the strip being drawn (image points, full-crossing).
   func updateCutOutStrip(_ rect: CGRect) {
-    guard canApplyCutOut else { return }
+    // A drag still in flight after Esc/Cancel must not resurrect a strip.
+    guard canApplyCutOut, isCutOutInteractionActive else { return }
     cutOutPreviewStrip = rect.standardized.isNull ? nil : rect.standardized
+  }
+
+  /// Esc handling while cut-out owns the editor: the first press discards the
+  /// drawn strip and keeps the mode, the next one leaves the mode. Never lets
+  /// Esc fall through to closing the window.
+  func cancelCutOutInteraction() {
+    guard isCutOutInteractionActive else { return }
+    if cutOutPreviewStrip != nil {
+      cutOutPreviewStrip = nil
+      return
+    }
+    cancelCutOut()
   }
 
   /// Leave cut-out mode and restore the tool/selection captured at entry.

@@ -633,7 +633,7 @@ final class DrawingCanvasNSView: NSView {
       // Cancel cut out first — mode tools share the shared bottom slot one at a time.
       if state.isCutOutInteractionActive {
         Task { @MainActor in
-          state.cancelCutOut()
+          state.cancelCutOutInteraction()
         }
         invalidateDrawing()
         return

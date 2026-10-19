@@ -365,6 +365,10 @@ class AnnotateWindow: NSWindow {
     switch event.type {
     case .keyDown where event.keyCode == 53:
       if isTextInputActive { break }
+      if interactionState?.isCutOutInteractionActive == true {
+        interactionState?.cancelCutOutInteraction()
+        return
+      }
       if interactionState?.isCropInteractionActive == true {
         interactionState?.cancelCrop()
         return
@@ -372,8 +376,13 @@ class AnnotateWindow: NSWindow {
       if onEscape?() == true { return }
 
     case .keyDown where event.keyCode == 36 || event.keyCode == 76:
-      guard !isTextInputActive, interactionState?.isCropInteractionActive == true else { break }
-      interactionState?.confirmCropInteraction()
+      guard !isTextInputActive, let state = interactionState else { break }
+      if state.isCutOutInteractionActive {
+        if state.cutOutPreviewStrip != nil { state.commitCutOut() }
+        return
+      }
+      guard state.isCropInteractionActive else { break }
+      state.confirmCropInteraction()
       return
 
     case .scrollWheel where event.modifierFlags.contains(.command):
