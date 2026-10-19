@@ -104,6 +104,25 @@ final class QuickAccessPanel: NSPanel {
     collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
     acceptsMouseMovedEvents = true
     ignoresMouseEvents = false
+    applyCaptureVisibility()
+  }
+
+  // MARK: - Capture Visibility
+
+  /// Keeps the panel out of screenshots unless "Include Snapzy in screenshots" is on (#628).
+  ///
+  /// Own-app exclusion hides Snapzy's normal-level windows, but this floating panel stays
+  /// on screen during captures, and the CGDisplayCreateImage fast paths only filter windows
+  /// whose `sharingType` is `.none`. Applied once per panel: the controller builds a fresh
+  /// panel on every `show()`, and AppKit does not reliably restore `.readOnly` on a window
+  /// that was already set to `.none`.
+  static func sharingType(includeOwnApp: Bool) -> NSWindow.SharingType {
+    includeOwnApp ? .readOnly : .none
+  }
+
+  private func applyCaptureVisibility() {
+    let includeOwnApp = UserDefaults.standard.bool(forKey: PreferencesKeys.screenshotIncludeOwnApp)
+    sharingType = Self.sharingType(includeOwnApp: includeOwnApp)
   }
 
   private func installMouseMonitors() {

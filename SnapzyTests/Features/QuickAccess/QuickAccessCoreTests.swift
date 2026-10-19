@@ -1505,6 +1505,23 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertGreaterThan(pinWindow.level.rawValue, videoEditorWindow.level.rawValue)
   }
 
+  func testQuickAccessPanel_capturedOnlyWhenOwnAppIncludedInScreenshots() {
+    let defaults = UserDefaults.standard
+    let key = PreferencesKeys.screenshotIncludeOwnApp
+    let original = defaults.object(forKey: key)
+    defer { defaults.set(original, forKey: key) }
+
+    defaults.set(false, forKey: key)
+    let excludedPanel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
+    defer { excludedPanel.close() }
+    XCTAssertEqual(excludedPanel.sharingType, .none)
+
+    defaults.set(true, forKey: key)
+    let includedPanel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
+    defer { includedPanel.close() }
+    XCTAssertEqual(includedPanel.sharingType, .readOnly)
+  }
+
   func testQuickAccessPanel_interactiveRegionTracksVisibleCardsOnly() {
     let panelHeight =
       QuickAccessLayout.scaledCardHeight(1) * 5
