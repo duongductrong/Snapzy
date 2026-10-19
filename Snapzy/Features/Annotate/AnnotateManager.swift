@@ -323,6 +323,13 @@ final class AnnotateManager {
   }
 
   func makeSessionData(for state: AnnotateState, originalImageData: Data? = nil) -> AnnotationSessionData? {
+    // Annotations, crop and `sourceLogicalSize` are in the transformed image's space,
+    // so a rotated/cut source must persist its own pixels, not the loaded file bytes.
+    if state.isSourceImageTransformed {
+      guard let transformedData = state.transformedSourceImageData() else { return nil }
+      return AnnotationSessionData.snapshot(from: state, originalImageData: transformedData)
+    }
+
     let resolvedOriginalImageData = originalImageData
       ?? state.quickAccessItemId.flatMap { sessionCache[$0]?.originalImageData }
       ?? state.sourceURL.flatMap { Self.readFileData(from: $0) }

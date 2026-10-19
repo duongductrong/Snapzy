@@ -168,6 +168,29 @@ final class AnnotateState: ObservableObject {
     didSet { invalidateImageAnalysisProfiles() }
   }
   @Published var sourceURL: URL?
+
+  /// Base image as loaded/restored. Rotate, cut out and combine reorder replace
+  /// `sourceImage` with a new instance, so an identity mismatch means the session
+  /// must persist the transformed pixels instead of the originally loaded bytes.
+  private var loadedSourceImage: NSImage?
+  private var transformedSourceImageDataCache: (image: NSImage, data: Data)?
+
+  var isSourceImageTransformed: Bool {
+    sourceImage != nil && sourceImage !== loadedSourceImage
+  }
+
+  /// PNG bytes of the current (transformed) source image for session persistence.
+  /// Cached per image instance so repeated save/copy snapshots don't re-encode.
+  func transformedSourceImageData() -> Data? {
+    guard let sourceImage else { return nil }
+    if let cache = transformedSourceImageDataCache, cache.image === sourceImage {
+      return cache.data
+    }
+    guard let data = AnnotateExporter.imageData(from: sourceImage, for: "png") else { return nil }
+    transformedSourceImageDataCache = (sourceImage, data)
+    return data
+  }
+
   @Published private(set) var cutoutImage: NSImage? {
     didSet { invalidateImageAnalysisProfiles() }
   }
@@ -1527,6 +1550,7 @@ final class AnnotateState: ObservableObject {
     self.canvasPresetStore = canvasPresetStore ?? AnnotateCanvasPresetStore.shared
     self.appliesDefaultCanvasPresetOnNewImages = appliesDefaultCanvasPresetOnNewImages
     self.sourceImage = image
+    self.loadedSourceImage = image
     self.sourceURL = url
     self.quickAccessItemId = quickAccessItemId
     self.cloudURL = cloudURL
@@ -1830,6 +1854,8 @@ final class AnnotateState: ObservableObject {
     resetBackgroundCutoutState(markUnsaved: false)
     cancelSensitiveRedactionScan()
     sourceImage = image
+    loadedSourceImage = image
+    transformedSourceImageDataCache = nil
     sourceURL = url
     // Reset annotations for new image
     annotations.removeAll()
@@ -3128,10 +3154,14 @@ final class AnnotateState: ObservableObject {
     let orientation = cutOutOrientation
     let mode = cutOutMode
     let imageBounds = sourceImageBounds
-    let fullStrip = AnnotateCutOutTransform.fullCrossingStrip(
-      from: strip,
-      orientation: orientation,
-      imageBounds: imageBounds
+    let fullStrip = AnnotateCutOutTransform.pixelAlignedStrip(
+      AnnotateCutOutTransform.fullCrossingStrip(
+        from: strip,
+        orientation: orientation,
+        imageBounds: imageBounds
+      ),
+      in: image,
+      orientation: orientation
     )
 
     guard let newSource = AnnotateCutOutTransform.apply(

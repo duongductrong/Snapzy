@@ -142,18 +142,34 @@ enum AnnotateCutOutTransform {
     guard let outImage = context.makeImage() else { return nil }
 
     // Preserve the logical point size contract (insert grows, remove shrinks).
-    let pointSize: CGSize
-    switch (orientation, mode) {
-    case (.horizontal, .remove):
-      pointSize = CGSize(width: size.width, height: size.height - clamped.height)
-    case (.horizontal, .insert):
-      pointSize = CGSize(width: size.width, height: size.height + clamped.height)
-    case (.vertical, .remove):
-      pointSize = CGSize(width: size.width - clamped.width, height: size.height)
-    case (.vertical, .insert):
-      pointSize = CGSize(width: size.width + clamped.width, height: size.height)
-    }
+    // Derived from the integral pixel result so the pixel/point scale never
+    // drifts across repeated cuts (a fractional strip would otherwise leave
+    // e.g. 1111px at 555.55pt and skew every later save/restore).
+    let pointSize = CGSize(
+      width: targetPixelSize.width / scaleX,
+      height: targetPixelSize.height / scaleY
+    )
     return NSImage(cgImage: outImage, size: pointSize)
+  }
+
+  /// Snap a strip's edges onto the image's backing pixel grid (in points), so
+  /// the amount removed from the image matches the amount annotations shift.
+  static func pixelAlignedStrip(_ strip: CGRect, in image: NSImage, orientation: CutOutOrientation) -> CGRect {
+    guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil),
+          image.size.width > 0, image.size.height > 0 else { return strip }
+    let scaleX = CGFloat(cgImage.width) / image.size.width
+    let scaleY = CGFloat(cgImage.height) / image.size.height
+    let rect = strip.standardized
+    switch orientation {
+    case .horizontal:
+      let minY = (rect.minY * scaleY).rounded() / scaleY
+      let height = (rect.height * scaleY).rounded() / scaleY
+      return CGRect(x: rect.minX, y: minY, width: rect.width, height: height)
+    case .vertical:
+      let minX = (rect.minX * scaleX).rounded() / scaleX
+      let width = (rect.width * scaleX).rounded() / scaleX
+      return CGRect(x: minX, y: rect.minY, width: width, height: rect.height)
+    }
   }
 
   // MARK: - Geometry (image points)
