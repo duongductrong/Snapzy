@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.8] - 2026-10-19
+
+### Bug Fixes
+- Keep Quick Access panel out of screenshots when Snapzy is excluded (#660) (20c14dbf)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.7] - 2026-10-19
 
 ### Features
