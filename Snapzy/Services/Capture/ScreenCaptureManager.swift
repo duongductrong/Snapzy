@@ -2076,10 +2076,26 @@ final class ScreenCaptureManager: ObservableObject {
 
     let configuration = SCStreamConfiguration()
     let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
-    if #available(macOS 14.0, *) { configuration.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow) }
+    // The content rect excludes the shadow, so a shadowed window gets a padded
+    // canvas to render 1:1 (issue #569). Only macOS 14+ pads: its screenshot
+    // path leaves unused canvas transparent for the fringe trim below.
+    let padsCanvasForShadow: Bool
+    if #available(macOS 14.0, *) {
+      configuration.ignoreShadowsSingleWindow = WindowShadowPreference.ignoreShadowsSingleWindow(includeShadow: includeWindowShadow)
+      padsCanvasForShadow = includeWindowShadow
+    } else {
+      padsCanvasForShadow = false
+    }
     if #available(macOS 14.2, *) { configuration.captureResolution = .best }
-    configuration.width = max(1, Int((contentRect.width * scaleFactor).rounded()))
-    configuration.height = max(1, Int((contentRect.height * scaleFactor).rounded()))
+    let canvasPixelSize = WindowCaptureResolution.canvasPixelSize(
+      logicalSize: contentRect.size,
+      scaleFactor: scaleFactor,
+      includesShadow: padsCanvasForShadow
+    )
+    configuration.width = Int(canvasPixelSize.width)
+    configuration.height = Int(canvasPixelSize.height)
+    // Scale down only, never up, so the window stays native inside the canvas.
+    configuration.scalesToFit = false
     configuration.pixelFormat = kCVPixelFormatType_32BGRA
     configuration.showsCursor = showCursor
 
@@ -2093,20 +2109,37 @@ final class ScreenCaptureManager: ObservableObject {
       configuration: configuration
     )
 
-    let actualPixelSize = CGSize(width: image.width, height: image.height)
-    let expectedPixelSize = WindowCaptureResolution.expectedPixelSize(
-      logicalSize: contentRect.size,
-      scaleFactor: scaleFactor
-    )
-    let actualScaleFactor = WindowCaptureResolution.actualScaleFactor(
-      pixelSize: actualPixelSize,
-      logicalSize: contentRect.size
-    )
-    if WindowCaptureResolution.isUndersized(
-      pixelSize: actualPixelSize,
-      logicalSize: contentRect.size,
-      expectedScaleFactor: scaleFactor
-    ) {
+    // A cursor drawn in the padding would survive the trim and grow the
+    // image, so take the trim bounds from a cursor-free pass instead.
+    let fringeReference: CGImage?
+    if padsCanvasForShadow && showCursor {
+      configuration.showsCursor = false
+      fringeReference = try await Self.captureImageCompat(
+        contentFilter: contentFilter,
+        configuration: configuration
+      )
+    } else {
+      fringeReference = nil
+    }
+
+    func rejectIfUndersized(_ candidate: CGImage) throws {
+      let actualPixelSize = CGSize(width: candidate.width, height: candidate.height)
+      guard WindowCaptureResolution.isUndersized(
+        pixelSize: actualPixelSize,
+        logicalSize: contentRect.size,
+        expectedScaleFactor: scaleFactor
+      ) else {
+        return
+      }
+
+      let expectedPixelSize = WindowCaptureResolution.expectedPixelSize(
+        logicalSize: contentRect.size,
+        scaleFactor: scaleFactor
+      )
+      let actualScaleFactor = WindowCaptureResolution.actualScaleFactor(
+        pixelSize: actualPixelSize,
+        logicalSize: contentRect.size
+      )
       DiagnosticLogger.shared.log(
         .warning,
         .capture,
@@ -2114,7 +2147,7 @@ final class ScreenCaptureManager: ObservableObject {
         context: [
           "windowID": "\(fallbackTarget.windowID)",
           "expected": "\(Int(expectedPixelSize.width))x\(Int(expectedPixelSize.height))",
-          "actual": "\(image.width)x\(image.height)",
+          "actual": "\(candidate.width)x\(candidate.height)",
           "requestedScale": String(format: "%.3f", Double(scaleFactor)),
           "actualScale": actualScaleFactor.map { String(format: "%.3f", Double($0)) } ?? "unknown",
         ]
@@ -2122,9 +2155,32 @@ final class ScreenCaptureManager: ObservableObject {
       throw CaptureError.captureFailed("ScreenCaptureKit returned an undersized window image")
     }
 
+    // A padded canvas is always large, so only the trimmed window shows
+    // whether ScreenCaptureKit rendered it at the requested scale.
+    if !padsCanvasForShadow {
+      try rejectIfUndersized(image)
+    }
+
     let normalizedImage = await Task.detached(priority: .userInitiated) {
-      Self.trimTransparentWindowFringe(from: image)
+      Self.trimTransparentWindowFringe(from: image, boundsFrom: fringeReference)
     }.value
+
+    if padsCanvasForShadow {
+      try rejectIfUndersized(normalizedImage.image)
+      if normalizedImage.image.width >= image.width || normalizedImage.image.height >= image.height {
+        DiagnosticLogger.shared.log(
+          .warning,
+          .capture,
+          "Shadowed window filled its padded canvas; it may have been scaled down",
+          context: [
+            "windowID": "\(fallbackTarget.windowID)",
+            "canvas": "\(image.width)x\(image.height)",
+            "output": "\(normalizedImage.image.width)x\(normalizedImage.image.height)",
+          ]
+        )
+      }
+    }
+
     if normalizedImage.didTrim {
       DiagnosticLogger.shared.log(
         .debug,
@@ -2183,11 +2239,20 @@ final class ScreenCaptureManager: ObservableObject {
     }
   }
 
+  /// Crops `image` to its non-transparent bounds, measured on `reference`
+  /// when given (a same-size capture, e.g. one without the cursor).
   private nonisolated static func trimTransparentWindowFringe(
     from image: CGImage,
+    boundsFrom reference: CGImage? = nil,
     alphaThreshold: UInt8 = 1
   ) -> (image: CGImage, didTrim: Bool) {
-    guard let alphaBounds = transparentFringeBounds(in: image, alphaThreshold: alphaThreshold) else {
+    let boundsSource: CGImage
+    if let reference, reference.width == image.width, reference.height == image.height {
+      boundsSource = reference
+    } else {
+      boundsSource = image
+    }
+    guard let alphaBounds = transparentFringeBounds(in: boundsSource, alphaThreshold: alphaThreshold) else {
       return (image, false)
     }
 

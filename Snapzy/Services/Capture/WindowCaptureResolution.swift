@@ -13,6 +13,13 @@ nonisolated enum WindowCaptureResolution {
   /// margins. A result below this ratio is a density mismatch, not rounding.
   static let minimumAcceptedScaleRatio: CGFloat = 0.75
 
+  /// Transparent room, in points, added on every side of a shadowed window's
+  /// output canvas. The filter's content rect excludes the shadow, and
+  /// ScreenCaptureKit shrinks a shadowed window that does not fit its canvas
+  /// (issue #569). macOS shadows measured about 56pt per side, so this leaves
+  /// headroom; the unused margin is trimmed after capture.
+  static let shadowCanvasPadding: CGFloat = 128
+
   static func scaleFactor(
     displayBackingScaleFactor: CGFloat?,
     filterPointPixelScale: CGFloat?,
@@ -60,6 +67,23 @@ nonisolated enum WindowCaptureResolution {
     return CGSize(
       width: max(1, (logicalSize.width * scale).rounded()),
       height: max(1, (logicalSize.height * scale).rounded())
+    )
+  }
+
+  /// Output canvas for an independent window capture. A shadowed window needs
+  /// padding so it renders 1:1 instead of being scaled down to fit.
+  static func canvasPixelSize(
+    logicalSize: CGSize,
+    scaleFactor: CGFloat,
+    includesShadow: Bool
+  ) -> CGSize {
+    let padding = includesShadow ? shadowCanvasPadding * 2 : 0
+    return expectedPixelSize(
+      logicalSize: CGSize(
+        width: logicalSize.width + padding,
+        height: logicalSize.height + padding
+      ),
+      scaleFactor: scaleFactor
     )
   }
 
