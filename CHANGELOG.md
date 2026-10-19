@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.7] - 2026-10-19
+
+### Features
+- Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.6] - 2026-10-14
 
 ### Features
