@@ -83,17 +83,6 @@ struct AnnotateToolbarView: View {
       .help(L10n.AnnotateUI.crop)
 
       ToolbarButton(
-        icon: "scissors",
-        isSelected: state.selectedTool == .cutOut,
-        activeGlassTint: nil
-      ) {
-        state.beginCutOutInteraction()
-      }
-      .help(L10n.AnnotateUI.cutOut)
-      .disabled(!state.canApplyCutOut)
-      .opacity(state.canApplyCutOut ? 1 : 0.4)
-
-      ToolbarButton(
         icon: "rectangle.on.rectangle",
         isSelected: state.showSidebar,
         activeGlassTint: nil
@@ -104,12 +93,24 @@ struct AnnotateToolbarView: View {
 
       ToolbarDivider()
 
-      rotateButtonsGroup
+      imageTransformButtonsGroup
     }
   }
 
-  private var rotateButtonsGroup: some View {
+  /// Cut out sits with rotate so Crop/Sidebar keep their established positions.
+  private var imageTransformButtonsGroup: some View {
     HStack(spacing: 4) {
+      ToolbarButton(
+        icon: "scissors",
+        isSelected: state.selectedTool == .cutOut,
+        activeGlassTint: nil
+      ) {
+        state.beginCutOutInteraction()
+      }
+      .help(L10n.AnnotateUI.cutOut)
+      .disabled(!state.canApplyCutOut)
+      .opacity(state.canApplyCutOut ? 1 : 0.4)
+
       ToolbarButton(icon: "rotate.left", isSelected: false) {
         state.rotateImage(clockwise: false)
       }
