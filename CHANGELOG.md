@@ -9,6 +9,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Features
 - Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
 
+### Bug Fixes
+- Keep shadowed window captures at native resolution (#657) (00ae7536)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [2.1.0-beta.7] - 2026-10-19
+
+### Features
+- Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
+
 ### Contributors
 - @duongductrong
 - @github-actions[bot]
