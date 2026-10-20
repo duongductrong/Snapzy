@@ -151,78 +151,59 @@ final class GIFConverter {
     ]
     CGImageDestinationSetProperties(destination, gifProperties as CFDictionary)
 
-    // Frame delay for each frame
-    let frameDelay = 1.0 / Double(options.fps)
-    let frameProperties: [String: Any] = [
-      kCGImagePropertyGIFDictionary as String: [
-        kCGImagePropertyGIFDelayTime as String: frameDelay,
-        kCGImagePropertyGIFUnclampedDelayTime as String: frameDelay,
-      ]
-    ]
+    // Frames are encoded as soon as they arrive, in order, so only a handful of decoded
+    // frames are alive at once (ImageIO encodes on add once destination properties are set).
+    let writer = GIFFrameWriter(
+      destination: destination,
+      sequencer: GIFFrameSequencer(frameDelay: 1.0 / Double(options.fps))
+    )
+    let expectedCount = frameTimes.count
 
-    // Extract frames — collect with index to preserve ordering
-    let orderedFrames = try await withCheckedThrowingContinuation {
-      (continuation: CheckedContinuation<[CGImage], Error>) in
-
-      // Use indexed storage to maintain temporal order
-      var frameMap: [Int: CGImage] = [:]
-      var completedCount = 0
-      let expectedCount = frameTimes.count
+    try await withCheckedThrowingContinuation {
+      (continuation: CheckedContinuation<Void, Error>) in
 
       generator.generateCGImagesAsynchronously(forTimes: frameTimes) {
         requestedTime, image, actualTime, result, error in
 
-        completedCount += 1
-
-        if let image = image {
-          // Map frame to its index by matching requested time
-          let requestedSeconds = CMTimeGetSeconds(requestedTime)
-          let frameIndex = Int(round(requestedSeconds * Double(options.fps)))
-          frameMap[frameIndex] = image
-        }
+        // Map frame to its index by matching requested time
+        let requestedSeconds = CMTimeGetSeconds(requestedTime)
+        let frameIndex = Int(round(requestedSeconds * Double(options.fps)))
+        let completedCount = writer.resolve(index: frameIndex, image: result == .succeeded ? image : nil)
 
         // Report progress on main thread
         let progress = Double(completedCount) / Double(expectedCount)
         Task { @MainActor in
-          onProgress(progress * 0.85)  // Reserve 15% for GIF assembly
+          onProgress(progress * 0.98)  // Reserve the rest for finalization
         }
 
-        if completedCount >= expectedCount {
-          // Reconstruct frames in correct temporal order
-          let sorted = (0..<expectedCount).compactMap { frameMap[$0] }
-          if sorted.isEmpty {
-            DiagnosticLogger.shared.log(.error, .recording, "GIF conversion generated no frames", context: [
-              "file": videoURL.lastPathComponent,
-              "expectedFrames": "\(expectedCount)",
-            ])
-            continuation.resume(throwing: GIFConversionError.noFrames)
-          } else {
-            continuation.resume(returning: sorted)
-          }
+        if completedCount == expectedCount {
+          writer.finish(frameCount: expectedCount)
+          continuation.resume()
         }
       }
     }
-    if orderedFrames.count < totalFrames {
+
+    let writtenFrames = writer.writtenFrames
+    guard writtenFrames > 0 else {
+      DiagnosticLogger.shared.log(.error, .recording, "GIF conversion generated no frames", context: [
+        "file": videoURL.lastPathComponent,
+        "expectedFrames": "\(expectedCount)",
+      ])
+      try? FileManager.default.removeItem(at: gifURL)
+      throw GIFConversionError.noFrames
+    }
+    if writtenFrames < totalFrames {
       DiagnosticLogger.shared.log(.warning, .recording, "GIF conversion generated fewer frames than expected", context: [
         "expectedFrames": "\(totalFrames)",
-        "generatedFrames": "\(orderedFrames.count)",
+        "generatedFrames": "\(writtenFrames)",
       ])
-    }
-
-    // Add all frames to GIF destination
-    for (idx, frame) in orderedFrames.enumerated() {
-      CGImageDestinationAddImage(destination, frame, frameProperties as CFDictionary)
-
-      // Progress for assembly phase (85% → 100%)
-      let assemblyProgress = 0.85 + (Double(idx) / Double(orderedFrames.count)) * 0.15
-      onProgress(assemblyProgress)
     }
 
     // Finalize GIF
     guard CGImageDestinationFinalize(destination) else {
       DiagnosticLogger.shared.log(.error, .recording, "GIF conversion finalization failed", context: [
         "file": gifURL.lastPathComponent,
-        "frames": "\(orderedFrames.count)",
+        "frames": "\(writtenFrames)",
       ])
       throw GIFConversionError.finalizationFailed
     }
@@ -233,11 +214,118 @@ final class GIFConverter {
     let fileSizeMB = String(format: "%.1f", Double(fileSize) / 1_048_576.0)
     DiagnosticLogger.shared.log(.info, .recording, "GIF conversion completed", context: [
       "file": gifURL.lastPathComponent,
-      "frames": "\(orderedFrames.count)",
+      "frames": "\(writtenFrames)",
       "fileSizeMB": fileSizeMB,
     ])
 
     return gifURL
+  }
+}
+
+// MARK: - Frame Sequencing
+
+/// Orders frames that may arrive out of order and assigns GIF delays. A frame that fails to
+/// decode does not shorten the animation: its time is folded into the previous frame's delay.
+nonisolated struct GIFFrameSequencer<Frame> {
+  struct Output {
+    let frame: Frame
+    let delay: Double
+  }
+
+  let frameDelay: Double
+  private var nextIndex = 0
+  private var pendingResults: [Int: Frame?] = [:]
+  private var held: Output?
+  private var leadingMissingDelay = 0.0
+
+  init(frameDelay: Double) {
+    self.frameDelay = frameDelay
+  }
+
+  /// Records the result for `index` (nil = failed) and returns frames now ready to encode.
+  mutating func resolve(index: Int, frame: Frame?) -> [Output] {
+    guard index >= nextIndex, pendingResults[index] == nil else { return [] }
+    pendingResults[index] = .some(frame)
+
+    var ready: [Output] = []
+    while let result = pendingResults.removeValue(forKey: nextIndex) {
+      nextIndex += 1
+      guard let frame = result else {
+        if let current = held {
+          held = Output(frame: current.frame, delay: current.delay + frameDelay)
+        } else {
+          leadingMissingDelay += frameDelay
+        }
+        continue
+      }
+      if let current = held {
+        ready.append(current)
+      }
+      // A run of failures before the first frame stretches the first frame instead.
+      held = Output(frame: frame, delay: frameDelay + leadingMissingDelay)
+      leadingMissingDelay = 0
+    }
+    return ready
+  }
+
+  /// Flushes the last held frame. Indices below `frameCount` never resolved count as missing.
+  mutating func finish(frameCount: Int) -> [Output] {
+    var ready: [Output] = []
+    while nextIndex < frameCount {
+      ready += resolve(index: nextIndex, frame: nil)
+    }
+    pendingResults.removeAll()
+    if let current = held {
+      ready.append(current)
+      held = nil
+    }
+    return ready
+  }
+}
+
+/// Feeds generator callbacks into a GIF destination; callbacks may come from any thread.
+private nonisolated final class GIFFrameWriter: @unchecked Sendable {
+  private let lock = NSLock()
+  private let destination: CGImageDestination
+  private var sequencer: GIFFrameSequencer<CGImage>
+  private var completedCount = 0
+  private var _writtenFrames = 0
+
+  init(destination: CGImageDestination, sequencer: GIFFrameSequencer<CGImage>) {
+    self.destination = destination
+    self.sequencer = sequencer
+  }
+
+  var writtenFrames: Int {
+    lock.withLock { _writtenFrames }
+  }
+
+  /// Returns the number of generator results received so far.
+  func resolve(index: Int, image: CGImage?) -> Int {
+    lock.withLock {
+      completedCount += 1
+      write(sequencer.resolve(index: index, frame: image))
+      return completedCount
+    }
+  }
+
+  func finish(frameCount: Int) {
+    lock.withLock {
+      write(sequencer.finish(frameCount: frameCount))
+    }
+  }
+
+  private func write(_ outputs: [GIFFrameSequencer<CGImage>.Output]) {
+    for output in outputs {
+      let frameProperties: [String: Any] = [
+        kCGImagePropertyGIFDictionary as String: [
+          kCGImagePropertyGIFDelayTime as String: output.delay,
+          kCGImagePropertyGIFUnclampedDelayTime as String: output.delay,
+        ]
+      ]
+      CGImageDestinationAddImage(destination, output.frame, frameProperties as CFDictionary)
+      _writtenFrames += 1
+    }
   }
 }
 
