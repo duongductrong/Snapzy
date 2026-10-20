@@ -278,6 +278,11 @@ final class InlineAreaAnnotateSession: ObservableObject {
     defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierColorPanel) as? Bool ?? true
   }
 
+  /// The "magnifier size" preference — same sharing rationale as above.
+  var magnifierSize: MagnifierSizeOption {
+    MagnifierSizeOption.current(defaults: defaults)
+  }
+
   /// Registers the per-display magnifier host view created by `InlineAreaMagnifierOverlay` so
   /// scroll-wheel zoom and the "C" copy shortcut (handled at the session level, since key
   /// events arrive via `handleKeyEvent`, not through the host view itself) can reach it.

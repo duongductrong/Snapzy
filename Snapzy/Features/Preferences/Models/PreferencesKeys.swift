@@ -73,6 +73,7 @@ enum PreferencesKeys {
   static let screenshotAutoDetectElementUnderCursor = "screenshot.autoDetectElementUnderCursor"
   static let screenshotShowMagnifierByDefault = "screenshot.showMagnifierByDefault"
   static let screenshotShowMagnifierColorPanel = "screenshot.showMagnifierColorPanel"
+  static let screenshotMagnifierSize = "screenshot.magnifierSize"
   static let screenshotLastAreaRect = "screenshot.lastAreaRect"
   static let scrollingCaptureShowHints = "scrollingCapture.showHints"
   static let backgroundCutoutAutoCropEnabled = "backgroundCutout.autoCropEnabled"

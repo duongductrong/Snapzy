@@ -50,6 +50,8 @@ struct CaptureSettingsView: View {
   @AppStorage(PreferencesKeys.screenshotAutoDetectElementUnderCursor) private var autoDetectElementUnderCursor = false
   @AppStorage(PreferencesKeys.screenshotShowMagnifierByDefault) private var showMagnifierByDefault = false
   @AppStorage(PreferencesKeys.screenshotShowMagnifierColorPanel) private var showMagnifierColorPanel = true
+  @AppStorage(PreferencesKeys.screenshotMagnifierSize)
+  private var magnifierSize = MagnifierSizeOption.defaultValue.rawValue
 
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
@@ -223,11 +225,6 @@ struct CaptureSettingsView: View {
             ) {
               Toggle("", isOn: $showMagnifierByDefault)
                 .labelsHidden()
-                .onChange(of: showMagnifierByDefault) { isOn in
-                  if !isOn {
-                    showMagnifierColorPanel = false
-                  }
-                }
             }
 
             SettingRow(
@@ -244,9 +241,24 @@ struct CaptureSettingsView: View {
               title: L10n.PreferencesCapture.showMagnifierColorPanelTitle,
               description: L10n.PreferencesCapture.showMagnifierColorPanelDescription
             ) {
+              // Independent of "show magnifier by default": the panel also shows on a
+              // magnifier opened with ⌘+scroll.
               Toggle("", isOn: $showMagnifierColorPanel)
                 .labelsHidden()
-                .disabled(!showMagnifierByDefault)
+            }
+
+            SettingRow(
+              icon: "arrow.up.left.and.arrow.down.right",
+              title: L10n.PreferencesCapture.magnifierSizeTitle,
+              description: L10n.PreferencesCapture.magnifierSizeDescription
+            ) {
+              Picker("", selection: $magnifierSize) {
+                ForEach(MagnifierSizeOption.allCases) { option in
+                  Text(option.displayName).tag(option.rawValue)
+                }
+              }
+              .labelsHidden()
+              .pickerStyle(.menu)
             }
           }
         }

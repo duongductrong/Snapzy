@@ -3,7 +3,16 @@ import QuartzCore
 
 final class AreaSelectionMagnifier {
   // Configurable bounds/sizes. The preview square and the info panel below it share one width.
-  private let magnifierSize: CGFloat = 160.0
+  /// The "Magnifier size" preference. Frames are laid out once per layer tree, so a size change
+  /// drops the current layers and the next `update(at:...)` rebuilds them at the new size.
+  var size: MagnifierSizeOption = .defaultValue {
+    didSet {
+      guard size != oldValue else { return }
+      removeLayers()
+    }
+  }
+
+  private var magnifierSize: CGFloat { size.previewSize }
   private let panelGap: CGFloat = 8.0
   private let magnifierGap: CGFloat = 20.0
   private let minMagnifierZoom: CGFloat = 1.0
@@ -39,6 +48,36 @@ final class AreaSelectionMagnifier {
     let text = copyHintPrefixText
     return text.isEmpty ? 0 : text.size(withAttributes: [.font: hintFont]).width
   }()
+  private lazy var hintSuffixWidth: CGFloat = {
+    let text = copyHintText
+    return text.isEmpty ? 0 : text.size(withAttributes: [.font: hintFont]).width
+  }()
+
+  /// Whether the copy hint's leading words ("Press") fit next to the key cap and suffix at
+  /// the current width. Long translations don't fit narrower sizes (some not even the medium
+  /// one), so the row drops the prefix and reads "[C] to Copy" instead of clipping mid-word.
+  private var showsHintPrefix: Bool {
+    Self.hintRowFitsPrefix(
+      prefixWidth: hintPrefixWidth,
+      suffixWidth: hintSuffixWidth,
+      availableWidth: magnifierSize - panelHorizontalPadding * 2,
+      keyCapSize: keyCapSize,
+      gap: keyCapTextGap
+    )
+  }
+
+  /// The layout rule behind `showsHintPrefix`, kept pure so it can be tested with any
+  /// widths, independent of the running locale.
+  static func hintRowFitsPrefix(
+    prefixWidth: CGFloat,
+    suffixWidth: CGFloat,
+    availableWidth: CGFloat,
+    keyCapSize: CGFloat,
+    gap: CGFloat
+  ) -> Bool {
+    guard prefixWidth > 0 else { return false }
+    return prefixWidth + gap + keyCapSize + gap + suffixWidth <= availableWidth
+  }
 
   private var colorRowHeight: CGFloat { max(hexLineHeight, swatchSize) }
   private var hintRowHeight: CGFloat { max(keyCapSize, hintLineHeight) }
@@ -254,7 +293,7 @@ final class AreaSelectionMagnifier {
     // The "C" reads as a pressable key (solid badge) rather than blending into the sentence.
     let hintPrefixText = CATextLayer()
     configureTextLayer(hintPrefixText, font: hintFont, color: NSColor.white.withAlphaComponent(0.95), contentsScale: contentsScale)
-    hintPrefixText.string = copyHintPrefixText
+    hintPrefixText.string = showsHintPrefix ? copyHintPrefixText : ""
     panel.addSublayer(hintPrefixText)
     self.hintPrefixTextLayer = hintPrefixText
 
@@ -275,6 +314,8 @@ final class AreaSelectionMagnifier {
     let hintText = CATextLayer()
     configureTextLayer(hintText, font: hintFont, color: NSColor.white.withAlphaComponent(0.95), contentsScale: contentsScale)
     hintText.string = copyHintText
+    // A suffix too long even without the prefix ends in "…" rather than being cut mid-glyph.
+    hintText.truncationMode = .end
     panel.addSublayer(hintText)
     self.hintTextLayer = hintText
 
@@ -466,15 +507,16 @@ final class AreaSelectionMagnifier {
     keyCapText: CATextLayer,
     hintText: CATextLayer
   ) {
-    let prefixTrailingGap: CGFloat = hintPrefixWidth > 0 ? keyCapTextGap : 0
+    let prefixWidth = showsHintPrefix ? hintPrefixWidth : 0
+    let prefixTrailingGap: CGFloat = prefixWidth > 0 ? keyCapTextGap : 0
 
     // Bottom row: "[prefix] [C] [suffix]", e.g. "按 [C] 复制色值" / "[C] キーでコピー"
     let hintRowY = panelVerticalPadding
     hintPrefixText.frame = CGRect(
       x: panelHorizontalPadding, y: hintRowY + (hintRowHeight - hintLineHeight) / 2.0,
-      width: hintPrefixWidth, height: hintLineHeight
+      width: prefixWidth, height: hintLineHeight
     )
-    let keyCapX = panelHorizontalPadding + hintPrefixWidth + prefixTrailingGap
+    let keyCapX = panelHorizontalPadding + prefixWidth + prefixTrailingGap
     keyCapBackground.frame = CGRect(
       x: keyCapX, y: hintRowY + (hintRowHeight - keyCapSize) / 2.0,
       width: keyCapSize, height: keyCapSize

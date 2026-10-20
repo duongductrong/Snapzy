@@ -292,6 +292,7 @@ private struct InlineAreaAnnotateRootView: View {
             hostSize: display.localFrame.size,
             showsByDefault: session.showsMagnifierByDefault,
             showsColorPanel: session.showsMagnifierColorPanel,
+            size: session.magnifierSize,
             onHostViewReady: { hostView in
               session.registerMagnifierHostView(hostView, for: display.displayID)
             }
@@ -752,12 +753,14 @@ private struct InlineAreaMagnifierOverlay: NSViewRepresentable {
   let hostSize: CGSize
   let showsByDefault: Bool
   let showsColorPanel: Bool
+  let size: MagnifierSizeOption
   let onHostViewReady: (InlineAreaMagnifierHostView) -> Void
 
   func makeNSView(context: Context) -> InlineAreaMagnifierHostView {
     let view = InlineAreaMagnifierHostView(frame: CGRect(origin: .zero, size: hostSize))
     view.displayBounds = CGRect(origin: .zero, size: hostSize)
     view.magnifier.showsColorPanel = showsColorPanel
+    view.magnifier.size = size
     // Mirrors plain area screenshot capture: coordinates live in the magnifier panel while
     // it's active, and in `InlineAreaMagnifierHostView`'s own bubble (its equivalent of
     // `updateCoordinateIndicator`) while it's inactive — never both at once.

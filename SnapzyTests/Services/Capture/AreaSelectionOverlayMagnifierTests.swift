@@ -149,6 +149,70 @@ final class AreaSelectionOverlayMagnifierTests: AreaSelectionOverlayTestCase {
     XCTAssertGreaterThan(overlayView.testMagnifierZoom, 1.0)
   }
 
+  /// Regression for #607: with "show magnifier by default" off, a magnifier opened with
+  /// ⌘+scroll must still show the color picker panel when that preference is on.
+  func testColorPanel_showsOnCommandScrollMagnifierWhenShowByDefaultIsOff() {
+    let keys = [
+      PreferencesKeys.screenshotShowMagnifierByDefault,
+      PreferencesKeys.screenshotShowMagnifierColorPanel,
+    ]
+    let originals = keys.map { UserDefaults.standard.object(forKey: $0) }
+    defer {
+      for (key, value) in zip(keys, originals) {
+        if let value {
+          UserDefaults.standard.set(value, forKey: key)
+        } else {
+          UserDefaults.standard.removeObject(forKey: key)
+        }
+      }
+    }
+
+    // GIVEN: Magnifier starts inactive, color panel preference on
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.screenshotShowMagnifierColorPanel)
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    overlayView.applyBackdrop(AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0))
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertEqual(overlayView.testMagnifierZoom, 1.0)
+    XCTAssertTrue(overlayView.testMagnifierShowsColorPanel)
+
+    // WHEN: The user activates it with ⌘+scroll
+    overlayView.testScrollWheel(deltaY: 4.0, modifierFlags: .command)
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+    // THEN: The panel is visible and reports the sampled color
+    XCTAssertGreaterThan(overlayView.testMagnifierZoom, 1.0)
+    guard let panelLayer = overlayView.testMagnifierPanelLayer else {
+      XCTFail("magnifierPanelLayer not found")
+      return
+    }
+    XCTAssertFalse(panelLayer.isHidden)
+    XCTAssertEqual(overlayView.testMagnifierColorTextLayer?.string as? String, "#000000")
+  }
+
+  func testResetMagnifierZoomForNewSession_appliesMagnifierSizePreference() {
+    let originalValue = UserDefaults.standard.object(forKey: PreferencesKeys.screenshotMagnifierSize)
+    defer {
+      if let originalValue {
+        UserDefaults.standard.set(originalValue, forKey: PreferencesKeys.screenshotMagnifierSize)
+      } else {
+        UserDefaults.standard.removeObject(forKey: PreferencesKeys.screenshotMagnifierSize)
+      }
+    }
+
+    UserDefaults.standard.set(MagnifierSizeOption.small.rawValue, forKey: PreferencesKeys.screenshotMagnifierSize)
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertEqual(overlayView.testMagnifierSize, .small)
+
+    UserDefaults.standard.set("huge", forKey: PreferencesKeys.screenshotMagnifierSize)
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertEqual(overlayView.testMagnifierSize, .medium)
+
+    UserDefaults.standard.removeObject(forKey: PreferencesKeys.screenshotMagnifierSize)
+    overlayView.resetMagnifierZoomForNewSession()
+    XCTAssertEqual(overlayView.testMagnifierSize, .medium)
+  }
+
   func testResetMagnifierZoomForNewSession_enablesPanelCoordinates() {
     // Plain area screenshot has its own `updateCoordinateIndicator` bubble, but that bubble
     // stands down once the magnifier activates (see the comment there) — so the panel must be

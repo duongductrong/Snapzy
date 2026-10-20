@@ -232,6 +232,9 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "capture", "screenshot", "show_magnifier_color_panel", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotShowMagnifierColorPanel)
     }
+    collectEnumString(&reader, "capture", "screenshot", "magnifier_size", allowed: MagnifierSizeOption.allCases.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.screenshotMagnifierSize)
+    }
     collectBool(&reader, "capture", "screenshot", "include_window_shadow", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.captureIncludeWindowShadow)
     }

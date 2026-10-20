@@ -3457,6 +3457,31 @@ nonisolated enum L10n {
       defaultValue: "Show the color swatch and hex value below the magnifier preview; turn off to keep only the pixel grid and crosshair",
       comment: "Capture preferences setting description"
     )
+    static let magnifierSizeTitle = string(
+      "preferences-capture.magnifier-size-title",
+      defaultValue: "Magnifier size",
+      comment: "Capture preferences setting title"
+    )
+    static let magnifierSizeDescription = string(
+      "preferences-capture.magnifier-size-description",
+      defaultValue: "Size of the magnifier preview and the color picker panel below it",
+      comment: "Capture preferences setting description"
+    )
+    static let magnifierSizeSmall = string(
+      "preferences-capture.magnifier-size.small",
+      defaultValue: "Small",
+      comment: "Magnifier size option"
+    )
+    static let magnifierSizeMedium = string(
+      "preferences-capture.magnifier-size.medium",
+      defaultValue: "Medium",
+      comment: "Magnifier size option"
+    )
+    static let magnifierSizeLarge = string(
+      "preferences-capture.magnifier-size.large",
+      defaultValue: "Large",
+      comment: "Magnifier size option"
+    )
     static let overlaySection = string(
       "preferences-capture.overlay-section",
       defaultValue: "Overlay",

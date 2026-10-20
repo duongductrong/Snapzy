@@ -247,6 +247,70 @@ final class AreaSelectionOverlayMagnifierLayoutTests: AreaSelectionOverlayTestCa
     XCTAssertEqual(containerLayer.frame.height, overlayView.testMagnifierTotalHeight)
   }
 
+  func testMagnifierSize_previewAndPanelFollowSelectedSize() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    overlayView.applyBackdrop(AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0))
+    overlayView.testMagnifierShowsCoordinatesInPanel = true
+
+    for option in MagnifierSizeOption.allCases {
+      overlayView.testMagnifierSize = option
+      overlayView.testMagnifierZoom = 5.0
+      overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+      guard let container = overlayView.testMagnifierContainerLayer,
+            let image = overlayView.testMagnifierImageLayer,
+            let panel = overlayView.testMagnifierPanelLayer else {
+        XCTFail("magnifier layers not found for \(option)")
+        continue
+      }
+      let size = option.previewSize
+      XCTAssertEqual(container.frame.width, size, "\(option)")
+      XCTAssertEqual(image.frame.size, CGSize(width: size, height: size), "\(option)")
+      XCTAssertEqual(panel.frame.width, size, "\(option)")
+      XCTAssertEqual(container.frame.height, overlayView.testMagnifierTotalHeight, "\(option)")
+    }
+  }
+
+  func testMagnifierSize_changeRebuildsLayersAtNewSize() {
+    let image = createSolidColorImage(color: .white, size: CGSize(width: 800, height: 600))
+    overlayView.applyBackdrop(AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0))
+    overlayView.testMagnifierSize = .medium
+    overlayView.testMagnifierZoom = 5.0
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+    XCTAssertEqual(overlayView.testMagnifierContainerLayer?.frame.width, 160)
+
+    // Frames are built once per layer tree, so a size change must drop the old one...
+    overlayView.testMagnifierSize = .large
+    XCTAssertNil(overlayView.testMagnifierContainerLayer)
+
+    // ...and the next update rebuilds it at the new size.
+    overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+    XCTAssertEqual(overlayView.testMagnifierContainerLayer?.frame.width, 200)
+    XCTAssertEqual(overlayView.testMagnifierImageLayer?.frame.width, 200)
+  }
+
+  func testMagnifierSize_copyHintStaysInsidePanelAtEverySize() {
+    let image = createSolidColorImage(color: .black, size: CGSize(width: 800, height: 600))
+    overlayView.applyBackdrop(AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0))
+    let horizontalPadding: CGFloat = 10
+
+    for option in MagnifierSizeOption.allCases {
+      overlayView.testMagnifierSize = option
+      overlayView.testMagnifierZoom = 5.0
+      overlayView.testUpdateMagnifier(at: CGPoint(x: 200, y: 150))
+
+      guard let keyCap = overlayView.testMagnifierKeyCapBackgroundLayer,
+            let hint = overlayView.testMagnifierHintTextLayer else {
+        XCTFail("hint layers not found for \(option)")
+        continue
+      }
+      let limit = option.previewSize - horizontalPadding
+      XCTAssertGreaterThanOrEqual(keyCap.frame.minX, horizontalPadding, "\(option)")
+      XCTAssertLessThanOrEqual(keyCap.frame.maxX, limit, "\(option)")
+      XCTAssertLessThanOrEqual(hint.frame.maxX, limit + 0.5, "\(option)")
+    }
+  }
+
   func testCoordinateIndicator_visibleWhileMagnifierInactive() {
     let image = createSolidColorImage(color: .white, size: CGSize(width: 800, height: 600))
     let backdrop = AreaSelectionBackdrop(displayID: 0, image: image, scaleFactor: 1.0)

@@ -3494,8 +3494,8 @@ final class AreaSelectionOverlayView: NSView {
   }
 
   /// Applies the magnifier's session-start preferences ("show magnifier by default", "show
-  /// color picker panel") to a window newly entering a selection session. Called from
-  /// `configureSessionWindow` — shared by session start and mid-session display attach —
+  /// color picker panel", "magnifier size") to a window newly entering a selection session.
+  /// Called from `configureSessionWindow` — shared by session start and mid-session display attach —
   /// rather than from `applyBackdrop`/`clearBackdrop` directly, since a frozen session (e.g.
   /// screenshot-and-annotate) already has its backdrop ready and takes the `applyBackdrop`
   /// path, which must not reset these on every reapplication.
@@ -3505,6 +3505,7 @@ final class AreaSelectionOverlayView: NSView {
     magnifier.resetZoom(showByDefault: showsMagnifierByDefault)
     magnifier.showsColorPanel = UserDefaults.standard
       .object(forKey: PreferencesKeys.screenshotShowMagnifierColorPanel) as? Bool ?? true
+    magnifier.size = MagnifierSizeOption.current()
     // Coordinates live in the panel, not the separate `updateCoordinateIndicator` bubble, once
     // the magnifier is active — see the comment there. Same behavior as screenshot-and-annotate.
     magnifier.showsCoordinatesInPanel = true
@@ -3631,6 +3632,11 @@ final class AreaSelectionOverlayView: NSView {
 
     var testMagnifierTotalHeight: CGFloat {
       magnifier.totalHeight
+    }
+
+    var testMagnifierSize: MagnifierSizeOption {
+      get { magnifier.size }
+      set { magnifier.size = newValue }
     }
 
     var testMagnifierLastHexColor: String? {

@@ -39,7 +39,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - App Windows: Include Snapzy windows in screenshots (`screenshot.includeOwnApp`) / in recordings (`recording.includeOwnApp`).
   - Desktop: Hide Desktop Icons (`hideDesktopIcons`), Hide Desktop Widgets (`hideDesktopWidgets`).
   - Overlay: Show Selection Area Overlay (`screenshot.showSelectionAreaOverlay`) — in live passthrough sessions the dim appears from capture start when this is on (already-visible hover UI stays alive but looks dimmed until the drag cutout).
-  - Magnifier: Reverse Magnifier Zoom Direction (`screenshot.reverseMagnifierZoomDirection`).
+  - Magnifier: Show Magnifier by Default (`screenshot.showMagnifierByDefault`), Reverse Magnifier Zoom Direction (`screenshot.reverseMagnifierZoomDirection`), Show Color Picker Panel (`screenshot.showMagnifierColorPanel`, default on; independent of Show Magnifier by Default, so it also applies to a magnifier opened with ⌘+scroll), Magnifier Size (`screenshot.magnifierSize`: `small` / `medium` / `large`, default `medium`).
   - Output Naming: screenshot/recording file-name templates (`screenshot.fileNameTemplate`, `recording.fileNameTemplate`) with token list + live preview + reset.
   - After Capture: action matrix (see below) + Auto-Crop Subject (`backgroundCutout.autoCropEnabled`).
 - **Screenshot pane**:

@@ -94,6 +94,31 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     )
   }
 
+  func testDefaultDocumentIncludesMagnifierSettings() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "capture", "screenshot", "show_magnifier_by_default")?.boolValue, false)
+    XCTAssertEqual(document.value(at: "capture", "screenshot", "show_magnifier_color_panel")?.boolValue, true)
+    XCTAssertEqual(
+      document.value(at: "capture", "screenshot", "magnifier_size")?.stringValue,
+      MagnifierSizeOption.defaultValue.rawValue
+    )
+  }
+
+  func testExportIncludesMagnifierSize() throws {
+    let defaults = UserDefaultsFactory.make()
+    XCTAssertEqual(
+      try SimpleTOMLParser.parse(SnapzyConfigurationExporter.exportTOML(defaults: defaults))
+        .value(at: "capture", "screenshot", "magnifier_size")?.stringValue,
+      "medium"
+    )
+
+    defaults.set(MagnifierSizeOption.small.rawValue, forKey: PreferencesKeys.screenshotMagnifierSize)
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationExporter.exportTOML(defaults: defaults))
+
+    XCTAssertEqual(document.value(at: "capture", "screenshot", "magnifier_size")?.stringValue, "small")
+  }
+
   func testExportIncludesQuickAccessSoundSetting() throws {
     let defaults = UserDefaultsFactory.make()
     defaults.set(false, forKey: PreferencesKeys.quickAccessPlaySounds)

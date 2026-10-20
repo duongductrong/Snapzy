@@ -83,6 +83,7 @@ enum SnapzyConfigurationExporter {
     writer.value("reverse_magnifier_zoom_direction", defaults.boolValue(PreferencesKeys.screenshotReverseMagnifierZoomDirection, default: false))
     writer.value("show_magnifier_by_default", defaults.boolValue(PreferencesKeys.screenshotShowMagnifierByDefault, default: false))
     writer.value("show_magnifier_color_panel", defaults.boolValue(PreferencesKeys.screenshotShowMagnifierColorPanel, default: true))
+    writer.value("magnifier_size", MagnifierSizeOption.current(defaults: defaults).rawValue)
     writer.value("include_window_shadow", defaults.boolValue(PreferencesKeys.captureIncludeWindowShadow, default: WindowShadowPreference.defaultIncludeShadow))
 
     writer.section("capture.scrolling")

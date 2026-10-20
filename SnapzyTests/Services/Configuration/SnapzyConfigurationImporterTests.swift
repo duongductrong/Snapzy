@@ -73,6 +73,50 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertNil(defaults.string(forKey: PreferencesKeys.recordingMaxResolution))
   }
 
+  func testImportAppliesMagnifierSize() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.screenshot]
+    magnifier_size = "large"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotMagnifierSize), "large")
+  }
+
+  func testImportRejectsInvalidMagnifierSize() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.screenshot]
+    magnifier_size = "huge"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.screenshotMagnifierSize))
+  }
+
+  func testImportingDefaultDocumentResetsMagnifierSettings() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(true, forKey: PreferencesKeys.screenshotShowMagnifierByDefault)
+    defaults.set(false, forKey: PreferencesKeys.screenshotShowMagnifierColorPanel)
+    defaults.set(MagnifierSizeOption.large.rawValue, forKey: PreferencesKeys.screenshotMagnifierSize)
+
+    let result = SnapzyConfigurationImporter.importTOML(SnapzyConfigurationDefaultDocument.toml(), defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierByDefault) as? Bool, false)
+    XCTAssertEqual(defaults.object(forKey: PreferencesKeys.screenshotShowMagnifierColorPanel) as? Bool, true)
+    XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotMagnifierSize), "medium")
+  }
+
   func testImportRejectsUnsupportedSchemaBeforeMutatingDefaults() {
     let defaults = UserDefaultsFactory.make()
     defaults.set("png", forKey: PreferencesKeys.screenshotFormat)
