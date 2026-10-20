@@ -209,12 +209,12 @@ nonisolated final class RecordingSession: @unchecked Sendable {
       }
 
       let offset = _pauseOffsetAccumulator
-      let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
 
+      // `_firstTimestamp` is published only after `startSession` runs below:
+      // audio queues treat it as "session started" and append right away.
       var needsSessionStart = false
       if !_sessionStarted {
         _sessionStarted = true
-        _firstTimestamp = adjustedTimestamp
         needsSessionStart = true
       }
 
@@ -240,6 +240,7 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     // This avoids rewriting every audio sample (large per-buffer allocations).
     if shouldStartSession {
       writer.startSession(atSourceTime: adjustedTimestamp)
+      lock.withLock { _firstTimestamp = adjustedTimestamp }
       DiagnosticLogger.shared.log(.debug, .recording, "Recording writer session started", context: [
         "firstFrameTimestampSeconds": String(format: "%.3f", adjustedTimestamp.seconds)
       ])

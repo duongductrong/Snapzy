@@ -714,6 +714,10 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
   private var stream: SCStream?
   private let session = RecordingSession()  // Thread-safe session for frame writing
+
+  /// Called when ScreenCaptureKit ends the active stream on its own (display
+  /// removed, permission revoked) so the owner can stop and save what was recorded.
+  var onStreamStoppedUnexpectedly: (() -> Void)?
   private var microphoneCapturer: MicrophoneAudioCapturer?
 
   /// Live 0...1 audio level derived read-only from capture buffers; drives the
@@ -2298,5 +2302,15 @@ extension ScreenRecordingManager: SCStreamOutput {
 extension ScreenRecordingManager: SCStreamDelegate {
   nonisolated func stream(_ stream: SCStream, didStopWithError error: Error) {
     DiagnosticLogger.shared.logError(.recording, error, "Screen recording stream stopped unexpectedly")
+    // No more frames will arrive: stop instead of showing a live recording
+    // that silently writes nothing.
+    let stoppedStreamID = ObjectIdentifier(stream)
+    Task { @MainActor [weak self] in
+      guard let self,
+            let activeStream = self.stream,
+            ObjectIdentifier(activeStream) == stoppedStreamID,
+            self.state.isPauseResumeEligible else { return }
+      self.onStreamStoppedUnexpectedly?()
+    }
   }
 }

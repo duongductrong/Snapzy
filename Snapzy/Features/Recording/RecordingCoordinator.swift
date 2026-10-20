@@ -67,6 +67,9 @@ final class RecordingCoordinator: ObservableObject {
       name: UserDefaults.didChangeNotification,
       object: nil
     )
+    recorder.onStreamStoppedUnexpectedly = { [weak self] in
+      self?.stopFromStatusItem()
+    }
   }
 
   private let tempCaptureManager = TempCaptureManager.shared
@@ -1025,38 +1028,34 @@ final class RecordingCoordinator: ObservableObject {
       outputDirectoryAccess.stop()
     }
 
-    // Add video to QuickAccess immediately with processing state
-    await quickAccess.addVideo(url: videoURL)
+    // Add video to QuickAccess immediately with processing state. Nil when
+    // Quick Access is disabled; the conversion still runs without a card.
+    let itemId = await quickAccess.addVideo(url: videoURL)?.id
 
-    // Find the item we just added (should be first)
-    guard let item = quickAccess.items.first else {
-      DiagnosticLogger.shared.log(.error, .recording, "GIF conversion aborted: Quick Access item missing", context: [
-        "file": videoURL.lastPathComponent,
-      ])
-      return
+    if let itemId {
+      quickAccess.updateProcessingState(id: itemId, state: .processing(progress: 0))
     }
-    let itemId = item.id
-
-    // Set initial processing state
-    quickAccess.updateProcessingState(id: itemId, state: .processing(progress: 0))
 
     // Run GIF conversion
     do {
       let gifURL = try await GIFConverter.convert(
         videoURL: videoURL,
         onProgress: { progress in
+          guard let itemId else { return }
           quickAccess.updateProcessingState(id: itemId, state: .processing(progress: progress))
         }
       )
 
-      // Generate thumbnail from GIF
-      let thumbnail = SandboxFileAccessManager.shared.withScopedAccess(to: gifURL) {
-        NSImage(contentsOf: gifURL)
-      }
+      if let itemId {
+        // Generate thumbnail from GIF
+        let thumbnail = SandboxFileAccessManager.shared.withScopedAccess(to: gifURL) {
+          NSImage(contentsOf: gifURL)
+        }
 
-      // Update the QuickAccess item with GIF URL
-      quickAccess.updateItemURL(id: itemId, newURL: gifURL, newThumbnail: thumbnail)
-      quickAccess.updateProcessingState(id: itemId, state: .idle)
+        // Update the QuickAccess item with GIF URL
+        quickAccess.updateItemURL(id: itemId, newURL: gifURL, newThumbnail: thumbnail)
+        quickAccess.updateProcessingState(id: itemId, state: .idle)
+      }
 
       // Run remaining post-capture actions (clipboard copy, etc.) on the final GIF
       // skipQuickAccess: item is already in QuickAccess from addVideo() above
@@ -1080,6 +1079,7 @@ final class RecordingCoordinator: ObservableObject {
     } catch {
       DiagnosticLogger.shared.logError(.recording, error, "GIF conversion failed")
       // On failure, keep the video as-is and clear processing state
+      guard let itemId else { return }
       quickAccess.updateProcessingState(id: itemId, state: .failed)
 
       // Auto-clear failure state after 2 seconds
