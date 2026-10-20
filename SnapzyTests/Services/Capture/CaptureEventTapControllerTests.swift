@@ -39,8 +39,10 @@ final class CaptureEventTapControllerTests: XCTestCase {
   private final class FakeEnvironment {
     var isTrusted = true
     var createsTap = true
+    var createsRunLoopSource = true
     var createTapCallCount = 0
     var enabledStates: [Bool] = []
+    var invalidatedTaps: [CFMachPort] = []
     var port: CFMachPort?
 
     func makeDependencies() -> CaptureEventTapDependencies {
@@ -54,11 +56,17 @@ final class CaptureEventTapControllerTests: XCTestCase {
           self.port = port
           return port
         },
-        createRunLoopSource: { tap in
-          CFMachPortCreateRunLoopSource(nil, unsafeDowncast(tap, to: CFMachPort.self), 0)
+        createRunLoopSource: { [unowned self] tap in
+          guard createsRunLoopSource else { return nil }
+          return CFMachPortCreateRunLoopSource(nil, unsafeDowncast(tap, to: CFMachPort.self), 0)
         },
         setTapEnabled: { [unowned self] _, enabled in
           enabledStates.append(enabled)
+        },
+        invalidateTap: { [unowned self] tap in
+          let port = unsafeDowncast(tap, to: CFMachPort.self)
+          invalidatedTaps.append(port)
+          CFMachPortInvalidate(port)
         }
       )
     }
@@ -139,6 +147,97 @@ final class CaptureEventTapControllerTests: XCTestCase {
     XCTAssertTrue(controller.start())
     XCTAssertTrue(controller.isRunning)
     XCTAssertEqual(environment.createTapCallCount, 2)
+  }
+
+  // MARK: - Tap Teardown (issue #566)
+
+  func testStop_invalidatesTapPort() throws {
+    controller.start()
+    let port = try XCTUnwrap(environment.port)
+    controller.stop()
+    XCTAssertEqual(environment.invalidatedTaps.count, 1)
+    XCTAssertTrue(environment.invalidatedTaps.first === port)
+    XCTAssertFalse(CFMachPortIsValid(port))
+  }
+
+  func testStop_calledTwice_invalidatesOnce() {
+    controller.start()
+    controller.stop()
+    controller.stop()
+    XCTAssertEqual(environment.invalidatedTaps.count, 1)
+  }
+
+  func testStop_whenNotRunning_invalidatesNothing() {
+    controller.stop()
+    XCTAssertTrue(environment.invalidatedTaps.isEmpty)
+  }
+
+  func testRepeatedSessions_invalidateEveryCreatedTap() {
+    for _ in 0..<50 {
+      XCTAssertTrue(controller.start())
+      controller.stop()
+    }
+    XCTAssertEqual(environment.createTapCallCount, 50)
+    XCTAssertEqual(environment.invalidatedTaps.count, 50)
+    XCTAssertTrue(environment.invalidatedTaps.allSatisfy { !CFMachPortIsValid($0) })
+  }
+
+  func testStart_whenRunLoopSourceCreationFails_invalidatesTap() throws {
+    environment.createsRunLoopSource = false
+    XCTAssertFalse(controller.start())
+    XCTAssertFalse(controller.isRunning)
+    let port = try XCTUnwrap(environment.port)
+    XCTAssertEqual(environment.invalidatedTaps.count, 1)
+    XCTAssertFalse(CFMachPortIsValid(port))
+  }
+
+  func testDeinit_whileRunning_invalidatesTap() throws {
+    controller.start()
+    let port = try XCTUnwrap(environment.port)
+    controller = nil
+    XCTAssertEqual(environment.invalidatedTaps.count, 1)
+    XCTAssertFalse(CFMachPortIsValid(port))
+    controller = CaptureEventTapController(dependencies: environment.makeDependencies())
+  }
+
+  /// End-to-end against the window server: the live teardown must leave no tap
+  /// registered for this process. Uses a listen-only mouse tap (no
+  /// Accessibility permission needed) with the live run-loop/enable/invalidate
+  /// seams, so it exercises the same CF lifecycle as the production tap.
+  func testLiveTap_repeatedSessions_leaveNoRegisteredTaps() throws {
+    var live = CaptureEventTapDependencies.live(eventMask: CaptureEventTapController.eventMask)
+    live.isAccessibilityTrusted = { true }
+    live.createTap = { callback, userInfo in
+      CGEvent.tapCreate(
+        tap: .cgSessionEventTap,
+        place: .headInsertEventTap,
+        options: .listenOnly,
+        eventsOfInterest: CGEventMask(1) << CGEventMask(CGEventType.mouseMoved.rawValue),
+        callback: callback,
+        userInfo: userInfo
+      )
+    }
+    let liveController = CaptureEventTapController(dependencies: live)
+    let baseline = Self.registeredTapCountForCurrentProcess()
+
+    for _ in 0..<5 {
+      guard liveController.start() else {
+        throw XCTSkip("Window server event taps unavailable in this environment")
+      }
+      XCTAssertEqual(Self.registeredTapCountForCurrentProcess(), baseline + 1)
+      liveController.stop()
+    }
+
+    XCTAssertEqual(Self.registeredTapCountForCurrentProcess(), baseline)
+  }
+
+  private static func registeredTapCountForCurrentProcess() -> Int {
+    var count: UInt32 = 0
+    CGGetEventTapList(0, nil, &count)
+    var taps = [CGEventTapInformation](repeating: CGEventTapInformation(), count: Int(count))
+    CGGetEventTapList(count, &taps, &count)
+    let pid = getpid()
+    return taps.prefix(Int(count)).filter { $0.tappingProcess == pid }.count
   }
 
   // MARK: - Delegate Routing

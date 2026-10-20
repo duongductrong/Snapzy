@@ -80,6 +80,11 @@ struct CaptureEventTapDependencies {
   var createTap: (_ callback: CGEventTapCallBack, _ userInfo: UnsafeMutableRawPointer?) -> TapHandle?
   var createRunLoopSource: (_ tap: TapHandle) -> CFRunLoopSource?
   var setTapEnabled: (_ tap: TapHandle, _ enabled: Bool) -> Void
+  /// Unregisters the tap from the window server. Disabling a tap and dropping
+  /// its run-loop source does not remove it: the `CFMachPort` and its source
+  /// retain each other until the port is invalidated, so every session would
+  /// otherwise leave a disabled tap registered for the life of the process.
+  var invalidateTap: (_ tap: TapHandle) -> Void
 }
 
 extension CaptureEventTapDependencies {
@@ -101,6 +106,9 @@ extension CaptureEventTapDependencies {
       },
       setTapEnabled: { tap, enabled in
         CGEvent.tapEnable(tap: unsafeDowncast(tap, to: CFMachPort.self), enable: enabled)
+      },
+      invalidateTap: { tap in
+        CFMachPortInvalidate(unsafeDowncast(tap, to: CFMachPort.self))
       }
     )
   }
@@ -206,6 +214,7 @@ final class CaptureEventTapController {
       return false
     }
     guard let runLoopSource = dependencies.createRunLoopSource(tap) else {
+      dependencies.invalidateTap(tap)
       DiagnosticLogger.shared.log(
         .error,
         .capture,
@@ -233,6 +242,9 @@ final class CaptureEventTapController {
     if let runLoopSource {
       CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
       CFRunLoopSourceInvalidate(runLoopSource)
+    }
+    if let tap {
+      dependencies.invalidateTap(tap)
     }
     tap = nil
     runLoopSource = nil
