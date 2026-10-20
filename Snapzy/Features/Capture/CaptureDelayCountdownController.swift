@@ -23,12 +23,14 @@ final class CaptureDelayCountdownController {
   private var timer: Timer?
   private var countdown = CaptureDelayCountdown(seconds: 0)
   private var onFinish: (@MainActor () -> Void)?
+  /// The capture scheduled after the HUD settles; still part of the countdown.
+  private var pendingCapture: Task<Void, Never>?
   private var globalKeyMonitor: Any?
   private var localKeyMonitor: Any?
 
   private init() {}
 
-  var isActive: Bool { onFinish != nil }
+  var isActive: Bool { onFinish != nil || pendingCapture != nil }
 
   /// Count down `seconds`, then run `onFinish`. Ignored while another
   /// countdown is running. `detail` is an optional line under the digits
@@ -72,6 +74,8 @@ final class CaptureDelayCountdownController {
     guard isActive else { return }
     DiagnosticLogger.shared.log(.info, .capture, "Capture delay cancelled")
     onFinish = nil
+    pendingCapture?.cancel()
+    pendingCapture = nil
     tearDown()
   }
 
@@ -83,7 +87,11 @@ final class CaptureDelayCountdownController {
     self.onFinish = nil
     tearDown()
     // Let the HUD disappear so it never ends up in the screenshot.
-    DispatchQueue.main.asyncAfter(deadline: .now() + hudDismissSettleDelay) {
+    let settleDelay = UInt64(hudDismissSettleDelay * 1_000_000_000)
+    pendingCapture = Task { @MainActor [weak self] in
+      try? await Task.sleep(nanoseconds: settleDelay)
+      guard let self, !Task.isCancelled else { return }
+      self.pendingCapture = nil
       onFinish()
     }
   }

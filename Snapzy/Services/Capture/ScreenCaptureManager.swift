@@ -30,6 +30,13 @@ private enum ShareableContentCacheMode: String {
 private struct ShareableContentCacheEntry {
   let mode: ShareableContentCacheMode
   let task: ShareableContentPrefetchTask
+  let createdAt: Date
+
+  /// Window lists and frames go stale as soon as anything moves, opens or
+  /// relaunches, so an entry only bridges the prefetch-to-capture gap.
+  static let maxAge: TimeInterval = 3
+
+  var isFresh: Bool { Date().timeIntervalSince(createdAt) < Self.maxAge }
 }
 
 /// Result type for capture operations
@@ -325,13 +332,13 @@ final class ScreenCaptureManager: ObservableObject {
     guard hasPermission else { return nil }
 
     let cacheMode = shareableContentCacheMode(includeDesktopWindows: includeDesktopWindows)
-    if !forceRefresh, let cached = shareableContentCacheEntry(for: cacheMode) {
+    if !forceRefresh, let cached = shareableContentCacheEntry(for: cacheMode), cached.isFresh {
       return cached.task
     }
 
     let task = makeShareableContentPrefetchTask(includeDesktopWindows: includeDesktopWindows)
     setShareableContentCacheEntry(
-      ShareableContentCacheEntry(mode: cacheMode, task: task),
+      ShareableContentCacheEntry(mode: cacheMode, task: task, createdAt: Date()),
       for: cacheMode
     )
     return task
