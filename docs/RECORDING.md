@@ -71,8 +71,8 @@ The toolbar's Fullscreen toggle keeps the display already selected: `restartSele
 
 ## Pause / Resume
 
-- `pauseRecording()` keeps the stream alive but flips `RecordingSession.isCapturing = false` so all incoming samples are dropped; `resumeRecording()` accumulates the wall-clock pause into `pausedDuration`, calls `session.setAccumulatedPauseOffset(CMTime)` **before** setting `isCapturing = true` (fix 70f7f36).
-- `RecordingSession` subtracts the accumulated offset from every video PTS and re-times audio/mic buffers through `CMSampleBufferCreateCopyWithNewTiming`, so the output timeline has no pause gap.
+- `pauseRecording()` / `resumeRecording()` keep the stream alive and call `session.pause(atHostTime:)` / `session.resume(atHostTime:)` with `CMClockGetHostTimeClock()` time — the clock ScreenCaptureKit and the mic `AVCaptureSession` stamp samples with.
+- `RecordingPauseTimeline` (inside `RecordingSession`) classifies every sample by its own PTS: samples captured in a paused span are dropped even if they reach the writer queue after resume, and later samples are shifted back by the accumulated paused time (audio/mic re-timed through `CMSampleBufferCreateCopyWithNewTiming`), so the output has no pause gap. Video frames whose output PTS would not advance past the last written frame are dropped, since a non-increasing PTS fails the `AVAssetWriter`.
 - The menu bar / status bar timer is wall clock minus `pausedDuration` (`updateElapsedTime`).
 - `RecordingMouseTracker.pause()/resume()` keeps sample times consistent with the same exclusion.
 - Global shortcut `GlobalShortcutKind.pauseResumeRecording` ships unbound (seeded into `clearedShortcuts`; recommended `⌘⇧Space`); bound in Preferences → Shortcuts → Recording it dispatches `ScreenRecordingManager.togglePause()` only when `RecordingState.isPauseResumeEligible` (`.recording` / `.paused`), silent no-op otherwise. The menu bar also gains Pause/Resume during recording.

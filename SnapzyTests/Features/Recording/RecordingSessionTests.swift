@@ -64,14 +64,18 @@ final class RecordingSessionTests: XCTestCase {
     session.configureExpectedVideoDimensions(width: 1920, height: 1080)
   }
 
-  func testSetAccumulatedPauseOffset_doesNotCrash() {
-    let offset = CMTime(seconds: 5.0, preferredTimescale: 1_000_000)
-    session.setAccumulatedPauseOffset(offset)
+  func testResume_returnsAccumulatedPausedDuration() {
+    session.pause(atHostTime: CMTime(seconds: 10, preferredTimescale: 600))
+    let offset = session.resume(atHostTime: CMTime(seconds: 15, preferredTimescale: 600))
+    XCTAssertEqual(offset.seconds, 5, accuracy: 0.001)
   }
 
   func testReset_clearsPauseOffset() {
-    let offset = CMTime(seconds: 5.0, preferredTimescale: 1_000_000)
-    session.setAccumulatedPauseOffset(offset)
+    session.pause(atHostTime: CMTime(seconds: 10, preferredTimescale: 600))
+    session.resume(atHostTime: CMTime(seconds: 15, preferredTimescale: 600))
     session.reset()
+    session.pause(atHostTime: CMTime(seconds: 20, preferredTimescale: 600))
+    let offset = session.resume(atHostTime: CMTime(seconds: 21, preferredTimescale: 600))
+    XCTAssertEqual(offset.seconds, 1, accuracy: 0.001)
   }
 }

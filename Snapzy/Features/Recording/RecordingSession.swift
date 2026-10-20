@@ -34,7 +34,7 @@ nonisolated final class RecordingSession: @unchecked Sendable {
   private var _sessionStarted = false
   private var _isCapturing = false
   private var _firstTimestamp: CMTime?  // Track first video timestamp for timeline alignment
-  private var _pauseOffsetAccumulator: CMTime = .zero
+  private var _pauseTimeline = RecordingPauseTimeline()
   private var _onFirstVideoFrame: (() -> Void)?
   private var _videoFramesReceived = 0
   private var _videoFramesAppended = 0
@@ -123,11 +123,20 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     }
   }
 
-  /// Set the total accumulated pause duration for PTS adjustment.
-  /// Called by ScreenRecordingManager on each resume.
-  func setAccumulatedPauseOffset(_ offset: CMTime) {
+  /// Stop writing samples captured at or after `hostTime` (host time clock, like sample PTS).
+  func pause(atHostTime hostTime: CMTime) {
     lock.withLock {
-      _pauseOffsetAccumulator = offset
+      _pauseTimeline.pause(at: hostTime)
+    }
+  }
+
+  /// Resume writing samples captured at or after `hostTime`, shifted back by the paused span.
+  /// Returns the total paused duration so far.
+  @discardableResult
+  func resume(atHostTime hostTime: CMTime) -> CMTime {
+    lock.withLock {
+      _pauseTimeline.resume(at: hostTime)
+      return _pauseTimeline.accumulatedOffset
     }
   }
 
@@ -189,13 +198,15 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     let timestamp = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
     guard timestamp.isValid else { return }
 
-    // Consolidate locks and read dimensions/offset in one acquisition
+    // Consolidate locks and read dimensions/output time in one acquisition
     var shouldLogDimensionMismatch = false
-    let (writer, videoInput, adaptor, shouldStartSession, onFirstVideoFrame, offset, expectedWidth, expectedHeight, pixelWidth, pixelHeight): (
+    let (writer, videoInput, adaptor, shouldStartSession, onFirstVideoFrame, adjustedTimestamp, expectedWidth, expectedHeight, pixelWidth, pixelHeight): (
       AVAssetWriter?, AVAssetWriterInput?, AVAssetWriterInputPixelBufferAdaptor?, Bool, (() -> Void)?, CMTime, Int?, Int?, Int, Int
     ) = lock.withLock {
-      guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil, false, nil, .zero, nil, nil, 0, 0)
+      guard _isCapturing, let writer = _assetWriter, writer.status == .writing,
+            // Drops frames captured while paused and any frame that would not advance the track.
+            let adjustedTimestamp = _pauseTimeline.acceptVideoFrame(at: timestamp) else {
+        return (nil, nil, nil, false, nil, .invalid, nil, nil, 0, 0)
       }
 
       let w = CVPixelBufferGetWidth(pixelBuffer)
@@ -208,8 +219,6 @@ nonisolated final class RecordingSession: @unchecked Sendable {
         shouldLogDimensionMismatch = true
       }
 
-      let offset = _pauseOffsetAccumulator
-
       // `_firstTimestamp` is published only after `startSession` runs below:
       // audio queues treat it as "session started" and append right away.
       var needsSessionStart = false
@@ -220,7 +229,7 @@ nonisolated final class RecordingSession: @unchecked Sendable {
 
       _videoFramesReceived += 1
 
-      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart, _onFirstVideoFrame, offset, _expectedVideoWidth, _expectedVideoHeight, w, h)
+      return (writer, _videoInput, _pixelBufferAdaptor, needsSessionStart, _onFirstVideoFrame, adjustedTimestamp, _expectedVideoWidth, _expectedVideoHeight, w, h)
     }
 
     if shouldLogDimensionMismatch, let expectedWidth = expectedWidth, let expectedHeight = expectedHeight {
@@ -233,8 +242,6 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     guard let writer = writer,
           let videoInput = videoInput,
           let adaptor = adaptor else { return }
-
-    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
 
     // Lazy start session at first video timestamp.
     // This avoids rewriting every audio sample (large per-buffer allocations).
@@ -279,11 +286,11 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     guard timestamp.isValid else { return }
     logAudioSampleFormatIfNeeded(sampleBuffer, role: .systemAudio)
 
-    let (writer, audioInput, firstTs, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime) = lock.withLock {
+    let (writer, audioInput, firstTs, adjustedTimestamp, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime?, CMTime) = lock.withLock {
       guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil, .zero)
+        return (nil, nil, nil, nil, .zero)
       }
-      return (writer, _audioInput, _firstTimestamp, _pauseOffsetAccumulator)
+      return (writer, _audioInput, _firstTimestamp, _pauseTimeline.outputTime(for: timestamp), _pauseTimeline.accumulatedOffset)
     }
 
     guard let writer = writer, writer.status == .writing else { return }
@@ -291,7 +298,8 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     // Skip audio until video has started the session
     guard let firstTs = firstTs else { return }
 
-    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
+    // Skip samples captured while paused
+    guard let adjustedTimestamp = adjustedTimestamp else { return }
 
     // Skip audio samples that arrived before video start
     guard CMTimeCompare(adjustedTimestamp, firstTs) >= 0 else { return }
@@ -323,11 +331,11 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     guard timestamp.isValid else { return }
     logAudioSampleFormatIfNeeded(sampleBuffer, role: .microphone)
 
-    let (writer, microphoneInput, firstTs, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime) = lock.withLock {
+    let (writer, microphoneInput, firstTs, adjustedTimestamp, offset): (AVAssetWriter?, AVAssetWriterInput?, CMTime?, CMTime?, CMTime) = lock.withLock {
       guard _isCapturing, let writer = _assetWriter, writer.status == .writing else {
-        return (nil, nil, nil, .zero)
+        return (nil, nil, nil, nil, .zero)
       }
-      return (writer, _microphoneInput, _firstTimestamp, _pauseOffsetAccumulator)
+      return (writer, _microphoneInput, _firstTimestamp, _pauseTimeline.outputTime(for: timestamp), _pauseTimeline.accumulatedOffset)
     }
 
     guard let writer = writer, writer.status == .writing else { return }
@@ -335,7 +343,8 @@ nonisolated final class RecordingSession: @unchecked Sendable {
     // Skip mic audio until video has started the session
     guard let firstTs = firstTs else { return }
 
-    let adjustedTimestamp = offset.isNumeric && offset > .zero ? CMTimeSubtract(timestamp, offset) : timestamp
+    // Skip samples captured while paused
+    guard let adjustedTimestamp = adjustedTimestamp else { return }
 
     // Skip mic samples that arrived before video start
     guard CMTimeCompare(adjustedTimestamp, firstTs) >= 0 else { return }
@@ -417,7 +426,7 @@ nonisolated final class RecordingSession: @unchecked Sendable {
       _sessionStarted = false
       _isCapturing = false
       _firstTimestamp = nil
-      _pauseOffsetAccumulator = .zero
+      _pauseTimeline = RecordingPauseTimeline()
       _onFirstVideoFrame = nil
       _videoFramesReceived = 0
       _videoFramesAppended = 0

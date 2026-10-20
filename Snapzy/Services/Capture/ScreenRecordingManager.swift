@@ -1162,7 +1162,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       DiagnosticLogger.shared.log(.debug, .recording, "pauseRecording ignored", context: ["state": "\(state)"])
       return
     }
-    session.isCapturing = false
+    // Samples are cut by their own capture timestamps, so frames already in flight when the user
+    // clicks pause still land, and frames captured during the pause are dropped even if late.
+    session.pause(atHostTime: CMClockGetTime(CMClockGetHostTimeClock()))
     mouseTracker?.pause()
     audioLevelMeter.freeze()
     pauseStartTime = Date()
@@ -1176,19 +1178,16 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
       DiagnosticLogger.shared.log(.debug, .recording, "resumeRecording ignored", context: ["state": "\(state)"])
       return
     }
+    // Wall-clock duration only drives the elapsed-time label; the writer uses host-clock time.
     pausedDuration += Date().timeIntervalSince(pauseStart)
     pauseStartTime = nil
 
-    // Set accumulated pause offset in CoreMedia time before resuming capture
-    let offset = CMTime(seconds: pausedDuration, preferredTimescale: 1_000_000)
-    session.setAccumulatedPauseOffset(offset)
-
-    session.isCapturing = true
+    let offset = session.resume(atHostTime: CMClockGetTime(CMClockGetHostTimeClock()))
     mouseTracker?.resume()
     audioLevelMeter.unfreeze()
     state = .recording
     DiagnosticLogger.shared.log(.info, .recording, "Recording resumed", context: [
-      "pauseOffsetSeconds": String(format: "%.3f", pausedDuration)
+      "pauseOffsetSeconds": String(format: "%.3f", offset.seconds)
     ])
   }
 
