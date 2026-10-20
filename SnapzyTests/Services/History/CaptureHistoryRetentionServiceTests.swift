@@ -190,6 +190,68 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: videoSessionDirectory(for: inactiveURL).path))
   }
 
+  func testSweep_keepsSidecarsWhenStoreHasNotPublishedRecordsYet() async throws {
+    let sourceURL = try writeSourceFile(named: "launch.png")
+    let videoURL = try writeSourceFile(named: "launch.mov")
+    let masterURL = try writeSourceFile(named: "launch-master.mov")
+    CaptureHistoryStore.shared.add(makeRecord(filePath: sourceURL.path))
+    CaptureHistoryStore.shared.add(makeRecord(filePath: videoURL.path))
+    XCTAssertTrue(annotationSessionStore.persist(makeSessionData(), for: sourceURL))
+    XCTAssertTrue(
+      videoEditorSessionStore.persist(VideoEditorSessionData(sourceSnapshotURL: masterURL), for: videoURL)
+    )
+    // No refreshRecords(): like app launch, the observation has not delivered the rows yet.
+    try XCTSkipUnless(
+      CaptureHistoryStore.shared.records.isEmpty,
+      "Observation already published the new rows; the launch race cannot be reproduced"
+    )
+
+    await service.sweep()
+
+    XCTAssertNotNil(annotationSessionStore.load(for: sourceURL))
+    XCTAssertNotNil(videoEditorSessionStore.load(for: videoURL))
+  }
+
+  func testFetchRecords_readsDatabaseBeforeObservationPublishes() {
+    let record = makeRecord()
+    CaptureHistoryStore.shared.add(record)
+
+    XCTAssertEqual(CaptureHistoryStore.shared.fetchRecords()?.map(\.id), [record.id])
+  }
+
+  // MARK: - temp file collection
+
+  func testTempFilePaths_collectsExpiredAndOverflowTempRecords() {
+    let now = Date()
+    let newest = makeRecord(filePath: "/tmp/newest.png", capturedAt: now)
+    let overflow = makeRecord(filePath: "/tmp/overflow.png", capturedAt: now.addingTimeInterval(-60))
+    let expired = makeRecord(filePath: "/tmp/expired.png", capturedAt: now.addingTimeInterval(-86400 * 10))
+    let expiredSaved = makeRecord(filePath: "/saved/expired.png", capturedAt: now.addingTimeInterval(-86400 * 11))
+
+    let paths = CaptureHistoryRetentionService.tempFilePathsForRecordsToDelete(
+      in: [newest, overflow, expired, expiredSaved],
+      retentionDays: 7,
+      maxCount: 1,
+      now: now,
+      isTempFile: { $0.path.hasPrefix("/tmp/") }
+    )
+
+    XCTAssertEqual(paths, [expired.filePath, overflow.filePath])
+  }
+
+  func testTempFilePaths_emptyWhenLimitsDisabled() {
+    let record = makeRecord(filePath: "/tmp/old.png", capturedAt: Date().addingTimeInterval(-86400 * 100))
+
+    let paths = CaptureHistoryRetentionService.tempFilePathsForRecordsToDelete(
+      in: [record],
+      retentionDays: 0,
+      maxCount: 0,
+      isTempFile: { _ in true }
+    )
+
+    XCTAssertTrue(paths.isEmpty)
+  }
+
   // MARK: - thumbnail ownership
 
   func testThumbnailOwnership_matchesLegacyAndCacheKeyedNames() {

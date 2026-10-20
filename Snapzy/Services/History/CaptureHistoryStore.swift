@@ -621,17 +621,26 @@ final class CaptureHistoryStore: ObservableObject {
   }
 
   func refreshRecords() {
-    guard let dbPool = requireDatabase(for: "refresh capture history records") else { return }
+    guard let fetchedRecords = fetchRecords() else { return }
+    records = fetchedRecords
+  }
+
+  /// Reads all records straight from the database, newest first, without waiting for the
+  /// observation to publish them. Returns nil when the read fails, so callers doing cleanup
+  /// can tell "no records" apart from "records not available".
+  func fetchRecords() -> [CaptureHistoryRecord]? {
+    guard let dbPool = requireDatabase(for: "fetch capture history records") else { return nil }
 
     do {
-      records = try dbPool.read { db in
+      return try dbPool.read { db in
         try CaptureHistoryRecord
           .order(Column("capturedAt").desc)
           .fetchAll(db)
       }
     } catch {
-      logger.error("Failed to refresh capture history records: \(error.localizedDescription)")
-      DiagnosticLogger.shared.logError(.history, error, "Capture history refresh failed")
+      logger.error("Failed to fetch capture history records: \(error.localizedDescription)")
+      DiagnosticLogger.shared.logError(.history, error, "Capture history fetch failed")
+      return nil
     }
   }
 

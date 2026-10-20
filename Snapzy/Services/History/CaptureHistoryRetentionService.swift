@@ -52,7 +52,9 @@ final class CaptureHistoryRetentionService {
       DiagnosticLogger.shared.log(.debug, .history, "Capture history retention sweep skipped; history disabled")
       return
     }
-    guard CaptureHistoryStore.shared.isDatabaseAvailable else {
+    // Read records from the database rather than `CaptureHistoryStore.records`: at launch the
+    // observation may not have published yet, and an empty list would wipe every sidecar.
+    guard let recordsBeforeSweep = CaptureHistoryStore.shared.fetchRecords() else {
       DiagnosticLogger.shared.log(
         .warning,
         .history,
@@ -73,7 +75,8 @@ final class CaptureHistoryRetentionService {
     )
 
     // Collect temp file paths before deleting records so we can clean them up afterward
-    let tempPathsToDelete = collectTempFilePathsForRecordsToDelete(
+    let tempPathsToDelete = Self.tempFilePathsForRecordsToDelete(
+      in: recordsBeforeSweep,
       retentionDays: retentionDays,
       maxCount: maxCount
     )
@@ -97,10 +100,19 @@ final class CaptureHistoryRetentionService {
     // Delete associated temp files that are no longer referenced by any history record
     deleteUnreferencedTempFiles(paths: tempPathsToDelete)
 
+    guard let remainingRecords = CaptureHistoryStore.shared.fetchRecords() else {
+      DiagnosticLogger.shared.log(
+        .warning,
+        .history,
+        "Capture history orphan cleanup skipped; records unavailable after retention"
+      )
+      return
+    }
+
     // Clean up orphaned thumbnails
-    await cleanupOrphanedThumbnails()
-    cleanupOrphanedAnnotationSessions()
-    cleanupOrphanedVideoEditorSessions()
+    await cleanupOrphanedThumbnails(keeping: remainingRecords)
+    cleanupOrphanedAnnotationSessions(keeping: remainingRecords)
+    cleanupOrphanedVideoEditorSessions(keeping: remainingRecords)
 
     logger.info("Retention sweep completed")
     DiagnosticLogger.shared.log(
@@ -112,39 +124,34 @@ final class CaptureHistoryRetentionService {
   }
 
   /// Collect temp file paths for records that will be deleted by retention.
-  /// Returns paths that are in the temp directory and will be removed.
-  private func collectTempFilePathsForRecordsToDelete(
+  /// `allRecords` must be ordered newest first. Returns paths that are in the temp directory.
+  static func tempFilePathsForRecordsToDelete(
+    in allRecords: [CaptureHistoryRecord],
     retentionDays: Int,
-    maxCount: Int
+    maxCount: Int,
+    now: Date = Date(),
+    isTempFile: ((URL) -> Bool)? = nil
   ) -> [String] {
-    let store = CaptureHistoryStore.shared
-    guard store.isDatabaseAvailable else { return [] }
-
-    let tempManager = TempCaptureManager.shared
-
+    let isTempFile = isTempFile ?? { TempCaptureManager.shared.isTempFile($0) }
     var pathsToDelete: [String] = []
 
-    do {
-      let allRecords = store.records
-
-      // Find records older than retentionDays
-      if retentionDays > 0 {
-        let cutoff = Date().addingTimeInterval(-TimeInterval(retentionDays * 24 * 60 * 60))
-        for record in allRecords where record.capturedAt < cutoff {
-          if tempManager.isTempFile(record.fileURL) {
-            pathsToDelete.append(record.filePath)
-          }
+    // Find records older than retentionDays
+    if retentionDays > 0 {
+      let cutoff = now.addingTimeInterval(-TimeInterval(retentionDays * 24 * 60 * 60))
+      for record in allRecords where record.capturedAt < cutoff {
+        if isTempFile(record.fileURL) {
+          pathsToDelete.append(record.filePath)
         }
       }
+    }
 
-      // Find records that would be trimmed by maxCount
-      if maxCount > 0, allRecords.count > maxCount {
-        let excess = allRecords.count - maxCount
-        let oldestRecords = allRecords.suffix(excess)
-        for record in oldestRecords {
-          if tempManager.isTempFile(record.fileURL), !pathsToDelete.contains(record.filePath) {
-            pathsToDelete.append(record.filePath)
-          }
+    // Find records that would be trimmed by maxCount
+    if maxCount > 0, allRecords.count > maxCount {
+      let excess = allRecords.count - maxCount
+      let oldestRecords = allRecords.suffix(excess)
+      for record in oldestRecords {
+        if isTempFile(record.fileURL), !pathsToDelete.contains(record.filePath) {
+          pathsToDelete.append(record.filePath)
         }
       }
     }
@@ -207,18 +214,8 @@ final class CaptureHistoryRetentionService {
   // MARK: - Private
 
   /// Remove thumbnails that no longer have a corresponding history record
-  private func cleanupOrphanedThumbnails() async {
+  private func cleanupOrphanedThumbnails(keeping records: [CaptureHistoryRecord]) async {
     let generator = HistoryThumbnailGenerator.shared
-    let store = CaptureHistoryStore.shared
-    guard store.isDatabaseAvailable else {
-      DiagnosticLogger.shared.log(
-        .warning,
-        .history,
-        "Capture history orphan thumbnail cleanup skipped; database unavailable"
-      )
-      return
-    }
-
     let fm = FileManager.default
     let thumbsDir = generator.thumbnailsDirectory
     let contents: [URL]
@@ -229,7 +226,7 @@ final class CaptureHistoryRetentionService {
       return
     }
 
-    let activeRecordIds = Set(store.records.map(\.id.uuidString))
+    let activeRecordIds = Set(records.map(\.id.uuidString))
 
     var removedCount = 0
     for url in contents {
@@ -260,35 +257,17 @@ final class CaptureHistoryRetentionService {
     }
   }
 
-  private func cleanupOrphanedAnnotationSessions() {
-    guard CaptureHistoryStore.shared.isDatabaseAvailable else {
-      DiagnosticLogger.shared.log(
-        .warning,
-        .history,
-        "Capture history annotation session cleanup skipped; database unavailable"
-      )
-      return
-    }
-
+  private func cleanupOrphanedAnnotationSessions(keeping records: [CaptureHistoryRecord]) {
     let activeScreenshotPaths = Set(
-      CaptureHistoryStore.shared.records
+      records
         .filter { $0.captureType == .screenshot }
         .map(\.filePath)
     )
     annotationSessionStore.cleanup(keepingScreenshotFilePaths: activeScreenshotPaths)
   }
 
-  private func cleanupOrphanedVideoEditorSessions() {
-    guard CaptureHistoryStore.shared.isDatabaseAvailable else {
-      DiagnosticLogger.shared.log(
-        .warning,
-        .history,
-        "Capture history video editor session cleanup skipped; database unavailable"
-      )
-      return
-    }
-
-    let activeMediaPaths = Set(CaptureHistoryStore.shared.records.map(\.filePath))
+  private func cleanupOrphanedVideoEditorSessions(keeping records: [CaptureHistoryRecord]) {
+    let activeMediaPaths = Set(records.map(\.filePath))
     videoEditorSessionStore.cleanup(keepingMediaFilePaths: activeMediaPaths)
   }
 

@@ -57,6 +57,7 @@ flowchart TD
 - `CaptureHistoryRetentionService` — sweep at launch + every 24h timer.
 - Prefs: `history.retentionDays` (default 30, 0 = forever), `history.maxCount` (default 500, 0 = unlimited).
 - Sweep deletes: records older than retention, count-overflow records, unreferenced temp files, orphan thumbnails, orphan annotation sidecars (source gone / no active record / signature mismatch).
+- The sweep reads records straight from the database (`CaptureHistoryStore.fetchRecords()`), not the observed `records`, which is still empty at launch until the GRDB observation publishes; if the read fails the sweep skips orphan cleanup instead of treating history as empty.
 - `clearAllHistory()` deletes records + thumbnails + sidecars but keeps capture files on disk.
 - `history.floating.autoClearDays` is persisted/exported but never consumed — dead setting.
 
