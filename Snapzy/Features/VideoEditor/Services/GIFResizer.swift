@@ -12,23 +12,24 @@ import ImageIO
 import os.log
 import UniformTypeIdentifiers
 
-private let logger = Logger(subsystem: "Snapzy", category: "GIFResizer")
+private nonisolated let logger = Logger(subsystem: "Snapzy", category: "GIFResizer")
 
 /// Resizes an animated GIF to target dimensions using ImageIO
 @MainActor
 final class GIFResizer {
-  /// Resize a GIF file to the specified dimensions
+  /// Resize a GIF file to the specified dimensions.
+  /// Frames are decoded and redrawn off the main actor.
   /// - Parameters:
   ///   - sourceURL: URL of the source GIF
   ///   - targetSize: Desired output dimensions
   ///   - outputURL: URL for the resized GIF output
-  ///   - onProgress: Progress callback (0.0 - 1.0)
+  ///   - onProgress: Progress callback (0.0 - 1.0), called off the main actor
   static func resize(
     sourceURL: URL,
     targetSize: CGSize,
     outputURL: URL,
-    onProgress: @escaping (Double) -> Void
-  ) throws {
+    onProgress: @escaping @Sendable (Double) -> Void
+  ) async throws {
     let sourceAccess = SandboxFileAccessManager.shared.beginAccessingURL(sourceURL)
     let outputDirAccess = SandboxFileAccessManager.shared.beginAccessingURL(
       outputURL.deletingLastPathComponent()
@@ -38,6 +39,22 @@ final class GIFResizer {
       outputDirAccess.stop()
     }
 
+    try await Task.detached(priority: .userInitiated) {
+      try resizeFrames(
+        sourceURL: sourceURL,
+        targetSize: targetSize,
+        outputURL: outputURL,
+        onProgress: onProgress
+      )
+    }.value
+  }
+
+  private nonisolated static func resizeFrames(
+    sourceURL: URL,
+    targetSize: CGSize,
+    outputURL: URL,
+    onProgress: (Double) -> Void
+  ) throws {
     // Create image source
     guard let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil) else {
       throw GIFResizeError.cannotReadSource
@@ -84,56 +101,17 @@ final class GIFResizer {
     let targetWidth = Int(targetSize.width)
     let targetHeight = Int(targetSize.height)
 
-    // Process each frame
+    // Process each frame; the pool releases each decoded and resized frame before the next.
     for i in 0 ..< frameCount {
-      guard let sourceImage = CGImageSourceCreateImageAtIndex(source, i, nil) else {
-        continue
+      autoreleasepool {
+        addResizedFrame(
+          at: i,
+          from: source,
+          to: destination,
+          targetWidth: targetWidth,
+          targetHeight: targetHeight
+        )
       }
-
-      // Get frame properties (delay time)
-      let frameProperties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any]
-      let frameGIFProps = frameProperties?[kCGImagePropertyGIFDictionary as String] as? [String: Any]
-
-      let delayTime = frameGIFProps?[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double
-        ?? frameGIFProps?[kCGImagePropertyGIFDelayTime as String] as? Double
-        ?? 0.1
-
-      // Resize frame
-      let colorSpace = sourceImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
-      guard let context = CGContext(
-        data: nil,
-        width: targetWidth,
-        height: targetHeight,
-        bitsPerComponent: 8,
-        bytesPerRow: 0,
-        space: colorSpace,
-        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
-      ) else {
-        continue
-      }
-
-      context.interpolationQuality = .high
-      context.setFillColor(CGColor(gray: 0, alpha: 1))
-      context.fill(CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
-
-      let fittedRect = VideoEditorExportLayout.aspectFitRect(
-        sourceSize: CGSize(width: sourceImage.width, height: sourceImage.height),
-        in: CGSize(width: targetWidth, height: targetHeight)
-      )
-      context.draw(sourceImage, in: fittedRect)
-
-      guard let resizedImage = context.makeImage() else {
-        continue
-      }
-
-      // Write frame with preserved delay
-      let outputFrameProperties: [String: Any] = [
-        kCGImagePropertyGIFDictionary as String: [
-          kCGImagePropertyGIFDelayTime as String: delayTime,
-          kCGImagePropertyGIFUnclampedDelayTime as String: delayTime,
-        ],
-      ]
-      CGImageDestinationAddImage(destination, resizedImage, outputFrameProperties as CFDictionary)
 
       // Report progress
       let progress = Double(i + 1) / Double(frameCount)
@@ -153,6 +131,63 @@ final class GIFResizer {
     logger.info(
       "GIF resized: \(outputURL.lastPathComponent) — \(frameCount) frames, \(targetWidth)×\(targetHeight), \(fileSizeMB)MB"
     )
+  }
+
+  private nonisolated static func addResizedFrame(
+    at i: Int,
+    from source: CGImageSource,
+    to destination: CGImageDestination,
+    targetWidth: Int,
+    targetHeight: Int
+  ) {
+    guard let sourceImage = CGImageSourceCreateImageAtIndex(source, i, nil) else {
+      return
+    }
+
+    // Get frame properties (delay time)
+    let frameProperties = CGImageSourceCopyPropertiesAtIndex(source, i, nil) as? [String: Any]
+    let frameGIFProps = frameProperties?[kCGImagePropertyGIFDictionary as String] as? [String: Any]
+
+    let delayTime = frameGIFProps?[kCGImagePropertyGIFUnclampedDelayTime as String] as? Double
+      ?? frameGIFProps?[kCGImagePropertyGIFDelayTime as String] as? Double
+      ?? 0.1
+
+    // Resize frame
+    let colorSpace = sourceImage.colorSpace ?? CGColorSpace(name: CGColorSpace.sRGB)!
+    guard let context = CGContext(
+      data: nil,
+      width: targetWidth,
+      height: targetHeight,
+      bitsPerComponent: 8,
+      bytesPerRow: 0,
+      space: colorSpace,
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+      return
+    }
+
+    context.interpolationQuality = .high
+    context.setFillColor(CGColor(gray: 0, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
+
+    let fittedRect = VideoEditorExportLayout.aspectFitRect(
+      sourceSize: CGSize(width: sourceImage.width, height: sourceImage.height),
+      in: CGSize(width: targetWidth, height: targetHeight)
+    )
+    context.draw(sourceImage, in: fittedRect)
+
+    guard let resizedImage = context.makeImage() else {
+      return
+    }
+
+    // Write frame with preserved delay
+    let outputFrameProperties: [String: Any] = [
+      kCGImagePropertyGIFDictionary as String: [
+        kCGImagePropertyGIFDelayTime as String: delayTime,
+        kCGImagePropertyGIFUnclampedDelayTime as String: delayTime,
+      ],
+    ]
+    CGImageDestinationAddImage(destination, resizedImage, outputFrameProperties as CFDictionary)
   }
 
   /// Get metadata from a GIF file
@@ -209,7 +244,7 @@ struct GIFMetadata {
 
 // MARK: - Errors
 
-enum GIFResizeError: Error, LocalizedError {
+nonisolated enum GIFResizeError: Error, LocalizedError {
   case cannotReadSource
   case noFrames
   case cannotCreateDestination

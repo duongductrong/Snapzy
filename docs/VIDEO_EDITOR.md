@@ -227,7 +227,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 ## GIF Editing
 
 - GIF mode is dimension-change only — no trim, zoom, or speed; saving with unchanged dimensions shows a "no changes" alert.
-- `Services/GIFResizer.swift`: ImageIO per-frame resize that preserves loop count and frame delays; `GIFMetadata` reads source properties; `VideoEditorAnimatedGIFView` renders the animated preview.
+- `Services/GIFResizer.swift`: ImageIO per-frame resize that preserves loop count and frame delays; `resize` is `async` and runs the frame loop in a detached task (one `autoreleasepool` per frame) so the main actor stays responsive, with progress reported off main; `GIFMetadata` reads source properties; `VideoEditorAnimatedGIFView` renders the animated preview.
 - Temporary GIFs resize into staging and replace their current Quick Access file in place; saved GIFs keep the Replace Original / Save As Copy choice. Both use the `_resized.gif` copy naming convention.
 
 ## Undo / Redo

@@ -392,7 +392,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
       do {
         preparedSource = try await prepareSessionSourceIfNeeded(for: state)
-        try GIFResizer.resize(
+        try await GIFResizer.resize(
           sourceURL: state.editingSourceURL,
           targetSize: targetSize,
           outputURL: tempURL
@@ -481,7 +481,7 @@ final class VideoEditorWindowController: NSWindowController, NSWindowDelegate {
 
     Task {
       do {
-        try GIFResizer.resize(
+        try await GIFResizer.resize(
           sourceURL: state.editingSourceURL,
           targetSize: targetSize,
           outputURL: outputURL
