@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2.1.0-beta.9] - 2026-10-20
 
 ### Bug Fixes
+- Invalidate capture event tap on teardown to stop tap leak (#663) (f0850a0a)
+- Fixed recording stop button not responding on macOS 13–15 (#655) (3ad7e3fe)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @lvqviet
+
+## [2.1.0-beta.9] - 2026-10-20
+
+### Bug Fixes
 - Fixed recording stop button not responding on macOS 13–15 (#655) (3ad7e3fe)
 
 ### Contributors
