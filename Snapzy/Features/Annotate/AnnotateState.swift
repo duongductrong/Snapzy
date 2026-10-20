@@ -3231,7 +3231,12 @@ final class AnnotateState: ObservableObject {
         let newStart = shiftPoint(start)
         let newEnd = shiftPoint(end)
         moved.type = .line(start: newStart, end: newEnd)
-      case .path, .highlight:
+      case .path(let points):
+        // Strokes render from their points, so shifting bounds alone leaves them behind.
+        moved.type = .path(points.map(shiftPoint))
+        moved.bounds = shiftRect(item.bounds)
+      case .highlight(let points):
+        moved.type = .highlight(points.map(shiftPoint))
         moved.bounds = shiftRect(item.bounds)
       case .counter:
         moved.properties.counterArrowTarget = item.properties.counterArrowTarget.map(shiftPoint)

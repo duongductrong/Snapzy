@@ -353,9 +353,11 @@ final class InlineAreaAnnotateSession: ObservableObject {
           let crop = cropImage(for: clampedRect) else { return }
 
     let standardizedPreviousRect = previousRect.standardized
+    // Local rects are top-down; annotation space is bottom-up from the image's
+    // bottom edge, so vertical anchoring follows the rect's bottom (maxY).
     let annotationOffset = CGPoint(
       x: standardizedPreviousRect.minX - crop.localRect.minX,
-      y: standardizedPreviousRect.minY - crop.localRect.minY
+      y: crop.localRect.maxY - standardizedPreviousRect.maxY
     )
 
     selectionRect = crop.localRect
