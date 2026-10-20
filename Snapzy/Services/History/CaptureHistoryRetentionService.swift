@@ -234,7 +234,7 @@ final class CaptureHistoryRetentionService {
     var removedCount = 0
     for url in contents {
       let filename = url.deletingPathExtension().lastPathComponent
-      if !activeRecordIds.contains(filename) {
+      if !Self.thumbnail(named: filename, belongsToAnyOf: activeRecordIds) {
         do {
           try fm.removeItem(at: url)
           removedCount += 1
@@ -290,5 +290,13 @@ final class CaptureHistoryRetentionService {
 
     let activeMediaPaths = Set(CaptureHistoryStore.shared.records.map(\.filePath))
     videoEditorSessionStore.cleanup(keepingMediaFilePaths: activeMediaPaths)
+  }
+
+  /// Thumbnails are named "<UUID>" (legacy) or "<UUID>-<cache signature>".
+  nonisolated static func thumbnail(named filename: String, belongsToAnyOf recordIds: Set<String>) -> Bool {
+    let recordIdLength = 36
+    let recordId = String(filename.prefix(recordIdLength))
+    return recordIds.contains(recordId)
+      && (filename.count == recordIdLength || filename.dropFirst(recordIdLength).hasPrefix("-"))
   }
 }

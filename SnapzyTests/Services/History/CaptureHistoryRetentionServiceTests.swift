@@ -190,6 +190,22 @@ final class CaptureHistoryRetentionServiceTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: videoSessionDirectory(for: inactiveURL).path))
   }
 
+  // MARK: - thumbnail ownership
+
+  func testThumbnailOwnership_matchesLegacyAndCacheKeyedNames() {
+    let id = UUID().uuidString
+    let ids: Set<String> = [id]
+
+    XCTAssertTrue(CaptureHistoryRetentionService.thumbnail(named: id, belongsToAnyOf: ids))
+    XCTAssertTrue(
+      CaptureHistoryRetentionService.thumbnail(named: "\(id)-preview-v2-1700000000000-1024", belongsToAnyOf: ids)
+    )
+    XCTAssertFalse(
+      CaptureHistoryRetentionService.thumbnail(named: "\(UUID().uuidString)-preview-v2-1-1", belongsToAnyOf: ids)
+    )
+    XCTAssertFalse(CaptureHistoryRetentionService.thumbnail(named: "\(id)x", belongsToAnyOf: ids))
+  }
+
   // MARK: - start / stop
 
   func testStartStop_lifecycleDoesNotCrash() {
