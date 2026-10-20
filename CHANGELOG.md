@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.10] - 2026-10-20
+
+### Bug Fixes
+- Unlock magnifier color panel and add magnifier size setting (#665) (9de2b0f2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.9] - 2026-10-20
 
 ### Bug Fixes
