@@ -292,17 +292,7 @@ final class QuickAccessManager: ObservableObject {
 
     // Animate insertion explicitly — no implicit .animation on the stack
     withAnimation(QuickAccessAnimations.cardInsert) {
-      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
-        cancelDismissTimer(for: oldestId)
-        pinWindowManager.close(id: oldestId)
-        items.removeLast()
-        DiagnosticLogger.shared.log(
-          .debug,
-          .ui,
-          "Quick access trimmed oldest item",
-          context: ["maxVisibleItems": "\(maxVisibleItems)"]
-        )
-      }
+      trimOldestItemIfNeeded(logMessage: "Quick access trimmed oldest item")
       items.insert(item, at: 0)
     }
     DiagnosticLogger.shared.log(
@@ -368,17 +358,7 @@ final class QuickAccessManager: ObservableObject {
 
     // Animate insertion explicitly — no implicit .animation on the stack
     withAnimation(QuickAccessAnimations.cardInsert) {
-      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
-        cancelDismissTimer(for: oldestId)
-        pinWindowManager.close(id: oldestId)
-        items.removeLast()
-        DiagnosticLogger.shared.log(
-          .debug,
-          .ui,
-          "Quick access trimmed oldest item",
-          context: ["maxVisibleItems": "\(maxVisibleItems)"]
-        )
-      }
+      trimOldestItemIfNeeded(logMessage: "Quick access trimmed oldest item")
       items.insert(item, at: 0)
     }
 
@@ -493,6 +473,29 @@ final class QuickAccessManager: ObservableObject {
       ]
     )
     return item
+  }
+
+  /// Drops the oldest card to make room for a new one. Frees its in-memory
+  /// editor caches like `removeItem(id:)`, but keeps the file: a new capture
+  /// must never delete an older unsaved one (launch-time cleanup reclaims it).
+  private func trimOldestItemIfNeeded(logMessage: String) {
+    guard items.count >= maxVisibleItems, let oldest = items.last else { return }
+    cancelDismissTimer(for: oldest.id)
+    pinWindowManager.close(id: oldest.id)
+    activityHoldItemIds.remove(oldest.id)
+    // An open editor still owns its session; it saves back on close.
+    if !editingItemIds.contains(oldest.id) {
+      AnnotateManager.shared.clearSessionData(for: oldest.id)
+      VideoEditorManager.shared.clearSessionData(for: oldest.id)
+      VideoEditorManager.shared.clearSessionData(for: oldest.url)
+    }
+    items.removeLast()
+    DiagnosticLogger.shared.log(
+      .debug,
+      .ui,
+      logMessage,
+      context: ["maxVisibleItems": "\(maxVisibleItems)"]
+    )
   }
 
   /// Remove an item (screenshot or video) from the stack
@@ -1444,17 +1447,7 @@ final class QuickAccessManager: ObservableObject {
     retryURL: URL
   ) {
     withAnimation(QuickAccessAnimations.cardInsert) {
-      if items.count >= maxVisibleItems, let oldestId = items.last?.id {
-        cancelDismissTimer(for: oldestId)
-        pinWindowManager.close(id: oldestId)
-        items.removeLast()
-        DiagnosticLogger.shared.log(
-          .debug,
-          .ui,
-          "Quick access trimmed oldest item for history restore",
-          context: ["maxVisibleItems": "\(maxVisibleItems)"]
-        )
-      }
+      trimOldestItemIfNeeded(logMessage: "Quick access trimmed oldest item for history restore")
       items.insert(item, at: 0)
     }
 
