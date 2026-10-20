@@ -236,11 +236,14 @@ final class S3CloudProvider: CloudProvider {
     var existingRules = try await getLifecycleRulesXML()
     let before = existingRules.count
     existingRules.removeAll { $0.contains("<ID>\(Self.lifecycleRuleID)</ID>") }
+    // Nothing of ours to remove (also covers a denied read reported as empty):
+    // never touch the bucket's other rules.
+    guard existingRules.count < before else { return }
 
     if existingRules.isEmpty {
       // Delete entire lifecycle config if no rules remain
       try await deleteLifecycleConfiguration()
-    } else if existingRules.count < before {
+    } else {
       try await putLifecycleConfiguration(rules: existingRules)
     }
     logger.info("Lifecycle rule removed for snapzy/ prefix")

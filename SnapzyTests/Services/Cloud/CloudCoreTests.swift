@@ -443,7 +443,7 @@ final class CloudCoreTests: XCTestCase {
     }
   }
 
-  func testS3CloudProvider_removeExpiration_403getAnd200delete_deletesConfig() async throws {
+  func testS3CloudProvider_removeExpiration_onlySnapzyRule_deletesConfig() async throws {
     let config = CloudConfiguration(
       providerType: .awsS3,
       bucket: "test-bucket",
@@ -452,8 +452,9 @@ final class CloudCoreTests: XCTestCase {
       customDomain: nil,
       expireTime: .day7
     )
+    let rulesXML = "<LifecycleConfiguration><Rule><ID>snapzy-auto-expire</ID><Status>Enabled</Status></Rule></LifecycleConfiguration>"
     let mockSession = MockURLSession { request in
-      MockURLSession.makeResponse(statusCode: 200)
+      MockURLSession.makeResponse(statusCode: 200, data: Data(rulesXML.utf8))
     }
     let provider = S3CloudProvider(config: config, accessKey: "AKIATEST", secretKey: "SECRET", session: mockSession)
 
@@ -462,5 +463,25 @@ final class CloudCoreTests: XCTestCase {
     let deleteRequest = mockSession.requests.first { $0.httpMethod == "DELETE" }
     XCTAssertNotNil(deleteRequest)
     XCTAssertTrue(deleteRequest?.url?.absoluteString.contains("lifecycle") == true)
+  }
+
+  func testS3CloudProvider_removeExpiration_noSnapzyRule_leavesBucketUntouched() async throws {
+    let config = CloudConfiguration(
+      providerType: .awsS3,
+      bucket: "test-bucket",
+      region: "us-east-1",
+      endpoint: nil,
+      customDomain: nil,
+      expireTime: .day7
+    )
+    let rulesXML = "<LifecycleConfiguration><Rule><ID>user-rule</ID><Status>Enabled</Status></Rule></LifecycleConfiguration>"
+    let mockSession = MockURLSession { request in
+      MockURLSession.makeResponse(statusCode: 200, data: Data(rulesXML.utf8))
+    }
+    let provider = S3CloudProvider(config: config, accessKey: "AKIATEST", secretKey: "SECRET", session: mockSession)
+
+    try await provider.removeExpiration()
+
+    XCTAssertEqual(mockSession.requests.map(\.httpMethod), ["GET"])
   }
 }
