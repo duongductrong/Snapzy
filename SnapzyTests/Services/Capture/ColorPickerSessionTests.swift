@@ -201,44 +201,6 @@ final class ColorPickerSessionTests: XCTestCase {
     XCTAssertTrue(toasts.isEmpty)
   }
 
-  func testController_newPickDismissesThePreviousResult() async throws {
-    try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
-    var dismissals = 0
-    let controller = makeController(capture: FakeCapture(image: ColorPickerTestImages.splitImage), dismissed: { dismissals += 1 })
-
-    controller.start()
-    XCTAssertEqual(dismissals, 1)
-    controller.cancel()
-  }
-
-  // MARK: - Result card
-
-  func testResultCard_showsCopiesOtherFormatsAndPicksAgain() async throws {
-    try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
-    var copied: [String] = []
-    var pickAgainCount = 0
-    let presenter = ColorPickerResultPresenter(
-      copyToPasteboard: { copied.append($0) },
-      onPickAgain: { pickAgainCount += 1 }
-    )
-    let color = ColorPickerColor(red: 0x1A, green: 0x2B, blue: 0x3C)
-
-    presenter.show(color: color, copiedFormat: .hex, near: CGPoint(x: 200, y: 400))
-    let panel = try XCTUnwrap(presenter.testPanel)
-    XCTAssertTrue(presenter.isVisible)
-    XCTAssertTrue(panel.isVisible)
-    XCTAssertFalse(panel.canBecomeKey)
-    XCTAssertEqual(panel.sharingType, .none)
-
-    presenter.testCopy(.hsl)
-    XCTAssertEqual(copied, ["hsl(210, 40%, 17%)"])
-    XCTAssertEqual(presenter.testCopiedFormat, .hsl)
-
-    presenter.testPickAgain()
-    XCTAssertEqual(pickAgainCount, 1)
-    XCTAssertFalse(presenter.isVisible)
-  }
-
   func testController_cancelCopiesNothing() async throws {
     try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
     var copied: [String] = []
@@ -282,6 +244,43 @@ final class ColorPickerSessionTests: XCTestCase {
     XCTAssertTrue(controller.testWindows.isEmpty)
     XCTAssertEqual(toasts.map(\.0), [L10n.ScreenCapture.colorPickerUnavailable])
     XCTAssertEqual(toasts.map(\.1), [.error])
+  }
+
+  // MARK: - Result window
+
+  func testResultWindow_isANativeWindowThatCopiesFormatsAndStaysForPickAgain() async throws {
+    try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
+    var copied: [String] = []
+    var pickAgainCount = 0
+    let controller = ColorPickerResultWindowController(
+      copyToPasteboard: { copied.append($0) },
+      onPickAgain: { pickAgainCount += 1 }
+    )
+    let color = ColorPickerColor(red: 0x1A, green: 0x2B, blue: 0x3C)
+
+    controller.show(color: color, copiedFormat: .hex, near: CGPoint(x: 200, y: 400))
+    let window = try XCTUnwrap(controller.testWindow)
+    XCTAssertTrue(controller.isVisible)
+    XCTAssertTrue(window.styleMask.contains(.titled))
+    XCTAssertTrue(window.styleMask.contains(.closable))
+    XCTAssertTrue(window.styleMask.contains(.miniaturizable))
+    XCTAssertEqual(window.title, L10n.Actions.pickColor)
+
+    controller.testCopy(.hsl)
+    XCTAssertEqual(copied, ["hsl(210, 40%, 17%)"])
+    XCTAssertEqual(controller.testCopiedFormat, .hsl)
+
+    controller.testPickAgain()
+    XCTAssertEqual(pickAgainCount, 1)
+    XCTAssertTrue(controller.isVisible)
+
+    // A second pick reuses the same window.
+    controller.show(color: ColorPickerColor(red: 255, green: 0, blue: 0), copiedFormat: .hex, near: .zero)
+    XCTAssertTrue(controller.testWindow === window)
+    XCTAssertEqual(controller.testCopiedFormat, .hex)
+
+    controller.close()
+    XCTAssertFalse(controller.isVisible)
   }
 
   // MARK: - Helpers
@@ -363,15 +362,13 @@ final class ColorPickerSessionTests: XCTestCase {
     capture: FakeCapture,
     copied: @escaping (String) -> Void = { _ in },
     toasts: @escaping (String, AppToastStyle) -> Void = { _, _ in },
-    results: @escaping (ColorPickerColor) -> Void = { _ in },
-    dismissed: @escaping () -> Void = {}
+    results: @escaping (ColorPickerColor) -> Void = { _ in }
   ) -> ColorPickerController {
     ColorPickerController(
       makeCapture: { capture },
       copyToPasteboard: copied,
       showToast: toasts,
       presentResult: { color, _ in results(color) },
-      dismissResult: dismissed,
       setsCursorHidden: false
     )
   }

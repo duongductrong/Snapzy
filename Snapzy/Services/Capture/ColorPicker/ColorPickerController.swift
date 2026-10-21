@@ -4,7 +4,7 @@
 //
 //  Standalone Pick Color session: see-through overlays keep the screen live, the display
 //  under the pointer is streamed for the loupe, and the picked pixel's sRGB hex value is
-//  copied without taking a screenshot; a result card then offers the other formats.
+//  copied without taking a screenshot; a result window then offers the other formats.
 //
 
 import AppKit
@@ -18,7 +18,6 @@ final class ColorPickerController {
   private let copyToPasteboard: (String) -> Void
   private let showToast: (String, AppToastStyle) -> Void
   private let presentResult: (ColorPickerColor, CGPoint) -> Void
-  private let dismissResult: () -> Void
   private let setsCursorHidden: Bool
 
   private var windows: [ColorPickerOverlayWindow] = []
@@ -42,7 +41,6 @@ final class ColorPickerController {
     copyToPasteboard: ((String) -> Void)? = nil,
     showToast: ((String, AppToastStyle) -> Void)? = nil,
     presentResult: ((ColorPickerColor, CGPoint) -> Void)? = nil,
-    dismissResult: (() -> Void)? = nil,
     setsCursorHidden: Bool = true
   ) {
     let copy = copyToPasteboard ?? { value in
@@ -55,18 +53,16 @@ final class ColorPickerController {
     self.showToast = showToast ?? { message, style in
       AppToastManager.shared.show(message: message, style: style, duration: 1.5, variant: .compact)
     }
-    if let presentResult, let dismissResult {
+    if let presentResult {
       self.presentResult = presentResult
-      self.dismissResult = dismissResult
     } else {
-      let presenter = ColorPickerResultPresenter(
+      let resultWindow = ColorPickerResultWindowController(
         copyToPasteboard: copy,
         onPickAgain: { ColorPickerController.shared.start() }
       )
       self.presentResult = { color, point in
-        presenter.show(color: color, copiedFormat: .hex, near: point)
+        resultWindow.show(color: color, copiedFormat: .hex, near: point)
       }
-      self.dismissResult = { presenter.dismiss() }
     }
     self.setsCursorHidden = setsCursorHidden
   }
@@ -83,7 +79,6 @@ final class ColorPickerController {
   func start() {
     guard !isActive else { return }
     isActive = true
-    dismissResult()
     let sessionID = UUID()
     self.sessionID = sessionID
     DiagnosticLogger.shared.log(.info, .capture, "Pick color started")
@@ -180,7 +175,7 @@ final class ColorPickerController {
   }
 
   /// Copies the hex right away (the common case needs no further click), then shows the result
-  /// card next to the picked point for the other formats.
+  /// window next to the picked point for the other formats.
   private func commit(_ color: ColorPickerColor) {
     guard isActive else { return }
     let pickedPoint = NSEvent.mouseLocation

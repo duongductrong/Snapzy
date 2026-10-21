@@ -145,28 +145,28 @@ final class ColorPickerTests: XCTestCase {
     XCTAssertEqual(ColorPickerFormat.hsl.string(for: almostRed), "hsl(0, 100%, 50%)")
   }
 
-  // MARK: - Result card placement
+  // MARK: - Result window placement
 
-  func testResultCard_sitsBelowRightOfThePickAndFlipsAtEdges() {
+  func testResultWindow_opensBelowRightOfThePickAndFlipsAtEdges() {
     let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
     let size = CGSize(width: 300, height: 320)
 
     XCTAssertEqual(
-      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 100, y: 600), in: screen),
+      ColorPickerResultWindowController.origin(for: size, near: CGPoint(x: 100, y: 600), in: screen),
       CGPoint(x: 118, y: 262)
     )
     // Near the right edge: to the left of the point.
     XCTAssertEqual(
-      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 900, y: 600), in: screen).x,
+      ColorPickerResultWindowController.origin(for: size, near: CGPoint(x: 900, y: 600), in: screen).x,
       582
     )
     // Near the bottom: above the point.
     XCTAssertEqual(
-      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 100, y: 100), in: screen).y,
+      ColorPickerResultWindowController.origin(for: size, near: CGPoint(x: 100, y: 100), in: screen).y,
       118
     )
     // Never outside the visible frame.
-    let corner = ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 999, y: 799), in: screen)
+    let corner = ColorPickerResultWindowController.origin(for: size, near: CGPoint(x: 999, y: 799), in: screen)
     XCTAssertTrue(screen.contains(CGRect(origin: corner, size: size)))
   }
 
