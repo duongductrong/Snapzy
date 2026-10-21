@@ -2991,6 +2991,71 @@
         }
       }
     },
+    "preferences-shortcuts.pick-color-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirm vergrößern und auf ein Pixel klicken, um seinen Hex-Farbwert zu kopieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Magnify the screen, then click a pixel to copy its hex color"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Amplía la pantalla y haz clic en un píxel para copiar su color hexadecimal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrandissez l’écran, puis cliquez sur un pixel pour copier sa couleur hexadécimale"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面を拡大し、ピクセルをクリックして16進カラーコードをコピー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면을 확대한 다음 픽셀을 클릭해 16진수 색상 코드를 복사"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Увеличьте экран и щёлкните пиксель, чтобы скопировать его HEX-цвет"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phóng to màn hình, rồi nhấp vào một điểm ảnh để sao chép mã màu hex"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大屏幕，点击像素即可复制其十六进制颜色值"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放大螢幕，點擊像素即可拷貝其十六進位色碼"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.quick-access-section": {
       "extractionState": "stale",
       "localizations": {

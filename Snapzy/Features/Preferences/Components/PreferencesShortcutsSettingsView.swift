@@ -32,6 +32,7 @@ struct ShortcutsSettingsView: View {
   @State private var videoEditorShortcut: ShortcutConfig?
   @State private var cloudUploadsShortcut: ShortcutConfig?
   @State private var shortcutListShortcut: ShortcutConfig?
+  @State private var pickColorShortcut: ShortcutConfig?
   @State private var historyShortcut: ShortcutConfig?
   @State private var openEditorShortcut: ShortcutConfig?
   @State private var openEditorShortcutEnabled: Bool
@@ -93,6 +94,7 @@ struct ShortcutsSettingsView: View {
     _videoEditorShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .videoEditor))
     _cloudUploadsShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .cloudUploads))
     _shortcutListShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .shortcutList))
+    _pickColorShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .pickColor))
     _historyShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .history))
     _openEditorShortcut = State(initialValue: QuickAccessManager.shared.openEditorShortcut)
     _openEditorShortcutEnabled = State(initialValue: QuickAccessManager.shared.openEditorShortcutEnabled)
@@ -578,6 +580,17 @@ struct ShortcutsSettingsView: View {
           )
 
           ShortcutRecorderView(
+            label: L10n.Actions.pickColor,
+            icon: "eyedropper",
+            description: L10n.PreferencesShortcuts.pickColorDescription,
+            shortcut: $pickColorShortcut,
+            defaultShortcut: nil,
+            isEnabled: globalEnabledBinding(for: .pickColor),
+            validationIssue: globalValidationIssues[.pickColor],
+            onShortcutChanged: { handleGlobalShortcutChange($0, for: .pickColor) }
+          )
+
+          ShortcutRecorderView(
             label: L10n.Actions.showShortcutList,
             icon: "list.bullet.rectangle",
             description: L10n.PreferencesShortcuts.shortcutListDescription,
@@ -891,8 +904,9 @@ struct ShortcutsSettingsView: View {
     videoEditorShortcut = .defaultVideoEditor
     cloudUploadsShortcut = .defaultCloudUploads
     shortcutListShortcut = .defaultShortcutList
+    pickColorShortcut = nil
 
-    let toolsKinds: [GlobalShortcutKind] = [.annotate, .videoEditor, .cloudUploads, .shortcutList]
+    let toolsKinds: [GlobalShortcutKind] = [.annotate, .videoEditor, .cloudUploads, .shortcutList, .pickColor]
     for kind in toolsKinds {
       globalShortcutEnabled[kind] = true
       manager.setShortcutEnabled(true, for: kind)
@@ -903,6 +917,7 @@ struct ShortcutsSettingsView: View {
     manager.setVideoEditorShortcut(.defaultVideoEditor)
     manager.setCloudUploadsShortcut(.defaultCloudUploads)
     manager.setShortcutListShortcut(.defaultShortcutList)
+    manager.setPickColorShortcut(nil)
 
     if refresh {
       manager.refreshShortcutRegistration()
@@ -1138,6 +1153,9 @@ struct ShortcutsSettingsView: View {
       case .history:
         historyShortcut = config
         manager.setHistoryShortcut(config)
+      case .pickColor:
+        pickColorShortcut = config
+        manager.setPickColorShortcut(config)
       }
 
       if kind.isSystemConflictRelevant {

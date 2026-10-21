@@ -96,6 +96,8 @@ struct SnapzyDeepLinkHandler {
       }
     case .openHistory:
       HistoryFloatingManager.shared.toggle()
+    case .pickColor:
+      screenCaptureViewModel.pickColor()
     case .showShortcuts:
       ShortcutOverlayManager.shared.toggle()
     case .openSettings(let tab):
@@ -131,6 +133,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case openVideoEditor
   case openCloudUploads
   case openHistory
+  case pickColor
   case showShortcuts
   case openSettings(PreferencesTab?)
   case openLiquidGlassPlayground
@@ -187,6 +190,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .openLiquidGlassPlayground
     case "open/history", "history", "capture-history":
       self = .openHistory
+    case "tools/pick-color", "pick-color", "color-picker":
+      self = .pickColor
     case "show/shortcuts", "shortcuts", "keyboard-shortcuts", "show-shortcuts":
       self = .showShortcuts
     case "settings", "preferences":
@@ -221,6 +226,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .openVideoEditor: return "openVideoEditor"
     case .openCloudUploads: return "openCloudUploads"
     case .openHistory: return "openHistory"
+    case .pickColor: return "pickColor"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
     case .openLiquidGlassPlayground: return "openLiquidGlassPlayground"

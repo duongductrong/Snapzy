@@ -378,6 +378,7 @@ private extension KeyboardShortcutManager {
     case .smartElement: setSmartElementShortcut(config)
     case .objectCutout: setObjectCutoutShortcut(config)
     case .history: setHistoryShortcut(config)
+    case .pickColor: setPickColorShortcut(config)
     }
   }
 }

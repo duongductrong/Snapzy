@@ -713,6 +713,18 @@ final class AppStatusBarController: ObservableObject {
       item.isEnabled = true
       return item
 
+    case .pickColor:
+      let item = NSMenuItem(
+        title: L10n.Actions.pickColor,
+        action: #selector(pickColorAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .pickColor, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "eyedropper", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
     case .editVideo:
       let item = NSMenuItem(
         title: L10n.Menu.editVideo,
@@ -860,6 +872,11 @@ final class AppStatusBarController: ObservableObject {
   @objc private func openCombineImagesAction() {
     logMenuAction("openCombineImages")
     CombineImagesCoordinator.shared.presentPicker()
+  }
+
+  @objc private func pickColorAction() {
+    logMenuAction("pickColor")
+    viewModel?.pickColor()
   }
 
   @objc private func editVideoAction() {

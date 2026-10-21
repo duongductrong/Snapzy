@@ -687,6 +687,11 @@ nonisolated enum L10n {
       defaultValue: "Capture Subject",
       comment: "Action title for subject cutout capture"
     )
+    static let pickColor = string(
+      "action.pick-color",
+      defaultValue: "Pick Color",
+      comment: "Action title for picking a color from the screen and copying its hex value"
+    )
     static let recordVideo = string(
       "action.record-video",
       defaultValue: "Record Video",
@@ -4290,6 +4295,11 @@ nonisolated enum L10n {
       "preferences-shortcuts.smart-element-capture-description",
       defaultValue: "Live-highlight an accessible UI element, then click to capture it",
       comment: "Description for smart element capture shortcut"
+    )
+    static let pickColorDescription = string(
+      "preferences-shortcuts.pick-color-description",
+      defaultValue: "Magnify the screen, then click a pixel to copy its hex color",
+      comment: "Description for the pick color shortcut"
     )
     static let recordingSection = string(
       "preferences-shortcuts.recording-section",
@@ -8649,6 +8659,25 @@ nonisolated enum L10n {
       defaultValue: "Copied",
       comment: "Brief confirmation shown in the screenshot magnifier's color panel after the sampled color is copied to the clipboard"
     )
+    static let colorPickerHint = string(
+      "screen-capture.color-picker-hint",
+      defaultValue: "Click to copy · Arrows move 1 px",
+      comment: "Hint under the Pick Color loupe: click copies the color, arrow keys move the loupe one pixel"
+    )
+    static let colorPickerUnavailable = string(
+      "screen-capture.color-picker-unavailable",
+      defaultValue: "Couldn't read the screen to pick a color",
+      comment: "Toast shown when Pick Color cannot snapshot the displays"
+    )
+    static func colorPickerCopied(_ hex: String) -> String {
+      format(
+        "screen-capture.color-picker-copied",
+        defaultValue: "Copied %@",
+        comment: "Toast shown after Pick Color copies a color. %@ is the hex value, e.g. #1A2B3C.",
+        hex
+      )
+    }
+
     static func captureFailed(_ reason: String) -> String {
       format(
         "screen-capture.capture-failed",

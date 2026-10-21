@@ -30,6 +30,9 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("snapzy://open/video-editor", .openVideoEditor),
       ("snapzy://open/cloud-uploads", .openCloudUploads),
       ("snapzy://open/history", .openHistory),
+      ("snapzy://tools/pick-color", .pickColor),
+      ("snapzy://pick-color", .pickColor),
+      ("snapzy://color-picker", .pickColor),
       ("snapzy://show/shortcuts", .showShortcuts),
       ("snapzy://settings", .openSettings(nil)),
     ]

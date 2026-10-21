@@ -59,8 +59,9 @@ All 21 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `deleteRecording` | Delete in-progress recording | **unbound** |
 | `delayedCapture` | Delayed Capture (countdown, then frozen area selection) | **unbound** |
 | `delayedFullscreen` | Delayed Fullscreen (countdown, then fullscreen screenshot) | **unbound** |
+| `pickColor` | Pick Color (live loupe, click copies the pixel's hex; pressing again cancels) | **unbound** |
 
-- The six unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
+- The seven unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
 
 ## Overlay shortcuts (in-overlay, not plain global hotkeys)
@@ -173,6 +174,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://open/video-editor` | Open empty Video Editor |
 | `snapzy://open/cloud-uploads` | Toggle Cloud Uploads window |
 | `snapzy://open/history` | Toggle History panel |
+| `snapzy://tools/pick-color` | Pick Color (aliases `pick-color`, `color-picker`) |
 | `snapzy://show/shortcuts` | Toggle shortcut cheat sheet |
 | `snapzy://settings` / `snapzy://settings?tab=<tab>` | Open Settings, optionally to a tab |
 

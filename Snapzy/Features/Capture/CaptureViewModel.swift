@@ -396,7 +396,27 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       ShortcutOverlayManager.shared.toggle()
     case .openHistory:
       HistoryFloatingManager.shared.toggle()
+    case .pickColor:
+      pickColor()
     }
+  }
+
+  /// Freezes the displays and copies the hex value of the clicked pixel — no screenshot is
+  /// saved. Triggering it again while the picker is open cancels it.
+  func pickColor() {
+    if ColorPickerController.shared.isActive {
+      ColorPickerController.shared.cancel()
+      return
+    }
+    guard hasPermission else {
+      requestPermission()
+      return
+    }
+    guard !isAreaSelectionActive else {
+      DiagnosticLogger.shared.log(.debug, .capture, "pickColor blocked: area selection active")
+      return
+    }
+    ColorPickerController.shared.start()
   }
 
   func updatePermissionState() async {

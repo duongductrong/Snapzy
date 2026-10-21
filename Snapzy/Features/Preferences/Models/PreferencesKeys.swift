@@ -74,6 +74,10 @@ enum PreferencesKeys {
   static let screenshotShowMagnifierByDefault = "screenshot.showMagnifierByDefault"
   static let screenshotShowMagnifierColorPanel = "screenshot.showMagnifierColorPanel"
   static let screenshotMagnifierSize = "screenshot.magnifierSize"
+  /// Pick Color loupe zoom and size, remembered from the last session (indexes into
+  /// `ColorPickerLoupe.cellSizes` / `.diameters`).
+  static let colorPickerLoupeCellSizeIndex = "colorPicker.loupeCellSizeIndex"
+  static let colorPickerLoupeDiameterIndex = "colorPicker.loupeDiameterIndex"
   static let screenshotLastAreaRect = "screenshot.lastAreaRect"
   static let scrollingCaptureShowHints = "scrollingCapture.showHints"
   static let backgroundCutoutAutoCropEnabled = "backgroundCutout.autoCropEnabled"
