@@ -156,19 +156,28 @@ final class ColorPickerResultWindowController: NSObject, NSWindowDelegate {
     return window
   }
 
-  /// Resizes the window to its content, keeping the top edge in place.
+  /// Sizes the window to its content, keeping the top edge in place. The content view covers the
+  /// whole frame (`.fullSizeContentView`) and the view lays itself out under the titlebar, so the
+  /// frame is set to exactly the measured size; `setContentSize` would add the titlebar on top.
   private func fitContent(of window: NSWindow, model: ColorPickerResultModel) {
     let size = NSHostingView(rootView: makeView(model: model)).fittingSize
-    let top = window.frame.maxY
-    window.setContentSize(size)
-    if window.isVisible {
-      window.setFrameTopLeftPoint(CGPoint(x: window.frame.minX, y: top))
-    }
+    var frame = window.frame
+    frame.origin.y = window.isVisible ? frame.maxY - size.height : frame.origin.y
+    frame.size = size
+    window.setFrame(frame, display: window.isVisible)
   }
+
+  /// Height of the titlebar the content runs under.
+  private static let titlebarHeight: CGFloat = {
+    let content = CGRect(x: 0, y: 0, width: 100, height: 100)
+    return NSWindow.frameRect(forContentRect: content, styleMask: [.titled, .closable, .miniaturizable]).height
+      - content.height
+  }()
 
   private func makeView(model: ColorPickerResultModel) -> ColorPickerResultView {
     ColorPickerResultView(
       model: model,
+      titlebarHeight: Self.titlebarHeight,
       onCopy: { [weak self] format in self?.copy(format) },
       onSelectRecent: { [weak self] color in self?.select(color) },
       onChangeCopyOnPick: { [weak self] format in self?.setCopyOnPickFormat(format) },
@@ -235,7 +244,14 @@ final class ColorPickerResultModel: ObservableObject {
 }
 
 struct ColorPickerResultView: View {
+  /// Space between the window edges (and the titlebar) and the content.
+  private static let margin: CGFloat = 20
+  /// How far a row's hover highlight reaches past the text, so the text itself lines up with the
+  /// swatch and footer.
+  private static let rowInset: CGFloat = 8
+
   @ObservedObject var model: ColorPickerResultModel
+  let titlebarHeight: CGFloat
   let onCopy: (ColorPickerFormat) -> Void
   let onSelectRecent: (ColorPickerColor) -> Void
   let onChangeCopyOnPick: (ColorPickerFormat) -> Void
@@ -245,19 +261,19 @@ struct ColorPickerResultView: View {
     VStack(alignment: .leading, spacing: 16) {
       ColorPickerResultHero(color: model.color)
 
-      VStack(spacing: 2) {
+      VStack(spacing: 0) {
         ForEach(Array(ColorPickerFormat.allCases.enumerated()), id: \.element) { index, format in
           ColorPickerFormatRow(
             format: format,
             value: format.string(for: model.color),
             shortcut: index + 1,
             isCopied: model.copiedFormat == format,
+            inset: Self.rowInset,
             onCopy: { onCopy(format) }
           )
         }
       }
-      .padding(4)
-      .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+      .padding(.horizontal, -Self.rowInset)
 
       if model.recentColors.count > 1 {
         recentColors
@@ -265,12 +281,16 @@ struct ColorPickerResultView: View {
 
       footer
     }
-    // The content runs under the titlebar (inside the glass view it gets no safe-area inset), so
-    // the top padding clears the titlebar plus the same 20pt the other edges get.
-    .padding(.horizontal, 20)
-    .padding(.top, 26)
-    .padding(.bottom, 20)
+    // The content runs under the titlebar and lays out from the window's top edge itself, so the
+    // gaps are exact: the margin at the sides, half of it below the titlebar, whose own height
+    // already leaves room around the window buttons, and at the bottom the margin less the room a
+    // large button keeps below its bezel, so the bottom reads the same as the sides.
+    .padding(.horizontal, Self.margin)
+    .padding(.top, titlebarHeight + Self.margin / 2)
+    .padding(.bottom, Self.margin - 4)
     .frame(width: 360, alignment: .leading)
+    .frame(maxHeight: .infinity, alignment: .top)
+    .ignoresSafeArea()
   }
 
   private var recentColors: some View {
@@ -354,6 +374,7 @@ private struct ColorPickerFormatRow: View {
   let value: String
   let shortcut: Int
   let isCopied: Bool
+  let inset: CGFloat
   let onCopy: () -> Void
 
   @State private var isHovering = false
@@ -372,8 +393,8 @@ private struct ColorPickerFormatRow: View {
         trailing
       }
       .font(.callout)
-      .padding(.horizontal, 10)
-      .padding(.vertical, 7)
+      .padding(.horizontal, inset)
+      .padding(.vertical, 6)
       .background(
         RoundedRectangle(cornerRadius: 8, style: .continuous)
           .fill(isHovering ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear))
@@ -385,20 +406,23 @@ private struct ColorPickerFormatRow: View {
     .onHover { isHovering = $0 }
     .help("\(L10n.Common.copy) \(format.title) (⌘\(shortcut))")
     .accessibilityLabel("\(L10n.Common.copy) \(format.title) \(value)")
+    .accessibilityValue(isCopied ? L10n.ScreenCapture.magnifierColorCopiedFeedback : "")
   }
 
+  /// A system-tinted checkmark marks the notation on the clipboard, like a selected menu item;
+  /// other rows reveal a copy glyph on hover.
   @ViewBuilder
   private var trailing: some View {
     if isCopied {
-      Label(L10n.ScreenCapture.magnifierColorCopiedFeedback, systemImage: "checkmark")
-        .font(.caption.weight(.medium))
-        .foregroundStyle(.green)
-        .labelStyle(.titleAndIcon)
-        .fixedSize()
+      Image(systemName: "checkmark")
+        .fontWeight(.semibold)
+        .foregroundStyle(.tint)
+        .frame(width: 16)
     } else {
       Image(systemName: "doc.on.doc")
         .foregroundStyle(.secondary)
         .opacity(isHovering ? 1 : 0)
+        .frame(width: 16)
     }
   }
 }
