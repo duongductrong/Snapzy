@@ -10,7 +10,10 @@
 import AppKit
 import QuartzCore
 
-final class ColorPickerLoupe {
+/// Nonisolated on purpose: overlay views hold the loupe, and AppKit can free a view while draining an
+/// autorelease pool after a Swift job. A main-actor (isolated) deinit run there aborts on
+/// macOS 13–15 (back-deployed `swift_task_deinitOnExecutor`, "pointer being freed was not allocated").
+nonisolated final class ColorPickerLoupe {
   /// On-screen size of one source pixel, in points. Whole points keep the grid crisp.
   static let cellSizes: [CGFloat] = [6, 8, 10, 12, 14, 16, 20, 24, 30]
   static let diameters: [CGFloat] = [110, 140, 180, 220, 260]

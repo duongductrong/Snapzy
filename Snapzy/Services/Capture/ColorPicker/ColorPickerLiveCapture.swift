@@ -61,7 +61,11 @@ final class ColorPickerScreenCapture: ColorPickerCapturing {
 }
 
 /// Streams one display and keeps only its newest complete frame.
-final class ColorPickerStreamPixelSource: NSObject, ColorPickerPixelSource, @unchecked Sendable {
+///
+/// Nonisolated on purpose: overlay views hold it, and AppKit can free a view while draining an
+/// autorelease pool after a Swift job. A main-actor (isolated) deinit run there aborts on
+/// macOS 13–15 (back-deployed `swift_task_deinitOnExecutor`, "pointer being freed was not allocated").
+nonisolated final class ColorPickerStreamPixelSource: NSObject, ColorPickerPixelSource, @unchecked Sendable {
   var onUpdate: (() -> Void)?
 
   private let filter: SCContentFilter
@@ -249,8 +253,9 @@ nonisolated enum ColorPickerPixelBufferReader {
 
 // MARK: - Still image
 
-/// A fixed image as a pixel source — for tests and previews.
-final class ColorPickerImagePixelSource: ColorPickerPixelSource {
+/// A fixed image as a pixel source — for tests and previews. Nonisolated for the same reason as
+/// `ColorPickerStreamPixelSource`.
+nonisolated final class ColorPickerImagePixelSource: ColorPickerPixelSource {
   var onUpdate: (() -> Void)?
   private let image: CGImage
   private var isRunning = false

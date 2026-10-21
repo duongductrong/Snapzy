@@ -355,7 +355,8 @@ final class ColorPickerTests: XCTestCase {
   private let srgb = CGColorSpace(name: CGColorSpace.sRGB)!
 
   /// A pixel source whose content tests can swap, like a stream delivering a new frame.
-  private final class MutablePixelSource: ColorPickerPixelSource {
+  /// Nonisolated like the real sources (see `ColorPickerStreamPixelSource`).
+  private nonisolated final class MutablePixelSource: ColorPickerPixelSource {
     var onUpdate: (() -> Void)?
     var image: CGImage
 
