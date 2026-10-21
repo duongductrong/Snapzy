@@ -78,6 +78,10 @@ enum PreferencesKeys {
   /// `ColorPickerLoupe.cellSizes` / `.diameters`).
   static let colorPickerLoupeCellSizeIndex = "colorPicker.loupeCellSizeIndex"
   static let colorPickerLoupeDiameterIndex = "colorPicker.loupeDiameterIndex"
+  /// `ColorPickerFormat` raw value copied when a color is picked (default HEX).
+  static let colorPickerCopyFormat = "colorPicker.copyFormat"
+  /// Recently picked colors, newest first, as hex strings.
+  static let colorPickerRecentColors = "colorPicker.recentColors"
   static let screenshotLastAreaRect = "screenshot.lastAreaRect"
   static let scrollingCaptureShowHints = "scrollingCapture.showHints"
   static let backgroundCutoutAutoCropEnabled = "backgroundCutout.autoCropEnabled"

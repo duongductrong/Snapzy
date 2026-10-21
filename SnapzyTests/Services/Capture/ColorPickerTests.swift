@@ -145,6 +145,39 @@ final class ColorPickerTests: XCTestCase {
     XCTAssertEqual(ColorPickerFormat.hsl.string(for: almostRed), "hsl(0, 100%, 50%)")
   }
 
+  // MARK: - Preferences
+
+  func testColor_parsesHexWithOrWithoutHash() {
+    XCTAssertEqual(ColorPickerColor(hex: "#1A2B3C"), ColorPickerColor(red: 0x1A, green: 0x2B, blue: 0x3C))
+    XCTAssertEqual(ColorPickerColor(hex: "ff8000"), ColorPickerColor(red: 255, green: 128, blue: 0))
+    XCTAssertNil(ColorPickerColor(hex: "#12345"))
+    XCTAssertNil(ColorPickerColor(hex: "zzzzzz"))
+  }
+
+  func testPreferences_copyFormatDefaultsToHexAndPersists() {
+    let defaults = UserDefaultsFactory.make()
+    XCTAssertEqual(ColorPickerPreferences(defaults: defaults).copyFormat, .hex)
+
+    ColorPickerPreferences(defaults: defaults).copyFormat = .swiftUI
+
+    XCTAssertEqual(ColorPickerPreferences(defaults: defaults).copyFormat, .swiftUI)
+  }
+
+  func testPreferences_recentColorsAreNewestFirstUniqueAndCapped() {
+    let preferences = ColorPickerPreferences(defaults: UserDefaultsFactory.make())
+    let colors = (0..<10).map { ColorPickerColor(red: UInt8($0), green: 0, blue: 0) }
+    for color in colors {
+      preferences.recordRecent(color)
+    }
+    XCTAssertEqual(preferences.recentColors, Array(colors.reversed().prefix(ColorPickerPreferences.recentLimit)))
+
+    // Picking a color again moves it to the front instead of duplicating it.
+    preferences.recordRecent(colors[5])
+    XCTAssertEqual(preferences.recentColors.first, colors[5])
+    XCTAssertEqual(preferences.recentColors.filter { $0 == colors[5] }.count, 1)
+    XCTAssertEqual(preferences.recentColors.count, ColorPickerPreferences.recentLimit)
+  }
+
   // MARK: - Result window placement
 
   func testResultWindow_opensBelowRightOfThePickAndFlipsAtEdges() {

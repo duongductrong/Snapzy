@@ -8669,6 +8669,16 @@ nonisolated enum L10n {
       defaultValue: "Couldn't read the screen to pick a color",
       comment: "Toast shown when Pick Color cannot snapshot the displays"
     )
+    static let colorPickerRecent = string(
+      "screen-capture.color-picker-recent",
+      defaultValue: "Recent",
+      comment: "Pick Color result window: label above the recently picked colors"
+    )
+    static let colorPickerCopyOnPick = string(
+      "screen-capture.color-picker-copy-on-pick",
+      defaultValue: "Copy on pick",
+      comment: "Pick Color result window: menu choosing which notation (HEX, RGB, ...) a pick copies"
+    )
     static let colorPickerPickAgain = string(
       "screen-capture.color-picker-pick-again",
       defaultValue: "Pick Again",

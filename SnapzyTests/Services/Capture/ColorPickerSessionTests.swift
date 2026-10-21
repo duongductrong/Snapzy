@@ -174,16 +174,19 @@ final class ColorPickerSessionTests: XCTestCase {
     controller.cancel()
   }
 
-  func testController_pickCopiesHexShowsResultAndEndsSession() async throws {
+  func testController_pickCopiesInTheChosenFormatShowsResultAndEndsSession() async throws {
     try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
     var copied: [String] = []
     var toasts: [(String, AppToastStyle)] = []
-    var results: [ColorPickerColor] = []
+    var results: [(ColorPickerColor, ColorPickerFormat)] = []
+    let preferences = ColorPickerPreferences(defaults: UserDefaultsFactory.make())
+    preferences.copyFormat = .rgb
     let controller = makeController(
       capture: FakeCapture(image: ColorPickerTestImages.splitImage),
       copied: { copied.append($0) },
       toasts: { toasts.append(($0, $1)) },
-      results: { results.append($0) }
+      results: { results.append(($0, $1)) },
+      preferences: preferences
     )
 
     controller.start()
@@ -196,8 +199,9 @@ final class ColorPickerSessionTests: XCTestCase {
     XCTAssertFalse(controller.isActive)
     XCTAssertTrue(controller.testWindows.isEmpty)
     XCTAssertNil(controller.testStreamingDisplayID)
-    XCTAssertEqual(copied, ["#12AB34"])
-    XCTAssertEqual(results, [picked])
+    XCTAssertEqual(copied, ["rgb(18, 171, 52)"])
+    XCTAssertEqual(results.map(\.0), [picked])
+    XCTAssertEqual(results.map(\.1), [.rgb])
     XCTAssertTrue(toasts.isEmpty)
   }
 
@@ -252,9 +256,11 @@ final class ColorPickerSessionTests: XCTestCase {
     try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
     var copied: [String] = []
     var pickAgainCount = 0
+    let preferences = ColorPickerPreferences(defaults: UserDefaultsFactory.make())
     let controller = ColorPickerResultWindowController(
       copyToPasteboard: { copied.append($0) },
-      onPickAgain: { pickAgainCount += 1 }
+      onPickAgain: { pickAgainCount += 1 },
+      preferences: preferences
     )
     let color = ColorPickerColor(red: 0x1A, green: 0x2B, blue: 0x3C)
 
@@ -265,6 +271,7 @@ final class ColorPickerSessionTests: XCTestCase {
     XCTAssertTrue(window.styleMask.contains(.closable))
     XCTAssertTrue(window.styleMask.contains(.miniaturizable))
     XCTAssertEqual(window.title, L10n.Actions.pickColor)
+    XCTAssertEqual(controller.testRecentColors, [color])
 
     controller.testCopy(.hsl)
     XCTAssertEqual(copied, ["hsl(210, 40%, 17%)"])
@@ -274,10 +281,21 @@ final class ColorPickerSessionTests: XCTestCase {
     XCTAssertEqual(pickAgainCount, 1)
     XCTAssertTrue(controller.isVisible)
 
-    // A second pick reuses the same window.
-    controller.show(color: ColorPickerColor(red: 255, green: 0, blue: 0), copiedFormat: .hex, near: .zero)
+    // A second pick reuses the same window and joins the recent colors.
+    let red = ColorPickerColor(red: 255, green: 0, blue: 0)
+    controller.show(color: red, copiedFormat: .hex, near: .zero)
     XCTAssertTrue(controller.testWindow === window)
     XCTAssertEqual(controller.testCopiedFormat, .hex)
+    XCTAssertEqual(controller.testRecentColors, [red, color])
+
+    // Choosing a recent color brings it back and copies it the way a pick would.
+    controller.testSetCopyOnPickFormat(.swiftUI)
+    XCTAssertEqual(preferences.copyFormat, .swiftUI)
+    controller.testSelectRecent(color)
+    XCTAssertEqual(controller.testColor, color)
+    XCTAssertEqual(copied.last, "Color(red: 0.102, green: 0.169, blue: 0.235)")
+    XCTAssertEqual(controller.testCopiedFormat, .swiftUI)
+    XCTAssertEqual(controller.testRecentColors, [color, red])
 
     controller.close()
     XCTAssertFalse(controller.isVisible)
@@ -362,13 +380,15 @@ final class ColorPickerSessionTests: XCTestCase {
     capture: FakeCapture,
     copied: @escaping (String) -> Void = { _ in },
     toasts: @escaping (String, AppToastStyle) -> Void = { _, _ in },
-    results: @escaping (ColorPickerColor) -> Void = { _ in }
+    results: @escaping (ColorPickerColor, ColorPickerFormat) -> Void = { _, _ in },
+    preferences: ColorPickerPreferences = ColorPickerPreferences(defaults: UserDefaultsFactory.make())
   ) -> ColorPickerController {
     ColorPickerController(
       makeCapture: { capture },
       copyToPasteboard: copied,
       showToast: toasts,
-      presentResult: { color, _ in results(color) },
+      presentResult: { color, format, _ in results(color, format) },
+      preferences: preferences,
       setsCursorHidden: false
     )
   }

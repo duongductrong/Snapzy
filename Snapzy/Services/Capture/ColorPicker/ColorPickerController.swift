@@ -17,7 +17,8 @@ final class ColorPickerController {
   private let makeCapture: () -> ColorPickerCapturing
   private let copyToPasteboard: (String) -> Void
   private let showToast: (String, AppToastStyle) -> Void
-  private let presentResult: (ColorPickerColor, CGPoint) -> Void
+  private let presentResult: (ColorPickerColor, ColorPickerFormat, CGPoint) -> Void
+  private let preferences: ColorPickerPreferences
   private let setsCursorHidden: Bool
 
   private var windows: [ColorPickerOverlayWindow] = []
@@ -40,7 +41,8 @@ final class ColorPickerController {
     makeCapture: (() -> ColorPickerCapturing)? = nil,
     copyToPasteboard: ((String) -> Void)? = nil,
     showToast: ((String, AppToastStyle) -> Void)? = nil,
-    presentResult: ((ColorPickerColor, CGPoint) -> Void)? = nil,
+    presentResult: ((ColorPickerColor, ColorPickerFormat, CGPoint) -> Void)? = nil,
+    preferences: ColorPickerPreferences = ColorPickerPreferences(),
     setsCursorHidden: Bool = true
   ) {
     let copy = copyToPasteboard ?? { value in
@@ -53,15 +55,17 @@ final class ColorPickerController {
     self.showToast = showToast ?? { message, style in
       AppToastManager.shared.show(message: message, style: style, duration: 1.5, variant: .compact)
     }
+    self.preferences = preferences
     if let presentResult {
       self.presentResult = presentResult
     } else {
       let resultWindow = ColorPickerResultWindowController(
         copyToPasteboard: copy,
-        onPickAgain: { ColorPickerController.shared.start() }
+        onPickAgain: { ColorPickerController.shared.start() },
+        preferences: preferences
       )
-      self.presentResult = { color, point in
-        resultWindow.show(color: color, copiedFormat: .hex, near: point)
+      self.presentResult = { color, format, point in
+        resultWindow.show(color: color, copiedFormat: format, near: point)
       }
     }
     self.setsCursorHidden = setsCursorHidden
@@ -174,14 +178,15 @@ final class ColorPickerController {
     windows.first { $0.displayID == displayID }?.overlayView
   }
 
-  /// Copies the hex right away (the common case needs no further click), then shows the result
-  /// window next to the picked point for the other formats.
+  /// Copies the color right away in the user's chosen notation (HEX by default), so the common
+  /// case needs no further click, then shows the result window next to the picked point.
   private func commit(_ color: ColorPickerColor) {
     guard isActive else { return }
     let pickedPoint = NSEvent.mouseLocation
+    let format = preferences.copyFormat
     finish()
-    copyToPasteboard(color.hex)
-    presentResult(color, pickedPoint)
+    copyToPasteboard(format.string(for: color))
+    presentResult(color, format, pickedPoint)
     DiagnosticLogger.shared.log(.info, .capture, "Pick color copied")
   }
 

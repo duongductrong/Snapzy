@@ -149,3 +149,55 @@ nonisolated extension ColorPickerColor {
     value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
   }
 }
+
+// MARK: - Preferences
+
+/// What Pick Color remembers between picks: the notation a pick copies, and recent colors.
+nonisolated struct ColorPickerPreferences {
+  static let recentLimit = 8
+
+  private let defaults: UserDefaults
+
+  init(defaults: UserDefaults = .standard) {
+    self.defaults = defaults
+  }
+
+  /// The notation a pick puts on the clipboard. HEX unless the user chose another.
+  var copyFormat: ColorPickerFormat {
+    get {
+      defaults.string(forKey: PreferencesKeys.colorPickerCopyFormat)
+        .flatMap(ColorPickerFormat.init(rawValue:)) ?? .hex
+    }
+    nonmutating set {
+      defaults.set(newValue.rawValue, forKey: PreferencesKeys.colorPickerCopyFormat)
+    }
+  }
+
+  /// Newest first, without duplicates.
+  var recentColors: [ColorPickerColor] {
+    (defaults.stringArray(forKey: PreferencesKeys.colorPickerRecentColors) ?? [])
+      .compactMap(ColorPickerColor.init(hex:))
+  }
+
+  /// Moves `color` to the front of the recent colors and returns the updated list.
+  @discardableResult
+  func recordRecent(_ color: ColorPickerColor) -> [ColorPickerColor] {
+    let colors = Array(([color] + recentColors.filter { $0 != color }).prefix(Self.recentLimit))
+    defaults.set(colors.map(\.hex), forKey: PreferencesKeys.colorPickerRecentColors)
+    return colors
+  }
+}
+
+nonisolated extension ColorPickerColor {
+  /// Parses `#RRGGBB` or `RRGGBB`.
+  init?(hex: String) {
+    var digits = hex.trimmingCharacters(in: .whitespaces)
+    if digits.hasPrefix("#") { digits.removeFirst() }
+    guard digits.count == 6, let value = UInt32(digits, radix: 16) else { return nil }
+    self.init(
+      red: UInt8((value >> 16) & 0xFF),
+      green: UInt8((value >> 8) & 0xFF),
+      blue: UInt8(value & 0xFF)
+    )
+  }
+}
