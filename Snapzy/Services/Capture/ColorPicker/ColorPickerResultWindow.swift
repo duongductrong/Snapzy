@@ -140,11 +140,13 @@ final class ColorPickerResultWindowController: NSObject, NSWindowDelegate {
     hostingView.autoresizingMask = [.width, .height]
 
     if #available(macOS 26.0, *) {
-      // The system Liquid Glass material behind the whole window, titlebar included.
+      // The system Liquid Glass material behind the whole window, titlebar included. No corner
+      // radius of its own: the window clips the corners and draws the one border; a rounded
+      // glass view adds its own rim inside the window's, a visible double outline.
       window.isOpaque = false
       window.backgroundColor = .clear
       let glass = NSGlassEffectView()
-      glass.cornerRadius = 26
+      glass.cornerRadius = 0
       glass.contentView = hostingView
       window.contentView = glass
     } else {
@@ -240,8 +242,8 @@ struct ColorPickerResultView: View {
   let onPickAgain: () -> Void
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 14) {
-      ColorPickerResultHero(color: model.color, copiedFormat: model.copiedFormat)
+    VStack(alignment: .leading, spacing: 16) {
+      ColorPickerResultHero(color: model.color)
 
       VStack(spacing: 2) {
         ForEach(Array(ColorPickerFormat.allCases.enumerated()), id: \.element) { index, format in
@@ -263,10 +265,12 @@ struct ColorPickerResultView: View {
 
       footer
     }
-    .padding(16)
-    // Clears the titlebar, which the content extends under.
-    .padding(.top, 22)
-    .frame(width: 348, alignment: .leading)
+    // The content runs under the titlebar (inside the glass view it gets no safe-area inset), so
+    // the top padding clears the titlebar plus the same 20pt the other edges get.
+    .padding(.horizontal, 20)
+    .padding(.top, 26)
+    .padding(.bottom, 20)
+    .frame(width: 360, alignment: .leading)
   }
 
   private var recentColors: some View {
@@ -314,50 +318,33 @@ struct ColorPickerResultView: View {
     }
   }
 
-  @ViewBuilder
   private var pickAgainButton: some View {
-    let button = Button(action: onPickAgain) {
+    Button(action: onPickAgain) {
       Label(L10n.ScreenCapture.colorPickerPickAgain, systemImage: "eyedropper")
         .padding(.horizontal, 4)
     }
     .controlSize(.large)
+    .buttonStyle(.borderedProminent)
     .keyboardShortcut(.defaultAction)
-
-    if #available(macOS 26.0, *) {
-      button.buttonStyle(.glassProminent)
-    } else {
-      button.buttonStyle(.borderedProminent)
-    }
   }
 }
 
 /// The picked color itself, with its hex written on it.
 private struct ColorPickerResultHero: View {
   let color: ColorPickerColor
-  let copiedFormat: ColorPickerFormat
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
-      RoundedRectangle(cornerRadius: 14, style: .continuous)
-        .fill(Color(cgColor: color.cgColor))
-        .overlay(
-          RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .strokeBorder(.separator)
-        )
-        .overlay(alignment: .bottomLeading) {
-          Text(verbatim: color.hex)
-            .font(.title2.monospaced().weight(.semibold))
-            .foregroundStyle(color.isLight ? Color.black.opacity(0.82) : Color.white)
-            .textSelection(.enabled)
-            .padding(12)
-        }
-        .frame(height: 84)
-
-      Label(L10n.ScreenCapture.colorPickerCopied(copiedFormat.title), systemImage: "checkmark.circle.fill")
-        .font(.callout)
-        .foregroundStyle(.secondary)
-        .symbolRenderingMode(.multicolor)
-    }
+    RoundedRectangle(cornerRadius: 12, style: .continuous)
+      .fill(Color(cgColor: color.cgColor))
+      .overlay(alignment: .bottomLeading) {
+        Text(verbatim: color.hex)
+          .font(.title2.monospaced().weight(.semibold))
+          .foregroundStyle(color.isLight ? Color.black.opacity(0.82) : Color.white)
+          .textSelection(.enabled)
+          .padding(.horizontal, 14)
+          .padding(.vertical, 12)
+      }
+      .frame(height: 80)
   }
 }
 
@@ -376,7 +363,7 @@ private struct ColorPickerFormatRow: View {
       HStack(alignment: .firstTextBaseline, spacing: 10) {
         Text(verbatim: format.title)
           .foregroundStyle(.secondary)
-          .frame(width: 58, alignment: .leading)
+          .frame(width: 54, alignment: .leading)
         Text(verbatim: value)
           .monospaced()
           .lineLimit(2)
@@ -409,16 +396,9 @@ private struct ColorPickerFormatRow: View {
         .labelStyle(.titleAndIcon)
         .fixedSize()
     } else {
-      Text(verbatim: "⌘\(shortcut)")
-        .font(.caption.monospacedDigit())
-        .foregroundStyle(.tertiary)
-        .opacity(isHovering ? 0 : 1)
-        .overlay {
-          Image(systemName: "doc.on.doc")
-            .foregroundStyle(.secondary)
-            .opacity(isHovering ? 1 : 0)
-        }
-        .fixedSize()
+      Image(systemName: "doc.on.doc")
+        .foregroundStyle(.secondary)
+        .opacity(isHovering ? 1 : 0)
     }
   }
 }

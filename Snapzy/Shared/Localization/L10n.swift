@@ -8682,16 +8682,8 @@ nonisolated enum L10n {
     static let colorPickerPickAgain = string(
       "screen-capture.color-picker-pick-again",
       defaultValue: "Pick Again",
-      comment: "Button on the Pick Color result card that starts another pick"
+      comment: "Button on the Pick Color result window that starts another pick"
     )
-    static func colorPickerCopied(_ formatName: String) -> String {
-      format(
-        "screen-capture.color-picker-copied",
-        defaultValue: "Copied %@",
-        comment: "Pick Color result card status: which notation is on the clipboard. %@ is a format name such as HEX, RGB or HSL.",
-        formatName
-      )
-    }
 
     static func captureFailed(_ reason: String) -> String {
       format(
