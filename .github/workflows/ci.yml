@@ -52,6 +52,7 @@ jobs:
             SnapzyTests/SmartElementCaptureControllerTests
             SnapzyTests/SmartElementWindowOwnerResolverTests
             SnapzyTests/SmartElementQueryServiceTests
+            SnapzyTests/ColorPickerSessionTests
             SnapzyTests/SandboxOffDataMigrationServiceTests
             SnapzyTests/AppStatusBarControllerTests
             SnapzyTests/RecordingAudioLevelMeterTests
