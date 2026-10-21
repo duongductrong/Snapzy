@@ -117,6 +117,10 @@ final class ColorPickerTests: XCTestCase {
 
   // MARK: - Overlay view and loupe
 
+  // Tests that create main-actor objects are `async`: their isolated deinits then run inside a
+  // task. Run outside one after other async tests, the back-deployed deinit hop aborts on
+  // macOS 13–15 (see `ColorPickerStreamPixelSource`).
+
   func testOverlayView_showsNothingUntilPixelsArriveThenFollowsPointer() async throws {
     let view = ColorPickerOverlayView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
     view.testPointerMoved(to: CGPoint(x: 10.5, y: 10.5))
@@ -225,7 +229,7 @@ final class ColorPickerTests: XCTestCase {
     XCTAssertNotEqual(view.testLoupe.cellSizeIndex, start)
   }
 
-  func testOverlayView_rightClickCancels() throws {
+  func testOverlayView_rightClickCancels() async throws {
     let view = ColorPickerOverlayView(frame: CGRect(x: 0, y: 0, width: 400, height: 300))
     let delegate = RecordingDelegate()
     view.delegate = delegate
@@ -284,7 +288,7 @@ final class ColorPickerTests: XCTestCase {
     XCTAssertEqual(toasts.map(\.1), [.success])
   }
 
-  func testController_cancelCopiesNothing() throws {
+  func testController_cancelCopiesNothing() async throws {
     var copied: [String] = []
     let controller = makeController(capture: FakeCapture(image: makeSplitImage), copied: { copied.append($0) })
 
@@ -337,7 +341,7 @@ final class ColorPickerTests: XCTestCase {
 
   // MARK: - Helpers
 
-  private final class RecordingDelegate: ColorPickerOverlayViewDelegate {
+  private nonisolated final class RecordingDelegate: ColorPickerOverlayViewDelegate {
     var pickedColors: [String] = []
     var cancelCount = 0
 
