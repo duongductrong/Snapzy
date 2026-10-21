@@ -104,6 +104,72 @@ final class ColorPickerTests: XCTestCase {
     XCTAssertEqual(ColorPickerPixelSampler.color(of: ColorPickerPixel(x: 2, y: 3), in: neighborhood)?.hex, "#0000FF")
   }
 
+  // MARK: - Formats
+
+  func testFormats_describeTheSampledColor() {
+    let color = ColorPickerColor(red: 0x1A, green: 0x2B, blue: 0x3C)
+    let expected: [ColorPickerFormat: String] = [
+      .hex: "#1A2B3C",
+      .rgb: "rgb(26, 43, 60)",
+      .hsl: "hsl(210, 40%, 17%)",
+      .hsb: "hsb(210, 57%, 24%)",
+      .cmyk: "cmyk(57%, 28%, 0%, 76%)",
+      .swiftUI: "Color(red: 0.102, green: 0.169, blue: 0.235)",
+    ]
+    for (format, value) in expected {
+      XCTAssertEqual(format.string(for: color), value, format.title)
+    }
+  }
+
+  func testFormats_matchCSSReferenceValues() {
+    let red = ColorPickerColor(red: 255, green: 0, blue: 0)
+    XCTAssertEqual(ColorPickerFormat.oklch.string(for: red), "oklch(62.8% 0.258 29.2)")
+    XCTAssertEqual(ColorPickerFormat.hsl.string(for: red), "hsl(0, 100%, 50%)")
+
+    let blue = ColorPickerColor(red: 0, green: 0, blue: 255)
+    XCTAssertEqual(ColorPickerFormat.hsl.string(for: blue), "hsl(240, 100%, 50%)")
+    XCTAssertEqual(ColorPickerFormat.oklch.string(for: blue), "oklch(45.2% 0.313 264.1)")
+  }
+
+  func testFormats_handleAchromaticAndWrappingHues() {
+    let white = ColorPickerColor(red: 255, green: 255, blue: 255)
+    XCTAssertEqual(ColorPickerFormat.oklch.string(for: white), "oklch(100% 0 0)")
+    XCTAssertEqual(ColorPickerFormat.hsb.string(for: white), "hsb(0, 0%, 100%)")
+
+    let black = ColorPickerColor(red: 0, green: 0, blue: 0)
+    XCTAssertEqual(ColorPickerFormat.cmyk.string(for: black), "cmyk(0%, 0%, 0%, 100%)")
+    XCTAssertEqual(ColorPickerFormat.swiftUI.string(for: black), "Color(red: 0, green: 0, blue: 0)")
+
+    // Hue 359.8° rounds to 360, which is written as 0.
+    let almostRed = ColorPickerColor(red: 255, green: 0, blue: 1)
+    XCTAssertEqual(ColorPickerFormat.hsl.string(for: almostRed), "hsl(0, 100%, 50%)")
+  }
+
+  // MARK: - Result card placement
+
+  func testResultCard_sitsBelowRightOfThePickAndFlipsAtEdges() {
+    let screen = CGRect(x: 0, y: 0, width: 1000, height: 800)
+    let size = CGSize(width: 300, height: 320)
+
+    XCTAssertEqual(
+      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 100, y: 600), in: screen),
+      CGPoint(x: 118, y: 262)
+    )
+    // Near the right edge: to the left of the point.
+    XCTAssertEqual(
+      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 900, y: 600), in: screen).x,
+      582
+    )
+    // Near the bottom: above the point.
+    XCTAssertEqual(
+      ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 100, y: 100), in: screen).y,
+      118
+    )
+    // Never outside the visible frame.
+    let corner = ColorPickerResultPresenter.origin(for: size, near: CGPoint(x: 999, y: 799), in: screen)
+    XCTAssertTrue(screen.contains(CGRect(origin: corner, size: size)))
+  }
+
   // MARK: - Loupe
 
   func testLoupe_radiusAlwaysCoversTheCircle() {

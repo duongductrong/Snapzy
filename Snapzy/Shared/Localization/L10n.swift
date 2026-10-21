@@ -8669,12 +8669,17 @@ nonisolated enum L10n {
       defaultValue: "Couldn't read the screen to pick a color",
       comment: "Toast shown when Pick Color cannot snapshot the displays"
     )
-    static func colorPickerCopied(_ hex: String) -> String {
+    static let colorPickerPickAgain = string(
+      "screen-capture.color-picker-pick-again",
+      defaultValue: "Pick Again",
+      comment: "Button on the Pick Color result card that starts another pick"
+    )
+    static func colorPickerCopied(_ formatName: String) -> String {
       format(
         "screen-capture.color-picker-copied",
         defaultValue: "Copied %@",
-        comment: "Toast shown after Pick Color copies a color. %@ is the hex value, e.g. #1A2B3C.",
-        hex
+        comment: "Pick Color result card status: which notation is on the clipboard. %@ is a format name such as HEX, RGB or HSL.",
+        formatName
       )
     }
 

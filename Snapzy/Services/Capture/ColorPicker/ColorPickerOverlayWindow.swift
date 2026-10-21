@@ -11,7 +11,7 @@ import Carbon.HIToolbox
 
 @MainActor
 protocol ColorPickerOverlayViewDelegate: AnyObject {
-  func colorPickerOverlayView(_ view: ColorPickerOverlayView, didPickColor hex: String)
+  func colorPickerOverlayView(_ view: ColorPickerOverlayView, didPick color: ColorPickerColor)
   func colorPickerOverlayViewDidCancel(_ view: ColorPickerOverlayView)
   func colorPickerOverlayViewDidReceivePointer(_ view: ColorPickerOverlayView)
 }
@@ -142,8 +142,8 @@ final class ColorPickerOverlayView: NSView {
     if currentPixel == nil {
       pointerMoved(to: convert(event.locationInWindow, from: nil))
     }
-    guard let hex = currentColor?.hex else { return }
-    delegate?.colorPickerOverlayView(self, didPickColor: hex)
+    guard let currentColor else { return }
+    delegate?.colorPickerOverlayView(self, didPick: currentColor)
   }
 
   override func rightMouseDown(with event: NSEvent) {

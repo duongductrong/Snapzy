@@ -4,7 +4,7 @@
 //
 //  Standalone Pick Color session: see-through overlays keep the screen live, the display
 //  under the pointer is streamed for the loupe, and the picked pixel's sRGB hex value is
-//  copied without taking a screenshot.
+//  copied without taking a screenshot; a result card then offers the other formats.
 //
 
 import AppKit
@@ -17,6 +17,8 @@ final class ColorPickerController {
   private let makeCapture: () -> ColorPickerCapturing
   private let copyToPasteboard: (String) -> Void
   private let showToast: (String, AppToastStyle) -> Void
+  private let presentResult: (ColorPickerColor, CGPoint) -> Void
+  private let dismissResult: () -> Void
   private let setsCursorHidden: Bool
 
   private var windows: [ColorPickerOverlayWindow] = []
@@ -39,16 +41,32 @@ final class ColorPickerController {
     makeCapture: (() -> ColorPickerCapturing)? = nil,
     copyToPasteboard: ((String) -> Void)? = nil,
     showToast: ((String, AppToastStyle) -> Void)? = nil,
+    presentResult: ((ColorPickerColor, CGPoint) -> Void)? = nil,
+    dismissResult: (() -> Void)? = nil,
     setsCursorHidden: Bool = true
   ) {
-    self.makeCapture = makeCapture ?? { ColorPickerScreenCapture() }
-    self.copyToPasteboard = copyToPasteboard ?? { hex in
+    let copy = copyToPasteboard ?? { value in
       let pasteboard = NSPasteboard.general
       pasteboard.clearContents()
-      pasteboard.setString(hex, forType: .string)
+      pasteboard.setString(value, forType: .string)
     }
+    self.makeCapture = makeCapture ?? { ColorPickerScreenCapture() }
+    self.copyToPasteboard = copy
     self.showToast = showToast ?? { message, style in
       AppToastManager.shared.show(message: message, style: style, duration: 1.5, variant: .compact)
+    }
+    if let presentResult, let dismissResult {
+      self.presentResult = presentResult
+      self.dismissResult = dismissResult
+    } else {
+      let presenter = ColorPickerResultPresenter(
+        copyToPasteboard: copy,
+        onPickAgain: { ColorPickerController.shared.start() }
+      )
+      self.presentResult = { color, point in
+        presenter.show(color: color, copiedFormat: .hex, near: point)
+      }
+      self.dismissResult = { presenter.dismiss() }
     }
     self.setsCursorHidden = setsCursorHidden
   }
@@ -65,6 +83,7 @@ final class ColorPickerController {
   func start() {
     guard !isActive else { return }
     isActive = true
+    dismissResult()
     let sessionID = UUID()
     self.sessionID = sessionID
     DiagnosticLogger.shared.log(.info, .capture, "Pick color started")
@@ -160,11 +179,14 @@ final class ColorPickerController {
     windows.first { $0.displayID == displayID }?.overlayView
   }
 
-  private func commit(_ hex: String) {
+  /// Copies the hex right away (the common case needs no further click), then shows the result
+  /// card next to the picked point for the other formats.
+  private func commit(_ color: ColorPickerColor) {
     guard isActive else { return }
+    let pickedPoint = NSEvent.mouseLocation
     finish()
-    copyToPasteboard(hex)
-    showToast(L10n.ScreenCapture.colorPickerCopied(hex), .success)
+    copyToPasteboard(color.hex)
+    presentResult(color, pickedPoint)
     DiagnosticLogger.shared.log(.info, .capture, "Pick color copied")
   }
 
@@ -268,8 +290,8 @@ final class ColorPickerController {
       return true
     case kVK_ANSI_C, kVK_Return, kVK_ANSI_KeypadEnter:
       guard modifiers.isEmpty else { return false }
-      if let hex = activeOverlayView()?.currentColor?.hex {
-        commit(hex)
+      if let color = activeOverlayView()?.currentColor {
+        commit(color)
       }
       return true
     case kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow:
@@ -298,8 +320,8 @@ final class ColorPickerController {
 }
 
 extension ColorPickerController: ColorPickerOverlayViewDelegate {
-  func colorPickerOverlayView(_ view: ColorPickerOverlayView, didPickColor hex: String) {
-    commit(hex)
+  func colorPickerOverlayView(_ view: ColorPickerOverlayView, didPick color: ColorPickerColor) {
+    commit(color)
   }
 
   func colorPickerOverlayViewDidCancel(_ view: ColorPickerOverlayView) {
