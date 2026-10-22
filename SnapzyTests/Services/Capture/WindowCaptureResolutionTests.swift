@@ -114,4 +114,96 @@ final class WindowCaptureResolutionTests: XCTestCase {
       )
     )
   }
+
+  // Issue #634: measured on a 2x display. A cached 600x400pt frame sized the
+  // padded canvas for an 800x620pt window, which came out 0.894x native.
+  func testResizedWindowFrameIsStale() {
+    XCTAssertTrue(
+      WindowCaptureResolution.isFrameStale(
+        CGRect(x: 200, y: 200, width: 600, height: 400),
+        currentFrame: CGRect(x: 200, y: 200, width: 800, height: 620)
+      )
+    )
+  }
+
+  func testMovedWindowFrameIsStale() {
+    // A move can change the display, and with it the capture scale.
+    XCTAssertTrue(
+      WindowCaptureResolution.isFrameStale(
+        CGRect(x: 200, y: 200, width: 800, height: 620),
+        currentFrame: CGRect(x: 1_900, y: 200, width: 800, height: 620)
+      )
+    )
+  }
+
+  func testMatchingWindowFrameIsNotStale() {
+    XCTAssertFalse(
+      WindowCaptureResolution.isFrameStale(
+        CGRect(x: 200, y: 200, width: 800, height: 620),
+        currentFrame: CGRect(x: 200.5, y: 200, width: 800, height: 620.5)
+      )
+    )
+  }
+
+  func testUnknownLiveFrameKeepsCachedWindow() {
+    XCTAssertFalse(
+      WindowCaptureResolution.isFrameStale(
+        CGRect(x: 200, y: 200, width: 800, height: 620),
+        currentFrame: nil
+      )
+    )
+  }
+
+  func testShadowedWindowAtNativeScaleIsAccepted() {
+    // 800x620pt window plus shadow, trimmed: 1796x1436px.
+    XCTAssertFalse(
+      WindowCaptureResolution.isScaledBelowNative(
+        pixelSize: CGSize(width: 1_796, height: 1_436),
+        logicalSize: CGSize(width: 800, height: 620),
+        scaleFactor: 2
+      )
+    )
+  }
+
+  func testShadowedWindowScaledToFitIsRejected() {
+    // Issue #634 outputs: 0.847x (v2.0.0, frame-sized canvas) and 0.805x
+    // (stale frame). Both pass the 75% undersize rule.
+    let cases: [(pixels: CGSize, points: CGSize)] = [
+      (CGSize(width: 1_521, height: 1_215), CGSize(width: 800, height: 620)),
+      (CGSize(width: 2_091, height: 1_447), CGSize(width: 1_200, height: 800)),
+    ]
+    for (pixels, points) in cases {
+      XCTAssertFalse(
+        WindowCaptureResolution.isUndersized(pixelSize: pixels, logicalSize: points, expectedScaleFactor: 2)
+      )
+      XCTAssertTrue(
+        WindowCaptureResolution.isScaledBelowNative(pixelSize: pixels, logicalSize: points, scaleFactor: 2),
+        "\(pixels) for \(points)"
+      )
+    }
+  }
+
+  func testShallowShrinkHiddenByShadowIsNotDetected() {
+    // 0.894x from a stale frame: the shadow keeps the trimmed image wider
+    // than the native window, so only the frame refresh prevents this one.
+    XCTAssertFalse(
+      WindowCaptureResolution.isScaledBelowNative(
+        pixelSize: CGSize(width: 1_611, height: 1_287),
+        logicalSize: CGSize(width: 800, height: 620),
+        scaleFactor: 2
+      )
+    )
+  }
+
+  func testTransparentMarginOnOneAxisIsNotScaledBelowNative() {
+    // Scaling to fit shrinks both axes; a window that is transparent along
+    // one edge only trims short on that axis.
+    XCTAssertFalse(
+      WindowCaptureResolution.isScaledBelowNative(
+        pixelSize: CGSize(width: 1_500, height: 1_436),
+        logicalSize: CGSize(width: 800, height: 620),
+        scaleFactor: 2
+      )
+    )
+  }
 }

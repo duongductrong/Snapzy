@@ -2122,13 +2122,19 @@ final class ScreenCaptureManager: ObservableObject {
       fringeReference = nil
     }
 
-    func rejectIfUndersized(_ candidate: CGImage) throws {
+    func rejectIfUndersized(_ candidate: CGImage, requiresNativeSize: Bool = false) throws {
       let actualPixelSize = CGSize(width: candidate.width, height: candidate.height)
-      guard WindowCaptureResolution.isUndersized(
+      let isUndersized = WindowCaptureResolution.isUndersized(
         pixelSize: actualPixelSize,
         logicalSize: contentRect.size,
         expectedScaleFactor: scaleFactor
-      ) else {
+      )
+      let isScaledBelowNative = requiresNativeSize && WindowCaptureResolution.isScaledBelowNative(
+        pixelSize: actualPixelSize,
+        logicalSize: contentRect.size,
+        scaleFactor: scaleFactor
+      )
+      guard isUndersized || isScaledBelowNative else {
         return
       }
 
@@ -2166,7 +2172,9 @@ final class ScreenCaptureManager: ObservableObject {
     }.value
 
     if padsCanvasForShadow {
-      try rejectIfUndersized(normalizedImage.image)
+      // The trimmed window still carries its shadow, so anything smaller than
+      // the native window was scaled down and would come out soft.
+      try rejectIfUndersized(normalizedImage.image, requiresNativeSize: true)
       if normalizedImage.image.width >= image.width || normalizedImage.image.height >= image.height {
         DiagnosticLogger.shared.log(
           .warning,

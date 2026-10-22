@@ -324,7 +324,20 @@ enum WindowSelectionQueryService {
     do {
       let content = try await loadShareableContent(prefetchedContentTask: prefetchedContentTask)
       if let prefetchedMatch = content.windows.first(where: { $0.windowID == windowID && $0.isOnScreen }) {
-        return prefetchedMatch
+        let currentFrame = currentQuartzBounds(windowID: windowID)
+        guard WindowCaptureResolution.isFrameStale(prefetchedMatch.frame, currentFrame: currentFrame) else {
+          return prefetchedMatch
+        }
+        DiagnosticLogger.shared.log(
+          .debug,
+          .capture,
+          "Cached shareable window frame is stale; refreshing",
+          context: [
+            "windowID": "\(windowID)",
+            "cached": "\(prefetchedMatch.frame)",
+            "current": currentFrame.map { "\($0)" } ?? "unknown",
+          ]
+        )
       }
 
       let refreshedContent = try await SCShareableContent.current
@@ -337,6 +350,17 @@ enum WindowSelectionQueryService {
       )
       return nil
     }
+  }
+
+  /// Live WindowServer bounds (top-left global points, like `SCWindow.frame`).
+  nonisolated private static func currentQuartzBounds(windowID: CGWindowID) -> CGRect? {
+    guard
+      let windowInfo = (CGWindowListCopyWindowInfo([.optionIncludingWindow], windowID) as? [[String: Any]])?.first,
+      let boundsDictionary = windowInfo[kCGWindowBounds as String] as? NSDictionary
+    else {
+      return nil
+    }
+    return CGRect(dictionaryRepresentation: boundsDictionary)?.standardized
   }
 
   /// Uses WindowServer's raw list rather than ScreenCaptureKit: eligible menu-bar popovers

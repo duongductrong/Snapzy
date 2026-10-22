@@ -20,6 +20,26 @@ nonisolated enum WindowCaptureResolution {
   /// headroom; the unused margin is trimmed after capture.
   static let shadowCanvasPadding: CGFloat = 128
 
+  /// Points a cached `SCWindow` frame may drift from WindowServer's live
+  /// bounds before the cached window is treated as stale.
+  static let staleFrameTolerance: CGFloat = 1
+
+  /// Pixels a padded capture may fall short of native size from rounding.
+  static let nativeSizeTolerance: CGFloat = 2
+
+  /// A cached `SCShareableContent` keeps the frame a window had when it was
+  /// fetched. Sizing a capture from it after a resize shrinks or crops the
+  /// window (issue #634), so a frame that moved or resized needs a refresh.
+  static func isFrameStale(_ cachedFrame: CGRect, currentFrame: CGRect?) -> Bool {
+    guard let currentFrame, !currentFrame.isEmpty else { return false }
+
+    let tolerance = staleFrameTolerance
+    return abs(cachedFrame.minX - currentFrame.minX) > tolerance
+      || abs(cachedFrame.minY - currentFrame.minY) > tolerance
+      || abs(cachedFrame.width - currentFrame.width) > tolerance
+      || abs(cachedFrame.height - currentFrame.height) > tolerance
+  }
+
   static func scaleFactor(
     displayBackingScaleFactor: CGFloat?,
     filterPointPixelScale: CGFloat?,
@@ -101,5 +121,29 @@ nonisolated enum WindowCaptureResolution {
     }
 
     return actualScaleFactor < expectedScaleFactor * minimumAcceptedScaleRatio
+  }
+
+  /// A padded capture is trimmed to the window plus its shadow, so at native
+  /// scale it is never smaller than the window itself. Falling short on both
+  /// axes means ScreenCaptureKit scaled the window down to fit its canvas,
+  /// which `isUndersized` lets through down to 75%. A shrink smaller than the
+  /// shadow's share of the image stays hidden, so fresh frames still matter.
+  static func isScaledBelowNative(
+    pixelSize: CGSize,
+    logicalSize: CGSize,
+    scaleFactor: CGFloat
+  ) -> Bool {
+    guard
+      scaleFactor.isFinite,
+      scaleFactor > 0,
+      logicalSize.width > 0,
+      logicalSize.height > 0
+    else {
+      return false
+    }
+
+    let nativeSize = expectedPixelSize(logicalSize: logicalSize, scaleFactor: scaleFactor)
+    return pixelSize.width < nativeSize.width - nativeSizeTolerance
+      && pixelSize.height < nativeSize.height - nativeSizeTolerance
   }
 }
