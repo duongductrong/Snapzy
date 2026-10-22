@@ -14,7 +14,8 @@ final class CaptureEventTapControllerTests: XCTestCase {
   private final class DelegateSpy: CaptureEventTapDelegate {
     var movedPoints: [CGPoint] = []
     var buttonEvents: [(CaptureButtonEvent, CGPoint)] = []
-    var keyEvents: [CaptureKeyEvent] = []
+    var keyEvents: [(type: CGEventType, keyCode: Int64)] = []
+    var consumesKeys = true
     var scrollEvents: [(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool)] = []
 
     func eventTapDidObserveMouseMoved(at screenPoint: CGPoint) {
@@ -25,8 +26,9 @@ final class CaptureEventTapControllerTests: XCTestCase {
       buttonEvents.append((kind, screenPoint))
     }
 
-    func eventTapDidReceiveKey(_ key: CaptureKeyEvent) {
-      keyEvents.append(key)
+    func eventTapShouldConsumeKeyEvent(_ event: CGEvent) -> Bool {
+      keyEvents.append((event.type, event.getIntegerValueField(.keyboardEventKeycode)))
+      return consumesKeys
     }
 
     func eventTapDidReceiveScroll(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool) {
@@ -284,33 +286,32 @@ final class CaptureEventTapControllerTests: XCTestCase {
     XCTAssertTrue(delegate.buttonEvents.allSatisfy { $0.1 == point })
   }
 
-  func testHandleTapEvent_keyDown_routesMappedKeysAndConsumes() throws {
-    let cases: [(UInt16, CaptureKeyEvent)] = [
-      (53, .escape),
-      (126, .arrowUp),
-      (125, .arrowDown),
-      (123, .arrowLeft),
-      (124, .arrowRight),
-      (36, .return),
-      (76, .return),
-    ]
-
-    for (keyCode, _) in cases {
-      let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: true))
-      let result = controller.handleTapEvent(type: .keyDown, event: event)
-      XCTAssertNil(result, "keyDown \(keyCode) should be consumed")
+  func testHandleTapEvent_keyEvents_areRoutedAndConsumedWhenDelegateClaimsThem() throws {
+    for (keyCode, keyDown) in [(53, true), (49, true), (49, false), (0, true)] as [(UInt16, Bool)] {
+      let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: keyCode, keyDown: keyDown))
+      let result = controller.handleTapEvent(type: keyDown ? .keyDown : .keyUp, event: event)
+      XCTAssertNil(result, "key \(keyCode) \(keyDown ? "down" : "up") should be consumed")
     }
 
-    XCTAssertEqual(delegate.keyEvents, cases.map(\.1))
+    XCTAssertEqual(delegate.keyEvents.map(\.keyCode), [53, 49, 49, 0])
+    XCTAssertEqual(delegate.keyEvents.map(\.type), [.keyDown, .keyDown, .keyUp, .keyDown])
   }
 
-  func testHandleTapEvent_keyDown_unmappedKey_passesThroughButNotRouted() throws {
+  func testHandleTapEvent_keyEvent_passesThroughWhenDelegateDeclines() throws {
+    delegate.consumesKeys = false
     let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: 0, keyDown: true)) // 'a'
 
     let result = controller.handleTapEvent(type: .keyDown, event: event)
 
     XCTAssertNotNil(result)
-    XCTAssertTrue(delegate.keyEvents.isEmpty)
+    XCTAssertEqual(delegate.keyEvents.count, 1)
+  }
+
+  func testHandleTapEvent_keyEvent_withoutDelegate_passesThrough() throws {
+    controller.delegate = nil
+    let event = try XCTUnwrap(CGEvent(keyboardEventSource: nil, virtualKey: 53, keyDown: true))
+
+    XCTAssertNotNil(controller.handleTapEvent(type: .keyDown, event: event))
   }
 
   func testHandleTapEvent_scrollWheel_isConsumedByDefault() throws {
@@ -408,7 +409,7 @@ final class CaptureEventTapControllerTests: XCTestCase {
       .mouseMoved,
       .leftMouseDown, .leftMouseUp, .leftMouseDragged,
       .rightMouseDown, .rightMouseUp, .rightMouseDragged,
-      .keyDown,
+      .keyDown, .keyUp,
       .scrollWheel,
     ]
     for eventType in required {

@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import Carbon
 import Combine
 import Foundation
 import QuartzCore
@@ -174,6 +175,14 @@ final class AreaSelectionController: NSObject {
   /// pointer movement. Falls back to window-event input when Accessibility trust is missing.
   private let livePassthroughEventTap = CaptureEventTapController()
   private var isLivePassthroughInputActive = false
+  /// Passthrough sessions keep the overlay from becoming key: keying even a nonactivating
+  /// panel resigns the key window of the app beneath, and apps such as Qt dismiss their
+  /// tooltips on that (#635). Keystrokes then arrive through the tap instead. Off when Secure
+  /// Event Input was on at session start — the tap gets no keystrokes then, so the overlay
+  /// stays key and Esc keeps working.
+  private var isLivePassthroughKeyboardActive = false
+  /// Key codes whose keyDown the tap let through to the app beneath; only their keyUp follows.
+  private var livePassthroughPassedKeyCodes: Set<UInt16> = []
   private var hasRevealedLivePassthroughDim = false
   /// Grants this background process permission to hide the system cursor (see
   /// `BackgroundCursorControl`); without it `CGDisplayHideCursor` is a no-op off the
@@ -459,7 +468,7 @@ final class AreaSelectionController: NSObject {
     if isLivePassthroughInputActive {
       livePassthroughCursorHider.hide(displayIDs: [displayID])
     }
-    window.setReceivesKeyboardInput(displayID == keyboardOwnerDisplayID)
+    window.setReceivesKeyboardInput(displayID == keyboardOwnerDisplayID && !isLivePassthroughKeyboardActive)
     window.activateKeyboardInputIfNeeded()
     window.overlayView.refreshCursor()
   }
@@ -1738,6 +1747,7 @@ final class AreaSelectionController: NSObject {
     livePassthroughEventTap.delegate = self
     guard livePassthroughEventTap.start() else { return }
     isLivePassthroughInputActive = true
+    isLivePassthroughKeyboardActive = !IsSecureEventInputEnabled()
     hasRevealedLivePassthroughDim = false
     lastLivePassthroughPointerLocation = nil
     // Hide the system cursor for the session so only the drawn crosshair proxy shows
@@ -1773,6 +1783,8 @@ final class AreaSelectionController: NSObject {
       livePassthroughCursorRestorer.restore(to: location)
     }
     isLivePassthroughInputActive = false
+    isLivePassthroughKeyboardActive = false
+    livePassthroughPassedKeyCodes.removeAll()
     hasRevealedLivePassthroughDim = false
     pendingLivePassthroughHoverPoint = nil
     lastProcessedLivePassthroughHoverPoint = nil
@@ -1958,21 +1970,51 @@ final class AreaSelectionController: NSObject {
       isLivePassthroughInputActive = true
       handleLivePassthroughButton(kind, at: screenPoint)
     }
+
+    /// Test-only mirror of `eventTapShouldConsumeKeyEvent` — forces passthrough input and
+    /// tap-delivered keyboard on for the call.
+    func testHandleLivePassthroughKey(_ event: CGEvent) -> Bool {
+      isLivePassthroughInputActive = true
+      isLivePassthroughKeyboardActive = true
+      return handleLivePassthroughKey(event)
+    }
   #endif
 
-  /// Route a consumed key. Esc cancels via the same teardown funnel as right-click.
-  /// Arrows/Return stay no-ops: the legacy overlay has no nudge/confirm key handling
-  /// to mirror (verified — only the Annotate canvas nudges, not area selection), and
-  /// the fallback escape monitors cover a starved tap. All other keys pass through
-  /// the tap untouched (Space-drag move, application-mode toggle).
-  private func handleLivePassthroughKey(_ key: CaptureKeyEvent) {
-    guard isPresenting, isLivePassthroughInputActive else { return }
-    switch key {
-    case .escape:
+  /// Route a key from the tap; returns whether to consume it. While the overlay is key
+  /// (Secure Event Input fallback) it handles its own keys and the tap only adds Esc.
+  /// Otherwise every key the session uses — Esc, Space-drag move, the application-mode
+  /// toggle, Return repeat-area, the magnifier's `C` copy — is handled as the key overlay
+  /// would, and every other key is swallowed too so it cannot dismiss hover UI or fire
+  /// shortcuts in the app beneath. Unhandled ⌘ chords pass through so system shortcuts
+  /// keep working; a keyUp passes only when its keyDown did, so releasing the capture
+  /// hotkey's key while ⌘ is still held never reaches (and dismisses a Qt tooltip in) the
+  /// app beneath.
+  private func handleLivePassthroughKey(_ cgEvent: CGEvent) -> Bool {
+    guard isPresenting, isLivePassthroughInputActive,
+          let event = NSEvent(cgEvent: cgEvent) else { return false }
+    guard isLivePassthroughKeyboardActive else {
+      guard event.type == .keyDown, event.keyCode == 53 else { return false }
       cancelSelection()
-    case .arrowUp, .arrowDown, .arrowLeft, .arrowRight, .return:
-      break
+      return true
     }
+    if handleManualSelectionSpaceEvent(event) {
+      return true
+    }
+    guard event.type == .keyDown else {
+      return livePassthroughPassedKeyCodes.remove(event.keyCode) == nil
+    }
+    let pointerWindow = lastLivePassthroughPointerLocation
+      .flatMap { window(containing: appKitScreenPoint(fromQuartzGlobalPoint: $0)) }
+      ?? window(containing: NSEvent.mouseLocation)
+    if pointerWindow?.overlayView.copyMagnifierColorIfActive(for: event) == true {
+      return true
+    }
+    if handleSessionKeyEvent(event) {
+      return true
+    }
+    guard event.modifierFlags.contains(.command) else { return true }
+    livePassthroughPassedKeyCodes.insert(event.keyCode)
+    return false
   }
 
   /// CGEvent locations arrive in global Quartz coordinates (top-left origin); the selection
@@ -2476,9 +2518,9 @@ extension AreaSelectionController: CaptureEventTapDelegate {
     }
   }
 
-  nonisolated func eventTapDidReceiveKey(_ key: CaptureKeyEvent) {
+  nonisolated func eventTapShouldConsumeKeyEvent(_ event: CGEvent) -> Bool {
     MainActor.assumeIsolated {
-      handleLivePassthroughKey(key)
+      handleLivePassthroughKey(event)
     }
   }
 

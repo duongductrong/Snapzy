@@ -35,28 +35,6 @@ enum CaptureButtonEvent: Equatable, Sendable {
   }
 }
 
-/// Keyboard activity relevant to a capture session (cancel/nudge/confirm).
-enum CaptureKeyEvent: Equatable, Sendable {
-  case escape
-  case arrowUp
-  case arrowDown
-  case arrowLeft
-  case arrowRight
-  case `return`
-
-  init?(keyCode: UInt16) {
-    switch keyCode {
-    case 53: self = .escape
-    case 126: self = .arrowUp
-    case 125: self = .arrowDown
-    case 123: self = .arrowLeft
-    case 124: self = .arrowRight
-    case 36, 76: self = .return // Return + keypad Enter
-    default: return nil
-    }
-  }
-}
-
 protocol CaptureEventTapDelegate: AnyObject {
   /// Observation before consume — the event drives crosshair/magnifier/coordinate
   /// updates, then the tap consumes it so the app beneath never reacts to (or
@@ -64,7 +42,9 @@ protocol CaptureEventTapDelegate: AnyObject {
   func eventTapDidObserveMouseMoved(at screenPoint: CGPoint)
   /// Consumed events — underlying apps never see these.
   func eventTapDidReceiveButton(_ kind: CaptureButtonEvent, at screenPoint: CGPoint)
-  func eventTapDidReceiveKey(_ key: CaptureKeyEvent)
+  /// Key down/up. Returns `true` to consume the event, `false` to pass it through
+  /// to the app beneath.
+  func eventTapShouldConsumeKeyEvent(_ event: CGEvent) -> Bool
   /// Observation before consume — the wheel drives the magnifier zoom, then the
   /// tap consumes the event so the content beneath does not shift mid-selection.
   func eventTapDidReceiveScroll(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool)
@@ -135,7 +115,7 @@ final class CaptureEventTapController {
       .mouseMoved,
       .leftMouseDown, .leftMouseUp, .leftMouseDragged,
       .rightMouseDown, .rightMouseUp, .rightMouseDragged,
-      .keyDown,
+      .keyDown, .keyUp,
       .scrollWheel,
     ]
     for eventType in eventTypes {
@@ -295,16 +275,14 @@ final class CaptureEventTapController {
       }
       return nil
 
-    case .keyDown:
-      // Capture-relevant keys (Esc/arrows/Return) are consumed and routed to
-      // the delegate. Every other key passes through so existing overlay key
-      // handling (Space-drag move, application-mode toggle) keeps working —
-      // the overlay panel is still key during a passthrough session.
-      let keyCode = UInt16(clamping: event.getIntegerValueField(.keyboardEventKeycode))
-      guard let key = CaptureKeyEvent(keyCode: keyCode) else {
+    case .keyDown, .keyUp:
+      // The overlay never takes key status in a passthrough session (keying it
+      // deactivates the window beneath, which dismisses Qt tooltips — #635), so
+      // keystrokes reach the session only through here. The delegate decides
+      // which ones the app beneath must not see.
+      guard delegate?.eventTapShouldConsumeKeyEvent(event) == true else {
         return Unmanaged.passUnretained(event)
       }
-      delegate?.eventTapDidReceiveKey(key)
       return nil
 
     case .scrollWheel:
