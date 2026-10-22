@@ -137,8 +137,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
   func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
     guard didFinishLaunching else { return true }
     let showsMenuBarIcon = UserDefaults.standard.object(forKey: PreferencesKeys.showMenuBarIcon) as? Bool ?? true
-    guard !showsMenuBarIcon else { return true }
+    // An enabled icon can still be hidden behind the notch on a crowded menu bar (issue #587).
+    let isIconObscured = showsMenuBarIcon && AppStatusBarController.shared.isMenuBarIconObscured
+    guard !showsMenuBarIcon || isIconObscured else { return true }
 
+    if isIconObscured {
+      DiagnosticLogger.shared.log(.info, .ui, "Opening Settings on reopen because the menu bar icon is hidden")
+    }
     AppStatusBarController.shared.openPreferencesWindow(tab: .general)
     return false
   }

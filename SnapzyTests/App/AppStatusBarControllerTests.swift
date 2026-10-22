@@ -49,6 +49,78 @@ final class AppStatusBarControllerTests: XCTestCase {
     XCTAssertFalse(controller.showsRecordingTimeOnMenuBarForTesting)
   }
 
+  // MARK: - Hidden status item detection (issue #587)
+
+  // Frames measured on a 14" notched MacBook Pro at default scaling.
+  private let notchedScreen = CGRect(x: 0, y: 0, width: 1800, height: 1169)
+  private let notchGap: ClosedRange<CGFloat> = 790...1010
+
+  func testStatusItemObscured_falseWhenRightOfNotchAndVisible() {
+    XCTAssertFalse(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: 1046, y: 1130, width: 137, height: 39),
+        screenFrame: notchedScreen,
+        notchGap: notchGap,
+        isOcclusionVisible: true
+      )
+    )
+  }
+
+  func testStatusItemObscured_trueWhenOverlappingNotch() {
+    XCTAssertTrue(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: 911, y: 1130, width: 137, height: 39),
+        screenFrame: notchedScreen,
+        notchGap: notchGap,
+        isOcclusionVisible: true
+      )
+    )
+  }
+
+  func testStatusItemObscured_trueWhenPushedOffScreen() {
+    XCTAssertTrue(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: -47, y: 1130, width: 137, height: 39),
+        screenFrame: notchedScreen,
+        notchGap: notchGap,
+        isOcclusionVisible: true
+      )
+    )
+  }
+
+  func testStatusItemObscured_trueWhenOccluded() {
+    XCTAssertTrue(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: 500, y: 1130, width: 137, height: 39),
+        screenFrame: notchedScreen,
+        notchGap: notchGap,
+        isOcclusionVisible: false
+      )
+    )
+  }
+
+  func testStatusItemObscured_trueWithoutScreen() {
+    XCTAssertTrue(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: 1046, y: 1130, width: 137, height: 39),
+        screenFrame: nil,
+        notchGap: nil,
+        isOcclusionVisible: true
+      )
+    )
+  }
+
+  func testStatusItemObscured_ignoresNotchGapOnScreensWithoutNotch() {
+    XCTAssertFalse(
+      AppStatusBarController.isStatusItemObscured(
+        itemFrame: CGRect(x: 911, y: 1130, width: 137, height: 39),
+        screenFrame: notchedScreen,
+        notchGap: nil,
+        isOcclusionVisible: true
+      )
+    )
+  }
+
   // MARK: - Menu bar title gating (issue #351)
 
   func testMenuBarTitle_hiddenWhenTimeDisplayOff_forAllStates() {

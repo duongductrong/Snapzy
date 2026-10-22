@@ -150,6 +150,8 @@ final class AppStatusBarController: ObservableObject {
     }
 
     statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+    // macOS persists a ⌘-drag removal per item; the Snapzy preference is the source of truth.
+    statusItem?.isVisible = true
 
     if let button = statusItem?.button {
       button.imagePosition = .imageLeading
@@ -158,10 +160,114 @@ final class AppStatusBarController: ObservableObject {
       button.sendAction(on: [.leftMouseUp, .rightMouseUp])
       renderStatusItem()
     }
+
+    // Occlusion is only known once the status bar window is on screen (see issue #587).
+    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+      self?.observeStatusItemOcclusion()
+      self?.logStatusItemVisibilityIfChanged(trigger: "setup")
+    }
+  }
+
+  // MARK: - Hidden Status Item Detection
+
+  /// True when the icon is enabled but macOS is not drawing it, e.g. it was pushed behind the
+  /// notch or under the active app's menus on a crowded menu bar (issue #587).
+  var isMenuBarIconObscured: Bool {
+    guard let statusItem else { return false }
+    guard statusItem.isVisible, let window = statusItem.button?.window else { return true }
+    let screen = window.screen
+    return Self.isStatusItemObscured(
+      itemFrame: window.frame,
+      screenFrame: screen?.frame,
+      notchGap: screen.flatMap { Self.notchGap(of: $0) },
+      isOcclusionVisible: window.occlusionState.contains(.visible)
+    )
+  }
+
+  /// Pure decision for whether a status item window is actually visible to the user.
+  /// Extracted for deterministic testing; AppKit reports `isVisible == true` for hidden items.
+  nonisolated static func isStatusItemObscured(
+    itemFrame: CGRect,
+    screenFrame: CGRect?,
+    notchGap: ClosedRange<CGFloat>?,
+    isOcclusionVisible: Bool
+  ) -> Bool {
+    guard isOcclusionVisible, let screenFrame else { return true }
+    if itemFrame.minX < screenFrame.minX || itemFrame.maxX > screenFrame.maxX {
+      return true
+    }
+    if let notchGap, itemFrame.minX < notchGap.upperBound, itemFrame.maxX > notchGap.lowerBound {
+      return true
+    }
+    return false
+  }
+
+  /// Horizontal span covered by the camera housing, or nil on screens without a notch.
+  private static func notchGap(of screen: NSScreen) -> ClosedRange<CGFloat>? {
+    guard let left = screen.auxiliaryTopLeftArea,
+          let right = screen.auxiliaryTopRightArea,
+          left.maxX < right.minX else { return nil }
+    return left.maxX...right.minX
+  }
+
+  private var statusItemOcclusionObserver: NSObjectProtocol?
+  private var lastLoggedStatusItemObscured: Bool?
+  private var didWarnStatusItemObscured = false
+
+  private func observeStatusItemOcclusion() {
+    removeStatusItemOcclusionObserver()
+    guard let window = statusItem?.button?.window else { return }
+    statusItemOcclusionObserver = NotificationCenter.default.addObserver(
+      forName: NSWindow.didChangeOcclusionStateNotification,
+      object: window,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.logStatusItemVisibilityIfChanged(trigger: "occlusionChange")
+      }
+    }
+  }
+
+  private func removeStatusItemOcclusionObserver() {
+    if let statusItemOcclusionObserver {
+      NotificationCenter.default.removeObserver(statusItemOcclusionObserver)
+    }
+    statusItemOcclusionObserver = nil
+    lastLoggedStatusItemObscured = nil
+    didWarnStatusItemObscured = false
+  }
+
+  private func logStatusItemVisibilityIfChanged(trigger: String) {
+    guard let statusItem else { return }
+    let obscured = isMenuBarIconObscured
+    guard obscured != lastLoggedStatusItemObscured else { return }
+    lastLoggedStatusItemObscured = obscured
+
+    let window = statusItem.button?.window
+    let context = [
+      "trigger": trigger,
+      "isVisible": statusItem.isVisible ? "true" : "false",
+      "frame": window.map { NSStringFromRect($0.frame) } ?? "none",
+      "occlusionVisible": (window?.occlusionState.contains(.visible) ?? false) ? "true" : "false",
+      "hasNotch": (window?.screen.flatMap { Self.notchGap(of: $0) } != nil) ? "true" : "false",
+    ]
+    if obscured {
+      // An auto-hiding menu bar flips occlusion on every reveal, so warn once per item.
+      DiagnosticLogger.shared.log(
+        didWarnStatusItemObscured ? .debug : .warning,
+        .ui,
+        "Menu bar icon is enabled but hidden by the system",
+        context: context
+      )
+      didWarnStatusItemObscured = true
+    } else {
+      DiagnosticLogger.shared.log(.debug, .ui, "Menu bar icon is visible", context: context)
+    }
   }
 
   private func removeStatusItem() {
     guard let statusItem else { return }
+    removeStatusItemOcclusionObserver()
     processingSpinner?.stopAnimation(nil)
     processingSpinner?.removeFromSuperview()
     processingSpinner = nil
