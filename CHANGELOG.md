@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.12] - 2026-10-22
+
+### Bug Fixes
+- Refresh stale window frames before sizing window captures (#670) (e3bd64ca)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.11] - 2026-10-21
 
 ### Features
