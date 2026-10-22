@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.13] - 2026-10-22
+
+### Bug Fixes
+- Keep the app beneath focused during live capture so tooltips survive (#672) (4b940ff9)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.12] - 2026-10-22
 
 ### Bug Fixes
