@@ -181,8 +181,8 @@ final class AreaSelectionController: NSObject {
   /// Event Input was on at session start — the tap gets no keystrokes then, so the overlay
   /// stays key and Esc keeps working.
   private var isLivePassthroughKeyboardActive = false
-  /// Key codes whose keyDown the tap let through to the app beneath; only their keyUp follows.
-  private var livePassthroughPassedKeyCodes: Set<UInt16> = []
+  /// Key codes whose keyDown the session consumed; only their keyUp is consumed too.
+  private var livePassthroughConsumedKeyCodes: Set<UInt16> = []
   private var hasRevealedLivePassthroughDim = false
   /// Grants this background process permission to hide the system cursor (see
   /// `BackgroundCursorControl`); without it `CGDisplayHideCursor` is a no-op off the
@@ -1784,7 +1784,7 @@ final class AreaSelectionController: NSObject {
     }
     isLivePassthroughInputActive = false
     isLivePassthroughKeyboardActive = false
-    livePassthroughPassedKeyCodes.removeAll()
+    livePassthroughConsumedKeyCodes.removeAll()
     hasRevealedLivePassthroughDim = false
     pendingLivePassthroughHoverPoint = nil
     lastProcessedLivePassthroughHoverPoint = nil
@@ -1986,9 +1986,10 @@ final class AreaSelectionController: NSObject {
   /// toggle, Return repeat-area, the magnifier's `C` copy — is handled as the key overlay
   /// would, and every other key is swallowed too so it cannot dismiss hover UI or fire
   /// shortcuts in the app beneath. Unhandled ⌘ chords pass through so system shortcuts
-  /// keep working; a keyUp passes only when its keyDown did, so releasing the capture
-  /// hotkey's key while ⌘ is still held never reaches (and dismisses a Qt tooltip in) the
-  /// app beneath.
+  /// keep working. A keyUp is consumed only when its keyDown was: keys pressed before the
+  /// session started — the capture hotkey itself — must release normally, because a
+  /// swallowed hotkey keyUp leaves the WindowServer treating the hotkey as still held, and
+  /// it then drops the next press of the same shortcut (every second press did nothing).
   private func handleLivePassthroughKey(_ cgEvent: CGEvent) -> Bool {
     guard isPresenting, isLivePassthroughInputActive,
           let event = NSEvent(cgEvent: cgEvent) else { return false }
@@ -1997,11 +1998,17 @@ final class AreaSelectionController: NSObject {
       cancelSelection()
       return true
     }
+    if event.type == .keyDown {
+      livePassthroughConsumedKeyCodes.insert(event.keyCode)
+    }
     if handleManualSelectionSpaceEvent(event) {
+      if event.type == .keyUp {
+        livePassthroughConsumedKeyCodes.remove(event.keyCode)
+      }
       return true
     }
     guard event.type == .keyDown else {
-      return livePassthroughPassedKeyCodes.remove(event.keyCode) == nil
+      return livePassthroughConsumedKeyCodes.remove(event.keyCode) != nil
     }
     let pointerWindow = lastLivePassthroughPointerLocation
       .flatMap { window(containing: appKitScreenPoint(fromQuartzGlobalPoint: $0)) }
@@ -2013,7 +2020,7 @@ final class AreaSelectionController: NSObject {
       return true
     }
     guard event.modifierFlags.contains(.command) else { return true }
-    livePassthroughPassedKeyCodes.insert(event.keyCode)
+    livePassthroughConsumedKeyCodes.remove(event.keyCode)
     return false
   }
 

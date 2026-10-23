@@ -69,11 +69,13 @@ final class AreaSelectionLivePassthroughKeyboardTests: XCTestCase {
     XCTAssertTrue(controller.isPresenting)
   }
 
-  /// The capture hotkey's own keyDown never reaches the tap; its keyUp — often released while
-  /// ⇧⌘ are still held — must not reach the app beneath either (Qt hides tooltips on KeyRelease).
-  func testCommandKeyUp_withoutPassedKeyDown_isConsumed() throws {
+  /// The capture hotkey's keyDown fires before the session (and its tap) exist, so its keyUp
+  /// arrives with no keyDown seen. Swallowing it leaves the WindowServer treating the hotkey as
+  /// held, and the next press of the same shortcut is dropped — every second press did nothing.
+  func testHotkeyKeyUp_withoutKeyDownInSession_passesThrough() throws {
     let controller = try startSession()
 
-    XCTAssertTrue(controller.testHandleLivePassthroughKey(try keyEvent(19, down: false, flags: [.maskCommand, .maskShift])))
+    XCTAssertFalse(controller.testHandleLivePassthroughKey(try keyEvent(21, down: false, flags: [.maskCommand, .maskShift])))
+    XCTAssertTrue(controller.isPresenting)
   }
 }
