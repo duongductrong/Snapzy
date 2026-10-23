@@ -7,6 +7,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2.1.0-beta.14] - 2026-10-23
 
 ### Bug Fixes
+- Stop live capture from swallowing the capture hotkey's keyUp (#679) (07a35516)
+- Retry DMG stapling on transient CloudKit failures (#680) (b7ad6802)
+- Keep pinned window drags alive across displays on macOS 27 (#677) (d9267305)
+- Read history records from the database in the retention sweep (ef5e914d)
+- Resize GIFs off the main actor (647e06b1)
+- Stream GIF frames to the encoder and keep duration on failed frames (2ad35d24)
+- Cut paused recording spans by sample timestamps (6f6888fe)
+- Expire cached shareable content and make delayed capture cancellable (7626b63e)
+- Harden recording session start, stream errors and GIF output (96d0551c)
+- Keep annotations in place after Cut Out and inline selection resize (53cc370f)
+- Free editor caches when Quick Access evicts its oldest card (dff80d1f)
+- Stop retention sweep from deleting every history thumbnail (b67a96d4)
+- Remove cloud expiry rule when switching to permanent (47645d05)
+- Detect a menu bar icon hidden by the notch and open Settings on reopen (#674) (2ca2dae5)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
+## [2.1.0-beta.14] - 2026-10-23
+
+### Bug Fixes
 - Keep pinned window drags alive across displays on macOS 27 (#677) (d9267305)
 - Read history records from the database in the retention sweep (ef5e914d)
 - Resize GIFs off the main actor (647e06b1)
