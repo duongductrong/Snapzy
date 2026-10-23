@@ -11,18 +11,37 @@ import AppKit
 ///
 /// The policy is native-first: every eligible drag starts as `.tracking`,
 /// events keep flowing to AppKit untouched, and only when the frame stays put
-/// past a small movement threshold does the manual path take ownership of the
-/// gesture. If the system moves the frame at any point (native dragging is
-/// available), the gesture is ceded back so exactly one mode owns it.
+/// past a small movement threshold does the decider step in. It first asks
+/// the window server to run the drag (`performDrag(with:)`), which keeps
+/// cross-display moves, Spaces and menu-bar constraints native. If the frame
+/// still stays put, the manual path takes ownership for the rest of the
+/// gesture. If the system moves the frame before the manual path owns it,
+/// the gesture is ceded back so exactly one mode owns it.
 struct PinWindowDragDecider: Equatable {
   enum Mode: Equatable {
     case idle
     case tracking(startScreenPoint: NSPoint, grabOffset: NSPoint, initialFrameOrigin: NSPoint)
-    case manual(grabOffset: NSPoint, appliedFrameOrigin: NSPoint)
+    case systemDragRequested(requestTimestamp: TimeInterval, grabOffset: NSPoint, frameOrigin: NSPoint)
+    case manual(grabOffset: NSPoint)
     case native
   }
 
+  enum Action: Equatable {
+    /// Let AppKit handle the event untouched.
+    case forward
+    /// Hand the gesture to the window server via `performDrag(with:)`.
+    case beginSystemDrag
+    /// Move the window to this screen origin and consume the event.
+    case move(to: NSPoint)
+  }
+
   static let movementThreshold: CGFloat = 4
+
+  /// How long the frame may stay put after the system-drag request before
+  /// the manual path takes over. Dragged events are coalesced, so distance
+  /// alone would fall back before the window server reports the first move
+  /// of a drag it accepted, and the two would fight over the frame.
+  static let systemDragFallbackDelay: TimeInterval = 0.1
 
   /// How far the frame may deviate from the recorded origin before it counts
   /// as "the system moved the window". Live drags can be subject to
@@ -37,6 +56,29 @@ struct PinWindowDragDecider: Equatable {
     return false
   }
 
+  /// Whether this window moves the frame itself (or may start to), so its
+  /// event handling must stay attached to the gesture. A drag the window
+  /// server owns follows the cursor on its own and may never send a mouse-up.
+  var isWindowDriven: Bool {
+    switch mode {
+    case .tracking, .manual:
+      return true
+    case .idle, .systemDragRequested, .native:
+      return false
+    }
+  }
+
+  /// Whether the decider took the gesture away from the click path, so the
+  /// trailing mouse-up must not reach the content underneath.
+  var ownsGesture: Bool {
+    switch mode {
+    case .systemDragRequested, .manual:
+      return true
+    case .idle, .tracking, .native:
+      return false
+    }
+  }
+
   /// Starts tracking a new eligible background drag. Always resets first so
   /// stale state can never leak into the next gesture.
   mutating func begin(startScreenPoint: NSPoint, grabOffset: NSPoint, initialFrameOrigin: NSPoint) {
@@ -47,40 +89,59 @@ struct PinWindowDragDecider: Equatable {
     )
   }
 
-  /// Evaluates a drag update. Returns the screen origin the window should be
-  /// moved to when the manual path owns the gesture, otherwise nil so events
-  /// keep flowing to AppKit.
-  mutating func dragged(screenPoint: NSPoint, currentFrameOrigin: NSPoint) -> NSPoint? {
+  /// Evaluates a drag update and returns what the window should do with it.
+  /// `timestamp` is the event's system-uptime timestamp.
+  mutating func dragged(
+    screenPoint: NSPoint,
+    currentFrameOrigin: NSPoint,
+    timestamp: TimeInterval
+  ) -> Action {
     switch mode {
     case .idle, .native:
-      return nil
+      return .forward
     case let .tracking(start, offset, initialOrigin):
       // The system moved the frame: native background dragging owns this
       // gesture.
       guard !frameMoved(currentFrameOrigin, from: initialOrigin) else {
         mode = .native
-        return nil
+        return .forward
       }
-      let dx = screenPoint.x - start.x
-      let dy = screenPoint.y - start.y
-      guard dx * dx + dy * dy >= Self.movementThreshold * Self.movementThreshold else {
-        return nil
+      guard distance(from: start, to: screenPoint) >= Self.movementThreshold else {
+        return .forward
+      }
+      mode = .systemDragRequested(
+        requestTimestamp: timestamp,
+        grabOffset: offset,
+        frameOrigin: currentFrameOrigin
+      )
+      return .beginSystemDrag
+    case let .systemDragRequested(requestTimestamp, offset, origin):
+      // The frame moved: the window server accepted the drag.
+      guard !frameMoved(currentFrameOrigin, from: origin) else {
+        mode = .native
+        return .forward
+      }
+      guard timestamp - requestTimestamp >= Self.systemDragFallbackDelay else {
+        return .forward
       }
       return applyingManualMove(screenPoint: screenPoint, grabOffset: offset)
-    case let .manual(offset, applied):
-      // Back off if the frame moved without our involvement.
-      guard !frameMoved(currentFrameOrigin, from: applied) else {
-        mode = .native
-        return nil
-      }
+    case let .manual(offset):
+      // Once manual, keep ownership until mouse-up. Native dragging already
+      // had its chance while tracking; a frame the system adjusted mid-drag
+      // (crossing displays, backing-scale changes) must not strand the
+      // gesture with nobody moving the window.
       return applyingManualMove(screenPoint: screenPoint, grabOffset: offset)
     }
   }
 
-  /// Ends the gesture: mouse-up, cancellation, or the window losing key
-  /// status.
+  /// Ends the gesture: mouse-up, cancellation, or the left button found
+  /// released mid-gesture.
   mutating func end() {
     mode = .idle
+  }
+
+  private func distance(from start: NSPoint, to end: NSPoint) -> CGFloat {
+    hypot(end.x - start.x, end.y - start.y)
   }
 
   private func frameMoved(_ origin: NSPoint, from reference: NSPoint) -> Bool {
@@ -88,10 +149,9 @@ struct PinWindowDragDecider: Equatable {
       || abs(origin.y - reference.y) > Self.systemMoveTolerance
   }
 
-  private mutating func applyingManualMove(screenPoint: NSPoint, grabOffset: NSPoint) -> NSPoint {
-    let target = NSPoint(x: screenPoint.x - grabOffset.x, y: screenPoint.y - grabOffset.y)
-    mode = .manual(grabOffset: grabOffset, appliedFrameOrigin: target)
-    return target
+  private mutating func applyingManualMove(screenPoint: NSPoint, grabOffset: NSPoint) -> Action {
+    mode = .manual(grabOffset: grabOffset)
+    return .move(to: NSPoint(x: screenPoint.x - grabOffset.x, y: screenPoint.y - grabOffset.y))
   }
 }
 
@@ -111,6 +171,8 @@ final class QuickAccessPinWindow: NSPanel {
   // `PinWindowDragDecider` only takes over when the native path does not
   // move the frame.
   private var backgroundDrag = PinWindowDragDecider()
+  // `performDrag(with:)` expects the gesture's original mouse-down.
+  private var backgroundDragMouseDown: NSEvent?
 
   init(contentRect: NSRect, state: QuickAccessPinWindowState) {
     pinState = state
@@ -146,14 +208,15 @@ final class QuickAccessPinWindow: NSPanel {
     case .leftMouseDown:
       beginBackgroundDragIfEligible(with: event)
       super.sendEvent(event)
-    case .leftMouseDragged where continueBackgroundDrag():
+    case .leftMouseDragged where continueBackgroundDrag(with: event):
       return
     case .leftMouseUp:
-      // A manual drag consumed the gesture: swallow the mouse-up so the click
+      // The decider consumed the gesture: swallow the mouse-up so the click
       // underneath does not fire (same behavior as a native window drag).
-      let wasManual = backgroundDrag.isManual
+      let ownedGesture = backgroundDrag.ownsGesture
       backgroundDrag.end()
-      if wasManual {
+      backgroundDragMouseDown = nil
+      if ownedGesture {
         return
       }
       super.sendEvent(event)
@@ -163,7 +226,12 @@ final class QuickAccessPinWindow: NSPanel {
   }
 
   override func resignKey() {
-    backgroundDrag.end()
+    // Key status can move mid-gesture (the hover path keying another window,
+    // or the system reassigning displays). Keep a live drag alive; the
+    // pressed-button check in `continueBackgroundDrag` ends it once released.
+    if !isBackgroundDragInProgress {
+      backgroundDrag.end()
+    }
     super.resignKey()
   }
 
@@ -215,6 +283,10 @@ final class QuickAccessPinWindow: NSPanel {
 
     guard pinState.isLocked else {
       ignoresMouseEvents = false
+      // The local monitor runs before the window moves for this event, so the
+      // cursor can briefly sit outside the frame. Handing key status away then
+      // would interrupt the drag.
+      guard !isBackgroundDragInProgress else { return }
       if isInside {
         if !isKeyWindow {
           makeKey()
@@ -333,9 +405,11 @@ final class QuickAccessPinWindow: NSPanel {
     // A fresh mouse-down always resets first, so stale state from a missed
     // mouse-up or a cancelled gesture can never leak into this one.
     backgroundDrag.end()
+    backgroundDragMouseDown = nil
     guard let pinState, !pinState.isLocked else { return }
     guard !isOverInteractiveControl(event) else { return }
 
+    backgroundDragMouseDown = event
     backgroundDrag.begin(
       startScreenPoint: NSEvent.mouseLocation,
       grabOffset: event.locationInWindow,
@@ -343,7 +417,11 @@ final class QuickAccessPinWindow: NSPanel {
     )
   }
 
-  private func continueBackgroundDrag() -> Bool {
+  private var isBackgroundDragInProgress: Bool {
+    backgroundDrag.isWindowDriven && NSEvent.pressedMouseButtons & 0x1 != 0
+  }
+
+  private func continueBackgroundDrag(with event: NSEvent) -> Bool {
     // Missed mouse-up (the window resigned key or the event was lost
     // mid-gesture): the left button is no longer pressed, so the gesture is
     // over.
@@ -355,24 +433,29 @@ final class QuickAccessPinWindow: NSPanel {
 
     let modeBefore = backgroundDrag.mode
     let frameBefore = frame.origin
-    guard let target = backgroundDrag.dragged(
+    let action = backgroundDrag.dragged(
       screenPoint: NSEvent.mouseLocation,
-      currentFrameOrigin: frame.origin
-    ) else {
-      logDragTransition("dragged", from: modeBefore, to: backgroundDrag.mode, context: [
-        "frame": "\(frameBefore)",
-      ])
-      // While tracking we deliberately forward events untouched so AppKit
-      // keeps its chance to own the gesture; only an active manual drag
-      // consumes them.
-      return backgroundDrag.isManual
-    }
+      currentFrameOrigin: frame.origin,
+      timestamp: event.timestamp
+    )
     logDragTransition("dragged", from: modeBefore, to: backgroundDrag.mode, context: [
       "frame": "\(frameBefore)",
-      "target": "\(target)",
+      "action": "\(action)",
     ])
-    setFrameOrigin(target)
-    return true
+
+    switch action {
+    case .forward:
+      // While tracking we deliberately forward events untouched so AppKit
+      // keeps its chance to own the gesture.
+      return false
+    case .beginSystemDrag:
+      // Returns right away; the window server drives the drag if it accepts.
+      performDrag(with: backgroundDragMouseDown ?? event)
+      return true
+    case let .move(target):
+      setFrameOrigin(target)
+      return true
+    }
   }
 
   private func logDragTransition(
