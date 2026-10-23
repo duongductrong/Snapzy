@@ -416,7 +416,24 @@ jobs:
           }
 
           echo "$SUBMIT_OUTPUT"
-          xcrun stapler staple "${{ env.dmg_path }}"
+
+          # Stapling fetches the ticket from Apple's CloudKit CDN, which can drop the
+          # connection (error 68) or lag behind an Accepted submission (error 65).
+          # Notarization already succeeded at this point, so retry the staple only.
+          MAX_STAPLE_ATTEMPTS=5
+          for attempt in $(seq 1 "$MAX_STAPLE_ATTEMPTS"); do
+            if xcrun stapler staple "${{ env.dmg_path }}"; then
+              break
+            fi
+            if [ "$attempt" -eq "$MAX_STAPLE_ATTEMPTS" ]; then
+              echo "::error::Stapling failed after $MAX_STAPLE_ATTEMPTS attempts"
+              exit 1
+            fi
+            DELAY=$((attempt * 30))
+            echo "::warning::Staple attempt $attempt failed, retrying in ${DELAY}s..."
+            sleep "$DELAY"
+          done
+          xcrun stapler validate "${{ env.dmg_path }}"
           echo "DMG notarized and stapled successfully"
 
       - name: Compute SHA256
