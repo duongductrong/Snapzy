@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.1.0-beta.15] - 2026-10-24
+
+### Features
+- Show capture chrome in screen recordings (#682) (fbee5709)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0-beta.14] - 2026-10-23
 
 ### Bug Fixes
