@@ -76,10 +76,10 @@ final class CLIRequestRouterTests: XCTestCase {
     XCTAssertEqual(response.error?.code, .unknownMethod)
   }
 
-  func testServerRegistersEveryPhaseTwoMethod() {
+  func testServerRegistersEveryMethodButHello() {
     XCTAssertEqual(
       CLIServer.makeRouter().registeredMethods,
-      ["system.status", "list.displays", "list.windows", "list.apps"]
+      Set(CLIMethod.allCases.filter { $0 != .hello }.map(\.rawValue))
     )
   }
 }

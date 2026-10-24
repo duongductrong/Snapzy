@@ -45,6 +45,34 @@ enum CaptureResult {
   case failure(CaptureError)
 }
 
+/// Who started a capture. Headless captures (the `snapzy` CLI) never prompt
+/// for Screen Recording and never emit `captureCompletedPublisher`, so no
+/// post-capture actions (Quick Access, clipboard, history, auto-open) run.
+nonisolated enum CaptureInvocation: Equatable, Sendable {
+  case interactive
+  /// `includeWindowShadow` overrides the window-shadow preference for window captures.
+  case headless(includeWindowShadow: Bool)
+
+  var emitsCompletion: Bool {
+    self == .interactive
+  }
+
+  var promptsForPermission: Bool {
+    self == .interactive
+  }
+
+  /// Interactive captures fall back to "something close" (another display, a
+  /// rect instead of a window); headless callers get an error instead.
+  var allowsBestEffortFallback: Bool {
+    self == .interactive
+  }
+
+  var windowShadowOverride: Bool? {
+    guard case .headless(let includeWindowShadow) = self else { return nil }
+    return includeWindowShadow
+  }
+}
+
 struct MultiDisplayScreenshotResult {
   let savedURLs: [URL]
   let failures: [CGDirectDisplayID: CaptureError]
@@ -571,9 +599,10 @@ final class ScreenCaptureManager: ObservableObject {
     excludeDesktopWidgets: Bool = false,
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil,
-    context: CaptureContext = .empty
+    context: CaptureContext = .empty,
+    invocation: CaptureInvocation = .interactive
   ) async -> CaptureResult {
-    if let unavailableError = await ensureCaptureAvailability() {
+    if let unavailableError = await ensureCaptureAvailability(promptsForPermission: invocation.promptsForPermission) {
       return .failure(unavailableError)
     }
 
@@ -591,9 +620,11 @@ final class ScreenCaptureManager: ObservableObject {
 
       // Get the target display
       let targetDisplayID = displayID ?? ScreenUtility.activeDisplayID()
+      // A headless caller named this display; never substitute another one.
+      let fallbackDisplay = invocation.allowsBestEffortFallback ? content.displays.first : nil
       guard
         let display = content.displays.first(where: { $0.displayID == targetDisplayID })
-          ?? content.displays.first
+          ?? fallbackDisplay
       else {
         return .failure(.noDisplayFound)
       }
@@ -673,6 +704,7 @@ final class ScreenCaptureManager: ObservableObject {
         fileName: fileName,
         format: format,
         scaleFactor: promotedImage.scaleFactor,
+        emitCompletion: invocation.emitsCompletion,
         context: context
       )
 
@@ -1121,9 +1153,10 @@ final class ScreenCaptureManager: ObservableObject {
     excludeDesktopWidgets: Bool = false,
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil,
-    context: CaptureContext = .empty
+    context: CaptureContext = .empty,
+    invocation: CaptureInvocation = .interactive
   ) async -> CaptureResult {
-    if let unavailableError = await ensureCaptureAvailability() {
+    if let unavailableError = await ensureCaptureAvailability(promptsForPermission: invocation.promptsForPermission) {
       return .failure(unavailableError)
     }
 
@@ -1164,6 +1197,7 @@ final class ScreenCaptureManager: ObservableObject {
           fileName: fileName,
           format: format,
           scaleFactor: compositeResult.scaleFactor,
+          emitCompletion: invocation.emitsCompletion,
           context: context
         )
       }
@@ -1191,6 +1225,7 @@ final class ScreenCaptureManager: ObservableObject {
         fileName: fileName,
         format: format,
         scaleFactor: captured.scaleFactor,
+        emitCompletion: invocation.emitsCompletion,
         context: context
       )
 
@@ -1211,9 +1246,10 @@ final class ScreenCaptureManager: ObservableObject {
     excludeOwnApplication: Bool = false,
     prefetchedContentTask: ShareableContentPrefetchTask? = nil,
     immediateMenuBarPopoverCapture: ImmediateMenuBarPopoverCapture? = nil,
-    context: CaptureContext = .empty
+    context: CaptureContext = .empty,
+    invocation: CaptureInvocation = .interactive
   ) async -> CaptureResult {
-    if let unavailableError = await ensureCaptureAvailability() {
+    if let unavailableError = await ensureCaptureAvailability(promptsForPermission: invocation.promptsForPermission) {
       return .failure(unavailableError)
     }
 
@@ -1247,7 +1283,8 @@ final class ScreenCaptureManager: ObservableObject {
         let windowImage = try await captureWindowImage(
           shareableWindow,
           fallbackTarget: target,
-          showCursor: showCursor
+          showCursor: showCursor,
+          includeWindowShadowOverride: invocation.windowShadowOverride
         )
         return await saveImage(
           windowImage.image,
@@ -1255,6 +1292,7 @@ final class ScreenCaptureManager: ObservableObject {
           fileName: fileName,
           format: format,
           scaleFactor: windowImage.scaleFactor,
+          emitCompletion: invocation.emitsCompletion,
           context: context
         )
       } catch {
@@ -1276,6 +1314,7 @@ final class ScreenCaptureManager: ObservableObject {
         fileName: fileName,
         format: format,
         scaleFactor: immediateMenuBarPopoverCapture.scaleFactor,
+        emitCompletion: invocation.emitsCompletion,
         context: context
       )
 
@@ -1287,6 +1326,7 @@ final class ScreenCaptureManager: ObservableObject {
           fileName: fileName,
           format: format,
           scaleFactor: windowImage.scaleFactor,
+          emitCompletion: invocation.emitsCompletion,
           context: context
         )
       }
@@ -1306,6 +1346,12 @@ final class ScreenCaptureManager: ObservableObject {
       )
     }
 
+    // A rect capture would return whatever covers the window; a headless
+    // caller asked for this window, so report the failure instead.
+    guard invocation.allowsBestEffortFallback else {
+      return .failure(.captureFailed("The window could not be captured directly; it may have closed or moved"))
+    }
+
     return await captureArea(
       rect: target.frame,
       saveDirectory: saveDirectory,
@@ -1316,7 +1362,8 @@ final class ScreenCaptureManager: ObservableObject {
       excludeDesktopWidgets: excludeDesktopWidgets,
       excludeOwnApplication: excludeOwnApplication,
       prefetchedContentTask: prefetchedContentTask,
-      context: context
+      context: context,
+      invocation: invocation
     )
   }
 
@@ -2075,7 +2122,8 @@ final class ScreenCaptureManager: ObservableObject {
   private func captureWindowImage(
     _ window: SCWindow,
     fallbackTarget: WindowCaptureTarget,
-    showCursor: Bool
+    showCursor: Bool,
+    includeWindowShadowOverride: Bool? = nil
   ) async throws -> (image: CGImage, scaleFactor: CGFloat) {
     let contentFilter = SCContentFilter(desktopIndependentWindow: window)
     let scaleFactor = max(
@@ -2094,7 +2142,8 @@ final class ScreenCaptureManager: ObservableObject {
     }
 
     let configuration = SCStreamConfiguration()
-    let includeWindowShadow = UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
+    let includeWindowShadow = includeWindowShadowOverride
+      ?? UserDefaults.standard.object(forKey: PreferencesKeys.captureIncludeWindowShadow) as? Bool ?? WindowShadowPreference.defaultIncludeShadow
     // The content rect excludes the shadow, so a shadowed window gets a padded
     // canvas to render 1:1 (issue #569). Only macOS 14+ pads: its screenshot
     // path leaves unused canvas transparent for the fringe trim below.
@@ -2652,13 +2701,14 @@ final class ScreenCaptureManager: ObservableObject {
     }
   }
 
-  private func ensureCaptureAvailability() async -> CaptureError? {
+  private func ensureCaptureAvailability(promptsForPermission: Bool = true) async -> CaptureError? {
     await checkPermission()
 
     switch permissionStatus {
     case .granted:
       return nil
     case .notGranted:
+      guard promptsForPermission else { return .permissionDenied }
       let granted = await requestPermission()
       if granted {
         return nil

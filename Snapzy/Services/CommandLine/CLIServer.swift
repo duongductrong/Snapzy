@@ -50,6 +50,7 @@ final class CLIServer {
       try listener.start()
       self.listener = listener
       DiagnosticLogger.shared.log(.info, .cli, "CLI server started")
+      Task.detached(priority: .utility) { HeadlessCaptureStaging.sweep() }
     } catch {
       DiagnosticLogger.shared.log(
         .error,
@@ -73,6 +74,9 @@ final class CLIServer {
     router.register(.listDisplays, CLIListDisplaysHandler())
     router.register(.listWindows, CLIListWindowsHandler())
     router.register(.listApps, CLIListAppsHandler())
+    router.register(.captureScreen, CLICaptureScreenHandler())
+    router.register(.captureWindow, CLICaptureWindowHandler())
+    router.register(.captureArea, CLICaptureAreaHandler())
     return router
   }
 

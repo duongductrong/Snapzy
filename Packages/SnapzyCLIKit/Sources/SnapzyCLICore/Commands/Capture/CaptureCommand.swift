@@ -36,7 +36,11 @@ struct CaptureCommand: AsyncParsableCommand {
     try await CommandRunner.run(global) { client, renderer in
       let result = try client.call(method, params: params, as: CLICaptureResult.self)
       let written = try writer.apply(result, to: destination, force: output.force) { data in
-        FileHandle.standardOutput.write(data)
+        do {
+          try FileHandle.standardOutput.write(contentsOf: data)
+        } catch {
+          throw CLIError(.internal, "Could not write the image to stdout: \(error.localizedDescription)")
+        }
       }
 
       if destination == .standardOutput {

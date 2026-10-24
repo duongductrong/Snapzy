@@ -79,11 +79,13 @@ enum StandardStreams {
     isatty(STDOUT_FILENO) == 1
   }
 
+  /// `write(contentsOf:)` throws on a closed pipe instead of raising an
+  /// Objective-C exception; SIGPIPE is ignored in `SnapzyCommand.execute`.
   static func write(_ string: String) {
-    FileHandle.standardOutput.write(Data(string.utf8))
+    try? FileHandle.standardOutput.write(contentsOf: Data(string.utf8))
   }
 
   static func writeError(_ string: String) {
-    FileHandle.standardError.write(Data(string.utf8))
+    try? FileHandle.standardError.write(contentsOf: Data(string.utf8))
   }
 }

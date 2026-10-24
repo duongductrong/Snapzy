@@ -39,6 +39,9 @@ public struct SnapzyCommand: AsyncParsableCommand {
   public init() {}
 
   public static func execute(_ arguments: [String]? = nil) async {
+    // A reader closing the pipe early (`| head`) should end the write with an
+    // error, not kill the process before staged files are cleaned up.
+    signal(SIGPIPE, SIG_IGN)
     do {
       var command = try parseAsRoot(arguments)
       if var asyncCommand = command as? AsyncParsableCommand {

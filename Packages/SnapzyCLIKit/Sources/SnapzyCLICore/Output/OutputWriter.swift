@@ -96,8 +96,10 @@ public struct OutputWriter {
     } catch {
       throw CLIError(.internal, "Could not read \(file.path): \(error.localizedDescription)")
     }
+    // The image is in memory now; remove the staged copy even if the reader
+    // closes the pipe early (`| head`) or the write fails.
+    defer { try? fileManager.removeItem(atPath: file.path) }
     try writeStandardOutput(data)
-    try? fileManager.removeItem(atPath: file.path)
 
     var streamed = result
     streamed.files[0].path = "-"
