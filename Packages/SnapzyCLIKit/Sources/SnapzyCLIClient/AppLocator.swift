@@ -72,7 +72,8 @@ public enum AppLocator {
       contents.lastPathComponent == "Contents",
       app.pathExtension == "app"
     else { return nil }
-    return app
+    // A directory URL regardless of whether the bundle exists on this disk.
+    return URL(fileURLWithPath: app.path, isDirectory: true)
   }
 
   public static func bundleIdentifier(ofAppAt url: URL) -> String? {

@@ -40,8 +40,10 @@ final class AppLocatorTests: XCTestCase {
   func testEnclosingAppBundle() {
     XCTAssertEqual(
       AppLocator
-        .enclosingAppBundle(forExecutableAt: URL(fileURLWithPath: "/Applications/Snapzy.app/Contents/Helpers/snapzy")),
-      URL(fileURLWithPath: "/Applications/Snapzy.app")
+        .enclosingAppBundle(forExecutableAt: URL(fileURLWithPath: "/Applications/Snapzy.app/Contents/Helpers/snapzy"))?
+        .path,
+      "/Applications/Snapzy.app",
+      "must not depend on whether Snapzy is installed on the test machine"
     )
     XCTAssertNil(AppLocator.enclosingAppBundle(forExecutableAt: URL(fileURLWithPath: "/usr/local/bin/snapzy")))
     XCTAssertNil(AppLocator
