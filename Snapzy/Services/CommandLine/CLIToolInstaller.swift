@@ -19,6 +19,8 @@ enum CLIToolInstaller {
     case pointsElsewhere(String)
     /// A regular file or directory occupies the link path.
     case blockedByFile
+    /// The Homebrew cask's `binary` link (at the associated path) points at this helper.
+    case managedByHomebrew(String)
   }
 
   enum InstallError: LocalizedError, Equatable {
@@ -32,15 +34,15 @@ enum CLIToolInstaller {
     var errorDescription: String? {
       switch self {
       case .helperMissing:
-        "This copy of Snapzy does not include the snapzy command line tool."
+        L10n.CommandLine.errorHelperMissing
       case .temporaryLocation:
-        "Move Snapzy to the Applications folder first; it is running from a temporary location."
+        L10n.CommandLine.errorTemporaryLocation
       case .blockedByFile:
-        "\(CLIToolInstaller.linkPath) already exists and is not a symlink. Remove it, then try again."
+        L10n.CommandLine.errorBlocked(CLIToolInstaller.linkPath)
       case .occupiedByOtherTool(let destination):
-        "\(CLIToolInstaller.linkPath) already links to \(destination). Remove that link, then try again."
+        L10n.CommandLine.errorOccupied(path: CLIToolInstaller.linkPath, destination: destination)
       case .cancelled:
-        "Installation was cancelled."
+        L10n.CommandLine.errorCancelled
       case .failed(let message):
         message
       }
@@ -83,16 +85,26 @@ enum CLIToolInstaller {
     return path.hasPrefix("/Volumes/") || path.contains("/AppTranslocation/")
   }
 
+  /// Where `brew install --cask snapzy` links the helper, and where its cask lives.
+  nonisolated static let homebrewLinkPaths = ["/opt/homebrew/bin/snapzy", "/usr/local/bin/snapzy"]
+  nonisolated static let homebrewCaskroomPaths = ["/opt/homebrew/Caskroom/snapzy", "/usr/local/Caskroom/snapzy"]
+
   static func currentState() -> State {
-    state(helperPath: helperURL().path)
+    let helper = helperURL().path
+    let caskInstalled = homebrewCaskroomPaths.contains { FileManager.default.fileExists(atPath: $0) }
+    if caskInstalled,
+       let brewLink = homebrewLinkPaths.first(where: { state(linkPath: $0, helperPath: helper) == .installed }) {
+      return .managedByHomebrew(brewLink)
+    }
+    return state(helperPath: helper)
   }
 
   static func install() async throws {
     let helper = helperURL().path
     guard !isTemporaryLocation(Bundle.main.bundleURL) else { throw InstallError.temporaryLocation }
     guard FileManager.default.isExecutableFile(atPath: helper) else { throw InstallError.helperMissing }
-    switch state(helperPath: helper) {
-    case .installed:
+    switch currentState() {
+    case .installed, .managedByHomebrew:
       return
     case .blockedByFile:
       throw InstallError.blockedByFile

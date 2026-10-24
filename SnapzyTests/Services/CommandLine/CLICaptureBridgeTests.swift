@@ -42,6 +42,7 @@ final class CLICaptureBridgeTests: XCTestCase {
       (.targetNotFound("x"), .targetNotFound),
       (.invalidRequest("x"), .invalidArguments),
       (.busy, .busy),
+      (.screenLocked, .appUnavailable),
       (.captureFailed("x"), .internal),
     ]
     for (error, code) in cases {
@@ -105,6 +106,7 @@ final class CLICaptureBridgeTests: XCTestCase {
   /// Needs Screen Recording for the test host; skipped otherwise.
   func testHeadlessFullscreenCaptureDoesNotEmitCompletion() async throws {
     try XCTSkipUnless(CGPreflightScreenCaptureAccess(), "Screen Recording is not granted to the test host")
+    try XCTSkipIf(HeadlessCaptureService.isScreenLocked, "No displays to capture while the screen is locked")
     let directory = FileManager.default.temporaryDirectory
       .appendingPathComponent("HeadlessCaptureIntegration-\(UUID().uuidString)", isDirectory: true)
     defer { try? FileManager.default.removeItem(at: directory) }

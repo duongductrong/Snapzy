@@ -136,6 +136,12 @@
       "prefixes": [
         "combine."
       ]
+    },
+    {
+      "file": "Features/CommandLine.xcstrings",
+      "prefixes": [
+        "command-line."
+      ]
     }
   ]
 }

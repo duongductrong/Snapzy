@@ -182,6 +182,7 @@ final class HeadlessCaptureService {
 
   private func checkReadiness() async throws {
     guard OnboardingFlowView.hasCompletedOnboarding else { throw HeadlessCaptureError.onboardingIncomplete }
+    guard !Self.isScreenLocked else { throw HeadlessCaptureError.screenLocked }
 
     await captureManager.checkPermission()
     switch captureManager.permissionStatus {
@@ -251,6 +252,14 @@ final class HeadlessCaptureService {
       .filter { screen in screen.displayID.map(displayIDs.contains) ?? false }
       .map(\.backingScaleFactor)
     return Double(scales.max() ?? NSScreen.main?.backingScaleFactor ?? 2)
+  }
+
+  /// A locked session (or asleep displays) leaves ScreenCaptureKit with no
+  /// displays; say so instead of "display not found".
+  nonisolated static var isScreenLocked: Bool {
+    let session = CGSessionCopyCurrentDictionary() as? [String: Any]
+    let isLocked = (session?["CGSSessionScreenIsLocked"] as? Bool) ?? false
+    return isLocked || CGDisplayIsAsleep(CGMainDisplayID()) != 0
   }
 
   static func postProcessorFormat(_ format: ImageFormat) -> HeadlessCapturePostProcessor.Format {

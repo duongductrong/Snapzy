@@ -19,6 +19,35 @@ final class CLISocketListenerTests: XCTestCase {
     }
   }
 
+  private struct AllowAllAuthorizer: CLIAuthorizing {
+    func authorize(_: CLIRequestContext, method _: String) async -> CLIAuthorizationOutcome {
+      .allowed
+    }
+  }
+
+  /// Denies every method except `system.status`, like an app the user refused.
+  private struct DenyingAuthorizer: CLIAuthorizing {
+    func authorize(_: CLIRequestContext, method: String) async -> CLIAuthorizationOutcome {
+      method == CLIMethod.systemStatus.rawValue ? .allowed : .denied(CLIError(.notAuthorized, "denied"))
+    }
+  }
+
+  /// "Allow Once" on the first request, then records whether later requests
+  /// on the same connection arrive already allowed.
+  private final class AllowOnceAuthorizer: CLIAuthorizing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls: [Bool] = []
+
+    var allowedForConnectionFlags: [Bool] {
+      lock.withLock { calls }
+    }
+
+    func authorize(_ context: CLIRequestContext, method _: String) async -> CLIAuthorizationOutcome {
+      lock.withLock { calls.append(context.isAllowedForConnection) }
+      return context.isAllowedForConnection ? .allowed : .allowedForConnection
+    }
+  }
+
   /// Blocks until the request ID is answered; 2 s receive timeout.
   private final class TestClient {
     let descriptor: Int32
@@ -101,7 +130,8 @@ final class CLISocketListenerTests: XCTestCase {
   private func startListener(
     path: String? = nil,
     maxConnections: Int = 8,
-    managesDirectory: Bool = true
+    managesDirectory: Bool = true,
+    authorizer: CLIAuthorizing = AllowAllAuthorizer()
   ) throws -> CLISocketListener {
     var router = CLIRequestRouter()
     router.register(.listDisplays, StubHandler())
@@ -109,6 +139,8 @@ final class CLISocketListenerTests: XCTestCase {
       path: path ?? socketPath,
       hello: HelloResponse(appVersion: "9.9.9", appBuild: "1", bundleID: "com.trongduong.snapzy.tests"),
       router: router,
+      authorizer: authorizer,
+      resolveCaller: { _ in nil },
       maxConnections: maxConnections,
       managesDirectory: managesDirectory
     )
@@ -202,7 +234,9 @@ final class CLISocketListenerTests: XCTestCase {
     let second = CLISocketListener(
       path: socketPath,
       hello: HelloResponse(appVersion: "", appBuild: "", bundleID: ""),
-      router: CLIRequestRouter()
+      router: CLIRequestRouter(),
+      authorizer: AllowAllAuthorizer(),
+      resolveCaller: { _ in nil }
     )
 
     XCTAssertThrowsError(try second.start()) { error in
@@ -287,5 +321,39 @@ final class CLISocketListenerTests: XCTestCase {
     try client.send(#"{"id":1,"method":"hello","params":{"protocolVersion":"2.0","capabilities":[]}}"#)
 
     XCTAssertEqual(client.error(in: client.receive())?.code, .versionMismatch)
+  }
+
+  func testDeniedCallerGetsNotAuthorizedInsteadOfAResult() throws {
+    _ = try startListener(authorizer: DenyingAuthorizer())
+    let client = try TestClient(path: socketPath)
+    _ = try client.hello()
+
+    try client.send(#"{"id":2,"method":"list.displays","params":{}}"#)
+
+    XCTAssertEqual(client.error(in: client.receive())?.code, .notAuthorized)
+  }
+
+  func testAllowOnceCoversTheRestOfTheConnection() throws {
+    let authorizer = AllowOnceAuthorizer()
+    _ = try startListener(authorizer: authorizer)
+    let client = try TestClient(path: socketPath)
+    _ = try client.hello()
+
+    for id in 2 ... 3 {
+      try client.send(#"{"id":\#(id),"method":"list.displays","params":{}}"#)
+      XCTAssertNotNil(client.receive())
+    }
+
+    XCTAssertEqual(authorizer.allowedForConnectionFlags, [false, true])
+  }
+
+  func testUnknownMethodIsRejectedWithoutAuthorization() throws {
+    _ = try startListener(authorizer: DenyingAuthorizer())
+    let client = try TestClient(path: socketPath)
+    _ = try client.hello()
+
+    try client.send(#"{"id":2,"method":"capture.everything","params":{}}"#)
+
+    XCTAssertEqual(client.error(in: client.receive())?.code, .unknownMethod)
   }
 }

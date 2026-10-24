@@ -21,6 +21,8 @@ final nonisolated class CLIConnection: @unchecked Sendable {
   private let descriptor: Int32
   private let hello: HelloResponse
   private let router: CLIRequestRouter
+  private let authorizer: CLIAuthorizing
+  private let resolveCaller: @Sendable (pid_t?) -> CLICallerIdentity?
   private let onClose: @Sendable (CLIConnection) -> Void
   private let queue: DispatchQueue
 
@@ -32,16 +34,25 @@ final nonisolated class CLIConnection: @unchecked Sendable {
   private var isHandshaken = false
   private var isClosed = false
   private var peerPID: pid_t?
+  private var caller: CLICallerIdentity?
+  private var isAllowedForConnection = false
+  /// The request being handled; cancelled on close so a pending approval
+  /// prompt for a client that went away is never shown.
+  private var inFlightRequest: Task<Void, Never>?
 
   init(
     descriptor: Int32,
     hello: HelloResponse,
     router: CLIRequestRouter,
+    authorizer: CLIAuthorizing,
+    resolveCaller: @escaping @Sendable (pid_t?) -> CLICallerIdentity?,
     onClose: @escaping @Sendable (CLIConnection) -> Void
   ) {
     self.descriptor = descriptor
     self.hello = hello
     self.router = router
+    self.authorizer = authorizer
+    self.resolveCaller = resolveCaller
     self.onClose = onClose
     queue = DispatchQueue(label: "com.trongduong.snapzy.cli.connection")
   }
@@ -97,6 +108,8 @@ final nonisolated class CLIConnection: @unchecked Sendable {
   private func closeOnQueue(reason: String) {
     guard !isClosed else { return }
     isClosed = true
+    inFlightRequest?.cancel()
+    inFlightRequest = nil
     timeoutTimer?.cancel()
     timeoutTimer = nil
     if let readSource {
@@ -161,15 +174,37 @@ final nonisolated class CLIConnection: @unchecked Sendable {
     isProcessing = true
     timeoutTimer?.cancel()
     let router = router
-    let context = CLIRequestContext(connectionID: id, peerPID: peerPID)
-    Task.detached { [weak self] in
-      let response = await router.response(for: payload, header: header, context: context)
+    let authorizer = authorizer
+    let context = CLIRequestContext(
+      connectionID: id,
+      peerPID: peerPID,
+      caller: caller,
+      isAllowedForConnection: isAllowedForConnection
+    )
+    // Unknown methods go straight to the router (unknownMethod) without a
+    // prompt, so a client cannot put its own text in front of the user.
+    let isKnownMethod = router.registeredMethods.contains(header.method)
+    inFlightRequest = Task.detached { [weak self] in
+      let response: Data
+      let outcome = isKnownMethod
+        ? await authorizer.authorize(context, method: header.method)
+        : .allowed
+      switch outcome {
+      case .denied(let error):
+        response = CLIRequestRouter.encode(error, id: header.id)
+      case .allowedForConnection:
+        self?.queue.async { self?.isAllowedForConnection = true }
+        response = await router.response(for: payload, header: header, context: context)
+      case .allowed:
+        response = await router.response(for: payload, header: header, context: context)
+      }
       self?.queue.async { self?.finish(response, requestID: header.id) }
     }
   }
 
   private func finish(_ response: Data, requestID: UInt64) {
     isProcessing = false
+    inFlightRequest = nil
     guard !isClosed else { return }
     guard response.count <= Frame.maxPayloadByteCount else {
       let error = CLIError(.internal, "Snapzy's response is too large to send (\(response.count) bytes)")
@@ -213,6 +248,7 @@ final nonisolated class CLIConnection: @unchecked Sendable {
     }
 
     isHandshaken = true
+    caller = resolveCaller(peerPID)
     send(CLIRequestRouter.encode(result: hello, id: header.id))
     scheduleTimeout(Self.idleTimeout, reason: "idle")
     DiagnosticLogger.shared.log(

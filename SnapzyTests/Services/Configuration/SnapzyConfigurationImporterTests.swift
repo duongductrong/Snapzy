@@ -734,4 +734,22 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.ocrSelectedModel), "builtin")
   }
 
+  func testCLIEnabledRoundTripsAndApprovalsStayLocal() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(false, forKey: PreferencesKeys.cliEnabled)
+    defaults.set(Data("[]".utf8), forKey: PreferencesKeys.cliApprovedCallers)
+
+    let exported = SnapzyConfigurationExporter.exportTOML(defaults: defaults)
+    XCTAssertTrue(exported.contains("cli_enabled = false"), exported)
+    XCTAssertFalse(exported.contains("approved"), "approved apps are machine-specific")
+
+    let target = UserDefaultsFactory.make()
+    let result = SnapzyConfigurationImporter.importTOML(exported, defaults: target)
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(target.object(forKey: PreferencesKeys.cliEnabled) as? Bool, false)
+  }
+
+  func testDefaultDocumentEnablesCLI() {
+    XCTAssertTrue(SnapzyConfigurationDefaultDocument.toml().contains("cli_enabled = true"))
+  }
 }

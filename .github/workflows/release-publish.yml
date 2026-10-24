@@ -709,6 +709,13 @@ jobs:
           sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/snapzy.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/snapzy.rb
 
+          # Link the embedded `snapzy` CLI onto PATH once a stable release ships it.
+          # Added here, not by hand, so the cask never names a binary its DMG lacks.
+          if [ -x "build/Snapzy.app/Contents/Helpers/snapzy" ] && ! grep -q 'Contents/Helpers/snapzy' Casks/snapzy.rb; then
+            perl -0pi -e 's/(  app "Snapzy\.app"\n)/$1  binary "#{appdir}\/Snapzy.app\/Contents\/Helpers\/snapzy"\n/' Casks/snapzy.rb
+            grep -q 'Contents/Helpers/snapzy' Casks/snapzy.rb || { echo "::error::Could not add the snapzy binary stanza"; exit 1; }
+          fi
+
       - name: Update README install version
         if: steps.version.outputs.is_beta != 'true'
         run: |

@@ -29,6 +29,8 @@ final nonisolated class CLISocketListener: @unchecked Sendable {
 
   private let hello: HelloResponse
   private let router: CLIRequestRouter
+  private let authorizer: CLIAuthorizing
+  private let resolveCaller: @Sendable (pid_t?) -> CLICallerIdentity?
   private let maxConnections: Int
   /// Whether the socket's parent directory is Snapzy's own (created and kept
   /// 0700) rather than one chosen through `SNAPZY_SOCKET`, which is only checked.
@@ -46,12 +48,16 @@ final nonisolated class CLISocketListener: @unchecked Sendable {
     path: String,
     hello: HelloResponse,
     router: CLIRequestRouter,
+    authorizer: CLIAuthorizing,
+    resolveCaller: @escaping @Sendable (pid_t?) -> CLICallerIdentity?,
     maxConnections: Int = defaultMaxConnections,
     managesDirectory: Bool = true
   ) {
     self.path = path
     self.hello = hello
     self.router = router
+    self.authorizer = authorizer
+    self.resolveCaller = resolveCaller
     self.maxConnections = maxConnections
     self.managesDirectory = managesDirectory
   }
@@ -213,7 +219,13 @@ final nonisolated class CLISocketListener: @unchecked Sendable {
         continue
       }
 
-      let connection = CLIConnection(descriptor: client, hello: hello, router: router) { [weak self] closed in
+      let connection = CLIConnection(
+        descriptor: client,
+        hello: hello,
+        router: router,
+        authorizer: authorizer,
+        resolveCaller: resolveCaller
+      ) { [weak self] closed in
         self?.queue.async { self?.connections.removeValue(forKey: closed.id) }
       }
       connections[connection.id] = connection

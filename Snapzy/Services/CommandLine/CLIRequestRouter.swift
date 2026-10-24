@@ -13,6 +13,10 @@ import SnapzyCLIProtocol
 nonisolated struct CLIRequestContext: Sendable {
   let connectionID: UUID
   let peerPID: pid_t?
+  /// The app behind the CLI, resolved once at handshake.
+  var caller: CLICallerIdentity?
+  /// The user chose "Allow Once" earlier on this connection.
+  var isAllowedForConnection = false
 }
 
 nonisolated protocol CLIRequestHandling: Sendable {

@@ -11,6 +11,7 @@ nonisolated enum L10n {
   private nonisolated static let tableMappings: [(prefix: String, tableName: String)] = [
     ("action.", "Common"),
     ("combine.", "Combine"),
+    ("command-line.", "CommandLine"),
     ("menu.", "Menubar"),
     ("common.", "Common"),
     ("whats-new.", "WhatsNew"),

@@ -11,56 +11,61 @@ import AppKit
 import SnapzyCLIProtocol
 
 nonisolated struct CLICaptureScreenHandler: CLIRequestHandling {
-  func handle(_ params: CaptureScreenParams, context _: CLIRequestContext) async throws -> CLICaptureResult {
-    try await CLICaptureBridge.captureScreen(params)
+  func handle(_ params: CaptureScreenParams, context: CLIRequestContext) async throws -> CLICaptureResult {
+    try await CLICaptureBridge.captureScreen(params, caller: context.caller)
   }
 }
 
 nonisolated struct CLICaptureWindowHandler: CLIRequestHandling {
-  func handle(_ params: CaptureWindowParams, context _: CLIRequestContext) async throws -> CLICaptureResult {
-    try await CLICaptureBridge.captureWindow(params)
+  func handle(_ params: CaptureWindowParams, context: CLIRequestContext) async throws -> CLICaptureResult {
+    try await CLICaptureBridge.captureWindow(params, caller: context.caller)
   }
 }
 
 nonisolated struct CLICaptureAreaHandler: CLIRequestHandling {
-  func handle(_ params: CaptureAreaParams, context _: CLIRequestContext) async throws -> CLICaptureResult {
-    try await CLICaptureBridge.captureArea(params)
+  func handle(_ params: CaptureAreaParams, context: CLIRequestContext) async throws -> CLICaptureResult {
+    try await CLICaptureBridge.captureArea(params, caller: context.caller)
   }
 }
 
 @MainActor
 enum CLICaptureBridge {
-  static func captureScreen(_ params: CaptureScreenParams) async throws -> CLICaptureResult {
+  static func captureScreen(_ params: CaptureScreenParams,
+                            caller: CLICallerIdentity?) async throws -> CLICaptureResult {
     let selection: HeadlessCaptureRequest.DisplaySelection = switch params.display {
     case .main: .main
     case .all: .all
     case .id(let displayID): .id(displayID)
     }
-    return try await capture(.screen(selection), options: params.options)
+    return try await capture(.screen(selection), options: params.options, caller: caller)
   }
 
-  static func captureWindow(_ params: CaptureWindowParams) async throws -> CLICaptureResult {
+  static func captureWindow(_ params: CaptureWindowParams,
+                            caller: CLICallerIdentity?) async throws -> CLICaptureResult {
     let selection: HeadlessCaptureRequest.WindowSelection = switch params.window {
     case .id(let windowID): .id(windowID)
     case .app(let query): .app(query.app, titlePattern: query.titlePattern, index: query.index)
     case .active: .active
     }
-    return try await capture(.window(selection), options: params.options)
+    return try await capture(.window(selection), options: params.options, caller: caller)
   }
 
-  static func captureArea(_ params: CaptureAreaParams) async throws -> CLICaptureResult {
+  static func captureArea(_ params: CaptureAreaParams, caller: CLICallerIdentity?) async throws -> CLICaptureResult {
     let rect = CLICoordinateSpace.appKitRect(
       fromTopLeft: params.rect,
       mainDisplayHeight: CLICoordinateSpace.mainDisplayHeight
     )
-    return try await capture(.area(rect), options: params.options)
+    return try await capture(.area(rect), options: params.options, caller: caller)
   }
 
   private static func capture(
     _ target: HeadlessCaptureRequest.Target,
-    options: CaptureOptions
+    options: CaptureOptions,
+    caller: CLICallerIdentity?
   ) async throws -> CLICaptureResult {
     let request = try HeadlessCaptureRequest(target: target, options: headlessOptions(options))
+    CLIActivityIndicator.shared.begin(caller: caller)
+    defer { CLIActivityIndicator.shared.end() }
     do {
       let result = try await HeadlessCaptureService.shared.capture(request)
       return cliResult(result, format: options.format, mainDisplayHeight: CLICoordinateSpace.mainDisplayHeight)
@@ -144,6 +149,8 @@ enum CLICaptureBridge {
       CLIError(.targetNotFound, message)
     case .invalidRequest(let message):
       CLIError(.invalidArguments, message)
+    case .screenLocked:
+      CLIError(.appUnavailable, "The screen is locked or asleep", hint: "Unlock the Mac, then retry")
     case .busy:
       CLIError(.busy, "Another capture is in progress", hint: "Retry in a moment")
     case .captureFailed(let message):

@@ -10,12 +10,12 @@ import Foundation
 import SnapzyCLIProtocol
 
 nonisolated struct CLIStatusHandler: CLIRequestHandling {
-  func handle(_: CLIEmpty, context _: CLIRequestContext) async throws -> CLIStatus {
-    await Self.currentStatus()
+  func handle(_: CLIEmpty, context: CLIRequestContext) async throws -> CLIStatus {
+    await Self.currentStatus(context)
   }
 
   @MainActor
-  private static func currentStatus() async -> CLIStatus {
+  private static func currentStatus(_ context: CLIRequestContext) async -> CLIStatus {
     let captureManager = ScreenCaptureManager.shared
     await captureManager.checkPermission()
 
@@ -27,8 +27,10 @@ nonisolated struct CLIStatusHandler: CLIRequestHandling {
         for: captureManager.permissionStatus,
         requiresRelaunch: captureManager.requiresRelaunchToActivate
       ),
-      // Caller authorization lands in plan phase 05.
-      authorization: .undetermined
+      authorization: CLIAuthorizationCoordinator.shared.authorizationStatus(
+        for: context.caller,
+        allowedForConnection: context.isAllowedForConnection
+      )
     )
   }
 

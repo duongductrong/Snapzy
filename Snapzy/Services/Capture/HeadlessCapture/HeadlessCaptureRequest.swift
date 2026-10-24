@@ -71,6 +71,8 @@ enum HeadlessCaptureError: Error, Equatable {
   /// app identity changed). The reason is shown to the caller.
   case permissionUnavailable(String)
   case onboardingIncomplete
+  /// The session is locked or the displays are asleep; ScreenCaptureKit sees no displays.
+  case screenLocked
   case targetNotFound(String)
   case invalidRequest(String)
   case busy

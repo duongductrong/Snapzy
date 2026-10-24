@@ -39,6 +39,10 @@ final class AppCoordinator {
       defaults.set(true, forKey: PreferencesKeys.urlSchemeEnabled)
     }
 
+    if defaults.object(forKey: PreferencesKeys.cliEnabled) == nil {
+      defaults.set(true, forKey: PreferencesKeys.cliEnabled)
+    }
+
     // History defaults
     if defaults.object(forKey: PreferencesKeys.historyEnabled) == nil {
       defaults.set(true, forKey: PreferencesKeys.historyEnabled)
@@ -96,7 +100,7 @@ final class AppCoordinator {
 
   func applicationWillTerminate() {
     flushConfigurationSyncBeforeTermination()
-    CLIServer.shared.stop()
+    CLIServer.shared.shutdown()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")
     CrashSentinel.shared.markTerminated()
     LogCleanupScheduler.shared.stop()
