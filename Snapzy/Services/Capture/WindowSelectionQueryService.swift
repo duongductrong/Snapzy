@@ -216,7 +216,10 @@ enum WindowSelectionQueryService {
       let displayImage: CGImage
       if let snapshot = displaySnapshots[displayID] {
         displayImage = snapshot
-      } else if let snapshot = CGDisplayCreateImage(displayID) {
+      } else if let snapshot = WindowListDisplaySnapshot.captureDisplay(
+        displayID,
+        excluding: CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
+      ) {
         displaySnapshots[displayID] = snapshot
         displayImage = snapshot
       } else {
@@ -266,6 +269,8 @@ enum WindowSelectionQueryService {
   static func captureImmediateQuickLookCaptures() -> [ImmediateQuickLookCapture] {
     var captures: [ImmediateQuickLookCapture] = []
     var displaySnapshots: [CGDirectDisplayID: CGImage] = [:]
+    // Can run while the selection overlay is up (it covers the preview), so leave chrome out.
+    let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
 
     for info in rawWindowInfoList(includeOffscreen: true) {
       guard isQuickLookWindow(info), let quartzBounds = info.quartzBounds else { continue }
@@ -279,7 +284,7 @@ enum WindowSelectionQueryService {
       let displayImage: CGImage
       if let snapshot = displaySnapshots[displayID] {
         displayImage = snapshot
-      } else if let snapshot = CGDisplayCreateImage(displayID) {
+      } else if let snapshot = WindowListDisplaySnapshot.captureDisplay(displayID, excluding: excludedWindowIDs) {
         displaySnapshots[displayID] = snapshot
         displayImage = snapshot
       } else {

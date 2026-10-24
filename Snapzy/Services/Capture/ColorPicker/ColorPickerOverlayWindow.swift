@@ -42,8 +42,8 @@ final class ColorPickerOverlayWindow: NSPanel {
     hidesOnDeactivate = false
     animationBehavior = .none
     becomesKeyOnlyIfNeeded = false
-    // Snapzy's own chrome never lands in a capture or a recording.
-    sharingType = .none
+    // Recorders see the loupe; the live sampler excludes these windows by ID.
+    CaptureChromeWindowRegistry.configure(self, role: .captureOverlay)
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     isMovable = false
     isMovableByWindowBackground = false

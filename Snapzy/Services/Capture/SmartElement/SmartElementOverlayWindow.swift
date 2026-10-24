@@ -32,7 +32,7 @@ final class SmartElementOverlayWindow: NSPanel, SmartElementOverlayWindowProvidi
     acceptsMouseMovedEvents = true
     hidesOnDeactivate = false
     becomesKeyOnlyIfNeeded = true
-    sharingType = .none
+    CaptureChromeWindowRegistry.configure(self, role: .captureOverlay)
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     contentView = overlayView
     overlayView.delegate = self

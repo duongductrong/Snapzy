@@ -93,11 +93,9 @@ final class RecordingCoordinator: ObservableObject {
       return (true, [])
     }
 
-    var windowIDs = regionOverlayWindows.map { CGWindowID($0.windowNumber) }
-    if let toolbarWindow {
-      windowIDs.append(CGWindowID(toolbarWindow.windowNumber))
-    }
-    return (false, windowIDs)
+    // Toolbar and region overlays register as `.recordingControls`.
+    let windowIDs = CaptureChromeWindowRegistry.shared.windowIDs(roles: [.recordingControls])
+    return (false, windowIDs.sorted())
   }
 
   // MARK: - Recording Area Persistence

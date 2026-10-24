@@ -1085,7 +1085,11 @@ final class ScrollingCaptureCoordinator {
     regionOverlayWindows.removeAll()
 
     for screen in NSScreen.screens {
-      let overlay = RecordingRegionOverlayWindow(screen: screen, highlightRect: rect)
+      let overlay = RecordingRegionOverlayWindow(
+        screen: screen,
+        highlightRect: rect,
+        chromeRole: .captureOverlay
+      )
       overlay.interactionDelegate = self
       overlay.setInteractionEnabled(true)
       overlay.updateGuidance(currentRegionOverlayGuidance())

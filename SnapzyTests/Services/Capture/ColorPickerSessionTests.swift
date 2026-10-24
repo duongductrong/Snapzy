@@ -159,7 +159,7 @@ final class ColorPickerSessionTests: XCTestCase {
 
   // MARK: - Controller
 
-  func testController_overlaysAreSeeThroughAndExcludedFromCapture() async throws {
+  func testController_overlaysAreSeeThroughVisibleToRecordersAndExcludedFromSampling() async throws {
     try skipIfRunningInCI("Requires onscreen overlay windows and a live main run loop")
     let capture = FakeCapture(image: ColorPickerTestImages.splitImage)
     let controller = makeController(capture: capture)
@@ -167,7 +167,7 @@ final class ColorPickerSessionTests: XCTestCase {
     controller.start()
     let windows = controller.testWindows
     XCTAssertEqual(windows.count, NSScreen.screens.count)
-    XCTAssertTrue(windows.allSatisfy { !$0.isOpaque && $0.sharingType == .none })
+    XCTAssertTrue(windows.allSatisfy { !$0.isOpaque && $0.sharingType == .readOnly })
     try await waitUntil { controller.testStreamingDisplayID != nil }
 
     XCTAssertEqual(Set(capture.excludedWindowNumbers), Set(windows.map(\.windowNumber)))

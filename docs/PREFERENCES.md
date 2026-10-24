@@ -36,7 +36,7 @@ Reference for the Settings window: tab structure, every section, and how prefere
 Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Recording / OCR.
 
 - **General pane**:
-  - App Windows: Include Snapzy windows in screenshots (`screenshot.includeOwnApp`) / in recordings (`recording.includeOwnApp`).
+  - App Windows: Include Snapzy windows in screenshots (`screenshot.includeOwnApp`) / in recordings (`recording.includeOwnApp`). Either one also makes Quick Access and toasts visible to third-party screen recorders and meeting shares. Capture chrome (selection overlay, HUDs, recording toolbar) is always visible to recorders and never in Snapzy screenshots, independent of these prefs.
   - Desktop: Hide Desktop Icons (`hideDesktopIcons`), Hide Desktop Widgets (`hideDesktopWidgets`).
   - Overlay: Show Selection Area Overlay (`screenshot.showSelectionAreaOverlay`) — in live passthrough sessions the dim appears from capture start when this is on (already-visible hover UI stays alive but looks dimmed until the drag cutout).
   - Magnifier: Show Magnifier by Default (`screenshot.showMagnifierByDefault`), Reverse Magnifier Zoom Direction (`screenshot.reverseMagnifierZoomDirection`), Show Color Picker Panel (`screenshot.showMagnifierColorPanel`, default on; independent of Show Magnifier by Default, so it also applies to a magnifier opened with ⌘+scroll), Magnifier Size (`screenshot.magnifierSize`: `small` / `medium` / `large`, default `medium`).

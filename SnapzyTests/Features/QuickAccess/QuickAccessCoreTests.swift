@@ -1505,21 +1505,47 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertGreaterThan(pinWindow.level.rawValue, videoEditorWindow.level.rawValue)
   }
 
-  func testQuickAccessPanel_capturedOnlyWhenOwnAppIncludedInScreenshots() {
+  func testQuickAccessPanel_visibleToRecordersOnlyWhenOwnAppIncluded() {
+    let defaults = UserDefaults.standard
+    let screenshotKey = PreferencesKeys.screenshotIncludeOwnApp
+    let recordingKey = PreferencesKeys.recordingIncludeOwnApp
+    let originalScreenshot = defaults.object(forKey: screenshotKey)
+    let originalRecording = defaults.object(forKey: recordingKey)
+    defer {
+      defaults.set(originalScreenshot, forKey: screenshotKey)
+      defaults.set(originalRecording, forKey: recordingKey)
+    }
+
+    let cases: [(screenshot: Bool, recording: Bool, expected: NSWindow.SharingType)] = [
+      (false, false, .none),
+      (true, false, .readOnly),
+      (false, true, .readOnly),
+      (true, true, .readOnly),
+    ]
+    for testCase in cases {
+      defaults.set(testCase.screenshot, forKey: screenshotKey)
+      defaults.set(testCase.recording, forKey: recordingKey)
+      let panel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
+      defer { panel.close() }
+      XCTAssertEqual(panel.sharingType, testCase.expected, "\(testCase)")
+    }
+  }
+
+  func testQuickAccessPanel_excludedFromScreenshotsUnlessOwnAppIncluded() {
     let defaults = UserDefaults.standard
     let key = PreferencesKeys.screenshotIncludeOwnApp
     let original = defaults.object(forKey: key)
     defer { defaults.set(original, forKey: key) }
 
+    let panel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
+    defer { panel.close() }
+    let windowID = CGWindowID(panel.windowNumber)
+
     defaults.set(false, forKey: key)
-    let excludedPanel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
-    defer { excludedPanel.close() }
-    XCTAssertEqual(excludedPanel.sharingType, .none)
+    XCTAssertTrue(CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs().contains(windowID))
 
     defaults.set(true, forKey: key)
-    let includedPanel = QuickAccessPanel(contentRect: NSRect(x: 0, y: 0, width: 204, height: 520))
-    defer { includedPanel.close() }
-    XCTAssertEqual(includedPanel.sharingType, .readOnly)
+    XCTAssertFalse(CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs().contains(windowID))
   }
 
   func testQuickAccessPanel_interactiveRegionTracksVisibleCardsOnly() {

@@ -2,7 +2,7 @@
 //  ScrollingCaptureWindowSharingTests.swift
 //  SnapzyTests
 //
-//  Unit tests for scrolling capture session chrome and toast capture exclusion.
+//  Unit tests for scrolling capture session chrome and toast capture visibility.
 //
 
 import AppKit
@@ -12,15 +12,19 @@ import XCTest
 @MainActor
 final class ScrollingCaptureWindowSharingTests: XCTestCase {
 
-  func testPreviewWindow_isExcludedFromScreenCapture() {
+  func testPreviewWindow_isVisibleToRecordersAndRegisteredAsChrome() {
     let model = ScrollingCaptureSessionModel(selectedRect: sampleAnchorRect)
     let window = ScrollingCapturePreviewWindow(anchorRect: sampleAnchorRect, model: model)
     defer { window.close() }
 
-    XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+    XCTAssertTrue(
+      CaptureChromeWindowRegistry.shared.windowIDs(roles: [.captureOverlay])
+        .contains(CGWindowID(window.windowNumber))
+    )
   }
 
-  func testHUDWindow_isExcludedFromScreenCapture() {
+  func testHUDWindow_isVisibleToRecordersAndRegisteredAsChrome() {
     let model = ScrollingCaptureSessionModel(selectedRect: sampleAnchorRect)
     let window = ScrollingCaptureHUDWindow(
       anchorRect: sampleAnchorRect,
@@ -32,24 +36,42 @@ final class ScrollingCaptureWindowSharingTests: XCTestCase {
     )
     defer { window.close() }
 
-    XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+    XCTAssertTrue(
+      CaptureChromeWindowRegistry.shared.windowIDs(roles: [.captureOverlay])
+        .contains(CGWindowID(window.windowNumber))
+    )
   }
 
-  func testAreaSelectionWindow_isExcludedFromScreenCapture() throws {
+  func testAreaSelectionWindow_isVisibleToRecordersAndRegisteredAsChrome() throws {
     let screen = try XCTUnwrap(NSScreen.main ?? NSScreen.screens.first)
     let window = AreaSelectionWindow(screen: screen, pooled: true)
     defer { window.close() }
 
-    XCTAssertEqual(window.sharingType, NSWindow.SharingType.none)
+    XCTAssertEqual(window.sharingType, NSWindow.SharingType.readOnly)
+    XCTAssertTrue(
+      CaptureChromeWindowRegistry.shared.windowIDs(roles: [.captureOverlay])
+        .contains(CGWindowID(window.windowNumber))
+    )
   }
 
   func testToastPanel_isExcludedFromScreenCapture() {
     // The scrolling capture hint is a toast, and it was stitched into the top
     // of a captured page.
+    let defaults = UserDefaults.standard
+    let keys = [PreferencesKeys.screenshotIncludeOwnApp, PreferencesKeys.recordingIncludeOwnApp]
+    let originals = keys.map { defaults.object(forKey: $0) }
+    defer { zip(keys, originals).forEach { defaults.set($1, forKey: $0) } }
+    keys.forEach { defaults.set(false, forKey: $0) }
+
     let panel = AppToastManager.makeToastPanel(contentRect: sampleAnchorRect)
     defer { panel.close() }
 
     XCTAssertEqual(panel.sharingType, NSWindow.SharingType.none)
+    XCTAssertTrue(
+      CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
+        .contains(CGWindowID(panel.windowNumber))
+    )
   }
 
   private var sampleAnchorRect: CGRect {

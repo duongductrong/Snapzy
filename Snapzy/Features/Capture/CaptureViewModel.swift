@@ -780,6 +780,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       let backingScaleFactor = screen.backingScaleFactor
       let colorSpaceName = self.captureManager.preferredCaptureColorSpaceName(for: screen)
       let captureManager = self.captureManager
+      let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
       // Task.detached ensures CGDisplayCreateImage runs on the cooperative thread
       // pool, freeing the main thread.
       return Task.detached {
@@ -787,7 +788,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           displayID: targetDisplayID,
           screenFrame: screenFrame,
           backingScaleFactor: backingScaleFactor,
-          colorSpaceName: colorSpaceName
+          colorSpaceName: colorSpaceName,
+          excludedWindowIDs: excludedWindowIDs
         )
       }
     }
@@ -1043,6 +1045,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
             captureManager.preferredCaptureColorSpaceName(for: screen)
           )
         }
+      let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
       let snapshots = await withTaskGroup(of: FrozenDisplaySnapshot?.self) { group in
         for input in screenInputs {
           group.addTask {
@@ -1050,7 +1053,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               displayID: input.displayID,
               screenFrame: input.screenFrame,
               backingScaleFactor: input.backingScaleFactor,
-              colorSpaceName: input.colorSpaceName
+              colorSpaceName: input.colorSpaceName,
+              excludedWindowIDs: excludedWindowIDs
             )
           }
         }
@@ -1453,8 +1457,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
   /// Synchronously snapshot each display the live `.rect` selection touches, at the instant
   /// of mouse-up, via the existing CGDisplayCreateImage fast path (~5-20ms per display, no
-  /// SCStream, no recording indicator). The area-selection overlay never bakes in: its
-  /// windows are `sharingType = .none`, which CGDisplayCreateImage respects — the same
+  /// SCStream, no recording indicator). The area-selection overlay never bakes in: the
+  /// snapshot leaves out `CaptureChromeWindowRegistry` windows by ID — the same
   /// mechanism frozen-mode lazy snapshots rely on while overlays are visible.
   ///
   /// Own-app exclusion does NOT disqualify the fast path here: live sessions hide own
@@ -1735,15 +1739,13 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     let startedAt = Date()
     if !showCursor, !excludeDesktopIcons, !excludeDesktopWidgets {
       for displayID in missingDisplayIDs {
-        let fastSnapshot = AreaSelectionController.shared.withDisplayOverlayHidden(for: displayID) {
-          captureManager.captureFastDisplaySnapshot(
-            displayID: displayID,
-            showCursor: false,
-            excludeDesktopIcons: false,
-            excludeDesktopWidgets: false,
-            excludeOwnApplication: false
-          )
-        }
+        let fastSnapshot = captureManager.captureFastDisplaySnapshot(
+          displayID: displayID,
+          showCursor: false,
+          excludeDesktopIcons: false,
+          excludeDesktopWidgets: false,
+          excludeOwnApplication: false
+        )
         if let fastSnapshot {
           frozenSession.addSnapshot(fastSnapshot)
         }
@@ -1822,22 +1824,20 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         let backingScale = screen.backingScaleFactor
         let colorSpaceName = captureManager.preferredCaptureColorSpaceName(for: screen)
         let captureManager = captureManager
+        // The overlay stays on screen; the snapshot leaves out capture chrome by window ID.
+        let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
 
-        // withDisplayOverlayHiddenAsync: hides overlay on main, runs work off-main, restores on main.
-        let fastSnapshot = await AreaSelectionController.shared.withDisplayOverlayHiddenAsync(
-          for: displayID
-        ) {
-          // Task.detached ensures CGDisplayCreateImage runs on cooperative thread pool,
-          // not on MainActor, freeing main thread for mouse event processing.
-          await Task.detached {
-            captureManager.captureFastDisplaySnapshotOffMain(
-              displayID: displayID,
-              screenFrame: screenFrame,
-              backingScaleFactor: backingScale,
-              colorSpaceName: colorSpaceName
-            )
-          }.value
-        }
+        // Task.detached ensures CGDisplayCreateImage runs on cooperative thread pool,
+        // not on MainActor, freeing main thread for mouse event processing.
+        let fastSnapshot = await Task.detached {
+          captureManager.captureFastDisplaySnapshotOffMain(
+            displayID: displayID,
+            screenFrame: screenFrame,
+            backingScaleFactor: backingScale,
+            colorSpaceName: colorSpaceName,
+            excludedWindowIDs: excludedWindowIDs
+          )
+        }.value
 
         // Re-validate session after awaiting — user may have dismissed capture area.
         guard activeAreaSelectionSessionID == sessionID else { return }
@@ -1945,25 +1945,23 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
         let startedAt = Date()
 
         // Fast CoreGraphics path when no cursor/desktop exclusions are needed. The overlay
-        // is capture-excluded (sharingType == .none), so it is not baked into the snapshot.
+        // stays on screen; the snapshot leaves out capture chrome by window ID.
         if !showCursor, !excludeDesktopIcons, !excludeDesktopWidgets,
            let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) {
           let screenFrame = screen.frame
           let backingScale = screen.backingScaleFactor
           let colorSpaceName = self.captureManager.preferredCaptureColorSpaceName(for: screen)
           let captureManager = self.captureManager
-          let fastSnapshot = await AreaSelectionController.shared.withDisplayOverlayHiddenAsync(
-            for: displayID
-          ) {
-            await Task.detached {
-              captureManager.captureFastDisplaySnapshotOffMain(
-                displayID: displayID,
-                screenFrame: screenFrame,
-                backingScaleFactor: backingScale,
-                colorSpaceName: colorSpaceName
-              )
-            }.value
-          }
+          let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
+          let fastSnapshot = await Task.detached {
+            captureManager.captureFastDisplaySnapshotOffMain(
+              displayID: displayID,
+              screenFrame: screenFrame,
+              backingScaleFactor: backingScale,
+              colorSpaceName: colorSpaceName,
+              excludedWindowIDs: excludedWindowIDs
+            )
+          }.value
           guard self.activeAreaSelectionSessionID == sessionID else { return }
           if let fastSnapshot {
             self.applyLazyFrozenSnapshot(

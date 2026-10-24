@@ -786,6 +786,9 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
 
   private override init() {
     super.init()
+    CaptureChromeWindowRegistry.shared.onChange = { [weak self] in
+      self?.scheduleCaptureChromeFilterUpdate()
+    }
   }
 
   // MARK: - Public API
@@ -1987,7 +1990,13 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
         excludedApps += content.applications.filter { $0.bundleIdentifier == bundleID }
       }
 
-      var exceptedWindows = content.windows.filter { exceptedWindowIDs.contains($0.windowID) }
+      // Capture overlays (area selection, HUDs, countdown) stay visible in the recording,
+      // like CleanShot X. Hidden pooled overlays are listed too, so they are excepted
+      // before they first appear and no frames are lost.
+      let captureOverlayWindowIDs = CaptureChromeWindowRegistry.shared.windowIDs(roles: [.captureOverlay])
+      var exceptedWindows = content.windows.filter {
+        exceptedWindowIDs.contains($0.windowID) || captureOverlayWindowIDs.contains($0.windowID)
+      }
       if excludeDesktopIconsFromCapture {
         excludedApps += iconManager.getFinderApps(from: content)
         exceptedWindows += iconManager.getVisibleFinderWindows(from: content)
@@ -2074,8 +2083,10 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
   private func loadShareableContentForCurrentFilters() async throws -> SCShareableContent {
     let requiresDesktopWindowEnumeration = excludeDesktopIconsFromCapture || excludeDesktopWidgetsFromCapture
     if requiresDesktopWindowEnumeration {
-      // Finder/widget exclusion needs desktop windows in the shareable snapshot.
-      return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true)
+      // Finder/widget exclusion needs desktop windows in the shareable snapshot. Off-screen
+      // windows are listed so hidden capture overlays can be excepted up front; the
+      // desktop icon/widget helpers only pick on-screen windows.
+      return try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
     }
 
     return try await SCShareableContent.current
@@ -2212,6 +2223,21 @@ final class ScreenRecordingManager: NSObject, ObservableObject {
     }
 
     stream = nil
+  }
+
+  private var isCaptureChromeFilterUpdatePending = false
+
+  /// Coalesces capture chrome registrations (e.g. a smart element overlay created mid-recording)
+  /// into one content filter update so the new overlay shows up in the recording.
+  private func scheduleCaptureChromeFilterUpdate() {
+    guard state != .idle, stream != nil, !isCaptureChromeFilterUpdatePending else { return }
+    isCaptureChromeFilterUpdatePending = true
+    Task { @MainActor [weak self] in
+      guard let self else { return }
+      self.isCaptureChromeFilterUpdatePending = false
+      guard self.state != .idle, let activeStream = self.stream else { return }
+      await self.updateContentFilter(for: activeStream)
+    }
   }
 
   /// Add a window to the active recording filter.

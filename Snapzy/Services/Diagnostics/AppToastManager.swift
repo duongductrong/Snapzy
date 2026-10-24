@@ -202,10 +202,9 @@ final class AppToastManager {
 
   private init() {}
 
-  /// A toast is Snapzy's own chrome, so it must not land in a capture or a
-  /// recording. Every other overlay the app puts on screen is excluded the same
-  /// way; the toast was not, and the scrolling-capture hint was stitched into
-  /// the top of a captured page.
+  /// A toast is a Snapzy app window: captures leave it out by window ID (the
+  /// scrolling-capture hint was once stitched into the top of a captured page),
+  /// and recorders see it only when an "Include Snapzy" pref is on.
   static func makeToastPanel(contentRect: NSRect) -> NSPanel {
     let panel = NSPanel(
       contentRect: contentRect,
@@ -219,7 +218,7 @@ final class AppToastManager {
     panel.hasShadow = true
     panel.hidesOnDeactivate = false
     panel.ignoresMouseEvents = true
-    panel.sharingType = .none
+    CaptureChromeWindowRegistry.configureAppWindow(panel)
     panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
     return panel
   }
@@ -307,6 +306,8 @@ final class AppToastManager {
 
     if let panel {
       if !panel.isVisible {
+        // The panel is reused across toasts; pick up "Include Snapzy" pref changes.
+        CaptureChromeWindowRegistry.configureAppWindow(panel)
         panel.setFrame(frame, display: true)
         panel.alphaValue = 0
         panel.orderFrontRegardless()

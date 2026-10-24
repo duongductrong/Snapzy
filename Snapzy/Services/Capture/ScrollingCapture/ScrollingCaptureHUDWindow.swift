@@ -34,7 +34,7 @@ final class ScrollingCaptureHUDWindow: NSPanel {
     level = .popUpMenu
     isOpaque = false
     backgroundColor = .clear
-    sharingType = .none
+    CaptureChromeWindowRegistry.configure(self, role: .captureOverlay)
     hasShadow = true
     hidesOnDeactivate = false
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]

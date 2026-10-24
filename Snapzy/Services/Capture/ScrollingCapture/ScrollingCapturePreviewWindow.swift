@@ -29,7 +29,7 @@ final class ScrollingCapturePreviewWindow: NSPanel {
     level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
     isOpaque = false
     backgroundColor = .clear
-    sharingType = .none
+    CaptureChromeWindowRegistry.configure(self, role: .captureOverlay)
     hasShadow = true
     hidesOnDeactivate = false
     ignoresMouseEvents = true

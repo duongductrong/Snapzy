@@ -149,7 +149,7 @@ final class CaptureDelayCountdownController {
     panel.hasShadow = true
     panel.hidesOnDeactivate = false
     panel.isReleasedWhenClosed = false
-    panel.sharingType = .none
+    CaptureChromeWindowRegistry.configure(panel, role: .captureOverlay)
     panel.contentView = FirstMouseHostingView(rootView: CaptureDelayCountdownView(model: model) { [weak self] in
       self?.cancel()
     })

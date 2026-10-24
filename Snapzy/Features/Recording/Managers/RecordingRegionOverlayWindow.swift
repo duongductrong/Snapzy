@@ -66,7 +66,13 @@ final class RecordingRegionOverlayWindow: NSPanel {
 
   private let overlayView: RecordingRegionOverlayView
 
-  init(screen: NSScreen, highlightRect: CGRect) {
+  /// - Parameter chromeRole: `.recordingControls` for the recording region (kept out of
+  ///   Snapzy's own recordings); scrolling capture passes `.captureOverlay`.
+  init(
+    screen: NSScreen,
+    highlightRect: CGRect,
+    chromeRole: CaptureChromeWindowRegistry.Role = .recordingControls
+  ) {
     self.overlayView = RecordingRegionOverlayView(
       frame: screen.frame,
       highlightRect: highlightRect
@@ -79,15 +85,15 @@ final class RecordingRegionOverlayWindow: NSPanel {
       defer: false
     )
 
-    configureWindow(screen: screen)
+    configureWindow(screen: screen, chromeRole: chromeRole)
     contentView = overlayView
   }
 
-  private func configureWindow(screen: NSScreen) {
+  private func configureWindow(screen: NSScreen, chromeRole: CaptureChromeWindowRegistry.Role) {
     isFloatingPanel = true
     isOpaque = false
     backgroundColor = .clear
-    sharingType = .none
+    CaptureChromeWindowRegistry.configure(self, role: chromeRole)
     level = .floating
     ignoresMouseEvents = true
     hasShadow = false

@@ -359,7 +359,10 @@ final class ScreenCaptureManager: ObservableObject {
     guard let screen = NSScreen.screens.first(where: { $0.displayID == displayID }) else {
       return nil
     }
-    guard let image = CGDisplayCreateImage(displayID) else {
+    guard let image = WindowListDisplaySnapshot.captureDisplay(
+      displayID,
+      excluding: CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
+    ) else {
       return nil
     }
 
@@ -378,15 +381,17 @@ final class ScreenCaptureManager: ObservableObject {
     )
   }
 
-  /// Off-main-thread variant — caller must resolve NSScreen data on main thread first,
-  /// then pass as value types so CGDisplayCreateImage can run on a background thread.
+  /// Off-main-thread variant — caller must resolve NSScreen data and
+  /// `CaptureChromeWindowRegistry.screenshotExcludedWindowIDs()` on main thread first,
+  /// then pass as value types so the Core Graphics capture can run on a background thread.
   nonisolated func captureFastDisplaySnapshotOffMain(
     displayID: CGDirectDisplayID,
     screenFrame: CGRect,
     backingScaleFactor: CGFloat,
-    colorSpaceName: CFString?
+    colorSpaceName: CFString?,
+    excludedWindowIDs: Set<CGWindowID>
   ) -> FrozenDisplaySnapshot? {
-    guard let image = CGDisplayCreateImage(displayID) else {
+    guard let image = WindowListDisplaySnapshot.captureDisplay(displayID, excluding: excludedWindowIDs) else {
       return nil
     }
 
@@ -881,7 +886,10 @@ final class ScreenCaptureManager: ObservableObject {
     quickLookCaptures: [ImmediateQuickLookCapture]
   ) async -> [DisplayPayloadResult] {
     if canUseFastPath {
-      return await captureDisplayPayloadsUsingCoreGraphics(targets: targets)
+      return await captureDisplayPayloadsUsingCoreGraphics(
+        targets: targets,
+        excludedWindowIDs: CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
+      )
     }
 
     guard let content else {
@@ -969,7 +977,8 @@ final class ScreenCaptureManager: ObservableObject {
   }
 
   private nonisolated func captureDisplayPayloadsUsingCoreGraphics(
-    targets: [DisplayCaptureTarget]
+    targets: [DisplayCaptureTarget],
+    excludedWindowIDs: Set<CGWindowID>
   ) async -> [DisplayPayloadResult] {
     let requests = targets.map {
       (
@@ -983,7 +992,10 @@ final class ScreenCaptureManager: ObservableObject {
     return await withTaskGroup(of: DisplayPayloadResult.self) { group in
       for request in requests {
         group.addTask {
-          guard let image = CGDisplayCreateImage(request.displayID) else {
+          guard let image = WindowListDisplaySnapshot.captureDisplay(
+            request.displayID,
+            excluding: excludedWindowIDs
+          ) else {
             return .failure(request.displayID, .captureFailed(L10n.ScreenCapture.unableToCaptureSelectedArea))
           }
 
@@ -2786,8 +2798,20 @@ final class ScreenCaptureManager: ObservableObject {
     var excludedApps: [SCRunningApplication] = []
     var exceptedWindows: [SCWindow] = []
 
-    if excludeOwnApplication, let bundleID = Bundle.main.bundleIdentifier {
-      excludedApps += content.applications.filter { $0.bundleIdentifier == bundleID }
+    if let bundleID = Bundle.main.bundleIdentifier {
+      if excludeOwnApplication {
+        excludedApps += content.applications.filter { $0.bundleIdentifier == bundleID }
+      } else {
+        // Snapzy is included but its visible capture chrome is not. SCK cannot exclude an
+        // app and individual windows at once, so exclude Snapzy and except its other windows.
+        let chromeWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs(visibleOnly: true)
+        if !chromeWindowIDs.isEmpty {
+          excludedApps += content.applications.filter { $0.bundleIdentifier == bundleID }
+          exceptedWindows += content.windows.filter {
+            $0.owningApplication?.bundleIdentifier == bundleID && !chromeWindowIDs.contains($0.windowID)
+          }
+        }
+      }
     }
 
     if excludeDesktopIcons {

@@ -723,14 +723,14 @@ final class AreaSelectionController: NSObject {
         let captureRect = CGDisplayBounds(targetDisplayID)
         let backingScale = screen.backingScaleFactor
         let sessionID = selectionSessionID
+        let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
 
         Task { [weak self] in
           let backdrop = await Task.detached { () -> AreaSelectionBackdrop? in
-            guard let cgImage = CGWindowListCreateImage(
-              captureRect,
-              .optionOnScreenOnly,
-              kCGNullWindowID,
-              .nominalResolution
+            guard let cgImage = WindowListDisplaySnapshot.captureOnScreenWindows(
+              bounds: captureRect,
+              imageOption: .nominalResolution,
+              excluding: excludedWindowIDs
             ) else { return nil }
             return AreaSelectionBackdrop(
               displayID: targetDisplayID,
@@ -1248,51 +1248,6 @@ final class AreaSelectionController: NSObject {
     }
   }
 
-  func withDisplayOverlayHidden<T>(
-    for displayID: CGDirectDisplayID,
-    perform work: () -> T
-  ) -> T {
-    guard let window = windowPool[displayID], window.isVisible else {
-      return work()
-    }
-
-    // Capture-excluded overlays can stay visible without being baked into the snapshot.
-    if window.sharingType == .none {
-      return work()
-    }
-
-    window.orderOut(nil)
-    let result = work()
-    window.orderFrontRegardless()
-    window.activateKeyboardInputIfNeeded()
-    window.overlayView.refreshCursor()
-    return result
-  }
-
-  /// Async variant of `withDisplayOverlayHidden` — hides the overlay on main, awaits
-  /// the async work closure (which may run off-main), then restores the overlay on main.
-  /// Use when the work body performs blocking I/O like `CGDisplayCreateImage`.
-  func withDisplayOverlayHiddenAsync<T: Sendable>(
-    for displayID: CGDirectDisplayID,
-    perform work: @Sendable () async -> T
-  ) async -> T {
-    guard let window = windowPool[displayID], window.isVisible else {
-      return await work()
-    }
-
-    // Capture-excluded overlays can stay visible without being baked into the snapshot.
-    if window.sharingType == .none {
-      return await work()
-    }
-
-    window.orderOut(nil)
-    let result = await work()
-    window.orderFrontRegardless()
-    window.activateKeyboardInputIfNeeded()
-    window.overlayView.refreshCursor()
-    return result
-  }
-
   private func requestDisplayActivationIfNeeded(for window: AreaSelectionWindow) {
     guard interactionMode == .manualRegion else { return }
     guard selectionMode == .screenshot else { return }
@@ -1400,13 +1355,13 @@ final class AreaSelectionController: NSObject {
         let captureRect = CGDisplayBounds(displayID)
         let backingScale = screen.backingScaleFactor
         let sessionID = self.selectionSessionID
+        let excludedWindowIDs = CaptureChromeWindowRegistry.shared.screenshotExcludedWindowIDs()
         Task { [weak self] in
           let backdrop = await Task.detached { () -> AreaSelectionBackdrop? in
-            guard let cgImage = CGWindowListCreateImage(
-              captureRect,
-              .optionOnScreenOnly,
-              kCGNullWindowID,
-              .nominalResolution
+            guard let cgImage = WindowListDisplaySnapshot.captureOnScreenWindows(
+              bounds: captureRect,
+              imageOption: .nominalResolution,
+              excluding: excludedWindowIDs
             ) else { return nil }
             return AreaSelectionBackdrop(
               displayID: displayID,
@@ -2596,7 +2551,7 @@ final class AreaSelectionWindow: NSPanel {
     isFloatingPanel = true
     isOpaque = false
     backgroundColor = NSColor(white: 0, alpha: 0.005)
-    sharingType = .none
+    CaptureChromeWindowRegistry.configure(self, role: .captureOverlay)
     level = .screenSaver
     ignoresMouseEvents = false
     acceptsMouseMovedEvents = true
