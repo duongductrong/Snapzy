@@ -111,7 +111,7 @@ public final class SocketConnection {
       }
       if written < 0 {
         if errno == EINTR || errno == EAGAIN { continue }
-        if errno == EPIPE { throw SocketConnectionError.closedByPeer }
+        if errno == EPIPE || errno == ECONNRESET { throw SocketConnectionError.closedByPeer }
         throw SocketConnectionError.system(operation: "write", errno: errno)
       }
       offset += written

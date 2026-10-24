@@ -72,7 +72,12 @@ public final class CLIClient {
 
     let responseData: Data
     do {
-      try connection.send(payload, timeout: timeout)
+      do {
+        try connection.send(payload, timeout: timeout)
+      } catch SocketConnectionError.closedByPeer {
+        // The app may have answered and closed before reading this request
+        // (e.g. `busy` when too many commands run); read that answer if it's there.
+      }
       responseData = try connection.receive(timeout: timeout)
     } catch let error as SocketConnectionError {
       throw Self.cliError(for: error, method: method)

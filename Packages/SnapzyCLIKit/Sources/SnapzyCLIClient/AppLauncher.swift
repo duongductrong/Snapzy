@@ -33,6 +33,10 @@ public struct AppLauncher: Sendable {
         configuration.activates = false
         configuration.addsToRecentItems = false
         configuration.arguments = [CLILaunchArguments.launchedByCLI]
+        // The launched app must listen where this CLI will connect.
+        if let socketOverride = ProcessInfo.processInfo.environment[SocketLocation.environmentOverrideKey] {
+          configuration.environment = [SocketLocation.environmentOverrideKey: socketOverride]
+        }
         _ = try await NSWorkspace.shared.openApplication(at: appURL, configuration: configuration)
       },
       sleep: { try await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) }
