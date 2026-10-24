@@ -45,8 +45,9 @@ flowchart TD
 | OCR text | `⇧⌘2` | `OCRService` + `QRCodeService` | Clipboard text only (no file) |
 | Object cutout | `⇧⌘1` (macOS 14+) | `ForegroundCutoutService` | Transparent PNG |
 | Smart element | `⌥⇧4` | `SmartElementCaptureController` + AX services | Cropped image file |
+| Headless (CLI) | `snapzy capture screen\|window\|area` | `HeadlessCaptureService` → `ScreenCaptureManager` with `invocation: .headless` (see [Headless capture](#headless-capture-snapzy-cli)) | File in the CLI staging folder, moved by the CLI to `--output` |
 
-All shortcut defaults are configurable; see [`SHORTCUTS.md`](SHORTCUTS.md). `ScreenCaptureViewModel` (`Snapzy/Features/Capture/CaptureViewModel.swift`) is the single entry point for every mode and implements `KeyboardShortcutDelegate`.
+All shortcut defaults are configurable; see [`SHORTCUTS.md`](SHORTCUTS.md). `ScreenCaptureViewModel` (`Snapzy/Features/Capture/CaptureViewModel.swift`) is the single entry point for every interactive mode and implements `KeyboardShortcutDelegate`; headless CLI captures are the one path that does not go through it.
 
 ## Screenshot, OCR, and Cutout
 
@@ -176,6 +177,20 @@ Snapzy's capture UI shows up in screen recordings (Snapzy's own and third-party 
 - Clicking inside the highlighted rect commits through `ScreenCaptureViewModel.captureSmartElement(rect:)`, which reuses the screenshot save and post-capture pipeline. Clicking outside the highlight or pressing `Escape` cancels without writing a capture.
 - Known limitation: Chromium-based apps (Chrome, Slack, Claude desktop, Electron) may expose only `AXWebArea` for web content unless launched with `--force-renderer-accessibility` (Chromium) or `app.setAccessibilitySupportEnabled(true)` (Electron). Inside such apps the highlight may snap to the whole web view rather than individual DOM elements.
 
+## Headless capture (snapzy CLI)
+
+`HeadlessCaptureService` (`Snapzy/Services/Capture/HeadlessCapture/`) captures with no user interaction for the `snapzy` command line tool ([`CLI.md`](CLI.md)). It is CLI-agnostic: the CLI handlers map wire models to `HeadlessCaptureRequest`.
+
+- **`CaptureInvocation`** (`ScreenCaptureManager.swift`): `captureFullscreen`, `captureArea`, and `captureWindow` take `invocation: .interactive` by default. `.headless(includeWindowShadow:)`:
+  - saves with `emitCompletion: false`, so `captureCompletedPublisher` never fires and `CaptureViewModel` never runs `PostCaptureActionHandler` — no Quick Access, clipboard, history, presets, or auto-open; the shutter sound lives in the view model, so it is silent too;
+  - never calls `requestPermission()` (`notGranted` → `permissionDenied`);
+  - overrides the window-shadow preference for window captures;
+  - never substitutes: a missing display returns `noDisplayFound` instead of the first display, and a window that cannot be captured directly returns `captureFailed` instead of a rect capture of whatever covers it.
+- **Readiness**: onboarding completed, screen not locked/asleep (ScreenCaptureKit sees no displays then), Screen Recording granted and active (`requiresRelaunchToActivate` → unavailable). Busy while another headless capture or an SCK capture (`ScreenCaptureManager.isCapturing`) runs; interactive selections and recordings do not block it, because capture chrome is excluded by `CaptureChromeWindowRegistry`.
+- **Targets** (`CaptureTargetResolver`, pure): display `main`/`all`/ID from `NSScreen`; window by ID, app (`AppNameMatcher`: bundle ID → exact name → prefix, best tier only) + title regex + index over `WindowSelectionQueryService.prepareSnapshot(excludeOwnApplication: true)` candidates, or `--active` via `ActiveWindowResolver`; areas must lie fully on screen (summed display intersections). `all` captures display by display so each file keeps its display ID, and deletes earlier files if one fails.
+- **Coordinates**: the CLI speaks top-left global points; `CLICoordinateSpace` flips to AppKit around the main display height before `captureArea`.
+- **Output**: `HeadlessCaptureStaging` writes `snapzy-cli-<yyyyMMdd-HHmmss>-<hex>.<ext>` to `Application Support/Snapzy/CLI/Captures/` (0700, outside the `Captures/` tree that `TempCaptureManager.cleanupOrphanedFiles()` sweeps; 24 h retention). `HeadlessCapturePostProcessor` applies `--max-dimension` off the main actor (ImageIO thumbnail, same format, DPI scaled) and reports pixel size, bytes, and `scale` (PNG/JPEG from DPI; WebP from display scale × downscale ratio).
+
 ## Key Files
 
 | File | Responsibility |
@@ -198,6 +213,7 @@ Snapzy's capture UI shows up in screen recordings (Snapzy's own and third-party 
 | `Snapzy/Services/Wallpaper/DesktopIconManager.swift` | SCK content-filter exclusion to hide desktop icons/widgets at capture |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Save-vs-temp destination logic and temp capture lifecycle |
 | `Snapzy/Services/Capture/PostCaptureActionHandler.swift` | After-capture action executor (see [`POST_CAPTURE.md`](POST_CAPTURE.md)) |
+| `Snapzy/Services/Capture/HeadlessCapture/` | Headless capture for the `snapzy` CLI: service, target resolver, staging, post-processor, app-name matching |
 
 ## Related docs
 
@@ -208,6 +224,7 @@ Snapzy's capture UI shows up in screen recordings (Snapzy's own and third-party 
 - [`QUICK_ACCESS.md`](QUICK_ACCESS.md) — floating post-capture panel
 - [`HISTORY.md`](HISTORY.md) — capture history and retention
 - [`SHORTCUTS.md`](SHORTCUTS.md) — global shortcut defaults and `snapzy://` routes
+- [`CLI.md`](CLI.md) — `snapzy` command line tool and headless capture contract
 - [`PREFERENCES.md`](PREFERENCES.md) — Settings → Capture reference
 - [`STRUCTURE.md`](STRUCTURE.md) — source tree and runtime architecture
 - [`LOCALIZATION.md`](LOCALIZATION.md) — localization ownership and rules

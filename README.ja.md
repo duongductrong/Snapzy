@@ -27,6 +27,7 @@
     <a href="#features">機能</a> •
     <a href="#install">インストール</a> •
     <a href="#raycast">Raycast</a> •
+    <a href="#cli">CLI</a> •
     <a href="#shortcuts">ショートカット</a> •
     <a href="#development">開発</a> •
     <a href="#documentation">ドキュメント</a> •
@@ -70,6 +71,7 @@
 - **ローカリゼーション**: 🇺🇸 English、🇻🇳 Vietnamese、🇨🇳 Simplified Chinese、🇹🇼 Traditional Chinese、🇪🇸 Spanish、🇯🇵 Japanese、🇰🇷 Korean、🇷🇺 Russian、🇫🇷 French、🇩🇪 German のアプリ内ローカリゼーションと、ネイティブ macOS のアプリごとの言語指定をサポート
 - **クラウドアップロード**: プライバシー優先の持ち込みストレージ方式。AWS S3 または Cloudflare R2 を使い、サードパーティサーバーは介在しない。Quick Access からスクリーンショット、ビデオ、GIF を、Annotate からスクリーンショットを手動アップロードできる。認証情報は macOS Keychain に保存され、任意のパスワードで保護できる。別の Mac でのセットアップを速める手動の暗号化済み認証情報インポート／エクスポート、アップロード履歴、設定可能な自動有効期限（1〜90日または無期限）、ライフサイクルルール、カスタムドメインにも対応
 - **高度な設定**: TOML のエクスポート／インポート、1回限りの設定フォルダ許可、デバウンスされたバックグラウンド同期、安全な開く前の同期、`~/.config/snapzy/config.toml` を介したポータブルな設定、dotfiles、バックアップ、マシン間セットアップのための起動時自動適用
+- **コマンドライン**: AI エージェントやスクリプト向けの `snapzy` コマンド。クリックなしでディスプレイ、ウインドウ（隠れていても）、範囲をキャプチャし、JSON と終了コードを返す。アプリごとに許可を確認
 - **アップデートと診断**: Sparkle によるアプリ内アップデート、診断ログバンドル付きの問題報告、キャッシュ管理
 - **プラットフォーム**: メニューバーアプリ、外観テーマ（ライト／ダーク／システム）、Hardened Runtime を有効にした Developer ID 署名済み・Apple 公証済みビルド、ユーザーが選択したフォルダ向けのセキュリティスコープ付きブックマーク
 
@@ -143,6 +145,18 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 <a href="https://www.raycast.com/chkzz/snapzy" title="Install snapzy Raycast Extension"><img src="https://www.raycast.com/chkzz/snapzy/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="" /></a>
 
 <a id="shortcuts"></a>
+
+## CLI
+
+Snapzy には `snapzy` コマンドが付属しており、AI エージェントやスクリプトがクリックなしでキャプチャし、ファイルパス、JSON メタデータ、終了コードを受け取れます:
+
+```bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+```
+
+コマンドは `/Applications/Snapzy.app/Contents/Helpers/snapzy` にあります。**設定 → 詳細 → コマンドライン → インストール** で `PATH` に追加できます。アプリが初めて使うとき、Snapzy はそのアプリを許可するか確認します。詳細: [docs/CLI.md](docs/CLI.md)。
 
 ## ショートカット
 
@@ -229,7 +243,7 @@ archive、export、DMG パッケージングのコマンドが必要な場合は
 - [アプリのライフサイクル、オンボーディング、メニューバー](docs/APP_LIFECYCLE.md)
 - キャプチャ: [スクリーンショットフロー](docs/CAPTURE.md) · [スクロールキャプチャ](docs/SCROLLING_CAPTURE.md) · [録画](docs/RECORDING.md) · [キャプチャ後の振り分け](docs/POST_CAPTURE.md)
 - エディタ: [Quick Access](docs/QUICK_ACCESS.md) · [キャプチャ履歴](docs/HISTORY.md) · [Annotate](docs/ANNOTATE.md) · [Video Editor](docs/VIDEO_EDITOR.md)
-- プラットフォーム: [クラウドアップロード](docs/CLOUD.md) · [ショートカットと URL scheme](docs/SHORTCUTS.md) · [設定リファレンス](docs/PREFERENCES.md) · [アップデートと診断](docs/UPDATES.md)
+- プラットフォーム: [クラウドアップロード](docs/CLOUD.md) · [ショートカットと URL scheme](docs/SHORTCUTS.md) · [設定リファレンス](docs/PREFERENCES.md) · [アップデートと診断](docs/UPDATES.md) · [コマンドライン](docs/CLI.md)
 - [TOML 設定のエクスポート／インポート](docs/CONFIGURATION.md)
 - [ビルドとパッケージングガイド](docs/BUILD.md)
 - [リリースとアップデートのワークフロー](docs/RELEASES.md)

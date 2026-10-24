@@ -70,8 +70,11 @@ xcodebuild -project Snapzy.xcodeproj \
   -configuration Release \
   CODE_SIGN_IDENTITY="" \
   CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO \
   build
 ```
+
+`CODE_SIGNING_ALLOWED=NO` is required: with an empty identity alone, Xcode refuses to sign the embedded `snapzy` Command Line Tool target ("An empty code signing identity is not valid…").
 
 ### Release Archive (Signed)
 
@@ -90,6 +93,14 @@ xcodebuild -exportArchive \
   -exportPath ./exported_app \
   -exportOptionsPlist ExportOptions.plist
 ```
+
+### The `snapzy` command line tool
+
+The app embeds the CLI built by the `SnapzyCLI` target (Command Line Tool, product `snapzy`, module `SnapzyCLIMain`, sources in `SnapzyCLI/` plus the local package `Packages/SnapzyCLIKit`). The app target depends on it and its **Embed Command Line Tool** Copy Files phase places it at `Snapzy.app/Contents/Helpers/snapzy` (Code Sign On Copy). `SKIP_INSTALL = YES` keeps the archive a plain app archive; `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` match the app so `scripts/bump-version.sh` updates both.
+
+- Manual signing (release workflow, `scripts/dry-run-release.sh`, `scripts/test-update-local.sh`) is inside-out without `--deep`, so the helper is signed **after Sparkle and before the app**: `codesign --force --sign "$SIGN_IDENTITY" -o runtime $TIMESTAMP_FLAG "Snapzy.app/Contents/Helpers/snapzy"` (`test-update-local.sh` uses its self-signed identity and `--timestamp=none`). The release verify step checks the helper's Team ID and hardened runtime.
+- Package tests run without Xcode: `swift test --package-path Packages/SnapzyCLIKit` (CI runs it before the Xcode tests).
+- Usage, packaging and PATH: [CLI.md](CLI.md).
 
 ### Create DMG
 

@@ -5,7 +5,7 @@
 //  Owns the socket the `snapzy` command line tool talks to. Started after
 //  launch and stopped on quit by AppCoordinator.
 //
-//  On by default (`cli.enabled`); every command except `status` needs the
+//  On by default (`cliEnabled`); every command except `status` needs the
 //  calling app to be approved (see CLIAuthorizationCoordinator).
 //
 

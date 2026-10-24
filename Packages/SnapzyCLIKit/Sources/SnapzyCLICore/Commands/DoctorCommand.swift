@@ -206,7 +206,7 @@ enum Doctor {
       checks.append(.fail(
         "authorization",
         "this app was denied",
-        hint: "Remove it from Settings → Advanced → Allowed apps, then retry",
+        hint: "Remove it from Settings → Advanced → Command Line → Allowed apps, then retry",
         code: .notAuthorized
       ))
     }

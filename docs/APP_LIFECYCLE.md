@@ -55,6 +55,7 @@ flowchart TD
    | --- | --- |
    | `diagnostics.retentionDays` | 3 (`LogCleanupScheduler.defaultRetentionDays`) |
    | `urlSchemeEnabled` | `true` |
+   | `cliEnabled` | `true` |
    | `history.enabled` | `true` |
    | `history.retentionDays` | 30 |
    | `history.maxCount` | 500 |
@@ -66,10 +67,11 @@ flowchart TD
 6. TOML configuration: `SnapzyConfigurationAutoImporter.applyIfNeededOnLaunch()` → `SnapzyConfigurationSyncCoordinator.start()`; when the auto-import did not apply, `scheduleSync(reason: .appLaunch)`.
 7. Schedulers: `LogCleanupScheduler`, `RecordingMetadataCleanupScheduler`, `CaptureHistoryRetentionService` — all `.start()`.
 8. `AppStatusBarController.shared.setup(viewModel:updater:didCrash:)` — `didCrash` prompt only when crash detected **and** `DiagnosticLogger.isEnabled`; also pre-allocates the area-selection window pool via `AreaSelectionController.shared.prepareWindowPool()` (targets <150 ms activation).
-9. After 0.3 s: `presentStartupExperience(...)` (see Onboarding).
-10. `.showOnboarding` notification observer → `SplashWindowController.shared.show(forceOnboarding: true)` ("Restart Onboarding" path).
+9. `CLIServer.shared.startIfEnabled()` — starts the `snapzy` CLI socket when `cliEnabled` is on and keeps following that key via KVO (see [CLI.md](CLI.md)); also sweeps expired headless captures.
+10. After 0.3 s: `presentStartupExperience(...)` (see Onboarding).
+11. `.showOnboarding` notification observer → `SplashWindowController.shared.show(forceOnboarding: true)` ("Restart Onboarding" path).
 
-Termination (`applicationWillTerminate`): `SnapzyConfigurationSyncCoordinator.flushPendingSync(reason: .appTerminate)`, `CrashSentinel.markTerminated()`, stop `LogCleanupScheduler` / `RecordingMetadataCleanupScheduler` / sync coordinator, remove observers.
+Termination (`applicationWillTerminate`): `SnapzyConfigurationSyncCoordinator.flushPendingSync(reason: .appTerminate)`, `CLIServer.shared.shutdown()` (closes and unlinks the socket and stops following `cliEnabled`, so a late defaults write cannot restart it), `CrashSentinel.markTerminated()`, stop `LogCleanupScheduler` / `RecordingMetadataCleanupScheduler` / sync coordinator, remove observers.
 
 Deep links: `handleDeepLink(_:)` constructs `SnapzyDeepLinkHandler` and dispatches — see [SHORTCUTS.md](SHORTCUTS.md) for the route table.
 
@@ -90,7 +92,7 @@ State machine (`SplashScreen`): `splash` → `language` → `sponsor` (only when
   - `splashSkipped` → skip splash entirely when onboarding done and sponsor seen.
   - `splash.skipOnceAfterOnboardingRelaunch` → one-time skip after a language-change relaunch, then the key is removed.
 - Language preview: `OnboardingLocalizationController` (`Snapzy/Features/Onboarding/Managers/`) re-renders onboarding strings in the selected language without relaunch; on completion `commitLanguageSelection()` persists via `AppLanguageManager` and, when `requiresRelaunchOnCompletion`, calls `relaunchApplication()` after setting the skip-once key.
-- Startup gating (`AppCoordinator.presentStartupExperience`): for existing users (`hasCompletedOnboarding`), when TOML auto-import returns `.skippedPermissionRequired` and `configuration.accessOnboardingPrompted` is false, show a one-time configAccess-only step (`showConfigurationAccess()`, steps `[.configAccess]`) instead of the splash. Otherwise `SplashWindowController.show()`, then after 1.5 s remove the legacy `hasSeenSmartElementIntro` key and present any pending `FeatureIntroManager` campaign.
+- Startup gating (`AppCoordinator.presentStartupExperience`): for existing users (`hasCompletedOnboarding`), when TOML auto-import returns `.skippedPermissionRequired` and `configuration.accessOnboardingPrompted` is false, show a one-time configAccess-only step (`showConfigurationAccess()`, steps `[.configAccess]`) instead of the splash. Otherwise `SplashWindowController.show()`, then after 1.5 s remove the legacy `hasSeenSmartElementIntro` key and present any pending `FeatureIntroManager` campaign. When the `snapzy` CLI launched the app (`--launched-by-cli`, from `CLILaunchArguments`) and onboarding is complete, both the splash and the campaign are skipped; incomplete onboarding still shows, and the CLI reports `onboardingIncomplete`.
 - "Restart Onboarding" (Preferences → General → Help): `OnboardingFlowView.resetOnboarding()` clears `onboardingCompleted` / `splashSkipped` / skip-once key, posts `.showOnboarding`.
 
 ## Menu bar
@@ -142,7 +144,7 @@ The Permissions tab reflects unhealthy identity as `grantedButUnavailableDueToAp
 `Snapzy/Snapzy.entitlements` (no app-sandbox key — builds are **not** sandboxed):
 
 - `com.apple.security.network.client` — outbound network (cloud uploads, updates, OAuth).
-- `com.apple.security.network.server` — local loopback listener for the Google Drive OAuth callback redirect.
+- `com.apple.security.network.server` — local loopback listener for the Google Drive OAuth callback redirect. (The `snapzy` CLI socket is a Unix domain socket under Application Support and needs no entitlement in this unsandboxed app.)
 - `com.apple.security.files.user-selected.read-write` — user-picked files/folders.
 - `com.apple.security.device.audio-input` — microphone for recordings.
 - `com.apple.security.temporary-exception.shared-preference.read-only` → `com.apple.symbolichotkeys` — system screenshot shortcut conflict detection (see [SHORTCUTS.md](SHORTCUTS.md)).
@@ -161,6 +163,8 @@ Security-scoped bookmarks persisted in UserDefaults: `exportLocation.bookmark` (
 
 AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coordinator ready → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler.handle(url)`. Gated by `urlSchemeEnabled` (default `true`); unknown routes are logged and ignored. Full route table: [SHORTCUTS.md](SHORTCUTS.md#url-scheme-automation).
 
+Deep links are fire-and-forget and mostly interactive. Agents and scripts that need a file path, JSON, and exit codes use the `snapzy` command line tool instead ([CLI.md](CLI.md)).
+
 ## Unresolved questions
 
 - `reportProblemAction` / `didDetectCrash` in `AppStatusBarController` are stored but never wired into the menu — dead code or pending feature? Currently problem reporting is only reachable via Preferences (see [UPDATES.md](UPDATES.md)).
@@ -172,4 +176,5 @@ AppleEvent `kAEGetURL` → `AppDelegate.handleGetURLEvent` → queued until coor
 - [UPDATES.md](UPDATES.md) — Sparkle, diagnostics, crash/problem reporting
 - [CONFIGURATION.md](CONFIGURATION.md) — TOML config file, `~/.config/snapzy` grant
 - [STRUCTURE.md](STRUCTURE.md) — project layout
+- [CLI.md](CLI.md) — `snapzy` command line tool, socket server, approval
 - [DEVELOPMENT.md](DEVELOPMENT.md) — local development setup

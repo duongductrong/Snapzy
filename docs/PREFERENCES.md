@@ -116,6 +116,7 @@ Provider configuration, credentials, expiration, usage stats, and the Cloud Uplo
 - **Backup**: TOML Import / Export / Restore Defaults (`SnapzyConfiguration*` services).
 - **Configuration File**: grant access to `~/.config/snapzy`, Sync Now, Open Config, status/issues — see [CONFIGURATION.md](CONFIGURATION.md).
 - **Integration**: URL Scheme toggle (`urlSchemeEnabled`).
+- **Command Line** (`PreferencesCommandLineSection.swift`): command line access toggle (`cliEnabled`, default on — `CLIServer` starts/stops as it changes); `snapzy` command install/uninstall at `/usr/local/bin/snapzy` via `CLIToolInstaller` (shows Homebrew-managed and other-copy links, refuses DMG/AppTranslocation launches); Allowed apps list from `CLIAuthorizationStore` (`cliApprovedCallers`, JSON in UserDefaults, never exported) with per-app Remove and Remove All — see [CLI.md](CLI.md).
 - **Diagnostics**: enable toggle (`diagnostics.enabled`), retention days (`diagnostics.retentionDays`, default 3, range 1–30 via `LogCleanupScheduler`), Open Folder (`~/Library/Logs/Snapzy`) — see [UPDATES.md](UPDATES.md).
 
 ### About (`PreferencesAboutSettingsView.swift`)
