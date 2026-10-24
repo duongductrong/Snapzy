@@ -30,6 +30,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
     """,
     subcommands: [
       StatusCommand.self,
+      DoctorCommand.self,
       VersionCommand.self,
       ListCommand.self,
       CaptureCommand.self,

@@ -175,6 +175,21 @@ sign_sparkle_adhoc() {
   codesign --force --sign - -o runtime --timestamp=none "$sparkle"
 }
 
+# The embedded `snapzy` command line tool is signed before the app (inside-out).
+sign_cli_helper() {
+  local app_path="$1"
+  local identity="$2"
+  local helper="$app_path/Contents/Helpers/snapzy"
+
+  if [ ! -f "$helper" ]; then
+    echo "  ⚠️  snapzy command line tool not found, skipping"
+    return
+  fi
+
+  echo "  → Signing snapzy command line tool with: $identity"
+  codesign --force --sign "$identity" -o runtime --timestamp=none "$helper"
+}
+
 sign_main_app() {
   local app_path="$1"
   local identity="$2"
@@ -223,7 +238,8 @@ prepare_version() {
     sign_sparkle_selfsigned "$app_path"
   fi
 
-  # Sign main app (always self-signed for TCC)
+  # Sign the CLI helper, then the main app (always self-signed for TCC)
+  sign_cli_helper "$app_path" "$CERT_NAME"
   sign_main_app "$app_path" "$CERT_NAME"
 
   # Verify
