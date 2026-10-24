@@ -38,6 +38,10 @@ final class CaptureChromeWindowRegistry {
 
   init() {}
 
+  // Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  // back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  deinit {}
+
   /// Marks `window` as capture chrome: visible to screen recorders, excluded from
   /// Snapzy's screenshots by window ID.
   static func configure(_ window: NSWindow, role: Role) {
