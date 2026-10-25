@@ -47,22 +47,28 @@ struct CommandLineSettingsView: View {
       }
 
       Section {
-        SettingRow(
-          icon: "checkmark.shield",
-          title: L10n.CommandLine.allowedAppsTitle,
-          description: store.callers.isEmpty
-            ? L10n.CommandLine.allowedAppsEmpty
-            : L10n.CommandLine.allowedAppsDescription
-        ) {
-          if !store.callers.isEmpty {
-            Button(L10n.CommandLine.removeAllButton) { store.revokeAll() }
-              .buttonStyle(.link)
-          }
+        if store.callers.isEmpty {
+          Text(L10n.CommandLine.allowedAppsEmpty)
+            .font(.callout)
+            .foregroundColor(.secondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 8)
         }
 
         ForEach(store.callers) { caller in
           CommandLineAllowedAppRow(caller: caller) {
             store.revoke(key: caller.key)
+          }
+        }
+      } header: {
+        CommandLineSectionHeader(
+          title: L10n.CommandLine.allowedAppsTitle,
+          description: L10n.CommandLine.allowedAppsDescription
+        ) {
+          if !store.callers.isEmpty {
+            Button(L10n.CommandLine.removeAllButton) { store.revokeAll() }
+              .buttonStyle(.borderless)
+              .font(.caption)
           }
         }
       }
@@ -117,6 +123,30 @@ struct CommandLineSettingsView: View {
   }
 }
 
+/// Title over a one-line description, like the other list sections in Settings.
+private struct CommandLineSectionHeader<Accessory: View>: View {
+  let title: String
+  let description: String
+  @ViewBuilder let accessory: () -> Accessory
+
+  var body: some View {
+    HStack(alignment: .bottom) {
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title)
+          .font(.headline)
+          .foregroundColor(.primary)
+        Text(description)
+          .font(.subheadline)
+          .foregroundColor(.secondary)
+      }
+
+      Spacer()
+      accessory()
+    }
+    .padding(.bottom, 4)
+  }
+}
+
 private struct CommandLineAllowedAppRow: View {
   let caller: CLIApprovedCaller
   let onRemove: () -> Void
@@ -125,21 +155,28 @@ private struct CommandLineAllowedAppRow: View {
     HStack(spacing: 12) {
       Image(nsImage: NSWorkspace.shared.icon(forFile: caller.path))
         .resizable()
-        .frame(width: 24, height: 24)
-        .frame(width: 28)
+        .frame(width: 28, height: 28)
 
       VStack(alignment: .leading, spacing: 2) {
         Text(verbatim: caller.displayName)
           .fontWeight(.medium)
-        Text(caller.decision == .allow ? L10n.CommandLine.statusAllowed : L10n.CommandLine.statusDenied)
+        Text(verbatim: subtitle)
           .font(.caption)
           .foregroundColor(caller.decision == .allow ? .secondary : .red)
+          .lineLimit(1)
+          .truncationMode(.middle)
       }
 
       Spacer()
 
       Button(L10n.CommandLine.removeAppButton, action: onRemove)
     }
+    .padding(.vertical, 4)
     .help(caller.path)
+  }
+
+  private var subtitle: String {
+    let status = caller.decision == .allow ? L10n.CommandLine.statusAllowed : L10n.CommandLine.statusDenied
+    return [status, caller.bundleID].compactMap { $0 }.joined(separator: " · ")
   }
 }
