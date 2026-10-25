@@ -2,12 +2,16 @@
 //  PreferencesQuickAccessActionShortcutsSection.swift
 //  Snapzy
 //
-//  Shortcuts tab section for hover-activated Quick Access card actions.
+//  Shortcuts tab rows for hover-activated Quick Access card actions.
 //
 
 import SwiftUI
 
-struct QuickAccessActionShortcutsSection: View {
+/// Rows for hover-activated Quick Access card actions, placed inside the Quick Access card
+/// on the Shortcuts page. The card's Reset bumps `resetCount` to clear stale highlights.
+struct QuickAccessActionShortcutRows: View {
+  let resetCount: Int
+
   @ObservedObject private var store = QuickAccessActionShortcutStore.shared
   @ObservedObject private var actionConfiguration = QuickAccessActionConfigurationStore.shared
   @State private var validationIssues: [QuickAccessActionKind: ShortcutValidationIssue] = [:]
@@ -15,7 +19,7 @@ struct QuickAccessActionShortcutsSection: View {
   private let validator = ShortcutValidationService.shared
 
   var body: some View {
-    Section {
+    Group {
       SettingRow(
         title: L10n.PreferencesShortcuts.cardActionsEnableTitle,
         description: L10n.PreferencesShortcuts.cardActionsEnableDescription
@@ -28,7 +32,6 @@ struct QuickAccessActionShortcutsSection: View {
         ForEach(QuickAccessActionKind.defaultOrder) { action in
           ShortcutRecorderView(
             label: action.settingsTitle,
-            icon: action.systemImage,
             footnote: footnote(for: action),
             shortcut: shortcutBinding(for: action),
             defaultShortcut: QuickAccessActionShortcutStore.defaultShortcuts[action],
@@ -38,15 +41,9 @@ struct QuickAccessActionShortcutsSection: View {
           )
         }
       }
-    } header: {
-      ShortcutSectionHeader(
-        title: L10n.PreferencesShortcuts.cardActionsSection,
-        help: L10n.PreferencesShortcuts.cardActionsSectionDescription,
-        onReset: {
-          store.resetToDefaults()
-          validationIssues.removeAll()
-        }
-      )
+    }
+    .onChange(of: resetCount) { _ in
+      validationIssues.removeAll()
     }
   }
 

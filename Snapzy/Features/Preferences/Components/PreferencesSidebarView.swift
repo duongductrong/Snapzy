@@ -194,12 +194,50 @@ struct PreferencesSidebarIcon: View {
   var size: CGFloat = 22
 
   var body: some View {
-    let shape = Radius.controlRect(forHeight: size)
-    glyph
+    if tab == .about {
+      PreferencesIconTile(size: size) {
+        // MenubarIcon's visible mark fills ~75% of its canvas; scale so it matches symbol weight.
+        Image("MenubarIcon")
+          .renderingMode(.template)
+          .resizable()
+          .scaledToFit()
+          .frame(width: size * 0.78, height: size * 0.78)
+      }
+    } else {
+      PreferencesSymbolTile(symbol: tab.symbol, size: size)
+    }
+  }
+}
+
+/// A bold rounded SF Symbol on the near-black settings tile.
+struct PreferencesSymbolTile: View {
+  let symbol: String
+  var size: CGFloat = 22
+
+  var body: some View {
+    PreferencesIconTile(size: size) {
+      Image(systemName: symbol)
+        .symbolRenderingMode(.monochrome)
+        .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+    }
+  }
+}
+
+/// Near-black glossy tile (Droppy-style): deep falloff toward the bottom, with a rim that
+/// catches light at the top edge and fades out, so it reads like a tiny app icon.
+/// Corner scales with `size`, so the same tile works from sidebar rows up to page heroes.
+/// No drop shadow at any size; large tiles take an Icon Composer-style specular rim.
+struct PreferencesIconTile<Glyph: View>: View {
+  var size: CGFloat
+  @ViewBuilder let glyph: () -> Glyph
+
+  private var isLarge: Bool { size > 36 }
+
+  var body: some View {
+    let shape = isLarge ? Radius.rect(size * 0.24) : Radius.controlRect(forHeight: size)
+    glyph()
       .foregroundStyle(Color.white)
       .frame(width: size, height: size)
-      // Near-black glossy tile (Droppy-style): deep falloff toward the bottom, with a rim that
-      // catches light at the top edge and fades out, so it reads like a tiny app icon.
       .background {
         shape.fill(LinearGradient(
           colors: [Color(white: 0.18), Color(white: 0.05)],
@@ -208,31 +246,42 @@ struct PreferencesSidebarIcon: View {
         ))
       }
       .overlay {
-        shape.strokeBorder(
-          LinearGradient(
-            colors: [Color.white.opacity(0.24), Color.white.opacity(0.04)],
-            startPoint: .top,
-            endPoint: .bottom
-          ),
-          lineWidth: 0.5
-        )
+        if isLarge {
+          specularRim(shape)
+        } else {
+          shape.strokeBorder(
+            LinearGradient(
+              colors: [Color.white.opacity(0.24), Color.white.opacity(0.04)],
+              startPoint: .top,
+              endPoint: .bottom
+            ),
+            lineWidth: 0.5
+          )
+        }
       }
-      .shadow(color: Color.black.opacity(0.35), radius: 1.5, y: 0.75)
   }
 
-  @ViewBuilder
-  private var glyph: some View {
-    if tab == .about {
-      // MenubarIcon's visible mark fills ~75% of its canvas; scale so it matches symbol weight.
-      Image("MenubarIcon")
-        .renderingMode(.template)
-        .resizable()
-        .scaledToFit()
-        .frame(width: size * 0.78, height: size * 0.78)
-    } else {
-      Image(systemName: tab.symbol)
-        .symbolRenderingMode(.monochrome)
-        .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+  /// Light hits the top-left edge and glints again at the bottom-right, like the glass edge
+  /// Icon Composer renders on macOS 26 icons; a dark inner hairline keeps the rim off the fill.
+  private func specularRim(_ shape: RoundedRectangle) -> some View {
+    let rimWidth = size * 0.022
+    return ZStack {
+      shape.strokeBorder(
+        LinearGradient(
+          stops: [
+            .init(color: Color.white.opacity(0.55), location: 0),
+            .init(color: Color.white.opacity(0.16), location: 0.3),
+            .init(color: Color.white.opacity(0.05), location: 0.55),
+            .init(color: Color.white.opacity(0.32), location: 1),
+          ],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        ),
+        lineWidth: rimWidth
+      )
+      shape
+        .inset(by: rimWidth)
+        .strokeBorder(Color.black.opacity(0.55), lineWidth: 0.75)
     }
   }
 }

@@ -202,6 +202,14 @@ final class PreferencesCoreTests: XCTestCase {
     XCTAssertEqual(navigation.backStack, [.general, .capture])
   }
 
+  func testPreferencesNavigationState_heroPagesLeaveHeaderUntitled() {
+    let navigation = makeNavigationState(initialTab: .general)
+    XCTAssertEqual(navigation.title, PreferencesTab.general.title)
+
+    navigation.select(.shortcuts)
+    XCTAssertEqual(navigation.title, "", "The hero already names the page")
+  }
+
   func testAboutContributor_propertiesAndCollections() {
     XCTAssertFalse(AboutContributor.featured.isEmpty)
     XCTAssertFalse(AboutContributor.all.isEmpty)

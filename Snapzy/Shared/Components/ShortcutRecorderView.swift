@@ -12,7 +12,6 @@ import SwiftUI
 /// A view that allows users to record custom keyboard shortcuts
 struct ShortcutRecorderView: View {
   let label: String
-  let icon: String
   let description: String
   let footnote: String?
   @Binding var shortcut: ShortcutConfig?
@@ -27,7 +26,6 @@ struct ShortcutRecorderView: View {
 
   init(
     label: String,
-    icon: String = "command",
     description: String = "",
     footnote: String? = nil,
     shortcut: Binding<ShortcutConfig?>,
@@ -37,7 +35,6 @@ struct ShortcutRecorderView: View {
     onShortcutChanged: @escaping (ShortcutConfig?) -> Bool
   ) {
     self.label = label
-    self.icon = icon
     self.description = description
     self.footnote = footnote
     self._shortcut = shortcut
@@ -49,14 +46,12 @@ struct ShortcutRecorderView: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      Image(systemName: icon)
-        .font(.title2)
-        .foregroundColor(.secondary)
-        .frame(width: 28)
-
-      Text(label)
-        .fontWeight(.medium)
-        .help(rowHelpText)
+      if rowHelpText.isEmpty {
+        Text(label)
+      } else {
+        Text(label)
+          .hint(rowHelpText, variant: .icon(.info))
+      }
 
       Spacer()
 
@@ -102,7 +97,7 @@ struct ShortcutRecorderView: View {
     )
   }
 
-  /// Description + footnote folded into a hover tooltip instead of inline text.
+  /// Description + footnote, shown from the ⓘ beside the title like `SettingRow`.
   private var rowHelpText: String {
     var parts: [String] = []
     if !description.isEmpty { parts.append(description) }
@@ -230,8 +225,10 @@ enum ShortcutRecorderMetrics {
 /// carry the resting and recording visuals, this only adds press feedback.
 struct ShortcutKeycapButtonStyle: ButtonStyle {
   let isRecording: Bool
-  var horizontalPadding: CGFloat = 6
-  var verticalPadding: CGFloat = 4
+  /// No inset by default: the keycap's own height sets the row, so recorder rows match
+  /// `SettingRow` rows, and the row's 12pt spacing separates it from the options menu.
+  var horizontalPadding: CGFloat = 0
+  var verticalPadding: CGFloat = 0
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
@@ -383,8 +380,6 @@ struct ShortcutButtonStyle: ButtonStyle {
 
   func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .padding(.horizontal, 6)
-      .padding(.vertical, 4)
       .contentShape(Radius.rect(ShortcutRecorderMetrics.fieldRadius))
       .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
       .animation(.easeInOut(duration: 0.1), value: configuration.isPressed)

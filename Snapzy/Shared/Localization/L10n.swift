@@ -4207,6 +4207,16 @@ nonisolated enum L10n {
       defaultValue: "No overlapping macOS screenshot shortcuts were found for the Snapzy shortcuts you currently have enabled.",
       comment: "Description for success state when there are no system shortcut conflicts"
     )
+    static let noConflictsBadge = string(
+      "preferences-shortcuts.no-conflicts-badge",
+      defaultValue: "No Conflicts",
+      comment: "Toolbar badge shown when no system shortcut conflicts exist"
+    )
+    static let conflictBadge = string(
+      "preferences-shortcuts.conflict-badge",
+      defaultValue: "Conflict",
+      comment: "Toolbar badge shown when macOS screenshot shortcuts conflict with Snapzy"
+    )
     static let globalSection = string(
       "preferences-shortcuts.global-section",
       defaultValue: "Global Shortcuts",
@@ -4496,6 +4506,66 @@ nonisolated enum L10n {
       "preferences-shortcuts.reset-to-defaults",
       defaultValue: "Reset to Defaults",
       comment: "Button title for resetting shortcut settings"
+    )
+    static let heroSubtitle = string(
+      "preferences-shortcuts.hero-subtitle",
+      defaultValue: "Every key combination Snapzy listens for, all in one place.",
+      comment: "Subtitle under the Shortcuts page hero"
+    )
+    static let inAppSection = string(
+      "preferences-shortcuts.in-app-section",
+      defaultValue: "In-App Shortcuts",
+      comment: "Shortcuts overview group title for shortcuts that work inside Snapzy windows"
+    )
+    static let shortcutsOff = string(
+      "preferences-shortcuts.shortcuts-off",
+      defaultValue: "Shortcuts are turned off. Use the switch in the toolbar to turn them back on.",
+      comment: "Notice on the Shortcuts page while the master switch is off"
+    )
+    static let recordingPage = string(
+      "preferences-shortcuts.recording-page",
+      defaultValue: "Recording",
+      comment: "Shortcuts overview card title for recording shortcuts"
+    )
+    static let capturePageDescription = string(
+      "preferences-shortcuts.capture-page-description",
+      defaultValue: "Screenshots, scrolling capture, OCR, and more.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let recordingPageDescription = string(
+      "preferences-shortcuts.recording-page-description",
+      defaultValue: "Start a recording and control it while it runs.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let toolsPageDescription = string(
+      "preferences-shortcuts.tools-page-description",
+      defaultValue: "Open the editors, cloud uploads, and the color picker.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let historyPageDescription = string(
+      "preferences-shortcuts.history-page-description",
+      defaultValue: "Open your capture history and switch its panel mode.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let quickAccessPageDescription = string(
+      "preferences-shortcuts.quick-access-page-description",
+      defaultValue: "Edit the latest capture and act on the card you hover.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let annotateActionsPageDescription = string(
+      "preferences-shortcuts.annotate-actions-page-description",
+      defaultValue: "Copy, pin, upload, and redact from the editor.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let annotateToolsPageDescription = string(
+      "preferences-shortcuts.annotate-tools-page-description",
+      defaultValue: "Single keys that switch tools in the editor.",
+      comment: "Shortcuts overview card subtitle"
+    )
+    static let annotateReferencePageDescription = string(
+      "preferences-shortcuts.annotate-reference-page-description",
+      defaultValue: "Built-in editor keys, for reference.",
+      comment: "Shortcuts overview card subtitle"
     )
   }
 

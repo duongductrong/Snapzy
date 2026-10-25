@@ -83,7 +83,7 @@ struct PreferencesView: View {
     .id(navigationState.selectedTab)
     .transition(.opacity)
     .animation(.easeOut(duration: 0.12), value: navigationState.selectedTab)
-    .navigationTitle(navigationState.selectedTab.title)
+    .navigationTitle(navigationState.title)
     .navigationSplitViewColumnWidth(min: 480, ideal: 580)
     .toolbar {
       ToolbarItemGroup(placement: .navigation) {

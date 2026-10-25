@@ -93,6 +93,12 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
     }
   }
 
+  /// Pages that open with their own icon hero, which already names the page, so the window
+  /// header stays untitled.
+  var showsHero: Bool {
+    self == .shortcuts
+  }
+
   /// Extra non-displayed terms the sidebar search matches besides the localized title.
   var searchKeywords: [String] {
     switch self {
@@ -159,6 +165,11 @@ final class PreferencesNavigationState: ObservableObject {
 
   var canGoBack: Bool { !backStack.isEmpty }
   var canGoForward: Bool { !forwardStack.isEmpty }
+
+  /// Header title; empty on pages whose hero already names them.
+  var title: String {
+    selectedTab.showsHero ? "" : selectedTab.title
+  }
 
   init(initialTab: PreferencesTab? = nil) {
     self.selectedTab = initialTab ?? PreferencesTab.lastSelected

@@ -56,12 +56,8 @@ struct SingleKeyRecorderView: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      Image(systemName: tool.icon)
-        .font(.title3)
-        .foregroundColor(.secondary)
-        .frame(width: 24)
-
-      VStack(alignment: .leading, spacing: 4) {
+      // Title and availability badges share one line so the row matches `SettingRow` height.
+      HStack(spacing: 6) {
         Text(tool.displayName)
         HStack(spacing: 4) {
           ForEach(context.badges, id: \.label) { badge in
@@ -76,7 +72,6 @@ struct SingleKeyRecorderView: View {
           }
         }
       }
-      .frame(minWidth: 100, alignment: .leading)
 
       Spacer()
 
@@ -110,7 +105,6 @@ struct SingleKeyRecorderView: View {
         onReset: resetToDefault
       )
     }
-    .padding(.vertical, 4)
     .opacity(isEnabled ? 1 : 0.62)
     .onChange(of: isEnabled) { newValue in
       if !newValue {
