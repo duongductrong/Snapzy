@@ -186,7 +186,7 @@ private struct PreferencesSidebarRow: View {
 
 // MARK: - Icon
 
-/// System Settings-style squircle: one near-black tile with a bold white glyph for every page,
+/// System Settings-style squircle: one near-black tile with a bold blue glyph for every page,
 /// so the sidebar reads calm and uniform whatever the system icon style is. About uses the
 /// menu bar brand mark on the same tile.
 struct PreferencesSidebarIcon: View {
@@ -233,10 +233,23 @@ struct PreferencesIconTile<Glyph: View>: View {
 
   private var isLarge: Bool { size > 36 }
 
+  /// One sky-to-azure glyph tint for every page (App Store dark-icon look): lit from the top,
+  /// deepening toward the bottom like the tile beneath it.
+  private var glyphGradient: LinearGradient {
+    LinearGradient(
+      colors: [
+        Color(red: 0.36, green: 0.76, blue: 1.0),
+        Color(red: 0.17, green: 0.45, blue: 0.93),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+  }
+
   var body: some View {
     let shape = isLarge ? Radius.rect(size * 0.24) : Radius.controlRect(forHeight: size)
     glyph()
-      .foregroundStyle(Color.white)
+      .foregroundStyle(glyphGradient)
       .frame(width: size, height: size)
       .background {
         shape.fill(LinearGradient(
