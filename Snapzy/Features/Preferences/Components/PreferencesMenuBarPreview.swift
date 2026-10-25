@@ -18,67 +18,24 @@ struct MenuBarSettingsPreview: View {
   private let shortcutManager = KeyboardShortcutManager.shared
 
   private let previewHeight: CGFloat = 300
-  private let bezelWidth: CGFloat = 9
   private let menuBarHeight: CGFloat = 24
-  private let screenCornerRadius: CGFloat = 13
-  private let chassisCornerRadius: CGFloat = 22
 
   var body: some View {
-    ZStack(alignment: .topTrailing) {
-      chassis
-
+    DisplayCornerFrame {
       screen
-        .padding(.top, bezelWidth)
-        .padding(.trailing, bezelWidth)
     }
     .frame(height: previewHeight)
     .frame(maxWidth: .infinity)
-    .clipShape(chassisShape)
-    .overlay(
-      chassisShape
-        .strokeBorder(
-          LinearGradient(
-            colors: [Color.white.opacity(0.22), Color.white.opacity(0.04)],
-            startPoint: .topTrailing,
-            endPoint: .bottomLeading
-          ),
-          lineWidth: 1
-        )
-    )
     .accessibilityElement(children: .ignore)
     .accessibilityLabel(L10n.PreferencesMenuBar.iconSection)
   }
 
-  private var chassisShape: CornerRoundedRectangle {
-    CornerRoundedRectangle(
-      topLeading: Radius.card,
-      topTrailing: chassisCornerRadius,
-      bottomLeading: Radius.card,
-      bottomTrailing: Radius.card
-    )
-  }
-
-  // MARK: - Hardware
-
-  /// Display bezel. A faint top-down sheen keeps it from reading as flat black.
-  private var chassis: some View {
-    LinearGradient(
-      colors: [Color(white: 0.11), Color(white: 0.04)],
-      startPoint: .top,
-      endPoint: .bottom
-    )
-  }
-
   private var screen: some View {
-    let shape = CornerRoundedRectangle(topTrailing: screenCornerRadius)
-
-    return ZStack(alignment: .topLeading) {
+    ZStack(alignment: .topLeading) {
       PaintedSkyBackdrop()
 
       menuBar
     }
-    .clipShape(shape)
-    .overlay(shape.stroke(Color.black.opacity(0.6), lineWidth: 0.5))
     .overlayPreferenceValue(MenuBarPreviewIconAnchorKey.self) { anchor in
       GeometryReader { proxy in
         if let anchor {
@@ -400,55 +357,6 @@ private struct MenuBarPreviewIconAnchorKey: PreferenceKey {
   }
 }
 
-/// Rounded rectangle with independent corner radii (UnevenRoundedRectangle
-/// needs macOS 14).
-private struct CornerRoundedRectangle: InsettableShape {
-  var topLeading: CGFloat = 0
-  var topTrailing: CGFloat = 0
-  var bottomLeading: CGFloat = 0
-  var bottomTrailing: CGFloat = 0
-  var insetAmount: CGFloat = 0
-
-  func path(in rect: CGRect) -> Path {
-    let rect = rect.insetBy(dx: insetAmount, dy: insetAmount)
-    let limit = min(rect.width, rect.height) / 2
-    let tl = min(topLeading, limit)
-    let tr = min(topTrailing, limit)
-    let bl = min(bottomLeading, limit)
-    let br = min(bottomTrailing, limit)
-
-    var path = Path()
-    path.move(to: CGPoint(x: rect.minX + tl, y: rect.minY))
-    path.addLine(to: CGPoint(x: rect.maxX - tr, y: rect.minY))
-    path.addQuadCurve(
-      to: CGPoint(x: rect.maxX, y: rect.minY + tr),
-      control: CGPoint(x: rect.maxX, y: rect.minY)
-    )
-    path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - br))
-    path.addQuadCurve(
-      to: CGPoint(x: rect.maxX - br, y: rect.maxY),
-      control: CGPoint(x: rect.maxX, y: rect.maxY)
-    )
-    path.addLine(to: CGPoint(x: rect.minX + bl, y: rect.maxY))
-    path.addQuadCurve(
-      to: CGPoint(x: rect.minX, y: rect.maxY - bl),
-      control: CGPoint(x: rect.minX, y: rect.maxY)
-    )
-    path.addLine(to: CGPoint(x: rect.minX, y: rect.minY + tl))
-    path.addQuadCurve(
-      to: CGPoint(x: rect.minX + tl, y: rect.minY),
-      control: CGPoint(x: rect.minX, y: rect.minY)
-    )
-    path.closeSubpath()
-    return path
-  }
-
-  func inset(by amount: CGFloat) -> CornerRoundedRectangle {
-    var shape = self
-    shape.insetAmount += amount
-    return shape
-  }
-}
 
 #Preview {
   MenuBarSettingsPreview(store: MenuBarCustomizationStore.shared)

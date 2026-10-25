@@ -31,6 +31,15 @@ private enum CaptureSettingsPane: String, CaseIterable, Hashable, Identifiable {
       L10n.PreferencesCapture.ocrTab
     }
   }
+
+  var previewScene: CaptureSettingsPreviewScene {
+    switch self {
+    case .general: .general
+    case .screenshot: .screenshot
+    case .recording: .recording
+    case .ocr: .ocr
+    }
+  }
 }
 
 struct CaptureSettingsView: View {
@@ -119,25 +128,30 @@ struct CaptureSettingsView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack {
-        Spacer()
-
-        Picker("", selection: $selectedPane) {
-          ForEach(CaptureSettingsPane.allCases) { pane in
-            Text(pane.title).tag(pane)
-          }
-        }
-        .labelsHidden()
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 560)
-
-        Spacer()
-      }
-      .padding(.horizontal, 20)
-      .padding(.top, 16)
-      .padding(.bottom, 8)
-
       Form {
+        // Preview and pane picker scroll with the settings so the preview
+        // never pins vertical space.
+        Section {
+          CaptureSettingsPreview(scene: selectedPane.previewScene)
+            .padding(.vertical, 4)
+        } footer: {
+          HStack {
+            Spacer()
+
+            Picker("", selection: $selectedPane) {
+              ForEach(CaptureSettingsPane.allCases) { pane in
+                Text(pane.title).tag(pane)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 560)
+
+            Spacer()
+          }
+          .padding(.top, 12)
+        }
+
         if selectedPane == .general {
           Section(L10n.PreferencesCapture.appWindowsSection) {
             SettingRow(
