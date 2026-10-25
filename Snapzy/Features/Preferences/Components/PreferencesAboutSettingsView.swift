@@ -41,6 +41,23 @@ struct AboutSettingsView: View {
         .padding(.bottom, 28)
       }
     }
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        CheckForUpdatesView(viewModel: updatesViewModel) {
+          Label(L10n.PreferencesAbout.checkForUpdates, systemImage: "arrow.down.to.line")
+            .labelStyle(.titleAndIcon)
+            // Match the toolbar's own text size; a smaller glyph keeps the icon from outweighing the title.
+            .font(.system(size: 12, weight: .medium))
+            .imageScale(.small)
+            .padding(.horizontal, 6)
+        }
+        // Native prominent style: the toolbar tints its own capsule instead of nesting a second one.
+        .buttonStyle(.borderedProminent)
+        .help(updatesViewModel.lastUpdateCheckDate
+          .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
+          L10n.PreferencesAbout.checkForUpdates)
+      }
+    }
   }
 
   // MARK: - Hero Section
@@ -68,22 +85,8 @@ struct AboutSettingsView: View {
           .frame(maxWidth: 420)
       }
 
-      VStack(spacing: 10) {
-        versionStatusLabel
-
-        CheckForUpdatesView(viewModel: updatesViewModel) {
-          HStack(spacing: 5) {
-            Image(systemName: "arrow.triangle.2.circlepath")
-              .font(.system(size: 11, weight: .semibold))
-            Text(L10n.PreferencesAbout.checkForUpdates)
-          }
-        }
-        .buttonStyle(.liquidGlass(emphasis: .primary, capsule: true))
-        .help(updatesViewModel.lastUpdateCheckDate
-          .map { "\(L10n.PreferencesAbout.checkedLabel): \($0.formatted(date: .abbreviated, time: .shortened))" } ??
-          L10n.PreferencesAbout.checkForUpdates)
-      }
-      .padding(.top, 6)
+      versionStatusLabel
+        .padding(.top, 6)
     }
     .padding(.bottom, 4)
   }
