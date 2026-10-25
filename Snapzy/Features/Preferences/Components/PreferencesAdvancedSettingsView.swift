@@ -122,8 +122,6 @@ struct AdvancedSettingsView: View {
         }
       }
 
-      PreferencesCommandLineSection()
-
       Section(L10n.PreferencesAdvanced.diagnosticsSection) {
         SettingRow(
           icon: "doc.text.magnifyingglass",

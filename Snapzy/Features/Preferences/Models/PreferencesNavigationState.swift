@@ -17,6 +17,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   case history
   case shortcuts
   case permissions
+  case commandLine
   case cloud
   case advanced
   case about
@@ -51,6 +52,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return L10n.Preferences.shortcutsTab
     case .permissions:
       return L10n.Preferences.permissionsTab
+    case .commandLine:
+      return L10n.Preferences.commandLineTab
     case .cloud:
       return L10n.Preferences.cloudTab
     case .advanced:
@@ -78,6 +81,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
       return "keyboard"
     case .permissions:
       return "lock.shield"
+    case .commandLine:
+      return "terminal"
     case .cloud:
       return "icloud"
     case .advanced:
@@ -91,7 +96,7 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   static let groups: [[PreferencesTab]] = [
     [.general, .menuBar, .quickAccess, .history],
     [.capture, .annotate, .cloud],
-    [.shortcuts, .permissions, .advanced],
+    [.shortcuts, .permissions, .commandLine, .advanced],
     [.about],
   ]
 }

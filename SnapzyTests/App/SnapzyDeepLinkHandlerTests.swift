@@ -151,6 +151,8 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("shortcuts", .shortcuts),
       ("permissions", .permissions),
       ("cloud", .cloud),
+      ("command-line", .commandLine),
+      ("cli", .commandLine),
       ("advanced", .advanced),
       ("about", .about),
     ]

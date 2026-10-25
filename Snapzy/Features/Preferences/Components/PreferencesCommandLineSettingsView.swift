@@ -1,68 +1,73 @@
 //
-//  PreferencesCommandLineSection.swift
+//  PreferencesCommandLineSettingsView.swift
 //  Snapzy
 //
-//  Settings → Advanced → Command Line: turn the `snapzy` command on or off,
-//  put it on PATH, and review the apps that asked to use it.
+//  Command Line settings tab: turn the `snapzy` command on or off, put it on
+//  PATH, and review the apps that asked to use it.
 //
 
 import AppKit
 import SwiftUI
 
-struct PreferencesCommandLineSection: View {
+struct CommandLineSettingsView: View {
   @AppStorage(PreferencesKeys.cliEnabled) private var cliEnabled = true
   @ObservedObject private var store = CLIAuthorizationStore.shared
   @State private var toolState = CLIToolInstaller.currentState()
   @State private var isUpdatingTool = false
 
   var body: some View {
-    Section(L10n.CommandLine.section) {
-      SettingRow(
-        icon: "terminal",
-        title: L10n.CommandLine.accessTitle,
-        description: L10n.CommandLine.accessDescription
-      ) {
-        Toggle("", isOn: $cliEnabled)
-          .labelsHidden()
-      }
+    Form {
+      Section {
+        SettingRow(
+          icon: "terminal",
+          title: L10n.CommandLine.accessTitle,
+          description: L10n.CommandLine.accessDescription
+        ) {
+          Toggle("", isOn: $cliEnabled)
+            .labelsHidden()
+        }
 
-      SettingRow(
-        icon: "chevron.left.forwardslash.chevron.right",
-        title: L10n.CommandLine.toolTitle,
-        description: toolStateDescription
-      ) {
-        if case .managedByHomebrew = toolState {
-          EmptyView()
-        } else if toolState == .homebrewLinkMissing {
-          Button(L10n.CommandLine.copyCommandButton) { copyHomebrewCommand() }
-        } else if toolState == .installed {
-          Button(L10n.CommandLine.uninstallButton) { updateTool(install: false) }
-            .disabled(isUpdatingTool)
-        } else {
-          Button(L10n.CommandLine.installButton) { updateTool(install: true) }
-            .disabled(isUpdatingTool || toolState == .blockedByFile)
+        SettingRow(
+          icon: "chevron.left.forwardslash.chevron.right",
+          title: L10n.CommandLine.toolTitle,
+          description: toolStateDescription
+        ) {
+          if case .managedByHomebrew = toolState {
+            EmptyView()
+          } else if toolState == .homebrewLinkMissing {
+            Button(L10n.CommandLine.copyCommandButton) { copyHomebrewCommand() }
+          } else if toolState == .installed {
+            Button(L10n.CommandLine.uninstallButton) { updateTool(install: false) }
+              .disabled(isUpdatingTool)
+          } else {
+            Button(L10n.CommandLine.installButton) { updateTool(install: true) }
+              .disabled(isUpdatingTool || toolState == .blockedByFile)
+          }
         }
       }
 
-      SettingRow(
-        icon: "checkmark.shield",
-        title: L10n.CommandLine.allowedAppsTitle,
-        description: store.callers.isEmpty
-          ? L10n.CommandLine.allowedAppsEmpty
-          : L10n.CommandLine.allowedAppsDescription
-      ) {
-        if !store.callers.isEmpty {
-          Button(L10n.CommandLine.removeAllButton) { store.revokeAll() }
-            .buttonStyle(.link)
+      Section {
+        SettingRow(
+          icon: "checkmark.shield",
+          title: L10n.CommandLine.allowedAppsTitle,
+          description: store.callers.isEmpty
+            ? L10n.CommandLine.allowedAppsEmpty
+            : L10n.CommandLine.allowedAppsDescription
+        ) {
+          if !store.callers.isEmpty {
+            Button(L10n.CommandLine.removeAllButton) { store.revokeAll() }
+              .buttonStyle(.link)
+          }
         }
-      }
 
-      ForEach(store.callers) { caller in
-        CommandLineAllowedAppRow(caller: caller) {
-          store.revoke(key: caller.key)
+        ForEach(store.callers) { caller in
+          CommandLineAllowedAppRow(caller: caller) {
+            store.revoke(key: caller.key)
+          }
         }
       }
     }
+    .formStyle(.grouped)
     .onAppear { toolState = CLIToolInstaller.currentState() }
   }
 

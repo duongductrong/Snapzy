@@ -148,7 +148,7 @@ snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
 ```
 
-It lives at `/Applications/Snapzy.app/Contents/Helpers/snapzy`; put it on your `PATH` from **Settings → Advanced → Command Line → Install**. The first time an app uses it, Snapzy asks whether to allow that app. Full reference: [docs/CLI.md](docs/CLI.md).
+It lives at `/Applications/Snapzy.app/Contents/Helpers/snapzy`; put it on your `PATH` from **Settings → Command Line → Install**. The first time an app uses it, Snapzy asks whether to allow that app. Full reference: [docs/CLI.md](docs/CLI.md).
 
 ## Shortcuts
 

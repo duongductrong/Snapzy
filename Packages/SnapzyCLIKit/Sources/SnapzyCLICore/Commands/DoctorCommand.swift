@@ -186,7 +186,7 @@ enum Doctor {
       : .fail(
         "command line access",
         "disabled",
-        hint: "Enable Settings → Advanced → Command line access",
+        hint: "Enable Settings → Command Line → Command line access",
         code: .disabled
       ))
 
@@ -223,7 +223,7 @@ enum Doctor {
       checks.append(.fail(
         "authorization",
         "this app was denied",
-        hint: "Remove it from Settings → Advanced → Command Line → Allowed apps, then retry",
+        hint: "Remove it from Settings → Command Line → Allowed apps, then retry",
         code: .notAuthorized
       ))
     }

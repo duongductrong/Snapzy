@@ -192,6 +192,11 @@ nonisolated enum L10n {
       defaultValue: "Cloud",
       comment: "Preferences tab title"
     )
+    static let commandLineTab = string(
+      "preferences.tab.command-line",
+      defaultValue: "Command Line",
+      comment: "Preferences tab title for the snapzy command line tool"
+    )
     static let advancedTab = string(
       "preferences.tab.advanced",
       defaultValue: "Advanced",

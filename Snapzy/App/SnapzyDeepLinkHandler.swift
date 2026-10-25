@@ -283,6 +283,8 @@ enum SnapzyDeepLinkAction: Equatable {
       return .shortcuts
     case "permissions", "privacy":
       return .permissions
+    case "command-line", "commandline", "cli":
+      return .commandLine
     case "cloud", "uploads":
       return .cloud
     case "advanced", "configuration", "config", "toml":

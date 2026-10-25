@@ -30,11 +30,6 @@ extension L10n {
       defaultValue: "An unknown app",
       comment: "Name used when the app behind a snapzy command is unknown"
     )
-    static let section = string(
-      "command-line.section",
-      defaultValue: "Command Line",
-      comment: "Settings section title for the snapzy command line tool"
-    )
     static let accessTitle = string(
       "command-line.access-title",
       defaultValue: "Command line access",
@@ -138,7 +133,7 @@ extension L10n {
     static func promptMessage(command: String) -> String {
       format(
         "command-line.prompt-message",
-        defaultValue: "It ran “snapzy %@”. If you allow it, this app and anything it runs can capture your displays and windows through Snapzy. You can change this later in Settings → Advanced.",
+        defaultValue: "It ran “snapzy %@”. If you allow it, this app and anything it runs can capture your displays and windows through Snapzy. You can change this later in Settings → Command Line.",
         comment: "Body of the snapzy command permission alert; %@ is the command, e.g. capture window",
         command
       )

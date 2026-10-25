@@ -80,7 +80,7 @@ public struct AppLauncher: Sendable {
       throw CLIError(
         .disabled,
         "Snapzy is running but not accepting command line requests",
-        hint: "Enable Settings → Advanced → Command line access, or run `snapzy doctor`"
+        hint: "Enable Settings → Command Line → Command line access, or run `snapzy doctor`"
       )
     }
 

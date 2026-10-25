@@ -4,7 +4,7 @@ Reference for the Settings window: tab structure, every section, and how prefere
 
 ## Root
 
-- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 11 categories in 4 unlabelled groups.
+- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 12 categories in 4 unlabelled groups.
 - `PreferencesWindowController` (`Snapzy/Features/Preferences/PreferencesWindowController.swift`) — Dedicated `NSWindowController` directly managing window lifecycle, activation policy transitions (`.regular` ↔ `.accessory`), fullSizeContentView, and titlebar transparency.
 - Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — supports back/forward history stacks (`⌘[` and `⌘]`), last-visited tab persistence, and programmatical routing from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
 
@@ -111,12 +111,15 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
 
 Provider configuration, credentials, expiration, usage stats, and the Cloud Uploads window. Summary only here — full reference in [CLOUD.md](CLOUD.md).
 
+### Command Line (`PreferencesCommandLineSettingsView.swift`)
+
+Sidebar tab between Permissions and Advanced (deep link `snapzy://settings/command-line`, alias `cli`). Command line access toggle (`cliEnabled`, default on — `CLIServer` starts/stops as it changes); `snapzy` command install/uninstall at `/usr/local/bin/snapzy` via `CLIToolInstaller` (shows Homebrew-managed and other-copy links, refuses DMG/AppTranslocation launches); Allowed apps list from `CLIAuthorizationStore` (`cliApprovedCallers`, JSON in UserDefaults, never exported) with per-app Remove and Remove All — see [CLI.md](CLI.md).
+
 ### Advanced (`PreferencesAdvancedSettingsView.swift`)
 
 - **Backup**: TOML Import / Export / Restore Defaults (`SnapzyConfiguration*` services).
 - **Configuration File**: grant access to `~/.config/snapzy`, Sync Now, Open Config, status/issues — see [CONFIGURATION.md](CONFIGURATION.md).
 - **Integration**: URL Scheme toggle (`urlSchemeEnabled`).
-- **Command Line** (`PreferencesCommandLineSection.swift`): command line access toggle (`cliEnabled`, default on — `CLIServer` starts/stops as it changes); `snapzy` command install/uninstall at `/usr/local/bin/snapzy` via `CLIToolInstaller` (shows Homebrew-managed and other-copy links, refuses DMG/AppTranslocation launches); Allowed apps list from `CLIAuthorizationStore` (`cliApprovedCallers`, JSON in UserDefaults, never exported) with per-app Remove and Remove All — see [CLI.md](CLI.md).
 - **Diagnostics**: enable toggle (`diagnostics.enabled`), retention days (`diagnostics.retentionDays`, default 3, range 1–30 via `LogCleanupScheduler`), Open Folder (`~/Library/Logs/Snapzy`) — see [UPDATES.md](UPDATES.md).
 
 ### About (`PreferencesAboutSettingsView.swift`)

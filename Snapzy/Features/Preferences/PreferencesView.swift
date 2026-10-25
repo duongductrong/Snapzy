@@ -92,6 +92,8 @@ struct PreferencesView: View {
         LazyView(ShortcutsSettingsView())
       case .permissions:
         LazyView(PermissionsSettingsView())
+      case .commandLine:
+        LazyView(CommandLineSettingsView())
       case .cloud:
         LazyView(CloudSettingsView())
       case .advanced:

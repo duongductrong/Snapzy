@@ -173,7 +173,7 @@ final class CLIAuthorizationCoordinator {
     CLIError(
       .notAuthorized,
       "\(caller.displayName) is not allowed to use Snapzy from the command line",
-      hint: "Remove it from Snapzy → Settings → Advanced → Command Line → Allowed apps, then retry"
+      hint: "Remove it from Snapzy → Settings → Command Line → Allowed apps, then retry"
     )
   }
 }

@@ -28,7 +28,7 @@ flowchart LR
 | --- | --- |
 | Homebrew | The cask links `binary "#{appdir}/Snapzy.app/Contents/Helpers/snapzy"`, added by the release workflow from the first stable release that ships the tool |
 | `install.sh` | Links `/usr/local/bin/snapzy` when that directory is writable; otherwise prints the `sudo ln -sfn …` command. Never replaces a regular file or another tool's live link. Prints `brew upgrade --cask snapzy` instead when the cask is installed |
-| Settings → Advanced → Command Line | **Install** creates the link (administrator password only if `/usr/local/bin` is not writable); refused while Snapzy runs from a DMG or AppTranslocation. **Uninstall** removes only a link to this app's helper. Homebrew-managed links are shown, not changed; a cask install without that link shows **Copy Command** (`brew upgrade --cask snapzy`) instead of Install |
+| Settings → Command Line | **Install** creates the link (administrator password only if `/usr/local/bin` is not writable); refused while Snapzy runs from a DMG or AppTranslocation. **Uninstall** removes only a link to this app's helper. Homebrew-managed links are shown, not changed; a cask install without that link shows **Copy Command** (`brew upgrade --cask snapzy`) instead of Install |
 | Direct | Agents can always call `/Applications/Snapzy.app/Contents/Helpers/snapzy` |
 
 `uninstall.sh` removes `/usr/local/bin/snapzy` only if it points into a `Snapzy*.app`.
@@ -121,7 +121,7 @@ The first request shows **Always Allow / Allow Once / Don't Allow**:
 - The prompt times out after 25 s (before the CLI's default 30 s timeout) → exit 7.
 - Allow Once covers the rest of that connection only.
 - At most 3 different apps wait for a prompt at once; a closed connection's queued prompt is never shown.
-- Decisions are stored in `UserDefaults` (`cliApprovedCallers`), never exported to `config.toml`, and managed in Settings → Advanced → Command Line → Allowed apps.
+- Decisions are stored in `UserDefaults` (`cliApprovedCallers`), never exported to `config.toml`, and managed in Settings → Command Line → Allowed apps.
 
 While a CLI capture runs the menu bar icon is tinted; if the icon is hidden, a toast names the app (at most every 30 s per app). See [`../SECURITY.md`](../SECURITY.md) for the threat model and limits.
 
@@ -165,7 +165,7 @@ Run `snapzy doctor` first. Common cases:
 
 | Symptom | Cause |
 | --- | --- |
-| `disabled` (5) right after a 3 s wait | Snapzy was already running but command line access is off (Settings → Advanced → Command Line) |
+| `disabled` (5) right after a 3 s wait | Snapzy was already running but command line access is off (Settings → Command Line) |
 | `launchTimeout` (5) | The CLI started Snapzy but no socket appeared within `--launch-timeout` — most often because command line access is off, or the app is slow to start |
 | `permissionDenied` (3), "granted but not usable yet" | Screen Recording was granted while Snapzy was running — relaunch; if it persists, remove and re-add Snapzy in System Settings |
 | `appUnavailable` (5), "The screen is locked or asleep" | ScreenCaptureKit sees no displays while the session is locked |

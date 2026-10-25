@@ -1196,61 +1196,61 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sie hat „snapzy %@“ ausgeführt. Wenn du es erlaubst, können diese App und alles, was sie startet, über Snapzy deine Bildschirme und Fenster aufnehmen. Du kannst das später unter Einstellungen → Erweitert ändern."
+            "value": "Sie hat „snapzy %@“ ausgeführt. Wenn du es erlaubst, können diese App und alles, was sie startet, über Snapzy deine Bildschirme und Fenster aufnehmen. Du kannst das später unter Einstellungen → Befehlszeile ändern."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "It ran “snapzy %@”. If you allow it, this app and anything it runs can capture your displays and windows through Snapzy. You can change this later in Settings → Advanced."
+            "value": "It ran “snapzy %@”. If you allow it, this app and anything it runs can capture your displays and windows through Snapzy. You can change this later in Settings → Command Line."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ejecutó “snapzy %@”. Si lo permites, esta app y todo lo que ejecute podrá capturar tus pantallas y ventanas con Snapzy. Puedes cambiarlo más tarde en Ajustes → Avanzado."
+            "value": "Ejecutó “snapzy %@”. Si lo permites, esta app y todo lo que ejecute podrá capturar tus pantallas y ventanas con Snapzy. Puedes cambiarlo más tarde en Ajustes → Línea de comandos."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elle a exécuté « snapzy %@ ». Si vous l’autorisez, cette app et tout ce qu’elle lance pourront capturer vos écrans et fenêtres avec Snapzy. Vous pourrez modifier ce choix plus tard dans Réglages → Avancé."
+            "value": "Elle a exécuté « snapzy %@ ». Si vous l’autorisez, cette app et tout ce qu’elle lance pourront capturer vos écrans et fenêtres avec Snapzy. Vous pourrez modifier ce choix plus tard dans Réglages → Ligne de commande."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "「snapzy %@」が実行されました。許可すると、このアプリとそこから実行されるものはすべて Snapzy を通じてディスプレイやウインドウをキャプチャできます。あとで「設定 → 詳細」で変更できます。"
+            "value": "「snapzy %@」が実行されました。許可すると、このアプリとそこから実行されるものはすべて Snapzy を通じてディスプレイやウインドウをキャプチャできます。あとで「設定 → コマンドライン」で変更できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "“snapzy %@” 명령을 실행했습니다. 허용하면 이 앱과 이 앱이 실행하는 모든 항목이 Snapzy를 통해 디스플레이와 윈도우를 캡처할 수 있습니다. 나중에 설정 → 고급에서 변경할 수 있습니다."
+            "value": "“snapzy %@” 명령을 실행했습니다. 허용하면 이 앱과 이 앱이 실행하는 모든 항목이 Snapzy를 통해 디스플레이와 윈도우를 캡처할 수 있습니다. 나중에 설정 → 명령줄에서 변경할 수 있습니다."
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Оно запустило «snapzy %@». Если разрешить, это приложение и всё, что оно запускает, смогут снимать ваши дисплеи и окна через Snapzy. Изменить это можно позже в Настройках → Дополнительно."
+            "value": "Оно запустило «snapzy %@». Если разрешить, это приложение и всё, что оно запускает, смогут снимать ваши дисплеи и окна через Snapzy. Изменить это можно позже в Настройках → Командная строка."
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ứng dụng này đã chạy “snapzy %@”. Nếu cho phép, ứng dụng này và mọi thứ nó chạy có thể chụp màn hình và cửa sổ của bạn qua Snapzy. Bạn có thể thay đổi sau trong Cài đặt → Nâng cao."
+            "value": "Ứng dụng này đã chạy “snapzy %@”. Nếu cho phép, ứng dụng này và mọi thứ nó chạy có thể chụp màn hình và cửa sổ của bạn qua Snapzy. Bạn có thể thay đổi sau trong Cài đặt → Dòng lệnh."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "它运行了“snapzy %@”。如果允许，此应用及其运行的任何程序都可以通过 Snapzy 截取你的显示器和窗口。你可以稍后在“设置 → 高级”中更改。"
+            "value": "它运行了“snapzy %@”。如果允许，此应用及其运行的任何程序都可以通过 Snapzy 截取你的显示器和窗口。你可以稍后在“设置 → 命令行”中更改。"
           }
         },
         "zh-Hant": {
           "stringUnit": {
             "state": "translated",
-            "value": "它執行了「snapzy %@」。若允許，此 App 及其執行的任何程式都能透過 Snapzy 擷取你的顯示器和視窗。你可以稍後在「設定 → 進階」中更改。"
+            "value": "它執行了「snapzy %@」。若允許，此 App 及其執行的任何程式都能透過 Snapzy 擷取你的顯示器和視窗。你可以稍後在「設定 → 命令列」中更改。"
           }
         }
       }
@@ -1515,72 +1515,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除"
-          }
-        }
-      }
-    },
-    "command-line.section": {
-      "comment": "Settings section title for the snapzy command line tool",
-      "extractionState": "manual",
-      "localizations": {
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Befehlszeile"
-          }
-        },
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Command Line"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Línea de comandos"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ligne de commande"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "コマンドライン"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "명령줄"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Командная строка"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dòng lệnh"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令行"
-          }
-        },
-        "zh-Hant": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "命令列"
           }
         }
       }

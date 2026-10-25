@@ -87,12 +87,12 @@ command must not turn that permission into a free-for-all for every local proces
 | Control | Behavior |
 | --- | --- |
 | Transport | Unix domain socket in `~/Library/Application Support/Snapzy/CLI/` (directory `0700`, socket `0600`); every connection must have the same user ID (`getpeereid`). No network listener |
-| On/off | Settings → Advanced → Command Line (`cliEnabled`, on by default). Off means no socket |
+| On/off | Settings → Command Line (`cliEnabled`, on by default). Off means no socket |
 | Approval | Every command except `status` requires the calling app to be approved: **Always Allow / Allow Once / Don't Allow**. No button answers Return; an unanswered prompt times out after 25 s and denies that request (not remembered; only Don't Allow is stored) |
 | Caller identity | Walk the CLI's parent processes to the first LaunchServices-registered app that is not Snapzy; verify the running process's code signature (Team ID, or Apple's anchor). Unverified apps are keyed by path, named by their bundle file name (not their own Info.plist), and the prompt shows a generic icon plus their real location |
 | Prompt abuse | Unknown methods are rejected before any prompt and the prompt only names known commands; at most 3 apps can wait for a prompt; prompts for connections that went away are never shown |
 | Visibility | The menu bar icon is tinted during every CLI capture; a toast names the app when the icon is hidden. Each capture is logged (`CLI` category) |
-| Revocation | Settings → Advanced → Command Line → Allowed apps. Decisions are stored per machine and never exported to `config.toml` |
+| Revocation | Settings → Command Line → Allowed apps. Decisions are stored per machine and never exported to `config.toml` |
 | Side effects | CLI captures never touch the clipboard, Quick Access, or history, and never trigger a permission prompt |
 
 Known limits — this is a consent check inside one user account, not a sandbox:
