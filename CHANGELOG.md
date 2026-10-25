@@ -4,16 +4,19 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.1.0-beta.15] - 2026-10-24
+## [2.1.0] - 2026-10-25
 
 ### Features
 - Show capture chrome in screen recordings (#682) (fbee5709)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.14] - 2026-10-23
+- Added Pick Color with a live, pixel-exact loupe (#668) (4e0d1de9)
+- Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
+- Improved scrolling capture work on real pages: window chrome, faded margins, and long scrolls (#609) (ce916026)
+- Added delayed fullscreen screenshot (#638) (09bb7929)
+- Added configuration for opening Finder after saving optional (#631) (d0d9816c)
+- Added attached arrows to counter annotations (#626) (80be6dc0)
+- Click an annotation's edge to select it with any tool (#629) (368bc338)
+- select pinned image zoom mode directly from preview tiles (8e9b9923)
+- Added keyboard navigation to floating history (#616) (f8edc72e)
 
 ### Bug Fixes
 - Stop live capture from swallowing the capture hotkey's keyUp (#679) (07a35516)
@@ -30,199 +33,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Stop retention sweep from deleting every history thumbnail (b67a96d4)
 - Remove cloud expiry rule when switching to permanent (47645d05)
 - Detect a menu bar icon hidden by the notch and open Settings on reopen (#674) (2ca2dae5)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.14] - 2026-10-23
-
-### Bug Fixes
-- Keep pinned window drags alive across displays on macOS 27 (#677) (d9267305)
-- Read history records from the database in the retention sweep (ef5e914d)
-- Resize GIFs off the main actor (647e06b1)
-- Stream GIF frames to the encoder and keep duration on failed frames (2ad35d24)
-- Cut paused recording spans by sample timestamps (6f6888fe)
-- Expire cached shareable content and make delayed capture cancellable (7626b63e)
-- Harden recording session start, stream errors and GIF output (96d0551c)
-- Keep annotations in place after Cut Out and inline selection resize (53cc370f)
-- Free editor caches when Quick Access evicts its oldest card (dff80d1f)
-- Stop retention sweep from deleting every history thumbnail (b67a96d4)
-- Remove cloud expiry rule when switching to permanent (47645d05)
-- Detect a menu bar icon hidden by the notch and open Settings on reopen (#674) (2ca2dae5)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.14] - 2026-10-23
-
-### Bug Fixes
-- Read history records from the database in the retention sweep (ef5e914d)
-- Resize GIFs off the main actor (647e06b1)
-- Stream GIF frames to the encoder and keep duration on failed frames (2ad35d24)
-- Cut paused recording spans by sample timestamps (6f6888fe)
-- Expire cached shareable content and make delayed capture cancellable (7626b63e)
-- Harden recording session start, stream errors and GIF output (96d0551c)
-- Keep annotations in place after Cut Out and inline selection resize (53cc370f)
-- Free editor caches when Quick Access evicts its oldest card (dff80d1f)
-- Stop retention sweep from deleting every history thumbnail (b67a96d4)
-- Remove cloud expiry rule when switching to permanent (47645d05)
-- Detect a menu bar icon hidden by the notch and open Settings on reopen (#674) (2ca2dae5)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.13] - 2026-10-22
-
-### Bug Fixes
 - Keep the app beneath focused during live capture so tooltips survive (#672) (4b940ff9)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.12] - 2026-10-22
-
-### Bug Fixes
 - Refresh stale window frames before sizing window captures (#670) (e3bd64ca)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.11] - 2026-10-21
-
-### Features
-- Added Pick Color with a live, pixel-exact loupe (#668) (4e0d1de9)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.10] - 2026-10-20
-
-### Bug Fixes
 - Unlock magnifier color panel and add magnifier size setting (#665) (9de2b0f2)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.9] - 2026-10-20
-
-### Bug Fixes
 - Invalidate capture event tap on teardown to stop tap leak (#663) (f0850a0a)
 - Fixed recording stop button not responding on macOS 13–15 (#655) (3ad7e3fe)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-- @lvqviet
-
-## [2.1.0-beta.9] - 2026-10-20
-
-### Bug Fixes
-- Fixed recording stop button not responding on macOS 13–15 (#655) (3ad7e3fe)
-
-### Contributors
-- @github-actions[bot]
-- @lvqviet
-
-## [2.1.0-beta.8] - 2026-10-19
-
-### Bug Fixes
 - Keep Quick Access panel out of screenshots when Snapzy is excluded (#660) (20c14dbf)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.7] - 2026-10-19
-
-### Features
-- Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
-
-### Bug Fixes
 - Keep shadowed window captures at native resolution (#657) (00ae7536)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.7] - 2026-10-19
-
-### Features
-- Cut Out tool to remove or add a strip from the middle of an image (#654) (54e6880f)
-
-### Contributors
-- @duongductrong
-- @github-actions[bot]
-
-## [2.1.0-beta.6] - 2026-10-14
-
-### Features
-- Improved scrolling capture work on real pages: window chrome, faded margins, and long scrolls (#609) (ce916026)
-
-### Contributors
-- @github-actions[bot]
-- @phamquocbuu
-
-## [2.1.0-beta.5] - 2026-10-13
-
-### Features
-- Added delayed fullscreen screenshot (#638) (09bb7929)
-
-### Contributors
-- @gengjiawen
-- @github-actions[bot]
-
-## [2.1.0-beta.4] - 2026-10-13
-
-### Features
-- Added configuration for opening Finder after saving optional (#631) (d0d9816c)
-- Added attached arrows to counter annotations (#626) (80be6dc0)
-
-### Bug Fixes
 - Fixed capture remapped and consumed keystrokes (#539) (d74508b0)
 - Sync include_window_shadow with config.toml (#526) (#630) (5dd42ee2)
 - Fixed keystroke overlay above elevated windows (#548) (4f3d326b)
-
-### Contributors
-- @github-actions[bot]
-- @nandan-varma
-- @qeude
-- @thanhthai3010
-
-## [2.1.0-beta.3] - 2026-10-10
-
-### Bug Fixes
 - Correct restored screen crop placement in screenshots (#642) (5625449d)
-
-### Contributors
-- @mvanhorn
-
-## [2.1.0-beta.2] - 2026-10-10
-
-### Features
-- select pinned image zoom mode directly from preview tiles (8e9b9923)
-
-### Bug Fixes
 - stabilize pinned image focal anchoring and restore gesture zoom paths (#640) (9b574164)
 
 ### Contributors
+- @adrianocr
 - @duongductrong
+- @gengjiawen
 - @github-actions[bot]
-- @tukuyomil032
-
-## [2.1.0-beta.1] - 2026-10-03
-
-### Features
-- Added keyboard navigation to floating history (#616) (f8edc72e)
-
-### Contributors
-- @github-actions[bot]
+- @lvqviet
+- @mvanhorn
+- @nandan-varma
+- @phamquocbuu
+- @qeude
+- @thanhthai3010
 - @tukuyomil032
 
 ## [2.0.0] - 2026-09-28
