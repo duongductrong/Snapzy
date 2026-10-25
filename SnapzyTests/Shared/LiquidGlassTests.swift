@@ -88,7 +88,7 @@ final class LiquidGlassTests: XCTestCase {
     XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system))
   }
 
-  func testCapabilities_playgroundSyncsUserPreferenceWithoutOverrideConflict() {
+  func testCapabilities_userPreferenceAppliesAfterRuntimeOverrideClears() {
     let originalPref = UserDefaults.standard.object(forKey: PreferencesKeys.useLiquidGlass)
     let originalRuntime = LiquidGlassCapabilities.runtimeLegacyOverride
     defer {
@@ -96,7 +96,7 @@ final class LiquidGlassTests: XCTestCase {
       LiquidGlassCapabilities.runtimeLegacyOverride = originalRuntime
     }
 
-    // Simulate stale override from legacy playground session
+    // Simulate an active legacy override
     LiquidGlassCapabilities.runtimeLegacyOverride = true
     XCTAssertTrue(LiquidGlassCapabilities.forcesLegacyGlass)
 
@@ -135,7 +135,7 @@ final class LiquidGlassTests: XCTestCase {
 
     if #available(macOS 26.0, *) {
       XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: true))
-      // A scoped `.native` mode is an explicit playground/test override and outranks the toggle.
+      // A scoped `.native` mode is an explicit render-mode override and outranks the toggle.
       XCTAssertTrue(LiquidGlassCapabilities.usesNativeGlass(for: .native, userEnabled: false))
     } else {
       XCTAssertFalse(LiquidGlassCapabilities.usesNativeGlass(for: .system, userEnabled: true))

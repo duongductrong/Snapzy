@@ -35,10 +35,9 @@ PATTERN='(cornerRadius: *[0-9]|\.cornerRadius\( *[0-9])'
 # Exempt paths.
 #
 #   RadiusTokens.swift  — defines the scale.
-#   LiquidGlassPreview  — DEBUG playground; hand-drawn mockups of other surfaces.
 #   Onboarding/Mockups  — miniature fake replicas of app windows, drawn at illustration scale.
 #   Services/           — render pipelines that rasterise user content at export resolution.
-EXEMPT='Snapzy/Shared/Styles/RadiusTokens.swift|LiquidGlassPreview.swift|Onboarding/Mockups/|/Services/'
+EXEMPT='Snapzy/Shared/Styles/RadiusTokens.swift|Onboarding/Mockups/|/Services/'
 
 # Line-level opt-out for a deliberate one-off, e.g. matching a real macOS window radius:
 #   .cornerRadius(10) // radius-lint:allow — matches the live NSWindow corner

@@ -10,46 +10,14 @@ import SwiftUI
 
 // MARK: - Capabilities
 
-enum LiquidGlassRenderMode: String, CaseIterable, Identifiable {
-  case system = "system"
-  case native = "native"
-  case legacy = "legacy"
-
-  var id: String { rawValue }
-
-  var title: String {
-    switch self {
-    case .system:
-      return "System Default"
-    case .native:
-      return "macOS 26+ (Apple Liquid Glass)"
-    case .legacy:
-      return "macOS 13–15 (Fallback Composite)"
-    }
-  }
-}
-
-struct LiquidGlassTuning: Equatable {
-  var substrateOpacity: CGFloat = LiquidGlassTokens.baseDarkness
-  var sheenTopOpacity: Double = LiquidGlassTokens.fallbackControlSheenTop
-  var sheenBottomOpacity: Double = LiquidGlassTokens.fallbackControlSheenBottom
-  var specularTopOpacity: Double = 0.22
-  var specularBottomOpacity: Double = 0.06
-  var isSubstrateEnabled: Bool = true
-  var isRefractionEnabled: Bool = true
-  var isVeilEnabled: Bool = true
-  var isSpecularEnabled: Bool = true
-  var isRimLightingEnabled: Bool = true
-
-  static let `default` = LiquidGlassTuning()
+enum LiquidGlassRenderMode {
+  case system
+  case native
+  case legacy
 }
 
 private struct LiquidGlassRenderModeKey: EnvironmentKey {
   static let defaultValue: LiquidGlassRenderMode = .system
-}
-
-private struct LiquidGlassTuningKey: EnvironmentKey {
-  static let defaultValue: LiquidGlassTuning? = nil
 }
 
 extension EnvironmentValues {
@@ -57,15 +25,10 @@ extension EnvironmentValues {
     get { self[LiquidGlassRenderModeKey.self] }
     set { self[LiquidGlassRenderModeKey.self] = newValue }
   }
-
-  var liquidGlassTuning: LiquidGlassTuning? {
-    get { self[LiquidGlassTuningKey.self] }
-    set { self[LiquidGlassTuningKey.self] = newValue }
-  }
 }
 
 enum LiquidGlassCapabilities {
-  /// Dynamic runtime override for in-app testing and playground inspection.
+  /// Dynamic runtime override used by Liquid Glass tests.
   static var runtimeLegacyOverride: Bool? = nil
 
   /// Whether the host operating system supports Apple's native Liquid Glass APIs.
@@ -139,7 +102,7 @@ enum LiquidGlassCapabilities {
     usesNativeGlass(for: mode, userEnabled: isUserPreferenceEnabled)
   }
 
-  /// Developer-only override (`-SnapzyForceLegacyGlass` or the legacy runtime flag).
+  /// Developer-only launch override for testing the legacy rendering path.
   private static var developerForcedLegacy: Bool {
     if let runtimeLegacyOverride {
       return runtimeLegacyOverride

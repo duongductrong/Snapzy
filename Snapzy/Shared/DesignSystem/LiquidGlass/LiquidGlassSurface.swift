@@ -38,8 +38,6 @@ struct LiquidGlassRefraction<S: InsettableShape>: View {
   var shape: S
   var layer: LiquidGlassLayer = .control
 
-  @Environment(\.liquidGlassTuning) private var tuning
-
   @ViewBuilder
   var body: some View {
     switch layer {
@@ -47,15 +45,13 @@ struct LiquidGlassRefraction<S: InsettableShape>: View {
       LiquidGlassVibrancyBackdrop(material: .hudWindow, blending: .behindWindow)
         .clipShape(shape)
     case .control:
-      let top = tuning?.sheenTopOpacity ?? LiquidGlassTokens.fallbackControlSheenTop
-      let bottom = tuning?.sheenBottomOpacity ?? LiquidGlassTokens.fallbackControlSheenBottom
       // A live AppKit blur per control would thrash the view hierarchy on every pointer move,
       // so nested controls approximate refraction with a diagonal sheen instead.
       shape.fill(
         LinearGradient(
           colors: [
-            Color.white.opacity(top),
-            Color.white.opacity(bottom),
+            Color.white.opacity(LiquidGlassTokens.fallbackControlSheenTop),
+            Color.white.opacity(LiquidGlassTokens.fallbackControlSheenBottom),
           ],
           startPoint: .topLeading,
           endPoint: .bottomTrailing
@@ -81,23 +77,14 @@ struct LiquidGlassSurface<S: InsettableShape>: View {
   var glassTint: Color? = nil
 
   @Environment(\.colorScheme) private var colorScheme
-  @Environment(\.liquidGlassTuning) private var tuning
 
   var body: some View {
-    let substrateActive = tuning?.isSubstrateEnabled ?? true
-    let refractionActive = tuning?.isRefractionEnabled ?? true
-    let veilActive = tuning?.isVeilEnabled ?? true
-    let specularActive = tuning?.isSpecularEnabled ?? true
-    let rimActive = (tuning?.isRimLightingEnabled ?? true) && withRimLighting
-
-    let effectiveSubstrate = (tuning != nil && layer == .control) ? tuning!.substrateOpacity : resolvedSubstrate
-
     ZStack {
       if let glassTint {
         // macOS 13–15 Solid Native: Grounded, punchy system color without fake optical lens artifacts
         shape.fill(glassTint)
 
-        if specularActive, let stops = resolvedHighlightStops {
+        if let stops = resolvedHighlightStops {
           shape.strokeBorder(
             LinearGradient(
               colors: [stops.top, stops.bottom],
@@ -108,26 +95,24 @@ struct LiquidGlassSurface<S: InsettableShape>: View {
           )
         }
       } else {
-        if substrateActive, effectiveSubstrate > 0 {
-          shape.fill(LiquidGlassTokens.substrateFill.opacity(effectiveSubstrate))
+        if resolvedSubstrate > 0 {
+          shape.fill(LiquidGlassTokens.substrateFill.opacity(resolvedSubstrate))
         }
 
-        if refractionActive {
-          LiquidGlassRefraction(shape: shape, layer: layer)
-            .clipShape(shape)
-        }
+        LiquidGlassRefraction(shape: shape, layer: layer)
+          .clipShape(shape)
 
-        if substrateActive, dim > 0 {
+        if dim > 0 {
           shape.fill(LiquidGlassTokens.substrateFill.opacity(dim))
         }
 
-        if veilActive, resolvedTint > 0 {
+        if resolvedTint > 0 {
           shape.fill(LiquidGlassTokens.veilFill.opacity(resolvedTint))
         }
 
-        if rimActive {
+        if withRimLighting {
           LiquidGlassRimBorder(shape: shape, isHovered: false, isEnabled: true)
-        } else if specularActive, let stops = resolvedHighlightStops {
+        } else if let stops = resolvedHighlightStops {
           shape.strokeBorder(
             LinearGradient(
               colors: [stops.top, stops.bottom],
@@ -153,9 +138,6 @@ struct LiquidGlassSurface<S: InsettableShape>: View {
   }
 
   private var resolvedHighlightStops: (top: Color, bottom: Color)? {
-    if let tuning {
-      return (Color.white.opacity(tuning.specularTopOpacity), Color.white.opacity(tuning.specularBottomOpacity))
-    }
     return highlight.stops
   }
 }
@@ -253,7 +235,6 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
   let nativeHighlight: LiquidGlassHighlight?
 
   @Environment(\.liquidGlassRenderMode) private var renderMode
-  @Environment(\.liquidGlassTuning) private var tuning
   @AppStorage(PreferencesKeys.useLiquidGlass) private var isLiquidGlassEnabled = true
 
   private var usesNativeGlass: Bool {
@@ -305,14 +286,7 @@ private struct LiquidGlassSurfaceModifier<S: InsettableShape>: ViewModifier {
   }
 
   private var resolvedNativeHighlightStops: (top: Color, bottom: Color)? {
-    guard let nativeHighlight, tuning?.isSpecularEnabled ?? true else { return nil }
-    if let tuning {
-      return (
-        Color.white.opacity(tuning.specularTopOpacity),
-        Color.white.opacity(tuning.specularBottomOpacity)
-      )
-    }
-    return nativeHighlight.stops
+    nativeHighlight?.stops
   }
 }
 

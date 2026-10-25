@@ -582,19 +582,6 @@ final class AppStatusBarController: ObservableObject {
     prefsItem.isEnabled = true
     menu?.addItem(prefsItem)
 
-    #if DEBUG
-    // Liquid Glass Playground
-    let playgroundItem = NSMenuItem(
-      title: "Liquid Glass Playground",
-      action: #selector(openLiquidGlassPlaygroundAction),
-      keyEquivalent: ""
-    )
-    playgroundItem.target = self
-    playgroundItem.image = NSImage(systemSymbolName: "slider.horizontal.below.square.and.square.filled", accessibilityDescription: nil)
-    playgroundItem.isEnabled = true
-    menu?.addItem(playgroundItem)
-    #endif
-
     // Replay onboarding — keep this as the last action before the final separator/Quit item.
     let replayOnboardingItem = NSMenuItem(
       title: L10n.PreferencesGeneral.restartOnboardingTitle,
@@ -1071,13 +1058,6 @@ final class AppStatusBarController: ObservableObject {
       NotificationCenter.default.post(name: .showOnboarding, object: nil)
     }
   }
-
-  #if DEBUG
-  @objc private func openLiquidGlassPlaygroundAction() {
-    logMenuAction("openLiquidGlassPlayground")
-    LiquidGlassPlaygroundWindowController.shared.show()
-  }
-  #endif
 
   func openPreferencesWindow(tab: PreferencesTab? = nil) {
     if let tab {

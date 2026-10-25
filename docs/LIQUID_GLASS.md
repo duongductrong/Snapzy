@@ -279,8 +279,7 @@ is how a 32pt recording button and a 12pt badge both ended up asking for `radius
 sweep moved every call site onto `Radius`; the old names remain as pass-throughs and are not for
 new code.
 
-The scale is rendered live in the Liquid Glass playground under **Overview & Tokens →
-Geometry & Hairline Physics**, so it cannot go stale.
+The scale is defined in `RadiusTokens.swift` and enforced by `scripts/lint-corner-radius.sh`.
 
 ---
 
@@ -543,8 +542,7 @@ Snapzy/Shared/DesignSystem/LiquidGlass/
 ├── LiquidGlassButton.swift            # LiquidGlassButtonStyle and LiquidGlassActionButton
 ├── LiquidGlassButtonSurface.swift     # Hover/press surface backing the button style
 ├── LiquidGlassSegmentedControl.swift  # Sliding indicator segmented control
-├── LiquidGlassActionBar.swift         # Etched-divider grouped action bar
-└── LiquidGlassPreview.swift           # Interactive demo and playground (DEBUG only)
+└── LiquidGlassActionBar.swift         # Etched-divider grouped action bar
 ```
 
 Shared icon buttons live outside this folder in `Snapzy/Shared/Styles/ToolbarControls.swift`,

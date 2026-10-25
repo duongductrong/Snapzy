@@ -12,6 +12,29 @@ import XCTest
 
 final class LiquidGlassSnapshotRenderTests: XCTestCase {
 
+  private enum SnapshotWallpaper: Equatable {
+    case brightDesktop
+    case darkAmbient
+
+    @ViewBuilder
+    var backgroundView: some View {
+      switch self {
+      case .brightDesktop:
+        LinearGradient(
+          colors: [Color(red: 0.96, green: 0.97, blue: 0.99), Color(red: 0.88, green: 0.91, blue: 0.95)],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      case .darkAmbient:
+        LinearGradient(
+          colors: [Color(red: 0.09, green: 0.11, blue: 0.16), Color(red: 0.04, green: 0.05, blue: 0.08)],
+          startPoint: .topLeading,
+          endPoint: .bottomTrailing
+        )
+      }
+    }
+  }
+
   @MainActor
   func testRenderLiquidGlassComparisonSnapshots() throws {
     try XCTSkipUnless(
@@ -36,7 +59,7 @@ final class LiquidGlassSnapshotRenderTests: XCTestCase {
   }
 
   @MainActor
-  private func renderSnapshot(wallpaper: PlaygroundWallpaper, colorScheme: ColorScheme, filename: String) throws {
+  private func renderSnapshot(wallpaper: SnapshotWallpaper, colorScheme: ColorScheme, filename: String) throws {
     let comparisonView = ZStack {
       wallpaper.backgroundView
         .ignoresSafeArea()
