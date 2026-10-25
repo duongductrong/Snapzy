@@ -15,7 +15,7 @@ enum HintIconStyle {
 
   var systemImage: String {
     switch self {
-    case .info: return "info.circle"
+    case .info: return "info.circle.fill"
     }
   }
 }
@@ -56,12 +56,13 @@ private struct HintModifier: ViewModifier {
         }
 
     case .icon(let style):
-      HStack(spacing: 4) {
+      HStack(spacing: 6) {
         content
 
+        // Filled disc with the glyph knocked out, so it reads as a quiet badge, not a line icon.
         Image(systemName: style.systemImage)
-          .font(.system(size: 11))
-          .foregroundColor(.secondary)
+          .font(.system(size: 12))
+          .foregroundStyle(.secondary)
           .onHover { hovering in isHovering = hovering }
           .popover(isPresented: $isHovering, arrowEdge: .bottom) {
             HintPopoverContent(text: text)

@@ -168,19 +168,24 @@ struct PermissionsSettingsView: View {
 
       Spacer()
 
-      Label(statusLabel, systemImage: statusIcon)
-        .font(.callout)
-        .foregroundStyle(statusColor)
-        .symbolRenderingMode(.hierarchical)
-        .lineLimit(1)
+      // Quiet tinted pill: status stays scannable without outweighing the row title.
+      HStack(spacing: 4) {
+        Image(systemName: statusIcon)
+          .font(.system(size: 10, weight: .semibold))
+        Text(statusLabel)
+          .font(.system(size: 11, weight: .medium))
+      }
+      .foregroundStyle(statusColor)
+      .lineLimit(1)
+      .padding(.horizontal, 8)
+      .padding(.vertical, 3)
+      .background(Capsule(style: .continuous).fill(statusColor.opacity(0.14)))
 
       Button(L10n.Common.openSettings) {
         openSystemSettings(settingsURL)
       }
-      .buttonStyle(.bordered)
-      .controlSize(.regular)
+      .controlSize(.small)
     }
-    .padding(.vertical, 4)
   }
 
   // MARK: - Permission Checking

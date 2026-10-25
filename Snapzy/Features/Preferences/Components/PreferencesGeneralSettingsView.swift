@@ -51,7 +51,11 @@ struct GeneralSettingsView: View {
       Section(L10n.PreferencesGeneral.appearanceSection) {
         PreferencesLanguageSettingRow()
 
-        SettingRow(title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
+        SettingRow(
+          title: L10n.PreferencesGeneral.themeTitle,
+          description: L10n.PreferencesGeneral.themeDescription,
+          alignment: .top
+        ) {
           AppearanceModePicker(selection: $themeManager.preferredAppearance)
         }
 

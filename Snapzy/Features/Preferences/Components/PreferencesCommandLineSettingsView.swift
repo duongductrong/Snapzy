@@ -170,7 +170,6 @@ private struct CommandLineAllowedAppRow: View {
 
       Button(L10n.CommandLine.removeAppButton, action: onRemove)
     }
-    .padding(.vertical, 4)
     .help(caller.path)
   }
 

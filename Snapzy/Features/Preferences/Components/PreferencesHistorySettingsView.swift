@@ -61,10 +61,10 @@ struct HistorySettingsView: View {
 
         SettingRow(
           title: L10n.PreferencesHistory.backgroundStyleTitle,
-          description: L10n.PreferencesHistory.backgroundStyleDescription
+          description: L10n.PreferencesHistory.backgroundStyleDescription,
+          alignment: .top
         ) {
-          HistoryBackgroundStylePicker(selection: $historyBackgroundStyle)
-            .frame(width: 190, alignment: .trailing)
+          HistoryBackgroundStylePicker(selection: $historyBackgroundStyle, position: manager.position)
         }
 
         SettingRow(
@@ -213,50 +213,92 @@ struct HistorySettingsView: View {
 
 private struct HistoryBackgroundStylePicker: View {
   @Binding var selection: HistoryBackgroundStyle
+  let position: HistoryPanelPosition
 
   var body: some View {
-    HStack(spacing: 14) {
+    HStack(spacing: 10) {
       ForEach(HistoryBackgroundStyle.allCases) { style in
-        Button(action: { selection = style }) {
-          VStack(spacing: 6) {
-            HistoryBackgroundStyleThumbnail(style: style, isSelected: selection == style)
-
-            Text(style.displayName)
-              .font(.system(size: 10))
-              .foregroundColor(selection == style ? .accentColor : .primary)
-          }
+        PreferencesVisualOptionTile(
+          title: style.displayName,
+          isSelected: selection == style,
+          action: { selection = style }
+        ) {
+          HistoryBackgroundStyleDesktopPreview(style: style, position: position)
         }
-        .buttonStyle(.plain)
       }
     }
-    .padding(.vertical, 4)
   }
 }
 
-private struct HistoryBackgroundStyleThumbnail: View {
+/// The floating History panel drawn on a mini desktop at its configured edge, so the choice
+/// shows what it changes: HUD lets the wallpaper read through, Solid covers it.
+private struct HistoryBackgroundStyleDesktopPreview: View {
+  @ObservedObject private var themeManager = ThemeManager.shared
   @Environment(\.colorScheme) private var colorScheme
 
   let style: HistoryBackgroundStyle
-  let isSelected: Bool
+  let position: HistoryPanelPosition
+
+  private static let panelSize = CGSize(width: 52, height: 24)
+  private static let edgeGap: CGFloat = 3
 
   var body: some View {
-    HistoryBackdropView(
-      style: style,
-      cornerRadius: Radius.tile,
-      compact: true,
-      isFloatingPanel: style == .hud
-    )
-      .frame(width: 72, height: 52)
-      .clipShape(Radius.rect(Radius.tile))
-      .overlay(
-        Radius.rect(Radius.tile)
-          .stroke(isSelected ? Color.accentColor : borderColor, lineWidth: isSelected ? 2 : 1)
-      )
-      .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
+    PreferencesMiniDesktop {
+      VStack(spacing: 0) {
+        if position == .bottomCenter { Spacer(minLength: 0) }
+        panel
+        if position != .bottomCenter { Spacer(minLength: 0) }
+      }
+      .padding(.top, PreferencesMiniDesktop<EmptyView>.menuBarHeight + Self.edgeGap)
+      .padding(.bottom, Self.edgeGap)
+    }
   }
 
-  private var borderColor: Color {
-    colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06)
+  private var panel: some View {
+    let shape = RoundedRectangle(cornerRadius: 4, style: .continuous) // radius-lint:allow — miniature History panel drawn at ~1:10 scale
+    return VStack(spacing: 3) {
+      HStack(spacing: 2) {
+        Capsule().fill(Color.accentColor).frame(width: 7, height: 3)
+        Capsule().fill(chromeFill).frame(width: 7, height: 3)
+        Capsule().fill(chromeFill).frame(width: 7, height: 3)
+        Spacer(minLength: 0)
+        Circle().fill(chromeFill).frame(width: 3, height: 3)
+      }
+      HStack(spacing: 3) {
+        ForEach(0..<4, id: \.self) { index in
+          RoundedRectangle(cornerRadius: 1.5, style: .continuous) // radius-lint:allow — miniature capture card
+            .fill(cardFill.opacity(index == 0 ? 1 : 0.7))
+        }
+      }
+    }
+    .padding(4)
+    .frame(width: Self.panelSize.width, height: Self.panelSize.height)
+    .background { panelFill.clipShape(shape) }
+    .overlay { shape.strokeBorder(Color.white.opacity(style == .hud ? 0.22 : 0.1), lineWidth: 0.5) }
+    .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+  }
+
+  /// HUD mirrors the real floating panel: forced-dark glass over the desktop.
+  private var isDarkPanel: Bool {
+    style == .hud || colorScheme == .dark
+  }
+
+  @ViewBuilder
+  private var panelFill: some View {
+    switch style {
+    case .hud:
+      Color.black.opacity(0.42)
+    case .solid:
+      Color(nsColor: WindowSurfacePalette.backgroundColor(for: themeManager.preferredAppearance))
+    }
+  }
+
+  private var chromeFill: Color {
+    isDarkPanel ? Color.white.opacity(0.22) : Color.black.opacity(0.12)
+  }
+
+  private var cardFill: Color {
+    isDarkPanel ? Color.white.opacity(0.28) : Color.black.opacity(0.10)
   }
 }
 

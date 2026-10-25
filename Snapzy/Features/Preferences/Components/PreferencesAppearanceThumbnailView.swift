@@ -26,21 +26,9 @@ struct AppearanceThumbnailView: View {
   }
 
   var body: some View {
-    Button(action: action) {
-      VStack(spacing: 6) {
-        thumbnailPreview
-          .overlay(
-            Radius.rect(Radius.tile)
-              .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 3)
-          )
-          .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
-
-        Text(mode.displayName)
-          .font(.system(size: 10))
-          .foregroundColor(isSelected ? .accentColor : .primary)
-      }
+    PreferencesVisualOptionTile(title: mode.displayName, isSelected: isSelected, action: action) {
+      thumbnailPreview
     }
-    .buttonStyle(.plain)
   }
 
   @ViewBuilder
@@ -82,16 +70,12 @@ struct AppearanceThumbnailView: View {
           )
       }
     }
-    .frame(width: 72, height: 52)
-    .clipShape(Radius.rect(Radius.tile))
   }
 
   // MARK: - Single Thumbnail
 
   private func singleThumbnail(isDark: Bool) -> some View {
     windowPreview(isDark: isDark)
-      .frame(width: 72, height: 52)
-      .clipShape(Radius.rect(Radius.tile))
   }
 
   // MARK: - Window Preview
@@ -156,7 +140,7 @@ struct AppearanceModePicker: View {
   @Binding var selection: AppearanceMode
 
   var body: some View {
-    HStack(spacing: 14) {
+    HStack(spacing: 10) {
       ForEach(AppearanceMode.allCases) { mode in
         AppearanceThumbnailView(
           mode: mode,
@@ -168,7 +152,6 @@ struct AppearanceModePicker: View {
         }
       }
     }
-    .padding(.vertical, 4)
   }
 }
 

@@ -20,10 +20,12 @@ struct SettingRow<Content: View>: View {
   let description: String?
   var descriptionStyle: SettingRowDescriptionStyle = .hint
   var tooltip: String? = nil
+  /// `.top` for tall trailing content (thumbnail pickers): macOS pins the label to the top edge.
+  var alignment: VerticalAlignment = .center
   @ViewBuilder let content: () -> Content
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(alignment: alignment, spacing: 12) {
       VStack(alignment: .leading, spacing: 2) {
         if let hintText {
           Text(title)
@@ -41,7 +43,6 @@ struct SettingRow<Content: View>: View {
       Spacer()
       content()
     }
-    .padding(.vertical, 2)
   }
 
   private var hintText: String? {

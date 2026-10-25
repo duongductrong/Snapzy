@@ -83,7 +83,6 @@ struct ShortcutRecorderView: View {
         onReset: resetToDefault
       )
     }
-    .padding(.vertical, 4)
     .opacity(rowOpacity)
     .onChange(of: isInteractionEnabled) { newValue in
       if !newValue {

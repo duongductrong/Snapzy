@@ -212,7 +212,6 @@ struct ShortcutsSettingsView: View {
                 .controlSize(.regular)
               }
             }
-            .padding(.vertical, 4)
           } header: {
             Label(L10n.PreferencesShortcuts.actionRequired, systemImage: "exclamationmark.circle.fill")
               .foregroundColor(.orange)
@@ -253,7 +252,6 @@ struct ShortcutsSettingsView: View {
               }
               .buttonStyle(.borderless)
             }
-            .padding(.vertical, 4)
           } header: {
             Label(L10n.PreferencesShortcuts.systemShortcuts, systemImage: "checkmark.seal.fill")
               .foregroundColor(.green)
@@ -318,7 +316,6 @@ struct ShortcutsSettingsView: View {
             .buttonStyle(.bordered)
             .controlSize(.regular)
           }
-          .padding(.vertical, 2)
         }
       } header: {
         ShortcutSectionHeader(
@@ -785,6 +782,18 @@ struct ShortcutsSettingsView: View {
           )
         }
       }
+
+      // Lives in the scroll content (not a pinned inset) so it never floats over rows.
+      Section {
+      } footer: {
+        HStack {
+          Spacer()
+          Button(L10n.PreferencesShortcuts.resetToDefaults) {
+            resetToDefaults()
+          }
+          .controlSize(.regular)
+        }
+      }
     }
     .formStyle(.grouped)
     .onAppear {
@@ -792,17 +801,6 @@ struct ShortcutsSettingsView: View {
     }
     .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
       accessibilityGranted = AXIsProcessTrusted()
-    }
-    .safeAreaInset(edge: .bottom) {
-      HStack {
-        Spacer()
-        Button(L10n.PreferencesShortcuts.resetToDefaults) {
-          resetToDefaults()
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.regular)
-        .padding()
-      }
     }
   }
 
@@ -1298,7 +1296,6 @@ private struct CaptureOverlayShortcutRecorderRow: View {
         onReset: resetToDefault
       )
     }
-    .padding(.vertical, 4)
     .opacity(rowOpacity)
     .onChange(of: isEnabled.wrappedValue) { newValue in
       if !newValue {
@@ -1431,9 +1428,9 @@ private struct ReadOnlyShortcutRow: View {
   var body: some View {
     HStack(spacing: 12) {
       Image(systemName: icon)
-        .font(.title3)
+        .font(.title2)
         .foregroundColor(.secondary)
-        .frame(width: 24)
+        .frame(width: 28)
 
       Text(label)
         .frame(minWidth: 100, alignment: .leading)
@@ -1454,7 +1451,6 @@ private struct ReadOnlyShortcutRow: View {
           )
       }
     }
-    .padding(.vertical, 4)
   }
 
   /// Split the display string (e.g. "⌘ ⇧ Z" or "← → ↑ ↓") into individual parts
