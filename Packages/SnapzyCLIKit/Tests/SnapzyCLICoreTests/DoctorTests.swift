@@ -58,6 +58,26 @@ final class DoctorTests: XCTestCase {
     XCTAssertNotNil(check.hint)
   }
 
+  func testPathMissingForCaskInstallPointsAtHomebrew() {
+    let check = Doctor.pathCheck(path: directory.path, executable: nil, caskInstalled: true)
+
+    XCTAssertFalse(check.ok)
+    XCTAssertEqual(check.hint, Doctor.homebrewHint)
+  }
+
+  func testCaskInstallDetection() throws {
+    let caskroom = directory.appendingPathComponent("Caskroom/snapzy")
+    let helper = URL(fileURLWithPath: "/Applications/Snapzy.app/Contents/Helpers/snapzy")
+    let debugHelper = URL(fileURLWithPath: "/tmp/Snapzy Debug.app/Contents/Helpers/snapzy")
+
+    XCTAssertFalse(Doctor.isCaskInstall(executable: helper, caskroomPaths: [caskroom.path]))
+
+    try FileManager.default.createDirectory(at: caskroom, withIntermediateDirectories: true)
+    XCTAssertTrue(Doctor.isCaskInstall(executable: helper, caskroomPaths: [caskroom.path]))
+    XCTAssertFalse(Doctor.isCaskInstall(executable: debugHelper, caskroomPaths: [caskroom.path]))
+    XCTAssertFalse(Doctor.isCaskInstall(executable: nil, caskroomPaths: [caskroom.path]))
+  }
+
   func testInstallHintQuotesThisBinary() {
     XCTAssertEqual(
       Doctor.installHint(for: URL(fileURLWithPath: "/tmp/Snapzy Debug.app/Contents/Helpers/snapzy")),

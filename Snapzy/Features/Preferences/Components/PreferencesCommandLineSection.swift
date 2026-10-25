@@ -33,6 +33,8 @@ struct PreferencesCommandLineSection: View {
       ) {
         if case .managedByHomebrew = toolState {
           EmptyView()
+        } else if toolState == .homebrewLinkMissing {
+          Button(L10n.CommandLine.copyCommandButton) { copyHomebrewCommand() }
         } else if toolState == .installed {
           Button(L10n.CommandLine.uninstallButton) { updateTool(install: false) }
             .disabled(isUpdatingTool)
@@ -76,7 +78,14 @@ struct PreferencesCommandLineSection: View {
       L10n.CommandLine.toolBlocked(CLIToolInstaller.linkPath)
     case .managedByHomebrew(let path):
       L10n.CommandLine.toolHomebrew(path)
+    case .homebrewLinkMissing:
+      L10n.CommandLine.toolHomebrewLinkMissing(CLIToolInstaller.homebrewUpgradeCommand)
     }
+  }
+
+  private func copyHomebrewCommand() {
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(CLIToolInstaller.homebrewUpgradeCommand, forType: .string)
   }
 
   private func updateTool(install: Bool) {

@@ -123,7 +123,11 @@ CLI_LINK="/usr/local/bin/snapzy"
 CLI_LINK_TARGET=""
 [[ -L "$CLI_LINK" ]] && CLI_LINK_TARGET="$(readlink "$CLI_LINK")"
 if [[ -x "$CLI_HELPER" ]]; then
-  if [[ -e "$CLI_LINK" && ! -L "$CLI_LINK" ]]; then
+  if [[ -d /opt/homebrew/Caskroom/snapzy || -d /usr/local/Caskroom/snapzy ]]; then
+    # The Homebrew cask owns the link; one made here would block `brew upgrade` on Intel Macs.
+    warn "Snapzy is also installed with Homebrew, which links the snapzy command. Run:"
+    printf "    brew upgrade --cask snapzy\n"
+  elif [[ -e "$CLI_LINK" && ! -L "$CLI_LINK" ]]; then
     warn "${CLI_LINK} exists and is not a symlink — leaving it alone."
   elif [[ -n "$CLI_LINK_TARGET" && -e "$CLI_LINK" && "$CLI_LINK_TARGET" != */Snapzy*.app/Contents/Helpers/snapzy ]]; then
     warn "${CLI_LINK} links to ${CLI_LINK_TARGET} — leaving it alone."

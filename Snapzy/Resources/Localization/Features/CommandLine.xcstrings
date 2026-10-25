@@ -397,6 +397,72 @@
         }
       }
     },
+    "command-line.copy-command-button": {
+      "comment": "Button: copy the Homebrew command that adds the snapzy command",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Befehl kopieren"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy Command"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar comando"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier la commande"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コマンドをコピー"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "명령 복사"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Скопировать команду"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sao chép lệnh"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷贝命令"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "拷貝指令"
+          }
+        }
+      }
+    },
     "command-line.error-blocked": {
       "comment": "Error: a regular file occupies the link path; %@ is the path",
       "extractionState": "manual",
@@ -591,6 +657,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "此 Snapzy 副本不包含 snapzy 指令。"
+          }
+        }
+      }
+    },
+    "command-line.error-homebrew-link-missing": {
+      "comment": "Error: Homebrew should link the snapzy command, not Snapzy; %@ is the brew command",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy wurde mit Homebrew installiert, das den Befehl snapzy hinzufügt. Führe %@ im Terminal aus."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy was installed with Homebrew, which adds the snapzy command. Run %@ in Terminal."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy se instaló con Homebrew, que añade el comando snapzy. Ejecuta %@ en Terminal."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy a été installée avec Homebrew, qui ajoute la commande snapzy. Exécutez %@ dans le Terminal."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy は Homebrew でインストールされており、snapzy コマンドは Homebrew が追加します。ターミナルで %@ を実行してください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy는 Homebrew로 설치되었으며 snapzy 명령은 Homebrew가 추가합니다. 터미널에서 %@ 을(를) 실행하세요."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy установлена через Homebrew, которая добавляет команду snapzy. Выполните %@ в Терминале."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy được cài bằng Homebrew, và Homebrew sẽ thêm lệnh snapzy. Hãy chạy %@ trong Terminal."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 是通过 Homebrew 安装的，snapzy 命令由 Homebrew 添加。请在终端中运行 %@。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy 是透過 Homebrew 安裝的，snapzy 指令由 Homebrew 加入。請在終端機中執行 %@。"
           }
         }
       }
@@ -1713,6 +1845,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "已由 Homebrew 安裝於 %@"
+          }
+        }
+      }
+    },
+    "command-line.tool-homebrew-link-missing": {
+      "comment": "snapzy command state when the Homebrew cask has not linked it yet; %@ is the brew command",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mit Homebrew installiert. Führe %@ im Terminal aus, um ihn in den PATH aufzunehmen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed with Homebrew. Run %@ in Terminal to put it on PATH"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instalado con Homebrew. Ejecuta %@ en Terminal para añadirlo al PATH"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installée avec Homebrew. Exécutez %@ dans le Terminal pour l’ajouter au PATH"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Homebrew でインストール済み。PATH に追加するにはターミナルで %@ を実行してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Homebrew로 설치됨. PATH에 추가하려면 터미널에서 %@ 을(를) 실행하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Установлено через Homebrew. Выполните %@ в Терминале, чтобы добавить её в PATH"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đã cài bằng Homebrew. Chạy %@ trong Terminal để đưa lệnh vào PATH"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已通过 Homebrew 安装。在终端中运行 %@ 以将其加入 PATH"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已透過 Homebrew 安裝。在終端機中執行 %@ 以將其加入 PATH"
           }
         }
       }

@@ -48,6 +48,56 @@ final class CLIToolInstallerTests: XCTestCase {
     XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: helper), .blockedByFile)
   }
 
+  func testCaskInstallLeavesTheLinkToHomebrew() throws {
+    let helper = try makeHelper(in: "Snapzy.app")
+    let brewLink = directory.appendingPathComponent("brew-snapzy").path
+
+    XCTAssertEqual(
+      CLIToolInstaller.state(helperPath: helper, caskInstalled: true, linkPath: link, homebrewLinkPaths: [brewLink]),
+      .homebrewLinkMissing
+    )
+    XCTAssertEqual(
+      CLIToolInstaller.state(helperPath: helper, caskInstalled: false, linkPath: link, homebrewLinkPaths: [brewLink]),
+      .notInstalled
+    )
+
+    try FileManager.default.createSymbolicLink(atPath: brewLink, withDestinationPath: helper)
+    XCTAssertEqual(
+      CLIToolInstaller.state(helperPath: helper, caskInstalled: true, linkPath: link, homebrewLinkPaths: [brewLink]),
+      .managedByHomebrew(brewLink)
+    )
+    XCTAssertEqual(
+      CLIToolInstaller.state(helperPath: helper, caskInstalled: false, linkPath: link, homebrewLinkPaths: [brewLink]),
+      .notInstalled,
+      "a link at Homebrew's path is not Homebrew's without the cask"
+    )
+  }
+
+  func testCaskInstallKeepsAWorkingLink() throws {
+    let helper = try makeHelper(in: "Snapzy.app")
+    let brewLink = directory.appendingPathComponent("brew-snapzy").path
+    try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: helper)
+
+    XCTAssertEqual(
+      CLIToolInstaller.state(helperPath: helper, caskInstalled: true, linkPath: link, homebrewLinkPaths: [brewLink]),
+      .installed
+    )
+  }
+
+  func testCaskInstallDetection() throws {
+    let caskroom = directory.appendingPathComponent("Caskroom/snapzy")
+    let app = URL(fileURLWithPath: "/Applications/Snapzy.app")
+
+    XCTAssertFalse(CLIToolInstaller.isCaskInstalled(appBundleURL: app, caskroomPaths: [caskroom.path]))
+
+    try FileManager.default.createDirectory(at: caskroom, withIntermediateDirectories: true)
+    XCTAssertTrue(CLIToolInstaller.isCaskInstalled(appBundleURL: app, caskroomPaths: [caskroom.path]))
+    XCTAssertFalse(CLIToolInstaller.isCaskInstalled(
+      appBundleURL: URL(fileURLWithPath: "/tmp/Snapzy Debug.app"),
+      caskroomPaths: [caskroom.path]
+    ))
+  }
+
   func testDanglingLinkIsPointsElsewhere() throws {
     let helper = try makeHelper(in: "Snapzy.app")
     try FileManager.default.createSymbolicLink(

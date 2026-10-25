@@ -63,7 +63,8 @@ struct DoctorCommand: AsyncParsableCommand {
     checks.append(.pass("cli", "\(CLIVersion.current) at \(executable?.path ?? "unknown")"))
     checks.append(Doctor.pathCheck(
       path: ProcessInfo.processInfo.environment["PATH"] ?? "",
-      executable: executable
+      executable: executable,
+      caskInstalled: Doctor.isCaskInstall(executable: executable)
     ))
 
     let location: AppLocation
@@ -131,10 +132,25 @@ enum Doctor {
     return "sudo mkdir -p /usr/local/bin && sudo ln -sfn \(quoted) /usr/local/bin/snapzy"
   }
 
+  static let homebrewHint = "Snapzy came from Homebrew, which links snapzy: run `brew upgrade --cask snapzy`"
+  static let homebrewCaskroomPaths = ["/opt/homebrew/Caskroom/snapzy", "/usr/local/Caskroom/snapzy"]
+
+  /// Whether this binary is inside the cask's `Snapzy.app` (not a Debug or
+  /// renamed copy), so Homebrew should link it rather than `ln -s` by hand.
+  static func isCaskInstall(
+    executable: URL?,
+    caskroomPaths: [String] = homebrewCaskroomPaths,
+    fileManager: FileManager = .default
+  ) -> Bool {
+    guard let executable, executable.path.hasSuffix("/Snapzy.app/Contents/Helpers/snapzy") else { return false }
+    return caskroomPaths.contains { fileManager.fileExists(atPath: $0) }
+  }
+
   /// Whether `snapzy` on PATH is this binary. Advisory: agents can always use the full path.
   static func pathCheck(
     path: String,
     executable: URL?,
+    caskInstalled: Bool = false,
     fileManager: FileManager = .default
   ) -> DoctorCheck {
     let found = path.split(separator: ":").lazy
@@ -147,7 +163,8 @@ enum Doctor {
       }
 
     guard let found else {
-      return .fail("path", "snapzy is not on PATH", hint: installHint(for: executable), code: nil)
+      let hint = caskInstalled ? homebrewHint : installHint(for: executable)
+      return .fail("path", "snapzy is not on PATH", hint: hint, code: nil)
     }
     let resolved = found.resolvingSymlinksInPath()
     guard let executable, resolved.path != executable.path else {

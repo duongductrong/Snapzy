@@ -5,7 +5,9 @@
 //  Links the embedded `snapzy` tool (Contents/Helpers/snapzy) onto PATH at
 //  /usr/local/bin/snapzy, asking for an administrator password only when
 //  that directory is not writable. Only ever creates or removes a symlink,
-//  and never replaces a file or another tool's link.
+//  and never replaces a file or another tool's link. A Homebrew cask install
+//  leaves the link to Homebrew, so `brew upgrade` never meets a link it did
+//  not make.
 //
 
 import Foundation
@@ -21,6 +23,9 @@ enum CLIToolInstaller {
     case blockedByFile
     /// The Homebrew cask's `binary` link (at the associated path) points at this helper.
     case managedByHomebrew(String)
+    /// Installed by the Homebrew cask, which has not linked the helper yet
+    /// (the cask predates the tool and Snapzy was updated in-app).
+    case homebrewLinkMissing
   }
 
   enum InstallError: LocalizedError, Equatable {
@@ -28,6 +33,7 @@ enum CLIToolInstaller {
     case temporaryLocation
     case blockedByFile
     case occupiedByOtherTool(String)
+    case homebrewLinkMissing
     case cancelled
     case failed(String)
 
@@ -41,6 +47,8 @@ enum CLIToolInstaller {
         L10n.CommandLine.errorBlocked(CLIToolInstaller.linkPath)
       case .occupiedByOtherTool(let destination):
         L10n.CommandLine.errorOccupied(path: CLIToolInstaller.linkPath, destination: destination)
+      case .homebrewLinkMissing:
+        L10n.CommandLine.errorHomebrewLinkMissing(CLIToolInstaller.homebrewUpgradeCommand)
       case .cancelled:
         L10n.CommandLine.errorCancelled
       case .failed(let message):
@@ -50,6 +58,7 @@ enum CLIToolInstaller {
   }
 
   static let linkPath = "/usr/local/bin/snapzy"
+  static let homebrewUpgradeCommand = "brew upgrade --cask snapzy"
 
   static func helperURL(appBundleURL: URL = Bundle.main.bundleURL) -> URL {
     appBundleURL.appendingPathComponent("Contents/Helpers/snapzy")
@@ -89,14 +98,40 @@ enum CLIToolInstaller {
   nonisolated static let homebrewLinkPaths = ["/opt/homebrew/bin/snapzy", "/usr/local/bin/snapzy"]
   nonisolated static let homebrewCaskroomPaths = ["/opt/homebrew/Caskroom/snapzy", "/usr/local/Caskroom/snapzy"]
 
-  static func currentState() -> State {
-    let helper = helperURL().path
-    let caskInstalled = homebrewCaskroomPaths.contains { FileManager.default.fileExists(atPath: $0) }
+  /// Whether this app came from the Homebrew cask. The cask installs exactly
+  /// `Snapzy.app`, so other copies (`Snapzy Debug.app`) never count.
+  nonisolated static func isCaskInstalled(
+    appBundleURL: URL,
+    caskroomPaths: [String] = homebrewCaskroomPaths
+  ) -> Bool {
+    appBundleURL.lastPathComponent == "Snapzy.app"
+      && caskroomPaths.contains { FileManager.default.fileExists(atPath: $0) }
+  }
+
+  nonisolated static func state(
+    helperPath: String,
+    caskInstalled: Bool,
+    linkPath: String = linkPath,
+    homebrewLinkPaths: [String] = homebrewLinkPaths
+  ) -> State {
     if caskInstalled,
-       let brewLink = homebrewLinkPaths.first(where: { state(linkPath: $0, helperPath: helper) == .installed }) {
+       let brewLink = homebrewLinkPaths.first(where: { state(linkPath: $0, helperPath: helperPath) == .installed }) {
       return .managedByHomebrew(brewLink)
     }
-    return state(helperPath: helper)
+    let linkState = state(linkPath: linkPath, helperPath: helperPath)
+    // A link made before the cask took over keeps working until the cask's
+    // preflight removes it; only offer Homebrew when nothing works yet.
+    if caskInstalled, linkState != .installed {
+      return .homebrewLinkMissing
+    }
+    return linkState
+  }
+
+  static func currentState() -> State {
+    state(
+      helperPath: helperURL().path,
+      caskInstalled: isCaskInstalled(appBundleURL: Bundle.main.bundleURL)
+    )
   }
 
   static func install() async throws {
@@ -106,6 +141,8 @@ enum CLIToolInstaller {
     switch currentState() {
     case .installed, .managedByHomebrew:
       return
+    case .homebrewLinkMissing:
+      throw InstallError.homebrewLinkMissing
     case .blockedByFile:
       throw InstallError.blockedByFile
     case .pointsElsewhere(let destination) where !isReplaceable(destination):

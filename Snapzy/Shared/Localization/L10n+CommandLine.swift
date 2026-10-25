@@ -65,6 +65,11 @@ extension L10n {
       defaultValue: "Uninstall",
       comment: "Button: remove the snapzy command link from PATH"
     )
+    static let copyCommandButton = string(
+      "command-line.copy-command-button",
+      defaultValue: "Copy Command",
+      comment: "Button: copy the Homebrew command that adds the snapzy command"
+    )
     static let installFailedTitle = string(
       "command-line.install-failed-title",
       defaultValue: "Couldn’t update the snapzy command",
@@ -209,6 +214,24 @@ extension L10n {
         defaultValue: "Installed by Homebrew at %@",
         comment: "snapzy command state when Homebrew manages the link; %@ is the link path",
         path
+      )
+    }
+
+    static func toolHomebrewLinkMissing(_ command: String) -> String {
+      format(
+        "command-line.tool-homebrew-link-missing",
+        defaultValue: "Installed with Homebrew. Run %@ in Terminal to put it on PATH",
+        comment: "snapzy command state when the Homebrew cask has not linked it yet; %@ is the brew command",
+        command
+      )
+    }
+
+    static func errorHomebrewLinkMissing(_ command: String) -> String {
+      format(
+        "command-line.error-homebrew-link-missing",
+        defaultValue: "Snapzy was installed with Homebrew, which adds the snapzy command. Run %@ in Terminal.",
+        comment: "Error: Homebrew should link the snapzy command, not Snapzy; %@ is the brew command",
+        command
       )
     }
   }
