@@ -100,7 +100,8 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
     self == .shortcuts
   }
 
-  /// Extra non-displayed terms the sidebar search matches besides the localized title.
+  /// Extra non-displayed terms the sidebar search matches besides the localized title;
+  /// `PreferencesSearchEngine` weighs them below the title.
   var searchKeywords: [String] {
     switch self {
     case .general:
@@ -130,14 +131,6 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
     }
   }
 
-  func matches(_ query: String) -> Bool {
-    let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !needle.isEmpty else { return true }
-    return ([title] + searchKeywords).contains {
-      $0.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) != nil
-    }
-  }
-
   /// The sidebar list, in unlabelled groups separated by whitespace.
   /// The profile header at the top of the sidebar also opens About.
   static let groups: [[PreferencesTab]] = [
@@ -151,6 +144,15 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
   static let sidebarOrder: [PreferencesTab] = groups.flatMap { $0 }
 }
 
+/// A pending jump to a setting row; distinct per request so repeating a jump re-fires it.
+struct PreferencesRevealRequest: Equatable {
+  let id = UUID()
+  let title: String
+  let pane: String?
+  /// The row is a `SettingRow` anchored by `title`; otherwise only `pane` is opened.
+  let scrolls: Bool
+}
+
 @MainActor
 final class PreferencesNavigationState: ObservableObject {
   static let shared = PreferencesNavigationState()
@@ -160,6 +162,11 @@ final class PreferencesNavigationState: ObservableObject {
       UserDefaults.standard.set(selectedTab.rawValue, forKey: PreferencesTab.storageKey)
     }
   }
+
+  /// Setting row the detail page should scroll to, set by a search jump.
+  @Published private(set) var revealRequest: PreferencesRevealRequest?
+  /// Title of the setting row currently flashing after a search jump.
+  @Published private(set) var highlightedSetting: String?
 
   @Published private(set) var backStack: [PreferencesTab] = []
   @Published private(set) var forwardStack: [PreferencesTab] = []
@@ -182,6 +189,28 @@ final class PreferencesNavigationState: ObservableObject {
     backStack.append(selectedTab)
     forwardStack.removeAll()
     selectedTab = tab
+  }
+
+  /// Opens a search result's page, its pane if it has one, and scrolls to an anchored setting.
+  func reveal(_ entry: PreferencesSearchEntry) {
+    select(entry.tab)
+    guard entry.anchored || entry.pane != nil else {
+      revealRequest = nil
+      return
+    }
+    revealRequest = PreferencesRevealRequest(title: entry.title, pane: entry.pane, scrolls: entry.anchored)
+  }
+
+  /// Called once the page has scrolled to `request`; flashes the row briefly.
+  func didReveal(_ request: PreferencesRevealRequest) {
+    guard revealRequest == request else { return }
+    revealRequest = nil
+    guard request.scrolls else { return }
+    highlightedSetting = request.title
+    DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { [weak self] in
+      guard self?.highlightedSetting == request.title else { return }
+      self?.highlightedSetting = nil
+    }
   }
 
   /// Navigates back to the previous tab in history.

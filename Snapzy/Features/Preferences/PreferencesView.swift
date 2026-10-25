@@ -52,6 +52,48 @@ struct PreferencesView: View {
   // MARK: - Detail
 
   private var detail: some View {
+    ScrollViewReader { proxy in
+      page
+        .environment(\.preferencesHighlightedSetting, navigationState.highlightedSetting)
+        .onChange(of: navigationState.revealRequest) { request in
+          guard let request else { return }
+          // Let the newly selected page lay out before scrolling into it.
+          DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if request.scrolls {
+              withAnimation(.easeInOut(duration: 0.25)) {
+                proxy.scrollTo(request.title, anchor: .center)
+              }
+            }
+            navigationState.didReveal(request)
+          }
+        }
+    }
+    .navigationTitle(navigationState.title)
+    .navigationSplitViewColumnWidth(min: 480, ideal: 580)
+    .toolbar {
+      ToolbarItemGroup(placement: .navigation) {
+        Button {
+          navigationState.goBack()
+        } label: {
+          Image(systemName: "chevron.left")
+        }
+        .disabled(!navigationState.canGoBack)
+        .help(L10n.PreferencesGeneral.navigationBack)
+        .keyboardShortcut("[", modifiers: .command)
+
+        Button {
+          navigationState.goForward()
+        } label: {
+          Image(systemName: "chevron.right")
+        }
+        .disabled(!navigationState.canGoForward)
+        .help(L10n.PreferencesGeneral.navigationForward)
+        .keyboardShortcut("]", modifiers: .command)
+      }
+    }
+  }
+
+  private var page: some View {
     Group {
       switch navigationState.selectedTab {
       case .general:
@@ -83,29 +125,6 @@ struct PreferencesView: View {
     .id(navigationState.selectedTab)
     .transition(.opacity)
     .animation(.easeOut(duration: 0.12), value: navigationState.selectedTab)
-    .navigationTitle(navigationState.title)
-    .navigationSplitViewColumnWidth(min: 480, ideal: 580)
-    .toolbar {
-      ToolbarItemGroup(placement: .navigation) {
-        Button {
-          navigationState.goBack()
-        } label: {
-          Image(systemName: "chevron.left")
-        }
-        .disabled(!navigationState.canGoBack)
-        .help(L10n.PreferencesGeneral.navigationBack)
-        .keyboardShortcut("[", modifiers: .command)
-
-        Button {
-          navigationState.goForward()
-        } label: {
-          Image(systemName: "chevron.right")
-        }
-        .disabled(!navigationState.canGoForward)
-        .help(L10n.PreferencesGeneral.navigationForward)
-        .keyboardShortcut("]", modifiers: .command)
-      }
-    }
   }
 }
 

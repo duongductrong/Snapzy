@@ -12,14 +12,23 @@ struct PreferencesSidebarView: View {
   @ObservedObject var navigationState: PreferencesNavigationState
 
   @State private var query = ""
+  @State private var searchGroups: [PreferencesSearchGroup] = []
+  /// Result last opened from the list, so keyboard moves continue from it.
+  @State private var activeResultID: String?
   @FocusState private var isSearchFocused: Bool
+
+  /// L10n strings are fixed for the app's lifetime, so the index is built once.
+  private static let searchEngine = PreferencesSearchEngine.standard()
 
   private var isSearching: Bool {
     !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
-  private var searchResults: [PreferencesTab] {
-    PreferencesTab.sidebarOrder.filter { $0.matches(query) }
+  /// Results in display order: each page row, then its settings.
+  private var flatResults: [PreferencesSearchEntry] {
+    searchGroups.flatMap { group in
+      [group.pageResult?.entry ?? PreferencesSearchEntry(page: group.tab)] + group.settings.map(\.entry)
+    }
   }
 
   var body: some View {
@@ -51,6 +60,10 @@ struct PreferencesSidebarView: View {
         .keyboardShortcut("f", modifiers: .command)
         .hidden()
     }
+    .onChange(of: query) { newValue in
+      searchGroups = Self.searchEngine.groupedSearch(newValue)
+      activeResultID = nil
+    }
   }
 
   // MARK: - Search
@@ -66,10 +79,12 @@ struct PreferencesSidebarView: View {
         .font(.system(size: 13))
         .focused($isSearchFocused)
         .onSubmit {
-          if let first = searchResults.first {
-            navigationState.select(first)
+          let results = flatResults
+          if let entry = results.first(where: { $0.id == activeResultID }) ?? results.first {
+            open(entry)
           }
         }
+        .onMoveCommand(perform: moveSelection)
         .onExitCommand { query = "" }
 
       if isSearching {
@@ -91,19 +106,45 @@ struct PreferencesSidebarView: View {
 
   @ViewBuilder
   private var searchResultList: some View {
-    if searchResults.isEmpty {
+    if searchGroups.isEmpty {
       Text(L10n.PreferencesGeneral.sidebarSearchNoResults)
         .font(.system(size: 12))
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
         .padding(.top, 24)
     } else {
-      VStack(spacing: 2) {
-        ForEach(searchResults) { tab in
-          row(for: tab)
+      VStack(spacing: 10) {
+        ForEach(searchGroups) { group in
+          VStack(spacing: 2) {
+            PreferencesSidebarRow(
+              tab: group.tab,
+              isSelected: isPageRowSelected(group.tab)
+            ) {
+              open(group.pageResult?.entry ?? PreferencesSearchEntry(page: group.tab))
+            }
+
+            ForEach(group.settings) { result in
+              PreferencesSidebarSearchResultRow(
+                result: result,
+                isSelected: activeResultID == result.id
+              ) {
+                open(result.entry)
+              }
+            }
+          }
         }
       }
     }
+  }
+
+  private func isPageRowSelected(_ tab: PreferencesTab) -> Bool {
+    guard navigationState.selectedTab == tab else { return false }
+    return activeResultID == nil || activeResultID == tab.rawValue
+  }
+
+  private func open(_ entry: PreferencesSearchEntry) {
+    activeResultID = entry.id
+    navigationState.reveal(entry)
   }
 
   // MARK: - Browse
@@ -133,19 +174,85 @@ struct PreferencesSidebarView: View {
   // MARK: - Keyboard
 
   private func moveSelection(_ direction: MoveCommandDirection) {
-    let order = isSearching ? searchResults : PreferencesTab.sidebarOrder
-    guard !order.isEmpty else { return }
-    let current = order.firstIndex(of: navigationState.selectedTab)
-    let next: Int
+    let step: Int
     switch direction {
     case .up:
-      next = max((current ?? order.count) - 1, 0)
+      step = -1
     case .down:
-      next = min((current ?? -1) + 1, order.count - 1)
+      step = 1
     default:
       return
     }
+
+    if isSearching {
+      let order = flatResults
+      guard !order.isEmpty else { return }
+      let current = order.firstIndex { $0.id == activeResultID }
+      let next = current.map { min(max($0 + step, 0), order.count - 1) } ?? (step > 0 ? 0 : order.count - 1)
+      open(order[next])
+      return
+    }
+
+    let order = PreferencesTab.sidebarOrder
+    let current = order.firstIndex(of: navigationState.selectedTab)
+    let next = current.map { min(max($0 + step, 0), order.count - 1) } ?? 0
     navigationState.select(order[next])
+  }
+}
+
+// MARK: - Search Result Row
+
+/// A setting inside a page, indented under that page's row, with its section as context.
+private struct PreferencesSidebarSearchResultRow: View {
+  let result: PreferencesSearchResult
+  let isSelected: Bool
+  let action: () -> Void
+
+  @State private var isHovering = false
+
+  /// Lines the title up with the page title above (row padding + icon + spacing).
+  private static let leadingInset: CGFloat = 7 + 22 + 9
+
+  var body: some View {
+    Button(action: action) {
+      VStack(alignment: .leading, spacing: 1) {
+        Text(highlightedTitle)
+          .font(.system(size: 12))
+          .foregroundStyle(Color.primary)
+          .lineLimit(2)
+        if let section = result.entry.section, !section.isEmpty {
+          Text(section)
+            .font(.system(size: 10.5))
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(.leading, Self.leadingInset)
+      .padding(.trailing, 7)
+      .padding(.vertical, 5)
+      .background {
+        Radius.controlRect(forHeight: 32)
+          .fill(Color.primary.opacity(isSelected ? 0.08 : (isHovering ? 0.045 : 0)))
+      }
+      .contentShape(Radius.controlRect(forHeight: 32))
+    }
+    .buttonStyle(.plain)
+    .onHover { isHovering = $0 }
+    .help(result.entry.detail ?? "")
+    .accessibilityLabel([result.entry.title, result.entry.section].compactMap { $0 }.joined(separator: ", "))
+    .accessibilityAddTraits(isSelected ? .isSelected : [])
+  }
+
+  /// The title with the characters the query matched set in semibold.
+  private var highlightedTitle: AttributedString {
+    let title = result.entry.title
+    var attributed = AttributedString(title)
+    for range in result.titleHighlights {
+      guard let attributedRange = Range(range, in: attributed) else { continue }
+      attributed[attributedRange].font = .system(size: 12, weight: .semibold)
+    }
+    return attributed
   }
 }
 

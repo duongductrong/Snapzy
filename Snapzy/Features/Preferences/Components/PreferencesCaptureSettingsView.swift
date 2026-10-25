@@ -8,7 +8,8 @@
 import AVFoundation
 import SwiftUI
 
-private enum CaptureSettingsPane: CaseIterable, Hashable, Identifiable {
+/// Raw values are referenced by `PreferencesSearchIndex` to open the right segment.
+private enum CaptureSettingsPane: String, CaseIterable, Hashable, Identifiable {
   case general
   case screenshot
   case recording
@@ -772,6 +773,11 @@ struct CaptureSettingsView: View {
         }
       }
       .formStyle(.grouped)
+      .onReceive(PreferencesNavigationState.shared.$revealRequest) { request in
+        if let pane = request?.pane.flatMap(CaptureSettingsPane.init(rawValue:)) {
+          selectedPane = pane
+        }
+      }
     }
     .onAppear(perform: refreshMicrophoneDevices)
     .task {

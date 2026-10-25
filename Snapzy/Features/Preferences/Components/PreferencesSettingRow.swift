@@ -24,7 +24,22 @@ struct SettingRow<Content: View>: View {
   var alignment: VerticalAlignment = .center
   @ViewBuilder let content: () -> Content
 
+  @Environment(\.preferencesHighlightedSetting) private var highlightedSetting
+
   var body: some View {
+    row
+      // The title doubles as the anchor Preferences search scrolls to.
+      .id(title)
+      .background {
+        RoundedRectangle(cornerRadius: 6, style: .continuous)
+          .fill(Color.accentColor.opacity(highlightedSetting == title ? 0.16 : 0))
+          .padding(.horizontal, -6)
+          .padding(.vertical, -4)
+          .animation(.easeInOut(duration: 0.35), value: highlightedSetting == title)
+      }
+  }
+
+  private var row: some View {
     HStack(alignment: alignment, spacing: 12) {
       VStack(alignment: .leading, spacing: 2) {
         if let hintText {
@@ -49,5 +64,19 @@ struct SettingRow<Content: View>: View {
     let hinted = descriptionStyle == .hint ? description : nil
     let parts = [hinted, tooltip].compactMap { $0 }.filter { !$0.isEmpty }
     return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
+  }
+}
+
+// MARK: - Search Highlight
+
+private struct PreferencesHighlightedSettingKey: EnvironmentKey {
+  static let defaultValue: String? = nil
+}
+
+extension EnvironmentValues {
+  /// Title of the setting row flashing after a Preferences search jump.
+  var preferencesHighlightedSetting: String? {
+    get { self[PreferencesHighlightedSettingKey.self] }
+    set { self[PreferencesHighlightedSettingKey.self] = newValue }
   }
 }

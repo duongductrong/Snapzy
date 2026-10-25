@@ -136,13 +136,6 @@ final class PreferencesCoreTests: XCTestCase {
     XCTAssertEqual(order.last, .about)
   }
 
-  func testPreferencesTabSearch_matchesTitleAndKeywordsCaseInsensitively() {
-    XCTAssertTrue(PreferencesTab.capture.matches(PreferencesTab.capture.title.uppercased()))
-    XCTAssertTrue(PreferencesTab.commandLine.matches("CLI"))
-    XCTAssertTrue(PreferencesTab.general.matches("   "))
-    XCTAssertFalse(PreferencesTab.about.matches("zzzz-no-match"))
-  }
-
   func testPreferencesTab_symbolsAndTitlesAreNonEmpty() {
     for tab in PreferencesTab.allCases {
       XCTAssertFalse(tab.title.isEmpty, "Expected title for tab \(tab)")
