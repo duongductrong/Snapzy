@@ -270,6 +270,7 @@ struct ShortcutsSettingsView: View {
           title: page.title,
           subtitle: page.subtitle,
           help: page.help,
+          tint: page.iconTint,
           isExpanded: expansion(for: page),
           onReset: resetAction(for: page)
         )
@@ -1365,13 +1366,27 @@ private enum ShortcutsPage: String, CaseIterable, Identifiable {
     }
   }
 
+  /// Accent layer of the card's duotone tile, echoing the sidebar page each group belongs to.
+  var iconTint: PreferencesIconTint {
+    switch self {
+    case .capture: return PreferencesTab.capture.iconTint
+    case .recording: return PreferencesIconTint(hue: 2, saturation: 0.62)
+    case .tools: return .periwinkle
+    case .history: return PreferencesTab.history.iconTint
+    case .quickAccess: return PreferencesTab.quickAccess.iconTint
+    case .annotateActions: return PreferencesTab.annotate.iconTint
+    case .annotateTools: return PreferencesTab.menuBar.iconTint
+    case .annotateReference: return PreferencesIconTint(hue: 138, saturation: 0.55)
+    }
+  }
+
   var symbol: String {
     switch self {
     case .capture: return "camera.viewfinder"
     case .recording: return "record.circle"
     case .tools: return "wrench.and.screwdriver.fill"
     case .history: return "clock.arrow.circlepath"
-    case .quickAccess: return "square.stack.fill"
+    case .quickAccess: return "square.stack.3d.up.fill"
     case .annotateActions: return "paintbrush.pointed.fill"
     case .annotateTools: return "character.cursor.ibeam"
     case .annotateReference: return "book.closed.fill"

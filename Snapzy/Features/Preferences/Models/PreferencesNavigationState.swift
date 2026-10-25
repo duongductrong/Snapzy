@@ -63,29 +63,30 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
     }
   }
 
-  /// Filled, rounded glyph drawn bold and white on the tab's dark sidebar squircle.
+  /// Layered glyph drawn duotone (silver body, `iconTint` accent) on the tab's dark squircle;
+  /// each symbol needs a second layer for the accent to land on.
   var symbol: String {
     switch self {
     case .general:
       return "gearshape.fill"
     case .menuBar:
-      return "menubar.rectangle"
+      return "menubar.dock.rectangle"
     case .capture:
-      return "camera.fill"
+      return "camera.viewfinder"
     case .annotate:
-      return "paintbrush.pointed.fill"
+      return "pencil.and.scribble"
     case .quickAccess:
-      return "square.stack.fill"
+      return "square.stack.3d.up.fill"
     case .history:
       return "clock.arrow.circlepath"
     case .shortcuts:
       return "command"
     case .permissions:
-      return "hand.raised.fill"
+      return "lock.shield.fill"
     case .commandLine:
       return "terminal.fill"
     case .cloud:
-      return "icloud.fill"
+      return "icloud.and.arrow.up.fill"
     case .advanced:
       return "gearshape.2.fill"
     case .about:

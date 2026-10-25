@@ -163,10 +163,10 @@ private struct PreferencesSidebarRow: View {
   var body: some View {
     Button(action: action) {
       HStack(spacing: 9) {
-        PreferencesSidebarIcon(tab: tab, size: 22)
+        PreferencesSidebarIcon(tab: tab, size: 22, duotone: true)
         Text(tab.title)
           .font(.system(size: 13, weight: isSelected ? .medium : .regular))
-          .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+          .foregroundStyle(Color.primary)
           .lineLimit(1)
         Spacer(minLength: 0)
       }
@@ -186,16 +186,106 @@ private struct PreferencesSidebarRow: View {
 
 // MARK: - Icon
 
-/// System Settings-style squircle: one near-black tile with a bold blue glyph for every page,
-/// so the sidebar reads calm and uniform whatever the system icon style is. About uses the
-/// menu bar brand mark on the same tile.
+/// Glyph tint for a settings tile: one hue in a pastel band that sits light on the near-black
+/// tile, washed toward white at the top and settling into the full color at the bottom
+/// (Droppy / App Store dark-icon look). Every tint shares that band, so pages each get their
+/// own color while the sidebar still reads as one family.
+struct PreferencesIconTint: Equatable {
+  /// Hue in degrees on the color wheel.
+  var hue: Double
+  var saturation: Double = 0.6
+
+  static let blue = PreferencesIconTint(hue: 214)
+  static let periwinkle = PreferencesIconTint(hue: 238)
+  static let graphite = PreferencesIconTint(hue: 225, saturation: 0.07)
+
+  /// Near-white silver for the primary layer of a duotone glyph, so the tint reads as an accent.
+  static var silver: LinearGradient {
+    LinearGradient(
+      colors: [Color(white: 0.98), Color(white: 0.76)],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+  }
+
+  var gradient: LinearGradient {
+    LinearGradient(
+      colors: [
+        Color(hue: wrapped(hue - 3), saturation: saturation * 0.55, brightness: 1),
+        Color(hue: wrapped(hue + 3), saturation: saturation, brightness: 0.86),
+      ],
+      startPoint: .top,
+      endPoint: .bottom
+    )
+  }
+
+  private func wrapped(_ degrees: Double) -> Double {
+    (degrees.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360) / 360
+  }
+}
+
+extension PreferencesTab {
+  /// Each page's glyph color, picked to match what the glyph depicts; neighbours within a
+  /// sidebar group never share a hue family.
+  var iconTint: PreferencesIconTint {
+    switch self {
+    case .general: return .graphite
+    case .capture: return .blue
+    case .quickAccess: return PreferencesIconTint(hue: 262)
+    case .shortcuts: return .periwinkle
+    case .annotate: return PreferencesIconTint(hue: 350)
+    case .history: return PreferencesIconTint(hue: 40, saturation: 0.66)
+    case .menuBar: return PreferencesIconTint(hue: 174)
+    case .cloud: return PreferencesIconTint(hue: 198)
+    case .permissions: return PreferencesIconTint(hue: 18, saturation: 0.64)
+    case .commandLine: return PreferencesIconTint(hue: 305, saturation: 0.5)
+    case .advanced: return .graphite
+    case .about: return .blue
+    }
+  }
+}
+
+/// System Settings-style squircle: one near-black tile for every page, each glyph tinted in
+/// its page's color. About uses the menu bar brand mark on the same tile. `duotone` (page
+/// heroes) draws the glyph silver with the page color as its accent layer.
 struct PreferencesSidebarIcon: View {
   let tab: PreferencesTab
   var size: CGFloat = 22
+  var duotone = false
 
   var body: some View {
-    if tab == .about {
-      PreferencesIconTile(size: size) {
+    if tab == .shortcuts && duotone {
+      PreferencesIconTile(size: size, tint: tab.iconTint, duotone: true) {
+        // ⌘ is a single-layer symbol; tinted fills behind its loops and centre give it the
+        // accent layer, so the silver outline reads like a keycap legend.
+        ZStack {
+          ForEach(0..<4, id: \.self) { corner in
+            Circle()
+              .fill(.secondary)
+              .frame(width: size * 0.11, height: size * 0.11)
+              .offset(
+                x: size * (corner % 2 == 0 ? -0.15 : 0.15),
+                y: size * (corner < 2 ? -0.15 : 0.15)
+              )
+          }
+          Radius.rect(size * 0.02)
+            .fill(.secondary)
+            .frame(width: size * 0.2, height: size * 0.2)
+          Image(systemName: tab.symbol)
+            .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+            .foregroundStyle(.primary)
+        }
+      }
+    } else if tab == .commandLine && duotone {
+      PreferencesIconTile(size: size, tint: tab.iconTint, duotone: true) {
+        // The prompt is cut out of a single-layer symbol, too thin to carry an accent. Keep the
+        // window silver like the ⌘ tile, so the cut-out prompt shows the dark tile through it.
+        Image(systemName: tab.symbol)
+          .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
+          .foregroundStyle(.primary)
+      }
+    } else if tab == .about {
+      PreferencesIconTile(size: size, tint: tab.iconTint) {
         // MenubarIcon's visible mark fills ~75% of its canvas; scale so it matches symbol weight.
         Image("MenubarIcon")
           .renderingMode(.template)
@@ -204,20 +294,23 @@ struct PreferencesSidebarIcon: View {
           .frame(width: size * 0.78, height: size * 0.78)
       }
     } else {
-      PreferencesSymbolTile(symbol: tab.symbol, size: size)
+      PreferencesSymbolTile(symbol: tab.symbol, size: size, tint: tab.iconTint, duotone: duotone)
     }
   }
 }
 
-/// A bold rounded SF Symbol on the near-black settings tile.
+/// A bold rounded SF Symbol on the near-black settings tile. Duotone renders the symbol's
+/// layers as a palette: silver body, tinted accent.
 struct PreferencesSymbolTile: View {
   let symbol: String
   var size: CGFloat = 22
+  var tint: PreferencesIconTint = .blue
+  var duotone = false
 
   var body: some View {
-    PreferencesIconTile(size: size) {
+    PreferencesIconTile(size: size, tint: tint, duotone: duotone) {
       Image(systemName: symbol)
-        .symbolRenderingMode(.monochrome)
+        .symbolRenderingMode(duotone ? .palette : .monochrome)
         .font(.system(size: size * 0.5, weight: .bold, design: .rounded))
     }
   }
@@ -229,27 +322,15 @@ struct PreferencesSymbolTile: View {
 /// No drop shadow at any size; large tiles take an Icon Composer-style specular rim.
 struct PreferencesIconTile<Glyph: View>: View {
   var size: CGFloat
+  var tint: PreferencesIconTint = .blue
+  var duotone = false
   @ViewBuilder let glyph: () -> Glyph
 
   private var isLarge: Bool { size > 36 }
 
-  /// One sky-to-azure glyph tint for every page (App Store dark-icon look): lit from the top,
-  /// deepening toward the bottom like the tile beneath it.
-  private var glyphGradient: LinearGradient {
-    LinearGradient(
-      colors: [
-        Color(red: 0.36, green: 0.76, blue: 1.0),
-        Color(red: 0.17, green: 0.45, blue: 0.93),
-      ],
-      startPoint: .top,
-      endPoint: .bottom
-    )
-  }
-
   var body: some View {
     let shape = isLarge ? Radius.rect(size * 0.24) : Radius.controlRect(forHeight: size)
-    glyph()
-      .foregroundStyle(glyphGradient)
+    styledGlyph
       .frame(width: size, height: size)
       .background {
         shape.fill(LinearGradient(
@@ -272,6 +353,15 @@ struct PreferencesIconTile<Glyph: View>: View {
           )
         }
       }
+  }
+
+  @ViewBuilder
+  private var styledGlyph: some View {
+    if duotone {
+      glyph().foregroundStyle(PreferencesIconTint.silver, tint.gradient)
+    } else {
+      glyph().foregroundStyle(tint.gradient)
+    }
   }
 
   /// Light hits the top-left edge and glints again at the bottom-right, like the glass edge

@@ -14,7 +14,7 @@ struct PreferencesPageHero: View {
 
   var body: some View {
     VStack(spacing: 12) {
-      PreferencesSidebarIcon(tab: tab, size: 72)
+      PreferencesSidebarIcon(tab: tab, size: 72, duotone: true)
 
       VStack(spacing: 4) {
         Text(tab.title)
@@ -43,6 +43,7 @@ struct PreferencesExpandableCardHeader: View {
   let title: String
   let subtitle: String
   var help: String? = nil
+  var tint: PreferencesIconTint = .blue
   @Binding var isExpanded: Bool
   var onReset: (() -> Void)? = nil
 
@@ -50,7 +51,7 @@ struct PreferencesExpandableCardHeader: View {
 
   var body: some View {
     HStack(spacing: 12) {
-      PreferencesSymbolTile(symbol: symbol, size: 30)
+      PreferencesSymbolTile(symbol: symbol, size: 30, tint: tint, duotone: true)
 
       VStack(alignment: .leading, spacing: 2) {
         titleText
