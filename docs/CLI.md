@@ -27,8 +27,8 @@ flowchart LR
 | Channel | How `snapzy` gets on PATH |
 | --- | --- |
 | Homebrew | The cask links `binary "#{appdir}/Snapzy.app/Contents/Helpers/snapzy"`, added by the release workflow from the first stable release that ships the tool |
-| `install.sh` | Links `/usr/local/bin/snapzy` when that directory is writable; otherwise prints the `sudo ln -sfn …` command. Never replaces a regular file or another tool's live link. Prints `brew upgrade --cask snapzy` instead when the cask is installed |
-| Settings → Command Line | **Install** creates the link (administrator password only if `/usr/local/bin` is not writable); refused while Snapzy runs from a DMG or AppTranslocation. **Uninstall** removes only a link to this app's helper. Homebrew-managed links are shown, not changed; a cask install without that link shows **Copy Command** (`brew upgrade --cask snapzy`) instead of Install |
+| `install.sh` | Links `/usr/local/bin/snapzy` when that directory is writable; otherwise prints the `sudo ln -sfn …` command. Never replaces a regular file or another tool's live link. Prints `brew reinstall --cask snapzy` instead when the cask is installed |
+| Settings → Command Line | **Install** creates the link (administrator password only if `/usr/local/bin` is not writable); refused while Snapzy runs from a DMG or AppTranslocation. **Uninstall** removes only a link to this app's helper. Homebrew-managed links are shown, not changed; a cask install without that link shows **Copy Command** (`brew reinstall --cask snapzy`) instead of Install |
 | Direct | Agents can always call `/Applications/Snapzy.app/Contents/Helpers/snapzy` |
 
 Debug builds (`com.trongduong.snapzy.debug`) link `/usr/local/bin/snapzy-debug` instead (`CommandName`, keyed by bundle ID like the socket), so a development copy never takes the installed app's `snapzy`. Settings → Command Line in a Debug build only replaces links into `Snapzy Debug*.app`; a release build replaces any link into a `Snapzy*.app`, which reclaims a `snapzy` link made by a Debug build from before the split. `snapzy doctor` from a Debug helper checks and hints `snapzy-debug`.
@@ -39,9 +39,10 @@ Debug builds (`com.trongduong.snapzy.debug`) link `/usr/local/bin/snapzy-debug` 
 
 Sparkle replaces the whole bundle at the same path, so the helper updates with the app and every link keeps working. Homebrew only links the helper when it installs or upgrades the cask, so:
 
-- A cask installed before the tool shipped and then updated in-app has no link. `CLIToolInstaller` reports `homebrewLinkMissing` (`Caskroom/snapzy` exists, the app is named `Snapzy.app`, no link works) and refuses to link, and `snapzy doctor` prints the same hint: `brew upgrade --cask snapzy`. Until a stable release adds the `binary` stanza (Sparkle beta users), link by hand or call the helper's full path.
+- A cask installed before the tool shipped and then updated in-app has no link. `CLIToolInstaller` reports `homebrewLinkMissing` (`Caskroom/snapzy` exists, the app is named `Snapzy.app`, no link works) and refuses to link, and `snapzy doctor` prints the same hint: `brew reinstall --cask snapzy`. Until a stable release adds the `binary` stanza (Sparkle beta users), link by hand or call the helper's full path.
 - On Intel Macs the cask's link and Snapzy's own link are both `/usr/local/bin/snapzy`. The cask's `preflight_steps` removes `$(brew --prefix)/bin/snapzy` when it is a symlink into an app's `Contents/Helpers/snapzy`, so `brew install`/`upgrade` never stops at "already a Binary". Anything else there is left alone; on Apple Silicon that path is never Snapzy's own link.
-- The cask has no `auto_updates true`: with it, `brew upgrade` would skip Snapzy and in-app-updated users would never get the link.
+- The cask keeps `auto_updates true`, as homebrew-cask requires for Sparkle apps. `brew upgrade` then reinstalls Snapzy only when the installed bundle is older than the tap, so a user Sparkle already updated never gets the link from it; the hint is `brew reinstall`, which always reruns the cask.
+- `Casks/snapzy.rb` mirrors [the official cask](https://github.com/Homebrew/homebrew-cask/blob/main/Casks/s/snapzy.rb). The release workflow only bumps the local copy and adds `binary`; Homebrew users get the link once a PR adds `binary` (and optionally `preflight_steps`) to homebrew-cask.
 
 ## Commands
 

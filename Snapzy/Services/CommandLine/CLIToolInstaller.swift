@@ -7,7 +7,7 @@
 //  asking for an administrator password only when that directory is not
 //  writable. Only ever creates or removes a symlink, and never replaces a
 //  file, another tool's link, or a Debug link with a release one. A Homebrew
-//  cask install leaves the link to Homebrew, so `brew upgrade` never meets a
+//  cask install leaves the link to Homebrew, so `brew reinstall` never meets a
 //  link it did not make.
 //
 
@@ -63,7 +63,7 @@ enum CLIToolInstaller {
   /// development copy and the installed app can both stay on PATH.
   static let isDebugBuild = CommandName.isDebugBundleID(Bundle.main.bundleIdentifier)
   static let linkPath = "/usr/local/bin/" + CommandName.forAppBundleID(Bundle.main.bundleIdentifier)
-  static let homebrewUpgradeCommand = "brew upgrade --cask snapzy"
+  static let homebrewUpgradeCommand = "brew reinstall --cask snapzy"
 
   static func helperURL(appBundleURL: URL = Bundle.main.bundleURL) -> URL {
     appBundleURL.appendingPathComponent("Contents/Helpers/snapzy")

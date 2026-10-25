@@ -141,7 +141,7 @@ enum Doctor {
     return "sudo mkdir -p /usr/local/bin && sudo ln -sfn \(quoted) /usr/local/bin/\(commandName)"
   }
 
-  static let homebrewHint = "Snapzy came from Homebrew, which links snapzy: run `brew upgrade --cask snapzy`"
+  static let homebrewHint = "Snapzy came from Homebrew, which links snapzy: run `brew reinstall --cask snapzy`"
   static let homebrewCaskroomPaths = ["/opt/homebrew/Caskroom/snapzy", "/usr/local/Caskroom/snapzy"]
 
   /// Whether this binary is inside the cask's `Snapzy.app` (not a Debug or
