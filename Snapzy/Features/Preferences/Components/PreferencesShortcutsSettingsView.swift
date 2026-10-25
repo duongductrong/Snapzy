@@ -263,7 +263,6 @@ struct ShortcutsSettingsView: View {
 
       Section {
         SettingRow(
-          icon: "keyboard",
           title: L10n.PreferencesShortcuts.enableShortcutsTitle,
           description: L10n.PreferencesShortcuts.enableShortcutsDescription
         ) {

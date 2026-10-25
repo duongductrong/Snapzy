@@ -15,7 +15,6 @@ struct PreferencesScreenshotDefaultPresetPicker: View {
 
   var body: some View {
     SettingRow(
-      icon: "wand.and.sparkles",
       title: L10n.PreferencesCapture.defaultPresetTitle,
       description: L10n.PreferencesCapture.defaultPresetDescription
     ) {

@@ -26,7 +26,7 @@ struct GeneralSettingsView: View {
   var body: some View {
     Form {
       Section(L10n.PreferencesGeneral.startupSection) {
-        SettingRow(icon: "power.circle", title: L10n.PreferencesGeneral.startAtLoginTitle, description: L10n.PreferencesGeneral.startAtLoginDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.startAtLoginTitle, description: L10n.PreferencesGeneral.startAtLoginDescription) {
           Toggle("", isOn: $startAtLogin)
             .labelsHidden()
             .onChange(of: startAtLogin) { newValue in
@@ -34,12 +34,12 @@ struct GeneralSettingsView: View {
             }
         }
 
-        SettingRow(icon: "speaker.wave.2", title: L10n.PreferencesGeneral.playSoundsTitle, description: L10n.PreferencesGeneral.playSoundsDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.playSoundsTitle, description: L10n.PreferencesGeneral.playSoundsDescription) {
           Toggle("", isOn: $playSounds)
             .labelsHidden()
         }
 
-        SettingRow(icon: "menubar.rectangle", title: L10n.PreferencesGeneral.menuBarIconTitle, description: L10n.PreferencesGeneral.menuBarIconDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.menuBarIconTitle, description: L10n.PreferencesGeneral.menuBarIconDescription) {
           Toggle("", isOn: $showMenuBarIcon)
             .labelsHidden()
             .onChange(of: showMenuBarIcon) { newValue in
@@ -51,11 +51,11 @@ struct GeneralSettingsView: View {
       Section(L10n.PreferencesGeneral.appearanceSection) {
         PreferencesLanguageSettingRow()
 
-        SettingRow(icon: "circle.lefthalf.filled", title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.themeTitle, description: L10n.PreferencesGeneral.themeDescription) {
           AppearanceModePicker(selection: $themeManager.preferredAppearance)
         }
 
-        SettingRow(icon: "sparkles", title: L10n.PreferencesGeneral.liquidGlassTitle, description: L10n.PreferencesGeneral.liquidGlassDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.liquidGlassTitle, description: L10n.PreferencesGeneral.liquidGlassDescription) {
           Toggle("", isOn: $useLiquidGlass)
             .labelsHidden()
             .onChange(of: useLiquidGlass) { _ in
@@ -66,7 +66,7 @@ struct GeneralSettingsView: View {
       }
 
       Section(L10n.PreferencesGeneral.storageSection) {
-        SettingRow(icon: "folder.fill", title: L10n.PreferencesGeneral.saveLocationTitle, description: exportLocationDisplay) {
+        SettingRow(title: L10n.PreferencesGeneral.saveLocationTitle, description: exportLocationDisplay, descriptionStyle: .subtitle) {
           Button(L10n.PreferencesGeneral.chooseButton) {
             chooseExportLocation()
           }
@@ -76,7 +76,7 @@ struct GeneralSettingsView: View {
       }
 
       Section(L10n.PreferencesGeneral.updatesSection) {
-        SettingRow(icon: "arrow.triangle.2.circlepath", title: L10n.PreferencesGeneral.checkAutomaticallyTitle, description: L10n.PreferencesGeneral.checkAutomaticallyDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.checkAutomaticallyTitle, description: L10n.PreferencesGeneral.checkAutomaticallyDescription) {
           Toggle("", isOn: Binding(
             get: { updater.automaticallyChecksForUpdates },
             set: {
@@ -87,7 +87,7 @@ struct GeneralSettingsView: View {
           .labelsHidden()
         }
 
-        SettingRow(icon: "arrow.down.circle", title: L10n.PreferencesGeneral.downloadAutomaticallyTitle, description: L10n.PreferencesGeneral.downloadAutomaticallyDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.downloadAutomaticallyTitle, description: L10n.PreferencesGeneral.downloadAutomaticallyDescription) {
           Toggle("", isOn: Binding(
             get: { updater.automaticallyDownloadsUpdates },
             set: {
@@ -98,7 +98,7 @@ struct GeneralSettingsView: View {
           .labelsHidden()
         }
 
-        SettingRow(icon: "clock", title: L10n.PreferencesGeneral.lastCheckedTitle, description: nil) {
+        SettingRow(title: L10n.PreferencesGeneral.lastCheckedTitle, description: nil) {
           if let lastCheck = updater.lastUpdateCheckDate {
             Text(lastCheck, style: .relative)
               .font(.caption)
@@ -112,7 +112,7 @@ struct GeneralSettingsView: View {
       }
 
       Section(L10n.PreferencesGeneral.helpSection) {
-        SettingRow(icon: "arrow.counterclockwise.circle", title: L10n.PreferencesGeneral.restartOnboardingTitle, description: L10n.PreferencesGeneral.restartOnboardingDescription) {
+        SettingRow(title: L10n.PreferencesGeneral.restartOnboardingTitle, description: L10n.PreferencesGeneral.restartOnboardingDescription) {
           Button(L10n.PreferencesGeneral.restartButton) {
             restartOnboarding()
           }
@@ -121,7 +121,6 @@ struct GeneralSettingsView: View {
         }
 
         SettingRow(
-          icon: "exclamationmark.bubble",
           title: L10n.PreferencesGeneral.reportIssueTitle,
           description: L10n.PreferencesGeneral.reportIssueDescription(bugReportDisplayAddress)
         ) {

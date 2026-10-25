@@ -4,7 +4,13 @@ Reference for the Settings window: tab structure, every section, and how prefere
 
 ## Root
 
-- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 12 categories in 4 unlabelled groups.
+- `PreferencesView` (`Snapzy/Features/Preferences/PreferencesView.swift`) — SwiftUI `NavigationSplitView` sidebar layout, resizable (default 800×620, min 700×520), 12 categories.
+- `PreferencesSidebarView` (`Components/PreferencesSidebarView.swift`) — custom sidebar (not a `List`), top to bottom:
+  - capsule search field (⌘F focuses, Esc clears, Return opens first hit; matches localized title + `PreferencesTab.searchKeywords`);
+  - `PreferencesSidebarProfileHeader` — System Settings account-row style: app icon, "Snapzy", version · channel dot. Click opens About (also listed as the last row); context menu = Check for Updates + Stable/Beta channel;
+  - `PreferencesTab.groups` as rows (General, Capture, Quick Access, Shortcuts first). ↑/↓ moves through `PreferencesTab.sidebarOrder`.
+- Sidebar icons (`PreferencesSidebarIcon`) — one fixed look for every page: graphite squircle (white 0.29→0.21, 0.5pt hairline, 1pt drop shadow) with a bold rounded white SF Symbol glyph. Deliberately ignores the macOS 26 icon style (Default/Dark/Clear/Tinted) so the sidebar stays uniform. About/profile use `NSApp.applicationIconImage`.
+- `SettingRow` (`Components/PreferencesSettingRow.swift`) — compact single-line row: title + ⓘ hint carrying the description (`descriptionStyle: .hint`, default). Rows whose description is live state (save location, storage size, sync status, cloud config values, CLI tool state, auto-close, language relaunch hint) pass `.subtitle` to keep it visible.
 - `PreferencesWindowController` (`Snapzy/Features/Preferences/PreferencesWindowController.swift`) — Dedicated `NSWindowController` directly managing window lifecycle, activation policy transitions (`.regular` ↔ `.accessory`), fullSizeContentView, and titlebar transparency.
 - Selection driven by `PreferencesNavigationState.shared.selectedTab` (`Models/PreferencesNavigationState.swift`, `PreferencesTab` enum) — supports back/forward history stacks (`⌘[` and `⌘]`), last-visited tab persistence, and programmatical routing from menu bar, deep links (`snapzy://settings?tab=`, see [SHORTCUTS.md](SHORTCUTS.md)), and the shortcut overlay.
 

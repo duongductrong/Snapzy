@@ -2,35 +2,36 @@
 //  SettingRow.swift
 //  Snapzy
 //
-//  Reusable settings row with icon, title, description, and trailing content
+//  Reusable compact settings row: title with an info hint, and trailing content.
 //
 
 import SwiftUI
 
+/// Where a row's description is shown.
+enum SettingRowDescriptionStyle {
+  /// Static explanation, revealed by hovering the ⓘ beside the title. Keeps rows single-line.
+  case hint
+  /// Live state the user should see at a glance (a path, a size, a sync status).
+  case subtitle
+}
+
 struct SettingRow<Content: View>: View {
-  let icon: String
   let title: String
   let description: String?
+  var descriptionStyle: SettingRowDescriptionStyle = .hint
   var tooltip: String? = nil
   @ViewBuilder let content: () -> Content
 
   var body: some View {
     HStack(spacing: 12) {
-      Image(systemName: icon)
-        .font(.title2)
-        .foregroundColor(.secondary)
-        .frame(width: 28)
-
       VStack(alignment: .leading, spacing: 2) {
-        if let tooltip {
+        if let hintText {
           Text(title)
-            .fontWeight(.medium)
-            .hint(tooltip, variant: .icon(.info))
+            .hint(hintText, variant: .icon(.info))
         } else {
           Text(title)
-            .fontWeight(.medium)
         }
-        if let description {
+        if descriptionStyle == .subtitle, let description {
           Text(description)
             .font(.caption)
             .foregroundColor(.secondary)
@@ -40,6 +41,12 @@ struct SettingRow<Content: View>: View {
       Spacer()
       content()
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, 2)
+  }
+
+  private var hintText: String? {
+    let hinted = descriptionStyle == .hint ? description : nil
+    let parts = [hinted, tooltip].compactMap { $0 }.filter { !$0.isEmpty }
+    return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
   }
 }

@@ -2954,6 +2954,16 @@ nonisolated enum L10n {
       defaultValue: "Settings categories",
       comment: "Accessibility label for settings sidebar categories"
     )
+    static let sidebarSearchPlaceholder = string(
+      "preferences-general.sidebar-search-placeholder",
+      defaultValue: "Search settings",
+      comment: "Placeholder for the settings sidebar search field"
+    )
+    static let sidebarSearchNoResults = string(
+      "preferences-general.sidebar-search-no-results",
+      defaultValue: "No matching settings",
+      comment: "Shown in the settings sidebar when the search matches no page"
+    )
     static let navigationBack = string(
       "preferences-general.navigation-back",
       defaultValue: "Back (⌘[)",

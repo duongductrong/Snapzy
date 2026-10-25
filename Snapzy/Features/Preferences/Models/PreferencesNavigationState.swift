@@ -63,42 +63,85 @@ enum PreferencesTab: String, CaseIterable, Identifiable, Hashable {
     }
   }
 
+  /// Filled, rounded glyph drawn bold and white on the tab's dark sidebar squircle.
   var symbol: String {
     switch self {
     case .general:
-      return "gearshape"
+      return "gearshape.fill"
     case .menuBar:
       return "menubar.rectangle"
     case .capture:
-      return "camera"
+      return "camera.fill"
     case .annotate:
-      return "pencil.and.scribble"
+      return "paintbrush.pointed.fill"
     case .quickAccess:
-      return "square.stack"
+      return "square.stack.fill"
     case .history:
       return "clock.arrow.circlepath"
     case .shortcuts:
-      return "keyboard"
+      return "command"
     case .permissions:
-      return "lock.shield"
+      return "hand.raised.fill"
     case .commandLine:
-      return "terminal"
+      return "terminal.fill"
     case .cloud:
-      return "icloud"
+      return "icloud.fill"
     case .advanced:
-      return "slider.horizontal.3"
+      return "gearshape.2.fill"
     case .about:
-      return "info.circle"
+      return "info.circle.fill"
     }
   }
 
-  /// The sidebar's running order in 4 unlabelled groups separated by natural whitespace (Ruru & macOS System Settings style).
+  /// Extra non-displayed terms the sidebar search matches besides the localized title.
+  var searchKeywords: [String] {
+    switch self {
+    case .general:
+      return ["startup", "login", "sound", "language", "theme", "appearance", "save location", "updates"]
+    case .menuBar:
+      return ["icon", "status item", "menu"]
+    case .capture:
+      return ["screenshot", "recording", "video", "gif", "ocr", "format", "magnifier", "audio", "microphone"]
+    case .annotate:
+      return ["editor", "crop", "highlighter", "drag"]
+    case .quickAccess:
+      return ["floating", "overlay", "card", "swipe", "pin"]
+    case .history:
+      return ["retention", "storage", "panel"]
+    case .shortcuts:
+      return ["keyboard", "hotkey", "keys"]
+    case .permissions:
+      return ["accessibility", "screen recording", "privacy", "microphone"]
+    case .commandLine:
+      return ["cli", "terminal", "agent"]
+    case .cloud:
+      return ["upload", "s3", "r2", "bucket"]
+    case .advanced:
+      return ["backup", "config", "toml", "diagnostics", "logs", "url scheme"]
+    case .about:
+      return ["version", "contributors", "support"]
+    }
+  }
+
+  func matches(_ query: String) -> Bool {
+    let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !needle.isEmpty else { return true }
+    return ([title] + searchKeywords).contains {
+      $0.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive]) != nil
+    }
+  }
+
+  /// The sidebar list, in unlabelled groups separated by whitespace.
+  /// The profile header at the top of the sidebar also opens About.
   static let groups: [[PreferencesTab]] = [
-    [.general, .menuBar, .quickAccess, .history],
-    [.capture, .annotate, .cloud],
-    [.shortcuts, .permissions, .commandLine, .advanced],
+    [.general, .capture, .quickAccess, .shortcuts],
+    [.annotate, .history, .menuBar, .cloud],
+    [.permissions, .commandLine, .advanced],
     [.about],
   ]
+
+  /// Every page in sidebar reading order.
+  static let sidebarOrder: [PreferencesTab] = groups.flatMap { $0 }
 }
 
 @MainActor

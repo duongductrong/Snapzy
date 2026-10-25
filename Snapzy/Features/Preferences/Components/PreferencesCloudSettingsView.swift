@@ -180,42 +180,42 @@ struct CloudSettingsView: View {
         if let config = cloudManager.cachedConfiguration {
           if config.providerType == .googleDrive {
             SettingRow(
-              icon: "cloud.fill",
               title: config.providerType.displayName,
-              description: config.bucket.isEmpty ? "Snapzy" : config.bucket
+              description: config.bucket.isEmpty ? "Snapzy" : config.bucket,
+              descriptionStyle: .subtitle
             ) {
               EmptyView()
             }
 
             SettingRow(
-              icon: "checkmark.seal.fill",
               title: L10n.CloudSettings.googleAuthorized,
-              description: L10n.CloudSettings.storedSecurelyInKeychain
+              description: L10n.CloudSettings.storedSecurelyInKeychain,
+              descriptionStyle: .subtitle
             ) {
               EmptyView()
             }
           } else {
             SettingRow(
-              icon: "cloud.fill",
               title: config.providerType.displayName,
-              description: L10n.CloudSettings.bucketDescription(config.bucket)
+              description: L10n.CloudSettings.bucketDescription(config.bucket),
+              descriptionStyle: .subtitle
             ) {
               EmptyView()
             }
 
             SettingRow(
-              icon: "key.fill",
               title: L10n.CloudSettings.accessKey,
-              description: cloudManager.cachedMaskedAccessKey
+              description: cloudManager.cachedMaskedAccessKey,
+              descriptionStyle: .subtitle
             ) {
               EmptyView()
             }
 
             if !config.region.isEmpty && config.providerType == .awsS3 {
               SettingRow(
-                icon: "globe",
                 title: L10n.CloudSettings.region,
-                description: config.region
+                description: config.region,
+                descriptionStyle: .subtitle
               ) {
                 EmptyView()
               }
@@ -223,27 +223,27 @@ struct CloudSettingsView: View {
 
             if let endpoint = config.endpoint, !endpoint.isEmpty {
               SettingRow(
-                icon: "server.rack",
                 title: L10n.CloudSettings.endpoint,
-                description: cloudManager.maskedEndpoint()
+                description: cloudManager.maskedEndpoint(),
+                descriptionStyle: .subtitle
               ) {
                 EmptyView()
               }
             }
 
             SettingRow(
-              icon: "clock",
               title: L10n.CloudSettings.expireTime,
-              description: config.expireTime.displayName
+              description: config.expireTime.displayName,
+              descriptionStyle: .subtitle
             ) {
               EmptyView()
             }
 
             if let domain = config.customDomain, !domain.isEmpty {
               SettingRow(
-                icon: "link",
                 title: L10n.CloudSettings.customDomain,
-                description: domain
+                description: domain,
+                descriptionStyle: .subtitle
               ) {
                 EmptyView()
               }
@@ -278,7 +278,6 @@ struct CloudSettingsView: View {
   private var uploadsWindowSection: some View {
     Section(L10n.CloudSettings.uploadsWindowSection) {
       SettingRow(
-        icon: "rectangle.center.inset.filled",
         title: L10n.CloudSettings.uploadsWindowPositionTitle,
         description: L10n.CloudSettings.uploadsWindowPositionDescription
       ) {
@@ -689,13 +688,13 @@ private struct CloudPasswordInitView: View {
 
         // Password fields
         VStack(alignment: .leading, spacing: 8) {
-          SettingRow(icon: "lock", title: L10n.CloudSettings.protectionPassword, description: nil) {
+          SettingRow(title: L10n.CloudSettings.protectionPassword, description: nil) {
             SecureField("", text: $password)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
           }
 
-          SettingRow(icon: "lock.rotation", title: L10n.CloudSettings.confirmPassword, description: nil) {
+          SettingRow(title: L10n.CloudSettings.confirmPassword, description: nil) {
             SecureField("", text: $confirmPassword)
               .textFieldStyle(.roundedBorder)
               .frame(width: 240)
@@ -846,7 +845,6 @@ private struct CloudCredentialFormView: View {
 
       Section(L10n.CloudSettings.providerSection) {
         SettingRow(
-          icon: "cloud",
           title: L10n.CloudSettings.provider,
           description: nil,
           tooltip: L10n.CloudSettings.providerTooltip
@@ -864,7 +862,6 @@ private struct CloudCredentialFormView: View {
       if providerType == .googleDrive {
         Section(L10n.CloudSettings.googleCredentialsSection) {
           SettingRow(
-            icon: "person.badge.key",
             title: L10n.CloudSettings.googleClientId,
             description: nil,
             tooltip: nil
@@ -875,7 +872,6 @@ private struct CloudCredentialFormView: View {
           }
 
           SettingRow(
-            icon: "lock",
             title: L10n.CloudSettings.googleClientSecret,
             description: nil,
             tooltip: nil
@@ -930,7 +926,6 @@ private struct CloudCredentialFormView: View {
 
         Section(L10n.CloudSettings.googleFolderSection) {
           SettingRow(
-            icon: "folder",
             title: L10n.CloudSettings.googleFolderName,
             description: nil,
             tooltip: nil
@@ -948,7 +943,6 @@ private struct CloudCredentialFormView: View {
       } else {
         Section(L10n.CloudSettings.credentialsSection) {
           SettingRow(
-            icon: "key",
             title: L10n.CloudSettings.accessKeyID,
             description: nil,
             tooltip: L10n.CloudSettings.accessKeyTooltip
@@ -959,7 +953,6 @@ private struct CloudCredentialFormView: View {
           }
 
           SettingRow(
-            icon: "lock",
             title: L10n.CloudSettings.secretAccessKey,
             description: nil,
             tooltip: L10n.CloudSettings.secretKeyTooltip
@@ -986,7 +979,6 @@ private struct CloudCredentialFormView: View {
 
         Section(L10n.CloudSettings.storageSection) {
           SettingRow(
-            icon: "externaldrive",
             title: L10n.CloudSettings.bucketName,
             description: nil,
             tooltip: L10n.CloudSettings.bucketTooltip
@@ -998,7 +990,6 @@ private struct CloudCredentialFormView: View {
 
           if providerType == .awsS3 {
             SettingRow(
-              icon: "globe",
               title: L10n.CloudSettings.region,
               description: nil,
               tooltip: L10n.CloudSettings.regionTooltip
@@ -1009,7 +1000,6 @@ private struct CloudCredentialFormView: View {
             }
 
             SettingRow(
-              icon: "server.rack",
               title: L10n.CloudSettings.endpoint,
               description: nil,
               tooltip: L10n.CloudSettings.endpointTooltipS3
@@ -1022,7 +1012,6 @@ private struct CloudCredentialFormView: View {
 
           if providerType == .cloudflareR2 {
             SettingRow(
-              icon: "server.rack",
               title: L10n.CloudSettings.endpoint,
               description: nil,
               tooltip: L10n.CloudSettings.endpointTooltipR2
@@ -1034,7 +1023,6 @@ private struct CloudCredentialFormView: View {
           }
 
           SettingRow(
-            icon: "link",
             title: L10n.CloudSettings.customDomain,
             description: nil,
             tooltip: L10n.CloudSettings.customDomainTooltip
@@ -1084,7 +1072,6 @@ private struct CloudCredentialFormView: View {
       if !isEditing || !hasExistingPassword {
         Section(L10n.CloudSettings.protectionPasswordSection) {
           SettingRow(
-            icon: "lock.shield",
             title: L10n.CloudSettings.password,
             description: nil,
             tooltip: L10n.CloudSettings.passwordTooltip
@@ -1096,7 +1083,6 @@ private struct CloudCredentialFormView: View {
 
           if !protectionPassword.isEmpty {
             SettingRow(
-              icon: "lock.rotation",
               title: L10n.CloudSettings.confirmPassword,
               description: nil,
               tooltip: L10n.CloudSettings.confirmPasswordTooltip

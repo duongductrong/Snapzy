@@ -128,11 +128,19 @@ final class PreferencesCoreTests: XCTestCase {
     XCTAssertEqual(PreferencesTab.allCases.count, 12)
   }
 
-  func testPreferencesTabGroups_coverAllCasesExactlyOnce() {
-    let flattened = PreferencesTab.groups.flatMap { $0 }
-    XCTAssertEqual(flattened.count, PreferencesTab.allCases.count)
-    XCTAssertEqual(Set(flattened).count, PreferencesTab.allCases.count)
+  func testPreferencesTabSidebar_coversAllCasesExactlyOnce() {
+    let order = PreferencesTab.sidebarOrder
+    XCTAssertEqual(order.count, PreferencesTab.allCases.count)
+    XCTAssertEqual(Set(order).count, PreferencesTab.allCases.count)
     XCTAssertEqual(PreferencesTab.groups.count, 4)
+    XCTAssertEqual(order.last, .about)
+  }
+
+  func testPreferencesTabSearch_matchesTitleAndKeywordsCaseInsensitively() {
+    XCTAssertTrue(PreferencesTab.capture.matches(PreferencesTab.capture.title.uppercased()))
+    XCTAssertTrue(PreferencesTab.commandLine.matches("CLI"))
+    XCTAssertTrue(PreferencesTab.general.matches("   "))
+    XCTAssertFalse(PreferencesTab.about.matches("zzzz-no-match"))
   }
 
   func testPreferencesTab_symbolsAndTitlesAreNonEmpty() {

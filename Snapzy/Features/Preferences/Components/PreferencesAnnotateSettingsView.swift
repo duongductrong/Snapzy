@@ -30,7 +30,6 @@ struct AnnotateSettingsView: View {
     Form {
       Section(L10n.PreferencesAnnotate.behaviorSection) {
         SettingRow(
-          icon: "cursorarrow",
           title: L10n.PreferencesAnnotate.defaultToolTitle,
           description: L10n.PreferencesAnnotate.defaultToolDescription
         ) {
@@ -48,7 +47,6 @@ struct AnnotateSettingsView: View {
         .opacity(annotateRememberLastTool ? 0.5 : 1)
 
         SettingRow(
-          icon: "clock.arrow.circlepath",
           title: L10n.PreferencesAnnotate.rememberLastToolTitle,
           description: L10n.PreferencesAnnotate.rememberLastToolDescription
         ) {
@@ -57,7 +55,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "slider.horizontal.3",
           title: L10n.PreferencesAnnotate.quickPropertiesSyncTitle,
           description: L10n.PreferencesAnnotate.quickPropertiesSyncDescription
         ) {
@@ -66,7 +63,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "rectangle.stack",
           title: L10n.PreferencesAnnotate.combineSaveAsEditTitle,
           description: L10n.PreferencesAnnotate.combineSaveAsEditDescription
         ) {
@@ -75,7 +71,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: CropToolbarSymbols.snapToEdges,
           title: L10n.AnnotateUI.cropSnapToEdges,
           description: L10n.AnnotateUI.cropSnapToEdgesDescription
         ) {
@@ -84,7 +79,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "highlighter",
           title: L10n.AnnotateUI.highlighterTextSnapping,
           description: L10n.AnnotateUI.highlighterTextSnappingDescription
         ) {
@@ -93,7 +87,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "doc.on.clipboard",
           title: L10n.PreferencesAnnotate.clipboardTitle,
           description: L10n.PreferencesAnnotate.clipboardDescription
         ) {
@@ -109,7 +102,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "arrow.up.forward.app",
           title: L10n.PreferencesAnnotate.closeAfterDragTitle,
           description: L10n.PreferencesAnnotate.closeAfterDragDescription
         ) {
@@ -118,7 +110,6 @@ struct AnnotateSettingsView: View {
         }
 
         SettingRow(
-          icon: "macwindow",
           title: L10n.PreferencesAnnotate.bringForwardAfterDragTitle,
           description: L10n.PreferencesAnnotate.bringForwardAfterDragDescription
         ) {

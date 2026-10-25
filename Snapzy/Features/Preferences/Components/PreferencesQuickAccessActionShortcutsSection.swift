@@ -17,7 +17,6 @@ struct QuickAccessActionShortcutsSection: View {
   var body: some View {
     Section {
       SettingRow(
-        icon: "keyboard.badge.ellipsis",
         title: L10n.PreferencesShortcuts.cardActionsEnableTitle,
         description: L10n.PreferencesShortcuts.cardActionsEnableDescription
       ) {

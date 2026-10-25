@@ -14,7 +14,6 @@ struct UpdateChannelSectionView: View {
   var body: some View {
     VStack(spacing: 0) {
       SettingRow(
-        icon: "shippingbox",
         title: L10n.PreferencesAbout.updateChannelTitle,
         description: L10n.PreferencesAbout.updateChannelDescription
       ) {

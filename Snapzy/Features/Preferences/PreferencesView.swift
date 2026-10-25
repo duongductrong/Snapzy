@@ -2,7 +2,7 @@
 //  PreferencesView.swift
 //  Snapzy
 //
-//  Root preferences window with modern macOS NavigationSplitView sidebar interface.
+//  Root preferences window: NavigationSplitView with the tiled sidebar and grouped-form detail.
 //
 
 import SwiftUI
@@ -38,37 +38,15 @@ struct PreferencesView: View {
   // MARK: - Sidebar
 
   private var sidebar: some View {
-    List(selection: sidebarSelection) {
-      ForEach(Array(PreferencesTab.groups.enumerated()), id: \.offset) { _, group in
-        Section {
-          ForEach(group) { tab in
-            PreferencesSidebarRow(tab: tab)
-              .tag(tab)
-          }
-        }
-      }
-    }
-    .listStyle(.sidebar)
-    .modifier(SidebarToggleRemovalModifier())
-    .safeAreaInset(edge: .bottom) {
-      PreferencesSidebarUpdateBadge()
-    }
-    .navigationSplitViewColumnWidth(
-      min: Self.fixedSidebarWidth,
-      ideal: Self.fixedSidebarWidth,
-      max: Self.fixedSidebarWidth
-    )
-    .accessibilityLabel(L10n.PreferencesGeneral.sidebarAccessibilityLabel)
-  }
-
-  private var sidebarSelection: Binding<PreferencesTab?> {
-    Binding(
-      get: { navigationState.selectedTab },
-      set: { tab in
-        guard let tab else { return }
-        navigationState.select(tab)
-      }
-    )
+    PreferencesSidebarView(navigationState: navigationState)
+      .modifier(SidebarToggleRemovalModifier())
+      .navigationSplitViewColumnWidth(
+        min: Self.fixedSidebarWidth,
+        ideal: Self.fixedSidebarWidth,
+        max: Self.fixedSidebarWidth
+      )
+      .accessibilityElement(children: .contain)
+      .accessibilityLabel(L10n.PreferencesGeneral.sidebarAccessibilityLabel)
   }
 
   // MARK: - Detail
@@ -127,23 +105,6 @@ struct PreferencesView: View {
         .help(L10n.PreferencesGeneral.navigationForward)
         .keyboardShortcut("]", modifiers: .command)
       }
-    }
-  }
-}
-
-// MARK: - Sidebar Row
-
-/// Clean, unboxed sidebar row using native SF Symbols (matching Ruru and macOS System Settings style).
-private struct PreferencesSidebarRow: View {
-  let tab: PreferencesTab
-
-  var body: some View {
-    Label {
-      Text(tab.title)
-    } icon: {
-      Image(systemName: tab.symbol)
-        .font(.system(size: 13, weight: .regular))
-        .frame(width: 18, alignment: .center)
     }
   }
 }

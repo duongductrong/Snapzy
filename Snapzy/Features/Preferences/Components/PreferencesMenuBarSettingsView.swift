@@ -33,7 +33,6 @@ struct MenuBarSettingsView: View {
 
       Section(L10n.PreferencesMenuBar.appSection) {
         SettingRow(
-          icon: MenuBarItemKind.checkForUpdates.systemImage,
           title: MenuBarItemKind.checkForUpdates.settingsTitle,
           description: nil
         ) {

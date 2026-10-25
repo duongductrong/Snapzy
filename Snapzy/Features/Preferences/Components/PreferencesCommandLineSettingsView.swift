@@ -19,7 +19,6 @@ struct CommandLineSettingsView: View {
     Form {
       Section {
         SettingRow(
-          icon: "terminal",
           title: L10n.CommandLine.accessTitle,
           description: L10n.CommandLine.accessDescription
         ) {
@@ -28,9 +27,9 @@ struct CommandLineSettingsView: View {
         }
 
         SettingRow(
-          icon: "chevron.left.forwardslash.chevron.right",
           title: L10n.CommandLine.toolTitle,
-          description: toolStateDescription
+          description: toolStateDescription,
+          descriptionStyle: .subtitle
         ) {
           if case .managedByHomebrew = toolState {
             EmptyView()

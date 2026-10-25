@@ -39,7 +39,6 @@ struct AdvancedSettingsView: View {
         }
 
         SettingRow(
-          icon: "square.and.arrow.down",
           title: L10n.PreferencesAdvanced.importTitle,
           description: L10n.PreferencesAdvanced.importDescription
         ) {
@@ -53,7 +52,6 @@ struct AdvancedSettingsView: View {
         }
 
         SettingRow(
-          icon: "square.and.arrow.up",
           title: L10n.PreferencesAdvanced.exportTitle,
           description: L10n.PreferencesAdvanced.exportDescription
         ) {
@@ -67,7 +65,6 @@ struct AdvancedSettingsView: View {
         }
 
         SettingRow(
-          icon: "arrow.counterclockwise.circle",
           title: L10n.PreferencesAdvanced.restoreDefaultsTitle,
           description: L10n.PreferencesAdvanced.restoreDefaultsDescription
         ) {
@@ -81,9 +78,9 @@ struct AdvancedSettingsView: View {
         }
 
         SettingRow(
-          icon: "arrow.triangle.2.circlepath",
           title: L10n.PreferencesAdvanced.configSyncStatusTitle,
-          description: configSyncStatusDescription
+          description: configSyncStatusDescription,
+          descriptionStyle: .subtitle
         ) {
           HStack(spacing: 10) {
             StatusBadge(configuration: configSyncBadgeConfiguration)
@@ -113,7 +110,6 @@ struct AdvancedSettingsView: View {
 
       Section(L10n.PreferencesAdvanced.integrationSection) {
         SettingRow(
-          icon: "link",
           title: L10n.PreferencesAdvanced.urlSchemeTitle,
           description: L10n.PreferencesAdvanced.urlSchemeDescription
         ) {
@@ -124,7 +120,6 @@ struct AdvancedSettingsView: View {
 
       Section(L10n.PreferencesAdvanced.diagnosticsSection) {
         SettingRow(
-          icon: "doc.text.magnifyingglass",
           title: L10n.PreferencesAdvanced.diagnosticLoggingTitle,
           description: L10n.PreferencesAdvanced.diagnosticLoggingDescription
         ) {
@@ -133,7 +128,6 @@ struct AdvancedSettingsView: View {
         }
 
         SettingRow(
-          icon: "calendar.badge.clock",
           title: L10n.PreferencesAdvanced.logRetentionTitle,
           description: L10n.PreferencesAdvanced.logRetentionDescription(diagnosticsRetentionDays)
         ) {
@@ -155,7 +149,7 @@ struct AdvancedSettingsView: View {
           .frame(width: 120, alignment: .trailing)
         }
 
-        SettingRow(icon: "folder", title: L10n.PreferencesAdvanced.logFilesTitle, description: logSizeText) {
+        SettingRow(title: L10n.PreferencesAdvanced.logFilesTitle, description: logSizeText, descriptionStyle: .subtitle) {
           Button(L10n.PreferencesAdvanced.openFolderButton) {
             revealLogFolder()
           }
