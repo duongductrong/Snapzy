@@ -98,12 +98,10 @@ final class CLIAuthorizationCoordinator {
 
     switch await prompt(caller, command: Self.commandName(for: method)) {
     case .alwaysAllow:
-      store.record(caller, decision: .allow)
       return .allowed
     case .allowOnce:
       return .allowedForConnection
     case .deny:
-      store.record(caller, decision: .deny)
       return .denied(Self.deniedError(caller))
     case .timedOut:
       return .denied(CLIError(
@@ -143,7 +141,15 @@ final class CLIAuthorizationCoordinator {
         guard let self, waiters[key]?.contains(where: { !$0.isCancelled }) == true else {
           return .timedOut
         }
-        return prompter.ask(caller, command: command)
+        let result = prompter.ask(caller, command: command)
+        // Recorded before the pending prompt is cleared, so a request arriving
+        // in between finds the decision instead of opening a second prompt.
+        switch result {
+        case .alwaysAllow: store.record(caller, decision: .allow)
+        case .deny: store.record(caller, decision: .deny)
+        case .allowOnce, .timedOut: break
+        }
+        return result
       }
       promptsByCaller[key] = task
       lastPrompt = task
