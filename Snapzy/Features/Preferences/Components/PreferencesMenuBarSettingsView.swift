@@ -25,6 +25,12 @@ struct MenuBarSettingsView: View {
 
   var body: some View {
     Form {
+      Section {
+        MenuBarSettingsPreview(store: store)
+          .id(iconRefreshID)
+          .padding(.vertical, 4)
+      }
+
       iconSection
 
       ForEach(MenuBarItemGroup.allCases, id: \.self) { group in
