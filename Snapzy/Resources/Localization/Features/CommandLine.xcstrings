@@ -859,6 +859,72 @@
         }
       }
     },
+    "command-line.hero-subtitle": {
+      "comment": "Command Line settings page subtitle",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lass Apps und KI-Agenten mit dem snapzy-Befehl aufnehmen und lege fest, wer ihn nutzen darf."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let apps and AI agents capture with the snapzy command, and choose who may use it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite que apps y agentes de IA capturen con el comando snapzy y elige quién puede usarlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Laissez les apps et agents IA capturer avec la commande snapzy et choisissez qui peut l’utiliser."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アプリや AI エージェントが snapzy コマンドでキャプチャできるようにし、使用できる相手を選びます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱과 AI 에이전트가 snapzy 명령으로 캡처하도록 허용하고 사용할 수 있는 대상을 선택합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Разрешите приложениям и ИИ-агентам делать снимки командой snapzy и выберите, кому это можно."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cho phép ứng dụng và AI agent chụp bằng lệnh snapzy, và chọn ai được phép dùng."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允许应用和 AI 代理使用 snapzy 命令截图，并选择谁可以使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "允許 App 和 AI 代理使用 snapzy 指令截圖，並選擇誰可以使用。"
+          }
+        }
+      }
+    },
     "command-line.install-button": {
       "comment": "Button: install the snapzy command on PATH",
       "extractionState": "manual",
@@ -921,6 +987,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "安裝"
+          }
+        }
+      }
+    },
+    "command-line.install-explanation": {
+      "comment": "Popover text explaining what installing the snapzy command does; keep snapzy verbatim",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei der Installation wird snapzy zu deinem PATH hinzugefügt, damit du es in jedem Terminal oder KI-Agenten eingeben kannst. Snapzy funktioniert auch ohne."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installing adds snapzy to your PATH so you can type it in any Terminal or AI agent. Snapzy keeps working without it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al instalarlo, snapzy se añade a tu PATH para que puedas escribirlo en cualquier Terminal o agente de IA. Snapzy funciona igual sin él."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’installation ajoute snapzy à votre PATH pour pouvoir le taper dans n’importe quel Terminal ou agent IA. Snapzy fonctionne aussi sans."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "インストールすると snapzy が PATH に追加され、どのターミナルや AI エージェントからでも入力できます。インストールしなくても Snapzy は動作します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설치하면 snapzy가 PATH에 추가되어 어떤 터미널이나 AI 에이전트에서도 입력할 수 있습니다. 설치하지 않아도 Snapzy는 작동합니다."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Установка добавляет snapzy в PATH, чтобы его можно было вызывать из любого Терминала или ИИ-агента. Snapzy работает и без неё."
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cài đặt sẽ thêm snapzy vào PATH để bạn gõ được lệnh trong mọi Terminal hoặc AI agent. Snapzy vẫn hoạt động khi chưa cài."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装后会将 snapzy 添加到 PATH，可在任意终端或 AI 代理中直接输入。不安装 Snapzy 也能正常使用。"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安裝後會將 snapzy 加入 PATH，可在任何終端機或 AI 代理中直接輸入。不安裝 Snapzy 也能正常使用。"
           }
         }
       }

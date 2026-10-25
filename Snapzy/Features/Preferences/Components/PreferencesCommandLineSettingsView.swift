@@ -18,31 +18,8 @@ struct CommandLineSettingsView: View {
   var body: some View {
     Form {
       Section {
-        SettingRow(
-          title: L10n.CommandLine.accessTitle,
-          description: L10n.CommandLine.accessDescription
-        ) {
-          Toggle("", isOn: $cliEnabled)
-            .labelsHidden()
-        }
-
-        SettingRow(
-          title: L10n.CommandLine.toolTitle,
-          description: toolStateDescription,
-          descriptionStyle: .subtitle
-        ) {
-          if case .managedByHomebrew = toolState {
-            EmptyView()
-          } else if toolState == .homebrewLinkMissing {
-            Button(L10n.CommandLine.copyCommandButton) { copyHomebrewCommand() }
-          } else if toolState == .installed {
-            Button(L10n.CommandLine.uninstallButton) { updateTool(install: false) }
-              .disabled(isUpdatingTool)
-          } else {
-            Button(L10n.CommandLine.installButton) { updateTool(install: true) }
-              .disabled(isUpdatingTool || toolState == .blockedByFile)
-          }
-        }
+      } header: {
+        PreferencesPageHero(tab: .commandLine, subtitle: L10n.CommandLine.heroSubtitle)
       }
 
       Section {
@@ -73,7 +50,49 @@ struct CommandLineSettingsView: View {
       }
     }
     .formStyle(.grouped)
+    .toolbar {
+      ToolbarItem(placement: .primaryAction) {
+        CommandLineToolBadge(
+          state: toolState,
+          stateDescription: toolStateDescription,
+          isUpdating: isUpdatingTool,
+          onInstall: { updateTool(install: true) },
+          onUninstall: { updateTool(install: false) },
+          onCopyCommand: copyHomebrewCommand
+        )
+      }
+      ToolbarItem(placement: .primaryAction) {
+        Toggle(L10n.CommandLine.accessTitle, isOn: accessBinding)
+          .toggleStyle(.switch)
+          .controlSize(.small)
+          .labelsHidden()
+          // Inset so the switch sits inside the toolbar's capsule like the back/forward pair.
+          .padding(.horizontal, 8)
+          .disabled(isUpdatingTool)
+          .help("\(L10n.CommandLine.accessTitle): \(L10n.CommandLine.accessDescription)")
+      }
+    }
     .onAppear { toolState = CLIToolInstaller.currentState() }
+  }
+
+  private var isToolInstalled: Bool {
+    switch toolState {
+    case .installed, .managedByHomebrew: true
+    default: false
+    }
+  }
+
+  /// Access reads as off until the command is installed; switching it on installs it.
+  private var accessBinding: Binding<Bool> {
+    Binding(
+      get: { isToolInstalled && cliEnabled },
+      set: { isOn in
+        cliEnabled = isOn
+        if isOn, !isToolInstalled {
+          updateTool(install: true)
+        }
+      }
+    )
   }
 
   private var toolStateDescription: String {
@@ -118,6 +137,114 @@ struct CommandLineSettingsView: View {
       }
       toolState = CLIToolInstaller.currentState()
       isUpdatingTool = false
+    }
+  }
+}
+
+/// Toolbar badge for the `snapzy` command on PATH. The icon's colour says whether it's
+/// installed; clicking it explains what installing does and offers Install or Uninstall.
+private struct CommandLineToolBadge: View {
+  let state: CLIToolInstaller.State
+  let stateDescription: String
+  let isUpdating: Bool
+  let onInstall: () -> Void
+  let onUninstall: () -> Void
+  let onCopyCommand: () -> Void
+
+  @State private var isPresented = false
+
+  var body: some View {
+    Button {
+      isPresented.toggle()
+    } label: {
+      Image(systemName: "info.circle")
+        .font(.system(size: 14, weight: .regular))
+        .foregroundStyle(Color.secondary)
+        .frame(width: 24, height: 24)
+        .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+    // Equal inset on every side so the circle sits centred in the toolbar capsule.
+    .padding(6)
+    .help("\(L10n.CommandLine.toolTitle): \(stateDescription)")
+    .accessibilityLabel(L10n.CommandLine.toolTitle)
+    .popover(isPresented: $isPresented, arrowEdge: .bottom) {
+      popoverContent
+        .padding(16)
+        .frame(width: 320)
+    }
+  }
+
+  private var isInstalled: Bool {
+    switch state {
+    case .installed, .managedByHomebrew: true
+    default: false
+    }
+  }
+
+  private var needsAttention: Bool {
+    switch state {
+    case .pointsElsewhere, .blockedByFile, .homebrewLinkMissing: true
+    default: false
+    }
+  }
+
+  private var symbol: String {
+    if needsAttention { return "exclamationmark.triangle.fill" }
+    return isInstalled ? "terminal.fill" : "terminal"
+  }
+
+  private var tint: Color {
+    if needsAttention { return .orange }
+    return isInstalled ? .green : .secondary
+  }
+
+  @ViewBuilder
+  private var popoverContent: some View {
+    VStack(alignment: .leading, spacing: 12) {
+      HStack(alignment: .top, spacing: 10) {
+        Image(systemName: symbol)
+          .font(.system(size: 18))
+          .foregroundColor(tint)
+
+        VStack(alignment: .leading, spacing: 2) {
+          Text(L10n.CommandLine.toolTitle)
+            .font(.system(size: 13, weight: .semibold))
+          Text(stateDescription)
+            .font(.system(size: 11))
+            .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .textSelection(.enabled)
+        }
+      }
+
+      Text(L10n.CommandLine.installExplanation)
+        .font(.system(size: 11))
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+
+      HStack {
+        Spacer(minLength: 0)
+        action
+      }
+      .controlSize(.regular)
+    }
+  }
+
+  @ViewBuilder
+  private var action: some View {
+    switch state {
+    case .managedByHomebrew:
+      EmptyView()
+    case .homebrewLinkMissing:
+      Button(L10n.CommandLine.copyCommandButton, action: onCopyCommand)
+    case .installed:
+      Button(L10n.CommandLine.uninstallButton, action: onUninstall)
+        .disabled(isUpdating)
+    default:
+      Button(L10n.CommandLine.installButton, action: onInstall)
+        .keyboardShortcut(.defaultAction)
+        .disabled(isUpdating || state == .blockedByFile)
     }
   }
 }

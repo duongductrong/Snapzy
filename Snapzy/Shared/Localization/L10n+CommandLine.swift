@@ -40,6 +40,16 @@ extension L10n {
       defaultValue: "Let apps and AI agents capture with the snapzy command",
       comment: "Settings row description for the snapzy command toggle"
     )
+    static let heroSubtitle = string(
+      "command-line.hero-subtitle",
+      defaultValue: "Let apps and AI agents capture with the snapzy command, and choose who may use it.",
+      comment: "Command Line settings page subtitle"
+    )
+    static let installExplanation = string(
+      "command-line.install-explanation",
+      defaultValue: "Installing adds snapzy to your PATH so you can type it in any Terminal or AI agent. Snapzy keeps working without it.",
+      comment: "Popover text explaining what installing the snapzy command does; keep snapzy verbatim"
+    )
     static let toolTitle = string(
       "command-line.tool-title",
       defaultValue: "snapzy command",
