@@ -3,14 +3,16 @@
 //  Snapzy
 //
 //  Links the embedded `snapzy` tool (Contents/Helpers/snapzy) onto PATH at
-//  /usr/local/bin/snapzy, asking for an administrator password only when
-//  that directory is not writable. Only ever creates or removes a symlink,
-//  and never replaces a file or another tool's link. A Homebrew cask install
-//  leaves the link to Homebrew, so `brew upgrade` never meets a link it did
-//  not make.
+//  /usr/local/bin/snapzy (/usr/local/bin/snapzy-debug for Debug builds),
+//  asking for an administrator password only when that directory is not
+//  writable. Only ever creates or removes a symlink, and never replaces a
+//  file, another tool's link, or a Debug link with a release one. A Homebrew
+//  cask install leaves the link to Homebrew, so `brew upgrade` never meets a
+//  link it did not make.
 //
 
 import Foundation
+import SnapzyCLIProtocol
 
 enum CLIToolInstaller {
   enum State: Equatable {
@@ -57,7 +59,10 @@ enum CLIToolInstaller {
     }
   }
 
-  static let linkPath = "/usr/local/bin/snapzy"
+  /// Debug builds (`com.trongduong.snapzy.debug`) link `snapzy-debug`, so a
+  /// development copy and the installed app can both stay on PATH.
+  static let isDebugBuild = CommandName.isDebugBundleID(Bundle.main.bundleIdentifier)
+  static let linkPath = "/usr/local/bin/" + CommandName.forAppBundleID(Bundle.main.bundleIdentifier)
   static let homebrewUpgradeCommand = "brew upgrade --cask snapzy"
 
   static func helperURL(appBundleURL: URL = Bundle.main.bundleURL) -> URL {
@@ -78,12 +83,15 @@ enum CLIToolInstaller {
     return resolvedDestination == resolvedHelper ? .installed : .pointsElsewhere(destination)
   }
 
-  /// A link that may be replaced: it is dangling or points at a Snapzy helper.
-  nonisolated static func isReplaceable(_ destination: String) -> Bool {
-    let isSnapzyHelper = destination.range(
-      of: #"/Snapzy[^/]*\.app/Contents/Helpers/snapzy$"#,
-      options: .regularExpression
-    ) != nil
+  /// A link that may be replaced: it is dangling or points at a Snapzy
+  /// helper this build may take over. Debug builds replace only Debug links;
+  /// release builds replace any Snapzy link, which reclaims a `snapzy` link
+  /// left by a Debug build from before Debug had its own name.
+  nonisolated static func isReplaceable(_ destination: String, isDebugBuild: Bool = isDebugBuild) -> Bool {
+    let pattern = isDebugBuild
+      ? #"/Snapzy Debug[^/]*\.app/Contents/Helpers/snapzy$"#
+      : #"/Snapzy[^/]*\.app/Contents/Helpers/snapzy$"#
+    let isSnapzyHelper = destination.range(of: pattern, options: .regularExpression) != nil
     return isSnapzyHelper || !FileManager.default.fileExists(atPath: destination)
   }
 

@@ -64,6 +64,7 @@ struct DoctorCommand: AsyncParsableCommand {
     checks.append(Doctor.pathCheck(
       path: ProcessInfo.processInfo.environment["PATH"] ?? "",
       executable: executable,
+      commandName: Doctor.commandName(for: executable),
       caskInstalled: Doctor.isCaskInstall(executable: executable)
     ))
 
@@ -124,12 +125,20 @@ struct DoctorCommand: AsyncParsableCommand {
 
 /// Pure pieces of `doctor`, kept separate for tests.
 enum Doctor {
+  /// `snapzy-debug` for the helper inside a Debug build, else `snapzy`.
+  static func commandName(for executable: URL?) -> String {
+    let bundleID = executable
+      .flatMap(AppLocator.enclosingAppBundle(forExecutableAt:))
+      .flatMap(AppLocator.bundleIdentifier(ofAppAt:))
+    return CommandName.forAppBundleID(bundleID)
+  }
+
   /// Links this exact binary, so the hint is right for Debug builds and
   /// apps outside /Applications too.
-  static func installHint(for executable: URL?) -> String {
+  static func installHint(for executable: URL?, commandName: String = CommandName.release) -> String {
     let helper = executable?.path ?? "/Applications/Snapzy.app/Contents/Helpers/snapzy"
     let quoted = "'" + helper.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    return "sudo mkdir -p /usr/local/bin && sudo ln -sfn \(quoted) /usr/local/bin/snapzy"
+    return "sudo mkdir -p /usr/local/bin && sudo ln -sfn \(quoted) /usr/local/bin/\(commandName)"
   }
 
   static let homebrewHint = "Snapzy came from Homebrew, which links snapzy: run `brew upgrade --cask snapzy`"
@@ -146,15 +155,16 @@ enum Doctor {
     return caskroomPaths.contains { fileManager.fileExists(atPath: $0) }
   }
 
-  /// Whether `snapzy` on PATH is this binary. Advisory: agents can always use the full path.
+  /// Whether `commandName` on PATH is this binary. Advisory: agents can always use the full path.
   static func pathCheck(
     path: String,
     executable: URL?,
+    commandName: String = CommandName.release,
     caskInstalled: Bool = false,
     fileManager: FileManager = .default
   ) -> DoctorCheck {
     let found = path.split(separator: ":").lazy
-      .map { URL(fileURLWithPath: String($0)).appendingPathComponent("snapzy") }
+      .map { URL(fileURLWithPath: String($0)).appendingPathComponent(commandName) }
       .first { candidate in
         var isDirectory: ObjCBool = false
         return fileManager.fileExists(atPath: candidate.path, isDirectory: &isDirectory)
@@ -163,8 +173,8 @@ enum Doctor {
       }
 
     guard let found else {
-      let hint = caskInstalled ? homebrewHint : installHint(for: executable)
-      return .fail("path", "snapzy is not on PATH", hint: hint, code: nil)
+      let hint = caskInstalled ? homebrewHint : installHint(for: executable, commandName: commandName)
+      return .fail("path", "\(commandName) is not on PATH", hint: hint, code: nil)
     }
     let resolved = found.resolvingSymlinksInPath()
     guard let executable, resolved.path != executable.path else {
@@ -172,8 +182,8 @@ enum Doctor {
     }
     return .fail(
       "path",
-      "\(found.path) runs \(resolved.path), not this snapzy",
-      hint: "Point the link at the Snapzy.app you use: \(installHint(for: executable))",
+      "\(found.path) runs \(resolved.path), not this \(commandName)",
+      hint: "Point the link at the Snapzy.app you use: \(installHint(for: executable, commandName: commandName))",
       code: nil
     )
   }

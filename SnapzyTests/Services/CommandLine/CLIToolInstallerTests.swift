@@ -120,11 +120,33 @@ final class CLIToolInstallerTests: XCTestCase {
 
   func testReplaceableLinks() throws {
     let otherTool = try makeHelper(in: "Other.app")
+    let release = try makeHelper(in: "Snapzy.app")
+    let debug = try makeHelper(in: "Snapzy Debug.app")
 
-    XCTAssertTrue(CLIToolInstaller.isReplaceable("/Applications/Snapzy.app/Contents/Helpers/snapzy"))
-    XCTAssertTrue(CLIToolInstaller.isReplaceable("/tmp/Snapzy Debug.app/Contents/Helpers/snapzy"))
-    XCTAssertTrue(CLIToolInstaller.isReplaceable("/Applications/Gone.app/bin/snapzy"), "dangling links are replaceable")
-    XCTAssertFalse(CLIToolInstaller.isReplaceable(otherTool), "another tool's existing binary")
+    XCTAssertTrue(CLIToolInstaller.isReplaceable(release, isDebugBuild: false))
+    XCTAssertTrue(
+      CLIToolInstaller.isReplaceable(debug, isDebugBuild: false),
+      "release reclaims a snapzy link an older Debug build made"
+    )
+    XCTAssertTrue(CLIToolInstaller.isReplaceable(debug, isDebugBuild: true))
+    XCTAssertFalse(CLIToolInstaller.isReplaceable(release, isDebugBuild: true), "Debug never takes a release link")
+
+    for isDebugBuild in [false, true] {
+      XCTAssertTrue(
+        CLIToolInstaller.isReplaceable("/Applications/Gone.app/bin/snapzy", isDebugBuild: isDebugBuild),
+        "dangling links are replaceable"
+      )
+      XCTAssertFalse(
+        CLIToolInstaller.isReplaceable(otherTool, isDebugBuild: isDebugBuild),
+        "another tool's existing binary"
+      )
+    }
+  }
+
+  func testDebugBuildLinksItsOwnName() {
+    // Tests run inside the Debug app.
+    XCTAssertTrue(CLIToolInstaller.isDebugBuild)
+    XCTAssertEqual(CLIToolInstaller.linkPath, "/usr/local/bin/snapzy-debug")
   }
 
   func testTemporaryLocations() {

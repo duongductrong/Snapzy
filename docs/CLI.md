@@ -31,6 +31,8 @@ flowchart LR
 | Settings → Command Line | **Install** creates the link (administrator password only if `/usr/local/bin` is not writable); refused while Snapzy runs from a DMG or AppTranslocation. **Uninstall** removes only a link to this app's helper. Homebrew-managed links are shown, not changed; a cask install without that link shows **Copy Command** (`brew upgrade --cask snapzy`) instead of Install |
 | Direct | Agents can always call `/Applications/Snapzy.app/Contents/Helpers/snapzy` |
 
+Debug builds (`com.trongduong.snapzy.debug`) link `/usr/local/bin/snapzy-debug` instead (`CommandName`, keyed by bundle ID like the socket), so a development copy never takes the installed app's `snapzy`. Settings → Command Line in a Debug build only replaces links into `Snapzy Debug*.app`; a release build replaces any link into a `Snapzy*.app`, which reclaims a `snapzy` link made by a Debug build from before the split. `snapzy doctor` from a Debug helper checks and hints `snapzy-debug`.
+
 `uninstall.sh` removes `/usr/local/bin/snapzy` only if it points into a `Snapzy*.app`.
 
 ### Homebrew and Sparkle
@@ -157,7 +159,7 @@ SNAPZY_APP_PATH="$PWD/.build/xcode-derived-data/Build/Products/Debug/Snapzy Debu
   swift run --package-path Packages/SnapzyCLIKit snapzy-dev doctor
 ```
 
-Or call the helper embedded in a Debug build: `…/Snapzy Debug.app/Contents/Helpers/snapzy`.
+Or call the helper embedded in a Debug build: `…/Snapzy Debug.app/Contents/Helpers/snapzy`, or link it as `snapzy-debug` from the Debug app's Settings → Command Line → **Install**.
 
 ## Troubleshooting
 

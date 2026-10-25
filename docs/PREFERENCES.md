@@ -113,7 +113,7 @@ Provider configuration, credentials, expiration, usage stats, and the Cloud Uplo
 
 ### Command Line (`PreferencesCommandLineSettingsView.swift`)
 
-Sidebar tab between Permissions and Advanced (deep link `snapzy://settings/command-line`, alias `cli`). Command line access toggle (`cliEnabled`, default on — `CLIServer` starts/stops as it changes); `snapzy` command install/uninstall at `/usr/local/bin/snapzy` via `CLIToolInstaller` (shows Homebrew-managed and other-copy links, refuses DMG/AppTranslocation launches); Allowed apps list from `CLIAuthorizationStore` (`cliApprovedCallers`, JSON in UserDefaults, never exported) with per-app Remove and Remove All — see [CLI.md](CLI.md).
+Sidebar tab between Permissions and Advanced (deep link `snapzy://settings/command-line`, alias `cli`). Command line access toggle (`cliEnabled`, default on — `CLIServer` starts/stops as it changes); `snapzy` command install/uninstall at `/usr/local/bin/snapzy` (Debug builds: `/usr/local/bin/snapzy-debug`) via `CLIToolInstaller` (shows Homebrew-managed and other-copy links, refuses DMG/AppTranslocation launches); Allowed apps list from `CLIAuthorizationStore` (`cliApprovedCallers`, JSON in UserDefaults, never exported) with per-app Remove and Remove All — see [CLI.md](CLI.md).
 
 ### Advanced (`PreferencesAdvancedSettingsView.swift`)
 

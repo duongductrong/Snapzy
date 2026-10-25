@@ -80,9 +80,57 @@ final class DoctorTests: XCTestCase {
 
   func testInstallHintQuotesThisBinary() {
     XCTAssertEqual(
-      Doctor.installHint(for: URL(fileURLWithPath: "/tmp/Snapzy Debug.app/Contents/Helpers/snapzy")),
-      "sudo mkdir -p /usr/local/bin && sudo ln -sfn '/tmp/Snapzy Debug.app/Contents/Helpers/snapzy' /usr/local/bin/snapzy"
+      Doctor.installHint(for: URL(fileURLWithPath: "/tmp/Snapzy's.app/Contents/Helpers/snapzy")),
+      "sudo mkdir -p /usr/local/bin && sudo ln -sfn '/tmp/Snapzy'\\''s.app/Contents/Helpers/snapzy' /usr/local/bin/snapzy"
     )
+    XCTAssertEqual(
+      Doctor.installHint(
+        for: URL(fileURLWithPath: "/tmp/Snapzy Debug.app/Contents/Helpers/snapzy"),
+        commandName: CommandName.debug
+      ),
+      "sudo mkdir -p /usr/local/bin && sudo ln -sfn '/tmp/Snapzy Debug.app/Contents/Helpers/snapzy' "
+        + "/usr/local/bin/snapzy-debug"
+    )
+  }
+
+  // MARK: - Command name
+
+  private func makeApp(_ name: String, bundleID: String) throws -> URL {
+    let helper = try makeExecutable("\(name)/Contents/Helpers/snapzy")
+    let plist = try PropertyListSerialization.data(
+      fromPropertyList: ["CFBundleIdentifier": bundleID],
+      format: .xml,
+      options: 0
+    )
+    try plist.write(to: directory.appendingPathComponent("\(name)/Contents/Info.plist"))
+    return helper
+  }
+
+  func testCommandNameFollowsTheEnclosingApp() throws {
+    let release = try makeApp("Snapzy.app", bundleID: "com.trongduong.snapzy")
+    let debug = try makeApp("Snapzy Debug.app", bundleID: "com.trongduong.snapzy.debug")
+
+    XCTAssertEqual(Doctor.commandName(for: release), "snapzy")
+    XCTAssertEqual(Doctor.commandName(for: debug), "snapzy-debug")
+    XCTAssertEqual(Doctor.commandName(for: nil), "snapzy", "swift run snapzy-dev")
+  }
+
+  func testDebugPathCheckIgnoresTheReleaseLink() throws {
+    let debug = try makeApp("Snapzy Debug.app", bundleID: "com.trongduong.snapzy.debug")
+    let release = try makeExecutable("Snapzy.app/Contents/Helpers/snapzy")
+    let bin = directory.appendingPathComponent("bin", isDirectory: true)
+    try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
+    try FileManager.default.createSymbolicLink(at: bin.appendingPathComponent("snapzy"), withDestinationURL: release)
+
+    let missing = Doctor.pathCheck(path: bin.path, executable: debug, commandName: CommandName.debug)
+    XCTAssertFalse(missing.ok)
+    XCTAssertEqual(missing.detail, "snapzy-debug is not on PATH")
+
+    try FileManager.default.createSymbolicLink(
+      at: bin.appendingPathComponent("snapzy-debug"),
+      withDestinationURL: debug
+    )
+    XCTAssertTrue(Doctor.pathCheck(path: bin.path, executable: debug, commandName: CommandName.debug).ok)
   }
 
   // MARK: - Status and exit code
