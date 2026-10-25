@@ -135,7 +135,7 @@ Promotion is an ordinary stable release — a full rebuild from master HEAD (the
 1. Ensure `master` contains exactly what should ship (no unwanted commits).
 2. **Actions → Release Prepare** on `master` → run with `channel = stable`. When the current version is a beta, the `-beta.N` suffix is stripped → version `X.Y.Z`, unless the bump type outranks that base (e.g. `1.33.0-beta.2` + `major` → `2.0.0`; + `minor`/`patch` → `1.33.0`).
 3. Review the `release/vX.Y.Z` PR into `master` — the changelog spans everything since the **last stable tag**, so all beta-tested commits are included. Merge.
-4. The publish pipeline runs the full stable path: `prerelease = false`, untagged appcast item, cask + README updated, Discord notify without `[Beta]`.
+4. The publish pipeline runs the full stable path: `prerelease = false`, untagged appcast item, cask + README updated, Discord notify without `[Beta]`. When the app contains `Contents/Helpers/snapzy` and the cask has no `binary` stanza yet, the cask step adds `binary "#{appdir}/Snapzy.app/Contents/Helpers/snapzy"` so Homebrew links the [`snapzy` command](CLI.md).
 5. Verify a beta-channel install is offered `X.Y.Z` (its build number is higher than every beta).
 
 > **Breaking changes:** commits titled `BREAKING CHANGE: …`, `type!: …` / `type(scope)!: …`, or carrying a `BREAKING CHANGE:` footer are listed in a `### Breaking Changes` section at the top of the generated changelog. Commits are classified on their subject line only.

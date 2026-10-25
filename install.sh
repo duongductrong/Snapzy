@@ -113,6 +113,29 @@ hdiutil detach "$MOUNT_POINT" -quiet 2>/dev/null || true
 ok "Installed Snapzy.app to ${INSTALL_DIR}"
 
 # ---------------------------------------------------------------------------
+# Command line tool
+# ---------------------------------------------------------------------------
+
+# Releases that ship the `snapzy` CLI embed it in the app; link it onto PATH.
+# Never replace a file that is not a symlink, and never use sudo here.
+CLI_HELPER="${INSTALL_DIR}/Snapzy.app/Contents/Helpers/snapzy"
+CLI_LINK="/usr/local/bin/snapzy"
+CLI_LINK_TARGET=""
+[[ -L "$CLI_LINK" ]] && CLI_LINK_TARGET="$(readlink "$CLI_LINK")"
+if [[ -x "$CLI_HELPER" ]]; then
+  if [[ -e "$CLI_LINK" && ! -L "$CLI_LINK" ]]; then
+    warn "${CLI_LINK} exists and is not a symlink — leaving it alone."
+  elif [[ -n "$CLI_LINK_TARGET" && -e "$CLI_LINK" && "$CLI_LINK_TARGET" != */Snapzy*.app/Contents/Helpers/snapzy ]]; then
+    warn "${CLI_LINK} links to ${CLI_LINK_TARGET} — leaving it alone."
+  elif mkdir -p "$(dirname "$CLI_LINK")" 2>/dev/null && ln -sfn "$CLI_HELPER" "$CLI_LINK" 2>/dev/null; then
+    ok "Linked the snapzy command to ${CLI_LINK}"
+  else
+    warn "Could not link the snapzy command. To use it from any terminal, run:"
+    printf "    sudo mkdir -p /usr/local/bin && sudo ln -sfn '%s' '%s'\n" "$CLI_HELPER" "$CLI_LINK"
+  fi
+fi
+
+# ---------------------------------------------------------------------------
 # Post-install
 # ---------------------------------------------------------------------------
 

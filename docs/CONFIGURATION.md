@@ -45,7 +45,7 @@ step and grant access later from Settings -> Advanced.
 
 The TOML file covers portable app preferences:
 
-- General settings: language, appearance, sounds, URL scheme integration, show menu bar icon, login item, export folder path.
+- General settings: language, appearance, sounds, URL scheme integration, `snapzy` command line access (`cli_enabled`, default `true`), show menu bar icon, login item, export folder path.
 - Menu bar customization: icon style, item order, hidden items (`[menu_bar]`). The custom icon PNG file itself is not portable — `icon_style = "custom"` falls back to `default` on a Mac without a locally imported custom icon.
 - Updates: automatic check/download and the Sparkle update channel (`stable` or `beta`).
 - Capture settings: naming templates, screenshot format, cursor/app inclusion, freeze area, Delayed Capture countdown (`[capture.screenshot] delayed_capture_seconds`: `3`, `5`, or `10`, default `3`; shared by delayed area and delayed fullscreen), show selection area overlay, magnifier preferences (`[capture.screenshot] reverse_magnifier_zoom_direction`, `show_magnifier_by_default`, `show_magnifier_color_panel`, `magnifier_size`: `"small"`, `"medium"`, or `"large"`, default `"medium"`), window shadow in Application Capture (`[capture.screenshot] include_window_shadow`, default `true`), scrolling hints, OCR notification (`[capture.ocr] success_notification`, default `true`), OCR provider selection (`[capture.ocr] selected_model`: `"builtin"` or `"custom:<uuid>"`), and custom OCR endpoint metadata (`[capture.ocr] custom_models`: JSON array, API keys excluded), object cutout auto-crop.
@@ -68,6 +68,8 @@ The export intentionally excludes secrets and machine-private state:
   on local Keychain items.
 - Capture history, temp files, annotation sidecars, upload history, caches, and
   app diagnostics are not part of `config.toml`.
+- Apps approved or denied for the `snapzy` command (`cliApprovedCallers`) are
+  machine-specific and never exported or imported; only `cli_enabled` travels.
 - File-access security-scoped bookmarks are not portable. Imported folder paths
   may still need to be confirmed in Settings on the destination Mac.
 
@@ -119,6 +121,7 @@ language = "system"
 appearance = "system"
 play_sounds = true
 url_scheme_enabled = true
+cli_enabled = true
 show_menu_bar_icon = true
 start_at_login = false
 export_location = "~/Desktop"

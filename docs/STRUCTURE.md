@@ -20,6 +20,7 @@ Separated feature docs cover each runtime area in depth:
 - [`APP_LIFECYCLE.md`](APP_LIFECYCLE.md) — Launch sequence, onboarding, menu bar bootstrap
 - [`LIQUID_GLASS.md`](LIQUID_GLASS.md) — Liquid Glass architecture, 4-layer composite model, buttons, segments, custom views
 - [`UPDATES.md`](UPDATES.md) — Sparkle updater, channels, release flow
+- [`CLI.md`](CLI.md) — `snapzy` command line tool: commands, JSON output, approval, socket, packaging
 
 ## Runtime Map
 
@@ -63,6 +64,8 @@ flowchart LR
         UP["UpdaterManager"]
         DG["DiagnosticLogger + CrashSentinel"]
         DI["DesktopIconManager"]
+        CLI["CLIServer + CLIAuthorizationCoordinator"]
+        HC["HeadlessCaptureService"]
     end
 
     subgraph Storage["Persistence"]
@@ -123,6 +126,9 @@ flowchart LR
     CFG --> UD
     CFG --> KS
     CFG --> CL
+    C --> CLI
+    CLI --> HC
+    HC --> I
     G --> UD
     KS --> UD
     F --> UD
@@ -135,6 +141,17 @@ tools/
   localization/
     CatalogTool.swift
 
+Packages/
+  SnapzyCLIKit/                # local SwiftPM package: snapzy CLI wire protocol, client, commands
+    Sources/SnapzyCLIProtocol/ # Foundation-only wire types, linked by the app
+    Sources/SnapzyCLIClient/   # socket client, app locator/launcher
+    Sources/SnapzyCLICore/     # ArgumentParser command tree, output, doctor
+    Sources/SnapzyCLIDev/      # snapzy-dev (development-only executable)
+    Tests/
+
+SnapzyCLI/
+  main.swift                   # SnapzyCLI tool target → Snapzy.app/Contents/Helpers/snapzy
+
 Snapzy/
   App/
     SnapzyApp.swift
@@ -145,6 +162,7 @@ Snapzy/
   Features/
     Annotate/
     Capture/
+    CommandLine/
     CrashReport/
     Onboarding/
     Preferences/
@@ -173,8 +191,11 @@ Snapzy/
         SmartElementWindowOwnerResolver.swift
       WindowSelectionQueryService.swift
       ScrollingCapture/
+      HeadlessCapture/
     Clipboard/
     Cloud/
+    CommandLine/
+      Handlers/
     Configuration/
     Diagnostics/
     FileAccess/
@@ -250,6 +271,7 @@ SnapzyUITests/
 | `Features/Shortcuts/` | Keyboard shortcut cheat-sheet overlay |
 | `Features/Updates/` | Sparkle menu binding and update UI bridge |
 | `Features/CrashReport/` | Crash report prompt and diagnostics UX |
+| `Features/CommandLine/` | Approval prompt for apps using the `snapzy` command |
 
 ## Service Roots
 
@@ -258,6 +280,8 @@ SnapzyUITests/
 | `Services/Capture/` | ScreenCaptureKit capture engine, area selection overlay/controller, window-target resolution, Smart Element query helpers, recording engine, temp storage, post-capture routing |
 | `Services/Capture/SmartElement/` | Standalone Smart Element overlay controller, per-screen live panels, window-owner resolution, capture performer, and protocol seams |
 | `Services/Capture/ScrollingCapture/` | Long screenshot session model, live preview, stitcher, HUD, metrics |
+| `Services/Capture/HeadlessCapture/` | No-interaction capture for the `snapzy` CLI: target resolution, staging folder, downscale/metadata post-processing, app-name matching |
+| `Services/CommandLine/` | `snapzy` CLI socket server, connections, router, caller identity and approval, activity indicator, command installer, method handlers |
 | `Services/Cloud/` | S3/R2/Google Drive providers, upload orchestration, GRDB history, Keychain credentials, encrypted transfer, OAuth service |
 | `Services/Configuration/` | TOML export/import facade, focused TOML parser/writer, schema validation, preference mutation helpers, debounced config.toml sync coordinator |
 | `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
@@ -290,6 +314,9 @@ SnapzyUITests/
       cutout.png                 # optional
       assets/
         <uuid>.bin               # optional embedded image assets
+  CLI/
+    <bundleID>.sock            # snapzy CLI socket (dir 0700, socket 0600)
+    Captures/                  # headless CLI captures, 24 h retention (outside the temp-capture sweep)
   snapzy.db
   DatabaseRecovery-<yyyyMMdd-HHmmss>[-N]/   # database files archived by launch recovery
     snapzy.db
@@ -302,7 +329,7 @@ SnapzyUITests/
 
 | Store | Used for |
 | --- | --- |
-| `UserDefaults` | Preferences, shortcut configs, onboarding flags, feature toggles, selected OCR provider and custom endpoint metadata (`ocr.selectedModel`, `ocr.customModels`) |
+| `UserDefaults` | Preferences, shortcut configs, onboarding flags, feature toggles, selected OCR provider and custom endpoint metadata (`ocr.selectedModel`, `ocr.customModels`), `snapzy` CLI access (`cliEnabled`) and approved apps (`cliApprovedCallers`, never exported) |
 | `Keychain` | Cloud access key, secret key, optional cloud protection password, custom OCR endpoint API keys |
 | `Application Support/Snapzy/Captures/` | Temp captures, per-session recording processing files, and recording metadata sidecars |
 | `Application Support/Snapzy/AnnotationSessions/` | Sidecar packages for committed editable screenshot annotation sessions |
@@ -312,6 +339,7 @@ SnapzyUITests/
 ## Implementation Notes That Matter
 
 - `ScreenCaptureViewModel` is the main entrypoint for capture actions fired from shortcuts, the status bar menu, or `snapzy://` automation URLs. Deep links can be toggled on/off globally in Advanced preferences (`urlSchemeEnabled`).
+- The `snapzy` command line tool bypasses `ScreenCaptureViewModel`: `CLIServer` (started by `AppCoordinator`, following `cliEnabled`) serves a Unix socket, `CLIAuthorizationCoordinator` approves the calling app, and capture methods go through `HeadlessCaptureService`, which calls `ScreenCaptureManager` with `invocation: .headless` — no completion event, so no post-capture actions, no permission prompt, no best-effort fallbacks. Details in `CLI.md`.
 - `AppStatusBarController` is the AppKit bridge for the menu bar item. It now keeps the menu accessible during active recording, renders the live recording timer from `ScreenRecordingManager`, and coordinates temporary Preferences-window exclusion for record-own-app sessions.
 - Area screenshot now freezes the active display first through `FrozenAreaCaptureSession`, then keeps one overlay session that can toggle between manual region selection and application window selection with the configurable `Application Capture` overlay key. The default key is `A`.
 - Area + inline annotate uses `InlineAreaAnnotateCoordinator` with `InlineAreaAnnotateSession` and `InlineAreaAnnotateWindow`. It starts after a frozen all-display snapshot set, creates coordinated per-display panels that share one desktop coordinate space, reuses Annotate state/canvas/export services, and routes the saved image through `PostCaptureActionHandler`.
@@ -348,6 +376,9 @@ the app source folder and Xcode can bind each root to the correct target.
   domain, for example `SnapzyTests/Services/Capture/*Tests.swift` tests
   `Snapzy/Services/Capture/*`.
 - **SnapzyUITests** — planned UI Testing Bundle for end-to-end user flows.
+- **SnapzyCLIKit tests** — `swift test --package-path Packages/SnapzyCLIKit`
+  covers the CLI wire contract, client and commands without building the app
+  (CI runs it before the Xcode tests).
 
 Current Xcode project contract:
 
@@ -404,6 +435,7 @@ Directory structure mirrors the app: `SnapzyTests/Services/Cloud/AWSV4SignerTest
 | TOML config export/import + startup auto-apply | `Services/Configuration/`, `Features/Onboarding/Components/OnboardingConfigAccessView.swift`, `Features/Preferences/Components/PreferencesAdvancedSettingsView.swift`, `App/AppCoordinator.swift`, `docs/CONFIGURATION.md` |
 | Onboarding or app startup | `App/`, `Features/Splash/`, `Features/Onboarding/`, `docs/APP_LIFECYCLE.md` |
 | Shortcuts and conflicts | `Services/Shortcuts/`, `Features/Shortcuts/`, `docs/SHORTCUTS.md` |
+| `snapzy` CLI commands, socket, approval, headless capture | `Packages/SnapzyCLIKit/`, `Services/CommandLine/`, `Services/Capture/HeadlessCapture/`, `docs/CLI.md` |
 | Unit tests for services | `SnapzyTests/Services/`, `SnapzyTests/Helpers/` |
 | UI tests for user flows | `SnapzyUITests/Features/` |
 | Test fixtures and mocks | `SnapzyTests/Helpers/`, `SnapzyTests/Fixtures/` |

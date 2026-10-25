@@ -49,6 +49,7 @@ xcodebuild -project "$PROJECT" \
   -configuration Release \
   CODE_SIGN_IDENTITY="" \
   CODE_SIGNING_REQUIRED=NO \
+  CODE_SIGNING_ALLOWED=NO \
   archive -archivePath "$ARCHIVE_PATH" \
   > /dev/null || fail "xcodebuild archive failed."
 success "Archive created at $ARCHIVE_PATH"
@@ -97,6 +98,12 @@ if [ -d "$SPARKLE_FRAMEWORK" ]; then
   codesign --force --sign "$SIGN_IDENTITY" -o runtime $TIMESTAMP_FLAG \
     "$SPARKLE_FRAMEWORK"
 fi
+
+# Sign the embedded `snapzy` command line tool before the app (inside-out)
+CLI_HELPER="$APP_PATH/Contents/Helpers/snapzy"
+[ -f "$CLI_HELPER" ] || fail "snapzy command line tool not found at $CLI_HELPER"
+info "Signing embedded snapzy command line tool..."
+codesign --force --sign "$SIGN_IDENTITY" -o runtime $TIMESTAMP_FLAG "$CLI_HELPER"
 
 # Pre-process entitlements
 info "Substituting entitlements template..."

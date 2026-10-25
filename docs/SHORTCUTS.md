@@ -149,6 +149,8 @@ Scheme: `snapzy://` (registered in `Snapzy/Resources/Info.plist` `CFBundleURLTyp
 
 Gate: `urlSchemeEnabled` (default `true`; Settings → Advanced → URL Scheme integration). Disabled or unknown routes are logged and ignored.
 
+Deep links are fire-and-forget and mostly interactive (the user still selects the area). For non-interactive captures with a file path, JSON, and exit codes — agents, scripts — use the `snapzy` command line tool: [CLI.md](CLI.md).
+
 Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppCoordinator.handleDeepLink` → `SnapzyDeepLinkHandler` (`Snapzy/App/SnapzyDeepLinkHandler.swift`); routes parsed by `SnapzyDeepLinkAction.init?(url:)`.
 
 ### Canonical route table

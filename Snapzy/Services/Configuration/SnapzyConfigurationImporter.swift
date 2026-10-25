@@ -120,6 +120,10 @@ enum SnapzyConfigurationImporter {
     collectBool(&reader, "general", "url_scheme_enabled", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.urlSchemeEnabled)
     }
+    // The CLI server follows this key; approved apps are machine-specific and never imported.
+    collectBool(&reader, "general", "cli_enabled", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.cliEnabled)
+    }
     collectBool(&reader, "general", "show_menu_bar_icon", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.showMenuBarIcon)
       if defaults == UserDefaults.standard {

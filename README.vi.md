@@ -27,6 +27,7 @@
     <a href="#features">Tính năng</a> •
     <a href="#install">Cài đặt</a> •
     <a href="#raycast">Raycast</a> •
+    <a href="#cli">CLI</a> •
     <a href="#shortcuts">Phím tắt</a> •
     <a href="#automation">Tự động hóa</a> •
     <a href="#development">Development</a> •
@@ -70,6 +71,7 @@
 - **Onboarding**: màn hình chào, chọn ngôn ngữ lần đầu, hướng dẫn cấp quyền, và cấu hình shortcut cho người dùng lần đầu
 - **Bản địa hóa**: bản địa hóa ứng dụng cho 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French và 🇩🇪 German, hỗ trợ chọn ngôn ngữ riêng cho từng app theo macOS
 - **Cloud Upload**: quyền riêng tư trước hết với mô hình tự mang storage bằng AWS S3 hoặc Cloudflare R2, không dùng server bên thứ ba, upload thủ công từ Quick Access cho screenshot, video và GIF, hoặc từ Annotate cho screenshot, credential lưu trong macOS Keychain với bảo vệ mật khẩu tùy chọn, import/export credential mã hóa thủ công để thiết lập nhanh trên Mac khác, lịch sử upload, auto-expiration cấu hình được (1–90 ngày hoặc vĩnh viễn), lifecycle rules, hỗ trợ custom domain
+- **Dòng lệnh**: lệnh `snapzy` cho AI agent và script — chụp màn hình, cửa sổ (kể cả khi bị che) hoặc một vùng mà không cần bấm gì, trả về JSON và exit code, có xin phép theo từng ứng dụng
 - **Cập nhật & chẩn đoán**: cập nhật trong app qua Sparkle, báo vấn đề kèm gói log chẩn đoán, quản lý cache
 - **Nền tảng**: app thanh menu, giao diện light/dark/system, ký Developer ID và notarize với Hardened Runtime bật, security-scoped bookmark cho thư mục người dùng chọn
 
@@ -150,6 +152,18 @@ Hoặc nếu bạn đã clone repo:
 
 <a id="shortcuts"></a>
 
+## CLI
+
+Snapzy kèm lệnh `snapzy` để AI agent và script chụp màn hình mà không cần bấm gì, nhận lại đường dẫn file, metadata JSON và exit code:
+
+```bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+```
+
+Lệnh nằm tại `/Applications/Snapzy.app/Contents/Helpers/snapzy`; đưa nó vào `PATH` từ **Cài đặt → Nâng cao → Dòng lệnh → Cài đặt**. Lần đầu một ứng dụng dùng lệnh này, Snapzy sẽ hỏi bạn có cho phép ứng dụng đó không. Tài liệu đầy đủ: [docs/CLI.md](docs/CLI.md).
+
 ## Phím tắt
 
 | Tác vụ                                                            | Phím tắt |
@@ -226,6 +240,7 @@ Nếu bạn cần lệnh archive, export, hoặc đóng gói DMG, xem [docs/BUIL
 - [Hướng dẫn build và đóng gói](docs/BUILD.md)
 - [Quy trình release và update](docs/RELEASES.md)
 - [Kiểm thử update Sparkle cục bộ](docs/UPDATE_TESTING.md)
+- [Lệnh `snapzy` cho agent và script](docs/CLI.md)
 
 <a id="community"></a>
 

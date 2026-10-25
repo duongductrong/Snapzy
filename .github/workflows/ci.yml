@@ -30,6 +30,9 @@ jobs:
           mkdir -p build/swift-module-cache
           swift -module-cache-path build/swift-module-cache tools/localization/CatalogTool.swift verify
 
+      - name: Test SnapzyCLIKit package
+        run: swift test --package-path Packages/SnapzyCLIKit
+
       - name: Run tests
         env:
           # The following tests crash on GitHub Actions macOS runners (Swift concurrency /
@@ -167,3 +170,19 @@ jobs:
             exit 1
           fi
           echo "Build successful: $APP_PATH"
+
+          CLI_HELPER="$APP_PATH/Contents/Helpers/snapzy"
+          if [ ! -x "$CLI_HELPER" ]; then
+            echo "::error::snapzy command line tool not embedded at $CLI_HELPER"
+            exit 1
+          fi
+          # With no app running and --no-launch the CLI must fail cleanly (exit 5), not crash.
+          set +e
+          SNAPZY_SOCKET="$RUNNER_TEMP/snapzy-ci.sock" "$CLI_HELPER" version --no-launch
+          CLI_EXIT=$?
+          set -e
+          if [ "$CLI_EXIT" -ne 5 ]; then
+            echo "::error::snapzy version --no-launch exited $CLI_EXIT, expected 5"
+            exit 1
+          fi
+          echo "Embedded snapzy CLI verified"

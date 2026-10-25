@@ -10,6 +10,9 @@
 		A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = A31BF0A72F1CF69100902D12 /* Sparkle */; };
 		B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */ = {isa = PBXBuildFile; productRef = B42DE1A12FA1B90000WEBP01 /* WebP */; };
 		C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C73DB2A12FA3GRDB00GRDB01 /* GRDB */; };
+		C11CL1012FB0000000CLI003 /* SnapzyCLIProtocol in Frameworks */ = {isa = PBXBuildFile; productRef = C11CL1012FB0000000CLI002 /* SnapzyCLIProtocol */; };
+		C11CL1012FB0000000CLI016 /* SnapzyCLICore in Frameworks */ = {isa = PBXBuildFile; productRef = C11CL1012FB0000000CLI015 /* SnapzyCLICore */; };
+		C11CL1012FB0000000CLI01E /* snapzy in Embed Command Line Tool */ = {isa = PBXBuildFile; fileRef = C11CL1012FB0000000CLI010 /* snapzy */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -20,12 +23,34 @@
 			remoteGlobalIDString = A36462A22F18EEDA0003453D;
 			remoteInfo = Snapzy;
 		};
+		C11CL1012FB0000000CLI01C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A364629B2F18EEDA0003453D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C11CL1012FB0000000CLI012;
+			remoteInfo = SnapzyCLI;
+		};
 /* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C11CL1012FB0000000CLI01D /* Embed Command Line Tool */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = Contents/Helpers;
+			dstSubfolderSpec = 1;
+			files = (
+				C11CL1012FB0000000CLI01E /* snapzy in Embed Command Line Tool */,
+			);
+			name = "Embed Command Line Tool";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		A36462A32F18EEDA0003453D /* Snapzy Debug.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Snapzy Debug.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00100012F9F000000000001 /* SnapzyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SnapzyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D00110022F9F000000000002 /* Snapzy.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = Snapzy.xctestplan; sourceTree = "<group>"; };
+		C11CL1012FB0000000CLI010 /* snapzy */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = snapzy; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -55,6 +80,11 @@
 			path = SnapzyTests;
 			sourceTree = "<group>";
 		};
+		C11CL1012FB0000000CLI011 /* SnapzyCLI */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = SnapzyCLI;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +95,7 @@
 				A31BF0A82F1CF69100902D12 /* Sparkle in Frameworks */,
 				B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */,
 				C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */,
+				C11CL1012FB0000000CLI003 /* SnapzyCLIProtocol in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +103,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C11CL1012FB0000000CLI014 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C11CL1012FB0000000CLI016 /* SnapzyCLICore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +123,7 @@
 				D00110022F9F000000000002 /* Snapzy.xctestplan */,
 				A36462A52F18EEDA0003453D /* Snapzy */,
 				D00100032F9F000000000003 /* SnapzyTests */,
+				C11CL1012FB0000000CLI011 /* SnapzyCLI */,
 				A36462A42F18EEDA0003453D /* Products */,
 			);
 			sourceTree = "<group>";
@@ -93,6 +133,7 @@
 			children = (
 				A36462A32F18EEDA0003453D /* Snapzy Debug.app */,
 				D00100012F9F000000000001 /* SnapzyTests.xctest */,
+				C11CL1012FB0000000CLI010 /* snapzy */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -108,10 +149,12 @@
 				A364629F2F18EEDA0003453D /* Sources */,
 				A36462A02F18EEDA0003453D /* Frameworks */,
 				A36462A12F18EEDA0003453D /* Resources */,
+				C11CL1012FB0000000CLI01D /* Embed Command Line Tool */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C11CL1012FB0000000CLI01B /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A36462A52F18EEDA0003453D /* Snapzy */,
@@ -121,6 +164,7 @@
 				A31BF0A72F1CF69100902D12 /* Sparkle */,
 				B42DE1A12FA1B90000WEBP01 /* WebP */,
 				C73DB2A12FA3GRDB00GRDB01 /* GRDB */,
+				C11CL1012FB0000000CLI002 /* SnapzyCLIProtocol */,
 			);
 			productName = Snapzy;
 			productReference = A36462A32F18EEDA0003453D /* Snapzy Debug.app */;
@@ -149,6 +193,28 @@
 			productReference = D00100012F9F000000000001 /* SnapzyTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		C11CL1012FB0000000CLI012 /* SnapzyCLI */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C11CL1012FB0000000CLI017 /* Build configuration list for PBXNativeTarget "SnapzyCLI" */;
+			buildPhases = (
+				C11CL1012FB0000000CLI013 /* Sources */,
+				C11CL1012FB0000000CLI014 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				C11CL1012FB0000000CLI011 /* SnapzyCLI */,
+			);
+			name = SnapzyCLI;
+			packageProductDependencies = (
+				C11CL1012FB0000000CLI015 /* SnapzyCLICore */,
+			);
+			productName = snapzy;
+			productReference = C11CL1012FB0000000CLI010 /* snapzy */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -165,6 +231,9 @@
 					D00100072F9F000000000007 = {
 						CreatedOnToolsVersion = 26.2;
 						TestTargetID = A36462A22F18EEDA0003453D;
+					};
+					C11CL1012FB0000000CLI012 = {
+						CreatedOnToolsVersion = 26.4;
 					};
 				};
 			};
@@ -190,6 +259,7 @@
 				A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */,
 				B42DE19F2FA1B90000WEBP01 /* XCRemoteSwiftPackageReference "Swift-WebP" */,
 				C73DB19F2FA3GRDB00GRDB01 /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A36462A42F18EEDA0003453D /* Products */;
@@ -198,6 +268,7 @@
 			targets = (
 				A36462A22F18EEDA0003453D /* Snapzy */,
 				D00100072F9F000000000007 /* SnapzyTests */,
+				C11CL1012FB0000000CLI012 /* SnapzyCLI */,
 			);
 		};
 /* End PBXProject section */
@@ -256,6 +327,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C11CL1012FB0000000CLI013 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -263,6 +341,11 @@
 			isa = PBXTargetDependency;
 			target = A36462A22F18EEDA0003453D /* Snapzy */;
 			targetProxy = D00100082F9F000000000008 /* PBXContainerItemProxy */;
+		};
+		C11CL1012FB0000000CLI01B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C11CL1012FB0000000CLI012 /* SnapzyCLI */;
+			targetProxy = C11CL1012FB0000000CLI01C /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -521,6 +604,44 @@
 			};
 			name = Release;
 		};
+		C11CL1012FB0000000CLI019 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 215;
+				DEVELOPMENT_TEAM = XMHV5GH2Z7;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 2.1.0-beta.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy.debug.cli;
+				PRODUCT_MODULE_NAME = SnapzyCLIMain;
+				PRODUCT_NAME = snapzy;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		C11CL1012FB0000000CLI01A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
+				CURRENT_PROJECT_VERSION = 215;
+				DEVELOPMENT_TEAM = XMHV5GH2Z7;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 13.0;
+				MARKETING_VERSION = 2.1.0-beta.15;
+				PRODUCT_BUNDLE_IDENTIFIER = com.trongduong.snapzy.cli;
+				PRODUCT_MODULE_NAME = SnapzyCLIMain;
+				PRODUCT_NAME = snapzy;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -551,7 +672,23 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		C11CL1012FB0000000CLI017 /* Build configuration list for PBXNativeTarget "SnapzyCLI" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C11CL1012FB0000000CLI019 /* Debug */,
+				C11CL1012FB0000000CLI01A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/SnapzyCLIKit;
+		};
+/* End XCLocalSwiftPackageReference section */
 
 /* Begin XCRemoteSwiftPackageReference section */
 		A31BF0A62F1CF69100902D12 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
@@ -595,6 +732,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C73DB19F2FA3GRDB00GRDB01 /* XCRemoteSwiftPackageReference "GRDB.swift" */;
 			productName = GRDB;
+		};
+		C11CL1012FB0000000CLI002 /* SnapzyCLIProtocol */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */;
+			productName = SnapzyCLIProtocol;
+		};
+		C11CL1012FB0000000CLI015 /* SnapzyCLICore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */;
+			productName = SnapzyCLICore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -39,3 +39,15 @@ _Avoid_: destination, preview
 **Promotion**:
 Moving a temporary capture into its export destination and ending temporary ownership.
 _Avoid_: editor save, commit
+
+**Headless capture**:
+A capture requested through the `snapzy` command line tool that runs with no overlay, prompt, or post-capture actions and never becomes a Quick Access card or history entry.
+_Avoid_: silent capture, background screenshot
+
+**Staging capture**:
+A headless capture file kept in Snapzy's CLI staging folder until the caller moves it to its own output path or it expires.
+_Avoid_: temporary capture, temp file
+
+**Approved caller**:
+An app the user allowed, once or always, to request headless captures through the `snapzy` command.
+_Avoid_: trusted client, authorized user

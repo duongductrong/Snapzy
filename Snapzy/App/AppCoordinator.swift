@@ -7,6 +7,7 @@
 
 import AppKit
 import Foundation
+import SnapzyCLIProtocol
 
 @MainActor
 final class AppCoordinator {
@@ -36,6 +37,10 @@ final class AppCoordinator {
 
     if defaults.object(forKey: PreferencesKeys.urlSchemeEnabled) == nil {
       defaults.set(true, forKey: PreferencesKeys.urlSchemeEnabled)
+    }
+
+    if defaults.object(forKey: PreferencesKeys.cliEnabled) == nil {
+      defaults.set(true, forKey: PreferencesKeys.cliEnabled)
     }
 
     // History defaults
@@ -83,6 +88,8 @@ final class AppCoordinator {
       context: ["crashPrompt": (didCrash && DiagnosticLogger.shared.isEnabled) ? "true" : "false"]
     )
 
+    CLIServer.shared.startIfEnabled()
+
     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
       DiagnosticLogger.shared.log(.debug, .ui, "Splash presentation scheduled")
       self.presentStartupExperience(configurationAutoImportResult: configurationAutoImportResult)
@@ -93,6 +100,7 @@ final class AppCoordinator {
 
   func applicationWillTerminate() {
     flushConfigurationSyncBeforeTermination()
+    CLIServer.shared.shutdown()
     DiagnosticLogger.shared.log(.info, .lifecycle, "App terminated normally")
     CrashSentinel.shared.markTerminated()
     LogCleanupScheduler.shared.stop()
@@ -215,6 +223,13 @@ final class AppCoordinator {
       return
     }
 
+    // Started in the background by `snapzy`: stay out of the way. Onboarding
+    // still shows when incomplete, because the CLI cannot capture until it is done.
+    if Self.wasLaunchedByCLI, OnboardingFlowView.hasCompletedOnboarding {
+      DiagnosticLogger.shared.log(.info, .lifecycle, "Launched by CLI; skipping splash and feature intro")
+      return
+    }
+
     SplashWindowController.shared.show()
     
     // Automatically show the new feature intro once
@@ -226,6 +241,10 @@ final class AppCoordinator {
         FeatureIntroManager.shared.showCampaign(campaign)
       }
     }
+  }
+
+  private static var wasLaunchedByCLI: Bool {
+    ProcessInfo.processInfo.arguments.contains(CLILaunchArguments.launchedByCLI)
   }
 
   private func shouldPresentConfigurationAccessOnboarding(

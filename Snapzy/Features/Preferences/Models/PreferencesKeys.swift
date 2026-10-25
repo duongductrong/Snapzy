@@ -21,6 +21,11 @@ enum PreferencesKeys {
   // General
   static let playSounds = "playSounds"
   static let urlSchemeEnabled = "urlSchemeEnabled"
+  /// `snapzy` command line access (the CLI socket server). No dot in the key:
+  /// CLIServer observes it with KVO, which treats dots as key paths.
+  static let cliEnabled = "cliEnabled"
+  /// JSON `[CLIApprovedCaller]`; machine-specific, never exported to config.toml.
+  static let cliApprovedCallers = "cliApprovedCallers"
   static let showMenuBarIcon = "showMenuBarIcon"
   static let exportLocation = "exportLocation"
   static let exportLocationBookmark = "exportLocation.bookmark"

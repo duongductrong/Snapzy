@@ -233,6 +233,14 @@ jobs:
               "$SPARKLE_FRAMEWORK"
           fi
 
+          # Sign the embedded `snapzy` command line tool before the app (inside-out)
+          CLI_HELPER="$APP_PATH/Contents/Helpers/snapzy"
+          if [ ! -f "$CLI_HELPER" ]; then
+            echo "::error::snapzy command line tool not found at $CLI_HELPER"
+            exit 1
+          fi
+          codesign --force --sign "$SIGN_IDENTITY" -o runtime $TIMESTAMP_FLAG "$CLI_HELPER"
+
           # Pre-process entitlements (Xcode variable substitution)
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_PATH/Contents/Info.plist")
           PROCESSED_ENTITLEMENTS="$RUNNER_TEMP/processed-entitlements.plist"
@@ -254,6 +262,21 @@ jobs:
           codesign --verify --deep --strict --verbose=4 "$APP_PATH"
           codesign -dv --verbose=4 "$APP_PATH"
           codesign -d --entitlements - "$APP_PATH" > build/exported-app-entitlements.plist
+
+          # The embedded CLI must carry the app's Team ID and hardened runtime
+          CLI_HELPER="$APP_PATH/Contents/Helpers/snapzy"
+          codesign --verify --strict --verbose=2 "$CLI_HELPER"
+          APP_TEAM=$(codesign -dv "$APP_PATH" 2>&1 | grep "^TeamIdentifier=" || true)
+          CLI_TEAM=$(codesign -dv "$CLI_HELPER" 2>&1 | grep "^TeamIdentifier=" || true)
+          if [ "$APP_TEAM" != "$CLI_TEAM" ]; then
+            echo "::error::snapzy CLI team ($CLI_TEAM) does not match the app ($APP_TEAM)"
+            exit 1
+          fi
+          if ! codesign -dvvv "$CLI_HELPER" 2>&1 | grep "flags=" | grep -q "runtime"; then
+            echo "::error::Hardened runtime not enabled on $CLI_HELPER"
+            exit 1
+          fi
+          echo "snapzy CLI signature verified: $CLI_TEAM"
 
           if grep -q "com.apple.security.app-sandbox" build/exported-app-entitlements.plist; then
             echo "::warning::App sandbox entitlement found in exported app, but app is configured to be unsandboxed"
@@ -685,6 +708,13 @@ jobs:
           SHA="${{ steps.sha256.outputs.sha256 }}"
           sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/snapzy.rb
           sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/snapzy.rb
+
+          # Link the embedded `snapzy` CLI onto PATH once a stable release ships it.
+          # Added here, not by hand, so the cask never names a binary its DMG lacks.
+          if [ -x "build/Snapzy.app/Contents/Helpers/snapzy" ] && ! grep -q 'Contents/Helpers/snapzy' Casks/snapzy.rb; then
+            perl -0pi -e 's/(  app "Snapzy\.app"\n)/$1  binary "#{appdir}\/Snapzy.app\/Contents\/Helpers\/snapzy"\n/' Casks/snapzy.rb
+            grep -q 'Contents/Helpers/snapzy' Casks/snapzy.rb || { echo "::error::Could not add the snapzy binary stanza"; exit 1; }
+          fi
 
       - name: Update README install version
         if: steps.version.outputs.is_beta != 'true'

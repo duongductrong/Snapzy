@@ -27,6 +27,7 @@
     <a href="#features">功能</a> •
     <a href="#install">安装</a> •
     <a href="#raycast">Raycast</a> •
+    <a href="#cli">CLI</a> •
     <a href="#shortcuts">快捷键</a> •
     <a href="#automation">自动化</a> •
     <a href="#development">Development</a> •
@@ -70,6 +71,7 @@
 - **引导流程**：首次使用时提供启动页、语言选择、权限引导和快捷键配置
 - **本地化**：应用已提供 🇺🇸 English、🇻🇳 Vietnamese、🇨🇳 Simplified Chinese、🇹🇼 Traditional Chinese、🇪🇸 Spanish、🇯🇵 Japanese、🇰🇷 Korean、🇷🇺 Russian、🇫🇷 French 和 🇩🇪 German，并支持 macOS 原生按应用选择语言
 - **云上传**：坚持隐私优先的自带存储方案，支持 AWS S3 或 Cloudflare R2，不经过第三方服务器；可从 Quick Access 手动上传截图、视频和 GIF，也可从 Annotate 手动上传截图；凭据存储于 macOS Keychain，可选密码保护；支持手动加密导入/导出凭据，便于在另一台 Mac 上快速配置；同时提供上传历史、可配置自动过期（1–90 天或永久）、生命周期规则和自定义域名支持
+- **命令行**：面向 AI 代理和脚本的 `snapzy` 命令——无需点击即可截取显示器、窗口（即使被遮挡）或区域，返回 JSON 和退出码，并按应用请求授权
 - **更新与诊断**：内置 Sparkle 应用更新、带诊断日志包的问题报告和缓存管理
 - **平台特性**：菜单栏应用、浅色/深色/跟随系统主题、启用 Hardened Runtime 并经 Developer ID 签名与 Apple 公证，以及针对用户所选文件夹的安全作用域书签
 
@@ -150,6 +152,18 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 
 <a id="shortcuts"></a>
 
+## CLI
+
+Snapzy 自带 `snapzy` 命令，AI 代理和脚本无需任何点击即可截图，并得到文件路径、JSON 元数据和退出码：
+
+```bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+```
+
+命令位于 `/Applications/Snapzy.app/Contents/Helpers/snapzy`；可在 **设置 → 高级 → 命令行 → 安装** 中将其加入 `PATH`。某个应用首次使用时，Snapzy 会询问是否允许该应用。完整说明：[docs/CLI.md](docs/CLI.md)。
+
 ## 快捷键
 
 | 操作                                                 | 快捷键 |
@@ -226,6 +240,7 @@ Snapzy 注册了 `snapzy://` URL scheme，因此 launcher 和自动化工具（�
 - [构建与打包指南](docs/BUILD.md)
 - [发布与更新工作流](docs/RELEASES.md)
 - [本地 Sparkle 更新测试](docs/UPDATE_TESTING.md)
+- [面向代理和脚本的 `snapzy` 命令](docs/CLI.md)
 
 <a id="community"></a>
 

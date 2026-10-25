@@ -36,6 +36,7 @@ enum DiagnosticLogCategory: String {
   case cloud = "CLOUD"
   case history = "HISTORY"
   case fileAccess = "FILE_ACCESS"
+  case cli = "CLI"
 }
 
 // MARK: - Log Entry

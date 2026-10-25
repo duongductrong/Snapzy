@@ -23,6 +23,7 @@ final class AppStatusBarController: ObservableObject {
   private let recorder = ScreenRecordingManager.shared
   private let menuBarCustomizationStore = MenuBarCustomizationStore.shared
   private let menuBarIconRenderer = MenuBarIconRenderer.shared
+  private var isShowingCLIActivity = false
   private var cachedIdleStatusImage: NSImage?
   private var cachedIdleStatusStyle: MenuBarIconStyle?
   private var cachedCustomIconDate: Date?
@@ -366,12 +367,26 @@ final class AppStatusBarController: ObservableObject {
     }
   }
 
+  /// Tints the menu bar icon while the `snapzy` command is capturing, so a
+  /// capture started by another app is never invisible.
+  func setCLIActivity(_ active: Bool) {
+    guard isShowingCLIActivity != active else { return }
+    isShowingCLIActivity = active
+    // Tint only: re-rendering would replace a running OCR spinner's image.
+    statusItem?.button?.contentTintColor = active ? .controlAccentColor : nil
+  }
+
+  /// False when the icon is turned off or macOS hides it (notch, crowded menu bar).
+  var isStatusItemVisibleToUser: Bool {
+    statusItem != nil && !isMenuBarIconObscured
+  }
+
   private func renderStatusItem() {
     guard let button = statusItem?.button else { return }
     // When the hover bar is hidden during recording, the menu bar item becomes the stop
     // control and shows a distinct stop glyph (macOS ⌘⇧5 parity). Otherwise use the app icon.
     button.image = isMenuBarActingAsStopControl ? (recordingStopImage ?? idleStatusImage) : idleStatusImage
-    button.contentTintColor = nil
+    button.contentTintColor = isShowingCLIActivity ? .controlAccentColor : nil
     button.attributedTitle = statusItemAttributedTitle(for: recorder.state)
     button.toolTip = statusItemTooltip(for: recorder.state)
   }

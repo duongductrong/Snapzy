@@ -77,6 +77,36 @@ All permissions are requested through standard macOS prompts and can be revoked 
 - **Network usage** — Outbound requests are limited to Sparkle update checks (appcast over HTTPS) and user-initiated cloud uploads. Both can be disabled in Preferences.
 - **Passive QR decoding** — QR codes detected during OCR capture are decoded locally and copied only as plain text. Snapzy does not auto-open QR URLs, expand links over the network, execute commands, load WebViews, or place QR payloads on the pasteboard as file URLs.
 
+## Command Line Tool (`snapzy`)
+
+Snapzy embeds a `snapzy` command at `Snapzy.app/Contents/Helpers/snapzy` so agents and
+scripts can capture the screen. Because Snapzy holds the Screen Recording permission, the
+command must not turn that permission into a free-for-all for every local process. Details:
+[docs/CLI.md](docs/CLI.md).
+
+| Control | Behavior |
+| --- | --- |
+| Transport | Unix domain socket in `~/Library/Application Support/Snapzy/CLI/` (directory `0700`, socket `0600`); every connection must have the same user ID (`getpeereid`). No network listener |
+| On/off | Settings → Advanced → Command Line (`cliEnabled`, on by default). Off means no socket |
+| Approval | Every command except `status` requires the calling app to be approved: **Always Allow / Allow Once / Don't Allow**. No button answers Return; an unanswered prompt times out after 25 s and denies that request (not remembered; only Don't Allow is stored) |
+| Caller identity | Walk the CLI's parent processes to the first LaunchServices-registered app that is not Snapzy; verify the running process's code signature (Team ID, or Apple's anchor). Unverified apps are keyed by path, named by their bundle file name (not their own Info.plist), and the prompt shows a generic icon plus their real location |
+| Prompt abuse | Unknown methods are rejected before any prompt and the prompt only names known commands; at most 3 apps can wait for a prompt; prompts for connections that went away are never shown |
+| Visibility | The menu bar icon is tinted during every CLI capture; a toast names the app when the icon is hidden. Each capture is logged (`CLI` category) |
+| Revocation | Settings → Advanced → Command Line → Allowed apps. Decisions are stored per machine and never exported to `config.toml` |
+| Side effects | CLI captures never touch the clipboard, Quick Access, or history, and never trigger a permission prompt |
+
+Known limits — this is a consent check inside one user account, not a sandbox:
+
+- Approval belongs to an **app**, so everything that app runs inherits it: approving a terminal
+  approves every command typed or scripted in it.
+- A malicious process running as the same user can make an approved app run `snapzy` for it
+  (for example AppleScript, `open -a Terminal script.command`) or `exec` into an approved
+  app's binary; parent processes are identified by PID. Such a process already has the
+  user's full privileges, but treat approvals accordingly.
+- Approving an app that runs untrusted code (an agent with broad shell access) lets that code
+  capture the screen whenever Snapzy is running. Use Allow Once, or turn command line access
+  off, when that is not acceptable.
+
 ## Cloud Credentials
 
 - **Keychain storage** — Cloud access keys, secret keys, and Google Drive OAuth refresh/access tokens are stored exclusively in the macOS Keychain, never in plaintext files or UserDefaults.

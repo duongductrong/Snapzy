@@ -165,6 +165,24 @@ else
   info "$APP_PATH not found (already removed)"
 fi
 
+# Remove the `snapzy` command symlink, but only if it points into a Snapzy.app.
+cli_link="/usr/local/bin/snapzy"
+if [ -L "$cli_link" ]; then
+  cli_target=$(readlink "$cli_link")
+  case "$cli_target" in
+    */Snapzy*.app/Contents/Helpers/snapzy)
+      if rm -f "$cli_link" 2>/dev/null; then
+        success "Removed $cli_link"
+      else
+        info "Could not remove $cli_link (run: sudo rm '$cli_link')"
+      fi
+      ;;
+    *)
+      info "Kept $cli_link (points to $cli_target)"
+      ;;
+  esac
+fi
+
 # ─── 4. Remove Application Support data ─────────────────────────
 info "Checking Application Support data..."
 app_support="$HOME/Library/Application Support/$APP_NAME"

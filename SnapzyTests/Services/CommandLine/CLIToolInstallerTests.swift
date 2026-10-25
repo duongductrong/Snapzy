@@ -1,0 +1,106 @@
+//
+//  CLIToolInstallerTests.swift
+//  SnapzyTests
+//
+//  Link-state detection and shell quoting for installing the snapzy command.
+//  Never touches /usr/local/bin.
+//
+
+@testable import Snapzy
+import XCTest
+
+final class CLIToolInstallerTests: XCTestCase {
+  private var directory: URL!
+
+  override func setUpWithError() throws {
+    directory = FileManager.default.temporaryDirectory
+      .appendingPathComponent("CLIToolInstallerTests-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+  }
+
+  override func tearDownWithError() throws {
+    try? FileManager.default.removeItem(at: directory)
+  }
+
+  private var link: String {
+    directory.appendingPathComponent("snapzy").path
+  }
+
+  private func makeHelper(in app: String) throws -> String {
+    let helper = directory.appendingPathComponent("\(app)/Contents/Helpers/snapzy")
+    try FileManager.default.createDirectory(at: helper.deletingLastPathComponent(), withIntermediateDirectories: true)
+    FileManager.default.createFile(atPath: helper.path, contents: Data())
+    return helper.path
+  }
+
+  func testStates() throws {
+    let helper = try makeHelper(in: "Snapzy Debug.app")
+    let other = try makeHelper(in: "Other.app")
+
+    XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: helper), .notInstalled)
+
+    try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: helper)
+    XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: helper), .installed)
+    XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: other), .pointsElsewhere(helper))
+
+    try FileManager.default.removeItem(atPath: link)
+    try Data("#!/bin/sh".utf8).write(to: URL(fileURLWithPath: link))
+    XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: helper), .blockedByFile)
+  }
+
+  func testDanglingLinkIsPointsElsewhere() throws {
+    let helper = try makeHelper(in: "Snapzy.app")
+    try FileManager.default.createSymbolicLink(
+      atPath: link,
+      withDestinationPath: "/Applications/Gone.app/Contents/Helpers/snapzy"
+    )
+
+    XCTAssertEqual(
+      CLIToolInstaller.state(linkPath: link, helperPath: helper),
+      .pointsElsewhere("/Applications/Gone.app/Contents/Helpers/snapzy")
+    )
+  }
+
+  func testRelativeLinkResolvesAgainstLinkDirectory() throws {
+    let helper = try makeHelper(in: "Snapzy.app")
+    try FileManager.default.createSymbolicLink(atPath: link, withDestinationPath: "Snapzy.app/Contents/Helpers/snapzy")
+
+    XCTAssertEqual(CLIToolInstaller.state(linkPath: link, helperPath: helper), .installed)
+  }
+
+  func testReplaceableLinks() throws {
+    let otherTool = try makeHelper(in: "Other.app")
+
+    XCTAssertTrue(CLIToolInstaller.isReplaceable("/Applications/Snapzy.app/Contents/Helpers/snapzy"))
+    XCTAssertTrue(CLIToolInstaller.isReplaceable("/tmp/Snapzy Debug.app/Contents/Helpers/snapzy"))
+    XCTAssertTrue(CLIToolInstaller.isReplaceable("/Applications/Gone.app/bin/snapzy"), "dangling links are replaceable")
+    XCTAssertFalse(CLIToolInstaller.isReplaceable(otherTool), "another tool's existing binary")
+  }
+
+  func testTemporaryLocations() {
+    XCTAssertTrue(CLIToolInstaller.isTemporaryLocation(URL(fileURLWithPath: "/Volumes/Snapzy/Snapzy.app")))
+    XCTAssertTrue(CLIToolInstaller.isTemporaryLocation(
+      URL(fileURLWithPath: "/private/var/folders/xy/T/AppTranslocation/ABC/d/Snapzy.app")
+    ))
+    XCTAssertFalse(CLIToolInstaller.isTemporaryLocation(URL(fileURLWithPath: "/Applications/Snapzy.app")))
+  }
+
+  func testAppleScriptQuoting() {
+    XCTAssertEqual(
+      CLIToolInstaller.appleScriptQuoted(#"ln -sfn '/a "b"\c' x"#),
+      #""ln -sfn '/a \"b\"\\c' x""#
+    )
+  }
+
+  func testShellQuoting() {
+    XCTAssertEqual(CLIToolInstaller.shellQuoted("/Applications/Snapzy Debug.app"), "'/Applications/Snapzy Debug.app'")
+    XCTAssertEqual(CLIToolInstaller.shellQuoted("it's"), "'it'\\''s'")
+  }
+
+  func testHelperURLIsInsideAppBundle() {
+    XCTAssertEqual(
+      CLIToolInstaller.helperURL(appBundleURL: URL(fileURLWithPath: "/Applications/Snapzy.app")).path,
+      "/Applications/Snapzy.app/Contents/Helpers/snapzy"
+    )
+  }
+}
