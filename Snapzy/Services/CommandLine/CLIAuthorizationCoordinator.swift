@@ -52,14 +52,23 @@ final class CLIAuthorizationCoordinator {
   /// script cannot queue prompts until the user gives in.
   static let maxPendingPrompts = 3
 
+  /// Freed after every prompt, so it needs the explicit deinit too.
   private final class Waiter {
     var isCancelled = false
+
+    /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+    /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+    deinit {}
   }
 
   init(store: CLIAuthorizationStore, prompter: CLIAuthorizationPrompting) {
     self.store = store
     self.prompter = prompter
   }
+
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  deinit {}
 
   func authorize(caller: CLICallerIdentity?, method: String,
                  allowedForConnection: Bool) async -> CLIAuthorizationOutcome {

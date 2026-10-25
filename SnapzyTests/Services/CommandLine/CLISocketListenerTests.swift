@@ -38,6 +38,9 @@ final class CLISocketListenerTests: XCTestCase {
     private let lock = NSLock()
     private var calls: [Bool] = []
 
+    /// Explicit and nonisolated: see #668 (main-actor deinit back-deploy abort on macOS 13-15).
+    deinit {}
+
     var allowedForConnectionFlags: [Bool] {
       lock.withLock { calls }
     }

@@ -26,6 +26,10 @@ private final class FakePrompter: CLIAuthorizationPrompting {
     self.results = results
   }
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  deinit {}
+
   func ask(_ caller: CLICallerIdentity, command _: String) -> CLIAuthorizationPromptResult {
     askedCallers.append(caller.displayName)
     return results.isEmpty ? .deny : results.removeFirst()

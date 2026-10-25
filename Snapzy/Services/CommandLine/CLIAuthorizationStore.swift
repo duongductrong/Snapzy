@@ -43,6 +43,10 @@ final class CLIAuthorizationStore: ObservableObject {
     callers = Self.load(from: defaults)
   }
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  deinit {}
+
   func decision(for key: String) -> CLIApprovedCaller.Decision? {
     callers.first { $0.key == key }?.decision
   }
