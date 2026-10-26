@@ -5500,6 +5500,16 @@ nonisolated enum L10n {
   }
 
   enum CloudSettings {
+    static let heroSubtitle = string(
+      "cloud-settings.hero-subtitle",
+      defaultValue: "Upload captures to your own storage and share them with a link.",
+      comment: "Cloud settings page subtitle"
+    )
+    static let connected = string(
+      "cloud-settings.connected",
+      defaultValue: "Connected",
+      comment: "Status shown next to the configured cloud provider"
+    )
     static let resetConfigurationTitle = string(
       "cloud-settings.reset-configuration-title",
       defaultValue: "Reset Cloud Configuration?",
