@@ -251,26 +251,29 @@ extension PreferencesSearchEntry {
   // MARK: - Annotate
 
   private static var annotate: [PreferencesSearchEntry] {
-    let behavior = L10n.PreferencesAnnotate.behaviorSection
+    let tools = L10n.PreferencesAnnotate.toolsSection
+    let drawing = L10n.PreferencesAnnotate.drawingSection
+    let openSave = L10n.PreferencesAnnotate.openSaveSection
+    let drag = L10n.PreferencesAnnotate.dragSection
     return [
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.defaultToolTitle,
+      .init(.annotate, section: tools, title: L10n.PreferencesAnnotate.defaultToolTitle,
             detail: L10n.PreferencesAnnotate.defaultToolDescription, keywords: ["editor", "initial"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.rememberLastToolTitle,
+      .init(.annotate, section: tools, title: L10n.PreferencesAnnotate.rememberLastToolTitle,
             detail: L10n.PreferencesAnnotate.rememberLastToolDescription, keywords: ["editor", "restore"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.quickPropertiesSyncTitle,
+      .init(.annotate, section: tools, title: L10n.PreferencesAnnotate.quickPropertiesSyncTitle,
             detail: L10n.PreferencesAnnotate.quickPropertiesSyncDescription,
             keywords: ["properties", "color", "stroke"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.combineSaveAsEditTitle,
+      .init(.annotate, section: openSave, title: L10n.PreferencesAnnotate.combineSaveAsEditTitle,
             detail: L10n.PreferencesAnnotate.combineSaveAsEditDescription, keywords: ["merge", "stitch"]),
-      .init(.annotate, section: behavior, title: L10n.AnnotateUI.cropSnapToEdges,
+      .init(.annotate, section: drawing, title: L10n.AnnotateUI.cropSnapToEdges,
             detail: L10n.AnnotateUI.cropSnapToEdgesDescription, keywords: ["crop", "magnet"]),
-      .init(.annotate, section: behavior, title: L10n.AnnotateUI.highlighterTextSnapping,
+      .init(.annotate, section: drawing, title: L10n.AnnotateUI.highlighterTextSnapping,
             detail: L10n.AnnotateUI.highlighterTextSnappingDescription, keywords: ["marker", "align"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.clipboardTitle,
+      .init(.annotate, section: openSave, title: L10n.PreferencesAnnotate.clipboardTitle,
             detail: L10n.PreferencesAnnotate.clipboardDescription, keywords: ["paste", "pasteboard"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.closeAfterDragTitle,
+      .init(.annotate, section: drag, title: L10n.PreferencesAnnotate.closeAfterDragTitle,
             detail: L10n.PreferencesAnnotate.closeAfterDragDescription, keywords: ["drag", "dismiss"]),
-      .init(.annotate, section: behavior, title: L10n.PreferencesAnnotate.bringForwardAfterDragTitle,
+      .init(.annotate, section: drag, title: L10n.PreferencesAnnotate.bringForwardAfterDragTitle,
             detail: L10n.PreferencesAnnotate.bringForwardAfterDragDescription, keywords: ["drag", "focus"]),
     ]
   }

@@ -4074,10 +4074,25 @@ nonisolated enum L10n {
   }
 
   enum PreferencesAnnotate {
-    static let behaviorSection = string(
-      "preferences-capture.section-annotate",
-      defaultValue: "Behavior",
-      comment: "Annotate preferences section title"
+    static let toolsSection = string(
+      "preferences-capture.section-annotate-tools",
+      defaultValue: "Tools",
+      comment: "Annotate preferences section title for tools the editor starts with"
+    )
+    static let drawingSection = string(
+      "preferences-capture.section-annotate-drawing",
+      defaultValue: "Drawing Helpers",
+      comment: "Annotate preferences section title for snapping aids while drawing and cropping"
+    )
+    static let openSaveSection = string(
+      "preferences-capture.section-annotate-open-save",
+      defaultValue: "Opening & Saving",
+      comment: "Annotate preferences section title for opening clipboard images and saving combined results"
+    )
+    static let dragSection = string(
+      "preferences-capture.section-annotate-drag",
+      defaultValue: "Drag & Drop",
+      comment: "Annotate preferences section title for what happens after dragging an image out of the editor"
     )
     static let defaultToolTitle = string(
       "preferences-capture.annotate-default-tool-title",

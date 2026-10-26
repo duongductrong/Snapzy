@@ -28,7 +28,12 @@ struct AnnotateSettingsView: View {
 
   var body: some View {
     Form {
-      Section(L10n.PreferencesAnnotate.behaviorSection) {
+      Section {
+        AnnotateSettingsPreview()
+          .padding(.vertical, 4)
+      }
+
+      Section(L10n.PreferencesAnnotate.toolsSection) {
         SettingRow(
           title: L10n.PreferencesAnnotate.defaultToolTitle,
           description: L10n.PreferencesAnnotate.defaultToolDescription
@@ -61,15 +66,9 @@ struct AnnotateSettingsView: View {
           Toggle("", isOn: $annotateQuickPropertiesSyncEnabled)
             .labelsHidden()
         }
+      }
 
-        SettingRow(
-          title: L10n.PreferencesAnnotate.combineSaveAsEditTitle,
-          description: L10n.PreferencesAnnotate.combineSaveAsEditDescription
-        ) {
-          Toggle("", isOn: $annotateCombineSaveAsEdit)
-            .labelsHidden()
-        }
-
+      Section(L10n.PreferencesAnnotate.drawingSection) {
         SettingRow(
           title: L10n.AnnotateUI.cropSnapToEdges,
           description: L10n.AnnotateUI.cropSnapToEdgesDescription
@@ -85,7 +84,9 @@ struct AnnotateSettingsView: View {
           Toggle("", isOn: $annotateHighlighterTextSnappingEnabled)
             .labelsHidden()
         }
+      }
 
+      Section(L10n.PreferencesAnnotate.openSaveSection) {
         SettingRow(
           title: L10n.PreferencesAnnotate.clipboardTitle,
           description: L10n.PreferencesAnnotate.clipboardDescription
@@ -101,6 +102,16 @@ struct AnnotateSettingsView: View {
           .frame(width: 180, alignment: .trailing)
         }
 
+        SettingRow(
+          title: L10n.PreferencesAnnotate.combineSaveAsEditTitle,
+          description: L10n.PreferencesAnnotate.combineSaveAsEditDescription
+        ) {
+          Toggle("", isOn: $annotateCombineSaveAsEdit)
+            .labelsHidden()
+        }
+      }
+
+      Section(L10n.PreferencesAnnotate.dragSection) {
         SettingRow(
           title: L10n.PreferencesAnnotate.closeAfterDragTitle,
           description: L10n.PreferencesAnnotate.closeAfterDragDescription
