@@ -4,6 +4,16 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.1] - 2026-10-26
+
+### Features
+- Redesign Preferences sidebar and settings layout (#687) (d34a789c)
+- Added the snapzy command line tool for AI Agent (#685) (908119ae)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.1.0] - 2026-10-25
 
 ### Features
