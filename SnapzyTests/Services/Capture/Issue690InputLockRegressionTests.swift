@@ -14,7 +14,11 @@ import CoreGraphics
 import XCTest
 
 final class Issue690InputLockRegressionTests: XCTestCase {
-  private final class Env {
+  /// `nonisolated`: under the target's default MainActor isolation this class would get an
+  /// isolated deinit, which on macOS 15 runs through the
+  /// `swift_task_deinitOnExecutorMainActorBackDeploy` shim and double-frees an object that
+  /// still has `unowned` references outstanding (CI crash).
+  private nonisolated final class Env {
     var enabledStates: [Bool] = []
     var deadlines: [DispatchWorkItem] = []
 
@@ -71,6 +75,7 @@ final class Issue690InputLockRegressionTests: XCTestCase {
 
     XCTAssertEqual(env.enabledStates.filter { $0 }.count, 1, "only the initial enable")
     XCTAssertFalse(tap.isRunning)
+    withExtendedLifetime(env) {} // outlive the tap's unowned captures
   }
 
   /// The deadline disables the tap on its own (background) queue, so input is released
@@ -90,6 +95,7 @@ final class Issue690InputLockRegressionTests: XCTestCase {
 
     XCTAssertEqual(env.enabledStates.last, false)
     tap.stop()
+    withExtendedLifetime(env) {} // outlive the tap's unowned captures
   }
 
   // MARK: - Session (real AreaSelectionController)
