@@ -39,6 +39,8 @@ jobs:
           # headless CGS), so they are skipped in CI and run locally instead.
           # The timeline suites also abort intermittently on the headless runner with a
           # malloc error; they remain covered by local CI.
+          # The #690 tap regression tests that drive a real overlay session or spin the main
+          # run loop across threads can hang the headless runner; they also run locally.
           SNAPZY_CI_SKIP_TESTS: |
             SnapzyTests/GoogleDriveTests
             SnapzyTests/DatabaseManagerTests
@@ -94,6 +96,10 @@ jobs:
             SnapzyTests/VideoEditorSessionStoreTests/testEditorHostingReplay_preservesFinalZoomAndSpeedValues
             SnapzyTests/VideoEditorTimelineViewportTests
             SnapzyTests/VideoEditorTimelineScrollCatcherTests
+            SnapzyTests/Issue690InputLockRegressionTests
+            SnapzyTests/CaptureEventTapControllerTests/testHandleTapEvent_tapDisabledByTimeout_staysDisabledAndEndsSession
+            SnapzyTests/CaptureEventTapControllerTests/testSessionDeadline_disablesTapOffMainThenEndsSession
+            SnapzyTests/CaptureEventTapControllerTests/testStaleSessionDeadline_doesNotEndNextSession
         run: |
           set -euo pipefail
           mkdir -p build
