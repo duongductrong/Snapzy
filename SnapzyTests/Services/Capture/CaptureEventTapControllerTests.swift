@@ -17,6 +17,7 @@ final class CaptureEventTapControllerTests: XCTestCase {
     var keyEvents: [(type: CGEventType, keyCode: Int64)] = []
     var consumesKeys = true
     var scrollEvents: [(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool)] = []
+    var stopReasons: [CaptureEventTapStopReason] = []
 
     func eventTapDidObserveMouseMoved(at screenPoint: CGPoint) {
       movedPoints.append(screenPoint)
@@ -34,6 +35,10 @@ final class CaptureEventTapControllerTests: XCTestCase {
     func eventTapDidReceiveScroll(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool) {
       scrollEvents.append((deltaY, hasPreciseScrollingDeltas, isCommandDown))
     }
+
+    func eventTapDidStop(reason: CaptureEventTapStopReason) {
+      stopReasons.append(reason)
+    }
   }
 
   /// Records dependency calls. The tap handle is a real local `CFMachPort` so
@@ -46,6 +51,7 @@ final class CaptureEventTapControllerTests: XCTestCase {
     var enabledStates: [Bool] = []
     var invalidatedTaps: [CFMachPort] = []
     var port: CFMachPort?
+    var scheduledDeadlines: [(delay: TimeInterval, work: DispatchWorkItem)] = []
 
     func makeDependencies() -> CaptureEventTapDependencies {
       CaptureEventTapDependencies(
@@ -69,6 +75,9 @@ final class CaptureEventTapControllerTests: XCTestCase {
           let port = unsafeDowncast(tap, to: CFMachPort.self)
           invalidatedTaps.append(port)
           CFMachPortInvalidate(port)
+        },
+        scheduleDeadline: { [unowned self] delay, work in
+          scheduledDeadlines.append((delay, work))
         }
       )
     }
@@ -373,7 +382,9 @@ final class CaptureEventTapControllerTests: XCTestCase {
 
   // MARK: - Tap Disabled Recovery
 
-  func testHandleTapEvent_tapDisabledByTimeout_reenablesTap() throws {
+  /// #690: re-enabling after a timeout handed every input event back to the stalled main
+  /// thread — a system-wide input lock. The tap must stay disabled and end the session.
+  func testHandleTapEvent_tapDisabledByTimeout_staysDisabledAndEndsSession() throws {
     controller.start()
     let event = try XCTUnwrap(CGEvent(
       mouseEventSource: nil,
@@ -383,8 +394,13 @@ final class CaptureEventTapControllerTests: XCTestCase {
     ))
 
     _ = controller.handleTapEvent(type: .tapDisabledByTimeout, event: event)
+    XCTAssertEqual(environment.enabledStates, [true], "never re-enabled inside the callback")
 
-    XCTAssertEqual(environment.enabledStates, [true, true])
+    drainMainQueue()
+    XCTAssertEqual(delegate.stopReasons, [.disabledByTimeout])
+    XCTAssertFalse(controller.isRunning)
+    XCTAssertEqual(environment.enabledStates, [true, false])
+    XCTAssertEqual(environment.invalidatedTaps.count, 1)
   }
 
   func testHandleTapEvent_tapDisabledByUserInput_reenablesTap() throws {
@@ -399,6 +415,58 @@ final class CaptureEventTapControllerTests: XCTestCase {
     _ = controller.handleTapEvent(type: .tapDisabledByUserInput, event: event)
 
     XCTAssertEqual(environment.enabledStates, [true, true])
+  }
+
+  // MARK: - Session Time Limit
+
+  func testStart_schedulesSessionDeadline() {
+    controller.start()
+    XCTAssertEqual(environment.scheduledDeadlines.count, 1)
+    XCTAssertEqual(environment.scheduledDeadlines.first?.delay, CaptureEventTapController.maxSessionDuration)
+  }
+
+  func testStop_cancelsSessionDeadline() throws {
+    controller.start()
+    controller.stop()
+    XCTAssertEqual(environment.scheduledDeadlines.first?.work.isCancelled, true)
+  }
+
+  func testSessionDeadline_disablesTapOffMainThenEndsSession() throws {
+    controller.start()
+    let work = try XCTUnwrap(environment.scheduledDeadlines.first?.work)
+
+    let fired = expectation(description: "deadline ran off main")
+    DispatchQueue.global().async {
+      work.perform()
+      fired.fulfill()
+    }
+    wait(for: [fired], timeout: 2)
+    // `wait(for:)` spins the main run loop, so the main-queue teardown may already have
+    // added its own disable; the deadline's off-main disable must come first.
+    XCTAssertEqual(Array(environment.enabledStates.prefix(2)), [true, false], "tap disabled before main is involved")
+
+    drainMainQueue()
+    XCTAssertEqual(delegate.stopReasons, [.sessionTimeLimit])
+    XCTAssertFalse(controller.isRunning)
+  }
+
+  func testStaleSessionDeadline_doesNotEndNextSession() throws {
+    controller.start()
+    let staleWork = try XCTUnwrap(environment.scheduledDeadlines.first?.work)
+    controller.stop()
+    controller.start()
+
+    staleWork.perform() // cancelled items still run when performed directly
+    drainMainQueue()
+
+    XCTAssertTrue(delegate.stopReasons.isEmpty)
+    XCTAssertTrue(controller.isRunning)
+  }
+
+  private func drainMainQueue() {
+    let drained = expectation(description: "main queue drained")
+    DispatchQueue.main.async { drained.fulfill() }
+    wait(for: [drained], timeout: 2)
   }
 
   // MARK: - Event Mask

@@ -35,6 +35,16 @@ enum CaptureButtonEvent: Equatable, Sendable {
   }
 }
 
+/// Why the tap ended a session on its own, without a delegate-driven `stop()`.
+enum CaptureEventTapStopReason: Equatable, Sendable {
+  /// The WindowServer disabled the tap because the callback (main run loop)
+  /// stopped answering in time. Re-enabling it would hand every input event
+  /// back to that stalled thread — a system-wide input lock (#690).
+  case disabledByTimeout
+  /// The session outlived `CaptureEventTapController.maxSessionDuration`.
+  case sessionTimeLimit
+}
+
 protocol CaptureEventTapDelegate: AnyObject {
   /// Observation before consume — the event drives crosshair/magnifier/coordinate
   /// updates, then the tap consumes it so the app beneath never reacts to (or
@@ -48,6 +58,10 @@ protocol CaptureEventTapDelegate: AnyObject {
   /// Observation before consume — the wheel drives the magnifier zoom, then the
   /// tap consumes the event so the content beneath does not shift mid-selection.
   func eventTapDidReceiveScroll(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool)
+  /// The tap is already disabled and input flows normally again; the delegate must
+  /// end the session (which calls `stop()`). Delivered on the main queue, outside
+  /// the tap callback.
+  func eventTapDidStop(reason: CaptureEventTapStopReason)
 }
 
 /// System-touching seams behind injectable closures so the controller's state
@@ -65,6 +79,11 @@ struct CaptureEventTapDependencies {
   /// retain each other until the port is invalidated, so every session would
   /// otherwise leave a disabled tap registered for the life of the process.
   var invalidateTap: (_ tap: TapHandle) -> Void
+  /// Runs the session deadline off the main thread, so it still fires (and the
+  /// tap still gets disabled) when the main run loop is stalled.
+  var scheduleDeadline: (_ delay: TimeInterval, _ work: DispatchWorkItem) -> Void = { delay, work in
+    DispatchQueue.global(qos: .userInteractive).asyncAfter(deadline: .now() + delay, execute: work)
+  }
 }
 
 extension CaptureEventTapDependencies {
@@ -107,6 +126,11 @@ final class CaptureEventTapController {
   /// plan.md). Flip to `false` to let scroll pass through to apps beneath.
   static let consumesScrollWheelEvents = true
 
+  /// Hard cap on how long one session may hold the consuming tap. A selection
+  /// that has not finished by then is cancelled, so no failure in the session
+  /// state machine can lock pointer and keyboard input indefinitely (#690).
+  static let maxSessionDuration: TimeInterval = 120
+
   /// Events the tap observes: pure hover motion plus everything the capture
   /// state machine needs to drive selection, cancellation, and confirmation.
   static let eventMask: CGEventMask = {
@@ -129,6 +153,10 @@ final class CaptureEventTapController {
   private let dependencies: CaptureEventTapDependencies
   private var tap: CaptureEventTapDependencies.TapHandle?
   private var runLoopSource: CFRunLoopSource?
+  private var deadlineWork: DispatchWorkItem?
+  /// Bumped per `start()` so a stale deadline or timeout notice from an earlier
+  /// session never ends the current one.
+  private var generation = 0
 
   private(set) var isRunning = false
 
@@ -173,7 +201,7 @@ final class CaptureEventTapController {
   /// tap is left untouched. Returns `false` when Accessibility permission is
   /// missing or tap creation failed (caller should use the legacy path).
   @discardableResult
-  func start() -> Bool {
+  func start(maxDuration: TimeInterval = CaptureEventTapController.maxSessionDuration) -> Bool {
     guard !isRunning else { return true }
     guard isAvailable else {
       DiagnosticLogger.shared.log(
@@ -209,13 +237,58 @@ final class CaptureEventTapController {
     self.tap = tap
     self.runLoopSource = runLoopSource
     isRunning = true
+    generation += 1
+
+    let deadlineWork = Self.makeDeadlineWork(
+      tap: tap,
+      setTapEnabled: dependencies.setTapEnabled
+    ) { [weak self, generation] in
+      self?.endSession(reason: .sessionTimeLimit, generation: generation)
+    }
+    self.deadlineWork = deadlineWork
+    dependencies.scheduleDeadline(maxDuration, deadlineWork)
     return true
+  }
+
+  /// Built in a nonisolated context: the work runs on a background queue, disables
+  /// the tap right there (`CGEvent.tapEnable` is thread-safe), and only then hops
+  /// to the main queue to end the session.
+  private nonisolated static func makeDeadlineWork(
+    tap: CaptureEventTapDependencies.TapHandle,
+    setTapEnabled: @escaping (CaptureEventTapDependencies.TapHandle, Bool) -> Void,
+    onMain: @escaping @MainActor () -> Void
+  ) -> DispatchWorkItem {
+    DispatchWorkItem {
+      setTapEnabled(tap, false)
+      DispatchQueue.main.async {
+        MainActor.assumeIsolated { onMain() }
+      }
+    }
+  }
+
+  /// Report a self-initiated stop to the delegate, once, for the current session only.
+  private func endSession(reason: CaptureEventTapStopReason, generation: Int) {
+    guard isRunning, generation == self.generation else { return }
+    DiagnosticLogger.shared.log(
+      .warning,
+      .capture,
+      "Capture event tap ended session",
+      context: ["reason": "\(reason)"]
+    )
+    delegate?.eventTapDidStop(reason: reason)
+    // Delegate gone (or it did not tear down): never leave the tap registered. The
+    // generation check spares a session the delegate may have started meanwhile.
+    if generation == self.generation {
+      stop()
+    }
   }
 
   /// Disable and tear down the event tap, restoring normal event delivery.
   /// Safe to call repeatedly and from any exit path (commit, cancel, Esc).
   func stop() {
     guard isRunning else { return }
+    deadlineWork?.cancel()
+    deadlineWork = nil
     if let tap {
       dependencies.setTapEnabled(tap, false)
     }
@@ -250,9 +323,20 @@ final class CaptureEventTapController {
     let signpost = PerfSignpost.CapturePassthrough.beginInterval("tapEvent")
     defer { PerfSignpost.CapturePassthrough.endInterval(signpost) }
     switch type {
-    case .tapDisabledByTimeout, .tapDisabledByUserInput:
-      // The system disabled the tap (timeout or user input); re-enable it so
-      // the capture session keeps receiving events.
+    case .tapDisabledByTimeout:
+      // The main run loop stopped answering the tap in time. Never re-enable: every
+      // event would wait on the stalled thread again and input stays locked
+      // system-wide (#690). Leave the tap disabled — input already flows — and end
+      // the session once the main queue gets to it, outside this callback.
+      PerfSignpost.CapturePassthrough.event("tapDisabled")
+      let generation = generation
+      DispatchQueue.main.async { [weak self] in
+        self?.endSession(reason: .disabledByTimeout, generation: generation)
+      }
+      return Unmanaged.passUnretained(event)
+
+    case .tapDisabledByUserInput:
+      // Not a stall (e.g. Secure Event Input toggling): resume the session.
       PerfSignpost.CapturePassthrough.event("tapDisabled")
       if let tap {
         dependencies.setTapEnabled(tap, true)

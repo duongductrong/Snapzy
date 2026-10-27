@@ -2486,6 +2486,21 @@ extension AreaSelectionController: CaptureEventTapDelegate {
     }
   }
 
+  /// The tap ended the session itself (main-thread stall or the session time limit) and is
+  /// already disabled; cancel through the normal teardown funnel so cursor and state restore.
+  nonisolated func eventTapDidStop(reason: CaptureEventTapStopReason) {
+    MainActor.assumeIsolated {
+      guard isPresenting, isLivePassthroughInputActive else { return }
+      DiagnosticLogger.shared.log(
+        .warning,
+        .capture,
+        "Live passthrough session cancelled by event tap",
+        context: ["reason": "\(reason)"]
+      )
+      cancelSelection()
+    }
+  }
+
   nonisolated func eventTapDidReceiveScroll(deltaY: CGFloat, hasPreciseScrollingDeltas: Bool, isCommandDown: Bool) {
     MainActor.assumeIsolated {
       guard isPresenting, isLivePassthroughInputActive,
