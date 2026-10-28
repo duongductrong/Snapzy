@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.2] - 2026-10-28
+
+### Bug Fixes
+- Stop live capture session instead of re-enabling a timed-out event tap (#690) (#692) (dd9171c1)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.1] - 2026-10-26
 
 ### Features
