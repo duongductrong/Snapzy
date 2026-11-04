@@ -367,6 +367,36 @@ final class CloudCoreTests: XCTestCase {
     XCTAssertEqual(mockSession.requests.first?.httpMethod, "DELETE")
   }
 
+  // MARK: - Object Keys
+
+  func testS3CloudProvider_generateObjectKey_isShortRandomAndUnderPrefix() {
+    let keys = (0..<1000).map { _ in
+      S3CloudProvider.generateObjectKey(fileName: "Snapzy_2026-11-04_15-27-49_181.png")
+    }
+
+    for key in keys {
+      XCTAssertNotNil(key.range(of: #"^snapzy/[0-9A-Za-z]{8}\.png$"#, options: .regularExpression), key)
+    }
+    XCTAssertEqual(Set(keys).count, keys.count)
+  }
+
+  func testS3CloudProvider_generateObjectKey_leavesFileNameOutOfTheLink() throws {
+    let key = S3CloudProvider.generateObjectKey(fileName: "Résumé C# (final) ?.mp4")
+
+    XCTAssertNotNil(key.range(of: #"^snapzy/[0-9A-Za-z]{8}\.mp4$"#, options: .regularExpression), key)
+
+    let url = try XCTUnwrap(URL(string: "https://share.example.com/\(key)"))
+    XCTAssertEqual(url.path, "/\(key)")
+    XCTAssertNil(url.fragment)
+    XCTAssertNil(url.query)
+  }
+
+  func testS3CloudProvider_generateObjectKey_withoutExtension() {
+    let key = S3CloudProvider.generateObjectKey(fileName: "capture")
+
+    XCTAssertNotNil(key.range(of: #"^snapzy/[0-9A-Za-z]{8}$"#, options: .regularExpression), key)
+  }
+
   // MARK: - Lifecycle 403 Graceful Handling
 
   func testS3CloudProvider_setExpiration_403getAndPut_graceful() async throws {

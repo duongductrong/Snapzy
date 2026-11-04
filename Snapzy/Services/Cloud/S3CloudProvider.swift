@@ -63,7 +63,7 @@ final class S3CloudProvider: CloudProvider {
 
     let fileAttributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
     let fileSize = fileAttributes?[.size] as? Int64 ?? 0
-    let key = existingKey ?? generateObjectKey(fileName: fileURL.lastPathComponent)
+    let key = existingKey ?? Self.generateObjectKey(fileName: fileURL.lastPathComponent)
 
     // Route to multipart uploader if file size exceeds threshold
     if fileSize > S3MultipartUploader.multipartThreshold {
@@ -217,6 +217,7 @@ final class S3CloudProvider: CloudProvider {
   private static let lifecycleRuleID = "snapzy-auto-expire"
   /// Prefix all Snapzy objects share
   private static let objectPrefix = "snapzy/"
+  private static let objectIDAlphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
 
   func setExpiration(days: Int) async throws {
     // 1. Get existing rules (excluding our old rule)
@@ -381,14 +382,13 @@ final class S3CloudProvider: CloudProvider {
     URL(string: "\(endpoint.absoluteString)/\(bucket)/\(key)")!
   }
 
-  private func generateObjectKey(fileName: String) -> String {
-    let timestamp = Int(Date().timeIntervalSince1970)
-    let uuid = UUID().uuidString.prefix(8).lowercased()
+  /// Share links are public, so the key is random and reveals nothing about the capture beyond
+  /// its file type. It stays under `objectPrefix` so lifecycle expiry and usage stats still apply.
+  static func generateObjectKey(fileName: String) -> String {
+    // 8 base62 characters (about 47 bits) from the system's secure random generator.
+    let id = String((0..<8).compactMap { _ in objectIDAlphabet.randomElement() })
     let ext = (fileName as NSString).pathExtension
-    let name = (fileName as NSString).deletingPathExtension
-      .replacingOccurrences(of: " ", with: "-")
-      .lowercased()
-    return "snapzy/\(timestamp)-\(uuid)-\(name).\(ext)"
+    return ext.isEmpty ? "\(objectPrefix)\(id)" : "\(objectPrefix)\(id).\(ext)"
   }
 
   // MARK: - Upload with Progress
