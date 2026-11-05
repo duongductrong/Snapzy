@@ -527,6 +527,9 @@ enum SnapzyConfigurationImporter {
     collectEnumString(&reader, "cloud", "expire_time", allowed: CloudExpireTime.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.cloudExpireTime)
     }
+    collectEnumString(&reader, "cloud", "share_link_style", allowed: CloudShareLinkStyle.allCases.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.cloudShareLinkStyle)
+    }
     collectEnumString(&reader, "cloud", "uploads_window_position", allowed: CloudUploadFloatingPosition.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.cloudUploadsFloatingPosition)
     }

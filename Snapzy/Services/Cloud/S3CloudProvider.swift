@@ -63,7 +63,7 @@ final class S3CloudProvider: CloudProvider {
 
     let fileAttributes = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
     let fileSize = fileAttributes?[.size] as? Int64 ?? 0
-    let key = existingKey ?? Self.generateObjectKey(fileName: fileURL.lastPathComponent)
+    let key = existingKey ?? Self.generateObjectKey(fileName: fileURL.lastPathComponent, style: .stored())
 
     // Route to multipart uploader if file size exceeds threshold
     if fileSize > S3MultipartUploader.multipartThreshold {
@@ -382,13 +382,29 @@ final class S3CloudProvider: CloudProvider {
     URL(string: "\(endpoint.absoluteString)/\(bucket)/\(key)")!
   }
 
-  /// Share links are public, so the key is random and reveals nothing about the capture beyond
-  /// its file type. It stays under `objectPrefix` so lifecycle expiry and usage stats still apply.
-  static func generateObjectKey(fileName: String) -> String {
-    // 8 base62 characters (about 47 bits) from the system's secure random generator.
-    let id = String((0..<8).compactMap { _ in objectIDAlphabet.randomElement() })
-    let ext = (fileName as NSString).pathExtension
+  /// Keys stay under `objectPrefix` so lifecycle expiry and usage stats apply to both styles.
+  static func generateObjectKey(fileName: String, style: CloudShareLinkStyle) -> String {
+    let id: String
+    switch style {
+    case .descriptive:
+      let timestamp = Int(Date().timeIntervalSince1970)
+      let uuid = UUID().uuidString.prefix(8).lowercased()
+      let name = urlSafeKeyPart((fileName as NSString).deletingPathExtension).lowercased()
+      id = name.isEmpty ? "\(timestamp)-\(uuid)" : "\(timestamp)-\(uuid)-\(name)"
+    case .short:
+      // 8 base62 characters (about 47 bits) from the system's secure random generator.
+      id = String((0..<8).compactMap { _ in objectIDAlphabet.randomElement() })
+    }
+    let ext = urlSafeKeyPart((fileName as NSString).pathExtension)
     return ext.isEmpty ? "\(objectPrefix)\(id)" : "\(objectPrefix)\(id).\(ext)"
+  }
+
+  /// Keys go into URLs unencoded, so a `#` or `?` would cut the key short and other characters
+  /// would break signing. Spells the text in ASCII and turns anything else into a single `-`.
+  private static func urlSafeKeyPart(_ text: String) -> String {
+    (text.applyingTransform(StringTransform("Any-Latin; Latin-ASCII"), reverse: false) ?? text)
+      .replacingOccurrences(of: "[^A-Za-z0-9._-]+", with: "-", options: .regularExpression)
+      .trimmingCharacters(in: CharacterSet(charactersIn: "-."))
   }
 
   // MARK: - Upload with Progress

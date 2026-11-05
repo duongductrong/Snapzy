@@ -84,6 +84,25 @@ final class SnapzyConfigurationServiceTests: XCTestCase {
     XCTAssertEqual(document.value(at: "quick_access", "two_finger_swipe_to_dismiss")?.boolValue, false)
   }
 
+  func testDefaultDocumentUsesDescriptiveShareLinks() throws {
+    let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
+
+    XCTAssertEqual(document.value(at: "cloud", "share_link_style")?.stringValue, "descriptive")
+  }
+
+  func testExportIncludesShareLinkStyleForObjectStorageOnly() throws {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(CloudProviderType.cloudflareR2.rawValue, forKey: PreferencesKeys.cloudProviderType)
+    defaults.set(CloudShareLinkStyle.short.rawValue, forKey: PreferencesKeys.cloudShareLinkStyle)
+
+    let objectStorage = try SimpleTOMLParser.parse(SnapzyConfigurationExporter.exportTOML(defaults: defaults))
+    XCTAssertEqual(objectStorage.value(at: "cloud", "share_link_style")?.stringValue, "short")
+
+    defaults.set(CloudProviderType.googleDrive.rawValue, forKey: PreferencesKeys.cloudProviderType)
+    let googleDrive = try SimpleTOMLParser.parse(SnapzyConfigurationExporter.exportTOML(defaults: defaults))
+    XCTAssertNil(googleDrive.value(at: "cloud", "share_link_style"))
+  }
+
   func testDefaultDocumentIncludesQuickAccessSoundSetting() throws {
     let document = try SimpleTOMLParser.parse(SnapzyConfigurationDefaultDocument.toml())
 

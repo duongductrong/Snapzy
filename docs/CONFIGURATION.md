@@ -53,7 +53,7 @@ The TOML file covers portable app preferences:
 - Recording settings: format, quality, FPS, audio, microphone device id, cursor, click highlights, keystroke overlay, live annotation shortcuts, video editor zoom transition duration.
 - Quick Access: visibility, position, countdown behavior, gesture toggles, trackpad swipe mode, pinned image zoom mode (`pin_zoom_mode`: `fixedViewport` by default or `windowFollowsImage`), swipe left/right actions, hide card when window open, animation style, open in Finder after saving (`[quick_access] open_in_finder_after_save`, default `true`), action order, enabled actions, card slots, hover-activated card action shortcuts.
 - History: retention, maximum count, floating panel layout and filter.
-- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, and upload window position.
+- Cloud metadata: provider, bucket, region, endpoint, custom domain, expiration, share link style (`[cloud] share_link_style`: `"descriptive"` or `"short"`, default `"descriptive"`, S3 and R2 only), and upload window position.
 - Annotate preferences.
 - Global, overlay, Annotate tool, and Annotate action shortcuts.
 
