@@ -147,9 +147,8 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
     XCTAssertFalse(overlayView.isManualSelectionInProgress)
   }
 
-  /// A fast trackpad drag can deliver its last drag sample short of the pointer,
-  /// then release immediately. The committed endpoint is the release, and an
-  /// older sample must not shrink the rect back to that lag.
+  /// A fast trackpad drag can deliver its last drag sample short of the pointer, then release
+  /// immediately. The committed endpoint is the release, not the lagging drag (#527).
   func testRapidTrackpadDrag_commitsReleaseWhenLastDragLags() {
     let hostFrame = CGRect(x: 100, y: 100, width: 800, height: 600)
     let hostWindow = NSWindow(
@@ -180,12 +179,12 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
         height: abs(end.y - start.y)
       )
     }
-    func mouseEvent(_ type: NSEvent.EventType, at local: CGPoint, timestamp: TimeInterval) -> NSEvent {
+    func mouseEvent(_ type: NSEvent.EventType, at local: CGPoint) -> NSEvent {
       NSEvent.mouseEvent(
         with: type,
         location: local,
         modifierFlags: [],
-        timestamp: timestamp,
+        timestamp: 0,
         windowNumber: hostWindow.windowNumber,
         context: nil,
         eventNumber: 1,
@@ -205,7 +204,7 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
     overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint(staleDrag))
     overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint(release))
 
-    // THEN: the endpoint includes the release, so the rect is the full path
+    // THEN: the endpoint is the release, so the rect is the full path
     XCTAssertEqual(overlayView.testCurrentMousePosition, release)
     XCTAssertFalse(overlayView.isManualSelectionInProgress)
     let committed = selectionRect(from: start, to: overlayView.testCurrentMousePosition)
@@ -214,33 +213,17 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
     XCTAssertGreaterThan(committed.width, lagged.width)
     XCTAssertGreaterThan(committed.height, lagged.height)
 
-    // A normally paced legacy drag keeps the exact release. An older drag
-    // delivered after it does not move the endpoint.
+    // Window-event input: the release event's own location is committed.
     overlayView.setLivePassthroughInputEnabled(false)
     overlayView.setInteractionMode(.manualRegion, resetSelection: true)
-    overlayView.mouseDown(with: mouseEvent(.leftMouseDown, at: start, timestamp: 1))
-    overlayView.mouseDragged(with: mouseEvent(.leftMouseDragged, at: release, timestamp: 3))
-    overlayView.mouseDragged(with: mouseEvent(.leftMouseDragged, at: staleDrag, timestamp: 2))
-    overlayView.mouseUp(with: mouseEvent(.leftMouseUp, at: release, timestamp: 3))
+    overlayView.mouseDown(with: mouseEvent(.leftMouseDown, at: start))
+    overlayView.mouseDragged(with: mouseEvent(.leftMouseDragged, at: staleDrag))
+    overlayView.mouseUp(with: mouseEvent(.leftMouseUp, at: release))
     XCTAssertEqual(overlayView.testCurrentMousePosition, release)
-    XCTAssertEqual(
-      selectionRect(from: start, to: overlayView.testCurrentMousePosition),
-      selectionRect(from: start, to: release)
-    )
 
-    // The release event itself can still carry the lagging location when its
-    // timestamp is older than the drag that already reached the lower-right.
-    overlayView.mouseDown(with: mouseEvent(.leftMouseDown, at: start, timestamp: 1))
-    overlayView.mouseDragged(with: mouseEvent(.leftMouseDragged, at: release, timestamp: 10))
-    overlayView.mouseUp(with: mouseEvent(.leftMouseUp, at: staleDrag, timestamp: 4))
-    XCTAssertEqual(overlayView.testCurrentMousePosition, release)
-    let kept = selectionRect(from: start, to: overlayView.testCurrentMousePosition)
-    XCTAssertGreaterThan(kept.width, lagged.width)
-    XCTAssertGreaterThan(kept.height, lagged.height)
-
-    let releaseEvent = mouseEvent(.leftMouseUp, at: release, timestamp: 5)
+    // Monitors read the event's own location, converted to screen space.
     XCTAssertEqual(
-      AreaSelectionPointerEndpoint.screenPoint(from: releaseEvent),
+      AreaSelectionPointerEndpoint.screenPoint(from: mouseEvent(.leftMouseUp, at: release)),
       hostWindow.convertPoint(toScreen: release)
     )
   }

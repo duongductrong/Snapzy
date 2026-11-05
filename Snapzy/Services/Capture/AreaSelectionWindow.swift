@@ -34,33 +34,15 @@ typealias AreaSelectionDisplayActivationHandler = (CGDirectDisplayID) -> Void
 /// `selectionBackdrops` visibility, which the luma recapture overwrites).
 typealias AreaSelectionTransitionRecaptureHandler = @MainActor () -> Void
 
-/// The pointer sample a manual-selection drag or release must commit.
+/// Where a manual-selection drag or release actually happened.
 ///
-/// A fast trackpad gesture coalesces drag events, and `NSEvent.mouseLocation`
-/// read from a monitor still sits on the previous sample when the button goes
-/// up. Finalizing from that stale drag captures a smaller rect than the pointer
-/// actually traversed; pausing before release only hides it because the location
-/// catches up. The newer sample wins. Equal timestamps keep the button event so
-/// the release coordinate is the one that is committed.
+/// `NSEvent` monitors must not read `NSEvent.mouseLocation`: inside the callback it can still
+/// hold the previous pointer sample, so a fast trackpad release commits the lagging drag and
+/// the rect comes out smaller than the path the pointer travelled (#527). The event carries
+/// its own location, which is the sample that produced it.
 enum AreaSelectionPointerEndpoint {
-  static func reconcile(
-    buttonPoint: CGPoint,
-    buttonTimestamp: TimeInterval,
-    queuedDragPoint: CGPoint?,
-    queuedDragTimestamp: TimeInterval?
-  ) -> CGPoint {
-    guard let queuedDragPoint, let queuedDragTimestamp else { return buttonPoint }
-    if queuedDragTimestamp > buttonTimestamp {
-      return queuedDragPoint
-    }
-    return buttonPoint
-  }
-
-  /// Screen point carried by `event` itself. Monitors must not substitute
-  /// `NSEvent.mouseLocation`: inside the callback that location still describes
-  /// the previous sample, so a rapid release commits the lagging drag. A nil
-  /// window (global monitor) already reports the screen point in
-  /// `locationInWindow`.
+  /// Screen point carried by `event` itself. A nil window (global monitor) already reports
+  /// the screen point in `locationInWindow`.
   static func screenPoint(from event: NSEvent) -> CGPoint {
     if let window = event.window {
       return window.convertPoint(toScreen: event.locationInWindow)
@@ -153,10 +135,6 @@ final class AreaSelectionController: NSObject {
   private var deferredBackdropDisplayIDs = Set<CGDirectDisplayID>()
   private var manualSelectionStartPoint: CGPoint?
   private var manualSelectionCurrentPoint: CGPoint?
-  /// Timestamp of the newest sample applied to `manualSelectionCurrentPoint`.
-  /// Older samples (a lagging monitor, a coalesced drag delivered late) cannot
-  /// move the endpoint backward. Zero until the first sample of the gesture.
-  private var manualSelectionNewestTimestamp: TimeInterval = 0
   private weak var manualSelectionSourceWindow: AreaSelectionWindow?
   private var manualSelectionLocalMonitor: Any?
   /// Observe-only global counterpart to `manualSelectionLocalMonitor`. The local monitor only
@@ -1673,9 +1651,9 @@ final class AreaSelectionController: NSObject {
       matching: [.leftMouseDragged, .leftMouseUp]
     ) { [weak self] event in
       let eventType = event.type
-      let mouseLocation = NSEvent.mouseLocation
+      let screenPoint = AreaSelectionPointerEndpoint.screenPoint(from: event)
       MainActor.assumeIsolated {
-        self?.forwardUndeliveredPendingClickEvent(eventType, at: mouseLocation)
+        self?.forwardUndeliveredPendingClickEvent(eventType, at: screenPoint)
       }
     }
   }
@@ -1938,7 +1916,7 @@ final class AreaSelectionController: NSObject {
       switch interactionMode {
       case .manualRegion:
         if manualSelectionStartPoint != nil {
-          endManualSelection(at: screenPoint)
+          endManualSelection(at: screenPoint, source: "eventTap")
         } else {
           // Mirrors the `leftMouseDragged` case above: no drag ever committed, so resolve the
           // release as a click on whatever the source overlay was hovering (a window, or with
@@ -2078,7 +2056,6 @@ final class AreaSelectionController: NSObject {
 
     manualSelectionStartPoint = screenPoint
     manualSelectionCurrentPoint = screenPoint
-    manualSelectionNewestTimestamp = 0
     manualSelectionSourceWindow = window
     activeWindow = window
     manualSelectionMoveAnchors = nil
@@ -2088,12 +2065,9 @@ final class AreaSelectionController: NSObject {
     renderManualSelectionIfNeeded()
   }
 
-  private func updateManualSelection(
-    to screenPoint: CGPoint,
-    timestamp: TimeInterval = CACurrentMediaTime()
-  ) {
+  private func updateManualSelection(to screenPoint: CGPoint) {
     guard manualSelectionStartPoint != nil else { return }
-    guard applyManualSelectionPointerSample(screenPoint, timestamp: timestamp) else { return }
+    guard applyManualSelectionPointerSample(screenPoint) else { return }
 
     requestDisplayActivationForManualSelection()
     renderManualSelectionIfNeeded()
@@ -2101,31 +2075,18 @@ final class AreaSelectionController: NSObject {
   }
 
   @discardableResult
-  private func applyManualSelectionPointerSample(
-    _ screenPoint: CGPoint,
-    timestamp: TimeInterval
-  ) -> Bool {
-    // A sample that left the device before the one already applied — the
-    // lagging monitor read, or a coalesced drag that shows up late — must not
-    // pull the endpoint back. Repeated samples of the same point still advance
-    // the timestamp so a later, older one stays older.
-    guard timestamp >= manualSelectionNewestTimestamp else { return false }
+  private func applyManualSelectionPointerSample(_ screenPoint: CGPoint) -> Bool {
     if let anchors = manualSelectionMoveAnchors {
       let moved = AreaSelectionMoveLogic.movedSelection(pointer: screenPoint, anchors: anchors)
       guard moved.start != manualSelectionStartPoint || moved.current != manualSelectionCurrentPoint else {
-        manualSelectionNewestTimestamp = timestamp
         return false
       }
       manualSelectionStartPoint = moved.start
       manualSelectionCurrentPoint = moved.current
     } else {
-      guard screenPoint != manualSelectionCurrentPoint else {
-        manualSelectionNewestTimestamp = timestamp
-        return false
-      }
+      guard screenPoint != manualSelectionCurrentPoint else { return false }
       manualSelectionCurrentPoint = screenPoint
     }
-    manualSelectionNewestTimestamp = timestamp
     return true
   }
 
@@ -2154,22 +2115,30 @@ final class AreaSelectionController: NSObject {
     return true
   }
 
+  /// `eventTimestamp` is only logged: it lets a field log show how far the release trailed
+  /// the last drag sample. The release point always wins, since a release is the last sample of
+  /// the gesture and carries its own location.
   private func endManualSelection(
     at screenPoint: CGPoint,
-    timestamp: TimeInterval = CACurrentMediaTime()
+    eventTimestamp: TimeInterval? = nil,
+    source: String
   ) {
     guard manualSelectionStartPoint != nil else { return }
-    // The release and the last drag are different samples. Keep whichever is
-    // newer so a rapid trackpad mouse-up cannot finalize from a stale
-    // `manualSelectionCurrentPoint`, and a late stale button event cannot
-    // shrink a drag that already reached further.
-    let endpoint = AreaSelectionPointerEndpoint.reconcile(
-      buttonPoint: screenPoint,
-      buttonTimestamp: timestamp,
-      queuedDragPoint: manualSelectionCurrentPoint,
-      queuedDragTimestamp: manualSelectionCurrentPoint == nil ? nil : manualSelectionNewestTimestamp
+    let lastDragPoint = manualSelectionCurrentPoint
+    applyManualSelectionPointerSample(screenPoint)
+    DiagnosticLogger.shared.log(
+      .debug,
+      .capture,
+      "Manual selection release",
+      context: [
+        "source": source,
+        "eventTimestamp": eventTimestamp.map { String(format: "%.4f", $0) } ?? "n/a",
+        "handledAt": String(format: "%.4f", CACurrentMediaTime()),
+        "releasePoint": "\(screenPoint)",
+        "lastDragPoint": lastDragPoint.map { "\($0)" } ?? "nil",
+        "committedEndpoint": manualSelectionCurrentPoint.map { "\($0)" } ?? "nil",
+      ]
     )
-    applyManualSelectionPointerSample(endpoint, timestamp: max(timestamp, manualSelectionNewestTimestamp))
     removeManualSelectionMonitor()
 
     guard let rect = manualSelectionRect, rect.width > 5, rect.height > 5 else {
@@ -2189,7 +2158,6 @@ final class AreaSelectionController: NSObject {
 
     manualSelectionStartPoint = nil
     manualSelectionCurrentPoint = nil
-    manualSelectionNewestTimestamp = 0
     manualSelectionSourceWindow = nil
     completeSelection(target: .rect(rect), from: sourceWindow)
   }
@@ -2225,12 +2193,10 @@ final class AreaSelectionController: NSObject {
     ) { [weak self] event in
       var consume = false
       MainActor.assumeIsolated {
-        // Passthrough drag/up belong to the event tap. Consuming them here
-        // (or sampling `NSEvent.mouseLocation`) finalizes the rect before the
-        // tap's release point is applied.
+        // Passthrough drag/up belong to the event tap.
         guard let self, !self.isLivePassthroughInputActive else { return }
         consume = true
-        self.handleManualSelectionMonitorEvent(event)
+        self.handleManualSelectionMonitorEvent(event, source: "localMonitor")
       }
       return consume ? nil : event
     }
@@ -2266,25 +2232,31 @@ final class AreaSelectionController: NSObject {
     ) { [weak self] event in
       MainActor.assumeIsolated {
         guard let self, !self.isLivePassthroughInputActive else { return }
-        self.handleManualSelectionMonitorEvent(event)
+        self.handleManualSelectionMonitorEvent(event, source: "globalMonitor")
       }
     }
   }
 
-  /// Drag/up from an `NSEvent` monitor. The event's own location is the sample;
-  /// its timestamp loses to any newer one already applied (the event tap, or a
-  /// coalesced drag that arrived first) so the two sources cannot drift.
-  private func handleManualSelectionMonitorEvent(_ event: NSEvent) {
+  /// Drag/up from an `NSEvent` monitor, applied at the event's own location.
+  private func handleManualSelectionMonitorEvent(_ event: NSEvent, source: String) {
     let screenPoint = AreaSelectionPointerEndpoint.screenPoint(from: event)
     switch event.type {
     case .leftMouseDragged:
-      updateManualSelection(to: screenPoint, timestamp: event.timestamp)
+      updateManualSelection(to: screenPoint)
     case .leftMouseUp:
-      endManualSelection(at: screenPoint, timestamp: event.timestamp)
+      endManualSelection(at: screenPoint, eventTimestamp: event.timestamp, source: source)
     default:
       break
     }
   }
+
+  #if DEBUG
+    /// Test-only entry point for a drag/up the manual-selection monitors would receive.
+    /// Unit tests cannot post real events to the monitors.
+    func testHandleManualSelectionMonitorEvent(_ event: NSEvent) {
+      handleManualSelectionMonitorEvent(event, source: "test")
+    }
+  #endif
 
   private func removeManualSelectionMonitor() {
     if let monitor = manualSelectionLocalMonitor {
@@ -2314,7 +2286,6 @@ final class AreaSelectionController: NSObject {
     removeManualSelectionMonitor()
     manualSelectionStartPoint = nil
     manualSelectionCurrentPoint = nil
-    manualSelectionNewestTimestamp = 0
     manualSelectionSourceWindow = nil
     if render {
       applyDeferredBackdropsIfPossible()
@@ -2528,7 +2499,7 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
   }
 
   func areaSelectionWindow(_: AreaSelectionWindow, manualSelectionEndedAt screenPoint: CGPoint) {
-    endManualSelection(at: screenPoint)
+    endManualSelection(at: screenPoint, source: "overlay")
   }
 }
 
@@ -2856,11 +2827,6 @@ final class AreaSelectionOverlayView: NSView {
   /// selects that window). Recording sessions park every press: a click selects the hovered
   /// element or window when auto-detection is on, and otherwise the whole display.
   private var pendingWindowDetectionStartPoint: CGPoint?
-  /// Newest drag sample of the gesture in progress, in view coordinates. The
-  /// release reconciles against it so a coalesced drag that lags — or a button
-  /// event older than the drag — cannot commit the wrong endpoint.
-  private var queuedManualDragPoint: CGPoint?
-  private var queuedManualDragTimestamp: TimeInterval = 0
   /// Whether this overlay's display is the one highlighted in `.fullDisplay` mode. Set by the
   /// controller (see `AreaSelectionController.updateFullDisplayHighlight`).
   private var isFullDisplayHighlighted = false
@@ -3263,7 +3229,6 @@ final class AreaSelectionOverlayView: NSView {
     autoDetectElementUnderCursor = UserDefaults.standard
       .object(forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor) as? Bool ?? false
     pendingWindowDetectionStartPoint = nil
-    clearQueuedManualDrag()
     // Drop any rect left over from a previous session/hover — this pooled view is about to be
     // reused, and a stale finer-grained highlight must not flash before the first real hover.
     hoveredSmartElementRect = nil
@@ -4622,18 +4587,12 @@ final class AreaSelectionOverlayView: NSView {
 
   override func mouseDragged(with event: NSEvent) {
     guard !isLivePassthroughInput else { return }
-    handlePrimaryMouseDragged(
-      at: convert(event.locationInWindow, from: nil),
-      timestamp: event.timestamp
-    )
+    handlePrimaryMouseDragged(at: convert(event.locationInWindow, from: nil))
   }
 
   override func mouseUp(with event: NSEvent) {
     guard !isLivePassthroughInput else { return }
-    handlePrimaryMouseUp(
-      at: convert(event.locationInWindow, from: nil),
-      timestamp: event.timestamp
-    )
+    handlePrimaryMouseUp(at: convert(event.locationInWindow, from: nil))
   }
 
   override func mouseMoved(with event: NSEvent) {
@@ -4704,7 +4663,6 @@ final class AreaSelectionOverlayView: NSView {
 
   private func handlePrimaryMouseDown(at point: CGPoint) {
     currentMousePosition = point
-    clearQueuedManualDrag()
     if let areaWindow = window as? AreaSelectionWindow {
       DiagnosticLogger.shared.log(
         .debug,
@@ -4752,10 +4710,7 @@ final class AreaSelectionOverlayView: NSView {
     }
   }
 
-  private func handlePrimaryMouseDragged(
-    at point: CGPoint,
-    timestamp: TimeInterval = CACurrentMediaTime()
-  ) {
+  private func handlePrimaryMouseDragged(at point: CGPoint) {
     currentMousePosition = point
     delegate?.overlayViewDidRequestDisplayActivation(self)
     guard selectionEnabled else {
@@ -4786,13 +4741,11 @@ final class AreaSelectionOverlayView: NSView {
         pendingWindowDetectionStartPoint = nil
         isSelecting = true
         delegate?.overlayView(self, manualSelectionBeganAt: pendingStart)
-        rememberManualDragSample(point, timestamp: timestamp)
         delegate?.overlayView(self, manualSelectionChangedTo: point)
         updateMagnifier(at: point)
         return
       }
       guard isSelecting else { return }
-      rememberManualDragSample(point, timestamp: timestamp)
       delegate?.overlayView(self, manualSelectionChangedTo: point)
       updateMagnifier(at: point)
     case .applicationWindow:
@@ -4803,10 +4756,7 @@ final class AreaSelectionOverlayView: NSView {
     }
   }
 
-  private func handlePrimaryMouseUp(
-    at point: CGPoint,
-    timestamp: TimeInterval = CACurrentMediaTime()
-  ) {
+  private func handlePrimaryMouseUp(at point: CGPoint) {
     currentMousePosition = point
     delegate?.overlayViewDidRequestDisplayActivation(self)
     guard selectionEnabled else {
@@ -4847,15 +4797,8 @@ final class AreaSelectionOverlayView: NSView {
       }
       guard isSelecting else { return }
       isSelecting = false
-      let endpoint = AreaSelectionPointerEndpoint.reconcile(
-        buttonPoint: point,
-        buttonTimestamp: timestamp,
-        queuedDragPoint: queuedManualDragPoint,
-        queuedDragTimestamp: queuedManualDragPoint == nil ? nil : queuedManualDragTimestamp
-      )
-      clearQueuedManualDrag()
-      currentMousePosition = endpoint
-      delegate?.overlayView(self, manualSelectionEndedAt: endpoint)
+
+      delegate?.overlayView(self, manualSelectionEndedAt: point)
     case .applicationWindow:
       updateWindowHover(at: point)
       if let hoveredWindowCandidate {
@@ -4926,19 +4869,6 @@ final class AreaSelectionOverlayView: NSView {
 
   var isManualSelectionInProgress: Bool {
     interactionMode == .manualRegion && isSelecting
-  }
-
-  /// Keep only the newest drag sample. An older coalesced or out-of-order
-  /// sample must not become the point mouse-up reconciles against.
-  private func rememberManualDragSample(_ point: CGPoint, timestamp: TimeInterval) {
-    guard timestamp >= queuedManualDragTimestamp else { return }
-    queuedManualDragPoint = point
-    queuedManualDragTimestamp = timestamp
-  }
-
-  private func clearQueuedManualDrag() {
-    queuedManualDragPoint = nil
-    queuedManualDragTimestamp = 0
   }
 }
 
