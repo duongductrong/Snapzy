@@ -68,6 +68,70 @@ final class AreaSelectionControllerReleaseEndpointTests: XCTestCase {
     XCTAssertEqual(committedRect(results), rect(from: start, to: release))
   }
 
+  /// With auto window detection on and the pointer over a window, the press is parked as a
+  /// pending click (it might select that window). The drag past the threshold turns it into a
+  /// manual selection through the overlay; the fast release then arrives through the monitor.
+  func testAutoWindowDetectionPendingClick_fastRelease_commitsReleasePoint() throws {
+    try skipIfRunningInCI(
+      "Presents real overlay windows via the shared AreaSelectionController, which is flaky on headless CI runners"
+    )
+    UserDefaults.standard.set(true, forKey: PreferencesKeys.screenshotAutoDetectWindowUnderCursor)
+    let originalElementSetting = UserDefaults.standard
+      .object(forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor)
+    UserDefaults.standard.set(false, forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor)
+    defer {
+      if let originalElementSetting {
+        UserDefaults.standard.set(originalElementSetting, forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor)
+      } else {
+        UserDefaults.standard.removeObject(forKey: PreferencesKeys.screenshotAutoDetectElementUnderCursor)
+      }
+    }
+
+    let controller = AreaSelectionController.shared
+    var results: [AreaSelectionResult?] = []
+    let backdrop = try XCTUnwrap(Self.makeBackdrop(displayID: CGDirectDisplayID.max - 1))
+    controller.startSelection(mode: .screenshot, backdrops: [backdrop.displayID: backdrop]) { results.append($0) }
+    let window = try presentedWindow()
+    let displayID = try XCTUnwrap(window.displayID)
+    controller.enableLiveFallbackSelection(for: displayID)
+
+    let start = CGPoint(x: window.frame.minX + 140, y: window.frame.minY + 140)
+    let firstDrag = CGPoint(x: start.x + 30, y: start.y + 20)
+    let release = CGPoint(x: start.x + 400, y: start.y + 250)
+    let hoveredWindowFrame = CGRect(x: start.x - 40, y: start.y - 40, width: 200, height: 150)
+    window.overlayView.setAllowsApplicationWindowSelection(true)
+    window.overlayView.setWindowSelectionSnapshot(WindowSelectionSnapshot(orderedCandidates: [
+      WindowSelectionCandidate(
+        target: WindowCaptureTarget(
+          windowID: 1,
+          frame: hoveredWindowFrame,
+          displayID: displayID,
+          title: "Hovered",
+          bundleIdentifier: "com.example.hovered",
+          ownerPID: 999
+        ),
+        ownerName: "Hovered",
+        windowLayer: 0
+      ),
+    ]))
+    let t0 = ProcessInfo.processInfo.systemUptime - 0.5
+
+    window.overlayView.mouseMoved(with: overlayEvent(.mouseMoved, at: start, in: window, timestamp: t0 - 0.1))
+    window.overlayView.mouseDown(with: overlayEvent(.leftMouseDown, at: start, in: window, timestamp: t0))
+    XCTAssertTrue(window.overlayView.hasPendingClick, "a press over a detected window is parked as a pending click")
+    window.overlayView.mouseDragged(with: overlayEvent(
+      .leftMouseDragged,
+      at: firstDrag,
+      in: window,
+      timestamp: t0 + 0.008
+    ))
+    XCTAssertTrue(window.overlayView.isManualSelectionInProgress, "the drag past the threshold starts the selection")
+
+    controller.testHandleManualSelectionMonitorEvent(monitorEvent(.leftMouseUp, at: release, timestamp: t0 + 0.016))
+
+    XCTAssertEqual(committedRect(results), rect(from: start, to: release))
+  }
+
   /// A press on a display whose backdrop is still loading is parked, then promoted through live
   /// fallback, which reports the press point as the first drag sample. The monitor drag and
   /// release that follow must still move the endpoint to the release.
