@@ -117,6 +117,16 @@ final class InlineAreaAnnotateSession: ObservableObject {
   /// `NSApp.activate` at start, so — unlike live-passthrough capture — this doesn't need
   /// `BackgroundCursorControl`'s background-cursor-control workaround.
   private var cursorHider = LivePassthroughCursorHider()
+  /// Polls the real pointer during `.selecting` so the drawn crosshair, magnifier, coordinate
+  /// bubble and window hover keep tracking even when AppKit stops delivering hover/mouse-moved
+  /// events to the overlay panels. On macOS 27 `onContinuousHover` was observed to report only
+  /// the seeded position, freezing all pointer chrome at the trigger point while the (hidden)
+  /// real cursor kept moving. Same approach as plain area screenshot's `pointerTrackingTimer`.
+  /// The SwiftUI hover/drag paths still run; this only fills in what they fail to report.
+  private var pointerTrackingTimer: Timer?
+  private var lastTrackedScreenPoint: CGPoint?
+  private var hoverEventCount = 0
+  private var polledPointerMoveCount = 0
 
   init(
     primaryDisplayID: CGDirectDisplayID,
@@ -158,6 +168,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     // Session always starts in `.selecting` — hide the real cursor for every display up
     // front; `beginAnnotating(with:)` shows it again once selection ends.
     cursorHider.hide(displayIDs: Set(displays.map(\.displayID)))
+    startPointerTracking()
     startWindowSelectionQuery(prefetchedContentTask: prefetchedContentTask, excludeOwnApplication: excludeOwnApplication)
     if autoDetectElementUnderCursor {
       SmartElementQueryService.shared.ensureAccessibilityPermission()
@@ -332,7 +343,65 @@ final class InlineAreaAnnotateSession: ObservableObject {
     state.loadImage(crop.image, url: nil)
     state.selectedTool = AnnotateToolPreference.initialTool(userDefaults: defaults)
     phase = .annotating
+    stopPointerTracking()
     cursorHider.showAll()
+  }
+
+  /// Called by `InlineAreaAnnotateRootView` for every SwiftUI hover update; only feeds the
+  /// diagnostics logged by `stopPointerTracking()`.
+  func recordHoverEvent() {
+    hoverEventCount += 1
+  }
+
+  private func startPointerTracking() {
+    guard pointerTrackingTimer == nil else { return }
+    let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.handlePointerTrackingTick()
+      }
+    }
+    RunLoop.main.add(timer, forMode: .common)
+    pointerTrackingTimer = timer
+  }
+
+  private func stopPointerTracking() {
+    guard let timer = pointerTrackingTimer else { return }
+    timer.invalidate()
+    pointerTrackingTimer = nil
+    DiagnosticLogger.shared.log(.debug, .capture, "Inline area annotate pointer tracking stopped", context: [
+      "hoverEvents": "\(hoverEventCount)",
+      "polledMoves": "\(polledPointerMoveCount)",
+      "appActive": "\(NSApp.isActive)",
+      "hasKeyPanel": "\(windows.allObjects.contains { $0.isKeyWindow })",
+    ])
+  }
+
+  func handlePointerTrackingTick(screenPoint: CGPoint = NSEvent.mouseLocation) {
+    guard phase == .selecting, !didComplete else {
+      stopPointerTracking()
+      return
+    }
+    let localPoint = localDesktopPoint(for: screenPoint)
+    let didMove = screenPoint != lastTrackedScreenPoint
+    lastTrackedScreenPoint = screenPoint
+
+    if selectionStartPoint != nil {
+      // Mid-drag: the drag monitor normally drives this; only fill in if it fell behind.
+      if didMove, selectionPointerLocation != localPoint {
+        updateSelection(to: localPoint)
+      }
+      return
+    }
+
+    // Re-publish even without movement so a stray hover `.ended` (which clears it) can't
+    // leave the chrome hidden while the pointer is still over a display.
+    if selectionPointerLocation != localPoint {
+      selectionPointerLocation = localPoint
+    }
+    if didMove {
+      polledPointerMoveCount += 1
+      updateHoveredWindow(atScreenPoint: screenPoint)
+    }
   }
 
   func moveSelection(to localRect: CGRect, refreshImage: Bool) {
@@ -644,6 +713,7 @@ final class InlineAreaAnnotateSession: ObservableObject {
     selectionPointerLocation = nil
     removeKeyMonitors()
     removeSelectionMonitor()
+    stopPointerTracking()
     frozenSession.invalidate()
 
     // Restore cursor before closing windows — the inline overlay uses a

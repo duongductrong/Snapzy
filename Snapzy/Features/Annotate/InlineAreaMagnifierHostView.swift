@@ -39,6 +39,15 @@ final class InlineAreaMagnifierHostView: NSView {
   private(set) var coordinateBubbleBackgroundLayer: CALayer?
   private(set) var coordinateBubbleTextLayer: CATextLayer?
 
+  /// Drawn replacement for the system cursor during `.selecting` (the real cursor is hidden
+  /// for that whole phase — see `InlineAreaAnnotateSession.cursorHider`). Rendered here as a
+  /// plain `CALayer`, exactly like plain area screenshot's `cursorProxyLayer`, rather than as
+  /// a SwiftUI `Image` sibling: it then shares the coordinate bubble's layer, update call and
+  /// `CATransaction`, so it can never lag, freeze or vanish while the bubble keeps tracking
+  /// the pointer (observed on macOS 27 with the SwiftUI-drawn proxy).
+  private(set) var crosshairProxyLayer: CALayer?
+  private var crosshairProxySourceImage: NSImage?
+
   override init(frame frameRect: NSRect) {
     super.init(frame: frameRect)
     wantsLayer = true
@@ -64,6 +73,7 @@ final class InlineAreaMagnifierHostView: NSView {
     magnifier.removeLayers()
     coordinateBubbleBackgroundLayer?.isHidden = true
     coordinateBubbleTextLayer?.isHidden = true
+    crosshairProxyLayer?.isHidden = true
   }
 
   @discardableResult
@@ -85,6 +95,44 @@ final class InlineAreaMagnifierHostView: NSView {
       in: layer
     )
     updateCoordinateBubble(at: point, in: layer)
+    updateCrosshairProxy(at: point, in: layer)
+  }
+
+  /// Mirrors `AreaSelectionOverlayView.updateCursorProxy`: same image, same hot-spot math
+  /// (`NSCursor.hotSpot` is top-left based, this view is bottom-left based).
+  private func updateCrosshairProxy(at point: CGPoint, in layer: CALayer) {
+    let cursor = NSCursor.vectorScreenshotCrosshairLight
+    let image = cursor.image
+    let hotSpot = cursor.hotSpot
+
+    let proxy = crosshairProxyLayer ?? {
+      let newLayer = CALayer()
+      newLayer.actions = [
+        kCAOnOrderIn: NSNull(), kCAOnOrderOut: NSNull(), "bounds": NSNull(), "position": NSNull(),
+        "hidden": NSNull(), "contents": NSNull(),
+      ]
+      // Stay above the magnifier/bubble sublayers, which may be re-added after this one.
+      newLayer.zPosition = 1000
+      layer.addSublayer(newLayer)
+      crosshairProxyLayer = newLayer
+      return newLayer
+    }()
+
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+    if image !== crosshairProxySourceImage {
+      proxy.contents = image
+      crosshairProxySourceImage = image
+    }
+    proxy.contentsScale = window?.backingScaleFactor ?? 2.0
+    proxy.frame = CGRect(
+      x: point.x - hotSpot.x,
+      y: point.y - (image.size.height - hotSpot.y),
+      width: image.size.width,
+      height: image.size.height
+    )
+    proxy.isHidden = false
+    CATransaction.commit()
   }
 
   private func updateCoordinateBubble(at point: CGPoint, in layer: CALayer) {

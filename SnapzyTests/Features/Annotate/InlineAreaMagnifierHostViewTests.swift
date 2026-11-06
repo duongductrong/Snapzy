@@ -79,6 +79,49 @@ final class InlineAreaMagnifierHostViewTests: XCTestCase {
     XCTAssertTrue(view.coordinateBubbleTextLayer?.isHidden ?? false)
   }
 
+  /// The drawn crosshair (the real cursor is hidden during `.selecting`) lives in this view's
+  /// layer, positioned with the cursor hot-spot on the pointer — same math as plain area
+  /// screenshot's `cursorProxyLayer`.
+  func testCrosshairProxy_tracksPointerWithHotSpot() throws {
+    let view = makeView(size: CGSize(width: 800, height: 600))
+    view.backdropImage = makeSolidColorImage(size: CGSize(width: 800, height: 600))
+    let cursor = NSCursor.vectorScreenshotCrosshairLight
+
+    view.update(at: CGPoint(x: 200, y: 150))
+    let proxy = try XCTUnwrap(view.crosshairProxyLayer)
+    XCTAssertFalse(proxy.isHidden)
+    XCTAssertTrue(proxy.superlayer === view.layer)
+    XCTAssertTrue((proxy.contents as AnyObject?) === cursor.image)
+    XCTAssertEqual(proxy.frame.origin.x, 200 - cursor.hotSpot.x)
+    XCTAssertEqual(proxy.frame.origin.y, 150 - (cursor.image.size.height - cursor.hotSpot.y))
+
+    view.update(at: CGPoint(x: 420, y: 310))
+    XCTAssertEqual(proxy.frame.origin.x, 420 - cursor.hotSpot.x)
+    XCTAssertEqual(proxy.frame.origin.y, 310 - (cursor.image.size.height - cursor.hotSpot.y))
+  }
+
+  /// The crosshair must stay visible while the magnifier is zoomed in (the bubble hides then).
+  func testCrosshairProxy_staysVisibleWhileMagnifierActive() {
+    let view = makeView(size: CGSize(width: 800, height: 600))
+    view.backdropImage = makeSolidColorImage(size: CGSize(width: 800, height: 600))
+    view.update(at: CGPoint(x: 200, y: 150))
+
+    view.applyScroll(delta: 6, hasPreciseScrollingDeltas: false)
+
+    XCTAssertFalse(view.crosshairProxyLayer?.isHidden ?? true)
+  }
+
+  func testCrosshairProxy_hiddenOnHide() {
+    let view = makeView(size: CGSize(width: 800, height: 600))
+    view.backdropImage = makeSolidColorImage(size: CGSize(width: 800, height: 600))
+    view.update(at: CGPoint(x: 200, y: 150))
+    XCTAssertFalse(view.crosshairProxyLayer?.isHidden ?? true)
+
+    view.hide()
+
+    XCTAssertTrue(view.crosshairProxyLayer?.isHidden ?? false)
+  }
+
   /// Regression for the magnifier appearing pinned to the bottom-left corner on first render
   /// in screenshot-and-annotate: `AreaSelectionMagnifier.update(bounds:)` clamps the container
   /// into `bounds` and divides by its width/height, so a `.zero` bounds collapses every
