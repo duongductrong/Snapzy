@@ -30,6 +30,7 @@ Flow-first entrypoint for humans and agents working in Snapzy. Docs are separate
 | [`CAPTURE.md`](CAPTURE.md) | Screenshot modes, selection overlay, OCR/QR, object cutout, Smart Element |
 | [`SCROLLING_CAPTURE.md`](SCROLLING_CAPTURE.md) | Long-screenshot stitching subsystem |
 | [`RECORDING.md`](RECORDING.md) | Screen recording, audio, overlays, GIF output, Smart Camera metadata |
+| [`OCR_BENCHMARK.md`](OCR_BENCHMARK.md) | OCR benchmark corpus, metrics, results, and reproduction steps |
 | [`POST_CAPTURE.md`](POST_CAPTURE.md) | After-capture action matrix, temp vs export destinations, formats, clipboard |
 
 ## Editors & Post-Capture UX
