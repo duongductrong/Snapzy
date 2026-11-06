@@ -78,6 +78,9 @@ jobs:
             SnapzyTests/InlineAreaAnnotateSessionTests/testAnnotateWindowConsumesCopyAndDuplicateWhenNothingIsSelected
             SnapzyTests/InlineAreaAnnotateSessionTests/testUpdateSelectionPublishesPointerLocation
             SnapzyTests/InlineAreaAnnotateSessionTests/testEndSelectionClearsPointerLocation
+            SnapzyTests/InlineAreaAnnotateSessionTests/testPointerTrackingTickPublishesPointerWithoutHoverEvents
+            SnapzyTests/InlineAreaAnnotateSessionTests/testPointerTrackingTickFillsInStalledDrag
+            SnapzyTests/InlineAreaAnnotateSessionTests/testPointerTrackingTickIsInertAfterSelectingPhase
             SnapzyTests/AreaSelectionMultiMonitorReconciliationTests
             SnapzyTests/AreaSelectionSessionLifecycleTests
             SnapzyTests/AreaSelectionHoverPerformanceTests
