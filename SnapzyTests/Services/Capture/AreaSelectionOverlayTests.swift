@@ -146,4 +146,85 @@ final class AreaSelectionOverlayTests: AreaSelectionOverlayTestCase {
     overlayView.reassertCursorDuringDrag()
     XCTAssertFalse(overlayView.isManualSelectionInProgress)
   }
+
+  /// A fast trackpad drag can deliver its last drag sample short of the pointer, then release
+  /// immediately. The committed endpoint is the release, not the lagging drag (#527).
+  func testRapidTrackpadDrag_commitsReleaseWhenLastDragLags() {
+    let hostFrame = CGRect(x: 100, y: 100, width: 800, height: 600)
+    let hostWindow = NSWindow(
+      contentRect: hostFrame,
+      styleMask: .borderless,
+      backing: .buffered,
+      defer: false
+    )
+    hostWindow.contentView = overlayView
+    hostWindow.setIsVisible(true)
+    defer {
+      hostWindow.contentView = nil
+      hostWindow.setIsVisible(false)
+    }
+
+    // Upper-left start, a drag that stops short, and the lower-right release.
+    let start = CGPoint(x: 50, y: 540)
+    let staleDrag = CGPoint(x: 260, y: 320)
+    let release = CGPoint(x: 660, y: 80)
+    func screenPoint(_ local: CGPoint) -> CGPoint {
+      CGPoint(x: local.x + hostFrame.origin.x, y: local.y + hostFrame.origin.y)
+    }
+    func selectionRect(from start: CGPoint, to end: CGPoint) -> CGRect {
+      CGRect(
+        x: min(start.x, end.x),
+        y: min(start.y, end.y),
+        width: abs(end.x - start.x),
+        height: abs(end.y - start.y)
+      )
+    }
+    func mouseEvent(_ type: NSEvent.EventType, at local: CGPoint) -> NSEvent {
+      NSEvent.mouseEvent(
+        with: type,
+        location: local,
+        modifierFlags: [],
+        timestamp: 0,
+        windowNumber: hostWindow.windowNumber,
+        context: nil,
+        eventNumber: 1,
+        clickCount: 1,
+        pressure: type == .leftMouseDown ? 1 : 0
+      )!
+    }
+
+    // GIVEN: live passthrough, manual region, no auto-window click promotion
+    overlayView.setSelectionEnabled(true)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: false)
+    overlayView.setLivePassthroughInputEnabled(true)
+
+    // WHEN: the last drag sample lags and the button releases at the lower-right
+    overlayView.handleLivePassthroughMouseDown(atScreenPoint: screenPoint(start))
+    overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint(staleDrag))
+    overlayView.handleLivePassthroughMouseDragged(atScreenPoint: screenPoint(staleDrag))
+    overlayView.handleLivePassthroughMouseUp(atScreenPoint: screenPoint(release))
+
+    // THEN: the endpoint is the release, so the rect is the full path
+    XCTAssertEqual(overlayView.testCurrentMousePosition, release)
+    XCTAssertFalse(overlayView.isManualSelectionInProgress)
+    let committed = selectionRect(from: start, to: overlayView.testCurrentMousePosition)
+    let lagged = selectionRect(from: start, to: staleDrag)
+    XCTAssertEqual(committed, selectionRect(from: start, to: release))
+    XCTAssertGreaterThan(committed.width, lagged.width)
+    XCTAssertGreaterThan(committed.height, lagged.height)
+
+    // Window-event input: the release event's own location is committed.
+    overlayView.setLivePassthroughInputEnabled(false)
+    overlayView.setInteractionMode(.manualRegion, resetSelection: true)
+    overlayView.mouseDown(with: mouseEvent(.leftMouseDown, at: start))
+    overlayView.mouseDragged(with: mouseEvent(.leftMouseDragged, at: staleDrag))
+    overlayView.mouseUp(with: mouseEvent(.leftMouseUp, at: release))
+    XCTAssertEqual(overlayView.testCurrentMousePosition, release)
+
+    // Monitors read the event's own location, converted to screen space.
+    XCTAssertEqual(
+      AreaSelectionPointerEndpoint.screenPoint(from: mouseEvent(.leftMouseUp, at: release)),
+      hostWindow.convertPoint(toScreen: release)
+    )
+  }
 }

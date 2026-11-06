@@ -34,6 +34,23 @@ typealias AreaSelectionDisplayActivationHandler = (CGDirectDisplayID) -> Void
 /// `selectionBackdrops` visibility, which the luma recapture overwrites).
 typealias AreaSelectionTransitionRecaptureHandler = @MainActor () -> Void
 
+/// Where a manual-selection drag or release actually happened.
+///
+/// `NSEvent` monitors must not read `NSEvent.mouseLocation`: inside the callback it can still
+/// hold the previous pointer sample, so a fast trackpad release commits the lagging drag and
+/// the rect comes out smaller than the path the pointer travelled (#527). The event carries
+/// its own location, which is the sample that produced it.
+enum AreaSelectionPointerEndpoint {
+  /// Screen point carried by `event` itself. A nil window (global monitor) already reports
+  /// the screen point in `locationInWindow`.
+  static func screenPoint(from event: NSEvent) -> CGPoint {
+    if let window = event.window {
+      return window.convertPoint(toScreen: event.locationInWindow)
+    }
+    return event.locationInWindow
+  }
+}
+
 // MARK: - NSScreen Extension for Display ID
 
 extension NSScreen {
@@ -1634,9 +1651,9 @@ final class AreaSelectionController: NSObject {
       matching: [.leftMouseDragged, .leftMouseUp]
     ) { [weak self] event in
       let eventType = event.type
-      let mouseLocation = NSEvent.mouseLocation
+      let screenPoint = AreaSelectionPointerEndpoint.screenPoint(from: event)
       MainActor.assumeIsolated {
-        self?.forwardUndeliveredPendingClickEvent(eventType, at: mouseLocation)
+        self?.forwardUndeliveredPendingClickEvent(eventType, at: screenPoint)
       }
     }
   }
@@ -1899,7 +1916,7 @@ final class AreaSelectionController: NSObject {
       switch interactionMode {
       case .manualRegion:
         if manualSelectionStartPoint != nil {
-          endManualSelection(at: screenPoint)
+          endManualSelection(at: screenPoint, source: "eventTap")
         } else {
           // Mirrors the `leftMouseDragged` case above: no drag ever committed, so resolve the
           // release as a click on whatever the source overlay was hovering (a window, or with
@@ -2098,9 +2115,30 @@ final class AreaSelectionController: NSObject {
     return true
   }
 
-  private func endManualSelection(at screenPoint: CGPoint) {
+  /// `eventTimestamp` is only logged: it lets a field log show how far the release trailed
+  /// the last drag sample. The release point always wins, since a release is the last sample of
+  /// the gesture and carries its own location.
+  private func endManualSelection(
+    at screenPoint: CGPoint,
+    eventTimestamp: TimeInterval? = nil,
+    source: String
+  ) {
     guard manualSelectionStartPoint != nil else { return }
+    let lastDragPoint = manualSelectionCurrentPoint
     applyManualSelectionPointerSample(screenPoint)
+    DiagnosticLogger.shared.log(
+      .debug,
+      .capture,
+      "Manual selection release",
+      context: [
+        "source": source,
+        "eventTimestamp": eventTimestamp.map { String(format: "%.4f", $0) } ?? "n/a",
+        "handledAt": String(format: "%.4f", CACurrentMediaTime()),
+        "releasePoint": "\(screenPoint)",
+        "lastDragPoint": lastDragPoint.map { "\($0)" } ?? "nil",
+        "committedEndpoint": manualSelectionCurrentPoint.map { "\($0)" } ?? "nil",
+      ]
+    )
     removeManualSelectionMonitor()
 
     guard let rect = manualSelectionRect, rect.width > 5, rect.height > 5 else {
@@ -2153,22 +2191,14 @@ final class AreaSelectionController: NSObject {
     manualSelectionLocalMonitor = NSEvent.addLocalMonitorForEvents(
       matching: [.leftMouseDragged, .leftMouseUp]
     ) { [weak self] event in
-      switch event.type {
-      case .leftMouseDragged:
-        let mouseLocation = NSEvent.mouseLocation
-        MainActor.assumeIsolated {
-          self?.updateManualSelection(to: mouseLocation)
-        }
-        return nil
-      case .leftMouseUp:
-        let mouseLocation = NSEvent.mouseLocation
-        MainActor.assumeIsolated {
-          self?.endManualSelection(at: mouseLocation)
-        }
-        return nil
-      default:
-        return event
+      var consume = false
+      MainActor.assumeIsolated {
+        // Passthrough drag/up belong to the event tap.
+        guard let self, !self.isLivePassthroughInputActive else { return }
+        consume = true
+        self.handleManualSelectionMonitorEvent(event, source: "localMonitor")
       }
+      return consume ? nil : event
     }
 
     if manualSelectionKeyLocalMonitor == nil {
@@ -2200,19 +2230,33 @@ final class AreaSelectionController: NSObject {
     manualSelectionGlobalMonitor = NSEvent.addGlobalMonitorForEvents(
       matching: [.leftMouseDragged, .leftMouseUp]
     ) { [weak self] event in
-      let mouseLocation = NSEvent.mouseLocation
       MainActor.assumeIsolated {
-        switch event.type {
-        case .leftMouseDragged:
-          self?.updateManualSelection(to: mouseLocation)
-        case .leftMouseUp:
-          self?.endManualSelection(at: mouseLocation)
-        default:
-          break
-        }
+        guard let self, !self.isLivePassthroughInputActive else { return }
+        self.handleManualSelectionMonitorEvent(event, source: "globalMonitor")
       }
     }
   }
+
+  /// Drag/up from an `NSEvent` monitor, applied at the event's own location.
+  private func handleManualSelectionMonitorEvent(_ event: NSEvent, source: String) {
+    let screenPoint = AreaSelectionPointerEndpoint.screenPoint(from: event)
+    switch event.type {
+    case .leftMouseDragged:
+      updateManualSelection(to: screenPoint)
+    case .leftMouseUp:
+      endManualSelection(at: screenPoint, eventTimestamp: event.timestamp, source: source)
+    default:
+      break
+    }
+  }
+
+  #if DEBUG
+    /// Test-only entry point for a drag/up the manual-selection monitors would receive.
+    /// Unit tests cannot post real events to the monitors.
+    func testHandleManualSelectionMonitorEvent(_ event: NSEvent) {
+      handleManualSelectionMonitorEvent(event, source: "test")
+    }
+  #endif
 
   private func removeManualSelectionMonitor() {
     if let monitor = manualSelectionLocalMonitor {
@@ -2455,7 +2499,7 @@ extension AreaSelectionController: AreaSelectionWindowDelegate {
   }
 
   func areaSelectionWindow(_: AreaSelectionWindow, manualSelectionEndedAt screenPoint: CGPoint) {
-    endManualSelection(at: screenPoint)
+    endManualSelection(at: screenPoint, source: "overlay")
   }
 }
 
