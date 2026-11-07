@@ -172,6 +172,10 @@ struct HistoryExpandedCaptureCardView: View, Equatable {
         if let uploadState = manager.cloudUploadState(for: record) {
           HistoryCloudUploadOverlayView(state: uploadState)
         }
+
+        HistoryCardRemoveButton(record: record, size: 24)
+          .padding(7)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
       }
       .clipShape(Radius.rect(Radius.tile))
       .overlay(

@@ -36,7 +36,7 @@ struct HistoryToolbar: View {
         .font(.system(size: 12, weight: .semibold))
         .foregroundColor(.secondary.opacity(0.9))
 
-      TextField("Search by filename", text: $searchText)
+      TextField(L10n.PreferencesHistory.searchByFilename, text: $searchText)
         .textFieldStyle(.plain)
         .font(.system(size: 12, weight: .medium))
 

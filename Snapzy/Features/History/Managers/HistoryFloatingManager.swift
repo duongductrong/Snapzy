@@ -546,7 +546,7 @@ enum HistoryFloatingTimeFilter: String, CaseIterable, Identifiable, Equatable {
 
   var title: String {
     switch self {
-    case .all: return "Any Time"
+    case .all: return L10n.PreferencesHistory.timeFilterAnyTime
     case .last24Hours: return "24H"
     case .last7Days: return "7D"
     case .last30Days: return "30D"
