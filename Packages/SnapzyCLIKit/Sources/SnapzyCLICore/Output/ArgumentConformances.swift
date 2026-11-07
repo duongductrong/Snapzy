@@ -13,6 +13,8 @@ extension CLIRect: ExpressibleByArgument {}
 
 extension DisplaySelector: ExpressibleByArgument {}
 
+extension CLIPoint: ExpressibleByArgument {}
+
 extension CLIImageFormat: ExpressibleByArgument {
   /// Accepts `png`, `jpg`, `jpeg` and `webp`.
   public init?(argument: String) {

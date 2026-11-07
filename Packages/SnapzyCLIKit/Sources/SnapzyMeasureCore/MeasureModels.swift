@@ -1,6 +1,6 @@
 //
-//  ScreenRulerMeasurement.swift
-//  Snapzy
+//  PixelMeasurement.swift
+//  SnapzyMeasureCore
 //
 //  Screen Ruler values: what was measured (a span around a pixel or a box), in which unit,
 //  and how it reads as text.
@@ -10,49 +10,49 @@ import CoreGraphics
 import Foundation
 
 /// Which directions a span measures.
-nonisolated enum ScreenRulerAxis: Equatable {
+public enum MeasureAxis: String, Equatable, CaseIterable, Sendable {
   case both
   case horizontal
   case vertical
 }
 
-nonisolated enum ScreenRulerUnit: String, CaseIterable {
+public enum MeasureUnit: String, CaseIterable, Sendable {
   /// Logical points (pixels divided by the display's backing scale).
   case points
   /// Physical display pixels.
   case pixels
 
-  var suffix: String {
+  public var suffix: String {
     switch self {
     case .points: return "pt"
     case .pixels: return "px"
     }
   }
 
-  var toggled: ScreenRulerUnit {
+  public var toggled: MeasureUnit {
     self == .points ? .pixels : .points
   }
 }
 
 /// Inclusive pixel rectangle, top-left origin.
-nonisolated struct ScreenRulerPixelRect: Equatable {
-  var minX: Int
-  var minY: Int
-  var maxX: Int
-  var maxY: Int
+public struct MeasurePixelRect: Equatable, Sendable {
+  public var minX: Int
+  public var minY: Int
+  public var maxX: Int
+  public var maxY: Int
 
-  var width: Int { maxX - minX + 1 }
-  var height: Int { maxY - minY + 1 }
+  public var width: Int { maxX - minX + 1 }
+  public var height: Int { maxY - minY + 1 }
 
   /// The rectangle spanned by two corner pixels in any order.
-  init(corner a: ColorPickerPixel, _ b: ColorPickerPixel) {
+  public init(corner a: MeasurePixel, _ b: MeasurePixel) {
     minX = min(a.x, b.x)
     maxX = max(a.x, b.x)
     minY = min(a.y, b.y)
     maxY = max(a.y, b.y)
   }
 
-  init(minX: Int, minY: Int, maxX: Int, maxY: Int) {
+  public init(minX: Int, minY: Int, maxX: Int, maxY: Int) {
     self.minX = minX
     self.minY = minY
     self.maxX = maxX
@@ -62,30 +62,39 @@ nonisolated struct ScreenRulerPixelRect: Equatable {
 
 /// The run of matching pixels around `origin`. `left`…`right` and `top`…`bottom` are the
 /// last pixels that still match the origin color, so lengths are inclusive.
-nonisolated struct ScreenRulerSpan: Equatable {
-  var origin: ColorPickerPixel
-  var axis: ScreenRulerAxis
-  var left: Int
-  var right: Int
-  var top: Int
-  var bottom: Int
+public struct MeasureSpan: Equatable, Sendable {
+  public var origin: MeasurePixel
+  public var axis: MeasureAxis
+  public var left: Int
+  public var right: Int
+  public var top: Int
+  public var bottom: Int
 
-  var width: Int? { axis == .vertical ? nil : right - left + 1 }
-  var height: Int? { axis == .horizontal ? nil : bottom - top + 1 }
+  public var width: Int? { axis == .vertical ? nil : right - left + 1 }
+  public var height: Int? { axis == .horizontal ? nil : bottom - top + 1 }
+
+  public init(origin: MeasurePixel, axis: MeasureAxis, left: Int, right: Int, top: Int, bottom: Int) {
+    self.origin = origin
+    self.axis = axis
+    self.left = left
+    self.right = right
+    self.top = top
+    self.bottom = bottom
+  }
 }
 
-nonisolated enum ScreenRulerMeasurement: Equatable {
-  case span(ScreenRulerSpan)
-  case box(ScreenRulerPixelRect)
+public enum PixelMeasurement: Equatable, Sendable {
+  case span(MeasureSpan)
+  case box(MeasurePixelRect)
 
-  var pixelWidth: Int? {
+  public var pixelWidth: Int? {
     switch self {
     case .span(let span): return span.width
     case .box(let rect): return rect.width
     }
   }
 
-  var pixelHeight: Int? {
+  public var pixelHeight: Int? {
     switch self {
     case .span(let span): return span.height
     case .box(let rect): return rect.height
@@ -93,9 +102,9 @@ nonisolated enum ScreenRulerMeasurement: Equatable {
   }
 }
 
-nonisolated enum ScreenRulerFormatter {
+public enum MeasureFormatter {
   /// `pixels` in `unit`: whole numbers without decimals, otherwise one decimal (`120.5`).
-  static func value(pixels: Int, scale: CGFloat, unit: ScreenRulerUnit) -> String {
+  public static func value(pixels: Int, scale: CGFloat, unit: MeasureUnit) -> String {
     let amount: Double
     switch unit {
     case .pixels: amount = Double(pixels)
@@ -110,11 +119,11 @@ nonisolated enum ScreenRulerFormatter {
 
   /// `120 × 48`, or a single value when only one axis was measured. Widths convert with
   /// `scaleX`, heights with `scaleY`.
-  static func label(
-    for measurement: ScreenRulerMeasurement,
+  public static func label(
+    for measurement: PixelMeasurement,
     scaleX: CGFloat,
     scaleY: CGFloat,
-    unit: ScreenRulerUnit
+    unit: MeasureUnit
   ) -> String {
     let parts = [
       measurement.pixelWidth.map { value(pixels: $0, scale: scaleX, unit: unit) },
@@ -123,21 +132,21 @@ nonisolated enum ScreenRulerFormatter {
     return parts.compactMap { $0 }.joined(separator: " × ")
   }
 
-  static func label(for measurement: ScreenRulerMeasurement, scale: CGFloat, unit: ScreenRulerUnit) -> String {
+  public static func label(for measurement: PixelMeasurement, scale: CGFloat, unit: MeasureUnit) -> String {
     label(for: measurement, scaleX: scale, scaleY: scale, unit: unit)
   }
 
   /// What Copy puts on the pasteboard: the label plus its unit, e.g. `120 × 48 pt`.
-  static func copyText(
-    for measurement: ScreenRulerMeasurement,
+  public static func copyText(
+    for measurement: PixelMeasurement,
     scaleX: CGFloat,
     scaleY: CGFloat,
-    unit: ScreenRulerUnit
+    unit: MeasureUnit
   ) -> String {
     "\(label(for: measurement, scaleX: scaleX, scaleY: scaleY, unit: unit)) \(unit.suffix)"
   }
 
-  static func copyText(for measurement: ScreenRulerMeasurement, scale: CGFloat, unit: ScreenRulerUnit) -> String {
+  public static func copyText(for measurement: PixelMeasurement, scale: CGFloat, unit: MeasureUnit) -> String {
     copyText(for: measurement, scaleX: scale, scaleY: scale, unit: unit)
   }
 }

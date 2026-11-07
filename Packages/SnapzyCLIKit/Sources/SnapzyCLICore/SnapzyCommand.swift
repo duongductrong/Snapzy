@@ -24,7 +24,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
       1  internal error
       2  invalid arguments
       3  Screen Recording permission or Snapzy onboarding missing
-      4  display, window or area not found
+      4  display, window, area or image file not found
       5  Snapzy unavailable, busy, disabled, or version mismatch
       7  this app is not allowed to use Snapzy
     """,
@@ -34,6 +34,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
       VersionCommand.self,
       ListCommand.self,
       CaptureCommand.self,
+      MeasureCommand.self,
     ]
   )
 
@@ -70,10 +71,25 @@ public struct SnapzyCommand: AsyncParsableCommand {
       StandardStreams.writeError(fullMessage(for: error) + "\n")
       return
     }
-    let subcommandPath = arguments.prefix { !$0.hasPrefix("-") }
+    let subcommandPath = subcommandPath(in: arguments)
     let helpCommand = (["snapzy", "help"] + subcommandPath).joined(separator: " ")
     let usageError = CLIError(.invalidArguments, message(for: error), hint: "Run `\(helpCommand)`")
     StandardStreams.writeError(OutputRenderer(mode: mode).render(error: usageError))
+  }
+
+  /// Leading arguments that name subcommands, so positional values (`measure image shot.png`)
+  /// stay out of the help hint.
+  static func subcommandPath(in arguments: [String]) -> [String] {
+    var command: ParsableCommand.Type = SnapzyCommand.self
+    var path: [String] = []
+    for argument in arguments {
+      guard let next = command.configuration.subcommands.first(where: {
+        $0.configuration.commandName == argument
+      }) else { break }
+      path.append(argument)
+      command = next
+    }
+    return path
   }
 }
 

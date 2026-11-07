@@ -10,6 +10,7 @@
 import AppKit
 import Carbon.HIToolbox
 import XCTest
+import SnapzyMeasureCore
 @testable import Snapzy
 
 @MainActor

@@ -1,6 +1,6 @@
 //
-//  ScreenRulerRaster.swift
-//  Snapzy
+//  MeasureRaster.swift
+//  SnapzyMeasureCore
 //
 //  Screen Ruler pixels: one display snapshot redrawn once into 8-bit sRGB RGBA bytes, so
 //  edge scans walk whole rows and columns with plain byte reads.
@@ -9,15 +9,15 @@
 import CoreGraphics
 import Foundation
 
-nonisolated final class ScreenRulerRaster: @unchecked Sendable {
-  let width: Int
-  let height: Int
-  let bytesPerRow: Int
+public final class MeasureRaster: @unchecked Sendable {
+  public let width: Int
+  public let height: Int
+  public let bytesPerRow: Int
   private let bytes: [UInt8]
 
   private static let sRGB = CGColorSpace(name: CGColorSpace.sRGB)!
 
-  init?(image: CGImage) {
+  public init?(image: CGImage) {
     let width = image.width
     let height = image.height
     guard width > 0, height > 0 else { return nil }
@@ -46,7 +46,7 @@ nonisolated final class ScreenRulerRaster: @unchecked Sendable {
 
   /// Largest per-channel difference between two pixels (top-left pixel coordinates).
   @inline(__always)
-  func delta(_ x1: Int, _ y1: Int, _ x2: Int, _ y2: Int) -> Int {
+  public func delta(_ x1: Int, _ y1: Int, _ x2: Int, _ y2: Int) -> Int {
     let a = y1 * bytesPerRow + x1 * 4
     let b = y2 * bytesPerRow + x2 * 4
     return max(
@@ -58,16 +58,16 @@ nonisolated final class ScreenRulerRaster: @unchecked Sendable {
 
   /// One channel (0 red, 1 green, 2 blue) of a pixel, top-left pixel coordinates.
   @inline(__always)
-  func channel(_ x: Int, _ y: Int, _ channel: Int) -> Int {
+  public func channel(_ x: Int, _ y: Int, _ channel: Int) -> Int {
     Int(bytes[y * bytesPerRow + x * 4 + channel])
   }
 
   /// Raw RGBA bytes for hot loops; the pointer is valid only inside `body`.
-  func withPixels<R>(_ body: (UnsafePointer<UInt8>) throws -> R) rethrows -> R {
+  public func withPixels<R>(_ body: (UnsafePointer<UInt8>) throws -> R) rethrows -> R {
     try bytes.withUnsafeBufferPointer { try body($0.baseAddress!) }
   }
 
-  func contains(_ pixel: ColorPickerPixel) -> Bool {
+  public func contains(_ pixel: MeasurePixel) -> Bool {
     pixel.x >= 0 && pixel.y >= 0 && pixel.x < width && pixel.y < height
   }
 }

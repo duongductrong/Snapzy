@@ -142,7 +142,7 @@ tools/
     CatalogTool.swift
 
 Packages/
-  SnapzyCLIKit/                # local SwiftPM package: snapzy CLI wire protocol, client, commands
+  SnapzyCLIKit/                # local SwiftPM package: snapzy CLI wire protocol, client, commands, SnapzyMeasureCore (pixel edge engine)
     Sources/SnapzyCLIProtocol/ # Foundation-only wire types, linked by the app
     Sources/SnapzyCLIClient/   # socket client, app locator/launcher
     Sources/SnapzyCLICore/     # ArgumentParser command tree, output, doctor

@@ -1,6 +1,6 @@
 //
-//  ScreenRulerEdgeScanner.swift
-//  Snapzy
+//  MeasureEdgeScanner.swift
+//  SnapzyMeasureCore
 //
 //  Screen Ruler edge finding. Both hover spans and drag boxes run one 1D edge finder along
 //  rows or columns:
@@ -18,10 +18,10 @@
 
 import Foundation
 
-nonisolated enum ScreenRulerEdgeScanner {
+public enum MeasureEdgeScanner {
   /// Smallest step (0–255, largest channel difference) treated as an edge on noise-free UI.
-  static let defaultTolerance = 3
-  static let toleranceRange = 0...64
+  public static let defaultTolerance = 3
+  public static let toleranceRange = 0...64
 
   /// The threshold is at least `noiseFactor × noise + 1`.
   private static let noiseFactor = 3.0
@@ -39,12 +39,12 @@ nonisolated enum ScreenRulerEdgeScanner {
 
   // MARK: - Span
 
-  static func span(
-    in raster: ScreenRulerRaster,
-    from origin: ColorPickerPixel,
-    axis: ScreenRulerAxis,
+  public static func span(
+    in raster: MeasureRaster,
+    from origin: MeasurePixel,
+    axis: MeasureAxis,
     tolerance: Int
-  ) -> ScreenRulerSpan {
+  ) -> MeasureSpan {
     let x0 = min(max(origin.x, 0), raster.width - 1)
     let y0 = min(max(origin.y, 0), raster.height - 1)
     let noise = noiseLevel(in: raster, around: x0, y0)
@@ -65,8 +65,8 @@ nonisolated enum ScreenRulerEdgeScanner {
       }
     }
 
-    return ScreenRulerSpan(
-      origin: ColorPickerPixel(x: x0, y: y0),
+    return MeasureSpan(
+      origin: MeasurePixel(x: x0, y: y0),
       axis: axis,
       left: left,
       right: right,
@@ -80,12 +80,12 @@ nonisolated enum ScreenRulerEdgeScanner {
   /// `rect` shrunk to the sharp edges inside it: every row is scanned in from the left and
   /// right border, every column from the top and bottom. Returns `rect` (clamped) unchanged
   /// when nothing inside has a sharp edge, so a box drawn over empty space keeps its size.
-  static func snap(
-    _ rect: ScreenRulerPixelRect,
-    in raster: ScreenRulerRaster,
+  public static func snap(
+    _ rect: MeasurePixelRect,
+    in raster: MeasureRaster,
     tolerance: Int
-  ) -> ScreenRulerPixelRect {
-    let r = ScreenRulerPixelRect(
+  ) -> MeasurePixelRect {
+    let r = MeasurePixelRect(
       minX: max(rect.minX, 0),
       minY: max(rect.minY, 0),
       maxX: min(rect.maxX, raster.width - 1),
@@ -129,7 +129,7 @@ nonisolated enum ScreenRulerEdgeScanner {
       }
     }
     guard minX <= maxX, minY <= maxY else { return r }
-    return ScreenRulerPixelRect(minX: minX, minY: minY, maxX: maxX, maxY: maxY)
+    return MeasurePixelRect(minX: minX, minY: minY, maxX: maxX, maxY: maxY)
   }
 
   // MARK: - Noise
@@ -137,7 +137,7 @@ nonisolated enum ScreenRulerEdgeScanner {
   /// Mean of the smallest 70% largest-channel differences between horizontal neighbors in a
   /// 9×9 window: 0 on flat UI, a few levels on materials and wallpapers. Edges in the window
   /// fall in the discarded 30%.
-  static func noiseLevel(in raster: ScreenRulerRaster, around x: Int, _ y: Int, radius: Int = 4) -> Double {
+  static func noiseLevel(in raster: MeasureRaster, around x: Int, _ y: Int, radius: Int = 4) -> Double {
     var samples: [Int] = []
     samples.reserveCapacity((2 * radius + 1) * (2 * radius))
     for yy in max(y - radius, 0)...min(y + radius, raster.height - 1) {
@@ -152,7 +152,7 @@ nonisolated enum ScreenRulerEdgeScanner {
   }
 
   /// Noise along the box border, which the user drew over background.
-  private static func borderNoiseLevel(of r: ScreenRulerPixelRect, in raster: ScreenRulerRaster) -> Double {
+  private static func borderNoiseLevel(of r: MeasurePixelRect, in raster: MeasureRaster) -> Double {
     var samples: [Int] = []
     if r.minX < r.maxX {
       for x in (r.minX + 1)...r.maxX {
@@ -185,19 +185,19 @@ nonisolated enum ScreenRulerEdgeScanner {
   // MARK: - 1D edge finder
 
   private struct EdgeFinder {
-    let raster: ScreenRulerRaster
+    let raster: MeasureRaster
     let pixels: UnsafePointer<UInt8>
     /// Smallest deviation from the reference that starts a transition.
     let threshold: Int
     /// Whether single-pixel deviations need the next pixel to agree.
     let isNoisy: Bool
 
-    init(raster: ScreenRulerRaster, pixels: UnsafePointer<UInt8>, tolerance: Int, noise: Double) {
+    init(raster: MeasureRaster, pixels: UnsafePointer<UInt8>, tolerance: Int, noise: Double) {
       self.raster = raster
       self.pixels = pixels
-      let noiseThreshold = noise > 0 ? Int((noise * ScreenRulerEdgeScanner.noiseFactor).rounded(.up)) + 1 : 0
+      let noiseThreshold = noise > 0 ? Int((noise * MeasureEdgeScanner.noiseFactor).rounded(.up)) + 1 : 0
       threshold = max(tolerance, noiseThreshold)
-      isNoisy = noise >= ScreenRulerEdgeScanner.noisyLevel
+      isNoisy = noise >= MeasureEdgeScanner.noisyLevel
     }
 
     /// Matched pixels past the start (0 when the very next pixel is an edge).
@@ -234,7 +234,7 @@ nonisolated enum ScreenRulerEdgeScanner {
         return (sum + 1) / 3
       }
 
-      var reference = Reference(length: ScreenRulerEdgeScanner.referenceLength)
+      var reference = Reference(length: MeasureEdgeScanner.referenceLength)
       reference.reset(value(0, 0), value(0, 1), value(0, 2))
       var i = 1
       while i < count {
@@ -284,7 +284,7 @@ nonisolated enum ScreenRulerEdgeScanner {
       var steps: [(index: Int, size: Int)] = []
       var terminal: (index: Int, size: Int)?
       var j = start
-      while j < count, j - start < ScreenRulerEdgeScanner.maxTransitionLength {
+      while j < count, j - start < MeasureEdgeScanner.maxTransitionLength {
         let step = value(j, channel) - value(j - 1, channel)
         if step * direction > 0 {
           steps.append((j, abs(step)))
@@ -318,7 +318,7 @@ nonisolated enum ScreenRulerEdgeScanner {
         if bestEnd > bestStart { paired.insert(bestIndex + 1) }
       }
       let end = terminal.map { $0.index } ?? j
-      let ratio = ScreenRulerEdgeScanner.sharpnessRatio
+      let ratio = MeasureEdgeScanner.sharpnessRatio
       // A step is sharp when it towers over the steps right next to it: the middle of a
       // blurred shadow has a large step too, but its neighbors are almost as large.
       if let bestIndex, bestStrength > threshold {

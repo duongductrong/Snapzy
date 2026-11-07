@@ -109,6 +109,11 @@ enum PreferencesKeys {
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
   static let annotateHighlighterTextSnappingEnabled = "annotate.highlighterTextSnappingEnabled"
+  /// Annotate Measure tool unit (`MeasureUnit` raw value, default points). Edge tolerance is
+  /// shared with Screen Ruler (`screenRulerEdgeTolerance`).
+  static let annotateMeasureUnit = "annotate.measureUnit"
+  /// Annotate Measure tool axis for click spans (`MeasureAxis` raw value, default both).
+  static let annotateMeasureAxis = "annotate.measureAxis"
   static let annotateCombineSaveAsEdit = "annotate.combineSaveAsEdit"
   static let annotateCustomColors = "annotate.customColors.v1"
   static let annotateFavoriteColors = "annotate.favoriteColors.v1"

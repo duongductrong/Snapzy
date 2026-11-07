@@ -6322,6 +6322,46 @@ nonisolated enum L10n {
       defaultValue: "Snap Highlight to Text",
       comment: "Settings title for snapping the highlighter to detected text lines"
     )
+    static let measureGestureHint = string(
+      "annotate.measure-gesture-hint",
+      defaultValue: "Click to measure · Drag for a box · ⌘ keeps the box",
+      comment: "Hint for the Measure tool: a click pins the span under the pointer; a drag measures a box that snaps to content; holding Command keeps the dragged box"
+    )
+    static let measureAxis = string(
+      "annotate.measure-axis",
+      defaultValue: "Axis",
+      comment: "Quick properties group title: which directions the Measure tool measures"
+    )
+    static let measureAxisBoth = string(
+      "annotate.measure-axis.both",
+      defaultValue: "Width and height",
+      comment: "Measure axis option: measure both directions"
+    )
+    static let measureAxisHorizontal = string(
+      "annotate.measure-axis.horizontal",
+      defaultValue: "Width only",
+      comment: "Measure axis option: measure horizontally only"
+    )
+    static let measureAxisVertical = string(
+      "annotate.measure-axis.vertical",
+      defaultValue: "Height only",
+      comment: "Measure axis option: measure vertically only"
+    )
+    static let measureUnit = string(
+      "annotate.measure-unit",
+      defaultValue: "Unit",
+      comment: "Quick properties group title: unit of Measure labels"
+    )
+    static let measureUnitPoints = string(
+      "annotate.measure-unit.points",
+      defaultValue: "Points",
+      comment: "Measure unit option: logical points"
+    )
+    static let measureUnitPixels = string(
+      "annotate.measure-unit.pixels",
+      defaultValue: "Pixels",
+      comment: "Measure unit option: image pixels"
+    )
     static let counterGestureHint = string(
       "annotate.counter-gesture-hint",
       defaultValue: "Click to place · Drag to point",
@@ -8495,6 +8535,11 @@ nonisolated enum L10n {
       "annotate.tool.counter",
       defaultValue: "Counter",
       comment: "Annotation tool display name"
+    )
+    static let measureTool = string(
+      "annotate.tool.measure",
+      defaultValue: "Measure",
+      comment: "Annotation tool display name: measures distances and sizes in the image"
     )
     static let watermarkTool = string(
       "annotate.tool.watermark",

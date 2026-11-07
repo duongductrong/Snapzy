@@ -127,7 +127,8 @@ enum AnnotationFactory {
       let text = context.watermarkText.trimmingCharacters(in: .whitespacesAndNewlines)
       type = .watermark(text.isEmpty ? "Snapzy" : text)
 
-    case .selection, .crop, .cutOut, .text, .mockup:
+    // Measure items come from a pixel scan (`AnnotateMeasureMapper`), not from drag geometry.
+    case .selection, .crop, .cutOut, .text, .measure, .mockup:
       return nil
     }
 

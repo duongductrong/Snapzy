@@ -1259,6 +1259,8 @@ extension AnnotationItem {
       translated.type = .path(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
     case .highlight(let points):
       translated.type = .highlight(points.map { CGPoint(x: $0.x + dx, y: $0.y + dy) })
+    case .measurement(let geometry):
+      translated.type = .measurement(geometry.translated(dx: dx, dy: dy))
     default:
       break
     }
@@ -1331,6 +1333,15 @@ extension AnnotationItem {
         height: counterDiameter
       )
       copy.properties.strokeWidth = controlValue
+    case .measurement(let geometry):
+      // A box takes the new rectangle (its label follows). A span is a pinned scan result:
+      // it only moves, keeping its exact extent (zero-thickness spans have a padded
+      // `resizeBounds`, so the offset is taken from that, not from `bounds`).
+      if geometry.kind == .span || oldBounds.size == normalizedBounds.size {
+        let dx = normalizedBounds.minX - oldBounds.minX
+        let dy = normalizedBounds.minY - oldBounds.minY
+        copy = translatedBy(dx: dx, dy: dy)
+      }
     default:
       break
     }
@@ -1404,6 +1415,7 @@ nonisolated enum AnnotationType: Equatable {
   case watermark(String)
   case embeddedImage(UUID)
   case spotlight
+  case measurement(MeasureGeometry)
 
   /// Corresponding toolbar tool type for this annotation
   var toolType: AnnotationToolType {
@@ -1421,6 +1433,7 @@ nonisolated enum AnnotationType: Equatable {
     case .watermark: .watermark
     case .embeddedImage: .selection
     case .spotlight: .spotlight
+    case .measurement: .measure
     }
   }
 
@@ -1579,6 +1592,8 @@ extension AnnotationItem {
     switch type {
     case .path, .highlight:
       false
+    case .measurement(let geometry):
+      geometry.kind == .box
     default:
       true
     }
@@ -1671,6 +1686,14 @@ extension AnnotationItem {
     return result
   }
 
+  /// Everything the item draws: `selectionBounds` plus a Measure label, which sits outside
+  /// the measured extent. Used for redraw culling, export culling and hit-test quick rejects;
+  /// selection geometry (paste/duplicate clamping) keeps `selectionBounds`.
+  var renderBounds: CGRect {
+    guard let label = AnnotateMeasureRenderer.labelRect(for: self) else { return selectionBounds }
+    return selectionBounds.union(label.insetBy(dx: -2, dy: -2))
+  }
+
   var selectionDecorationBounds: CGRect {
     switch type {
     case .highlight(let points):
@@ -1720,6 +1743,9 @@ extension AnnotationItem {
         ).contains(point)
       }
       return false
+
+    case .measurement(let geometry):
+      return measurementContains(point, geometry: geometry, tolerance: tolerance)
 
     case .counter:
       let counterBounds = bounds.isEmpty ? Self.counterBounds(center: bounds.origin, properties: properties) : bounds
@@ -1803,7 +1829,7 @@ extension AnnotationItem {
     case .embeddedImage:
       return false
 
-    case .arrow, .line, .path, .highlight, .text, .counter:
+    case .arrow, .line, .path, .highlight, .text, .counter, .measurement:
       return containsPoint(point, baseTolerance: baseTolerance)
     }
   }
@@ -1838,6 +1864,24 @@ extension AnnotationItem {
       return containsPoint(point, baseTolerance: baseTolerance)
     default:
       return false
+    }
+  }
+
+  /// Near a measuring line, the box outline, or on the label.
+  private func measurementContains(_ point: CGPoint, geometry: MeasureGeometry, tolerance: CGFloat) -> Bool {
+    if AnnotateMeasureRenderer.labelRect(for: self)?.insetBy(dx: -2, dy: -2).contains(point) == true {
+      return true
+    }
+    switch geometry.kind {
+    case .box:
+      let outer = bounds.insetBy(dx: -tolerance, dy: -tolerance)
+      guard outer.contains(point) else { return false }
+      let inner = bounds.insetBy(dx: tolerance, dy: tolerance)
+      return inner.isNull || inner.isEmpty || !inner.contains(point)
+    case .span:
+      return geometry.segments(in: bounds).contains {
+        distanceToSegment(point, from: $0.start, to: $0.end) <= tolerance
+      }
     }
   }
 

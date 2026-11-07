@@ -57,6 +57,10 @@ Sparkle replaces the whole bundle at the same path, so the helper updates with t
 | `snapzy capture screen [--display main\|all\|ID]` | One file per display |
 | `snapzy capture window --id ID \| --app NAME [--title REGEX] [--index N] \| --active [--no-shadow]` | One window, even when covered. `--id` and `--app` only find on-screen windows; IDs from `list windows --all` that are off screen give `targetNotFound` |
 | `snapzy capture area --rect x,y,w,h` | A rectangle; must lie fully on screen |
+| `snapzy measure image PATH (--at x,y \| --box x,y,w,h)…` | Measures an image file **in the CLI process**: no app, no approval, no Screen Recording permission |
+| `snapzy measure screen [--display main\|ID] (--at … \| --box …)…` | Captures one display, then measures it locally |
+| `snapzy measure window --id ID \| --app NAME … \| --active (--at … \| --box …)…` | Captures one window without its shadow, then measures it |
+| `snapzy measure area --rect x,y,w,h (--at … \| --box …)…` | Captures a rectangle, then measures it |
 
 App matching (`--app`): exact bundle ID, else exact name, else name prefix — case-insensitive, best tier only (so `Code` never mixes VS Code's windows with Codex's; with no app named exactly `Code`, the prefix tier still matches `Codex`). With several matches the frontmost window wins and `matchedCandidates` reports the count; `--index` picks another (0-based).
 
@@ -70,6 +74,14 @@ App matching (`--app`): exact bundle ID, else exact name, else name prefix — c
 | `--max-dimension PX` | capture | Downscale so the longest edge is at most PX (never upscales) — e.g. `1568` for vision models |
 | `--cursor` | capture | Include the pointer |
 | `--force` | capture | Overwrite `--output` |
+| `--at x,y` | measure | Repeatable. Measures the run of matching pixels around this point to the nearest edges (Screen Ruler's hover span) |
+| `--box x,y,w,h` | measure | Repeatable. A rectangle shrunk to the sharp edges of the content inside it (Screen Ruler's drag box). Clamped to the image; a box entirely outside is an error |
+| `--axis both\|horizontal\|vertical` | measure | Directions `--at` measures; default `both` |
+| `--tolerance 0…64` | measure | Smallest per-channel step read as an edge on flat UI; default 3 (noise raises it automatically) |
+| `--no-snap` | measure | Keep `--box` as given |
+| `--pixels` | measure | `--at`/`--box` are image pixels instead of points |
+| `--scale S` | measure image | Pixels per point; default from the file's DPI (DPI ÷ 72), else 1 |
+| `--keep PATH` | measure screen/window/area | Also keep the captured PNG (file, or directory with trailing `/`; `--force` overwrites). Otherwise it is deleted after measuring |
 | `--json` | all | JSON even on a terminal (pretty-printed there) |
 | `--timeout S` | all | Per-request timeout, default 30 |
 | `--launch-timeout S` | all | Wait for Snapzy to start, default 15 |
@@ -94,9 +106,24 @@ Stdout is JSON when it is not a terminal (or with `--json`); a terminal gets one
 - `format` is `png`, `jpeg` (for `--format jpg`), or `webp`.
 - Errors: `{"error":{"code":"targetNotFound","message":"…","hint":"…"}}`.
 
+`snapzy measure` prints one object. Spans come first (in `--at` order), then boxes (in `--box` order); every measurement has `points` and `pixels`, each with `width`, `height` (`null` on an axis a single-axis span did not measure) and the measured `rect` from the image's top-left. A terminal gets one line per measurement, such as `span @120,80  240 × 32 pt  (480 × 64 px)`.
+
+```json
+{"measurements":[{"at":{"x":60,"y":40},"axis":"both","kind":"span",
+ "pixels":{"height":80,"rect":{"height":80,"width":160,"x":80,"y":40},"width":160},
+ "points":{"height":40,"rect":{"height":40,"width":80,"x":40,"y":20},"width":80}}],
+ "source":{"height":200,"kind":"image","path":"/Users/me/card@2x.png","scale":2,"width":400},"tolerance":3}
+```
+
+- The engine is the one Screen Ruler and Annotate's Measure tool use (`SnapzyMeasureCore`), so the numbers match.
+- `measure screen|window|area` call the same `capture.*` methods (and approval) as `capture`, forced to PNG at native pixels with no cursor or window shadow; no new wire method. Capture sources add `displayID` and, for windows, `window`. `--display all` is rejected.
+- `measure image` reads the file with the caller's own rights, never through the app; files over 100 megapixels are rejected.
+
 ### Coordinates
 
 All frames and `--rect` use **global points with the origin at the top-left of the main display** (CoreGraphics/Accessibility convention). Displays left of or above the main one have negative x/y; `--rect -1440,0,800,600` works without `=`. A frame from `list windows` can be passed straight to `capture area`.
+
+`measure`'s `--at` and `--box` are different: **points from the top-left of the measured image** (window-local for `measure window`, rectangle-local for `measure area`, display-local for `measure screen`), or image pixels with `--pixels`.
 
 ### Exit codes
 
@@ -104,9 +131,9 @@ All frames and `--rect` use **global points with the origin at the top-left of t
 | --- | --- | --- |
 | 0 | — | Success |
 | 1 | `internal` | Unexpected failure (also unknown codes from a newer Snapzy) |
-| 2 | `invalidArguments` | Bad flags, partly off-screen area, existing `--output` |
+| 2 | `invalidArguments` | Bad flags, partly off-screen area, existing `--output`, a measure point outside the image, a file that is not an image |
 | 3 | `permissionDenied`, `onboardingIncomplete` | Screen Recording missing or not active yet; setup unfinished |
-| 4 | `targetNotFound` | No such display/window/app, or area off screen |
+| 4 | `targetNotFound` | No such display/window/app, area off screen, or no file at the `measure image` path |
 | 5 | `appUnavailable`, `launchTimeout`, `disabled`, `busy`, `versionMismatch`, `unknownMethod` | Snapzy not reachable, command line access off, another capture running, screen locked, version skew |
 | 7 | `notAuthorized` | This app was denied, not approved in time, or could not be identified |
 
@@ -145,7 +172,7 @@ Debug (`com.trongduong.snapzy.debug`) and release builds use separate sockets. T
 
 | Path | Owns |
 | --- | --- |
-| `Packages/SnapzyCLIKit/` | `SnapzyCLIProtocol` (wire), `SnapzyCLIClient` (socket, app locator/launcher), `SnapzyCLICore` (commands, output), `snapzy-dev` (dev executable) |
+| `Packages/SnapzyCLIKit/` | `SnapzyCLIProtocol` (wire), `SnapzyCLIClient` (socket, app locator/launcher), `SnapzyCLICore` (commands, output; `Commands/Measure/`, `Measure/`), `SnapzyMeasureCore` (pixel edge engine shared with the app), `snapzy-dev` (dev executable) |
 | `SnapzyCLI/main.swift` | Xcode Command Line Tool target `SnapzyCLI` (product `snapzy`, module `SnapzyCLIMain`), embedded by the app's "Embed Command Line Tool" phase |
 | `Snapzy/Services/CommandLine/` | `CLIServer`, `CLISocketListener`, `CLIConnection`, `CLIRequestRouter`, authorization, identity, installer, activity indicator, handlers |
 | `Snapzy/Services/Capture/HeadlessCapture/` | `HeadlessCaptureService`, `CaptureTargetResolver`, staging, post-processor, `AppNameMatcher` |

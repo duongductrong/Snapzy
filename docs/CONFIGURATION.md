@@ -216,6 +216,8 @@ quick_properties_sync = true
 combine_save_as_edit = true
 crop_snap_to_edges = true
 highlighter_text_snapping = true
+measure_unit = "points"
+measure_axis = "both"
 
 [shortcuts.global.fullscreen]
 key = "3"

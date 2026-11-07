@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import SnapzyMeasureCore
 
 /// Everything one display's overlay shows. Pixel values are snapshot pixels (top-left origin);
 /// `scaleX` / `scaleY` are snapshot pixels per point on each axis (they differ slightly on

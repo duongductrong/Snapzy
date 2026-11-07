@@ -14,14 +14,12 @@ struct ScreenCommand: AsyncParsableCommand {
 
   @OptionGroup var global: GlobalOptions
   @OptionGroup var output: CaptureOutputOptions
-
-  @Option(help: "main, all, or a display ID from `snapzy list displays`.")
-  var display: DisplaySelector = .main
+  @OptionGroup var selection: DisplaySelectionOptions
 
   func run() async throws {
     try await CaptureCommand.run(
       .captureScreen,
-      params: CaptureScreenParams(display: display, options: output.captureOptions()),
+      params: CaptureScreenParams(display: selection.display, options: output.captureOptions()),
       output: output,
       global: global
     )

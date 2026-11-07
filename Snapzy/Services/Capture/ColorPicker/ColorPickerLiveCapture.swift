@@ -12,6 +12,7 @@ import AppKit
 import CoreMedia
 import CoreVideo
 import ScreenCaptureKit
+import SnapzyMeasureCore
 
 /// Where the loupe reads pixels from: a live display stream, or a still image in tests.
 protocol ColorPickerPixelSource: AnyObject {

@@ -5,6 +5,7 @@
 //  Contextual quick properties bar for common annotation styling.
 //
 
+import SnapzyMeasureCore
 import SwiftUI
 
 private enum QuickPropertiesDensity {
@@ -189,6 +190,8 @@ struct AnnotateQuickPropertiesBar: View {
     let showLineStyle = state.quickPropertiesSupportsLineStyle
     let showArrowStyle = state.quickPropertiesSupportsArrowStyle
     let showTextSnap = state.quickPropertiesSupportsHighlighterTextSnapping
+    let showMeasureAxis = state.quickPropertiesSupportsMeasureAxis
+    let showMeasureUnit = state.quickPropertiesSupportsMeasureUnit
     let hasEditableStyleControls = showStrokeColor
       || showFill
       || showTextBackground
@@ -490,6 +493,39 @@ struct AnnotateQuickPropertiesBar: View {
           buttonWidth: density.controlButtonWidth,
           groupSpacing: density.groupSpacing
         )
+      }
+
+      activePropertySlot(
+        isVisible: showMeasureAxis,
+        isEnabled: true,
+        showsLeadingDivider: hasBeforeTextSnap || showTextSnap,
+        width: nil
+      ) {
+        QuickMeasureAxisControl(
+          axis: state.quickMeasureAxisBinding,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      activePropertySlot(
+        isVisible: showMeasureUnit,
+        isEnabled: true,
+        showsLeadingDivider: hasBeforeTextSnap || showTextSnap || showMeasureAxis,
+        width: nil
+      ) {
+        QuickMeasureUnitControl(
+          unit: state.quickMeasureUnitBinding,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
+
+      if includesCounterHint, state.quickPropertiesMode == .toolDefaults, state.selectedTool == .measure {
+        Text(L10n.AnnotateUI.measureGestureHint)
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .fixedSize()
       }
 
       if includesCounterHint, state.selectedTool == .counter {
@@ -1521,6 +1557,74 @@ private struct QuickTextSnapControl: View {
       .help(L10n.AnnotateUI.highlighterTextSnappingDescription)
       .accessibilityLabel(L10n.AnnotateUI.highlighterTextSnapping)
       .accessibilityValue(isEnabled ? L10n.Common.on : L10n.Common.off)
+    }
+  }
+}
+
+/// Which directions a Measure click spans.
+private struct QuickMeasureAxisControl: View {
+  @Binding var axis: MeasureAxis
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.measureAxis, spacing: groupSpacing) {
+      ForEach(MeasureAxis.allCases, id: \.self) { option in
+        Button {
+          axis = option
+        } label: {
+          Image(systemName: Self.symbol(for: option))
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundColor(axis == option ? LiquidGlassTokens.inkPrimary : .secondary)
+            .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
+            .liquidGlassControl(isActive: axis == option, activeGlassTint: nil)
+        }
+        .buttonStyle(.plain)
+        .help(Self.title(for: option))
+        .accessibilityLabel(Self.title(for: option))
+      }
+    }
+  }
+
+  private static func symbol(for axis: MeasureAxis) -> String {
+    switch axis {
+    case .both: return "plus"
+    case .horizontal: return "arrow.left.and.right"
+    case .vertical: return "arrow.up.and.down"
+    }
+  }
+
+  private static func title(for axis: MeasureAxis) -> String {
+    switch axis {
+    case .both: return L10n.AnnotateUI.measureAxisBoth
+    case .horizontal: return L10n.AnnotateUI.measureAxisHorizontal
+    case .vertical: return L10n.AnnotateUI.measureAxisVertical
+    }
+  }
+}
+
+/// Points or source pixels for Measure labels.
+private struct QuickMeasureUnitControl: View {
+  @Binding var unit: MeasureUnit
+  let buttonWidth: CGFloat
+  let groupSpacing: CGFloat
+
+  var body: some View {
+    QuickPropertiesGroup(title: L10n.AnnotateUI.measureUnit, spacing: groupSpacing) {
+      ForEach(MeasureUnit.allCases, id: \.self) { option in
+        Button {
+          unit = option
+        } label: {
+          Text(option.suffix)
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .foregroundColor(unit == option ? LiquidGlassTokens.inkPrimary : .secondary)
+            .frame(width: buttonWidth, height: QuickPropertiesMetrics.chip)
+            .liquidGlassControl(isActive: unit == option, activeGlassTint: nil)
+        }
+        .buttonStyle(.plain)
+        .help(option == .points ? L10n.AnnotateUI.measureUnitPoints : L10n.AnnotateUI.measureUnitPixels)
+        .accessibilityLabel(option == .points ? L10n.AnnotateUI.measureUnitPoints : L10n.AnnotateUI.measureUnitPixels)
+      }
     }
   }
 }

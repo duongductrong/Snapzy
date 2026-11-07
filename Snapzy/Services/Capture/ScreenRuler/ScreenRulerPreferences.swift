@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SnapzyMeasureCore
 
 struct ScreenRulerPreferences {
   private let defaults: UserDefaults

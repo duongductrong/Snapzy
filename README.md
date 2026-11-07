@@ -104,6 +104,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
   - Add a camera overlay, including iPhone Continuity Camera, mouse-click and keystroke highlights, or live annotations.
 - **Annotate and edit**
   - Add arrows, shapes, text, watermarks, blur, and pixelation. Detect and redact sensitive data on-device.
+  - Measure distances and sizes in the image with the Measure tool (`U`): editable measurements that export with it.
   - Crop images, remove backgrounds, and create 3D mockups. Trim clips, add zoom or speed segments, and use Follow Mouse to keep the cursor in view.
 - **Quick Access and History**
   - Copy, edit, drag, or upload captures from their floating Quick Access cards; pin screenshots on screen.
@@ -160,6 +161,7 @@ Access is approved per calling app. All commands other than `snapzy status` requ
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 
 See the [CLI reference](docs/CLI.md).

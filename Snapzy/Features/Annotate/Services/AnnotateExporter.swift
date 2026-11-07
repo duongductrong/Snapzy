@@ -596,7 +596,7 @@ final class AnnotateExporter {
       if case .spotlight = annotation.type { continue }
       // Only include annotations that intersect with crop bounds
       if let cropRect = snapshot.cropRect {
-        guard annotation.selectionBounds.intersects(cropRect) else { continue }
+        guard annotation.renderBounds.intersects(cropRect) else { continue }
       }
       let offsetAnnotation = offsetAnnotationForExport(
         annotation,
@@ -1021,7 +1021,7 @@ final class AnnotateExporter {
     )
     for annotation in snapshot.annotations.renderOrdered {
       if let cropRect = snapshot.cropRect {
-        guard annotation.selectionBounds.intersects(cropRect) else { continue }
+        guard annotation.renderBounds.intersects(cropRect) else { continue }
       }
       let offsetAnnotation = offsetAnnotationForCrop(
         annotation,

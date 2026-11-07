@@ -8,6 +8,7 @@
 
 import AppKit
 import Carbon.HIToolbox
+import SnapzyMeasureCore
 
 @MainActor
 protocol ColorPickerOverlayViewDelegate: AnyObject {

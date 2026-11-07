@@ -10,6 +10,7 @@
 //
 
 import AppKit
+import SnapzyMeasureCore
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -591,6 +592,8 @@ private struct DragFallbackSignature: Equatable {
       return "embeddedImage|\(assetId.uuidString)"
     case .spotlight:
       return "spotlight"
+    case .measurement(let geometry):
+      return "measurement|\(geometry.kind.rawValue)|\(geometry.axis.rawValue)|\(pointSignature(geometry.origin))|\(geometry.unit.rawValue)"
     }
   }
 

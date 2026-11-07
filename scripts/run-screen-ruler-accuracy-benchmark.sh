@@ -32,10 +32,8 @@ swiftc -O -parse-as-library \
   -o "$BINARY_PATH" \
   scripts/swift-tools/screen-ruler-accuracy/screen-ruler-accuracy-benchmark.swift \
   scripts/swift-tools/screen-ruler-accuracy/screen-ruler-accuracy-support.swift \
-  Snapzy/Services/Capture/ColorPicker/ColorPickerPixelSampler.swift \
-  Snapzy/Services/Capture/ScreenRuler/ScreenRulerRaster.swift \
-  Snapzy/Services/Capture/ScreenRuler/ScreenRulerMeasurement.swift \
-  Snapzy/Services/Capture/ScreenRuler/ScreenRulerEdgeScanner.swift
+  scripts/swift-tools/screen-ruler-accuracy/screen-ruler-accuracy-aliases.swift \
+  Packages/SnapzyCLIKit/Sources/SnapzyMeasureCore/*.swift
 
 : > "$STDERR_PATH"
 set +e

@@ -62,7 +62,7 @@
 
 - **截图**：支持全屏或选区截图，并可在手动选区/应用窗口模式间切换（`Application Capture`，默认 `A`）；同时支持选区截图并实时标注（annotate before saving）、带实时拼接预览的滚动截图、OCR 文字提取（识别完成后弹出系统通知显示结果）、透明背景对象抠图并可选安全自动裁剪、窗口阴影保留（macOS 14+）、多格式导出（PNG/JPG/WebP）、隐藏桌面图标/小组件，以及录屏时快速截图
 - **屏幕录制**：支持视频或 GIF 导出、系统音频 + 麦克风、鼠标点击高亮、按键覆盖层、屏幕实时标注、记住上次区域、GIF 尺寸调整，以及用于 Follow Mouse 编辑的 Smart Camera 元数据
-- **标注编辑器**：提供形状、箭头、文本、水印、填充矩形、模糊/像素化、编号、裁剪、去背景与感知裁剪区域的自动裁剪、3D 渲染器模拟背景、缩放/平移（触控板捏合 + 键盘）、拖拽到其他应用，以及可配置工具快捷键
+- **标注编辑器**：提供形状、箭头、文本、水印、填充矩形、模糊/像素化、编号、测量距离与尺寸、裁剪、去背景与感知裁剪区域的自动裁剪、3D 渲染器模拟背景、缩放/平移（触控板捏合 + 键盘）、拖拽到其他应用，以及可配置工具快捷键
 - **截图后设置**：按模式分别配置保存、Quick Access、复制到剪贴板和标注动作矩阵，并为去背景提供独立的全局自动裁剪开关（默认开启）
 - **视频编辑器**：可视化时间线 + 帧条裁剪、自动聚焦的缩放片段（Follow Mouse）、壁纸背景 + 留白、自定义导出尺寸、动态图 GIF 查看器，以及撤销/重做
 - **Quick Access**：每次截图后弹出的悬浮面板，提供复制、编辑、拖拽到应用、打开和删除操作
@@ -160,6 +160,7 @@ Snapzy 自带 `snapzy` 命令，AI 代理和脚本无需任何点击即可截图
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ```
 
 命令位于 `/Applications/Snapzy.app/Contents/Helpers/snapzy`；可在 **设置 → 高级 → 命令行 → 安装** 中将其加入 `PATH`。某个应用首次使用时，Snapzy 会询问是否允许该应用。完整说明：[docs/CLI.md](docs/CLI.md)。

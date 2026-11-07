@@ -8,6 +8,7 @@
 
 import AppKit
 import XCTest
+import SnapzyMeasureCore
 @testable import Snapzy
 
 @MainActor

@@ -8,12 +8,11 @@
 
 import CoreGraphics
 import Foundation
+import SnapzyMeasureCore
 
-/// A pixel in a snapshot image, top-left origin (CGImage convention).
-nonisolated struct ColorPickerPixel: Equatable {
-  var x: Int
-  var y: Int
-}
+/// A pixel in a snapshot image, top-left origin (CGImage convention). Shared with the
+/// measurement engine so Pick Color and Screen Ruler map points to pixels the same way.
+typealias ColorPickerPixel = MeasurePixel
 
 /// A sampled color, 8-bit sRGB.
 nonisolated struct ColorPickerColor: Equatable {
