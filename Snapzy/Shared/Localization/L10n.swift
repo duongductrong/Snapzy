@@ -2639,6 +2639,16 @@ nonisolated enum L10n {
         displayName
       )
     }
+    static let swap = string(
+      "shortcut-recorder.swap",
+      defaultValue: "Swap",
+      comment: "Button in the duplicate-shortcut popover that swaps shortcuts between the two actions"
+    )
+    static let swapHelp = string(
+      "shortcut-recorder.swap-help",
+      defaultValue: "Use this shortcut here and give this action's previous shortcut to the other action.",
+      comment: "Help text for the Swap button in the duplicate-shortcut popover"
+    )
   }
 
   enum ShortcutValidation {

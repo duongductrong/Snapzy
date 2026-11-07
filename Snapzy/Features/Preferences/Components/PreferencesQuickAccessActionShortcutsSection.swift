@@ -37,6 +37,7 @@ struct QuickAccessActionShortcutRows: View {
             defaultShortcut: QuickAccessActionShortcutStore.defaultShortcuts[action],
             isEnabled: enabledBinding(for: action),
             validationIssue: validationIssues[action],
+            onSwap: swapAction(for: action),
             onShortcutChanged: { handleChange($0, for: action) }
           )
         }
@@ -83,6 +84,23 @@ struct QuickAccessActionShortcutRows: View {
         }
       }
     )
+  }
+
+  /// Swap with the card action that already owns the rejected combo.
+  private func swapAction(for action: QuickAccessActionKind) -> (() -> Void)? {
+    guard let proposal = validationIssues[action]?.swapProposal,
+          case .quickAccessAction(let owner) = proposal.owner,
+          case .combo(let requested) = proposal.value else { return nil }
+    return {
+      guard store.shortcut(for: owner) == requested else { return }
+      let editingOriginal = store.shortcut(for: action)
+      _ = handleChange(nil, for: owner)
+      guard handleChange(requested, for: action) else {
+        _ = handleChange(requested, for: owner)
+        return
+      }
+      _ = handleChange(editingOriginal, for: owner)
+    }
   }
 
   private func handleChange(_ config: ShortcutConfig?, for action: QuickAccessActionKind) -> Bool {

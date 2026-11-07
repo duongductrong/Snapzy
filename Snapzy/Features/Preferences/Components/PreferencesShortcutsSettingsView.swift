@@ -350,6 +350,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultFullscreen,
       isEnabled: globalEnabledBinding(for: .fullscreen),
       validationIssue: globalValidationIssues[.fullscreen],
+      onSwap: swapAction(for: .global(.fullscreen)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .fullscreen) }
     )
 
@@ -360,6 +361,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultArea,
       isEnabled: globalEnabledBinding(for: .area),
       validationIssue: globalValidationIssues[.area],
+      onSwap: swapAction(for: .global(.area)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .area) }
     )
 
@@ -381,6 +383,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultRepeatArea,
       isEnabled: globalEnabledBinding(for: .repeatArea),
       validationIssue: globalValidationIssues[.repeatArea],
+      onSwap: swapAction(for: .global(.repeatArea)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .repeatArea) }
     )
 
@@ -391,6 +394,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .delayedCapture),
       validationIssue: globalValidationIssues[.delayedCapture],
+      onSwap: swapAction(for: .global(.delayedCapture)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .delayedCapture) }
     )
 
@@ -401,6 +405,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .delayedFullscreen),
       validationIssue: globalValidationIssues[.delayedFullscreen],
+      onSwap: swapAction(for: .global(.delayedFullscreen)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .delayedFullscreen) }
     )
 
@@ -411,6 +416,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultAreaAnnotate,
       isEnabled: globalEnabledBinding(for: .areaAnnotate),
       validationIssue: globalValidationIssues[.areaAnnotate],
+      onSwap: swapAction(for: .global(.areaAnnotate)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .areaAnnotate) }
     )
 
@@ -421,6 +427,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultActiveWindowCapture,
       isEnabled: globalEnabledBinding(for: .activeWindow),
       validationIssue: globalValidationIssues[.activeWindow],
+      onSwap: swapAction(for: .global(.activeWindow)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .activeWindow) }
     )
 
@@ -431,6 +438,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultScrollingCapture,
       isEnabled: globalEnabledBinding(for: .scrollingCapture),
       validationIssue: globalValidationIssues[.scrollingCapture],
+      onSwap: swapAction(for: .global(.scrollingCapture)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .scrollingCapture) }
     )
 
@@ -441,6 +449,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultObjectCutout,
       isEnabled: globalEnabledBinding(for: .objectCutout),
       validationIssue: globalValidationIssues[.objectCutout],
+      onSwap: swapAction(for: .global(.objectCutout)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .objectCutout) }
     )
 
@@ -451,6 +460,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultOCR,
       isEnabled: globalEnabledBinding(for: .ocr),
       validationIssue: globalValidationIssues[.ocr],
+      onSwap: swapAction(for: .global(.ocr)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .ocr) }
     )
 
@@ -461,6 +471,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultSmartElement,
       isEnabled: globalEnabledBinding(for: .smartElement),
       validationIssue: globalValidationIssues[.smartElement],
+      onSwap: swapAction(for: .global(.smartElement)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .smartElement) }
     )
   }
@@ -474,6 +485,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultRecording,
       isEnabled: globalEnabledBinding(for: .recording),
       validationIssue: globalValidationIssues[.recording],
+      onSwap: swapAction(for: .global(.recording)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .recording) }
     )
 
@@ -496,6 +508,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .pauseResumeRecording),
       validationIssue: globalValidationIssues[.pauseResumeRecording],
+      onSwap: swapAction(for: .global(.pauseResumeRecording)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .pauseResumeRecording) }
     )
 
@@ -507,6 +520,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .togglePenRecording),
       validationIssue: globalValidationIssues[.togglePenRecording],
+      onSwap: swapAction(for: .global(.togglePenRecording)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .togglePenRecording) }
     )
 
@@ -518,6 +532,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .restartRecording),
       validationIssue: globalValidationIssues[.restartRecording],
+      onSwap: swapAction(for: .global(.restartRecording)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .restartRecording) }
     )
 
@@ -529,6 +544,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .deleteRecording),
       validationIssue: globalValidationIssues[.deleteRecording],
+      onSwap: swapAction(for: .global(.deleteRecording)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .deleteRecording) }
     )
   }
@@ -542,6 +558,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultAnnotate,
       isEnabled: globalEnabledBinding(for: .annotate),
       validationIssue: globalValidationIssues[.annotate],
+      onSwap: swapAction(for: .global(.annotate)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .annotate) }
     )
 
@@ -552,6 +569,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultVideoEditor,
       isEnabled: globalEnabledBinding(for: .videoEditor),
       validationIssue: globalValidationIssues[.videoEditor],
+      onSwap: swapAction(for: .global(.videoEditor)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .videoEditor) }
     )
 
@@ -562,6 +580,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultCloudUploads,
       isEnabled: globalEnabledBinding(for: .cloudUploads),
       validationIssue: globalValidationIssues[.cloudUploads],
+      onSwap: swapAction(for: .global(.cloudUploads)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .cloudUploads) }
     )
 
@@ -572,6 +591,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: nil,
       isEnabled: globalEnabledBinding(for: .pickColor),
       validationIssue: globalValidationIssues[.pickColor],
+      onSwap: swapAction(for: .global(.pickColor)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .pickColor) }
     )
 
@@ -582,6 +602,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultMeasureScreen,
       isEnabled: globalEnabledBinding(for: .measureScreen),
       validationIssue: globalValidationIssues[.measureScreen],
+      onSwap: swapAction(for: .global(.measureScreen)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .measureScreen) }
     )
 
@@ -592,6 +613,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultShortcutList,
       isEnabled: globalEnabledBinding(for: .shortcutList),
       validationIssue: globalValidationIssues[.shortcutList],
+      onSwap: swapAction(for: .global(.shortcutList)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .shortcutList) }
     )
   }
@@ -605,6 +627,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: .defaultHistory,
       isEnabled: globalEnabledBinding(for: .history),
       validationIssue: globalValidationIssues[.history],
+      onSwap: swapAction(for: .global(.history)),
       onShortcutChanged: { handleGlobalShortcutChange($0, for: .history) }
     )
 
@@ -653,6 +676,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: AnnotateShortcutManager.defaultCopyAndClose,
       isEnabled: annotateActionEnabledBinding(for: .copyAndClose),
       validationIssue: annotateActionValidationIssues[.copyAndClose],
+      onSwap: swapAction(for: .annotateAction(.copyAndClose)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .copyAndClose) }
     )
 
@@ -662,6 +686,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: AnnotateShortcutManager.defaultToggleSidebar,
       isEnabled: annotateActionEnabledBinding(for: .toggleSidebar),
       validationIssue: annotateActionValidationIssues[.toggleSidebar],
+      onSwap: swapAction(for: .annotateAction(.toggleSidebar)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .toggleSidebar) }
     )
 
@@ -672,6 +697,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: AnnotateShortcutManager.defaultTogglePin,
       isEnabled: annotateActionEnabledBinding(for: .togglePin),
       validationIssue: annotateActionValidationIssues[.togglePin],
+      onSwap: swapAction(for: .annotateAction(.togglePin)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .togglePin) }
     )
 
@@ -682,6 +708,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: AnnotateShortcutManager.defaultCloudUpload,
       isEnabled: annotateActionEnabledBinding(for: .cloudUpload),
       validationIssue: annotateActionValidationIssues[.cloudUpload],
+      onSwap: swapAction(for: .annotateAction(.cloudUpload)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .cloudUpload) }
     )
 
@@ -692,6 +719,7 @@ struct ShortcutsSettingsView: View {
       defaultShortcut: AnnotateShortcutManager.defaultAutoRedactSensitiveData,
       isEnabled: annotateActionEnabledBinding(for: .autoRedactSensitiveData),
       validationIssue: annotateActionValidationIssues[.autoRedactSensitiveData],
+      onSwap: swapAction(for: .annotateAction(.autoRedactSensitiveData)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .autoRedactSensitiveData) }
     )
   }
@@ -707,7 +735,8 @@ struct ShortcutsSettingsView: View {
         onChanged: { handleAnnotateToolShortcutChange($0, for: tool) },
         conflictingTool: conflictForTool(tool),
         context: toolContext(for: tool),
-        defaultShortcut: tool.defaultShortcut
+        defaultShortcut: tool.defaultShortcut,
+        onSwap: toolSwapAction(for: tool)
       )
     }
   }
@@ -1008,6 +1037,84 @@ struct ShortcutsSettingsView: View {
         }
       }
     )
+  }
+
+  // MARK: - Shortcut Swap
+
+  /// Swap closure for a combo row whose last rejection named another action as owner.
+  /// Supports global ↔ global, annotate action ↔ annotate action, and across the two.
+  private func swapAction(for editing: ShortcutSwapProposal.Owner) -> (() -> Void)? {
+    guard let proposal = validationIssue(for: editing)?.swapProposal,
+          case .combo(let requested) = proposal.value,
+          isComboOwner(proposal.owner) else { return nil }
+    return { performComboSwap(editing: editing, owner: proposal.owner, requested: requested) }
+  }
+
+  private func validationIssue(for owner: ShortcutSwapProposal.Owner) -> ShortcutValidationIssue? {
+    switch owner {
+    case .global(let kind): return globalValidationIssues[kind]
+    case .annotateAction(let kind): return annotateActionValidationIssues[kind]
+    case .quickAccessAction, .annotateTool: return nil
+    }
+  }
+
+  private func isComboOwner(_ owner: ShortcutSwapProposal.Owner) -> Bool {
+    switch owner {
+    case .global, .annotateAction: return true
+    case .quickAccessAction, .annotateTool: return false
+    }
+  }
+
+  private func currentComboShortcut(for owner: ShortcutSwapProposal.Owner) -> ShortcutConfig? {
+    switch owner {
+    case .global(let kind): return manager.shortcut(for: kind)
+    case .annotateAction(let kind): return annotateManager.shortcut(for: kind)
+    case .quickAccessAction, .annotateTool: return nil
+    }
+  }
+
+  @discardableResult
+  private func applyComboShortcut(_ config: ShortcutConfig?, to owner: ShortcutSwapProposal.Owner) -> Bool {
+    switch owner {
+    case .global(let kind): return handleGlobalShortcutChange(config, for: kind)
+    case .annotateAction(let kind): return handleAnnotateActionShortcutChange(config, for: kind)
+    case .quickAccessAction, .annotateTool: return false
+    }
+  }
+
+  /// Clears the owner first so no two actions ever hold the same combo, then hands the
+  /// requested combo to the edited row and the edited row's old combo to the owner.
+  private func performComboSwap(
+    editing: ShortcutSwapProposal.Owner,
+    owner: ShortcutSwapProposal.Owner,
+    requested: ShortcutConfig
+  ) {
+    let ownerOriginal = currentComboShortcut(for: owner)
+    let editingOriginal = currentComboShortcut(for: editing)
+    guard ownerOriginal == requested else { return }
+
+    applyComboShortcut(nil, to: owner)
+    guard applyComboShortcut(requested, to: editing) else {
+      applyComboShortcut(ownerOriginal, to: owner)
+      return
+    }
+    applyComboShortcut(editingOriginal, to: owner)
+  }
+
+  private func toolSwapAction(for tool: AnnotationToolType) -> (() -> Void)? {
+    guard let proposal = annotateToolValidationIssues[tool]?.swapProposal,
+          case .annotateTool(let ownerTool) = proposal.owner,
+          case .key(let requested) = proposal.value else { return nil }
+    return {
+      guard annotateManager.shortcut(for: ownerTool) == requested else { return }
+      let editingOriginal = annotateManager.shortcut(for: tool)
+      _ = handleAnnotateToolShortcutChange(nil, for: ownerTool)
+      guard handleAnnotateToolShortcutChange(requested, for: tool) else {
+        _ = handleAnnotateToolShortcutChange(requested, for: ownerTool)
+        return
+      }
+      _ = handleAnnotateToolShortcutChange(editingOriginal, for: ownerTool)
+    }
   }
 
   private func conflictForTool(_ tool: AnnotationToolType) -> AnnotationToolType? {
