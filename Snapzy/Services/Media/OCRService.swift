@@ -41,53 +41,26 @@ final class OCRService {
     let lastError: Error?
   }
 
-  private let ciContext = CIContext(options: [.cacheIntermediates: false])
   private let modelResolver = OCRModelResolver()
 
   private init() {}
 
   // MARK: - Image Normalization
 
-  /// Draw the image into a standard sRGB bitmap so Vision can read it.
-  /// This fixes `TextRecognition.CRImageReaderError` on images produced by
-  /// `SCScreenshotManager` and other IOSurface-backed sources.
-  private func normalizedImageForVision(_ image: CGImage) -> CGImage {
-    let width = image.width
-    let height = image.height
-    let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) ?? image.colorSpace ?? CGColorSpaceCreateDeviceRGB()
-    let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue
-
-    guard let context = CGContext(
-      data: nil,
-      width: width,
-      height: height,
-      bitsPerComponent: 8,
-      bytesPerRow: 0,
-      space: colorSpace,
-      bitmapInfo: bitmapInfo
-    ) else {
-      DiagnosticLogger.shared.log(
-        .warning,
-        .ocr,
-        "OCR image normalization failed; using original image",
-        context: ["width": "\(width)", "height": "\(height)"]
-      )
-      return image
+  /// ScreenCaptureKit images are sometimes backed by IOSurfaces or use color
+  /// spaces that Vision cannot read directly, producing CRImageReaderError.
+  /// Normalize to a standard sRGB bitmap (on the OCR work queue) before recognition.
+  private func normalizedImageForVision(_ image: CGImage) async -> CGImage {
+    if let normalized = await OCRWorkQueue.run({ VisionOCRWorker.normalizedImageForVision(image) }) {
+      return normalized
     }
-
-    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-
-    guard let normalized = context.makeImage() else {
-      DiagnosticLogger.shared.log(
-        .warning,
-        .ocr,
-        "OCR image normalization produced no output; using original image",
-        context: ["width": "\(width)", "height": "\(height)"]
-      )
-      return image
-    }
-
-    return normalized
+    DiagnosticLogger.shared.log(
+      .warning,
+      .ocr,
+      "OCR image normalization failed; using original image",
+      context: ["width": "\(image.width)", "height": "\(image.height)"]
+    )
+    return image
   }
 
   // MARK: - Engine Routing
@@ -104,10 +77,7 @@ final class OCRService {
   /// Built-in Apple Vision recognition with profile/language recovery passes.
   /// Kept intact for `VisionOCRProvider`; other engines plug in via `OCRProvider`.
   func recognizeWithVision(_ request: OCRRequest) async throws -> OCRResult {
-    // ScreenCaptureKit images are sometimes backed by IOSurfaces or use color
-    // spaces that Vision cannot read directly, producing CRImageReaderError.
-    // Normalize to a standard sRGB bitmap before recognition to avoid that.
-    let normalizedImage = normalizedImageForVision(request.image)
+    let normalizedImage = await normalizedImageForVision(request.image)
     let request = OCRRequest(
       image: normalizedImage,
       preferredLanguageIdentifier: request.preferredLanguageIdentifier,
@@ -130,7 +100,8 @@ final class OCRService {
     var bestCandidate = primaryPass.bestCandidate
     var lastError = primaryPass.lastError
 
-    if let enhancedImage = makeContrastEnhancedImage(from: request.image) {
+    let sourceImage = request.image
+    if let enhancedImage = await OCRWorkQueue.run({ VisionOCRWorker.makeContrastEnhancedImage(from: sourceImage) }) {
       let enhancedProfiles = uniqueProfiles(VisionOCRProfile.enhancedRecoveryProfiles(for: request, primary: profile))
       if !enhancedProfiles.isEmpty {
         let enhancedRequest = OCRRequest(
@@ -163,7 +134,8 @@ final class OCRService {
       }
     }
 
-    if request.contentType != .code, let verticalImage = VerticalCJKTextNormalizer.normalizedImage(from: request.image) {
+    if request.contentType != .code,
+      let verticalImage = await OCRWorkQueue.run({ VerticalCJKTextNormalizer.normalizedImage(from: sourceImage) }) {
       let verticalRequest = OCRRequest(
         image: verticalImage,
         preferredLanguageIdentifier: request.preferredLanguageIdentifier,
@@ -328,84 +300,62 @@ final class OCRService {
       ]
     )
 
-    return try await withCheckedThrowingContinuation { continuation in
-      var hasResumed = false
-      func resumeOnce(with result: Result<OCRResult, Error>) {
-        guard !hasResumed else { return }
-        hasResumed = true
-        continuation.resume(with: result)
-      }
-
-      let visionRequest = VNRecognizeTextRequest { visionRequest, error in
-        if let error {
-          DiagnosticLogger.shared.logError(.ocr, error, "OCR recognition failed", context: ["profile": profile.id])
-          resumeOnce(with: .failure(OCRError.recognitionFailed(error)))
-          return
-        }
-
-        guard let observations = visionRequest.results as? [VNRecognizedTextObservation] else {
-          resumeOnce(with: .failure(OCRError.noTextFound))
-          return
-        }
-
-        let lines = observations.compactMap { observation -> OCRTextLine? in
-          guard let candidate = self.bestTextCandidate(for: observation, request: request) else { return nil }
-          return OCRTextLine(
-            text: candidate.string,
-            confidence: candidate.confidence,
-            boundingBox: observation.boundingBox
-          )
-        }
-
-        guard !lines.isEmpty else {
-          DiagnosticLogger.shared.log(.warning, .ocr, "OCR completed: no text found", context: ["profile": profile.id])
-          resumeOnce(with: .failure(OCRError.noTextFound))
-          return
-        }
-
-        let orderedLines = self.sortLinesForReadingOrder(lines)
-        let resultText = self.formatText(from: orderedLines, request: request)
-        let averageConfidence = orderedLines.map(\.confidence).reduce(0, +) / Float(orderedLines.count)
-        let result = OCRResult(
-          engine: .vision,
-          profileID: profile.id,
-          text: resultText,
-          lines: orderedLines,
-          averageConfidence: averageConfidence
-        )
-
-        DiagnosticLogger.shared.log(
-          .info,
-          .ocr,
-          "OCR completed",
-          context: [
-            "profile": profile.id,
-            "lines": "\(lines.count)",
-            "chars": "\(resultText.count)",
-            "confidence": String(format: "%.3f", averageConfidence)
-          ]
-        )
-        resumeOnce(with: .success(result))
-      }
-
-      profile.configure(visionRequest)
-
-      let handler = VNImageRequestHandler(cgImage: request.image, options: [:])
-
-      do {
-        try handler.perform([visionRequest])
-      } catch {
-        DiagnosticLogger.shared.logError(.ocr, error, "OCR handler failed", context: ["profile": profile.id])
-        resumeOnce(with: .failure(OCRError.recognitionFailed(error)))
-      }
+    // Vision runs on the OCR work queue; only the cheap line ranking and
+    // formatting below happens back on the main actor.
+    let observations: [VisionTextObservation]
+    do {
+      observations = try await VisionOCRWorker.recognizeText(
+        in: request.image,
+        configuration: profile.recognitionConfiguration
+      )
+    } catch {
+      DiagnosticLogger.shared.logError(.ocr, error, "OCR handler failed", context: ["profile": profile.id])
+      throw OCRError.recognitionFailed(error)
     }
+
+    let lines = observations.compactMap { observation -> OCRTextLine? in
+      guard let candidate = bestTextCandidate(from: observation.candidates, request: request) else { return nil }
+      return OCRTextLine(
+        text: candidate.string,
+        confidence: candidate.confidence,
+        boundingBox: observation.boundingBox
+      )
+    }
+
+    guard !lines.isEmpty else {
+      DiagnosticLogger.shared.log(.warning, .ocr, "OCR completed: no text found", context: ["profile": profile.id])
+      throw OCRError.noTextFound
+    }
+
+    let orderedLines = sortLinesForReadingOrder(lines)
+    let resultText = formatText(from: orderedLines, request: request)
+    let averageConfidence = orderedLines.map(\.confidence).reduce(0, +) / Float(orderedLines.count)
+    let result = OCRResult(
+      engine: .vision,
+      profileID: profile.id,
+      text: resultText,
+      lines: orderedLines,
+      averageConfidence: averageConfidence
+    )
+
+    DiagnosticLogger.shared.log(
+      .info,
+      .ocr,
+      "OCR completed",
+      context: [
+        "profile": profile.id,
+        "lines": "\(lines.count)",
+        "chars": "\(resultText.count)",
+        "confidence": String(format: "%.3f", averageConfidence)
+      ]
+    )
+    return result
   }
 
   private func bestTextCandidate(
-    for observation: VNRecognizedTextObservation,
+    from candidates: [VisionTextCandidate],
     request: OCRRequest
-  ) -> VNRecognizedText? {
-    let candidates = observation.topCandidates(5)
+  ) -> VisionTextCandidate? {
     guard let topCandidate = candidates.first else { return nil }
     let preferredLanguage = AppLanguageManager.normalizedLanguageIdentifier(from: request.preferredLanguageIdentifier)
 
@@ -431,7 +381,7 @@ final class OCRService {
     }
   }
 
-  private func isViableDiacriticAlternative(_ candidate: VNRecognizedText, topCandidate: VNRecognizedText) -> Bool {
+  private func isViableDiacriticAlternative(_ candidate: VisionTextCandidate, topCandidate: VisionTextCandidate) -> Bool {
     guard candidate.confidence >= topCandidate.confidence - 0.28 else { return false }
 
     let candidateText = candidate.string.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -449,7 +399,7 @@ final class OCRService {
     return diacriticMarkCount(in: candidateText) >= diacriticMarkCount(in: topText)
   }
 
-  private func languageCandidateScore(_ candidate: VNRecognizedText, preferredLanguage: String?) -> Float {
+  private func languageCandidateScore(_ candidate: VisionTextCandidate, preferredLanguage: String?) -> Float {
     var score = candidate.confidence
     let text = candidate.string
 
@@ -693,35 +643,6 @@ final class OCRService {
 
   private var leadingInlinePunctuation: CharacterSet {
     CharacterSet(charactersIn: ",.;:!?)]}%")
-  }
-
-  private func makeContrastEnhancedImage(from image: CGImage) -> CGImage? {
-    let ciImage = CIImage(cgImage: image)
-
-    guard
-      let colorControls = CIFilter(name: "CIColorControls"),
-      let sharpen = CIFilter(name: "CISharpenLuminance")
-    else {
-      return nil
-    }
-
-    colorControls.setValue(ciImage, forKey: kCIInputImageKey)
-    colorControls.setValue(0, forKey: kCIInputSaturationKey)
-    colorControls.setValue(1.32, forKey: kCIInputContrastKey)
-    colorControls.setValue(0.02, forKey: kCIInputBrightnessKey)
-
-    guard let normalizedImage = colorControls.outputImage?.cropped(to: ciImage.extent) else {
-      return nil
-    }
-
-    sharpen.setValue(normalizedImage, forKey: kCIInputImageKey)
-    sharpen.setValue(0.45, forKey: kCIInputSharpnessKey)
-
-    guard let outputImage = sharpen.outputImage?.cropped(to: ciImage.extent) else {
-      return nil
-    }
-
-    return ciContext.createCGImage(outputImage, from: ciImage.extent)
   }
 
   private func meaningfulCharacterCount(in text: String) -> Int {

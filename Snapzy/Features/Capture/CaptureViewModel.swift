@@ -64,6 +64,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   private let fileAccessManager = SandboxFileAccessManager.shared
   private let tempCaptureManager = TempCaptureManager.shared
   private var isAreaSelectionActive = false
+  /// True from OCR area selection (mouse-up) until text recognition finishes.
+  private var isOCRProcessing = false
   private var activeAreaSelectionSessionID: UUID?
   private var lazyAreaSnapshotTasks: [CGDirectDisplayID: Task<Void, Never>] = [:]
   private var lazyAreaSnapshotFailedDisplayIDs = Set<CGDirectDisplayID>()
@@ -2407,6 +2409,14 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   // MARK: - OCR Capture
 
   func captureOCR() {
+    // A previous OCR is still capturing/recognizing: tell the user at the pointer
+    // instead of silently ignoring the shortcut (which reads as the app hanging).
+    if isOCRProcessing {
+      DiagnosticLogger.shared.log(.debug, .ocr, "captureOCR blocked: previous OCR still processing")
+      CursorBubbleController.shared.show(L10n.OCR.alreadyRunning)
+      return
+    }
+
     // Prevent multiple area captures
     if isAreaSelectionActive {
       DiagnosticLogger.shared.log(.debug, .ocr, "captureOCR blocked: area selection active")
@@ -2489,6 +2499,11 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
           // Secure pixels first: immediately after the snapshot is taken, dismiss the overlay.
           AreaSelectionController.shared.cancelSelection()
+          // Pixels are secured and the overlay is gone: release the shared capture lock now
+          // (as live area capture does) so other capture shortcuts work while OCR runs.
+          // `isOCRProcessing` alone guards against starting a second OCR.
+          self.isAreaSelectionActive = false
+          self.isOCRProcessing = true
 
           let progressToast = AppStatusBarController.shared.isMenuBarIconVisible
             ? nil
@@ -2503,7 +2518,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
           Task { @MainActor in
             var progressToastResolved = false
             defer {
-              self.isAreaSelectionActive = false
+              self.isOCRProcessing = false
               hiddenWindowSession.restore()
               if let progressToast, !progressToastResolved {
                 AppToastManager.shared.dismiss(progressToast)
@@ -2657,9 +2672,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
     let startTime = CFAbsoluteTimeGetCurrent()
 
     do {
-      let result = try await Task.detached(priority: .userInitiated) {
-        try await QRCodeService.shared.detect(in: image)
-      }.value
+      // QRCodeService runs Vision on the OCR work queue itself.
+      let result = try await QRCodeService.shared.detect(in: image)
 
       if result.hasCopyablePayloads || result.unsupportedPayloadCount > 0 {
         DiagnosticLogger.shared.log(

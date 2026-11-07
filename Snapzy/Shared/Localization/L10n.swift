@@ -8827,6 +8827,11 @@ nonisolated enum L10n {
       defaultValue: "Capturing...",
       comment: "Progress toast shown the moment an OCR capture starts, while the selected area is still being captured"
     )
+    static let alreadyRunning = string(
+      "ocr.already-running",
+      defaultValue: "Hang tight, still reading text…",
+      comment: "Friendly bubble that follows the pointer when the user triggers OCR capture again while a previous OCR capture is still processing"
+    )
     static let extractingContent = string(
       "ocr.extracting-content",
       defaultValue: "Extracting content...",

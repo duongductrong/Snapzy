@@ -8,7 +8,7 @@
 import CoreGraphics
 import Foundation
 
-enum VerticalCJKTextNormalizer {
+nonisolated enum VerticalCJKTextNormalizer {
   static func normalizedImage(from image: CGImage) -> CGImage? {
     guard image.height >= Int(Double(image.width) * 1.35), image.width >= 16, image.height >= 64 else {
       return nil

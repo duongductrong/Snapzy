@@ -14,63 +14,41 @@ nonisolated final class QRCodeService: Sendable {
 
   private init() {}
 
+  /// Runs barcode detection on the OCR work queue so the synchronous Vision
+  /// call never blocks the main thread or a Swift cooperative-pool thread.
   func detect(in image: CGImage) async throws -> QRCodeDetectionResult {
-    try await withCheckedThrowingContinuation { continuation in
-      var hasResumed = false
+    try await OCRWorkQueue.run { try Self.detectSynchronously(in: image) }
+  }
 
-      func resumeOnce(with result: Result<QRCodeDetectionResult, Error>) {
-        guard !hasResumed else { return }
-        hasResumed = true
-        continuation.resume(with: result)
+  private static func detectSynchronously(in image: CGImage) throws -> QRCodeDetectionResult {
+    let request = VNDetectBarcodesRequest()
+    request.symbologies = [.qr]
+
+    let handler = VNImageRequestHandler(cgImage: image, options: [:])
+    try handler.perform([request])
+
+    var unsupportedPayloadCount = 0
+    let detections = (request.results ?? []).compactMap { observation -> QRCodeDetection? in
+      guard observation.symbology == .qr else { return nil }
+      guard let payload = observation.payloadStringValue else {
+        unsupportedPayloadCount += 1
+        return nil
       }
 
-      let request = VNDetectBarcodesRequest { request, error in
-        if let error {
-          resumeOnce(with: .failure(error))
-          return
-        }
+      let trimmedPayload = payload.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !trimmedPayload.isEmpty else { return nil }
 
-        guard let observations = request.results as? [VNBarcodeObservation] else {
-          resumeOnce(with: .success(.empty))
-          return
-        }
-
-        var unsupportedPayloadCount = 0
-        let detections = observations.compactMap { observation -> QRCodeDetection? in
-          guard observation.symbology == .qr else { return nil }
-          guard let payload = observation.payloadStringValue else {
-            unsupportedPayloadCount += 1
-            return nil
-          }
-
-          let trimmedPayload = payload.trimmingCharacters(in: .whitespacesAndNewlines)
-          guard !trimmedPayload.isEmpty else { return nil }
-
-          return QRCodeDetection(
-            payload: payload,
-            boundingBox: observation.boundingBox,
-            classification: QRPayloadClassifier.classify(payload)
-          )
-        }
-
-        let orderedDetections = Self.sortInReadingOrder(Self.deduplicate(detections))
-        let result = QRCodeDetectionResult(
-          detections: orderedDetections,
-          unsupportedPayloadCount: unsupportedPayloadCount
-        )
-
-        resumeOnce(with: .success(result))
-      }
-
-      request.symbologies = [.qr]
-
-      let handler = VNImageRequestHandler(cgImage: image, options: [:])
-      do {
-        try handler.perform([request])
-      } catch {
-        resumeOnce(with: .failure(error))
-      }
+      return QRCodeDetection(
+        payload: payload,
+        boundingBox: observation.boundingBox,
+        classification: QRPayloadClassifier.classify(payload)
+      )
     }
+
+    return QRCodeDetectionResult(
+      detections: sortInReadingOrder(deduplicate(detections)),
+      unsupportedPayloadCount: unsupportedPayloadCount
+    )
   }
 
   private static func deduplicate(_ detections: [QRCodeDetection]) -> [QRCodeDetection] {
