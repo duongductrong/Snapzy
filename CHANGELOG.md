@@ -4,6 +4,22 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.4] - 2026-11-07
+
+### Features
+- Add share link style setting for cloud uploads (#702) (b5b63def)
+
+### Bug Fixes
+- carry share link style through cloud transfer and reset (#711) (ee306f47)
+
+### Chore
+- ci: force stapler onto TCP and allow re-publishing a merged release (#710) (ba7aa393)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @gtmcknight
+
 ## [2.2.0-beta.3] - 2026-11-07
 
 ### Bug Fixes
