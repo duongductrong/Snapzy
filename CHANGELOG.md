@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.5] - 2026-11-07
+
+### Features
+- Added Measure Screen ruler, Annotate Measure tool and snapzy measure CLI (#714) (865852eb)
+
+### Chore
+- docs: sync localized READMEs with the new README layout (#713) (11fe00e1)
+- docs: improve README readability (#706) (79c7acd9)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @tukuyomil032
+
 ## [2.2.0-beta.4] - 2026-11-07
 
 ### Features
