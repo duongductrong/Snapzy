@@ -204,6 +204,7 @@ enum SnapzyConfigurationExporter {
       writer.value("endpoint", defaults.string(forKey: PreferencesKeys.cloudEndpoint) ?? "")
       writer.value("custom_domain", defaults.string(forKey: PreferencesKeys.cloudCustomDomain) ?? "")
       writer.value("expire_time", defaults.string(forKey: PreferencesKeys.cloudExpireTime) ?? CloudExpireTime.day7.rawValue)
+      writer.value("share_link_style", CloudShareLinkStyle.stored(userDefaults: defaults).rawValue)
     }
     writer.value("uploads_window_position", CloudUploadFloatingPosition.stored(userDefaults: defaults).rawValue)
   }

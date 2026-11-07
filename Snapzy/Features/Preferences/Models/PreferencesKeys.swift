@@ -206,5 +206,6 @@ enum PreferencesKeys {
   static let cloudPasswordSkipped = "cloud.passwordSkipped"
   static let cloudUsageStatsCache = "cloud.usageStatsCache"
   nonisolated static let cloudUploadsFloatingPosition = "cloud.uploads.floatingPosition"
+  nonisolated static let cloudShareLinkStyle = "cloud.shareLinkStyle"
   static let cloudGoogleFolderId = "cloud.google.folderId"
 }

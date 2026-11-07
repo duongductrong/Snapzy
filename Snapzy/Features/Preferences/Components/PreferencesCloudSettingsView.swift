@@ -39,6 +39,8 @@ struct CloudSettingsView: View {
   @ObservedObject private var usageService = CloudUsageService.shared
   @AppStorage(PreferencesKeys.cloudUploadsFloatingPosition)
   private var uploadsWindowPosition: CloudUploadFloatingPosition = .defaultPosition
+  @AppStorage(PreferencesKeys.cloudShareLinkStyle)
+  private var shareLinkStyle: CloudShareLinkStyle = .defaultStyle
 
   @State private var isEditing = false
   @State private var showResetConfirmation = false
@@ -228,6 +230,7 @@ struct CloudSettingsView: View {
 
         if config.providerType != .googleDrive {
           cloudStatsSection
+          shareLinksSection
         }
       }
     }
@@ -269,6 +272,25 @@ struct CloudSettingsView: View {
 
   private var showsConfiguredView: Bool {
     !showPasswordInit && cloudManager.isConfigured && !isEditing
+  }
+
+  private var shareLinksSection: some View {
+    Section(L10n.CloudSettings.shareLinksSection) {
+      SettingRow(
+        title: L10n.CloudSettings.shareLinkStyleTitle,
+        description: L10n.CloudSettings.shareLinkStyleDescription
+      ) {
+        Picker("", selection: $shareLinkStyle) {
+          ForEach(CloudShareLinkStyle.allCases) { style in
+            Text(style.displayName).tag(style)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .fixedSize()
+        .frame(width: 140, alignment: .trailing)
+      }
+    }
   }
 
   private var uploadsWindowSection: some View {

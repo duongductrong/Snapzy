@@ -43,6 +43,36 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.object(forKey: PreferencesKeys.recordingFPS) as? Int, 60)
   }
 
+  func testImportAppliesCloudShareLinkStyle() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [cloud]
+    share_link_style = "short"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(CloudShareLinkStyle.stored(userDefaults: defaults), .short)
+  }
+
+  func testImportRejectsUnknownCloudShareLinkStyle() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [cloud]
+    share_link_style = "tiny"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.cloudShareLinkStyle))
+  }
+
   func testImportAppliesRecordingMaxResolution() {
     let defaults = UserDefaultsFactory.make()
     let source = """

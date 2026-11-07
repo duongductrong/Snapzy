@@ -367,6 +367,87 @@ final class CloudCoreTests: XCTestCase {
     XCTAssertEqual(mockSession.requests.first?.httpMethod, "DELETE")
   }
 
+  // MARK: - Object Keys
+
+  func testS3CloudProvider_generateObjectKey_short_isRandomAndUnderPrefix() {
+    let keys = (0..<1000).map { _ in
+      S3CloudProvider.generateObjectKey(fileName: "Snapzy_2026-11-04_15-27-49_181.png", style: .short)
+    }
+
+    for key in keys {
+      assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.png$"#)
+    }
+    XCTAssertEqual(Set(keys).count, keys.count)
+  }
+
+  func testS3CloudProvider_generateObjectKey_short_leavesFileNameOutOfTheKey() {
+    let key = S3CloudProvider.generateObjectKey(fileName: "Résumé C# (final) ?.mp4", style: .short)
+
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.mp4$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_short_withoutExtension() {
+    let key = S3CloudProvider.generateObjectKey(fileName: "capture", style: .short)
+
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_descriptive_keepsTheFormatForOrdinaryNames() {
+    let key = S3CloudProvider.generateObjectKey(fileName: "Snapzy_2026-11-04 at 15.27.49.png", style: .descriptive)
+
+    assertKey(key, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-snapzy_2026-11-04-at-15\.27\.49\.png$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_descriptive_sanitizesSpecialCharacters() {
+    let key = S3CloudProvider.generateObjectKey(fileName: "Résumé C# (final) ?.mp4", style: .descriptive)
+
+    assertKey(key, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-resume-c-final\.mp4$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_descriptive_spellsOtherScriptsInASCII() {
+    let vietnamese = S3CloudProvider.generateObjectKey(fileName: "Ảnh đẹp.png", style: .descriptive)
+    let chinese = S3CloudProvider.generateObjectKey(fileName: "微信.png", style: .descriptive)
+
+    assertKey(vietnamese, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-anh-dep\.png$"#)
+    assertKey(chinese, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-wei-xin\.png$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_descriptive_withoutUsableNameOrExtension() {
+    let noName = S3CloudProvider.generateObjectKey(fileName: "###.png", style: .descriptive)
+    let noExtension = S3CloudProvider.generateObjectKey(fileName: "capture", style: .descriptive)
+
+    assertKey(noName, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}\.png$"#)
+    assertKey(noExtension, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-capture$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_needsNoURLEncodingInEitherStyle() throws {
+    let fileNames = [
+      "a#b?c%d&e=f+g.png", "100% done.png", "Résumé C# (final) ?.mp4", "微信 截图.png", "🎉.gif",
+      "###.png", "capture", ".hidden", "trailing.", "weird.p#g", "two words.m p4",
+    ]
+
+    for style in CloudShareLinkStyle.allCases {
+      for fileName in fileNames {
+        let key = S3CloudProvider.generateObjectKey(fileName: fileName, style: style)
+
+        assertKey(key, matches: #"^snapzy/[0-9A-Za-z_-][0-9A-Za-z._-]*$"#)
+        let url = try XCTUnwrap(URL(string: "https://share.example.com/\(key)"))
+        XCTAssertEqual(url.path, "/\(key)")
+        XCTAssertNil(url.fragment)
+        XCTAssertNil(url.query)
+      }
+    }
+  }
+
+  private func assertKey(
+    _ key: String,
+    matches pattern: String,
+    file: StaticString = #filePath,
+    line: UInt = #line
+  ) {
+    XCTAssertNotNil(key.range(of: pattern, options: .regularExpression), key, file: file, line: line)
+  }
+
   // MARK: - Lifecycle 403 Graceful Handling
 
   func testS3CloudProvider_setExpiration_403getAndPut_graceful() async throws {

@@ -171,6 +171,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("endpoint", "")
     writer.value("custom_domain", "")
     writer.value("expire_time", CloudExpireTime.day7.rawValue)
+    writer.value("share_link_style", CloudShareLinkStyle.defaultStyle.rawValue)
     writer.value("uploads_window_position", CloudUploadFloatingPosition.defaultPosition.rawValue)
   }
 

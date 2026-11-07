@@ -533,6 +533,7 @@ extension PreferencesSearchEntry {
     let transfer = L10n.CloudSettings.transferSection
     let googleCredentials = L10n.CloudSettings.googleCredentialsSection
     let googleFolder = L10n.CloudSettings.googleFolderSection
+    let shareLinks = L10n.CloudSettings.shareLinksSection
     let uploadsWindow = L10n.CloudSettings.uploadsWindowSection
     return [
       .init(.cloud, section: provider, title: L10n.CloudSettings.provider,
@@ -571,6 +572,9 @@ extension PreferencesSearchEntry {
             keywords: ["google drive", "oauth"], anchored: false),
       .init(.cloud, section: googleFolder, title: L10n.CloudSettings.googleFolderName,
             detail: L10n.CloudSettings.googleFolderDescription, keywords: ["google drive"], anchored: false),
+      .init(.cloud, section: shareLinks, title: L10n.CloudSettings.shareLinkStyleTitle,
+            detail: L10n.CloudSettings.shareLinkStyleDescription,
+            keywords: ["share link", "url", "file name", "privacy"]),
       .init(.cloud, section: uploadsWindow, title: L10n.CloudSettings.uploadsWindowPositionTitle,
             detail: L10n.CloudSettings.uploadsWindowPositionDescription, keywords: ["upload progress", "placement"]),
     ]

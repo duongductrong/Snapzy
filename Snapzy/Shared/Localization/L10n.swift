@@ -5638,6 +5638,31 @@ nonisolated enum L10n {
       defaultValue: "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy).",
       comment: "Google Drive Folder Name description"
     )
+    static let shareLinksSection = string(
+      "cloud-settings.share-links-section",
+      defaultValue: "Share Links",
+      comment: "Section title for Cloud share link settings"
+    )
+    static let shareLinkStyleTitle = string(
+      "cloud-settings.share-link-style-title",
+      defaultValue: "Link Style",
+      comment: "Cloud settings title for choosing how new share links look"
+    )
+    static let shareLinkStyleDescription = string(
+      "cloud-settings.share-link-style-description",
+      defaultValue: "Short hides the file name and capture time from the link. Existing links don't change.",
+      comment: "Cloud settings description for choosing how new share links look"
+    )
+    static let shareLinkStyleDescriptive = string(
+      "cloud-settings.share-link-style-descriptive",
+      defaultValue: "Descriptive",
+      comment: "Share link style option: the link shows the capture time and file name"
+    )
+    static let shareLinkStyleShort = string(
+      "cloud-settings.share-link-style-short",
+      defaultValue: "Short",
+      comment: "Share link style option: the link is short and random"
+    )
     static let uploadsWindowSection = string(
       "cloud-settings.uploads-window-section",
       defaultValue: "Uploads Window",

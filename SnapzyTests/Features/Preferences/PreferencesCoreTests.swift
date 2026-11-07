@@ -32,6 +32,17 @@ final class PreferencesCoreTests: XCTestCase {
     XCTAssertEqual(CloudUploadFloatingPosition.stored(userDefaults: defaults), .center)
   }
 
+  func testCloudShareLinkStyleStored_readsValidValueAndFallsBackToDescriptive() throws {
+    let defaults = try makeDefaults()
+    XCTAssertEqual(CloudShareLinkStyle.stored(userDefaults: defaults), .descriptive)
+
+    defaults.set(CloudShareLinkStyle.short.rawValue, forKey: PreferencesKeys.cloudShareLinkStyle)
+    XCTAssertEqual(CloudShareLinkStyle.stored(userDefaults: defaults), .short)
+
+    defaults.set("invalid", forKey: PreferencesKeys.cloudShareLinkStyle)
+    XCTAssertEqual(CloudShareLinkStyle.stored(userDefaults: defaults), .descriptive)
+  }
+
   func testHistoryBackgroundStyleStored_readsValidValueAndFallsBackToDefault() throws {
     let defaults = try makeDefaults()
     XCTAssertEqual(HistoryBackgroundStyle.currentStoredStyle(userDefaults: defaults), .hud)

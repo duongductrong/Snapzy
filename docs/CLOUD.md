@@ -33,7 +33,7 @@ flowchart LR
 ```
 
 - `CloudProvider` protocol (`CloudProvider.swift`): `upload(fileURL:contentType:expireTime:existingKey:progress:)`, `generatePublicURL(for:)`, `delete(key:)`, `setExpiration(days:)`, `removeExpiration()`, `validate()`.
-- `S3CloudProvider`: pure-Foundation SigV4 signing (`AWSV4Signer`), path-style URLs, multipart above 50 MB (`S3MultipartUploader.multipartThreshold`, 10 MB parts), optional custom domain for public URLs. Objects under `snapzy/` prefix; lifecycle rule ID `snapzy-auto-expire`.
+- `S3CloudProvider`: pure-Foundation SigV4 signing (`AWSV4Signer`), path-style URLs, multipart above 50 MB (`S3MultipartUploader.multipartThreshold`, 10 MB parts), optional custom domain for public URLs. Objects live under the `snapzy/` prefix, named by the share link style (`CloudShareLinkStyle`): `snapzy/<timestamp>-<8 hex>-<name>.<ext>` for `descriptive` (default), `snapzy/<8 random base62 characters>.<ext>` for `short`. Names and extensions are reduced to URL-safe ASCII. Lifecycle rule ID `snapzy-auto-expire`.
 - `R2CloudProvider`: thin wrapper over S3 with `region = "auto"` and the account endpoint.
 - `GoogleDriveCloudProvider`: OAuth desktop flow via `GoogleDriveOAuthService` (NWListener loopback on `127.0.0.1`), uploads into a named folder (default `Snapzy`, cached folder ID), multipart for ≤5 MB else resumable, sets anyone-with-link reader permission. Lifecycle/expiration **unsupported** (`setExpiration`/`removeExpiration` are no-ops) → expire time forced to permanent for this provider.
 - `CloudManager` (`CloudManager.swift`): facade — non-secret config in UserDefaults (`cloud.*` keys), secrets in Keychain, upload orchestration with `isUploading`/`uploadProgress`, history record insert, thumbnail generation (200 px max-dimension JPEG in `Application Support/Snapzy/thumbnails/<recordUUID>.jpg`; video uploads get frame thumbnails).
@@ -56,6 +56,7 @@ flowchart LR
 - Save & Test: `validate()` credentials before persisting.
 - Configured state: masked summary (access key masked, "stored securely in Keychain") + Edit (password-gated) / Import / Export (`.snapzycloud`) / Reset.
 - Usage stats grid (`CloudUsageService`): ListObjectsV2 scan of the `snapzy/` prefix, 10-minute cache (`cloud.usageStatsCache`), monthly cost estimates — R2 $0.015/GB (10 GB free), S3 $0.023/GB (5 GB free); skipped for Google Drive.
+- Share link style pref (S3/R2, shown once configured): `cloud.shareLinkStyle` (`CloudShareLinkStyle`), `descriptive` by default. `short` hides the file name and capture time from new links. Re-uploads keep their existing key, and Google Drive is unaffected.
 - Uploads window position pref: `cloud.uploads.floatingPosition` (`CloudUploadFloatingPosition`).
 
 ## Cloud Uploads window
