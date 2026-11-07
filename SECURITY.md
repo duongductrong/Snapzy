@@ -65,16 +65,23 @@ because they currently grant or restrict anything.
 | --- | --- | --- |
 | Screen Recording | Yes | Core functionality — capturing the screen via ScreenCaptureKit |
 | Microphone | Optional | Recording system audio + voice in screen recordings |
+| Camera | Optional | Camera overlay in screen recordings |
 | Accessibility | Optional | Keystroke overlays and mouse click highlights during recording |
 
 All permissions are requested through standard macOS prompts and can be revoked at any time in **System Settings → Privacy & Security**.
 
 ## Data Handling
 
-- **Local-first** — All captures and recordings are stored locally. Cloud upload is opt-in and sends files only to **your own** cloud storage (AWS S3, Cloudflare R2, or Google Drive) — no third-party servers are involved.
-- **No telemetry** — No analytics, tracking, or usage data is collected.
-- **No accounts** — No sign-in, registration, or user accounts.
-- **Network usage** — Outbound requests are limited to Sparkle update checks (appcast over HTTPS) and user-initiated cloud uploads. Both can be disabled in Preferences.
+- **Local-first** — All captures and recordings are stored locally. Cloud uploads are opt-in and go to the user's selected storage provider (AWS S3, Cloudflare R2, or Google Drive). The selected provider receives the upload; it does not pass through Snapzy-operated relay servers.
+- **No telemetry** — Snapzy sends no analytics or tracking telemetry to Snapzy-operated servers. For S3/R2, it reads object counts, storage size, and lifecycle information from the selected provider to display cloud usage in the app; Google Drive usage is not queried.
+- **No Snapzy account required** — Snapzy itself requires no sign-in or registration. Connecting Google Drive requires authorizing a Google account.
+- **Network requests made by Snapzy** — The app itself makes requests only for:
+  - Sparkle update checks, which fetch the appcast over HTTPS from `raw.githubusercontent.com/duongductrong/Snapzy/master/appcast.xml`. Update archives are downloaded from URLs listed in the appcast (currently GitHub Releases) and verified with EdDSA. Automatic update checks can be disabled in Preferences.
+  - Google Drive OAuth token exchange and refresh requests to `oauth2.googleapis.com/token`, and account email requests to `www.googleapis.com/oauth2/v2/userinfo`.
+  - When cloud storage is configured and used, direct connections to AWS S3, Cloudflare R2, a user-configured S3-compatible endpoint, or Google Drive. S3/R2 requests validate credentials and the bucket, upload and delete files, read usage for the `snapzy/` prefix, and read, set/update, or remove Snapzy lifecycle rules. A custom endpoint uses the scheme in its configured URL.
+  - Google Drive API requests to `www.googleapis.com/drive/v3` and `www.googleapis.com/upload/drive/v3` to validate access, find or create the configured folder (default name: `Snapzy`), check a cached folder ID, upload or replace files, grant `anyone`/`reader` permission so anyone with a share link can read the file, and delete files. Resumable uploads continue to the session URL returned by Google. The selected provider receives uploaded files; Snapzy does not relay them through its own servers.
+  - Requests to a user-configured HTTP(S) OpenAI-compatible OCR endpoint when the user runs OCR or tests the connection. Recognition sends the captured image; a connection test sends a generated probe image. Built-in OCR uses Apple Vision on-device, and Snapzy does not download OCR models.
+- **Browser traffic** — Connecting Google Drive opens `accounts.google.com/o/oauth2/v2/auth` in the default browser. Snapzy receives Google's redirect through a local loopback listener at `127.0.0.1`. When the user opens a share link, chooses to open a URL found during OCR, or follows an external support, community, or sponsor link, macOS hands the URL to the default browser; the browser makes that request, not Snapzy.
 - **Passive QR decoding** — QR codes detected during OCR capture are decoded locally and copied only as plain text. Snapzy does not auto-open QR URLs, expand links over the network, execute commands, load WebViews, or place QR payloads on the pasteboard as file URLs.
 
 ## Command Line Tool (`snapzy`)
@@ -112,13 +119,13 @@ Known limits — this is a consent check inside one user account, not a sandbox:
 - **Keychain storage** — Cloud access keys, secret keys, and Google Drive OAuth refresh/access tokens are stored exclusively in the macOS Keychain, never in plaintext files or UserDefaults.
 - **Optional password protection** — Users can set a protection password for cloud credentials. The password is SHA-256 hashed before storage; no plaintext password is persisted.
 - **Manual encrypted transfer** — Users may export cloud credentials only through an explicit in-app action. Exported archives are encrypted with a user-supplied passphrase and are never uploaded or synced by Snapzy.
-- **No relay servers** — Uploads go directly from the app to your own storage endpoints (S3/R2 endpoints using AWS Signature V4, or Google Drive API using standard OAuth). Snapzy never proxies or stores files on its own infrastructure.
+- **No Snapzy-operated relay servers** — Uploads go directly from the app to the user's selected cloud provider (S3/R2 endpoints using AWS Signature V4, or Google Drive API using standard OAuth). The selected provider receives the files; Snapzy does not proxy or store them on its own infrastructure.
 
 ## Auto-Updates (Sparkle)
 
 Snapzy uses [Sparkle](https://sparkle-project.org/) for in-app updates:
 
-- Update checks are made over HTTPS against a signed appcast
+- Update checks fetch the appcast over HTTPS.
 - Downloaded updates are verified with EdDSA signatures before installation
 - Users can disable automatic update checks in Preferences
 
