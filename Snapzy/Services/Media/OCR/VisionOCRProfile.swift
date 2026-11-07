@@ -92,6 +92,17 @@ struct VisionOCRProfile {
     }
   }
 
+  /// Sendable copy of the request settings, for running Vision off the main actor.
+  var recognitionConfiguration: VisionRecognitionConfiguration {
+    VisionRecognitionConfiguration(
+      usesLanguageCorrection: usesLanguageCorrection,
+      recognitionLanguages: recognitionLanguages,
+      customWords: customWords,
+      minimumTextHeight: minimumTextHeight,
+      automaticallyDetectsLanguage: automaticallyDetectsLanguage
+    )
+  }
+
   func configure(_ request: VNRecognizeTextRequest) {
     request.recognitionLevel = .accurate
     request.usesLanguageCorrection = usesLanguageCorrection

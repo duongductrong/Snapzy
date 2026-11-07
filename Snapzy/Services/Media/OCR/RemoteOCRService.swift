@@ -92,7 +92,8 @@ struct RemoteOCRProvider: OCRProvider {
     guard let endpoint = Self.endpointURL(forBaseURL: model.baseURL) else {
       throw RemoteOCRError.invalidBaseURL
     }
-    guard let jpegData = Self.jpegData(from: image) else {
+    // JPEG + base64 encoding of a full screenshot is CPU-heavy; keep it off the main actor.
+    guard let imageBase64 = await OCRWorkQueue.run({ Self.jpegData(from: image)?.base64EncodedString() }) else {
       throw RemoteOCRError.imageEncodingFailed
     }
 
@@ -107,7 +108,7 @@ struct RemoteOCRProvider: OCRProvider {
       model: model.modelIdentifier,
       messages: [ChatCompletionMessage(role: "user", content: [
         .text(prompt),
-        .imageURL("data:image/jpeg;base64,\(jpegData.base64EncodedString())"),
+        .imageURL("data:image/jpeg;base64,\(imageBase64)"),
       ])]
     ))
 
@@ -174,7 +175,7 @@ struct RemoteOCRProvider: OCRProvider {
     return prompt
   }
 
-  private static func jpegData(from image: CGImage) -> Data? {
+  nonisolated private static func jpegData(from image: CGImage) -> Data? {
     autoreleasepool {
       NSBitmapImageRep(cgImage: image).representation(using: .jpeg, properties: [.compressionFactor: 0.9])
     }

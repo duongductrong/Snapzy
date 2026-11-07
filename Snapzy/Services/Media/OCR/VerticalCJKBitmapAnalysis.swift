@@ -8,12 +8,12 @@
 import CoreGraphics
 import Foundation
 
-enum VerticalCJKBitmapFormat {
+nonisolated enum VerticalCJKBitmapFormat {
   static let rgbaBitmapInfo = CGBitmapInfo.byteOrder32Big.rawValue
     | CGImageAlphaInfo.premultipliedLast.rawValue
 }
 
-struct VerticalCJKBitmap {
+nonisolated struct VerticalCJKBitmap {
   let width: Int
   let height: Int
   let bytesPerRow: Int
@@ -122,14 +122,14 @@ struct VerticalCJKBitmap {
   }
 }
 
-struct VerticalCJKForegroundRow {
+nonisolated struct VerticalCJKForegroundRow {
   let y: Int
   let hasInk: Bool
   let minX: Int
   let maxX: Int
 }
 
-struct VerticalCJKGlyphBand {
+nonisolated struct VerticalCJKGlyphBand {
   var startY: Int
   var endY: Int
   var minX: Int
@@ -162,7 +162,7 @@ struct VerticalCJKGlyphBand {
   }
 }
 
-struct VerticalCJKRGBColor {
+nonisolated struct VerticalCJKRGBColor {
   let red: Int
   let green: Int
   let blue: Int
