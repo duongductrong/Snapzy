@@ -482,6 +482,17 @@ final class CloudCoreTests: XCTestCase {
     assertKey(noExtension, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-capture$"#)
   }
 
+  func testS3CloudProvider_generateObjectKey_descriptive_cutsALongNameToFitTheKeyLimit() {
+    // A valid 249-byte macOS file name. Each ligature is spelled out in ASCII, which made
+    // the key 1,442 bytes, past the limit S3 and R2 accept.
+    let fileName = String(repeating: "\u{FDFA}", count: 83) + ".png"
+    let key = S3CloudProvider.generateObjectKey(fileName: fileName, style: .descriptive)
+
+    XCTAssertLessThanOrEqual(key.utf8.count, S3CloudProvider.maxObjectKeyLength)
+    XCTAssertGreaterThan(key.utf8.count, 1000)
+    assertKey(key, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-[0-9a-z._-]+\.png$"#)
+  }
+
   func testS3CloudProvider_generateObjectKey_needsNoURLEncodingInEitherStyle() throws {
     let fileNames = [
       "a#b?c%d&e=f+g.png", "100% done.png", "Résumé C# (final) ?.mp4", "微信 截图.png", "🎉.gif",
