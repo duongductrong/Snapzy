@@ -402,8 +402,9 @@ final class S3CloudProvider: CloudProvider {
         .trimmingCharacters(in: CharacterSet(charactersIn: "-."))
       id = name.isEmpty ? stem : "\(stem)-\(name)"
     case .short:
-      // 8 base62 characters (about 47 bits) from the system's secure random generator.
-      id = String((0..<8).compactMap { _ in objectIDAlphabet.randomElement() })
+      // 12 base62 characters (about 71 bits) from the system's secure random generator, so two
+      // uploads to one bucket practically never get the same key and overwrite each other.
+      id = String((0..<12).compactMap { _ in objectIDAlphabet.randomElement() })
     }
     return "\(objectPrefix)\(id)\(suffix)"
   }

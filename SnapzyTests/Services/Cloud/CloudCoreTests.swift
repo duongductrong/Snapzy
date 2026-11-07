@@ -437,7 +437,7 @@ final class CloudCoreTests: XCTestCase {
     }
 
     for key in keys {
-      assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.png$"#)
+      assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}\.png$"#)
     }
     XCTAssertEqual(Set(keys).count, keys.count)
   }
@@ -445,13 +445,13 @@ final class CloudCoreTests: XCTestCase {
   func testS3CloudProvider_generateObjectKey_short_leavesFileNameOutOfTheKey() {
     let key = S3CloudProvider.generateObjectKey(fileName: "Résumé C# (final) ?.mp4", style: .short)
 
-    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.mp4$"#)
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}\.mp4$"#)
   }
 
   func testS3CloudProvider_generateObjectKey_short_withoutExtension() {
     let key = S3CloudProvider.generateObjectKey(fileName: "capture", style: .short)
 
-    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}$"#)
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}$"#)
   }
 
   func testS3CloudProvider_generateObjectKey_descriptive_keepsTheFormatForOrdinaryNames() {
