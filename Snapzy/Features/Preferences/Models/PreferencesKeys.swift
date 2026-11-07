@@ -87,6 +87,11 @@ enum PreferencesKeys {
   static let colorPickerCopyFormat = "colorPicker.copyFormat"
   /// Recently picked colors, newest first, as hex strings.
   static let colorPickerRecentColors = "colorPicker.recentColors"
+  /// Screen Ruler unit (`ScreenRulerUnit` raw value, default points).
+  static let screenRulerUnit = "screenRuler.unit"
+  /// Screen Ruler edge tolerance: smallest per-channel step (0–64) treated as an edge on
+  /// noise-free UI (default 3); noisy backgrounds raise the threshold automatically.
+  static let screenRulerEdgeTolerance = "screenRuler.edgeTolerance"
   static let screenshotLastAreaRect = "screenshot.lastAreaRect"
   static let scrollingCaptureShowHints = "scrollingCapture.showHints"
   static let backgroundCutoutAutoCropEnabled = "backgroundCutout.autoCropEnabled"

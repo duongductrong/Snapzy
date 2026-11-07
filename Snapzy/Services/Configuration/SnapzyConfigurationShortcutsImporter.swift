@@ -420,6 +420,8 @@ private extension KeyboardShortcutManager {
       setHistoryShortcut(config)
     case .pickColor:
       setPickColorShortcut(config)
+    case .measureScreen:
+      setMeasureScreenShortcut(config)
     }
   }
 }

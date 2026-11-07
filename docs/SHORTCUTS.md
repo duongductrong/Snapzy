@@ -34,7 +34,7 @@ flowchart TD
 
 ## Global shortcut table
 
-All 21 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
+All 23 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortcutManager.swift`):
 
 | Kind | Action | Default |
 | --- | --- | --- |
@@ -60,6 +60,7 @@ All 21 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `delayedCapture` | Delayed Capture (countdown, then frozen area selection) | **unbound** |
 | `delayedFullscreen` | Delayed Fullscreen (countdown, then fullscreen screenshot) | **unbound** |
 | `pickColor` | Pick Color (live loupe, click copies the pixel's hex; pressing again cancels) | **unbound** |
+| `measureScreen` | Measure Screen (frozen screen ruler; pressing again cancels) | `⌥⇧M` |
 
 - The seven unbound-by-default kinds are seeded into the cleared set on first launch (`seedDefaultClearedShortcutsOnFirstLaunchIfNeeded`) so they never shadow existing user config. `pauseResumeRecordingShortcut` keeps the recommended ⌘⇧Space as its backing value, but resolves to `nil` via `shortcut(for:)` until the user binds it.
 - Editing UI: Settings → Shortcuts (see [PREFERENCES.md](PREFERENCES.md)).
@@ -177,6 +178,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://open/cloud-uploads` | Toggle Cloud Uploads window |
 | `snapzy://open/history` | Toggle History panel |
 | `snapzy://tools/pick-color` | Pick Color (aliases `pick-color`, `color-picker`) |
+| `snapzy://tools/measure` | Measure Screen / Screen Ruler (aliases `tools/ruler`, `measure`, `ruler`, `screen-ruler`, `measure-screen`) |
 | `snapzy://show/shortcuts` | Toggle shortcut cheat sheet |
 | `snapzy://settings` / `snapzy://settings?tab=<tab>` | Open Settings, optionally to a tab |
 

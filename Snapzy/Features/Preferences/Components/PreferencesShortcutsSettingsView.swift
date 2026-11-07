@@ -33,6 +33,7 @@ struct ShortcutsSettingsView: View {
   @State private var cloudUploadsShortcut: ShortcutConfig?
   @State private var shortcutListShortcut: ShortcutConfig?
   @State private var pickColorShortcut: ShortcutConfig?
+  @State private var measureScreenShortcut: ShortcutConfig?
   @State private var historyShortcut: ShortcutConfig?
   @State private var openEditorShortcut: ShortcutConfig?
   @State private var openEditorShortcutEnabled: Bool
@@ -99,6 +100,7 @@ struct ShortcutsSettingsView: View {
     _cloudUploadsShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .cloudUploads))
     _shortcutListShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .shortcutList))
     _pickColorShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .pickColor))
+    _measureScreenShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .measureScreen))
     _historyShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .history))
     _openEditorShortcut = State(initialValue: QuickAccessManager.shared.openEditorShortcut)
     _openEditorShortcutEnabled = State(initialValue: QuickAccessManager.shared.openEditorShortcutEnabled)
@@ -574,6 +576,16 @@ struct ShortcutsSettingsView: View {
     )
 
     ShortcutRecorderView(
+      label: L10n.Actions.measureScreen,
+      description: L10n.PreferencesShortcuts.measureScreenDescription,
+      shortcut: $measureScreenShortcut,
+      defaultShortcut: .defaultMeasureScreen,
+      isEnabled: globalEnabledBinding(for: .measureScreen),
+      validationIssue: globalValidationIssues[.measureScreen],
+      onShortcutChanged: { handleGlobalShortcutChange($0, for: .measureScreen) }
+    )
+
+    ShortcutRecorderView(
       label: L10n.Actions.showShortcutList,
       description: L10n.PreferencesShortcuts.shortcutListDescription,
       shortcut: $shortcutListShortcut,
@@ -821,8 +833,9 @@ struct ShortcutsSettingsView: View {
     cloudUploadsShortcut = .defaultCloudUploads
     shortcutListShortcut = .defaultShortcutList
     pickColorShortcut = nil
+    measureScreenShortcut = .defaultMeasureScreen
 
-    let toolsKinds: [GlobalShortcutKind] = [.annotate, .videoEditor, .cloudUploads, .shortcutList, .pickColor]
+    let toolsKinds: [GlobalShortcutKind] = [.annotate, .videoEditor, .cloudUploads, .shortcutList, .pickColor, .measureScreen]
     for kind in toolsKinds {
       globalShortcutEnabled[kind] = true
       manager.setShortcutEnabled(true, for: kind)
@@ -834,6 +847,7 @@ struct ShortcutsSettingsView: View {
     manager.setCloudUploadsShortcut(.defaultCloudUploads)
     manager.setShortcutListShortcut(.defaultShortcutList)
     manager.setPickColorShortcut(nil)
+    manager.setMeasureScreenShortcut(.defaultMeasureScreen)
 
     if refresh {
       manager.refreshShortcutRegistration()
@@ -1073,6 +1087,9 @@ struct ShortcutsSettingsView: View {
       case .pickColor:
         pickColorShortcut = config
         manager.setPickColorShortcut(config)
+      case .measureScreen:
+        measureScreenShortcut = config
+        manager.setMeasureScreenShortcut(config)
       }
 
       if kind.isSystemConflictRelevant {

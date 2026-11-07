@@ -281,6 +281,7 @@ struct MenuBarSettingsPreview: View {
     case .recordScreen: return .recording
     case .openAnnotate: return .annotate
     case .pickColor: return .pickColor
+    case .measureScreen: return .measureScreen
     case .editVideo: return .videoEditor
     case .cloudUploads: return .cloudUploads
     case .openHistory: return .history

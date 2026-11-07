@@ -78,6 +78,13 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(optionKey | shiftKey)
   )
 
+  /// Option + Shift + M (Measure Screen): sits with Smart Element's ⌥⇧4 as a screen-inspection
+  /// tool and avoids the system's ⌥⌘ bindings (⌥⌘M minimizes all windows).
+  static let defaultMeasureScreen = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_M),
+    modifiers: UInt32(optionKey | shiftKey)
+  )
+
   /// Cmd + Shift + 1
   static let defaultObjectCutout = ShortcutConfig(
     keyCode: UInt32(kVK_ANSI_1),
@@ -492,6 +499,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case objectCutout
   case history
   case pickColor
+  case measureScreen
 
   var isSystemConflictRelevant: Bool {
     switch self {
@@ -550,6 +558,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.openHistory
     case .pickColor:
       return L10n.Actions.pickColor
+    case .measureScreen:
+      return L10n.Actions.measureScreen
     }
   }
 }
@@ -580,6 +590,7 @@ enum ShortcutAction {
   case openShortcutList
   case openHistory
   case pickColor
+  case measureScreen
 }
 
 /// Protocol for handling shortcut events
@@ -621,6 +632,7 @@ final class KeyboardShortcutManager {
   private(set) var delayedCaptureShortcut: ShortcutConfig
   private(set) var delayedFullscreenShortcut: ShortcutConfig
   private(set) var pickColorShortcut: ShortcutConfig
+  private(set) var measureScreenShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var clearedShortcuts: Set<GlobalShortcutKind> = []
@@ -684,6 +696,7 @@ final class KeyboardShortcutManager {
   private var delayedCaptureHotkeyRef: EventHotKeyRef?
   private var delayedFullscreenHotkeyRef: EventHotKeyRef?
   private var pickColorHotkeyRef: EventHotKeyRef?
+  private var measureScreenHotkeyRef: EventHotKeyRef?
 
   /// Fn-containing bindings can't be expressed via Carbon `RegisterEventHotKey`;
   /// they are dispatched through key event monitors instead.
@@ -716,6 +729,7 @@ final class KeyboardShortcutManager {
   private let delayedCaptureHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464D), id: 22)     // "ZSFM"
   private let delayedFullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464E), id: 23) // "ZSFN"
   private let pickColorHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464F), id: 24)         // "ZSFO"
+  private let measureScreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4650), id: 25)     // "ZSFP"
 
   private var eventHandler: EventHandlerRef?
 
@@ -742,6 +756,7 @@ final class KeyboardShortcutManager {
   private let delayedCaptureShortcutKey = "delayedCaptureShortcut"
   private let delayedFullscreenShortcutKey = "delayedFullscreenShortcut"
   private let pickColorShortcutKey = "pickColorShortcut"
+  private let measureScreenShortcutKey = "measureScreenShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
   private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
   private let clearedShortcutsKey = PreferencesKeys.clearedGlobalShortcuts
@@ -769,6 +784,7 @@ final class KeyboardShortcutManager {
     delayedCaptureShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     delayedFullscreenShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     pickColorShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
+    measureScreenShortcut = .defaultMeasureScreen
     loadShortcuts()
     loadDisabledShortcuts()
     loadClearedShortcuts()
@@ -890,6 +906,7 @@ final class KeyboardShortcutManager {
     case .objectCutout: return objectCutoutShortcut
     case .history: return historyShortcut
     case .pickColor: return pickColorShortcut
+    case .measureScreen: return measureScreenShortcut
     }
   }
 
@@ -1046,6 +1063,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .pickColor) {
         pickColorShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update measure screen shortcut (default ⌥⇧M)
+  func setMeasureScreenShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .measureScreen) {
+        measureScreenShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -1221,6 +1249,11 @@ final class KeyboardShortcutManager {
     } else if let data = try? encoder.encode(pickColorShortcut) {
       UserDefaults.standard.set(data, forKey: pickColorShortcutKey)
     }
+    if clearedShortcuts.contains(.measureScreen) {
+      UserDefaults.standard.removeObject(forKey: measureScreenShortcutKey)
+    } else if let data = try? encoder.encode(measureScreenShortcut) {
+      UserDefaults.standard.set(data, forKey: measureScreenShortcutKey)
+    }
     if let annotateData = try? encoder.encode(annotateShortcut) {
       UserDefaults.standard.set(annotateData, forKey: annotateShortcutKey)
     }
@@ -1316,6 +1349,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: pickColorData)
     {
       pickColorShortcut = config
+    }
+    if let measureScreenData = UserDefaults.standard.data(forKey: measureScreenShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: measureScreenData)
+    {
+      measureScreenShortcut = config
     }
     if let annotateData = UserDefaults.standard.data(forKey: annotateShortcutKey),
       let config = try? decoder.decode(ShortcutConfig.self, from: annotateData)
@@ -1556,6 +1594,9 @@ final class KeyboardShortcutManager {
     case pickColorHotkeyID.id:
       actionName = "pick-color"
       action = .pickColor
+    case measureScreenHotkeyID.id:
+      actionName = "measure-screen"
+      action = .measureScreen
     default:
       return
     }
@@ -1718,6 +1759,12 @@ final class KeyboardShortcutManager {
       config: shortcut(for: .pickColor),
       hotkeyID: pickColorHotkeyID,
       ref: &pickColorHotkeyRef
+    )
+    registerShortcutIfNeeded(
+      kind: .measureScreen,
+      config: shortcut(for: .measureScreen),
+      hotkeyID: measureScreenHotkeyID,
+      ref: &measureScreenHotkeyRef
     )
 
     logRegistrationAudit()
@@ -1991,6 +2038,10 @@ final class KeyboardShortcutManager {
     if let ref = pickColorHotkeyRef {
       UnregisterEventHotKey(ref)
       pickColorHotkeyRef = nil
+    }
+    if let ref = measureScreenHotkeyRef {
+      UnregisterEventHotKey(ref)
+      measureScreenHotkeyRef = nil
     }
   }
 

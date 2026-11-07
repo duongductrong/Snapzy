@@ -698,6 +698,11 @@ nonisolated enum L10n {
       defaultValue: "Pick Color",
       comment: "Action title for picking a color from the screen and copying its hex value"
     )
+    static let measureScreen = string(
+      "action.measure-screen",
+      defaultValue: "Measure Screen",
+      comment: "Action title for the screen ruler that measures distances and sizes on screen"
+    )
     static let recordVideo = string(
       "action.record-video",
       defaultValue: "Record Video",
@@ -4341,6 +4346,11 @@ nonisolated enum L10n {
       "preferences-shortcuts.pick-color-description",
       defaultValue: "Magnify the screen, then click a pixel to copy its hex color",
       comment: "Description for the pick color shortcut"
+    )
+    static let measureScreenDescription = string(
+      "preferences-shortcuts.measure-screen-description",
+      defaultValue: "Freeze the screen, then measure gaps and sizes between edges",
+      comment: "Description for the measure screen (screen ruler) shortcut"
     )
     static let recordingSection = string(
       "preferences-shortcuts.recording-section",
@@ -8820,6 +8830,34 @@ nonisolated enum L10n {
       defaultValue: "Pick Again",
       comment: "Button on the Pick Color result window that starts another pick"
     )
+    static let screenRulerHint = string(
+      "screen-capture.screen-ruler-hint",
+      defaultValue: "Click to pin · Drag for a box · H/V lock axis · U units · C copy · Return save · Esc quit",
+      comment: "Hint bar on the Measure Screen overlay listing its mouse and keyboard controls"
+    )
+    static let screenRulerUnavailable = string(
+      "screen-capture.screen-ruler-unavailable",
+      defaultValue: "Couldn't read the screen to measure",
+      comment: "Toast shown when Measure Screen cannot snapshot the displays"
+    )
+
+    static func screenRulerCopied(_ value: String) -> String {
+      format(
+        "screen-capture.screen-ruler-copied",
+        defaultValue: "Copied %@",
+        comment: "Feedback on the Measure Screen overlay after a measurement is copied. %@ is the value, e.g. \"120 × 48 pt\".",
+        value
+      )
+    }
+
+    static func screenRulerTolerance(_ value: Int) -> String {
+      format(
+        "screen-capture.screen-ruler-tolerance",
+        defaultValue: "Edge tolerance: %lld",
+        comment: "Feedback on the Measure Screen overlay after [ or ] changes how different a pixel must be to count as an edge. %lld is 0–64.",
+        Int64(value)
+      )
+    }
 
     static func captureFailed(_ reason: String) -> String {
       format(

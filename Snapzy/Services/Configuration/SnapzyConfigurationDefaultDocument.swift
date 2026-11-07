@@ -302,6 +302,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .objectCutout: return .defaultObjectCutout
     case .history: return .defaultHistory
     case .pickColor: return nil
+    case .measureScreen: return .defaultMeasureScreen
     }
   }
 

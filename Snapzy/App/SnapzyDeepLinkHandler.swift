@@ -98,6 +98,8 @@ struct SnapzyDeepLinkHandler {
       HistoryFloatingManager.shared.toggle()
     case .pickColor:
       screenCaptureViewModel.pickColor()
+    case .measureScreen:
+      screenCaptureViewModel.measureScreen()
     case .showShortcuts:
       ShortcutOverlayManager.shared.toggle()
     case .openSettings(let tab):
@@ -127,6 +129,7 @@ enum SnapzyDeepLinkAction: Equatable {
   case openCloudUploads
   case openHistory
   case pickColor
+  case measureScreen
   case showShortcuts
   case openSettings(PreferencesTab?)
   init?(url: URL) {
@@ -181,6 +184,8 @@ enum SnapzyDeepLinkAction: Equatable {
       self = .openHistory
     case "tools/pick-color", "pick-color", "color-picker":
       self = .pickColor
+    case "tools/measure", "tools/ruler", "measure", "ruler", "screen-ruler", "measure-screen":
+      self = .measureScreen
     case "show/shortcuts", "shortcuts", "keyboard-shortcuts", "show-shortcuts":
       self = .showShortcuts
     case "settings", "preferences":
@@ -216,6 +221,7 @@ enum SnapzyDeepLinkAction: Equatable {
     case .openCloudUploads: return "openCloudUploads"
     case .openHistory: return "openHistory"
     case .pickColor: return "pickColor"
+    case .measureScreen: return "measureScreen"
     case .showShortcuts: return "showShortcuts"
     case .openSettings(let tab): return "openSettings(\(String(describing: tab)))"
     }
