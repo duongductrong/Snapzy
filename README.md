@@ -123,7 +123,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | ↳ Toggle manual/app window mode (`Application Capture`) | `A`      |
 | Repeat last area screenshot                              | `⌃⌘⇧4`   |
 | Area screenshot + inline annotate                        | `⇧⌘7`    |
-| Active Window Capture                                    | `⌘⇧9`    |
+| Active window capture                                    | `⇧⌘9`    |
 | Scrolling screenshot                                     | `⇧⌘6`    |
 | Screen recording (start/stop toggle)                     | `⇧⌘5`    |
 | Pause/Resume recording (optional, recommended `⌘⇧Space`) | _unset_  |
@@ -135,7 +135,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | Open Video Editor                                        | `⇧⌘E`    |
 | Open Cloud Uploads                                       | `⇧⌘L`    |
 | Show shortcuts list                                      | `⇧⌘K`    |
-| History panel toggle                                     | `⌘⇧H`    |
+| History panel toggle                                     | `⇧⌘H`    |
 
 ## Quick Access card actions
 
@@ -175,7 +175,7 @@ Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (s
 | Fullscreen screenshot  | `snapzy://capture/fullscreen`      |
 | Area screenshot        | `snapzy://capture/area`            |
 | Repeat area screenshot | `snapzy://capture/repeat-area`     |
-| Delayed area screenshot | `snapzy://capture/delayed`        |
+| Delayed area screenshot | `snapzy://capture/delayed`         |
 | Application window     | `snapzy://capture/application`     |
 | Active window          | `snapzy://capture/active-window`   |
 | Area annotate          | `snapzy://capture/area-annotate`   |

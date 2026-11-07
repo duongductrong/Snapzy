@@ -2,7 +2,7 @@
   <img src="./banner.png" width="200" height="200" alt="Snapzy バナー" />
 
   <h1>Snapzy</h1>
-  <p><strong>メニューバー常駐型、macOSネイティブなスクリーンショット、録画、注釈、編集アプリ</strong></p>
+  <p><strong>メニューバーから使える、macOS ネイティブのスクリーンショット・画面収録・注釈・編集アプリ</strong></p>
 
   <p>
     <a href="https://trendshift.io/repositories/24550" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24550" alt="duongductrong%2FSnapzy | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
@@ -12,8 +12,8 @@
     <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>、
     <a href="https://developer.apple.com/documentation/appkit">AppKit</a>、
     <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>、
-    <a href="https://developer.apple.com/documentation/vision">Vision</a>、および
-    <a href="https://sparkle-project.org/">Sparkle</a> を使用して構築されています
+    <a href="https://developer.apple.com/documentation/vision">Vision</a>、
+    <a href="https://sparkle-project.org/">Sparkle</a> で構築されています。
   </p>
 
   <p>
@@ -24,18 +24,22 @@
   </p>
 
   <p>
-    <a href="#features">機能</a> •
     <a href="#install">インストール</a> •
-    <a href="#raycast">Raycast</a> •
-    <a href="#cli">CLI</a> •
+    <a href="#uninstall">アンインストール</a> •
+    <a href="#quick-start">クイックスタート</a> •
+    <a href="#what-snapzy-can-do">Snapzy でできること</a> •
     <a href="#shortcuts">ショートカット</a> •
-    <a href="#development">開発</a> •
-    <a href="#documentation">ドキュメント</a> •
-    <a href="#community">コミュニティ</a> •
-    <a href="#security">セキュリティ</a> •
+    <a href="#quick-access-card-actions">クイックアクセスカードの操作</a> •
+    <a href="#command-line-tools">コマンドラインツール</a> •
+    <a href="#automation">自動化</a> •
+    <a href="#security-and-privacy">セキュリティとプライバシー</a> •
+    <a href="#more-details">詳細ドキュメント</a> •
     <a href="#contributing">コントリビュート</a> •
-    <a href="#contributors">貢献者</a> •
-    <a href="#acknowledgments">謝辞</a>
+    <a href="#contributors">コントリビューター</a> •
+    <a href="#featured-on">掲載実績</a> •
+    <a href="#star-history">Star 履歴</a> •
+    <a href="#acknowledgments">謝辞</a> •
+    <a href="#license">ライセンス</a>
   </p>
 
   <p>
@@ -51,136 +55,103 @@
   </p>
   <p>
     <a href="https://github.com/sponsors/duongductrong"><img alt="GitHub Sponsors" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4?style=flat&amp;logo=github" /></a>
-    <a href="https://ko-fi.com/duongductrong"><img alt="Ko-fi Donate" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
+    <a href="https://ko-fi.com/duongductrong"><img alt="Ko-fi で支援" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
   </p>
 </div>
 
-<a id="features"></a>
-
-## 機能
-
-- **スクリーンショット**: フルスクリーンまたは選択範囲のキャプチャ、手動選択／アプリケーションウインドウモードの切替（`Application Capture`、既定値は `A`）。通常はキャプチャ開始時に閉じる、すでに開いているサードパーティ製メニューバーのポップオーバーも選択時に視覚的に復元し、角丸の透明領域を保ったまま保存できる。保存前のインライン注釈付き範囲キャプチャ、ライブ結合プレビュー付きスクロールキャプチャ、ネイティブ通知で結果を表示する OCR テキスト抽出、安全な自動トリミングを任意で適用できる透明なオブジェクト切り抜き、ウインドウの影のキャプチャ（macOS 14+）、複数形式への書き出し（PNG/JPG/WebP）、デスクトップアイコン／ウィジェットの非表示、録画中のクイックスクリーンショットにも対応
-- **画面収録**: ビデオまたは GIF 出力、システム音声 + マイク、マウスクリックのハイライト、キーストロークオーバーレイ、画面上のライブ注釈、前回の範囲の記憶、GIF のリサイズ、Follow Mouse 編集用の Smart Camera メタデータ
-- **注釈エディタ**: 図形、矢印、テキスト、透かし、塗りつぶし矩形、ぼかし／ピクセル化、自動ローカル機密データマスキング、カウンター、距離とサイズの計測、曲線矢印のベジェ制御ハンドル調整、エッジスナップ付きトリミング（`⌘` で無効化）とコンテンツへのワンキー自動トリミング（`A`）、トリミング領域を考慮した自動トリミング対応の背景削除、3D レンダラーによるモックアップ背景、ズーム／パン（ピンチ + キーボード）、編集を続けるオプションとエディタ再アクティブ化動作を備えたアプリへのドラッグ、設定可能なツール／アクションショートカット
-- **キャプチャ後の設定**: 保存、Quick Access、クリップボードへのコピー、注釈に対するモード別アクションマトリクスと、独立したグローバルな背景削除時の自動トリミング切替（既定で有効）
-- **ビデオエディタ**: 視覚的なタイムライン + フレームストリップによるトリミング、自動フォーカス付きズーム区間（Follow Mouse）、壁紙背景 + 余白、カスタム書き出し寸法、アニメーション GIF ビューア、取り消し／やり直し
-- **Quick Access**: 各キャプチャ後に表示されるフローティングパネル。コピー、編集、アプリへのドラッグ、2本指スワイプでの閉じる操作、開く、削除を提供
-- **キャプチャ履歴**: 最近のスクリーンショット、ビデオ、GIF のフローティング履歴パネル + 完全なブラウザ。種類／時間フィルター、ファイル名検索、コピー／開く／削除のクイック操作、Annotate または Video Editor でのワンクリック再オープン、確定済みスクリーンショット編集の編集可能な注釈復元、設定可能なパネルレイアウトと保持ポリシー
-- **ショートカット**: キャプチャ、録画、注釈ツールのグローバルショートカットを完全に設定可能。ショートカットごとのオン／オフ制御とシステム競合の検出に対応
-- **オンボーディング**: スプラッシュ画面、初回起動時の言語選択、権限設定のガイド、初めて使うユーザー向けのショートカット設定
-- **ローカリゼーション**: 🇺🇸 English、🇻🇳 Vietnamese、🇨🇳 Simplified Chinese、🇹🇼 Traditional Chinese、🇪🇸 Spanish、🇯🇵 Japanese、🇰🇷 Korean、🇷🇺 Russian、🇫🇷 French、🇩🇪 German のアプリ内ローカリゼーションと、ネイティブ macOS のアプリごとの言語指定をサポート
-- **クラウドアップロード**: プライバシー優先の持ち込みストレージ方式。AWS S3 または Cloudflare R2 を使い、サードパーティサーバーは介在しない。Quick Access からスクリーンショット、ビデオ、GIF を、Annotate からスクリーンショットを手動アップロードできる。認証情報は macOS Keychain に保存され、任意のパスワードで保護できる。別の Mac でのセットアップを速める手動の暗号化済み認証情報インポート／エクスポート、アップロード履歴、設定可能な自動有効期限（1〜90日または無期限）、ライフサイクルルール、カスタムドメインにも対応
-- **高度な設定**: TOML のエクスポート／インポート、1回限りの設定フォルダ許可、デバウンスされたバックグラウンド同期、安全な開く前の同期、`~/.config/snapzy/config.toml` を介したポータブルな設定、dotfiles、バックアップ、マシン間セットアップのための起動時自動適用
-- **コマンドライン**: AI エージェントやスクリプト向けの `snapzy` コマンド。クリックなしでディスプレイ、ウインドウ（隠れていても）、範囲をキャプチャし、JSON と終了コードを返す。アプリごとに許可を確認
-- **アップデートと診断**: Sparkle によるアプリ内アップデート、診断ログバンドル付きの問題報告、キャッシュ管理
-- **プラットフォーム**: メニューバーアプリ、外観テーマ（ライト／ダーク／システム）、Hardened Runtime を有効にした Developer ID 署名済み・Apple 公証済みビルド、ユーザーが選択したフォルダ向けのセキュリティスコープ付きブックマーク
+Snapzy は、スクリーンショット、画面収録、注釈、編集をこなす macOS ネイティブのメニューバーアプリです。macOS 13.0 以降が必要です。
 
 <a id="install"></a>
 
 ## インストール
 
-> **macOS 13.0** 以降が必要です。
-
-### Homebrew
-
-```bash
+~~~bash
 brew install --cask snapzy
-```
+~~~
 
-### シェルスクリプト
+特定のバージョンをインストールする場合：
 
-```bash
-# Install a specific version
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.30.1/install.sh | bash
-```
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.1.0/install.sh | bash
+~~~
 
-### リリースをダウンロード
+[リリースページ](https://github.com/duongductrong/Snapzy/releases)からダウンロードすることもできます。Snapzy.app を /Applications（アプリケーションフォルダ）に移動して起動し、求められたら「画面収録」の権限を許可してください。macOS から求められた場合は、アプリを再起動してください。マイクとカメラの権限は、それぞれを録画の入力として使う場合にのみ必要です。Snapzy は署名済みで、Apple による公証を受けています。
 
-1. [Releases](https://github.com/duongductrong/Snapzy/releases) を開く
-2. 最新のパッケージ済みアプリ資産（通常は `Snapzy-v<version>.dmg`）をダウンロードする
-3. `Snapzy.app` を `/Applications` へ移動する
-4. Snapzy を起動する
-5. System Settingsで求められたら**画面収録とシステムオーディオ録音**の権限を許可する
-6. macOS から求められた場合は、**画面収録とシステムオーディオ録音**を許可した後にSnapzyを再起動する
-7. 録画で音声入力を使う場合は、Microphone 権限も許可する
-
-> Snapzy は Apple による署名と公証を受けています。追加の手順なしで macOS から開けます。
+<a id="uninstall"></a>
 
 ## アンインストール
 
-Snapzyを完全に削除し、すべての権限をリセットしてアプリデータを消去するには、以下のコマンドを実行します。
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninstall.sh | bash
-```
+~~~
 
-またはリポジトリをクローンしている場合は、次を実行します。
+アンインストール中に、Application Support フォルダを削除するかどうかをスクリプトが確認します。このフォルダには一時的なキャプチャや録画が含まれている場合があります。フォルダを残す場合は n と答えてください。アンインストールせずに権限だけをリセットするには、次を実行します：
 
-```bash
-./uninstall.sh
-```
-
-これにより`/Applications`からアプリが削除され、環境設定とキャッシュが削除され、TCC権限（Screen Recording、Microphone、Accessibility）がリセットされます。権限の変更を完全に反映するには、ログアウトまたは再起動が必要になる場合があります。
-
-### 権限をリセット
-
-アプリをアンインストールせずに TCC 権限（Screen Recording、Microphone、Accessibility）のみをリセットする場合は、以下のコマンドを実行します。
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-permissions.sh | bash
-```
+~~~
 
-またはリポジトリをクローンしている場合は、次を実行します。
+<a id="quick-start"></a>
 
-```bash
-./reset-permissions.sh
-```
+## クイックスタート
 
-<a id="raycast"></a>
+1. ⇧⌘4 で範囲を、⇧⌘3 で全画面をキャプチャします。
+2. クイックアクセス（Quick Access）カードから、結果のコピー、注釈、編集、ドラッグ、アップロードができます。
+3. 履歴（History）を開くと、最近のスクリーンショット、ビデオ、GIF を探して再利用できます。
 
-## Raycast
+<a id="what-snapzy-can-do"></a>
 
-公式拡張機能を使ってRaycastからSnapzyを直接操作できます。
+## Snapzy でできること
 
-<a href="https://www.raycast.com/chkzz/snapzy" title="Install snapzy Raycast Extension"><img src="https://www.raycast.com/chkzz/snapzy/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="" /></a>
+- **キャプチャ**
+  - 全画面、選択範囲、アプリのウィンドウ、またはスマート要素（Smart Element）をキャプチャできます。開いているサードパーティ製メニューバーのポップオーバーもキャプチャでき、スクロールするコンテンツはライブプレビューを見ながら 1 枚の画像に結合できます。
+  - 内蔵の Apple Vision OCR、または設定した OpenAI 互換エンドポイントでテキストを抽出できます。ライブルーペでピクセルの色を取得し、HEX、RGB、HSL、HSB、CMYK、OKLCH、SwiftUI 形式でコピーできます。被写体の切り抜きにも対応し、安全な自動トリミングも選べます。
+  - Screen Ruler で画面上の間隔やサイズを測定できます。エッジ間にカーソルを合わせる、コンテンツにスナップするボックスをドラッグする、測定値をピン留め・コピーする、測定値を描き込んだスクリーンショットを保存する、といった操作に対応しています。
+- **画面収録**
+  - 画面全体またはアプリをビデオとして収録できます。システムオーディオとマイク入力も任意で含められ、GIF として保存することもできます。
+  - カメラオーバーレイ（iPhone の連係カメラにも対応）、マウスクリックとキー入力のハイライト、画面上でのライブ注釈を追加できます。
+- **注釈と編集**
+  - 矢印、図形、テキスト、透かし、ぼかし、ピクセル化を追加できます。機密データはデバイス上で検出してマスクできます。
+  - 測定ツール（`U`）で画像内の距離やサイズを測れます。測定値は編集でき、書き出し画像にも含まれます。
+  - 画像のトリミング、背景の削除、3D モックアップの作成ができます。ビデオのカット、ズーム区間や速度変更区間の追加、「マウスに追従」（Follow Mouse）によるカーソルの追尾にも対応しています。
+- **クイックアクセスと履歴**
+  - フローティング表示されるクイックアクセスカードから、キャプチャのコピー、編集、ドラッグ、アップロードができます。スクリーンショットを画面にピン留めすることもできます。
+  - スクリーンショット、ビデオ、GIF をファイル名・種類・日時で検索し、エディタで開き直せます。
+- **クラウドアップロード**
+  - クイックアクセス、注釈（Annotate）、ビデオエディタ（Video Editor）、履歴から、AWS S3、Cloudflare R2、Google Drive へ手動でアップロードできます。
+  - ファイルは選択したプロバイダーに直接アップロードされます。キャプチャ後の自動アップロードは行わず、Snapzy 独自のサーバーを経由することもありません。
+- **アプリの言語**: macOS ネイティブのアプリ別言語設定に対応し、英語、ベトナム語、簡体字中国語、繁体字中国語、スペイン語、日本語、韓国語、ロシア語、フランス語、ドイツ語の 10 言語を利用できます。
 
 <a id="shortcuts"></a>
 
-## CLI
-
-Snapzy には `snapzy` コマンドが付属しており、AI エージェントやスクリプトがクリックなしでキャプチャし、ファイルパス、JSON メタデータ、終了コードを受け取れます:
-
-```bash
-snapzy list windows --app Safari
-snapzy capture window --app Safari --max-dimension 1568 -o shot.png
-snapzy capture area --rect 0,0,800,600 -o area.png
-snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
-```
-
-コマンドは `/Applications/Snapzy.app/Contents/Helpers/snapzy` にあります。**設定 → 詳細 → コマンドライン → インストール** で `PATH` に追加できます。アプリが初めて使うとき、Snapzy はそのアプリを許可するか確認します。詳細: [docs/CLI.md](docs/CLI.md)。
-
 ## ショートカット
 
-| 操作                                                    | ショートカット |
-| ------------------------------------------------------- | -------------- |
-| フルスクリーンショット                     | `⇧⌘3`         |
-| 範囲選択スクリーンショット                               | `⇧⌘4`         |
-| ↳ 手動／アプリケーションウインドウモードを切り替え（`Application Capture`） | `A`           |
-| 範囲選択スクリーンショット + インライン注釈              | `⇧⌘7`         |
-| スクロールスクリーンショット                           | `⇧⌘6`         |
-| 画面収録（開始／停止の切り替え）                        | `⇧⌘5`         |
-| 録画を一時停止／再開（任意、推奨は `⌘⇧Space`）         | _未設定_      |
-| OCRテキストキャプチャ                                 | `⇧⌘2`         |
-| オブジェクト切り抜きキャプチャ                         | `⇧⌘1`         |
-| スマート要素キャプチャ                                 | `⌥⇧4`         |
-| 画面注釈を開く                                        | `⇧⌘A`         |
-| ビデオエディターを開く                                    | `⇧⌘E`         |
-| クラウドアップロード画面を開く                                   | `⇧⌘L`         |
-| ショートカット一覧を表示                               | `⇧⌘K`         |
+| 操作                                                       | ショートカット |
+| ---------------------------------------------------------- | -------------- |
+| 全画面キャプチャ                                           | `⇧⌘3`          |
+| 領域キャプチャ                                             | `⇧⌘4`          |
+| ↳ 手動選択／アプリウィンドウモードの切り替え（`Application Capture`） | `A` |
+| 同じ領域を再撮影                                           | `⌃⌘⇧4`         |
+| マークアップキャプチャ（範囲を選択してその場で注釈）       | `⇧⌘7`          |
+| アクティブウィンドウを撮影                                 | `⇧⌘9`          |
+| スクロールキャプチャ                                       | `⇧⌘6`          |
+| 画面収録（開始／停止の切り替え）                           | `⇧⌘5`          |
+| 録画の一時停止／再開（任意、推奨 `⌘⇧Space`）               | _未設定_       |
+| テキストを抽出（OCR）                                      | `⇧⌘2`          |
+| 被写体の切り抜き                                           | `⇧⌘1`          |
+| スマート要素キャプチャ                                     | `⌥⇧4`          |
+| 画面を測定（スクリーンルーラー）                           | `⌥⇧M`          |
+| 注釈を開く                                                 | `⇧⌘A`          |
+| ビデオエディタを開く                                       | `⇧⌘E`          |
+| クラウドアップロードを開く                                 | `⇧⌘L`          |
+| ショートカットリストを表示                                 | `⇧⌘K`          |
+| 履歴パネルの表示／非表示                                   | `⇧⌘H`          |
 
-### クイックアクセスカードの操作
+<a id="quick-access-card-actions"></a>
 
-クイックアクセスカードにカーソルを重ねてキーを押します。ポインタがカード上にある間のみ有効です。
+## クイックアクセスカードの操作
+
+クイックアクセスカードにポインタを重ねてから、キーを押します。ポインタがカードの上にあるときだけ有効です。
 
 | 操作 | ショートカット |
 | ---- | -------------- |
@@ -188,135 +159,124 @@ snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 | 保存 / 開く | `⌘S` |
 | 編集 | `⌘E` |
 | クラウドにアップロード | `⌘U` |
-| 画面にピン留め | `⌘P` |
+| スクリーンショットを画面にピン留め | `⌘P` |
 | 削除 | `⌘⌫` |
 | 閉じる | `⌘W` |
+
+<a id="command-line-tools"></a>
+
+## コマンドラインツール
+
+`snapzy` ヘルパーは `/Applications/Snapzy.app/Contents/Helpers/snapzy` にあります。**設定 → コマンドライン** で **インストール** をクリックすると、`PATH` に追加できます。
+
+アクセスは、コマンドを呼び出すアプリごとに許可します。`snapzy status` 以外のコマンドはすべて、許可済みの呼び出し元アプリからのみ実行できます。一度許可すると、そのアプリからの以降のコマンドで確認が繰り返し表示されることはありません。
+
+~~~bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
+~~~
+
+詳しくは [CLI リファレンス](docs/CLI.md) を参照してください。
 
 <a id="automation"></a>
 
 ## 自動化
 
-Snapzyは `snapzy://` URL schemeを登録しているため、ランチャーや自動化ツール（[Raycast Extension](https://www.raycast.com/chkzz/snapzy)、Alfred、カスタムスクリプトなど）からキャプチャ操作を起動できます。この連携は **Settings -> Advanced -> URL Scheme integration** でオン／オフを切り替えられます。
+Snapzy は `snapzy://` URL スキームを登録しているため、ランチャーや自動化ツール（[Raycast 拡張機能](https://www.raycast.com/chkzz/snapzy)、Alfred、独自スクリプトなど）からキャプチャ操作を実行できます。この連携は **設定 → 詳細 → URLスキーム** でオン／オフを切り替えられます。
 
-| 操作                            | URL                               |
-| ------------------------------- | --------------------------------- |
-| フルスクリーンショット | `snapzy://capture/fullscreen`     |
-| 範囲選択スクリーンショット       | `snapzy://capture/area`           |
-| アプリケーションウインドウキャプチャ    | `snapzy://capture/application`    |
-| アクティブウインドウのキャプチャ           | `snapzy://capture/active-window`  |
-| 選択範囲への注釈                    | `snapzy://capture/area-annotate`  |
-| スクロールスクリーンショット   | `snapzy://capture/scrolling`      |
-| OCRテキストキャプチャ          | `snapzy://capture/ocr`            |
-| スマート要素選択キャプチャ          | `snapzy://capture/smart-element`  |
-| オブジェクト切り抜きキャプチャ  | `snapzy://capture/object-cutout`  |
-| 画面収録                        | `snapzy://record/screen`          |
-| アプリケーションの録画          | `snapzy://record/application`     |
-| 画面注釈を開く                 | `snapzy://open/annotate`          |
-| 画像を結合                      | `snapzy://open/combine`           |
-| ビデオエディターを開く             | `snapzy://open/video-editor`      |
-| クラウドアップロード画面を開く            | `snapzy://open/cloud-uploads`     |
-| キャプチャ履歴を開く            | `snapzy://open/history`           |
-| ショートカット一覧を表示        | `snapzy://show/shortcuts`         |
-| 設定画面を開く                 | `snapzy://settings`               |
-| Settingsのタブを開く           | `snapzy://settings?tab=annotate`  |
+| 操作                         | URL                                |
+| ---------------------------- | ---------------------------------- |
+| 全画面キャプチャ             | `snapzy://capture/fullscreen`      |
+| 領域キャプチャ               | `snapzy://capture/area`            |
+| 同じ領域を再撮影             | `snapzy://capture/repeat-area`     |
+| 遅延領域キャプチャ           | `snapzy://capture/delayed`         |
+| アプリのウィンドウをキャプチャ | `snapzy://capture/application`   |
+| アクティブウィンドウを撮影   | `snapzy://capture/active-window`   |
+| マークアップキャプチャ       | `snapzy://capture/area-annotate`   |
+| スクロールキャプチャ         | `snapzy://capture/scrolling`       |
+| テキストを抽出（OCR）        | `snapzy://capture/ocr`             |
+| スマート要素キャプチャ       | `snapzy://capture/smart-element`   |
+| 被写体の切り抜き             | `snapzy://capture/object-cutout`   |
+| 画面収録                     | `snapzy://record/screen`           |
+| アプリ録画                   | `snapzy://record/application`      |
+| 注釈を開く                   | `snapzy://open/annotate`           |
+| 画像を結合                   | `snapzy://open/combine`            |
+| ビデオエディタを開く         | `snapzy://open/video-editor`       |
+| クラウドアップロードを開く   | `snapzy://open/cloud-uploads`      |
+| キャプチャ履歴を開く         | `snapzy://open/history`            |
+| カラーを取得                 | `snapzy://tools/pick-color`        |
+| 画面を測定                   | `snapzy://tools/measure`           |
+| ショートカットリストを表示   | `snapzy://show/shortcuts`          |
+| 設定を開く                   | `snapzy://settings`                |
+| 設定の特定タブを開く         | `snapzy://settings?tab=annotate`   |
 
-`snapzy://open/combine` は画像ピッカーを開きます。自動化ツールは、URLエンコードしたローカルパスを `file` パラメータとして2つ以上繰り返し指定することで、ピッカーをスキップできます。
+`snapzy://open/combine` は画像ピッカーを開きます。自動化ツールから、URL エンコードしたローカルパスを 2 つ以上、`file` パラメータを繰り返して渡すと、ピッカーを省略できます：
 
-```bash
+~~~bash
 open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
-```
+~~~
 
-<a id="development"></a>
+詳しくは [ショートカットと URL スキーム](docs/SHORTCUTS.md) を参照してください。
 
-## 開発
+<a id="security-and-privacy"></a>
 
-ローカルセットアップ、ソースビルド、初回の開発ワークフローは [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) から始めてください。
+## セキュリティとプライバシー
 
-archive、export、DMG パッケージングのコマンドが必要な場合は [docs/BUILD.md](docs/BUILD.md) を参照してください。コントリビュートのワークフローは [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
+Snapzy はサンドボックス化されておらず、起動したユーザーアカウントの権限で動作します。macOS の Hardened Runtime を有効にし、Developer ID で署名され、Apple の公証を受けています。ライブラリ検証も有効なため、Snapzy または Apple が署名したコードしか読み込まれません。キャプチャと録画はローカルに保存され、ユーザー自身の AWS S3、Cloudflare R2、Google Drive へのアップロードは、ユーザーが操作したときにのみ行われます。内蔵の OCR は Apple Vision によりデバイス上で処理されます。カスタムの OpenAI 互換 OCR エンドポイントを設定した場合は、キャプチャした画像を含む OCR リクエストがそのエンドポイントに送信されます。Snapzy はテレメトリを収集しません。
 
-<a id="documentation"></a>
+クラウドの認証情報、OAuth トークン、カスタム OCR の API キーは macOS のキーチェーンにのみ保存されます。クラウド認証情報を保護する任意のパスワードは SHA-256 でハッシュ化され、平文で保存されることはありません。クラウド認証情報は、パスフレーズで暗号化した手動のエクスポート／インポートでのみ移行でき、カスタム OCR の API キーは設定や認証情報のエクスポートに含まれません。ポータブルな TOML 設定ファイルには環境設定のみが含まれ、シークレット、キャプチャとアップロードの履歴、キャッシュ、CLI の許可情報、セキュリティスコープ付きブックマークは含まれません。ネットワークリクエストの詳細とセキュリティポリシーの全文は [SECURITY.md](SECURITY.md) を、ポータブルな設定については [設定ガイド](docs/CONFIGURATION.md) を参照してください。
 
-## ドキュメント
+脆弱性を報告する場合は、[GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) を利用するか、メンテナーに非公開で連絡してください。報告方法の詳細は [SECURITY.md](SECURITY.md) を参照してください。
 
-- [DeepWiki に質問（対話型ドキュメントアシスタント）](https://deepwiki.com/duongductrong/Snapzy)
-- [人間とエージェント向けのドキュメントマップ](docs/README.md)
-- [プロジェクト構造とランタイムアーキテクチャ](docs/STRUCTURE.md)
-- [アプリのライフサイクル、オンボーディング、メニューバー](docs/APP_LIFECYCLE.md)
-- キャプチャ: [スクリーンショットフロー](docs/CAPTURE.md) · [スクロールキャプチャ](docs/SCROLLING_CAPTURE.md) · [録画](docs/RECORDING.md) · [キャプチャ後の振り分け](docs/POST_CAPTURE.md)
-- エディタ: [Quick Access](docs/QUICK_ACCESS.md) · [キャプチャ履歴](docs/HISTORY.md) · [Annotate](docs/ANNOTATE.md) · [Video Editor](docs/VIDEO_EDITOR.md)
-- プラットフォーム: [クラウドアップロード](docs/CLOUD.md) · [ショートカットと URL scheme](docs/SHORTCUTS.md) · [設定リファレンス](docs/PREFERENCES.md) · [アップデートと診断](docs/UPDATES.md) · [コマンドライン](docs/CLI.md)
-- [TOML 設定のエクスポート／インポート](docs/CONFIGURATION.md)
-- [ビルドとパッケージングガイド](docs/BUILD.md)
-- [リリースとアップデートのワークフロー](docs/RELEASES.md)
-- [ローカル Sparkle アップデートテスト](docs/UPDATE_TESTING.md)
+<a id="more-details"></a>
 
-<a id="community"></a>
+## 詳細ドキュメント
 
-## コミュニティ
+以下の詳細ドキュメントは現在、英語版のみです。
 
-- サポート、フィードバック、議論は公式Snapzy Discordコミュニティへ参加してください: [https://discord.gg/xkWDAuJkZu](https://discord.gg/xkWDAuJkZu)
+- [キャプチャと OCR](docs/CAPTURE.md) · [スクロールキャプチャ](docs/SCROLLING_CAPTURE.md) · [画面収録](docs/RECORDING.md)
+- [注釈](docs/ANNOTATE.md) · [ビデオエディタ](docs/VIDEO_EDITOR.md) · [クイックアクセス](docs/QUICK_ACCESS.md) · [履歴](docs/HISTORY.md)
+- [クラウドアップロード](docs/CLOUD.md) · [ショートカットと URL スキーム](docs/SHORTCUTS.md) · [CLI](docs/CLI.md)
+- [設定と環境設定](docs/CONFIGURATION.md) · [環境設定リファレンス](docs/PREFERENCES.md) · [アップデートと診断](docs/UPDATES.md)
+- [開発](docs/DEVELOPMENT.md) · [ビルドとパッケージング](docs/BUILD.md) · [ドキュメントマップ](docs/README.md)
+- [OCR ベンチマークの結果と手法](docs/OCR_BENCHMARK.md)
+
+<a id="contributing"></a>
+
+## コントリビュート
+
+コントリビュートを歓迎します。プルリクエストを作成する前に [CONTRIBUTING.md](CONTRIBUTING.md) をお読みください。
+
+<a id="contributors"></a>
+
+## コントリビューター
+
+Snapzy に貢献してくださったすべての方に感謝します！
+
+<a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
+</a>
 
 <a id="featured-on"></a>
 
 ## 掲載実績
 
 <p>
-  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - CleanShot X を思わせる、オープンソースで開発者に優しいアプリ | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
-  <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Unikorn.vnで紹介されたSnapzy" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - Think CleanShot X, but open-source and developer-friendly | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
+  <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy trên Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
-## ベンチマーク
+<a id="star-history"></a>
 
-### OCR
-
-ベンチマーク日: 2026年4月19日。現在の OCR 数値は、クリーンな合成の折り返し済み UI／記事テキストコーパスに対して、`10 supported languages` 全体で `12 samples / language` を用い、`scripts/run-ocr-readme-benchmark.sh` から実行したものです。`Character accuracy` が主要な指標で、`exact match` は意図的に厳格に判定しています。このコーパスでの `no-output` は、下表のすべての言語で `0%` です。
-
-| 言語                | Character Accuracy | Exact Match |
-| ------------------- | -----------------: | ----------: |
-| English             |             100.0% |      100.0% |
-| Vietnamese          |             100.0% |      100.0% |
-| Simplified Chinese  |              99.3% |       75.0% |
-| Traditional Chinese |              99.0% |       66.7% |
-| Spanish             |              99.9% |       91.7% |
-| Japanese            |              99.4% |       66.7% |
-| Korean              |              99.7% |       83.3% |
-| Russian             |             100.0% |      100.0% |
-| French              |              99.3% |       33.3% |
-| German              |              99.8% |       75.0% |
-
-実際のスクリーンショットでは、特に絵文字、低コントラストのフッター、一般的でない句読点、グラデーション、ぼかし、装飾的なフォントが含まれる場合に、この数値より低くなることがあります。
-
-<a id="security"></a>
-
-## セキュリティ
-
-Snapzy はサンドボックス化されて**いません** — ユーザーアカウントの権限で動作します。macOS の Hardened Runtime を有効にし、Developer ID で署名され Apple の公証を受けており、宣言する entitlement は最小限です。ライブラリ検証（library validation）は有効なままなので、Snapzy または Apple が署名したコードしか読み込みません。ネットワーク要求は Sparkle のアップデート確認、ローカルループバックの OAuth コールバックリダイレクト、そして **あなた自身の** クラウドストレージ（AWS S3、Cloudflare R2、Google Drive）へのユーザー主導のクラウドアップロードに限られ、データがサードパーティサーバーへ送信されることはありません。クラウド認証情報と OAuth トークンは macOS Keychain のみに保存され、任意のパスワードでさらに保護できます（SHA-256 でハッシュ化され、平文では決して保存されません）。認証情報は、ユーザーが指定したアーカイブパスフレーズで保護された手動の暗号化エクスポート／インポートフローを介してのみ転送できます。Snapzy はテレメトリーを収集しません。
-
-脆弱性の報告には [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) を使うか、メンテナーへ非公開で連絡してください。詳細は [SECURITY.md](SECURITY.md) を参照してください。
-
-<a id="contributing"></a>
-
-## コントリビュート
-
-コントリビューションを歓迎します。プルリクエストを開く前に [CONTRIBUTING.md](CONTRIBUTING.md) を読んでください。
-
-<a id="contributors"></a>
-
-## 貢献者
-
-Snapzy に貢献してくださるすべての方々に感謝します！
-
-<a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
-</a>
-
-## スターの履歴
+## Star 履歴
 
 <a href="https://www.star-history.com/?repos=duongductrong%2FSnapzy&type=date&logscale=&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&theme=dark&logscale&legend=top-left" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
-   <img alt="スター履歴グラフ" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+   <img alt="Star 履歴グラフ" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
  </picture>
 </a>
 
@@ -324,8 +284,10 @@ Snapzy に貢献してくださるすべての方々に感謝します！
 
 ## 謝辞
 
-Snapzy は、macOS 向けの高度なスクリーンショットおよび画面収録アプリケーションである [CleanShot X](https://cleanshot.com/) に着想を得ています。
+Snapzy は、macOS 向けの高機能なスクリーンショット・画面収録アプリ [CleanShot X](https://cleanshot.com/) から着想を得ています。
+
+<a id="license"></a>
 
 ## ライセンス
 
-BSD 3-Clause License。詳細は [LICENSE](LICENSE) を参照してください。
+BSD 3-Clause License です。詳しくは [LICENSE](LICENSE) を参照してください。

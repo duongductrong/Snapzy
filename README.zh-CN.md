@@ -9,11 +9,11 @@
   </p>
 
   <p>
-    Built with <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>,
-    <a href="https://developer.apple.com/documentation/appkit">AppKit</a>,
-    <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>,
-    <a href="https://developer.apple.com/documentation/vision">Vision</a>, and
-    <a href="https://sparkle-project.org/">Sparkle</a>.
+    基于 <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>、
+    <a href="https://developer.apple.com/documentation/appkit">AppKit</a>、
+    <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>、
+    <a href="https://developer.apple.com/documentation/vision">Vision</a> 和
+    <a href="https://sparkle-project.org/">Sparkle</a> 构建。
   </p>
 
   <p>
@@ -24,19 +24,22 @@
   </p>
 
   <p>
-    <a href="#features">功能</a> •
     <a href="#install">安装</a> •
-    <a href="#raycast">Raycast</a> •
-    <a href="#cli">CLI</a> •
+    <a href="#uninstall">卸载</a> •
+    <a href="#quick-start">快速上手</a> •
+    <a href="#what-snapzy-can-do">功能一览</a> •
     <a href="#shortcuts">快捷键</a> •
+    <a href="#quick-access-card-actions">快速访问卡片操作</a> •
+    <a href="#command-line-tools">命令行工具</a> •
     <a href="#automation">自动化</a> •
-    <a href="#development">Development</a> •
-    <a href="#documentation">文档</a> •
-    <a href="#community">社区</a> •
-    <a href="#security">安全</a> •
-    <a href="#contributing">贡献</a> •
+    <a href="#security-and-privacy">安全与隐私</a> •
+    <a href="#more-details">更多文档</a> •
+    <a href="#contributing">参与贡献</a> •
     <a href="#contributors">贡献者</a> •
-    <a href="#acknowledgments">致谢</a>
+    <a href="#featured-on">推荐与收录</a> •
+    <a href="#star-history">Star 历史</a> •
+    <a href="#acknowledgments">致谢</a> •
+    <a href="#license">许可证</a>
   </p>
 
   <p>
@@ -47,145 +50,108 @@
   <p>
     <a href="https://deepwiki.com/duongductrong/Snapzy"><img alt="询问 DeepWiki" src="https://deepwiki.com/badge.svg" /></a>
     <a href="https://discord.gg/xkWDAuJkZu"><img alt="加入 Discord 社区" src="https://img.shields.io/badge/Discord-Join%20Community-5865F2?style=flat&amp;logo=discord&amp;logoColor=white" /></a>
-    <a href="https://www.raycast.com/chkzz/snapzy"><img alt="Raycast 插件" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
-    <a href="#featured-on"><img alt="已收录平台" src="https://img.shields.io/badge/Featured%20On-Product%20Hunt%20%2B%20Unikorn-111827?style=flat&amp;logo=producthunt&amp;logoColor=white" /></a>
+    <a href="https://www.raycast.com/chkzz/snapzy"><img alt="Raycast 扩展" src="https://img.shields.io/badge/Raycast-Extension-FF6363?style=flat&amp;logo=raycast&amp;logoColor=white" /></a>
+    <a href="#featured-on"><img alt="推荐与收录" src="https://img.shields.io/badge/Featured%20On-Product%20Hunt%20%2B%20Unikorn-111827?style=flat&amp;logo=producthunt&amp;logoColor=white" /></a>
   </p>
   <p>
     <a href="https://github.com/sponsors/duongductrong"><img alt="GitHub Sponsors" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4?style=flat&amp;logo=github" /></a>
-    <a href="https://ko-fi.com/duongductrong"><img alt="Ko-fi Donate" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
+    <a href="https://ko-fi.com/duongductrong"><img alt="通过 Ko-fi 赞助" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
   </p>
 </div>
 
-<a id="features"></a>
-
-## 功能
-
-- **截图**：支持全屏或选区截图，并可在手动选区/应用窗口模式间切换（`Application Capture`，默认 `A`）；同时支持选区截图并实时标注（annotate before saving）、带实时拼接预览的滚动截图、OCR 文字提取（识别完成后弹出系统通知显示结果）、透明背景对象抠图并可选安全自动裁剪、窗口阴影保留（macOS 14+）、多格式导出（PNG/JPG/WebP）、隐藏桌面图标/小组件，以及录屏时快速截图
-- **屏幕录制**：支持视频或 GIF 导出、系统音频 + 麦克风、鼠标点击高亮、按键覆盖层、屏幕实时标注、记住上次区域、GIF 尺寸调整，以及用于 Follow Mouse 编辑的 Smart Camera 元数据
-- **标注编辑器**：提供形状、箭头、文本、水印、填充矩形、模糊/像素化、编号、测量距离与尺寸、裁剪、去背景与感知裁剪区域的自动裁剪、3D 渲染器模拟背景、缩放/平移（触控板捏合 + 键盘）、拖拽到其他应用，以及可配置工具快捷键
-- **截图后设置**：按模式分别配置保存、Quick Access、复制到剪贴板和标注动作矩阵，并为去背景提供独立的全局自动裁剪开关（默认开启）
-- **视频编辑器**：可视化时间线 + 帧条裁剪、自动聚焦的缩放片段（Follow Mouse）、壁纸背景 + 留白、自定义导出尺寸、动态图 GIF 查看器，以及撤销/重做
-- **Quick Access**：每次截图后弹出的悬浮面板，提供复制、编辑、拖拽到应用、打开和删除操作
-- **捕获历史**：提供悬浮历史面板和完整历史浏览器，可查看最近的截图、视频和 GIF，支持按类型/时间筛选、按文件名搜索、快速复制/打开/删除、一键重新在 Annotate 或 Video Editor 中打开，恢复已提交截图标注并继续编辑，并可配置面板布局与保留策略
-- **快捷键**：为截图、录制和标注工具提供完全可配置的全局快捷键，支持逐项启用/停用和系统冲突检测
-- **引导流程**：首次使用时提供启动页、语言选择、权限引导和快捷键配置
-- **本地化**：应用已提供 🇺🇸 English、🇻🇳 Vietnamese、🇨🇳 Simplified Chinese、🇹🇼 Traditional Chinese、🇪🇸 Spanish、🇯🇵 Japanese、🇰🇷 Korean、🇷🇺 Russian、🇫🇷 French 和 🇩🇪 German，并支持 macOS 原生按应用选择语言
-- **云上传**：坚持隐私优先的自带存储方案，支持 AWS S3 或 Cloudflare R2，不经过第三方服务器；可从 Quick Access 手动上传截图、视频和 GIF，也可从 Annotate 手动上传截图；凭据存储于 macOS Keychain，可选密码保护；支持手动加密导入/导出凭据，便于在另一台 Mac 上快速配置；同时提供上传历史、可配置自动过期（1–90 天或永久）、生命周期规则和自定义域名支持
-- **命令行**：面向 AI 代理和脚本的 `snapzy` 命令——无需点击即可截取显示器、窗口（即使被遮挡）或区域，返回 JSON 和退出码，并按应用请求授权
-- **更新与诊断**：内置 Sparkle 应用更新、带诊断日志包的问题报告和缓存管理
-- **平台特性**：菜单栏应用、浅色/深色/跟随系统主题、启用 Hardened Runtime 并经 Developer ID 签名与 Apple 公证，以及针对用户所选文件夹的安全作用域书签
+Snapzy 是一款原生 macOS 菜单栏应用，用于截图、录屏、标注和编辑。需要 macOS 13.0 或更高版本。
 
 <a id="install"></a>
 
 ## 安装
 
-> 需要 **macOS 13.0** 或更高版本。
-
-### Homebrew
-
-```bash
+~~~bash
 brew install --cask snapzy
-```
+~~~
 
-### Shell 脚本
+或安装指定版本：
 
-```bash
-# 安装指定版本
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install.sh | bash
-```
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.1.0/install.sh | bash
+~~~
 
-### 下载发行版
+你也可以[下载发布版本](https://github.com/duongductrong/Snapzy/releases)。将 Snapzy.app 移到 /Applications（“应用程序”文件夹），启动后按提示授予“屏幕录制”权限。如果 macOS 要求，请重新启动 Snapzy。麦克风和摄像头权限仅在录制时使用对应输入源才需要。Snapzy 已签名并通过 Apple 公证。
 
-1. 打开 [Releases](https://github.com/duongductrong/Snapzy/releases)
-2. 下载最新打包应用资源，通常为 `Snapzy-v<version>.dmg`
-3. 将 `Snapzy.app` 移动到 `/Applications`
-4. 启动 Snapzy
-5. 当 macOS 在 System Settings 中提示时，授予 Screen Recording 权限
-6. 如果 macOS 提示，请在授予 Screen Recording 后重新启动 Snapzy
-7. 如果你想在录屏中录制人声，也请授予 Microphone 权限
-
-**注意：** Snapzy 目前尚未经过 Apple notarize，因此 macOS 可能会在首次启动时阻止应用打开。将 Snapzy 安装到 `/Applications` 后，请运行：
-
-```bash
-sudo xattr -rd com.apple.quarantine /Applications/Snapzy.app
-```
-
-了解更多：[Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445)。
+<a id="uninstall"></a>
 
 ## 卸载
 
-若要彻底移除 Snapzy、重置所有权限并清理应用数据：
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninstall.sh | bash
-```
+~~~
 
-如果你已经 clone 了仓库，也可以直接运行：
+卸载过程中，脚本会询问是否删除 Application Support 文件夹，其中可能包含临时截图和录屏文件。输入 n 即可保留该文件夹。如果只想重置权限而不卸载，请运行：
 
-```bash
-./uninstall.sh
-```
-
-该脚本会从 `/Applications` 中移除应用，删除偏好设置和缓存，并重置 TCC 权限（Screen Recording、Microphone、Accessibility）。权限变更可能需要注销或重启后才会完全生效。
-
-### 重置权限
-
-如果你只想重置 TCC 权限（Screen Recording、Microphone、Accessibility）而不卸载应用：
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-permissions.sh | bash
-```
+~~~
 
-如果你已经 clone 了仓库，也可以直接运行：
+<a id="quick-start"></a>
 
-```bash
-./reset-permissions.sh
-```
+## 快速上手
 
-<a id="raycast"></a>
+1. 按 ⇧⌘4 截取区域，或按 ⇧⌘3 截取全屏。
+2. 在快速访问（Quick Access）卡片中复制、标注、编辑、拖拽或上传截图结果。
+3. 打开历史记录（History），查找并重新使用最近的截图、视频和 GIF。
 
-## Raycast
+<a id="what-snapzy-can-do"></a>
 
-通过官方插件直接从 Raycast 控制 Snapzy：
+## 功能一览
 
-<a href="https://www.raycast.com/chkzz/snapzy" title="Install snapzy Raycast Extension"><img src="https://www.raycast.com/chkzz/snapzy/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="" /></a>
+- **截图**
+  - 截取全屏、选定区域、应用窗口或界面中的智能元素（Smart Element）。可截取已打开的第三方菜单栏弹出窗口；也可将滚动内容拼接成一张长图，并实时预览。
+  - 使用内置的 Apple Vision OCR，或你配置的 OpenAI 兼容接口识别文字。用实时放大镜拾取像素颜色，并复制为 HEX、RGB、HSL、HSB、CMYK、OKLCH 或 SwiftUI 格式；提取主体（抠图），并可选择安全自动裁剪。
+  - 使用屏幕标尺（Screen Ruler）测量屏幕上的间距和尺寸：悬停在边缘之间、拖出自动贴合内容的框、固定并复制测量值，或保存绘有测量结果的截图。
+- **录屏**
+  - 将整个屏幕或单个应用录制为视频，可选录入系统音频和麦克风，也可保存为 GIF。
+  - 添加摄像头画面（支持 iPhone 连续互通相机）、鼠标点击与按键高亮，或在屏幕上实时标注。
+- **标注与编辑**
+  - 添加箭头、形状、文字、水印、模糊和像素化效果。在本地检测并遮蔽敏感信息。
+  - 用测量工具（`U`）测量图片中的距离和尺寸：测量结果可编辑，并随图片一起导出。
+  - 裁剪图片、移除背景、制作 3D 样机展示。剪辑视频片段，添加缩放片段或变速片段，并使用“跟随鼠标”（Follow Mouse）让光标始终保持在画面中。
+- **快速访问与历史记录**
+  - 在悬浮的快速访问卡片上直接复制、编辑、拖拽或上传截图；将截图固定到屏幕上。
+  - 按文件名、类型或时间搜索截图、视频和 GIF，并在编辑器中重新打开。
+- **云端上传**
+  - 从快速访问、标注（Annotate）、视频编辑器（Video Editor）或历史记录中手动上传到 AWS S3、Cloudflare R2 或 Google Drive。
+  - 文件直接上传到你选择的服务商。Snapzy 不会在截图后自动上传，也不会经由自己的服务器中转文件。
+- **应用语言**：支持 macOS 原生的按应用设置语言，共 10 种语言：英语、越南语、简体中文、繁体中文、西班牙语、日语、韩语、俄语、法语和德语。
 
 <a id="shortcuts"></a>
 
-## CLI
-
-Snapzy 自带 `snapzy` 命令，AI 代理和脚本无需任何点击即可截图，并得到文件路径、JSON 元数据和退出码：
-
-```bash
-snapzy list windows --app Safari
-snapzy capture window --app Safari --max-dimension 1568 -o shot.png
-snapzy capture area --rect 0,0,800,600 -o area.png
-snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
-```
-
-命令位于 `/Applications/Snapzy.app/Contents/Helpers/snapzy`；可在 **设置 → 高级 → 命令行 → 安装** 中将其加入 `PATH`。某个应用首次使用时，Snapzy 会询问是否允许该应用。完整说明：[docs/CLI.md](docs/CLI.md)。
-
 ## 快捷键
 
-| 操作                                                 | 快捷键 |
-| ---------------------------------------------------- | ------ |
-| 全屏截图                                             | `⇧⌘3`  |
-| 选区截图                                             | `⇧⌘4`  |
-| ↳ 切换手动选区/应用窗口模式（`Application Capture`） | `A`    |
-| 选区截图 + 实时标注                                  | `⇧⌘7`    |
-| 滚动截图                                             | `⇧⌘6`  |
-| 屏幕录制（开始/停止切换）                            | `⇧⌘5`  |
-| 暂停/继续录制（可选，推荐 `⌘⇧Space`）                | _未设置_ |
-| OCR 文字识别                                         | `⇧⌘2`  |
-| 对象抠图截图                                         | `⇧⌘1`  |
-| 打开标注编辑器                                       | `⇧⌘A`  |
-| 打开视频编辑器                                       | `⇧⌘E`  |
-| 打开云上传                                           | `⇧⌘L`  |
-| 显示快捷键列表                                       | `⇧⌘K`  |
+| 操作                                                    | 快捷键    |
+| ------------------------------------------------------- | --------- |
+| 全屏截图                                                | `⇧⌘3`     |
+| 区域截屏                                                | `⇧⌘4`     |
+| ↳ 切换手动选区/应用窗口模式（`Application Capture`）    | `A`       |
+| 重复上次区域截图                                        | `⌃⌘⇧4`    |
+| 截图并标注                                              | `⇧⌘7`     |
+| 截取当前窗口                                            | `⇧⌘9`     |
+| 滚动截屏                                                | `⇧⌘6`     |
+| 屏幕录制（开始/停止）                                   | `⇧⌘5`     |
+| 暂停/恢复录制（可选，建议设为 `⌘⇧Space`）               | _未设置_  |
+| 识别文字（OCR）                                         | `⇧⌘2`     |
+| 提取主体（抠图）                                        | `⇧⌘1`     |
+| 智能元素截取                                            | `⌥⇧4`     |
+| 测量屏幕（屏幕标尺）                                    | `⌥⇧M`     |
+| 打开标注                                                | `⇧⌘A`     |
+| 打开视频编辑器                                          | `⇧⌘E`     |
+| 打开云端上传窗口                                        | `⇧⌘L`     |
+| 显示快捷键列表                                          | `⇧⌘K`     |
+| 显示/隐藏历史记录面板                                   | `⇧⌘H`     |
 
-### 快速访问卡片操作
+<a id="quick-access-card-actions"></a>
 
-将指针悬停在快速访问卡片上，然后按下按键。仅在指针位于卡片上时生效。
+## 快速访问卡片操作
+
+将鼠标悬停在快速访问卡片上，然后按下对应按键。仅在指针位于卡片上方时生效。
 
 | 操作 | 快捷键 |
 | ---- | ------ |
@@ -193,105 +159,97 @@ snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 | 保存 / 打开 | `⌘S` |
 | 编辑 | `⌘E` |
 | 上传到云端 | `⌘U` |
-| 钉在屏幕上 | `⌘P` |
+| 将截图固定到屏幕 | `⌘P` |
 | 删除 | `⌘⌫` |
 | 关闭 | `⌘W` |
+
+<a id="command-line-tools"></a>
+
+## 命令行工具
+
+`snapzy` 命令行工具位于 `/Applications/Snapzy.app/Contents/Helpers/snapzy`。在 **偏好设置 → 命令行** 中点击 **安装**，即可将其添加到 `PATH`。
+
+访问权限按调用方应用分别授予。除 `snapzy status` 外，所有命令都需要调用方应用已获批准；批准后，该应用后续调用命令时不会再重复弹出提示。
+
+~~~bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
+~~~
+
+参见 [CLI 参考文档](docs/CLI.md)。
 
 <a id="automation"></a>
 
 ## 自动化
 
-Snapzy 注册了 `snapzy://` URL scheme，因此 launcher 和自动化工具（如 [Raycast 插件](https://www.raycast.com/chkzz/snapzy)、Alfred 或自定义脚本）可以直接触发各类捕获动作。此集成选项可以在 **设置 -> 高级 -> URL Scheme 集成** 中开启或关闭。
+Snapzy 注册了 `snapzy://` URL Scheme，启动器和自动化工具（例如 [Raycast 扩展](https://www.raycast.com/chkzz/snapzy)、Alfred 或自定义脚本）可以借此触发截图操作。你可以在 **偏好设置 → 高级 → URL Scheme 集成** 中开启或关闭此功能。
 
-| 操作           | URL                               |
-| -------------- | --------------------------------- |
-| 全屏截图       | `snapzy://capture/fullscreen`     |
-| 选区截图       | `snapzy://capture/area`           |
-| 应用窗口截图   | `snapzy://capture/application`    |
-| 选区实时标注   | `snapzy://capture/area-annotate`  |
-| 滚动截图       | `snapzy://capture/scrolling`      |
-| OCR 文字识别   | `snapzy://capture/ocr`            |
-| 对象抠图截图   | `snapzy://capture/object-cutout`  |
-| 屏幕录制       | `snapzy://record/screen`          |
-| 应用窗口录制   | `snapzy://record/application`     |
-| 打开标注编辑器 | `snapzy://open/annotate`          |
-| 打开视频编辑器 | `snapzy://open/video-editor`      |
-| 打开云上传     | `snapzy://open/cloud-uploads`     |
-| 打开捕获历史   | `snapzy://open/history`           |
-| 显示快捷键列表 | `snapzy://show/shortcuts`         |
-| 打开设置       | `snapzy://settings`               |
-| 打开设置标签页 | `snapzy://settings?tab=annotate`  |
+| 操作                 | URL                                |
+| -------------------- | ---------------------------------- |
+| 全屏截图             | `snapzy://capture/fullscreen`      |
+| 区域截屏             | `snapzy://capture/area`            |
+| 重复区域截图         | `snapzy://capture/repeat-area`     |
+| 延迟区域截图         | `snapzy://capture/delayed`         |
+| 应用窗口截屏         | `snapzy://capture/application`     |
+| 截取当前窗口         | `snapzy://capture/active-window`   |
+| 截图并标注           | `snapzy://capture/area-annotate`   |
+| 滚动截屏             | `snapzy://capture/scrolling`       |
+| 识别文字（OCR）      | `snapzy://capture/ocr`             |
+| 智能元素截取         | `snapzy://capture/smart-element`   |
+| 提取主体（抠图）     | `snapzy://capture/object-cutout`   |
+| 屏幕录制             | `snapzy://record/screen`           |
+| 应用窗口录屏         | `snapzy://record/application`      |
+| 打开标注             | `snapzy://open/annotate`           |
+| 拼图                 | `snapzy://open/combine`            |
+| 打开视频编辑器       | `snapzy://open/video-editor`       |
+| 打开云端上传窗口     | `snapzy://open/cloud-uploads`      |
+| 打开截图历史记录     | `snapzy://open/history`            |
+| 取色                 | `snapzy://tools/pick-color`        |
+| 测量屏幕             | `snapzy://tools/measure`           |
+| 显示快捷键列表       | `snapzy://show/shortcuts`          |
+| 打开偏好设置         | `snapzy://settings`                |
+| 打开偏好设置的指定标签页 | `snapzy://settings?tab=annotate` |
 
-<a id="development"></a>
+`snapzy://open/combine` 会打开图片选择器。自动化工具可通过重复传入 `file` 参数（两个或以上经过 URL 编码的本地路径）来跳过选择器：
 
-## Development
+~~~bash
+open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
+~~~
 
-如果你要进行本地开发、从源码运行，或完成首次开发环境设置，请先阅读 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)。
+详情参见 [快捷键与 URL Scheme](docs/SHORTCUTS.md)。
 
-如果你需要 archive、export 或 DMG 打包命令，请参阅 [docs/BUILD.md](docs/BUILD.md)。如果你想查看贡献流程，请参阅 [CONTRIBUTING.md](CONTRIBUTING.md)。
+<a id="security-and-privacy"></a>
 
-<a id="documentation"></a>
+## 安全与隐私
 
-## 文档
+Snapzy 不在沙盒中运行，而是以启动它的用户账户权限运行。它启用了 macOS 强化运行时（Hardened Runtime），使用 Developer ID 签名并通过 Apple 公证；库验证（Library Validation）保持开启，因此只能加载由 Snapzy 或 Apple 签名的代码。截图和录屏保存在本地，只有在你主动操作时才会上传到你自己的 AWS S3、Cloudflare R2 或 Google Drive。内置 OCR 使用 Apple Vision 在设备端完成；如果你配置了自定义的 OpenAI 兼容 OCR 接口，OCR 请求会包含截图图像并发送到该接口。Snapzy 不收集任何遥测数据。
 
-- [询问 DeepWiki（交互式文档助手）](https://deepwiki.com/duongductrong/Snapzy)
-- [面向开发者和 agent 的文档索引](docs/README.md)
-- [项目结构与运行时架构](docs/STRUCTURE.md)
-- [截图、录制与编辑流程](docs/CAPTURE.md)
-- [构建与打包指南](docs/BUILD.md)
-- [发布与更新工作流](docs/RELEASES.md)
-- [本地 Sparkle 更新测试](docs/UPDATE_TESTING.md)
-- [面向代理和脚本的 `snapzy` 命令](docs/CLI.md)
+云存储凭据、OAuth 令牌和自定义 OCR 的 API 密钥仅存储在 macOS 钥匙串中。可选的云存储凭据保护密码会经过 SHA-256 哈希处理，绝不会以明文保存。云存储凭据只能通过手动的、使用口令加密的导出/导入进行迁移，自定义 OCR 的 API 密钥不会包含在配置导出和凭据导出中。可移植的 TOML 配置文件只包含偏好设置，不包含敏感凭据、截图与上传历史、缓存、已批准的 CLI 调用方应用以及安全范围书签（security-scoped bookmark）。网络请求细节和完整安全策略请参见 [SECURITY.md](SECURITY.md)，可移植设置请参见 [配置指南](docs/CONFIGURATION.md)。
 
-<a id="community"></a>
+如需报告安全漏洞，请通过 [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) 提交，或私下联系维护者。报告方式详见 [SECURITY.md](SECURITY.md)。
 
-## 社区
+<a id="more-details"></a>
 
-- 加入 Snapzy Discord 社区，获取支持、反馈与讨论：[https://discord.gg/xkWDAuJkZu](https://discord.gg/xkWDAuJkZu)
+## 更多文档
 
-<a id="featured-on"></a>
+以下详细文档目前仅提供英文版。
 
-## 收录平台
-
-<p>
-  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - 可以把它理解成更偏开发者、更开源友好的 CleanShot X | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
-  <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy on Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
-</p>
-
-## Benchmark
-
-### OCR
-
-基准测试日期：2026 年 4 月 19 日。README 中的 OCR 数据来自可复现的 runner `scripts/run-ocr-readme-benchmark.sh`，测试语料为干净的合成 UI/article text 换行文本，覆盖 `10 种支持语言`，每种语言 `12 个样本`。`Character accuracy` 是主要指标，`exact match` 采用严格计算，此语料上的 `no-output` 比例在下表所有语言中均为 `0%`。
-
-| 语言                | Character Accuracy | Exact Match |
-| ------------------- | -----------------: | ----------: |
-| English             |             100.0% |      100.0% |
-| Vietnamese          |             100.0% |      100.0% |
-| Simplified Chinese  |              99.3% |       75.0% |
-| Traditional Chinese |              99.0% |       66.7% |
-| Spanish             |              99.9% |       91.7% |
-| Japanese            |              99.4% |       66.7% |
-| Korean              |              99.7% |       83.3% |
-| Russian             |             100.0% |      100.0% |
-| French              |              99.3% |       33.3% |
-| German              |              99.8% |       75.0% |
-
-真实截图中的表现可能低于这组语料，尤其是在包含 emoji、低对比度页脚、特殊标点、渐变背景、模糊效果或装饰性很强的字体时。
-
-<a id="security"></a>
-
-## 安全
-
-Snapzy **未** 运行在沙盒中，而是以你的用户账户权限运行。应用启用了 macOS Hardened Runtime，经 Developer ID 签名并通过 Apple 公证，且仅声明最小必要 entitlement；库验证（library validation）始终开启，因此应用只会加载由 Snapzy 或 Apple 签名的代码。网络请求仅用于 Sparkle 更新检查，以及用户主动发起到自己 S3/R2 bucket 的云上传，数据不会发送到第三方服务器。云凭据只保存在 macOS Keychain 中，并可额外通过可选密码保护（SHA-256 哈希，绝不以明文存储）；凭据仅能通过用户提供归档口令保护的手动加密导出/导入流程转移。Snapzy 不收集任何遥测数据。
-
-如果你需要报告安全漏洞，请使用 [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) 或私下联系维护者。完整细节见 [SECURITY.md](SECURITY.md)。
+- [截图与 OCR](docs/CAPTURE.md) · [滚动截屏](docs/SCROLLING_CAPTURE.md) · [录屏](docs/RECORDING.md)
+- [标注](docs/ANNOTATE.md) · [视频编辑器](docs/VIDEO_EDITOR.md) · [快速访问](docs/QUICK_ACCESS.md) · [历史记录](docs/HISTORY.md)
+- [云端上传](docs/CLOUD.md) · [快捷键与 URL Scheme](docs/SHORTCUTS.md) · [CLI](docs/CLI.md)
+- [配置与偏好设置](docs/CONFIGURATION.md) · [偏好设置参考](docs/PREFERENCES.md) · [更新与诊断](docs/UPDATES.md)
+- [开发](docs/DEVELOPMENT.md) · [构建与打包](docs/BUILD.md) · [文档导航](docs/README.md)
+- [OCR 基准测试结果与方法](docs/OCR_BENCHMARK.md)
 
 <a id="contributing"></a>
 
-## 贡献
+## 参与贡献
 
-欢迎贡献代码。提交 pull request 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+欢迎贡献！提交 Pull Request 前请先阅读 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+<a id="contributors"></a>
 
 ## 贡献者
 
@@ -300,6 +258,17 @@ Snapzy **未** 运行在沙盒中，而是以你的用户账户权限运行。�
 <a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
 </a>
+
+<a id="featured-on"></a>
+
+## 推荐与收录
+
+<p>
+  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - Think CleanShot X, but open-source and developer-friendly | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
+  <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy trên Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
+</p>
+
+<a id="star-history"></a>
 
 ## Star 历史
 
@@ -311,10 +280,14 @@ Snapzy **未** 运行在沙盒中，而是以你的用户账户权限运行。�
  </picture>
 </a>
 
+<a id="acknowledgments"></a>
+
 ## 致谢
 
-Snapzy 的灵感来源于 [CleanShot X](https://cleanshot.com/)，一款适用于 macOS 的先进截图与录屏应用。
+Snapzy 的灵感来自 [CleanShot X](https://cleanshot.com/)，一款功能强大的 macOS 截图与录屏应用。
+
+<a id="license"></a>
 
 ## 许可证
 
-BSD 3-Clause License。详见 [LICENSE](LICENSE)。
+BSD 3-Clause 许可证。详见 [LICENSE](LICENSE)。
