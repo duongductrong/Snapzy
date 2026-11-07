@@ -4,6 +4,18 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.3] - 2026-11-07
+
+### Bug Fixes
+- Keep the app responsive while OCR runs (#708) (44278b1c)
+- Fixed Capture Markup crosshair tracking the pointer on macOS 27 (#707) (96054e5d)
+- make trackpad area selection use the final pointer position (#697) (72806d49)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @mvanhorn
+
 ## [2.2.0-beta.2] - 2026-10-28
 
 ### Bug Fixes
