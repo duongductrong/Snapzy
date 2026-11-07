@@ -344,7 +344,8 @@ final class CloudManager: ObservableObject {
       secretKey: credentials.secretKey,
       googleClientId: googleClientId,
       googleClientSecret: googleClientSecret,
-      googleRefreshToken: googleRefreshToken
+      googleRefreshToken: googleRefreshToken,
+      shareLinkStyle: isGoogle ? nil : CloudShareLinkStyle.stored().rawValue
     )
   }
 
@@ -358,15 +359,7 @@ final class CloudManager: ObservableObject {
 
     CloudPasswordService.shared.removePassword()
 
-    let defaults = UserDefaults.standard
-    defaults.removeObject(forKey: PreferencesKeys.cloudProviderType)
-    defaults.removeObject(forKey: PreferencesKeys.cloudBucket)
-    defaults.removeObject(forKey: PreferencesKeys.cloudRegion)
-    defaults.removeObject(forKey: PreferencesKeys.cloudEndpoint)
-    defaults.removeObject(forKey: PreferencesKeys.cloudCustomDomain)
-    defaults.removeObject(forKey: PreferencesKeys.cloudExpireTime)
-    defaults.set(false, forKey: PreferencesKeys.cloudConfigured)
-    defaults.removeObject(forKey: PreferencesKeys.cloudPasswordSkipped)
+    Self.clearConfigurationDefaults(UserDefaults.standard)
 
     isConfigured = false
     providerType = nil
@@ -376,6 +369,20 @@ final class CloudManager: ObservableObject {
 
     logger.info("Cloud configuration cleared")
     DiagnosticLogger.shared.log(.info, .cloud, "Cloud configuration cleared")
+  }
+
+  /// Removes the non-secret cloud settings that belong to the configured bucket.
+  /// The uploads window position is a UI preference and survives a reset.
+  static func clearConfigurationDefaults(_ defaults: UserDefaults) {
+    defaults.removeObject(forKey: PreferencesKeys.cloudProviderType)
+    defaults.removeObject(forKey: PreferencesKeys.cloudBucket)
+    defaults.removeObject(forKey: PreferencesKeys.cloudRegion)
+    defaults.removeObject(forKey: PreferencesKeys.cloudEndpoint)
+    defaults.removeObject(forKey: PreferencesKeys.cloudCustomDomain)
+    defaults.removeObject(forKey: PreferencesKeys.cloudExpireTime)
+    defaults.removeObject(forKey: PreferencesKeys.cloudShareLinkStyle)
+    defaults.set(false, forKey: PreferencesKeys.cloudConfigured)
+    defaults.removeObject(forKey: PreferencesKeys.cloudPasswordSkipped)
   }
 
   // MARK: - Provider Factory

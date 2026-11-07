@@ -1373,6 +1373,11 @@ private struct CloudCredentialFormView: View {
           googleRefreshToken: refreshToken
         )
 
+        // An imported archive carries its share link style; apply it only once the config is saved.
+        if !isGoogle, let style = importedPayload?.resolvedShareLinkStyle {
+          UserDefaults.standard.set(style.rawValue, forKey: PreferencesKeys.cloudShareLinkStyle)
+        }
+
         if !protectionPassword.isEmpty {
           do {
             try CloudPasswordService.shared.savePassword(protectionPassword)
