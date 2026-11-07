@@ -2,17 +2,17 @@
   <img src="./banner.png" width="200" height="200" alt="Banner Snapzy" />
 
   <h1>Snapzy</h1>
-  <p><strong>Chụp màn hình, quay màn hình, chú thích và chỉnh sửa macOS thuần native ngay từ thanh menu.</strong></p>
+  <p><strong>Chụp màn hình, quay màn hình, chú thích và chỉnh sửa native trên macOS, ngay từ thanh menu.</strong></p>
 
   <p>
     <a href="https://trendshift.io/repositories/24550" target="_blank"><img src="https://trendshift.io/api/badge/repositories/24550" alt="duongductrong%2FSnapzy | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
   </p>
 
   <p>
-    Built with <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>,
+    Xây dựng bằng <a href="https://developer.apple.com/xcode/swiftui/">SwiftUI</a>,
     <a href="https://developer.apple.com/documentation/appkit">AppKit</a>,
     <a href="https://developer.apple.com/documentation/screencapturekit">ScreenCaptureKit</a>,
-    <a href="https://developer.apple.com/documentation/vision">Vision</a>, and
+    <a href="https://developer.apple.com/documentation/vision">Vision</a> và
     <a href="https://sparkle-project.org/">Sparkle</a>.
   </p>
 
@@ -24,19 +24,22 @@
   </p>
 
   <p>
-    <a href="#features">Tính năng</a> •
     <a href="#install">Cài đặt</a> •
-    <a href="#raycast">Raycast</a> •
-    <a href="#cli">CLI</a> •
+    <a href="#uninstall">Gỡ cài đặt</a> •
+    <a href="#quick-start">Bắt đầu nhanh</a> •
+    <a href="#what-snapzy-can-do">Snapzy làm được gì</a> •
     <a href="#shortcuts">Phím tắt</a> •
+    <a href="#quick-access-card-actions">Thao tác trên thẻ Truy cập nhanh</a> •
+    <a href="#command-line-tools">Công cụ dòng lệnh</a> •
     <a href="#automation">Tự động hóa</a> •
-    <a href="#development">Development</a> •
-    <a href="#documentation">Tài liệu</a> •
-    <a href="#community">Cộng đồng</a> •
-    <a href="#security">Bảo mật</a> •
+    <a href="#security-and-privacy">Bảo mật và quyền riêng tư</a> •
+    <a href="#more-details">Tài liệu chi tiết</a> •
     <a href="#contributing">Đóng góp</a> •
-    <a href="#contributors">Cộng tác viên</a> •
-    <a href="#acknowledgments">Lời cảm ơn</a>
+    <a href="#contributors">Người đóng góp</a> •
+    <a href="#featured-on">Được giới thiệu trên</a> •
+    <a href="#star-history">Lịch sử Star</a> •
+    <a href="#acknowledgments">Lời cảm ơn</a> •
+    <a href="#license">Giấy phép</a>
   </p>
 
   <p>
@@ -52,268 +55,234 @@
   </p>
   <p>
     <a href="https://github.com/sponsors/duongductrong"><img alt="GitHub Sponsors" src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-ff69b4?style=flat&amp;logo=github" /></a>
-    <a href="https://ko-fi.com/duongductrong"><img alt="Ko-fi Donate" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
+    <a href="https://ko-fi.com/duongductrong"><img alt="Ủng hộ qua Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-FF5E5B?style=flat&amp;logo=ko-fi&amp;logoColor=white" /></a>
   </p>
 </div>
 
-<a id="features"></a>
-
-## Tính năng
-
-- **Chụp màn hình**: chụp toàn màn hình hoặc vùng chọn với chuyển đổi giữa chế độ chọn tay/chế độ cửa sổ ứng dụng (`Application Capture`, mặc định `A`), chụp vùng kèm chú thích nhanh (annotate trước khi lưu), chụp cuộn với xem trước ghép ảnh trực tiếp, trích xuất văn bản OCR kèm thông báo hệ thống hiển thị kết quả, chụp cắt đối tượng nền trong suốt với tự động crop an toàn tùy chọn, giữ bóng cửa sổ (macOS 14+), xuất nhiều định dạng (PNG/JPG/WebP), ẩn icon/widget desktop, chụp nhanh khi đang quay
-- **Quay màn hình**: xuất video hoặc GIF, thu âm thanh hệ thống + microphone, làm nổi bật cú nhấp chuột, overlay phím bấm, chú thích trực tiếp trên màn hình, nhớ vùng quay gần nhất, resize GIF, metadata Smart Camera cho chỉnh sửa Follow Mouse
-- **Trình chỉnh sửa chú thích**: shape, mũi tên, văn bản, watermark, hình chữ nhật tô màu, blur/pixelate, counter, crop, xóa nền với auto-crop nhận biết vùng cắt, nền mockup với 3D renderer, zoom/pan (pinch + bàn phím), kéo thả sang app khác, shortcut công cụ có thể cấu hình
-- **Thiết lập sau khi chụp**: ma trận hành động theo từng chế độ cho lưu, Quick Access, copy clipboard và annotate, cùng một tùy chọn auto-crop toàn cục riêng cho remove background (bật mặc định)
-- **Trình chỉnh sửa video**: cắt với timeline trực quan + dải frame, zoom segment với auto-focus (Follow Mouse), nền wallpaper + padding, kích thước export tùy chỉnh, trình xem GIF động, undo/redo
-- **Quick Access**: bảng nổi sau mỗi lần chụp với các thao tác copy, edit, drag-to-app, open và delete
-- **Lịch sử capture**: panel history nổi + cửa sổ duyệt đầy đủ cho screenshot, video và GIF gần đây, có lọc theo loại/thời gian, tìm theo tên file, thao tác copy/open/delete nhanh, mở lại bằng Annotate hoặc Video Editor chỉ với một lần nhấn, restore annotation đã commit để tiếp tục chỉnh sửa, tùy chỉnh layout panel, và retention policy
-- **Shortcut**: shortcut toàn cục cấu hình đầy đủ cho chụp, quay và công cụ annotate, có bật/tắt cho từng shortcut và phát hiện xung đột hệ thống
-- **Onboarding**: màn hình chào, chọn ngôn ngữ lần đầu, hướng dẫn cấp quyền, và cấu hình shortcut cho người dùng lần đầu
-- **Bản địa hóa**: bản địa hóa ứng dụng cho 🇺🇸 English, 🇻🇳 Vietnamese, 🇨🇳 Simplified Chinese, 🇹🇼 Traditional Chinese, 🇪🇸 Spanish, 🇯🇵 Japanese, 🇰🇷 Korean, 🇷🇺 Russian, 🇫🇷 French và 🇩🇪 German, hỗ trợ chọn ngôn ngữ riêng cho từng app theo macOS
-- **Cloud Upload**: quyền riêng tư trước hết với mô hình tự mang storage bằng AWS S3 hoặc Cloudflare R2, không dùng server bên thứ ba, upload thủ công từ Quick Access cho screenshot, video và GIF, hoặc từ Annotate cho screenshot, credential lưu trong macOS Keychain với bảo vệ mật khẩu tùy chọn, import/export credential mã hóa thủ công để thiết lập nhanh trên Mac khác, lịch sử upload, auto-expiration cấu hình được (1–90 ngày hoặc vĩnh viễn), lifecycle rules, hỗ trợ custom domain
-- **Dòng lệnh**: lệnh `snapzy` cho AI agent và script — chụp màn hình, cửa sổ (kể cả khi bị che) hoặc một vùng mà không cần bấm gì, trả về JSON và exit code, có xin phép theo từng ứng dụng
-- **Cập nhật & chẩn đoán**: cập nhật trong app qua Sparkle, báo vấn đề kèm gói log chẩn đoán, quản lý cache
-- **Nền tảng**: app thanh menu, giao diện light/dark/system, ký Developer ID và notarize với Hardened Runtime bật, security-scoped bookmark cho thư mục người dùng chọn
+Snapzy là ứng dụng thanh menu native trên macOS để chụp màn hình, quay màn hình, chú thích và chỉnh sửa. Yêu cầu macOS 13.0 trở lên.
 
 <a id="install"></a>
 
 ## Cài đặt
 
-> Yêu cầu **macOS 13.0** trở lên.
-
-### Homebrew
-
-```bash
+~~~bash
 brew install --cask snapzy
-```
+~~~
 
-### Script shell
+Hoặc cài một phiên bản cụ thể:
 
-```bash
-# Cài một phiên bản cụ thể
-curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v1.9.8/install.sh | bash
-```
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/v2.1.0/install.sh | bash
+~~~
 
-### Tải bản phát hành
+Bạn cũng có thể [tải bản phát hành](https://github.com/duongductrong/Snapzy/releases). Chuyển Snapzy.app vào thư mục /Applications, mở ứng dụng và cấp quyền Ghi màn hình (Screen Recording) khi được hỏi. Mở lại ứng dụng nếu macOS yêu cầu. Quyền Micro và Camera chỉ cần khi bạn ghi kèm các nguồn đó. Snapzy đã được ký số và notarize bởi Apple.
 
-1. Mở [Releases](https://github.com/duongductrong/Snapzy/releases)
-2. Tải asset ứng dụng đã đóng gói mới nhất, thường là `Snapzy-v<version>.dmg`
-3. Di chuyển `Snapzy.app` vào `/Applications`
-4. Mở Snapzy
-5. Cấp quyền Screen Recording khi macOS nhắc trong System Settings
-6. Mở lại Snapzy sau khi cấp quyền Screen Recording nếu macOS yêu cầu
-7. Cấp thêm quyền Microphone nếu bạn muốn ghi giọng nói trong video
-
-**Lưu ý:** Snapzy hiện chưa được Apple notarize, nên macOS có thể chặn app trong lần mở đầu tiên. Sau khi cài Snapzy vào `/Applications`, hãy chạy:
-
-```bash
-sudo xattr -rd com.apple.quarantine /Applications/Snapzy.app
-```
-
-Tìm hiểu thêm tại [Apple Support: Open a Mac app from an unidentified developer](https://support.apple.com/en-us/102445).
+<a id="uninstall"></a>
 
 ## Gỡ cài đặt
 
-Để xóa hoàn toàn Snapzy, reset mọi quyền và dọn dữ liệu ứng dụng:
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/uninstall.sh | bash
-```
+~~~
 
-Hoặc nếu bạn đã clone repo:
+Trong lúc gỡ cài đặt, script sẽ hỏi có xóa thư mục Application Support hay không. Thư mục này có thể chứa ảnh chụp và bản ghi tạm. Trả lời n để giữ lại thư mục đó. Để đặt lại quyền mà không cần gỡ cài đặt, chạy:
 
-```bash
-./uninstall.sh
-```
-
-Lệnh này sẽ xóa ứng dụng khỏi `/Applications`, xóa preferences và cache, đồng thời reset quyền TCC (Screen Recording, Microphone, Accessibility). Bạn có thể cần đăng xuất hoặc khởi động lại để thay đổi quyền có hiệu lực hoàn toàn.
-
-### Reset quyền
-
-Nếu bạn chỉ muốn reset lại quyền TCC (Screen Recording, Microphone, Accessibility) mà không cần gỡ cài đặt ứng dụng:
-
-```bash
+~~~bash
 curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-permissions.sh | bash
-```
+~~~
 
-Hoặc nếu bạn đã clone repo:
+<a id="quick-start"></a>
 
-```bash
-./reset-permissions.sh
-```
+## Bắt đầu nhanh
 
-<a id="raycast"></a>
+1. Nhấn ⇧⌘4 để chụp một vùng, hoặc ⇧⌘3 để chụp toàn màn hình.
+2. Dùng thẻ Truy cập nhanh (Quick Access) để sao chép, chú thích, chỉnh sửa, kéo thả hoặc tải lên ảnh vừa chụp.
+3. Mở Lịch sử (History) để tìm và dùng lại ảnh chụp màn hình, video và GIF gần đây.
 
-## Raycast
+<a id="what-snapzy-can-do"></a>
 
-Điều khiển Snapzy trực tiếp từ Raycast với extension chính thức:
+## Snapzy làm được gì
 
-<a href="https://www.raycast.com/chkzz/snapzy" title="Install snapzy Raycast Extension"><img src="https://www.raycast.com/chkzz/snapzy/install_button@2x.png?v=1.1" height="64" style="height: 64px;" alt="" /></a>
+- **Chụp màn hình**
+  - Chụp toàn màn hình, một vùng chọn, cửa sổ ứng dụng hoặc một thành phần giao diện (Smart Element). Chụp được cả popover trên thanh menu của ứng dụng bên thứ ba đang mở; ghép nội dung cuộn thành một ảnh duy nhất với bản xem trước trực tiếp.
+  - Trích xuất văn bản bằng OCR Apple Vision tích hợp sẵn hoặc một endpoint tương thích OpenAI do bạn cấu hình. Lấy màu một điểm ảnh bằng kính lúp trực tiếp và sao chép dưới dạng HEX, RGB, HSL, HSB, CMYK, OKLCH hoặc SwiftUI; tách chủ thể khỏi nền, có tùy chọn tự động cắt viền an toàn.
+- **Quay màn hình**
+  - Quay toàn màn hình hoặc một ứng dụng thành video, có thể kèm âm thanh hệ thống và micro, hoặc lưu bản ghi dưới dạng GIF.
+  - Thêm khung camera (hỗ trợ cả Camera liên tục (Continuity Camera) trên iPhone), làm nổi bật cú nhấp chuột và phím bấm, hoặc vẽ chú thích trực tiếp lên màn hình.
+- **Chú thích và chỉnh sửa**
+  - Thêm mũi tên, hình khối, văn bản, watermark, làm mờ (blur) và pixel hóa. Phát hiện và che dữ liệu nhạy cảm ngay trên máy.
+  - Cắt (crop) ảnh, xóa nền và tạo mockup 3D. Cắt ngắn video, thêm đoạn zoom hoặc đoạn đổi tốc độ, và dùng Theo chuột (Follow Mouse) để con trỏ luôn nằm trong khung hình.
+- **Truy cập nhanh và Lịch sử**
+  - Sao chép, chỉnh sửa, kéo thả hoặc tải lên ảnh chụp ngay từ thẻ Truy cập nhanh nổi; ghim ảnh chụp màn hình lên màn hình.
+  - Tìm ảnh chụp màn hình, video và GIF theo tên file, loại hoặc thời gian, rồi mở lại trong trình chỉnh sửa.
+- **Tải lên cloud**
+  - Tải lên thủ công từ Truy cập nhanh, Chú thích (Annotate), Trình sửa video (Video Editor) hoặc Lịch sử tới AWS S3, Cloudflare R2 hoặc Google Drive.
+  - File được tải thẳng lên nhà cung cấp bạn chọn. Snapzy không tự động tải lên sau khi chụp và không chuyển file qua máy chủ của Snapzy.
+- **Ngôn ngữ ứng dụng**: hỗ trợ chọn ngôn ngữ riêng cho từng ứng dụng theo cơ chế native của macOS, với 10 ngôn ngữ: tiếng Anh, tiếng Việt, tiếng Trung giản thể, tiếng Trung phồn thể, tiếng Tây Ban Nha, tiếng Nhật, tiếng Hàn, tiếng Nga, tiếng Pháp và tiếng Đức.
 
 <a id="shortcuts"></a>
 
-## CLI
-
-Snapzy kèm lệnh `snapzy` để AI agent và script chụp màn hình mà không cần bấm gì, nhận lại đường dẫn file, metadata JSON và exit code:
-
-```bash
-snapzy list windows --app Safari
-snapzy capture window --app Safari --max-dimension 1568 -o shot.png
-snapzy capture area --rect 0,0,800,600 -o area.png
-```
-
-Lệnh nằm tại `/Applications/Snapzy.app/Contents/Helpers/snapzy`; đưa nó vào `PATH` từ **Cài đặt → Nâng cao → Dòng lệnh → Cài đặt**. Lần đầu một ứng dụng dùng lệnh này, Snapzy sẽ hỏi bạn có cho phép ứng dụng đó không. Tài liệu đầy đủ: [docs/CLI.md](docs/CLI.md).
-
 ## Phím tắt
 
-| Tác vụ                                                            | Phím tắt |
-| ----------------------------------------------------------------- | -------- |
-| Chụp toàn màn hình                                                | `⇧⌘3`    |
-| Chụp vùng                                                         | `⇧⌘4`    |
-| ↳ Chuyển chế độ chọn vùng/cửa sổ ứng dụng (`Application Capture`) | `A`      |
-| Chụp vùng + chú thích nhanh                                       | `⇧⌘7`    |
-| Chụp cuộn                                                         | `⇧⌘6`    |
-| Quay màn hình (bật/tắt)                                           | `⇧⌘5`    |
-| Tạm dừng/Tiếp tục quay (tùy chọn, gợi ý `⌘⇧Space`)               | _chưa đặt_ |
-| OCR văn bản                                                       | `⇧⌘2`    |
-| Chụp tách nền đối tượng                                           | `⇧⌘1`    |
-| Mở Annotate                                                       | `⇧⌘A`    |
-| Mở Video Editor                                                   | `⇧⌘E`    |
-| Mở Cloud Uploads                                                  | `⇧⌘L`    |
-| Hiện danh sách shortcut                                           | `⇧⌘K`    |
+| Thao tác                                                         | Phím tắt     |
+| ---------------------------------------------------------------- | ------------ |
+| Chụp toàn màn hình                                               | `⇧⌘3`        |
+| Chụp vùng chọn                                                   | `⇧⌘4`        |
+| ↳ Chuyển giữa chọn thủ công/cửa sổ ứng dụng (`Application Capture`) | `A`       |
+| Chụp lại vùng đã chọn                                            | `⌃⌘⇧4`       |
+| Chụp vùng và chú thích                                           | `⇧⌘7`        |
+| Chụp cửa sổ đang hoạt động                                       | `⇧⌘9`        |
+| Chụp cuộn                                                        | `⇧⌘6`        |
+| Quay màn hình (bấm để bắt đầu/dừng)                              | `⇧⌘5`        |
+| Tạm dừng/Tiếp tục ghi hình (tùy chọn, gợi ý `⌘⇧Space`)           | _chưa gán_   |
+| Chụp văn bản (OCR)                                               | `⇧⌘2`        |
+| Tách chủ thể                                                     | `⇧⌘1`        |
+| Chụp thành phần thông minh (Smart Element)                       | `⌥⇧4`        |
+| Mở Chú thích                                                     | `⇧⌘A`        |
+| Mở trình sửa video                                               | `⇧⌘E`        |
+| Mở cửa sổ Tải lên cloud                                          | `⇧⌘L`        |
+| Hiện danh sách phím tắt                                          | `⇧⌘K`        |
+| Bật/tắt bảng Lịch sử                                             | `⇧⌘H`        |
 
-### Hành động thẻ Quick Access
+<a id="quick-access-card-actions"></a>
 
-Di chuột lên thẻ Quick Access rồi nhấn phím. Chỉ hoạt động khi con trỏ đang ở trên thẻ.
+## Thao tác trên thẻ Truy cập nhanh
 
-| Hành động | Phím tắt |
-| --------- | -------- |
+Rê chuột lên một thẻ Truy cập nhanh rồi nhấn phím. Các phím này chỉ hoạt động khi con trỏ đang nằm trên thẻ.
+
+| Thao tác | Phím tắt |
+| -------- | -------- |
 | Sao chép | `⌘C` |
 | Lưu / Mở | `⌘S` |
 | Chỉnh sửa | `⌘E` |
 | Tải lên cloud | `⌘U` |
-| Ghim lên màn hình | `⌘P` |
+| Ghim ảnh chụp lên màn hình | `⌘P` |
 | Xóa | `⌘⌫` |
 | Đóng | `⌘W` |
+
+<a id="command-line-tools"></a>
+
+## Công cụ dòng lệnh
+
+Công cụ `snapzy` nằm tại `/Applications/Snapzy.app/Contents/Helpers/snapzy`. Để thêm vào `PATH`, mở **Cài đặt → Dòng lệnh** rồi bấm **Cài đặt**.
+
+Quyền truy cập được cấp riêng cho từng ứng dụng gọi lệnh. Mọi lệnh, trừ `snapzy status`, đều yêu cầu ứng dụng gọi lệnh đã được chấp thuận; sau khi chấp thuận, ứng dụng đó có thể chạy các lệnh tiếp theo mà không bị hỏi lại.
+
+~~~bash
+snapzy list windows --app Safari
+snapzy capture window --app Safari --max-dimension 1568 -o shot.png
+snapzy capture area --rect 0,0,800,600 -o area.png
+~~~
+
+Xem [tài liệu CLI](docs/CLI.md).
 
 <a id="automation"></a>
 
 ## Tự động hóa
 
-Snapzy đăng ký URL scheme `snapzy://` để launcher và công cụ tự động hóa (như [Extension Raycast](https://www.raycast.com/chkzz/snapzy), Alfred, hoặc script tùy chỉnh) có thể kích hoạt các thao tác capture. Tùy chọn tích hợp này có thể bật hoặc tắt dưới **Cài đặt -> Nâng cao -> Tích hợp URL Scheme**.
+Snapzy đăng ký URL scheme `snapzy://` để launcher và công cụ tự động hóa (như [Raycast Extension](https://www.raycast.com/chkzz/snapzy), Alfred hoặc script tự viết) có thể kích hoạt các thao tác chụp. Bạn có thể bật hoặc tắt tích hợp này tại **Cài đặt → Nâng cao → Tích hợp URL Scheme**.
 
-| Tác vụ                  | URL                               |
-| ----------------------- | --------------------------------- |
-| Chụp toàn màn hình      | `snapzy://capture/fullscreen`     |
-| Chụp vùng               | `snapzy://capture/area`           |
-| Chụp cửa sổ ứng dụng    | `snapzy://capture/application`    |
-| Chụp vùng + chú thích   | `snapzy://capture/area-annotate`  |
-| Chụp cuộn               | `snapzy://capture/scrolling`      |
-| OCR văn bản             | `snapzy://capture/ocr`            |
-| Chụp tách nền đối tượng | `snapzy://capture/object-cutout`  |
-| Quay màn hình           | `snapzy://record/screen`          |
-| Quay cửa sổ ứng dụng    | `snapzy://record/application`     |
-| Mở Annotate             | `snapzy://open/annotate`          |
-| Mở Video Editor         | `snapzy://open/video-editor`      |
-| Mở Cloud Uploads        | `snapzy://open/cloud-uploads`     |
-| Mở Lịch sử capture      | `snapzy://open/history`           |
-| Hiện danh sách shortcut | `snapzy://show/shortcuts`         |
-| Mở Cài đặt              | `snapzy://settings`               |
-| Mở tab Cài đặt          | `snapzy://settings?tab=annotate`  |
+| Thao tác                    | URL                                |
+| --------------------------- | ---------------------------------- |
+| Chụp toàn màn hình          | `snapzy://capture/fullscreen`      |
+| Chụp vùng chọn              | `snapzy://capture/area`            |
+| Chụp lại vùng đã chọn       | `snapzy://capture/repeat-area`     |
+| Chụp vùng hẹn giờ           | `snapzy://capture/delayed`         |
+| Chụp cửa sổ ứng dụng        | `snapzy://capture/application`     |
+| Chụp cửa sổ đang hoạt động  | `snapzy://capture/active-window`   |
+| Chụp vùng và chú thích      | `snapzy://capture/area-annotate`   |
+| Chụp cuộn                   | `snapzy://capture/scrolling`       |
+| Chụp văn bản (OCR)          | `snapzy://capture/ocr`             |
+| Chụp thành phần thông minh  | `snapzy://capture/smart-element`   |
+| Tách chủ thể                | `snapzy://capture/object-cutout`   |
+| Quay màn hình               | `snapzy://record/screen`           |
+| Quay ứng dụng               | `snapzy://record/application`      |
+| Mở Chú thích                | `snapzy://open/annotate`           |
+| Ghép ảnh                    | `snapzy://open/combine`            |
+| Mở trình sửa video          | `snapzy://open/video-editor`       |
+| Mở cửa sổ Tải lên cloud     | `snapzy://open/cloud-uploads`      |
+| Mở Lịch sử chụp             | `snapzy://open/history`            |
+| Chọn màu                    | `snapzy://tools/pick-color`        |
+| Hiện danh sách phím tắt     | `snapzy://show/shortcuts`          |
+| Mở Cài đặt                  | `snapzy://settings`                |
+| Mở một tab trong Cài đặt    | `snapzy://settings?tab=annotate`   |
 
-<a id="development"></a>
+`snapzy://open/combine` mở trình chọn ảnh. Công cụ tự động hóa có thể bỏ qua bước chọn bằng cách truyền từ hai đường dẫn file cục bộ trở lên (đã URL-encode) qua tham số `file` lặp lại:
 
-## Development
+~~~bash
+open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
+~~~
 
-Để setup local, build từ source, và bắt đầu workflow phát triển, hãy đọc [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+Xem [Phím tắt và URL scheme](docs/SHORTCUTS.md) để biết thêm chi tiết.
 
-Nếu bạn cần lệnh archive, export, hoặc đóng gói DMG, xem [docs/BUILD.md](docs/BUILD.md). Nếu bạn muốn workflow đóng góp, xem [CONTRIBUTING.md](CONTRIBUTING.md).
+<a id="security-and-privacy"></a>
 
-<a id="documentation"></a>
+## Bảo mật và quyền riêng tư
 
-## Tài liệu
+Snapzy không chạy trong sandbox và chạy với quyền của tài khoản người dùng đã mở nó. Ứng dụng bật Hardened Runtime của macOS, được ký bằng Developer ID và notarize bởi Apple; library validation vẫn được bật, nên chỉ code do Snapzy hoặc Apple ký mới được nạp. Ảnh chụp và bản ghi được lưu cục bộ, và chỉ được tải lên AWS S3, Cloudflare R2 hoặc Google Drive của chính bạn khi bạn chủ động thực hiện. OCR tích hợp dùng Apple Vision ngay trên máy; nếu bạn cấu hình một endpoint OCR tùy chỉnh tương thích OpenAI, yêu cầu OCR sẽ kèm ảnh chụp và được gửi tới endpoint đó. Snapzy không thu thập dữ liệu telemetry.
 
-- [Hỏi DeepWiki (trợ lý tài liệu tương tác)](https://deepwiki.com/duongductrong/Snapzy)
-- [Bản đồ tài liệu cho con người và agent](docs/README.md)
-- [Cấu trúc dự án và kiến trúc runtime](docs/STRUCTURE.md)
-- [Luồng chụp, quay và chỉnh sửa](docs/CAPTURE.md)
-- [Hướng dẫn build và đóng gói](docs/BUILD.md)
-- [Quy trình release và update](docs/RELEASES.md)
-- [Kiểm thử update Sparkle cục bộ](docs/UPDATE_TESTING.md)
-- [Lệnh `snapzy` cho agent và script](docs/CLI.md)
+Thông tin đăng nhập cloud, OAuth token và API key của OCR tùy chỉnh chỉ được lưu trong Chuỗi khóa (Keychain) của macOS. Mật khẩu bảo vệ thông tin đăng nhập cloud (tùy chọn) được băm SHA-256 và không bao giờ được lưu dưới dạng văn bản thô. Thông tin đăng nhập cloud chỉ có thể chuyển sang máy khác qua thao tác export/import thủ công được mã hóa bằng passphrase, còn API key của OCR tùy chỉnh không có trong file export cấu hình lẫn file export thông tin đăng nhập. File cấu hình TOML di động chỉ chứa các tùy chọn; không gồm secret, lịch sử chụp và tải lên, cache, danh sách ứng dụng đã được chấp thuận dùng CLI, và security-scoped bookmark. Xem [SECURITY.md](SECURITY.md) để biết chi tiết các yêu cầu mạng và toàn bộ chính sách bảo mật, và [hướng dẫn cấu hình](docs/CONFIGURATION.md) cho phần thiết lập di động.
 
-<a id="community"></a>
+Để báo cáo lỗ hổng, hãy dùng [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) hoặc liên hệ riêng với maintainer. Xem [SECURITY.md](SECURITY.md) để biết cách báo cáo.
 
-## Cộng đồng
+<a id="more-details"></a>
 
-- Tham gia cộng đồng Snapzy trên Discord để nhận hỗ trợ, góp ý và thảo luận: [https://discord.gg/xkWDAuJkZu](https://discord.gg/xkWDAuJkZu)
+## Tài liệu chi tiết
+
+Tài liệu chi tiết hiện chỉ có bằng tiếng Anh.
+
+- [Chụp màn hình và OCR](docs/CAPTURE.md) · [Chụp cuộn](docs/SCROLLING_CAPTURE.md) · [Quay màn hình](docs/RECORDING.md)
+- [Chú thích](docs/ANNOTATE.md) · [Trình sửa video](docs/VIDEO_EDITOR.md) · [Truy cập nhanh](docs/QUICK_ACCESS.md) · [Lịch sử](docs/HISTORY.md)
+- [Tải lên cloud](docs/CLOUD.md) · [Phím tắt và URL scheme](docs/SHORTCUTS.md) · [CLI](docs/CLI.md)
+- [Cấu hình và tùy chọn](docs/CONFIGURATION.md) · [Tham chiếu tùy chọn](docs/PREFERENCES.md) · [Cập nhật và chẩn đoán](docs/UPDATES.md)
+- [Phát triển](docs/DEVELOPMENT.md) · [Build và đóng gói](docs/BUILD.md) · [Bản đồ tài liệu](docs/README.md)
+- [Kết quả và phương pháp benchmark OCR](docs/OCR_BENCHMARK.md)
+
+<a id="contributing"></a>
+
+## Đóng góp
+
+Mọi đóng góp đều được hoan nghênh. Hãy đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi mở pull request.
+
+<a id="contributors"></a>
+
+## Người đóng góp
+
+Cảm ơn tất cả những người đã đóng góp cho Snapzy!
+
+<a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
+</a>
 
 <a id="featured-on"></a>
 
 ## Được giới thiệu trên
 
 <p>
-  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - Hãy nghĩ tới CleanShot X nhưng mã nguồn mở và thân thiện với developer | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
+  <a href="https://www.producthunt.com/products/snapzy?embed=true&amp;utm_source=badge-featured&amp;utm_medium=badge&amp;utm_campaign=badge-snapzy" target="_blank" rel="noopener noreferrer"><img alt="Snapzy - Think CleanShot X, but open-source and developer-friendly | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1097629&amp;theme=light&amp;t=1773585048784"></a>
   <a href="https://unikorn.vn/p/snapzy?ref=embed-snapzy" target="_blank"><img src="https://unikorn.vn/api/widgets/badge/snapzy?theme=light" alt="Snapzy trên Unikorn.vn" style="width: 250px; height: 54px;" width="250" height="54" /></a>
 </p>
 
-## Benchmark
+<a id="star-history"></a>
 
-### OCR
-
-Ngày benchmark: 19 tháng 4, 2026. Các con số OCR trong README được lấy từ runner có thể tái lập `scripts/run-ocr-readme-benchmark.sh`, chạy trên corpus sạch dạng UI/article text có xuống dòng với `12 mẫu / ngôn ngữ` trên `10 ngôn ngữ được hỗ trợ`. `Character accuracy` là chỉ số chính, `exact match` được tính rất chặt, và tỷ lệ `no-output` trên corpus này là `0%` cho toàn bộ bảng bên dưới.
-
-| Ngôn ngữ            | Character Accuracy | Exact Match |
-| ------------------- | -----------------: | ----------: |
-| English             |             100.0% |      100.0% |
-| Vietnamese          |             100.0% |      100.0% |
-| Simplified Chinese  |              99.3% |       75.0% |
-| Traditional Chinese |              99.0% |       66.7% |
-| Spanish             |              99.9% |       91.7% |
-| Japanese            |              99.4% |       66.7% |
-| Korean              |              99.7% |       83.3% |
-| Russian             |             100.0% |      100.0% |
-| French              |              99.3% |       33.3% |
-| German              |              99.8% |       75.0% |
-
-Screenshot thực tế có thể thấp hơn corpus này, nhất là khi có emoji, footer tương phản thấp, dấu câu lạ, nền gradient, blur, hoặc font trang trí mạnh.
-
-<a id="security"></a>
-
-## Bảo mật
-
-Snapzy **không** chạy trong sandbox — app chạy với quyền của tài khoản người dùng. App bật macOS Hardened Runtime, được ký Developer ID và notarize bởi Apple, và chỉ khai báo tập entitlement tối thiểu; library validation luôn bật nên app chỉ nạp được code do Snapzy hoặc Apple ký. Mọi request mạng chỉ phục vụ kiểm tra cập nhật Sparkle và các lần cloud upload do chính người dùng chủ động tới bucket S3/R2 của riêng mình, không có dữ liệu nào được gửi tới server bên thứ ba. Credential cloud được lưu độc quyền trong macOS Keychain, có thể được bảo vệ thêm bằng mật khẩu tùy chọn (băm SHA-256, không bao giờ lưu plaintext), và chỉ có thể chuyển qua luồng export/import mã hóa thủ công được bảo vệ bằng passphrase do người dùng cung cấp. Snapzy không thu thập telemetry.
-
-Để báo cáo lỗ hổng bảo mật, hãy dùng [GitHub Security Advisory](https://github.com/duongductrong/Snapzy/security/advisories/new) hoặc liên hệ riêng với maintainer. Xem [SECURITY.md](SECURITY.md) để biết đầy đủ chi tiết.
-
-<a id="contributing"></a>
-
-## Đóng góp
-
-Mọi đóng góp đều được chào đón. Hãy đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi mở pull request.
-
-## Cộng tác viên
-
-Cảm ơn tất cả mọi người đã đóng góp cho Snapzy!
-
-<a href="https://github.com/duongductrong/Snapzy/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=duongductrong/Snapzy" />
-</a>
-
-## Lịch sử sao
+## Lịch sử Star
 
 <a href="https://www.star-history.com/?repos=duongductrong%2FSnapzy&type=date&logscale=&legend=top-left">
  <picture>
    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&theme=dark&logscale&legend=top-left" />
    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
-   <img alt="Biểu đồ lịch sử sao" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
+   <img alt="Biểu đồ lịch sử Star" src="https://api.star-history.com/image?repos=duongductrong/Snapzy&type=date&logscale&legend=top-left" />
  </picture>
 </a>
 
+<a id="acknowledgments"></a>
+
 ## Lời cảm ơn
 
-Snapzy lấy cảm hứng từ [CleanShot X](https://cleanshot.com/), một ứng dụng chụp màn hình và quay màn hình tiên tiến dành cho macOS.
+Snapzy lấy cảm hứng từ [CleanShot X](https://cleanshot.com/), một ứng dụng chụp và quay màn hình nâng cao dành cho macOS.
+
+<a id="license"></a>
 
 ## Giấy phép
 
-BSD 3-Clause License. Xem [LICENSE](LICENSE).
+Giấy phép BSD 3-Clause. Xem [LICENSE](LICENSE).
