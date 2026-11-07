@@ -12,10 +12,10 @@ struct HistoryFilterBar: View {
   let counts: [CaptureHistoryType?: Int]
 
   private let filters: [(label: String, icon: String, type: CaptureHistoryType?)] = [
-    ("All", "square.grid.2x2", nil),
-    ("Screenshots", CaptureHistoryType.screenshot.systemIconName, .screenshot),
-    ("Videos", CaptureHistoryType.video.systemIconName, .video),
-    ("GIFs", CaptureHistoryType.gif.systemIconName, .gif),
+    (L10n.PreferencesHistory.defaultFilterAll, "square.grid.2x2", nil),
+    (L10n.PreferencesHistory.defaultFilterScreenshots, CaptureHistoryType.screenshot.systemIconName, .screenshot),
+    (L10n.PreferencesHistory.defaultFilterVideos, CaptureHistoryType.video.systemIconName, .video),
+    (L10n.PreferencesHistory.defaultFilterGifs, CaptureHistoryType.gif.systemIconName, .gif),
   ]
 
   var body: some View {

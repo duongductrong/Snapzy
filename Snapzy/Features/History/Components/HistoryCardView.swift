@@ -179,6 +179,10 @@ struct HistoryCardView: View, Equatable {
         if let uploadState = manager.cloudUploadState(for: record) {
           HistoryCloudUploadOverlayView(state: uploadState)
         }
+
+        HistoryCardRemoveButton(record: record, size: 26)
+          .padding(8)
+          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
       }
       .clipShape(cardShape)
       .overlay(
@@ -324,6 +328,34 @@ struct HistoryCardView: View, Equatable {
   private func openDefaultEditor() {
     guard fileExists else { return }
     HistoryWindowController.shared.openItem(record)
+  }
+}
+
+/// Small liquid-glass trash button pinned to a history card's top-trailing corner.
+/// Removes the single capture (moves the file to Trash), matching the context-menu Delete.
+struct HistoryCardRemoveButton: View {
+  let record: CaptureHistoryRecord
+  var size: CGFloat = 24
+
+  var body: some View {
+    Button {
+      HistoryWindowController.shared.deleteRecords([record], asksConfirmation: false)
+    } label: {
+      Image(systemName: "trash")
+        .font(.system(size: size * 0.42, weight: .semibold))
+        .foregroundColor(LiquidGlassTokens.inkOverlay)
+        .frame(width: size, height: size)
+        .liquidGlassControl(
+          isActive: false,
+          in: Circle(),
+          emphasis: .overlay,
+          showsRestingSurface: true
+        )
+        .contentShape(Circle())
+    }
+    .buttonStyle(.plain)
+    .help(L10n.Common.deleteAction)
+    .accessibilityLabel(L10n.Common.deleteAction)
   }
 }
 

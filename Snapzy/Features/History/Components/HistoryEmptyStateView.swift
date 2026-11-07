@@ -53,20 +53,20 @@ struct HistoryEmptyStateView: View {
 
   private var title: String {
     if hasSearch {
-      return "No matches found"
+      return L10n.PreferencesHistory.emptyNoMatches
     }
     switch filter {
-    case .screenshot: return "No screenshots yet"
-    case .video: return "No videos yet"
-    case .gif: return "No GIFs yet"
-    case nil: return "No captures yet"
+    case .screenshot: return L10n.PreferencesHistory.emptyNoScreenshots
+    case .video: return L10n.PreferencesHistory.emptyNoVideos
+    case .gif: return L10n.PreferencesHistory.emptyNoGifs
+    case nil: return L10n.PreferencesHistory.emptyNoCaptures
     }
   }
 
   private var subtitle: String {
     if hasSearch {
-      return "Try a different search term."
+      return L10n.PreferencesHistory.emptySearchHint
     }
-    return "Take a screenshot or record your screen to see them here."
+    return L10n.PreferencesHistory.emptyHint
   }
 }

@@ -254,6 +254,26 @@ final class HistoryWindowController {
     }
   }
 
+  /// Moves every history capture to Trash after one confirmation. Returns the number removed.
+  @discardableResult
+  func clearAllHistory() -> Int {
+    let records = CaptureHistoryStore.shared.records
+    guard !records.isEmpty else { return 0 }
+
+    let isConfirmed = HistoryFloatingManager.shared.performModalInteraction {
+      let alert = NSAlert()
+      alert.messageText = L10n.PreferencesHistory.clearHistoryAlertTitle
+      alert.informativeText = L10n.PreferencesHistory.clearHistoryAlertMessage
+      alert.alertStyle = .warning
+      alert.addButton(withTitle: L10n.PreferencesHistory.clearHistoryConfirm)
+      alert.addButton(withTitle: L10n.Common.cancel)
+      return alert.runModal() == .alertFirstButtonReturn
+    }
+    guard isConfirmed else { return 0 }
+
+    return deleteRecords(records, asksConfirmation: false)
+  }
+
   private func confirmDelete(records: [CaptureHistoryRecord]) -> Bool {
     let alert = NSAlert()
     alert.messageText = L10n.PreferencesHistory.deleteSelectedAlertTitle

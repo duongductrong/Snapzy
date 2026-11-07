@@ -222,6 +222,8 @@ struct HistoryFloatingContentView: View {
       HStack(spacing: 8) {
         Spacer()
 
+        clearHistoryButton(size: 30)
+
         controlButton(
           systemName: "arrow.up.forward.app",
           help: L10n.Actions.openHistory,
@@ -347,7 +349,7 @@ struct HistoryFloatingContentView: View {
         .font(.system(size: 12, weight: .semibold))
         .foregroundColor(.secondary.opacity(0.9))
 
-      TextField("Search captures", text: $manager.searchText)
+      TextField(L10n.PreferencesHistory.floatingSearchPlaceholder, text: $manager.searchText)
         .textFieldStyle(.plain)
         .font(.system(size: 12, weight: .medium))
 
@@ -362,7 +364,9 @@ struct HistoryFloatingContentView: View {
     }
     .padding(.horizontal, 14)
     .padding(.vertical, 9)
-    .frame(width: 238)
+    // Header row budget: type filters + search + time filters + 4 controls must fit the
+    // expanded panel's content width, so the search field gives up room for "Clear History".
+    .frame(width: 198)
     .liquidGlassSurface(
       shape: Capsule(style: .continuous),
       substrate: 0.18,
@@ -405,10 +409,12 @@ struct HistoryFloatingContentView: View {
 
   private var expandedControls: some View {
     HStack(spacing: 6) {
+      clearHistoryButton(size: 34)
+
       if manager.isEnabled {
         controlButton(
           systemName: "arrow.down.right.and.arrow.up.left",
-          help: "Collapse",
+          help: L10n.PreferencesHistory.collapsePanel,
           size: 34,
           action: manager.collapse
         )
@@ -579,10 +585,10 @@ struct HistoryFloatingContentView: View {
 
   private var captureTypeFilters: [(title: String, type: CaptureHistoryType?)] {
     [
-      ("All", nil),
-      ("Screenshots", .screenshot),
-      ("Videos", .video),
-      ("GIFs", .gif),
+      (L10n.PreferencesHistory.defaultFilterAll, nil),
+      (L10n.PreferencesHistory.defaultFilterScreenshots, .screenshot),
+      (L10n.PreferencesHistory.defaultFilterVideos, .video),
+      (L10n.PreferencesHistory.defaultFilterGifs, .gif),
     ]
   }
 
@@ -621,10 +627,10 @@ struct HistoryFloatingContentView: View {
 
   private var compactEmptyTitle: String {
     switch effectiveCompactFilter {
-    case .screenshot: return "No screenshots yet"
-    case .video: return "No videos yet"
-    case .gif: return "No GIFs yet"
-    case nil: return "No captures yet"
+    case .screenshot: return L10n.PreferencesHistory.emptyNoScreenshots
+    case .video: return L10n.PreferencesHistory.emptyNoVideos
+    case .gif: return L10n.PreferencesHistory.emptyNoGifs
+    case nil: return L10n.PreferencesHistory.emptyNoCaptures
     }
   }
 
@@ -681,6 +687,28 @@ struct HistoryFloatingContentView: View {
     }
     .buttonStyle(.plain)
     .help(help)
+  }
+
+  /// One-click "Clear History" — hidden while there is nothing to clear so the header
+  /// never offers a no-op destructive action.
+  @ViewBuilder
+  private func clearHistoryButton(size: CGFloat) -> some View {
+    if !store.records.isEmpty {
+      controlButton(
+        systemName: "trash",
+        help: L10n.PreferencesHistory.clearHistoryButton,
+        size: size,
+        action: clearAllHistory
+      )
+      .accessibilityLabel(L10n.PreferencesHistory.clearHistoryButton)
+      .transition(.scale(scale: 0.8).combined(with: .opacity))
+    }
+  }
+
+  private func clearAllHistory() {
+    let deletedCount = HistoryWindowController.shared.clearAllHistory()
+    guard deletedCount > 0 else { return }
+    clearExpandedSelection()
   }
 
   private func selectionControlButton(
