@@ -49,6 +49,8 @@ struct SingleKeyRecorderView: View {
   let conflictingTool: AnnotationToolType?
   var context: AnnotationToolContext = .both
   var defaultShortcut: Character? = nil
+  /// Swaps keys with the tool that owns the rejected key (see `ShortcutSwapProposal`).
+  var onSwap: (() -> Void)? = nil
 
   @State private var isRecording = false
   @State private var eventMonitor: Any?
@@ -94,7 +96,7 @@ struct SingleKeyRecorderView: View {
         }
       }
       .buttonStyle(ShortcutButtonStyle(isRecording: isRecording))
-      .shortcutValidationHighlight(issue: validationIssue)
+      .shortcutValidationHighlight(issue: validationIssue, onSwap: onSwap)
       .disabled(!isEnabled)
       .help(isEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 

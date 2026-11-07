@@ -12,9 +12,34 @@ enum ShortcutValidationSeverity: Equatable {
   case error
 }
 
+/// Offer attached to a duplicate-shortcut rejection: the user can swap shortcuts
+/// with the action that already owns the combination instead of being blocked.
+struct ShortcutSwapProposal: Equatable {
+  enum Owner: Equatable {
+    case global(GlobalShortcutKind)
+    case annotateAction(AnnotateActionShortcutKind)
+    case quickAccessAction(QuickAccessActionKind)
+    case annotateTool(AnnotationToolType)
+  }
+
+  enum Value: Equatable {
+    case combo(ShortcutConfig)
+    case key(Character)
+  }
+
+  /// Action currently holding the requested shortcut.
+  let owner: Owner
+  /// Shortcut the user just tried to record.
+  let value: Value
+}
+
 struct ShortcutValidationIssue: Equatable {
   let severity: ShortcutValidationSeverity
   let message: String
+  var swapProposal: ShortcutSwapProposal? = nil
+  /// Unique per validation run, so recording the same rejected combo again still counts
+  /// as a change and re-presents the popover (and its Swap offer) after it was dismissed.
+  let occurrenceID = UUID()
 }
 
 enum ShortcutValidationDecision: Equatable {
@@ -36,14 +61,16 @@ final class ShortcutValidationService {
     if let conflictKind = conflictingGlobalShortcut(for: config, excluding: kind) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .global(conflictKind), value: .combo(config))
       ))
     }
 
     if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: nil) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedByInAnnotate(conflictKind.displayName)
+        message: L10n.ShortcutValidation.alreadyUsedByInAnnotate(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .annotateAction(conflictKind), value: .combo(config))
       ))
     }
 
@@ -71,14 +98,16 @@ final class ShortcutValidationService {
     if let conflictKind = conflictingAnnotateActionShortcut(for: config, excluding: kind) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .annotateAction(conflictKind), value: .combo(config))
       ))
     }
 
     if let conflictKind = conflictingGlobalShortcut(for: config, excluding: nil) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName)
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictKind.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .global(conflictKind), value: .combo(config))
       ))
     }
 
@@ -111,7 +140,8 @@ final class ShortcutValidationService {
     if let conflictAction = conflictingQuickAccessActionShortcut(for: config, excluding: action) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedBy(conflictAction.settingsTitle)
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictAction.settingsTitle),
+        swapProposal: ShortcutSwapProposal(owner: .quickAccessAction(conflictAction), value: .combo(config))
       ))
     }
 
@@ -132,7 +162,8 @@ final class ShortcutValidationService {
     if let conflictTool = AnnotateShortcutManager.shared.conflictingTool(for: key, excluding: tool) {
       return .reject(issue: ShortcutValidationIssue(
         severity: .error,
-        message: L10n.ShortcutValidation.alreadyUsedBy(conflictTool.displayName)
+        message: L10n.ShortcutValidation.alreadyUsedBy(conflictTool.displayName),
+        swapProposal: ShortcutSwapProposal(owner: .annotateTool(conflictTool), value: .key(key))
       ))
     }
 

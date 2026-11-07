@@ -18,6 +18,9 @@ struct ShortcutRecorderView: View {
   let defaultShortcut: ShortcutConfig?
   let isEnabled: Binding<Bool>?
   let validationIssue: ShortcutValidationIssue?
+  /// Swaps shortcuts with the action that owns the rejected combination.
+  /// Shown in the validation popover only when the issue carries a swap proposal.
+  let onSwap: (() -> Void)?
   let onShortcutChanged: (ShortcutConfig?) -> Bool
 
   @State private var isRecording = false
@@ -32,6 +35,7 @@ struct ShortcutRecorderView: View {
     defaultShortcut: ShortcutConfig? = nil,
     isEnabled: Binding<Bool>? = nil,
     validationIssue: ShortcutValidationIssue? = nil,
+    onSwap: (() -> Void)? = nil,
     onShortcutChanged: @escaping (ShortcutConfig?) -> Bool
   ) {
     self.label = label
@@ -41,6 +45,7 @@ struct ShortcutRecorderView: View {
     self.defaultShortcut = defaultShortcut
     self.isEnabled = isEnabled
     self.validationIssue = validationIssue
+    self.onSwap = onSwap
     self.onShortcutChanged = onShortcutChanged
   }
 
@@ -67,7 +72,7 @@ struct ShortcutRecorderView: View {
         }
       }
       .buttonStyle(ShortcutKeycapButtonStyle(isRecording: isRecording))
-      .shortcutValidationHighlight(issue: validationIssue)
+      .shortcutValidationHighlight(issue: validationIssue, onSwap: onSwap)
       .disabled(!isInteractionEnabled)
       .help(isInteractionEnabled ? L10n.ShortcutRecorder.clickToRecord : L10n.ShortcutRecorder.turnOnToEdit)
 
@@ -268,22 +273,34 @@ enum ShortcutValidationPopoverCoordinator {
 /// Popover content for validation messages — styled for macOS popover chrome.
 private struct ShortcutValidationPopoverContent: View {
   let issue: ShortcutValidationIssue
+  /// Non-nil when the conflict can be resolved by swapping with the owning action.
+  let onSwap: (() -> Void)?
 
   var body: some View {
-    HStack(spacing: 6) {
-      Image(systemName: iconName)
-        .font(.system(size: 11, weight: .semibold))
-        .foregroundColor(accentColor)
+    HStack(spacing: 8) {
+      HStack(spacing: 6) {
+        Image(systemName: iconName)
+          .font(.system(size: 11, weight: .semibold))
+          .foregroundColor(accentColor)
 
-      Text(issue.message)
-        .font(.system(size: 12, weight: .medium))
-        .foregroundColor(.primary)
-        .lineLimit(2)
-        .fixedSize(horizontal: false, vertical: true)
+        Text(issue.message)
+          .font(.system(size: 12, weight: .medium))
+          .foregroundColor(.primary)
+          .lineLimit(2)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+
+      if let onSwap {
+        Button(L10n.ShortcutRecorder.swap, action: onSwap)
+          .buttonStyle(.liquidGlass(emphasis: .secondary, capsule: true))
+          .fixedSize()
+          .keyboardShortcut(.defaultAction)
+        .help(L10n.ShortcutRecorder.swapHelp)
+      }
     }
     .padding(.horizontal, 10)
     .padding(.vertical, 6)
-    .frame(minWidth: 160, maxWidth: 260)
+    .frame(minWidth: 160, maxWidth: onSwap == nil ? 260 : 340)
   }
 
   private var accentColor: Color {
@@ -298,6 +315,7 @@ private struct ShortcutValidationPopoverContent: View {
 /// ViewModifier: red/orange pill highlight on keycap + macOS popover tooltip.
 struct ShortcutValidationHighlightModifier: ViewModifier {
   let issue: ShortcutValidationIssue?
+  var onSwap: (() -> Void)? = nil
 
   @State private var showPopover = false
   @State private var dismissTask: DispatchWorkItem?
@@ -321,7 +339,7 @@ struct ShortcutValidationHighlightModifier: ViewModifier {
         arrowEdge: .bottom
       ) {
         if let issue {
-          ShortcutValidationPopoverContent(issue: issue)
+          ShortcutValidationPopoverContent(issue: issue, onSwap: swapAction(for: issue))
         }
       }
       .onChange(of: issue) { newIssue in
@@ -340,7 +358,10 @@ struct ShortcutValidationHighlightModifier: ViewModifier {
             ShortcutValidationPopoverCoordinator.clear(id: instanceID)
           }
           dismissTask = task
-          DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+          // A swap offer stays until the user acts or clicks away; plain messages auto-hide.
+          if swapAction(for: newIssue) == nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4, execute: task)
+          }
         } else {
           showPopover = false
           ShortcutValidationPopoverCoordinator.clear(id: instanceID)
@@ -351,6 +372,15 @@ struct ShortcutValidationHighlightModifier: ViewModifier {
           ShortcutValidationPopoverCoordinator.clear(id: instanceID)
         }
       }
+  }
+
+  private func swapAction(for issue: ShortcutValidationIssue?) -> (() -> Void)? {
+    guard issue?.swapProposal != nil, let onSwap else { return nil }
+    return {
+      dismissTask?.cancel()
+      showPopover = false
+      onSwap()
+    }
   }
 
   private var pillFill: Color {
@@ -369,8 +399,11 @@ struct ShortcutValidationHighlightModifier: ViewModifier {
 }
 
 extension View {
-  func shortcutValidationHighlight(issue: ShortcutValidationIssue?) -> some View {
-    modifier(ShortcutValidationHighlightModifier(issue: issue))
+  func shortcutValidationHighlight(
+    issue: ShortcutValidationIssue?,
+    onSwap: (() -> Void)? = nil
+  ) -> some View {
+    modifier(ShortcutValidationHighlightModifier(issue: issue, onSwap: onSwap))
   }
 }
 
