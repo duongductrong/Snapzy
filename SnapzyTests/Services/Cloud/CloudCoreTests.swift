@@ -150,6 +150,68 @@ final class CloudCoreTests: XCTestCase {
     }
   }
 
+  func testCloudCredentialTransfer_roundTripsShareLinkStyle() throws {
+    var payload = makeTransferPayload()
+    payload.shareLinkStyle = CloudShareLinkStyle.short.rawValue
+    let passphrase = "correct horse battery"
+
+    let archiveData = try CloudCredentialTransferService.exportArchive(payload: payload, passphrase: passphrase)
+    let imported = try CloudCredentialTransferService.importArchive(from: archiveData, passphrase: passphrase)
+
+    XCTAssertEqual(imported.shareLinkStyle, "short")
+    XCTAssertEqual(imported.resolvedShareLinkStyle, .short)
+  }
+
+  func testCloudCredentialTransferPayload_decodesArchivesWithoutShareLinkStyle() throws {
+    // An archive written before the field existed has no `shareLinkStyle` key.
+    var legacyObject = try XCTUnwrap(
+      JSONSerialization.jsonObject(with: JSONEncoder().encode(makeTransferPayload())) as? [String: Any]
+    )
+    legacyObject.removeValue(forKey: "shareLinkStyle")
+    let legacyJSON = try JSONSerialization.data(withJSONObject: legacyObject)
+
+    let payload = try JSONDecoder().decode(CloudCredentialTransferPayload.self, from: legacyJSON)
+
+    XCTAssertNil(payload.shareLinkStyle)
+    XCTAssertNil(payload.resolvedShareLinkStyle)
+  }
+
+  func testCloudCredentialTransferPayload_ignoresUnknownStyleAndGoogleDrive() {
+    var unknown = makeTransferPayload()
+    unknown.shareLinkStyle = "tiny"
+    XCTAssertNil(unknown.resolvedShareLinkStyle)
+
+    let google = CloudCredentialTransferPayload(
+      configuration: CloudConfiguration(
+        providerType: .googleDrive,
+        bucket: "Snapzy",
+        region: "",
+        endpoint: nil,
+        customDomain: nil,
+        expireTime: .permanent
+      ),
+      accessKey: "client",
+      secretKey: "secret",
+      shareLinkStyle: CloudShareLinkStyle.short.rawValue
+    )
+    XCTAssertNil(google.resolvedShareLinkStyle)
+  }
+
+  func testCloudManagerClearConfigurationDefaults_removesShareLinkStyleAndKeepsWindowPosition() {
+    let defaults = UserDefaultsFactory.make()
+    defaults.set(CloudShareLinkStyle.short.rawValue, forKey: PreferencesKeys.cloudShareLinkStyle)
+    defaults.set("r2", forKey: PreferencesKeys.cloudProviderType)
+    defaults.set(CloudUploadFloatingPosition.center.rawValue, forKey: PreferencesKeys.cloudUploadsFloatingPosition)
+
+    CloudManager.clearConfigurationDefaults(defaults)
+
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.cloudShareLinkStyle))
+    XCTAssertEqual(CloudShareLinkStyle.stored(userDefaults: defaults), .descriptive)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.cloudProviderType))
+    XCTAssertFalse(defaults.bool(forKey: PreferencesKeys.cloudConfigured))
+    XCTAssertEqual(CloudUploadFloatingPosition.stored(userDefaults: defaults), .center)
+  }
+
   func testCloudCredentialTransferSuggestedArchiveFileName_sanitizesBucket() {
     let payload = CloudCredentialTransferPayload(
       configuration: CloudConfiguration(

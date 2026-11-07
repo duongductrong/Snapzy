@@ -56,7 +56,7 @@ flowchart LR
 - Save & Test: `validate()` credentials before persisting.
 - Configured state: masked summary (access key masked, "stored securely in Keychain") + Edit (password-gated) / Import / Export (`.snapzycloud`) / Reset.
 - Usage stats grid (`CloudUsageService`): ListObjectsV2 scan of the `snapzy/` prefix, 10-minute cache (`cloud.usageStatsCache`), monthly cost estimates — R2 $0.015/GB (10 GB free), S3 $0.023/GB (5 GB free); skipped for Google Drive.
-- Share link style pref (S3/R2, shown once configured): `cloud.shareLinkStyle` (`CloudShareLinkStyle`), `descriptive` by default. `short` hides the file name and capture time from new links. Re-uploads keep their existing key, and Google Drive is unaffected.
+- Share link style pref (S3/R2, shown once configured): `cloud.shareLinkStyle` (`CloudShareLinkStyle`), `descriptive` by default. `short` hides the file name and capture time from new links. Re-uploads keep their existing key, and Google Drive is unaffected. Carried in `.snapzycloud` archives (optional `shareLinkStyle`, applied after Save & Test; older archives and unknown values are ignored) and cleared by Reset.
 - Uploads window position pref: `cloud.uploads.floatingPosition` (`CloudUploadFloatingPosition`).
 
 ## Cloud Uploads window
