@@ -395,6 +395,46 @@ final class InlineAreaAnnotateSessionTests: XCTestCase {
     XCTAssertEqual(session.phase, .selecting)
   }
 
+  /// Regression (macOS 27): hover events stopped after the seeded first position, freezing
+  /// crosshair/bubble/magnifier at the trigger point. The polling tick must publish the real
+  /// pointer position without any hover event.
+  @MainActor
+  func testPointerTrackingTickPublishesPointerWithoutHoverEvents() throws {
+    let session = try makeSelectionSession()
+    // desktopFrame is (0, 0, 800, 600): screen (200, 100) → local (200, 500).
+    session.handlePointerTrackingTick(screenPoint: CGPoint(x: 200, y: 100))
+    XCTAssertEqual(session.selectionPointerLocation, CGPoint(x: 200, y: 500))
+
+    session.handlePointerTrackingTick(screenPoint: CGPoint(x: 650, y: 420))
+    XCTAssertEqual(session.selectionPointerLocation, CGPoint(x: 650, y: 180))
+
+    // A hover `.ended` clears it; the next tick restores it even without movement.
+    session.selectionPointerLocation = nil
+    session.handlePointerTrackingTick(screenPoint: CGPoint(x: 650, y: 420))
+    XCTAssertEqual(session.selectionPointerLocation, CGPoint(x: 650, y: 180))
+    session.cancel()
+  }
+
+  @MainActor
+  func testPointerTrackingTickFillsInStalledDrag() throws {
+    let session = try makeSelectionSession()
+    session.beginSelection(at: CGPoint(x: 100, y: 100))
+    session.handlePointerTrackingTick(screenPoint: CGPoint(x: 300, y: 300)) // local (300, 300)
+    XCTAssertEqual(session.selectionPointerLocation, CGPoint(x: 300, y: 300))
+    XCTAssertEqual(session.selectionRect, CGRect(x: 100, y: 100, width: 200, height: 200))
+    session.cancel()
+  }
+
+  @MainActor
+  func testPointerTrackingTickIsInertAfterSelectingPhase() throws {
+    let session = try makeSelectionSession()
+    session.beginAnnotating(with: CGRect(x: 10, y: 10, width: 200, height: 100))
+    XCTAssertEqual(session.phase, .annotating)
+    session.handlePointerTrackingTick(screenPoint: CGPoint(x: 200, y: 100))
+    XCTAssertNil(session.selectionPointerLocation)
+    session.cancel()
+  }
+
   @MainActor
   private func makeSelectionSession() throws -> InlineAreaAnnotateSession {
     // Fake display ID: the session hides the cursor per display at init — a nonexistent

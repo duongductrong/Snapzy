@@ -302,16 +302,10 @@ private struct InlineAreaAnnotateRootView: View {
           // display's true size is already known without needing SwiftUI to measure it.
           .frame(width: display.localFrame.width, height: display.localFrame.height)
           .allowsHitTesting(false)
-
           // The real system cursor is hidden for the whole `.selecting` phase
-          // (`InlineAreaAnnotateSession.cursorHider`) — draw the same crosshair image
-          // ourselves instead, mirroring plain area screenshot's `cursorProxyLayer`. Native
-          // `NSCursor.set()` is not used here: on this `.nonactivatingPanel` configuration the
-          // WindowServer can silently stop rendering it after roughly a second of no new mouse
-          // events, even though the app's own cursor bookkeeping stays correct the whole time.
-          if let selectingPointerPoint {
-            InlineAreaSystemCrosshairProxy(point: selectingPointerPoint)
-          }
+          // (`InlineAreaAnnotateSession.cursorHider`). The replacement crosshair is drawn by
+          // `InlineAreaMagnifierHostView` as a CALayer (`crosshairProxyLayer`), in the same
+          // update as the coordinate bubble — not as a SwiftUI view here.
         }
       }
       .coordinateSpace(name: InlineAreaCoordinateSpace.root)
@@ -320,6 +314,7 @@ private struct InlineAreaAnnotateRootView: View {
         case let .active(location):
           cursorIndicatorPoint = location
           if session.phase == .selecting {
+            session.recordHoverEvent()
             session.selectionPointerLocation = desktopPoint(for: location)
           }
           updateNativeCursorForIndicator(showsCursorIndicator)
@@ -726,7 +721,7 @@ private struct InlineAreaAnnotateRootView: View {
 
   /// Only relevant to `.annotating`-phase moving (`InlineAreaCursorIndicator`) — during
   /// `.selecting` the real cursor is already hidden for the whole phase
-  /// (`InlineAreaAnnotateSession.cursorHider`) and `InlineAreaSystemCrosshairProxy` draws the
+  /// (`InlineAreaAnnotateSession.cursorHider`) and `InlineAreaMagnifierHostView` draws the
   /// crosshair instead, so there's nothing for this to do there.
   private func updateNativeCursorForIndicator(_ isIndicatorVisible: Bool) {
     guard session.phase != .selecting else { return }
@@ -806,22 +801,6 @@ private struct InlineAreaCursorIndicator: View {
     .frame(width: frameSize, height: frameSize)
     .position(point)
     .allowsHitTesting(false)
-  }
-}
-
-/// Drawn replacement for the real system cursor during `.selecting`, mirroring plain area
-/// screenshot's `cursorProxyLayer`: draws the exact same crosshair image
-/// (`NSCursor.vectorScreenshotCrosshairLight`) the real cursor would otherwise use, so the two
-/// entry points look pixel-identical, while sidestepping the WindowServer's tendency to stop
-/// rendering a native `NSCursor.set()` cursor on this `.nonactivatingPanel` configuration after
-/// a period of no new mouse events (see `InlineAreaAnnotateSession.cursorHider`).
-private struct InlineAreaSystemCrosshairProxy: View {
-  let point: CGPoint
-
-  var body: some View {
-    Image(nsImage: NSCursor.vectorScreenshotCrosshairLight.image)
-      .position(point)
-      .allowsHitTesting(false)
   }
 }
 
