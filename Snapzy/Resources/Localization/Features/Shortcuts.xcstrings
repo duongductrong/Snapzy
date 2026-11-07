@@ -3064,6 +3064,71 @@
         }
       }
     },
+    "preferences-shortcuts.measure-screen-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bildschirm einfrieren und Abstände und Größen zwischen Kanten messen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Freeze the screen, then measure gaps and sizes between edges"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Congela la pantalla y mide espacios y tamaños entre bordes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Figer l’écran, puis mesurer les espacements et tailles entre les bords"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面を固定して、エッジ間の間隔とサイズを計測します"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면을 고정한 뒤 가장자리 사이의 간격과 크기를 측정합니다"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Зафиксировать экран и измерить отступы и размеры между краями"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cố định màn hình rồi đo khoảng cách và kích thước giữa các cạnh"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "冻结屏幕，然后测量边缘之间的间距和尺寸"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "凍結螢幕，然後測量邊緣之間的間距與尺寸"
+          }
+        }
+      }
+    },
     "preferences-shortcuts.no-conflicts-badge": {
       "comment": "Toolbar badge shown when no system shortcut conflicts exist",
       "extractionState": "manual",

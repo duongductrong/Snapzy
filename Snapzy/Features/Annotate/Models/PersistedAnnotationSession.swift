@@ -7,6 +7,7 @@
 
 import CoreGraphics
 import Foundation
+import SnapzyMeasureCore
 import SwiftUI
 
 nonisolated struct PersistedAnnotationSession: Codable {
@@ -127,6 +128,15 @@ struct PersistedAnnotationItem: Codable, Equatable {
 struct PersistedAnnotationType: Codable, Equatable {
   enum Kind: String, Codable {
     case path, rectangle, filledRectangle, oval, arrow, line, text, highlight, blur, counter, watermark, embeddedImage, spotlight
+    case measurement
+    /// A kind written by a newer Snapzy. The item is skipped instead of failing the whole
+    /// manifest, so a session keeps everything this build can draw.
+    case unknown
+
+    init(from decoder: Decoder) throws {
+      let raw = try decoder.singleValueContainer().decode(String.self)
+      self = Kind(rawValue: raw) ?? .unknown
+    }
   }
 
   var kind: Kind
@@ -138,6 +148,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   var blurType: String?
   var counterValue: Int?
   var embeddedImageAssetId: UUID?
+  var measure: PersistedMeasureGeometry?
 
   init(annotationType: AnnotationType) {
     switch annotationType {
@@ -177,6 +188,9 @@ struct PersistedAnnotationType: Codable, Equatable {
       embeddedImageAssetId = assetId
     case .spotlight:
       kind = .spotlight
+    case .measurement(let geometry):
+      kind = .measurement
+      measure = PersistedMeasureGeometry(geometry: geometry)
     }
   }
 
@@ -210,6 +224,42 @@ struct PersistedAnnotationType: Codable, Equatable {
       return .embeddedImage(embeddedImageAssetId)
     case .spotlight:
       return .spotlight
+    case .measurement:
+      return measure?.measureGeometry.map { .measurement($0) }
+    case .unknown:
+      return nil
     }
+  }
+}
+
+/// Measure annotation geometry. Unknown kinds, axes and units fall back so a session never
+/// fails to load over one of these fields.
+struct PersistedMeasureGeometry: Codable, Equatable {
+  var kind: String
+  var axis: String?
+  var origin: CGPoint?
+  var pixelScale: CGSize
+  var unit: String?
+
+  init(geometry: MeasureGeometry) {
+    kind = geometry.kind.rawValue
+    axis = geometry.axis.rawValue
+    origin = geometry.kind == .span ? geometry.origin : nil
+    pixelScale = geometry.pixelScale
+    unit = geometry.unit.rawValue
+  }
+
+  var measureGeometry: MeasureGeometry? {
+    guard let kind = MeasureGeometry.Kind(rawValue: kind),
+          pixelScale.width.isFinite, pixelScale.height.isFinite,
+          pixelScale.width > 0, pixelScale.height > 0 else { return nil }
+    if kind == .span, origin == nil { return nil }
+    return MeasureGeometry(
+      kind: kind,
+      axis: axis.flatMap(MeasureAxis.init(rawValue:)) ?? .both,
+      origin: origin ?? .zero,
+      pixelScale: pixelScale,
+      unit: unit.flatMap(MeasureUnit.init(rawValue:)) ?? .points
+    )
   }
 }

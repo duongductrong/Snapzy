@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import SnapzyMeasureCore
 import SwiftUI
 
 /// NSViewRepresentable wrapper for the drawing canvas
@@ -280,6 +281,8 @@ final class CanvasLayerView: NSView {
 /// NSView subclass handling mouse events and drawing
 final class DrawingCanvasNSView: NSView {
   private static let drawingCommitDragThreshold: CGFloat = 2
+  /// Measure: pointer travel (screen points) still read as a click that pins a span.
+  private static let measureClickThreshold: CGFloat = 4
 
   var state: AnnotateState {
     didSet {
@@ -301,6 +304,8 @@ final class DrawingCanvasNSView: NSView {
   private var isDrawing = false
   private var dragStart: CGPoint?
   private var drawingRawEndPoint: CGPoint?
+  /// Measure tool: the span under the pointer while hovering (drawn, never committed).
+  private var measureHoverItem: AnnotationItem?
   private var drawingStartDisplayPoint: CGPoint?
   private var drawingDragDistance: CGFloat = 0
   /// The drawing-tool press in progress: set once on mouseDown, cleared once
@@ -765,7 +770,7 @@ final class DrawingCanvasNSView: NSView {
     let hitTolerance = annotationHitToleranceInImagePoints
     for annotation in state.annotations.renderOrdered.reversed() {
       // Quick bounds check first (optimization)
-      let expandedBounds = annotation.selectionBounds.insetBy(dx: -hitTolerance, dy: -hitTolerance)
+      let expandedBounds = annotation.renderBounds.insetBy(dx: -hitTolerance, dy: -hitTolerance)
       guard expandedBounds.contains(point) else { continue }
 
       // Precise hit test
@@ -784,7 +789,7 @@ final class DrawingCanvasNSView: NSView {
   private func hitTestAnnotationEdge(at point: CGPoint) -> AnnotationItem? {
     let hitTolerance = annotationHitToleranceInImagePoints
     for annotation in state.annotations.renderOrdered.reversed() {
-      let expandedBounds = annotation.selectionBounds.insetBy(dx: -hitTolerance, dy: -hitTolerance)
+      let expandedBounds = annotation.renderBounds.insetBy(dx: -hitTolerance, dy: -hitTolerance)
       guard expandedBounds.contains(point) else { continue }
 
       if annotation.edgeBandContains(point, baseTolerance: hitTolerance) {
@@ -1118,6 +1123,7 @@ final class DrawingCanvasNSView: NSView {
 
     // Start drawing for other tools (in image coordinates)
     isDrawing = true
+    measureHoverItem = nil
     drawingStartDisplayPoint = displayPoint
     drawingDragDistance = 0
     drawingCounterValue = state.selectedTool == .counter ? state.nextCounterValue() : nil
@@ -1809,6 +1815,14 @@ final class DrawingCanvasNSView: NSView {
       }
     }
 
+    if tool == .measure {
+      let isClick = maxDrawingDistance(from: start, to: endPoint, path: pathToSave) < Self.measureClickThreshold
+      commitMeasurement(from: start, to: endPoint, isClick: isClick, keepsRawBox: event.modifierFlags.contains(.command))
+      resetDrawingInteraction()
+      invalidateDrawing()
+      return
+    }
+
     if shouldCommitDrawing(tool: tool, start: start, end: endPoint, path: pathToSave) {
       // Commit synchronously: deferring to a Task lets a frame render where the
       // stroke preview is already gone but the annotation is not yet appended,
@@ -2132,7 +2146,7 @@ final class DrawingCanvasNSView: NSView {
     let imageDirtyRect = displayToImage(dirtyRect).insetBy(dx: -cullingPadding, dy: -cullingPadding)
 
     for annotation in items {
-      guard annotation.selectionBounds.intersects(imageDirtyRect) else { continue }
+      guard annotation.renderBounds.intersects(imageDirtyRect) else { continue }
       renderer.draw(annotation)
     }
 
@@ -2226,7 +2240,7 @@ final class DrawingCanvasNSView: NSView {
     )
     let imageDirtyRect = displayToImage(dirtyRect).insetBy(dx: -chromePadding, dy: -chromePadding)
     for annotation in currentDisplayItems()
-    where state.isAnnotationSelected(annotation.id) && annotation.selectionBounds.intersects(imageDirtyRect) {
+    where state.isAnnotationSelected(annotation.id) && annotation.renderBounds.intersects(imageDirtyRect) {
       draw(annotation, context)
     }
 
@@ -2235,6 +2249,10 @@ final class DrawingCanvasNSView: NSView {
 
   /// Live preview of the in-progress stroke while a drawing gesture is active.
   private func drawCurrentStrokePreview(sourceImage: NSImage?, sourceCGImage: CGImage?, in context: CGContext) {
+    if state.selectedTool == .measure {
+      drawMeasurePreview(in: context)
+      return
+    }
     guard isDrawing, let start = dragStart else { return }
     let renderer = makeRenderer(sourceImage: sourceImage, sourceCGImage: sourceCGImage, in: context)
 
@@ -2292,6 +2310,18 @@ final class DrawingCanvasNSView: NSView {
         watermarkRotationDegrees: previewProperties.rotationDegrees,
         watermarkFontSize: previewProperties.fontSize
       )
+    }
+  }
+
+  /// Hover span, or the dashed box while dragging past the click threshold.
+  private func drawMeasurePreview(in context: CGContext) {
+    if isDrawing, let start = dragStart {
+      let end = currentPath.last ?? drawingRawEndPoint ?? start
+      guard maxDrawingDistance(from: start, to: end, path: []) >= Self.measureClickThreshold,
+            let item = measureDragPreviewItem(from: start, to: end) else { return }
+      AnnotateMeasureRenderer.draw(item, color: NSColor(item.properties.strokeColor).cgColor, in: context, dashed: true)
+    } else if let item = measureHoverItem, state.measureMapper != nil {
+      AnnotateMeasureRenderer.draw(item, color: NSColor(item.properties.strokeColor).cgColor.copy(alpha: 0.8) ?? .black, in: context)
     }
   }
 
@@ -2484,12 +2514,61 @@ final class DrawingCanvasNSView: NSView {
   override func mouseExited(with _: NSEvent) {
     state.updateCanvasMouseLocation(nil)
     NSCursor.arrow.set()
+    updateMeasureHover(at: nil)
   }
 
   override func mouseMoved(with event: NSEvent) {
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     updateCursor(for: event)
+    updateMeasureHover(at: displayToImage(displayPoint))
+  }
+
+  // MARK: - Measure
+
+  /// Re-scans the span under the pointer for the Measure tool's hover preview (< 1 ms).
+  private func updateMeasureHover(at imagePoint: CGPoint?) {
+    var item: AnnotationItem?
+    if state.selectedTool == .measure, !isDrawing, let imagePoint,
+       state.activeAnnotationBounds.contains(imagePoint),
+       let mapper = state.measureMapper,
+       let span = mapper.span(at: imagePoint, axis: state.measureAxis, tolerance: state.measureTolerance, unit: state.measureUnit) {
+      item = AnnotationItem(
+        type: .measurement(span.geometry),
+        bounds: span.bounds,
+        properties: state.annotationCreationProperties(for: .measure)
+      )
+    }
+    guard item?.type != measureHoverItem?.type || item?.bounds != measureHoverItem?.bounds else { return }
+    measureHoverItem = item
+    invalidateLiveLayers()
+  }
+
+  /// Commits a Measure gesture: a click pins the span under it, a drag measures a box that
+  /// snaps to the content inside (⌘ keeps the dragged box).
+  private func commitMeasurement(from start: CGPoint, to end: CGPoint, isClick: Bool, keepsRawBox: Bool) {
+    guard let mapper = state.measureMapper else { return }
+    let result: (geometry: MeasureGeometry, bounds: CGRect)?
+    if isClick {
+      // Same rule as the hover preview: nothing is measured outside the crop.
+      guard state.activeAnnotationBounds.contains(start) else { return }
+      result = mapper.span(at: start, axis: state.measureAxis, tolerance: state.measureTolerance, unit: state.measureUnit)
+    } else {
+      let bounds = state.activeAnnotationBounds
+      let clampedEnd = CGPoint(x: min(max(end.x, bounds.minX), bounds.maxX), y: min(max(end.y, bounds.minY), bounds.maxY))
+      result = mapper.box(from: start, to: clampedEnd, snaps: !keepsRawBox, tolerance: state.measureTolerance, unit: state.measureUnit)
+    }
+    guard let result else { return }
+    let item = state.addMeasurement(geometry: result.geometry, bounds: result.bounds)
+    state.selectedAnnotationId = item.id
+    autoSelectedAnnotationId = item.id
+  }
+
+  /// The dragged box before it snaps, drawn dashed.
+  private func measureDragPreviewItem(from start: CGPoint, to end: CGPoint) -> AnnotationItem? {
+    guard let mapper = state.measureMapper else { return nil }
+    let box = mapper.box(from: start, to: end, snaps: false, tolerance: state.measureTolerance, unit: state.measureUnit)
+    return AnnotationItem(type: .measurement(box.geometry), bounds: box.bounds, properties: state.annotationCreationProperties(for: .measure))
   }
 
   private func updateCanvasMouseLocation(for displayPoint: CGPoint) {

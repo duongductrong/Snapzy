@@ -833,6 +833,18 @@ final class AppStatusBarController: ObservableObject {
       item.isEnabled = viewModel.hasPermission
       return item
 
+    case .measureScreen:
+      let item = NSMenuItem(
+        title: L10n.Actions.measureScreen,
+        action: #selector(measureScreenAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .measureScreen, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "ruler", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
     case .editVideo:
       let item = NSMenuItem(
         title: L10n.Menu.editVideo,
@@ -985,6 +997,11 @@ final class AppStatusBarController: ObservableObject {
   @objc private func pickColorAction() {
     logMenuAction("pickColor")
     viewModel?.pickColor()
+  }
+
+  @objc private func measureScreenAction() {
+    logMenuAction("measureScreen")
+    viewModel?.measureScreen()
   }
 
   @objc private func editVideoAction() {

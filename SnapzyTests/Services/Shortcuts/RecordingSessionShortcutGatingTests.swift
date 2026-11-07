@@ -379,6 +379,7 @@ private extension KeyboardShortcutManager {
     case .objectCutout: setObjectCutoutShortcut(config)
     case .history: setHistoryShortcut(config)
     case .pickColor: setPickColorShortcut(config)
+    case .measureScreen: setMeasureScreenShortcut(config)
     }
   }
 }

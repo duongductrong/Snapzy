@@ -7,6 +7,7 @@
 
 import AppKit
 import Foundation
+import SnapzyMeasureCore
 
 @MainActor
 enum SnapzyConfigurationDefaultDocument {
@@ -186,6 +187,8 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("combine_save_as_edit", true)
     writer.value("crop_snap_to_edges", true)
     writer.value("highlighter_text_snapping", true)
+    writer.value("measure_unit", MeasureUnit.points.rawValue)
+    writer.value("measure_axis", MeasureAxis.both.rawValue)
   }
 
   private static func writeShortcuts(_ writer: inout SimpleTOMLWriter) {
@@ -302,6 +305,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .objectCutout: return .defaultObjectCutout
     case .history: return .defaultHistory
     case .pickColor: return nil
+    case .measureScreen: return .defaultMeasureScreen
     }
   }
 

@@ -33,6 +33,9 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("snapzy://tools/pick-color", .pickColor),
       ("snapzy://pick-color", .pickColor),
       ("snapzy://color-picker", .pickColor),
+      ("snapzy://tools/measure", .measureScreen),
+      ("snapzy://tools/ruler", .measureScreen),
+      ("snapzy://screen-ruler", .measureScreen),
       ("snapzy://show/shortcuts", .showShortcuts),
       ("snapzy://settings", .openSettings(nil)),
     ]

@@ -98,11 +98,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Capture**
   - Capture the full screen, a selected area, an app window, or a Smart Element. Capture already-open third-party menu-bar popovers; stitch scrolling content into one image with a live preview.
   - Extract text with built-in Apple Vision OCR or a configured OpenAI-compatible endpoint. Pick a pixel with the live loupe and copy it as HEX, RGB, HSL, HSB, CMYK, OKLCH, or SwiftUI; cut out a subject with optional safe auto-crop.
+  - Measure gaps and sizes on screen with the Screen Ruler: hover between edges, drag a box that snaps to content, pin measurements, copy them, or save a screenshot with them drawn on.
 - **Record**
   - Record the screen or an app as video with optional system audio and microphone input, or save a recording as a GIF.
   - Add a camera overlay, including iPhone Continuity Camera, mouse-click and keystroke highlights, or live annotations.
 - **Annotate and edit**
   - Add arrows, shapes, text, watermarks, blur, and pixelation. Detect and redact sensitive data on-device.
+  - Measure distances and sizes in the image with the Measure tool (`U`): editable measurements that export with it.
   - Crop images, remove backgrounds, and create 3D mockups. Trim clips, add zoom or speed segments, and use Follow Mouse to keep the cursor in view.
 - **Quick Access and History**
   - Copy, edit, drag, or upload captures from their floating Quick Access cards; pin screenshots on screen.
@@ -128,6 +130,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | OCR text capture                                         | `⇧⌘2`    |
 | Object cutout capture                                    | `⇧⌘1`    |
 | Smart element capture                                    | `⌥⇧4`    |
+| Measure screen (screen ruler)                            | `⌥⇧M`    |
 | Open Annotate                                            | `⇧⌘A`    |
 | Open Video Editor                                        | `⇧⌘E`    |
 | Open Cloud Uploads                                       | `⇧⌘L`    |
@@ -158,6 +161,7 @@ Access is approved per calling app. All commands other than `snapzy status` requ
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 
 See the [CLI reference](docs/CLI.md).
@@ -187,6 +191,7 @@ Snapzy registers the `snapzy://` URL scheme so launchers and automation tools (s
 | Open Cloud Uploads     | `snapzy://open/cloud-uploads`       |
 | Open Capture History   | `snapzy://open/history`             |
 | Pick color             | `snapzy://tools/pick-color`         |
+| Measure screen         | `snapzy://tools/measure`            |
 | Show shortcuts list    | `snapzy://show/shortcuts`           |
 | Open Settings          | `snapzy://settings`                 |
 | Open Settings tab      | `snapzy://settings?tab=annotate`    |

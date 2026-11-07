@@ -106,11 +106,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **キャプチャ**
   - 全画面、選択範囲、アプリのウィンドウ、またはスマート要素（Smart Element）をキャプチャできます。開いているサードパーティ製メニューバーのポップオーバーもキャプチャでき、スクロールするコンテンツはライブプレビューを見ながら 1 枚の画像に結合できます。
   - 内蔵の Apple Vision OCR、または設定した OpenAI 互換エンドポイントでテキストを抽出できます。ライブルーペでピクセルの色を取得し、HEX、RGB、HSL、HSB、CMYK、OKLCH、SwiftUI 形式でコピーできます。被写体の切り抜きにも対応し、安全な自動トリミングも選べます。
+  - Screen Ruler で画面上の間隔やサイズを測定できます。エッジ間にカーソルを合わせる、コンテンツにスナップするボックスをドラッグする、測定値をピン留め・コピーする、測定値を描き込んだスクリーンショットを保存する、といった操作に対応しています。
 - **画面収録**
   - 画面全体またはアプリをビデオとして収録できます。システムオーディオとマイク入力も任意で含められ、GIF として保存することもできます。
   - カメラオーバーレイ（iPhone の連係カメラにも対応）、マウスクリックとキー入力のハイライト、画面上でのライブ注釈を追加できます。
 - **注釈と編集**
   - 矢印、図形、テキスト、透かし、ぼかし、ピクセル化を追加できます。機密データはデバイス上で検出してマスクできます。
+  - 測定ツール（`U`）で画像内の距離やサイズを測れます。測定値は編集でき、書き出し画像にも含まれます。
   - 画像のトリミング、背景の削除、3D モックアップの作成ができます。ビデオのカット、ズーム区間や速度変更区間の追加、「マウスに追従」（Follow Mouse）によるカーソルの追尾にも対応しています。
 - **クイックアクセスと履歴**
   - フローティング表示されるクイックアクセスカードから、キャプチャのコピー、編集、ドラッグ、アップロードができます。スクリーンショットを画面にピン留めすることもできます。
@@ -138,6 +140,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | テキストを抽出（OCR）                                      | `⇧⌘2`          |
 | 被写体の切り抜き                                           | `⇧⌘1`          |
 | スマート要素キャプチャ                                     | `⌥⇧4`          |
+| 画面を測定（スクリーンルーラー）                           | `⌥⇧M`          |
 | 注釈を開く                                                 | `⇧⌘A`          |
 | ビデオエディタを開く                                       | `⇧⌘E`          |
 | クラウドアップロードを開く                                 | `⇧⌘L`          |
@@ -172,6 +175,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 
 詳しくは [CLI リファレンス](docs/CLI.md) を参照してください。
@@ -203,6 +207,7 @@ Snapzy は `snapzy://` URL スキームを登録しているため、ランチ�
 | クラウドアップロードを開く   | `snapzy://open/cloud-uploads`      |
 | キャプチャ履歴を開く         | `snapzy://open/history`            |
 | カラーを取得                 | `snapzy://tools/pick-color`        |
+| 画面を測定                   | `snapzy://tools/measure`           |
 | ショートカットリストを表示   | `snapzy://show/shortcuts`          |
 | 設定を開く                   | `snapzy://settings`                |
 | 設定の特定タブを開く         | `snapzy://settings?tab=annotate`   |

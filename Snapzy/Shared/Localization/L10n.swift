@@ -698,6 +698,11 @@ nonisolated enum L10n {
       defaultValue: "Pick Color",
       comment: "Action title for picking a color from the screen and copying its hex value"
     )
+    static let measureScreen = string(
+      "action.measure-screen",
+      defaultValue: "Measure Screen",
+      comment: "Action title for the screen ruler that measures distances and sizes on screen"
+    )
     static let recordVideo = string(
       "action.record-video",
       defaultValue: "Record Video",
@@ -4342,6 +4347,11 @@ nonisolated enum L10n {
       defaultValue: "Magnify the screen, then click a pixel to copy its hex color",
       comment: "Description for the pick color shortcut"
     )
+    static let measureScreenDescription = string(
+      "preferences-shortcuts.measure-screen-description",
+      defaultValue: "Freeze the screen, then measure gaps and sizes between edges",
+      comment: "Description for the measure screen (screen ruler) shortcut"
+    )
     static let recordingSection = string(
       "preferences-shortcuts.recording-section",
       defaultValue: "Recording Shortcuts",
@@ -6311,6 +6321,46 @@ nonisolated enum L10n {
       "annotate.highlighter-text-snapping",
       defaultValue: "Snap Highlight to Text",
       comment: "Settings title for snapping the highlighter to detected text lines"
+    )
+    static let measureGestureHint = string(
+      "annotate.measure-gesture-hint",
+      defaultValue: "Click to measure · Drag for a box · ⌘ keeps the box",
+      comment: "Hint for the Measure tool: a click pins the span under the pointer; a drag measures a box that snaps to content; holding Command keeps the dragged box"
+    )
+    static let measureAxis = string(
+      "annotate.measure-axis",
+      defaultValue: "Axis",
+      comment: "Quick properties group title: which directions the Measure tool measures"
+    )
+    static let measureAxisBoth = string(
+      "annotate.measure-axis.both",
+      defaultValue: "Width and height",
+      comment: "Measure axis option: measure both directions"
+    )
+    static let measureAxisHorizontal = string(
+      "annotate.measure-axis.horizontal",
+      defaultValue: "Width only",
+      comment: "Measure axis option: measure horizontally only"
+    )
+    static let measureAxisVertical = string(
+      "annotate.measure-axis.vertical",
+      defaultValue: "Height only",
+      comment: "Measure axis option: measure vertically only"
+    )
+    static let measureUnit = string(
+      "annotate.measure-unit",
+      defaultValue: "Unit",
+      comment: "Quick properties group title: unit of Measure labels"
+    )
+    static let measureUnitPoints = string(
+      "annotate.measure-unit.points",
+      defaultValue: "Points",
+      comment: "Measure unit option: logical points"
+    )
+    static let measureUnitPixels = string(
+      "annotate.measure-unit.pixels",
+      defaultValue: "Pixels",
+      comment: "Measure unit option: image pixels"
     )
     static let counterGestureHint = string(
       "annotate.counter-gesture-hint",
@@ -8486,6 +8536,11 @@ nonisolated enum L10n {
       defaultValue: "Counter",
       comment: "Annotation tool display name"
     )
+    static let measureTool = string(
+      "annotate.tool.measure",
+      defaultValue: "Measure",
+      comment: "Annotation tool display name: measures distances and sizes in the image"
+    )
     static let watermarkTool = string(
       "annotate.tool.watermark",
       defaultValue: "Watermark",
@@ -8820,6 +8875,34 @@ nonisolated enum L10n {
       defaultValue: "Pick Again",
       comment: "Button on the Pick Color result window that starts another pick"
     )
+    static let screenRulerHint = string(
+      "screen-capture.screen-ruler-hint",
+      defaultValue: "Click to pin · Drag for a box · H/V lock axis · U units · C copy · Return save · Esc quit",
+      comment: "Hint bar on the Measure Screen overlay listing its mouse and keyboard controls"
+    )
+    static let screenRulerUnavailable = string(
+      "screen-capture.screen-ruler-unavailable",
+      defaultValue: "Couldn't read the screen to measure",
+      comment: "Toast shown when Measure Screen cannot snapshot the displays"
+    )
+
+    static func screenRulerCopied(_ value: String) -> String {
+      format(
+        "screen-capture.screen-ruler-copied",
+        defaultValue: "Copied %@",
+        comment: "Feedback on the Measure Screen overlay after a measurement is copied. %@ is the value, e.g. \"120 × 48 pt\".",
+        value
+      )
+    }
+
+    static func screenRulerTolerance(_ value: Int) -> String {
+      format(
+        "screen-capture.screen-ruler-tolerance",
+        defaultValue: "Edge tolerance: %lld",
+        comment: "Feedback on the Measure Screen overlay after [ or ] changes how different a pixel must be to count as an edge. %lld is 0–64.",
+        Int64(value)
+      )
+    }
 
     static func captureFailed(_ reason: String) -> String {
       format(

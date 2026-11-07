@@ -106,11 +106,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **Chụp màn hình**
   - Chụp toàn màn hình, một vùng chọn, cửa sổ ứng dụng hoặc một thành phần giao diện (Smart Element). Chụp được cả popover trên thanh menu của ứng dụng bên thứ ba đang mở; ghép nội dung cuộn thành một ảnh duy nhất với bản xem trước trực tiếp.
   - Trích xuất văn bản bằng OCR Apple Vision tích hợp sẵn hoặc một endpoint tương thích OpenAI do bạn cấu hình. Lấy màu một điểm ảnh bằng kính lúp trực tiếp và sao chép dưới dạng HEX, RGB, HSL, HSB, CMYK, OKLCH hoặc SwiftUI; tách chủ thể khỏi nền, có tùy chọn tự động cắt viền an toàn.
+  - Đo khoảng cách và kích thước trên màn hình bằng Screen Ruler: di chuột giữa các cạnh, kéo một khung tự bám theo nội dung, ghim và sao chép số đo, hoặc lưu ảnh chụp có vẽ sẵn các số đo.
 - **Quay màn hình**
   - Quay toàn màn hình hoặc một ứng dụng thành video, có thể kèm âm thanh hệ thống và micro, hoặc lưu bản ghi dưới dạng GIF.
   - Thêm khung camera (hỗ trợ cả Camera liên tục (Continuity Camera) trên iPhone), làm nổi bật cú nhấp chuột và phím bấm, hoặc vẽ chú thích trực tiếp lên màn hình.
 - **Chú thích và chỉnh sửa**
   - Thêm mũi tên, hình khối, văn bản, watermark, làm mờ (blur) và pixel hóa. Phát hiện và che dữ liệu nhạy cảm ngay trên máy.
+  - Đo khoảng cách và kích thước trong ảnh bằng công cụ Measure (`U`): số đo chỉnh sửa được và được xuất cùng ảnh.
   - Cắt (crop) ảnh, xóa nền và tạo mockup 3D. Cắt ngắn video, thêm đoạn zoom hoặc đoạn đổi tốc độ, và dùng Theo chuột (Follow Mouse) để con trỏ luôn nằm trong khung hình.
 - **Truy cập nhanh và Lịch sử**
   - Sao chép, chỉnh sửa, kéo thả hoặc tải lên ảnh chụp ngay từ thẻ Truy cập nhanh nổi; ghim ảnh chụp màn hình lên màn hình.
@@ -138,6 +140,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | Chụp văn bản (OCR)                                               | `⇧⌘2`        |
 | Tách chủ thể                                                     | `⇧⌘1`        |
 | Chụp thành phần thông minh (Smart Element)                       | `⌥⇧4`        |
+| Đo màn hình (thước đo màn hình)                                  | `⌥⇧M`        |
 | Mở Chú thích                                                     | `⇧⌘A`        |
 | Mở trình sửa video                                               | `⇧⌘E`        |
 | Mở cửa sổ Tải lên cloud                                          | `⇧⌘L`        |
@@ -172,6 +175,7 @@ Quyền truy cập được cấp riêng cho từng ứng dụng gọi lệnh. M
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 
 Xem [tài liệu CLI](docs/CLI.md).
@@ -203,6 +207,7 @@ Snapzy đăng ký URL scheme `snapzy://` để launcher và công cụ tự đ�
 | Mở cửa sổ Tải lên cloud     | `snapzy://open/cloud-uploads`      |
 | Mở Lịch sử chụp             | `snapzy://open/history`            |
 | Chọn màu                    | `snapzy://tools/pick-color`        |
+| Đo màn hình                 | `snapzy://tools/measure`           |
 | Hiện danh sách phím tắt     | `snapzy://show/shortcuts`          |
 | Mở Cài đặt                  | `snapzy://settings`                |
 | Mở một tab trong Cài đặt    | `snapzy://settings?tab=annotate`   |

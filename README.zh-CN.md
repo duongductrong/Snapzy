@@ -106,11 +106,13 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 - **截图**
   - 截取全屏、选定区域、应用窗口或界面中的智能元素（Smart Element）。可截取已打开的第三方菜单栏弹出窗口；也可将滚动内容拼接成一张长图，并实时预览。
   - 使用内置的 Apple Vision OCR，或你配置的 OpenAI 兼容接口识别文字。用实时放大镜拾取像素颜色，并复制为 HEX、RGB、HSL、HSB、CMYK、OKLCH 或 SwiftUI 格式；提取主体（抠图），并可选择安全自动裁剪。
+  - 使用屏幕标尺（Screen Ruler）测量屏幕上的间距和尺寸：悬停在边缘之间、拖出自动贴合内容的框、固定并复制测量值，或保存绘有测量结果的截图。
 - **录屏**
   - 将整个屏幕或单个应用录制为视频，可选录入系统音频和麦克风，也可保存为 GIF。
   - 添加摄像头画面（支持 iPhone 连续互通相机）、鼠标点击与按键高亮，或在屏幕上实时标注。
 - **标注与编辑**
   - 添加箭头、形状、文字、水印、模糊和像素化效果。在本地检测并遮蔽敏感信息。
+  - 用测量工具（`U`）测量图片中的距离和尺寸：测量结果可编辑，并随图片一起导出。
   - 裁剪图片、移除背景、制作 3D 样机展示。剪辑视频片段，添加缩放片段或变速片段，并使用“跟随鼠标”（Follow Mouse）让光标始终保持在画面中。
 - **快速访问与历史记录**
   - 在悬浮的快速访问卡片上直接复制、编辑、拖拽或上传截图；将截图固定到屏幕上。
@@ -138,6 +140,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 | 识别文字（OCR）                                         | `⇧⌘2`     |
 | 提取主体（抠图）                                        | `⇧⌘1`     |
 | 智能元素截取                                            | `⌥⇧4`     |
+| 测量屏幕（屏幕标尺）                                    | `⌥⇧M`     |
 | 打开标注                                                | `⇧⌘A`     |
 | 打开视频编辑器                                          | `⇧⌘E`     |
 | 打开云端上传窗口                                        | `⇧⌘L`     |
@@ -172,6 +175,7 @@ curl -fsSL https://raw.githubusercontent.com/duongductrong/Snapzy/master/reset-p
 snapzy list windows --app Safari
 snapzy capture window --app Safari --max-dimension 1568 -o shot.png
 snapzy capture area --rect 0,0,800,600 -o area.png
+snapzy measure window --app Safari --at 24,180 --box 0,0,800,60
 ~~~
 
 参见 [CLI 参考文档](docs/CLI.md)。
@@ -203,6 +207,7 @@ Snapzy 注册了 `snapzy://` URL Scheme，启动器和自动化工具（例如 [
 | 打开云端上传窗口     | `snapzy://open/cloud-uploads`      |
 | 打开截图历史记录     | `snapzy://open/history`            |
 | 取色                 | `snapzy://tools/pick-color`        |
+| 测量屏幕             | `snapzy://tools/measure`           |
 | 显示快捷键列表       | `snapzy://show/shortcuts`          |
 | 打开偏好设置         | `snapzy://settings`                |
 | 打开偏好设置的指定标签页 | `snapzy://settings?tab=annotate` |

@@ -7,6 +7,7 @@
 
 import AppKit
 import Foundation
+import SnapzyMeasureCore
 import Sparkle
 
 @MainActor
@@ -566,6 +567,12 @@ enum SnapzyConfigurationImporter {
     }
     collectBool(&reader, "annotate", "highlighter_text_snapping", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled)
+    }
+    collectEnumString(&reader, "annotate", "measure_unit", allowed: MeasureUnit.allCases.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateMeasureUnit)
+    }
+    collectEnumString(&reader, "annotate", "measure_axis", allowed: MeasureAxis.allCases.map(\.rawValue), mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateMeasureAxis)
     }
   }
 

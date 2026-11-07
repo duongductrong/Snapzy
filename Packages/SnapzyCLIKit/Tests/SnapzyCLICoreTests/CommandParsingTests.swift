@@ -28,12 +28,15 @@ final class CommandParsingTests: XCTestCase {
       ["capture", "window", "--app", "Safari", "--title", "^Docs", "--index", "1"]
     )
 
-    XCTAssertEqual(try command.selector(), .app(AppWindowQuery(app: "Safari", titlePattern: "^Docs", index: 1)))
+    XCTAssertEqual(
+      try command.selection.selector(),
+      .app(AppWindowQuery(app: "Safari", titlePattern: "^Docs", index: 1))
+    )
   }
 
   func testWindow_idAndActive() throws {
-    XCTAssertEqual(try parse(WindowCommand.self, ["capture", "window", "--id", "42"]).selector(), .id(42))
-    XCTAssertEqual(try parse(WindowCommand.self, ["capture", "window", "--active"]).selector(), .active)
+    XCTAssertEqual(try parse(WindowCommand.self, ["capture", "window", "--id", "42"]).selection.selector(), .id(42))
+    XCTAssertEqual(try parse(WindowCommand.self, ["capture", "window", "--active"]).selection.selector(), .active)
   }
 
   func testWindow_requiresExactlyOneSelector() {
@@ -61,9 +64,9 @@ final class CommandParsingTests: XCTestCase {
   // MARK: - capture screen / area
 
   func testScreen_displaySelector() throws {
-    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen"]).display, .main)
-    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen", "--display", "all"]).display, .all)
-    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen", "--display", "7"]).display, .id(7))
+    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen"]).selection.display, .main)
+    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen", "--display", "all"]).selection.display, .all)
+    XCTAssertEqual(try parse(ScreenCommand.self, ["capture", "screen", "--display", "7"]).selection.display, .id(7))
     assertUsageError(["capture", "screen", "--display", "left"])
   }
 
@@ -71,8 +74,8 @@ final class CommandParsingTests: XCTestCase {
     let command = try parse(AreaCommand.self, ["capture", "area", "--rect", "-1440,0,800,600"])
     let withEquals = try parse(AreaCommand.self, ["capture", "area", "--rect=-1440,-900,10,10"])
 
-    XCTAssertEqual(command.rect, CLIRect(x: -1440, y: 0, width: 800, height: 600))
-    XCTAssertEqual(withEquals.rect, CLIRect(x: -1440, y: -900, width: 10, height: 10))
+    XCTAssertEqual(command.selection.rect, CLIRect(x: -1440, y: 0, width: 800, height: 600))
+    XCTAssertEqual(withEquals.selection.rect, CLIRect(x: -1440, y: -900, width: 10, height: 10))
     assertUsageError(["capture", "area"])
     assertUsageError(["capture", "area", "--rect", "0,0,0,0"])
   }

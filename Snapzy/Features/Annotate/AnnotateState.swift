@@ -9,6 +9,7 @@ import AppKit
 import Combine
 import CoreImage
 import ImageIO
+import SnapzyMeasureCore
 import SwiftUI
 
 /// Central state for annotation window
@@ -265,6 +266,12 @@ final class AnnotateState: ObservableObject {
       // Text snapping needs the line profile ready before the first drag.
       if selectedTool == .highlighter {
         prepareTextLineProfileIfNeeded()
+      }
+      // Measuring reads source pixels; the raster is large, so it lives only while measuring.
+      if selectedTool == .measure {
+        prepareMeasureMapperIfNeeded()
+      } else if oldValue == .measure {
+        releaseMeasureMapper()
       }
       syncActiveToolProperties()
     }
@@ -1455,6 +1462,23 @@ final class AnnotateState: ObservableObject {
   /// belongs to; guards against stale async results and repeat computation.
   private var textLineProfileImageID: ObjectIdentifier?
 
+  // MARK: - Measure State
+
+  /// Source pixels for the Measure tool, built off-main when the tool is selected and dropped
+  /// when it is left or the effective image changes. Nil while building.
+  private(set) var measureMapper: AnnotateMeasureMapper?
+  private var measureMapperImageID: ObjectIdentifier?
+  private var measureMapperTask: Task<Void, Never>?
+  /// Which directions a click measures (persisted).
+  @Published var measureAxis: MeasureAxis = .both {
+    didSet { defaults.set(measureAxis.rawValue, forKey: PreferencesKeys.annotateMeasureAxis) }
+  }
+  /// Unit for new measurements (persisted). Changing it with a measurement selected converts
+  /// that one too (see `setMeasureUnit`).
+  @Published private(set) var measureUnit: MeasureUnit = .points
+  /// Edge tolerance, shared with Screen Ruler.
+  var measureTolerance: Int { ScreenRulerPreferences(defaults: defaults).edgeTolerance }
+
   // MARK: - Cut Out State
 
   /// Whether cut-out mode is actively editing (a strip can be drawn/committed).
@@ -1561,6 +1585,8 @@ final class AnnotateState: ObservableObject {
       defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
+    self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -1587,6 +1613,8 @@ final class AnnotateState: ObservableObject {
       defaults.object(forKey: PreferencesKeys.annotateCropSnapToEdgesEnabled) as? Bool ?? true
     self.isHighlighterTextSnappingEnabled =
       defaults.object(forKey: PreferencesKeys.annotateHighlighterTextSnappingEnabled) as? Bool ?? true
+    self.measureAxis = defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:)) ?? .both
+    self.measureUnit = defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:)) ?? .points
     loadSharedAnnotationColor()
     loadSharedAnnotationParameterDefaults()
     loadAnnotationToolProperties()
@@ -2865,6 +2893,11 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       }
 
+    case .measurement(let geometry):
+      rotated.type = .measurement(geometry.rotated {
+        AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
+      })
+
     case .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
       // Bounds-only annotations: the rotated `bounds` above is the full transform we need.
       // Watermark `rotationDegrees` is user-controlled and clamped to ±45°, so we leave it
@@ -3244,6 +3277,14 @@ final class AnnotateState: ObservableObject {
       case .text:
         moved.properties.calloutTailTarget = item.properties.calloutTailTarget.map(shiftPoint)
         moved.bounds = shiftRect(item.bounds)
+      case .measurement(let geometry):
+        // Move with the far side as one piece; a measured extent is never stretched.
+        let shiftedBounds = shiftRect(item.bounds)
+        moved.type = .measurement(geometry.translated(
+          dx: shiftedBounds.minX - item.bounds.minX,
+          dy: shiftedBounds.minY - item.bounds.minY
+        ))
+        moved.bounds = CGRect(origin: shiftedBounds.origin, size: item.bounds.size)
       case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark:
         moved.bounds = shiftRect(item.bounds)
       }
@@ -3300,6 +3341,77 @@ final class AnnotateState: ObservableObject {
     if selectedTool == .highlighter {
       prepareTextLineProfileIfNeeded()
     }
+    releaseMeasureMapper()
+    if selectedTool == .measure {
+      prepareMeasureMapperIfNeeded()
+    }
+  }
+
+  // MARK: - Measure
+
+  /// Builds the Measure raster for the current effective image unless it is built or building.
+  func prepareMeasureMapperIfNeeded() {
+    guard hasImage,
+          let image = effectiveSourceImage,
+          let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return }
+    let imageID = ObjectIdentifier(image)
+    guard measureMapperImageID != imageID else { return }
+    measureMapperTask?.cancel()
+    measureMapper = nil
+    measureMapperImageID = imageID
+    let imageSize = image.size
+    measureMapperTask = Task { [weak self] in
+      let mapper = await Task.detached(priority: .userInitiated) {
+        MeasureRaster(image: cgImage).flatMap { AnnotateMeasureMapper(raster: $0, imageSize: imageSize) }
+      }.value
+      guard !Task.isCancelled, let self, self.measureMapperImageID == imageID,
+            self.effectiveSourceImage.map({ ObjectIdentifier($0) }) == imageID else { return }
+      self.measureMapper = mapper
+      if mapper == nil {
+        self.measureMapperImageID = nil
+      }
+    }
+  }
+
+  func releaseMeasureMapper() {
+    measureMapperTask?.cancel()
+    measureMapperTask = nil
+    measureMapper = nil
+    measureMapperImageID = nil
+  }
+
+  /// Changes the unit for new measurements, and for the selected measurements as one undo step.
+  func setMeasureUnit(_ unit: MeasureUnit) {
+    measureUnit = unit
+    defaults.set(unit.rawValue, forKey: PreferencesKeys.annotateMeasureUnit)
+    let targets = selectedAnnotationIds
+    let indices = annotations.indices.filter { index in
+      guard targets.contains(annotations[index].id),
+            case .measurement(let geometry) = annotations[index].type else { return false }
+      return geometry.unit != unit
+    }
+    guard !indices.isEmpty else { return }
+    saveState()
+    for index in indices {
+      guard case .measurement(var geometry) = annotations[index].type else { continue }
+      geometry.unit = unit
+      annotations[index].type = .measurement(geometry)
+    }
+    hasUnsavedChanges = true
+  }
+
+  /// Adds a finished measurement as one undo step and selects it.
+  @discardableResult
+  func addMeasurement(geometry: MeasureGeometry, bounds: CGRect) -> AnnotationItem {
+    let item = AnnotationItem(
+      type: .measurement(geometry),
+      bounds: bounds,
+      properties: annotationCreationProperties(for: .measure)
+    )
+    saveState()
+    annotations.append(item)
+    hasUnsavedChanges = true
+    return item
   }
 
   /// Kick off content-border detection for the current image unless a profile
@@ -5683,6 +5795,37 @@ final class AnnotateState: ObservableObject {
   /// every control in the selected-item context edits that item.
   var quickPropertiesSupportsHighlighterTextSnapping: Bool {
     quickPropertiesMode == .toolDefaults && quickPropertiesTool == .highlighter
+  }
+
+  /// Axis shapes new measurements only, like text snapping; a pinned span keeps its axis.
+  var quickPropertiesSupportsMeasureAxis: Bool {
+    quickPropertiesMode == .toolDefaults && quickPropertiesTool == .measure
+  }
+
+  /// Unit applies to new measurements and converts selected ones.
+  var quickPropertiesSupportsMeasureUnit: Bool {
+    quickPropertiesTool == .measure
+  }
+
+  var quickMeasureAxisBinding: Binding<MeasureAxis> {
+    Binding(
+      get: { [weak self] in self?.measureAxis ?? .both },
+      set: { [weak self] axis in self?.measureAxis = axis }
+    )
+  }
+
+  /// The selected measurement's unit when one is selected, otherwise the tool's.
+  var quickMeasureUnitBinding: Binding<MeasureUnit> {
+    Binding(
+      get: { [weak self] in
+        guard let self else { return .points }
+        for annotation in self.quickPropertiesSelectionTargets {
+          if case .measurement(let geometry) = annotation.type { return geometry.unit }
+        }
+        return self.measureUnit
+      },
+      set: { [weak self] unit in self?.setMeasureUnit(unit) }
+    )
   }
 
   var quickHighlighterTextSnappingBinding: Binding<Bool> {

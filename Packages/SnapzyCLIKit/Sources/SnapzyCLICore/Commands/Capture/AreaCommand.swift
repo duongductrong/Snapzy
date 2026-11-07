@@ -18,16 +18,12 @@ struct AreaCommand: AsyncParsableCommand {
 
   @OptionGroup var global: GlobalOptions
   @OptionGroup var output: CaptureOutputOptions
-
-  /// `.unconditional` so displays left of or above the main one work:
-  /// `--rect -1440,0,800,600` would otherwise parse `-1440…` as an option.
-  @Option(parsing: .unconditional, help: "Rectangle as x,y,width,height in points.")
-  var rect: CLIRect
+  @OptionGroup var selection: AreaSelectionOptions
 
   func run() async throws {
     try await CaptureCommand.run(
       .captureArea,
-      params: CaptureAreaParams(rect: rect, options: output.captureOptions()),
+      params: CaptureAreaParams(rect: selection.rect, options: output.captureOptions()),
       output: output,
       global: global
     )

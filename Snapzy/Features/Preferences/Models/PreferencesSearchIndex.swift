@@ -431,6 +431,8 @@ extension PreferencesSearchEntry {
                     ["s3", "r2"]),
       shortcutEntry(tools, L10n.Actions.pickColor, L10n.PreferencesShortcuts.pickColorDescription,
                     ["eyedropper", "hex"]),
+      shortcutEntry(tools, L10n.Actions.measureScreen, L10n.PreferencesShortcuts.measureScreenDescription,
+                    ["ruler", "measure", "distance", "pixels", "spacing"]),
       shortcutEntry(tools, L10n.Actions.showShortcutList, L10n.PreferencesShortcuts.shortcutListDescription,
                     ["cheat sheet", "keyboard"]),
 

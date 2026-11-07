@@ -125,6 +125,9 @@ nonisolated struct AnnotationRenderer {
     case .spotlight:
       // Spotlight is rendered as a unified overlay pass, skip per-item drawing
       break
+
+    case .measurement:
+      AnnotateMeasureRenderer.draw(annotation, color: strokeColor, in: context)
     }
   }
 

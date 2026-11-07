@@ -74,3 +74,24 @@ extension CLICaptureResult: HumanReadable {
     }.joined(separator: "\n")
   }
 }
+
+extension CLIMeasureResult: HumanReadable {
+  /// One line per measurement: `span @120,80  240 × 32 pt  (480 × 64 px)`.
+  public var humanDescription: String {
+    guard !measurements.isEmpty else { return "No measurements." }
+    return measurements.map { measurement in
+      let label = switch measurement {
+      case .span(let at, _, _, _):
+        "span @\(at)"
+      case .box(let input, _, let points, _):
+        "box \(input) → \(points.rect)"
+      }
+      return "\(label)  \(Self.size(measurement.points)) pt  (\(Self.size(measurement.pixels)) px)"
+    }.joined(separator: "\n")
+  }
+
+  /// `240 × 32`, or the one measured axis.
+  static func size(_ extent: CLIMeasureExtent) -> String {
+    [extent.width, extent.height].compactMap { $0.map(CLIMeasureNumber.text) }.joined(separator: " × ")
+  }
+}

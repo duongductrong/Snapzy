@@ -349,6 +349,10 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   // MARK: - KeyboardShortcutDelegate
 
   func shortcutTriggered(_ action: ShortcutAction) {
+    // The ruler's opaque frozen overlay would sit on top of any other capture or recording.
+    if action != .measureScreen, ScreenRulerController.shared.isActive {
+      ScreenRulerController.shared.cancel()
+    }
     switch action {
     case .captureFullscreen:
       captureFullscreen()
@@ -400,6 +404,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       HistoryFloatingManager.shared.toggle()
     case .pickColor:
       pickColor()
+    case .measureScreen:
+      measureScreen()
     }
   }
 
@@ -414,11 +420,83 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       requestPermission()
       return
     }
-    guard !isAreaSelectionActive else {
-      DiagnosticLogger.shared.log(.debug, .capture, "pickColor blocked: area selection active")
+    guard !isAreaSelectionActive, !ScreenRulerController.shared.isActive else {
+      DiagnosticLogger.shared.log(.debug, .capture, "pickColor blocked: another capture tool is active")
       return
     }
     ColorPickerController.shared.start()
+  }
+
+  /// Freezes every display and opens the Screen Ruler. Return saves the display under the
+  /// pointer with its measurements drawn on, through the regular screenshot pipeline.
+  /// Triggering it again while the ruler is open cancels it.
+  func measureScreen() {
+    if ScreenRulerController.shared.isActive {
+      ScreenRulerController.shared.cancel()
+      return
+    }
+    guard hasPermission else {
+      requestPermission()
+      return
+    }
+    guard !isAreaSelectionActive, !isCapturing, !ColorPickerController.shared.isActive else {
+      DiagnosticLogger.shared.log(.debug, .capture, "measureScreen blocked: another capture tool is active")
+      return
+    }
+    let captureManager = captureManager
+    let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
+    let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
+    let excludeOwnApplication = !includesOwnAppInScreenshots
+    let captureContext = CaptureContext.fromFrontmostApp()
+    ScreenRulerController.shared.start(
+      snapshots: {
+        Array(try await captureManager.captureDisplaySnapshots(
+          excludeDesktopIcons: excludeDesktopIcons,
+          excludeDesktopWidgets: excludeDesktopWidgets,
+          excludeOwnApplication: excludeOwnApplication
+        ).values)
+      },
+      save: { [weak self] image, scale in
+        Task { @MainActor [weak self] in
+          await self?.saveMeasuredScreen(image, scale: scale, context: captureContext)
+        }
+      }
+    )
+  }
+
+  private func saveMeasuredScreen(_ image: CGImage, scale: CGFloat, context: CaptureContext) async {
+    guard
+      let resolvedSaveDirectory = fileAccessManager.ensureExportDirectoryForOperation(
+        promptMessage: L10n.Recording.chooseSaveLocationMessage
+      )
+    else {
+      lastCaptureResult = .failure(.saveFailed(L10n.ScreenCapture.saveLocationPermissionRequired))
+      return
+    }
+    saveDirectory = resolvedSaveDirectory
+    let actualSaveDirectory = tempCaptureManager.resolveSaveDirectory(
+      for: .screenshot,
+      exportDirectory: resolvedSaveDirectory
+    )
+    let result = await captureManager.saveProcessedImage(
+      image,
+      to: actualSaveDirectory,
+      format: resolvedFormat,
+      scaleFactor: scale,
+      context: context
+    )
+    lastCaptureResult = result
+    switch result {
+    case .success:
+      SoundManager.playScreenshotCapture()
+    case .failure(let error):
+      AppToastManager.shared.show(
+        message: error.localizedDescription,
+        style: .error,
+        position: .bottomCenter
+      )
+      QuickAccessSound.failed.play()
+    }
   }
 
   func updatePermissionState() async {

@@ -9,6 +9,7 @@
 
 import AppKit
 import Carbon.HIToolbox
+import SnapzyMeasureCore
 
 @MainActor
 final class ColorPickerController {

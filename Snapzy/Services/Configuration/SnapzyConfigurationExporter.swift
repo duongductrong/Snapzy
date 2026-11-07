@@ -7,6 +7,7 @@
 
 import AppKit
 import Foundation
+import SnapzyMeasureCore
 import Sparkle
 
 @MainActor
@@ -222,6 +223,16 @@ enum SnapzyConfigurationExporter {
     writer.value(
       "highlighter_text_snapping",
       defaults.boolValue(PreferencesKeys.annotateHighlighterTextSnappingEnabled, default: true)
+    )
+    writer.value(
+      "measure_unit",
+      defaults.string(forKey: PreferencesKeys.annotateMeasureUnit).flatMap(MeasureUnit.init(rawValue:))?.rawValue
+        ?? MeasureUnit.points.rawValue
+    )
+    writer.value(
+      "measure_axis",
+      defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:))?.rawValue
+        ?? MeasureAxis.both.rawValue
     )
   }
 

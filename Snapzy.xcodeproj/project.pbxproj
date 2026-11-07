@@ -12,6 +12,7 @@
 		C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = C73DB2A12FA3GRDB00GRDB01 /* GRDB */; };
 		C11CL1012FB0000000CLI003 /* SnapzyCLIProtocol in Frameworks */ = {isa = PBXBuildFile; productRef = C11CL1012FB0000000CLI002 /* SnapzyCLIProtocol */; };
 		C11CL1012FB0000000CLI016 /* SnapzyCLICore in Frameworks */ = {isa = PBXBuildFile; productRef = C11CL1012FB0000000CLI015 /* SnapzyCLICore */; };
+		C11CL1012FB0000000MSR002 /* SnapzyMeasureCore in Frameworks */ = {isa = PBXBuildFile; productRef = C11CL1012FB0000000MSR001 /* SnapzyMeasureCore */; };
 		C11CL1012FB0000000CLI01E /* snapzy in Embed Command Line Tool */ = {isa = PBXBuildFile; fileRef = C11CL1012FB0000000CLI010 /* snapzy */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -96,6 +97,7 @@
 				B42DE1A02FA1B90000WEBP01 /* WebP in Frameworks */,
 				C73DB2A02FA3GRDB00GRDB01 /* GRDB in Frameworks */,
 				C11CL1012FB0000000CLI003 /* SnapzyCLIProtocol in Frameworks */,
+				C11CL1012FB0000000MSR002 /* SnapzyMeasureCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -165,6 +167,7 @@
 				B42DE1A12FA1B90000WEBP01 /* WebP */,
 				C73DB2A12FA3GRDB00GRDB01 /* GRDB */,
 				C11CL1012FB0000000CLI002 /* SnapzyCLIProtocol */,
+				C11CL1012FB0000000MSR001 /* SnapzyMeasureCore */,
 			);
 			productName = Snapzy;
 			productReference = A36462A32F18EEDA0003453D /* Snapzy Debug.app */;
@@ -742,6 +745,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */;
 			productName = SnapzyCLICore;
+		};
+		C11CL1012FB0000000MSR001 /* SnapzyMeasureCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C11CL1012FB0000000CLI001 /* XCLocalSwiftPackageReference "Packages/SnapzyCLIKit" */;
+			productName = SnapzyMeasureCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

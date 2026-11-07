@@ -43,7 +43,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 
 ## Tools & Shortcuts
 
-`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 16 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
+`AnnotationToolType` (`Models/AnnotateAnnotationToolType.swift`) — 17 tools, single-key defaults, all rebindable via `AnnotateShortcutManager`:
 
 | Tool | Key | Tool | Key | Tool | Key |
 | --- | --- | --- | --- | --- | --- |
@@ -52,7 +52,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 | cutOut | `x` | text | `t` | counter | `n` |
 | rectangle | `r` | highlighter | `h` | watermark | `w` |
 | filledRectangle | `f` | pencil | `p` | mockup | `m` |
-| oval | `o` | | | | |
+| oval | `o` | measure | `u` | | |
 
 - `drawableTools` shared with inline overlay so surfaces stay in sync; `supportsQuickPropertiesBar` false for selection/crop/cutOut/mockup.
 - While a drawing tool is active, clicking an existing annotation's edge (a shape's outline, an arrow or line, a text box, a counter) selects it without leaving the tool; the quick properties bar then edits that item, and dragging its edge or handles moves or resizes it. Drags that start anywhere else — including inside an existing shape, on the item just drawn (until it is clicked or otherwise selected), or in the margin outside the image — draw a new annotation. A click inside an opaque item (filled rectangle, blur, combined image) never selects what lies beneath it. Hold Option to always draw, even on a selected item's resize handle. Combined images are never selected by drawing tools.
@@ -92,6 +92,14 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 - Crop: shrink AND expand canvas (drag handles outside source creates annotatable empty canvas, included in export). `CropAspectRatio` presets Free/1:1/4:3/3:2/16:9/21:9 + portrait toggle. Esc cancels, Return/⌘S commits; while cropping, `CropToolbarView` replaces the bottom-bar right side.
 - Crop edge snapping: while dragging resize handles in Free mode, edges snap to detected content borders (`CropContentAnalyzer` edge profile, computed once per image on crop entry). Toggle in `CropToolbarView` or Settings → Annotate (`annotate.cropSnapToEdgesEnabled`, default on); hold ⌘ mid-drag to temporarily bypass. Snapping skips fixed-aspect/Shift-locked resizes and body moves.
 - Crop auto-crop to content: `A` (or the toolbar button) tightens the current crop rect to detected content borders; falls back to Vision subject-mask bounds on macOS 14+ when edge analysis finds nothing (`ForegroundCutoutService.extractForegroundResult` reuse). Toasts when nothing is detected; Esc still restores the pre-crop rect. A crop rect expanded beyond the source image tightens to the image bounds on the out-of-bounds side(s).
+
+## Measure
+
+- Tool `.measure` (`u`, icon `ruler`), in `drawableTools` so it is also in inline ⇧⌘7. Same engine and gestures as Screen Ruler (`SnapzyMeasureCore`): **hover** previews the span around the pointer, **click** pins it, **drag** measures a box that snaps to the content inside (hold ⌘ for the raw box). Click-to-place (`requiresDragToCreateAnnotation` false); measurements under 4 screen points of travel are clicks.
+- Pixels: `AnnotateState.prepareMeasureMapperIfNeeded()` rasterizes `effectiveSourceImage` off-main into a `MeasureRaster` when the tool is selected (identity-guarded like the text-line profile) and `releaseMeasureMapper()` drops it on tool switch or image change (~59 MB at 5K). `AnnotateMeasureMapper` maps image points (bottom-left) ↔ raster pixels (top-left). Only source pixels are measured: other annotations and combined images are not in the raster.
+- Item: `AnnotationType.measurement(MeasureGeometry)` (`Models/AnnotateMeasureGeometry.swift`). The measured extent is the item's `bounds`; a span adds `origin` (where its lines cross) and `axis` (zero-thickness bounds on an unmeasured axis). `pixelScale` (source px/pt at measuring time) and `unit` make the label (`label(for:)`) independent of later crops and of the export path. Spans move but never resize (a pinned value stays true); boxes resize and their label follows. Rotation moves the origin and swaps axis/scale; cut-out moves the item as one piece.
+- Drawing: `AnnotateMeasureRenderer` (from `AnnotationRenderer.draw`, so canvas, preview and every export match): lines with end ticks or a lightly filled box, plus a dark label capsule below-right of the span origin or under the box. Hit testing covers lines, the box edge and the label.
+- Quick properties bar: color, **Axis** (both / width / height; tool defaults only) and **Unit** (pt / px; converts selected measurements in one undo step), plus a gesture hint. Prefs `annotate.measureUnit`, `annotate.measureAxis` (TOML `measure_unit`, `measure_axis`); edge tolerance is shared with Screen Ruler (`screenRuler.edgeTolerance`).
 
 ## Cut Out (Remove / Add a Strip)
 
@@ -158,6 +166,7 @@ source image.
 - Package: `manifest.json` (`PersistedAnnotationSession`, schemaVersion 1, `PersistedFileSignature` = size + modifiedAt + extension) + `original.bin` + optional `cutout.png` + `assets/` (embedded images). Signature mismatch (replaced file at same path) → sidecar ignored, never restores annotations onto wrong pixels.
 - The manifest also carries `sourceLogicalSize` — the authoring-time point-space size of the source image, i.e. the coordinate space annotations live in. Session restores apply it verbatim (`AnnotateWindowController.restoredSessionImage`), so native-density (1×) captures reopen with matching annotation positions on any display arrangement; sidecars written before the field existed fall back to the legacy main-screen scale heuristic. Optional key, schemaVersion stays 1.
 - File opens without a sidecar (`AnnotateState.loadImageWithCorrectScale`) derive density from the file's own DPI metadata (`fileDensityScaleFactor`, DPI ÷ 72 — Snapzy writes `scale × 72` on save); only files without usable DPI (e.g. WebP) fall back to the legacy main-screen heuristic.
+- Unknown `type.kind` values (written by a newer Snapzy) decode as `.unknown` and the item is skipped, so the rest of the session still loads. Builds before Measure dropped the whole sidecar on an unknown kind, so sessions with measurements need this version or later.
 - Commit-based writes only: save, save-and-close, copy&close, successful drag-to-app, cloud upload/re-upload, inline annotate finish, default-preset auto-apply. NO draft autosave; unsaved windows keep the normal unsaved-change prompt.
 - Restore order: QuickAccess in-memory session cache → sidecar → flattened file.
 - Cleanup paths: QA delete, Annotate delete-image, history delete, clear-history, retention sweep (incl. orphan sidecars), move-on-save (temp→export moves sidecar to new path hash).

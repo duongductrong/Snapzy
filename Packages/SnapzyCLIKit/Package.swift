@@ -20,6 +20,7 @@ let package = Package(
     .library(name: "SnapzyCLIProtocol", targets: ["SnapzyCLIProtocol"]),
     .library(name: "SnapzyCLIClient", targets: ["SnapzyCLIClient"]),
     .library(name: "SnapzyCLICore", targets: ["SnapzyCLICore"]),
+    .library(name: "SnapzyMeasureCore", targets: ["SnapzyMeasureCore"]),
     .executable(name: "snapzy-dev", targets: ["SnapzyCLIDev"]),
   ],
   dependencies: [
@@ -27,6 +28,9 @@ let package = Package(
   ],
   targets: [
     .target(name: "SnapzyCLIProtocol"),
+    // Pixel edge measurement shared by the app (Screen Ruler, Annotate Measure) and the CLI
+    // (`snapzy measure`). Foundation, CoreGraphics and ImageIO only.
+    .target(name: "SnapzyMeasureCore"),
     .target(
       name: "SnapzyCLIClient",
       dependencies: ["SnapzyCLIProtocol"]
@@ -36,6 +40,7 @@ let package = Package(
       dependencies: [
         "SnapzyCLIClient",
         "SnapzyCLIProtocol",
+        "SnapzyMeasureCore",
         .product(name: "ArgumentParser", package: "swift-argument-parser"),
       ]
     ),
@@ -48,8 +53,12 @@ let package = Package(
       dependencies: ["SnapzyCLIProtocol"]
     ),
     .testTarget(
+      name: "SnapzyMeasureCoreTests",
+      dependencies: ["SnapzyMeasureCore"]
+    ),
+    .testTarget(
       name: "SnapzyCLICoreTests",
-      dependencies: ["SnapzyCLICore", "SnapzyCLIClient", "SnapzyCLIProtocol"]
+      dependencies: ["SnapzyCLICore", "SnapzyCLIClient", "SnapzyCLIProtocol", "SnapzyMeasureCore"]
     ),
   ]
 )

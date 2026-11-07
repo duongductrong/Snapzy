@@ -168,6 +168,7 @@ extension GlobalShortcutKind {
     case .objectCutout: return "object_cutout"
     case .history: return "history"
     case .pickColor: return "pick_color"
+    case .measureScreen: return "measure_screen"
     }
   }
 }
