@@ -442,21 +442,28 @@ jobs:
 
           # Stapling fetches the ticket from Apple's CloudKit CDN, which can drop the
           # connection (error 68) or lag behind an Accepted submission (error 65).
-          # Notarization already succeeded at this point, so retry the staple only.
-          MAX_STAPLE_ATTEMPTS=5
-          for attempt in $(seq 1 "$MAX_STAPLE_ATTEMPTS"); do
-            if xcrun stapler staple "${{ env.dmg_path }}"; then
-              break
-            fi
-            if [ "$attempt" -eq "$MAX_STAPLE_ATTEMPTS" ]; then
-              echo "::error::Stapling failed after $MAX_STAPLE_ATTEMPTS attempts"
-              exit 1
-            fi
-            DELAY=$((attempt * 30))
-            echo "::warning::Staple attempt $attempt failed, retrying in ${DELAY}s..."
-            sleep "$DELAY"
-          done
-          xcrun stapler validate "${{ env.dmg_path }}"
+          # Notarization already succeeded at this point, so retry staple/validate only.
+          # `stapler validate` also queries CloudKit and fails the same way, so it
+          # needs the same retry treatment as `stapler staple`.
+          retry_stapler() {
+            local action="$1"
+            local max_attempts=5
+            for attempt in $(seq 1 "$max_attempts"); do
+              if xcrun stapler "$action" "${{ env.dmg_path }}"; then
+                return 0
+              fi
+              if [ "$attempt" -eq "$max_attempts" ]; then
+                echo "::error::stapler $action failed after $max_attempts attempts"
+                return 1
+              fi
+              local delay=$((attempt * 30))
+              echo "::warning::stapler $action attempt $attempt failed, retrying in ${delay}s..."
+              sleep "$delay"
+            done
+          }
+
+          retry_stapler staple
+          retry_stapler validate
           echo "DMG notarized and stapled successfully"
 
       - name: Compute SHA256
