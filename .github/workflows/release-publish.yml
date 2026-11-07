@@ -4,6 +4,15 @@ on:
   pull_request:
     types: [closed]
     branches: [master, beta]
+  # Recovery path: re-publish an already merged release PR with the current
+  # workflow file. "Re-run jobs" replays the workflow as it was at merge time,
+  # so fixes to this file never reach a re-run.
+  workflow_dispatch:
+    inputs:
+      release_pr:
+        description: 'Number of the merged release/vX.Y.Z PR to publish'
+        required: true
+        type: string
 
 concurrency:
   group: release-publish
@@ -11,12 +20,13 @@ concurrency:
 
 jobs:
   publish:
-    # Only run when a release PR is merged (not just closed)
+    # Only run when a release PR is merged (not just closed), or on manual dispatch
     if: >-
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'release/v')
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/v'))
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 45
     permissions:
       contents: write
     env:
@@ -28,11 +38,62 @@ jobs:
       ALLOW_SIGNING_IDENTITY_CHANGE: ${{ (vars.ALLOW_SIGNING_IDENTITY_CHANGE == 'true' || secrets.ALLOW_SIGNING_IDENTITY_CHANGE == 'true') && 'true' || 'false' }}
 
     steps:
+      - name: Resolve release PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PR: ${{ inputs.release_pr }}
+          EVENT_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          EVENT_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          EVENT_MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            if ! [[ "$INPUT_PR" =~ ^[0-9]+$ ]]; then
+              echo "::error::release_pr must be a PR number, got '$INPUT_PR'"
+              exit 1
+            fi
+            PR_JSON=$(gh api "repos/$REPO/pulls/$INPUT_PR")
+            if [ "$(echo "$PR_JSON" | jq -r '.merged')" != "true" ]; then
+              echo "::error::PR #$INPUT_PR is not merged"
+              exit 1
+            fi
+            HEAD_REF=$(echo "$PR_JSON" | jq -r '.head.ref')
+            BASE_REF=$(echo "$PR_JSON" | jq -r '.base.ref')
+            MERGE_SHA=$(echo "$PR_JSON" | jq -r '.merge_commit_sha')
+            case "$BASE_REF" in
+              master|beta) ;;
+              *)
+                echo "::error::PR #$INPUT_PR targets '$BASE_REF', expected master or beta"
+                exit 1
+                ;;
+            esac
+          else
+            HEAD_REF="$EVENT_HEAD_REF"
+            BASE_REF="$EVENT_BASE_REF"
+            MERGE_SHA="$EVENT_MERGE_SHA"
+          fi
+
+          if [[ "$HEAD_REF" != release/v* ]]; then
+            echo "::error::'$HEAD_REF' is not a release/v* branch"
+            exit 1
+          fi
+
+          {
+            echo "head_ref=$HEAD_REF"
+            echo "base_ref=$BASE_REF"
+            echo "merge_sha=$MERGE_SHA"
+          } >> "$GITHUB_OUTPUT"
+          echo "Publishing $HEAD_REF -> $BASE_REF at $MERGE_SHA"
+
       - name: Extract version
         id: version
         env:
-          RELEASE_BRANCH: ${{ github.event.pull_request.head.ref }}
-          TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+          RELEASE_BRANCH: ${{ steps.pr.outputs.head_ref }}
+          TARGET_BRANCH: ${{ steps.pr.outputs.base_ref }}
         run: |
           set -euo pipefail
 
@@ -69,7 +130,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ steps.pr.outputs.merge_sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract changelog
@@ -440,11 +501,19 @@ jobs:
 
           echo "$SUBMIT_OUTPUT"
 
-          # Stapling fetches the ticket from Apple's CloudKit CDN, which can drop the
-          # connection (error 68) or lag behind an Accepted submission (error 65).
-          # Notarization already succeeded at this point, so retry staple/validate only.
-          # `stapler validate` also queries CloudKit and fails the same way, so it
-          # needs the same retry treatment as `stapler staple`.
+          # stapler fetches the ticket from api.apple-cloudkit.com over HTTP/3
+          # (QUIC, UDP 443). On GitHub-hosted macOS runners that UDP path gets
+          # dropped (NSURLErrorDomain -1005, "The staple and validate action
+          # failed! Error 68"), persistently for the whole job, so retrying alone
+          # does not help. Block outbound UDP 443 so stapler falls back to
+          # HTTP/2 over TCP. This is the workaround GitHub published in
+          # actions/runner-images#14924; it only affects this ephemeral runner.
+          echo "block return out quick proto udp from any to any port 443" | sudo pfctl -f -
+          sudo pfctl -E || true
+
+          # Keep a retry for genuinely transient drops and for CloudKit lagging
+          # behind an Accepted submission (error 65). `stapler validate` queries
+          # CloudKit too, so it gets the same treatment as `stapler staple`.
           retry_stapler() {
             local action="$1"
             local max_attempts=5
@@ -456,7 +525,7 @@ jobs:
                 echo "::error::stapler $action failed after $max_attempts attempts"
                 return 1
               fi
-              local delay=$((attempt * 30))
+              local delay=$((attempt * 15))
               echo "::warning::stapler $action attempt $attempt failed, retrying in ${delay}s..."
               sleep "$delay"
             done
@@ -510,6 +579,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ steps.pr.outputs.merge_sha }}
           name: v${{ steps.version.outputs.version }}
           body_path: ${{ steps.changelog.outputs.changelog_path }}
           draft: false
@@ -528,6 +598,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ steps.version.outputs.version }}
+          target_commitish: ${{ steps.pr.outputs.merge_sha }}
           name: v${{ steps.version.outputs.version }}
           body_path: ${{ steps.changelog.outputs.changelog_path }}
           draft: false
@@ -739,7 +810,7 @@ jobs:
       - name: Commit release metadata
         env:
           TARGET_BRANCH: ${{ steps.version.outputs.target_branch }}
-          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          MERGE_SHA: ${{ steps.pr.outputs.merge_sha }}
           IS_BETA: ${{ steps.version.outputs.is_beta }}
           VERSION: ${{ steps.version.outputs.version }}
         run: |
@@ -747,8 +818,22 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # The build ran from the exact release merge commit. Attach the
-          # metadata commit to the PR target branch before pushing it.
-          git checkout -B "$TARGET_BRANCH" "$MERGE_SHA"
+          # metadata commit to the current tip of the PR target branch, which
+          # may have moved past the merge commit (e.g. a manual re-publish).
+          git fetch origin "$TARGET_BRANCH"
+          STASHED=false
+          if [ -n "$(git status --porcelain -- appcast.xml Casks/snapzy.rb README.md docs)" ]; then
+            git stash push --include-untracked -- appcast.xml Casks/snapzy.rb README.md docs
+            STASHED=true
+          fi
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          if ! git merge-base --is-ancestor "$MERGE_SHA" HEAD; then
+            echo "::error::$TARGET_BRANCH no longer contains release commit $MERGE_SHA"
+            exit 1
+          fi
+          if [ "$STASHED" = "true" ]; then
+            git stash pop
+          fi
           git add appcast.xml Casks/snapzy.rb README.md docs/*.md
           if git diff --cached --quiet; then
             echo "No appcast/cask/readme/docs changes to commit"
