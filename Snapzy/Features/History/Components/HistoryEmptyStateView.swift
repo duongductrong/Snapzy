@@ -8,34 +8,26 @@
 import SwiftUI
 
 struct HistoryEmptyStateView: View {
-  @Environment(\.colorScheme) private var colorScheme
-
   let filter: CaptureHistoryType?
   let hasSearch: Bool
 
   var body: some View {
-    VStack(spacing: 16) {
+    VStack(spacing: 10) {
       Image(systemName: iconName)
-        .font(.system(size: 48))
+        .font(.system(size: 36, weight: .light))
         .foregroundColor(.secondary.opacity(0.5))
+        .padding(.bottom, 4)
 
       Text(title)
-        .font(.title3)
-        .fontWeight(.semibold)
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundColor(.primary.opacity(0.85))
 
       Text(subtitle)
-        .font(.body)
+        .font(.system(size: 13))
         .foregroundColor(.secondary)
         .multilineTextAlignment(.center)
-        .frame(maxWidth: 300)
+        .frame(maxWidth: 280)
     }
-    .padding(.horizontal, 30)
-    .padding(.vertical, 26)
-    .background(.regularMaterial, in: Radius.rect(Radius.panel))
-    .overlay(
-      Radius.rect(Radius.panel)
-        .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05), lineWidth: 1)
-    )
     .frame(maxWidth: .infinity, maxHeight: .infinity)
   }
 
