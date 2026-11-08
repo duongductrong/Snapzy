@@ -148,6 +148,12 @@ jobs:
         with:
           xcode-version: "26.2"
 
+      - name: Reset SwiftPM artifact cache
+        # Fresh macos-15 images can ship a stale entry for the Sparkle binary
+        # artifact, which makes package resolution fail with
+        # "... already exists in file system".
+        run: rm -rf "$HOME/Library/Caches/org.swift.swiftpm/artifacts"
+
       - name: Build archive
         run: |
           set -euo pipefail
