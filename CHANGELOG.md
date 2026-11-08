@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.7] - 2026-11-08
+
+### Features
+- Added clear-history and per-card remove actions to floating history panel (#718) (ceac75f4)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.6] - 2026-11-07
 
 ### Features
