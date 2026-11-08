@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.8] - 2026-11-08
+
+### Bug Fixes
+- Cloud keys stay within the S3 limit and short keys get 12 characters (#719) (c7ea38ac)
+
+### Chore
+- refactor: Improved history empty state ui (fa36b971)
+- ci: reset SwiftPM artifact cache before xcodebuild (#723) (f78e43a4)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @gtmcknight
+
 ## [2.2.0-beta.7] - 2026-11-08
 
 ### Features
