@@ -218,6 +218,8 @@ final class S3CloudProvider: CloudProvider {
   /// Prefix all Snapzy objects share
   private static let objectPrefix = "snapzy/"
   private static let objectIDAlphabet = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz")
+  /// S3 and R2 reject longer keys.
+  static let maxObjectKeyLength = 1024
 
   func setExpiration(days: Int) async throws {
     // 1. Get existing rules (excluding our old rule)
@@ -384,19 +386,27 @@ final class S3CloudProvider: CloudProvider {
 
   /// Keys stay under `objectPrefix` so lifecycle expiry and usage stats apply to both styles.
   static func generateObjectKey(fileName: String, style: CloudShareLinkStyle) -> String {
+    let ext = urlSafeKeyPart((fileName as NSString).pathExtension).prefix(16)
+    let suffix = ext.isEmpty ? "" : ".\(ext)"
     let id: String
     switch style {
     case .descriptive:
       let timestamp = Int(Date().timeIntervalSince1970)
       let uuid = UUID().uuidString.prefix(8).lowercased()
+      let stem = "\(timestamp)-\(uuid)"
+      // Spelling a name in ASCII can make it several times longer, so it is cut to fit the key
+      // limit. Every character here is ASCII, so the count is the byte length.
+      let room = maxObjectKeyLength - objectPrefix.count - stem.count - 1 - suffix.count
       let name = urlSafeKeyPart((fileName as NSString).deletingPathExtension).lowercased()
-      id = name.isEmpty ? "\(timestamp)-\(uuid)" : "\(timestamp)-\(uuid)-\(name)"
+        .prefix(max(0, room))
+        .trimmingCharacters(in: CharacterSet(charactersIn: "-."))
+      id = name.isEmpty ? stem : "\(stem)-\(name)"
     case .short:
-      // 8 base62 characters (about 47 bits) from the system's secure random generator.
-      id = String((0..<8).compactMap { _ in objectIDAlphabet.randomElement() })
+      // 12 base62 characters (about 71 bits) from the system's secure random generator, so two
+      // uploads to one bucket practically never get the same key and overwrite each other.
+      id = String((0..<12).compactMap { _ in objectIDAlphabet.randomElement() })
     }
-    let ext = urlSafeKeyPart((fileName as NSString).pathExtension)
-    return ext.isEmpty ? "\(objectPrefix)\(id)" : "\(objectPrefix)\(id).\(ext)"
+    return "\(objectPrefix)\(id)\(suffix)"
   }
 
   /// Keys go into URLs unencoded, so a `#` or `?` would cut the key short and other characters

@@ -437,7 +437,7 @@ final class CloudCoreTests: XCTestCase {
     }
 
     for key in keys {
-      assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.png$"#)
+      assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}\.png$"#)
     }
     XCTAssertEqual(Set(keys).count, keys.count)
   }
@@ -445,13 +445,13 @@ final class CloudCoreTests: XCTestCase {
   func testS3CloudProvider_generateObjectKey_short_leavesFileNameOutOfTheKey() {
     let key = S3CloudProvider.generateObjectKey(fileName: "Résumé C# (final) ?.mp4", style: .short)
 
-    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}\.mp4$"#)
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}\.mp4$"#)
   }
 
   func testS3CloudProvider_generateObjectKey_short_withoutExtension() {
     let key = S3CloudProvider.generateObjectKey(fileName: "capture", style: .short)
 
-    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{8}$"#)
+    assertKey(key, matches: #"^snapzy/[0-9A-Za-z]{12}$"#)
   }
 
   func testS3CloudProvider_generateObjectKey_descriptive_keepsTheFormatForOrdinaryNames() {
@@ -480,6 +480,17 @@ final class CloudCoreTests: XCTestCase {
 
     assertKey(noName, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}\.png$"#)
     assertKey(noExtension, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-capture$"#)
+  }
+
+  func testS3CloudProvider_generateObjectKey_descriptive_cutsALongNameToFitTheKeyLimit() {
+    // A valid 249-byte macOS file name. Each ligature is spelled out in ASCII, which made
+    // the key 1,442 bytes, past the limit S3 and R2 accept.
+    let fileName = String(repeating: "\u{FDFA}", count: 83) + ".png"
+    let key = S3CloudProvider.generateObjectKey(fileName: fileName, style: .descriptive)
+
+    XCTAssertLessThanOrEqual(key.utf8.count, S3CloudProvider.maxObjectKeyLength)
+    XCTAssertGreaterThan(key.utf8.count, 1000)
+    assertKey(key, matches: #"^snapzy/[0-9]+-[0-9a-f]{8}-[0-9a-z._-]+\.png$"#)
   }
 
   func testS3CloudProvider_generateObjectKey_needsNoURLEncodingInEitherStyle() throws {
