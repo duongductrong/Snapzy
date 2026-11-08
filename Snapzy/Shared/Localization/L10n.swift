@@ -9543,6 +9543,61 @@ nonisolated enum L10n {
       defaultValue: "GIFs",
       comment: "History settings default filter option for GIFs"
     )
+    static let floatingSearchPlaceholder = string(
+      "preferences-history.floating-search-placeholder",
+      defaultValue: "Search captures",
+      comment: "Placeholder for the search field in the floating history panel"
+    )
+    static let searchByFilename = string(
+      "preferences-history.search-by-filename",
+      defaultValue: "Search by filename",
+      comment: "Placeholder for the search field in the history window"
+    )
+    static let collapsePanel = string(
+      "preferences-history.collapse-panel",
+      defaultValue: "Collapse",
+      comment: "Tooltip for the button that collapses the expanded floating history panel"
+    )
+    static let timeFilterAnyTime = string(
+      "preferences-history.time-filter-any-time",
+      defaultValue: "Any Time",
+      comment: "Floating history time filter that shows captures from any date"
+    )
+    static let emptyNoMatches = string(
+      "preferences-history.empty-no-matches",
+      defaultValue: "No matches found",
+      comment: "History empty state title when a search has no results"
+    )
+    static let emptyNoScreenshots = string(
+      "preferences-history.empty-no-screenshots",
+      defaultValue: "No screenshots yet",
+      comment: "History empty state title when there are no screenshots"
+    )
+    static let emptyNoVideos = string(
+      "preferences-history.empty-no-videos",
+      defaultValue: "No videos yet",
+      comment: "History empty state title when there are no videos"
+    )
+    static let emptyNoGifs = string(
+      "preferences-history.empty-no-gifs",
+      defaultValue: "No GIFs yet",
+      comment: "History empty state title when there are no GIFs"
+    )
+    static let emptyNoCaptures = string(
+      "preferences-history.empty-no-captures",
+      defaultValue: "No captures yet",
+      comment: "History empty state title when there are no captures"
+    )
+    static let emptySearchHint = string(
+      "preferences-history.empty-search-hint",
+      defaultValue: "Try a different search term.",
+      comment: "History empty state hint when a search has no results"
+    )
+    static let emptyHint = string(
+      "preferences-history.empty-hint",
+      defaultValue: "Take a screenshot or record your screen to see them here.",
+      comment: "History empty state hint when there are no captures"
+    )
     static let maxItemsTitle = string(
       "preferences-history.max-items-title",
       defaultValue: "Max Displayed Items",
