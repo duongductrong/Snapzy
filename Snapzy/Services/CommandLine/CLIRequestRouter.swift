@@ -27,7 +27,10 @@ nonisolated protocol CLIRequestHandling: Sendable {
 }
 
 nonisolated struct CLIRequestRouter: Sendable {
-  typealias Route = @Sendable (_ payload: Data, _ id: UInt64, _ context: CLIRequestContext) async -> Data
+  // Not `nonisolated(nonsending)` on purpose: storing a nonsending async closure type
+  // generically needs `swift_getExtendedFunctionTypeMetadata` (macOS 15+ runtime), which
+  // Release builds call without a fallback -> launch crash on macOS 13/14 (#725).
+  typealias Route = @Sendable @concurrent (_ payload: Data, _ id: UInt64, _ context: CLIRequestContext) async -> Data
 
   private var routes: [String: Route] = [:]
 
