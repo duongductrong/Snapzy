@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.9] - 2026-11-09
+
+### Bug Fixes
+- Snapzy no longer crashes at launch on macOS 13 and 14 (#725) (#727) (432657c3)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.8] - 2026-11-08
 
 ### Bug Fixes
