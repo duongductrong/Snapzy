@@ -17,7 +17,10 @@ final class ScrollingCaptureCommitScheduler {
   }
 
   private let onRequestCoalesced: () -> Void
-  private let operation: (Request) async -> Void
+  // Not `nonisolated(nonsending)` on purpose: storing a nonsending async closure type
+  // generically needs `swift_getExtendedFunctionTypeMetadata` (macOS 15+ runtime), which
+  // Release builds call without a fallback -> launch crash on macOS 13/14 (#725).
+  private let operation: @MainActor (Request) async -> Void
 
   private var runnerTask: Task<Void, Never>?
   private var currentRequest: Request?
@@ -26,7 +29,7 @@ final class ScrollingCaptureCommitScheduler {
 
   init(
     onRequestCoalesced: @escaping () -> Void = {},
-    operation: @escaping (Request) async -> Void
+    operation: @escaping @MainActor (Request) async -> Void
   ) {
     self.onRequestCoalesced = onRequestCoalesced
     self.operation = operation

@@ -24,7 +24,10 @@ final class ScreenRulerController {
   private let setProcessing: (Bool) -> Void
   private let preferences: ScreenRulerPreferences
   private let setsCursorHidden: Bool
-  private let buildRaster: (CGImage) async -> ScreenRulerRaster?
+  // Not `nonisolated(nonsending)` on purpose: storing a nonsending async closure type
+  // generically needs `swift_getExtendedFunctionTypeMetadata` (macOS 15+ runtime), which
+  // Release builds call without a fallback -> launch crash on macOS 13/14 (#725).
+  private let buildRaster: @MainActor (CGImage) async -> ScreenRulerRaster?
 
   private var windows: [ScreenRulerOverlayWindow] = []
   private var saveHandler: SaveHandler?
@@ -48,7 +51,7 @@ final class ScreenRulerController {
     setProcessing: ((Bool) -> Void)? = nil,
     preferences: ScreenRulerPreferences = ScreenRulerPreferences(),
     setsCursorHidden: Bool = true,
-    buildRaster: ((CGImage) async -> ScreenRulerRaster?)? = nil
+    buildRaster: (@MainActor (CGImage) async -> ScreenRulerRaster?)? = nil
   ) {
     self.copyToPasteboard = copyToPasteboard ?? { value in
       let pasteboard = NSPasteboard.general

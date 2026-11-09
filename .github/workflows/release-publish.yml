@@ -181,6 +181,21 @@ jobs:
             exit 1
           fi
 
+      # Release-only crash class (#725): optimized builds call macOS 15+ Swift
+      # runtime symbols without a fallback, so the app dies at launch on 13/14.
+      - name: Guard Swift runtime imports for deployment target
+        run: |
+          set -euo pipefail
+          bash scripts/check-runtime-weak-imports.sh build/Snapzy.xcarchive/Products/Applications/Snapzy.app
+
+      - name: Upload dSYMs
+        uses: actions/upload-artifact@v7
+        with:
+          name: Snapzy-v${{ steps.version.outputs.version }}-dSYMs
+          path: build/Snapzy.xcarchive/dSYMs
+          if-no-files-found: warn
+          retention-days: 90
+
       - name: Guard release signing strategy
         run: |
           set -euo pipefail
