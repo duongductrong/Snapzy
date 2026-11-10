@@ -8276,6 +8276,41 @@ nonisolated enum L10n {
       defaultValue: "Screenshot Failed",
       comment: "Alert title shown when taking a screenshot during recording fails"
     )
+    static let restartConfirmTitle = string(
+      "recording.restart-confirm-title",
+      defaultValue: "Restart Recording?",
+      comment: "Confirmation alert title shown before discarding the current recording and starting over"
+    )
+    static let restartConfirmMessage = string(
+      "recording.restart-confirm-message",
+      defaultValue: "The current recording will be discarded and a new one will start. This can't be undone.",
+      comment: "Confirmation alert message shown before discarding the current recording and starting over"
+    )
+    static let restartConfirmButton = string(
+      "recording.restart-confirm-button",
+      defaultValue: "Discard and Restart",
+      comment: "Destructive button title that discards the current recording and starts over"
+    )
+    static let deleteConfirmTitle = string(
+      "recording.delete-confirm-title",
+      defaultValue: "Delete Recording?",
+      comment: "Confirmation alert title shown before deleting the current recording"
+    )
+    static let deleteConfirmMessage = string(
+      "recording.delete-confirm-message",
+      defaultValue: "The current recording will be discarded and won't be saved. This can't be undone.",
+      comment: "Confirmation alert message shown before deleting the current recording"
+    )
+    static let deleteConfirmButton = string(
+      "recording.delete-confirm-button",
+      defaultValue: "Delete Recording",
+      comment: "Destructive button title that deletes the current recording"
+    )
+    static let keepRecordingButton = string(
+      "recording.keep-recording-button",
+      defaultValue: "Keep Recording",
+      comment: "Button title that dismisses the discard confirmation and keeps recording"
+    )
     static let saveLocationAccessRequiredTitle = string(
       "recording.save-location-access-required-title",
       defaultValue: "Save Location Access Required",

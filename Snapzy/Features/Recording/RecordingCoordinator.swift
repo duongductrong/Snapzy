@@ -172,13 +172,13 @@ final class RecordingCoordinator: ObservableObject {
   /// Restart/Re-record from global shortcut.
   func restartFromShortcut() {
     guard isActive else { return }
-    restartRecording()
+    requestRestartRecording()
   }
 
   /// Cancel/Delete current recording from global shortcut.
   func deleteFromShortcut() {
     guard isActive else { return }
-    deleteRecording()
+    requestDeleteRecording()
   }
 
   /// Start recording flow after area selection
@@ -339,10 +339,10 @@ final class RecordingCoordinator: ObservableObject {
       self?.cancel()
     }
     toolbar.onDelete = { [weak self] in
-      self?.deleteRecording()
+      self?.requestDeleteRecording()
     }
     toolbar.onRestart = { [weak self] in
-      self?.restartRecording()
+      self?.requestRestartRecording()
     }
     toolbar.onStop = { [weak self] in
       self?.stopRecording()
@@ -557,6 +557,82 @@ final class RecordingCoordinator: ObservableObject {
     case .application:
       restartSelection(for: .application)
     }
+  }
+
+  // MARK: - Discard Confirmation
+
+  private enum DiscardAction: String {
+    case restart
+    case delete
+  }
+
+  /// Recordings shorter than this are discarded without asking, so a quick retake stays one click.
+  private static let discardConfirmationMinimumSeconds = 3
+
+  /// Guards against stacking alerts when the button or shortcut is triggered again while one is open.
+  private var isConfirmingDiscard = false
+
+  private func requestRestartRecording() {
+    guard confirmDiscardIfNeeded(.restart) else { return }
+    restartRecording()
+  }
+
+  private func requestDeleteRecording() {
+    guard confirmDiscardIfNeeded(.delete) else { return }
+    deleteRecording()
+  }
+
+  /// Asks the user before throwing away a recording in progress.
+  /// The recording is paused while the alert is up so the wait doesn't end up in the video.
+  /// Returns `true` when the caller may go ahead and discard.
+  private func confirmDiscardIfNeeded(_ action: DiscardAction) -> Bool {
+    guard !isConfirmingDiscard else { return false }
+    guard recorder.state == .recording || recorder.state == .paused,
+          recorder.elapsedSeconds >= Self.discardConfirmationMinimumSeconds else {
+      return true
+    }
+
+    isConfirmingDiscard = true
+    defer { isConfirmingDiscard = false }
+
+    let pausedForAlert = recorder.state == .recording
+    if pausedForAlert {
+      recorder.pauseRecording()
+    }
+
+    let alert = NSAlert()
+    alert.alertStyle = .warning
+    switch action {
+    case .restart:
+      alert.messageText = L10n.Recording.restartConfirmTitle
+      alert.informativeText = L10n.Recording.restartConfirmMessage
+    case .delete:
+      alert.messageText = L10n.Recording.deleteConfirmTitle
+      alert.informativeText = L10n.Recording.deleteConfirmMessage
+    }
+    // Safe choice first so Return keeps the recording; Escape also maps to it.
+    let keepButton = alert.addButton(withTitle: L10n.Recording.keepRecordingButton)
+    keepButton.keyEquivalent = "\r"
+    let discardButton = alert.addButton(
+      withTitle: action == .restart ? L10n.Recording.restartConfirmButton : L10n.Recording.deleteConfirmButton
+    )
+    discardButton.keyEquivalent = ""
+    discardButton.hasDestructiveAction = true
+    // The toolbar floats at pop-up-menu level; keep the alert above it.
+    alert.window.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue + 1)
+    NSApp.activate(ignoringOtherApps: true)
+
+    let confirmed = alert.runModal() == .alertSecondButtonReturn
+    DiagnosticLogger.shared.log(.info, .recording, "Recording discard confirmation answered", context: [
+      "action": action.rawValue,
+      "confirmed": "\(confirmed)",
+      "elapsedSeconds": "\(recorder.elapsedSeconds)",
+    ])
+
+    if !confirmed, pausedForAlert, isActive, recorder.state == .paused {
+      recorder.resumeRecording()
+    }
+    return confirmed && isActive
   }
 
   /// Delete current recording and close
