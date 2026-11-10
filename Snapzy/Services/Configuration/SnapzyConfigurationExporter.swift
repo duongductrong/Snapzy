@@ -77,6 +77,7 @@ enum SnapzyConfigurationExporter {
 
     writer.section("capture.screenshot")
     writer.value("format", defaults.string(forKey: PreferencesKeys.screenshotFormat) ?? ImageFormatOption.png.rawValue)
+    writer.value("clipboard_content", ClipboardImageContentOption.current(defaults: defaults).rawValue)
     writer.value("include_snapzy", defaults.boolValue(PreferencesKeys.screenshotIncludeOwnApp, default: false))
     writer.value("show_cursor", defaults.boolValue(PreferencesKeys.screenshotShowCursor, default: false))
     writer.value("freeze_area", defaults.boolValue(PreferencesKeys.screenshotFreezeArea, default: false))

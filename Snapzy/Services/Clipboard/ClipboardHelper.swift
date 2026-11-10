@@ -23,6 +23,9 @@ private nonisolated let logger = Logger(subsystem: "Snapzy", category: "Clipboar
 /// screenshot as separate clipboard items.
 /// Temp files must NOT be deleted immediately — the receiving app needs them at paste time.
 /// Orphaned temp files are cleaned up on next launch by `TempCaptureManager.cleanupOrphanedFiles()`.
+///
+/// When `ClipboardImageContentOption` is `.imageOnly`, image copies skip the file URL and
+/// write pixel data only (still one pasteboard item). Media and multi-file copies are unaffected.
 enum ClipboardHelper {
   // MARK: - File-based copy
 
@@ -105,7 +108,9 @@ enum ClipboardHelper {
   ///
   /// - Important: Do NOT delete the file after calling this — the receiving app
   ///   needs it to exist at paste time.
-  static func copyImage(from url: URL) {
+  ///
+  /// - Parameter content: overrides the user's clipboard content preference; `nil` uses it.
+  static func copyImage(from url: URL, content: ClipboardImageContentOption? = nil) {
     DiagnosticLogger.shared.log(.info, .clipboard, "Copy image from file", context: ["file": url.lastPathComponent])
     let fileAccess = SandboxFileAccessManager.shared.beginAccessingURL(url)
     defer { fileAccess.stop() }
@@ -129,7 +134,8 @@ enum ClipboardHelper {
       image: image,
       tiffData: image?.tiffRepresentation,
       encodedData: encodedData,
-      encodedType: encodedType
+      encodedType: encodedType,
+      content: content
     )
 
     if image == nil {
@@ -208,7 +214,12 @@ enum ClipboardHelper {
   /// then writing the file URL. This ensures the pasted result uses the correct format.
   ///
   /// Used by Annotate / Mockup copy where the image is rendered on-the-fly.
-  static func copyImage(_ image: NSImage, format: ImageFormatOption? = nil) {
+  /// - Parameter content: overrides the user's clipboard content preference; `nil` uses it.
+  static func copyImage(
+    _ image: NSImage,
+    format: ImageFormatOption? = nil,
+    content: ClipboardImageContentOption? = nil
+  ) {
     DiagnosticLogger.shared.log(
       .info,
       .clipboard,
@@ -231,6 +242,22 @@ enum ClipboardHelper {
       pasteboard.clearContents()
       pasteboard.writeObjects([image])
       return
+    }
+
+    // Image-only mode needs no file reference, so skip the temp file entirely.
+    if (content ?? ClipboardImageContentOption.current()) == .imageOnly {
+      let pasteboard = NSPasteboard.general
+      pasteboard.clearContents()
+      if writeImageOnlyItem(
+        to: pasteboard,
+        sourceName: "rendered.\(ext)",
+        tiffData: image.tiffRepresentation,
+        encodedData: data,
+        encodedType: pasteboardImageType(for: ext)
+      ) {
+        logger.info("Clipboard: copied rendered image as \(ext), image data only")
+        return
+      }
     }
 
     // Write to a temp file so the pasteboard can reference it
@@ -273,8 +300,20 @@ enum ClipboardHelper {
     image: NSImage?,
     tiffData: Data?,
     encodedData: Data?,
-    encodedType: NSPasteboard.PasteboardType?
+    encodedType: NSPasteboard.PasteboardType?,
+    content: ClipboardImageContentOption? = nil
   ) {
+    if (content ?? ClipboardImageContentOption.current()) == .imageOnly,
+       writeImageOnlyItem(
+         to: pasteboard,
+         sourceName: fileURL.lastPathComponent,
+         tiffData: tiffData,
+         encodedData: encodedData,
+         encodedType: encodedType
+       ) {
+      return
+    }
+
     // Use writeObjects with NSURL to ensure macOS grants a sandbox extension
     // to the receiving app. NSPasteboardItem.setString(url, forType: .fileURL)
     // does NOT grant sandbox extensions — this was the root cause of Area
@@ -329,6 +368,55 @@ enum ClipboardHelper {
         ]
       )
     }
+  }
+
+  /// Writes a single pasteboard item holding only image data (encoded format + TIFF),
+  /// with no file reference. Used when the user picks "Image only" so receivers that
+  /// mishandle file URLs (Citrix/RDP forwarding a file to Outlook, some terminals)
+  /// paste an inline image.
+  ///
+  /// Returns `false` without touching the pasteboard when there is no decodable
+  /// image (e.g. WebP on macOS 13): an item holding only WebP bytes would paste
+  /// nowhere, so the caller keeps the file reference instead.
+  private static func writeImageOnlyItem(
+    to pasteboard: NSPasteboard,
+    sourceName: String,
+    tiffData: Data?,
+    encodedData: Data?,
+    encodedType: NSPasteboard.PasteboardType?
+  ) -> Bool {
+    guard let tiffData else {
+      logger.warning("Clipboard: image-only copy needs decodable image, keeping file reference for \(sourceName)")
+      DiagnosticLogger.shared.log(
+        .warning,
+        .clipboard,
+        "Image-only copy fell back to file reference",
+        context: ["file": sourceName]
+      )
+      return false
+    }
+
+    let item = NSPasteboardItem()
+    var didSetData = true
+    if let encodedData, let encodedType {
+      didSetData = item.setData(encodedData, forType: encodedType) && didSetData
+    }
+    if encodedType != .tiff {
+      didSetData = item.setData(tiffData, forType: .tiff) && didSetData
+    }
+    let didWrite = pasteboard.writeObjects([item])
+
+    DiagnosticLogger.shared.log(
+      didWrite && didSetData ? .info : .warning,
+      .clipboard,
+      "Image data written to clipboard (no file reference)",
+      context: [
+        "file": sourceName,
+        "writeObjects": didWrite ? "true" : "false",
+        "types": item.types.map(\.rawValue).joined(separator: ","),
+      ]
+    )
+    return true
   }
 
   private static func addFileURLFallbackRepresentations(

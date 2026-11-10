@@ -65,6 +65,8 @@ enum PreferencesKeys {
 
   // Screenshot
   static let screenshotFormat = "screenshot.format"
+  /// `ClipboardImageContentOption` raw value: image copies with or without a file reference.
+  static let clipboardImageContent = "clipboard.imageContent"
   static let screenshotFileNameTemplate = "screenshot.fileNameTemplate"
   static let screenshotIncludeOwnApp = "screenshot.includeOwnApp"
   static let screenshotShowCursor = "screenshot.showCursor"

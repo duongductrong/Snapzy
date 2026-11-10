@@ -64,6 +64,8 @@ struct CaptureSettingsView: View {
   private var magnifierSize = MagnifierSizeOption.defaultValue.rawValue
 
   @AppStorage(PreferencesKeys.screenshotFormat) private var screenshotFormat = "png"
+  @AppStorage(PreferencesKeys.clipboardImageContent)
+  private var clipboardImageContent = ClipboardImageContentOption.defaultValue.rawValue
   @AppStorage(PreferencesKeys.scrollingCaptureShowHints) private var scrollingCaptureShowHints = true
   @AppStorage(PreferencesKeys.backgroundCutoutAutoCropEnabled) private var backgroundCutoutAutoCropEnabled = true
   @AppStorage(PreferencesKeys.ocrSuccessNotificationEnabled) private var ocrSuccessNotification = true
@@ -380,6 +382,19 @@ struct CaptureSettingsView: View {
                   .fixedSize(horizontal: false, vertical: true)
               }
               .padding(.vertical, 4)
+            }
+
+            SettingRow(
+              title: L10n.PreferencesCapture.clipboardContentTitle,
+              description: L10n.PreferencesCapture.clipboardContentDescription
+            ) {
+              Picker("", selection: $clipboardImageContent) {
+                ForEach(ClipboardImageContentOption.allCases) { option in
+                  Text(option.displayName).tag(option.rawValue)
+                }
+              }
+              .labelsHidden()
+              .pickerStyle(.menu)
             }
           }
         }
