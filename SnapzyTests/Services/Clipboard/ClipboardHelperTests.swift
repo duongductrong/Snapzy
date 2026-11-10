@@ -195,4 +195,64 @@ final class ClipboardHelperTests: XCTestCase {
     XCTAssertEqual(readURLs?[0].standardizedFileURL, url1.standardizedFileURL)
     XCTAssertEqual(readURLs?[1].standardizedFileURL, url2.standardizedFileURL)
   }
+
+  // MARK: - Image-only clipboard content (#699)
+  // The mode is passed explicitly: the setting lives in shared UserDefaults, and
+  // parallel test processes copying images would otherwise race on it.
+
+  func testCopyImageFromURL_imageOnly_writesDataWithoutFileURL() throws {
+    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDir) }
+
+    let cgImage = try XCTUnwrap(TestImageFactory.solidColor(width: 10, height: 10))
+    let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: 10, height: 10))
+    let data = try XCTUnwrap(AnnotateExporter.imageData(from: nsImage, for: "png"))
+    let fileURL = tempDir.appendingPathComponent("test.png")
+    try data.write(to: fileURL)
+
+    ClipboardHelper.copyImage(from: fileURL, content: .imageOnly)
+
+    let pasteboard = NSPasteboard.general
+    let item = try XCTUnwrap(pasteboard.pasteboardItems?.first)
+    XCTAssertEqual(pasteboard.pasteboardItems?.count, 1)
+    XCTAssertFalse(item.types.contains(.fileURL))
+    XCTAssertTrue(item.types.contains(.png))
+    XCTAssertTrue(item.types.contains(.tiff))
+    XCTAssertEqual(item.data(forType: .png), data)
+    XCTAssertTrue((pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL])?.isEmpty ?? true)
+    XCTAssertEqual((pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.count, 1)
+    XCTAssertFalse(ClipboardHelper.isReferencedByGeneralPasteboard(fileURL))
+  }
+
+  func testCopyRenderedImage_imageOnly_withJPEGFormat_writesDataWithoutFileURL() throws {
+    UserDefaults.standard.set(ImageFormatOption.jpeg.rawValue, forKey: PreferencesKeys.screenshotFormat)
+    let cgImage = try XCTUnwrap(TestImageFactory.solidColor(width: 10, height: 10))
+    let nsImage = NSImage(cgImage: cgImage, size: NSSize(width: 10, height: 10))
+
+    ClipboardHelper.copyImage(nsImage, format: .jpeg, content: .imageOnly)
+
+    let pasteboard = NSPasteboard.general
+    let item = try XCTUnwrap(pasteboard.pasteboardItems?.first)
+    XCTAssertEqual(pasteboard.pasteboardItems?.count, 1)
+    XCTAssertFalse(item.types.contains(.fileURL))
+    XCTAssertTrue(item.types.contains(NSPasteboard.PasteboardType("public.jpeg")))
+    XCTAssertTrue(item.types.contains(.tiff))
+    XCTAssertEqual((pasteboard.readObjects(forClasses: [NSImage.self], options: nil) as? [NSImage])?.count, 1)
+  }
+
+  func testCopyImageFromURL_imageOnly_undecodableImage_keepsFileURL() throws {
+    let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: tempDir) }
+
+    let fileURL = tempDir.appendingPathComponent("test.webp")
+    try Data([0x52, 0x49, 0x46, 0x46]).write(to: fileURL)
+
+    ClipboardHelper.copyImage(from: fileURL, content: .imageOnly)
+
+    let item = try XCTUnwrap(NSPasteboard.general.pasteboardItems?.first)
+    XCTAssertEqual(NSPasteboard.general.pasteboardItems?.count, 1)
+    XCTAssertTrue(item.types.contains(.fileURL))
+  }
 }

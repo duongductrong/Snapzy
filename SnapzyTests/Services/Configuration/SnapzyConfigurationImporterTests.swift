@@ -118,6 +118,36 @@ final class SnapzyConfigurationImporterTests: XCTestCase {
     XCTAssertEqual(defaults.string(forKey: PreferencesKeys.screenshotMagnifierSize), "large")
   }
 
+  func testImportAppliesClipboardContent() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.screenshot]
+    clipboard_content = "image_only"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertFalse(result.hasErrors)
+    XCTAssertEqual(ClipboardImageContentOption.current(defaults: defaults), .imageOnly)
+  }
+
+  func testImportRejectsInvalidClipboardContent() {
+    let defaults = UserDefaultsFactory.make()
+    let source = """
+    schema_version = 1
+
+    [capture.screenshot]
+    clipboard_content = "file_only"
+    """
+
+    let result = SnapzyConfigurationImporter.importTOML(source, defaults: defaults)
+
+    XCTAssertTrue(result.hasErrors)
+    XCTAssertNil(defaults.string(forKey: PreferencesKeys.clipboardImageContent))
+  }
+
   func testImportRejectsInvalidMagnifierSize() {
     let defaults = UserDefaultsFactory.make()
     let source = """

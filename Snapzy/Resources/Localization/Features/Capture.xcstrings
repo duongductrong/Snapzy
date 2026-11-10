@@ -4433,6 +4433,266 @@
         }
       }
     },
+    "preferences-capture.clipboard-content-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was beim Kopieren von Bildern in die Zwischenablage gelangt. Wähle „Nur Bild“, wenn beim Einfügen in einen Remote-Desktop (Citrix, RDP) oder ein Terminal eine Datei statt eines eingebetteten Bildes eingefügt wird"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What copied images put on the clipboard. Choose Image only if pasting into a remote desktop (Citrix, RDP) or a terminal adds a file instead of an inline image"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo que se copia al portapapeles al copiar imágenes. Elige Solo imagen si al pegar en un escritorio remoto (Citrix, RDP) o una terminal se añade un archivo en lugar de una imagen insertada"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que la copie d'une image place dans le presse-papiers. Choisissez Image seule si le collage dans un bureau à distance (Citrix, RDP) ou un terminal ajoute un fichier au lieu d'une image intégrée"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像をコピーしたときにクリップボードに入れる内容。リモートデスクトップ（Citrix、RDP）やターミナルに貼り付けると画像ではなくファイルが追加される場合は「画像のみ」を選択してください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지를 복사할 때 클립보드에 넣는 내용입니다. 원격 데스크톱(Citrix, RDP)이나 터미널에 붙여 넣을 때 인라인 이미지 대신 파일이 추가되면 이미지만을 선택하세요"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Что попадает в буфер обмена при копировании изображений. Выберите «Только изображение», если при вставке в удалённый рабочий стол (Citrix, RDP) или терминал добавляется файл вместо встроенного изображения"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nội dung được đưa vào clipboard khi sao chép ảnh. Chọn Chỉ ảnh nếu khi dán vào máy tính từ xa (Citrix, RDP) hoặc terminal, ảnh bị thêm dưới dạng tệp thay vì hiển thị trực tiếp"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制图像时放入剪贴板的内容。如果粘贴到远程桌面（Citrix、RDP）或终端时添加的是文件而不是内嵌图像，请选择“仅图像”"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "複製影像時放入剪貼簿的內容。若貼到遠端桌面（Citrix、RDP）或終端機時加入的是檔案而非內嵌影像，請選擇「僅影像」"
+          }
+        }
+      }
+    },
+    "preferences-capture.clipboard-content-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inhalt der Zwischenablage"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clipboard content"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contenido del portapapeles"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contenu du presse-papiers"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "クリップボードの内容"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "클립보드 내용"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Содержимое буфера обмена"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nội dung clipboard"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪贴板内容"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "剪貼簿內容"
+          }
+        }
+      }
+    },
+    "preferences-capture.clipboard-content.image-and-file": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bild und Datei"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image and file"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imagen y archivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image et fichier"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像とファイル"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지 및 파일"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Изображение и файл"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ảnh và tệp"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "图像和文件"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "影像和檔案"
+          }
+        }
+      }
+    },
+    "preferences-capture.clipboard-content.image-only": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nur Bild"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image only"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo imagen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image seule"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画像のみ"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미지만"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Только изображение"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chỉ ảnh"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅图像"
+          }
+        },
+        "zh-Hant": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "僅影像"
+          }
+        }
+      }
+    },
     "preferences-capture.combine-save-as-edit-description": {
       "comment": "Annotate preferences toggle description for combine save-as-edit behavior",
       "extractionState": "manual",

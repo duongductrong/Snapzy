@@ -209,6 +209,13 @@ enum SnapzyConfigurationImporter {
       }
       mutations.append { defaults.set(format, forKey: PreferencesKeys.screenshotFormat) }
     }
+    collectEnumString(
+      &reader, "capture", "screenshot", "clipboard_content",
+      allowed: ClipboardImageContentOption.allCases.map(\.rawValue),
+      mutations: &mutations
+    ) {
+      defaults.set($0, forKey: PreferencesKeys.clipboardImageContent)
+    }
     collectBool(&reader, "capture", "screenshot", "include_snapzy", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.screenshotIncludeOwnApp)
     }

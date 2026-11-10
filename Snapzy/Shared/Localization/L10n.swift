@@ -3616,6 +3616,26 @@ nonisolated enum L10n {
       defaultValue: "Output format for captured screenshots",
       comment: "Capture preferences setting description"
     )
+    static let clipboardContentTitle = string(
+      "preferences-capture.clipboard-content-title",
+      defaultValue: "Clipboard content",
+      comment: "Capture preferences setting title"
+    )
+    static let clipboardContentDescription = string(
+      "preferences-capture.clipboard-content-description",
+      defaultValue: "What copied images put on the clipboard. Choose Image only if pasting into a remote desktop (Citrix, RDP) or a terminal adds a file instead of an inline image",
+      comment: "Capture preferences setting description"
+    )
+    static let clipboardContentImageAndFile = string(
+      "preferences-capture.clipboard-content.image-and-file",
+      defaultValue: "Image and file",
+      comment: "Clipboard content option: image data plus a file reference"
+    )
+    static let clipboardContentImageOnly = string(
+      "preferences-capture.clipboard-content.image-only",
+      defaultValue: "Image only",
+      comment: "Clipboard content option: image data without a file reference"
+    )
     static let webpWarning = string(
       "preferences-capture.webp-warning",
       defaultValue: "WebP encoding is slower than other formats. For faster capture speed, consider using PNG or JPEG.",

@@ -102,6 +102,7 @@ Batch variant `handleScreenshotCaptures(urls:)`: filters missing files, delegate
 - `copyMediaFile(from:)` — videos/GIFs: file-URL write plus same-item `.URL` and `.string` fallbacks for Teams/Electron/WebView paste targets.
 - `copyFileURLs(_:)` — batch file-URL copy for multi-display screenshot sets.
 - Render-based `copyImage(_:format:)` — Annotate/Mockup copies render to the configured format, write a temp file (`Snapzy_clipboard_<uuid>`), then copy like a file.
+- **Clipboard content** (`clipboard.imageContent`, `ClipboardImageContentOption`): `image_and_file` (default, behavior above) or `image_only`. Image-only skips `writeObjects([NSURL])` and writes one `NSPasteboardItem` with the encoded data type + `.tiff`, so Citrix/RDP sessions and some terminals paste an inline image instead of a file attachment (#699). Render-based copies then skip the temp file, and nothing is recorded for pasteboard-reference tracking. If the image cannot be decoded (no TIFF), the copy falls back to the file reference. Applies to `copyImage` only; media and multi-file copies always use file URLs. Callers may pass `content:` to override the preference.
 - Temp files must **not** be deleted after copying: receivers read them at paste time. Orphans are reclaimed by `cleanupOrphanedFiles()` on the next launch.
 
 ## Quick Access Handoff

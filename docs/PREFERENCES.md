@@ -49,7 +49,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
   - Output Naming: screenshot/recording file-name templates (`screenshot.fileNameTemplate`, `recording.fileNameTemplate`) with token list + live preview + reset.
   - After Capture: action matrix (see below) + Auto-Crop Subject (`backgroundCutout.autoCropEnabled`).
 - **Screenshot pane**:
-  - Format: Show Cursor (`screenshot.showCursor`), Freeze Area (`screenshot.freezeArea`), Hover Passthrough (`screenshot.livePassthrough`, requires Accessibility), Image Format (`screenshot.format`, `ImageFormatOption`; WebP shows a warning, JPEG a cutout note).
+  - Format: Show Cursor (`screenshot.showCursor`), Freeze Area (`screenshot.freezeArea`), Hover Passthrough (`screenshot.livePassthrough`, requires Accessibility), Image Format (`screenshot.format`, `ImageFormatOption`; WebP shows a warning, JPEG a cutout note), Clipboard Content (`clipboard.imageContent`, `ClipboardImageContentOption`: Image and file (default) / Image only).
   - Preset: default annotate canvas preset (`PreferencesScreenshotDefaultPresetPicker`).
   - Scrolling Capture: Show Session Hints (`scrollingCapture.showHints`) + info note.
 - **Recording pane**:

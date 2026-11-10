@@ -59,6 +59,7 @@ enum SnapzyConfigurationDefaultDocument {
 
     writer.section("capture.screenshot")
     writer.value("format", ImageFormatOption.png.rawValue)
+    writer.value("clipboard_content", ClipboardImageContentOption.defaultValue.rawValue)
     writer.value("include_snapzy", false)
     writer.value("show_cursor", false)
     writer.value("freeze_area", false)
