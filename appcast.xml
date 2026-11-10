@@ -6,6 +6,23 @@
     <description>Snapzy application updates</description>
     <language>en</language>
     <item>
+      <title>Version 2.2.0-beta.10</title>
+      <sparkle:channel>beta</sparkle:channel>
+      <sparkle:version>226</sparkle:version>
+      <sparkle:shortVersionString>2.2.0-beta.10</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>13.0</sparkle:minimumSystemVersion>
+      <pubDate>Tue, 10 Nov 2026 19:26:59 +0000</pubDate>
+      <description><![CDATA[
+        <style>:root { color-scheme: light dark; } body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 13px; line-height: 1.5; padding: 8px 16px; } h3 { font-size: 14px; margin: 12px 0 6px; } ul { padding-left: 20px; margin: 4px 0; } li { margin: 3px 0; }</style>
+        <h3>✨ Features</h3><ul><li>Option to copy screenshots as image data only (eacb77cb)</li><li>Confirm before restarting or deleting a recording in progress (04ae542f)</li></ul><h3>🐛 Bug Fixes</h3><ul><li>Quick Access card buttons no longer ignore the first click (75a5ce58)</li><li>Settings tooltips no longer grow huge on macOS 15 (01fe19e0)</li></ul>
+      ]]></description>
+      <enclosure
+        url="https://github.com/duongductrong/Snapzy/releases/download/v2.2.0-beta.10/Snapzy-v2.2.0-beta.10.dmg"
+        sparkle:edSignature="9sZrYRynknwAoWDLVJUS4avmRh7Fm6j2ZH9Wcj3WQl5q9KNM4S6iM2uxSkM8gHSxFx3AcNig0Jyvjciem18MCw=="
+        length="52791248"
+        type="application/octet-stream"/>
+    </item>
+    <item>
       <title>Version 2.2.0-beta.9</title>
       <sparkle:channel>beta</sparkle:channel>
       <sparkle:version>225</sparkle:version>
