@@ -83,6 +83,32 @@ final class QuickAccessPanel: NSPanel {
     return interactiveRect.contains(screenPoint)
   }
 
+  /// Whether the panel should let mouse events fall through to the window below
+  /// while the pointer is at `screenPoint`.
+  ///
+  /// The window server picks a click's target window the moment the click happens,
+  /// using whatever `ignoresMouseEvents` is at that instant. Snapzy can only flip it
+  /// after its main thread has handled a mouse-move, so the panel must already
+  /// accept clicks *before* the pointer reaches a card. Otherwise a quick first click
+  /// falls through to the app behind and the card seems to ignore it (#698).
+  ///
+  /// The decision therefore depends only on height: pass clicks through only at or
+  /// above the top of the card stack (the empty area of the fixed-size panel). Beside
+  /// or below the stack the panel accepts clicks. That costs nothing outside the
+  /// panel frame (the window cannot receive those clicks anyway), and pointers
+  /// arriving from the side or from below meet a card that is already clickable.
+  /// Only a pointer moving straight down out of the empty area still needs a flip.
+  func shouldPassMouseThrough(at screenPoint: NSPoint) -> Bool {
+    guard visibleItemCount > 0 else { return true }
+
+    let cardsTop = frame.minY + Self.interactiveContentHeight(
+      itemCount: visibleItemCount,
+      scale: overlayScale,
+      panelHeight: frame.height
+    )
+    return screenPoint.y >= cardsTop
+  }
+
   static func interactiveContentHeight(itemCount: Int, scale: CGFloat, panelHeight: CGFloat) -> CGFloat {
     guard itemCount > 0 else { return 0 }
 
@@ -139,8 +165,11 @@ final class QuickAccessPanel: NSPanel {
     }
 
     if globalMouseMonitor == nil {
+      // Global monitor handlers run on the main thread. Handle the event inline:
+      // hopping through a Task delays the passthrough flip and widens the window
+      // in which a click is routed to the app behind the panel (#698).
       globalMouseMonitor = NSEvent.addGlobalMonitorForEvents(matching: mask) { [weak self] event in
-        Task { @MainActor in
+        MainActor.assumeIsolated {
           self?.handleGlobalMouseEvent(event)
         }
       }
@@ -158,7 +187,8 @@ final class QuickAccessPanel: NSPanel {
     }
   }
 
-  private func refreshMousePassthrough() {
+  /// - Parameter missedMove: true when a mouse-move just went to some other window.
+  private func refreshMousePassthrough(missedMove: Bool = false) {
     if isMouseInteractionActive && NSEvent.pressedMouseButtons & 1 == 0 {
       isMouseInteractionActive = false
     }
@@ -168,7 +198,38 @@ final class QuickAccessPanel: NSPanel {
       return
     }
 
-    ignoresMouseEvents = !containsInteractivePoint(NSEvent.mouseLocation)
+    let wasPassingThrough = ignoresMouseEvents
+    ignoresMouseEvents = shouldPassMouseThrough(at: NSEvent.mouseLocation)
+
+    // A move that went elsewhere while the pointer is over this (now clickable)
+    // panel was routed before the window server applied our flip. Replay it here.
+    if !ignoresMouseEvents && (wasPassingThrough || missedMove) {
+      resyncHoverAtPointer()
+    }
+  }
+
+  /// AppKit updates hover tracking (SwiftUI `.onHover`) only when a mouse-move
+  /// reaches the window. Turning `ignoresMouseEvents` off takes effect in the window
+  /// server asynchronously, so moves made just before or just after the flip still go
+  /// to the window behind. If the pointer then stops on a card, the card never sees
+  /// hover, its action buttons never appear, and every click lands on the card body
+  /// (#698). Feed the panel one move at the current pointer location so hover is
+  /// checked right away. No-op while the pointer is outside the panel.
+  private func resyncHoverAtPointer() {
+    let screenPoint = NSEvent.mouseLocation
+    guard frame.contains(screenPoint),
+          let event = NSEvent.mouseEvent(
+            with: .mouseMoved,
+            location: convertPoint(fromScreen: screenPoint),
+            modifierFlags: [],
+            timestamp: ProcessInfo.processInfo.systemUptime,
+            windowNumber: windowNumber,
+            context: nil,
+            eventNumber: 0,
+            clickCount: 0,
+            pressure: 0
+          ) else { return }
+    NSApp.postEvent(event, atStart: false)
   }
 
   private func handleLocalMouseEvent(_ event: NSEvent) {
@@ -183,7 +244,7 @@ final class QuickAccessPanel: NSPanel {
       }
     }
 
-    refreshMousePassthrough()
+    refreshMousePassthrough(missedMove: event.type == .mouseMoved && event.window !== self)
   }
 
   private func handleGlobalMouseEvent(_ event: NSEvent) {
@@ -191,7 +252,8 @@ final class QuickAccessPanel: NSPanel {
       isMouseInteractionActive = false
     }
 
-    refreshMousePassthrough()
+    // Global events always went to another app.
+    refreshMousePassthrough(missedMove: event.type == .mouseMoved)
   }
 
   override var canBecomeKey: Bool { false }

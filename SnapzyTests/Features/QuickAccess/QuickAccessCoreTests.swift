@@ -1569,6 +1569,40 @@ final class QuickAccessCoreTests: XCTestCase {
     XCTAssertFalse(panel.containsInteractivePoint(NSPoint(x: 150, y: panel.frame.maxY - 10)))
   }
 
+  /// #698: the panel must already accept clicks before the pointer reaches a card,
+  /// so passthrough depends only on height. Beside or below the card stack (even
+  /// outside the panel frame) clicks are accepted. Only the empty area above passes through.
+  func testQuickAccessPanel_passthroughOnlyAboveCardStack() {
+    let panelHeight =
+      QuickAccessLayout.scaledCardHeight(1) * 5
+      + QuickAccessLayout.cardSpacing * 4
+      + QuickAccessLayout.containerPadding * 2
+    let panel = QuickAccessPanel(
+      contentRect: NSRect(x: 100, y: 100, width: 204, height: panelHeight)
+    )
+    defer { panel.close() }
+
+    panel.updatePassthroughRegion(itemCount: 1, scale: 1)
+    let cardsTop = panel.frame.minY + QuickAccessLayout.cardHeight + QuickAccessLayout.containerPadding * 2
+
+    // On the card.
+    XCTAssertFalse(panel.shouldPassMouseThrough(at: NSPoint(x: 150, y: 150)))
+    // Approaching from the side or from below, outside the panel frame.
+    XCTAssertFalse(panel.shouldPassMouseThrough(at: NSPoint(x: 0, y: 150)))
+    XCTAssertFalse(panel.shouldPassMouseThrough(at: NSPoint(x: 150, y: 10)))
+    // Empty area above the stack, inside and beside the panel frame.
+    XCTAssertTrue(panel.shouldPassMouseThrough(at: NSPoint(x: 150, y: cardsTop + 1)))
+    XCTAssertTrue(panel.shouldPassMouseThrough(at: NSPoint(x: 0, y: panel.frame.maxY - 10)))
+
+    // The boundary rises as cards are added.
+    panel.updatePassthroughRegion(itemCount: 2, scale: 1)
+    XCTAssertFalse(panel.shouldPassMouseThrough(at: NSPoint(x: 150, y: cardsTop + 1)))
+
+    // No cards: everything passes through.
+    panel.updatePassthroughRegion(itemCount: 0, scale: 1)
+    XCTAssertTrue(panel.shouldPassMouseThrough(at: NSPoint(x: 150, y: 150)))
+  }
+
   func testQuickAccessActionConfigurationStore_usesDefaultOrderAndEnabledActions() {
     let defaults = makeIsolatedDefaults()
     let store = makeActionConfigurationStore(defaults: defaults)
