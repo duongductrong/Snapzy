@@ -77,13 +77,33 @@ private struct HintModifier: ViewModifier {
 private struct HintPopoverContent: View {
   let text: String
 
+  private static let fontSize: CGFloat = 11
+  private static let maxTextWidth: CGFloat = 240
+  private static let horizontalPadding: CGFloat = 10
+  private static let verticalPadding: CGFloat = 6
+
   var body: some View {
+    // NSPopover sizes itself from the hosting view's fitting size. A flexible width lets
+    // macOS 15 measure the text at a near-zero width, so the popover grows very tall (#730).
+    // Pin an exact width (the text's own width, capped) and let SwiftUI derive the height at it.
     Text(text)
-      .font(.system(size: 11))
+      .font(.system(size: Self.fontSize))
       .foregroundColor(.primary)
-      .padding(.horizontal, 10)
-      .padding(.vertical, 6)
+      .lineLimit(nil)
+      .frame(width: Self.textWidth(for: text), alignment: .leading)
       .fixedSize(horizontal: false, vertical: true)
-      .frame(maxWidth: 260, alignment: .leading)
+      .padding(.horizontal, Self.horizontalPadding)
+      .padding(.vertical, Self.verticalPadding)
+      .fixedSize()
+  }
+
+  private static func textWidth(for text: String) -> CGFloat {
+    let rect = (text as NSString).boundingRect(
+      with: CGSize(width: maxTextWidth, height: .greatestFiniteMagnitude),
+      options: [.usesLineFragmentOrigin, .usesFontLeading],
+      attributes: [.font: NSFont.systemFont(ofSize: fontSize)]
+    )
+    // Small slack so SwiftUI never wraps a line AppKit measured as fitting.
+    return min(ceil(rect.width) + 2, maxTextWidth)
   }
 }
