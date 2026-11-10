@@ -4,6 +4,20 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.10] - 2026-11-10
+
+### Features
+- Option to copy screenshots as image data only (#734) (eacb77cb)
+- Confirm before restarting or deleting a recording in progress (#732) (04ae542f)
+
+### Bug Fixes
+- Quick Access card buttons no longer ignore the first click (#733) (75a5ce58)
+- Settings tooltips no longer grow huge on macOS 15 (#731) (01fe19e0)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.9] - 2026-11-09
 
 ### Bug Fixes
