@@ -28,6 +28,12 @@
             "value": "%@ Valeurs par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ברירות מחדל של %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ sélectionné"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ נבחר"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Forêt"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יער"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Océan"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוקיינוס"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "Coucher de soleil"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שקיעה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajouter un nouveau préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת ערכה חדשה"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "Alignement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יישור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -481,6 +523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annotations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סימון"
           }
         },
         "ja": {
@@ -548,6 +596,12 @@
             "value": "Appliquer un style prédéfini enregistré"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלת ערכת סגנון שמורה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Courbure"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כיפוף"
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Normal"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רגיל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inversé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפוך"
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Fin"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סוף"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flèche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חץ"
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Cercle"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עיגול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא"
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "Début"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Classique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קלאסי"
           }
         },
         "ja": {
@@ -1198,6 +1306,12 @@
             "value": "Contour"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתאר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1261,6 +1375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effilé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחודד"
           }
         },
         "ja": {
@@ -1328,6 +1448,12 @@
             "value": "Équilibre automatique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איזון אוטומטי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1391,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun contenu détecté pour le recadrage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה תוכן לחיתוך"
           }
         },
         "ja": {
@@ -1458,6 +1590,12 @@
             "value": "Recadrage automatique sur le contenu"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיתוך אוטומטי לפי התוכן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +1659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer aut."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השחרה אוטומטית"
           }
         },
         "ja": {
@@ -1588,6 +1732,12 @@
             "value": "Masquer automatiquement les données sensibles"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השחרה אוטומטית של מידע רגיש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1651,6 +1801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d masquages ajoutés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נוספו %d השחרות."
           }
         },
         "ja": {
@@ -1718,6 +1874,12 @@
             "value": "Aucune image disponible pour l'analyse."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין תמונה זמינה לסריקה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +1943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune donnée sensible trouvée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצא מידע רגיש."
           }
         },
         "ja": {
@@ -1848,6 +2016,12 @@
             "value": "Recherche de données sensibles..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סורק אחר מידע רגיש..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1911,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Découpe d’arrière-plan"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת רקע"
           }
         },
         "ja": {
@@ -1978,6 +2158,12 @@
             "value": "Rapport d'arrière-plan"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יחס הרקע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2041,6 +2227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrière-plan supprimé (cliquez pour restaurer)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרקע הוסר (לחץ לשחזור)"
           }
         },
         "ja": {
@@ -2108,6 +2300,12 @@
             "value": "Type de flou"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סוג טשטוש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2171,6 +2369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flou"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מטושטש"
           }
         },
         "ja": {
@@ -2238,6 +2442,12 @@
             "value": "Atténué"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעומעם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2301,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Givré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלבי"
           }
         },
         "ja": {
@@ -2368,6 +2584,12 @@
             "value": "Doux"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +2653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vif"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עז"
           }
         },
         "ja": {
@@ -2498,6 +2726,12 @@
             "value": "ou capturez une capture d'écran pour annoter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "או צלם מסך כדי לסמן עליו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2561,6 +2795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effacer le préréglage par défaut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניקוי ערכת ברירת המחדל"
           }
         },
         "ja": {
@@ -2628,6 +2868,12 @@
             "value": "Annotate a trouvé une image dans le presse-papiers. La charger sur le canevas ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נמצאה תמונה בלוח. לטעון אותה לקנבס?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2691,6 +2937,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Charger l’image du presse-papiers ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לטעון את התמונה מהלוח?"
           }
         },
         "ja": {
@@ -2758,6 +3010,12 @@
             "value": "Veuillez configurer vos informations d'identification cloud dans Préférences -> Cloud avant le téléchargement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדר את פרטי הענן שלך בהעדפות ← ענן לפני ההעלאה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2821,6 +3079,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cloud non configuré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הענן לא מוגדר"
           }
         },
         "ja": {
@@ -2888,6 +3152,12 @@
             "value": "Copier dans le presse-papier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה ללוח"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2951,6 +3221,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recadrer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיתוך"
           }
         },
         "ja": {
@@ -3018,6 +3294,12 @@
             "value": "Aligner sur les bords"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדה לקצוות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3081,6 +3363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aligne les bords du recadrage sur les bords du contenu pendant le glissement. Maintenez ⌘ pour désactiver temporairement."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדת קצוות החיתוך לגבולות התוכן בזמן הגרירה. החזק ⌘ כדי להשבית זמנית."
           }
         },
         "ja": {
@@ -3148,6 +3436,12 @@
             "value": "Maintenez ⌘ pour désactiver temporairement l'alignement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החזק ⌘ כדי להשבית זמנית את ההצמדה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3211,6 +3505,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cristallisé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כוכבים"
           }
         },
         "ja": {
@@ -3278,6 +3578,12 @@
             "value": "Masquer les informations sensibles avec un effet de motif cristallisé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר בגוון לבנדר עם דוגמת כוכבים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3341,6 +3647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flèche incurvée vers la gauche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חץ שמתעקל שמאלה"
           }
         },
         "ja": {
@@ -3408,6 +3720,12 @@
             "value": "Flèche incurvée vers la droite"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חץ שמתעקל ימינה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3473,6 +3791,12 @@
             "value": "Bande verticale"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רצועה אנכית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3533,6 +3857,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "−%@"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "−%@"
@@ -3603,6 +3933,12 @@
             "value": "Supprimer et joindre"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרה וחיבור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3663,6 +3999,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%@"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "+%@"
@@ -3733,6 +4075,12 @@
             "value": "Ajouter un espace vide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת שטח ריק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3796,6 +4144,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bande horizontale"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רצועה אופקית"
           }
         },
         "ja": {
@@ -3863,6 +4217,12 @@
             "value": "Faites glisser sur l'image pour sélectionner une bande"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור על התמונה כדי לבחור רצועה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3926,6 +4286,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Découpage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גזירה"
           }
         },
         "ja": {
@@ -3993,6 +4359,12 @@
             "value": "image_annotée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "annotated_image"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4056,6 +4428,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת הערכה"
           }
         },
         "ja": {
@@ -4123,6 +4501,12 @@
             "value": "Supprimer \"%@\"?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למחוק את ״%@״?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4186,6 +4570,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת ערכה"
           }
         },
         "ja": {
@@ -4253,6 +4643,12 @@
             "value": "Cela déplacera \\\"%@\\\" vers la corbeille."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעולה תעביר את ״%@״ לפח."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4316,6 +4712,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer la capture d'écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת צילום המסך"
           }
         },
         "ja": {
@@ -4383,6 +4785,12 @@
             "value": "Profondeur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עומק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4446,6 +4854,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ne plus demander"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אל תשאל שוב"
           }
         },
         "ja": {
@@ -4513,6 +4927,12 @@
             "value": "Ne pas enregistrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא לשמור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4576,6 +4996,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Faites glisser vers l'application"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרירה לאפליקציה"
           }
         },
         "ja": {
@@ -4643,6 +5069,12 @@
             "value": "Faites-le glisser vers une autre application pour partager l'image annotée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור לאפליקציה אחרת כדי לשתף את התמונה המסומנת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4706,6 +5138,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Déposez une image ici"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחרר תמונה כאן"
           }
         },
         "ja": {
@@ -4773,6 +5211,12 @@
             "value": "Extraire le texte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חילוץ טקסט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4836,6 +5280,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajuster (%@)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמה (%@)"
           }
         },
         "ja": {
@@ -4903,6 +5353,12 @@
             "value": "Inverser la courbure"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היפוך הכיפוף"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4966,6 +5422,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gaussienne"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גאוסיאני"
           }
         },
         "ja": {
@@ -5033,6 +5495,12 @@
             "value": "Flou gaussien lisse similaire au filtre CSS"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טשטוש גאוסיאני חלק, בדומה למסנן CSS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5096,6 +5564,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Demi-teinte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משבצות"
           }
         },
         "ja": {
@@ -5163,6 +5637,12 @@
             "value": "Masquer les informations sensibles avec des points en demi-teinte de style bande dessinée classique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר בצבע שמנת עם דוגמת משבצות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5226,6 +5706,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hexagonal"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משושים"
           }
         },
         "ja": {
@@ -5293,6 +5779,12 @@
             "value": "Masquer les détails sensibles avec une pixellisation hexagonale en nid d'abeille"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפקט פיקסלים אמנותי בצורת משושים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5356,6 +5848,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aligner le surlignage sur le texte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדת המרקר לטקסט"
           }
         },
         "ja": {
@@ -5423,6 +5921,12 @@
             "value": "Aligne les tracés du surligneur sur les lignes de texte proches pendant le glissement. Maintenez ⌘ pour désactiver temporairement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יישור קווי המרקר לשורות טקסט סמוכות בזמן הגרירה. החזק ⌘ כדי להשבית זמנית."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5486,6 +5990,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette image utilise une découpe d'arrière-plan transparente. L'enregistrement au format JPEG aplatira la transparence sur un arrière-plan opaque. Utilisez PNG ou WebP pour conserver la transparence."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לתמונה זו יש רקע שקוף. שמירה כ־JPEG תהפוך את השקיפות לרקע אטום. השתמש ב־PNG או WebP כדי לשמור על השקיפות."
           }
         },
         "ja": {
@@ -5553,6 +6063,12 @@
             "value": "JPEG supprime la transparence"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JPEG מבטל את השקיפות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5616,6 +6132,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Style de ligne"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגנון קו"
           }
         },
         "ja": {
@@ -5683,6 +6205,12 @@
             "value": "Tirets"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקווקו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5746,6 +6274,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pointillés"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מנוקד"
           }
         },
         "ja": {
@@ -5813,6 +6347,12 @@
             "value": "Continue"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רציף"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5876,6 +6416,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Charger l’image"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טעינת תמונה"
           }
         },
         "ja": {
@@ -5943,6 +6489,12 @@
             "value": "Chargement des fonds d'écran..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טוען טפטים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6006,6 +6558,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annoter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סימון"
           }
         },
         "ja": {
@@ -6073,6 +6631,12 @@
             "value": "Maquette"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדמיה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6136,6 +6700,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aperçu"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תצוגה מקדימה"
           }
         },
         "ja": {
@@ -6203,6 +6773,12 @@
             "value": "Déplacer la zone sélectionnée (Space + glisser avec la souris)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזזת האזור הנבחר (רווח + גרירת עכבר)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6266,6 +6842,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nouvelle fenêtre Annotate"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלון סימון חדש"
           }
         },
         "ja": {
@@ -6333,6 +6915,12 @@
             "value": "Aucun préréglage pour l'instant"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין אין ערכות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6396,6 +6984,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pas maintenant"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא עכשיו"
           }
         },
         "ja": {
@@ -6463,6 +7057,12 @@
             "value": "Cette image a déjà été téléchargée sur le cloud. Le nouveau téléchargement remplacera le fichier existant par vos modifications."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה זו כבר הועלתה לענן. העלאה מחדש תחליף את הקובץ הקיים בשינויים שלך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6526,6 +7126,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette image a déjà été téléchargée sur le cloud. L'enregistrement remplacera le fichier cloud par vos modifications."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה זו כבר הועלתה לענן. השמירה תחליף את הקובץ בענן בשינויים שלך."
           }
         },
         "ja": {
@@ -6593,6 +7199,12 @@
             "value": "Écraser le fichier cloud ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להחליף את הקובץ בענן?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6656,6 +7268,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Épingler la fenêtre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדת החלון"
           }
         },
         "ja": {
@@ -6723,6 +7341,12 @@
             "value": "Pixélisé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פיקסלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6786,6 +7410,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flou pixélisé pour la suppression de contenus sensibles"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טשטוש פיקסלים להסתרת תוכן רגיש"
           }
         },
         "ja": {
@@ -6853,6 +7483,12 @@
             "value": "Pointillisme"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רשת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6916,6 +7552,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer le contenu sensible avec un effet de pointillisme artistique composé de minuscules points"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר בצבע אפרסק עם דוגמת קווי רשת"
           }
         },
         "ja": {
@@ -6983,6 +7625,12 @@
             "value": "Vous pouvez enregistrer jusqu'à 20 préréglages. Supprimez-en un pour ajouter un nouveau préréglage."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לשמור עד 20 ערכות. מחק אחת כדי להוסיף ערכה חדשה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7046,6 +7694,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Limite prédéfinie atteinte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגעת למגבלת הערכות"
           }
         },
         "ja": {
@@ -7113,6 +7767,12 @@
             "value": "Nom du préréglage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם הערכה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7176,6 +7836,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Préréglages"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ערכות"
           }
         },
         "ja": {
@@ -7243,6 +7909,12 @@
             "value": "Supprimer l'arrière-plan (recadrage automatique désactivé dans les paramètres)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת רקע (חיתוך אוטומטי מושבת בהגדרות)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7306,6 +7978,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer l'arrière-plan (recadrage automatique en cas de sécurité)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת רקע (חיתוך אוטומטי כשבטוח)"
           }
         },
         "ja": {
@@ -7373,6 +8051,12 @@
             "value": "Supprimer le fond d'écran personnalisé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת הטפט המותאם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7436,6 +8120,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nécessite macOS 14+"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דורש macOS 14 ומעלה"
           }
         },
         "ja": {
@@ -7503,6 +8193,12 @@
             "value": "Réinitialiser l'arrière-plan, le remplissage, l'ombre et les coins"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס הרקע, הריפוד, הצל והפינות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7566,6 +8262,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser la maquette"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס ההדמיה"
           }
         },
         "ja": {
@@ -7633,6 +8335,12 @@
             "value": "Réinitialiser aux valeurs par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס לברירות המחדל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7696,6 +8404,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Re-télécharger sur Cloud"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העלאה מחדש לענן"
           }
         },
         "ja": {
@@ -7763,6 +8477,12 @@
             "value": "Pivoter à gauche 90°"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיבוב שמאלה 90°"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7826,6 +8546,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pivoter à droite 90°"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיבוב ימינה 90°"
           }
         },
         "ja": {
@@ -7893,6 +8619,12 @@
             "value": "Enregistrer au format JPEG"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה כ־JPEG"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7956,6 +8688,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy n'a pas pu écrire à l'emplacement sélectionné. Veuillez choisir un autre dossier."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy לא הצליחה לכתוב למיקום שנבחר. בחר תיקייה אחרת."
           }
         },
         "ja": {
@@ -8023,6 +8761,12 @@
             "value": "Échec de l'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השמירה נכשלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8086,6 +8830,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entrez un nom pour ce préréglage de canevas."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן שם לערכת הקנבס הזו."
           }
         },
         "ja": {
@@ -8153,6 +8903,12 @@
             "value": "Enregistrer le préréglage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת ערכה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8216,6 +8972,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélectionnez le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת ערכה"
           }
         },
         "ja": {
@@ -8283,6 +9045,12 @@
             "value": "Utiliser comme préréglage par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שימוש כערכת ברירת מחדל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8346,6 +9114,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Obscurité"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עוצמת ההחשכה"
           }
         },
         "ja": {
@@ -8413,6 +9187,12 @@
             "value": "Droit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ישר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8476,6 +9256,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ligne directe du début à la fin"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קו ישר מההתחלה לסוף"
           }
         },
         "ja": {
@@ -8543,6 +9329,12 @@
             "value": "Ruban"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8606,6 +9398,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Caviarder les informations sensibles avec un effet de ruban adhésif"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר אוף־וייט עם דוגמה אלכסונית"
           }
         },
         "ja": {
@@ -8673,6 +9471,12 @@
             "value": "Couleur du texte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צבע טקסט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8736,6 +9540,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aligner"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדה"
           }
         },
         "ja": {
@@ -8803,6 +9613,12 @@
             "value": "Style de texte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגנון טקסט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8866,6 +9682,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Changer l'orientation du format de l'image"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלפת כיוון יחס הגובה־רוחב"
           }
         },
         "ja": {
@@ -8933,6 +9755,12 @@
             "value": "Changer l'orientation du recadrage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלפת כיוון החיתוך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8996,6 +9824,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Basculer la règle des tiers"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה/הסתרה של רשת שליש"
           }
         },
         "ja": {
@@ -9063,6 +9897,12 @@
             "value": "Basculer la barre latérale"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה/הסתרה של סרגל הצד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9128,6 +9968,12 @@
             "value": "Flèche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חץ"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9191,6 +10037,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Flou"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טשטוש"
           }
         },
         "ja": {
@@ -9259,6 +10111,12 @@
             "value": "Cliquer pour placer · Glisser pour pointer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי למקם · גרור כדי להצביע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9322,6 +10180,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comptoir"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מונה"
           }
         },
         "ja": {
@@ -9389,6 +10253,12 @@
             "value": "Recadrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיתוך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9452,6 +10322,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Découpage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גזירה"
           }
         },
         "ja": {
@@ -9519,6 +10395,12 @@
             "value": "Rectangle rempli"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מלבן מלא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9582,6 +10464,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Surligneur"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרקר"
           }
         },
         "ja": {
@@ -9649,6 +10537,12 @@
             "value": "Ligne"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9712,6 +10606,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Maquette"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדמיה"
           }
         },
         "ja": {
@@ -9779,6 +10679,12 @@
             "value": "Ovale"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אליפסה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9842,6 +10748,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Crayon"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עיפרון"
           }
         },
         "ja": {
@@ -9909,6 +10821,12 @@
             "value": "Rectangulaire"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מלבן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9972,6 +10890,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélection"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירה"
           }
         },
         "ja": {
@@ -10039,6 +10963,12 @@
             "value": "Projecteur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זרקור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10102,6 +11032,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Texte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טקסט"
           }
         },
         "ja": {
@@ -10169,6 +11105,12 @@
             "value": "Filigrane"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סימן מים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10232,6 +11174,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de supprimer l'arrière-plan."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להסיר את הרקע."
           }
         },
         "ja": {
@@ -10299,6 +11247,12 @@
             "value": "Le style de canevas actuel ne peut pas être stocké en tant que préréglage pour le moment."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לשמור את סגנון הקנבס הנוכחי כערכה כרגע."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10362,6 +11316,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'enregistrer le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לשמור את הערכה"
           }
         },
         "ja": {
@@ -10429,6 +11389,12 @@
             "value": "Détacher la fenêtre"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול הצמדת החלון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10492,6 +11458,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous avez des modifications non enregistrées. Voulez-vous sauvegarder avant de fermer ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יש שינויים שלא נשמרו. לשמור לפני הסגירה?"
           }
         },
         "ja": {
@@ -10559,6 +11531,12 @@
             "value": "Modifications non enregistrées"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שינויים שלא נשמרו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10622,6 +11600,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mettre à jour le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדכון הערכה"
           }
         },
         "ja": {
@@ -10689,6 +11673,12 @@
             "value": "Remplacer \"%@\" par les paramètres actuels ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להחליף את ״%@״ בהגדרות הנוכחיות?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10752,6 +11742,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mettre à jour le préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדכון ערכה"
           }
         },
         "ja": {
@@ -10819,6 +11815,12 @@
             "value": "Mettre à jour le préréglage sélectionné avec les valeurs actuelles"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדכון הערכה הנבחרת בערכים הנוכחיים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10882,6 +11884,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Télécharger sur le cloud"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העלאה לענן"
           }
         },
         "ja": {
@@ -10949,6 +11957,12 @@
             "value": "Téléversé sur le cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הועלה לענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11012,6 +12026,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Washi"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "וואשי"
           }
         },
         "ja": {
@@ -11079,6 +12099,12 @@
             "value": "Masquer les détails sensibles avec un ruban washi décoratif semi-transparent"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרט נייר בגוון טורקיז פסטל עם דוגמת נקודות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11142,6 +12168,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diagonale"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אלכסוני"
           }
         },
         "ja": {
@@ -11209,6 +12241,12 @@
             "value": "Opacité"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אטימות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11272,6 +12310,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Unique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יחיד"
           }
         },
         "ja": {
@@ -11339,6 +12383,12 @@
             "value": "Répété"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרוס"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11402,6 +12452,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Axe X"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ציר X"
           }
         },
         "ja": {
@@ -11469,6 +12525,12 @@
             "value": "Axe Y"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ציר Y"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11532,6 +12594,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Axe Z"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ציר Z"
           }
         },
         "ja": {
@@ -11598,6 +12666,12 @@
             "value": "Mesurer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מדידה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11660,6 +12734,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez pour mesurer · Faites glisser pour un cadre · ⌘ conserve le cadre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי למדוד · גרור למלבן · ⌘ שומר את המלבן"
           }
         },
         "ja": {
@@ -11726,6 +12806,12 @@
             "value": "Axe"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ציר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11788,6 +12874,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Largeur et hauteur"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רוחב וגובה"
           }
         },
         "ja": {
@@ -11854,6 +12946,12 @@
             "value": "Largeur seule"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רוחב בלבד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11916,6 +13014,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hauteur seule"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גובה בלבד"
           }
         },
         "ja": {
@@ -11982,6 +13086,12 @@
             "value": "Unité"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יחידה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12046,6 +13156,12 @@
             "value": "Points"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נקודות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12108,6 +13224,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pixels"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פיקסלים"
           }
         },
         "ja": {

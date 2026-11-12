@@ -27,6 +27,12 @@
             "value": "Fermer l’intégration"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירת תהליך ההיכרות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -89,6 +95,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך"
           }
         },
         "ja": {
@@ -155,6 +167,12 @@
             "value": "Cliquez sur Continuer pour avancer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ על ״המשך״ כדי להתקדם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -217,6 +235,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Terminer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיום"
           }
         },
         "ja": {
@@ -283,6 +307,12 @@
             "value": "Revenir à l’étape précédente"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חזרה שלב אחד אחורה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -345,6 +375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ignorer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דילוג"
           }
         },
         "ja": {
@@ -411,6 +447,12 @@
             "value": "Choisissez un outil d’annotation (flèche, rectangle, flou)."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר כלי סימון (חץ, מלבן, טשטוש)."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -473,6 +515,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La capture arrive dans la carte Accès rapide."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצילום מגיע לכרטיס הגישה המהירה."
           }
         },
         "ja": {
@@ -539,6 +587,12 @@
             "value": "Décochez ⇧⌘3, ⇧⌘4, ⇧⌘5 dans Clavier > Captures d’écran."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בטל את הסימון של ⇧⌘3,‏ ⇧⌘4,‏ ⇧⌘5 במקלדת > צילומי מסך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -601,6 +655,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisez l’accessibilité (facultatif)."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אשר נגישות (אופציונלי)."
           }
         },
         "ja": {
@@ -667,6 +727,12 @@
             "value": "Sélectionnez le dossier d’enregistrement des captures."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר תיקייה לשמירת הצילומים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -729,6 +795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisez l’enregistrement de l’écran."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אשר הקלטת מסך."
           }
         },
         "ja": {
@@ -795,6 +867,12 @@
             "value": "Survolez la carte Accès rapide."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רחף מעל כרטיס הגישה המהירה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -857,6 +935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez sur la carte pour ouvrir la fenêtre d’annotation."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ על הכרטיס כדי לפתוח את חלון הסימון."
           }
         },
         "ja": {
@@ -923,6 +1007,12 @@
             "value": "Ouvrez l’éditeur vidéo depuis la carte."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתח את עורך הווידאו מהכרטיס."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -985,6 +1075,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrez un court extrait vidéo de 3 secondes."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלט סרטון קצר של 3 שניות."
           }
         },
         "ja": {
@@ -1051,6 +1147,12 @@
             "value": "Sélectionnez une zone sur l’écran."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר אזור במסך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1113,6 +1215,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélectionnez une zone pour l’enregistrement d’écran."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר אזור להקלטת המסך."
           }
         },
         "ja": {
@@ -1179,6 +1287,12 @@
             "value": "Appuyez sur ⌘C pour copier ou ⌘E pour modifier."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ⌘C להעתקה או ⌘E לעריכה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1241,6 +1355,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermer l’intégration"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירת תהליך ההיכרות"
           }
         },
         "ja": {
@@ -1307,6 +1427,12 @@
             "value": "Auto"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוטומטי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1369,6 +1495,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Auto (Système)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוטומטי (לפי המערכת)"
           }
         },
         "ja": {
@@ -1435,6 +1567,12 @@
             "value": "Langue"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שפה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1497,6 +1635,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Figez, cadrez et basculez directement vers Annoter ou copiez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקפאה, חיתוך ושליחה ישירה לעורך הסימון או ללוח."
           }
         },
         "ja": {
@@ -1563,6 +1707,12 @@
             "value": "Capture de zone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום אזור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1625,6 +1775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "CONFIGURATION TERMINÉE"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההגדרה הושלמה"
           }
         },
         "ja": {
@@ -1691,6 +1847,12 @@
             "value": "Snapzy est prêt dans votre barre des menus. Capturez, enregistrez, extrayez du texte et annotez à tout moment."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy מוכנה בשורת התפריטים. צלם מסך, הקלט קליפים, חלץ טקסט וסמן בכל עת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1753,6 +1915,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous êtes prêt !"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכול מוכן!"
           }
         },
         "ja": {
@@ -1820,6 +1988,12 @@
             "value": "Snapzy est prêt. Accédez-y depuis la barre de menus ou utilisez vos raccourcis clavier."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy מוכנה. אפשר לגשת אליה משורת התפריטים או בקיצורי המקלדת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1885,6 +2059,12 @@
             "value": "Commencez"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בואו נתחיל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1947,6 +2127,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rejoindre Discord"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצטרפות ל־Discord"
           }
         },
         "ja": {
@@ -2014,6 +2200,12 @@
             "value": "Barre de menus"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שורת התפריטים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2077,6 +2269,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recherchez l'icône de l'appareil photo dans votre barre de menus"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חפש את סמל המצלמה בשורת התפריטים"
           }
         },
         "ja": {
@@ -2143,6 +2341,12 @@
             "value": "Accédez aux captures récentes, à l’historique, aux raccourcis et aux réglages."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גישה לצילומים אחרונים, היסטוריה, קיצורים והעדפות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2205,6 +2409,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Centre de la barre des menus"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרכז שורת התפריטים"
           }
         },
         "ja": {
@@ -2271,6 +2481,12 @@
             "value": "Extrayez le texte sur l’appareil avec Apple Vision directement vers le presse-papiers."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חילוץ טקסט במכשיר עם Apple Vision ישירות ללוח."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2333,6 +2549,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture de texte (OCR)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חילוץ טקסט (OCR)"
           }
         },
         "ja": {
@@ -2400,6 +2622,12 @@
             "value": "Ouvrir les préférences"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת ההעדפות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2463,6 +2691,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Personnalisez les raccourcis, le format de sortie et bien plus encore"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמת קיצורים, פורמט פלט ועוד"
           }
         },
         "ja": {
@@ -2529,6 +2763,12 @@
             "value": "Appuyez sur Échap pour revoir les étapes précédentes"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ Esc כדי לחזור לשלבים הקודמים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2593,6 +2833,12 @@
             "value": "Enregistrez le micro, le son système et les clics. Exportez en MP4 ou GIF."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת מיקרופון, שמע מערכת ולחיצות. ייצוא ל־MP4 או GIF."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2655,6 +2901,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement d’écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת מסך"
           }
         },
         "ja": {
@@ -2722,6 +2974,12 @@
             "value": "Utilisez ⇧⌘3, ⇧⌘4, ⇧⌘5 pour capturer à tout moment"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השתמש ב־⇧⌘3,‏ ⇧⌘4,‏ ⇧⌘5 כדי לצלם בכל עת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2784,6 +3042,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Soutenir le projet"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמיכה בפרויקט"
           }
         },
         "ja": {
@@ -2850,6 +3114,12 @@
             "value": "Mettre une étoile sur GitHub"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כוכב ב־GitHub"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2912,6 +3182,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Commencer à utiliser Snapzy"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת השימוש ב־Snapzy"
           }
         },
         "ja": {
@@ -2979,6 +3255,12 @@
             "value": "Vous êtes prêt !"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכול מוכן!"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3041,6 +3323,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Requis pour config.toml"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרש עבור config.toml"
           }
         },
         "ja": {
@@ -3107,6 +3395,12 @@
             "value": "Accordez l’accès une fois. Snapzy créera config.toml si nécessaire et appliquera les modifications directes valides au lancement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אשר גישה פעם אחת. Snapzy תיצור את config.toml במידת הצורך ותחיל עריכות ישירות תקינות בעת ההפעלה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3169,6 +3463,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dossier de config"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תיקיית התצורה"
           }
         },
         "ja": {
@@ -3235,6 +3535,12 @@
             "value": "Plus tard"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מאוחר יותר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3297,6 +3603,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cela donne seulement à Snapzy accès à son dossier de config. Il n’importe aucun secret et n’analyse pas vos fichiers."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זה מעניק ל־Snapzy גישה רק לתיקיית התצורה שלה. היא לא מייבאת סודות ולא סורקת את הקבצים שלך."
           }
         },
         "ja": {
@@ -3363,6 +3675,12 @@
             "value": "config.toml est prêt."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "config.toml מוכן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3425,6 +3743,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy utilise un fichier TOML pour les réglages portables, les sauvegardes et les workflows dotfiles."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy משתמשת בקובץ TOML להגדרות ניידות, גיבויים ועבודה עם dotfiles."
           }
         },
         "ja": {
@@ -3491,6 +3815,12 @@
             "value": "Configurer config.toml"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרת config.toml"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3555,6 +3885,12 @@
             "value": "Démo interactive"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגמה אינטראקטיבית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3617,6 +3953,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lancer la simulation sur la scène virtuelle"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרצת סימולציה על במת הדגמה"
           }
         },
         "ja": {
@@ -3684,6 +4026,12 @@
             "value": "Snapzy peut collecter des journaux de diagnostic anonymes en cas de problème. Ces journaux nous aident à trouver et à corriger les bugs plus rapidement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy יכולה לאסוף יומני אבחון אנונימיים כשמשהו משתבש. היומנים עוזרים לנו למצוא ולתקן באגים מהר יותר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3747,6 +4095,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activer la journalisation des diagnostics"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת יומני אבחון"
           }
         },
         "ja": {
@@ -3814,6 +4168,12 @@
             "value": "Les journaux sont stockés localement sur votre appareil"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היומנים נשמרים מקומית במכשיר שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3877,6 +4237,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune donnée personnelle n'est collectée. Rien n'est envoyé sans votre action."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נאסף מידע אישי. שום דבר לא נשלח בלי פעולה שלך."
           }
         },
         "ja": {
@@ -3944,6 +4310,12 @@
             "value": "Aidez-nous à améliorer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עזרו לנו להשתפר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4007,6 +4379,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuer et appliquer à la fin"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך והחלה בסיום"
           }
         },
         "ja": {
@@ -4074,6 +4452,12 @@
             "value": "Suit macOS. Actuellement %@."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לפי macOS. כרגע %@."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4137,6 +4521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוטומטי"
           }
         },
         "ja": {
@@ -4204,6 +4594,12 @@
             "value": "Vous pourrez le modifier à tout moment dans Préférences -> Général."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לשנות זאת בכל עת בהעדפות ← כללי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4267,6 +4663,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy peut suivre votre Mac ou prévisualiser une langue d'app spécifique pendant la configuration."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy יכולה לפעול לפי שפת ה־Mac או להציג תצוגה מקדימה של שפה מסוימת במהלך ההגדרה."
           }
         },
         "ja": {
@@ -4334,6 +4736,12 @@
             "value": "Choisissez votre langue"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר את השפה שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4396,6 +4804,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diagnostics anonymes"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אבחון אנונימי"
           }
         },
         "ja": {
@@ -4462,6 +4876,12 @@
             "value": "%@ capturé !"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ צולם!"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4524,6 +4944,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conflit"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התנגשות"
           }
         },
         "ja": {
@@ -4590,6 +5016,12 @@
             "value": "Conflits actifs"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יש התנגשויות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4652,6 +5084,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conflits de raccourcis macOS détectés (⇧⌘3, ⇧⌘4, ⇧⌘5)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהו התנגשויות עם קיצורי macOS ‏(⇧⌘3,‏ ⇧⌘4,‏ ⇧⌘5)"
           }
         },
         "ja": {
@@ -4718,6 +5156,12 @@
             "value": "Rapports de plantage uniquement, aucun contenu capturé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דוחות קריסה בלבד, ללא תוכן מהצילומים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4780,6 +5224,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Terminé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיום"
           }
         },
         "ja": {
@@ -4846,6 +5296,12 @@
             "value": "Exporter MP4 (⌘S)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ייצוא MP4 ‏(⌘S)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4908,6 +5364,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accorder"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור"
           }
         },
         "ja": {
@@ -4974,6 +5436,12 @@
             "value": "Lié"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקושר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5036,6 +5504,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun conflit"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין התנגשויות"
           }
         },
         "ja": {
@@ -5102,6 +5576,12 @@
             "value": "Ouvrir Réglages Système…"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת הגדרות המערכת..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5164,6 +5644,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réglages portables en texte brut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרות ניידות בטקסט פשוט"
           }
         },
         "ja": {
@@ -5230,6 +5716,12 @@
             "value": "Appuyez sur ⇧⌘4 ou cliquez pour capturer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ⇧⌘4 או לחץ כאן כדי לצלם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5292,6 +5784,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez sur Enregistrer (démo 3s)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ״הקלטה״ כדי להתחיל (הדגמה של 3 שניות)"
           }
         },
         "ja": {
@@ -5358,6 +5856,12 @@
             "value": "Enregistrer MP4"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת MP4"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5420,6 +5924,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rejouer la démo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת ההדגמה מחדש"
           }
         },
         "ja": {
@@ -5486,6 +5996,12 @@
             "value": "Tout résoudre"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתרון הכול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5548,6 +6064,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rétablir les valeurs par défaut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחזור ברירות המחדל"
           }
         },
         "ja": {
@@ -5614,6 +6136,12 @@
             "value": "Tous les raccourcis globaux actifs et sans conflit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כל הקיצורים הגלובליים פעילים וללא התנגשויות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5676,6 +6204,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis Snapzy prêts"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי Snapzy מוכנים"
           }
         },
         "ja": {
@@ -5742,6 +6276,12 @@
             "value": "Arrêter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עצירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5804,6 +6344,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Balayer pour masquer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלק כדי לסגור"
           }
         },
         "ja": {
@@ -5870,6 +6416,12 @@
             "value": "Décochez ⇧⌘3, ⇧⌘4, ⇧⌘5 ci-dessous pour désactiver les raccourcis natifs de macOS."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בטל את הסימון של ⇧⌘3,‏ ⇧⌘4,‏ ⇧⌘5 למטה כדי להשבית את קיצורי macOS המובנים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5932,6 +6484,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Décocher pour résoudre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בטל סימון כדי לפתור"
           }
         },
         "ja": {
@@ -5999,6 +6557,12 @@
             "value": "Accessibilité"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נגישות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6061,6 +6625,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activer les raccourcis…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת קיצורים…"
           }
         },
         "ja": {
@@ -6127,6 +6697,12 @@
             "value": "Ne vérifie les touches que par rapport aux raccourcis de capture configurés."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בודקת מקשים רק מול קיצורי הצילום שהוגדרו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6189,6 +6765,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ne lit jamais les mots de passe et n’enregistre pas vos frappes."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לעולם לא קוראת סיסמאות ולא מתעדת את ההקלדות שלך."
           }
         },
         "ja": {
@@ -6255,6 +6837,12 @@
             "value": "Peut être désactivé à tout moment dans Réglages Système."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לכבות בכל עת בהגדרות המערכת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6317,6 +6905,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Détecte ⇧⌘4 et vos raccourcis globaux depuis n’importe quelle application"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מאזינה ל־⇧⌘4 ולקיצורים הגלובליים שהגדרת, מכל אפליקציה"
           }
         },
         "ja": {
@@ -6383,6 +6977,12 @@
             "value": "Accordez tout ou partie des autorisations : vous pouvez les modifier à tout moment dans Réglages Système."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אשר את כולן או רק חלק — אפשר לשנות הרשאות בהגדרות המערכת בכל עת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6447,6 +7047,12 @@
             "value": "FACULTATIF"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6509,6 +7115,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "REQUIS"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרש"
           }
         },
         "ja": {
@@ -6576,6 +7188,12 @@
             "value": "Choisissez un dossier pour les captures Snapzy (par défaut : Desktop/Snapzy)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר תיקייה לצילומי Snapzy (ברירת מחדל: שולחן העבודה/Snapzy)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6639,6 +7257,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accorder l'accès"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתן גישה"
           }
         },
         "ja": {
@@ -6706,6 +7330,12 @@
             "value": "La construction d’une identité nécessite une attention particulière"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זהות הבנייה דורשת טיפול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6769,6 +7399,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accordé dans les paramètres système, mais cette version ne peut pas utiliser l'autorisation tant que les problèmes d'identité ci-dessous ne sont pas résolus."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההרשאה ניתנה בהגדרות המערכת, אבל הבנייה הזו לא יכולה להשתמש בה עד שבעיות הזהות שלמטה יתוקנו."
           }
         },
         "ja": {
@@ -6836,6 +7472,12 @@
             "value": "Micro"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6899,6 +7541,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notifications"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התראות"
           }
         },
         "ja": {
@@ -6966,6 +7614,12 @@
             "value": "Facultatif pour les raccourcis globaux"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי, לקיצורים גלובליים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7029,6 +7683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Facultatif pour les résultats OCR et les alertes de capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי, לתוצאות OCR ולהתראות צילום"
           }
         },
         "ja": {
@@ -7096,6 +7756,12 @@
             "value": "Facultatif pour l'enregistrement vocal"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי, להקלטת קול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7158,6 +7824,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vision OCR, annotations et capture audio sont traitées localement sur le matériel de votre Mac."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי טקסט, סימון תמונות והקלטת שמע מעובדים כולם מקומית על החומרה של ה־Mac שלך."
           }
         },
         "ja": {
@@ -7224,6 +7896,12 @@
             "value": "100 % sur l’appareil et privé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "100% במכשיר ופרטי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7286,6 +7964,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quel que soit votre choix"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא משנה מה תבחר"
           }
         },
         "ja": {
@@ -7352,6 +8036,12 @@
             "value": "Révoquez les autorisations dans Réglages Système à votre guise, Snapzy s’adaptera avec les outils restants."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לבטל הרשאות בהגדרות המערכת מתי שתרצה, ו־Snapzy תמשיך לעבוד עם שאר הכלים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7414,6 +8104,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Révocation à tout moment dans Réglages"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול בכל עת בהגדרות"
           }
         },
         "ja": {
@@ -7480,6 +8176,12 @@
             "value": "Snapzy reste complètement inactive jusqu’à ce que vous utilisiez un raccourci. Aucun scan en arrière-plan."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy נשארת רדומה לגמרי עד שתלחץ על קיצור. אין שום סריקה ברקע של המסך שלך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7542,6 +8244,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous déclenchez chaque capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אתה מפעיל כל צילום"
           }
         },
         "ja": {
@@ -7609,6 +8317,12 @@
             "value": "Actualiser le statut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רענון המצב"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7672,6 +8386,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Requis pour les captures d'écran et les enregistrements"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרש לצילומי מסך ולהקלטות"
           }
         },
         "ja": {
@@ -7739,6 +8459,12 @@
             "value": "Enregistrer le dossier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תיקיית שמירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7801,6 +8527,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisir un dossier…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת תיקייה…"
           }
         },
         "ja": {
@@ -7867,6 +8599,12 @@
             "value": "Snapzy n’accède qu’au dossier assigné (par défaut : Bureau/Snapzy)."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy נוגעת רק בתיקייה שהוקצתה לה (ברירת מחדל: שולחן העבודה/Snapzy)."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7929,6 +8667,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistre avec des modèles de nommage et sous-dossiers personnalisables."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומרת עם תבניות שמות ותתי־תיקיות הניתנים להתאמה."
           }
         },
         "ja": {
@@ -7995,6 +8739,12 @@
             "value": "Les fichiers restent strictement locaux sur votre Mac."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקבצים נשארים מקומיים לחלוטין ב־Mac שלך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8057,6 +8807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistre vos captures dans le dossier de votre choix sans demandes répétées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומרת את הצילומים בתיקייה שבחרת בלי בקשות הרשאה"
           }
         },
         "ja": {
@@ -8124,6 +8880,12 @@
             "value": "Enregistrement d'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8186,6 +8948,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autoriser l’enregistrement d’écran…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור הקלטת מסך…"
           }
         },
         "ja": {
@@ -8252,6 +9020,12 @@
             "value": "Ne capture que lorsque vous déclenchez un raccourci ou une action."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלמת רק כשאתה מפעיל קיצור או פעולה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8314,6 +9088,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune diffusion en arrière-plan ni enregistrement masqué."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא שידור ברקע וללא הקלטה נסתרת."
           }
         },
         "ja": {
@@ -8380,6 +9160,12 @@
             "value": "L’extraction de texte OCR fonctionne entièrement sur l’appareil."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חילוץ טקסט (OCR) רץ במלואו על המכשיר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8444,6 +9230,12 @@
             "value": "Capture vos écrans, fenêtres et sélections avec une précision au pixel près"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלמת את המסכים, החלונות והבחירות שלך בדיוק של פיקסל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8506,6 +9298,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accordé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניתנה"
           }
         },
         "ja": {
@@ -8573,6 +9371,12 @@
             "value": "Snapzy a besoin d’autorisations pour la capture, l’audio, les notifications et le dossier d’enregistrement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאות לצילום, לשמע, להתראות ולמיקום השמירה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8636,6 +9440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accorder des autorisations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתן הרשאות"
           }
         },
         "ja": {
@@ -8703,6 +9513,12 @@
             "value": "Désactivé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבוי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8766,6 +9582,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Indisponible"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זמין"
           }
         },
         "ja": {
@@ -8833,6 +9655,12 @@
             "value": "Vous pouvez personnaliser ou désactiver les raccourcis à tout moment dans Préférences → Raccourcis."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר להתאים או לכבות קיצורים בכל עת בהעדפות ← קיצורים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8896,6 +9724,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Oui, activez les raccourcis"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כן, להפעיל קיצורים"
           }
         },
         "ja": {
@@ -8963,6 +9797,12 @@
             "value": "Ouvrez Paramètres système → Clavier → Raccourcis clavier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתח את הגדרות המערכת ← מקלדת ← קיצורי מקלדת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9026,6 +9866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélectionnez Captures d'écran dans la barre latérale"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר ״צילומי מסך״ בסרגל הצד"
           }
         },
         "ja": {
@@ -9093,6 +9939,12 @@
             "value": "Décochez les raccourcis de capture d'écran macOS qui chevauchent les raccourcis Snapzy que vous souhaitez conserver"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בטל את הסימון של קיצורי צילום המסך של macOS שחופפים לקיצורי Snapzy שברצונך להשאיר פעילים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9156,6 +10008,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun raccourci de capture d'écran macOS qui se chevauche n'est détecté : prêt à partir !"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהו קיצורי צילום מסך חופפים של macOS — אפשר להתחיל!"
           }
         },
         "ja": {
@@ -9223,6 +10081,12 @@
             "value": "Non, merci"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא, תודה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9286,6 +10150,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrez Paramètres →"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת ההגדרות ←"
           }
         },
         "ja": {
@@ -9353,6 +10223,12 @@
             "value": "Résoudre le chevauchement des raccourcis macOS"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתרון חפיפה עם קיצורי macOS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9416,6 +10292,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
           }
         },
         "ja": {
@@ -9483,6 +10365,12 @@
             "value": "Outils"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9546,6 +10434,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Attribuez des raccourcis système à Snapzy pour un accès rapide."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקצאת קיצורי המערכת ל־Snapzy לגישה מהירה."
           }
         },
         "ja": {
@@ -9613,6 +10507,12 @@
             "value": "Définir comme outil de capture d'écran par défaut ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להגדיר ככלי צילום המסך הראשי?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9676,6 +10576,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tous les paramètres restants utiliseront leurs valeurs par défaut. Vous pourrez toujours les modifier ultérieurement dans les Préférences."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כל שאר ההגדרות יקבלו את ערכי ברירת המחדל. תמיד אפשר לשנות אותן בהמשך בהעדפות."
           }
         },
         "ja": {
@@ -9743,6 +10649,12 @@
             "value": "Retourner"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חזרה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9806,6 +10718,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis clavier — paramètres par défaut du système"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי מקלדת — ברירות המחדל של המערכת"
           }
         },
         "ja": {
@@ -9873,6 +10791,12 @@
             "value": "Ignorer la configuration"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דילוג על ההגדרה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9936,6 +10860,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ignorer la configuration restante ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לדלג על שאר ההגדרה?"
           }
         },
         "ja": {
@@ -10003,6 +10933,12 @@
             "value": "Snapzy est désormais open source. Si cela vous fait gagner du temps, envisagez de soutenir le développement continu."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy היא עכשיו קוד פתוח. אם היא חוסכת לך זמן, שקול לתמוך בהמשך הפיתוח."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10066,6 +11002,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'assistance est facultative. Snapzy reste entièrement utilisable sans sponsoring."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התמיכה אינה חובה. Snapzy נשארת שמישה במלואה גם בלי תמיכה."
           }
         },
         "ja": {
@@ -10133,6 +11075,12 @@
             "value": "Parrainez l'auteur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמיכה ביוצר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10195,6 +11143,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Étape %d sur %d"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שלב %d מתוך %d"
           }
         },
         "ja": {
@@ -10261,6 +11215,12 @@
             "value": "Capture dans Accès rapide ! Cliquez sur la carte ou ✎ pour ouvrir la fenêtre d’annotation."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצילום בגישה המהירה! לחץ על הכרטיס או על ✎ כדי לפתוח את חלון הסימון."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10323,6 +11283,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fenêtre d’annotation ouverte ! Cliquez pour rejouer le flux complet depuis le début."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלון הסימון פתוח! לחץ כדי להפעיל מחדש את כל התהליך מההתחלה."
           }
         },
         "ja": {
@@ -10389,6 +11355,12 @@
             "value": "Cliquez pour figer l’écran et simuler la sélection d’une zone avec ⇧⌘4."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי להקפיא את המסך ולדמות בחירת אזור עם ⇧⌘4."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10451,6 +11423,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zone sélectionnée ! Cliquez pour terminer la capture et l’envoyer dans Accès rapide."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור נבחר! לחץ כדי להשלים את הצילום ולשלוח לגישה המהירה."
           }
         },
         "ja": {
@@ -10517,6 +11495,12 @@
             "value": "Capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10579,6 +11563,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Appuyez sur ⇧⌘4 pour figer et sélectionner une zone. Votre capture s’affiche aussitôt dans une carte Accès rapide flottante, prête à être copiée, enregistrée ou annotée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ⇧⌘4 כדי להקפיא ולבחור אזור. הצילום מגיע מיד לכרטיס גישה מהירה צף — מוכן להעתקה, לשמירה או לפתיחה בעורך הסימון."
           }
         },
         "ja": {
@@ -10645,6 +11635,12 @@
             "value": "Cliquer sur la carte Accès rapide ouvre directement la fenêtre complète d’annotation vectorielle."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחיצה על כרטיס הגישה המהירה פותחת ישירות את חלון הסימון המלא."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10707,6 +11703,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d’écran et annotations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך וסימון"
           }
         },
         "ja": {
@@ -10773,6 +11775,12 @@
             "value": "Autorisations"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10835,6 +11843,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy fonctionne entièrement sur votre Mac. Ces autorisations macOS activent la capture d’écran, l’enregistrement audio et les raccourcis globaux."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy פועלת כולה על ה־Mac שלך. ההרשאות האלה של macOS מאפשרות צילום מסך, הקלטת שמע וקיצורים גלובליים."
           }
         },
         "ja": {
@@ -10901,6 +11915,12 @@
             "value": "Toute la reconnaissance OCR et le traitement s’effectuent sur l’appareil grâce à Apple Vision."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כל זיהוי הטקסט והעיבוד מתבצעים במכשיר באמצעות Apple Vision."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10963,6 +11983,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisations et confidentialité"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאות ופרטיות"
           }
         },
         "ja": {
@@ -11029,6 +12055,12 @@
             "value": "Enregistrement en cours (%ds)... Appuyez sur Arrêter ou attendez 3 s."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה מתבצעת (%d שנ׳)... הקש ״עצירה״ או המתן 3 שניות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11091,6 +12123,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vidéo dans Accès rapide ! Cliquez sur la carte ou ici pour ouvrir l’éditeur vidéo."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הווידאו בגישה המהירה! לחץ על הכרטיס או כאן כדי לפתוח את עורך הווידאו."
           }
         },
         "ja": {
@@ -11157,6 +12195,12 @@
             "value": "Zone cadrée ! Cliquez sur « Record MP4 » ou ici pour lancer le compte à rebours de 3 s."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור נבחר! לחץ ״הקלטת MP4״ או כאן כדי להתחיל ספירה לאחור של 3 שניות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11219,6 +12263,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Éditeur vidéo ouvert ! Cliquez ici ou sur « Rejouer » pour tester à nouveau le flux d’enregistrement."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עורך הווידאו פתוח! לחץ כאן או ״הפעלה מחדש״ כדי לבדוק שוב את תהליך ההקלטה."
           }
         },
         "ja": {
@@ -11285,6 +12335,12 @@
             "value": "Cliquez pour simuler le raccourci d’enregistrement ⇧⌘5 et ouvrir la zone de cadrage."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי לדמות את קיצור ההקלטה ⇧⌘5 ולפתוח את אזור ההקלטה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11347,6 +12403,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
           }
         },
         "ja": {
@@ -11413,6 +12475,12 @@
             "value": "Appuyez sur ⇧⌘5 pour cadrer une région. Enregistrez le son système et le micro, découpez sur la timeline et exportez en MP4 ou GIF net."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ⇧⌘5 כדי לסמן אזור כלשהו. הקלט שמע מערכת ומיקרופון, חתוך בציר הזמן וייצא ל־MP4 או GIF חדים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11475,6 +12543,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous pouvez mettre en pause, reprendre et annoter à l’écran pendant l’enregistrement."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר להשהות, להמשיך ולסמן על המסך בזמן הקלטת וידאו."
           }
         },
         "ja": {
@@ -11541,6 +12615,12 @@
             "value": "Enregistrement d’écran et éditeur vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת מסך ועורך וידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11603,6 +12683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Conflits détectés ! Dans Clavier > Raccourcis clavier > Captures, décochez ⇧⌘3, ⇧⌘4, ⇧⌘5 (ou cliquez ici pour résoudre)."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהו התנגשויות! במקלדת > קיצורי מקלדת > צילומי מסך, בטל את הסימון של ⇧⌘3,‏ ⇧⌘4,‏ ⇧⌘5 (או לחץ כאן לפתרון)."
           }
         },
         "ja": {
@@ -11669,6 +12755,12 @@
             "value": "Conflits résolus ! Testez les touches de raccourci ou autorisez l’accès à config.toml ci-dessous."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההתנגשויות נפתרו! נסה את כפתורי הקיצורים או אשר גישה ל־config.toml למטה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11731,6 +12823,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים"
           }
         },
         "ja": {
@@ -11797,6 +12895,12 @@
             "value": "Allez dans Réglages Système > Clavier > Raccourcis clavier > Captures d’écran pour décocher ⇧⌘3, ⇧⌘4 et ⇧⌘5 afin d’éviter les conflits avec Snapzy. config.toml garde vos réglages portables."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עבור להגדרות המערכת > מקלדת > קיצורי מקלדת > צילומי מסך ובטל את הסימון של ⇧⌘3,‏ ⇧⌘4 ו־⇧⌘5 כדי למנוע התנגשות עם Snapzy. שמור על תהליכי עבודה ניידים עם config.toml."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11861,6 +12965,12 @@
             "value": "Vous pouvez personnaliser chaque raccourci à tout moment dans Réglages → Raccourcis."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר להתאים כל קיצור בכל עת בהעדפות ← קיצורים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11923,6 +13033,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis macOS et conflits"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי macOS והתנגשויות"
           }
         },
         "ja": {
@@ -11990,6 +13106,12 @@
             "value": "Faisons-le!"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קדימה!"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12053,6 +13175,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annoter et modifier des captures"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סימון ועריכה של צילומים"
           }
         },
         "ja": {
@@ -12120,6 +13248,12 @@
             "value": "Zone de capture ou captures d'écran en plein écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום אזור או מסך מלא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12183,6 +13317,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer l'écran avec l'audio"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת מסך עם שמע"
           }
         },
         "ja": {
@@ -12250,6 +13390,12 @@
             "value": "Une puissante application de capture d'écran et d'enregistrement d'écran pour macOS"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפליקציה עוצמתית לצילום והקלטת מסך ל־macOS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12313,6 +13459,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ne plus afficher"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אל תציג שוב"
           }
         },
         "ja": {
@@ -12380,6 +13532,12 @@
             "value": "Appuyez sur Entrée ↵"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ Enter ↵"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12443,6 +13601,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d'écran et enregistrement, simplifiés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום והקלטת מסך, בפשטות."
           }
         },
         "ja": {
@@ -12510,6 +13674,12 @@
             "value": "Bienvenue chez Snapzy"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ברוכים הבאים ל־Snapzy"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12573,6 +13743,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assistance directe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמיכה ישירה"
           }
         },
         "ja": {
@@ -12640,6 +13816,12 @@
             "value": "Pourboire unique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תרומה חד־פעמית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12703,6 +13885,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Support récurrent"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמיכה קבועה"
           }
         },
         "ja": {

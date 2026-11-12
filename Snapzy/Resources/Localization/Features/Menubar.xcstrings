@@ -28,6 +28,12 @@
             "value" : "Vérifier les mises à jour..."
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "בדיקת עדכונים..."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -91,6 +97,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Capture différée (%d s)"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "צילום מושהה (%d שנ׳)"
           }
         },
         "ja" : {
@@ -158,6 +170,12 @@
             "value" : "Capture différée plein écran (%d s)"
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מסך מלא מושהה (%d שנ׳)"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -221,6 +239,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Modifier la vidéo..."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עריכת וידאו..."
           }
         },
         "ja" : {
@@ -288,6 +312,12 @@
             "value" : "Accorder l'autorisation..."
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "מתן הרשאה..."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -351,6 +381,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Raccourcis clavier"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "קיצורי מקלדת"
           }
         },
         "ja" : {
@@ -418,6 +454,12 @@
             "value" : "Préférences..."
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "העדפות..."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -481,6 +523,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quitter Snapzy"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "יציאה מ־Snapzy"
           }
         },
         "ja" : {
@@ -548,6 +596,12 @@
             "value" : "Écran d'enregistrement"
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "הקלטת מסך"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -611,6 +665,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Arrêter l'enregistrement (%@)"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "עצירת הקלטה (%@)"
           }
         },
         "ja" : {

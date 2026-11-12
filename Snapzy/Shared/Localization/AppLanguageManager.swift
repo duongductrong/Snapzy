@@ -27,6 +27,7 @@ struct AppLanguageOption: Identifiable, Hashable {
     AppLanguageOption(identifier: "ru", displayName: "Русский", greeting: "Привет"),
     AppLanguageOption(identifier: "fr", displayName: "Français", greeting: "Bonjour"),
     AppLanguageOption(identifier: "de", displayName: "Deutsch", greeting: "Hallo"),
+    AppLanguageOption(identifier: "he", displayName: "עברית", greeting: "שלום"),
   ]
 }
 
@@ -160,6 +161,8 @@ final class AppLanguageManager: ObservableObject {
       ("ru", "ru"),
       ("fr", "fr"),
       ("de", "de"),
+      ("he", "he"),
+      ("iw", "he"),
     ]
 
     for entry in prefixMap where normalized.hasPrefix(entry.prefix) {

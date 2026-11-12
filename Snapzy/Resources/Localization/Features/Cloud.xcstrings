@@ -28,6 +28,12 @@
             "value": "1 jour"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יום אחד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "14 jours"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "14 ימים"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "3 jours"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 ימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "30 jours"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 ימים"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "60 jours"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "60 ימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "7 jours"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 ימים"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "90 jours"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 ימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -481,6 +523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Permanente"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לצמיתות"
           }
         },
         "ja": {
@@ -548,6 +596,12 @@
             "value": "Échec de la validation du bucket"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אימות ה־Bucket נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la suppression : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המחיקה נכשלה: %@"
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Échec de la suppression de la configuration du cycle de vie : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת הגדרת מחזור החיים נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la construction de l'URL présignée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יצירת כתובת חתומה מראש נכשלה"
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Échec de l'encodage de la valeur du trousseau"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קידוד הערך עבור מחזיק המפתחות נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fichier introuvable : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקובץ לא נמצא: %@"
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Échec de l'obtention de la configuration du cycle de vie : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קבלת הגדרת מחזור החיים נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Informations d'identification cloud non valides. Veuillez vérifier votre clé d'accès et votre clé secrète."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי הענן שגויים. בדוק את ה־Access Key וה־Secret Key."
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "URL ou méthode de requête non valide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתובת או שיטת בקשה לא תקינה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réponse invalide du fournisseur de cloud."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תגובה לא תקינה מספק הענן."
           }
         },
         "ja": {
@@ -1198,6 +1306,12 @@
             "value": "URL non valide pour la pré-signature"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתובת לא תקינה לחתימה מראש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1261,6 +1375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Erreur de trousseau : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שגיאת מחזיק מפתחות: %@"
           }
         },
         "ja": {
@@ -1328,6 +1448,12 @@
             "value": "Erreur réseau : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שגיאת רשת: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1391,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le stockage cloud n'est pas configuré. Veuillez configurer vos informations d'identification dans Préférences -> Cloud."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אחסון הענן לא מוגדר. הגדר את הפרטים שלך בהעדפות ← ענן."
           }
         },
         "ja": {
@@ -1458,6 +1590,12 @@
             "value": "Échec de SecItemAdd : %d"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SecItemAdd נכשל: %d"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +1659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de SecItemUpdate : %d"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SecItemUpdate נכשל: %d"
           }
         },
         "ja": {
@@ -1588,6 +1732,12 @@
             "value": "Échec de la définition de la configuration du cycle de vie : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קביעת הגדרת מחזור החיים נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1651,6 +1801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la signature de la demande : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חתימת הבקשה נכשלה: %@"
           }
         },
         "ja": {
@@ -1718,6 +1874,12 @@
             "value": "Échec du téléchargement (HTTP %d) : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההעלאה נכשלה (HTTP %d): %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +1943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de lire le mot de passe de protection enregistré à partir du trousseau."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לקרוא את סיסמת ההגנה השמורה ממחזיק המפתחות."
           }
         },
         "ja": {
@@ -1848,6 +2016,12 @@
             "value": "L'accès au trousseau n'a pas été accordé. Autorisez l'accès et réessayez."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתנה גישה למחזיק המפתחות. אשר גישה ונסה שוב."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1911,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L’interaction avec le trousseau n’est pas disponible pour le moment. Déverrouillez votre Mac et réessayez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין אפשרות לגשת למחזיק המפתחות כרגע. בטל את נעילת ה־Mac ונסה שוב."
           }
         },
         "ja": {
@@ -1978,6 +2158,12 @@
             "value": "Le mot de passe de protection n'est pas configuré."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא הוגדרה סיסמת הגנה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2038,6 +2224,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AWS S3"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "AWS S3"
@@ -2108,6 +2300,12 @@
             "value": "Cloudflare R2"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cloudflare R2"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2168,6 +2366,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "Google Drive"
@@ -2238,6 +2442,12 @@
             "value": "Clé d'accès"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח גישה (Access Key)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2301,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ID de clé d'accès"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מזהה מפתח גישה (Access Key ID)"
           }
         },
         "ja": {
@@ -2368,6 +2584,12 @@
             "value": "Clé d'accès de votre fournisseur de cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח הגישה של ספק הענן שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +2653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Compartiment : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bucket: %@"
           }
         },
         "ja": {
@@ -2498,6 +2726,12 @@
             "value": "Nom du compartiment"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם ה־Bucket"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2561,6 +2795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nom du compartiment S3 ou R2"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם ה־Bucket ב־S3 או R2"
           }
         },
         "ja": {
@@ -2628,6 +2868,12 @@
             "value": "Configuration enregistrée, mais la configuration du mot de passe a échoué : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההגדרות נשמרו, אך הגדרת הסיסמה נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2691,6 +2937,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirmer le mot de passe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אימות סיסמה"
           }
         },
         "ja": {
@@ -2758,6 +3010,12 @@
             "value": "Ressaisissez le mot de passe de protection"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן שוב את סיסמת ההגנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2820,6 +3078,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connecté"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחובר"
           }
         },
         "ja": {
@@ -2887,6 +3151,12 @@
             "value": "Connexion vérifiée avec succès !"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החיבור אומת בהצלחה!"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2950,6 +3220,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Informations d'identification"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי גישה"
           }
         },
         "ja": {
@@ -3017,6 +3293,12 @@
             "value": "Domaine personnalisé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דומיין מותאם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3080,6 +3362,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Domaine d'accès public (facultatif)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דומיין לגישה ציבורית (אופציונלי)"
           }
         },
         "ja": {
@@ -3147,6 +3435,12 @@
             "value": "Modifier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3210,6 +3504,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entrez votre mot de passe de protection pour modifier les informations d'identification cloud."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן את סיסמת ההגנה כדי לערוך את פרטי הענן."
           }
         },
         "ja": {
@@ -3277,6 +3577,12 @@
             "value": "Point de terminaison"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נקודת קצה (Endpoint)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3340,6 +3646,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "URL du point de terminaison du compte R2"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתובת נקודת הקצה של חשבון R2"
           }
         },
         "ja": {
@@ -3407,6 +3719,12 @@
             "value": "Point de terminaison S3 personnalisé en option pour LocalStack ou autre stockage compatible S3"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נקודת קצה S3 מותאמת (אופציונלי) עבור LocalStack או אחסון אחר תואם S3"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3470,6 +3788,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Heure d'expiration"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זמן תפוגה"
           }
         },
         "ja": {
@@ -3537,6 +3861,12 @@
             "value": "Entrez votre mot de passe de protection pour exporter les informations d'identification cloud actuelles."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן את סיסמת ההגנה כדי לייצא את פרטי הענן הנוכחיים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3600,6 +3930,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'enregistrement du mot de passe : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת הסיסמה נכשלה: %@"
           }
         },
         "ja": {
@@ -3667,6 +4003,12 @@
             "value": "Expiration du fichier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תפוגת קבצים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3730,6 +4072,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Si vous oubliez ce mot de passe, vous devrez réinitialiser votre configuration cloud et ressaisir toutes les informations d'identification."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אם תשכח את הסיסמה, תצטרך לאפס את הגדרות הענן ולהזין מחדש את כל הפרטים."
           }
         },
         "ja": {
@@ -3797,6 +4145,12 @@
             "value": "Mot de passe oublié ? Réinitialiser la configuration"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שכחת את הסיסמה? איפוס ההגדרות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3860,6 +4214,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google Authorization"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאת Google"
           }
         },
         "ja": {
@@ -3927,6 +4287,12 @@
             "value": "Authorize with Google"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחברות עם Google"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3990,6 +4356,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Authorized"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מאושר"
           }
         },
         "ja": {
@@ -4057,6 +4429,12 @@
             "value": "Authorizing…"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתחבר…"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4117,6 +4495,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client ID"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "Client ID"
@@ -4187,6 +4571,12 @@
             "value": "Client Secret"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client Secret"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4250,6 +4640,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connected as: %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחובר בתור: %@"
           }
         },
         "ja": {
@@ -4317,6 +4713,12 @@
             "value": "Google Drive Credentials"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי Google Drive"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4380,6 +4782,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Screenshots and videos will be saved under this folder in your Google Drive (default: Snapzy)."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילומי מסך וסרטונים יישמרו בתיקייה זו ב־Google Drive שלך (ברירת מחדל: Snapzy)."
           }
         },
         "ja": {
@@ -4447,6 +4855,12 @@
             "value": "Folder Name"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם התיקייה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4510,6 +4924,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Google Drive Folder"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תיקיית Google Drive"
           }
         },
         "ja": {
@@ -4577,6 +4997,12 @@
             "value": "Bring your own credentials to protect privacy. Create a Desktop App OAuth Client ID in your Google Cloud Console."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השתמש בפרטי גישה משלך כדי לשמור על פרטיות. צור OAuth Client ID מסוג Desktop App ב־Google Cloud Console שלך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4639,6 +5065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Envoyez vos captures vers votre propre stockage et partagez-les avec un lien."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העלאת צילומים לאחסון משלך ושיתוף שלהם בקישור."
           }
         },
         "ja": {
@@ -4706,6 +5138,12 @@
             "value": "Snapzy chargera les valeurs importées dans l'éditeur. Votre configuration enregistrée actuelle reste inchangée jusqu'à ce que vous cliquiez sur Enregistrer et tester."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy תטען את הערכים המיובאים לטופס. ההגדרות השמורות הנוכחיות לא ישתנו עד שתלחץ ״שמירה ובדיקה״."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4769,6 +5207,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entrez votre mot de passe de protection pour importer les informations d'identification sur la configuration cloud actuelle."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן את סיסמת ההגנה כדי לייבא פרטים במקום הגדרות הענן הנוכחיות."
           }
         },
         "ja": {
@@ -4836,6 +5280,12 @@
             "value": "Importer des informations d'identification cloud ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לייבא פרטי ענן?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4899,6 +5349,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importer une archive cryptée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ייבוא ארכיון מוצפן"
           }
         },
         "ja": {
@@ -4966,6 +5422,12 @@
             "value": "Chargez une archive cloud Snapzy précédemment exportée pour pré-remplir ce formulaire."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טעינת ארכיון ענן של Snapzy שיוצא בעבר כדי למלא את הטופס מראש."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5029,6 +5491,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mot de passe incorrect. Veuillez réessayer. (%d tentatives échouées)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמה שגויה. נסה שוב. (%d ניסיונות כושלים)"
           }
         },
         "ja": {
@@ -5096,6 +5564,12 @@
             "value": "Une règle de cycle de vie sera configurée sur votre compartiment pour supprimer automatiquement les fichiers après la période sélectionnée. La suppression peut prendre jusqu'à 24 heures après l'expiration."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כלל מחזור חיים יוגדר ב־Bucket כדי למחוק קבצים אוטומטית אחרי התקופה שנבחרה. המחיקה עשויה להימשך עד 24 שעות אחרי התפוגה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5159,6 +5633,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connecté avec des autorisations limitées. Le nettoyage automatique (règles de cycle de vie) n’est pas disponible : les fichiers resteront jusqu’à leur suppression manuelle."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחובר עם הרשאות מוגבלות. ניקוי אוטומטי (כללי מחזור חיים) אינו זמין — הקבצים יישארו עד למחיקה ידנית."
           }
         },
         "ja": {
@@ -5226,6 +5706,12 @@
             "value": "Aucune règle de cycle de vie ne sera définie. Les fichiers resteront définitivement à moins qu’ils ne soient supprimés manuellement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא יוגדר כלל מחזור חיים. הקבצים יישארו לצמיתות אלא אם יימחקו ידנית."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5289,6 +5775,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Facultatif"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי"
           }
         },
         "ja": {
@@ -5356,6 +5848,12 @@
             "value": "Mot de passe"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5419,6 +5917,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le mot de passe doit contenir au moins %d caractères."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסיסמה חייבת להכיל לפחות %d תווים."
           }
         },
         "ja": {
@@ -5486,6 +5990,12 @@
             "value": "Mot de passe requis"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת סיסמה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5549,6 +6059,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mot de passe facultatif pour protéger les informations d'identification contre tout accès non autorisé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמה אופציונלית להגנה על הפרטים מפני גישה לא מורשית"
           }
         },
         "ja": {
@@ -5616,6 +6132,12 @@
             "value": "Les mots de passe ne correspondent pas."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסיסמאות אינן תואמות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5679,6 +6201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sans mot de passe, toute personne ayant accès à votre Mac peut afficher et modifier vos informations d'identification cloud. Nous vous recommandons fortement de définir un mot de passe pour protéger votre configuration."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא סיסמה, כל מי שיש לו גישה ל־Mac שלך יוכל לצפות בפרטי הענן ולשנות אותם. אנו ממליצים בחום להגדיר סיסמה להגנה על ההגדרות."
           }
         },
         "ja": {
@@ -5746,6 +6274,12 @@
             "value": "Continuer sans mot de passe ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להמשיך ללא סיסמה?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5809,6 +6343,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Définissez un mot de passe pour empêcher tout accès non autorisé à votre configuration cloud. Ce mot de passe sera requis pour afficher ou modifier vos informations d'identification."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדר סיסמה כדי למנוע גישה לא מורשית להגדרות הענן. הסיסמה תידרש לצפייה בפרטים או לעריכתם."
           }
         },
         "ja": {
@@ -5876,6 +6416,12 @@
             "value": "Protégez vos informations d'identification cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגנה על פרטי הענן שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5939,6 +6485,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mot de passe de protection"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמת הגנה"
           }
         },
         "ja": {
@@ -6006,6 +6558,12 @@
             "value": "Le mot de passe de protection doit contenir au moins %d caractères."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמת ההגנה חייבת להכיל לפחות %d תווים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6069,6 +6627,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mot de passe de protection"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמת הגנה"
           }
         },
         "ja": {
@@ -6136,6 +6700,12 @@
             "value": "Les mots de passe de protection ne correspondent pas."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמאות ההגנה אינן תואמות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6199,6 +6769,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nous vous recommandons de définir un mot de passe pour protéger vos informations d'identification cloud contre tout accès non autorisé. Ce mot de passe sera requis pour visualiser ou modifier votre configuration."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אנו ממליצים להגדיר סיסמה להגנה על פרטי הענן מפני גישה לא מורשית. הסיסמה תידרש לצפייה בהגדרות או לעריכתן."
           }
         },
         "ja": {
@@ -6266,6 +6842,12 @@
             "value": "Fournisseur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6329,6 +6911,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fournisseur de cloud"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספק ענן"
           }
         },
         "ja": {
@@ -6396,6 +6984,12 @@
             "value": "Sélectionnez votre fournisseur de stockage cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר את ספק אחסון הענן שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6459,6 +7053,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Région"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אזור"
           }
         },
         "ja": {
@@ -6526,6 +7126,12 @@
             "value": "Région AWS (par exemple us-east-1)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אזור AWS (למשל us-east-1)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6589,6 +7195,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס"
           }
         },
         "ja": {
@@ -6656,6 +7268,12 @@
             "value": "Cela supprimera toutes les informations d'identification cloud, le mot de passe de protection et les paramètres. Cette action ne peut pas être annulée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעולה תסיר את כל פרטי הענן, סיסמת ההגנה וההגדרות. לא ניתן לבטל פעולה זו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6719,6 +7337,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser la configuration cloud ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לאפס את הגדרות הענן?"
           }
         },
         "ja": {
@@ -6786,6 +7410,12 @@
             "value": "Enregistrer et tester"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה ובדיקה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6849,6 +7479,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clé d'accès secrète"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח גישה סודי (Secret Access Key)"
           }
         },
         "ja": {
@@ -6916,6 +7552,12 @@
             "value": "Clé secrète de votre fournisseur de cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המפתח הסודי של ספק הענן שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6979,6 +7621,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Définir le mot de passe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרת סיסמה"
           }
         },
         "ja": {
@@ -7046,6 +7694,12 @@
             "value": "« Court » masque le nom du fichier et l'heure de capture dans le lien. Les liens existants ne changent pas."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "״קצר״ מסתיר מהקישור את שם הקובץ ואת זמן הצילום. קישורים קיימים לא ישתנו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7109,6 +7763,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Descriptif"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תיאורי"
           }
         },
         "ja": {
@@ -7176,6 +7836,12 @@
             "value": "Court"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קצר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7239,6 +7905,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Style de lien"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגנון קישור"
           }
         },
         "ja": {
@@ -7306,6 +7978,12 @@
             "value": "Liens de partage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קישורי שיתוף"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7369,6 +8047,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sauter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דילוג"
           }
         },
         "ja": {
@@ -7436,6 +8120,12 @@
             "value": "Passer pour l'instant"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דילוג לעת עתה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7499,6 +8189,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sans mot de passe, toute personne ayant accès à votre Mac peut afficher et modifier vos informations d'identification cloud. Nous vous recommandons fortement de définir un mot de passe."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא סיסמה, כל מי שיש לו גישה ל־Mac שלך יוכל לצפות בפרטי הענן ולשנות אותם. אנו ממליצים בחום להגדיר סיסמה."
           }
         },
         "ja": {
@@ -7566,6 +8262,12 @@
             "value": "Ignorer la protection par mot de passe ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לדלג על הגנת הסיסמה?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7629,6 +8331,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stockage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אחסון"
           }
         },
         "ja": {
@@ -7696,6 +8404,12 @@
             "value": "Stocké en toute sécurité dans le trousseau"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מאוחסן בבטחה במחזיק המפתחות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7759,6 +8473,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Test..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בודק..."
           }
         },
         "ja": {
@@ -7826,6 +8546,12 @@
             "value": "Transfert vers le cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העברת הגדרות ענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7889,6 +8615,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transfert"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העברה"
           }
         },
         "ja": {
@@ -7956,6 +8688,12 @@
             "value": "Bas"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8019,6 +8757,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Centre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרכז"
           }
         },
         "ja": {
@@ -8086,6 +8830,12 @@
             "value": "Choisissez où Cloud Uploads s’ouvre à l’écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן חלון ההעלאות לענן ייפתח במסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8149,6 +8899,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Position flottante"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקום החלון הצף"
           }
         },
         "ja": {
@@ -8216,6 +8972,12 @@
             "value": "Haut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8279,6 +9041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fenêtre des téléversements"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלון ההעלאות"
           }
         },
         "ja": {
@@ -8346,6 +9114,12 @@
             "value": "Vérifier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אימות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8409,6 +9183,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Contenu des archives"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תוכן הארכיון"
           }
         },
         "ja": {
@@ -8476,6 +9256,12 @@
             "value": "%@ • Compartiment : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ • Bucket: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8539,6 +9325,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Archiver la phrase secrète"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמת הארכיון"
           }
         },
         "ja": {
@@ -8606,6 +9398,12 @@
             "value": "Archive cryptée enregistrée dans %@."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הארכיון המוצפן נשמר ב־%@."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8669,6 +9467,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez la destination"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת יעד"
           }
         },
         "ja": {
@@ -8736,6 +9540,12 @@
             "value": "Choisissez une archive d'informations d'identification cryptées Snapzy."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר ארכיון פרטי גישה מוצפן של Snapzy."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8799,6 +9609,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirmer la phrase secrète"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אימות סיסמה"
           }
         },
         "ja": {
@@ -8866,6 +9682,12 @@
             "value": "Entrez la phrase secrète de l'archive"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן את סיסמת הארכיון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8929,6 +9751,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le fichier sélectionné n'est pas une archive d'informations d'identification cloud Snapzy valide."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקובץ שנבחר אינו ארכיון פרטי ענן תקין של Snapzy."
           }
         },
         "ja": {
@@ -8996,6 +9824,12 @@
             "value": "La phrase secrète d’exportation doit contenir au moins %d caractères."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סיסמת הייצוא חייבת להכיל לפחות %d תווים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9059,6 +9893,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de générer des octets aléatoires sécurisés pour l'archive."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה ליצור בתים אקראיים מאובטחים עבור הארכיון."
           }
         },
         "ja": {
@@ -9126,6 +9966,12 @@
             "value": "Impossible de déverrouiller l'archive. Vérifiez la phrase secrète ou choisissez une archive valide."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לפתוח את הארכיון. בדוק את הסיסמה או בחר ארכיון תקין."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9189,6 +10035,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette archive utilise un format de cryptage non pris en charge."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הארכיון משתמש בפורמט הצפנה שאינו נתמך."
           }
         },
         "ja": {
@@ -9256,6 +10108,12 @@
             "value": "Cette archive utilise la version de schéma %d non prise en charge."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הארכיון משתמש בגרסת סכמה %d שאינה נתמכת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9319,6 +10177,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Créez une archive cryptée que vous pouvez importer sur un autre Mac. Snapzy ne stocke pas cette phrase secrète d'archive."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יצירת ארכיון מוצפן שאפשר לייבא ב־Mac אחר. Snapzy לא שומרת את סיסמת הארכיון."
           }
         },
         "ja": {
@@ -9386,6 +10250,12 @@
             "value": "Exporter les informations d'identification cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ייצוא פרטי הענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9449,6 +10319,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Déverrouillez l'archive cryptée pour charger ses valeurs dans le formulaire Cloud."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתח את הארכיון המוצפן כדי לטעון את הערכים שלו לטופס הענן."
           }
         },
         "ja": {
@@ -9516,6 +10392,12 @@
             "value": "Importer les informations d'identification Cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ייבוא פרטי ענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9579,6 +10461,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Informations d'identification importées chargées. Vérifiez les valeurs, puis cliquez sur Enregistrer et tester pour les appliquer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפרטים המיובאים נטענו. בדוק את הערכים ולחץ ״שמירה ובדיקה״ כדי להחיל אותם."
           }
         },
         "ja": {
@@ -9646,6 +10534,12 @@
             "value": "Au moins %d caractères"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לפחות %d תווים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9709,6 +10603,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La phrase secrète doit contenir au moins %d caractères."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסיסמה חייבת להכיל לפחות %d תווים."
           }
         },
         "ja": {
@@ -9776,6 +10676,12 @@
             "value": "Les phrases secrètes ne correspondent pas."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסיסמאות אינן תואמות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9839,6 +10745,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entrez à nouveau la phrase secrète de l'archive"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזן שוב את סיסמת הארכיון"
           }
         },
         "ja": {
@@ -9906,6 +10818,12 @@
             "value": "Choisissez où Snapzy doit enregistrer l'archive des informations d'identification cryptées."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן Snapzy תשמור את ארכיון הפרטים המוצפן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9969,6 +10887,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Archives sélectionnées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הארכיון שנבחר"
           }
         },
         "ja": {
@@ -10036,6 +10960,12 @@
             "value": "il y a"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ""
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10099,6 +11029,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Statut du nuage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצב הענן"
           }
         },
         "ja": {
@@ -10166,6 +11102,12 @@
             "value": "Impossible d'actualiser les statistiques du cloud. Affichage des données mises en cache."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לרענן את נתוני הענן. מוצגים נתונים שמורים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10229,6 +11171,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "expire dans %d j"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תפוגה: %d ימים"
           }
         },
         "ja": {
@@ -10296,6 +11244,12 @@
             "value": "HNE. Coût/mois"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עלות משוערת לחודש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10359,6 +11313,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Niveau gratuit"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חבילה חינמית"
           }
         },
         "ja": {
@@ -10426,6 +11386,12 @@
             "value": "Cycle de vie"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחזור חיים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10489,6 +11455,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de ListObjectsV2 : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ListObjectsV2 נכשל: %@"
           }
         },
         "ja": {
@@ -10556,6 +11528,12 @@
             "value": "Chargement des statistiques..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טוען נתונים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10619,6 +11597,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la vérification de l'état du cloud : autorisation de liste de compartiments manquante (par exemple, s3:ListBucket)."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בדיקת מצב הענן נכשלה: חסרה הרשאה לרשימת ה־Bucket (למשל s3:ListBucket)."
           }
         },
         "ja": {
@@ -10686,6 +11670,12 @@
             "value": "Aucun"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10749,6 +11739,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cloud non configuré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הענן לא מוגדר"
           }
         },
         "ja": {
@@ -10816,6 +11812,12 @@
             "value": "Objets"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אובייקטים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10879,6 +11881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stockage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אחסון"
           }
         },
         "ja": {
@@ -10946,6 +11954,12 @@
             "value": "Échec de la vérification de l'état du cloud : non autorisé. Vérifiez le point de terminaison, la région et les informations d’identification."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בדיקת מצב הענן נכשלה: אין הרשאה. בדוק את נקודת הקצה, האזור והפרטים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11009,6 +12023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la vérification de l'état du cloud : non autorisé. Vérifiez le point de terminaison R2 et les informations d'identification de l'API."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בדיקת מצב הענן נכשלה: אין הרשאה. בדוק את נקודת הקצה של R2 ואת פרטי ה־API."
           }
         },
         "ja": {
@@ -11076,6 +12096,12 @@
             "value": "Mise à jour"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עודכן לפני"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11139,6 +12165,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effacer tout l'historique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניקוי כל ההיסטוריה"
           }
         },
         "ja": {
@@ -11206,6 +12238,12 @@
             "value": "\"Supprimer du cloud et effacer\" supprime les fichiers du stockage cloud et de l'historique local.\n\"Effacer l'historique uniquement\" supprime les enregistrements locaux mais conserve les fichiers sur le cloud."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "״מחיקה מהענן וניקוי״ מסיר קבצים מאחסון הענן ומההיסטוריה המקומית.\n״ניקוי ההיסטוריה בלבד״ מסיר רשומות מקומיות אך משאיר את הקבצים בענן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11269,6 +12307,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effacer tout l'historique de téléchargement ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לנקות את כל היסטוריית ההעלאות?"
           }
         },
         "ja": {
@@ -11336,6 +12380,12 @@
             "value": "Effacer l'historique uniquement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניקוי ההיסטוריה בלבד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11399,6 +12449,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copier le lien"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת קישור"
           }
         },
         "ja": {
@@ -11466,6 +12522,12 @@
             "value": "Supprimer du cloud et effacer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקה מהענן וניקוי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11529,6 +12591,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rejeter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה"
           }
         },
         "ja": {
@@ -11596,6 +12664,12 @@
             "value": "Heure d'expiration"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זמן תפוגה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11659,6 +12733,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Expiré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פג תוקף"
           }
         },
         "ja": {
@@ -11726,6 +12806,12 @@
             "value": "Échec de la suppression de %@ : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת %@ נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11789,6 +12875,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Filtres"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסננים"
           }
         },
         "ja": {
@@ -11856,6 +12948,12 @@
             "value": "Le plus grand premier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדולים קודם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11919,6 +13017,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le plus récent en premier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החדשים קודם"
           }
         },
         "ja": {
@@ -11986,6 +13090,12 @@
             "value": "Aucun résultat trouvé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצאו תוצאות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12049,6 +13159,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun téléchargement pour l'instant"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין אין העלאות"
           }
         },
         "ja": {
@@ -12116,6 +13232,12 @@
             "value": "Le plus ancien en premier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הישנים קודם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12179,6 +13301,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fournisseur"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספק"
           }
         },
         "ja": {
@@ -12246,6 +13374,12 @@
             "value": "Réinitialiser les filtres"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס המסננים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12309,6 +13443,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rechercher des téléchargements..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיפוש בהעלאות..."
           }
         },
         "ja": {
@@ -12376,6 +13516,12 @@
             "value": "Le plus petit en premier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקטנים קודם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12439,6 +13585,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Certains fichiers n'ont pas pu être supprimés : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה למחוק חלק מהקבצים: %@"
           }
         },
         "ja": {
@@ -12506,6 +13658,12 @@
             "value": "Trier par"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיון לפי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12569,6 +13727,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Statut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצב"
           }
         },
         "ja": {
@@ -12636,6 +13800,12 @@
             "value": "Actif"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעיל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12699,6 +13869,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tous"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכול"
           }
         },
         "ja": {
@@ -12766,6 +13942,12 @@
             "value": "Expiré"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פג תוקף"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12831,6 +14013,12 @@
             "value": "%d téléchargements"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d העלאות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12894,6 +14082,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Historique de téléchargement dans le cloud"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היסטוריית העלאות לענן"
           }
         },
         "ja": {

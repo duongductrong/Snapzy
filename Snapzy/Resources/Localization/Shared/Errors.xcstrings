@@ -28,6 +28,12 @@
             "value" : "Faites glisser le lot de journaux vers la page de rapport"
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "גרור את חבילת היומנים לדף הדיווח"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -91,6 +97,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Snapzy a regroupé vos journaux de diagnostic dans un fichier. Faites glisser le fichier ci-dessous vers la page de rapport."
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snapzy ארזה את יומני האבחון שלך לקובץ אחד. גרור את הקובץ שלמטה לדף הדיווח."
           }
         },
         "ja" : {
@@ -158,6 +170,12 @@
             "value" : "Snapzy n’a pas pu préparer de lot de journaux de diagnostic. Vous pouvez quand même ouvrir la page de rapport et décrire le problème."
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Snapzy לא הצליחה להכין חבילת יומני אבחון. עדיין אפשר לפתוח את דף הדיווח ולתאר את הבעיה."
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -221,6 +239,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Signaler un problème"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "דיווח על בעיה"
           }
         },
         "ja" : {
@@ -288,6 +312,12 @@
             "value" : "Fermer"
           }
         },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "סגירה"
+          }
+        },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
@@ -351,6 +381,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ouvrir la page de rapport"
+          }
+        },
+        "he" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "פתיחת דף הדיווח"
           }
         },
         "ja" : {
