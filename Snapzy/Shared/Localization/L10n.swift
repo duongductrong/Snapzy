@@ -6247,6 +6247,21 @@ nonisolated enum L10n {
       defaultValue: "Rotate right 90°",
       comment: "Tooltip for rotating the source image 90° clockwise"
     )
+    static let flipHorizontal = string(
+      "annotate.flip-horizontal",
+      defaultValue: "Flip horizontal",
+      comment: "Menu item for mirroring the source image left to right"
+    )
+    static let flipVertical = string(
+      "annotate.flip-vertical",
+      defaultValue: "Flip vertical",
+      comment: "Menu item for mirroring the source image top to bottom"
+    )
+    static let rotateAndFlip = string(
+      "annotate.rotate-and-flip",
+      defaultValue: "Rotate & flip",
+      comment: "Tooltip for the toolbar menu that rotates or flips the source image"
+    )
     static let toggleSidebar = string(
       "annotate.toggle-sidebar",
       defaultValue: "Toggle sidebar",

@@ -97,7 +97,7 @@ The `.accessory` activation-policy revert is deferred to a later runloop turn (s
 
 - Tool `.measure` (`u`, icon `ruler`), in `drawableTools` so it is also in inline ⇧⌘7. Same engine and gestures as Screen Ruler (`SnapzyMeasureCore`): **hover** previews the span around the pointer, **click** pins it, **drag** measures a box that snaps to the content inside (hold ⌘ for the raw box). Click-to-place (`requiresDragToCreateAnnotation` false); measurements under 4 screen points of travel are clicks.
 - Pixels: `AnnotateState.prepareMeasureMapperIfNeeded()` rasterizes `effectiveSourceImage` off-main into a `MeasureRaster` when the tool is selected (identity-guarded like the text-line profile) and `releaseMeasureMapper()` drops it on tool switch or image change (~59 MB at 5K). `AnnotateMeasureMapper` maps image points (bottom-left) ↔ raster pixels (top-left). Only source pixels are measured: other annotations and combined images are not in the raster.
-- Item: `AnnotationType.measurement(MeasureGeometry)` (`Models/AnnotateMeasureGeometry.swift`). The measured extent is the item's `bounds`; a span adds `origin` (where its lines cross) and `axis` (zero-thickness bounds on an unmeasured axis). `pixelScale` (source px/pt at measuring time) and `unit` make the label (`label(for:)`) independent of later crops and of the export path. Spans move but never resize (a pinned value stays true); boxes resize and their label follows. Rotation moves the origin and swaps axis/scale; cut-out moves the item as one piece.
+- Item: `AnnotationType.measurement(MeasureGeometry)` (`Models/AnnotateMeasureGeometry.swift`). The measured extent is the item's `bounds`; a span adds `origin` (where its lines cross) and `axis` (zero-thickness bounds on an unmeasured axis). `pixelScale` (source px/pt at measuring time) and `unit` make the label (`label(for:)`) independent of later crops and of the export path. Spans move but never resize (a pinned value stays true); boxes resize and their label follows. Rotation moves the origin and swaps axis/scale; flip moves the origin only; cut-out moves the item as one piece.
 - Drawing: `AnnotateMeasureRenderer` (from `AnnotationRenderer.draw`, so canvas, preview and every export match): lines with end ticks or a lightly filled box, plus a dark label capsule below-right of the span origin or under the box. Hit testing covers lines, the box edge and the label.
 - Quick properties bar: color, **Axis** (both / width / height; tool defaults only) and **Unit** (pt / px; converts selected measurements in one undo step), plus a gesture hint. Prefs `annotate.measureUnit`, `annotate.measureAxis` (TOML `measure_unit`, `measure_axis`); edge tolerance is shared with Screen Ruler (`screenRuler.edgeTolerance`).
 
@@ -113,7 +113,7 @@ Toolbar `scissors` button or `x` (`Services/AnnotateCutOutTransform.swift`, pure
 
 ## Undo/Redo
 
-- `UndoEntry` = `.annotations(AnnotationSnapshot)` | `.imageTransform(ImageTransformSnapshot)` — image-transform undo (90° rotation + cut-out strips) never disturbs the annotation path.
+- `UndoEntry` = `.annotations(AnnotationSnapshot)` | `.imageTransform(ImageTransformSnapshot)` — image-transform undo (90° rotation, flip + cut-out strips) never disturbs the annotation path.
 - Annotation snapshots include selection and embedded-layer metadata so object paste/duplicate undo is atomic and redo reselects the newly created items.
 - Text-edit commits as one transaction; quick-properties slider gestures scoped to a single checkpoint (`quickPropertiesGestureUndoSnapshot`).
 
@@ -199,9 +199,11 @@ source image.
 - Cloud button gated by `CloudManager.shared.isConfigured && QuickAccessActionConfigurationStore.shared.isEnabled(.uploadToCloud)`; ⌘U posts `annotateCloudUpload`; overwrite confirmation when item has a `cloudKey` and is stale. Note: commit `dd4ccd5` removed only the after-capture auto-upload preference — manual uploads here stay.
 - Edits after upload mark item cloud-stale (`isCloudStale`) until re-upload clears it.
 
-## Rotation & Canvas Presets
+## Rotate, Flip & Canvas Presets
 
-- Rotate 90° left/right from toolbar; dedicated image-transform (`ImageTransformSnapshot`) undo entries, shared with the Cut Out tool.
+- Toolbar "Rotate & flip" menu (`rectangle.landscape.rotate`, `AnnotateImageTransformToolbarButton` pops a native `NSMenu` so the glyph matches `ToolbarButton` and shortcut hints show) (next to Cut Out; also in the canvas right-click menu, `AnnotateImageTransformMenuItems`): Rotate 90° left/right (`⌘L` / `⌘R`) and Flip horizontal/vertical (`⌃⌘H` / `⌃⌘V`, `AnnotateState.flipImage`); key codes, handled in `AnnotateWindow.performKeyEquivalent`, menu items only render the hints. Gated by `canRotateImage` (no crop/cut-out editing, no cutout request in flight).
+- Both transform the source, cutout and embedded image bitmaps plus annotations, crop rects and auto-crop rect. Flip mirrors placement only: text and watermark glyphs stay readable; measure spans keep axis/scale.
+- Dedicated image-transform (`ImageTransformSnapshot`) undo entries, shared with the Cut Out tool.
 - `AnnotateCanvasPresetStore` (`annotate.canvasPresets.v1`): background style, blur effect, spacing, shadow, corner radius, aspect ratio + orientation. One preset can be default (`annotate.defaultCanvasPresetId.v1`).
 - Default preset auto-applies to new screenshots during post-capture via `ScreenshotPresetAutoApplier` — lightweight `AnnotateExporter.renderCanvasEffects` without constructing full `AnnotateState`, returns editable session data. Inline area annotate does NOT auto-apply.
 
