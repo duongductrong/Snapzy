@@ -359,12 +359,18 @@ final class AnnotateState: ObservableObject {
   static let combineBaseLayerID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
 
   @Published private(set) var isCombineMode = false
-  @Published private(set) var combineMode: CombineImagesMode = .autoStitch
+  /// Always `.freeCanvas` once active; `.autoStitch` only survives briefly while an older
+  /// saved session is migrated (see `migrateAutoStitchToFreeLayers`).
+  @Published private(set) var combineMode: CombineImagesMode = .freeCanvas
   @Published private(set) var combineDirection: CombineImagesDirection = .smart
   @Published private(set) var combineResolvedDirection: CombineImagesDirection = .horizontal
   @Published private(set) var combineGap: CGFloat = 0
   @Published private(set) var combineContentBounds: CGRect = .zero
   @Published var frozenCombineContentBounds: CGRect?
+  /// Canvas grown live while a layer is dragged or resized past the frozen bounds.
+  /// The view keeps its fit scale from the frozen bounds and anchors the frozen area
+  /// on screen, so the canvas grows around the pointer instead of rescaling under it.
+  @Published var liveCombineCanvasBounds: CGRect?
   /// Arrangement placed by dropping or dragging images on the canvas. nil means an
   /// automatic strip built from `combineDirection`; the arrangement buttons reset to it.
   @Published private(set) var combineStitchGrid: CombineStitchGrid?
@@ -384,20 +390,87 @@ final class AnnotateState: ObservableObject {
 
   var effectiveContentBounds: CGRect {
     guard isCombineMode else { return sourceImageBounds }
+    return liveCombineCanvasBounds ?? frozenCombineContentBounds ?? combineContentBounds
+  }
+
+  /// Bounds the canvas view fits to the viewport. Stays fixed during a gesture even
+  /// when `liveCombineCanvasBounds` grows, so the pointer keeps its canvas position.
+  var combineFitBounds: CGRect {
+    guard isCombineMode else { return sourceImageBounds }
     return frozenCombineContentBounds ?? combineContentBounds
   }
 
-  /// True once a drop or drag placed images by hand (no arrangement button applies).
-  var hasCustomCombineArrangement: Bool { combineStitchGrid != nil }
+  /// Footprint a layer adds to the combine canvas: images by their frame, markup by
+  /// what it visibly draws (stroke, arrowhead, callout tail, measure label), so the
+  /// canvas never clips a layer moved to its edge. Hit-test padding is left out.
+  static func combineCanvasFootprint(of annotation: AnnotationItem) -> CGRect? {
+    var rect: CGRect
+    let strokeWidth = max(0, annotation.properties.strokeWidth)
+    switch annotation.type {
+    case .embeddedImage:
+      rect = annotation.bounds
+    case .highlight:
+      rect = annotation.selectionDecorationBounds
+    case .rectangle, .oval, .line, .path, .measurement:
+      rect = annotation.resizeBounds.insetBy(dx: -strokeWidth / 2, dy: -strokeWidth / 2)
+    case .arrow:
+      // Matches the arrowhead width used by AnnotationItem.containsPoint.
+      let headHalfWidth = (3.2 + strokeWidth * 2.0) * 1.2 / 2
+      let pad = max(strokeWidth / 2, headHalfWidth)
+      rect = annotation.resizeBounds.insetBy(dx: -pad, dy: -pad)
+    case .text:
+      rect = annotation.resizeBounds
+      if annotation.properties.textPresentation == .callout,
+         let tailTarget = annotation.properties.calloutTailTarget {
+        rect = rect.union(
+          TextBubbleGeometry.tailPath(
+            in: annotation.bounds,
+            to: tailTarget,
+            fontSize: annotation.properties.fontSize
+          ).boundingBoxOfPath
+        )
+      }
+    default:
+      rect = annotation.resizeBounds
+    }
+    if let label = AnnotateMeasureRenderer.labelRect(for: annotation) {
+      rect = rect.union(label)
+    }
+    rect = rect.standardized
+    guard !rect.isNull, !rect.isInfinite,
+          rect.minX.isFinite, rect.minY.isFinite,
+          rect.maxX.isFinite, rect.maxY.isFinite else { return nil }
+    return rect
+  }
+
+  /// Begin a combine-mode gesture: freeze the canvas so it does not shift under the pointer.
+  func beginCombineCanvasGesture() {
+    guard isCombineMode else { return }
+    frozenCombineContentBounds = combineContentBounds
+    liveCombineCanvasBounds = nil
+  }
+
+  /// Grow the canvas live to include `rects` (gesture-local layer footprints).
+  /// Never shrinks mid-gesture; the canvas hugs its content again on release.
+  func updateLiveCombineCanvas(including rects: [CGRect]) {
+    guard isCombineMode, let frozen = frozenCombineContentBounds else { return }
+    let grown = rects.reduce(frozen) { $0.union($1) }
+    let next: CGRect? = grown == frozen ? nil : grown
+    if liveCombineCanvasBounds != next {
+      liveCombineCanvasBounds = next
+    }
+  }
+
+  /// End a combine-mode gesture. Content bounds are recomputed by the commit itself.
+  func endCombineCanvasGesture() {
+    if frozenCombineContentBounds != nil { frozenCombineContentBounds = nil }
+    if liveCombineCanvasBounds != nil { liveCombineCanvasBounds = nil }
+  }
 
   /// Stitched layer ids in reading order (row by row), base layer included.
   var combineStitchedOrder: [UUID] { currentStitchGrid().orderedIDs }
 
   var combineImageCount: Int { combineStitchedOrder.count }
-
-  func isCombineOverlay(_ id: UUID) -> Bool {
-    combineOverlayIDs.contains(id)
-  }
 
   /// Embedded image whose position and size Auto Stitch controls (not an overlay).
   func isAutoStitchedLayer(_ annotation: AnnotationItem) -> Bool {
@@ -406,18 +479,19 @@ final class AnnotateState: ObservableObject {
     return !combineOverlayIDs.contains(annotation.id)
   }
 
-  func activateCombineMode(preferredMode: CombineImagesMode = .autoStitch) {
+  /// Enter combine mode. Images are always free layers: they are placed once (beside
+  /// an edge or where dropped) and then only move when the user moves them.
+  func activateCombineMode() {
     guard hasImage else { return }
     if !isCombineMode {
       isCombineMode = true
       showSidebar = true
       selectedTool = .selection
-      // Images added before combining were placed by hand; keep them floating.
-      combineOverlayIDs = Set(embeddedImageAnnotationIDs())
+      combineOverlayIDs = []
       combineStitchGrid = nil
       captureCurrentFreeCombineBounds()
     }
-    setCombineMode(preferredMode)
+    setCombineMode(.freeCanvas)
   }
 
   func deactivateCombineMode() {
@@ -425,6 +499,7 @@ final class AnnotateState: ObservableObject {
     isCombineMode = false
     combineContentBounds = sourceImageBounds
     frozenCombineContentBounds = nil
+    liveCombineCanvasBounds = nil
     combineDropPreview = nil
   }
 
@@ -481,32 +556,17 @@ final class AnnotateState: ObservableObject {
 
   // MARK: Positional drop (stitch by edge / overlay by centre)
 
-  /// Drops and drags place images by position in Auto Stitch, and on a single image
-  /// (where an edge drop starts a stitch).
+  /// External drops pick a side of the image under the pointer (or float on it), the
+  /// way users know from other screenshot editors. Once placed, images move freely.
   var supportsPositionalCombineDrop: Bool {
-    hasImage && editorMode == .annotate && (!isCombineMode || combineMode == .autoStitch)
+    hasImage && editorMode == .annotate
   }
 
-  /// Resolve where an image dropped at `point` (canvas space) goes.
-  /// - Parameter movingAnnotationID: an embedded image being dragged on the canvas. It is
-  ///   left out of the targets. A dragged overlay only re-stitches once it leaves the
-  ///   stitched content; inside it the drag is a plain move (nil).
-  func resolveCombineDrop(at point: CGPoint, movingAnnotationID: UUID? = nil) -> CombineDropTarget? {
+  /// Resolve where an image dropped from outside at `point` (canvas space) goes: beside
+  /// the nearest image edge, or floating on the image under the pointer.
+  func resolveCombineDrop(at point: CGPoint) -> CombineDropTarget? {
     guard supportsPositionalCombineDrop else { return nil }
-    if let movingAnnotationID {
-      guard isCombineMode else { return nil }
-      let layers = stitchedLayerRects(excluding: movingAnnotationID)
-      if combineOverlayIDs.contains(movingAnnotationID) {
-        let content = layers.dropFirst().reduce(layers[0].rect) { $0.union($1.rect) }
-        guard !content.contains(point) else { return nil }
-      } else if let ownSlot = annotations.first(where: { $0.id == movingAnnotationID })?.bounds,
-                ownSlot.contains(point) {
-        // Released over its own slot (a click or a jitter): leave the arrangement alone.
-        return nil
-      }
-      return CombineDropResolver.resolve(point: point, layers: layers)
-    }
-    return CombineDropResolver.resolve(point: point, layers: stitchedLayerRects())
+    return CombineDropResolver.resolve(point: point, layers: combineImageLayerRects())
   }
 
   /// True between an external drag entering the canvas and its drop/exit. AppKit can
@@ -529,10 +589,10 @@ final class AnnotateState: ObservableObject {
     clearCombineDropPreview()
   }
 
-  func updateCombineDropPreview(at point: CGPoint?, movingAnnotationID: UUID? = nil) {
+  func updateCombineDropPreview(at point: CGPoint?) {
     let preview = point
-      .flatMap { resolveCombineDrop(at: $0, movingAnnotationID: movingAnnotationID) }
-      .flatMap { makeCombineDropPreview(for: $0, excluding: movingAnnotationID) }
+      .flatMap { resolveCombineDrop(at: $0) }
+      .flatMap { makeCombineDropPreview(for: $0) }
     if preview != combineDropPreview {
       combineDropPreview = preview
     }
@@ -544,8 +604,9 @@ final class AnnotateState: ObservableObject {
     }
   }
 
-  /// Add `image` where it was dropped. Stitch targets start Auto Stitch when needed;
-  /// an overlay outside combine mode stays a plain embedded image.
+  /// Add `image` where it was dropped: beside the target image's edge (top/left aligned,
+  /// one Image Gap away) or floating on the image under the pointer. Either way it is a
+  /// free layer afterwards; nothing re-arranges it later.
   /// - Returns: the new layer's annotation id, or nil when nothing was added.
   @discardableResult
   func importImage(_ image: NSImage, sourceData: Data?, at target: CombineDropTarget?) -> UUID? {
@@ -557,37 +618,28 @@ final class AnnotateState: ObservableObject {
     let imageSize = normalizedCanvasImageSize(for: image)
     guard imageSize.width > 0, imageSize.height > 0 else { return nil }
 
-    let layerID: UUID
+    let layers = combineImageLayerRects()
+    let bounds: CGRect
     switch target {
     case .stitch(let anchor, let edge):
-      activateCombineMode(preferredMode: .autoStitch)
-      guard combineMode == .autoStitch else { return nil }
-      saveState()
-      layerID = insertEmbeddedImageLayer(
-        image,
-        sourceData: sourceData,
-        bounds: CGRect(origin: .zero, size: imageSize)
+      guard let anchorRect = layers.first(where: { $0.id == anchor })?.rect else { return nil }
+      bounds = Self.besideBounds(
+        for: imageSize,
+        edge: edge,
+        of: anchorRect,
+        gap: combineGap,
+        avoiding: layers.map(\.rect)
       )
-      lowerBelowOverlays(layerID)
-      var grid = currentStitchGrid()
-      grid.insert(layerID, edge: edge, of: anchor)
-      combineStitchGrid = grid
-      refreshCombineLayout()
-      if let bounds = annotations.first(where: { $0.id == layerID })?.bounds {
-        freeCombineBoundsByAnnotationID[layerID] = bounds
-      }
-
     case .overlay(let point):
-      let host = stitchedLayerRects().last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
-      activateCombineMode(preferredMode: .autoStitch)
-      guard combineMode == .autoStitch else { return nil }
-      saveState()
-      let bounds = Self.overlayBounds(for: imageSize, centeredAt: point, within: host)
-      layerID = insertEmbeddedImageLayer(image, sourceData: sourceData, bounds: bounds)
-      combineOverlayIDs.insert(layerID)
-      freeCombineBoundsByAnnotationID[layerID] = bounds
-      refreshCombineLayout()
+      let host = layers.last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
+      bounds = Self.overlayBounds(for: imageSize, centeredAt: point, within: host)
     }
+
+    activateCombineMode()
+    saveState()
+    let layerID = insertEmbeddedImageLayer(image, sourceData: sourceData, bounds: bounds)
+    freeCombineBoundsByAnnotationID[layerID] = bounds
+    refreshCombineLayout()
 
     combineDropPreview = nil
     selectedAnnotationId = layerID
@@ -596,59 +648,6 @@ final class AnnotateState: ObservableObject {
     hasUnsavedChanges = true
     updateImportWarningIfNeeded()
     return layerID
-  }
-
-  /// Finish dragging an embedded image in Auto Stitch. The drag gesture already recorded
-  /// the undo checkpoint. `target` nil means a plain move of an overlay.
-  func commitCombineLayerDrag(id: UUID, target: CombineDropTarget?, droppedBounds: CGRect) {
-    defer { combineDropPreview = nil }
-    guard isCombineMode, combineMode == .autoStitch,
-          let annotation = annotations.first(where: { $0.id == id }),
-          case .embeddedImage = annotation.type else { return }
-
-    switch target {
-    case nil:
-      // Only overlays resolve to nil; stitched layers always land somewhere.
-      if combineOverlayIDs.contains(id) {
-        updateAnnotationBounds(id: id, bounds: droppedBounds)
-        freeCombineBoundsByAnnotationID[id] = droppedBounds.standardized
-      }
-
-    case .overlay(let point):
-      var grid = currentStitchGrid()
-      grid.remove(id)
-      combineOverlayIDs.insert(id)
-      if combineStitchGrid != nil {
-        combineStitchGrid = grid
-      }
-      let host = stitchedLayerRects(excluding: id).last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
-      let bounds = Self.overlayBounds(
-        for: droppedBounds.size,
-        centeredAt: CGPoint(x: droppedBounds.midX, y: droppedBounds.midY),
-        within: host,
-        maxCoverage: 0.6
-      )
-      updateAnnotationBounds(id: id, bounds: bounds)
-      freeCombineBoundsByAnnotationID[id] = bounds
-      raiseAboveEmbeddedImages(id)
-
-    case .stitch(let anchor, let edge):
-      let before = currentStitchGrid()
-      var grid = before
-      grid.insert(id, edge: edge, of: anchor)
-      let wasOverlay = combineOverlayIDs.remove(id) != nil
-      if wasOverlay { lowerBelowOverlays(id) }
-      // A drag that lands back in its own slot keeps an automatic strip automatic.
-      if wasOverlay || grid != before {
-        combineStitchGrid = grid
-      }
-    }
-
-    refreshCombineLayout()
-    if case .stitch = target, let bounds = annotations.first(where: { $0.id == id })?.bounds {
-      freeCombineBoundsByAnnotationID[id] = bounds
-    }
-    hasUnsavedChanges = true
   }
 
   /// Capture the active combine session's layout flags for persistence.
@@ -698,6 +697,22 @@ final class AnnotateState: ObservableObject {
     }
     // Deterministic: autoStitch recomputes layout from the arrangement/direction/gap;
     // freeCanvas derives content bounds from the restored annotation bounds.
+    refreshCombineLayout()
+    migrateAutoStitchToFreeLayers()
+    // Free layers carry no stitch arrangement; drop any a legacy session saved.
+    combineStitchGrid = nil
+    combineOverlayIDs = []
+  }
+
+  /// Sessions saved while Auto Stitch existed reopen looking the same: their laid-out
+  /// frames become the free positions, and from then on images only move by hand.
+  private func migrateAutoStitchToFreeLayers() {
+    guard isCombineMode, combineMode == .autoStitch else { return }
+    combineMode = .freeCanvas
+    combineStitchGrid = nil
+    combineOverlayIDs = []
+    combineDropPreview = nil
+    captureCurrentFreeCombineBounds()
     refreshCombineLayout()
   }
 
@@ -1559,6 +1574,11 @@ final class AnnotateState: ObservableObject {
       if !isApplyingPropertyEdit {
         pendingFullCanvasInvalidation = true
       }
+      // The combine canvas hugs its layers: any add, move, resize or undo can grow
+      // or shrink it. Reads annotations only, so it cannot re-enter this observer.
+      if isCombineMode {
+        refreshCombineCanvasBounds()
+      }
     }
   }
 
@@ -1913,7 +1933,7 @@ final class AnnotateState: ObservableObject {
     let imageSize = normalizedCanvasImageSize(for: image)
     guard imageSize.width > 0, imageSize.height > 0 else { return }
 
-    activateCombineMode(preferredMode: combineMode)
+    activateCombineMode()
 
     let placementBounds = importedImagePlacementBounds(for: imageSize)
 
@@ -2128,12 +2148,13 @@ final class AnnotateState: ObservableObject {
     embeddedImageSnapshotCacheData.removeAll()
     embeddedImageCGImageCache.removeAll()
     isCombineMode = false
-    combineMode = .autoStitch
+    combineMode = .freeCanvas
     combineDirection = .smart
     combineResolvedDirection = .horizontal
     combineGap = 0
     combineContentBounds = CGRect(origin: .zero, size: image.size)
     frozenCombineContentBounds = nil
+    liveCombineCanvasBounds = nil
     freeCombineBoundsByAnnotationID.removeAll()
     combineStitchGrid = nil
     combineOverlayIDs.removeAll()
@@ -2759,28 +2780,69 @@ final class AnnotateState: ObservableObject {
             annotations[index].bounds != bounds else { continue }
       annotations[index].bounds = bounds
     }
-    combineContentBounds = result.contentBounds.isEmpty ? sourceImageBounds : result.contentBounds
+    let stitchedBounds = result.contentBounds.isEmpty ? sourceImageBounds : result.contentBounds
+    combineContentBounds = unionWithFloatingCombineLayers(stitchedBounds)
   }
 
-  /// Move layer `id` just above the topmost embedded image so an overlay is never hidden
-  /// under the stitched image it sits on, while markup drawn later stays on top.
-  private func raiseAboveEmbeddedImages(_ id: UUID) {
-    guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
-    let item = annotations.remove(at: index)
-    let lastEmbedded = annotations.lastIndex { annotation in
-      if case .embeddedImage = annotation.type { return true }
-      return false
+  /// Base image plus every embedded image in canvas space, base first: the images a drop
+  /// can attach to (and must not cover), whether or not combine mode is active yet.
+  private func combineImageLayerRects() -> [(id: UUID, rect: CGRect)] {
+    var layers: [(id: UUID, rect: CGRect)] = [(Self.combineBaseLayerID, sourceImageBounds)]
+    for annotation in annotations {
+      guard case .embeddedImage = annotation.type else { continue }
+      layers.append((annotation.id, annotation.bounds))
     }
-    annotations.insert(item, at: lastEmbedded.map { $0 + 1 } ?? annotations.count)
+    return layers
   }
 
-  /// Move a stitched layer just below the first overlay so overlays stay visible on top.
-  private func lowerBelowOverlays(_ id: UUID) {
-    guard let index = annotations.firstIndex(where: { $0.id == id }),
-          let firstOverlay = annotations.firstIndex(where: { combineOverlayIDs.contains($0.id) }),
-          firstOverlay < index else { return }
-    let item = annotations.remove(at: index)
-    annotations.insert(item, at: firstOverlay)
+  /// Frame for an image dropped on `edge` of `anchor`: matched to the anchor's height
+  /// (left/right) or width (top/bottom) without upscaling, top- or left-aligned with it,
+  /// one `gap` away. Pushed further out along the same side while it would overlap
+  /// another image, so a second drop on a filled side queues up instead of covering it.
+  static func besideBounds(
+    for size: CGSize,
+    edge: CombineStitchEdge,
+    of anchor: CGRect,
+    gap: CGFloat,
+    avoiding occupied: [CGRect]
+  ) -> CGRect {
+    guard size.width > 0, size.height > 0 else { return CGRect(origin: anchor.origin, size: .zero) }
+    let safeGap = max(0, gap)
+    let scale = edge.isHorizontal
+      ? min(anchor.height / size.height, 1)
+      : min(anchor.width / size.width, 1)
+    let target = CGSize(width: max(1, size.width * scale), height: max(1, size.height * scale))
+
+    // Canvas space is y-up: the visual top edge is maxY.
+    var rect: CGRect
+    switch edge {
+    case .right:
+      rect = CGRect(x: anchor.maxX + safeGap, y: anchor.maxY - target.height, width: target.width, height: target.height)
+    case .left:
+      rect = CGRect(x: anchor.minX - safeGap - target.width, y: anchor.maxY - target.height, width: target.width, height: target.height)
+    case .top:
+      rect = CGRect(x: anchor.minX, y: anchor.maxY + safeGap, width: target.width, height: target.height)
+    case .bottom:
+      rect = CGRect(x: anchor.minX, y: anchor.minY - safeGap - target.height, width: target.width, height: target.height)
+    }
+
+    // Bounded: each step moves past one obstacle, so it ends after at most one per image.
+    for _ in 0 ... occupied.count {
+      let blockers = occupied.filter { $0.intersects(rect.insetBy(dx: 0.5, dy: 0.5)) }
+      guard !blockers.isEmpty else { break }
+      switch edge {
+      case .right:
+        rect.origin.x = (blockers.map(\.maxX).max() ?? rect.minX) + safeGap
+      case .left:
+        rect.origin.x = (blockers.map(\.minX).min() ?? rect.maxX) - safeGap - rect.width
+      case .top:
+        rect.origin.y = (blockers.map(\.maxY).max() ?? rect.minY) + safeGap
+      case .bottom:
+        rect.origin.y = (blockers.map(\.minY).min() ?? rect.maxY) - safeGap - rect.height
+      }
+    }
+    rect.origin = CGPoint(x: rect.origin.x.rounded(), y: rect.origin.y.rounded())
+    return rect
   }
 
   /// Stitched layers in canvas space, base first. Outside combine mode only the base.
@@ -2795,11 +2857,8 @@ final class AnnotateState: ObservableObject {
     return layers
   }
 
-  private func makeCombineDropPreview(
-    for target: CombineDropTarget,
-    excluding excludedID: UUID?
-  ) -> CombineDropPreview? {
-    let layers = stitchedLayerRects(excluding: excludedID)
+  private func makeCombineDropPreview(for target: CombineDropTarget) -> CombineDropPreview? {
+    let layers = combineImageLayerRects()
     switch target {
     case .overlay(let point):
       let host = layers.last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
@@ -2807,40 +2866,34 @@ final class AnnotateState: ObservableObject {
 
     case .stitch(let anchor, let edge):
       guard let anchorRect = layers.first(where: { $0.id == anchor })?.rect else { return nil }
-      var span = anchorRect
-      if !edge.isHorizontal {
-        // A top/bottom stitch opens a new row, so it spans the anchor's whole row.
-        var grid = currentStitchGrid()
-        if let excludedID { grid.remove(excludedID) }
-        if let position = grid.position(of: anchor) {
-          let rowIDs = Set(grid.rows[position.row])
-          span = layers.filter { rowIDs.contains($0.id) }.reduce(anchorRect) { $0.union($1.rect) }
-        }
-      }
+      // The dragged file's size is unknown until it drops; estimate with the anchor's
+      // size so the line sits where the image will start (gap and push-past included).
+      let span = Self.besideBounds(
+        for: anchorRect.size,
+        edge: edge,
+        of: anchorRect,
+        gap: combineGap,
+        avoiding: layers.map(\.rect)
+      )
+      // Draw on the edge the image will sit against (the anchor, or the image it is
+      // pushed past), which lies inside the current canvas so the clip never hides it.
+      let gap = max(0, combineGap)
       let line: CombineInsertionLine
       switch edge {
-      case .left:
-        line = CombineInsertionLine(
-          start: CGPoint(x: span.minX, y: span.minY),
-          end: CGPoint(x: span.minX, y: span.maxY)
-        )
       case .right:
-        line = CombineInsertionLine(
-          start: CGPoint(x: span.maxX, y: span.minY),
-          end: CGPoint(x: span.maxX, y: span.maxY)
-        )
+        let x = span.minX - gap
+        line = CombineInsertionLine(start: CGPoint(x: x, y: span.minY), end: CGPoint(x: x, y: span.maxY))
+      case .left:
+        let x = span.maxX + gap
+        line = CombineInsertionLine(start: CGPoint(x: x, y: span.minY), end: CGPoint(x: x, y: span.maxY))
       case .top:
-        line = CombineInsertionLine(
-          start: CGPoint(x: span.minX, y: span.maxY),
-          end: CGPoint(x: span.maxX, y: span.maxY)
-        )
+        let y = span.minY - gap
+        line = CombineInsertionLine(start: CGPoint(x: span.minX, y: y), end: CGPoint(x: span.maxX, y: y))
       case .bottom:
-        line = CombineInsertionLine(
-          start: CGPoint(x: span.minX, y: span.minY),
-          end: CGPoint(x: span.maxX, y: span.minY)
-        )
+        let y = span.maxY + gap
+        line = CombineInsertionLine(start: CGPoint(x: span.minX, y: y), end: CGPoint(x: span.maxX, y: y))
       }
-      return CombineDropPreview(target: target, highlightRect: span, insertionLine: line)
+      return CombineDropPreview(target: target, highlightRect: anchorRect, insertionLine: line)
     }
   }
 
@@ -2868,22 +2921,57 @@ final class AnnotateState: ObservableObject {
       combineContentBounds = sourceImageBounds
       return
     }
-    let imageBounds = annotations.compactMap { annotation -> CGRect? in
-      guard case .embeddedImage = annotation.type else { return nil }
-      return annotation.bounds
+    guard combineMode == .freeCanvas else {
+      applyAutomaticCombineLayout()
+      return
     }
-    combineContentBounds = imageBounds.reduce(sourceImageBounds) { $0.union($1) }
+    // Free Canvas hugs every layer, so moving one past the edge grows the canvas.
+    setCombineContentBounds(
+      annotations
+        .compactMap(Self.combineCanvasFootprint(of:))
+        .reduce(sourceImageBounds) { $0.union($1) }
+    )
+  }
+
+  /// Recompute the canvas after layers moved, without re-running the Auto Stitch layout
+  /// (a moved overlay or markup must not reshuffle the stitched images).
+  func refreshCombineCanvasBounds() {
+    guard isCombineMode else { return }
+    if combineMode == .freeCanvas {
+      updateCombineContentBounds()
+      return
+    }
+    let layers = stitchedLayerRects()
+    let stitchedBounds = layers.dropFirst().reduce(layers[0].rect) { $0.union($1.rect) }
+    setCombineContentBounds(unionWithFloatingCombineLayers(stitchedBounds))
+  }
+
+  /// Publish only real changes: this runs on every annotations mutation.
+  private func setCombineContentBounds(_ bounds: CGRect) {
+    if combineContentBounds != bounds {
+      combineContentBounds = bounds
+    }
+  }
+
+  /// Auto Stitch result plus layers it does not place (overlays, markup), so moving
+  /// those past the stitched edge grows the canvas instead of clipping them.
+  private func unionWithFloatingCombineLayers(_ stitchedBounds: CGRect) -> CGRect {
+    annotations.reduce(stitchedBounds) { result, annotation in
+      if case .embeddedImage = annotation.type, !combineOverlayIDs.contains(annotation.id) {
+        return result
+      }
+      guard let footprint = Self.combineCanvasFootprint(of: annotation) else { return result }
+      return result.union(footprint)
+    }
   }
 
   private func importedImagePlacementBounds(for imageSize: CGSize) -> CGRect {
     if isCombineMode {
-      let baseHeight = max(imageHeight, 1)
-      let scale = baseHeight / max(imageSize.height, 1)
-      let targetSize = CGSize(width: imageSize.width * scale, height: baseHeight)
-      return CGRect(
-        origin: CGPoint(x: combineContentBounds.maxX + combineGap, y: combineContentBounds.minY),
-        size: targetSize
-      )
+      // Same rule as dropping on the right edge of the rightmost image, so paste,
+      // file import and drop all place images alike.
+      let layers = combineImageLayerRects().map(\.rect)
+      let anchor = layers.max { $0.maxX < $1.maxX } ?? sourceImageBounds
+      return Self.besideBounds(for: imageSize, edge: .right, of: anchor, gap: combineGap, avoiding: layers)
     }
 
     let drawingBounds: CGRect
@@ -4364,7 +4452,6 @@ final class AnnotateState: ObservableObject {
     if isCombineMode, combineMode == .freeCanvas,
        case .embeddedImage = annotations[index].type {
       freeCombineBoundsByAnnotationID[id] = annotations[index].bounds
-      updateCombineContentBounds()
     }
   }
 
@@ -6596,6 +6683,10 @@ final class AnnotateState: ObservableObject {
     saveState()
     for index in annotations.indices where selectedIds.contains(annotations[index].id) {
       translateAnnotation(at: index, dx: dx, dy: dy)
+      if isCombineMode, combineMode == .freeCanvas,
+         case .embeddedImage = annotations[index].type {
+        freeCombineBoundsByAnnotationID[annotations[index].id] = annotations[index].bounds
+      }
     }
   }
 

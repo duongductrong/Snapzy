@@ -352,9 +352,6 @@ final class DrawingCanvasNSView: NSView {
   private var isDraggingAnnotation = false
   private var draggingAnnotationId: UUID? // Local tracking to avoid async race
   private var draggingAnnotationIds: Set<UUID> = []
-  /// Embedded image being dragged in Auto Stitch. Its release re-stitches, detaches it
-  /// as an overlay, or (for an overlay) just moves it — see `AnnotateState.resolveCombineDrop`.
-  private var combineDragLayerID: UUID?
   private var isResizingAnnotation = false
   private var resizingAnnotationId: UUID? // Local tracking to avoid async race
   private var activeResizeHandle: ResizeHandle?
@@ -1046,7 +1043,21 @@ final class DrawingCanvasNSView: NSView {
   private func interactionPoint(from displayPoint: CGPoint) -> CGPoint {
     let rawImagePoint = displayToImage(displayPoint)
     guard state.selectedTool != .crop else { return rawImagePoint }
+    if growsCombineCanvasDuringGesture { return rawImagePoint }
     return clampToCanvasBounds(rawImagePoint)
+  }
+
+  /// Moving or resizing layers in combine mode may leave the canvas: it grows to
+  /// follow them, like other screenshot editors' expanding canvas.
+  private var growsCombineCanvasDuringGesture: Bool {
+    state.isCombineMode && (isDraggingAnnotation || isResizingAnnotation)
+  }
+
+  /// Grow the canvas live to the gesture-local layers' footprints.
+  private func updateLiveCombineCanvas() {
+    guard growsCombineCanvasDuringGesture else { return }
+    let footprints = gestureLocalItems.values.compactMap(AnnotateState.combineCanvasFootprint(of:))
+    state.updateLiveCombineCanvas(including: footprints)
   }
 
   // MARK: - Mouse Events
@@ -1055,9 +1066,7 @@ final class DrawingCanvasNSView: NSView {
     window?.makeFirstResponder(self)
     // Safety net: no drop or drag is in flight on a fresh press.
     state.endExternalCombineDrop()
-    if state.isCombineMode {
-      state.frozenCombineContentBounds = state.combineContentBounds
-    }
+    state.beginCombineCanvasGesture()
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
@@ -1255,20 +1264,7 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
-    // Auto Stitch places images by where they are released, one image at a time.
-    let isCombineLayerDrag: Bool = {
-      guard state.isCombineMode, state.combineMode == .autoStitch,
-            case .embeddedImage = annotation.type else { return false }
-      return true
-    }()
-    if isCombineLayerDrag {
-      state.setSelectedAnnotationIds([annotation.id])
-    }
-    combineDragLayerID = isCombineLayerDrag ? annotation.id : nil
-
-    let activeIds: Set<UUID> = if isCombineLayerDrag {
-      [annotation.id]
-    } else if state.isAnnotationSelected(annotation.id), !state.selectedAnnotationIds.isEmpty {
+    let activeIds: Set<UUID> = if state.isAnnotationSelected(annotation.id), !state.selectedAnnotationIds.isEmpty {
       state.selectedAnnotationIds
     } else {
       [annotation.id]
@@ -1352,6 +1348,7 @@ final class DrawingCanvasNSView: NSView {
     if isResizingAnnotation, let handle = activeResizeHandle,
        let resizeId = resizingAnnotationId {
       applyGestureResize(handle: handle, resizeId: resizeId, imagePoint: imagePoint, event: event)
+      updateLiveCombineCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1462,13 +1459,6 @@ final class DrawingCanvasNSView: NSView {
         gestureLocalItems[id] = original.applyingResizeBounds(newBounds)
       }
 
-      if let combineDragLayerID {
-        state.updateCombineDropPreview(
-          at: displayToImage(displayPoint),
-          movingAnnotationID: combineDragLayerID
-        )
-      }
-
       // Combine free-canvas snapping resolves against the gesture-local copy
       // so the gesture stays state-free until mouseUp commits.
       if state.isCombineMode,
@@ -1495,6 +1485,7 @@ final class DrawingCanvasNSView: NSView {
               let updated = gestureLocalItems[id] else { continue }
         noteGestureMutation(original: original, updated: updated)
       }
+      updateLiveCombineCanvas()
       invalidateLiveLayers()
       return
     }
@@ -1696,11 +1687,11 @@ final class DrawingCanvasNSView: NSView {
   }
 
   override func mouseUp(with event: NSEvent) {
-    if state.isCombineMode {
-      state.frozenCombineContentBounds = nil
-    }
+    // Map the release point before the canvas un-freezes, against the same
+    // bounds the drag used.
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
+    defer { state.endCombineCanvasGesture() }
     drawingToolGesture?.trackPointer(at: displayPoint, zoomLevel: state.zoomLevel)
     let gesture = drawingToolGesture
     defer { drawingToolGesture = nil }
@@ -1816,20 +1807,7 @@ final class DrawingCanvasNSView: NSView {
       }
       // Commit gesture-local bounds once, synchronously, so the next draw is
       // already at the final position (deferred commit caused old/new flicker).
-      if let combineDragLayerID {
-        if gestureDidMutate, let local = gestureLocalItems[combineDragLayerID] {
-          state.commitCombineLayerDrag(
-            id: combineDragLayerID,
-            target: state.resolveCombineDrop(
-              at: displayToImage(displayPoint),
-              movingAnnotationID: combineDragLayerID
-            ),
-            droppedBounds: local.resizeBounds
-          )
-        } else {
-          state.clearCombineDropPreview()
-        }
-      } else if gestureDidMutate {
+      if gestureDidMutate {
         for id in activeIds {
           guard let local = gestureLocalItems[id] else { continue }
           state.updateAnnotationBounds(id: id, bounds: local.resizeBounds)
@@ -2039,10 +2017,6 @@ final class DrawingCanvasNSView: NSView {
   /// Drops gesture-local copies. Called when any gesture ends so the next
   /// gesture starts from pristine state.
   private func clearGestureState() {
-    if combineDragLayerID != nil {
-      combineDragLayerID = nil
-      state.clearCombineDropPreview()
-    }
     gestureOriginalItems = [:]
     gestureLocalItems = [:]
     gestureLastResizeBounds = nil
