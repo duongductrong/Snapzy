@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.11] - 2026-11-14
+
+### Features
+- Smart drop-to-stitch and layer arrange for combine images (#741) (5027699f)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.10] - 2026-11-10
 
 ### Features
