@@ -138,13 +138,20 @@ final class CanvasInteractionProxyNSView: NSView {
   }
 
   override func menu(for event: NSEvent) -> NSMenu? {
+    // Right-click acts on what is under the pointer, like Finder and Keynote.
+    let canvas = bridge?.drawingCanvas
+    canvas?.selectAnnotationForContextMenu(event)
+
     // The proxy becomes the AppKit hit view, but the SwiftUI context menu is
     // installed on an ancestor. Preserve the normal responder-chain lookup
     // instead of silently swallowing right-clicks on zoomed canvas content.
     var ancestor = superview
     while let view = ancestor {
       if let menu = view.menu(for: event) {
-        return menu
+        // Copy so the Arrange items are never appended twice to SwiftUI's menu.
+        let combined = (menu.copy() as? NSMenu) ?? menu
+        canvas?.appendArrangeItems(to: combined)
+        return combined
       }
       ancestor = view.superview
     }
@@ -345,6 +352,9 @@ final class DrawingCanvasNSView: NSView {
   private var isDraggingAnnotation = false
   private var draggingAnnotationId: UUID? // Local tracking to avoid async race
   private var draggingAnnotationIds: Set<UUID> = []
+  /// Embedded image being dragged in Auto Stitch. Its release re-stitches, detaches it
+  /// as an overlay, or (for an overlay) just moves it — see `AnnotateState.resolveCombineDrop`.
+  private var combineDragLayerID: UUID?
   private var isResizingAnnotation = false
   private var resizingAnnotationId: UUID? // Local tracking to avoid async race
   private var activeResizeHandle: ResizeHandle?
@@ -918,6 +928,57 @@ final class DrawingCanvasNSView: NSView {
 
   // MARK: - Coordinate Transformation
 
+  // MARK: - Context menu (Arrange)
+
+  /// Select the layer under a right-click when it is not already part of the selection.
+  func selectAnnotationForContextMenu(_ event: NSEvent) {
+    guard state.selectedTool == .selection, state.editingTextAnnotationId == nil else { return }
+    let imagePoint = displayToImage(convert(event.locationInWindow, from: nil))
+    guard let hit = hitTestAnnotation(at: imagePoint),
+          !state.isAnnotationSelected(hit.id) else { return }
+    state.setSelectedAnnotationIds([hit.id])
+    invalidateDrawing()
+  }
+
+  /// Append an "Arrange" submenu acting on the current selection.
+  func appendArrangeItems(to menu: NSMenu) {
+    let actions: [(AnnotationArrangeAction, String, String, NSEvent.ModifierFlags)] = [
+      (.bringToFront, L10n.AnnotateUI.bringToFront, "]", [.command, .option]),
+      (.bringForward, L10n.AnnotateUI.bringForward, "]", [.command]),
+      (.sendBackward, L10n.AnnotateUI.sendBackward, "[", [.command]),
+      (.sendToBack, L10n.AnnotateUI.sendToBack, "[", [.command, .option])
+    ]
+    guard actions.contains(where: { state.canArrangeSelection($0.0) }) else { return }
+
+    let submenu = NSMenu(title: L10n.AnnotateUI.arrange)
+    submenu.autoenablesItems = false
+    for (action, title, key, modifiers) in actions {
+      let item = AnnotateClosureMenuItem(title: title, keyEquivalent: key) { [weak self] in
+        self?.state.arrangeSelectedAnnotations(action)
+      }
+      // Shown as a hint only; AnnotateWindow handles the shortcut itself.
+      item.keyEquivalentModifierMask = modifiers
+      item.isEnabled = state.canArrangeSelection(action)
+      submenu.addItem(item)
+    }
+
+    if !menu.items.isEmpty {
+      menu.addItem(.separator())
+    }
+    let parent = NSMenuItem(title: L10n.AnnotateUI.arrange, action: nil, keyEquivalent: "")
+    parent.submenu = submenu
+    menu.addItem(parent)
+  }
+
+  /// Canvas-space point under a screen location, unclamped (drop targeting can sit
+  /// outside the visible content). Goes through AppKit's transform, so zoom, pan and
+  /// fit scale are already applied.
+  func canvasPoint(forScreenLocation screenPoint: NSPoint) -> CGPoint? {
+    guard let window else { return nil }
+    let windowPoint = window.convertPoint(fromScreen: screenPoint)
+    return displayToImage(convert(windowPoint, from: nil))
+  }
+
   /// Convert display point to image coordinates (for storage)
   private func displayToImage(_ point: CGPoint) -> CGPoint {
     guard displayScale > 0 else { return point }
@@ -992,6 +1053,8 @@ final class DrawingCanvasNSView: NSView {
 
   override func mouseDown(with event: NSEvent) {
     window?.makeFirstResponder(self)
+    // Safety net: no drop or drag is in flight on a fresh press.
+    state.endExternalCombineDrop()
     if state.isCombineMode {
       state.frozenCombineContentBounds = state.combineContentBounds
     }
@@ -1192,14 +1255,20 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func beginAnnotationDrag(anchor annotation: AnnotationItem, at imagePoint: CGPoint) {
-    if state.isCombineMode, state.combineMode == .autoStitch,
-       case .embeddedImage = annotation.type {
+    // Auto Stitch places images by where they are released, one image at a time.
+    let isCombineLayerDrag: Bool = {
+      guard state.isCombineMode, state.combineMode == .autoStitch,
+            case .embeddedImage = annotation.type else { return false }
+      return true
+    }()
+    if isCombineLayerDrag {
       state.setSelectedAnnotationIds([annotation.id])
-      invalidateDrawing()
-      return
     }
+    combineDragLayerID = isCombineLayerDrag ? annotation.id : nil
 
-    let activeIds: Set<UUID> = if state.isAnnotationSelected(annotation.id), !state.selectedAnnotationIds.isEmpty {
+    let activeIds: Set<UUID> = if isCombineLayerDrag {
+      [annotation.id]
+    } else if state.isAnnotationSelected(annotation.id), !state.selectedAnnotationIds.isEmpty {
       state.selectedAnnotationIds
     } else {
       [annotation.id]
@@ -1229,9 +1298,8 @@ final class DrawingCanvasNSView: NSView {
   }
 
   private func canResizeAnnotation(_ annotation: AnnotationItem) -> Bool {
-    guard state.isCombineMode, state.combineMode == .autoStitch else { return true }
-    if case .embeddedImage = annotation.type { return false }
-    return true
+    // Auto Stitch sizes stitched images itself; overlays resize like any layer.
+    !state.isAutoStitchedLayer(annotation)
   }
 
   private func beginAreaSelection(at imagePoint: CGPoint) {
@@ -1392,6 +1460,13 @@ final class DrawingCanvasNSView: NSView {
           size: originalBounds.size
         )
         gestureLocalItems[id] = original.applyingResizeBounds(newBounds)
+      }
+
+      if let combineDragLayerID {
+        state.updateCombineDropPreview(
+          at: displayToImage(displayPoint),
+          movingAnnotationID: combineDragLayerID
+        )
       }
 
       // Combine free-canvas snapping resolves against the gesture-local copy
@@ -1741,7 +1816,20 @@ final class DrawingCanvasNSView: NSView {
       }
       // Commit gesture-local bounds once, synchronously, so the next draw is
       // already at the final position (deferred commit caused old/new flicker).
-      if gestureDidMutate {
+      if let combineDragLayerID {
+        if gestureDidMutate, let local = gestureLocalItems[combineDragLayerID] {
+          state.commitCombineLayerDrag(
+            id: combineDragLayerID,
+            target: state.resolveCombineDrop(
+              at: displayToImage(displayPoint),
+              movingAnnotationID: combineDragLayerID
+            ),
+            droppedBounds: local.resizeBounds
+          )
+        } else {
+          state.clearCombineDropPreview()
+        }
+      } else if gestureDidMutate {
         for id in activeIds {
           guard let local = gestureLocalItems[id] else { continue }
           state.updateAnnotationBounds(id: id, bounds: local.resizeBounds)
@@ -1951,6 +2039,10 @@ final class DrawingCanvasNSView: NSView {
   /// Drops gesture-local copies. Called when any gesture ends so the next
   /// gesture starts from pristine state.
   private func clearGestureState() {
+    if combineDragLayerID != nil {
+      combineDragLayerID = nil
+      state.clearCombineDropPreview()
+    }
     gestureOriginalItems = [:]
     gestureLocalItems = [:]
     gestureLastResizeBounds = nil
@@ -2206,7 +2298,36 @@ final class DrawingCanvasNSView: NSView {
     context.translateBy(x: -effectiveCanvasBounds.minX, y: -effectiveCanvasBounds.minY)
     drawCurrentStrokePreview(sourceImage: sourceImage, sourceCGImage: sourceCGImage, in: context)
     drawAreaSelectionPreview(in: context)
+    drawCombineDropPreview(in: context)
     context.restoreGState()
+  }
+
+  /// Where a dropped or dragged image will land in Auto Stitch: a tinted target with a
+  /// bold insertion edge for a stitch, a dashed frame for an overlay.
+  private func drawCombineDropPreview(in context: CGContext) {
+    guard let preview = state.combineDropPreview else { return }
+    let accent = NSColor.controlAccentColor
+    context.saveGState()
+    defer { context.restoreGState() }
+
+    context.setFillColor(accent.withAlphaComponent(0.14).cgColor)
+    context.fill(preview.highlightRect)
+
+    if let line = preview.insertionLine {
+      context.setStrokeColor(accent.cgColor)
+      context.setLineWidth(selectionChromeMetrics.imageLength(forScreenPoints: 4))
+      context.setLineCap(.round)
+      context.move(to: line.start)
+      context.addLine(to: line.end)
+      context.strokePath()
+    } else {
+      let dash = selectionChromeMetrics.imageLength(forScreenPoints: 6)
+      context.setStrokeColor(accent.cgColor)
+      context.setLineWidth(selectionChromeMetrics.imageLength(forScreenPoints: 2))
+      context.setLineDash(phase: 0, lengths: [dash, dash])
+      let inset = selectionChromeMetrics.imageLength(forScreenPoints: 1)
+      context.stroke(preview.highlightRect.insetBy(dx: inset, dy: inset))
+    }
   }
 
   private func drawSelectionUnderlays(dirtyRect: NSRect) {
@@ -3073,5 +3194,25 @@ final class DrawingCanvasNSView: NSView {
     Task { @MainActor in
       state.updateCropRect(newRect)
     }
+  }
+}
+
+/// Menu item that runs a closure, for menus built on the fly.
+final class AnnotateClosureMenuItem: NSMenuItem {
+  private let handler: () -> Void
+
+  init(title: String, keyEquivalent: String, handler: @escaping () -> Void) {
+    self.handler = handler
+    super.init(title: title, action: #selector(runHandler), keyEquivalent: keyEquivalent)
+    target = self
+  }
+
+  @available(*, unavailable)
+  required init(coder _: NSCoder) {
+    fatalError("init(coder:) is not supported")
+  }
+
+  @objc private func runHandler() {
+    handler()
   }
 }

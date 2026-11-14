@@ -168,6 +168,39 @@ final class PersistedCombineSessionTests: XCTestCase {
     XCTAssertEqual(decoded, original)
   }
 
+  func testPersistAndLoad_roundTripsStitchRowsAndOverlays() throws {
+    let sourceURL = try writeSourceImage(named: "grid.png")
+    let a = UUID(uuidString: "AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA")!
+    let b = UUID(uuidString: "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB")!
+    let overlay = UUID(uuidString: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC")!
+    let combine = CombineSessionSnapshot(
+      mode: .autoStitch,
+      direction: .smart,
+      gap: 0,
+      freeBoundsByAnnotationID: [:],
+      stitchRows: [[AnnotateState.combineBaseLayerID, a], [b]],
+      overlayIDs: [overlay]
+    )
+    XCTAssertTrue(store.persist(try makeSessionData(combineSession: combine), for: sourceURL))
+
+    let restored = try XCTUnwrap(store.load(for: sourceURL)?.combineSession)
+    XCTAssertEqual(restored, combine)
+    XCTAssertTrue(restored.stripsGrowDownward)
+  }
+
+  func testToSnapshot_missingLayoutRevisionIsLegacyUpwardStrip() {
+    let persisted = PersistedCombineSession(
+      modeRawValue: "autoStitch",
+      directionRawValue: "vertical",
+      gap: 0,
+      freeBoundsByAnnotationID: [:]
+    )
+    let snapshot = persisted.toSnapshot()
+    XCTAssertFalse(snapshot.stripsGrowDownward)
+    XCTAssertNil(snapshot.stitchRows)
+    XCTAssertTrue(snapshot.overlayIDs.isEmpty)
+  }
+
   // MARK: - toSnapshot() fallbacks
 
   func testToSnapshot_unknownRawValuesFallBackToDefaults() {

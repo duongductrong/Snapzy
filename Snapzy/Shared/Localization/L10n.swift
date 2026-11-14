@@ -837,35 +837,9 @@ nonisolated enum L10n {
       defaultValue: "Free Canvas",
       comment: "Free image arrangement mode"
     )
-    static let arrangement = string(
-      "combine.arrangement",
-      defaultValue: "Arrangement",
-      comment: "Combine arrangement section title"
-    )
     static let spacing = string("combine.spacing", defaultValue: "Spacing", comment: "Combine spacing section title")
     static let imageGap = string("combine.image-gap", defaultValue: "Image Gap", comment: "Gap between combined images")
-    static let images = string("combine.images", defaultValue: "Images", comment: "Combined image list title")
-    static func image(_ index: Int) -> String {
-      format("combine.image-index", defaultValue: "Image %d", comment: "Combined image list item", index)
-    }
 
-    static let moveEarlier = string(
-      "combine.move-earlier",
-      defaultValue: "Move Earlier",
-      comment: "Move combined image earlier"
-    )
-    static let moveLater = string(
-      "combine.move-later",
-      defaultValue: "Move Later",
-      comment: "Move combined image later"
-    )
-    static let smart = string("combine.smart", defaultValue: "Smart", comment: "Smart combine direction")
-    static let horizontal = string(
-      "combine.horizontal",
-      defaultValue: "Horizontal",
-      comment: "Horizontal combine direction"
-    )
-    static let vertical = string("combine.vertical", defaultValue: "Vertical", comment: "Vertical combine direction")
     static let open = string("combine.open", defaultValue: "Combine Images", comment: "Open combine images action")
     static let pickerTitle = string(
       "combine.picker-title",
@@ -6108,6 +6082,31 @@ nonisolated enum L10n {
       "annotate.extract-text",
       defaultValue: "Extract Text",
       comment: "Context-menu action that extracts text from the underlying annotate image"
+    )
+    static let arrange = string(
+      "annotate.arrange",
+      defaultValue: "Arrange",
+      comment: "Context-menu submenu for changing layer stacking order"
+    )
+    static let bringToFront = string(
+      "annotate.arrange.bring-to-front",
+      defaultValue: "Bring to Front",
+      comment: "Move the selected layer above all others"
+    )
+    static let bringForward = string(
+      "annotate.arrange.bring-forward",
+      defaultValue: "Bring Forward",
+      comment: "Move the selected layer one step up"
+    )
+    static let sendBackward = string(
+      "annotate.arrange.send-backward",
+      defaultValue: "Send Backward",
+      comment: "Move the selected layer one step down"
+    )
+    static let sendToBack = string(
+      "annotate.arrange.send-to-back",
+      defaultValue: "Send to Back",
+      comment: "Move the selected layer below all others"
     )
     static let newWindow = string(
       "annotate.new-window",

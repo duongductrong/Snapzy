@@ -12,6 +12,14 @@ import ImageIO
 import SnapzyMeasureCore
 import SwiftUI
 
+/// Stacking-order commands for selected canvas layers (Arrange).
+nonisolated enum AnnotationArrangeAction: CaseIterable, Sendable {
+  case bringToFront
+  case bringForward
+  case sendBackward
+  case sendToBack
+}
+
 /// Central state for annotation window
 @MainActor
 final class AnnotateState: ObservableObject {
@@ -22,6 +30,8 @@ final class AnnotateState: ObservableObject {
     var embeddedImageSnapshotCacheData: [UUID: Data]
     var autoSizingTextAnnotationIDs: Set<UUID>
     var freeCombineBoundsByAnnotationID: [UUID: CGRect]
+    var combineStitchGrid: CombineStitchGrid?
+    var combineOverlayIDs: Set<UUID>
     var selectedAnnotationIds: Set<UUID>
   }
 
@@ -30,6 +40,8 @@ final class AnnotateState: ObservableObject {
     var embeddedImageAssets: [UUID: NSImage] = [:]
     var embeddedImageData: [UUID: Data] = [:]
     var autoSizingTextAnnotationIDs: Set<UUID> = []
+    /// Clones of combine overlays, which stay overlays instead of joining the stitch.
+    var combineOverlayIDs: Set<UUID> = []
   }
 
   private struct AnnotationClipboardPayload {
@@ -353,6 +365,14 @@ final class AnnotateState: ObservableObject {
   @Published private(set) var combineGap: CGFloat = 0
   @Published private(set) var combineContentBounds: CGRect = .zero
   @Published var frozenCombineContentBounds: CGRect?
+  /// Arrangement placed by dropping or dragging images on the canvas. nil means an
+  /// automatic strip built from `combineDirection`; the arrangement buttons reset to it.
+  @Published private(set) var combineStitchGrid: CombineStitchGrid?
+  /// Embedded images floating above the stitched result (dropped onto an image's centre).
+  /// Auto Stitch never moves or resizes them.
+  @Published private(set) var combineOverlayIDs: Set<UUID> = []
+  /// Where the image being dropped or dragged will land, drawn by the canvas.
+  @Published private(set) var combineDropPreview: CombineDropPreview?
   let combineSnapTolerance: CGFloat = 14
 
   /// True when this editor session was opened manually (empty window / Combine picker).
@@ -367,36 +387,23 @@ final class AnnotateState: ObservableObject {
     return frozenCombineContentBounds ?? combineContentBounds
   }
 
-  var combineImageCount: Int {
-    1 + annotations.reduce(into: 0) { count, annotation in
-      if case .embeddedImage = annotation.type { count += 1 }
-    }
+  /// True once a drop or drag placed images by hand (no arrangement button applies).
+  var hasCustomCombineArrangement: Bool { combineStitchGrid != nil }
+
+  /// Stitched layer ids in reading order (row by row), base layer included.
+  var combineStitchedOrder: [UUID] { currentStitchGrid().orderedIDs }
+
+  var combineImageCount: Int { combineStitchedOrder.count }
+
+  func isCombineOverlay(_ id: UUID) -> Bool {
+    combineOverlayIDs.contains(id)
   }
 
-  func moveCombineImage(at index: Int, by offset: Int) {
-    guard isCombineMode, offset != 0, let sourceImage else { return }
-    let slots = annotations.compactMap { annotation -> UUID? in
-      guard case .embeddedImage(let assetID) = annotation.type else { return nil }
-      return assetID
-    }
-    var orderedImages = [sourceImage] + slots.compactMap { embeddedImageAssets[$0] }
-    guard orderedImages.count == slots.count + 1,
-          orderedImages.indices.contains(index) else { return }
-    let destination = index + offset
-    guard orderedImages.indices.contains(destination) else { return }
-
-    pushImageTransformUndo(currentImageTransformSnapshot())
-    let moved = orderedImages.remove(at: index)
-    orderedImages.insert(moved, at: destination)
-    self.sourceImage = orderedImages[0]
-    for (slotIndex, assetID) in slots.enumerated() {
-      embeddedImageAssets[assetID] = orderedImages[slotIndex + 1]
-      embeddedImageSourceData.removeValue(forKey: assetID)
-      embeddedImageSnapshotCacheData.removeValue(forKey: assetID)
-      embeddedImageCGImageCache.removeValue(forKey: assetID)
-    }
-    hasUnsavedChanges = true
-    refreshCombineLayout()
+  /// Embedded image whose position and size Auto Stitch controls (not an overlay).
+  func isAutoStitchedLayer(_ annotation: AnnotationItem) -> Bool {
+    guard isCombineMode, combineMode == .autoStitch,
+          case .embeddedImage = annotation.type else { return false }
+    return !combineOverlayIDs.contains(annotation.id)
   }
 
   func activateCombineMode(preferredMode: CombineImagesMode = .autoStitch) {
@@ -405,6 +412,9 @@ final class AnnotateState: ObservableObject {
       isCombineMode = true
       showSidebar = true
       selectedTool = .selection
+      // Images added before combining were placed by hand; keep them floating.
+      combineOverlayIDs = Set(embeddedImageAnnotationIDs())
+      combineStitchGrid = nil
       captureCurrentFreeCombineBounds()
     }
     setCombineMode(preferredMode)
@@ -415,6 +425,7 @@ final class AnnotateState: ObservableObject {
     isCombineMode = false
     combineContentBounds = sourceImageBounds
     frozenCombineContentBounds = nil
+    combineDropPreview = nil
   }
 
   func setCombineMode(_ mode: CombineImagesMode) {
@@ -428,6 +439,7 @@ final class AnnotateState: ObservableObject {
       captureCurrentFreeCombineBounds()
     }
     combineMode = mode
+    combineDropPreview = nil
     switch mode {
     case .autoStitch:
       applyAutomaticCombineLayout()
@@ -436,7 +448,13 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  /// Pick an automatic strip. Replaces a hand-placed arrangement (undoable).
   func setCombineDirection(_ direction: CombineImagesDirection) {
+    if combineStitchGrid != nil {
+      saveState()
+      combineStitchGrid = nil
+      hasUnsavedChanges = true
+    }
     combineDirection = direction
     if isCombineMode, combineMode == .autoStitch {
       applyAutomaticCombineLayout()
@@ -461,6 +479,178 @@ final class AnnotateState: ObservableObject {
     }
   }
 
+  // MARK: Positional drop (stitch by edge / overlay by centre)
+
+  /// Drops and drags place images by position in Auto Stitch, and on a single image
+  /// (where an edge drop starts a stitch).
+  var supportsPositionalCombineDrop: Bool {
+    hasImage && editorMode == .annotate && (!isCombineMode || combineMode == .autoStitch)
+  }
+
+  /// Resolve where an image dropped at `point` (canvas space) goes.
+  /// - Parameter movingAnnotationID: an embedded image being dragged on the canvas. It is
+  ///   left out of the targets. A dragged overlay only re-stitches once it leaves the
+  ///   stitched content; inside it the drag is a plain move (nil).
+  func resolveCombineDrop(at point: CGPoint, movingAnnotationID: UUID? = nil) -> CombineDropTarget? {
+    guard supportsPositionalCombineDrop else { return nil }
+    if let movingAnnotationID {
+      guard isCombineMode else { return nil }
+      let layers = stitchedLayerRects(excluding: movingAnnotationID)
+      if combineOverlayIDs.contains(movingAnnotationID) {
+        let content = layers.dropFirst().reduce(layers[0].rect) { $0.union($1.rect) }
+        guard !content.contains(point) else { return nil }
+      } else if let ownSlot = annotations.first(where: { $0.id == movingAnnotationID })?.bounds,
+                ownSlot.contains(point) {
+        // Released over its own slot (a click or a jitter): leave the arrangement alone.
+        return nil
+      }
+      return CombineDropResolver.resolve(point: point, layers: layers)
+    }
+    return CombineDropResolver.resolve(point: point, layers: stitchedLayerRects())
+  }
+
+  /// True between an external drag entering the canvas and its drop/exit. AppKit can
+  /// deliver a late `dropUpdated` after `performDrop`; without this gate that call would
+  /// re-show a preview nothing clears.
+  private var isExternalCombineDropActive = false
+
+  func beginExternalCombineDrop(at point: CGPoint?) {
+    isExternalCombineDropActive = true
+    updateCombineDropPreview(at: point)
+  }
+
+  func updateExternalCombineDrop(at point: CGPoint?) {
+    guard isExternalCombineDropActive else { return }
+    updateCombineDropPreview(at: point)
+  }
+
+  func endExternalCombineDrop() {
+    isExternalCombineDropActive = false
+    clearCombineDropPreview()
+  }
+
+  func updateCombineDropPreview(at point: CGPoint?, movingAnnotationID: UUID? = nil) {
+    let preview = point
+      .flatMap { resolveCombineDrop(at: $0, movingAnnotationID: movingAnnotationID) }
+      .flatMap { makeCombineDropPreview(for: $0, excluding: movingAnnotationID) }
+    if preview != combineDropPreview {
+      combineDropPreview = preview
+    }
+  }
+
+  func clearCombineDropPreview() {
+    if combineDropPreview != nil {
+      combineDropPreview = nil
+    }
+  }
+
+  /// Add `image` where it was dropped. Stitch targets start Auto Stitch when needed;
+  /// an overlay outside combine mode stays a plain embedded image.
+  /// - Returns: the new layer's annotation id, or nil when nothing was added.
+  @discardableResult
+  func importImage(_ image: NSImage, sourceData: Data?, at target: CombineDropTarget?) -> UUID? {
+    guard hasImage, let target else {
+      let countBefore = annotations.count
+      importImage(image, sourceURL: nil, sourceData: sourceData)
+      return annotations.count > countBefore ? annotations.last?.id : nil
+    }
+    let imageSize = normalizedCanvasImageSize(for: image)
+    guard imageSize.width > 0, imageSize.height > 0 else { return nil }
+
+    let layerID: UUID
+    switch target {
+    case .stitch(let anchor, let edge):
+      activateCombineMode(preferredMode: .autoStitch)
+      guard combineMode == .autoStitch else { return nil }
+      saveState()
+      layerID = insertEmbeddedImageLayer(
+        image,
+        sourceData: sourceData,
+        bounds: CGRect(origin: .zero, size: imageSize)
+      )
+      lowerBelowOverlays(layerID)
+      var grid = currentStitchGrid()
+      grid.insert(layerID, edge: edge, of: anchor)
+      combineStitchGrid = grid
+      refreshCombineLayout()
+      if let bounds = annotations.first(where: { $0.id == layerID })?.bounds {
+        freeCombineBoundsByAnnotationID[layerID] = bounds
+      }
+
+    case .overlay(let point):
+      let host = stitchedLayerRects().last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
+      activateCombineMode(preferredMode: .autoStitch)
+      guard combineMode == .autoStitch else { return nil }
+      saveState()
+      let bounds = Self.overlayBounds(for: imageSize, centeredAt: point, within: host)
+      layerID = insertEmbeddedImageLayer(image, sourceData: sourceData, bounds: bounds)
+      combineOverlayIDs.insert(layerID)
+      freeCombineBoundsByAnnotationID[layerID] = bounds
+      refreshCombineLayout()
+    }
+
+    combineDropPreview = nil
+    selectedAnnotationId = layerID
+    editingTextAnnotationId = nil
+    selectedTool = .selection
+    hasUnsavedChanges = true
+    updateImportWarningIfNeeded()
+    return layerID
+  }
+
+  /// Finish dragging an embedded image in Auto Stitch. The drag gesture already recorded
+  /// the undo checkpoint. `target` nil means a plain move of an overlay.
+  func commitCombineLayerDrag(id: UUID, target: CombineDropTarget?, droppedBounds: CGRect) {
+    defer { combineDropPreview = nil }
+    guard isCombineMode, combineMode == .autoStitch,
+          let annotation = annotations.first(where: { $0.id == id }),
+          case .embeddedImage = annotation.type else { return }
+
+    switch target {
+    case nil:
+      // Only overlays resolve to nil; stitched layers always land somewhere.
+      if combineOverlayIDs.contains(id) {
+        updateAnnotationBounds(id: id, bounds: droppedBounds)
+        freeCombineBoundsByAnnotationID[id] = droppedBounds.standardized
+      }
+
+    case .overlay(let point):
+      var grid = currentStitchGrid()
+      grid.remove(id)
+      combineOverlayIDs.insert(id)
+      if combineStitchGrid != nil {
+        combineStitchGrid = grid
+      }
+      let host = stitchedLayerRects(excluding: id).last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
+      let bounds = Self.overlayBounds(
+        for: droppedBounds.size,
+        centeredAt: CGPoint(x: droppedBounds.midX, y: droppedBounds.midY),
+        within: host,
+        maxCoverage: 0.6
+      )
+      updateAnnotationBounds(id: id, bounds: bounds)
+      freeCombineBoundsByAnnotationID[id] = bounds
+      raiseAboveEmbeddedImages(id)
+
+    case .stitch(let anchor, let edge):
+      let before = currentStitchGrid()
+      var grid = before
+      grid.insert(id, edge: edge, of: anchor)
+      let wasOverlay = combineOverlayIDs.remove(id) != nil
+      if wasOverlay { lowerBelowOverlays(id) }
+      // A drag that lands back in its own slot keeps an automatic strip automatic.
+      if wasOverlay || grid != before {
+        combineStitchGrid = grid
+      }
+    }
+
+    refreshCombineLayout()
+    if case .stitch = target, let bounds = annotations.first(where: { $0.id == id })?.bounds {
+      freeCombineBoundsByAnnotationID[id] = bounds
+    }
+    hasUnsavedChanges = true
+  }
+
   /// Capture the active combine session's layout flags for persistence.
   /// Returns nil when not in combine mode. Source pixels persist separately via
   /// embedded image assets, so only the layout flags are captured here.
@@ -470,7 +660,10 @@ final class AnnotateState: ObservableObject {
       mode: combineMode,
       direction: combineDirection,
       gap: combineGap,
-      freeBoundsByAnnotationID: freeCombineBoundsByAnnotationID
+      freeBoundsByAnnotationID: freeCombineBoundsByAnnotationID,
+      stitchRows: combineStitchGrid?.rows,
+      overlayIDs: combineOverlayIDs.intersection(embeddedImageAnnotationIDs()),
+      stripsGrowDownward: true
     )
   }
 
@@ -488,7 +681,22 @@ final class AnnotateState: ObservableObject {
     combineDirection = snapshot.direction
     combineGap = max(0, snapshot.gap)
     freeCombineBoundsByAnnotationID = snapshot.freeBoundsByAnnotationID
-    // Deterministic: autoStitch recomputes layout from annotation order/direction/gap;
+    combineOverlayIDs = snapshot.overlayIDs
+    combineStitchGrid = snapshot.stitchRows.map(CombineStitchGrid.init(rows:))
+    if !snapshot.stripsGrowDownward, combineStitchGrid == nil {
+      // Older builds stacked vertical strips upward on screen. Keep those sessions
+      // looking the same by pinning the column in that visual order.
+      let items = stitchedLayoutItems()
+      let direction = CombineImagesLayout.resolveDirection(
+        requested: combineDirection,
+        items: items,
+        gap: combineGap
+      )
+      if direction == .vertical, items.count > 1 {
+        combineStitchGrid = CombineStitchGrid(rows: items.reversed().map { [$0.id] })
+      }
+    }
+    // Deterministic: autoStitch recomputes layout from the arrangement/direction/gap;
     // freeCanvas derives content bounds from the restored annotation bounds.
     refreshCombineLayout()
   }
@@ -1708,9 +1916,22 @@ final class AnnotateState: ObservableObject {
     activateCombineMode(preferredMode: combineMode)
 
     let placementBounds = importedImagePlacementBounds(for: imageSize)
-    let assetId = UUID()
 
     saveState()
+    let layerID = insertEmbeddedImageLayer(image, sourceData: sourceData, bounds: placementBounds)
+    freeCombineBoundsByAnnotationID[layerID] = placementBounds
+    refreshCombineLayout()
+    selectedAnnotationId = layerID
+    editingTextAnnotationId = nil
+    selectedTool = .selection
+    hasUnsavedChanges = true
+    updateImportWarningIfNeeded()
+  }
+
+  /// Store `image` as an embedded asset and append its layer. No undo checkpoint,
+  /// layout pass or selection change; callers own those.
+  private func insertEmbeddedImageLayer(_ image: NSImage, sourceData: Data?, bounds: CGRect) -> UUID {
+    let assetId = UUID()
     embeddedImageAssets[assetId] = image
     if let sourceData {
       embeddedImageSourceData[assetId] = sourceData
@@ -1719,17 +1940,32 @@ final class AnnotateState: ObservableObject {
     embeddedImageCGImageCache.removeValue(forKey: assetId)
     let item = AnnotationItem(
       type: .embeddedImage(assetId),
-      bounds: placementBounds,
+      bounds: bounds,
       properties: AnnotationProperties(strokeColor: .clear, fillColor: .clear, strokeWidth: 1)
     )
     annotations.append(item)
-    freeCombineBoundsByAnnotationID[item.id] = placementBounds
-    refreshCombineLayout()
-    selectedAnnotationId = item.id
-    editingTextAnnotationId = nil
-    selectedTool = .selection
-    hasUnsavedChanges = true
-    updateImportWarningIfNeeded()
+    return item.id
+  }
+
+  /// Overlay frame for an image of `size`: at most `maxCoverage` of the host image on
+  /// each side (never upscaled), centred on `center` and kept inside the host.
+  static func overlayBounds(
+    for size: CGSize,
+    centeredAt center: CGPoint,
+    within host: CGRect,
+    maxCoverage: CGFloat = 0.5
+  ) -> CGRect {
+    guard size.width > 0, size.height > 0 else { return CGRect(origin: center, size: .zero) }
+    let scale = min(
+      host.width * maxCoverage / size.width,
+      host.height * maxCoverage / size.height,
+      1
+    )
+    let target = CGSize(width: max(1, size.width * scale), height: max(1, size.height * scale))
+    var origin = CGPoint(x: center.x - target.width / 2, y: center.y - target.height / 2)
+    origin.x = min(max(origin.x, host.minX), max(host.maxX - target.width, host.minX))
+    origin.y = min(max(origin.y, host.minY), max(host.maxY - target.height, host.minY))
+    return CGRect(origin: origin, size: target)
   }
 
   func embeddedImage(for assetId: UUID) -> NSImage? {
@@ -1899,6 +2135,9 @@ final class AnnotateState: ObservableObject {
     combineContentBounds = CGRect(origin: .zero, size: image.size)
     frozenCombineContentBounds = nil
     freeCombineBoundsByAnnotationID.removeAll()
+    combineStitchGrid = nil
+    combineOverlayIDs.removeAll()
+    combineDropPreview = nil
     selectedAnnotationId = nil
     editingTextAnnotationId = nil
     undoStack.removeAll()
@@ -2451,14 +2690,23 @@ final class AnnotateState: ObservableObject {
     return CGSize(width: rep.pixelsWide, height: rep.pixelsHigh)
   }
 
-  private func combineLayoutItems() -> [CombineImagesLayoutItem] {
+  private func embeddedImageAnnotationIDs() -> [UUID] {
+    annotations.compactMap { annotation in
+      guard case .embeddedImage = annotation.type else { return nil }
+      return annotation.id
+    }
+  }
+
+  /// Base layer plus stitched (non-overlay) embedded images, in annotation order.
+  private func stitchedLayoutItems() -> [CombineImagesLayoutItem] {
     var items = [
       CombineImagesLayoutItem(
         id: Self.combineBaseLayerID,
         size: CGSize(width: imageWidth, height: imageHeight)
       )
     ]
-    for annotation in annotations {
+    guard isCombineMode else { return items }
+    for annotation in annotations where !combineOverlayIDs.contains(annotation.id) {
       guard case .embeddedImage(let assetID) = annotation.type,
             let image = embeddedImageAssets[assetID] else { continue }
       let size = normalizedCanvasImageSize(for: image)
@@ -2468,20 +2716,132 @@ final class AnnotateState: ObservableObject {
     return items
   }
 
-  private func applyAutomaticCombineLayout() {
-    guard isCombineMode, hasImage else { return }
-    let result = CombineImagesLayout.layout(
-      items: combineLayoutItems(),
-      direction: combineDirection,
+  /// The arrangement Auto Stitch lays out: the hand-placed grid reconciled with the
+  /// current layers, or a strip resolved from `combineDirection`.
+  private func currentStitchGrid() -> CombineStitchGrid {
+    currentStitchGrid(items: stitchedLayoutItems()).grid
+  }
+
+  private func currentStitchGrid(
+    items: [CombineImagesLayoutItem]
+  ) -> (grid: CombineStitchGrid, direction: CombineImagesDirection) {
+    let ids = items.map(\.id)
+    if var grid = combineStitchGrid {
+      grid.reconcile(with: ids)
+      return (grid, grid.stripDirection ?? .horizontal)
+    }
+    let direction = CombineImagesLayout.resolveDirection(
+      requested: combineDirection,
+      items: items,
       gap: combineGap
     )
-    combineResolvedDirection = result.direction
+    return (CombineStitchGrid.strip(ids, direction: direction), direction)
+  }
+
+  private func applyAutomaticCombineLayout() {
+    guard isCombineMode, hasImage else { return }
+    let items = stitchedLayoutItems()
+    let (grid, direction) = currentStitchGrid(items: items)
+    if combineStitchGrid != nil, combineStitchGrid != grid {
+      combineStitchGrid = grid
+    }
+    let sizes = Dictionary(items.map { ($0.id, $0.size) }, uniquingKeysWith: { lhs, _ in lhs })
+    let result = CombineImagesLayout.layout(
+      grid: grid,
+      sizes: sizes,
+      anchorID: Self.combineBaseLayerID,
+      gap: combineGap
+    )
+    combineResolvedDirection = direction
     for index in annotations.indices {
       guard case .embeddedImage = annotations[index].type,
-            let bounds = result.boundsByID[annotations[index].id] else { continue }
+            let bounds = result.boundsByID[annotations[index].id],
+            annotations[index].bounds != bounds else { continue }
       annotations[index].bounds = bounds
     }
     combineContentBounds = result.contentBounds.isEmpty ? sourceImageBounds : result.contentBounds
+  }
+
+  /// Move layer `id` just above the topmost embedded image so an overlay is never hidden
+  /// under the stitched image it sits on, while markup drawn later stays on top.
+  private func raiseAboveEmbeddedImages(_ id: UUID) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }) else { return }
+    let item = annotations.remove(at: index)
+    let lastEmbedded = annotations.lastIndex { annotation in
+      if case .embeddedImage = annotation.type { return true }
+      return false
+    }
+    annotations.insert(item, at: lastEmbedded.map { $0 + 1 } ?? annotations.count)
+  }
+
+  /// Move a stitched layer just below the first overlay so overlays stay visible on top.
+  private func lowerBelowOverlays(_ id: UUID) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          let firstOverlay = annotations.firstIndex(where: { combineOverlayIDs.contains($0.id) }),
+          firstOverlay < index else { return }
+    let item = annotations.remove(at: index)
+    annotations.insert(item, at: firstOverlay)
+  }
+
+  /// Stitched layers in canvas space, base first. Outside combine mode only the base.
+  private func stitchedLayerRects(excluding excludedID: UUID? = nil) -> [(id: UUID, rect: CGRect)] {
+    var layers: [(id: UUID, rect: CGRect)] = [(Self.combineBaseLayerID, sourceImageBounds)]
+    guard isCombineMode else { return layers }
+    for annotation in annotations where annotation.id != excludedID {
+      guard case .embeddedImage = annotation.type,
+            !combineOverlayIDs.contains(annotation.id) else { continue }
+      layers.append((annotation.id, annotation.bounds))
+    }
+    return layers
+  }
+
+  private func makeCombineDropPreview(
+    for target: CombineDropTarget,
+    excluding excludedID: UUID?
+  ) -> CombineDropPreview? {
+    let layers = stitchedLayerRects(excluding: excludedID)
+    switch target {
+    case .overlay(let point):
+      let host = layers.last { $0.rect.contains(point) }?.rect ?? sourceImageBounds
+      return CombineDropPreview(target: target, highlightRect: host, insertionLine: nil)
+
+    case .stitch(let anchor, let edge):
+      guard let anchorRect = layers.first(where: { $0.id == anchor })?.rect else { return nil }
+      var span = anchorRect
+      if !edge.isHorizontal {
+        // A top/bottom stitch opens a new row, so it spans the anchor's whole row.
+        var grid = currentStitchGrid()
+        if let excludedID { grid.remove(excludedID) }
+        if let position = grid.position(of: anchor) {
+          let rowIDs = Set(grid.rows[position.row])
+          span = layers.filter { rowIDs.contains($0.id) }.reduce(anchorRect) { $0.union($1.rect) }
+        }
+      }
+      let line: CombineInsertionLine
+      switch edge {
+      case .left:
+        line = CombineInsertionLine(
+          start: CGPoint(x: span.minX, y: span.minY),
+          end: CGPoint(x: span.minX, y: span.maxY)
+        )
+      case .right:
+        line = CombineInsertionLine(
+          start: CGPoint(x: span.maxX, y: span.minY),
+          end: CGPoint(x: span.maxX, y: span.maxY)
+        )
+      case .top:
+        line = CombineInsertionLine(
+          start: CGPoint(x: span.minX, y: span.maxY),
+          end: CGPoint(x: span.maxX, y: span.maxY)
+        )
+      case .bottom:
+        line = CombineInsertionLine(
+          start: CGPoint(x: span.minX, y: span.minY),
+          end: CGPoint(x: span.maxX, y: span.minY)
+        )
+      }
+      return CombineDropPreview(target: target, highlightRect: span, insertionLine: line)
+    }
   }
 
   private func captureCurrentFreeCombineBounds() {
@@ -2641,6 +3001,8 @@ final class AnnotateState: ObservableObject {
       embeddedImageSnapshotCacheData: embeddedImageSnapshotCacheData,
       autoSizingTextAnnotationIDs: autoSizingTextAnnotationIDs,
       freeCombineBoundsByAnnotationID: freeCombineBoundsByAnnotationID,
+      combineStitchGrid: combineStitchGrid,
+      combineOverlayIDs: combineOverlayIDs,
       selectedAnnotationIds: selectedAnnotationIds
     )
   }
@@ -2715,6 +3077,8 @@ final class AnnotateState: ObservableObject {
     embeddedImageCGImageCache.removeAll()
     autoSizingTextAnnotationIDs = snapshot.autoSizingTextAnnotationIDs
     freeCombineBoundsByAnnotationID = snapshot.freeCombineBoundsByAnnotationID
+    combineStitchGrid = snapshot.combineStitchGrid
+    combineOverlayIDs = snapshot.combineOverlayIDs
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
 
@@ -3722,6 +4086,108 @@ final class AnnotateState: ObservableObject {
     return true
   }
 
+  // MARK: - Arrange (z-order)
+
+  /// Layers Arrange can reorder. Images placed by Auto Stitch tile without overlapping,
+  /// so they stay out of it and always sit beneath overlays and markup.
+  private func isArrangeable(_ annotation: AnnotationItem) -> Bool {
+    !isAutoStitchedLayer(annotation)
+  }
+
+  private var arrangeableSelectionIDs: Set<UUID> {
+    Set(annotations.filter { selectedAnnotationIds.contains($0.id) && isArrangeable($0) }.map(\.id))
+  }
+
+  func canArrangeSelection(_ action: AnnotationArrangeAction) -> Bool {
+    guard editingTextAnnotationId == nil else { return false }
+    return arrangedAnnotations(for: action, selection: arrangeableSelectionIDs) != nil
+  }
+
+  /// Move the selected layers in the stacking order. Forward/backward step past the
+  /// next layer that actually overlaps, so every press makes a visible change.
+  @discardableResult
+  func arrangeSelectedAnnotations(_ action: AnnotationArrangeAction) -> Bool {
+    guard editingTextAnnotationId == nil,
+          let reordered = arrangedAnnotations(for: action, selection: arrangeableSelectionIDs) else {
+      return false
+    }
+    saveState()
+    annotations = reordered
+    hasUnsavedChanges = true
+    return true
+  }
+
+  /// The annotation list after `action`, or nil when nothing would change.
+  ///
+  /// The canvas always paints images, then blurs, then markup (`renderOrdered`), so
+  /// Arrange reorders within each of those tiers: images move among images, markup
+  /// among markup. Auto-stitched images are the fixed floor of the image tier.
+  private func arrangedAnnotations(
+    for action: AnnotationArrangeAction,
+    selection: Set<UUID>
+  ) -> [AnnotationItem]? {
+    guard !selection.isEmpty else { return nil }
+    var floor: [AnnotationItem] = []
+    var images: [AnnotationItem] = []
+    var blurs: [AnnotationItem] = []
+    var markup: [AnnotationItem] = []
+    for item in annotations {
+      if !isArrangeable(item) {
+        floor.append(item)
+        continue
+      }
+      switch item.type {
+      case .embeddedImage: images.append(item)
+      case .blur: blurs.append(item)
+      default: markup.append(item)
+      }
+    }
+
+    func arranged(_ tier: [AnnotationItem]) -> [AnnotationItem] {
+      guard tier.contains(where: { selection.contains($0.id) }) else { return tier }
+      switch action {
+      case .bringToFront:
+        return tier.filter { !selection.contains($0.id) } + tier.filter { selection.contains($0.id) }
+      case .sendToBack:
+        return tier.filter { selection.contains($0.id) } + tier.filter { !selection.contains($0.id) }
+      case .bringForward:
+        return Self.stepped(tier, selection: selection, forward: true)
+      case .sendBackward:
+        return Self.stepped(tier, selection: selection, forward: false)
+      }
+    }
+
+    // Compare against the same tiers unarranged so regrouping alone never counts as a change.
+    let baseline = floor + images + blurs + markup
+    let reordered = floor + arranged(images) + arranged(blurs) + arranged(markup)
+    guard reordered.map(\.id) != baseline.map(\.id) else { return nil }
+    return reordered
+  }
+
+  /// Move each selected layer one place past the nearest unselected layer it overlaps
+  /// in the given direction. Layers with nothing overlapping that way stay put.
+  private static func stepped(
+    _ stack: [AnnotationItem],
+    selection: Set<UUID>,
+    forward: Bool
+  ) -> [AnnotationItem] {
+    var items = stack
+    let order = forward ? Array(items.indices.reversed()) : Array(items.indices)
+    for originalIndex in order where selection.contains(stack[originalIndex].id) {
+      guard let index = items.firstIndex(where: { $0.id == stack[originalIndex].id }) else { continue }
+      let moving = items[index]
+      let candidates = forward
+        ? Array((index + 1) ..< items.count)
+        : Array((0 ..< index).reversed())
+      guard let target = candidates.first(where: {
+        !selection.contains(items[$0].id) && items[$0].renderBounds.intersects(moving.renderBounds)
+      }) else { continue }
+      items.remove(at: index)
+      items.insert(moving, at: target)
+    }
+    return items
+  }
+
   var selectedAnnotations: [AnnotationItem] {
     annotations.filter { selectedAnnotationIds.contains($0.id) }
   }
@@ -3756,6 +4222,9 @@ final class AnnotateState: ObservableObject {
         clone.type = .embeddedImage(clonedAssetId)
         result.embeddedImageAssets[clonedAssetId] = image
         result.embeddedImageData[clonedAssetId] = data
+        if combineOverlayIDs.contains(source.id) {
+          result.combineOverlayIDs.insert(clone.id)
+        }
       }
 
       result.annotations.append(clone)
@@ -3772,6 +4241,9 @@ final class AnnotateState: ObservableObject {
     embeddedImageSnapshotCacheData.merge(result.embeddedImageData) { _, new in new }
     annotations.append(contentsOf: result.annotations)
     autoSizingTextAnnotationIDs.formUnion(result.autoSizingTextAnnotationIDs)
+    if isCombineMode {
+      combineOverlayIDs.formUnion(result.combineOverlayIDs)
+    }
 
     if isCombineMode, combineMode == .freeCanvas {
       for annotation in result.annotations {

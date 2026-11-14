@@ -21,26 +21,16 @@ struct AnnotateCombineModePicker: View {
 }
 
 struct AnnotateCombineControlsView: View {
-  /// Tall stacked icon+label buttons; their radius is derived from this so the three arrangement
-  /// choices keep the same roundness as the rest of the sidebar's controls.
-  static let directionButtonHeight: CGFloat = 38
-
   @ObservedObject var state: AnnotateState
 
   var body: some View {
+    // Arrangement and order follow where images are dropped or dragged on the canvas,
+    // so the sidebar only keeps the mode and the gap.
     VStack(alignment: .leading, spacing: Spacing.md) {
       VStack(alignment: .leading, spacing: Spacing.sm) {
         SidebarSectionHeader(title: L10n.Combine.mode)
         AnnotateCombineModePicker(state: state)
       }
-
-      Divider().background(Color(nsColor: .separatorColor))
-
-      directionSection
-
-      Divider().background(Color(nsColor: .separatorColor))
-
-      imageOrderSection
 
       Divider().background(Color(nsColor: .separatorColor))
 
@@ -58,101 +48,5 @@ struct AnnotateCombineControlsView: View {
       .disabled(state.combineMode == .freeCanvas)
       .opacity(state.combineMode == .freeCanvas ? 0.45 : 1)
     }
-  }
-
-  private var imageOrderSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      HStack {
-        SidebarSectionHeader(title: L10n.Combine.images)
-        Spacer()
-        Text("\(state.combineImageCount)")
-          .font(Typography.labelSmall)
-          .foregroundColor(SidebarColors.labelSecondary)
-      }
-
-      ForEach(0 ..< state.combineImageCount, id: \.self) { index in
-        HStack(spacing: Spacing.xs) {
-          Image(systemName: "photo")
-            .foregroundColor(.accentColor)
-          Text(L10n.Combine.image(index + 1))
-            .font(Typography.labelSmall)
-          Spacer()
-          Button {
-            state.moveCombineImage(at: index, by: -1)
-          } label: {
-            Image(systemName: "chevron.up")
-          }
-          .buttonStyle(.borderless)
-          .disabled(index == 0)
-          .help(L10n.Combine.moveEarlier)
-
-          Button {
-            state.moveCombineImage(at: index, by: 1)
-          } label: {
-            Image(systemName: "chevron.down")
-          }
-          .buttonStyle(.borderless)
-          .disabled(index == state.combineImageCount - 1)
-          .help(L10n.Combine.moveLater)
-        }
-        .padding(.horizontal, Spacing.sm)
-        .padding(.vertical, 6)
-        .background(
-          Radius.rect(Radius.tile)
-            .fill(SidebarColors.itemDefault)
-        )
-      }
-    }
-  }
-
-  private var directionSection: some View {
-    VStack(alignment: .leading, spacing: Spacing.sm) {
-      HStack {
-        SidebarSectionHeader(title: L10n.Combine.arrangement)
-        Spacer()
-        if state.combineDirection == .smart {
-          Text(state.combineResolvedDirection == .horizontal ? L10n.Combine.horizontal : L10n.Combine.vertical)
-            .font(Typography.labelSmall)
-            .foregroundColor(SidebarColors.labelSecondary)
-        }
-      }
-
-      HStack(spacing: Spacing.xs) {
-        directionButton(.smart, title: L10n.Combine.smart, icon: "sparkles")
-        directionButton(.horizontal, title: L10n.Combine.horizontal, icon: "rectangle.split.3x1")
-        directionButton(.vertical, title: L10n.Combine.vertical, icon: "rectangle.split.1x2")
-      }
-    }
-    .disabled(state.combineMode == .freeCanvas)
-    .opacity(state.combineMode == .freeCanvas ? 0.45 : 1)
-  }
-
-  private func directionButton(
-    _ direction: CombineImagesDirection,
-    title: String,
-    icon: String
-  ) -> some View {
-    Button {
-      state.setCombineDirection(direction)
-    } label: {
-      VStack(spacing: 4) {
-        Image(systemName: icon)
-          .font(.system(size: 12, weight: .medium))
-        Text(title)
-          .font(Typography.labelSmall)
-          .lineLimit(1)
-      }
-      .frame(maxWidth: .infinity, minHeight: Self.directionButtonHeight)
-      .foregroundColor(state.combineDirection == direction ? .white : SidebarColors.labelSecondary)
-      .background(
-        Capsule(style: .continuous)
-          .fill(state.combineDirection == direction ? Color.accentColor.opacity(0.75) : SidebarColors.itemDefault)
-      )
-      .overlay(
-        Capsule(style: .continuous)
-          .stroke(state.combineDirection == direction ? Color.accentColor : Color.clear, lineWidth: 1)
-      )
-    }
-    .buttonStyle(.plain)
   }
 }

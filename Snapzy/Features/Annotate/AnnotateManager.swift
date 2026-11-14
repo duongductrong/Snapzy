@@ -40,6 +40,12 @@ struct CombineSessionSnapshot: Equatable {
   var direction: CombineImagesDirection
   var gap: CGFloat
   var freeBoundsByAnnotationID: [UUID: CGRect]
+  /// Hand-placed stitch rows (top to bottom); nil for an automatic strip.
+  var stitchRows: [[UUID]]? = nil
+  /// Embedded images floating above the stitch instead of being part of it.
+  var overlayIDs: Set<UUID> = []
+  /// False for sessions saved before vertical strips grew downward on screen.
+  var stripsGrowDownward: Bool = true
 }
 
 struct AnnotationSessionData {
