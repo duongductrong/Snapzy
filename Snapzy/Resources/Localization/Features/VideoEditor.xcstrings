@@ -28,6 +28,12 @@
             "value": "Extraction des images..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחלץ פריימים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zoom avant"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדלה"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Zoom arrière"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקטנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajuster"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמה"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "Ajouter une vitesse à la tête de lecture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת מהירות במיקום הסמן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajouter une vitesse ici"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת מהירות כאן"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "Ajouter un zoom sur la tête de lecture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת זום במיקום הסמן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -481,6 +523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajouter un zoom ici"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת זום כאן"
           }
         },
         "ja": {
@@ -548,6 +596,12 @@
             "value": "Audio Track %d"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רצועת שמע %d"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "A%d"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ש%d"
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Application d'effets..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיל אפקטים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rapport hauteur/largeur"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יחס גובה־רוחב"
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Volume"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עוצמת קול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוטומטי"
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Segments automobiles"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קטעים אוטומטיים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Équilibré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מאוזן"
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "En bas à gauche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה משמאל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En bas à droite"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה מימין"
           }
         },
         "ja": {
@@ -1198,6 +1306,12 @@
             "value": "Parcourir les fichiers..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עיון בקבצים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1261,6 +1375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy n'a pas d'accès en écriture à cet emplacement de fichier. Enregistrez plutôt sous forme de copie.\n\n%@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ל־Snapzy אין הרשאת כתיבה למיקום הקובץ. שמור כעותק במקום זאת.\n\n%@"
           }
         },
         "ja": {
@@ -1328,6 +1448,12 @@
             "value": "Impossible de remplacer l'original"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להחליף את המקור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1391,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Centre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרכז"
           }
         },
         "ja": {
@@ -1458,6 +1590,12 @@
             "value": "Choisissez où enregistrer la vidéo éditée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן לשמור את הווידאו הערוך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +1659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez où enregistrer le fichier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן לשמור את הקובץ"
           }
         },
         "ja": {
@@ -1588,6 +1732,12 @@
             "value": "Cliquez pour ajouter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ להוספה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1651,6 +1801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Terminer..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משלים..."
           }
         },
         "ja": {
@@ -1718,6 +1874,12 @@
             "value": "Convertir"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המרה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +1943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Espace de coordonnées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרחב קואורדינטות"
           }
         },
         "ja": {
@@ -1848,6 +2016,12 @@
             "value": "Impossible de lire le fichier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לקרוא את הקובץ"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1911,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Volume personnalisé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עוצמה מותאמת"
           }
         },
         "ja": {
@@ -1978,6 +2158,12 @@
             "value": "Supprimer la vitesse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת מהירות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2041,6 +2227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer le zoom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת זום"
           }
         },
         "ja": {
@@ -2108,6 +2300,12 @@
             "value": "Désactiver la vitesse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השבתת מהירות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2171,6 +2369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désactiver le zoom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השבתת זום"
           }
         },
         "ja": {
@@ -2238,6 +2442,12 @@
             "value": "Ne pas enregistrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא לשמור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2301,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Déposez une vidéo ici pour la modifier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחרר כאן וידאו לעריכה"
           }
         },
         "ja": {
@@ -2368,6 +2584,12 @@
             "value": "Activer la vitesse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת מהירות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +2653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activer le zoom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת זום"
           }
         },
         "ja": {
@@ -2498,6 +2726,12 @@
             "value": "Encodage des trames..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקודד פריימים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2561,6 +2795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'exportation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הייצוא נכשל"
           }
         },
         "ja": {
@@ -2628,6 +2868,12 @@
             "value": "Exportation..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מייצא..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2691,6 +2937,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportation de vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מייצא וידאו"
           }
         },
         "ja": {
@@ -2758,6 +3010,12 @@
             "value": "Échec du chargement du fichier : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טעינת הקובץ נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2821,6 +3079,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la préparation du fichier : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכנת הקובץ נכשלה: %@"
           }
         },
         "ja": {
@@ -2888,6 +3152,12 @@
             "value": "Rapide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מהיר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2951,6 +3221,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nom du fichier :"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם הקובץ:"
           }
         },
         "ja": {
@@ -3018,6 +3294,12 @@
             "value": "Fichier introuvable"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקובץ לא נמצא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3081,6 +3363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nom du fichier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם קובץ"
           }
         },
         "ja": {
@@ -3148,6 +3436,12 @@
             "value": "Finalisation..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3211,6 +3505,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Marge de mise au point"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שולי מיקוד"
           }
         },
         "ja": {
@@ -3278,6 +3578,12 @@
             "value": "Ajoute une zone de stabilité afin que les petits mouvements du curseur ne continuent pas à pousser la caméra."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מוסיף אזור יציבות כדי שתנועות קטנות של הסמן לא יזיזו את המצלמה כל הזמן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3341,6 +3647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suivre la souris"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעקב אחר העכבר"
           }
         },
         "ja": {
@@ -3408,6 +3720,12 @@
             "value": "La position de la caméra suit le chemin de la souris enregistré uniquement lorsque cet élément de zoom est actif."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקום המצלמה עוקב אחר מסלול העכבר שהוקלט רק בזמן שפריט הזום הזה פעיל."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3471,6 +3789,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Follow Mouse ne fonctionne qu'avec les vidéos enregistrées par Snapzy après l'ajout du suivi de la souris."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעקב אחר העכבר עובד רק עם סרטונים שהוקלטו ב־Snapzy אחרי שנוסף מעקב העכבר."
           }
         },
         "ja": {
@@ -3538,6 +3862,12 @@
             "value": "Suivez la vitesse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מהירות המעקב"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3601,6 +3931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les valeurs inférieures semblent plus calmes. Les valeurs plus élevées réagissent plus rapidement lorsque le curseur change de direction."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ערכים נמוכים רגועים יותר. ערכים גבוהים מגיבים מהר יותר כשהסמן משנה כיוון."
           }
         },
         "ja": {
@@ -3668,6 +4004,12 @@
             "value": "%d images"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d פריימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3731,6 +4073,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les dimensions du GIF n'ont pas changé. Sélectionnez un préréglage de taille différent à redimensionner."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מידות ה־GIF לא השתנו. בחר גודל אחר כדי לשנות את הגודל."
           }
         },
         "ja": {
@@ -3798,6 +4146,12 @@
             "value": "Informations GIF"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי GIF"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3860,6 +4214,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer la barre latérale gauche (⌘B)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרת סרגל הצד (⌘B)"
           }
         },
         "ja": {
@@ -3927,6 +4287,12 @@
             "value": "Masquer les informations vidéo (I)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרת פרטי הווידאו (I)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3990,6 +4356,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fichier invalide"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קובץ לא תקין"
           }
         },
         "ja": {
@@ -4057,6 +4429,12 @@
             "value": "Conserver l'original"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת המקור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4120,6 +4498,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Manuel"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ידני"
           }
         },
         "ja": {
@@ -4187,6 +4571,12 @@
             "value": "Le contrôle manuel de la caméra est disponible uniquement en mode manuel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שליטה ידנית במצלמה זמינה רק במצב ידני."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4250,6 +4640,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le mode manuel maintient le cadrage de la caméra fixe. Basculez sur Auto lorsque cet élément de zoom doit suivre la souris."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "במצב ידני מסגור המצלמה קבוע. עבור למצב אוטומטי כשפריט הזום צריך לעקוב אחר העכבר."
           }
         },
         "ja": {
@@ -4317,6 +4713,12 @@
             "value": "Microphone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4380,6 +4782,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mic"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיק׳"
           }
         },
         "ja": {
@@ -4447,6 +4855,12 @@
             "value": "Échantillons de souris"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "דגימות עכבר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4510,6 +4924,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Données de suivi de la souris indisponibles"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נתוני מעקב העכבר אינם זמינים"
           }
         },
         "ja": {
@@ -4577,6 +4997,12 @@
             "value": "Muet"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השתקה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4640,6 +5066,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun changement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין שינויים"
           }
         },
         "ja": {
@@ -4707,6 +5139,12 @@
             "value": "Aucun zoom sélectionné"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נבחר זום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4770,6 +5208,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Original (%d×%d)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקורי (%d×%d)"
           }
         },
         "ja": {
@@ -4837,6 +5281,12 @@
             "value": "Préparation de l'exportation..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מכין ייצוא..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4900,6 +5350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Préparation de la sauvegarde..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מכין שמירה..."
           }
         },
         "ja": {
@@ -4967,6 +5423,12 @@
             "value": "Appuyez sur Z pour ajouter un zoom au niveau de la tête de lecture ou cliquez sur un élément de zoom dans la timeline."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ Z כדי להוסיף זום במיקום הסמן, או לחץ על פריט זום בציר הזמן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5030,6 +5492,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Traitement de la vidéo..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעבד וידאו..."
           }
         },
         "ja": {
@@ -5097,6 +5565,12 @@
             "value": "Refaire (⌘⇧Z)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביצוע מחדש (⌘⇧Z)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5160,6 +5634,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer toutes les vitesses"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת כל המהירויות"
           }
         },
         "ja": {
@@ -5227,6 +5707,12 @@
             "value": "Supprimer tous les zooms"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת כל הזומים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5290,6 +5776,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remplacer l'original"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלפת המקור"
           }
         },
         "ja": {
@@ -5357,6 +5849,12 @@
             "value": "Redimensionner \"%@\" de %d×%d à %d×%d ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לשנות את גודל ״%@״ מ־%d×%d ל־%d×%d?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5420,6 +5918,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redimensionner les cadres..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משנה גודל פריימים..."
           }
         },
         "ja": {
@@ -5487,6 +5991,12 @@
             "value": "Redimensionner le GIF..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משנה גודל GIF..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5550,6 +6060,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taux d'échantillonnage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קצב דגימה"
           }
         },
         "ja": {
@@ -5617,6 +6133,12 @@
             "value": "Enregistrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5680,6 +6202,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer en tant que copie"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה כעותק"
           }
         },
         "ja": {
@@ -5747,6 +6275,12 @@
             "value": "Comment souhaitez-vous enregistrer la vidéo modifiée « %@ » ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כיצד לשמור את הווידאו הערוך ״%@״?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5810,6 +6344,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer la vidéo éditée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת הווידאו הערוך"
           }
         },
         "ja": {
@@ -5877,6 +6417,12 @@
             "value": "Enregistrer le GIF"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת GIF"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5940,6 +6486,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer le GIF redimensionné"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת ה־GIF בגודל החדש"
           }
         },
         "ja": {
@@ -6007,6 +6559,12 @@
             "value": "Enregistrer la copie vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת עותק של הווידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6070,6 +6628,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement de la vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר וידאו"
           }
         },
         "ja": {
@@ -6137,6 +6701,12 @@
             "value": "Segments"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קטעים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6202,6 +6772,12 @@
             "value": "Veuillez sélectionner une vidéo ou un fichier GIF valide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר קובץ וידאו או GIF תקין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6264,6 +6840,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher la barre latérale gauche (⌘B)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת סרגל הצד (⌘B)"
           }
         },
         "ja": {
@@ -6331,6 +6913,12 @@
             "value": "Afficher les informations vidéo (I)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת פרטי הווידאו (I)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6394,6 +6982,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Caméra intelligente"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלמה חכמה"
           }
         },
         "ja": {
@@ -6461,6 +7055,12 @@
             "value": "Lisse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6524,6 +7124,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glissez pour définir la vitesse"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור כדי לקבוע מהירות"
           }
         },
         "ja": {
@@ -6591,6 +7197,12 @@
             "value": "Accélérer ou ralentir une zone (timelapse)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האצה או האטה של קטע (טיימלאפס)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6654,6 +7266,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette zone chevauche un zoom — le zoom est lu à la vitesse ajustée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקטע הזה חופף לזום — הזום יתנגן במהירות המותאמת."
           }
         },
         "ja": {
@@ -6721,6 +7339,12 @@
             "value": "Vitesse"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מהירות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6784,6 +7408,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Prend en charge MOV, MP4, GIF et autres formats vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תומך ב־MOV,‏ MP4,‏ GIF ופורמטי וידאו נוספים"
           }
         },
         "ja": {
@@ -6851,6 +7481,12 @@
             "value": "System Audio"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמע המערכת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6914,6 +7550,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sys"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מערכת"
           }
         },
         "ja": {
@@ -6981,6 +7623,12 @@
             "value": "En haut à gauche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה משמאל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7044,6 +7692,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En haut à droite"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה מימין"
           }
         },
         "ja": {
@@ -7111,6 +7765,12 @@
             "value": "S'applique à tous les éléments de zoom dans cet éditeur. Des valeurs plus élevées semblent plus calmes lorsque vous entrez ou quittez le zoom."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חל על כל פריטי הזום בעורך הזה. ערכים גבוהים רגועים יותר בכניסה ויציאה מזום."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7174,6 +7834,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Douceur des transitions"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלקות המעבר"
           }
         },
         "ja": {
@@ -7241,6 +7907,12 @@
             "value": "Annuler (⌘Z)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול פעולה (⌘Z)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7304,6 +7976,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous avez des modifications vidéo non enregistrées. Voulez-vous sauvegarder avant de fermer ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יש עריכות וידאו שלא נשמרו. לשמור לפני הסגירה?"
           }
         },
         "ja": {
@@ -7371,6 +8049,12 @@
             "value": "Modifications non enregistrées"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שינויים שלא נשמרו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7434,6 +8118,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Type de fichier non pris en charge"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סוג קובץ לא נתמך"
           }
         },
         "ja": {
@@ -7501,6 +8191,12 @@
             "value": "Voulez-vous téléverser la vidéo exportée dans le cloud ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להעלות את הווידאו שיוצא לענן?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7564,6 +8260,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Détails de la vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרטי הווידאו"
           }
         },
         "ja": {
@@ -7631,6 +8333,12 @@
             "value": "Centre de zoom"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרכז הזום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7694,6 +8402,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effets de zoom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפקטי זום"
           }
         },
         "ja": {
@@ -7761,6 +8475,12 @@
             "value": "Élément de zoom"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פריט זום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7824,6 +8544,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Niveau de zoom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רמת זום"
           }
         },
         "ja": {
@@ -7891,6 +8617,12 @@
             "value": "Paramètres de zoom"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרות זום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7954,6 +8686,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zooms"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זומים"
           }
         },
         "ja": {
@@ -8021,6 +8759,12 @@
             "value": "Échec de l'exportation vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ייצוא הווידאו נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8084,6 +8828,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la création de la session d'exportation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יצירת סשן הייצוא נכשלה"
           }
         },
         "ja": {
@@ -8151,6 +8901,12 @@
             "value": "Échec de l'application des effets de zoom. La vidéo est peut-être corrompue ou dans un format non pris en charge."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלת אפקטי הזום נכשלה. ייתכן שהווידאו פגום או בפורמט לא נתמך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8216,6 +8972,12 @@
             "value": "Le format du fichier vidéo est incompatible ou corrompu. Veuillez essayer de réenregistrer."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט קובץ הווידאו אינו תואם או שהקובץ פגום. נסה להקליט מחדש."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8279,6 +9041,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Incohérence de l'ID de suivi : %@ attendu, disponible : %@. Veuillez essayer de réexporter."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אי־התאמה במזהה הרצועה: צפוי %@, זמין: %@. נסה לייצא מחדש."
           }
         },
         "ja": {
@@ -8381,6 +9149,12 @@
             "state": "translated",
             "value": "在播放頭處分割 (S)"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פיצול במיקום הסמן (S)"
+          }
         }
       }
     },
@@ -8445,6 +9219,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "在播放磁頭處插入影片"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת וידאו במיקום הסמן"
           }
         }
       }
@@ -8511,6 +9291,12 @@
             "state": "translated",
             "value": "選擇要插入時間軸的影片"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר סרטונים להוספה לציר הזמן"
+          }
         }
       }
     },
@@ -8575,6 +9361,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "向左移動片段"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזזת הקליפ שמאלה"
           }
         }
       }
@@ -8641,6 +9433,12 @@
             "state": "translated",
             "value": "向右移動片段"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזזת הקליפ ימינה"
+          }
         }
       }
     },
@@ -8705,6 +9503,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "移除片段"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת הקליפ"
           }
         }
       }
@@ -8771,6 +9575,12 @@
             "state": "translated",
             "value": "刪除片段 (⌫)"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת הקליפ (⌫)"
+          }
         }
       }
     },
@@ -8835,6 +9645,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "在此分割"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פיצול כאן"
           }
         }
       }
@@ -8901,6 +9717,12 @@
             "state": "translated",
             "value": "拖曳以更改片段起點"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור כדי לשנות את נקודת ההתחלה של הקליפ"
+          }
         }
       }
     },
@@ -8966,6 +9788,12 @@
             "state": "translated",
             "value": "拖曳以更改片段終點"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור כדי לשנות את נקודת הסיום של הקליפ"
+          }
         }
       }
     },
@@ -9030,6 +9858,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "錄製"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
           }
         }
       }

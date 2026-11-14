@@ -28,6 +28,12 @@
             "value": "Snapzy n'a pas pu conserver l'accès à ce dossier. Veuillez choisir à nouveau le dossier et confirmer l'autorisation."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy לא הצליחה לשמור גישה לתיקייה זו. בחר שוב את התיקייה ואשר את ההרשאה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accès au dossier non accordé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתנה גישה לתיקייה"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Choisissez où Snapzy doit enregistrer les captures d'écran et les enregistrements"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן Snapzy תשמור צילומי מסך והקלטות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisir un dossier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת תיקייה"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "Accorder l'accès"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתן גישה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accordé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניתנה"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "Facultatif"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אופציונלי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -483,6 +525,12 @@
             "value": "Obligatoire"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -546,6 +594,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy nécessite certaines autorisations pour capturer votre écran et votre audio."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאות מסוימות כדי לצלם את המסך ולהקליט שמע."
           }
         },
         "ja": {

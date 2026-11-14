@@ -63,6 +63,12 @@
             "state": "translated",
             "value": "Tự động ghép"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיבור אוטומטי"
+          }
         }
       }
     },
@@ -126,6 +132,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sao chép vào bộ nhớ tạm"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה ללוח"
           }
         }
       }
@@ -191,6 +203,12 @@
             "state": "translated",
             "value": "Khung vẽ tự do"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קנבס חופשי"
+          }
         }
       }
     },
@@ -254,6 +272,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Khoảng cách ảnh"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רווח בין תמונות"
           }
         }
       }
@@ -319,6 +343,12 @@
             "state": "translated",
             "value": "Chế độ ghép"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצב שילוב"
+          }
         }
       }
     },
@@ -382,6 +412,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ghép ảnh"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שילוב תמונות"
           }
         }
       }
@@ -447,6 +483,12 @@
             "state": "translated",
             "value": "Ghép"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שילוב"
+          }
         }
       }
     },
@@ -510,6 +552,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chọn từ hai ảnh trở lên."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר שתי תמונות או יותר."
           }
         }
       }
@@ -575,6 +623,12 @@
             "state": "translated",
             "value": "Chọn ảnh để ghép"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת תמונות לשילוב"
+          }
         }
       }
     },
@@ -638,6 +692,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Chọn cách xuất kết quả ghép ảnh."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר כיצד לייצא את התמונה המחוברת."
           }
         }
       }
@@ -703,6 +763,12 @@
             "state": "translated",
             "value": "Lưu ảnh đã ghép"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת התמונה המשולבת"
+          }
         }
       }
     },
@@ -767,6 +833,12 @@
             "state": "translated",
             "value": "Lưu thành tệp…"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה לקובץ…"
+          }
         }
       }
     },
@@ -830,6 +902,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Khoảng cách"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מרווח"
           }
         }
       }

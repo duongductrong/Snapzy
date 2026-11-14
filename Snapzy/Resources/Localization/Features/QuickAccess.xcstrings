@@ -28,6 +28,12 @@
             "value": "Désactivé dans les réglages d'accès rapide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבוי בהגדרות הגישה המהירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modifier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכה"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Épingler à l'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדה למסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -223,6 +241,12 @@
             "value": "Enregistrer / Ouvrir"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה / פתיחה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -286,6 +310,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désépingler"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול הצמדה"
           }
         },
         "ja": {
@@ -388,6 +418,12 @@
             "state": "translated",
             "value": "Wählen Sie, wie das schwebende Fenster eingeblendet wird"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר כיצד הכרטיסים נכנסים ויוצאים מהערימה."
+          }
         }
       }
     },
@@ -452,6 +488,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skalieren"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדלה ודהייה"
           }
         }
       }
@@ -518,6 +560,12 @@
             "state": "translated",
             "value": "Gleiten"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלקה"
+          }
         }
       }
     },
@@ -583,6 +631,12 @@
             "state": "translated",
             "value": "Animationsstil"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגנון אנימציה"
+          }
         }
       }
     },
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermeture automatique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה אוטומטית"
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Coin"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פינה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Principal"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ראשי"
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Fermer après"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה אחרי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Se ferme après %d secondes"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נסגר אחרי %d שניות"
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Faites glisser les captures vers d'autres applications"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרירת צילומים לאפליקציות אחרות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glisser-déposer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרירה ושחרור"
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "Afficher l'aperçu après la capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת תצוגה מקדימה אחרי הצילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Superposition flottante"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלונית צפה"
           }
         },
         "ja": {
@@ -1233,6 +1341,12 @@
             "state": "translated",
             "value": "Töne abspielen, wenn das Overlay erscheint oder eine Aktion abgeschlossen ist"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השמעת צלילים כשהחלונית מופיעה או כשפעולה מסתיימת"
+          }
         }
       }
     },
@@ -1297,6 +1411,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Soundeffekte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפקטים קוליים"
           }
         }
       }
@@ -1363,6 +1483,12 @@
             "state": "translated",
             "value": "Nach dem Speichern im Finder öffnen"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה ב־Finder אחרי שמירה"
+          }
         }
       }
     },
@@ -1427,6 +1553,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Die gespeicherte Datei im Finder anzeigen, wenn aus dem Overlay gespeichert wird"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הקובץ השמור ב־Finder בעת שמירה מהחלונית"
           }
         }
       }
@@ -1493,6 +1625,12 @@
             "state": "translated",
             "value": "Blendet die schwebende Karte automatisch aus, wenn Fenster geöffnet werden"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרה זמנית של הפריט מהערימה כשהחלון שלו פתוח."
+          }
         }
       }
     },
@@ -1558,6 +1696,12 @@
             "state": "translated",
             "value": "Ausblenden wenn offen"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרה אוטומטית של פריטים פתוחים"
+          }
         }
       }
     },
@@ -1586,6 +1730,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Garder la superposition ouverte jusqu'à ce qu'elle soit rejetée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השארת החלונית פתוחה עד לסגירה ידנית"
           }
         },
         "ja": {
@@ -1653,6 +1803,12 @@
             "value": "Gauche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמאל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1716,6 +1872,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pas sur la carte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא על הכרטיס"
           }
         },
         "ja": {
@@ -1783,6 +1945,12 @@
             "value": "Ajuster la taille de l'aperçu flottant"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמת גודל התצוגה המקדימה הצפה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1846,6 +2014,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taille de superposition"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל החלונית"
           }
         },
         "ja": {
@@ -1913,6 +2087,12 @@
             "value": "Mettre le compte à rebours en pause lorsque vous survolez la carte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השהיית הספירה לאחור כשהעכבר מעל הכרטיס"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1976,6 +2156,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pause au survol"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השהיה בריחוף"
           }
         },
         "ja": {
@@ -2043,6 +2229,12 @@
             "value": "Faites glisser les lignes de la liste pour réorganiser le menu contextuel. Faites glisser des actions sur l’aperçu pour définir les positions de la carte."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור שורות ברשימה כדי לסדר מחדש את התפריט. גרור פעולות אל התצוגה המקדימה כדי לקבוע את מיקומן בכרטיס."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2106,6 +2298,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser les actions"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס הפעולות"
           }
         },
         "ja": {
@@ -2173,6 +2371,12 @@
             "value": "À droite"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ימין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2236,6 +2440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Où la superposition apparaît"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היכן החלונית מופיעה"
           }
         },
         "ja": {
@@ -2303,6 +2513,12 @@
             "value": "Bord de l'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קצה המסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2366,6 +2582,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apparence"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מראה"
           }
         },
         "ja": {
@@ -2433,6 +2655,12 @@
             "value": "Comportements"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התנהגות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2496,6 +2724,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Poste"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקום"
           }
         },
         "ja": {
@@ -2563,6 +2797,12 @@
             "value": "Aperçu"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תצוגה מקדימה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2626,6 +2866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Actions rapides"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות מהירות"
           }
         },
         "ja": {
@@ -2693,6 +2939,12 @@
             "value": "Actions de balayage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות החלקה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2756,6 +3008,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bas gauche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה משמאל"
           }
         },
         "ja": {
@@ -2823,6 +3081,12 @@
             "value": "Bas droit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה מימין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2886,6 +3150,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Centre bas"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה במרכז"
           }
         },
         "ja": {
@@ -2953,6 +3223,12 @@
             "value": "Centre haut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה במרכז"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3016,6 +3292,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Haut gauche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה משמאל"
           }
         },
         "ja": {
@@ -3083,6 +3365,12 @@
             "value": "Haut droit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה מימין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3146,6 +3434,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה"
           }
         },
         "ja": {
@@ -3213,6 +3507,12 @@
             "value": "Glissez des actions sur les cibles de balayage circulaires pour choisir ce qui s'exécute après un balayage à deux doigts."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרור פעולות אל יעדי ההחלקה העגולים כדי לבחור מה יקרה אחרי החלקה בשתי אצבעות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3276,6 +3576,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Balayer vers la gauche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלקה שמאלה"
           }
         },
         "ja": {
@@ -3343,6 +3649,12 @@
             "value": "Balayer vers la droite"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלקה ימינה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3407,6 +3719,12 @@
             "value": "Ajustez la vitesse de suivi de la carte lors du balayage sur le trackpad"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קביעת מהירות התגובה של הכרטיס להחלקה במשטח המגע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3469,6 +3787,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sensibilité du balayage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רגישות החלקה"
           }
         },
         "ja": {
@@ -3536,6 +3860,12 @@
             "value": "Effacer l'action"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניקוי הפעולה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3599,6 +3929,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser pour fermer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס לסגירה"
           }
         },
         "ja": {
@@ -3665,6 +4001,12 @@
             "value": "Choisissez si la carte suit votre doigt ou se déplace dans la direction opposée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר אם הכרטיס עוקב אחרי האצבע או זז בכיוון ההפוך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3727,6 +4069,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inversé (suivre le défilement)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפוך (לפי הגלילה)"
           }
         },
         "ja": {
@@ -3793,6 +4141,12 @@
             "value": "Naturel (suivre le doigt)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טבעי (לפי האצבע)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3855,6 +4209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Direction du balayage trackpad"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כיוון החלקה במשטח המגע"
           }
         },
         "ja": {
@@ -3922,6 +4282,12 @@
             "value": "Balayez horizontalement sur l’aperçu pour le fermer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלקה אופקית על התצוגה המקדימה כדי לסגור אותה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3985,6 +4351,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Balayage à deux doigts"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלקה בשתי אצבעות"
           }
         },
         "ja": {
@@ -4052,6 +4424,12 @@
             "value": "Modifier la vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת וידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4115,6 +4493,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajuster"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמה"
           }
         },
         "ja": {
@@ -4182,6 +4566,12 @@
             "value": "Verrouiller et masquer au survol"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נעילה והסתרה במעבר עכבר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4247,6 +4637,12 @@
             "value": "Déverrouiller la fenêtre épinglée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול נעילת החלון המוצמד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4310,6 +4706,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zoomer la fenêtre épinglée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זום בחלון המוצמד"
           }
         },
         "ja": {
@@ -4412,6 +4814,12 @@
             "state": "translated",
             "value": "Angeheftetes Bild"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה מוצמדת"
+          }
         }
       }
     },
@@ -4477,6 +4885,12 @@
             "state": "translated",
             "value": "Fenster mit dem Bild vergrößern"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שינוי גודל החלון יחד עם התמונה"
+          }
         }
       }
     },
@@ -4541,6 +4955,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fenstergröße beibehalten"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה על גודל חלון קבוע"
           }
         }
       }

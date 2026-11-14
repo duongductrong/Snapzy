@@ -28,6 +28,12 @@
             "value": "%@ pour %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ עבור %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copier le fichier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת הקובץ"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Copier automatiquement dans le presse-papiers"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה אוטומטית ללוח"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrir l'éditeur d'annotations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת עורך הסימון"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "Ouvrir l'éditeur d'annotations après la capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת עורך הסימון אחרי הצילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "Enregistrer vers l'emplacement d'exportation"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה במיקום הייצוא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -481,6 +523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher la superposition avec des actions rapides"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת חלונית עם פעולות מהירות"
           }
         },
         "ja": {
@@ -548,6 +596,12 @@
             "value": "Enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d'écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך"
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Vide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ריק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de vider le cache pendant qu'une capture ou un enregistrement est en cours."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לנקות את המטמון בזמן שמתבצע צילום או הקלטה."
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Échec de la découpe de l'arrière-plan : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת הרקע נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La découpe de l'arrière-plan a échoué. Veuillez réessayer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת הרקע נכשלה. נסה שוב."
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Impossible de convertir le résultat de la découpe en image."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להמיר את תוצאת הגזירה לתמונה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun sujet au premier plan n'a été détecté dans la zone sélectionnée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה נושא בחזית באזור שנבחר."
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "Aucun sujet détecté. Essayez de sélectionner une zone plus étroite autour du sujet."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה נושא. נסה לבחור אזור צמוד יותר סביב הנושא."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de traiter l'image découpée. Veuillez réessayer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לעבד את תמונת הגזירה. נסה שוב."
           }
         },
         "ja": {
@@ -1198,6 +1306,12 @@
             "value": "La découpe d’arrière-plan nécessite macOS 14 ou version ultérieure."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת רקע דורשת macOS 14 ומעלה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1261,6 +1375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Un instant, lecture du texte en cours…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רגע, עדיין קורא את הטקסט…"
           }
         },
         "ja": {
@@ -1328,6 +1448,12 @@
             "value": "Capture en cours..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלם..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1391,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copier le lien"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת קישור"
           }
         },
         "ja": {
@@ -1458,6 +1590,12 @@
             "value": "Extraction du contenu..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחלץ תוכן..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +1659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la conversion de l'image pour le traitement OCR"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המרת התמונה לעיבוד OCR נכשלה"
           }
         },
         "ja": {
@@ -1588,6 +1732,12 @@
             "value": "Lien copié dans le presse-papiers"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקישור הועתק ללוח"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1651,6 +1801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lien détecté"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהה קישור"
           }
         },
         "ja": {
@@ -1718,6 +1874,12 @@
             "value": "%d liens détectés"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהו %d קישורים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +1943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun texte trouvé dans la zone sélectionnée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצא טקסט באזור שנבחר"
           }
         },
         "ja": {
@@ -1848,6 +2016,12 @@
             "value": "Texte copié"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הטקסט הועתק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1911,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy n’a pas pu reconnaître de texte dans la zone sélectionnée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy לא הצליחה לזהות טקסט באזור שנבחר."
           }
         },
         "ja": {
@@ -1978,6 +2158,12 @@
             "value": "Échec de l’OCR"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי הטקסט נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2041,6 +2227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy n’a trouvé aucun texte lisible dans la zone sélectionnée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy לא מצאה טקסט קריא באזור שנבחר."
           }
         },
         "ja": {
@@ -2108,6 +2300,12 @@
             "value": "Aucun texte détecté"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה טקסט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2171,6 +2369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tout ouvrir"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת הכול"
           }
         },
         "ja": {
@@ -2238,6 +2442,12 @@
             "value": "Ouvrir %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2301,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Codes QR"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קודי QR"
           }
         },
         "ja": {
@@ -2368,6 +2584,12 @@
             "value": "Code QR détecté, mais Snapzy ne peut copier que le contenu QR textuel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהה קוד QR, אך Snapzy יכולה להעתיק רק תוכן QR מבוסס טקסט."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +2653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la reconnaissance OCR : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי הטקסט נכשל: %@"
           }
         },
         "ja": {
@@ -2499,6 +2727,12 @@
             "value": "Le point de terminaison OCR personnalisé a renvoyé une erreur (HTTP %d)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שרת ה־OCR המותאם החזיר שגיאה (HTTP %d)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2563,6 +2797,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'encodage de l'image pour la requête OCR"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קידוד התמונה לבקשת ה־OCR נכשל"
           }
         },
         "ja": {
@@ -2631,6 +2871,12 @@
             "value": "L'URL du point de terminaison OCR personnalisé est invalide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתובת שרת ה־OCR המותאם אינה תקינה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2695,6 +2941,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le point de terminaison OCR personnalisé a renvoyé une réponse illisible ou vide"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שרת ה־OCR המותאם החזיר תגובה ריקה או בלתי קריאה"
           }
         },
         "ja": {
@@ -2763,6 +3015,12 @@
             "value": "Le point de terminaison OCR personnalisé a rejeté la requête — vérifiez la clé API"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שרת ה־OCR המותאם דחה את הבקשה — בדוק את מפתח ה־API"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2827,6 +3085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'atteindre le point de terminaison OCR personnalisé : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להתחבר לשרת ה־OCR המותאם: %@"
           }
         },
         "ja": {
@@ -2894,6 +3158,12 @@
             "value": "Vitesse d'expansion de l'ondulation (%@s)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מהירות התפשטות הגל (%@ שנ׳)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2957,6 +3227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Durée de l'animation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משך האנימציה"
           }
         },
         "ja": {
@@ -3024,6 +3300,12 @@
             "value": "Quand l’éditeur reste ouvert, remettre Snapzy au premier plan et focaliser Annoter une fois le dépôt terminé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כשהעורך נשאר פתוח, הבאת Snapzy לחזית והתמקדות בעורך הסימון אחרי השחרור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3087,6 +3369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réactiver après dépôt"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלה מחדש אחרי שחרור"
           }
         },
         "ja": {
@@ -3154,6 +3442,12 @@
             "value": "Demander à chaque fois"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לשאול בכל פעם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3217,6 +3511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez ce qui se passe lorsqu’une image du presse-papiers est disponible à l’ouverture d’Annoter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר מה יקרה כשיש תמונה בלוח בעת פתיחת עורך הסימון"
           }
         },
         "ja": {
@@ -3284,6 +3584,12 @@
             "value": "Ne rien faire"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא לעשות כלום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3347,6 +3653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Charger automatiquement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "טעינה אוטומטית"
           }
         },
         "ja": {
@@ -3414,6 +3726,12 @@
             "value": "Image du presse-papiers à l’ouverture d’Annoter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה מהלוח בפתיחת עורך הסימון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3479,6 +3797,12 @@
             "value": "Fermer automatiquement l’éditeur Annoter après un dépôt réussi dans une autre app"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה אוטומטית של עורך הסימון אחרי גרירה מוצלחת לאפליקציה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3542,6 +3866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermer après dépôt"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה אחרי שחרור"
           }
         },
         "ja": {
@@ -3610,6 +3940,12 @@
             "value": "Outil sélectionné lorsque la mémorisation du dernier outil est désactivée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכלי שנבחר כשזכירת הכלי האחרון כבויה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3674,6 +4010,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Outil par défaut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כלי ברירת מחדל"
           }
         },
         "ja": {
@@ -3742,6 +4084,12 @@
             "value": "Utilise un seul jeu de valeurs par défaut pour les outils d’annotation compatibles. Désactivez pour garder séparés la couleur, le trait, le rayon, la taille du texte et le filigrane de chaque outil"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שימוש בסט ברירות מחדל אחד לכלי סימון תואמים. כבה כדי לשמור בנפרד את הצבע, הקו, הרדיוס, גודל הטקסט וערכי סימן המים של כל כלי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3806,6 +4154,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Synchroniser les réglages"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סנכרון ברירות המחדל של הכלים"
           }
         },
         "ja": {
@@ -3874,6 +4228,12 @@
             "value": "Commencer chaque annotation de capture avec le dernier outil choisi"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת כל סימון צילום מסך עם הכלי האחרון שבחרת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3938,6 +4298,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mémoriser le dernier outil"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זכירת הכלי האחרון"
           }
         },
         "ja": {
@@ -4005,6 +4371,12 @@
             "value": "S’applique à la suppression de l’arrière-plan dans Capture et Annoter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חל על הסרת רקע בצילום ובעורך הסימון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4068,6 +4440,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sujet de recadrage automatique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיתוך אוטומטי של הנושא"
           }
         },
         "ja": {
@@ -4135,6 +4513,12 @@
             "value": "Met en surbrillance un bouton, une fenêtre contextuelle ou un élément de page web spécifique lors du survol, au lieu de toute la fenêtre. Nécessite que le réglage ci-dessus soit activé."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגשת כפתור, חלון קופץ או רכיב בדף אינטרנט מסוים בעת ריחוף, במקום החלון כולו. דורש את ההגדרה שלמעלה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4198,6 +4582,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Détecter aussi des éléments spécifiques, pas seulement les fenêtres"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי גם של רכיבים ספציפיים, לא רק חלונות"
           }
         },
         "ja": {
@@ -4265,6 +4655,12 @@
             "value": "Met en surbrillance et sélectionne la fenêtre sous le curseur sans appuyer sur une touche au préalable ; faites glisser pour dessiner une sélection manuelle"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגשה ובחירה של החלון שמתחת לסמן בלי ללחוץ קודם על מקש; גרור כדי לסמן בחירה ידנית במקום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4328,6 +4724,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Détecter automatiquement la fenêtre sous le curseur"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי אוטומטי של החלון שמתחת לסמן"
           }
         },
         "ja": {
@@ -4395,6 +4797,12 @@
             "value": "Jetons disponibles : {datetime}, {date}, {year}, {yearShort}, {month}, {monthName}, {monthShort}, {day}, {time}, {ms}, {timestamp}, {type}, {appName}. Utilisez / pour créer des sous-dossiers."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תבניות זמינות: {datetime}, {date}, {year}, {yearShort}, {month}, {monthName}, {monthShort}, {day}, {time}, {ms}, {timestamp}, {type}, {appName}. השתמש ב־/ כדי ליצור תתי־תיקיות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4458,6 +4866,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ce que la copie d'une image place dans le presse-papiers. Choisissez Image seule si le collage dans un bureau à distance (Citrix, RDP) ou un terminal ajoute un fichier au lieu d'une image intégrée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מה תמונות מועתקות שמות בלוח. בחר ״תמונה בלבד״ אם הדבקה בשולחן עבודה מרוחק (Citrix,‏ RDP) או בטרמינל מוסיפה קובץ במקום תמונה"
           }
         },
         "ja": {
@@ -4525,6 +4939,12 @@
             "value": "Contenu du presse-papiers"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תוכן הלוח"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4590,6 +5010,12 @@
             "value": "Image et fichier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה וקובץ"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4653,6 +5079,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Image seule"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונה בלבד"
           }
         },
         "ja": {
@@ -4756,6 +5188,12 @@
             "state": "translated",
             "value": "Beim Zusammenfügen von Bildern im Editor aktualisiert das Speichern den aktuellen Screenshot, statt den Export eines neuen kombinierten Bildes abzufragen."
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בעת חיבור תמונות בעורך, השמירה מעדכנת את צילום המסך הנוכחי במקום לבקש לייצא תמונה משולבת חדשה."
+          }
         }
       }
     },
@@ -4822,6 +5260,12 @@
             "state": "translated",
             "value": "Kombiniertes Ergebnis als Teil der aktuellen Bearbeitung speichern"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת התוצאה המשולבת כחלק מהעריכה הנוכחית"
+          }
         }
       }
     },
@@ -4849,6 +5293,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Applique un préréglage Annoter juste après chaque capture d’écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלת ערכת סימון מיד אחרי כל צילום מסך"
           }
         },
         "ja": {
@@ -4913,6 +5363,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Préréglage par défaut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ערכת ברירת מחדל"
           }
         },
         "ja": {
@@ -4980,6 +5436,12 @@
             "value": "Durée d'attente de la capture différée avant la capture. Ouvrez des menus ou des états de survol pendant le compte à rebours."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כמה זמן צילום מושהה ממתין לפני הצילום. אפשר לפתוח תפריטים או מצבי ריחוף במהלך הספירה לאחור."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5043,6 +5505,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d secondes"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d שניות"
           }
         },
         "ja": {
@@ -5110,6 +5578,12 @@
             "value": "Compte à rebours de la capture différée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספירה לאחור לצילום מושהה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5173,6 +5647,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Temps avant la disparition du badge (%@s)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזמן עד שהתג נעלם (%@ שנ׳)"
           }
         },
         "ja": {
@@ -5240,6 +5720,12 @@
             "value": "Durée d'affichage"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משך התצוגה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5303,6 +5789,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taille du texte du badge (%dpt)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל טקסט התג (%d נק׳)"
           }
         },
         "ja": {
@@ -5370,6 +5862,12 @@
             "value": "Taille de la police"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל גופן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5433,6 +5931,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "FPS plus élevés pour des mouvements plus fluides"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FPS גבוה יותר לתנועה חלקה יותר"
           }
         },
         "ja": {
@@ -5500,6 +6004,12 @@
             "value": "Fréquence d'images"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קצב פריימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5563,6 +6073,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fige l'écran lors de la sélection. Activez pour garder une image fixe."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקפאת המסך בזמן הבחירה. הפעל כדי לעבוד על תמונה קפואה."
           }
         },
         "ja": {
@@ -5630,6 +6146,12 @@
             "value": "Figer l'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקפאת המסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5693,6 +6215,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer temporairement les icônes pendant la capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרה זמנית של הסמלים בזמן הצילום"
           }
         },
         "ja": {
@@ -5760,6 +6288,12 @@
             "value": "Masquer les icônes du bureau"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרת סמלי שולחן העבודה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5823,6 +6357,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer temporairement les widgets pendant la capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרה זמנית של הווידג׳טים בזמן הצילום"
           }
         },
         "ja": {
@@ -5890,6 +6430,12 @@
             "value": "Masquer les widgets du bureau"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסתרת ווידג׳טים בשולחן העבודה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5953,6 +6499,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couleur des anneaux à clic"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צבע טבעות הלחיצה"
           }
         },
         "ja": {
@@ -6020,6 +6572,12 @@
             "value": "Couleur de surbrillance"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צבע ההדגשה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6083,6 +6641,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Diamètre de l'effet d'entraînement (%dpx)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קוטר אפקט הגל (%d פיקסלים)"
           }
         },
         "ja": {
@@ -6150,6 +6714,12 @@
             "value": "Taille de surbrillance"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל ההדגשה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6213,6 +6783,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher les contrôles à l'écran pendant l'enregistrement. Si masqués, utiliser l'icône de la barre des menus pour arrêter."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת פקדים על המסך בזמן ההקלטה. כשהם מוסתרים, השתמש בסמל שבשורת התפריטים כדי לעצור."
           }
         },
         "ja": {
@@ -6280,6 +6856,12 @@
             "value": "Afficher les contrôles flottants"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת פקדים צפים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6343,6 +6925,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Format de sortie pour les captures d'écran capturées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט הפלט של צילומי המסך"
           }
         },
         "ja": {
@@ -6410,6 +6998,12 @@
             "value": "Format d'image"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט תמונה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6473,6 +7067,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher les fenêtres Snapzy telles que Annoter dans les vidéos enregistrées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת חלונות Snapzy (כמו עורך הסימון) בסרטונים המוקלטים"
           }
         },
         "ja": {
@@ -6540,6 +7140,12 @@
             "value": "Inclure dans les enregistrements"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכללה בהקלטות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6603,6 +7209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher les fenêtres Snapzy telles que Annoter dans les images capturées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת חלונות Snapzy (כמו עורך הסימון) בתמונות המצולמות"
           }
         },
         "ja": {
@@ -6670,6 +7282,12 @@
             "value": "Inclure dans les captures d'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכללה בצילומי מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6734,6 +7352,12 @@
             "value": "Afficher l'ombre portée de la fenêtre dans la Capture d'application"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת צל החלון בצילום אפליקציה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6796,6 +7420,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inclure l'ombre de la fenêtre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכללת צל החלון"
           }
         },
         "ja": {
@@ -6863,6 +7493,12 @@
             "value": "Les captures de découpes d'objets nécessitent de la transparence. Snapzy les enregistrera au format PNG même lorsque JPEG est sélectionné."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילומים עם הסרת רקע דורשים שקיפות. Snapzy תשמור אותם כ־PNG גם כשנבחר JPEG."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6926,6 +7562,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fige l'interaction avec les apps situées dessous pour capturer les info-bulles et états de survol visibles. Nécessite l'autorisation Accessibilité."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקפאת האינטראקציה עם האפליקציות שמתחת כדי שאפשר יהיה לצלם חלוניות עזרה ומצבי ריחוף גלויים. דורש הרשאת נגישות."
           }
         },
         "ja": {
@@ -6993,6 +7635,12 @@
             "value": "La transmission du survol nécessite l'autorisation Accessibilité pour observer les événements globaux de souris et de clavier."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעבר ריחוף דורש הרשאת נגישות כדי לעקוב אחר אירועי עכבר ומקלדת גלובליים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7056,6 +7704,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transmission du survol"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעבר ריחוף"
           }
         },
         "ja": {
@@ -7123,6 +7777,12 @@
             "value": "Taille de l’aperçu de la loupe et du panneau du sélecteur de couleur en dessous"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל תצוגת הזכוכית המגדלת וחלונית בוחר הצבעים שמתחתיה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7186,6 +7846,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taille de la loupe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל הזכוכית המגדלת"
           }
         },
         "ja": {
@@ -7253,6 +7919,12 @@
             "value": "Grande"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גדול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7316,6 +7988,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moyenne"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בינוני"
           }
         },
         "ja": {
@@ -7383,6 +8061,12 @@
             "value": "Petite"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קטן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7446,6 +8130,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Zoom de la loupe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זום הזכוכית המגדלת"
           }
         },
         "ja": {
@@ -7513,6 +8203,12 @@
             "value": "Améliore la compatibilité H.264 avec les navigateurs en limitant la résolution d’enregistrement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "משפר את התאימות של H.264 לדפדפנים על ידי הגבלת רזולוציית ההקלטה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7576,6 +8272,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Résolution maximale"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רזולוציה מרבית"
           }
         },
         "ja": {
@@ -7643,6 +8345,12 @@
             "value": "Afficher la durée écoulée à côté de l'icône d'état."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הזמן שחלף ליד סמל המצב."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7706,6 +8414,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher le minuteur dans la barre des menus"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת טיימר בשורת התפריטים"
           }
         },
         "ja": {
@@ -7773,6 +8487,12 @@
             "value": "Capturez votre voix"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת הקול שלך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7836,6 +8556,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez le micro intégré ou externe utilisé pour les enregistrements"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר את המיקרופון המובנה או החיצוני שישמש להקלטות"
           }
         },
         "ja": {
@@ -7903,6 +8629,12 @@
             "value": "Entrée microphone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קלט מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7968,6 +8700,12 @@
             "value": "Proposer d'ouvrir les liens web trouvés dans le texte capturé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצעה לפתוח קישורי אינטרנט שנמצאו בטקסט המצולם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8031,6 +8769,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Détecter les liens"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי קישורים"
           }
         },
         "ja": {
@@ -8099,6 +8843,12 @@
             "value": "Ajouter un modèle personnalisé…"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת מודל מותאם…"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8163,6 +8913,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reconnaissance sur l'appareil Apple Vision"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זיהוי במכשיר באמצעות Apple Vision"
           }
         },
         "ja": {
@@ -8231,6 +8987,12 @@
             "value": "OCR intégré"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR מובנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8295,6 +9057,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Personnalisé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מותאם"
           }
         },
         "ja": {
@@ -8363,6 +9131,12 @@
             "value": "Par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ברירת מחדל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8427,6 +9201,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modifier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכה"
           }
         },
         "ja": {
@@ -8495,6 +9275,12 @@
             "value": "Supprimer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8559,6 +9345,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "« %@ » et sa clé API stockée seront supprimés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "״%@״ ומפתח ה־API השמור שלו יימחקו."
           }
         },
         "ja": {
@@ -8627,6 +9419,12 @@
             "value": "Supprimer le modèle personnalisé ?"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להסיר את המודל המותאם?"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8691,6 +9489,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modèle OCR"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מודל OCR"
           }
         },
         "ja": {
@@ -8759,6 +9563,12 @@
             "value": "Ajouter un modèle personnalisé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוספת מודל מותאם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8823,6 +9633,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clé API (optionnel)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מפתח API (אופציונלי)"
           }
         },
         "ja": {
@@ -8891,6 +9707,12 @@
             "value": "Laissez vide pour conserver la clé existante."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השאר ריק כדי לשמור על המפתח הקיים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8955,6 +9777,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "URL de base du serveur / API"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתובת השרת / API"
           }
         },
         "ja": {
@@ -9023,6 +9851,12 @@
             "value": "Connectez un point de terminaison compatible OpenAI — API LLM, Ollama, vLLM ou LM Studio."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיבור לנקודת קצה תואמת OpenAI — ממשקי LLM,‏ Ollama,‏ vLLM או LM Studio."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9087,6 +9921,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modifier le modèle personnalisé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת מודל מותאם"
           }
         },
         "ja": {
@@ -9155,6 +9995,12 @@
             "value": "Identifiant du modèle"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מזהה המודל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9219,6 +10065,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nom"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שם"
           }
         },
         "ja": {
@@ -9287,6 +10139,12 @@
             "value": "Invite / Prompt (optionnel)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פרומפט (אופציונלי)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9351,6 +10209,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tester la connexion"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בדיקת חיבור"
           }
         },
         "ja": {
@@ -9419,6 +10283,12 @@
             "value": "Échec de la connexion"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החיבור נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9483,6 +10353,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connecté (%d ms)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחובר (%d מילישניות)"
           }
         },
         "ja": {
@@ -9551,6 +10427,12 @@
             "value": "Connexion réussie"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החיבור הצליח"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9614,6 +10496,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autoriser"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור"
           }
         },
         "ja": {
@@ -9681,6 +10569,12 @@
             "value": "Autorisez les notifications pour que Snapzy puisse vous montrer le texte reconnu."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אשר התראות כדי ש־Snapzy תוכל להציג לך את הטקסט שזוהה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9746,6 +10640,12 @@
             "value": "Les notifications de Snapzy sont désactivées dans Réglages Système. L’OCR fonctionne toujours et copie le texte dans le presse-papiers."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההתראות של Snapzy כבויות בהגדרות המערכת. זיהוי הטקסט עדיין עובד ומעתיק את הטקסט ללוח."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9809,6 +10709,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Notifications"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התראות"
           }
         },
         "ja": {
@@ -9877,6 +10783,12 @@
             "value": "Afficher une notification système avec le texte reconnu après l’OCR"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת התראת מערכת עם הטקסט שזוהה אחרי OCR"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -9943,6 +10855,12 @@
             "value": "Notifications OCR"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התראות OCR"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10003,6 +10921,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "OCR"
@@ -10073,6 +10997,12 @@
             "value": "Actions sur le texte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות טקסט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10136,6 +11066,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Transparence de l'anneau (%d%%)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שקיפות הטבעת (%d%%)"
           }
         },
         "ja": {
@@ -10203,6 +11139,12 @@
             "value": "Opacité"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אטימות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10266,6 +11208,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Superposition"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שכבת־על"
           }
         },
         "ja": {
@@ -10333,6 +11281,12 @@
             "value": "Placement des badges dans la zone d'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקום התג באזור ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10396,6 +11350,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Poste"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקום"
           }
         },
         "ja": {
@@ -10463,6 +11423,12 @@
             "value": "Qualité supérieure = taille de fichier plus grande"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איכות גבוהה יותר = קובץ גדול יותר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10526,6 +11492,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qualité"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איכות"
           }
         },
         "ja": {
@@ -10592,6 +11564,12 @@
             "value": "Assombrit tout ce qui se trouve en dehors de la zone d'enregistrement pendant l'enregistrement afin de faire ressortir la zone capturée. Désactivez cette option pour garder les autres fenêtres entièrement visibles et utilisables pendant l'enregistrement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החשכת כל מה שמחוץ לאזור ההקלטה בזמן ההקלטה כדי שהאזור המוקלט יבלוט. כבה כדי שחלונות אחרים יישארו גלויים ושמישים לגמרי בזמן ההקלטה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10654,6 +11632,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assombrir la zone non sélectionnée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עמעום האזור שלא נבחר"
           }
         },
         "ja": {
@@ -10721,6 +11705,12 @@
             "value": "Aperçu de l'enregistrement : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תצוגה מקדימה להקלטה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10784,6 +11774,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inclure le pointeur de la souris dans les vidéos et GIF enregistrés"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכללת סמן העכבר בסרטונים וב־GIFs המוקלטים"
           }
         },
         "ja": {
@@ -10851,6 +11847,12 @@
             "value": "Modèle pour le nom de fichier ou le chemin de sous-dossier des enregistrements enregistrés automatiquement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תבנית לשם הקובץ או לנתיב תת־התיקייה של הקלטות שנשמרות אוטומטית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -10914,6 +11916,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modèle d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תבנית הקלטה"
           }
         },
         "ja": {
@@ -10981,6 +11989,12 @@
             "value": "Restaurer la zone d'enregistrement précédente lors de la prochaine capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחזור אזור ההקלטה הקודם בצילום הבא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11044,6 +12058,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mémoriser la dernière zone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זכירת האזור האחרון"
           }
         },
         "ja": {
@@ -11111,6 +12131,12 @@
             "value": "Supprimer l'arrière-plan"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת רקע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11174,6 +12200,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialiser les paramètres de dénomination par défaut"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס שמות לברירת המחדל"
           }
         },
         "ja": {
@@ -11241,6 +12273,12 @@
             "value": "Inverser le sens du zoom de la molette (défiler vers le bas pour zoomer)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היפוך כיוון הזום בגלגלת (גלילה למטה מגדילה)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11304,6 +12342,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inverser la direction du zoom de la loupe"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היפוך כיוון הזום של הזכוכית המגדלת"
           }
         },
         "ja": {
@@ -11371,6 +12415,12 @@
             "value": "Nombre d'anneaux expansibles"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מספר הטבעות המתפשטות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11434,6 +12484,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nombre d'ondulations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מספר גלים"
           }
         },
         "ja": {
@@ -11501,6 +12557,12 @@
             "value": "Aperçu de la capture d'écran : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תצוגה מקדימה לצילום מסך: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11564,6 +12626,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modèle pour le nom de fichier ou le chemin de sous-dossier des captures d'écran enregistrées automatiquement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תבנית לשם הקובץ או לנתיב תת־התיקייה של צילומי מסך שנשמרים אוטומטית"
           }
         },
         "ja": {
@@ -11631,6 +12699,12 @@
             "value": "Modèle de capture d'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תבנית צילום מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11694,6 +12768,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les meilleurs résultats proviennent de la sélection uniquement du contenu en mouvement, puis du défilement dans une direction à un rythme constant."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התוצאות הטובות ביותר מתקבלות כשבוחרים רק את התוכן הנגלל, ואז גוללים בכיוון אחד בקצב קבוע."
           }
         },
         "ja": {
@@ -11761,6 +12841,12 @@
             "value": "Après la capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אחרי הצילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11824,6 +12910,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Glisser-déposer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גרירה ושחרור"
           }
         },
         "ja": {
@@ -11891,6 +12983,12 @@
             "value": "Aides au dessin"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עזרי ציור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -11954,6 +13052,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouverture et enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחה ושמירה"
           }
         },
         "ja": {
@@ -12021,6 +13125,12 @@
             "value": "Outils"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12084,6 +13194,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Application Windows"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חלונות האפליקציה"
           }
         },
         "ja": {
@@ -12151,6 +13267,12 @@
             "value": "Audio"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12214,6 +13336,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bureau"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שולחן העבודה"
           }
         },
         "ja": {
@@ -12281,6 +13409,12 @@
             "value": "Superposition de frappe"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תצוגת הקשות מקלדת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12344,6 +13478,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Surbrillance de la souris"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגשת העכבר"
           }
         },
         "ja": {
@@ -12411,6 +13551,12 @@
             "value": "Dénomination des sorties"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמות קובצי הפלט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12474,6 +13620,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Comportement d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התנהגות ההקלטה"
           }
         },
         "ja": {
@@ -12541,6 +13693,12 @@
             "value": "Contrôles d'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פקדי ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12604,6 +13762,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Format d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט ההקלטה"
           }
         },
         "ja": {
@@ -12671,6 +13835,12 @@
             "value": "Qualité d'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איכות ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12736,6 +13906,12 @@
             "value": "Format"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12798,6 +13974,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Préréglage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ערכה"
           }
         },
         "ja": {
@@ -12865,6 +14047,12 @@
             "value": "Capture par défilement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום גלילה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -12928,6 +14116,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inclure le pointeur de la souris dans les captures d'écran capturées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכללת סמן העכבר בצילומי המסך"
           }
         },
         "ja": {
@@ -12995,6 +14189,12 @@
             "value": "Afficher le curseur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הסמן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13058,6 +14258,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Démarrer la sélection de zone avec la loupe déjà active, au lieu de nécessiter ⌘+molette"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת בחירת אזור כשהזכוכית המגדלת כבר פעילה, במקום לדרוש ⌘+גלילה"
           }
         },
         "ja": {
@@ -13125,6 +14331,12 @@
             "value": "Afficher la loupe par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הזכוכית המגדלת כברירת מחדל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13188,6 +14400,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Affiche la nuance de couleur et la valeur hexadécimale sous l'aperçu de la loupe ; désactivez pour ne conserver que la grille de pixels et le réticule"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת דוגמית הצבע וערך ה־hex מתחת לזכוכית המגדלת; כבה כדי להשאיר רק את רשת הפיקסלים והכוונת"
           }
         },
         "ja": {
@@ -13255,6 +14473,12 @@
             "value": "Afficher le panneau du sélecteur de couleur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת חלונית בוחר הצבעים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13318,6 +14542,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assombrir l'arrière-plan en dehors de la zone de sélection pendant la capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עמעום הרקע מחוץ לאזור הבחירה בזמן הצילום"
           }
         },
         "ja": {
@@ -13385,6 +14615,12 @@
             "value": "Afficher la superposition de la zone de sélection"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת שכבת אזור הבחירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13448,6 +14684,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gardez les conseils visibles lors du démarrage d'une session de capture par défilement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השארת ההנחיות גלויות בתחילת צילום גלילה"
           }
         },
         "ja": {
@@ -13515,6 +14757,12 @@
             "value": "Afficher les conseils de session"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת רמזים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13578,6 +14826,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturez les sons des applications"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת צלילים מאפליקציות"
           }
         },
         "ja": {
@@ -13645,6 +14899,12 @@
             "value": "Audio système"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמע המערכת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13708,6 +14968,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "MOV offre une meilleure qualité. MP4 offre une compatibilité plus large."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MOV מציע איכות טובה יותר. MP4 תואם ליותר מקומות."
           }
         },
         "ja": {
@@ -13775,6 +15041,12 @@
             "value": "Format vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט וידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13838,6 +15110,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'encodage WebP est plus lent que les autres formats. Pour une vitesse de capture plus rapide, pensez à utiliser PNG ou JPEG."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קידוד WebP איטי יותר מפורמטים אחרים. לצילום מהיר יותר, שקול להשתמש ב־PNG או JPEG."
           }
         },
         "ja": {
@@ -13905,6 +15183,12 @@
             "value": "Appuyez sur %@ pour capturer une fenêtre d’application"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ %@ כדי לבחור חלון אפליקציה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -13968,6 +15252,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La capture a été annulée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצילום בוטל"
           }
         },
         "ja": {
@@ -14035,6 +15325,12 @@
             "value": "Échap pour annuler"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esc לביטול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14098,6 +15394,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Plein écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסך מלא"
           }
         },
         "ja": {
@@ -14165,6 +15467,12 @@
             "value": "Échec de la capture : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצילום נכשל: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14228,6 +15536,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La capture a dépassé le délai imparti. Veuillez réessayer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תם הזמן לצילום. נסה שוב."
           }
         },
         "ja": {
@@ -14295,6 +15609,12 @@
             "value": "Copier au prélèvement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה בבחירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14358,6 +15678,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez pour copier · Flèches : 1 px"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ להעתקה · החצים מזיזים פיקסל אחד"
           }
         },
         "ja": {
@@ -14425,6 +15751,12 @@
             "value": "Prélever à nouveau"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירה מחדש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14488,6 +15820,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Récents"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אחרונים"
           }
         },
         "ja": {
@@ -14555,6 +15893,12 @@
             "value": "Impossible de lire l’écran pour prélever une couleur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לקרוא את המסך כדי לבחור צבע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14618,6 +15962,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de créer le dossier de sauvegarde : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן ליצור את תיקיית השמירה: %@"
           }
         },
         "ja": {
@@ -14685,6 +16035,12 @@
             "value": "Impossible de créer la destination de l'image"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן ליצור את יעד התמונה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14748,6 +16104,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la création d'une image à partir du cadre capturé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יצירת תמונה מהפריים שצולם נכשלה"
           }
         },
         "ja": {
@@ -14815,6 +16177,12 @@
             "value": "Échec du recadrage de l'image capturée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חיתוך התמונה שצולמה נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -14878,6 +16246,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'écriture de l'image sur le disque"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כתיבת התמונה לדיסק נכשלה"
           }
         },
         "ja": {
@@ -14945,6 +16319,12 @@
             "value": "La vérification de l'écriture du fichier a échoué pour %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אימות כתיבת הקובץ נכשל עבור %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15008,6 +16388,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copié"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הועתק"
           }
         },
         "ja": {
@@ -15075,6 +16461,12 @@
             "value": "Appuyez sur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15138,6 +16530,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "pour copier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להעתקה"
           }
         },
         "ja": {
@@ -15205,6 +16603,12 @@
             "value": "Appuyez sur %@ pour revenir à la capture manuelle de zone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ %@ לבחירת אזור ידנית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15268,6 +16672,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun affichage trouvé pour capturer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצא מסך לצילום"
           }
         },
         "ja": {
@@ -15335,6 +16745,12 @@
             "value": "Autorisation de capture d'écran refusée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאת צילום המסך נדחתה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15398,6 +16814,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez sur un écran pour l’enregistrer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ על מסך כדי להקליט אותו"
           }
         },
         "ja": {
@@ -15465,6 +16887,12 @@
             "value": "Cliquez pour le plein écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ למסך מלא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15528,6 +16956,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Entrée pour sélectionner une zone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter לבחירת אזור"
           }
         },
         "ja": {
@@ -15595,6 +17029,12 @@
             "value": "Entrée pour choisir un écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enter לבחירת מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15658,6 +17098,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ pour une fenêtre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ לחלון"
           }
         },
         "ja": {
@@ -15725,6 +17171,12 @@
             "value": "Aucune zone précédente — sélectionnez d'abord une zone avec ⇧⌘4"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין אזור קודם — בחר תחילה אזור עם ⇧⌘4"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15788,6 +17240,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'enregistrement de la capture d'écran : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירת צילום המסך נכשלה: %@"
           }
         },
         "ja": {
@@ -15855,6 +17313,12 @@
             "value": "L’autorisation d’enregistrer l’emplacement est requise."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת הרשאה למיקום השמירה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -15918,6 +17382,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copié : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הועתק %@"
           }
         },
         "ja": {
@@ -15985,6 +17455,12 @@
             "value": "Clic pour épingler · Glisser pour un cadre · H/V verrouiller l’axe · U unités · C copier · Retour enregistrer · Échap quitter"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחיצה להצמדה · גרירה למלבן · H/V נעילת ציר · U יחידות · C העתקה · Return שמירה · Esc יציאה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16048,6 +17524,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tolérance des bords : %lld"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סבילות קצוות: %lld"
           }
         },
         "ja": {
@@ -16115,6 +17597,12 @@
             "value": "Impossible de lire l’écran pour mesurer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לקרוא את המסך לצורך מדידה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16178,6 +17666,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La zone sélectionnée se trouve en dehors des limites d'affichage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור שנבחר חורג מגבולות המסך"
           }
         },
         "ja": {
@@ -16245,6 +17739,12 @@
             "value": "Impossible de capturer la zone sélectionnée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לצלם את האזור שנבחר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16308,6 +17808,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'encodage WebP a échoué"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קידוד WebP נכשל"
           }
         },
         "ja": {
@@ -16375,6 +17881,12 @@
             "value": "Ajustez la région pour que seul le contenu en mouvement reste à l'intérieur, puis appuyez sur Démarrer la capture. Appuyez sur Échap pour annuler."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כוונן את האזור כך שרק התוכן הנגלל יישאר בפנים, ואז לחץ ״התחלת צילום״. לחץ Esc לביטול."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16438,6 +17950,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturer et aligner le dernier contenu visible..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלם ומיישר את התוכן הגלוי האחרון..."
           }
         },
         "ja": {
@@ -16505,6 +18023,12 @@
             "value": "L’alignement s’est arrêté. Ralentissez et gardez une direction pour que Snapzy puisse récupérer."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היישור הושהה. האט והמשך בכיוון אחד כדי ש־Snapzy תוכל להתאושש."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16568,6 +18092,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le défilement automatique nécessite l’autorisation d’accessibilité. Activez Snapzy dans Réglages Système > Confidentialité et sécurité > Accessibilité."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גלילה אוטומטית דורשת הרשאת נגישות. הפעל את Snapzy בהגדרות המערכת > פרטיות ואבטחה > נגישות."
           }
         },
         "ja": {
@@ -16635,6 +18165,12 @@
             "value": "Défilement automatique en pause. Replacez le pointeur dans la zone sélectionnée pour continuer."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגלילה האוטומטית הושהתה. החזר את הסמן לאזור שנבחר כדי להמשיך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16698,6 +18234,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturer la première image. Après cela, continuez à faire défiler vers le bas à un rythme constant."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלם את הפריים הראשון. אחר כך המשך לגלול למטה בקצב קבוע."
           }
         },
         "ja": {
@@ -16765,6 +18307,12 @@
             "value": "Impossible d'aligner ce cadre. Gardez la même direction et un rythme plus régulier."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה ליישר את הפריים. שמור על אותו כיוון ועל קצב יציב יותר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16828,6 +18376,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de capturer la dernière image. Snapzy enregistrera le résultat cousu actuel."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לצלם את הפריים האחרון. Snapzy תשמור את התוצאה המחוברת הנוכחית."
           }
         },
         "ja": {
@@ -16895,6 +18449,12 @@
             "value": "Impossible d'actualiser la dernière image. Snapzy enregistrera le résultat cousu actuel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לרענן את הפריים האחרון. Snapzy תשמור את התוצאה המחוברת הנוכחית."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -16958,6 +18518,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La direction a changé. Continuez à faire défiler de la même manière ou redémarrez la session."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכיוון השתנה. המשך לגלול באותו כיוון או התחל מחדש."
           }
         },
         "ja": {
@@ -17025,6 +18591,12 @@
             "value": "Aucun nouveau contenu détecté. Vous êtes probablement à la fin du contenu déroulant. Appuyez sur Terminé pour enregistrer."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה תוכן חדש. כנראה הגעת לסוף התוכן הנגלל. לחץ ״סיום״ כדי לשמור."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17088,6 +18660,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'aligner proprement la dernière image. Snapzy enregistrera le résultat cousu actuel."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה ליישר בצורה נקייה את הפריים האחרון. Snapzy תשמור את התוצאה המחוברת הנוכחית."
           }
         },
         "ja": {
@@ -17155,6 +18733,12 @@
             "value": "Finalisation de la capture en cours. Snapzy verrouille le dernier résultat cousu avant de l'enregistrer."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את הצילום הנוכחי. Snapzy נועלת את התוצאה המחוברת האחרונה לפני השמירה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17218,6 +18802,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verrouillage de la capture en cours. Snapzy scelle %d cadres cousus avant de les enregistrer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נועל את הצילום הנוכחי. Snapzy חותמת %d פריימים מחוברים לפני השמירה."
           }
         },
         "ja": {
@@ -17285,6 +18875,12 @@
             "value": "Limite de hauteur atteinte. Snapzy enregistre le résultat cousu actuel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגעת למגבלת הגובה. Snapzy שומרת את התוצאה המחוברת הנוכחית."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17348,6 +18944,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun nouveau contenu n'a été détecté. Snapzy enregistre le résultat cousu actuel."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה תוכן חדש. Snapzy שומרת את התוצאה המחוברת הנוכחית."
           }
         },
         "ja": {
@@ -17415,6 +19017,12 @@
             "value": "Premier cadre verrouillé. Gardez le pointeur sur la région en surbrillance et faites défiler vers le bas régulièrement."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפריים הראשון ננעל. השאר את הסמן מעל האזור המודגש וגלול למטה בקצב קבוע."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17478,6 +19086,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vous avez atteint la limite de sortie de %d px. Appuyez sur Terminé pour enregistrer le résultat actuel."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגעת למגבלת הפלט של %d פיקסלים. לחץ ״סיום״ כדי לשמור את התוצאה הנוכחית."
           }
         },
         "ja": {
@@ -17545,6 +19159,12 @@
             "value": "Sens de défilement mixtes détectés. Gardez une direction pour que Snapzy puisse s'aligner."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זוהו כיווני גלילה מעורבים. שמור על כיוון אחד כדי ש־Snapzy תוכל ליישר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17608,6 +19228,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finalisation du résultat cousu actuel après des directions de défilement mixtes."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את התוצאה המחוברת הנוכחית אחרי כיווני גלילה מעורבים."
           }
         },
         "ja": {
@@ -17675,6 +19301,12 @@
             "value": "Snapzy n'a pas encore pu verrouiller une image assemblée pouvant être enregistrée. Vous pouvez continuer la capture, réessayer Terminé ou Annuler."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy עדיין לא הצליחה לנעול תמונה מחוברת שניתן לשמור. אפשר להמשיך לצלם, לנסות ״סיום״ שוב או לבטל."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17738,6 +19370,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'actualisation de l'aperçu. Vous pouvez annuler et réessayer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רענון התצוגה המקדימה נכשל. אפשר לבטל ולנסות שוב."
           }
         },
         "ja": {
@@ -17805,6 +19443,12 @@
             "value": "Sélectionnez uniquement le contenu en mouvement, appuyez sur Démarrer la capture, puis continuez à faire défiler dans une direction à un rythme constant."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר רק את התוכן הנגלל, לחץ ״התחלת צילום״, ואז המשך לגלול בכיוון אחד בקצב קבוע."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17868,6 +19512,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Région mise à jour. Conservez uniquement le contenu en mouvement à l’intérieur, puis appuyez sur Démarrer la capture. Appuyez sur Échap pour annuler."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור עודכן. השאר בפנים רק את התוכן הנגלל, ואז לחץ ״התחלת צילום״. לחץ Esc לביטול."
           }
         },
         "ja": {
@@ -17935,6 +19585,12 @@
             "value": "Relâchez pour verrouiller la région de défilement mise à jour."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחרר כדי לנעול את אזור הגלילה המעודכן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -17998,6 +19654,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'enregistrement a échoué. Le résultat de la couture est figé, vous pouvez donc réessayer Terminé ou Annuler."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השמירה נכשלה. התוצאה המחוברת קפואה, אז אפשר לנסות ״סיום״ שוב או לבטל."
           }
         },
         "ja": {
@@ -18065,6 +19727,12 @@
             "value": "Enregistrement de l'image longue assemblée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר את התמונה הארוכה המחוברת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18128,6 +19796,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Séance active. %d images cousues dans %d px."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצילום פעיל. %d פריימים חוברו לגובה %d פיקסלים."
           }
         },
         "ja": {
@@ -18195,6 +19869,12 @@
             "value": "Impossible de capturer la zone sélectionnée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לצלם את האזור שנבחר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18258,6 +19938,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'afficher l'aperçu assemblé."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להציג את התצוגה המקדימה המחוברת."
           }
         },
         "ja": {
@@ -18325,6 +20011,12 @@
             "value": "En attente de nouveau contenu. Gardez le défilement dans une direction."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ממתין לתוכן חדש. המשך לגלול בכיוון אחד."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18388,6 +20080,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Défilement automatique"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גלילה אוטומטית"
           }
         },
         "ja": {
@@ -18455,6 +20153,12 @@
             "value": "Capturé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צולם"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18518,6 +20222,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finition"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים"
           }
         },
         "ja": {
@@ -18585,6 +20295,12 @@
             "value": "En direct"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18648,6 +20364,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En pause"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מושהה"
           }
         },
         "ja": {
@@ -18715,6 +20437,12 @@
             "value": "Économie"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18778,6 +20506,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Synchronisation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסנכרן"
           }
         },
         "ja": {
@@ -18845,6 +20579,12 @@
             "value": "Image finale verrouillée • %d images • +%d px"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפריים האחרון ננעל • %d פריימים • ‎+%d פיקסלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -18908,6 +20648,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finalisation du résultat assemblé actuel • dernière image ignorée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את התוצאה המחוברת • הפריים האחרון דולג"
           }
         },
         "ja": {
@@ -18975,6 +20721,12 @@
             "value": "Finalisation du résultat actuel • pas de nouveau contenu"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את התוצאה הנוכחית • אין תוכן חדש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19038,6 +20790,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Finalisation du résultat assemblé • %d images verrouillées"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את התוצאה המחוברת • %d פריימים ננעלו"
           }
         },
         "ja": {
@@ -19105,6 +20863,12 @@
             "value": "Finalisation du résultat cousu..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים את התוצאה המחוברת..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19168,6 +20932,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Premier cadre verrouillé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפריים הראשון ננעל"
           }
         },
         "ja": {
@@ -19235,6 +21005,12 @@
             "value": "%d images cousues • +%d px"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d פריימים חוברו • ‎+%d פיקסלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19298,6 +21074,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%d images cousues • limite de hauteur atteinte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d פריימים חוברו • הגעת למגבלת הגובה"
           }
         },
         "ja": {
@@ -19365,6 +21147,12 @@
             "value": "%d images assemblées • aucun nouveau contenu"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d פריימים חוברו • אין תוכן חדש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19428,6 +21216,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aperçu en direct en cours d'exécution pendant que Snapzy verrouille le cadre cousu."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התצוגה המקדימה החיה פועלת בזמן ש־Snapzy נועלת את הפריים המחובר."
           }
         },
         "ja": {
@@ -19495,6 +21289,12 @@
             "value": "Aucun résultat cousu enregistrable n'est encore prêt"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין אין תוצאה מחוברת שניתן לשמור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19558,6 +21358,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'enregistrement • Le résultat cousu est toujours prêt"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השמירה נכשלה • התוצאה המחוברת עדיין מוכנה"
           }
         },
         "ja": {
@@ -19625,6 +21431,12 @@
             "value": "Enregistrement du résultat cousu..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר את התוצאה המחוברת..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19688,6 +21500,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Démarrez Capture pour verrouiller la première image"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ״התחלת צילום״ כדי לנעול את הפריים הראשון"
           }
         },
         "ja": {
@@ -19755,6 +21573,12 @@
             "value": "Zone mise à jour"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור עודכן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19818,6 +21642,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuer manuellement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך ידנית"
           }
         },
         "ja": {
@@ -19885,6 +21715,12 @@
             "value": "Le résultat actuel est toujours prêt"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התוצאה הנוכחית עדיין מוכנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -19948,6 +21784,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le résultat cousu actuel est prêt"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התוצאה המחוברת הנוכחית מוכנה"
           }
         },
         "ja": {
@@ -20015,6 +21857,12 @@
             "value": "Encadrez uniquement le contenu défilant"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סמן רק את התוכן הנגלל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20078,6 +21926,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Limite de hauteur atteinte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגעת למגבלת הגובה"
           }
         },
         "ja": {
@@ -20145,6 +21999,12 @@
             "value": "Tenez bon"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על יציבות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20208,6 +22068,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuez à capturer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך לצלם"
           }
         },
         "ja": {
@@ -20275,6 +22141,12 @@
             "value": "Gardez une direction"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על כיוון אחד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20338,6 +22210,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gardez une direction pour un point propre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על כיוון אחד לחיבור נקי"
           }
         },
         "ja": {
@@ -20405,6 +22283,12 @@
             "value": "Gardez une direction ou redémarrez"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על כיוון אחד או התחל מחדש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20468,6 +22352,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gardez une direction pour que Snapzy puisse se réaligner"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על כיוון אחד כדי ש־Snapzy תוכל ליישר מחדש"
           }
         },
         "ja": {
@@ -20535,6 +22425,12 @@
             "value": "Conserver uniquement le contenu défilant"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השאר רק את התוכן הנגלל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20598,6 +22494,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuez à faire défiler vers le bas"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך לגלול למטה"
           }
         },
         "ja": {
@@ -20665,6 +22567,12 @@
             "value": "Gardez un rythme plus régulier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמור על קצב יציב יותר"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20728,6 +22636,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verrouillage de la capture de courant"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נועל את הצילום הנוכחי"
           }
         },
         "ja": {
@@ -20795,6 +22709,12 @@
             "value": "Aucun nouveau contenu n'a été détecté"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהה תוכן חדש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20858,6 +22778,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une direction, un rythme soutenu"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כיוון אחד, קצב קבוע"
           }
         },
         "ja": {
@@ -20925,6 +22851,12 @@
             "value": "Placez la souris dans la zone de capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקם את העכבר בתוך אזור הצילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -20988,6 +22920,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Veuillez patienter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אנא המתן"
           }
         },
         "ja": {
@@ -21055,6 +22993,12 @@
             "value": "Appuyez sur Terminé pour enregistrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ״סיום״ כדי לשמור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21118,6 +23062,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Appuyez sur Terminé lorsque vous êtes prêt"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ״סיום״ כשתהיה מוכן"
           }
         },
         "ja": {
@@ -21185,6 +23135,12 @@
             "value": "L'aperçu doit être récupéré"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התצוגה המקדימה צריכה התאוששות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21248,6 +23204,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Relâcher pour verrouiller la zone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שחרר כדי לנעול את האזור"
           }
         },
         "ja": {
@@ -21315,6 +23277,12 @@
             "value": "Replacez le pointeur dans la sélection pour continuer le défilement automatique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החזר את הסמן לתוך הבחירה כדי להמשיך בגלילה האוטומטית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21378,6 +23346,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le défilement inversé peut casser le point"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גלילה הפוכה עלולה לשבור את החיבור"
           }
         },
         "ja": {
@@ -21445,6 +23419,12 @@
             "value": "Sauvegarde du résultat actuel"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר את התוצאה הנוכחית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21508,6 +23488,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement d'une longue capture d'écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר את צילום המסך הארוך"
           }
         },
         "ja": {
@@ -21575,6 +23561,12 @@
             "value": "Faites défiler vers le bas régulièrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גלול למטה בקצב קבוע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21638,6 +23630,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ralentir"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האט"
           }
         },
         "ja": {
@@ -21705,6 +23703,12 @@
             "value": "Snapzy verrouille la première image"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy נועלת את הפריים הראשון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21768,6 +23772,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy scelle le résultat cousu"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy חותמת את התוצאה המחוברת"
           }
         },
         "ja": {
@@ -21835,6 +23845,12 @@
             "value": "Restez dans une direction"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הישאר בכיוון אחד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -21898,6 +23914,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Appuyez ensuite sur Démarrer la capture"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ואז לחץ ״התחלת צילום״"
           }
         },
         "ja": {
@@ -21965,6 +23987,12 @@
             "value": "Puis réessayez Terminé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ואז נסה ״סיום״ שוב"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22028,6 +24056,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réessayez Terminé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נסה ״סיום״ שוב"
           }
         },
         "ja": {
@@ -22095,6 +24129,12 @@
             "value": "Finition : sauvegarde de votre capture."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים - שומר את הצילום שלך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22158,6 +24198,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'aperçu correspond à la capture assemblée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התצוגה המקדימה תואמת לצילום המחובר."
           }
         },
         "ja": {
@@ -22225,6 +24271,12 @@
             "value": "Aperçu en pause - faites défiler lentement pour que Snapzy puisse se réaligner."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התצוגה המקדימה הושהתה - גלול לאט כדי ש־Snapzy תוכל ליישר מחדש."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22288,6 +24340,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Appuyez sur Démarrer la capture pour commencer."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ ״התחלת צילום״ כדי להתחיל."
           }
         },
         "ja": {
@@ -22355,6 +24413,12 @@
             "value": "Sauvegarde de votre capture..."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר את הצילום שלך..."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22418,6 +24482,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Affichage de la dernière capture assemblée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מוצג הצילום המחובר האחרון."
           }
         },
         "ja": {
@@ -22485,6 +24555,12 @@
             "value": "Affichage du dernier résultat assemblé pendant que Snapzy verrouille le contenu le plus récent."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מוצגת התוצאה המחוברת האחרונה בזמן ש־Snapzy נועלת תוכן חדש יותר."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22548,6 +24624,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלם"
           }
         },
         "ja": {
@@ -22615,6 +24697,12 @@
             "value": "Finition"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מסיים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22678,6 +24766,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En direct"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חי"
           }
         },
         "ja": {
@@ -22745,6 +24839,12 @@
             "value": "En pause"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מושהה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22808,6 +24908,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Traitement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מעבד"
           }
         },
         "ja": {
@@ -22875,6 +24981,12 @@
             "value": "Prêt"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מוכן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -22938,6 +25050,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Économie"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שומר"
           }
         },
         "ja": {
@@ -23005,6 +25123,12 @@
             "value": "Démarrer la capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת צילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -23068,6 +25192,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrêter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עצירה"
           }
         },
         "ja": {
@@ -23135,6 +25265,12 @@
             "value": "Aucun cadre cousu n'est encore prêt."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין אין פריים מחובר מוכן."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -23200,6 +25336,12 @@
             "value": "La capture par défilement a enregistré l'image assemblée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום הגלילה שמר את התמונה המחוברת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -23263,6 +25405,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une session de capture défilante est déjà active."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום גלילה כבר פעיל."
           }
         },
         "ja": {

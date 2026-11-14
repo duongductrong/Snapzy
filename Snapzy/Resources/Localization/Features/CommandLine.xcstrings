@@ -29,6 +29,12 @@
             "value": "Permettre aux apps et aux agents IA de capturer avec la commande snapzy"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לאפליקציות ולסוכני AI לצלם באמצעות הפקודה snapzy"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -93,6 +99,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accès en ligne de commande"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גישה משורת הפקודה"
           }
         },
         "ja": {
@@ -161,6 +173,12 @@
             "value": "Apps ayant demandé à utiliser la commande snapzy"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפליקציות שביקשו להשתמש בפקודה snapzy"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -225,6 +243,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune app ne l’a encore demandé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין אף אפליקציה לא ביקשה"
           }
         },
         "ja": {
@@ -293,6 +317,12 @@
             "value": "Apps autorisées"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפליקציות מורשות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -357,6 +387,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ a capturé l’écran avec la commande snapzy"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ צילמה את המסך באמצעות הפקודה snapzy"
           }
         },
         "ja": {
@@ -425,6 +461,12 @@
             "value": "Copier la commande"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת הפקודה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -489,6 +531,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ existe déjà et n’est pas un lien. Supprimez-le, puis réessayez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ כבר קיים ואינו קישור. הסר אותו ונסה שוב."
           }
         },
         "ja": {
@@ -557,6 +605,12 @@
             "value": "La modification a été annulée."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השינוי בוטל."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -621,6 +675,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cette copie de Snapzy n’inclut pas la commande snapzy."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עותק זה של Snapzy אינו כולל את הפקודה snapzy."
           }
         },
         "ja": {
@@ -689,6 +749,12 @@
             "value": "Snapzy a été installée avec Homebrew, qui ajoute la commande snapzy. Exécutez %@ dans le Terminal."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy הותקנה דרך Homebrew, שמוסיף את הפקודה snapzy. הרץ את %@ בטרמינל."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -753,6 +819,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ pointe déjà vers %2$@. Supprimez ce lien, puis réessayez."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ כבר מקושר אל %2$@. הסר את הקישור ונסה שוב."
           }
         },
         "ja": {
@@ -821,6 +893,12 @@
             "value": "Déplacez d’abord Snapzy dans le dossier Applications. Elle s’exécute depuis un emplacement temporaire."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תחילה העבר את Snapzy לתיקיית היישומים. כרגע היא פועלת ממיקום זמני."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -885,6 +963,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Laissez les apps et agents IA capturer avec la commande snapzy et choisissez qui peut l’utiliser."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשר לאפליקציות ולסוכני AI לצלם באמצעות הפקודה snapzy, ובחר מי רשאי להשתמש בה."
           }
         },
         "ja": {
@@ -953,6 +1037,12 @@
             "value": "Installer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התקנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1017,6 +1107,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "L’installation ajoute snapzy à votre PATH pour pouvoir le taper dans n’importe quel Terminal ou agent IA. Snapzy fonctionne aussi sans."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההתקנה מוסיפה את snapzy ל־PATH כדי שתוכל להקליד אותה בכל טרמינל או סוכן AI. Snapzy ממשיכה לעבוד גם בלעדיה."
           }
         },
         "ja": {
@@ -1085,6 +1181,12 @@
             "value": "Impossible de mettre à jour la commande snapzy"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לעדכן את הפקודה snapzy"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1149,6 +1251,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autoriser une fois"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור חד־פעמי"
           }
         },
         "ja": {
@@ -1217,6 +1325,12 @@
             "value": "Toujours autoriser"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור תמיד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1281,6 +1395,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ne pas autoriser"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא לאשר"
           }
         },
         "ja": {
@@ -1349,6 +1469,12 @@
             "value": "Elle a exécuté « snapzy %@ ». Si vous l’autorisez, cette app et tout ce qu’elle lance pourront capturer vos écrans et fenêtres avec Snapzy. Vous pourrez modifier ce choix plus tard dans Réglages → Ligne de commande."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "היא הריצה את ״snapzy %@״. אם תאשר, האפליקציה הזו וכל מה שהיא מריצה יוכלו לצלם את המסכים והחלונות שלך דרך Snapzy. אפשר לשנות זאת בהמשך בהגדרות ← שורת פקודה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1413,6 +1539,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "« %@ » veut capturer votre écran avec Snapzy"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "״%@״ מבקשת לצלם את המסך שלך באמצעות Snapzy"
           }
         },
         "ja": {
@@ -1481,6 +1613,12 @@
             "value": "Snapzy n’a pas pu vérifier qui a créé cette app. Autorisez-la seulement si vous faites confiance à l’app située dans %@."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy לא הצליחה לאמת מי יצר את האפליקציה הזו. אשר רק אם אתה סומך על האפליקציה שבמיקום %@."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1545,6 +1683,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tout retirer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת הכול"
           }
         },
         "ja": {
@@ -1613,6 +1757,12 @@
             "value": "Retirer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1677,6 +1827,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מורשית"
           }
         },
         "ja": {
@@ -1745,6 +1901,12 @@
             "value": "Refusée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדחתה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1809,6 +1971,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ est un fichier, pas un lien"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ הוא קובץ, לא קישור"
           }
         },
         "ja": {
@@ -1877,6 +2045,12 @@
             "value": "Installée par Homebrew dans %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הותקנה דרך Homebrew במיקום %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1941,6 +2115,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Installée avec Homebrew. Exécutez %@ dans le Terminal pour l’ajouter au PATH"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הותקנה דרך Homebrew. הרץ את %@ בטרמינל כדי להוסיף אותה ל־PATH"
           }
         },
         "ja": {
@@ -2009,6 +2189,12 @@
             "value": "Installée dans %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מותקנת במיקום %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2073,6 +2259,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pas encore dans le PATH. Les apps peuvent la lancer depuis Snapzy.app/Contents/Helpers"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עדיין לא ב־PATH. אפליקציות עדיין יכולות להריץ אותה מתוך Snapzy.app/Contents/Helpers"
           }
         },
         "ja": {
@@ -2141,6 +2333,12 @@
             "value": "Liée à une autre copie : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקושרת לעותק אחר: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2205,6 +2403,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Commande snapzy"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפקודה snapzy"
           }
         },
         "ja": {
@@ -2273,6 +2477,12 @@
             "value": "Désinstaller"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הסרת התקנה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2337,6 +2547,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une app inconnue"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפליקציה לא מוכרת"
           }
         },
         "ja": {

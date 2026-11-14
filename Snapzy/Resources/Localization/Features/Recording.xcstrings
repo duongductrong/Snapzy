@@ -28,6 +28,12 @@
             "value": "Accès à la caméra requis"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת גישה למצלמה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -91,6 +97,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Choisissez une entrée de caméra"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת מצלמה"
           }
         },
         "ja": {
@@ -158,6 +170,12 @@
             "value": "Appareil photo Continuité"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלמת המשכיות (Continuity)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -221,6 +239,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Caméra déconnectée. En attente de reconnexion…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המצלמה נותקה. ממתין לחיבור מחדש…"
           }
         },
         "ja": {
@@ -288,6 +312,12 @@
             "value": "Ne pas utiliser la caméra"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא מצלמה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -351,6 +381,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Caméra désactivée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המצלמה כבויה"
           }
         },
         "ja": {
@@ -418,6 +454,12 @@
             "value": "Caméra activée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המצלמה פועלת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -481,6 +523,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Options de la caméra"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשרויות מצלמה"
           }
         },
         "ja": {
@@ -548,6 +596,12 @@
             "value": "Snapzy a besoin de l'accès à la caméra. Veuillez l'activer dans Réglages Système > Confidentialité et sécurité > Appareil photo."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאת מצלמה. הפעל אותה בהגדרות המערכת > פרטיות ואבטחה > מצלמה."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -611,6 +665,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy a besoin de l'accès à la caméra pour superposer la caméra sur l'enregistrement."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאת מצלמה כדי להוסיף שכבת מצלמה להקלטה."
           }
         },
         "ja": {
@@ -678,6 +738,12 @@
             "value": "Caméra par défaut du système"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצלמת ברירת המחדל של המערכת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -741,6 +807,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Caméra indisponible"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המצלמה לא זמינה"
           }
         },
         "ja": {
@@ -808,6 +880,12 @@
             "value": "Échec de la création du fichier de sortie GIF"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "יצירת קובץ ה־GIF נכשלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -871,6 +949,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible de lire le fichier GIF"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן לקרוא את קובץ ה־GIF"
           }
         },
         "ja": {
@@ -938,6 +1022,12 @@
             "value": "Échec de la finalisation du fichier GIF"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השלמת קובץ ה־GIF נכשלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1001,6 +1091,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de la finalisation du GIF redimensionné"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השלמת ה־GIF בגודל החדש נכשלה"
           }
         },
         "ja": {
@@ -1068,6 +1164,12 @@
             "value": "Fichier vidéo invalide ou vide"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קובץ וידאו לא תקין או ריק"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1131,6 +1233,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'extraire des images de la vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן היה לחלץ פריימים מהווידאו"
           }
         },
         "ja": {
@@ -1198,6 +1306,12 @@
             "value": "Le GIF ne contient aucun cadre"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ה־GIF לא מכיל פריימים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1261,6 +1375,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En bas au centre"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה במרכז"
           }
         },
         "ja": {
@@ -1328,6 +1448,12 @@
             "value": "En bas à gauche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה משמאל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1391,6 +1517,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En bas à droite"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למטה מימין"
           }
         },
         "ja": {
@@ -1458,6 +1590,12 @@
             "value": "En haut au centre"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה במרכז"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1521,6 +1659,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "En haut à gauche"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה משמאל"
           }
         },
         "ja": {
@@ -1588,6 +1732,12 @@
             "value": "En haut à droite"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למעלה מימין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1651,6 +1801,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Accès au microphone requis"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת גישה למיקרופון"
           }
         },
         "ja": {
@@ -1718,6 +1874,12 @@
             "value": "Choisir une entrée microphone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1781,6 +1943,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Continuer sans micro"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך ללא מיקרופון"
           }
         },
         "ja": {
@@ -1848,6 +2016,12 @@
             "value": "Ne pas utiliser le micro"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ללא מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1911,6 +2085,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Microphone muet"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השתקת המיקרופון"
           }
         },
         "ja": {
@@ -1978,6 +2158,12 @@
             "value": "Micro éteint"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המיקרופון כבוי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2041,6 +2227,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Micro activé"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המיקרופון פועל"
           }
         },
         "ja": {
@@ -2108,6 +2300,12 @@
             "value": "Options du microphone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשרויות מיקרופון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2171,6 +2369,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy a besoin de l'autorisation du microphone. Veuillez l'activer dans Paramètres système > Confidentialité et sécurité > Microphone."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאת מיקרופון. הפעל אותה בהגדרות המערכת > פרטיות ואבטחה > מיקרופון."
           }
         },
         "ja": {
@@ -2238,6 +2442,12 @@
             "value": "Snapzy a besoin de l'autorisation du microphone pour enregistrer de l'audio. Veuillez accorder l'accès dans les paramètres système."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאת מיקרופון כדי להקליט שמע. אשר גישה בהגדרות המערכת."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2301,6 +2511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Micro par défaut du système"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקרופון ברירת המחדל של המערכת"
           }
         },
         "ja": {
@@ -2368,6 +2584,12 @@
             "value": "Indisponible"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זמין"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2431,6 +2653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effacement automatique : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניקוי אוטומטי: %@"
           }
         },
         "ja": {
@@ -2498,6 +2726,12 @@
             "value": "Dernier %d"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d אחרונים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2563,6 +2797,12 @@
             "value": "Contrôle (⌃)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Control (⌃)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2623,6 +2863,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Option (⌥)"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "Option (⌥)"
@@ -2693,6 +2939,12 @@
             "value": "Maj (⇧)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shift (⇧)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2756,6 +3008,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Persister"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קבוע"
           }
         },
         "ja": {
@@ -2823,6 +3081,12 @@
             "value": "Sélection de zone"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת אזור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2886,6 +3150,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture de sélection de zone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום בחירת אזור"
           }
         },
         "ja": {
@@ -2953,6 +3223,12 @@
             "value": "Audio"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמע"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3016,6 +3292,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annuler l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול ההקלטה"
           }
         },
         "ja": {
@@ -3083,6 +3365,12 @@
             "value": "Capturer une capture d'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3146,6 +3434,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez pour arrêter l'enregistrement (%@)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי לעצור את ההקלטה (%@)"
           }
         },
         "ja": {
@@ -3213,6 +3507,12 @@
             "value": "Supprimer l'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3275,6 +3575,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Assombrir la zone non sélectionnée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עמעום האזור שלא נבחר"
           }
         },
         "ja": {
@@ -3342,6 +3648,12 @@
             "value": "Désactiver les annotations"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השבתת הסימונים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3405,6 +3717,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Activer les annotations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת הסימונים"
           }
         },
         "ja": {
@@ -3472,6 +3790,12 @@
             "value": "Format"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פורמט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3535,6 +3859,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture plein écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך מלא"
           }
         },
         "ja": {
@@ -3602,6 +3932,12 @@
             "value": "Mettre en surbrillance les clics"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגשת לחיצות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3665,6 +4001,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Microphone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מיקרופון"
           }
         },
         "ja": {
@@ -3732,6 +4074,12 @@
             "value": "Options"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשרויות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3795,6 +4143,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Options d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשרויות הקלטה"
           }
         },
         "ja": {
@@ -3862,6 +4216,12 @@
             "value": "Ouvre les paramètres de format, de qualité et de superpositions"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פותח הגדרות פורמט, איכות ושכבות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3922,6 +4282,12 @@
           }
         },
         "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GIF"
+          }
+        },
+        "he": {
           "stringUnit": {
             "state": "translated",
             "value": "GIF"
@@ -3992,6 +4358,12 @@
             "value": "Mode de sortie"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מצב פלט"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4055,6 +4427,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvre la sélection du format de sortie"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פותח את בחירת פורמט הפלט"
           }
         },
         "ja": {
@@ -4122,6 +4500,12 @@
             "value": "Vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "וידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4185,6 +4569,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Superpositions"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שכבות"
           }
         },
         "ja": {
@@ -4252,6 +4642,12 @@
             "value": "Automatique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אוטומטי"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4315,6 +4711,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Native"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקורית"
           }
         },
         "ja": {
@@ -4382,6 +4784,12 @@
             "value": "Résolution maximale"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רזולוציה מרבית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4445,6 +4853,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Suspendre l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השהיית ההקלטה"
           }
         },
         "ja": {
@@ -4512,6 +4926,12 @@
             "value": "Élevé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גבוהה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4575,6 +4995,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Faible"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נמוכה"
           }
         },
         "ja": {
@@ -4642,6 +5068,12 @@
             "value": "Moyen"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בינונית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4705,6 +5137,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Qualité"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איכות"
           }
         },
         "ja": {
@@ -4772,6 +5210,12 @@
             "value": "Enregistrer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4835,6 +5279,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement en cours"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה מתבצעת"
           }
         },
         "ja": {
@@ -4902,6 +5352,12 @@
             "value": "Enregistrement en pause"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההקלטה מושהית"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4965,6 +5421,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redémarrer l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת ההקלטה מחדש"
           }
         },
         "ja": {
@@ -5032,6 +5494,12 @@
             "value": "Reprendre l'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5095,6 +5563,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Paramètres d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרות הקלטה"
           }
         },
         "ja": {
@@ -5162,6 +5636,12 @@
             "value": "Afficher le curseur"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הסמן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5225,6 +5705,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher les frappes"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגת הקשות מקלדת"
           }
         },
         "ja": {
@@ -5292,6 +5778,12 @@
             "value": "Démarrer l'enregistrement en tant que %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת הקלטה כ־%@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5355,6 +5847,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Commence l'enregistrement d'écran avec les paramètres actuels"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מתחיל הקלטת מסך עם ההגדרות הנוכחיות"
           }
         },
         "ja": {
@@ -5422,6 +5920,12 @@
             "value": "Barre d'état d'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שורת מצב ההקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5485,6 +5989,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrêter"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עצירה"
           }
         },
         "ja": {
@@ -5552,6 +6062,12 @@
             "value": "Arrêter l'enregistrement - Durée : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עצירת ההקלטה - משך: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5615,6 +6131,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Arrête et sauvegarde l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עוצר ושומר את ההקלטה"
           }
         },
         "ja": {
@@ -5682,6 +6204,12 @@
             "value": "Audio système"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמע המערכת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5745,6 +6273,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Barre d'outils d'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סרגל ההקלטה"
           }
         },
         "ja": {
@@ -5812,6 +6346,12 @@
             "value": "Choisissez où Snapzy doit enregistrer les captures d'écran et les enregistrements"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר היכן Snapzy תשמור צילומי מסך והקלטות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5875,6 +6415,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת ההקלטה"
           }
         },
         "ja": {
@@ -5942,6 +6488,12 @@
             "value": "L'enregistrement en cours sera supprimé et ne sera pas enregistré. Cette action est irréversible."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההקלטה הנוכחית תימחק ולא תישמר. לא ניתן לבטל פעולה זו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6005,6 +6557,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer l'enregistrement ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "למחוק את ההקלטה?"
           }
         },
         "ja": {
@@ -6072,6 +6630,12 @@
             "value": "Enregistrement annulé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההקלטה בוטלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6135,6 +6699,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'ajouter une entrée d'écriture de microphone"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להוסיף קלט מיקרופון לכתיבה"
           }
         },
         "ja": {
@@ -6202,6 +6772,12 @@
             "value": "Impossible d'ajouter l'entrée du graveur audio système"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להוסיף קלט שמע מערכת לכתיבה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6265,6 +6841,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Impossible d'ajouter une entrée de rédacteur vidéo"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא ניתן להוסיף קלט וידאו לכתיבה"
           }
         },
         "ja": {
@@ -6332,6 +6914,12 @@
             "value": "Échec du démarrage de l'écriture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת הכתיבה נכשלה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6395,6 +6983,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Autorisation du microphone refusée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאת המיקרופון נדחתה"
           }
         },
         "ja": {
@@ -6462,6 +7056,12 @@
             "value": "Aucun affichage trouvé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצא מסך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6525,6 +7125,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucune URL de sortie"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין כתובת פלט"
           }
         },
         "ja": {
@@ -6592,6 +7198,12 @@
             "value": "Autorisation d'enregistrement d'écran refusée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הרשאת הקלטת המסך נדחתה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6655,6 +7267,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La zone de sélection est en dehors des limites d'affichage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "האזור שנבחר חורג מגבולות המסך"
           }
         },
         "ja": {
@@ -6722,6 +7340,12 @@
             "value": "Échec de l'installation : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההכנה נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6785,6 +7409,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "ScreenCaptureKit n'a pas pu charger le contenu partageable : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ScreenCaptureKit לא הצליח לטעון את התוכן לשיתוף: %@"
           }
         },
         "ja": {
@@ -6852,6 +7482,12 @@
             "value": "Échec de l'écriture : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הכתיבה נכשלה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6915,6 +7551,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Échec de l'enregistrement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההקלטה נכשלה"
           }
         },
         "ja": {
@@ -6982,6 +7624,12 @@
             "value": "Continuer l'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "המשך הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7045,6 +7693,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Supprimer et redémarrer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקה והתחלה מחדש"
           }
         },
         "ja": {
@@ -7112,6 +7766,12 @@
             "value": "L'enregistrement en cours sera supprimé et un nouveau commencera. Cette action est irréversible."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ההקלטה הנוכחית תימחק ותתחיל הקלטה חדשה. לא ניתן לבטל פעולה זו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7175,6 +7835,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Redémarrer l'enregistrement ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להתחיל את ההקלטה מחדש?"
           }
         },
         "ja": {
@@ -7242,6 +7908,12 @@
             "value": "Snapzy a besoin d'une autorisation de dossier de sauvegarde pour continuer. Veuillez choisir un dossier lors de l'intégration ou l'accorder maintenant."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy זקוקה להרשאה לתיקיית שמירה כדי להמשיך. בחר תיקייה בתהליך ההיכרות או אשר זאת עכשיו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7305,6 +7977,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer l'accès à l'emplacement requis"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת גישה למיקום השמירה"
           }
         },
         "ja": {
@@ -7372,6 +8050,12 @@
             "value": "Échec de la capture d'écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום המסך נכשל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7435,6 +8119,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Forme"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צורה"
           }
         },
         "ja": {
@@ -7502,6 +8192,12 @@
             "value": "Par défaut (Rectangle)"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ברירת מחדל (מלבן)"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7565,6 +8261,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Carré"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ריבוע"
           }
         },
         "ja": {
@@ -7632,6 +8334,12 @@
             "value": "Cercle"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עיגול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7695,6 +8403,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Taille"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גודל"
           }
         },
         "ja": {
@@ -7762,6 +8476,12 @@
             "value": "Petit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קטן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7825,6 +8545,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Moyen"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בינוני"
           }
         },
         "ja": {
@@ -7892,6 +8618,12 @@
             "value": "Grand"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גדול"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7957,6 +8689,12 @@
             "value": "Miroir de la caméra"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "תמונת מראה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8020,6 +8758,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désactiver la caméra"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כיבוי המצלמה"
           }
         },
         "ja": {

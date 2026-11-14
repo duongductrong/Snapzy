@@ -28,6 +28,12 @@
             "value": "Action requise"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "נדרשת פעולה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -93,6 +99,12 @@
             "value": "Actif uniquement pendant l’enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעיל רק בזמן הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -156,6 +168,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis pour les actions courantes dans l'éditeur d'annotations."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים לפעולות נפוצות בעורך הסימון."
           }
         },
         "ja": {
@@ -224,6 +242,12 @@
             "value": "Copiez, épinglez, envoyez et masquez depuis l’éditeur."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה, הצמדה, העלאה והשחרה מתוך העורך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -288,6 +312,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Touches intégrées de l’éditeur, pour référence."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקשים מובנים של העורך, לעיון."
           }
         },
         "ja": {
@@ -356,6 +386,12 @@
             "value": "Des touches uniques pour changer d’outil dans l’éditeur."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקשים בודדים להחלפת כלים בעורך."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -419,6 +455,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis à une seule touche pour changer d'outil dans l'éditeur d'annotations."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי מקש בודד להחלפת כלים בעורך הסימון."
           }
         },
         "ja": {
@@ -486,6 +528,12 @@
             "value": "Dans la surcouche Capture de zone."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקש בודד (A) פועל יחד עם צילום אזור; צירוף עם מקשי שינוי (⇧⌘A)\nפועל באופן עצמאי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -549,6 +597,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d’application"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום אפליקציה"
           }
         },
         "ja": {
@@ -616,6 +670,12 @@
             "value": "La touche unique (A) est associée à Enregistrer l’écran ; la combinaison de modificateurs (⇧⌘A)\nfonctionne indépendamment."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקש בודד (A) פועל יחד עם הקלטת מסך; צירוף עם מקשי שינוי (⇧⌘A)\nפועל באופן עצמאי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -679,6 +739,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrement d’application"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת אפליקציה"
           }
         },
         "ja": {
@@ -746,6 +812,12 @@
             "value": "Rechercher localement du texte sensible et ajouter des annotations de flou modifiables"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איתור מקומי של טקסט רגיש והוספת טשטוש שניתן לערוך"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -809,6 +881,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture instantanément la fenêtre active, sans étape de sélection"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מיידי של החלון הממוקד, ללא שלב בחירה"
           }
         },
         "ja": {
@@ -876,6 +954,12 @@
             "value": "Sélectionnez une zone, marquez-la sur place, puis terminez avec ⌘S ou Entrée"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחר אזור, סמן עליו במקום, וסיים עם ⌘S או Enter"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -939,6 +1023,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sélectionnez une région à capturer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בחירת אזור לצילום"
           }
         },
         "ja": {
@@ -1006,6 +1096,12 @@
             "value": "Compte à rebours, puis sélection d'une zone sur l'écran figé"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספירה לאחור, ואז בחירת אזור על מסך מוקפא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1071,6 +1167,12 @@
             "value": "Compte à rebours, puis capture de l'écran entier"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ספירה לאחור, ואז צילום המסך המלא"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1134,6 +1236,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturez instantanément tout l’écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מיידי של המסך כולו"
           }
         },
         "ja": {
@@ -1202,6 +1310,12 @@
             "value": "Captures d’écran, capture défilante, OCR et plus."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילומי מסך, צילום גלילה, OCR ועוד."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1265,6 +1379,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturer à nouveau la zone sélectionnée"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום חוזר של האזור שנבחר קודם"
           }
         },
         "ja": {
@@ -1332,6 +1452,12 @@
             "value": "Capturer des raccourcis"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי צילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1395,6 +1521,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Extraire le texte de la région de l'écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "חילוץ טקסט מאזור במסך"
           }
         },
         "ja": {
@@ -1462,6 +1594,12 @@
             "value": "Activer ou désactiver tous les raccourcis de carte d'un coup"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלה או כיבוי של כל קיצורי הכרטיס בבת אחת"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1525,6 +1663,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis d'actions de carte"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי פעולות כרטיס"
           }
         },
         "ja": {
@@ -1592,6 +1736,12 @@
             "value": "Actif uniquement au survol d'une carte"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעיל רק כשהעכבר מעל כרטיס"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1655,6 +1805,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Actions de carte d'accès rapide"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות כרטיס הגישה המהירה"
           }
         },
         "ja": {
@@ -1722,6 +1878,12 @@
             "value": "Survolez une carte d'accès rapide, puis appuyez sur un raccourci pour exécuter l'action. Ces touches ne fonctionnent que lorsque le pointeur est sur une carte."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "רחף מעל כרטיס גישה מהירה ולחץ על קיצור כדי להפעיל את הפעולה. מקשים אלה פועלים רק כשהסמן מעל כרטיס."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1787,6 +1949,12 @@
             "value": "Télécharger une image annotée sur le cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העלאת התמונה המסומנת לענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1850,6 +2018,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Afficher ou masquer l'historique des téléversements cloud"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה/הסתרה של היסטוריית ההעלאות לענן"
           }
         },
         "ja": {
@@ -1918,6 +2092,12 @@
             "value": "Conflit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התנגשות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -1981,6 +2161,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copiez l'image annotée dans le presse-papiers et fermez"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת התמונה המסומנת ללוח וסגירה"
           }
         },
         "ja": {
@@ -2048,6 +2234,12 @@
             "value": "Supprimer l'enregistrement actif et annuler. Optionnel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת ההקלטה הפעילה וביטול. אופציונלי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2113,6 +2305,12 @@
             "value": "Vous ne pourrez pas capturer de captures d'écran ou d'enregistrements à l'aide des raccourcis clavier d'une application. Vous devrez ouvrir Snapzy manuellement pour utiliser les fonctionnalités de capture."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא תוכל לצלם מסך או להקליט באמצעות קיצורי מקלדת מאף אפליקציה. תצטרך לפתוח את Snapzy ידנית כדי להשתמש בתכונות הצילום."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2176,6 +2374,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désactiver les raccourcis clavier ?"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "להשבית את קיצורי המקלדת?"
           }
         },
         "ja": {
@@ -2278,6 +2482,12 @@
             "state": "translated",
             "value": "編輯最新擷取"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת הצילום האחרון"
+          }
         }
       }
     },
@@ -2343,6 +2553,12 @@
             "state": "translated",
             "value": "在顯示預覽時開啟最新擷取的編輯器。"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת העורך עבור הצילום האחרון בזמן שהתצוגה המקדימה שלו מוצגת"
+          }
         }
       }
     },
@@ -2371,6 +2587,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capturez depuis n'importe quelle application"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מכל אפליקציה"
           }
         },
         "ja": {
@@ -2438,6 +2660,12 @@
             "value": "Activer les raccourcis"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעלת קיצורים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2501,6 +2729,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les raccourcis utilisant la touche Fn nécessitent l'autorisation Accessibilité pour fonctionner depuis d'autres apps."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים שמשתמשים במקש Fn דורשים הרשאת נגישות כדי לפעול מאפליקציות אחרות."
           }
         },
         "ja": {
@@ -2568,6 +2802,12 @@
             "value": "Raccourcis mondiaux"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים גלובליים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2631,6 +2871,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utilisez les raccourcis clavier pour capturer depuis n'importe où."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שימוש בקיצורי מקלדת לצילום מכל מקום."
           }
         },
         "ja": {
@@ -2699,6 +2945,12 @@
             "value": "Toutes les combinaisons de touches que Snapzy écoute, au même endroit."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כל צירופי המקשים ש־Snapzy מאזינה להם, במקום אחד."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2763,6 +3015,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrez l’historique des captures et changez le mode du panneau."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת היסטוריית הצילומים והחלפת מצב החלונית שלה."
           }
         },
         "ja": {
@@ -2830,6 +3088,12 @@
             "value": "Raccourcis d'historique"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי היסטוריה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2895,6 +3159,12 @@
             "value": "Gérer les raccourcis clavier pour le navigateur d'historique de capture et le basculement du mode flottant."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ניהול קיצורי מקלדת לדפדפן היסטוריית הצילומים ולמעבר למצב צף."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -2958,6 +3228,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "COMMENT DÉSACTIVER"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איך להשבית"
           }
         },
         "ja": {
@@ -3026,6 +3302,12 @@
             "value": "Raccourcis dans l’app"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים בתוך האפליקציה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3089,6 +3371,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Figer l’écran, puis mesurer les espacements et tailles entre les bords"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקפאת המסך ומדידת מרווחים וגדלים בין קצוות"
           }
         },
         "ja": {
@@ -3157,6 +3445,12 @@
             "value": "Aucun conflit"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אין התנגשויות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3220,6 +3514,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun raccourci de capture d'écran macOS se chevauchant n'a été trouvé pour les raccourcis Snapzy que vous avez actuellement activés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא נמצאו קיצורי צילום מסך של macOS שמתנגשים עם קיצורי Snapzy המופעלים כעת."
           }
         },
         "ja": {
@@ -3287,6 +3587,12 @@
             "value": "Aucun conflit détecté"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לא זוהו התנגשויות"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3350,6 +3656,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrir l'éditeur d'annotations d'images"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת עורך הסימון לתמונות"
           }
         },
         "ja": {
@@ -3417,6 +3729,12 @@
             "value": "Ouvrir le navigateur d’historique de capture"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת דפדפן היסטוריית הצילומים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3480,6 +3798,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrir les paramètres des raccourcis clavier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת הגדרות קיצורי המקלדת"
           }
         },
         "ja": {
@@ -3547,6 +3871,12 @@
             "value": "Ouvrir les outils de montage vidéo"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת כלי עריכת הווידאו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3610,6 +3940,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mettre en pause ou reprendre un enregistrement actif. Optionnel. Recommandé : ⌘⇧Space."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השהיה או המשך של הקלטה פעילה. אופציונלי. מומלץ: ⌘⇧Space."
           }
         },
         "ja": {
@@ -3677,6 +4013,12 @@
             "value": "Agrandissez l’écran, puis cliquez sur un pixel pour copier sa couleur hexadécimale"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדלת המסך ולחיצה על פיקסל כדי להעתיק את קוד הצבע (hex) שלו"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -3741,6 +4083,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modifiez la dernière capture et agissez sur la carte survolée."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "עריכת הצילום האחרון ופעולה על הכרטיס שמתחת לעכבר."
           }
         },
         "ja": {
@@ -3843,6 +4191,12 @@
             "state": "translated",
             "value": "快速訪問"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גישה מהירה"
+          }
         }
       }
     },
@@ -3908,6 +4262,12 @@
             "state": "translated",
             "value": "快速訪問預覽顯示在螢幕上時處於啟用狀態的快速鍵。"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורים שפעילים בזמן שתצוגה מקדימה של הגישה המהירה מוצגת."
+          }
         }
       }
     },
@@ -3936,6 +4296,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Démarrer l'enregistrement d'écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת הקלטת מסך"
           }
         },
         "ja": {
@@ -4001,6 +4367,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez sur un raccourci pour enregistrer de nouvelles touches. Appuyez sur Retour arrière/Suppr pendant l’enregistrement pour les effacer. Appuyez sur Échap pour annuler."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ על קיצור כדי להקליט מקשים חדשים. לחץ Backspace/Delete בזמן ההקלטה כדי לנקות. לחץ Esc לביטול."
           }
         },
         "ja": {
@@ -4069,6 +4441,12 @@
             "value": "Enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4133,6 +4511,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lancez un enregistrement et contrôlez-le pendant qu’il tourne."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלת הקלטה ושליטה בה בזמן שהיא פועלת."
           }
         },
         "ja": {
@@ -4200,6 +4584,12 @@
             "value": "Raccourcis d'enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4263,6 +4653,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis macOS standard utilisés dans l'éditeur d'annotations."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי macOS סטנדרטיים שמשמשים בעורך הסימון."
           }
         },
         "ja": {
@@ -4330,6 +4726,12 @@
             "value": "Réinitialiser aux valeurs par défaut"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "איפוס לברירות המחדל"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4393,6 +4795,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Recommencer/Réenregistrer à partir de zéro. Optionnel."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התחלה מחדש / הקלטה מחדש מההתחלה. אופציונלי."
           }
         },
         "ja": {
@@ -4459,6 +4867,12 @@
             "value": "Définir la touche"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרת מקש"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4521,6 +4935,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Définir le raccourci"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הגדרת קיצור"
           }
         },
         "ja": {
@@ -4586,6 +5006,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ouvrir la superposition des raccourcis clavier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת חלונית קיצורי המקלדת"
           }
         },
         "ja": {
@@ -4654,6 +5080,12 @@
             "value": "Les raccourcis sont désactivés. Utilisez l’interrupteur de la barre d’outils pour les réactiver."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקיצורים כבויים. השתמש במתג שבסרגל הכלים כדי להפעיל אותם מחדש."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4717,6 +5149,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cliquez pour enregistrer. Appuyez sur Retour arrière/Suppr pendant l’enregistrement pour effacer les touches. Appuyez sur Échap pour annuler."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי להקליט. לחץ Backspace/Delete בזמן ההקלטה כדי לנקות. לחץ Esc לביטול."
           }
         },
         "ja": {
@@ -4819,6 +5257,12 @@
             "state": "translated",
             "value": "Wählen Sie ein bestimmtes UI-Element aus"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הדגשה חיה של רכיב ממשק נגיש, ולחיצה כדי לצלם אותו"
+          }
         }
       }
     },
@@ -4847,6 +5291,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désactivez les raccourcis macOS qui se chevauchent pour éviter les conflits avec les raccourcis Snapzy que vous gardez activés."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבה את קיצורי macOS החופפים כדי למנוע התנגשות עם קיצורי Snapzy שהשארת מופעלים."
           }
         },
         "ja": {
@@ -4914,6 +5364,12 @@
             "value": "Les raccourcis de capture d'écran macOS se chevauchent avec Snapzy"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי צילום המסך של macOS חופפים ל־Snapzy"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -4977,6 +5433,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis système"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי מערכת"
           }
         },
         "ja": {
@@ -5044,6 +5506,12 @@
             "value": "Basculer la barre d'outils de dessin et les superpositions. Optionnel."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצגה/הסתרה של סרגל הציור והשכבות. אופציונלי."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5107,6 +5575,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Épingler ou désépingler la fenêtre d'annotation"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדה או ביטול הצמדה של חלון הסימון"
           }
         },
         "ja": {
@@ -5175,6 +5649,12 @@
             "value": "Ouvrez les éditeurs, les envois cloud et la pipette."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פתיחת העורכים, ההעלאות לענן ובוחר הצבעים."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5238,6 +5718,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis des outils"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי כלים"
           }
         },
         "ja": {
@@ -5305,6 +5791,12 @@
             "value": "Annoter les actions"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "פעולות סימון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5368,6 +5860,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annoter la référence"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקשי עורך הסימון"
           }
         },
         "ja": {
@@ -5435,6 +5933,12 @@
             "value": "Annoter les clés d'outils"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקשי כלי הסימון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5498,6 +6002,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d’application : %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום אפליקציה: %@"
           }
         },
         "ja": {
@@ -5565,6 +6075,12 @@
             "value": "Enregistrement de l'application : %@"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטת אפליקציה: %@"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5628,6 +6144,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Masquer automatiquement les données sensibles"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "השחרה אוטומטית של מידע רגיש"
           }
         },
         "ja": {
@@ -5695,6 +6217,12 @@
             "value": "Annuler / Désélectionner"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול / ביטול בחירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5758,6 +6286,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fermer"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "סגירה"
           }
         },
         "ja": {
@@ -5825,6 +6359,12 @@
             "value": "Téléchargement dans le cloud"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העלאה לענן"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -5888,6 +6428,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Confirmer le recadrage"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור החיתוך"
           }
         },
         "ja": {
@@ -5955,6 +6501,12 @@
             "value": "Copier et fermer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקה וסגירה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6018,6 +6570,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Personnaliser dans Paramètres…"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "התאמה אישית בהגדרות…"
           }
         },
         "ja": {
@@ -6085,6 +6643,12 @@
             "value": "Supprimer l'annotation"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מחיקת סימון"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6148,6 +6712,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "À l'intérieur de l'éditeur d'annotations"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בתוך עורך הסימון"
           }
         },
         "ja": {
@@ -6215,6 +6785,12 @@
             "value": "Déplacer 10px"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזזה ב־10 פיקסלים"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6278,6 +6854,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annotation de déplacement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הזזת הסימון"
           }
         },
         "ja": {
@@ -6345,6 +6927,12 @@
             "value": "Enregistrement uniquement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הקלטה בלבד"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6408,6 +6996,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Refaire"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביצוע מחדש"
           }
         },
         "ja": {
@@ -6475,6 +7069,12 @@
             "value": "Enregistrer sous…"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה בשם…"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6538,6 +7138,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Enregistrer (Terminé)"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שמירה (סיום)"
           }
         },
         "ja": {
@@ -6605,6 +7211,12 @@
             "value": "Capture d'écran + enregistrement"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך + הקלטה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6668,6 +7280,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture d'écran uniquement"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך בלבד"
           }
         },
         "ja": {
@@ -6735,6 +7353,12 @@
             "value": "Capturer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6798,6 +7422,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Outils"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כלים"
           }
         },
         "ja": {
@@ -6865,6 +7495,12 @@
             "value": "Appuyez sur Echap ou cliquez à l'extérieur pour fermer"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ Esc או לחץ מחוץ לחלונית כדי לסגור"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -6928,6 +7564,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Raccourcis clavier"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "קיצורי מקלדת"
           }
         },
         "ja": {
@@ -6995,6 +7637,12 @@
             "value": "Goupille à bascule"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הצמדה/ביטול הצמדה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7058,6 +7706,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Annuler"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ביטול פעולה"
           }
         },
         "ja": {
@@ -7125,6 +7779,12 @@
             "value": "Cliquez pour enregistrer un raccourci."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ כדי להקליט קיצור."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7188,6 +7848,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Appuyez sur les touches..."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "לחץ על המקשים..."
           }
         },
         "ja": {
@@ -7255,6 +7921,12 @@
             "value": "Échanger"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "החלפה"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7318,6 +7990,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utiliser ce raccourci ici et attribuer l’ancien raccourci de cette action à l’autre action."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "שימוש בקיצור הזה כאן, והעברת הקיצור הקודם של פעולה זו לפעולה האחרת."
           }
         },
         "ja": {
@@ -7385,6 +8063,12 @@
             "value": "Activez ce raccourci pour le modifier."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הפעל את הקיצור הזה כדי לערוך אותו."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7448,6 +8132,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utilisé par %@"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "בשימוש על ידי %@"
           }
         },
         "ja": {
@@ -7515,6 +8205,12 @@
             "value": "Déjà utilisé par %@."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבר בשימוש על ידי %@."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7578,6 +8274,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Déjà utilisé par %@ dans l’éditeur Annoter."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "כבר בשימוש על ידי %@ בעורך הסימון."
           }
         },
         "ja": {
@@ -7645,6 +8347,12 @@
             "value": "Correspond à %@. macOS pourrait gagner."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "זהה ל־%@. ייתכן ש־macOS יקבל עדיפות."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7708,6 +8416,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "La touche fn n'est pas prise en charge pour les raccourcis de carte."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מקש fn אינו נתמך בקיצורי כרטיס."
           }
         },
         "ja": {
@@ -7775,6 +8489,12 @@
             "value": "Ajoutez ⌘, ⌥ ou ⌃. Les raccourcis de carte capturent la touche pendant le survol."
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "הוסף ⌘,‏ ⌥ או ⌃. קיצורי כרטיס תופסים את המקש בזמן ריחוף."
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7838,6 +8558,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Remplace %@ pendant le survol d'une carte."
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גובר על %@ בזמן ריחוף מעל כרטיס."
           }
         },
         "ja": {
@@ -7905,6 +8631,12 @@
             "value": "Zone de capture macOS"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום אזור של macOS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -7968,6 +8700,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture macOS en plein écran"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "צילום מסך מלא של macOS"
           }
         },
         "ja": {
@@ -8035,6 +8773,12 @@
             "value": "Zone de copie macOS"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת אזור של macOS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8100,6 +8844,12 @@
             "value": "Copier macOS en plein écran"
           }
         },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "העתקת מסך מלא של macOS"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
@@ -8163,6 +8913,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Options de capture d'écran et d'enregistrement macOS"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אפשרויות צילום והקלטה של macOS"
           }
         },
         "ja": {

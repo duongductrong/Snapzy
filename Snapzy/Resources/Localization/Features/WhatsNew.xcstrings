@@ -63,6 +63,12 @@
             "state": "translated",
             "value": "Snapzy 的新功能"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "מה חדש ב־Snapzy"
+          }
         }
       }
     },
@@ -127,6 +133,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "探索版本 %@ 中的最新功能。"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "גלו את התכונות החדשות בגרסה %@."
           }
         }
       }
@@ -193,6 +205,12 @@
             "state": "translated",
             "value": "Apple 公證認證"
           }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "אישור (Notarization) של Apple"
+          }
         }
       }
     },
@@ -257,6 +275,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Snapzy 現已正式註冊 Apple 開發者計劃並獲得 Apple 公證認證，繞過 Gatekeeper 保護以實現安全啟動。"
+          }
+        },
+        "he": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Snapzy רשומה כעת רשמית בתוכנית המפתחים של Apple ומאושרת על ידי Apple, כך שהיא נפתחת בבטחה ללא חסימת Gatekeeper."
           }
         }
       }
