@@ -137,5 +137,18 @@ final class PreferencesWindowController: NSObject, NSWindowDelegate {
       didElevateActivationPolicy = false
       DiagnosticLogger.shared.log(.debug, .ui, "Activation policy restored to accessory after preferences closed")
     }
+
+    // A closed (ordered-out) window keeps its NSHostingView alive, and SwiftUI does not
+    // fire onDisappear/cancel `.task` for it — so looping work such as the animated
+    // CaptureSettingsPreview kept rendering off-screen (~20–35% CPU while idle).
+    // Tear the hierarchy down; `show()` rebuilds it on demand.
+    guard let closingWindow = notification.object as? NSWindow, closingWindow === window else { return }
+    DispatchQueue.main.async { [weak self] in
+      guard let self, self.window === closingWindow, !closingWindow.isVisible else { return }
+      closingWindow.contentView = nil
+      closingWindow.delegate = nil
+      self.themeObserver = nil
+      self.window = nil
+    }
   }
 }
