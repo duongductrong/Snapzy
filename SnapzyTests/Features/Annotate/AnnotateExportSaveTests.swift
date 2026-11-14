@@ -86,9 +86,9 @@ final class AnnotateExportSaveTests: XCTestCase {
   func testRenderFinalImageUsesCombinedBoundsGapAndPadding() throws {
     let state = makeAnnotateState()
     state.loadImage(try makeImage(width: 200, height: 100))
-    state.importImage(try makeImage(width: 100, height: 100))
-    state.setCombineDirection(.horizontal)
+    // The gap spaces images as they are placed; placed images then stay put.
     state.setCombineGap(10)
+    state.importImage(try makeImage(width: 100, height: 100))
     state.padding = 24
 
     let rendered = try XCTUnwrap(AnnotateExporter.renderFinalImage(state: state))

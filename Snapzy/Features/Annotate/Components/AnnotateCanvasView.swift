@@ -245,7 +245,8 @@ struct AnnotateCanvasView: View {
 
     let fitBounds: CGRect
     if state.isCombineMode {
-      fitBounds = combineBounds
+      // Fixed during a gesture even while the canvas grows (see liveCombineCanvasBounds).
+      fitBounds = state.combineFitBounds
     } else if let cropBounds, !state.isCropActive {
       fitBounds = cropBounds
     } else {
@@ -300,6 +301,10 @@ struct AnnotateCanvasView: View {
       baseCanvasSize: CGSize(width: bgWidth, height: bgHeight),
       fitScale: scale
     )
+
+    let combineGrowthAnchorOffset: CGPoint = state.isCombineMode
+      ? displayOffset(for: foregroundBounds, in: fitBounds, scale: scale)
+      : .zero
 
     let foregroundWidth = foregroundBounds.width * scale
     let foregroundHeight = foregroundBounds.height * scale
@@ -370,6 +375,9 @@ struct AnnotateCanvasView: View {
         isEnabled: state.isCombineMode,
         cornerRadius: state.effectiveCornerRadius * scale
       ))
+      // While a drag grows the canvas, keep the pre-gesture area where it was on
+      // screen: the canvas extends toward the pointer instead of re-centring.
+      .offset(x: combineGrowthAnchorOffset.x, y: combineGrowthAnchorOffset.y)
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
       // AppKit conversion exposes the layout transform, not a Core Animation
@@ -716,7 +724,7 @@ private final class AnnotateDropBatch {
 }
 
 /// Chains a multi-image drop: the first image lands on the drop target, each later one
-/// attaches after the previous image (right of it for a side drop, below for top/bottom).
+/// lands on the same side of the previous image, so the batch extends outward.
 @MainActor
 private final class AnnotateDropPlacement {
   private(set) var next: CombineDropTarget?
@@ -729,15 +737,15 @@ private final class AnnotateDropPlacement {
     guard let layerID, let current = next else { return }
     switch current {
     case .stitch(_, let edge):
-      next = .stitch(anchor: layerID, edge: edge.isHorizontal ? .right : .bottom)
+      next = .stitch(anchor: layerID, edge: edge)
     case .overlay(let point):
       next = .overlay(at: CGPoint(x: point.x + 24, y: point.y - 24))
     }
   }
 }
 
-/// Drop handling for the editor canvas. While an image hovers in Auto Stitch (or over a
-/// single image) it publishes where the drop would land so the canvas can preview it.
+/// Drop handling for the editor canvas. While an image hovers it publishes where the drop
+/// would land so the canvas can preview it.
 private struct AnnotateCanvasDropDelegate: DropDelegate {
   let state: AnnotateState
   let bridge: CanvasInteractionBridge
