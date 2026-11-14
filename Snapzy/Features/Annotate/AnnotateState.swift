@@ -575,13 +575,27 @@ final class AnnotateState: ObservableObject {
   private var isExternalCombineDropActive = false
 
   func beginExternalCombineDrop(at point: CGPoint?) {
+    guard isExternalDragInFlight else {
+      endExternalCombineDrop()
+      return
+    }
     isExternalCombineDropActive = true
     updateCombineDropPreview(at: point)
   }
 
   func updateExternalCombineDrop(at point: CGPoint?) {
-    guard isExternalCombineDropActive else { return }
+    guard isExternalCombineDropActive, isExternalDragInFlight else {
+      endExternalCombineDrop()
+      return
+    }
     updateCombineDropPreview(at: point)
+  }
+
+  /// A drag session always holds a mouse button. SwiftUI can re-deliver `dropEntered`/
+  /// `dropUpdated` after the drop finished (button released); without this check that
+  /// late call leaves the preview frame on the canvas with nothing left to clear it.
+  private var isExternalDragInFlight: Bool {
+    NSEvent.pressedMouseButtons & 1 != 0
   }
 
   func endExternalCombineDrop() {
