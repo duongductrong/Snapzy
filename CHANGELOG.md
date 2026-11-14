@@ -4,6 +4,14 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.13] - 2026-11-14
+
+### Bug Fixes
+- clear stuck drop preview frame after dropping an image on annotate canvas (#745) (bba5596b)
+
+### Contributors
+- @duongductrong
+
 ## [2.2.0-beta.12] - 2026-11-14
 
 ### Features
