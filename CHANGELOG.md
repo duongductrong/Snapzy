@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.14] - 2026-11-14
+
+### Features
+- Added flip horizontal/vertical and group rotate+flip into one toolbar menu (#747) (88a87bc2)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+
 ## [2.2.0-beta.13] - 2026-11-14
 
 ### Bug Fixes
