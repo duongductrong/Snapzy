@@ -100,6 +100,13 @@ nonisolated struct MeasureGeometry: Equatable {
     return copy
   }
 
+  /// After a mirror of the image: the origin moves with the image, axes and scale are unchanged.
+  func mirrored(_ flipPoint: (CGPoint) -> CGPoint) -> MeasureGeometry {
+    var copy = self
+    copy.origin = flipPoint(origin)
+    return copy
+  }
+
   /// The span's bounds for a scan result: zero-thickness on an unmeasured axis.
   static func spanBounds(axis: MeasureAxis, origin: CGPoint, horizontal: ClosedRange<CGFloat>, vertical: ClosedRange<CGFloat>) -> CGRect {
     let minX = axis == .vertical ? origin.x : horizontal.lowerBound

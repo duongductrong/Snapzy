@@ -268,6 +268,20 @@ class AnnotateWindow: NSWindow {
       return true
     }
 
+    // ⌘L / ⌘R — rotate left / right (Preview convention). Key codes keep it layout-independent.
+    if flags == .command, !textInputActive, event.keyCode == 37 || event.keyCode == 15,
+       let interactionState, interactionState.canRotateImage {
+      interactionState.rotateImage(clockwise: event.keyCode == 15)
+      return true
+    }
+
+    // ⌃⌘H / ⌃⌘V — flip horizontal / vertical (⇧⌘H is the global History hotkey).
+    if flags == [.command, .control], !textInputActive, event.keyCode == 4 || event.keyCode == 9,
+       let interactionState, interactionState.canRotateImage {
+      interactionState.flipImage(event.keyCode == 4 ? .horizontal : .vertical)
+      return true
+    }
+
     if let objectShortcut = Self.annotationObjectShortcut(
       for: event,
       isTextInputActive: textInputActive

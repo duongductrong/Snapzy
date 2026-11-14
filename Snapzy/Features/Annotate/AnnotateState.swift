@@ -3374,6 +3374,105 @@ final class AnnotateState: ObservableObject {
     return rotated
   }
 
+  // MARK: - Flip
+
+  /// Mirror the source image across `axis` and bring annotations, crop bounds, embedded image
+  /// layers and cutout state along. Shares the rotation gate and undo entry type, so it is
+  /// reversible without touching the annotation-only undo path.
+  ///
+  /// Text and watermark glyphs are never mirrored: only their placement moves, so they stay
+  /// readable after the flip.
+  func flipImage(_ axis: AnnotateImageFlipAxis) {
+    guard canRotateImage,
+          let source = sourceImage,
+          let flippedSource = source.flipped(axis) else {
+      return
+    }
+
+    if editingTextAnnotationId != nil {
+      commitTextEditing()
+    }
+
+    DiagnosticLogger.shared.log(.info, .annotate, "Image flipped", context: [
+      "axis": axis.rawValue,
+      "size": "\(Int(imageWidth))x\(Int(imageHeight))"
+    ])
+
+    let size = CGSize(width: imageWidth, height: imageHeight)
+    pushImageTransformUndo(currentImageTransformSnapshot())
+
+    sourceImage = flippedSource
+    if let cutoutImage {
+      self.cutoutImage = cutoutImage.flipped(axis)
+    }
+
+    for (assetId, image) in embeddedImageAssets {
+      guard let flippedAsset = image.flipped(axis) else { continue }
+      embeddedImageAssets[assetId] = flippedAsset
+      embeddedImageSourceData.removeValue(forKey: assetId)
+      embeddedImageSnapshotCacheData.removeValue(forKey: assetId)
+    }
+    embeddedImageCGImageCache.removeAll()
+
+    annotations = annotations.map { flipAnnotation($0, size: size, axis: axis) }
+
+    cropRect = cropRect.map { AnnotateImageRotation.flipRect($0, size: size, axis: axis) }
+    originalCropRect = originalCropRect.map { AnnotateImageRotation.flipRect($0, size: size, axis: axis) }
+    cutoutAutoAppliedCropRect = cutoutAutoAppliedCropRect.map {
+      AnnotateImageRotation.flipRect($0, size: size, axis: axis)
+    }
+
+    hasUnsavedChanges = true
+  }
+
+  private func flipAnnotation(
+    _ annotation: AnnotationItem,
+    size: CGSize,
+    axis: AnnotateImageFlipAxis
+  ) -> AnnotationItem {
+    let flipPoint = { AnnotateImageRotation.flipPoint($0, size: size, axis: axis) }
+    var flipped = annotation
+    // A mirror preserves dimensions, so this one call also moves text layout boxes correctly.
+    flipped.bounds = AnnotateImageRotation.flipRect(annotation.bounds, size: size, axis: axis)
+
+    switch annotation.type {
+    case .arrow(let geometry):
+      let newGeometry = ArrowGeometry(
+        start: flipPoint(geometry.start),
+        end: flipPoint(geometry.end),
+        style: geometry.style,
+        controlPoint: geometry.resolvedControlPoint.map(flipPoint),
+        arrowType: geometry.arrowType,
+        startHead: geometry.startHead,
+        endHead: geometry.endHead
+      )
+      flipped.type = .arrow(newGeometry)
+      flipped.bounds = newGeometry.bounds()
+
+    case .line(let start, let end):
+      flipped.type = .line(start: flipPoint(start), end: flipPoint(end))
+
+    case .path(let points):
+      flipped.type = .path(points.map(flipPoint))
+
+    case .highlight(let points):
+      flipped.type = .highlight(points.map(flipPoint))
+
+    case .counter:
+      flipped.properties.counterArrowTarget = annotation.properties.counterArrowTarget.map(flipPoint)
+
+    case .measurement(let geometry):
+      flipped.type = .measurement(geometry.mirrored(flipPoint))
+
+    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
+      // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
+      // Embedded image bitmaps were mirrored with the assets above.
+      break
+    }
+
+    return flipped
+  }
+
   // MARK: - Counter
 
   /// Derive next counter value from existing annotations.

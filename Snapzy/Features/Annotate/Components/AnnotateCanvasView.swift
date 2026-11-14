@@ -405,6 +405,10 @@ struct AnnotateCanvasView: View {
         Label(L10n.AnnotateUI.extractText, systemImage: "text.viewfinder")
       }
       .disabled(!state.canExtractText)
+
+      Divider()
+
+      AnnotateImageTransformMenuItems(state: state)
     }
     .onAppear {
       state.updateViewportMetrics(
