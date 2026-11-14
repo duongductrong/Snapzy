@@ -172,6 +172,22 @@ class AnnotateWindow: NSWindow {
     }
   }
 
+  nonisolated static func arrangeAction(
+    for event: NSEvent,
+    isTextInputActive: Bool
+  ) -> AnnotationArrangeAction? {
+    guard !isTextInputActive, event.type == .keyDown else { return nil }
+    let flags = event.modifierFlags.intersection([.command, .option, .shift, .control])
+    // Key codes, not characters: ] and [ move around on non-US layouts.
+    switch (event.keyCode, flags) {
+    case (30, [.command]): return .bringForward
+    case (33, [.command]): return .sendBackward
+    case (30, [.command, .option]): return .bringToFront
+    case (33, [.command, .option]): return .sendToBack
+    default: return nil
+    }
+  }
+
   override func performKeyEquivalent(with event: NSEvent) -> Bool {
     guard event.type == .keyDown else {
       return super.performKeyEquivalent(with: event)
@@ -243,6 +259,26 @@ class AnnotateWindow: NSWindow {
         return super.performKeyEquivalent(with: event)
       }
       NotificationCenter.default.post(name: .annotateAutoRedactSensitiveData, object: self)
+      return true
+    }
+
+    // Arrange: ⌘] / ⌘[ step forward/backward, ⌥⌘] / ⌥⌘[ to front/back.
+    if let arrangeAction = Self.arrangeAction(for: event, isTextInputActive: textInputActive),
+       interactionState?.arrangeSelectedAnnotations(arrangeAction) == true {
+      return true
+    }
+
+    // ⌘L / ⌘R — rotate left / right (Preview convention). Key codes keep it layout-independent.
+    if flags == .command, !textInputActive, event.keyCode == 37 || event.keyCode == 15,
+       let interactionState, interactionState.canRotateImage {
+      interactionState.rotateImage(clockwise: event.keyCode == 15)
+      return true
+    }
+
+    // ⌃⌘H / ⌃⌘V — flip horizontal / vertical (⇧⌘H is the global History hotkey).
+    if flags == [.command, .control], !textInputActive, event.keyCode == 4 || event.keyCode == 9,
+       let interactionState, interactionState.canRotateImage {
+      interactionState.flipImage(event.keyCode == 4 ? .horizontal : .vertical)
       return true
     }
 

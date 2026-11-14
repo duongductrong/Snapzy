@@ -109,52 +109,187 @@ final class AnnotateImageOpsTests: XCTestCase {
     XCTAssertTrue(state.isCombineMode)
   }
 
-  func testCombineImportPlacesSecondImageFlushRightInHorizontalMode() throws {
+  func testCombineImportPlacesSecondImageFlushRight() throws {
     let state = makeAnnotateState()
     state.loadImage(try makeImage(width: 400, height: 300))
     state.importImage(try makeImage(width: 200, height: 100))
-    state.setCombineDirection(.horizontal)
 
+    XCTAssertEqual(state.combineMode, .freeCanvas)
+    // Top-aligned beside the base, never upscaled (same as a right-edge drop).
     let imported = try XCTUnwrap(state.annotations.first)
-    XCTAssertEqual(imported.bounds.minX, 400, accuracy: 0.001)
-    XCTAssertEqual(imported.bounds.minY, 0, accuracy: 0.001)
-    XCTAssertEqual(imported.bounds.height, 300, accuracy: 0.001)
-    XCTAssertEqual(state.combineContentBounds.width, 1000, accuracy: 0.001)
+    XCTAssertEqual(imported.bounds, CGRect(x: 400, y: 200, width: 200, height: 100))
+    XCTAssertEqual(state.combineContentBounds.width, 600, accuracy: 0.001)
   }
 
-  func testCombineModeSwitchRestoresFreeCanvasBounds() throws {
+  func testMovedCombineImageStaysWhereReleasedAndGrowsCanvas() throws {
     let state = makeAnnotateState()
     state.loadImage(try makeImage(width: 400, height: 300))
     state.importImage(try makeImage(width: 200, height: 100))
-    state.setCombineMode(.freeCanvas)
+    let id = try XCTUnwrap(state.annotations.first?.id)
 
-    let importedID = try XCTUnwrap(state.annotations.first?.id)
-    let freeBounds = CGRect(x: 90, y: -40, width: 240, height: 120)
-    state.updateAnnotationBounds(id: importedID, bounds: freeBounds)
-    state.setCombineMode(.autoStitch)
-    XCTAssertNotEqual(state.annotations.first?.bounds, freeBounds)
+    let moved = CGRect(x: 700, y: -50, width: 600, height: 300)
+    state.updateAnnotationBounds(id: id, bounds: moved)
+    state.refreshCombineLayout()
 
-    state.setCombineMode(.freeCanvas)
-    XCTAssertEqual(state.annotations.first?.bounds, freeBounds)
+    XCTAssertEqual(state.annotations.first?.bounds, moved)
+    XCTAssertEqual(state.combineContentBounds, CGRect(x: 0, y: -50, width: 1300, height: 350))
   }
 
-  func testCombineImageOrderCanMoveImportedImageBeforeBase() throws {
+  func testCombineCanvasHugsMarkupMovedPastTheEdge() throws {
     let state = makeAnnotateState()
     state.loadImage(try makeImage(width: 400, height: 300))
-    state.importImage(try makeImage(width: 200, height: 100))
+    state.importImage(try makeImage(width: 400, height: 300))
+    let rect = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 100, y: 100, width: 50, height: 50),
+      properties: AnnotationProperties(strokeWidth: 4)
+    )
+    state.annotations.append(rect)
+    XCTAssertEqual(state.combineContentBounds, CGRect(x: 0, y: 0, width: 800, height: 300))
 
-    state.moveCombineImage(at: 1, by: -1)
+    state.updateAnnotationBounds(id: rect.id, bounds: CGRect(x: 100, y: 320, width: 50, height: 50))
+    // Geometry plus half the stroke, so the outline is not clipped.
+    XCTAssertEqual(state.combineContentBounds.maxY, 372, accuracy: 0.001)
 
-    XCTAssertEqual(state.sourceImage?.size, NSSize(width: 200, height: 100))
-    guard case .embeddedImage(let assetID) = try XCTUnwrap(state.annotations.first).type else {
-      return XCTFail("Expected imported image layer")
-    }
-    XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 400, height: 300))
-    XCTAssertEqual(state.combineImageCount, 2)
+    state.updateAnnotationBounds(id: rect.id, bounds: CGRect(x: 100, y: 100, width: 50, height: 50))
+    XCTAssertEqual(state.combineContentBounds, CGRect(x: 0, y: 0, width: 800, height: 300))
+  }
+
+  // MARK: - Positional combine drop (issue #739, #738)
+
+  func testDropBelowSingleImagePlacesFreeImageUnderneath() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+
+    let target = try XCTUnwrap(state.resolveCombineDrop(at: CGPoint(x: 200, y: -40)))
+    XCTAssertEqual(target, .stitch(anchor: AnnotateState.combineBaseLayerID, edge: .bottom))
+    let id = try XCTUnwrap(state.importImage(try makeImage(width: 200, height: 100), sourceData: nil, at: target))
+
+    XCTAssertTrue(state.isCombineMode)
+    XCTAssertEqual(state.combineMode, .freeCanvas)
+    let bounds = try XCTUnwrap(state.annotations.first { $0.id == id }?.bounds)
+    XCTAssertEqual(bounds, CGRect(x: 0, y: -100, width: 200, height: 100)) // left-aligned, never upscaled
+  }
+
+  func testDropBesideMatchesAnchorHeightAndHonoursGap() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 400, height: 300))
+    state.setCombineGap(10)
+    let base = AnnotateState.combineBaseLayerID
+
+    let id = try XCTUnwrap(state.importImage(
+      try makeImage(width: 800, height: 600),
+      sourceData: nil,
+      at: .stitch(anchor: base, edge: .left)
+    ))
+    let bounds = try XCTUnwrap(state.annotations.first { $0.id == id }?.bounds)
+    XCTAssertEqual(bounds, CGRect(x: -410, y: 0, width: 400, height: 300))
+  }
+
+  func testSecondDropOnFilledSideQueuesInsteadOfCovering() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    let base = AnnotateState.combineBaseLayerID
+    let first = try XCTUnwrap(state.importImage(
+      try makeImage(width: 200, height: 300),
+      sourceData: nil,
+      at: .stitch(anchor: base, edge: .right)
+    ))
+    let second = try XCTUnwrap(state.importImage(
+      try makeImage(width: 200, height: 300),
+      sourceData: nil,
+      at: .stitch(anchor: base, edge: .right)
+    ))
+
+    XCTAssertEqual(state.annotations.first { $0.id == first }?.bounds.minX, 400)
+    XCTAssertEqual(state.annotations.first { $0.id == second }?.bounds.minX, 600)
+  }
+
+  func testDropInCentreOfSingleImageFloatsOnIt() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+
+    let target = try XCTUnwrap(state.resolveCombineDrop(at: CGPoint(x: 200, y: 140)))
+    let id = try XCTUnwrap(state.importImage(try makeImage(width: 400, height: 400), sourceData: nil, at: target))
+
+    XCTAssertTrue(state.isCombineMode)
+    XCTAssertEqual(state.combineContentBounds, state.sourceImageBounds)
+    let bounds = try XCTUnwrap(state.annotations.first { $0.id == id }?.bounds)
+    XCTAssertEqual(bounds.width, 150, accuracy: 0.001) // fits half of the 300pt height
+    XCTAssertEqual(bounds.midX, 200, accuracy: 0.001)
+    XCTAssertEqual(bounds.midY, 140, accuracy: 0.001)
 
     state.undo()
-    XCTAssertEqual(state.sourceImage?.size, NSSize(width: 400, height: 300))
-    XCTAssertEqual(state.embeddedImage(for: assetID)?.size, NSSize(width: 200, height: 100))
+    XCTAssertFalse(state.annotations.contains { $0.id == id })
+  }
+
+  func testLegacyAutoStitchSessionReopensAsFreeLayersInSamePlace() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    state.importImage(try makeImage(width: 400, height: 300))
+
+    state.restoreCombineSession(CombineSessionSnapshot(
+      mode: .autoStitch,
+      direction: .vertical,
+      gap: 0,
+      freeBoundsByAnnotationID: [:],
+      stripsGrowDownward: false
+    ))
+
+    // Older builds stacked vertical strips upward; the image keeps that frame.
+    XCTAssertEqual(state.combineMode, .freeCanvas)
+    let bounds = try XCTUnwrap(state.annotations.first?.bounds)
+    XCTAssertEqual(bounds.minY, 300, accuracy: 0.001)
+    XCTAssertEqual(state.combineContentBounds, CGRect(x: 0, y: 0, width: 400, height: 600))
+    XCTAssertEqual(state.combineSessionSnapshot()?.mode, .freeCanvas)
+  }
+
+  // MARK: - Arrange (z-order)
+
+  func testArrangeOverlaysStepsPastOverlappingLayersOnly() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    let a = try XCTUnwrap(state.importImage(try makeImage(width: 100, height: 100), sourceData: nil, at: .overlay(at: CGPoint(x: 100, y: 150))))
+    let far = try XCTUnwrap(state.importImage(try makeImage(width: 100, height: 100), sourceData: nil, at: .overlay(at: CGPoint(x: 330, y: 150))))
+    let b = try XCTUnwrap(state.importImage(try makeImage(width: 100, height: 100), sourceData: nil, at: .overlay(at: CGPoint(x: 140, y: 150))))
+    func order() -> [UUID] { state.annotations.map(\.id) }
+    XCTAssertEqual(order(), [a, far, b])
+
+    state.setSelectedAnnotationIds([a])
+    XCTAssertTrue(state.arrangeSelectedAnnotations(.bringForward))
+    // `far` does not overlap `a`, so one step lands `a` above `b`.
+    XCTAssertEqual(order(), [far, b, a])
+    XCTAssertFalse(state.canArrangeSelection(.bringForward))
+    XCTAssertFalse(state.canArrangeSelection(.bringToFront))
+
+    XCTAssertTrue(state.arrangeSelectedAnnotations(.sendToBack))
+    XCTAssertEqual(order(), [a, far, b])
+
+    state.undo()
+    XCTAssertEqual(order(), [far, b, a])
+  }
+
+  func testArrangeKeepsImagesBelowMarkup() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 400, height: 300))
+    let floating = try XCTUnwrap(state.importImage(try makeImage(width: 100, height: 100), sourceData: nil, at: .overlay(at: CGPoint(x: 200, y: 150))))
+    let beside = try XCTUnwrap(state.importImage(
+      try makeImage(width: 400, height: 300),
+      sourceData: nil,
+      at: .stitch(anchor: AnnotateState.combineBaseLayerID, edge: .right)
+    ))
+    let rect = AnnotationItem(type: .rectangle, bounds: CGRect(x: 150, y: 100, width: 100, height: 100), properties: AnnotationProperties())
+    state.annotations.append(rect)
+
+    // Every image is a free layer, so any of them can be arranged.
+    state.setSelectedAnnotationIds([beside])
+    XCTAssertTrue(state.arrangeSelectedAnnotations(.sendToBack))
+    XCTAssertEqual(state.annotations.prefix(2).map(\.id), [beside, floating])
+
+    // Markup can't be sent beneath images: nothing below it in its own tier.
+    state.setSelectedAnnotationIds([rect.id])
+    XCTAssertFalse(state.canArrangeSelection(.sendToBack))
   }
 
   func testDrawingToolPressIntentTable() throws {

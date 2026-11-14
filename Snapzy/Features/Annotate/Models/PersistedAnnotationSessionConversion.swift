@@ -115,7 +115,12 @@ extension PersistedAnnotationSession {
         directionRawValue: snapshot.direction.rawValue,
         gap: Double(snapshot.gap),
         freeBoundsByAnnotationID: Dictionary(uniqueKeysWithValues:
-          snapshot.freeBoundsByAnnotationID.map { ($0.key.uuidString, $0.value) })
+          snapshot.freeBoundsByAnnotationID.map { ($0.key.uuidString, $0.value) }),
+        stitchRows: snapshot.stitchRows?.map { $0.map(\.uuidString) },
+        overlayAnnotationIDs: snapshot.overlayIDs.isEmpty
+          ? nil
+          : snapshot.overlayIDs.map(\.uuidString).sorted(),
+        layoutRevision: PersistedCombineSession.currentLayoutRevision
       )
     }
 
@@ -175,11 +180,17 @@ extension PersistedCombineSession {
     let bounds = Dictionary(uniqueKeysWithValues: freeBoundsByAnnotationID.compactMap {
       key, rect in UUID(uuidString: key).map { ($0, rect) }
     })
+    let rows = stitchRows?
+      .map { $0.compactMap(UUID.init(uuidString:)) }
+      .filter { !$0.isEmpty }
     return CombineSessionSnapshot(
       mode: mode,
       direction: direction,
       gap: CGFloat(gap),
-      freeBoundsByAnnotationID: bounds
+      freeBoundsByAnnotationID: bounds,
+      stitchRows: rows?.isEmpty == true ? nil : rows,
+      overlayIDs: Set((overlayAnnotationIDs ?? []).compactMap(UUID.init(uuidString:))),
+      stripsGrowDownward: (layoutRevision ?? 1) >= 2
     )
   }
 }

@@ -48,6 +48,15 @@ struct PersistedCombineSession: Codable, Equatable {
   var gap: Double
   /// Free-canvas layer positions keyed by annotation UUID string (JSON-friendly).
   var freeBoundsByAnnotationID: [String: CGRect]
+  /// Hand-placed stitch rows of annotation UUID strings; nil for an automatic strip.
+  /// Optional fields below decode as nil from older sidecars.
+  var stitchRows: [[String]]?
+  /// Embedded images floating above the stitch.
+  var overlayAnnotationIDs: [String]?
+  /// Layout revision. nil = written before vertical strips grew downward (rev 2).
+  var layoutRevision: Int?
+
+  static let currentLayoutRevision = 2
 }
 
 nonisolated struct PersistedFileSignature: Codable, Equatable {

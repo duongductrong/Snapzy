@@ -36,8 +36,6 @@ private struct AnnotateSidebarSnapshot: Equatable {
   let defaultCanvasPresetId: UUID?
   let isCombineMode: Bool
   let combineMode: CombineImagesMode
-  let combineDirection: CombineImagesDirection
-  let combineResolvedDirection: CombineImagesDirection
   let combineGap: CGFloat
 
   init(state: AnnotateState) {
@@ -60,8 +58,6 @@ private struct AnnotateSidebarSnapshot: Equatable {
     defaultCanvasPresetId = state.defaultCanvasPresetId
     isCombineMode = state.isCombineMode
     combineMode = state.combineMode
-    combineDirection = state.combineDirection
-    combineResolvedDirection = state.combineResolvedDirection
     combineGap = state.combineGap
   }
 }

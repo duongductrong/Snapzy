@@ -2,8 +2,8 @@
 //  AnnotateImageRotation.swift
 //  Snapzy
 //
-//  90° rotation helpers for NSImage and CGRect used by the editor's
-//  rotate-left / rotate-right toolbar buttons.
+//  90° rotation and mirror helpers for NSImage and CGRect used by the editor's
+//  Transform menu (rotate left/right, flip horizontal/vertical).
 //
 
 import AppKit
@@ -120,5 +120,95 @@ enum AnnotateImageRotation {
       width: standardised.width,
       height: standardised.height
     )
+  }
+}
+
+// MARK: - Flip
+
+/// Mirror axis for the editor's flip actions. `horizontal` mirrors left↔right, `vertical` top↔bottom.
+enum AnnotateImageFlipAxis: String, CaseIterable {
+  case horizontal
+  case vertical
+}
+
+extension NSImage {
+  /// Returns a new `NSImage` mirrored across the given axis.
+  ///
+  /// Preserves backing-pixel resolution (Retina) and logical point size, mirroring the
+  /// underlying `CGImage` the same way `rotated90(clockwise:)` rotates it.
+  func flipped(_ axis: AnnotateImageFlipAxis) -> NSImage? {
+    guard let cgImage = self.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+      return nil
+    }
+
+    let pixelWidth = cgImage.width
+    let pixelHeight = cgImage.height
+    let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+
+    guard let context = CGContext(
+      data: nil,
+      width: pixelWidth,
+      height: pixelHeight,
+      bitsPerComponent: 8,
+      bytesPerRow: 0,
+      space: colorSpace,
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else {
+      return nil
+    }
+
+    // A mirror is orientation-agnostic, so the bottom-left CG origin needs no special handling.
+    switch axis {
+    case .horizontal:
+      context.translateBy(x: CGFloat(pixelWidth), y: 0)
+      context.scaleBy(x: -1, y: 1)
+    case .vertical:
+      context.translateBy(x: 0, y: CGFloat(pixelHeight))
+      context.scaleBy(x: 1, y: -1)
+    }
+    context.draw(cgImage, in: CGRect(x: 0, y: 0, width: pixelWidth, height: pixelHeight))
+
+    guard let flippedCGImage = context.makeImage() else { return nil }
+    return NSImage(cgImage: flippedCGImage, size: self.size)
+  }
+}
+
+extension AnnotateImageRotation {
+  /// Mirror a point across the centre line of an image of `size`.
+  static func flipPoint(
+    _ point: CGPoint,
+    size: CGSize,
+    axis: AnnotateImageFlipAxis
+  ) -> CGPoint {
+    switch axis {
+    case .horizontal: return CGPoint(x: size.width - point.x, y: point.y)
+    case .vertical: return CGPoint(x: point.x, y: size.height - point.y)
+    }
+  }
+
+  /// Mirror a rect across the centre line of an image of `size`. Dimensions are preserved, so
+  /// this also serves text layout boxes. The returned rect is standardised.
+  static func flipRect(
+    _ rect: CGRect,
+    size: CGSize,
+    axis: AnnotateImageFlipAxis
+  ) -> CGRect {
+    let standardised = rect.standardized
+    switch axis {
+    case .horizontal:
+      return CGRect(
+        x: size.width - standardised.maxX,
+        y: standardised.minY,
+        width: standardised.width,
+        height: standardised.height
+      )
+    case .vertical:
+      return CGRect(
+        x: standardised.minX,
+        y: size.height - standardised.maxY,
+        width: standardised.width,
+        height: standardised.height
+      )
+    }
   }
 }

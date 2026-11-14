@@ -172,9 +172,15 @@ struct AnnotateCanvasView: View {
       showError(message)
       state.consumeImportWarningMessage()
     }
-    .onDrop(of: [.fileURL, .image], isTargeted: $isDragOver) { providers in
-      handleDrop(providers: providers)
-    }
+    .onDrop(
+      of: [.fileURL, .image],
+      delegate: AnnotateCanvasDropDelegate(
+        state: state,
+        bridge: canvasInteractionBridge,
+        isDragOver: $isDragOver,
+        performDrop: { providers, target in handleDrop(providers: providers, target: target) }
+      )
+    )
     .focusable()
     .modifier(FocusEffectDisabledModifier())
     .focused($isCanvasFocused)
@@ -239,7 +245,8 @@ struct AnnotateCanvasView: View {
 
     let fitBounds: CGRect
     if state.isCombineMode {
-      fitBounds = combineBounds
+      // Fixed during a gesture even while the canvas grows (see liveCombineCanvasBounds).
+      fitBounds = state.combineFitBounds
     } else if let cropBounds, !state.isCropActive {
       fitBounds = cropBounds
     } else {
@@ -294,6 +301,10 @@ struct AnnotateCanvasView: View {
       baseCanvasSize: CGSize(width: bgWidth, height: bgHeight),
       fitScale: scale
     )
+
+    let combineGrowthAnchorOffset: CGPoint = state.isCombineMode
+      ? displayOffset(for: foregroundBounds, in: fitBounds, scale: scale)
+      : .zero
 
     let foregroundWidth = foregroundBounds.width * scale
     let foregroundHeight = foregroundBounds.height * scale
@@ -364,6 +375,9 @@ struct AnnotateCanvasView: View {
         isEnabled: state.isCombineMode,
         cornerRadius: state.effectiveCornerRadius * scale
       ))
+      // While a drag grows the canvas, keep the pre-gesture area where it was on
+      // screen: the canvas extends toward the pointer instead of re-centring.
+      .offset(x: combineGrowthAnchorOffset.x, y: combineGrowthAnchorOffset.y)
       .scaleEffect(state.zoomLevel)
       .offset(x: state.panOffset.width, y: state.panOffset.height)
       // AppKit conversion exposes the layout transform, not a Core Animation
@@ -391,6 +405,10 @@ struct AnnotateCanvasView: View {
         Label(L10n.AnnotateUI.extractText, systemImage: "text.viewfinder")
       }
       .disabled(!state.canExtractText)
+
+      Divider()
+
+      AnnotateImageTransformMenuItems(state: state)
     }
     .onAppear {
       state.updateViewportMetrics(
@@ -625,34 +643,51 @@ struct AnnotateCanvasView: View {
     }
   }
 
-  /// Handle dropped image files
-  private func handleDrop(providers: [NSItemProvider]) -> Bool {
-    for provider in providers {
+  /// Handle dropped image files. With a combine `target` (Auto Stitch) the first image
+  /// goes there and later ones chain after it along the same edge, in drop order.
+  private func handleDrop(providers: [NSItemProvider], target: CombineDropTarget?) -> Bool {
+    let batch = AnnotateDropBatch()
+    var acceptedCount = 0
+    for (index, provider) in providers.enumerated() {
+      batch.pending += 1
       let didAccept = AnnotateImageDropLoader.load(from: provider) { droppedImage in
-        guard let droppedImage else {
-          Task { @MainActor in
-            showError("Failed to load image data")
-          }
-          return
-        }
-
         Task { @MainActor in
-          if !state.importImage(
-            droppedImage.image,
-            sourceURL: nil,
-            sourceData: droppedImage.data
-          ) {
-            showError("Failed to import image")
-          }
+          batch.finish(index: index, image: droppedImage)
         }
-        return
       }
-      if didAccept { return true }
+      if didAccept {
+        acceptedCount += 1
+        // Without a positional target keep the original one-image-per-drop behaviour.
+        if target == nil { break }
+      } else {
+        batch.pending -= 1
+      }
     }
 
-    // No valid provider found
-    showError("Unsupported file type")
-    return false
+    guard acceptedCount > 0 else {
+      showError("Unsupported file type")
+      return false
+    }
+
+    batch.onComplete = { images, didFail in
+      let placement = AnnotateDropPlacement(target: target)
+      for droppedImage in images {
+        let hadImage = state.hasImage
+        let layerID = state.importImage(
+          droppedImage.image,
+          sourceData: droppedImage.data,
+          at: hadImage ? placement.next : nil
+        )
+        if hadImage, layerID == nil {
+          showError("Failed to import image")
+        }
+        placement.advance(after: layerID)
+      }
+      if didFail {
+        showError("Failed to load image data")
+      }
+    }
+    return true
   }
 
   /// Validate file is a supported image format
@@ -661,6 +696,99 @@ struct AnnotateCanvasView: View {
       return false
     }
     return supportedImageTypes.contains { type.conforms(to: $0) }
+  }
+}
+
+/// Collects asynchronously loaded drop images and hands them over in provider order once
+/// every load has finished, so a multi-file drop keeps the order the files were dragged in.
+@MainActor
+private final class AnnotateDropBatch {
+  var pending = 0
+  var onComplete: (([AnnotateDroppedImage], Bool) -> Void)? {
+    didSet { completeIfReady() }
+  }
+  private var loaded: [Int: AnnotateDroppedImage] = [:]
+  private var didFail = false
+
+  func finish(index: Int, image: AnnotateDroppedImage?) {
+    if let image {
+      loaded[index] = image
+    } else {
+      didFail = true
+    }
+    pending -= 1
+    completeIfReady()
+  }
+
+  private func completeIfReady() {
+    guard pending == 0, let onComplete else { return }
+    self.onComplete = nil
+    onComplete(loaded.keys.sorted().compactMap { loaded[$0] }, didFail)
+  }
+}
+
+/// Chains a multi-image drop: the first image lands on the drop target, each later one
+/// lands on the same side of the previous image, so the batch extends outward.
+@MainActor
+private final class AnnotateDropPlacement {
+  private(set) var next: CombineDropTarget?
+
+  init(target: CombineDropTarget?) {
+    next = target
+  }
+
+  func advance(after layerID: UUID?) {
+    guard let layerID, let current = next else { return }
+    switch current {
+    case .stitch(_, let edge):
+      next = .stitch(anchor: layerID, edge: edge)
+    case .overlay(let point):
+      next = .overlay(at: CGPoint(x: point.x + 24, y: point.y - 24))
+    }
+  }
+}
+
+/// Drop handling for the editor canvas. While an image hovers it publishes where the drop
+/// would land so the canvas can preview it.
+private struct AnnotateCanvasDropDelegate: DropDelegate {
+  let state: AnnotateState
+  let bridge: CanvasInteractionBridge
+  @Binding var isDragOver: Bool
+  let performDrop: ([NSItemProvider], CombineDropTarget?) -> Bool
+
+  private static let acceptedTypes: [UTType] = [.fileURL, .image]
+
+  func validateDrop(info: DropInfo) -> Bool {
+    info.hasItemsConforming(to: Self.acceptedTypes)
+  }
+
+  func dropEntered(info _: DropInfo) {
+    isDragOver = true
+    state.beginExternalCombineDrop(at: currentCanvasPoint())
+  }
+
+  func dropUpdated(info _: DropInfo) -> DropProposal? {
+    state.updateExternalCombineDrop(at: currentCanvasPoint())
+    return DropProposal(operation: .copy)
+  }
+
+  func dropExited(info _: DropInfo) {
+    isDragOver = false
+    state.endExternalCombineDrop()
+  }
+
+  func performDrop(info: DropInfo) -> Bool {
+    isDragOver = false
+    let target = currentCanvasPoint().flatMap { state.resolveCombineDrop(at: $0) }
+    state.endExternalCombineDrop()
+    return performDrop(info.itemProviders(for: Self.acceptedTypes), target)
+  }
+
+  /// DropInfo.location is in SwiftUI space; the canvas maps the live cursor through its
+  /// own AppKit transform instead, which already includes zoom, pan and fit scale.
+  private func currentCanvasPoint() -> CGPoint? {
+    guard state.supportsPositionalCombineDrop else { return nil }
+    return bridge.drawingCanvas?.canvasPoint(forScreenLocation: NSEvent.mouseLocation)
   }
 }
 

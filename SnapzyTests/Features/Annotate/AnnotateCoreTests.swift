@@ -2463,7 +2463,7 @@ final class AnnotateCoreTests: XCTestCase {
   // MARK: F5 - hover does not promise a resize that mouseDown refuses
 
   @MainActor
-  func testCanvasHoverOnEmbeddedImageHandleInAutoStitchDoesNotPromiseResize() throws {
+  func testCanvasHoverOnCombineImageHandleShowsResizeCursor() throws {
     let state = makeAnnotateState()
     let base = try XCTUnwrap(TestImageFactory.solidColor(width: 400, height: 300))
     let secondary = try XCTUnwrap(TestImageFactory.solidColor(width: 200, height: 100))
@@ -2488,17 +2488,11 @@ final class AnnotateCoreTests: XCTestCase {
     }
     let idle = display(CGPoint(x: contentBounds.minX + 5, y: contentBounds.minY + 5))
 
-    // Free canvas lets the image resize, so the handle shows a resize cursor.
-    state.setCombineMode(.freeCanvas)
+    // Combine images are free layers, so the handle promises (and grants) a resize.
     hover(canvas, at: idle)
     let idleCursor = NSCursor.current
     hover(canvas, at: try handlePoint())
-    XCTAssertFalse(NSCursor.current === idleCursor, "Precondition: the handle shows a resize cursor")
-
-    // Auto-stitch refuses the resize in mouseDown, so hover must not promise it.
-    state.setCombineMode(.autoStitch)
-    hover(canvas, at: try handlePoint())
-    XCTAssertTrue(NSCursor.current === idleCursor)
+    XCTAssertFalse(NSCursor.current === idleCursor)
   }
 
   // MARK: F6 - while text is edited a click only commits, for every tool

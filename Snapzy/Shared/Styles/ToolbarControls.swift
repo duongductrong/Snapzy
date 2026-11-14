@@ -21,18 +21,36 @@ struct ToolbarButton: View {
   var activeGlassTint: Color? = .accentColor
   var selectedForegroundColor: Color? = nil
   var selectedBadgeIcon: String? = nil
+  /// Shows a small trailing chevron, marking the button as a pull-down that opens a menu.
+  /// The glyph keeps its size; the button grows by `menuIndicatorWidth` and the glass covers both.
+  var showsMenuIndicator: Bool = false
 
   let action: () -> Void
 
   @Environment(\.isEnabled) private var isEnabled
   @State private var isHovering = false
 
+  static let menuIndicatorWidth: CGFloat = 10
+
   var body: some View {
     Button(action: action) {
-      Image(systemName: displayedIcon)
-        .font(.system(size: 14, weight: .medium))
-        .foregroundColor(foregroundColor)
-        .frame(width: ControlMetrics.toolbarButton, height: ControlMetrics.toolbarButton)
+      HStack(spacing: 0) {
+        Image(systemName: displayedIcon)
+          .font(.system(size: 14, weight: .medium))
+          // With a chevron the glyph sits a little left of centre so the pair reads as one unit.
+          .frame(width: showsMenuIndicator ? ControlMetrics.toolbarButton - 4 : ControlMetrics.toolbarButton)
+          .padding(.leading, showsMenuIndicator ? 2 : 0)
+        if showsMenuIndicator {
+          Image(systemName: "chevron.down")
+            .font(.system(size: 7, weight: .bold))
+            .opacity(0.55)
+            .frame(width: Self.menuIndicatorWidth)
+            .padding(.trailing, 4)
+        }
+      }
+      .foregroundColor(foregroundColor)
+      .frame(height: ControlMetrics.toolbarButton)
+      .contentShape(Rectangle())
         // Disabled buttons never show glass. Their dimming is applied to the glyph colour below,
         // never as an `.opacity()` around this surface — that would detach the backdrop (Rule 2).
         .liquidGlassChrome(

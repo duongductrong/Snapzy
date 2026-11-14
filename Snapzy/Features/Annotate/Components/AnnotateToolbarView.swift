@@ -111,18 +111,15 @@ struct AnnotateToolbarView: View {
       .disabled(!state.canApplyCutOut)
       .opacity(state.canApplyCutOut ? 1 : 0.4)
 
-      ToolbarButton(icon: "rotate.left", isSelected: false) {
-        state.rotateImage(clockwise: false)
-      }
-      .help(L10n.AnnotateUI.rotateLeft)
-      .disabled(!state.canRotateImage)
-
-      ToolbarButton(icon: "rotate.right", isSelected: false) {
-        state.rotateImage(clockwise: true)
-      }
-      .help(L10n.AnnotateUI.rotateRight)
-      .disabled(!state.canRotateImage)
+      transformMenuButton
     }
+  }
+
+  /// Rotate and flip are occasional whole-image actions, so they share one menu slot instead of
+  /// four toolbar buttons. ⌘L / ⌘R rotate and ⌃⌘H / ⌃⌘V flip without opening the menu.
+  private var transformMenuButton: some View {
+    AnnotateImageTransformToolbarButton(state: state)
+      .help(L10n.AnnotateUI.rotateAndFlip)
   }
 
   private var annotationToolsGroup: some View {

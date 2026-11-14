@@ -168,7 +168,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     for url in combineImageURLs.dropFirst() {
       _ = state.importImage(from: url)
     }
-    state.activateCombineMode(preferredMode: .autoStitch)
+    state.activateCombineMode()
   }
 
   /// URL-only initializer for post-capture auto-open flow

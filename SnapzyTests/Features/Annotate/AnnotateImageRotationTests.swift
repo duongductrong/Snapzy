@@ -294,6 +294,144 @@ final class AnnotateImageRotationTests: XCTestCase {
     XCTAssertEqual(restored.bounds, text.bounds)
   }
 
+  // MARK: - Flip
+
+  func testFlipPoint_horizontalMirrorsX() {
+    XCTAssertEqual(
+      AnnotateImageRotation.flipPoint(CGPoint(x: 10, y: 30), size: imageSize, axis: .horizontal),
+      CGPoint(x: 390, y: 30)
+    )
+  }
+
+  func testFlipPoint_verticalMirrorsY() {
+    XCTAssertEqual(
+      AnnotateImageRotation.flipPoint(CGPoint(x: 10, y: 30), size: imageSize, axis: .vertical),
+      CGPoint(x: 10, y: 170)
+    )
+  }
+
+  func testFlipRect_preservesSizeAndIsInvolution() {
+    let rect = CGRect(x: 10, y: 20, width: 80, height: 60)
+    for axis in AnnotateImageFlipAxis.allCases {
+      let flipped = AnnotateImageRotation.flipRect(rect, size: imageSize, axis: axis)
+      XCTAssertEqual(flipped.size, rect.size)
+      XCTAssertEqual(AnnotateImageRotation.flipRect(flipped, size: imageSize, axis: axis), rect)
+    }
+    XCTAssertEqual(
+      AnnotateImageRotation.flipRect(rect, size: imageSize, axis: .horizontal),
+      CGRect(x: 310, y: 20, width: 80, height: 60)
+    )
+    XCTAssertEqual(
+      AnnotateImageRotation.flipRect(rect, size: imageSize, axis: .vertical),
+      CGRect(x: 10, y: 120, width: 80, height: 60)
+    )
+  }
+
+  func testFlipRect_handlesNonStandardRectByStandardising() {
+    let rect = CGRect(x: 90, y: 80, width: -80, height: -60)
+    XCTAssertEqual(
+      AnnotateImageRotation.flipRect(rect, size: imageSize, axis: .horizontal),
+      CGRect(x: 310, y: 20, width: 80, height: 60)
+    )
+  }
+
+  func testNSImageFlipped_preservesLogicalPointSize() {
+    let image = makeImage(width: 200, height: 100)
+    XCTAssertEqual(image.flipped(.horizontal)?.size, NSSize(width: 200, height: 100))
+    XCTAssertEqual(image.flipped(.vertical)?.size, NSSize(width: 200, height: 100))
+  }
+
+  func testNSImageFlippedHorizontal_swapsLeftAndRightMarkers() throws {
+    let flipped = try XCTUnwrap(makeCornerMarkerImage().flipped(.horizontal))
+    let cgImage = try XCTUnwrap(flipped.cgImage(forProposedRect: nil, context: nil, hints: nil))
+    let pixels = try rgbaBytes(from: cgImage)
+
+    XCTAssertPixel(pixels, at: CGPoint(x: 0, y: 0), width: cgImage.width, equals: MarkerColor.topRightGreen,
+      "Horizontal flip should move the old top-right marker to the top-left.")
+    XCTAssertPixel(pixels, at: CGPoint(x: 2, y: 1), width: cgImage.width, equals: MarkerColor.bottomLeftBlue,
+      "Horizontal flip should move the old bottom-left marker to the bottom-right.")
+  }
+
+  func testNSImageFlippedVertical_swapsTopAndBottomMarkers() throws {
+    let flipped = try XCTUnwrap(makeCornerMarkerImage().flipped(.vertical))
+    let cgImage = try XCTUnwrap(flipped.cgImage(forProposedRect: nil, context: nil, hints: nil))
+    let pixels = try rgbaBytes(from: cgImage)
+
+    XCTAssertPixel(pixels, at: CGPoint(x: 0, y: 1), width: cgImage.width, equals: MarkerColor.topLeftRed,
+      "Vertical flip should move the old top-left marker to the bottom-left.")
+    XCTAssertPixel(pixels, at: CGPoint(x: 2, y: 0), width: cgImage.width, equals: MarkerColor.bottomRightYellow,
+      "Vertical flip should move the old bottom-right marker to the top-right.")
+  }
+
+  @MainActor
+  func testFlipImage_horizontalMirrorsAnnotationsAndUndoRestores() throws {
+    let state = makeAnnotateState()
+    state.loadImage(makeImage(width: imageSize.width, height: imageSize.height))
+    let rectangle = AnnotationItem(
+      type: .rectangle,
+      bounds: CGRect(x: 10, y: 20, width: 80, height: 60),
+      properties: AnnotationProperties()
+    )
+    let line = AnnotationItem(
+      type: .line(start: CGPoint(x: 20, y: 30), end: CGPoint(x: 120, y: 90)),
+      bounds: CGRect(x: 20, y: 30, width: 100, height: 60),
+      properties: AnnotationProperties()
+    )
+    let text = AnnotationItem(
+      type: .text("text"),
+      bounds: CGRect(x: 100, y: 80, width: 120, height: 30),
+      properties: AnnotationProperties(fontSize: 28)
+    )
+    state.annotations = [rectangle, line, text]
+    state.setSelectedAnnotationIds([rectangle.id])
+
+    state.flipImage(.horizontal)
+
+    XCTAssertEqual(state.sourceImage?.size, NSSize(width: imageSize.width, height: imageSize.height))
+    XCTAssertEqual(
+      try XCTUnwrap(state.annotations.first(where: { $0.id == rectangle.id })).bounds,
+      CGRect(x: 310, y: 20, width: 80, height: 60)
+    )
+    let flippedLine = try XCTUnwrap(state.annotations.first(where: { $0.id == line.id }))
+    guard case .line(let start, let end) = flippedLine.type else {
+      return XCTFail("Expected flipped line annotation.")
+    }
+    XCTAssertEqual(start, CGPoint(x: 380, y: 30))
+    XCTAssertEqual(end, CGPoint(x: 280, y: 90))
+    let flippedText = try XCTUnwrap(state.annotations.first(where: { $0.id == text.id }))
+    XCTAssertEqual(flippedText.bounds, CGRect(x: 180, y: 80, width: 120, height: 30))
+    XCTAssertTrue(state.isAnnotationSelected(rectangle.id))
+    XCTAssertTrue(state.hasUnsavedChanges)
+
+    state.undo()
+
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first(where: { $0.id == rectangle.id })).bounds, rectangle.bounds)
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first(where: { $0.id == line.id })).type, line.type)
+    XCTAssertEqual(try XCTUnwrap(state.annotations.first(where: { $0.id == text.id })).bounds, text.bounds)
+  }
+
+  @MainActor
+  func testFlipImage_verticalTwiceRestoresGeometry() throws {
+    let state = makeAnnotateState()
+    state.loadImage(makeImage(width: imageSize.width, height: imageSize.height))
+    let path = AnnotationItem(
+      type: .path([CGPoint(x: 5, y: 10), CGPoint(x: 50, y: 150)]),
+      bounds: CGRect(x: 5, y: 10, width: 45, height: 140),
+      properties: AnnotationProperties()
+    )
+    state.annotations = [path]
+
+    state.flipImage(.vertical)
+    let once = try XCTUnwrap(state.annotations.first)
+    guard case .path(let points) = once.type else { return XCTFail("Expected path.") }
+    XCTAssertEqual(points, [CGPoint(x: 5, y: 190), CGPoint(x: 50, y: 50)])
+    XCTAssertEqual(once.bounds, CGRect(x: 5, y: 50, width: 45, height: 140))
+
+    state.flipImage(.vertical)
+    XCTAssertEqual(state.annotations.first?.type, path.type)
+    XCTAssertEqual(state.annotations.first?.bounds, path.bounds)
+  }
+
   // MARK: - Helpers
 
   @MainActor
