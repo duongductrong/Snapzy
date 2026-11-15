@@ -27,6 +27,9 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
       - content.height
   }()
 
+  /// Height of the SwiftUI canvas behind the window (see `show`); above any card height.
+  private static let canvasHeight: CGFloat = 1200
+
   private var window: TranslationCardWindow?
   private var model: TranslationCardModel?
   /// AppKit global rect the card sits next to (the captured area, or the pointer).
@@ -103,7 +106,16 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
     // content grows (translating → done); letting the hosting view drive the
     // window size as well loops the constraint pass inside a glass container.
     hostingView.sizingOptions = []
-    hostingView.autoresizingMask = [.width, .height]
+    // A fixed-height canvas pinned to the window's top edge; the window clips it. Height changes
+    // then only resize the window (and its glass), never re-layout the SwiftUI content mid
+    // animation: content taller than its hosting view was laid out off-center for a frame,
+    // which made the header jump and the titlebar tear while the window grew.
+    let canvasHeight = Self.canvasHeight
+    let container = NSView(frame: CGRect(x: 0, y: 0, width: Self.cardWidth, height: initialHeight))
+    container.autoresizingMask = [.width, .height]
+    hostingView.frame = CGRect(x: 0, y: initialHeight - canvasHeight, width: Self.cardWidth, height: canvasHeight)
+    hostingView.autoresizingMask = [.width, .minYMargin]
+    container.addSubview(hostingView)
 
     let newWindow = TranslationCardWindow(
       contentRect: frame(forHeight: initialHeight),
@@ -133,11 +145,11 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
       newWindow.backgroundColor = .clear
       let glass = NSGlassEffectView()
       glass.cornerRadius = 0
-      glass.contentView = hostingView
+      glass.contentView = container
       newWindow.contentView = glass
     } else {
       newWindow.backgroundColor = .windowBackgroundColor
-      newWindow.contentView = hostingView
+      newWindow.contentView = container
     }
 
     newWindow.onCancel = { [weak self] in self?.dismiss() }
@@ -207,10 +219,30 @@ final class TranslationCardManager: NSObject, NSWindowDelegate {
       if let visible = screen(containing: current)?.visibleFrame, newFrame.minY < visible.minY + Self.screenMargin {
         newFrame.origin.y = visible.minY + Self.screenMargin
       }
-      window.setFrame(newFrame, display: true)
+      // Glide to the new height on the same curve as the content (read → resolve), so the
+      // window grows with the text instead of snapping; instant under Reduce Motion.
+      let animates = window.isVisible && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+      NSAnimationContext.runAnimationGroup { context in
+        context.duration = animates ? TranslationCardMotion.revealDuration : 0
+        context.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.25, 1)
+        context.allowsImplicitAnimation = animates
+        if animates {
+          window.animator().setFrame(newFrame, display: true)
+        } else {
+          window.setFrame(newFrame, display: true)
+        }
+      } completionHandler: { [weak window] in
+        MainActor.assumeIsolated {
+          if let window { Self.pinContentView(of: window) }
+        }
+      }
     }
-    // `.fullSizeContentView`: the content view covers the whole frame. Re-assert it in case a
-    // layout pass still in flight kept the old size.
+    Self.pinContentView(of: window)
+  }
+
+  /// `.fullSizeContentView`: the content view covers the whole frame. Re-asserted in case a
+  /// layout pass still in flight kept the old size.
+  private static func pinContentView(of window: NSWindow) {
     if let contentView = window.contentView, contentView.frame.size != window.frame.size {
       contentView.frame = CGRect(origin: .zero, size: window.frame.size)
     }

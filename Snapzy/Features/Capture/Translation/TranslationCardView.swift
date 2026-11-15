@@ -21,12 +21,16 @@ struct TranslationCardView: View {
 
   @State private var showsOriginal = false
   @State private var copiedOriginal = false
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// Side margin, matching the system's small utility windows.
   private static let margin: CGFloat = 16
   private static let maxTextHeight: CGFloat = 300
   /// Inset wells (text, status) — tile radius sits inside the window corner at this margin.
   private static let wellShape = Radius.rect(Radius.tile)
+  /// Source (while reading) and translation share the type, so the swap does not reflow.
+  private static let textFont = Font.system(size: 14)
+  private static let textLineSpacing: CGFloat = 2
 
   var body: some View {
     VStack(alignment: .leading, spacing: 12) {
@@ -71,7 +75,17 @@ struct TranslationCardView: View {
       }
 
       Spacer(minLength: 0)
+
+      if model.phase == .translating {
+        Text(L10n.Translate.translating)
+          .font(.system(size: 11))
+          .foregroundStyle(LiquidGlassTokens.inkMuted)
+          .lineLimit(1)
+          .transition(.opacity)
+          .accessibilityHidden(true)
+      }
     }
+    .animation(.easeOut(duration: 0.2), value: model.phase == .translating)
   }
 
   private var sourceName: String? {
@@ -94,16 +108,10 @@ struct TranslationCardView: View {
     switch model.phase {
     case .needsTarget:
       chooseTarget
-    case .translating:
-      translatingWell
-      originalSection
-    case .done(let output):
-      translatedWell(output.text)
-      if model.isAlreadyInTarget, let target = model.target {
-        note(L10n.Translate.alreadyInTarget(target.displayName), systemImage: "checkmark.circle")
-      }
-      originalSection
-      footer(translation: output.text)
+    case .translating, .done:
+      // One branch for both, so the well keeps its identity and changes content in place
+      // (read → resolve) instead of being swapped for another view.
+      translationBody
     case .failed(let failure):
       failureView(failure)
     case .unavailable(let reason):
@@ -122,36 +130,59 @@ struct TranslationCardView: View {
     }
   }
 
-  private var translatingWell: some View {
-    HStack(spacing: 10) {
-      ProgressView()
-        .controlSize(.small)
-      Text(L10n.Translate.translating)
-        .font(.system(size: 12.5))
-        .foregroundStyle(LiquidGlassTokens.inkBody)
-      Spacer(minLength: 0)
+  private var translationBody: some View {
+    let translation = model.translatedText
+    let lateEntrance = TranslationCardMotion.lateEntrance(reduceMotion: reduceMotion)
+    return VStack(alignment: .leading, spacing: 12) {
+      textWell(translation: translation)
+
+      if translation != nil, model.isAlreadyInTarget, let target = model.target {
+        note(L10n.Translate.alreadyInTarget(target.displayName), systemImage: "checkmark.circle")
+          .transition(lateEntrance)
+      }
+      // While translating, the source is already on screen in the well.
+      if let translation {
+        originalSection
+          .transition(lateEntrance)
+        footer(translation: translation)
+          .transition(lateEntrance)
+      }
     }
-    .padding(12)
-    .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Self.wellShape.fill(LiquidGlassTokens.veilFill.opacity(0.05)))
+    // No `.animation` here on purpose: the transitions carry their own, and the layout must not
+    // interpolate (the well would draw new text outside its old bounds mid-way).
   }
 
-  private func translatedWell(_ text: String) -> some View {
-    ScrollView {
-      Text(text)
-        .font(.system(size: 14))
-        .lineSpacing(2)
-        .foregroundStyle(LiquidGlassTokens.inkPrimary)
-        .textSelection(.enabled)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .multilineTextAlignment(.leading)
-        .environment(\.layoutDirection, model.target.map(Self.layoutDirection) ?? .leftToRight)
-        .padding(12)
+  /// The text well: the source being read while translating, then the translation.
+  private func textWell(translation: String?) -> some View {
+    ZStack(alignment: .topLeading) {
+      if let translation {
+        ScrollView {
+          TranslationResolvingText(
+            text: translation,
+            font: Self.textFont,
+            lineSpacing: Self.textLineSpacing,
+            layoutDirection: model.target.map(Self.layoutDirection) ?? .leftToRight
+          )
+          .padding(12)
+        }
+        .frame(maxHeight: Self.maxTextHeight)
+        .fixedSize(horizontal: false, vertical: true)
+      } else {
+        TranslationReadingText(text: model.sourceText, font: Self.textFont, lineSpacing: Self.textLineSpacing)
+          .padding(12)
+          .transition(TranslationCardMotion.sourceExit(reduceMotion: reduceMotion))
+      }
     }
-    .frame(maxHeight: Self.maxTextHeight)
-    .fixedSize(horizontal: false, vertical: true)
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .clipShape(Self.wellShape)
     .background(Self.wellShape.fill(LiquidGlassTokens.veilFill.opacity(0.05)))
     .overlay(Self.wellShape.strokeBorder(LiquidGlassTokens.veilFill.opacity(0.06), lineWidth: 0.5))
+    .overlay {
+      if translation == nil {
+        TranslationReadingRim(shape: Self.wellShape)
+          .transition(.opacity.animation(.easeOut(duration: 0.2)))
+      }
+    }
   }
 
   @ViewBuilder
@@ -346,6 +377,13 @@ struct TranslationCardView: View {
     case .other(let description):
       return L10n.Translate.errorGeneric(description)
     }
+  }
+
+  /// Rough line count at the card's text width, for the line-by-line reveal's length.
+  static func estimatedLineCount(_ text: String) -> Int {
+    let charactersPerLine = 46
+    return text.split(separator: "\n", omittingEmptySubsequences: false)
+      .reduce(0) { $0 + max(1, Int((Double($1.count) / Double(charactersPerLine)).rounded(.up))) }
   }
 
   static func languageName(_ identifier: String) -> String? {
