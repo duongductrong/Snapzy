@@ -371,6 +371,19 @@ struct AnnotateCanvasView: View {
           .offset(x: offset.x, y: offset.y)
         }
 
+        // Translate Area marquee while picking the area to translate.
+        if state.isTranslateAreaSelecting {
+          AnnotateTranslateAreaSelectionView(
+            state: state,
+            scale: scale,
+            canvasBounds: foregroundBounds
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
+          .clipped()
+          .offset(x: offset.x, y: offset.y)
+          .transition(.opacity.animation(.easeOut(duration: 0.15)))
+        }
+
         // Auto Translate loading overlay (reading → translating → resolving).
         if state.isAutoTranslateRunning {
           AnnotateAutoTranslateOverlayView(

@@ -64,6 +64,10 @@ final class AnnotateAutoTranslateRuntime {
   var appleContinuation: CheckedContinuation<BlockTranslationOutput, Error>?
   var appleToken: UUID?
   var noticeTask: Task<Void, Never>?
+  /// Area of the last run (nil = whole image), so "Translate with …" retries the same area.
+  var lastRegion: CGRect?
+  /// Where the current Translate Area drag started (annotate space).
+  var areaDragStart: CGPoint?
 }
 
 // MARK: - Flow
@@ -113,10 +117,14 @@ extension AnnotateState {
     }
   }
 
-  /// Runs Auto Translate on the current image. `endpoint` forces a custom endpoint for
-  /// this run only (an explicit "Translate with …" after Apple failed).
-  func autoTranslate(using endpoint: CustomOCRModel? = nil) {
+  /// Runs Auto Translate on the current image, or only inside `region` (annotate space)
+  /// for Translate Area. `endpoint` forces a custom endpoint for this run only (an
+  /// explicit "Translate with …" after Apple failed).
+  func autoTranslate(using endpoint: CustomOCRModel? = nil, region: CGRect? = nil) {
     guard !isAutoTranslateRunning, canAutoTranslate, let image = effectiveSourceImage else { return }
+    if isTranslateAreaSelecting {
+      endTranslateAreaSelection()
+    }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }
@@ -134,10 +142,13 @@ extension AnnotateState {
     autoTranslateRuntime.noticeTask?.cancel()
     autoTranslateNotice = nil
     autoTranslateBlocks = []
+    autoTranslateRegion = region
+    autoTranslateRuntime.lastRegion = region
     autoTranslatePhase = .reading
     DiagnosticLogger.shared.log(.info, .annotate, "Auto Translate started", context: [
       "target": target.identifier,
       "engine": Self.engineName(route),
+      "scope": region == nil ? "image" : "area",
     ])
 
     autoTranslateRuntime.task = Task { [weak self] in
@@ -145,6 +156,7 @@ extension AnnotateState {
       do {
         let candidates = try await AnnotateAutoTranslateLayout.detectCandidates(
           in: image,
+          region: region,
           languageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier,
           targetLanguage: target
         )
@@ -159,7 +171,13 @@ extension AnnotateState {
         let output = try await translate(texts, route: route, target: target)
         guard isCurrentAutoTranslate(operationID) else { return }
 
-        try await resolveAndCommit(candidates: candidates, output: output, target: target, operationID: operationID)
+        try await resolveAndCommit(
+          candidates: candidates,
+          output: output,
+          target: target,
+          region: region,
+          operationID: operationID
+        )
       } catch {
         guard isCurrentAutoTranslate(operationID) else { return }
         failAutoTranslate(error, route: route)
@@ -175,8 +193,75 @@ extension AnnotateState {
     resumeAppleTranslation(with: .failure(CancellationError()))
     appleTranslationRequest = nil
     autoTranslateBlocks = []
+    autoTranslateRegion = nil
     autoTranslatePhase = .idle
   }
+
+  // MARK: Translate Area
+
+  /// Starts Translate Area: the next drag on the canvas picks the area to translate.
+  func beginTranslateAreaSelection() {
+    guard !isAutoTranslateRunning, canAutoTranslate else { return }
+    if editingTextAnnotationId != nil {
+      commitTextEditing()
+    }
+    dismissAutoTranslateNotice()
+    setSelectedAnnotationIds([])
+    translateAreaDraft = nil
+    autoTranslateRuntime.areaDragStart = nil
+    isTranslateAreaSelecting = true
+  }
+
+  func toggleTranslateAreaSelection() {
+    if isAutoTranslateRunning {
+      cancelAutoTranslate()
+    } else if isTranslateAreaSelecting {
+      endTranslateAreaSelection()
+    } else {
+      beginTranslateAreaSelection()
+    }
+  }
+
+  func endTranslateAreaSelection() {
+    isTranslateAreaSelecting = false
+    translateAreaDraft = nil
+    autoTranslateRuntime.areaDragStart = nil
+  }
+
+  /// Canvas drag, in annotate space. Returns false when not selecting an area.
+  @discardableResult
+  func updateTranslateAreaDrag(from start: CGPoint?, to point: CGPoint) -> Bool {
+    guard isTranslateAreaSelecting else { return false }
+    if let start {
+      autoTranslateRuntime.areaDragStart = start
+    }
+    guard let origin = autoTranslateRuntime.areaDragStart else { return true }
+    translateAreaDraft = CGRect(
+      x: min(origin.x, point.x),
+      y: min(origin.y, point.y),
+      width: abs(point.x - origin.x),
+      height: abs(point.y - origin.y)
+    ).intersection(sourceImageBounds)
+    return true
+  }
+
+  /// Ends the drag: a real area runs Auto Translate inside it; a click keeps the mode on.
+  @discardableResult
+  func finishTranslateAreaDrag(at point: CGPoint) -> Bool {
+    guard isTranslateAreaSelecting else { return false }
+    updateTranslateAreaDrag(from: nil, to: point)
+    let area = translateAreaDraft ?? .null
+    autoTranslateRuntime.areaDragStart = nil
+    guard !area.isNull, area.width >= Self.minimumTranslateAreaSide, area.height >= Self.minimumTranslateAreaSide else {
+      translateAreaDraft = nil
+      return true
+    }
+    endTranslateAreaSelection()
+    autoTranslate(region: area)
+    return true
+  }
+
+  static let minimumTranslateAreaSide: CGFloat = 8
 
   /// Called by the hidden `.translationTask` host with the batch result.
   func completeAppleTranslation(token: UUID, result: Result<BlockTranslationOutput, Error>) {
@@ -204,7 +289,7 @@ extension AnnotateState {
       Self.openTranslationSettings()
     case .translateWithEndpoint(_, let id):
       guard let endpoint = Self.customEndpoints().first(where: { $0.id == id }) else { return }
-      autoTranslate(using: endpoint)
+      autoTranslate(using: endpoint, region: autoTranslateRuntime.lastRegion)
     }
   }
 
@@ -357,6 +442,7 @@ extension AnnotateState {
     candidates: [AnnotateTranslationCandidate],
     output: BlockTranslationOutput,
     target: TranslationLanguage,
+    region: CGRect?,
     operationID: UUID
   ) async throws {
     let groupID = UUID()
@@ -415,7 +501,12 @@ extension AnnotateState {
     guard isCurrentAutoTranslate(operationID) else { return }
 
     saveState()
-    annotations.removeAll { $0.type.isTranslation }
+    // A whole-image run replaces every translation; an area run only those it overlaps.
+    annotations.removeAll { item in
+      guard item.type.isTranslation else { return false }
+      guard let region else { return true }
+      return item.bounds.intersects(region)
+    }
     annotations.append(contentsOf: items)
     setSelectedAnnotationIds([])
     selectedTool = .selection
@@ -424,6 +515,7 @@ extension AnnotateState {
     autoTranslateRuntime.operationID = nil
     autoTranslateRuntime.task = nil
     autoTranslateBlocks = []
+    autoTranslateRegion = nil
     autoTranslatePhase = .idle
     showAutoTranslateNotice(.success(count: items.count, targetLanguage: target.displayName))
     DiagnosticLogger.shared.log(.info, .annotate, "Auto Translate completed", context: [
@@ -437,6 +529,7 @@ extension AnnotateState {
     autoTranslateRuntime.task = nil
     appleTranslationRequest = nil
     autoTranslateBlocks = []
+    autoTranslateRegion = nil
     autoTranslatePhase = .idle
 
     if error is CancellationError { return }

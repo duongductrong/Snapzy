@@ -17,6 +17,7 @@ extension Notification.Name {
   static let annotateCloudUpload = Notification.Name("annotateCloudUpload")
   static let annotateAutoRedactSensitiveData = Notification.Name("annotateAutoRedactSensitiveData")
   static let annotateAutoTranslate = Notification.Name("annotateAutoTranslate")
+  static let annotateTranslateArea = Notification.Name("annotateTranslateArea")
   static let annotatePasteImage = Notification.Name("annotatePasteImage")
   static let annotateAddImage = Notification.Name("annotateAddImage")
   static let annotateTogglePin = Notification.Name("annotateTogglePin")
@@ -272,6 +273,15 @@ class AnnotateWindow: NSWindow {
       return true
     }
 
+    // Translate Area — configurable (default: ⌥⌘T)
+    if AnnotateShortcutManager.shared.matchesTranslateArea(event) {
+      if isTextInputActive {
+        return super.performKeyEquivalent(with: event)
+      }
+      NotificationCenter.default.post(name: .annotateTranslateArea, object: self)
+      return true
+    }
+
     // Arrange: ⌘] / ⌘[ step forward/backward, ⌥⌘] / ⌥⌘[ to front/back.
     if let arrangeAction = Self.arrangeAction(for: event, isTextInputActive: textInputActive),
        interactionState?.arrangeSelectedAnnotations(arrangeAction) == true {
@@ -436,6 +446,10 @@ class AnnotateWindow: NSWindow {
       if isTextInputActive { break }
       if interactionState?.isAutoTranslateRunning == true {
         interactionState?.cancelAutoTranslate()
+        return
+      }
+      if interactionState?.isTranslateAreaSelecting == true {
+        interactionState?.endTranslateAreaSelection()
         return
       }
       if interactionState?.isCutOutInteractionActive == true {

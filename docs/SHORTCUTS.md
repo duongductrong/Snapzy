@@ -128,6 +128,7 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
   | `cloudUpload` | ⌘U | `annotate.action.cloudUpload` |
   | `autoRedactSensitiveData` | unbound | `annotate.action.autoRedactSensitiveData` |
   | `autoTranslate` | ⌘⇧T | `annotate.action.autoTranslate` |
+  | `translateArea` | ⌥⌘T | `annotate.action.translateArea` |
 
 - Action disable set: `shortcuts.disabledAnnotateActionShortcuts`.
 

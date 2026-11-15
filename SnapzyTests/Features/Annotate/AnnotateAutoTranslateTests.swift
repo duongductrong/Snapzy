@@ -7,6 +7,7 @@
 //
 
 import AppKit
+import Carbon.HIToolbox
 import CoreGraphics
 import SwiftUI
 import XCTest
@@ -322,4 +323,76 @@ final class AnnotateAutoTranslateTests: XCTestCase {
     state.setPeekingOriginalTranslations(true)
     XCTAssertTrue(state.isPeekingOriginalTranslations)
   }
+
+  // MARK: - Translate Area
+
+  func testCandidatesInAreaAreOffsetByAreaOrigin() {
+    let block = OCRTextBlock(
+      text: "Hello world",
+      box: CGRect(x: 0, y: 0, width: 0.5, height: 0.5),
+      rowBoxes: [CGRect(x: 0, y: 0, width: 0.5, height: 0.5)]
+    )
+
+    let candidates = AnnotateAutoTranslateLayout.makeCandidates(
+      from: [block],
+      imageSize: CGSize(width: 100, height: 40),
+      origin: CGPoint(x: 200, y: 300),
+      clampRect: CGRect(x: 0, y: 0, width: 1000, height: 1000),
+      targetLanguage: TranslationLanguage(identifier: "vi")
+    )
+
+    XCTAssertEqual(candidates.count, 1)
+    let bounds = candidates[0].bounds
+    XCTAssertTrue(bounds.contains(CGRect(x: 200, y: 300, width: 50, height: 20)))
+    XCTAssertLessThan(bounds.maxX, 260)
+  }
+
+  func testRegionCropMapsAnnotateSpaceToPixelsAndBack() throws {
+    // 2× image: 200×100 points, 400×200 pixels.
+    let cgImage = try XCTUnwrap(TestImageFactory.solidColor(width: 400, height: 200))
+    let crop = try XCTUnwrap(AnnotateAutoTranslateLayout.regionCrop(
+      of: cgImage,
+      imageSize: CGSize(width: 200, height: 100),
+      region: CGRect(x: 50, y: 60, width: 40, height: 30)
+    ))
+
+    XCTAssertEqual(crop.image.width, 80)
+    XCTAssertEqual(crop.image.height, 60)
+    XCTAssertEqual(crop.origin.x, 50, accuracy: 0.001)
+    XCTAssertEqual(crop.origin.y, 60, accuracy: 0.001)
+    XCTAssertEqual(crop.size.width, 40, accuracy: 0.001)
+    XCTAssertNil(AnnotateAutoTranslateLayout.regionCrop(
+      of: cgImage, imageSize: CGSize(width: 200, height: 100), region: CGRect(x: 500, y: 500, width: 10, height: 10)
+    ))
+  }
+
+  func testTranslateAreaDragBuildsMarqueeAndClickKeepsWaiting() throws {
+    let state = makeAnnotateState()
+    state.loadImage(try makeImage(width: 300, height: 200))
+
+    state.beginTranslateAreaSelection()
+    XCTAssertTrue(state.isTranslateAreaSelecting)
+
+    XCTAssertTrue(state.updateTranslateAreaDrag(from: CGPoint(x: 10, y: 10), to: CGPoint(x: 10, y: 10)))
+    state.updateTranslateAreaDrag(from: nil, to: CGPoint(x: 400, y: 60))
+    XCTAssertEqual(state.translateAreaDraft, CGRect(x: 10, y: 10, width: 290, height: 50), "Clamped to the image")
+
+    // A click (tiny area) keeps the mode on.
+    state.updateTranslateAreaDrag(from: CGPoint(x: 20, y: 20), to: CGPoint(x: 20, y: 20))
+    XCTAssertTrue(state.finishTranslateAreaDrag(at: CGPoint(x: 22, y: 21)))
+    XCTAssertTrue(state.isTranslateAreaSelecting)
+    XCTAssertNil(state.translateAreaDraft)
+
+    state.activateTool(.rectangle)
+    XCTAssertFalse(state.isTranslateAreaSelecting)
+    XCTAssertFalse(state.updateTranslateAreaDrag(from: .zero, to: .zero), "Canvas is not intercepted any more")
+  }
+
+  func testTranslateAreaShortcutDefaultsToOptionCommandT() {
+    let config = AnnotateShortcutManager.defaultTranslateArea
+    XCTAssertEqual(config.keyCode, UInt32(kVK_ANSI_T))
+    XCTAssertEqual(config.modifiers, UInt32(cmdKey | optionKey))
+    XCTAssertNotEqual(config, AnnotateShortcutManager.defaultAutoTranslate)
+  }
+
 }

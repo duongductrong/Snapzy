@@ -61,11 +61,26 @@ struct AnnotateAutoTranslateOverlayView: View {
     // Veil: whole image while reading, eased back once blocks are known.
     let veilTarget: Double = phase == .reading ? (isDark ? 0.22 : 0.12) : (isDark ? 0.12 : 0.06)
     let veilIn = reduceMotion ? 1 : min(elapsed / 0.35, 1)
-    let veilOpacity = phase == .resolving ? veilTarget * max(0, 1 - now.timeIntervalSince(resolveStart) / 0.5) : veilTarget * veilIn
-    context.fill(Path(fullRect), with: .color(.black.opacity(veilOpacity)))
+    let veilFade = phase == .resolving ? max(0, 1 - now.timeIntervalSince(resolveStart) / 0.5) : veilIn
+    let veilOpacity = veilTarget * veilFade
 
-    if phase == .reading, !reduceMotion {
-      drawSweep(in: &context, rect: fullRect, now: now, phaseOffset: 0, strength: 0.16)
+    // Translate Area: the area stays clear and reads; outside it sits a little darker.
+    if let region = state.autoTranslateRegion {
+      let area = displayRect(region).intersection(fullRect)
+      var outside = Path(fullRect)
+      outside.addRect(area)
+      context.fill(outside, with: .color(.black.opacity((isDark ? 0.3 : 0.18) * veilFade)), style: FillStyle(eoFill: true))
+      context.fill(Path(area), with: .color(.black.opacity(veilOpacity * 0.6)))
+      if phase == .reading, !reduceMotion {
+        drawSweep(in: &context, rect: area, now: now, phaseOffset: 0, strength: 0.22)
+      }
+      let areaShape = Path(roundedRect: area, cornerRadius: 4, style: .continuous)
+      drawRim(in: &context, shape: areaShape, rect: area, now: now, strength: phase == .reading ? veilIn : 0.5 * veilFade)
+    } else {
+      context.fill(Path(fullRect), with: .color(.black.opacity(veilOpacity)))
+      if phase == .reading, !reduceMotion {
+        drawSweep(in: &context, rect: fullRect, now: now, phaseOffset: 0, strength: 0.16)
+      }
     }
 
     let blocks = state.autoTranslateBlocks
@@ -232,6 +247,63 @@ struct AnnotateAutoTranslateOverlayView: View {
   }
 }
 
+// MARK: - Translate Area marquee
+
+/// Shown while Translate Area waits for (or follows) a drag: a light veil with the
+/// dragged area cut out, the card's rim light around it and its size.
+struct AnnotateTranslateAreaSelectionView: View {
+  @ObservedObject var state: AnnotateState
+  let scale: CGFloat
+  let canvasBounds: CGRect
+
+  @Environment(\.colorScheme) private var colorScheme
+
+  var body: some View {
+    GeometryReader { proxy in
+      let full = CGRect(origin: .zero, size: proxy.size)
+      let area = state.translateAreaDraft.map(displayRect)?.intersection(full)
+      ZStack(alignment: .topLeading) {
+        Canvas { context, _ in
+          var veil = Path(full)
+          if let area, !area.isNull { veil.addRect(area) }
+          context.fill(
+            veil,
+            with: .color(.black.opacity(colorScheme == .dark ? 0.32 : 0.2)),
+            style: FillStyle(eoFill: true)
+          )
+        }
+
+        if let area, !area.isNull, area.width > 1, area.height > 1 {
+          TranslationReadingRim(shape: RoundedRectangle(cornerRadius: 4, style: .continuous))
+            .frame(width: area.width, height: area.height)
+            .offset(x: area.minX, y: area.minY)
+
+          if let draft = state.translateAreaDraft {
+            Text("\(Int(draft.width.rounded())) × \(Int(draft.height.rounded()))")
+              .font(.system(size: 10, weight: .semibold).monospacedDigit())
+              .foregroundStyle(.white)
+              .padding(.horizontal, 6)
+              .padding(.vertical, 2)
+              .background(Capsule().fill(Color.black.opacity(0.55)))
+              .fixedSize()
+              .offset(x: area.minX, y: max(area.minY - 22, 2))
+          }
+        }
+      }
+    }
+    .allowsHitTesting(false)
+  }
+
+  private func displayRect(_ rect: CGRect) -> CGRect {
+    CGRect(
+      x: (rect.minX - canvasBounds.minX) * scale,
+      y: (canvasBounds.maxY - rect.maxY) * scale,
+      width: rect.width * scale,
+      height: rect.height * scale
+    )
+  }
+}
+
 // MARK: - Status / result pill
 
 struct AnnotateAutoTranslatePill: View {
@@ -243,6 +315,8 @@ struct AnnotateAutoTranslatePill: View {
       if state.isAutoTranslateRunning {
         pill { runningContent }
           .overlay(TranslationReadingRim(shape: Capsule(style: .continuous)))
+      } else if state.isTranslateAreaSelecting {
+        pill { areaSelectionContent }
       } else if let notice = state.autoTranslateNotice {
         pill { noticeContent(notice) }
           .onHover { state.holdAutoTranslateNotice($0) }
@@ -250,6 +324,7 @@ struct AnnotateAutoTranslatePill: View {
     }
     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isAutoTranslateRunning)
+    .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isTranslateAreaSelecting)
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.autoTranslateNotice)
   }
 
@@ -274,6 +349,19 @@ struct AnnotateAutoTranslatePill: View {
     Text(L10n.AnnotateTranslate.cancelHint)
       .foregroundStyle(.tertiary)
     pillButton(L10n.Common.cancel) { state.cancelAutoTranslate() }
+  }
+
+  @ViewBuilder
+  private var areaSelectionContent: some View {
+    Image(systemName: "text.viewfinder")
+      .font(.system(size: 12, weight: .semibold))
+      .foregroundStyle(.secondary)
+    Text(L10n.AnnotateTranslate.areaHint(state.autoTranslateTarget.displayName))
+      .foregroundStyle(.primary)
+    Text(L10n.AnnotateTranslate.cancelHint)
+      .foregroundStyle(.tertiary)
+    pillButton(L10n.AnnotateTranslate.wholeImage) { state.autoTranslate() }
+    pillButton(L10n.Common.cancel) { state.endTranslateAreaSelection() }
   }
 
   private var statusText: String {

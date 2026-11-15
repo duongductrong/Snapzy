@@ -240,6 +240,11 @@ enabled = true
 key = "t"
 modifiers = ["command", "shift"]
 
+[shortcuts.annotate_actions.translate_area]
+enabled = true
+key = "t"
+modifiers = ["command", "option"]
+
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false
 key = "return"

@@ -234,6 +234,12 @@ final class AnnotateState: ObservableObject {
   @Published var includesTranslationsInExport: Bool = true
   /// Translation whose editor popover is open (double-click or the edit button).
   @Published var translationEditorID: UUID?
+  /// Translate Area: the canvas is waiting for a drag that picks the area.
+  @Published var isTranslateAreaSelecting: Bool = false
+  /// Live marquee while dragging a Translate Area (annotate space).
+  @Published var translateAreaDraft: CGRect?
+  /// Area of the run in flight (nil = whole image); the overlay focuses it.
+  @Published var autoTranslateRegion: CGRect?
   let autoTranslateRuntime = AnnotateAutoTranslateRuntime()
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
@@ -2169,6 +2175,7 @@ final class AnnotateState: ObservableObject {
     resetBackgroundCutoutState(markUnsaved: false)
     cancelSensitiveRedactionScan()
     cancelAutoTranslate()
+    endTranslateAreaSelection()
     autoTranslateNotice = nil
     isPeekingOriginalTranslations = false
     sourceImage = image
@@ -6763,6 +6770,9 @@ final class AnnotateState: ObservableObject {
   }
 
   func activateTool(_ tool: AnnotationToolType) {
+    if isTranslateAreaSelecting {
+      endTranslateAreaSelection()
+    }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }

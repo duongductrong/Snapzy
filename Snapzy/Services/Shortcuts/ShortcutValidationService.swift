@@ -287,6 +287,8 @@ private extension AnnotateActionShortcutKind {
       return L10n.ShortcutOverlay.autoRedactSensitiveData
     case .autoTranslate:
       return L10n.AnnotateTranslate.actionTitle
+    case .translateArea:
+      return L10n.AnnotateTranslate.translateArea
     }
   }
 }

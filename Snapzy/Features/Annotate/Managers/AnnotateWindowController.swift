@@ -790,6 +790,16 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       }
     }
 
+    NotificationCenter.default.addObserver(
+      forName: .annotateTranslateArea,
+      object: window,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.state.toggleTranslateAreaSelection()
+      }
+    }
+
     // Drag-to-app: hide window when drag starts
     NotificationCenter.default.addObserver(
       forName: .annotateDragStarted,

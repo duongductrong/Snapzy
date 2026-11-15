@@ -10249,6 +10249,31 @@ extension L10n {
     static var largerText: String {
       string("annotate.translate.larger-text", defaultValue: "Larger Text", comment: "Increase a translation's text size")
     }
+    static var translateWholeImage: String {
+      string("annotate.translate.whole-image-action", defaultValue: "Translate Whole Image",
+             comment: "Menu item: detect and translate all text on the image")
+    }
+    static var translateArea: String {
+      string("annotate.translate.area-action", defaultValue: "Translate Area…",
+             comment: "Menu item and shortcut name: drag over part of the image to translate only that text")
+    }
+    static var translateAreaDescription: String {
+      string("annotate.translate.area-description",
+             defaultValue: "Drag over part of the image to translate only the text there",
+             comment: "Shortcut settings description for Annotate Translate Area")
+    }
+    static var cancelAreaSelection: String {
+      string("annotate.translate.cancel-area", defaultValue: "Cancel Area Selection",
+             comment: "Menu item that leaves Translate Area without translating")
+    }
+    static func areaHint(_ language: String) -> String {
+      format("annotate.translate.area-hint", defaultValue: "Drag over the text to translate into %@",
+             comment: "Hint shown while waiting for the user to drag the area to translate; argument is the target language", language)
+    }
+    static var wholeImage: String {
+      string("annotate.translate.whole-image", defaultValue: "Whole Image",
+             comment: "Button in the Translate Area hint that translates the whole image instead")
+    }
     static var textColor: String {
       string("annotate.translate.text-color", defaultValue: "Text", comment: "Color of the translated text")
     }

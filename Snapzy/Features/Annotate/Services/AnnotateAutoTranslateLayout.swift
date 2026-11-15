@@ -88,8 +88,11 @@ nonisolated enum AnnotateAutoTranslateError: LocalizedError, Equatable {
 enum AnnotateAutoTranslateLayout {
   /// OCR (Vision, user's OCR language) → positioned blocks → filtered candidates with styles.
   @MainActor
+  /// - Parameter region: limits detection to this annotate-space rect (Translate Area);
+  ///   nil scans the whole image.
   static func detectCandidates(
     in image: NSImage,
+    region: CGRect? = nil,
     languageIdentifier: String?,
     targetLanguage: TranslationLanguage
   ) async throws -> [AnnotateTranslationCandidate] {
@@ -100,10 +103,17 @@ enum AnnotateAutoTranslateLayout {
       ? image.size
       : CGSize(width: cgImage.width, height: cgImage.height)
 
+    // Area mode: OCR only the selected pixels, then map the boxes back with its origin.
+    let area = region.flatMap { regionCrop(of: cgImage, imageSize: imageSize, region: $0) }
+    if region != nil, area == nil { throw AnnotateAutoTranslateError.noText }
+    let ocrImage = area?.image ?? cgImage
+    let mapSize = area?.size ?? imageSize
+    let mapOrigin = area?.origin ?? .zero
+
     let result: OCRResult
     do {
       result = try await OCRService.shared.recognizeLayout(
-        OCRRequest(image: cgImage, preferredLanguageIdentifier: languageIdentifier, contentType: .interfaceText)
+        OCRRequest(image: ocrImage, preferredLanguageIdentifier: languageIdentifier, contentType: .interfaceText)
       )
     } catch OCRError.noTextFound {
       throw AnnotateAutoTranslateError.noText
@@ -112,11 +122,17 @@ enum AnnotateAutoTranslateLayout {
     let prefersCJK = ["ja", "ko", "zh-Hans", "zh-Hant"]
       .contains(AppLanguageManager.normalizedLanguageIdentifier(from: languageIdentifier) ?? "")
     let formatter = OCRTextLayoutFormatter(
-      imageSize: CGSize(width: cgImage.width, height: cgImage.height),
+      imageSize: CGSize(width: ocrImage.width, height: ocrImage.height),
       prefersCJK: prefersCJK
     )
     let blocks = formatter.blocks(result.lines)
-    let candidates = makeCandidates(from: blocks, imageSize: imageSize, targetLanguage: targetLanguage)
+    let candidates = makeCandidates(
+      from: blocks,
+      imageSize: mapSize,
+      origin: mapOrigin,
+      clampRect: CGRect(origin: .zero, size: imageSize),
+      targetLanguage: targetLanguage
+    )
     guard !candidates.isEmpty else { throw AnnotateAutoTranslateError.noText }
 
     let styled = await Task.detached(priority: .userInitiated) {
@@ -136,17 +152,24 @@ enum AnnotateAutoTranslateLayout {
 
   // MARK: - Candidates
 
+  /// - Parameters:
+  ///   - imageSize: size of the image the blocks were read from (the area in area mode).
+  ///   - origin: where that image sits in annotate space (area mode), `.zero` otherwise.
+  ///   - clampRect: covers never leave this rect (the whole image).
   nonisolated static func makeCandidates(
     from blocks: [OCRTextBlock],
     imageSize: CGSize,
+    origin: CGPoint = .zero,
+    clampRect: CGRect? = nil,
     targetLanguage: TranslationLanguage
   ) -> [AnnotateTranslationCandidate] {
-    let imageBounds = CGRect(origin: .zero, size: imageSize)
+    let imageBounds = clampRect ?? CGRect(origin: origin, size: imageSize)
     return blocks.compactMap { block -> AnnotateTranslationCandidate? in
       let text = block.text.trimmingCharacters(in: .whitespacesAndNewlines)
       guard shouldTranslate(text, targetLanguage: targetLanguage) else { return nil }
 
       let textBounds = VisionImageGeometry.annotateRect(fromVisionBoundingBox: block.box, imageSize: imageSize)
+        .offsetBy(dx: origin.x, dy: origin.y)
       let rowHeight = block.rowHeight * imageSize.height
       guard rowHeight >= 6, textBounds.width >= 4 else { return nil }
 
@@ -158,6 +181,7 @@ enum AnnotateAutoTranslateLayout {
 
       let rowRects = block.rowBoxes.map {
         VisionImageGeometry.annotateRect(fromVisionBoundingBox: $0, imageSize: imageSize)
+          .offsetBy(dx: origin.x, dy: origin.y)
       }
       return AnnotateTranslationCandidate(
         id: UUID(),
@@ -191,6 +215,30 @@ enum AnnotateAutoTranslateLayout {
       }
     }
     return true
+  }
+
+  /// Crops `region` (annotate space, bottom-left) out of `cgImage`. Returns the crop and
+  /// where it sits in annotate space, snapped to whole pixels.
+  nonisolated static func regionCrop(
+    of cgImage: CGImage,
+    imageSize: CGSize,
+    region: CGRect
+  ) -> (image: CGImage, origin: CGPoint, size: CGSize)? {
+    guard imageSize.width > 0, imageSize.height > 0 else { return nil }
+    let clamped = region.standardized.intersection(CGRect(origin: .zero, size: imageSize))
+    guard !clamped.isNull, clamped.width >= 4, clamped.height >= 4 else { return nil }
+    let scaleX = CGFloat(cgImage.width) / imageSize.width
+    let scaleY = CGFloat(cgImage.height) / imageSize.height
+    let pixel = CGRect(
+      x: clamped.minX * scaleX,
+      y: (imageSize.height - clamped.maxY) * scaleY,
+      width: clamped.width * scaleX,
+      height: clamped.height * scaleY
+    ).integral.intersection(CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height))
+    guard pixel.width >= 2, pixel.height >= 2, let crop = cgImage.cropping(to: pixel) else { return nil }
+    let size = CGSize(width: pixel.width / scaleX, height: pixel.height / scaleY)
+    let origin = CGPoint(x: pixel.minX / scaleX, y: imageSize.height - pixel.maxY / scaleY)
+    return (crop, origin, size)
   }
 
   nonisolated static func languageCode(_ identifier: String) -> String {

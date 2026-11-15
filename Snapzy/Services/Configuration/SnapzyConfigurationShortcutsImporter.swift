@@ -444,6 +444,8 @@ private extension AnnotateShortcutManager {
       setAutoRedactSensitiveDataShortcut(config)
     case .autoTranslate:
       setAutoTranslateShortcut(config)
+    case .translateArea:
+      setTranslateAreaShortcut(config)
     }
   }
 }

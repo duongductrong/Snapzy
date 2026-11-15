@@ -246,6 +246,8 @@ enum ShortcutOverlayContentBuilder {
       return (L10n.ShortcutOverlay.autoRedactSensitiveData, "shield.lefthalf.filled")
     case .autoTranslate:
       return (L10n.AnnotateTranslate.actionTitle, "translate")
+    case .translateArea:
+      return (L10n.AnnotateTranslate.translateArea, "text.viewfinder")
     }
   }
 
