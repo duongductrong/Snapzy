@@ -192,7 +192,9 @@ struct AnnotateQuickPropertiesBar: View {
     let showTextSnap = state.quickPropertiesSupportsHighlighterTextSnapping
     let showMeasureAxis = state.quickPropertiesSupportsMeasureAxis
     let showMeasureUnit = state.quickPropertiesSupportsMeasureUnit
-    let hasEditableStyleControls = showStrokeColor
+    let showTranslation = state.quickPropertiesSelectedAnnotationCount == 1 && state.selectedTranslation != nil
+    let hasEditableStyleControls = showTranslation
+      || showStrokeColor
       || showFill
       || showTextBackground
       || showTextFontSize
@@ -222,6 +224,19 @@ struct AnnotateQuickPropertiesBar: View {
     return HStack(spacing: density.rowSpacing) {
       contextChip(density: density)
         .frame(width: density.contextChipWidth, alignment: .leading)
+
+      activePropertySlot(
+        isVisible: showTranslation,
+        isEnabled: state.editorMode == .annotate,
+        showsLeadingDivider: false,
+        width: nil
+      ) {
+        QuickTranslationControl(
+          state: state,
+          buttonWidth: density.controlButtonWidth,
+          groupSpacing: density.groupSpacing
+        )
+      }
 
       activePropertySlot(
         isVisible: showSelectionInfo,
@@ -1391,7 +1406,7 @@ private struct QuickPropertiesColorSwatch: View {
   }
 }
 
-private struct QuickPropertiesGroup<Content: View>: View {
+struct QuickPropertiesGroup<Content: View>: View {
   let title: String
   let spacing: CGFloat
   let content: Content

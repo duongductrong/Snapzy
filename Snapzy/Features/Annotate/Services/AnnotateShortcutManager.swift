@@ -17,6 +17,7 @@ enum AnnotateActionShortcutKind: String, CaseIterable, Codable {
   case togglePin
   case cloudUpload
   case autoRedactSensitiveData
+  case autoTranslate
 }
 
 /// Manager for annotation tool keyboard shortcuts
@@ -35,6 +36,7 @@ final class AnnotateShortcutManager: ObservableObject {
   @Published private(set) var togglePinShortcut: ShortcutConfig?
   @Published private(set) var cloudUploadShortcut: ShortcutConfig?
   @Published private(set) var autoRedactSensitiveDataShortcut: ShortcutConfig?
+  @Published private(set) var autoTranslateShortcut: ShortcutConfig?
   @Published private(set) var disabledActionShortcuts: Set<AnnotateActionShortcutKind> = []
 
   /// UserDefaults key prefix
@@ -44,6 +46,7 @@ final class AnnotateShortcutManager: ObservableObject {
   private let togglePinKey = "annotate.action.togglePin"
   private let cloudUploadKey = "annotate.action.cloudUpload"
   private let autoRedactSensitiveDataKey = "annotate.action.autoRedactSensitiveData"
+  private let autoTranslateKey = "annotate.action.autoTranslate"
   private let disabledToolShortcutsKey = PreferencesKeys.disabledAnnotateToolShortcuts
   private let disabledActionShortcutsKey = PreferencesKeys.disabledAnnotateActionShortcuts
   private let explicitEmptyActionShortcutData = Data("null".utf8)
@@ -81,12 +84,19 @@ final class AnnotateShortcutManager: ObservableObject {
   /// No default shortcut; available for users who want a local Annotate action key.
   static let defaultAutoRedactSensitiveData: ShortcutConfig? = nil
 
+  /// Default: ⌘⇧T (Annotate-local; nothing else in Annotate uses T with ⌘).
+  static let defaultAutoTranslate = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_T),
+    modifiers: UInt32(cmdKey | shiftKey)
+  )
+
   private init() {
     copyAndCloseShortcut = Self.defaultCopyAndClose
     toggleSidebarShortcut = Self.defaultToggleSidebar
     togglePinShortcut = Self.defaultTogglePin
     cloudUploadShortcut = Self.defaultCloudUpload
     autoRedactSensitiveDataShortcut = Self.defaultAutoRedactSensitiveData
+    autoTranslateShortcut = Self.defaultAutoTranslate
     loadShortcuts()
     loadDisabledToolShortcuts()
     loadActionShortcuts()
@@ -150,6 +160,7 @@ final class AnnotateShortcutManager: ObservableObject {
     setTogglePinShortcut(Self.defaultTogglePin)
     setCloudUploadShortcut(Self.defaultCloudUpload)
     setAutoRedactSensitiveDataShortcut(Self.defaultAutoRedactSensitiveData)
+    setAutoTranslateShortcut(Self.defaultAutoTranslate)
   }
 
   // MARK: - Action Shortcut Mutation
@@ -179,6 +190,11 @@ final class AnnotateShortcutManager: ObservableObject {
     saveActionShortcut(config, forKey: autoRedactSensitiveDataKey)
   }
 
+  func setAutoTranslateShortcut(_ config: ShortcutConfig?) {
+    autoTranslateShortcut = config
+    saveActionShortcut(config, forKey: autoTranslateKey)
+  }
+
   func isActionShortcutEnabled(for kind: AnnotateActionShortcutKind) -> Bool {
     !disabledActionShortcuts.contains(kind)
   }
@@ -195,6 +211,8 @@ final class AnnotateShortcutManager: ObservableObject {
       return cloudUploadShortcut
     case .autoRedactSensitiveData:
       return autoRedactSensitiveDataShortcut
+    case .autoTranslate:
+      return autoTranslateShortcut
     }
   }
 
@@ -243,6 +261,13 @@ final class AnnotateShortcutManager: ObservableObject {
     guard isActionShortcutEnabled(for: .autoRedactSensitiveData) else { return false }
     guard let autoRedactSensitiveDataShortcut else { return false }
     return matchesShortcut(autoRedactSensitiveDataShortcut, event: event)
+  }
+
+  /// Check if an NSEvent matches the Auto Translate shortcut.
+  func matchesAutoTranslate(_ event: NSEvent) -> Bool {
+    guard isActionShortcutEnabled(for: .autoTranslate) else { return false }
+    guard let autoTranslateShortcut else { return false }
+    return matchesShortcut(autoTranslateShortcut, event: event)
   }
 
   // MARK: - Validation
@@ -305,6 +330,7 @@ final class AnnotateShortcutManager: ObservableObject {
       forKey: autoRedactSensitiveDataKey,
       defaultValue: Self.defaultAutoRedactSensitiveData
     )
+    autoTranslateShortcut = loadActionShortcut(forKey: autoTranslateKey, defaultValue: Self.defaultAutoTranslate)
   }
 
   private func loadDisabledActionShortcuts() {

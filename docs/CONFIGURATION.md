@@ -235,6 +235,11 @@ enabled = true
 key = ""
 modifiers = []
 
+[shortcuts.annotate_actions.auto_translate]
+enabled = true
+key = "t"
+modifiers = ["command", "shift"]
+
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false
 key = "return"

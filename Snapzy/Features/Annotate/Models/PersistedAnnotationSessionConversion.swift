@@ -143,7 +143,8 @@ extension PersistedAnnotationSession {
       createdAt: createdAt,
       updatedAt: updatedAt,
       combineSession: persistedCombineSession,
-      sourceLogicalSize: sessionData.sourceLogicalSize
+      sourceLogicalSize: sessionData.sourceLogicalSize,
+      excludesTranslationsFromExport: sessionData.excludesTranslationsFromExport ? true : nil
     )
   }
 
@@ -166,7 +167,8 @@ extension PersistedAnnotationSession {
       cutoutAutoAppliedCropRect: cutoutAutoAppliedCropRect,
       embeddedImageAssetsData: embeddedImageAssetsData,
       combineSession: combineSession?.toSnapshot(),
-      sourceLogicalSize: sourceLogicalSize
+      sourceLogicalSize: sourceLogicalSize,
+      excludesTranslationsFromExport: excludesTranslationsFromExport ?? false
     )
   }
 }

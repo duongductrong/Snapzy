@@ -370,6 +370,19 @@ struct AnnotateCanvasView: View {
           .frame(width: foregroundWidth, height: foregroundHeight)
           .offset(x: offset.x, y: offset.y)
         }
+
+        // Auto Translate loading overlay (reading → translating → resolving).
+        if state.isAutoTranslateRunning {
+          AnnotateAutoTranslateOverlayView(
+            state: state,
+            scale: scale,
+            canvasBounds: foregroundBounds
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
+          .clipped()
+          .offset(x: offset.x, y: offset.y)
+          .transition(.opacity.animation(.easeOut(duration: 0.18)))
+        }
       }
       .modifier(CombineCanvasClipModifier(
         isEnabled: state.isCombineMode,
@@ -398,6 +411,10 @@ struct AnnotateCanvasView: View {
       }
     }
     .contentShape(Rectangle())
+    .overlay(alignment: .bottom) {
+      AnnotateAutoTranslatePill(state: state)
+        .padding(.bottom, 16)
+    }
     .contextMenu {
       Button {
         state.extractText()

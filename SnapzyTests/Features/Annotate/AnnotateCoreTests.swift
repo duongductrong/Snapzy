@@ -335,6 +335,64 @@ final class AnnotateCoreTests: XCTestCase {
     XCTAssertEqual(rect.height, 20, accuracy: 0.0001)
   }
 
+  func testVisionBoxConvertsToAnnotateCanvasCoordinates() {
+    // Annotate bounds are bottom-left: a box near the top of the image has a large y.
+    let rect = VisionImageGeometry.annotateRect(
+      fromVisionBoundingBox: CGRect(x: 0.25, y: 0.8, width: 0.5, height: 0.1),
+      imageSize: CGSize(width: 400, height: 200)
+    )
+
+    XCTAssertEqual(rect.origin.x, 100, accuracy: 0.0001)
+    XCTAssertEqual(rect.origin.y, 160, accuracy: 0.0001)
+    XCTAssertEqual(rect.width, 200, accuracy: 0.0001)
+    XCTAssertEqual(rect.height, 20, accuracy: 0.0001)
+  }
+
+  func testSensitiveRedactionRegionsAreFlippedIntoAnnotateSpace() {
+    let imageSize = CGSize(width: 400, height: 200)
+    let visionBox = CGRect(x: 0.25, y: 0.8, width: 0.5, height: 0.1)
+    let topLeft = AnnotateSensitiveRedactionService.imageRect(fromVisionBoundingBox: visionBox, imageSize: imageSize)
+
+    let regions = AnnotateSensitiveRedactionService.annotateRegions(
+      fromTopLeftRegions: [AnnotateSensitiveRedactionRegion(kind: .email, bounds: topLeft, confidence: 1)],
+      imageSize: imageSize
+    )
+
+    XCTAssertEqual(regions.count, 1)
+    XCTAssertEqual(regions[0].kind, .email)
+    XCTAssertEqual(
+      regions[0].bounds,
+      VisionImageGeometry.annotateRect(fromVisionBoundingBox: visionBox, imageSize: imageSize)
+    )
+  }
+
+  func testSensitiveRedactionDetectsEmailAtImageTopInAnnotateSpace() async throws {
+    let imageSize = CGSize(width: 900, height: 600)
+    let image = NSImage(size: imageSize, flipped: false) { bounds in
+      NSColor.white.setFill()
+      bounds.fill()
+      let attributes: [NSAttributedString.Key: Any] = [
+        .font: NSFont.systemFont(ofSize: 36, weight: .regular),
+        .foregroundColor: NSColor.black,
+      ]
+      // Drawn near the top edge (bottom-left drawing space, like the canvas).
+      ("Contact: john.appleseed@example.com" as NSString)
+        .draw(at: CGPoint(x: 40, y: bounds.height - 90), withAttributes: attributes)
+      ("Plain text near the bottom" as NSString)
+        .draw(at: CGPoint(x: 40, y: 40), withAttributes: attributes)
+      return true
+    }
+
+    let result = try await AnnotateSensitiveRedactionService().detectRegions(in: image)
+    let emails = result.regions.filter { $0.kind == .email }
+
+    XCTAssertFalse(emails.isEmpty, "Vision should find the e-mail address")
+    for region in emails {
+      XCTAssertGreaterThan(region.bounds.minY, imageSize.height / 2, "Region must sit at the top, not mirrored to the bottom")
+      XCTAssertTrue(region.bounds.intersects(CGRect(x: 40, y: imageSize.height - 90, width: 800, height: 50)))
+    }
+  }
+
   func testSensitiveRedactionRectUsesFullLineBoundsWhenMatchCoversMostOCRLine() {
     let text = "admin@example.com"
     let matchRange = NSRange(text.startIndex..<text.endIndex, in: text)

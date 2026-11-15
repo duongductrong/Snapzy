@@ -285,6 +285,8 @@ private extension AnnotateActionShortcutKind {
       return L10n.ShortcutOverlay.cloudUpload
     case .autoRedactSensitiveData:
       return L10n.ShortcutOverlay.autoRedactSensitiveData
+    case .autoTranslate:
+      return L10n.AnnotateTranslate.actionTitle
     }
   }
 }

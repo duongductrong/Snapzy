@@ -77,6 +77,21 @@ final class OCRService {
   /// Built-in Apple Vision recognition with profile/language recovery passes.
   /// Kept intact for `VisionOCRProvider`; other engines plug in via `OCRProvider`.
   func recognizeWithVision(_ request: OCRRequest) async throws -> OCRResult {
+    try await recognizeWithVision(request, allowsGeometryChangingRecovery: true)
+  }
+
+  /// Text with positions for overlays (Annotate Auto Translate). Always Vision, because
+  /// custom endpoints return no geometry. Inherits the OCR language, profiles and the
+  /// contrast recovery pass; skips the vertical-CJK pass, whose normalized image has
+  /// different geometry, so every returned box maps onto the source image.
+  func recognizeLayout(_ request: OCRRequest) async throws -> OCRResult {
+    try await recognizeWithVision(request, allowsGeometryChangingRecovery: false)
+  }
+
+  private func recognizeWithVision(
+    _ request: OCRRequest,
+    allowsGeometryChangingRecovery: Bool
+  ) async throws -> OCRResult {
     let normalizedImage = await normalizedImageForVision(request.image)
     let request = OCRRequest(
       image: normalizedImage,
@@ -134,7 +149,8 @@ final class OCRService {
       }
     }
 
-    if request.contentType != .code,
+    if allowsGeometryChangingRecovery,
+      request.contentType != .code,
       let verticalImage = await OCRWorkQueue.run({ VerticalCJKTextNormalizer.normalizedImage(from: sourceImage) }) {
       let verticalRequest = OCRRequest(
         image: verticalImage,

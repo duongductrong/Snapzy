@@ -533,6 +533,10 @@ final class DrawingCanvasNSView: NSView {
     state.$cutoutImage
       .sink { [weak self] _ in self?.invalidateDrawing() }
       .store(in: &stateObservers)
+    state.$isPeekingOriginalTranslations
+      .removeDuplicates()
+      .sink { [weak self] _ in self?.invalidateDrawing() }
+      .store(in: &stateObservers)
 
     // Everything else (crop flags, spotlight opacity, zoom/pan, ...) only needs
     // the cheap live layers; static annotation content is unaffected.
@@ -1084,6 +1088,15 @@ final class DrawingCanvasNSView: NSView {
         Task { @MainActor in
           state.selectedAnnotationId = annotation.id
           state.beginTextEditing(id: annotation.id)
+        }
+        invalidateDrawing()
+        return
+      }
+      if let annotation = hitTestAnnotation(at: imagePoint),
+         case .translation = annotation.type {
+        Task { @MainActor in
+          state.setSelectedAnnotationIds([annotation.id])
+          state.translationEditorID = annotation.id
         }
         invalidateDrawing()
         return
@@ -2105,9 +2118,12 @@ final class DrawingCanvasNSView: NSView {
   /// Current items for display: gesture-local copies shadow state items while
   /// a drag/resize is active.
   private func currentDisplayItems() -> [AnnotationItem] {
-    gestureLocalItems.isEmpty
+    let items = gestureLocalItems.isEmpty
       ? state.annotations
       : state.annotations.map { gestureLocalItems[$0.id] ?? $0 }
+    // Holding ⌥ peeks at the source text under Auto Translate overlays.
+    guard state.isPeekingOriginalTranslations else { return items }
+    return items.filter { !$0.type.isTranslation }
   }
 
   /// Ids of annotations pulled out of the static layers because they are being

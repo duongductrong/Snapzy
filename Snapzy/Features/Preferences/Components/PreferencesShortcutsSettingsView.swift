@@ -43,6 +43,7 @@ struct ShortcutsSettingsView: View {
   @State private var togglePinShortcut: ShortcutConfig?
   @State private var cloudUploadShortcut: ShortcutConfig?
   @State private var autoRedactSensitiveDataShortcut: ShortcutConfig?
+  @State private var autoTranslateShortcut: ShortcutConfig?
   @State private var globalShortcutEnabled: [GlobalShortcutKind: Bool]
   @State private var annotateActionEnabled: [AnnotateActionShortcutKind: Bool]
   @State private var globalValidationIssues: [GlobalShortcutKind: ShortcutValidationIssue] = [:]
@@ -113,6 +114,7 @@ struct ShortcutsSettingsView: View {
     _autoRedactSensitiveDataShortcut = State(
       initialValue: AnnotateShortcutManager.shared.autoRedactSensitiveDataShortcut
     )
+    _autoTranslateShortcut = State(initialValue: AnnotateShortcutManager.shared.autoTranslateShortcut)
     _globalShortcutEnabled = State(
       initialValue: Dictionary(
         uniqueKeysWithValues: GlobalShortcutKind.allCases.map {
@@ -735,6 +737,17 @@ struct ShortcutsSettingsView: View {
       onSwap: swapAction(for: .annotateAction(.autoRedactSensitiveData)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .autoRedactSensitiveData) }
     )
+
+    ShortcutRecorderView(
+      label: L10n.AnnotateTranslate.actionTitle,
+      description: L10n.AnnotateTranslate.shortcutDescription,
+      shortcut: $autoTranslateShortcut,
+      defaultShortcut: AnnotateShortcutManager.defaultAutoTranslate,
+      isEnabled: annotateActionEnabledBinding(for: .autoTranslate),
+      validationIssue: annotateActionValidationIssues[.autoTranslate],
+      onSwap: swapAction(for: .annotateAction(.autoTranslate)),
+      onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .autoTranslate) }
+    )
   }
 
   @ViewBuilder
@@ -929,6 +942,7 @@ struct ShortcutsSettingsView: View {
     togglePinShortcut = AnnotateShortcutManager.defaultTogglePin
     cloudUploadShortcut = AnnotateShortcutManager.defaultCloudUpload
     autoRedactSensitiveDataShortcut = AnnotateShortcutManager.defaultAutoRedactSensitiveData
+    autoTranslateShortcut = AnnotateShortcutManager.defaultAutoTranslate
 
     for kind in AnnotateActionShortcutKind.allCases {
       annotateActionEnabled[kind] = true
@@ -941,6 +955,7 @@ struct ShortcutsSettingsView: View {
     annotateManager.setTogglePinShortcut(AnnotateShortcutManager.defaultTogglePin)
     annotateManager.setCloudUploadShortcut(AnnotateShortcutManager.defaultCloudUpload)
     annotateManager.setAutoRedactSensitiveDataShortcut(AnnotateShortcutManager.defaultAutoRedactSensitiveData)
+    annotateManager.setAutoTranslateShortcut(AnnotateShortcutManager.defaultAutoTranslate)
   }
 
   private func resetAnnotateToolKeysSection() {
@@ -1250,6 +1265,9 @@ struct ShortcutsSettingsView: View {
       case .autoRedactSensitiveData:
         autoRedactSensitiveDataShortcut = config
         annotateManager.setAutoRedactSensitiveDataShortcut(config)
+      case .autoTranslate:
+        autoTranslateShortcut = config
+        annotateManager.setAutoTranslateShortcut(config)
       }
       return true
     case .reject(let issue):

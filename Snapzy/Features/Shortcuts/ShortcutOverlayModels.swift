@@ -244,6 +244,8 @@ enum ShortcutOverlayContentBuilder {
       return (L10n.ShortcutOverlay.cloudUpload, "icloud.and.arrow.up")
     case .autoRedactSensitiveData:
       return (L10n.ShortcutOverlay.autoRedactSensitiveData, "shield.lefthalf.filled")
+    case .autoTranslate:
+      return (L10n.AnnotateTranslate.actionTitle, "translate")
     }
   }
 

@@ -95,6 +95,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
+      self.state.includesTranslationsInExport = !sessionData.excludesTranslationsFromExport
     } else {
       // First open: load image from disk and capture raw file bytes (fast, no re-encoding)
       let image = Self.loadImageWithCorrectScale(from: item.url) ?? item.thumbnail
@@ -205,6 +206,7 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       if let combineSession = sessionData.combineSession {
         self.state.restoreCombineSession(combineSession)
       }
+      self.state.includesTranslationsInExport = !sessionData.excludesTranslationsFromExport
     } else {
       let image = Self.loadImageWithCorrectScale(from: url)
         ?? NSImage(size: NSSize(width: 400, height: 300))
@@ -775,6 +777,16 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
     ) { [weak self] _ in
       MainActor.assumeIsolated {
         self?.state.autoRedactSensitiveData()
+      }
+    }
+
+    NotificationCenter.default.addObserver(
+      forName: .annotateAutoTranslate,
+      object: window,
+      queue: .main
+    ) { [weak self] _ in
+      MainActor.assumeIsolated {
+        self?.state.toggleAutoTranslate()
       }
     }
 

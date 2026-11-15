@@ -1416,6 +1416,8 @@ nonisolated enum AnnotationType: Equatable {
   case embeddedImage(UUID)
   case spotlight
   case measurement(MeasureGeometry)
+  /// Auto Translate overlay: cover + translated text over a source text block.
+  case translation(TranslatedTextBlock)
 
   /// Corresponding toolbar tool type for this annotation
   var toolType: AnnotationToolType {
@@ -1434,6 +1436,7 @@ nonisolated enum AnnotationType: Equatable {
     case .embeddedImage: .selection
     case .spotlight: .spotlight
     case .measurement: .measure
+    case .translation: .selection
     }
   }
 
@@ -1712,7 +1715,7 @@ extension AnnotationItem {
     let tolerance = baseTolerance + properties.strokeWidth / 2
 
     switch type {
-    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight:
+    case .rectangle, .filledRectangle, .blur(_), .watermark, .embeddedImage, .spotlight, .translation:
       return bounds.contains(point)
 
     case .oval:
@@ -1829,7 +1832,7 @@ extension AnnotationItem {
     case .embeddedImage:
       return false
 
-    case .arrow, .line, .path, .highlight, .text, .counter, .measurement:
+    case .arrow, .line, .path, .highlight, .text, .counter, .measurement, .translation:
       return containsPoint(point, baseTolerance: baseTolerance)
     }
   }

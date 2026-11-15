@@ -57,5 +57,6 @@ struct AnnotateMainView: View {
     .preferredColorScheme(themeManager.systemAppearance)
     .ignoresSafeArea(.all, edges: .top) // Extend background behind title bar
     .animation(.easeInOut(duration: 0.14), value: state.showsQuickPropertiesBar)
+    .modifier(AnnotateAppleTranslationHost(state: state))
   }
 }
