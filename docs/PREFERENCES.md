@@ -67,6 +67,7 @@ Segmented into four panes (`CaptureSettingsPane`): General / Screenshot / Record
     - A removed or unavailable custom endpoint falls back to Built-in OCR (`OCRModelResolver`). Legacy downloadable selections are treated as Built-in OCR.
   - Notifications: OCR Notifications (`ocr.successNotificationEnabled`, default on — posts a native macOS notification with a preview of the recognized text; falls back to an in-app toast when notifications are unavailable). When the toggle is on, an inline row surfaces the macOS-level permission only when it would block delivery: `notDetermined` shows an "Allow" button that triggers the system prompt in place, `denied` shows an orange hint plus "Open Settings". A granted (or unavailable) state renders nothing, so a healthy setup stays uncluttered. The row refreshes on `NSApplication.didBecomeActiveNotification`, so returning from System Settings updates it.
   - Text Actions: Link Detection (`ocr.linkDetectionEnabled`).
+  - Snip to Translate (`PreferencesTranslateSettingsSection`): Translate to (`translate.targetLanguage`, empty = "Ask on first use") and Translation engine (`translate.selectedEngine`, `builtin` = Apple Translation, or one of the custom endpoints from the OCR Model list). On macOS 13/14 the Apple option reads "requires macOS 15" and a hint explains how to translate with a custom endpoint; choosing an endpoint shows that text is sent to it. Exported/imported under `[capture.translate]` (`target_language`, `selected_engine`).
 
 ### Annotate (`PreferencesAnnotateSettingsView.swift`)
 

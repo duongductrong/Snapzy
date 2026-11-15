@@ -97,6 +97,13 @@ enum SnapzyConfigurationExporter {
     writer.value("selected_model", defaults.string(forKey: PreferencesKeys.ocrSelectedModel) ?? OCRModelSelection.builtIn.persistedValue)
     writer.value("custom_models", customModelsJSON(defaults: defaults))
 
+    writer.section("capture.translate")
+    writer.value("target_language", defaults.string(forKey: PreferencesKeys.translateTargetLanguage) ?? "")
+    writer.value(
+      "selected_engine",
+      defaults.string(forKey: PreferencesKeys.translateSelectedEngine) ?? TranslationEngineSelection.builtIn.persistedValue
+    )
+
     writer.section("capture.object_cutout")
     writer.value("auto_crop", defaults.boolValue(PreferencesKeys.backgroundCutoutAutoCropEnabled, default: true))
 

@@ -374,6 +374,8 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
       captureScrolling()
     case .captureOCR:
       captureOCR()
+    case .captureTranslate:
+      captureTranslate()
     case .captureSmartElement:
       SmartElementCaptureController.shared.startCapture()
     case .captureObjectCutout:
@@ -2487,6 +2489,26 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
   // MARK: - OCR Capture
 
   func captureOCR() {
+    runTextCapture(purpose: .copyText)
+  }
+
+  /// Snip to Translate: same selection, capture and OCR as `captureOCR()`, but the
+  /// recognized text opens the translation card instead of going to the clipboard.
+  func captureTranslate() {
+    if case .unavailable(let reason) = TranslationEngineResolver().resolve(), !isOCRProcessing {
+      DiagnosticLogger.shared.log(.info, .ocr, "Translate capture unavailable", context: ["reason": "\(reason)"])
+      TranslationCardManager.shared.presentUnavailable(reason)
+      return
+    }
+    runTextCapture(purpose: .translate)
+  }
+
+  private enum TextCapturePurpose: String {
+    case copyText
+    case translate
+  }
+
+  private func runTextCapture(purpose: TextCapturePurpose) {
     // A previous OCR is still capturing/recognizing: tell the user at the pointer
     // instead of silently ignoring the shortcut (which reads as the app hanging).
     if isOCRProcessing {
@@ -2503,7 +2525,7 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
 
     // Set flag BEFORE delay to close the race window
     isAreaSelectionActive = true
-    DiagnosticLogger.shared.log(.info, .ocr, "OCR capture flow started")
+    DiagnosticLogger.shared.log(.info, .ocr, "OCR capture flow started", context: ["purpose": purpose.rawValue])
     let excludeDesktopIcons = DesktopIconManager.shared.isIconHidingEnabled
     let excludeDesktopWidgets = DesktopIconManager.shared.isWidgetHidingEnabled
     let excludeOwnApplication = !includesOwnAppInScreenshots
@@ -2639,6 +2661,42 @@ final class ScreenCaptureViewModel: ObservableObject, KeyboardShortcutDelegate {
               let (qrResult, recognizedText) = await (qrResultTask, recognizedTextTask)
               let processingDurationMs = Self.elapsedMilliseconds(since: processingStartTime)
               let totalDurationMs = Self.elapsedMilliseconds(since: operationStartTime)
+
+              if purpose == .translate {
+                AppStatusBarController.shared.setProcessing(false)
+                let performanceContext = [
+                  "purpose": purpose.rawValue,
+                  "captureMs": captureDurationMs,
+                  "processingMs": processingDurationMs,
+                  "totalMs": totalDurationMs,
+                ]
+                guard let recognizedText,
+                      !recognizedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                  if let progressToast {
+                    AppToastManager.shared.update(
+                      progressToast,
+                      message: L10n.OCR.noTextFound,
+                      style: .warning,
+                      duration: 2.5,
+                      variant: .compact
+                    )
+                    progressToastResolved = true
+                  }
+                  DiagnosticLogger.shared.log(
+                    .warning,
+                    .ocr,
+                    "Translate capture found no text",
+                    context: performanceContext
+                  )
+                  QuickAccessSound.failed.play()
+                  return
+                }
+                var context = performanceContext
+                context["chars"] = "\(recognizedText.count)"
+                DiagnosticLogger.shared.log(.info, .ocr, "Translate capture recognized text", context: context)
+                TranslationCardManager.shared.present(sourceText: recognizedText, anchorRect: selectedRect)
+                return
+              }
 
               let clipboardText = OCRQRPayloadComposer.compose(
                 recognizedText: recognizedText,

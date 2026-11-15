@@ -22,6 +22,7 @@ struct ShortcutsSettingsView: View {
   @State private var scrollingCaptureShortcut: ShortcutConfig?
   @State private var objectCutoutShortcut: ShortcutConfig?
   @State private var ocrShortcut: ShortcutConfig?
+  @State private var translateShortcut: ShortcutConfig?
   @State private var smartElementShortcut: ShortcutConfig?
   @State private var recordingShortcut: ShortcutConfig?
   @State private var pauseResumeRecordingShortcut: ShortcutConfig?
@@ -81,6 +82,7 @@ struct ShortcutsSettingsView: View {
     _scrollingCaptureShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .scrollingCapture))
     _objectCutoutShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .objectCutout))
     _ocrShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .ocr))
+    _translateShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .translate))
     _smartElementShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .smartElement))
     _recordingShortcut = State(initialValue: KeyboardShortcutManager.shared.shortcut(for: .recording))
     _pauseResumeRecordingShortcut = State(
@@ -465,6 +467,17 @@ struct ShortcutsSettingsView: View {
     )
 
     ShortcutRecorderView(
+      label: L10n.Translate.actionTitle,
+      description: L10n.Translate.shortcutDescription,
+      shortcut: $translateShortcut,
+      defaultShortcut: .defaultTranslate,
+      isEnabled: globalEnabledBinding(for: .translate),
+      validationIssue: globalValidationIssues[.translate],
+      onSwap: swapAction(for: .global(.translate)),
+      onShortcutChanged: { handleGlobalShortcutChange($0, for: .translate) }
+    )
+
+    ShortcutRecorderView(
       label: L10n.Actions.captureSmartElement,
       description: L10n.PreferencesShortcuts.smartElementCaptureDescription,
       shortcut: $smartElementShortcut,
@@ -784,11 +797,12 @@ struct ShortcutsSettingsView: View {
     scrollingCaptureShortcut = .defaultScrollingCapture
     objectCutoutShortcut = .defaultObjectCutout
     ocrShortcut = .defaultOCR
+    translateShortcut = .defaultTranslate
     smartElementShortcut = .defaultSmartElement
 
     let captureKinds: [GlobalShortcutKind] = [
       .fullscreen, .area, .repeatArea, .delayedCapture, .delayedFullscreen, .areaAnnotate, .activeWindow, .scrollingCapture, .objectCutout, .ocr,
-      .smartElement,
+      .translate, .smartElement,
     ]
     for kind in captureKinds {
       globalShortcutEnabled[kind] = true
@@ -807,6 +821,7 @@ struct ShortcutsSettingsView: View {
     manager.setScrollingCaptureShortcut(.defaultScrollingCapture)
     manager.setObjectCutoutShortcut(.defaultObjectCutout)
     manager.setOCRShortcut(.defaultOCR)
+    manager.setTranslateShortcut(.defaultTranslate)
     manager.setSmartElementShortcut(.defaultSmartElement)
     CaptureOverlayShortcutSettings.resetApplicationCaptureShortcut()
 
@@ -1182,6 +1197,9 @@ struct ShortcutsSettingsView: View {
       case .ocr:
         ocrShortcut = config
         manager.setOCRShortcut(config)
+      case .translate:
+        translateShortcut = config
+        manager.setTranslateShortcut(config)
       case .smartElement:
         smartElementShortcut = config
         manager.setSmartElementShortcut(config)

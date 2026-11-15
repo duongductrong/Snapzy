@@ -274,6 +274,7 @@ struct MenuBarSettingsPreview: View {
     case .captureActiveWindow: return .activeWindow
     case .scrollingCapture: return .scrollingCapture
     case .captureOCR: return .ocr
+    case .captureTranslate: return .translate
     case .captureSmartElement: return .smartElement
     case .captureObjectCutout: return .objectCutout
     case .captureDelayed: return .delayedCapture

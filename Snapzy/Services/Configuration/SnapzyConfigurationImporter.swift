@@ -260,6 +260,16 @@ enum SnapzyConfigurationImporter {
       defaults.set($0, forKey: PreferencesKeys.ocrSelectedModel)
     }
     collectCustomOCRModels(&reader, defaults: defaults, keychainStore: keychainStore, mutations: &mutations)
+    collectString(&reader, "capture", "translate", "target_language", mutations: &mutations) {
+      if $0.isEmpty {
+        defaults.removeObject(forKey: PreferencesKeys.translateTargetLanguage)
+      } else {
+        defaults.set($0, forKey: PreferencesKeys.translateTargetLanguage)
+      }
+    }
+    collectString(&reader, "capture", "translate", "selected_engine", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.translateSelectedEngine)
+    }
     collectBool(&reader, "capture", "object_cutout", "auto_crop", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.backgroundCutoutAutoCropEnabled)
     }

@@ -78,6 +78,12 @@ struct ShortcutConfig: Equatable, Codable {
     modifiers: UInt32(optionKey | shiftKey)
   )
 
+  /// Option + Shift + 2 (Snip to Translate): pairs with OCR's ⇧⌘2 in the ⌥⇧ tool family.
+  static let defaultTranslate = ShortcutConfig(
+    keyCode: UInt32(kVK_ANSI_2),
+    modifiers: UInt32(optionKey | shiftKey)
+  )
+
   /// Option + Shift + M (Measure Screen): sits with Smart Element's ⌥⇧4 as a screen-inspection
   /// tool and avoids the system's ⌥⌘ bindings (⌥⌘M minimizes all windows).
   static let defaultMeasureScreen = ShortcutConfig(
@@ -495,6 +501,7 @@ enum GlobalShortcutKind: String, CaseIterable, Codable {
   case cloudUploads
   case shortcutList
   case ocr
+  case translate
   case smartElement
   case objectCutout
   case history
@@ -560,6 +567,8 @@ extension GlobalShortcutKind {
       return L10n.Actions.pickColor
     case .measureScreen:
       return L10n.Actions.measureScreen
+    case .translate:
+      return L10n.Translate.actionTitle
     }
   }
 }
@@ -591,6 +600,7 @@ enum ShortcutAction {
   case openHistory
   case pickColor
   case measureScreen
+  case captureTranslate
 }
 
 /// Protocol for handling shortcut events
@@ -633,6 +643,7 @@ final class KeyboardShortcutManager {
   private(set) var delayedFullscreenShortcut: ShortcutConfig
   private(set) var pickColorShortcut: ShortcutConfig
   private(set) var measureScreenShortcut: ShortcutConfig
+  private(set) var translateShortcut: ShortcutConfig
   private(set) var isEnabled: Bool = false
   private var disabledShortcuts: Set<GlobalShortcutKind> = []
   private var clearedShortcuts: Set<GlobalShortcutKind> = []
@@ -697,6 +708,7 @@ final class KeyboardShortcutManager {
   private var delayedFullscreenHotkeyRef: EventHotKeyRef?
   private var pickColorHotkeyRef: EventHotKeyRef?
   private var measureScreenHotkeyRef: EventHotKeyRef?
+  private var translateHotkeyRef: EventHotKeyRef?
 
   /// Fn-containing bindings can't be expressed via Carbon `RegisterEventHotKey`;
   /// they are dispatched through key event monitors instead.
@@ -730,6 +742,7 @@ final class KeyboardShortcutManager {
   private let delayedFullscreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464E), id: 23) // "ZSFN"
   private let pickColorHotkeyID = EventHotKeyID(signature: OSType(0x5A53_464F), id: 24)         // "ZSFO"
   private let measureScreenHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4650), id: 25)     // "ZSFP"
+  private let translateHotkeyID = EventHotKeyID(signature: OSType(0x5A53_4651), id: 26)         // "ZSFQ"
 
   private var eventHandler: EventHandlerRef?
 
@@ -757,6 +770,7 @@ final class KeyboardShortcutManager {
   private let delayedFullscreenShortcutKey = "delayedFullscreenShortcut"
   private let pickColorShortcutKey = "pickColorShortcut"
   private let measureScreenShortcutKey = "measureScreenShortcut"
+  private let translateShortcutKey = "translateShortcut"
   private let shortcutsEnabledKey = "shortcutsEnabled"
   private let disabledShortcutsKey = PreferencesKeys.disabledGlobalShortcuts
   private let clearedShortcutsKey = PreferencesKeys.clearedGlobalShortcuts
@@ -785,10 +799,16 @@ final class KeyboardShortcutManager {
     delayedFullscreenShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     pickColorShortcut = ShortcutConfig(keyCode: 0, modifiers: 0)
     measureScreenShortcut = .defaultMeasureScreen
+    translateShortcut = .defaultTranslate
     loadShortcuts()
     loadDisabledShortcuts()
     loadClearedShortcuts()
     seedDefaultClearedShortcutsOnFirstLaunchIfNeeded()
+    unbindNewDefaultIfTaken(
+      kind: .translate,
+      storageKey: translateShortcutKey,
+      defaultConfig: .defaultTranslate
+    )
     setupEventHandler()
     observeRecordingSessionState()
 
@@ -907,6 +927,7 @@ final class KeyboardShortcutManager {
     case .history: return historyShortcut
     case .pickColor: return pickColorShortcut
     case .measureScreen: return measureScreenShortcut
+    case .translate: return translateShortcut
     }
   }
 
@@ -1063,6 +1084,17 @@ final class KeyboardShortcutManager {
     mutateShortcutRegistration {
       setShortcut(config, for: .pickColor) {
         pickColorShortcut = $0
+      }
+      saveShortcuts()
+      saveClearedShortcuts()
+    }
+  }
+
+  /// Update Snip to Translate shortcut (default ⌥⇧2)
+  func setTranslateShortcut(_ config: ShortcutConfig?) {
+    mutateShortcutRegistration {
+      setShortcut(config, for: .translate) {
+        translateShortcut = $0
       }
       saveShortcuts()
       saveClearedShortcuts()
@@ -1254,6 +1286,11 @@ final class KeyboardShortcutManager {
     } else if let data = try? encoder.encode(measureScreenShortcut) {
       UserDefaults.standard.set(data, forKey: measureScreenShortcutKey)
     }
+    if clearedShortcuts.contains(.translate) {
+      UserDefaults.standard.removeObject(forKey: translateShortcutKey)
+    } else if let data = try? encoder.encode(translateShortcut) {
+      UserDefaults.standard.set(data, forKey: translateShortcutKey)
+    }
     if let annotateData = try? encoder.encode(annotateShortcut) {
       UserDefaults.standard.set(annotateData, forKey: annotateShortcutKey)
     }
@@ -1354,6 +1391,11 @@ final class KeyboardShortcutManager {
       let config = try? decoder.decode(ShortcutConfig.self, from: measureScreenData)
     {
       measureScreenShortcut = config
+    }
+    if let translateData = UserDefaults.standard.data(forKey: translateShortcutKey),
+      let config = try? decoder.decode(ShortcutConfig.self, from: translateData)
+    {
+      translateShortcut = config
     }
     if let annotateData = UserDefaults.standard.data(forKey: annotateShortcutKey),
       let config = try? decoder.decode(ShortcutConfig.self, from: annotateData)
@@ -1471,6 +1513,30 @@ final class KeyboardShortcutManager {
     if didMutate {
       saveClearedShortcuts()
     }
+  }
+
+  /// A default added in a later release (e.g. ⌥⇧2 for Translate) must not steal a
+  /// combo the user already gave to another action: if it is taken, ship the new
+  /// action unbound instead. Runs only while the new action was never configured.
+  private func unbindNewDefaultIfTaken(
+    kind: GlobalShortcutKind,
+    storageKey: String,
+    defaultConfig: ShortcutConfig
+  ) {
+    guard UserDefaults.standard.data(forKey: storageKey) == nil,
+          !clearedShortcuts.contains(kind) else { return }
+    let isTaken = GlobalShortcutKind.allCases.contains { other in
+      other != kind && shortcut(for: other) == defaultConfig
+    }
+    guard isTaken else { return }
+    clearedShortcuts.insert(kind)
+    saveClearedShortcuts()
+    DiagnosticLogger.shared.log(
+      .info,
+      .action,
+      "New default shortcut already in use; leaving it unbound",
+      context: ["kind": kind.rawValue]
+    )
   }
 
   // MARK: - Private Methods
@@ -1597,6 +1663,9 @@ final class KeyboardShortcutManager {
     case measureScreenHotkeyID.id:
       actionName = "measure-screen"
       action = .measureScreen
+    case translateHotkeyID.id:
+      actionName = "translate"
+      action = .captureTranslate
     default:
       return
     }
@@ -1765,6 +1834,12 @@ final class KeyboardShortcutManager {
       config: shortcut(for: .measureScreen),
       hotkeyID: measureScreenHotkeyID,
       ref: &measureScreenHotkeyRef
+    )
+    registerShortcutIfNeeded(
+      kind: .translate,
+      config: shortcut(for: .translate),
+      hotkeyID: translateHotkeyID,
+      ref: &translateHotkeyRef
     )
 
     logRegistrationAudit()
@@ -2042,6 +2117,10 @@ final class KeyboardShortcutManager {
     if let ref = measureScreenHotkeyRef {
       UnregisterEventHotKey(ref)
       measureScreenHotkeyRef = nil
+    }
+    if let ref = translateHotkeyRef {
+      UnregisterEventHotKey(ref)
+      translateHotkeyRef = nil
     }
   }
 

@@ -375,6 +375,7 @@ private extension KeyboardShortcutManager {
     case .cloudUploads: setCloudUploadsShortcut(config)
     case .shortcutList: setShortcutListShortcut(config)
     case .ocr: setOCRShortcut(config)
+    case .translate: setTranslateShortcut(config)
     case .smartElement: setSmartElementShortcut(config)
     case .objectCutout: setObjectCutoutShortcut(config)
     case .history: setHistoryShortcut(config)

@@ -248,6 +248,11 @@ extension PreferencesSearchEntry {
             detail: L10n.PreferencesCapture.ocrSuccessNotificationDescription, keywords: ["alert", "text recognition"]),
       .init(.capture, section: textActions, title: L10n.PreferencesCapture.ocrLinkDetectionTitle,
             detail: L10n.PreferencesCapture.ocrLinkDetectionDescription, keywords: ["url", "ocr"]),
+      .init(.capture, section: L10n.Translate.settingsSection, title: L10n.Translate.targetLanguageLabel,
+            detail: L10n.Translate.settingsTargetDescription, keywords: ["translate", "translation", "language"]),
+      .init(.capture, section: L10n.Translate.settingsSection, title: L10n.Translate.settingsEngineTitle,
+            detail: L10n.Translate.settingsEngineDescription,
+            keywords: ["translate", "translation", "apple", "llm", "endpoint"]),
     ]
   }
 
@@ -407,6 +412,8 @@ extension PreferencesSearchEntry {
                     ["remove background", "cutout"]),
       shortcutEntry(capture, L10n.Actions.captureTextOCR, L10n.PreferencesShortcuts.captureTextDescription,
                     ["recognize", "extract"]),
+      shortcutEntry(capture, L10n.Translate.actionTitle, L10n.Translate.shortcutDescription,
+                    ["translate", "translation", "language"]),
       shortcutEntry(capture, L10n.Actions.captureSmartElement, L10n.PreferencesShortcuts.smartElementCaptureDescription,
                     ["ui", "control"]),
 

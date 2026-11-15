@@ -46,6 +46,7 @@ All 23 `GlobalShortcutKind`s with shipping defaults (verified in `KeyboardShortc
 | `scrollingCapture` | Scrolling Capture | ⌘⇧6 |
 | `recording` | Record Screen (start/stop toggle) | ⌘⇧5 |
 | `ocr` | Capture Text (OCR) | ⌘⇧2 |
+| `translate` | Capture & Translate Text | ⌥⇧2 |
 | `smartElement` | Capture Smart Element | ⌥⇧4 |
 | `objectCutout` | Object Cutout | ⌘⇧1 |
 | `annotate` | Open Annotate | ⌘⇧A |
@@ -168,6 +169,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
 | `snapzy://capture/area-annotate` | Capture area → Annotate |
 | `snapzy://capture/scrolling` | Scrolling capture |
 | `snapzy://capture/ocr` | OCR capture |
+| `snapzy://capture/translate` | Snip to Translate |
 | `snapzy://capture/smart-element` | Smart Element capture |
 | `snapzy://capture/object-cutout` | Object cutout |
 | `snapzy://record/screen` | Start screen recording |

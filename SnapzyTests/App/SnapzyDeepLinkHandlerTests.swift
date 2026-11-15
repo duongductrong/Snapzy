@@ -21,6 +21,7 @@ final class SnapzyDeepLinkHandlerTests: XCTestCase {
       ("snapzy://capture/area-annotate", .captureAreaAnnotate),
       ("snapzy://capture/scrolling", .captureScrolling),
       ("snapzy://capture/ocr", .captureOCR),
+      ("snapzy://capture/translate", .captureTranslate),
       ("snapzy://capture/smart-element", .captureSmartElement),
       ("snapzy://capture/object-cutout", .captureObjectCutout),
       ("snapzy://record/screen", .recordScreen),

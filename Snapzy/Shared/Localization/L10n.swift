@@ -41,6 +41,7 @@ nonisolated enum L10n {
     ("file-access.", "Permissions"),
     ("foreground-cutout.", "Capture"),
     ("ocr.", "Capture"),
+    ("translate.", "Capture"),
     ("screen-capture.", "Capture"),
     ("scrolling-capture.", "Capture"),
     ("scrolling-capture-status.", "Capture"),
@@ -9006,6 +9007,237 @@ nonisolated enum L10n {
       defaultValue: "Capture was cancelled",
       comment: "Error shown when screenshot capture is cancelled"
     )
+  }
+
+  enum Translate {
+    static var actionTitle: String {
+      string(
+        "translate.action-title",
+        defaultValue: "Capture & Translate Text",
+        comment: "Menu item, shortcut and action name for Snip to Translate: select an area, recognize its text and translate it"
+      )
+    }
+    static var shortcutDescription: String {
+      string(
+        "translate.shortcut-description",
+        defaultValue: "Select an area, recognize its text and show a translation",
+        comment: "Shortcut settings description for Snip to Translate"
+      )
+    }
+    static var cardTitle: String {
+      string(
+        "translate.card-title",
+        defaultValue: "Translation",
+        comment: "Title of the floating translation card"
+      )
+    }
+    static var chooseLanguagePrompt: String {
+      string(
+        "translate.choose-language-prompt",
+        defaultValue: "Choose the language to translate into. Snapzy remembers it for next time.",
+        comment: "Shown on the translation card the first time, before any target language is chosen"
+      )
+    }
+    static var translateButton: String {
+      string(
+        "translate.translate-button",
+        defaultValue: "Translate",
+        comment: "Button that starts translating on the translation card"
+      )
+    }
+    static var translating: String {
+      string(
+        "translate.translating",
+        defaultValue: "Translating…",
+        comment: "Progress text while a translation is running"
+      )
+    }
+    static var targetLanguageLabel: String {
+      string(
+        "translate.target-language-label",
+        defaultValue: "Translate to",
+        comment: "Label of the target language picker (translation card and settings)"
+      )
+    }
+    static var originalText: String {
+      string(
+        "translate.original-text",
+        defaultValue: "Original text",
+        comment: "Disclosure title that shows the recognized source text on the translation card"
+      )
+    }
+    static var copyTranslation: String {
+      string(
+        "translate.copy-translation",
+        defaultValue: "Copy Translation",
+        comment: "Button that copies the translated text"
+      )
+    }
+    static var copyOriginal: String {
+      string(
+        "translate.copy-original",
+        defaultValue: "Copy Original",
+        comment: "Button that copies the recognized source text"
+      )
+    }
+    static var copied: String {
+      string(
+        "translate.copied",
+        defaultValue: "Copied",
+        comment: "Short confirmation shown on a copy button after copying"
+      )
+    }
+    static var engineAppleFooter: String {
+      string(
+        "translate.engine-apple-footer",
+        defaultValue: "Translated on this Mac with Apple Translation.",
+        comment: "Footer on the translation card when Apple Translation produced the result"
+      )
+    }
+    static func engineRemoteFooter(_ value: String) -> String {
+      format(
+        "translate.engine-remote-footer",
+        defaultValue: "Translated by %@. The text was sent to this endpoint.",
+        comment: "Footer on the translation card when a custom endpoint produced the result. %@ is the endpoint name.",
+        value
+      )
+    }
+    static func alreadyInTarget(_ value: String) -> String {
+      format(
+        "translate.already-in-target",
+        defaultValue: "The text is already in %@.",
+        comment: "Note on the translation card when the recognized text is already in the target language. %@ is the language name.",
+        value
+      )
+    }
+    static var errorUnsupportedPair: String {
+      string(
+        "translate.error-unsupported-pair",
+        defaultValue: "Apple Translation can’t translate between these languages.",
+        comment: "Error on the translation card when Apple Translation does not support the language pair"
+      )
+    }
+    static var errorUnidentifiedLanguage: String {
+      string(
+        "translate.error-unidentified-language",
+        defaultValue: "Apple Translation couldn’t tell which language this text is in.",
+        comment: "Error on the translation card when the source language can't be identified"
+      )
+    }
+    static var errorCancelled: String {
+      string(
+        "translate.error-cancelled",
+        defaultValue: "Translation was cancelled.",
+        comment: "Error on the translation card when the translation or language download was cancelled"
+      )
+    }
+    static func errorGeneric(_ value: String) -> String {
+      format(
+        "translate.error-generic",
+        defaultValue: "Translation failed: %@",
+        comment: "Error on the translation card. %@ is the underlying error description.",
+        value
+      )
+    }
+    static var retry: String {
+      string(
+        "translate.retry",
+        defaultValue: "Try Again",
+        comment: "Button that retries a failed translation"
+      )
+    }
+    static func useEndpoint(_ value: String) -> String {
+      format(
+        "translate.use-endpoint",
+        defaultValue: "Translate with %@",
+        comment: "Button offered after an Apple Translation failure to translate with a custom endpoint instead. %@ is the endpoint name.",
+        value
+      )
+    }
+    static var useEndpointCaption: String {
+      string(
+        "translate.use-endpoint-caption",
+        defaultValue: "The text will be sent to this endpoint.",
+        comment: "Privacy caption next to choosing a custom endpoint for translation"
+      )
+    }
+    static var openSettings: String {
+      string(
+        "translate.open-settings",
+        defaultValue: "Translation Settings…",
+        comment: "Button on the translation card that opens the translation settings"
+      )
+    }
+    static var requiresMacOS15Title: String {
+      string(
+        "translate.requires-macos15-title",
+        defaultValue: "Apple Translation requires macOS 15 or later.",
+        comment: "Shown when Snip to Translate is used with Apple Translation on macOS 13 or 14"
+      )
+    }
+    static var requiresMacOS15MessageWithEndpoint: String {
+      string(
+        "translate.requires-macos15-with-endpoint",
+        defaultValue: "To translate on this Mac, choose one of your custom endpoints as the translation engine in Settings.",
+        comment: "Shown on macOS 13/14 when Apple Translation is selected and at least one custom endpoint exists"
+      )
+    }
+    static var requiresMacOS15MessageNoEndpoint: String {
+      string(
+        "translate.requires-macos15-no-endpoint",
+        defaultValue: "To translate on this Mac, add a custom OpenAI-compatible endpoint in Settings and choose it as the translation engine.",
+        comment: "Shown on macOS 13/14 when Apple Translation is selected and no custom endpoint exists"
+      )
+    }
+    static var settingsSection: String {
+      string(
+        "translate.settings-section",
+        defaultValue: "Snip to Translate",
+        comment: "Settings section title for the translation feature"
+      )
+    }
+    static var settingsTargetDescription: String {
+      string(
+        "translate.settings-target-description",
+        defaultValue: "Language that captured text is translated into.",
+        comment: "Settings description for the target language picker"
+      )
+    }
+    static var settingsTargetAsk: String {
+      string(
+        "translate.settings-target-ask",
+        defaultValue: "Ask on first use",
+        comment: "Target language picker option when no language is chosen yet"
+      )
+    }
+    static var settingsEngineTitle: String {
+      string(
+        "translate.settings-engine-title",
+        defaultValue: "Translation engine",
+        comment: "Settings row title for choosing the translation engine"
+      )
+    }
+    static var settingsEngineDescription: String {
+      string(
+        "translate.settings-engine-description",
+        defaultValue: "Apple Translation runs on this Mac. Custom endpoints (from the OCR Model list) send the text to that server.",
+        comment: "Settings description for the translation engine picker"
+      )
+    }
+    static var settingsEngineApple: String {
+      string(
+        "translate.settings-engine-apple",
+        defaultValue: "Apple Translation (on this Mac)",
+        comment: "Translation engine option for Apple Translation"
+      )
+    }
+    static var settingsEngineAppleUnavailable: String {
+      string(
+        "translate.settings-engine-apple-unavailable",
+        defaultValue: "Apple Translation (requires macOS 15)",
+        comment: "Translation engine option for Apple Translation on macOS 13/14"
+      )
+    }
   }
 
   enum OCR {

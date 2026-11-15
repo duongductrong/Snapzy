@@ -457,6 +457,8 @@ struct CaptureSettingsView: View {
                 .labelsHidden()
             }
           }
+
+          PreferencesTranslateSettingsSection()
         }
 
         if selectedPane == .general {
