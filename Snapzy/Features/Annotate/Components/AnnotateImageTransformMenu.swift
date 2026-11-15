@@ -125,7 +125,7 @@ struct AnnotateImageTransformToolbarButton: View {
   }
 }
 
-private final class ClosureMenuItem: NSMenuItem {
+final class ClosureMenuItem: NSMenuItem {
   private let handler: () -> Void
 
   init(title: String, keyEquivalent: String, handler: @escaping () -> Void) {
@@ -144,11 +144,11 @@ private final class ClosureMenuItem: NSMenuItem {
   }
 }
 
-private final class MenuAnchor {
+final class MenuAnchor {
   weak var view: NSView?
 }
 
-private struct MenuAnchorView: NSViewRepresentable {
+struct MenuAnchorView: NSViewRepresentable {
   let anchor: MenuAnchor
 
   func makeNSView(context: Context) -> NSView {

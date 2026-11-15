@@ -370,6 +370,32 @@ struct AnnotateCanvasView: View {
           .frame(width: foregroundWidth, height: foregroundHeight)
           .offset(x: offset.x, y: offset.y)
         }
+
+        // Translate Area marquee while picking the area to translate.
+        if state.isTranslateAreaSelecting {
+          AnnotateTranslateAreaSelectionView(
+            state: state,
+            scale: scale,
+            canvasBounds: foregroundBounds
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
+          .clipped()
+          .offset(x: offset.x, y: offset.y)
+          .transition(.opacity.animation(.easeOut(duration: 0.15)))
+        }
+
+        // Auto Translate loading overlay (reading → translating → resolving).
+        if state.isAutoTranslateRunning {
+          AnnotateAutoTranslateOverlayView(
+            state: state,
+            scale: scale,
+            canvasBounds: foregroundBounds
+          )
+          .frame(width: foregroundWidth, height: foregroundHeight)
+          .clipped()
+          .offset(x: offset.x, y: offset.y)
+          .transition(.opacity.animation(.easeOut(duration: 0.18)))
+        }
       }
       .modifier(CombineCanvasClipModifier(
         isEnabled: state.isCombineMode,
@@ -398,6 +424,14 @@ struct AnnotateCanvasView: View {
       }
     }
     .contentShape(Rectangle())
+    .overlay(alignment: .bottom) {
+      // Status pill floats above the AI dock; both stay outside the zoom/pan transform.
+      VStack(spacing: 10) {
+        AnnotateAutoTranslatePill(state: state)
+        AnnotateAIDockView(state: state)
+      }
+      .padding(.bottom, 16)
+    }
     .contextMenu {
       Button {
         state.extractText()

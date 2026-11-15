@@ -10140,3 +10140,161 @@ nonisolated enum L10n {
     )
   }
 }
+
+// MARK: - Annotate Auto Translate
+
+extension L10n {
+  nonisolated enum AnnotateTranslate {
+    static var actionTitle: String {
+      string("annotate.translate.action-title", defaultValue: "Auto Translate",
+             comment: "Annotate action that detects text on the image and places a translation over it")
+    }
+    static var shortcutDescription: String {
+      string("annotate.translate.shortcut-description",
+             defaultValue: "Detect text on the image and place a translation over it",
+             comment: "Shortcut settings description for Annotate Auto Translate")
+    }
+    static var reading: String {
+      string("annotate.translate.reading", defaultValue: "Reading text…",
+             comment: "Auto Translate status while text is being detected on the image")
+    }
+    static var cancelHint: String {
+      string("annotate.translate.cancel-hint", defaultValue: "Esc to cancel",
+             comment: "Hint under the Auto Translate status telling the user how to cancel")
+    }
+    static func success(_ count: Int, _ language: String) -> String {
+      format("annotate.translate.success", defaultValue: "Translated %d blocks into %@",
+             comment: "Auto Translate result: number of translated text blocks and the target language", count, language)
+    }
+    static var noText: String {
+      string("annotate.translate.no-text", defaultValue: "No text to translate was found on this image.",
+             comment: "Auto Translate found no translatable text")
+    }
+    static var imageUnavailable: String {
+      string("annotate.translate.image-unavailable", defaultValue: "The image can’t be read for translation.",
+             comment: "Auto Translate could not read the image")
+    }
+    static var alreadyInTarget: String {
+      string("annotate.translate.already-in-target", defaultValue: "The text is already in the target language.",
+             comment: "Auto Translate found that all text is already in the target language")
+    }
+    static var peekHint: String {
+      string("annotate.translate.peek-hint", defaultValue: "Hold ⌥ to see the original",
+             comment: "Hint telling the user to hold Option to temporarily hide translations")
+    }
+    static var showOriginal: String {
+      string("annotate.translate.show-original", defaultValue: "Show Original",
+             comment: "Press-and-hold button that temporarily hides translations")
+    }
+    static var includeInExport: String {
+      string("annotate.translate.include-in-export", defaultValue: "Include Translations in Export",
+             comment: "Toggle: whether translations are drawn into saved, copied and shared images")
+    }
+    static var notInExport: String {
+      string("annotate.translate.not-in-export", defaultValue: "Not in export",
+             comment: "Badge shown when translations are excluded from exported images")
+    }
+    static var removeTranslations: String {
+      string("annotate.translate.remove", defaultValue: "Remove Translations",
+             comment: "Menu item that removes all Auto Translate overlays")
+    }
+    static var engineApple: String {
+      string("annotate.translate.engine-apple", defaultValue: "Apple Translation, on this Mac",
+             comment: "Auto Translate menu: current engine is Apple Translation")
+    }
+    static func engineRemote(_ name: String) -> String {
+      format("annotate.translate.engine-remote", defaultValue: "%@ (text is sent to this endpoint)",
+             comment: "Auto Translate menu: current engine is a custom endpoint", name)
+    }
+    static var layoutNote: String {
+      string("annotate.translate.layout-note",
+             defaultValue: "Auto Translate in Annotate (⌘⇧T) uses these settings. It always finds text positions on this Mac, even when OCR uses a custom endpoint.",
+             comment: "Settings note explaining how Annotate Auto Translate uses the translation settings")
+    }
+    static var translationTitle: String {
+      string("annotate.translate.translation-title", defaultValue: "Translation",
+             comment: "Quick properties group and editor title for a selected translation")
+    }
+    static var editTranslation: String {
+      string("annotate.translate.edit", defaultValue: "Edit Translation",
+             comment: "Button that opens the editor for the selected translation")
+    }
+    static var original: String {
+      string("annotate.translate.original", defaultValue: "Original",
+             comment: "Label above the source text in the translation editor")
+    }
+    static var fitText: String {
+      string("annotate.translate.fit-text", defaultValue: "Fit Text",
+             comment: "Button that re-fits the translation's text size to its box")
+    }
+    static var cover: String {
+      string("annotate.translate.cover", defaultValue: "Cover",
+             comment: "How the original text under a translation is hidden")
+    }
+    static var coverSolid: String {
+      string("annotate.translate.cover-solid", defaultValue: "Solid", comment: "Cover style: flat color")
+    }
+    static var coverFrosted: String {
+      string("annotate.translate.cover-frosted", defaultValue: "Frosted", comment: "Cover style: blurred background")
+    }
+    static var coverNone: String {
+      string("annotate.translate.cover-none", defaultValue: "None", comment: "Cover style: no cover")
+    }
+    static var bold: String {
+      string("annotate.translate.bold", defaultValue: "Bold", comment: "Toggle bold text for a translation")
+    }
+    static var smallerText: String {
+      string("annotate.translate.smaller-text", defaultValue: "Smaller Text", comment: "Decrease a translation's text size")
+    }
+    static var largerText: String {
+      string("annotate.translate.larger-text", defaultValue: "Larger Text", comment: "Increase a translation's text size")
+    }
+    static var translateWholeImage: String {
+      string("annotate.translate.whole-image-action", defaultValue: "Translate Whole Image",
+             comment: "Menu item: detect and translate all text on the image")
+    }
+    static var translateArea: String {
+      string("annotate.translate.area-action", defaultValue: "Translate Area…",
+             comment: "Menu item and shortcut name: drag over part of the image to translate only that text")
+    }
+    static var translateAreaDescription: String {
+      string("annotate.translate.area-description",
+             defaultValue: "Drag over part of the image to translate only the text there",
+             comment: "Shortcut settings description for Annotate Translate Area")
+    }
+    static var cancelAreaSelection: String {
+      string("annotate.translate.cancel-area", defaultValue: "Cancel Area Selection",
+             comment: "Menu item that leaves Translate Area without translating")
+    }
+    static func areaHint(_ language: String) -> String {
+      format("annotate.translate.area-hint", defaultValue: "Drag over the text to translate into %@",
+             comment: "Hint shown while waiting for the user to drag the area to translate; argument is the target language", language)
+    }
+    static var wholeImage: String {
+      string("annotate.translate.whole-image", defaultValue: "Whole Image",
+             comment: "Button in the Translate Area hint that translates the whole image instead")
+    }
+    static var aiTools: String {
+      string("annotate.ai.tools", defaultValue: "AI Tools",
+             comment: "Floating dock at the bottom of the Annotate canvas that holds AI actions such as Auto Translate")
+    }
+    static var dockTranslate: String {
+      string("annotate.translate.dock-translate", defaultValue: "Translate",
+             comment: "Short AI dock button: translate all text on the image")
+    }
+    static var dockArea: String {
+      string("annotate.translate.dock-area", defaultValue: "Area",
+             comment: "Short AI dock button: drag over part of the image to translate only that text")
+    }
+    static var options: String {
+      string("annotate.translate.options", defaultValue: "Translation Options",
+             comment: "AI dock menu button with translation engine, settings, export and removal options")
+    }
+    static var textColor: String {
+      string("annotate.translate.text-color", defaultValue: "Text", comment: "Color of the translated text")
+    }
+    static var coverColor: String {
+      string("annotate.translate.cover-color", defaultValue: "Cover", comment: "Color of the cover behind a translation")
+    }
+  }
+}

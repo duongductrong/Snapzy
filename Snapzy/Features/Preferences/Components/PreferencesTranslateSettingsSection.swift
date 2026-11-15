@@ -64,6 +64,16 @@ struct PreferencesTranslateSettingsSection: View {
             .foregroundColor(.secondary)
         }
       }
+
+      Label {
+        Text(L10n.AnnotateTranslate.layoutNote)
+          .font(.callout)
+          .foregroundColor(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      } icon: {
+        Image(systemName: "translate")
+          .foregroundColor(.secondary)
+      }
     }
   }
 

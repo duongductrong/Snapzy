@@ -476,6 +476,10 @@ extension PreferencesSearchEntry {
                     ["s3", "r2", "share"]),
       shortcutEntry(annotateActions, L10n.ShortcutOverlay.autoRedactSensitiveData,
                     L10n.PreferencesShortcuts.autoRedactSensitiveDataDescription, ["blur", "privacy", "pii"]),
+      shortcutEntry(annotateActions, L10n.AnnotateTranslate.actionTitle,
+                    L10n.AnnotateTranslate.shortcutDescription, ["translate", "translation", "language", "ocr"]),
+      shortcutEntry(annotateActions, L10n.AnnotateTranslate.translateArea,
+                    L10n.AnnotateTranslate.translateAreaDescription, ["translate", "area", "selection", "region"]),
     ]
 
     entries += AnnotateShortcutManager.configurableTools.map {

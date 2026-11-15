@@ -292,3 +292,106 @@ nonisolated struct OCRTextLayoutFormatter {
     }
   }
 }
+
+// MARK: - Layout blocks
+
+/// A run of text that belongs together on screen (a paragraph, a list item or a
+/// single label), with its position. Boxes are Vision-normalized (bottom-left origin).
+nonisolated struct OCRTextBlock: Equatable {
+  let text: String
+  let box: CGRect
+  let rowBoxes: [CGRect]
+
+  /// Average height of one visual row, normalized.
+  var rowHeight: CGFloat {
+    guard !rowBoxes.isEmpty else { return box.height }
+    return rowBoxes.map(\.height).reduce(0, +) / CGFloat(rowBoxes.count)
+  }
+}
+
+extension OCRTextLayoutFormatter {
+  /// Groups ordered OCR lines into positioned blocks for overlay use (Annotate Auto
+  /// Translate). Unlike `format(_:)`, it never joins text across columns or across
+  /// horizontally separated labels, so each block covers only its own text.
+  /// `format(_:)` is untouched; this is a separate path.
+  func blocks(_ lines: [OCRTextLine]) -> [OCRTextBlock] {
+    let rows = mergeLayoutRows(droppingEdgeFragments(from: lines))
+    return groupLayoutParagraphs(rows).flatMap(layoutBlocks(in:))
+  }
+
+  /// Same-row observations merge only when they are close horizontally
+  /// (a tab bar's labels stay apart).
+  private func mergeLayoutRows(_ lines: [OCRTextLine]) -> [Row] {
+    var rows: [Row] = []
+    for line in lines {
+      let text = line.text.trimmingCharacters(in: .whitespacesAndNewlines)
+      guard !text.isEmpty else { continue }
+      if var last = rows.last, Self.isSameRow(last.box, line.boundingBox) {
+        let gap = (line.boundingBox.minX - last.box.maxX) * aspectRatio
+        let height = max(last.box.height, line.boundingBox.height)
+        if gap <= height * 1.2 {
+          last.text = join(last.text, text)
+          last.box = last.box.union(line.boundingBox)
+          rows[rows.count - 1] = last
+          continue
+        }
+      }
+      rows.append(Row(text: text, box: line.boundingBox))
+    }
+    return rows
+  }
+
+  /// A row joins the paragraph whose last row sits right above it, overlaps it
+  /// horizontally and has a similar height (headings and other columns stay apart).
+  private func groupLayoutParagraphs(_ rows: [Row]) -> [[Row]] {
+    var paragraphs: [[Row]] = []
+    for row in rows {
+      let index = paragraphs.lastIndex { paragraph in
+        guard let previous = paragraph.last else { return false }
+        let height = max(previous.box.height, row.box.height)
+        let gap = previous.box.minY - row.box.maxY
+        guard gap >= -height * 0.3, gap <= height * 0.75 else { return false }
+        let ratio = max(previous.box.height, row.box.height) / max(min(previous.box.height, row.box.height), .ulpOfOne)
+        guard ratio <= 1.4 else { return false }
+        let overlap = min(previous.box.maxX, row.box.maxX) - max(previous.box.minX, row.box.minX)
+        let leftAligned = abs(previous.box.minX - row.box.minX) * aspectRatio <= height * 1.5
+        return overlap > 0 && (leftAligned || overlap >= min(previous.box.width, row.box.width) * 0.6)
+      }
+      if let index {
+        paragraphs[index].append(row)
+      } else {
+        paragraphs.append([row])
+      }
+    }
+    return paragraphs
+  }
+
+  private func layoutBlocks(in rows: [Row]) -> [OCRTextBlock] {
+    let blocks = splitBlocks(rows)
+    let hasList = blocks.contains { $0.kind == .listItem }
+    let paragraphMinX = rows.map(\.box.minX).min() ?? 0
+    let paragraphMaxX = rows.map(\.box.maxX).max() ?? 0
+
+    return blocks.flatMap { block -> [OCRTextBlock] in
+      switch block.kind {
+      case .listItem:
+        return [Self.makeBlock(text: reflow(block.rows), rows: block.rows)]
+      case .prose:
+        guard hasList || shouldReflowProse(block.rows) else {
+          return block.rows.map { Self.makeBlock(text: $0.text, rows: [$0]) }
+        }
+        let text = reflowKeepingHardBreaks(
+          block.rows,
+          paragraphMinX: paragraphMinX,
+          paragraphMaxX: paragraphMaxX
+        )
+        return [Self.makeBlock(text: text, rows: block.rows)]
+      }
+    }
+  }
+
+  private static func makeBlock(text: String, rows: [Row]) -> OCRTextBlock {
+    let box = rows.reduce(CGRect.null) { $0.union($1.box) }
+    return OCRTextBlock(text: text, box: box, rowBoxes: rows.map(\.box))
+  }
+}

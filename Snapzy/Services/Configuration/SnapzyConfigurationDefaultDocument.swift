@@ -322,6 +322,8 @@ enum SnapzyConfigurationDefaultDocument {
     case .togglePin: return AnnotateShortcutManager.defaultTogglePin
     case .cloudUpload: return AnnotateShortcutManager.defaultCloudUpload
     case .autoRedactSensitiveData: return AnnotateShortcutManager.defaultAutoRedactSensitiveData
+    case .autoTranslate: return AnnotateShortcutManager.defaultAutoTranslate
+    case .translateArea: return AnnotateShortcutManager.defaultTranslateArea
     }
   }
 }

@@ -533,6 +533,14 @@ final class DrawingCanvasNSView: NSView {
     state.$cutoutImage
       .sink { [weak self] _ in self?.invalidateDrawing() }
       .store(in: &stateObservers)
+    state.$isTranslateAreaSelecting
+      .removeDuplicates()
+      .sink { [weak self] _ in self?.refreshCursorAtPointer() }
+      .store(in: &stateObservers)
+    state.$isPeekingOriginalTranslations
+      .removeDuplicates()
+      .sink { [weak self] _ in self?.invalidateDrawing() }
+      .store(in: &stateObservers)
 
     // Everything else (crop flags, spotlight opacity, zoom/pan, ...) only needs
     // the cheap live layers; static annotation content is unaffected.
@@ -1070,6 +1078,10 @@ final class DrawingCanvasNSView: NSView {
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
+    // Translate Area owns the press: the drag picks the area, nothing else reacts.
+    if state.updateTranslateAreaDrag(from: imagePoint, to: imagePoint) {
+      return
+    }
     dragStart = imagePoint // Store in image coords
     // The just-drawn marker lasts until the next press: read the selection
     // drawing-tool routing honours first, then drop the marker.
@@ -1084,6 +1096,15 @@ final class DrawingCanvasNSView: NSView {
         Task { @MainActor in
           state.selectedAnnotationId = annotation.id
           state.beginTextEditing(id: annotation.id)
+        }
+        invalidateDrawing()
+        return
+      }
+      if let annotation = hitTestAnnotation(at: imagePoint),
+         case .translation = annotation.type {
+        Task { @MainActor in
+          state.setSelectedAnnotationIds([annotation.id])
+          state.translationEditorID = annotation.id
         }
         invalidateDrawing()
         return
@@ -1342,6 +1363,9 @@ final class DrawingCanvasNSView: NSView {
     let displayPoint = convert(event.locationInWindow, from: nil)
     updateCanvasMouseLocation(for: displayPoint)
     let imagePoint = interactionPoint(from: displayPoint)
+    if state.updateTranslateAreaDrag(from: nil, to: imagePoint) {
+      return
+    }
 
     // Handle resizing (in image coordinates). Mutates only the gesture-local
     // copy; the final geometry commits to state once on mouseUp.
@@ -1692,6 +1716,9 @@ final class DrawingCanvasNSView: NSView {
     let displayPoint = convert(event.locationInWindow, from: nil)
     let imagePoint = interactionPoint(from: displayPoint)
     defer { state.endCombineCanvasGesture() }
+    if state.finishTranslateAreaDrag(at: imagePoint) {
+      return
+    }
     drawingToolGesture?.trackPointer(at: displayPoint, zoomLevel: state.zoomLevel)
     let gesture = drawingToolGesture
     defer { drawingToolGesture = nil }
@@ -2105,9 +2132,12 @@ final class DrawingCanvasNSView: NSView {
   /// Current items for display: gesture-local copies shadow state items while
   /// a drag/resize is active.
   private func currentDisplayItems() -> [AnnotationItem] {
-    gestureLocalItems.isEmpty
+    let items = gestureLocalItems.isEmpty
       ? state.annotations
       : state.annotations.map { gestureLocalItems[$0.id] ?? $0 }
+    // Holding ⌥ peeks at the source text under Auto Translate overlays.
+    guard state.isPeekingOriginalTranslations else { return items }
+    return items.filter { !$0.type.isTranslation }
   }
 
   /// Ids of annotations pulled out of the static layers because they are being
@@ -2682,6 +2712,14 @@ final class DrawingCanvasNSView: NSView {
     updateCursor(at: convert(windowPoint, from: nil), optionHeld: event.modifierFlags.contains(.option))
   }
 
+  /// Re-evaluates the hover cursor at the live pointer (mode changes without a mouse move).
+  private func refreshCursorAtPointer() {
+    guard let window else { return }
+    let windowPoint = window.mouseLocationOutsideOfEventStream
+    guard receivesPointer(atWindowPoint: windowPoint) else { return }
+    updateCursor(at: convert(windowPoint, from: nil), optionHeld: NSEvent.modifierFlags.contains(.option))
+  }
+
   /// Whether the pointer at this window point belongs to the canvas, by the
   /// rule hover uses: the window's hit view is the canvas itself, or the zoom
   /// proxy whose interaction target is the canvas. Chrome over a zoomed-in
@@ -2719,9 +2757,9 @@ final class DrawingCanvasNSView: NSView {
     let imagePoint = displayToImage(displayPoint)
     let isDrawingTool = state.selectedTool != .selection && state.selectedTool != .crop
 
-    // Cut out always draws a full-crossing strip — crosshair everywhere on the
-    // canvas, no annotation affordances while the mode is active.
-    if state.selectedTool == .cutOut {
+    // Cut out always draws a full-crossing strip, and Translate Area draws a
+    // marquee — crosshair everywhere, no annotation affordances.
+    if state.selectedTool == .cutOut || state.isTranslateAreaSelecting {
       NSCursor.crosshair.set()
       return
     }

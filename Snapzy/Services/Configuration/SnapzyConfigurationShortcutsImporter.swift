@@ -442,6 +442,10 @@ private extension AnnotateShortcutManager {
       setCloudUploadShortcut(config)
     case .autoRedactSensitiveData:
       setAutoRedactSensitiveDataShortcut(config)
+    case .autoTranslate:
+      setAutoTranslateShortcut(config)
+    case .translateArea:
+      setTranslateAreaShortcut(config)
     }
   }
 }

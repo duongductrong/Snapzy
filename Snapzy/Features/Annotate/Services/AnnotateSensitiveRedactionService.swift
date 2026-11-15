@@ -282,7 +282,14 @@ final class AnnotateSensitiveRedactionService {
     self.detector = detector
   }
 
-  func detectRegions(in image: NSImage) async throws -> AnnotateSensitiveRedactionResult {
+  /// Returns regions in annotate image space (bottom-left origin), ready to be
+  /// inserted as `AnnotationItem.bounds`.
+  /// - Parameter preferredLanguageIdentifier: the user's OCR language, so Vision
+  ///   reads e.g. Vietnamese diacritics or CJK the same way Capture Text does.
+  func detectRegions(
+    in image: NSImage,
+    preferredLanguageIdentifier: String? = nil
+  ) async throws -> AnnotateSensitiveRedactionResult {
     guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
       throw AnnotateSensitiveRedactionError.imageUnavailable
     }
@@ -291,6 +298,11 @@ final class AnnotateSensitiveRedactionService {
       ? image.size
       : CGSize(width: cgImage.width, height: cgImage.height)
     let detector = detector
+    let languageProfile = VisionOCRProfile.resolve(
+      for: OCRRequest(image: cgImage, preferredLanguageIdentifier: preferredLanguageIdentifier)
+    )
+    let recognitionLanguages = languageProfile.recognitionLanguages
+    let automaticallyDetectsLanguage = languageProfile.automaticallyDetectsLanguage
 
     return try await withCheckedThrowingContinuation { continuation in
       DispatchQueue.global(qos: .userInitiated).async {
@@ -305,10 +317,15 @@ final class AnnotateSensitiveRedactionService {
             return
           }
 
-          let regions = Self.extractRegions(
-            from: observations,
-            imageSize: imageSize,
-            detector: detector
+          // Analysis runs in top-left space (its "below"/row heuristics read
+          // downward); the canvas is bottom-left, so flip once at the boundary.
+          let regions = Self.annotateRegions(
+            fromTopLeftRegions: Self.extractRegions(
+              from: observations,
+              imageSize: imageSize,
+              detector: detector
+            ),
+            imageSize: imageSize
           )
           continuation.resume(returning: AnnotateSensitiveRedactionResult(regions: regions))
         }
@@ -316,8 +333,11 @@ final class AnnotateSensitiveRedactionService {
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = true
         request.minimumTextHeight = 0.01
+        if !recognitionLanguages.isEmpty {
+          request.recognitionLanguages = recognitionLanguages
+        }
         if #available(macOS 13.0, *) {
-          request.automaticallyDetectsLanguage = true
+          request.automaticallyDetectsLanguage = automaticallyDetectsLanguage
         }
 
         do {
@@ -329,13 +349,24 @@ final class AnnotateSensitiveRedactionService {
     }
   }
 
+  /// Top-left image rect (y grows downward), used for the internal analysis only.
+  /// Convert with `annotateRegions(fromTopLeftRegions:imageSize:)` before inserting.
   static func imageRect(fromVisionBoundingBox boundingBox: CGRect, imageSize: CGSize) -> CGRect {
-    CGRect(
-      x: boundingBox.minX * imageSize.width,
-      y: (1 - boundingBox.maxY) * imageSize.height,
-      width: boundingBox.width * imageSize.width,
-      height: boundingBox.height * imageSize.height
-    ).standardized
+    VisionImageGeometry.topLeftRect(fromVisionBoundingBox: boundingBox, imageSize: imageSize)
+  }
+
+  /// Top-left analysis regions → annotate canvas regions (bottom-left origin).
+  static func annotateRegions(
+    fromTopLeftRegions regions: [AnnotateSensitiveRedactionRegion],
+    imageSize: CGSize
+  ) -> [AnnotateSensitiveRedactionRegion] {
+    regions.map { region in
+      AnnotateSensitiveRedactionRegion(
+        kind: region.kind,
+        bounds: VisionImageGeometry.flippedVertically(region.bounds, imageHeight: imageSize.height),
+        confidence: region.confidence
+      )
+    }
   }
 
   static func contextualRegions(

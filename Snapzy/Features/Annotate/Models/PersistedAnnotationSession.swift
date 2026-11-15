@@ -38,6 +38,8 @@ nonisolated struct PersistedAnnotationSession: Codable {
   /// reopen with matching annotation positions on any display arrangement. Optional
   /// so pre-existing sidecars decode without it — schemaVersion stays 1.
   var sourceLogicalSize: CGSize?
+  /// Auto Translate overlays left out of exports. Optional: older sidecars decode without it.
+  var excludesTranslationsFromExport: Bool?
 }
 
 /// Persisted combine/stitch layout flags. Enum values stored as raw strings and read back
@@ -138,6 +140,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   enum Kind: String, Codable {
     case path, rectangle, filledRectangle, oval, arrow, line, text, highlight, blur, counter, watermark, embeddedImage, spotlight
     case measurement
+    case translation
     /// A kind written by a newer Snapzy. The item is skipped instead of failing the whole
     /// manifest, so a session keeps everything this build can draw.
     case unknown
@@ -158,6 +161,7 @@ struct PersistedAnnotationType: Codable, Equatable {
   var counterValue: Int?
   var embeddedImageAssetId: UUID?
   var measure: PersistedMeasureGeometry?
+  var translation: PersistedTranslatedTextBlock?
 
   init(annotationType: AnnotationType) {
     switch annotationType {
@@ -200,6 +204,9 @@ struct PersistedAnnotationType: Codable, Equatable {
     case .measurement(let geometry):
       kind = .measurement
       measure = PersistedMeasureGeometry(geometry: geometry)
+    case .translation(let block):
+      kind = .translation
+      translation = PersistedTranslatedTextBlock(block: block)
     }
   }
 
@@ -235,6 +242,8 @@ struct PersistedAnnotationType: Codable, Equatable {
       return .spotlight
     case .measurement:
       return measure?.measureGeometry.map { .measurement($0) }
+    case .translation:
+      return translation.map { .translation($0.block) }
     case .unknown:
       return nil
     }
@@ -269,6 +278,48 @@ struct PersistedMeasureGeometry: Codable, Equatable {
       origin: origin ?? .zero,
       pixelScale: pixelScale,
       unit: unit.flatMap(MeasureUnit.init(rawValue:)) ?? .points
+    )
+  }
+}
+
+/// Auto Translate block. Unknown cover/alignment values fall back instead of failing.
+struct PersistedTranslatedTextBlock: Codable, Equatable {
+  var sourceText: String
+  var translatedText: String
+  var sourceLanguage: String?
+  var targetLanguage: String
+  var cover: String
+  var alignment: String
+  var isBold: Bool
+  var isFontSizeManual: Bool
+  var baseFontSize: CGFloat?
+  var groupID: UUID
+
+  init(block: TranslatedTextBlock) {
+    sourceText = block.sourceText
+    translatedText = block.translatedText
+    sourceLanguage = block.sourceLanguage
+    targetLanguage = block.targetLanguage
+    cover = block.cover.rawValue
+    alignment = block.alignment.rawValue
+    isBold = block.isBold
+    isFontSizeManual = block.isFontSizeManual
+    baseFontSize = block.baseFontSize
+    groupID = block.groupID
+  }
+
+  var block: TranslatedTextBlock {
+    TranslatedTextBlock(
+      sourceText: sourceText,
+      translatedText: translatedText,
+      sourceLanguage: sourceLanguage,
+      targetLanguage: targetLanguage,
+      cover: TranslationCoverStyle(rawValue: cover) ?? .solid,
+      alignment: TranslationTextAlignment(rawValue: alignment) ?? .leading,
+      isBold: isBold,
+      isFontSizeManual: isFontSizeManual,
+      baseFontSize: baseFontSize ?? 14,
+      groupID: groupID
     )
   }
 }

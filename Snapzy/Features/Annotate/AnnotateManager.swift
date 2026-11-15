@@ -76,6 +76,8 @@ struct AnnotationSessionData {
   /// instead of re-deriving density from the current main display — native-density
   /// (1×) captures would otherwise get a mismatched canvas (issue #414 follow-up).
   var sourceLogicalSize: CGSize? = nil
+  /// Auto Translate overlays are left out of exported images.
+  var excludesTranslationsFromExport: Bool = false
 }
 
 /// Manages annotation window instances
@@ -367,7 +369,8 @@ extension AnnotationSessionData {
       cutoutAutoAppliedCropRect: cutoutSnapshot.autoAppliedCropRect,
       embeddedImageAssetsData: state.embeddedImageAssetsSnapshotData(),
       combineSession: state.combineSessionSnapshot(),
-      sourceLogicalSize: state.sourceImage?.size
+      sourceLogicalSize: state.sourceImage?.size,
+      excludesTranslationsFromExport: !state.includesTranslationsInExport
     )
   }
 }

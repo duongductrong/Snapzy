@@ -16,6 +16,8 @@ extension Notification.Name {
   static let annotateCopyAndClose = Notification.Name("annotateCopyAndClose")
   static let annotateCloudUpload = Notification.Name("annotateCloudUpload")
   static let annotateAutoRedactSensitiveData = Notification.Name("annotateAutoRedactSensitiveData")
+  static let annotateAutoTranslate = Notification.Name("annotateAutoTranslate")
+  static let annotateTranslateArea = Notification.Name("annotateTranslateArea")
   static let annotatePasteImage = Notification.Name("annotatePasteImage")
   static let annotateAddImage = Notification.Name("annotateAddImage")
   static let annotateTogglePin = Notification.Name("annotateTogglePin")
@@ -262,6 +264,24 @@ class AnnotateWindow: NSWindow {
       return true
     }
 
+    // Auto Translate — configurable (default: ⌘⇧T)
+    if AnnotateShortcutManager.shared.matchesAutoTranslate(event) {
+      if isTextInputActive {
+        return super.performKeyEquivalent(with: event)
+      }
+      NotificationCenter.default.post(name: .annotateAutoTranslate, object: self)
+      return true
+    }
+
+    // Translate Area — configurable (default: ⌥⌘T)
+    if AnnotateShortcutManager.shared.matchesTranslateArea(event) {
+      if isTextInputActive {
+        return super.performKeyEquivalent(with: event)
+      }
+      NotificationCenter.default.post(name: .annotateTranslateArea, object: self)
+      return true
+    }
+
     // Arrange: ⌘] / ⌘[ step forward/backward, ⌥⌘] / ⌥⌘[ to front/back.
     if let arrangeAction = Self.arrangeAction(for: event, isTextInputActive: textInputActive),
        interactionState?.arrangeSelectedAnnotations(arrangeAction) == true {
@@ -397,10 +417,41 @@ class AnnotateWindow: NSWindow {
 
   /// Intercept scroll wheel (Cmd+scroll), trackpad magnify, Space key,
   /// and mouse drag events at the window level for zoom & pan.
+  /// Hold ⌥ alone (no mouse button down) to peek at the text under Auto Translate
+  /// overlays; any click ends the peek so ⌥-drag duplication keeps working.
+  private func updateTranslationPeek(for event: NSEvent) {
+    switch event.type {
+    case .flagsChanged:
+      let flags = event.modifierFlags.intersection([.command, .option, .shift, .control])
+      interactionState?.setPeekingOriginalTranslations(
+        flags == .option && NSEvent.pressedMouseButtons == 0 && !isTextInputActive
+      )
+    case .leftMouseDown, .rightMouseDown, .keyDown:
+      interactionState?.setPeekingOriginalTranslations(false)
+    default:
+      break
+    }
+  }
+
+  override func resignKey() {
+    super.resignKey()
+    interactionState?.setPeekingOriginalTranslations(false)
+  }
+
   override func sendEvent(_ event: NSEvent) {
+    updateTranslationPeek(for: event)
+
     switch event.type {
     case .keyDown where event.keyCode == 53:
       if isTextInputActive { break }
+      if interactionState?.isAutoTranslateRunning == true {
+        interactionState?.cancelAutoTranslate()
+        return
+      }
+      if interactionState?.isTranslateAreaSelecting == true {
+        interactionState?.endTranslateAreaSelection()
+        return
+      }
       if interactionState?.isCutOutInteractionActive == true {
         interactionState?.cancelCutOutInteraction()
         return

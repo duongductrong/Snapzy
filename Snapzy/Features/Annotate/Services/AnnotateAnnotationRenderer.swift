@@ -128,7 +128,45 @@ nonisolated struct AnnotationRenderer {
 
     case .measurement:
       AnnotateMeasureRenderer.draw(annotation, color: strokeColor, in: context)
+
+    case .translation(let block):
+      drawTranslation(block, annotation: annotation)
     }
+  }
+
+  private func drawTranslation(_ block: TranslatedTextBlock, annotation: AnnotationItem) {
+    let bounds = annotation.bounds.standardized
+    guard bounds.width > 0, bounds.height > 0 else { return }
+
+    switch block.cover {
+    case .solid:
+      context.saveGState()
+      context.setFillColor(NSColor(annotation.properties.fillColor).cgColor)
+      context.addPath(AnnotateTranslationTextLayout.coverPath(in: bounds))
+      context.fillPath()
+      context.restoreGState()
+    case .frosted:
+      context.saveGState()
+      context.addPath(AnnotateTranslationTextLayout.coverPath(in: bounds))
+      context.clip()
+      drawBlur(bounds: bounds, annotationId: annotation.id, blurType: .gaussian, controlValue: 12)
+      context.setFillColor(NSColor(annotation.properties.fillColor).withAlphaComponent(0.72).cgColor)
+      context.fill(bounds)
+      context.restoreGState()
+    case .none:
+      break
+    }
+
+    // Text being edited is shown by the inline editor.
+    guard annotation.id != editingTextId else { return }
+    AnnotateTranslationTextLayout.drawText(
+      block,
+      in: bounds,
+      fontSize: annotation.properties.fontSize,
+      fontName: annotation.properties.fontName,
+      color: NSColor(annotation.properties.strokeColor),
+      context: context
+    )
   }
 
   func drawCurrentStroke(

@@ -220,6 +220,28 @@ final class AnnotateState: ObservableObject {
   private var activeOCROperationID: UUID?
   private var ocrToast: AppToastHandle?
 
+  // MARK: Auto Translate (see AnnotateState+AutoTranslate.swift)
+  @Published var autoTranslatePhase: AnnotateAutoTranslatePhase = .idle
+  /// Overlay blocks while a run is in flight (not annotations until committed).
+  @Published var autoTranslateBlocks: [AnnotateAutoTranslateOverlayBlock] = []
+  /// Result or error pill under the canvas.
+  @Published var autoTranslateNotice: AnnotateAutoTranslateNotice?
+  /// Batch for the hidden `.translationTask` host (Apple Translation).
+  @Published var appleTranslationRequest: AnnotateAppleTranslationRequest?
+  /// Holding ⌥ hides translations to show the text under them.
+  @Published var isPeekingOriginalTranslations: Bool = false
+  /// Whether `.translation` items are drawn into saved/copied/shared images.
+  @Published var includesTranslationsInExport: Bool = true
+  /// Translation whose editor popover is open (double-click or the edit button).
+  @Published var translationEditorID: UUID?
+  /// Translate Area: the canvas is waiting for a drag that picks the area.
+  @Published var isTranslateAreaSelecting: Bool = false
+  /// Live marquee while dragging a Translate Area (annotate space).
+  @Published var translateAreaDraft: CGRect?
+  /// Area of the run in flight (nil = whole image); the overlay focuses it.
+  @Published var autoTranslateRegion: CGRect?
+  let autoTranslateRuntime = AnnotateAutoTranslateRuntime()
+
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?
 
@@ -2052,7 +2074,8 @@ final class AnnotateState: ObservableObject {
       isCombineMode: isCombineMode,
       effectiveContentBounds: effectiveContentBounds,
       cropRect: cropRect,
-      annotations: annotations,
+      // The single choke point for every flattened output (save, copy, drag, upload, mockup).
+      annotations: includesTranslationsInExport ? annotations : annotations.filter { !$0.type.isTranslation },
       embeddedImages: embeddedImageAssets,
       embeddedCGImages: embeddedImageCGImageCache,
       backgroundStyle: backgroundStyle,
@@ -2151,6 +2174,10 @@ final class AnnotateState: ObservableObject {
     let shouldApplyDefaultPreset = !hasImage
     resetBackgroundCutoutState(markUnsaved: false)
     cancelSensitiveRedactionScan()
+    cancelAutoTranslate()
+    endTranslateAreaSelection()
+    autoTranslateNotice = nil
+    isPeekingOriginalTranslations = false
     sourceImage = image
     loadedSourceImage = image
     transformedSourceImageDataCache = nil
@@ -2301,7 +2328,10 @@ final class AnnotateState: ObservableObject {
 
     Task {
       do {
-        let result = try await AnnotateSensitiveRedactionService.shared.detectRegions(in: image)
+        let result = try await AnnotateSensitiveRedactionService.shared.detectRegions(
+          in: image,
+          preferredLanguageIdentifier: AppLanguageManager.shared.activeOCRLanguageIdentifier
+        )
         guard activeSensitiveRedactionOperationID == operationID else { return }
 
         isSensitiveRedactionScanning = false
@@ -3347,7 +3377,7 @@ final class AnnotateState: ObservableObject {
         AnnotateImageRotation.rotatePoint($0, oldSize: oldSize, clockwise: clockwise)
       })
 
-    case .text:
+    case .text, .translation:
       rotated.bounds = AnnotateImageRotation.rotateLayoutRectPreservingSize(
         annotation.bounds,
         oldSize: oldSize,
@@ -3464,7 +3494,7 @@ final class AnnotateState: ObservableObject {
     case .measurement(let geometry):
       flipped.type = .measurement(geometry.mirrored(flipPoint))
 
-    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight:
+    case .text, .rectangle, .filledRectangle, .oval, .blur, .watermark, .embeddedImage, .spotlight, .translation:
       // Bounds-only annotations: the mirrored `bounds` above is the full transform we need.
       // Embedded image bitmaps were mirrored with the assets above.
       break
@@ -3850,7 +3880,7 @@ final class AnnotateState: ObservableObject {
           dy: shiftedBounds.minY - item.bounds.minY
         ))
         moved.bounds = CGRect(origin: shiftedBounds.origin, size: item.bounds.size)
-      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark:
+      case .rectangle, .filledRectangle, .oval, .blur, .embeddedImage, .spotlight, .watermark, .translation:
         moved.bounds = shiftRect(item.bounds)
       }
 
@@ -4556,6 +4586,7 @@ final class AnnotateState: ObservableObject {
     let oldBounds = annotations[index].resizeBounds
     let normalizedBounds = bounds.standardized
     annotations[index] = annotations[index].applyingResizeBounds(normalizedBounds)
+    refitTranslationAfterResize(at: index, oldBounds: oldBounds)
 
     if case .text = annotations[index].type,
        abs(oldBounds.width - normalizedBounds.width) > 0.5 {
@@ -6415,6 +6446,10 @@ final class AnnotateState: ObservableObject {
   var quickPropertiesContextTitle: String {
     switch quickPropertiesMode {
     case .selectedItem:
+      if quickPropertiesSelectionAnnotations.count == 1,
+         quickPropertiesSelectionAnnotations.first?.type.isTranslation == true {
+        return L10n.AnnotateContext.selected(L10n.AnnotateTranslate.translationTitle)
+      }
       if quickPropertiesSelectionAnnotations.count > 1 {
         return L10n.AnnotateContext.selected("\(quickPropertiesSelectionAnnotations.count)")
       }
@@ -6735,6 +6770,9 @@ final class AnnotateState: ObservableObject {
   }
 
   func activateTool(_ tool: AnnotationToolType) {
+    if isTranslateAreaSelecting {
+      endTranslateAreaSelection()
+    }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }

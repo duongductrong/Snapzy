@@ -196,6 +196,8 @@ extension AnnotateActionShortcutKind {
     case .togglePin: return "toggle_pin"
     case .cloudUpload: return "cloud_upload"
     case .autoRedactSensitiveData: return "auto_redact_sensitive_data"
+    case .autoTranslate: return "auto_translate"
+    case .translateArea: return "translate_area"
     }
   }
 }
