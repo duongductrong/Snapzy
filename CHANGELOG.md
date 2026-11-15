@@ -4,6 +4,21 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.15] - 2026-11-15
+
+### Features
+- Auto Translate in Annotate (auto scan and area) (#750) (881a5a8d)
+- Added Snip to Translate (OCR + translation card) (#749) (710d0864)
+- Added Hebrew (he) localization (#737) (d3628e1e)
+
+### Bug Fixes
+- release preferences window content on close to stop idle CPU burn (18fe56ad)
+
+### Contributors
+- @duongductrong
+- @github-actions[bot]
+- @meir9884
+
 ## [2.2.0-beta.14] - 2026-11-14
 
 ### Features
