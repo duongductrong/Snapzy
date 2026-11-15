@@ -412,6 +412,8 @@ private extension KeyboardShortcutManager {
       setShortcutListShortcut(config)
     case .ocr:
       setOCRShortcut(config)
+    case .translate:
+      setTranslateShortcut(config)
     case .smartElement:
       setSmartElementShortcut(config)
     case .objectCutout:

@@ -28,6 +28,7 @@ enum MenuBarItemKind: String, CaseIterable {
   case captureActiveWindow
   case scrollingCapture
   case captureOCR
+  case captureTranslate
   case captureSmartElement
   case captureObjectCutout
   case captureDelayed
@@ -53,7 +54,7 @@ enum MenuBarItemKind: String, CaseIterable {
   var group: MenuBarItemGroup? {
     switch self {
     case .captureArea, .captureAreaAnnotate, .captureApplication, .captureFullscreen,
-         .captureActiveWindow, .scrollingCapture, .captureOCR, .captureSmartElement,
+         .captureActiveWindow, .scrollingCapture, .captureOCR, .captureTranslate, .captureSmartElement,
          .captureObjectCutout, .captureDelayed, .captureDelayedFullscreen:
       return .capture
     case .recordScreen, .recordApplication:
@@ -81,6 +82,7 @@ enum MenuBarItemKind: String, CaseIterable {
     case .captureActiveWindow: return L10n.Actions.captureActiveWindow
     case .scrollingCapture: return L10n.Actions.scrollingCapture
     case .captureOCR: return L10n.Actions.captureTextOCR
+    case .captureTranslate: return L10n.Translate.actionTitle
     case .captureSmartElement: return L10n.Actions.captureSmartElement
     case .captureObjectCutout: return GlobalShortcutKind.objectCutout.displayName
     case .captureDelayed: return L10n.Actions.captureDelayed
@@ -109,6 +111,7 @@ enum MenuBarItemKind: String, CaseIterable {
     case .captureActiveWindow: return "macwindow.on.rectangle"
     case .scrollingCapture: return "arrow.up.and.down"
     case .captureOCR: return "text.viewfinder"
+    case .captureTranslate: return "translate"
     case .captureSmartElement: return "dot.viewfinder"
     case .captureObjectCutout: return "person.crop.rectangle"
     case .captureDelayed: return "timer"

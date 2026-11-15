@@ -201,6 +201,7 @@ Snapzy/
     FileAccess/
     Media/
       OCR/
+      Translation/
     Notifications/
       OCRNotificationContent.swift
       SystemNotificationService.swift
@@ -261,7 +262,7 @@ SnapzyUITests/
 | `App/` | Entry point, app lifecycle, menu bar bootstrap, preferences wiring |
 | `Features/Splash/` | Splash window, onboarding root coordinator, intro flow, multilingual welcome screen |
 | `Features/Onboarding/` | Onboarding step views and visual system, including first-run language selection |
-| `Features/Capture/` | High-level screenshot, OCR, cutout, scrolling-capture, and recording entry actions |
+| `Features/Capture/` | High-level screenshot, OCR, Snip to Translate card (`Translation/`), cutout, scrolling-capture, and recording entry actions |
 | `Features/Recording/` | Recording toolbar, overlays, live annotation, stop/GIF handoff |
 | `Features/QuickAccess/` | Floating post-capture stack, temp-file persistence UX, drag-to-app, pinned screenshot windows |
 | `Features/History/` | Floating capture history panel, compact/expanded cards, restore flow, and direct file drag-out |
@@ -285,7 +286,7 @@ SnapzyUITests/
 | `Services/Cloud/` | S3/R2/Google Drive providers, upload orchestration, GRDB history, Keychain credentials, encrypted transfer, OAuth service |
 | `Services/Configuration/` | TOML export/import facade, focused TOML parser/writer, schema validation, preference mutation helpers, debounced config.toml sync coordinator |
 | `Services/FileAccess/` | Sandbox-scoped save-folder permissions and bookmarks |
-| `Services/Media/` | OCR provider routing (`OCRProvider`: built-in Vision and remote OpenAI-compatible endpoints), OCR profiles/results, QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
+| `Services/Media/` | OCR provider routing (`OCRProvider`: built-in Vision and remote OpenAI-compatible endpoints), OCR profiles/results, translation engines (`Translation/`: Apple Translation on macOS 15+, custom endpoints), QR payload detection, foreground cutout, GIF conversion helpers, WebP encode |
 | `Services/Notifications/` | Native macOS notification delivery (`UserNotifications`) and OCR notification title/body/preview formatting |
 | `Services/Security/` | Keychain storage for custom OCR endpoint API keys (`OCRKeychainStore`) |
 | `Services/Shortcuts/` | Global shortcuts, conflict detection, system shortcut checks |

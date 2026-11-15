@@ -538,111 +538,12 @@ final class OCRService {
   }
 
   private func formatText(from lines: [OCRTextLine], request: OCRRequest) -> String {
-    let paragraphs = groupParagraphs(from: lines)
-    let formattedParagraphs = paragraphs.map { paragraph -> String in
-      if shouldReflowParagraph(paragraph, request: request) {
-        return reflowedParagraphText(from: paragraph, request: request)
-      }
-      return paragraph
-        .map(\.text)
-        .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-        .joined(separator: "\n")
-    }
-
-    return formattedParagraphs
-      .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-      .filter { !$0.isEmpty }
-      .joined(separator: "\n\n")
-  }
-
-  private func groupParagraphs(from lines: [OCRTextLine]) -> [[OCRTextLine]] {
-    guard !lines.isEmpty else { return [] }
-
-    let averageHeight = lines.map(\.boundingBox.height).reduce(0, +) / CGFloat(lines.count)
-    var paragraphs: [[OCRTextLine]] = []
-    var currentParagraph = [lines[0]]
-
-    for line in lines.dropFirst() {
-      guard let previousLine = currentParagraph.last else { continue }
-      let verticalGap = previousLine.boundingBox.minY - line.boundingBox.maxY
-      let paragraphThreshold = max(
-        averageHeight * 0.75,
-        max(previousLine.boundingBox.height, line.boundingBox.height) * 0.68
-      )
-
-      if verticalGap > paragraphThreshold {
-        paragraphs.append(currentParagraph)
-        currentParagraph = [line]
-      } else {
-        currentParagraph.append(line)
-      }
-    }
-
-    paragraphs.append(currentParagraph)
-    return paragraphs
-  }
-
-  private func shouldReflowParagraph(_ paragraph: [OCRTextLine], request: OCRRequest) -> Bool {
-    guard paragraph.count > 1 else { return false }
-
-    if isSingleVisualRow(paragraph) {
-      return true
-    }
-
-    let averageWidth = paragraph.map(\.boundingBox.width).reduce(0, +) / CGFloat(paragraph.count)
-    let longestLineLength = paragraph.map { meaningfulCharacterCount(in: $0.text) }.max() ?? 0
     let preferredLanguage = AppLanguageManager.normalizedLanguageIdentifier(from: request.preferredLanguageIdentifier)
-    let paragraphText = paragraph.map(\.text).joined()
-    let cjkWeight = cjkCharacterCount(in: paragraphText)
-    let isLikelyCJK = (preferredLanguage.map(isCJKLanguage) ?? false) || cjkWeight >= max(6, meaningfulCharacterCount(in: paragraphText) / 3)
-
-    if isLikelyCJK {
-      return averageWidth >= 0.24 || paragraph.count >= 3
-    }
-
-    return averageWidth >= 0.36 || longestLineLength >= 28 || paragraph.count >= 4
-  }
-
-  private func isSingleVisualRow(_ paragraph: [OCRTextLine]) -> Bool {
-    guard paragraph.count > 1 else { return false }
-
-    let minY = paragraph.map(\.boundingBox.minY).min() ?? 0
-    let maxY = paragraph.map(\.boundingBox.maxY).max() ?? 0
-    let averageHeight = paragraph.map(\.boundingBox.height).reduce(0, +) / CGFloat(paragraph.count)
-    guard averageHeight > 0 else { return false }
-
-    return maxY - minY <= averageHeight * 1.45
-  }
-
-  private func reflowedParagraphText(from paragraph: [OCRTextLine], request: OCRRequest) -> String {
-    let paragraphText = paragraph.map(\.text).joined()
-    let preferredLanguage = AppLanguageManager.normalizedLanguageIdentifier(from: request.preferredLanguageIdentifier)
-    let isLikelyCJK = (preferredLanguage.map(isCJKLanguage) ?? false) || cjkCharacterCount(in: paragraphText) >= max(6, meaningfulCharacterCount(in: paragraphText) / 3)
-    let separator = isLikelyCJK ? "" : " "
-
-    return paragraph.reduce(into: "") { text, line in
-      let nextFragment = line.text.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !nextFragment.isEmpty else { return }
-      guard !text.isEmpty else {
-        text = nextFragment
-        return
-      }
-
-      if separator.isEmpty {
-        text += nextFragment
-      } else if text.hasSuffix("-") {
-        text.removeLast()
-        text += nextFragment
-      } else if let firstScalar = nextFragment.unicodeScalars.first, leadingInlinePunctuation.contains(firstScalar) {
-        text += nextFragment
-      } else {
-        text += separator + nextFragment
-      }
-    }
-  }
-
-  private var leadingInlinePunctuation: CharacterSet {
-    CharacterSet(charactersIn: ",.;:!?)]}%")
+    let formatter = OCRTextLayoutFormatter(
+      imageSize: CGSize(width: request.image.width, height: request.image.height),
+      prefersCJK: preferredLanguage.map(isCJKLanguage) ?? false
+    )
+    return formatter.format(lines)
   }
 
   private func meaningfulCharacterCount(in text: String) -> Int {

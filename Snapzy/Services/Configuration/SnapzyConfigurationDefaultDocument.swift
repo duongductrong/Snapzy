@@ -79,6 +79,10 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("selected_model", OCRModelSelection.builtIn.persistedValue)
     writer.value("custom_models", "[]")
 
+    writer.section("capture.translate")
+    writer.value("target_language", "")
+    writer.value("selected_engine", TranslationEngineSelection.builtIn.persistedValue)
+
     writer.section("capture.object_cutout")
     writer.value("auto_crop", true)
 
@@ -302,6 +306,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .cloudUploads: return .defaultCloudUploads
     case .shortcutList: return .defaultShortcutList
     case .ocr: return .defaultOCR
+    case .translate: return .defaultTranslate
     case .smartElement: return nil
     case .objectCutout: return .defaultObjectCutout
     case .history: return .defaultHistory

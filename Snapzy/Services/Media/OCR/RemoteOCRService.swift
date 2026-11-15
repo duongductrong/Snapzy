@@ -89,7 +89,8 @@ struct RemoteOCRProvider: OCRProvider {
 
   @discardableResult
   private func performCompletion(image: CGImage, prompt: String) async throws -> String {
-    guard let endpoint = Self.endpointURL(forBaseURL: model.baseURL) else {
+    // Fail fast before the JPEG work; the client validates the URL again.
+    guard Self.endpointURL(forBaseURL: model.baseURL) != nil else {
       throw RemoteOCRError.invalidBaseURL
     }
     // JPEG + base64 encoding of a full screenshot is CPU-heavy; keep it off the main actor.
@@ -97,46 +98,15 @@ struct RemoteOCRProvider: OCRProvider {
       throw RemoteOCRError.imageEncodingFailed
     }
 
-    var request = URLRequest(url: endpoint)
-    request.httpMethod = "POST"
-    request.timeoutInterval = timeout
-    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-    if let apiKey = keychainStore.readKey(for: model.id), !apiKey.isEmpty {
-      request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-    }
-    request.httpBody = try JSONEncoder().encode(ChatCompletionRequest(
-      model: model.modelIdentifier,
-      messages: [ChatCompletionMessage(role: "user", content: [
-        .text(prompt),
-        .imageURL("data:image/jpeg;base64,\(imageBase64)"),
-      ])]
-    ))
-
-    let data: Data
-    let response: URLResponse
-    do {
-      (data, response) = try await session.data(for: request)
-    } catch let error as URLError {
-      throw RemoteOCRError.unreachable(error)
-    }
-
-    guard let httpResponse = response as? HTTPURLResponse else {
-      throw RemoteOCRError.invalidResponse
-    }
-    switch httpResponse.statusCode {
-    case 200...299:
-      break
-    case 401, 403:
-      throw RemoteOCRError.unauthorized
-    default:
-      throw RemoteOCRError.httpStatus(httpResponse.statusCode, Self.bodySnippet(from: data))
-    }
-
-    guard let chatResponse = try? JSONDecoder().decode(ChatCompletionResponse.self, from: data),
-          let content = chatResponse.choices.first?.message.content else {
-      throw RemoteOCRError.invalidResponse
-    }
-    return content.text
+    return try await OpenAICompatibleChatClient(
+      model: model,
+      keychainStore: keychainStore,
+      session: session,
+      timeout: timeout
+    ).complete(messages: [ChatCompletionMessage(role: "user", content: [
+      .text(prompt),
+      .imageURL("data:image/jpeg;base64,\(imageBase64)"),
+    ])])
   }
 
   // MARK: - Helpers
@@ -145,16 +115,7 @@ struct RemoteOCRProvider: OCRProvider {
   /// slashes, keeps an explicit `/chat/completions` suffix, appends
   /// `/chat/completions` to a `/v1` base, else appends `/v1/chat/completions`.
   static func endpointURL(forBaseURL baseURL: String) -> URL? {
-    var normalized = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
-    while normalized.hasSuffix("/") { normalized.removeLast() }
-    guard !normalized.isEmpty else { return nil }
-    if normalized.hasSuffix("/chat/completions") {
-      return URL(string: normalized)
-    }
-    if normalized.hasSuffix("/v1") {
-      return URL(string: normalized + "/chat/completions")
-    }
-    return URL(string: normalized + "/v1/chat/completions")
+    OpenAICompatibleChatClient.endpointURL(forBaseURL: baseURL)
   }
 
   static func defaultPrompt(for contentType: OCRContentType) -> String {
@@ -191,10 +152,5 @@ struct RemoteOCRProvider: OCRProvider {
     context.setFillColor(red: 1, green: 1, blue: 1, alpha: 1)
     context.fill(CGRect(x: 0, y: 0, width: size, height: size))
     return context.makeImage()
-  }
-
-  private static func bodySnippet(from data: Data, limit: Int = 200) -> String {
-    String(data: data.prefix(limit), encoding: .utf8)?
-      .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
   }
 }

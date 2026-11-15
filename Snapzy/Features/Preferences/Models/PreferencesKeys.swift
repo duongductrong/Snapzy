@@ -123,6 +123,10 @@ enum PreferencesKeys {
   static let ocrLinkDetectionEnabled = "ocr.linkDetectionEnabled"
   static let ocrSelectedModel = "ocr.selectedModel"
   static let ocrCustomModels = "ocr.customModels"
+  /// Snip to Translate target language (BCP-47). Unset = ask on first use.
+  static let translateTargetLanguage = "translate.targetLanguage"
+  /// Snip to Translate engine: `builtin` (Apple Translation) or `custom:<uuid>`.
+  static let translateSelectedEngine = "translate.selectedEngine"
 
   // Floating Screenshot (Quick Access)
   static let floatingEnabled = "floatingScreenshot.enabled"

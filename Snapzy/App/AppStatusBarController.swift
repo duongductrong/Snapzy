@@ -738,6 +738,18 @@ final class AppStatusBarController: ObservableObject {
       item.isEnabled = viewModel.hasPermission
       return item
 
+    case .captureTranslate:
+      let item = NSMenuItem(
+        title: L10n.Translate.actionTitle,
+        action: #selector(captureTranslateAction),
+        keyEquivalent: ""
+      )
+      applyConfiguredShortcut(item, for: .translate, using: shortcutManager)
+      item.target = self
+      item.image = NSImage(systemSymbolName: "translate", accessibilityDescription: nil)
+      item.isEnabled = viewModel.hasPermission
+      return item
+
     case .captureSmartElement:
       let item = NSMenuItem(
         title: L10n.Actions.captureSmartElement,
@@ -962,6 +974,11 @@ final class AppStatusBarController: ObservableObject {
   @objc private func captureOCRAction() {
     logMenuAction("captureOCR")
     viewModel?.captureOCR()
+  }
+
+  @objc private func captureTranslateAction() {
+    logMenuAction("captureTranslate")
+    viewModel?.captureTranslate()
   }
 
   @objc private func captureSmartElementAction() {

@@ -156,6 +156,7 @@ enum ShortcutOverlayContentBuilder {
 
     items.append(globalItem(kind: .objectCutout, icon: "person.crop.rectangle", manager: manager))
     items.append(globalItem(kind: .ocr, icon: "text.viewfinder", manager: manager))
+    items.append(globalItem(kind: .translate, icon: "translate", manager: manager))
     items.append(globalItem(kind: .smartElement, icon: "dot.viewfinder", manager: manager))
     return items
   }
