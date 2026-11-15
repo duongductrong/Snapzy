@@ -446,6 +446,8 @@ private extension AnnotateShortcutManager {
       setAutoTranslateShortcut(config)
     case .translateArea:
       setTranslateAreaShortcut(config)
+    case .aiPrompt:
+      setAIPromptShortcut(config)
     }
   }
 }

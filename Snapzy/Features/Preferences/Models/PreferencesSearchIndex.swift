@@ -481,6 +481,10 @@ extension PreferencesSearchEntry {
       shortcutEntry(annotateActions, L10n.AnnotateTranslate.translateArea,
                     L10n.AnnotateTranslate.translateAreaDescription, ["translate", "area", "selection", "region"]),
     ]
+    if AnnotateAgentProviderResolver.isFeatureAvailable {
+      entries.append(shortcutEntry(annotateActions, L10n.AnnotateAI.askHelp,
+                                   L10n.AnnotateAI.shortcutDescription, ["ai", "prompt", "agent", "ask", "intelligence"]))
+    }
 
     entries += AnnotateShortcutManager.configurableTools.map {
       shortcutEntry(annotateTools, $0.displayName, nil, ["tool key", "single key"])

@@ -241,6 +241,8 @@ final class AnnotateState: ObservableObject {
   /// Area of the run in flight (nil = whole image); the overlay focuses it.
   @Published var autoTranslateRegion: CGRect?
   let autoTranslateRuntime = AnnotateAutoTranslateRuntime()
+  /// AI prompt ("Ask") for this window. Views observe it directly.
+  lazy var agent = AnnotateAgentController(state: self)
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?
@@ -1819,8 +1821,13 @@ final class AnnotateState: ObservableObject {
   @Published var canUndo: Bool = false
   @Published var canRedo: Bool = false
 
-  private var undoStack: [UndoEntry] = []
+  private var undoStack: [UndoEntry] = [] {
+    didSet { undoGeneration &+= 1 }
+  }
   private var redoStack: [UndoEntry] = []
+  /// Changes whenever the undo stack changes, so callers can tell whether "their" checkpoint
+  /// is still on top (the AI prompt's Undo).
+  private(set) var undoGeneration = 0
   private var textEditingUndoTransaction: TextEditingUndoTransaction?
 
   init(
@@ -3063,6 +3070,14 @@ final class AnnotateState: ObservableObject {
     pushUndoSnapshot(currentSnapshot(), annotationCount: annotations.count)
   }
 
+  /// Records an undo checkpoint for a change already applied to `annotations`, so callers
+  /// can skip the checkpoint when the change turned out to be a no-op (AI prompt runs).
+  func recordUndoCheckpoint(annotationsBeforeChange before: [AnnotationItem]) {
+    var snapshot = currentSnapshot()
+    snapshot.annotations = before
+    pushUndoSnapshot(snapshot, annotationCount: before.count)
+  }
+
   private func pushUndoSnapshot(_ snapshot: AnnotationSnapshot, annotationCount: Int) {
     DiagnosticLogger.shared.log(.debug, .annotate, "Undo checkpoint", context: ["annotations": "\(annotationCount)"])
     undoStack.append(.annotations(snapshot))
@@ -3090,6 +3105,8 @@ final class AnnotateState: ObservableObject {
   }
 
   func undo() {
+    // An AI prompt run owns the top checkpoint while it works.
+    guard !agent.isRunning else { return }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }
@@ -3108,6 +3125,7 @@ final class AnnotateState: ObservableObject {
   }
 
   func redo() {
+    guard !agent.isRunning else { return }
     if editingTextAnnotationId != nil {
       commitTextEditing()
     }
@@ -4346,6 +4364,34 @@ final class AnnotateState: ObservableObject {
     annotations = reordered
     hasUnsavedChanges = true
     return true
+  }
+
+  /// Arrange for an explicit set of layers, without an undo checkpoint (the caller owns it).
+  @discardableResult
+  func arrangeAnnotationsWithoutUndo(_ ids: Set<UUID>, action: AnnotationArrangeAction) -> Bool {
+    let arrangeable = Set(annotations.filter { ids.contains($0.id) && isArrangeable($0) }.map(\.id))
+    guard let reordered = arrangedAnnotations(for: action, selection: arrangeable) else { return false }
+    annotations = reordered
+    hasUnsavedChanges = true
+    return true
+  }
+
+  /// Sets one text annotation's presentation (plain / label / callout) without an undo checkpoint.
+  func setTextPresentationWithoutUndo(id: UUID, _ presentation: TextPresentation) {
+    guard let index = annotations.firstIndex(where: { $0.id == id }),
+          case .text = annotations[index].type else { return }
+    annotations[index].properties.textPresentation = presentation
+    switch presentation {
+    case .plain, .label:
+      annotations[index].properties.calloutTailTarget = nil
+    case .callout:
+      annotations[index].properties.calloutTailTarget = annotations[index].properties.calloutTailTarget
+        ?? defaultCalloutTailTarget(for: annotations[index].bounds, fontSize: annotations[index].properties.fontSize)
+    }
+    if presentation != .plain, annotations[index].properties.fillColor == .clear {
+      annotations[index].properties.fillColor = .black
+    }
+    hasUnsavedChanges = true
   }
 
   /// The annotation list after `action`, or nil when nothing would change.
@@ -6792,13 +6838,22 @@ final class AnnotateState: ObservableObject {
       "count": "\(selectedIds.count)"
     ])
     saveState()
-    annotations.removeAll { selectedIds.contains($0.id) }
-    autoSizingTextAnnotationIDs.subtract(selectedIds)
-    selectedIds.forEach { freeCombineBoundsByAnnotationID.removeValue(forKey: $0) }
+    removeAnnotationsWithoutUndo(selectedIds)
+    deselectAnnotation()
+  }
+
+  /// Removes annotations and their bookkeeping. Callers own the undo checkpoint
+  /// (AI prompt runs record one checkpoint for the whole run).
+  func removeAnnotationsWithoutUndo(_ ids: Set<UUID>) {
+    guard !ids.isEmpty else { return }
+    annotations.removeAll { ids.contains($0.id) }
+    autoSizingTextAnnotationIDs.subtract(ids)
+    ids.forEach { freeCombineBoundsByAnnotationID.removeValue(forKey: $0) }
     pruneUnusedEmbeddedAssets()
     updateImportWarningIfNeeded()
     refreshCombineLayout()
-    deselectAnnotation()
+    setSelectedAnnotationIds(selectedAnnotationIds.subtracting(ids))
+    hasUnsavedChanges = true
   }
 
   /// Commit the current text editing and exit edit mode

@@ -324,6 +324,7 @@ enum SnapzyConfigurationDefaultDocument {
     case .autoRedactSensitiveData: return AnnotateShortcutManager.defaultAutoRedactSensitiveData
     case .autoTranslate: return AnnotateShortcutManager.defaultAutoTranslate
     case .translateArea: return AnnotateShortcutManager.defaultTranslateArea
+    case .aiPrompt: return AnnotateShortcutManager.defaultAIPrompt
     }
   }
 }

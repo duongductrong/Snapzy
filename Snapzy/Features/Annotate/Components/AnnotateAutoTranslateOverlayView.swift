@@ -163,34 +163,13 @@ struct AnnotateAutoTranslateOverlayView: View {
     layer.draw(resolved, in: CGRect(x: x, y: y, width: available.width, height: min(measured.height, rect.height)))
   }
 
-  /// Faint multi-hue light running around the block, like the card's rim.
   private func drawRim(in context: inout GraphicsContext, shape: Path, rect: CGRect, now: Date, strength: Double) {
-    guard strength > 0.01 else { return }
-    let hues = TranslationCardMotion.rimHues
-    let angle: Angle
-    if reduceMotion {
-      angle = .zero
-    } else {
-      let turn = now.timeIntervalSinceReferenceDate
-        .truncatingRemainder(dividingBy: TranslationCardMotion.rimTurnDuration) / TranslationCardMotion.rimTurnDuration
-      angle = .degrees(turn * 360)
-    }
-    let shading = GraphicsContext.Shading.conicGradient(
-      Gradient(colors: hues),
-      center: CGPoint(x: rect.midX, y: rect.midY),
-      angle: angle
+    AnnotateAIOverlayPainter.drawRim(
+      in: &context, shape: shape, rect: rect, now: now, strength: strength,
+      reduceMotion: reduceMotion, isDark: colorScheme == .dark
     )
-    var glow = context
-    glow.opacity = strength * (colorScheme == .dark ? 0.55 : 0.45)
-    glow.addFilter(.blur(radius: 4))
-    glow.stroke(shape, with: shading, lineWidth: 3)
-
-    var line = context
-    line.opacity = strength * (colorScheme == .dark ? 0.85 : 0.75)
-    line.stroke(shape, with: shading, lineWidth: 1.2)
   }
 
-  /// A soft diagonal band moving leading → trailing, as in the card's reading sweep.
   private func drawSweep(
     in context: inout GraphicsContext,
     rect: CGRect,
@@ -199,30 +178,8 @@ struct AnnotateAutoTranslateOverlayView: View {
     phaseOffset: Double,
     strength: Double
   ) {
-    guard strength > 0.01 else { return }
-    let cycle = TranslationCardMotion.sweepDuration + TranslationCardMotion.sweepRest
-    let t = (now.timeIntervalSinceReferenceDate + phaseOffset).truncatingRemainder(dividingBy: cycle)
-    let raw = min(t / TranslationCardMotion.sweepDuration, 1)
-    guard raw < 1 else { return }
-    let eased = raw < 0.5 ? 4 * raw * raw * raw : 1 - pow(-2 * raw + 2, 3) / 2
-    let width = 0.38
-    let center = -width + eased * (1 + 2 * width)
-
-    var layer = context
-    if let clip { layer.clip(to: clip) }
-    layer.blendMode = .plusLighter
-    let gradient = Gradient(stops: [
-      .init(color: .clear, location: max(0, min(1, center - width))),
-      .init(color: .white.opacity(strength), location: max(0, min(1, center))),
-      .init(color: .clear, location: max(0, min(1, center + width))),
-    ])
-    layer.fill(
-      Path(rect),
-      with: .linearGradient(
-        gradient,
-        startPoint: CGPoint(x: rect.minX, y: rect.minY + rect.height * 0.2),
-        endPoint: CGPoint(x: rect.maxX, y: rect.minY + rect.height * 0.8)
-      )
+    AnnotateAIOverlayPainter.drawSweep(
+      in: &context, rect: rect, clip: clip, now: now, phaseOffset: phaseOffset, strength: strength
     )
   }
 

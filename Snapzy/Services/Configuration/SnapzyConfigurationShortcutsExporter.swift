@@ -198,6 +198,7 @@ extension AnnotateActionShortcutKind {
     case .autoRedactSensitiveData: return "auto_redact_sensitive_data"
     case .autoTranslate: return "auto_translate"
     case .translateArea: return "translate_area"
+    case .aiPrompt: return "ai_prompt"
     }
   }
 }

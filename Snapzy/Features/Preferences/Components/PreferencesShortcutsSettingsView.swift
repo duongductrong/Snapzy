@@ -45,6 +45,7 @@ struct ShortcutsSettingsView: View {
   @State private var autoRedactSensitiveDataShortcut: ShortcutConfig?
   @State private var autoTranslateShortcut: ShortcutConfig?
   @State private var translateAreaShortcut: ShortcutConfig?
+  @State private var aiPromptShortcut: ShortcutConfig?
   @State private var globalShortcutEnabled: [GlobalShortcutKind: Bool]
   @State private var annotateActionEnabled: [AnnotateActionShortcutKind: Bool]
   @State private var globalValidationIssues: [GlobalShortcutKind: ShortcutValidationIssue] = [:]
@@ -117,6 +118,7 @@ struct ShortcutsSettingsView: View {
     )
     _autoTranslateShortcut = State(initialValue: AnnotateShortcutManager.shared.autoTranslateShortcut)
     _translateAreaShortcut = State(initialValue: AnnotateShortcutManager.shared.translateAreaShortcut)
+    _aiPromptShortcut = State(initialValue: AnnotateShortcutManager.shared.aiPromptShortcut)
     _globalShortcutEnabled = State(
       initialValue: Dictionary(
         uniqueKeysWithValues: GlobalShortcutKind.allCases.map {
@@ -761,6 +763,19 @@ struct ShortcutsSettingsView: View {
       onSwap: swapAction(for: .annotateAction(.translateArea)),
       onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .translateArea) }
     )
+
+    if AnnotateAgentProviderResolver.isFeatureAvailable {
+      ShortcutRecorderView(
+        label: L10n.AnnotateAI.askHelp,
+        description: L10n.AnnotateAI.shortcutDescription,
+        shortcut: $aiPromptShortcut,
+        defaultShortcut: AnnotateShortcutManager.defaultAIPrompt,
+        isEnabled: annotateActionEnabledBinding(for: .aiPrompt),
+        validationIssue: annotateActionValidationIssues[.aiPrompt],
+        onSwap: swapAction(for: .annotateAction(.aiPrompt)),
+        onShortcutChanged: { handleAnnotateActionShortcutChange($0, for: .aiPrompt) }
+      )
+    }
   }
 
   @ViewBuilder
@@ -957,6 +972,7 @@ struct ShortcutsSettingsView: View {
     autoRedactSensitiveDataShortcut = AnnotateShortcutManager.defaultAutoRedactSensitiveData
     autoTranslateShortcut = AnnotateShortcutManager.defaultAutoTranslate
     translateAreaShortcut = AnnotateShortcutManager.defaultTranslateArea
+    aiPromptShortcut = AnnotateShortcutManager.defaultAIPrompt
 
     for kind in AnnotateActionShortcutKind.allCases {
       annotateActionEnabled[kind] = true
@@ -971,6 +987,7 @@ struct ShortcutsSettingsView: View {
     annotateManager.setAutoRedactSensitiveDataShortcut(AnnotateShortcutManager.defaultAutoRedactSensitiveData)
     annotateManager.setAutoTranslateShortcut(AnnotateShortcutManager.defaultAutoTranslate)
     annotateManager.setTranslateAreaShortcut(AnnotateShortcutManager.defaultTranslateArea)
+    annotateManager.setAIPromptShortcut(AnnotateShortcutManager.defaultAIPrompt)
   }
 
   private func resetAnnotateToolKeysSection() {
@@ -1286,6 +1303,9 @@ struct ShortcutsSettingsView: View {
       case .translateArea:
         translateAreaShortcut = config
         annotateManager.setTranslateAreaShortcut(config)
+      case .aiPrompt:
+        aiPromptShortcut = config
+        annotateManager.setAIPromptShortcut(config)
       }
       return true
     case .reject(let issue):

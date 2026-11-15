@@ -232,6 +232,7 @@ final class ShortcutValidationService {
   ) -> AnnotateActionShortcutKind? {
     AnnotateActionShortcutKind.allCases.first(where: {
       $0 != excludedKind
+        && ($0 != .aiPrompt || AnnotateAgentProviderResolver.isFeatureAvailable)
         && AnnotateShortcutManager.shared.isActionShortcutEnabled(for: $0)
         && AnnotateShortcutManager.shared.shortcut(for: $0) == config
     })
@@ -289,6 +290,8 @@ private extension AnnotateActionShortcutKind {
       return L10n.AnnotateTranslate.actionTitle
     case .translateArea:
       return L10n.AnnotateTranslate.translateArea
+    case .aiPrompt:
+      return L10n.AnnotateAI.askHelp
     }
   }
 }

@@ -68,7 +68,9 @@ enum ShortcutOverlayContentBuilder {
       ShortcutOverlaySection(
         id: "annotate-actions",
         title: L10n.ShortcutOverlay.annotateActions,
-        items: AnnotateActionShortcutKind.allCases.map { kind in
+        items: AnnotateActionShortcutKind.allCases
+          .filter { $0 != .aiPrompt || AnnotateAgentProviderResolver.isFeatureAvailable }
+          .map { kind in
           let (title, icon) = annotateActionMetadata(kind)
           let shortcut = annotate.shortcut(for: kind)
           return ShortcutOverlayItem(
@@ -248,6 +250,8 @@ enum ShortcutOverlayContentBuilder {
       return (L10n.AnnotateTranslate.actionTitle, "translate")
     case .translateArea:
       return (L10n.AnnotateTranslate.translateArea, "text.viewfinder")
+    case .aiPrompt:
+      return (L10n.AnnotateAI.askHelp, "sparkles")
     }
   }
 

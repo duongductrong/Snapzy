@@ -10297,4 +10297,124 @@ extension L10n {
       string("annotate.translate.cover-color", defaultValue: "Cover", comment: "Color of the cover behind a translation")
     }
   }
+
+  nonisolated enum AnnotateAI {
+    static var ask: String {
+      string("annotate.ai.ask", defaultValue: "Ask", comment: "Annotate AI dock: button that opens the natural-language prompt")
+    }
+    static var askHelp: String {
+      string("annotate.ai.ask-help", defaultValue: "Ask AI", comment: "Tooltip and shortcut name for the Annotate AI prompt")
+    }
+    static var shortcutDescription: String {
+      string("annotate.ai.shortcut-description", defaultValue: "Describe what to annotate and let AI add it", comment: "Shortcut settings description for the Annotate AI prompt")
+    }
+    static var placeholder: String {
+      string("annotate.ai.placeholder", defaultValue: "Describe what to annotate…", comment: "Placeholder of the Annotate AI prompt field")
+    }
+    static var followUpPlaceholder: String {
+      string("annotate.ai.follow-up-placeholder", defaultValue: "Ask a follow-up…", comment: "Placeholder of the AI prompt field after a first request")
+    }
+    static var back: String {
+      string("annotate.ai.back", defaultValue: "Back", comment: "Button that leaves the AI prompt and returns to the AI tools")
+    }
+    static var send: String {
+      string("annotate.ai.send", defaultValue: "Send", comment: "Button that sends the AI prompt")
+    }
+    static var stop: String {
+      string("annotate.ai.stop", defaultValue: "Stop", comment: "Button that stops the running AI request")
+    }
+    static var newConversation: String {
+      string("annotate.ai.new-conversation", defaultValue: "New Conversation", comment: "Menu item that forgets earlier AI prompts in this window")
+    }
+    static var settings: String {
+      string("annotate.ai.settings", defaultValue: "AI Settings…", comment: "Menu item that opens AI settings")
+    }
+    static var notConfigured: String {
+      string("annotate.ai.not-configured", defaultValue: "AI isn’t set up yet", comment: "Shown when no AI provider is available for the Annotate prompt")
+    }
+    static var failed: String {
+      string("annotate.ai.failed", defaultValue: "The AI request didn’t finish", comment: "Generic error when an AI request fails")
+    }
+    static var appleRefused: String {
+      string("annotate.ai.apple-refused", defaultValue: "Apple Intelligence can’t help with this request", comment: "Apple Intelligence declined to answer for safety reasons")
+    }
+    static var appleUnsupportedLanguage: String {
+      string("annotate.ai.apple-unsupported-language", defaultValue: "Apple Intelligence doesn’t support this language yet", comment: "Apple Intelligence does not support the prompt's language")
+    }
+    static var appleUnavailable: String {
+      string("annotate.ai.apple-unavailable", defaultValue: "Apple Intelligence isn’t ready yet. Check System Settings › Apple Intelligence & Siri", comment: "Apple Intelligence model is not ready (downloading or disabled)")
+    }
+    static var appleBusy: String {
+      string("annotate.ai.apple-busy", defaultValue: "Apple Intelligence is busy. Try again in a moment", comment: "Apple Intelligence is rate limited or busy")
+    }
+    static var appleTooLong: String {
+      string("annotate.ai.apple-too-long", defaultValue: "Too much to handle on-device. Try a shorter request", comment: "The prompt plus screenshot did not fit the on-device model's context")
+    }
+    static var stopped: String {
+      string("annotate.ai.stopped", defaultValue: "Stopped", comment: "Result after the user stopped an AI request")
+    }
+    static var noChanges: String {
+      string("annotate.ai.no-changes", defaultValue: "No changes", comment: "AI request finished without changing anything")
+    }
+    static func changes(_ count: Int) -> String {
+      format("annotate.ai.changes", defaultValue: "Changes: %lld", comment: "Number of changes an AI request made", count)
+    }
+    static func selected(_ count: Int) -> String {
+      format("annotate.ai.selected", defaultValue: "Selected: %lld", comment: "Chip in the AI prompt: number of selected annotations the prompt applies to", count)
+    }
+    static var clearSelection: String {
+      string("annotate.ai.clear-selection", defaultValue: "Clear Selection", comment: "Removes the selection chip from the AI prompt")
+    }
+    static var statusReading: String {
+      string("annotate.ai.status-reading", defaultValue: "Reading the screenshot…", comment: "AI working status")
+    }
+    static var statusThinking: String {
+      string("annotate.ai.status-thinking", defaultValue: "Thinking…", comment: "AI working status")
+    }
+    static var statusFindingText: String {
+      string("annotate.ai.status-finding-text", defaultValue: "Looking for text…", comment: "AI working status")
+    }
+    static var statusBox: String {
+      string("annotate.ai.status-box", defaultValue: "Drawing a box…", comment: "AI working status")
+    }
+    static var statusOval: String {
+      string("annotate.ai.status-oval", defaultValue: "Circling…", comment: "AI working status")
+    }
+    static var statusArrow: String {
+      string("annotate.ai.status-arrow", defaultValue: "Adding an arrow…", comment: "AI working status")
+    }
+    static var statusLine: String {
+      string("annotate.ai.status-line", defaultValue: "Drawing a line…", comment: "AI working status")
+    }
+    static var statusText: String {
+      string("annotate.ai.status-text", defaultValue: "Writing a note…", comment: "AI working status")
+    }
+    static var statusHighlight: String {
+      string("annotate.ai.status-highlight", defaultValue: "Highlighting…", comment: "AI working status")
+    }
+    static var statusBlur: String {
+      string("annotate.ai.status-blur", defaultValue: "Blurring…", comment: "AI working status")
+    }
+    static var statusSpotlight: String {
+      string("annotate.ai.status-spotlight", defaultValue: "Adding a spotlight…", comment: "AI working status")
+    }
+    static var statusCounter: String {
+      string("annotate.ai.status-counter", defaultValue: "Numbering steps…", comment: "AI working status")
+    }
+    static var statusWatermark: String {
+      string("annotate.ai.status-watermark", defaultValue: "Adding a watermark…", comment: "AI working status")
+    }
+    static var statusEdit: String {
+      string("annotate.ai.status-edit", defaultValue: "Editing annotations…", comment: "AI working status")
+    }
+    static var statusDelete: String {
+      string("annotate.ai.status-delete", defaultValue: "Removing annotations…", comment: "AI working status")
+    }
+    static var statusArrange: String {
+      string("annotate.ai.status-arrange", defaultValue: "Arranging layers…", comment: "AI working status")
+    }
+    static var statusCanvas: String {
+      string("annotate.ai.status-canvas", defaultValue: "Styling the canvas…", comment: "AI working status")
+    }
+  }
 }
