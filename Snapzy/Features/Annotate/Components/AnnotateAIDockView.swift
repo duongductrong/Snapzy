@@ -571,6 +571,8 @@ private struct AnnotateAIDockPromptRow: View {
     current.isEnabled = false
     menu.addItem(current)
     menu.addItem(.separator())
+    addProviderChoices(to: menu)
+    menu.addItem(.separator())
     let newConversation = ClosureMenuItem(title: L10n.AnnotateAI.newConversation, keyEquivalent: "") { [weak agent] in
       agent?.startNewConversation()
     }
@@ -578,6 +580,29 @@ private struct AnnotateAIDockPromptRow: View {
     newConversation.isEnabled = agent.hasConversation && !agent.isRunning
     menu.addItem(newConversation)
     return menu
+  }
+
+  /// Automatic, Apple Intelligence (when ready) and the shared custom endpoints.
+  private func addProviderChoices(to menu: NSMenu) {
+    let selection = agent.providerSelection
+    var choices: [(title: String, symbol: String, value: AnnotateAgentProviderSelection)] = [
+      (L10n.AnnotateAI.automatic, "sparkles", .automatic),
+    ]
+    if AnnotateAgentAppleIntelligence.isAvailable || selection == .appleIntelligence {
+      choices.append(("Apple Intelligence", "apple.intelligence", .appleIntelligence))
+    }
+    for model in CustomOCRModelStore.shared.models {
+      choices.append((model.name, "network", .endpoint(model.id)))
+    }
+    for choice in choices {
+      let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") { [weak agent] in
+        agent?.selectProvider(choice.value)
+      }
+      item.image = NSImage(systemSymbolName: choice.symbol, accessibilityDescription: nil)
+      item.state = choice.value == selection ? .on : .off
+      item.isEnabled = !agent.isRunning
+      menu.addItem(item)
+    }
   }
 
   @ViewBuilder

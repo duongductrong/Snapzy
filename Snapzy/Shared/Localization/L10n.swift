@@ -10416,5 +10416,23 @@ extension L10n {
     static var statusCanvas: String {
       string("annotate.ai.status-canvas", defaultValue: "Styling the canvas…", comment: "AI working status")
     }
+    static func statusContacting(_ name: String) -> String {
+      format("annotate.ai.status-contacting", defaultValue: "Asking %@…", comment: "AI working status while waiting for a custom endpoint. %@ is the endpoint name", name)
+    }
+    static var invalidReply: String {
+      string("annotate.ai.invalid-reply", defaultValue: "The model’s answer couldn’t be read. Try again or choose another model", comment: "A custom AI endpoint answered with something Snapzy can't use")
+    }
+    static var automatic: String {
+      string("annotate.ai.automatic", defaultValue: "Automatic", comment: "AI provider menu: let Snapzy pick the on-device provider")
+    }
+    static func consentTitle(_ name: String) -> String {
+      format("annotate.ai.consent-title", defaultValue: "Send this screenshot to %@?", comment: "Alert title before the first AI prompt goes to an off-device provider. %@ is the provider name", name)
+    }
+    static func consentMessage(_ host: String) -> String {
+      format("annotate.ai.consent-message", defaultValue: "To answer, the screenshot and the text recognized in it are sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first AI prompt goes to an off-device provider. %@ is the server host", host)
+    }
+    static var consentSend: String {
+      string("annotate.ai.consent-send", defaultValue: "Send", comment: "Alert button that allows sending the screenshot to an AI provider")
+    }
   }
 }

@@ -65,6 +65,10 @@ final class AnnotateAgentController: ObservableObject {
   private weak var state: AnnotateState?
   private let resolveProvider: @MainActor () -> AnnotateAgentProvider?
   private let pacingEnabled: Bool
+  private let defaults: UserDefaults
+  /// Asks before the first prompt goes to an off-device provider. `true` = send.
+  private let confirmRemoteUse: @MainActor (AnnotateAgentRemoteDestination) async -> Bool
+  private var isConfirmingRemoteUse = false
 
   /// The image the analysis belongs to. Held strongly: comparing addresses of freed images
   /// could mistake a new image for the old one.
@@ -87,18 +91,24 @@ final class AnnotateAgentController: ObservableObject {
   init(
     state: AnnotateState,
     pacingEnabled: Bool = true,
-    resolveProvider: (@MainActor () -> AnnotateAgentProvider?)? = nil
+    defaults: UserDefaults = .standard,
+    resolveProvider: (@MainActor () -> AnnotateAgentProvider?)? = nil,
+    confirmRemoteUse: (@MainActor (AnnotateAgentRemoteDestination) async -> Bool)? = nil
   ) {
     self.state = state
     self.pacingEnabled = pacingEnabled
+    self.defaults = defaults
     self.resolveProvider = resolveProvider ?? { AnnotateAgentProviderResolver.resolve() }
+    self.confirmRemoteUse = confirmRemoteUse ?? { await AnnotateAgentController.askRemoteUse($0) }
   }
 
   // MARK: - Derived
 
   var isRunning: Bool { phase != .idle }
   var hasConversation: Bool { !turns.isEmpty }
-  var canSend: Bool { !isRunning && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+  var canSend: Bool {
+    !isRunning && !isConfirmingRemoteUse && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+  }
 
   var isAvailable: Bool {
     AnnotateAgentProviderResolver.isFeatureAvailable && (state?.canAutoTranslate ?? false)
@@ -152,9 +162,24 @@ final class AnnotateAgentController: ObservableObject {
 
   func submit() {
     let prompt = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-    guard !prompt.isEmpty, !isRunning, let state, state.hasImage, !state.isAutoTranslateRunning else { return }
+    guard !prompt.isEmpty, !isRunning, !isConfirmingRemoteUse, let state, state.hasImage, !state.isAutoTranslateRunning else {
+      return
+    }
     guard let provider = resolveProvider() else {
       showNotice(.failed(message: L10n.AnnotateAI.notConfigured, offersSettings: true))
+      return
+    }
+    // The screenshot leaves the Mac: ask once per provider, then send what was typed.
+    if let destination = provider.remoteDestination, !hasRemoteConsent(destination) {
+      isConfirmingRemoteUse = true
+      Task { [weak self] in
+        guard let self else { return }
+        let allowed = await self.confirmRemoteUse(destination)
+        self.isConfirmingRemoteUse = false
+        guard allowed else { return }
+        self.recordRemoteConsent(destination)
+        self.submit()
+      }
       return
     }
 
@@ -215,6 +240,20 @@ final class AnnotateAgentController: ObservableObject {
     dismissNotice()
   }
 
+  var providerSelection: AnnotateAgentProviderSelection {
+    AnnotateAgentProviderResolver.selection(defaults: defaults)
+  }
+
+  /// A different provider starts a new conversation: it never saw the earlier turns.
+  func selectProvider(_ selection: AnnotateAgentProviderSelection) {
+    guard !isRunning, !isConfirmingRemoteUse, selection != providerSelection else { return }
+    AnnotateAgentProviderResolver.setSelection(selection, defaults: defaults)
+    objectWillChange.send()
+    turns = []
+    toolbox = nil
+    dismissNotice()
+  }
+
   func dismissNotice() {
     noticeTask?.cancel()
     notice = nil
@@ -267,7 +306,11 @@ final class AnnotateAgentController: ObservableObject {
       prompt: prompt,
       history: turns,
       sceneJSON: toolbox.execute(name: AnnotateAgentToolName.getScene.rawValue, argumentsJSON: "{}").text,
-      scene: toolbox.scene()
+      scene: toolbox.scene(),
+      // Only off-device providers look at pixels today; on-device ones read the scene.
+      image: provider.remoteDestination == nil
+        ? nil
+        : state.effectiveSourceImage?.cgImage(forProposedRect: nil, context: nil, hints: nil)
     )
 
     do {
@@ -343,6 +386,37 @@ final class AnnotateAgentController: ObservableObject {
     canvasAfterRun = nil
     undoGenerationAfterRun = nil
     lastRunRecordedUndo = false
+  }
+
+  // MARK: - Remote consent
+
+  private func hasRemoteConsent(_ destination: AnnotateAgentRemoteDestination) -> Bool {
+    defaults.stringArray(forKey: PreferencesKeys.annotateAgentConsentedProviders)?.contains(destination.id) ?? false
+  }
+
+  private func recordRemoteConsent(_ destination: AnnotateAgentRemoteDestination) {
+    var ids = defaults.stringArray(forKey: PreferencesKeys.annotateAgentConsentedProviders) ?? []
+    guard !ids.contains(destination.id) else { return }
+    ids.append(destination.id)
+    defaults.set(ids, forKey: PreferencesKeys.annotateAgentConsentedProviders)
+  }
+
+  /// Sheet on the Annotate window (app-modal when there is none).
+  private static func askRemoteUse(_ destination: AnnotateAgentRemoteDestination) async -> Bool {
+    let alert = NSAlert()
+    alert.alertStyle = .informational
+    alert.messageText = L10n.AnnotateAI.consentTitle(destination.name)
+    alert.informativeText = L10n.AnnotateAI.consentMessage(destination.host)
+    alert.addButton(withTitle: L10n.AnnotateAI.consentSend)
+    alert.addButton(withTitle: L10n.Common.cancel)
+    guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
+      return alert.runModal() == .alertFirstButtonReturn
+    }
+    return await withCheckedContinuation { continuation in
+      alert.beginSheetModal(for: window) { response in
+        continuation.resume(returning: response == .alertFirstButtonReturn)
+      }
+    }
   }
 
   // MARK: - Overlay feedback

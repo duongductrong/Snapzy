@@ -129,21 +129,9 @@ final class AnnotateAgentAppleIntelligenceProvider: AnnotateAgentProvider {
     return parts.joined(separator: "\n\n")
   }
 
-  /// The pill shows one line: drop lists/markdown wrappers and keep it short.
   static func cleanReply(_ text: String) -> String {
-    let oneLine = text
-      .components(separatedBy: .newlines)
-      .map { $0.trimmingCharacters(in: .whitespaces) }
-      .filter { !$0.isEmpty }
-      .joined(separator: " ")
-    let trimmed = oneLine
-      .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”*`"))
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    guard trimmed.count > maximumReplyLength else { return trimmed }
-    return String(trimmed.prefix(maximumReplyLength - 1)).trimmingCharacters(in: .whitespaces) + "…"
+    AnnotateAgentReplyFormatter.oneLine(text)
   }
-
-  static let maximumReplyLength = 160
 
   // MARK: - Errors
 

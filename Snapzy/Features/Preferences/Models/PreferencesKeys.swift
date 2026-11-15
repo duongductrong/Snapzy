@@ -107,6 +107,10 @@ enum PreferencesKeys {
   static let annotateBringForwardAfterDrag = "annotate.bringForwardAfterDrag"
   static let annotatePrimaryColor = "annotate.primaryColor.v1"
   static let annotateParameterDefaults = "annotate.parameterDefaults.v1"
+  /// Annotate AI prompt provider: "automatic", "apple" or "endpoint:<uuid>".
+  static let annotateAgentProvider = "annotateAgent.provider"
+  /// Provider ids ("endpoint:<uuid>") the user allowed to receive screenshots.
+  static let annotateAgentConsentedProviders = "annotateAgent.consentedProviders"
   static let annotateToolParameterDefaults = "annotate.toolParameterDefaults.v1"
   static let annotateQuickPropertiesSyncEnabled = "annotate.quickPropertiesSyncEnabled"
   static let annotateCropSnapToEdgesEnabled = "annotate.cropSnapToEdgesEnabled"
