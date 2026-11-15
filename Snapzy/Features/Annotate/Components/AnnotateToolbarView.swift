@@ -132,8 +132,6 @@ struct AnnotateToolbarView: View {
 
       backgroundCutoutButton
         .padding(.leading, 2)
-
-      AnnotateTranslateToolbarButton(state: state)
     }
   }
 

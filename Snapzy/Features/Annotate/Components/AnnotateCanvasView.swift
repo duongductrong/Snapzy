@@ -425,8 +425,12 @@ struct AnnotateCanvasView: View {
     }
     .contentShape(Rectangle())
     .overlay(alignment: .bottom) {
-      AnnotateAutoTranslatePill(state: state)
-        .padding(.bottom, 16)
+      // Status pill floats above the AI dock; both stay outside the zoom/pan transform.
+      VStack(spacing: 10) {
+        AnnotateAutoTranslatePill(state: state)
+        AnnotateAIDockView(state: state)
+      }
+      .padding(.bottom, 16)
     }
     .contextMenu {
       Button {

@@ -10274,6 +10274,22 @@ extension L10n {
       string("annotate.translate.whole-image", defaultValue: "Whole Image",
              comment: "Button in the Translate Area hint that translates the whole image instead")
     }
+    static var aiTools: String {
+      string("annotate.ai.tools", defaultValue: "AI Tools",
+             comment: "Floating dock at the bottom of the Annotate canvas that holds AI actions such as Auto Translate")
+    }
+    static var dockTranslate: String {
+      string("annotate.translate.dock-translate", defaultValue: "Translate",
+             comment: "Short AI dock button: translate all text on the image")
+    }
+    static var dockArea: String {
+      string("annotate.translate.dock-area", defaultValue: "Area",
+             comment: "Short AI dock button: drag over part of the image to translate only that text")
+    }
+    static var options: String {
+      string("annotate.translate.options", defaultValue: "Translation Options",
+             comment: "AI dock menu button with translation engine, settings, export and removal options")
+    }
     static var textColor: String {
       string("annotate.translate.text-color", defaultValue: "Text", comment: "Color of the translated text")
     }
