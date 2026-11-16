@@ -83,7 +83,7 @@ struct AnnotateToolbarView: View {
       .help(L10n.AnnotateUI.crop)
 
       ToolbarButton(
-        icon: "rectangle.on.rectangle",
+        icon: "sidebar.left",
         isSelected: state.showSidebar,
         activeGlassTint: nil
       ) {

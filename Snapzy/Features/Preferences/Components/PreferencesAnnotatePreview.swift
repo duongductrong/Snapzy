@@ -135,7 +135,7 @@ struct AnnotateSettingsPreview: View {
       .padding(.leading, 13)
       .padding(.trailing, 20)
 
-      toolGroup(["crop", "rectangle.on.rectangle"])
+      toolGroup(["crop", "sidebar.left"])
       toolbarDivider
       toolGroup(["scissors", "rotate.left", "rotate.right"])
       toolbarDivider
