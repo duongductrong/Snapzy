@@ -16,6 +16,8 @@ nonisolated struct AnnotateAgentTurn: Equatable {
   let prompt: String
   /// The agent's own summary of what it did.
   let reply: String
+  /// The agent CLI's conversation id, so the next turn can resume it.
+  var providerSessionID: String? = nil
 }
 
 nonisolated struct AnnotateAgentRequest: Equatable {
@@ -28,6 +30,8 @@ nonisolated struct AnnotateAgentRequest: Equatable {
   var scene: AnnotateAgentScene? = nil
   /// The screenshot (no annotations), for providers that can look at it.
   var image: CGImage? = nil
+  /// The previous turn's agent CLI conversation, when it can be resumed.
+  var resumeSessionID: String? = nil
 }
 
 /// Where a provider sends the screenshot when it runs off the Mac. The user agrees once per `id`.
@@ -95,6 +99,10 @@ final class AnnotateAgentSession {
   /// calling afterwards (a process or stream that ignores task cancellation) gets
   /// `CancellationError` and can no longer touch the canvas.
   private(set) var isActive = true
+  /// Set by providers that keep a conversation of their own (agent CLIs).
+  var providerSessionID: String?
+  /// Successful canvas-changing tool calls so far, so a provider knows whether a retry is safe.
+  private(set) var changeCount = 0
 
   func invalidate() {
     isActive = false
@@ -128,6 +136,7 @@ final class AnnotateAgentSession {
     let result = toolbox.execute(name: name, argumentsJSON: arguments)
     if tool?.isReadOnly == false {
       lastChange = Date()
+      if !result.isError { changeCount += 1 }
     }
     return result
   }
@@ -146,10 +155,18 @@ nonisolated enum AnnotateAgentProviderSelection: Equatable {
   case appleIntelligence
   /// A custom endpoint from the shared OCR/Translate endpoint list.
   case endpoint(UUID)
+  /// An agent CLI on this Mac (Claude Code, Codex, OpenCode).
+  case cli(AnnotateAgentCLIKind)
 
   init(persistedValue: String?) {
     switch persistedValue {
     case "apple": self = .appleIntelligence
+    case let value? where value.hasPrefix("cli:"):
+      if let kind = AnnotateAgentCLIKind(rawValue: String(value.dropFirst("cli:".count))) {
+        self = .cli(kind)
+      } else {
+        self = .automatic
+      }
     case let value? where value.hasPrefix("endpoint:"):
       if let id = UUID(uuidString: String(value.dropFirst("endpoint:".count))) {
         self = .endpoint(id)
@@ -165,6 +182,7 @@ nonisolated enum AnnotateAgentProviderSelection: Equatable {
     case .automatic: "automatic"
     case .appleIntelligence: "apple"
     case .endpoint(let id): "endpoint:\(id.uuidString)"
+    case .cli(let kind): "cli:\(kind.rawValue)"
     }
   }
 }
@@ -207,6 +225,9 @@ enum AnnotateAgentProviderResolver {
       } else {
         provider = AnnotateAgentAppleIntelligence.makeProviderIfAvailable()
       }
+    case .cli(let kind):
+      // Not installed is reported by the run itself, with what to do about it.
+      provider = AnnotateAgentCLIProvider(kind: kind, defaults: defaults)
     case .automatic, .appleIntelligence:
       provider = AnnotateAgentAppleIntelligence.makeProviderIfAvailable()
     }
@@ -225,7 +246,10 @@ enum AnnotateAgentProviderResolver {
     return true
     #else
     // Any configured endpoint counts: the provider menu in the prompt is where it gets picked.
-    return AnnotateAgentAppleIntelligence.isAvailable || !CustomOCRModelStore.shared.models.isEmpty
+    return AnnotateAgentAppleIntelligence.isAvailable
+      || !CustomOCRModelStore.shared.models.isEmpty
+      || !AnnotateAgentCLIDetector.shared.installed.isEmpty
+      || { if case .cli = selection() { return true } else { return false } }()
     #endif
   }
 }

@@ -100,6 +100,7 @@ final class AnnotateAgentController: ObservableObject {
     self.defaults = defaults
     self.resolveProvider = resolveProvider ?? { AnnotateAgentProviderResolver.resolve() }
     self.confirmRemoteUse = confirmRemoteUse ?? { await AnnotateAgentController.askRemoteUse($0) }
+    AnnotateAgentCLIDetector.shared.refresh()
   }
 
   // MARK: - Derived
@@ -135,6 +136,7 @@ final class AnnotateAgentController: ObservableObject {
     state?.cancelAutoTranslateIfIdleSelection()
     isPromptPresented = true
     prepareAnalysis()
+    AnnotateAgentCLIDetector.shared.refresh()
   }
 
   /// Ignored while a run is in flight: the prompt row is where its status and Stop live.
@@ -310,7 +312,8 @@ final class AnnotateAgentController: ObservableObject {
       // Only off-device providers look at pixels today; on-device ones read the scene.
       image: provider.remoteDestination == nil
         ? nil
-        : state.effectiveSourceImage?.cgImage(forProposedRect: nil, context: nil, hints: nil)
+        : state.effectiveSourceImage?.cgImage(forProposedRect: nil, context: nil, hints: nil),
+      resumeSessionID: turns.last?.providerSessionID
     )
 
     do {
@@ -320,7 +323,7 @@ final class AnnotateAgentController: ObservableObject {
       let summary = toolbox.finishRun()
       endRun()
       rememberRunResult(summary)
-      turns.append(AnnotateAgentTurn(prompt: prompt, reply: reply))
+      turns.append(AnnotateAgentTurn(prompt: prompt, reply: reply, providerSessionID: session.providerSessionID))
       let message = reply.trimmingCharacters(in: .whitespacesAndNewlines)
       showNotice(.finished(
         message: message.isEmpty

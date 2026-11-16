@@ -582,7 +582,7 @@ private struct AnnotateAIDockPromptRow: View {
     return menu
   }
 
-  /// Automatic, Apple Intelligence (when ready) and the shared custom endpoints.
+  /// Automatic, Apple Intelligence (when ready), the shared custom endpoints and agent CLIs.
   private func addProviderChoices(to menu: NSMenu) {
     let selection = agent.providerSelection
     var choices: [(title: String, symbol: String, value: AnnotateAgentProviderSelection)] = [
@@ -593,6 +593,11 @@ private struct AnnotateAIDockPromptRow: View {
     }
     for model in CustomOCRModelStore.shared.models {
       choices.append((model.name, "network", .endpoint(model.id)))
+    }
+    // Agent CLIs found on this Mac (the selected one stays listed even if it went missing).
+    let installedCLIs = AnnotateAgentCLIDetector.shared.installed
+    for kind in AnnotateAgentCLIKind.allCases where installedCLIs[kind] != nil || selection == .cli(kind) {
+      choices.append((kind.displayName, "terminal", .cli(kind)))
     }
     for choice in choices {
       let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") { [weak agent] in

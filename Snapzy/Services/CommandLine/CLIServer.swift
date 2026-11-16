@@ -18,6 +18,10 @@ final class CLIServer {
 
   private var listener: CLISocketListener?
   private var preferenceObservation: NSKeyValueObservation?
+  /// Annotate AI runs using an agent CLI. They need the socket for `snapzy mcp`
+  /// even when command line access is off; the listener then serves agent methods only.
+  private var agentHolds = 0
+  private(set) var isAgentOnly = false
 
   static var isEnabled: Bool {
     UserDefaults.standard.object(forKey: PreferencesKeys.cliEnabled) as? Bool ?? true
@@ -46,8 +50,29 @@ final class CLIServer {
 
   private func applyPreference() {
     if Self.isEnabled {
-      start()
+      if isAgentOnly { stop() }
+      start(agentOnly: false)
+    } else if agentHolds > 0 {
+      if listener != nil, !isAgentOnly { stop() }
+      start(agentOnly: true)
     } else {
+      stop()
+    }
+  }
+
+  /// Keeps the socket up for an agent CLI run. Returns false when it could not start.
+  @discardableResult
+  func beginAgentSession() -> Bool {
+    agentHolds += 1
+    if listener == nil {
+      start(agentOnly: !Self.isEnabled)
+    }
+    return listener != nil
+  }
+
+  func endAgentSession() {
+    agentHolds = max(agentHolds - 1, 0)
+    if agentHolds == 0, isAgentOnly {
       stop()
     }
   }
@@ -59,21 +84,22 @@ final class CLIServer {
       DispatchQueue.main.async {
         MainActor.assumeIsolated {
           let server = CLIServer.shared
-          guard server.preferenceObservation != nil, Self.isEnabled != server.isRunning else { return }
+          // applyPreference is idempotent; it also swaps an agent-only listener for the full one.
+          guard server.preferenceObservation != nil else { return }
           server.applyPreference()
         }
       }
     }
   }
 
-  private func start() {
+  private func start(agentOnly: Bool) {
     guard listener == nil, let bundleID = Bundle.main.bundleIdentifier else { return }
 
     let usesSocketOverride = ProcessInfo.processInfo.environment[SocketLocation.environmentOverrideKey] != nil
     let listener = CLISocketListener(
       path: SocketLocation.path(forAppBundleID: bundleID),
       hello: Self.makeHello(bundleID: bundleID),
-      router: Self.makeRouter(),
+      router: agentOnly ? Self.makeAgentRouter() : Self.makeRouter(),
       authorizer: CLIAuthorizer(),
       resolveCaller: { pid in pid.flatMap { CLIClientIdentityResolver.resolve(peerPID: $0) } },
       managesDirectory: !usesSocketOverride
@@ -81,7 +107,8 @@ final class CLIServer {
     do {
       try listener.start()
       self.listener = listener
-      DiagnosticLogger.shared.log(.info, .cli, "CLI server started")
+      isAgentOnly = agentOnly
+      DiagnosticLogger.shared.log(.info, .cli, "CLI server started", context: ["agentOnly": "\(agentOnly)"])
       Task.detached(priority: .utility) { HeadlessCaptureStaging.sweep() }
     } catch {
       DiagnosticLogger.shared.log(
@@ -98,6 +125,7 @@ final class CLIServer {
     guard let listener else { return }
     listener.stop()
     self.listener = nil
+    isAgentOnly = false
     DiagnosticLogger.shared.log(.info, .cli, "CLI server stopped")
   }
 
@@ -110,7 +138,22 @@ final class CLIServer {
     router.register(.captureScreen, CLICaptureScreenHandler())
     router.register(.captureWindow, CLICaptureWindowHandler())
     router.register(.captureArea, CLICaptureAreaHandler())
+    registerAgentRoutes(&router)
     return router
+  }
+
+  /// Only what `snapzy mcp` needs, for when command line access is off. `system.status`
+  /// stays so `snapzy status`/`doctor` still report access as off.
+  static func makeAgentRouter() -> CLIRequestRouter {
+    var router = CLIRequestRouter()
+    router.register(.systemStatus, CLIStatusHandler())
+    registerAgentRoutes(&router)
+    return router
+  }
+
+  private static func registerAgentRoutes(_ router: inout CLIRequestRouter) {
+    router.register(.agentTools, CLIAgentToolsHandler())
+    router.register(.agentCall, CLIAgentCallHandler())
   }
 
   private static func makeHello(bundleID: String) -> HelloResponse {

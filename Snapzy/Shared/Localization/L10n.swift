@@ -10416,6 +10416,24 @@ extension L10n {
     static var statusCanvas: String {
       string("annotate.ai.status-canvas", defaultValue: "Styling the canvas…", comment: "AI working status")
     }
+    static func statusStarting(_ name: String) -> String {
+      format("annotate.ai.status-starting", defaultValue: "Starting %@…", comment: "AI working status while an agent CLI starts. %@ is the CLI name (Claude Code, Codex, OpenCode)", name)
+    }
+    static func cliNotInstalled(_ name: String) -> String {
+      format("annotate.ai.cli-not-installed", defaultValue: "%@ isn’t installed. Install it or pick another provider", comment: "Agent CLI not found on this Mac. %@ is the CLI name", name)
+    }
+    static var cliHelperMissing: String {
+      string("annotate.ai.cli-helper-missing", defaultValue: "Snapzy’s command line helper is missing. Reinstall Snapzy", comment: "Snapzy's embedded snapzy command line helper is missing from the app bundle")
+    }
+    static func cliConnectionFailed(_ name: String) -> String {
+      format("annotate.ai.cli-connection-failed", defaultValue: "Couldn’t open the connection %@ needs", comment: "Snapzy could not open the local connection the agent CLI needs. %@ is the CLI name", name)
+    }
+    static func cliFailed(_ name: String, _ detail: String) -> String {
+      format("annotate.ai.cli-failed", defaultValue: "%1$@: %2$@", comment: "Agent CLI failed. %1$@ is the CLI name, %2$@ is its error message", name, detail)
+    }
+    static func cliTimedOut(_ name: String) -> String {
+      format("annotate.ai.cli-timed-out", defaultValue: "%@ took too long and was stopped", comment: "Agent CLI did not finish in time. %@ is the CLI name", name)
+    }
     static func statusContacting(_ name: String) -> String {
       format("annotate.ai.status-contacting", defaultValue: "Asking %@…", comment: "AI working status while waiting for a custom endpoint. %@ is the endpoint name", name)
     }

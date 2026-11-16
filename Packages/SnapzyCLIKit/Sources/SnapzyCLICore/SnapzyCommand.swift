@@ -35,6 +35,7 @@ public struct SnapzyCommand: AsyncParsableCommand {
       ListCommand.self,
       CaptureCommand.self,
       MeasureCommand.self,
+      MCPCommand.self,
     ]
   )
 
