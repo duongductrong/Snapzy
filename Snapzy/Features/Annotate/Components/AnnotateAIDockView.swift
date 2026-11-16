@@ -30,7 +30,6 @@ struct AnnotateAIDockView: View {
   let maxWidth: CGFloat
 
   @ObservedObject private var shortcuts = AnnotateShortcutManager.shared
-  @State private var isExpanded = false
   @State private var promptGlow: Double = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -59,6 +58,11 @@ struct AnnotateAIDockView: View {
   }
 
   private var isPrompt: Bool { agent.isPromptPresented }
+
+  private var isExpanded: Bool {
+    get { agent.isDockExpanded }
+    nonmutating set { agent.isDockExpanded = newValue }
+  }
 
   private var isTranslating: Bool { state.isAutoTranslateRunning }
 

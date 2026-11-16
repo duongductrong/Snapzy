@@ -54,6 +54,8 @@ final class AnnotateAgentController: ObservableObject {
   static let noticeLifetime: TimeInterval = 6
 
   @Published var isPromptPresented = false
+  /// The AI dock's tool row is open (orb expanded). Esc collapses it before closing the window.
+  @Published var isDockExpanded = false
   @Published var draft = ""
   /// Bumped whenever the prompt field should take the caret (the field watches it).
   @Published private(set) var promptFocusRequest = 0
@@ -149,6 +151,11 @@ final class AnnotateAgentController: ObservableObject {
   func dismissPrompt() {
     guard !isRunning else { return }
     isPromptPresented = false
+  }
+
+  /// Esc with the dock's tools showing: fold them back into the orb.
+  func collapseDock() {
+    isDockExpanded = false
   }
 
   func togglePrompt() {

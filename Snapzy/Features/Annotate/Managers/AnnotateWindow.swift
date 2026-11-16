@@ -7,6 +7,7 @@
 
 import AppKit
 import Combine
+import SwiftUI
 
 // MARK: - Notifications
 
@@ -480,6 +481,13 @@ class AnnotateWindow: NSWindow {
       }
       if interactionState?.isCropInteractionActive == true {
         interactionState?.cancelCrop()
+        return
+      }
+      // AI dock tools open: fold them into the orb instead of closing the window.
+      if interactionState?.agent.isDockExpanded == true {
+        withAnimation(.spring(response: 0.42, dampingFraction: 0.86)) {
+          interactionState?.agent.collapseDock()
+        }
         return
       }
       if onEscape?() == true { return }

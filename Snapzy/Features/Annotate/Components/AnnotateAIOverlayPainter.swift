@@ -102,11 +102,12 @@ enum AnnotateAIOverlayPainter {
     var layer = context
     layer.clip(to: shape)
 
-    // Wide, soft bloom → mid glow → crisp rim (stroke is centered on the edge, so half shows).
+    // Wide, soft bloom → mid glow → hairline rim. Strokes are centered on the edge and
+    // clipped, so only the inner half shows; the rim is ~1.25pt on screen at any size.
     let passes: [(width: CGFloat, blur: CGFloat, opacity: Double)] = [
       (base * 4.0, base * 2.2, 0.55),
       (base * 2.0, base * 0.9, 0.75),
-      (base * 0.7, 0, 0.95),
+      (2.5, 0, 0.95),
     ]
     for pass in passes {
       var stroke = layer
