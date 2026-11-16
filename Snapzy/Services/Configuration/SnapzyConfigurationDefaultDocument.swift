@@ -196,7 +196,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("measure_axis", MeasureAxis.both.rawValue)
 
     writer.section("annotate.ai")
-    writer.value("provider", AnnotateAgentProviderSelection.automatic.persistedValue)
+    writer.value("provider", AgentProviderSelection.automatic.persistedValue)
     writer.value("send_image", true)
     writer.value("cli_timeout", AnnotateAgentAISettings.defaultCLITimeout)
     for kind in AnnotateAgentCLIKind.allCases {

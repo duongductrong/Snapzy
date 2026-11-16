@@ -593,7 +593,7 @@ enum SnapzyConfigurationImporter {
     }
     collectString(&reader, "annotate", "ai", "provider", mutations: &mutations) {
       // Unknown or malformed values read as automatic, like a removed endpoint.
-      defaults.set(AnnotateAgentProviderSelection(persistedValue: $0).persistedValue, forKey: PreferencesKeys.annotateAgentProvider)
+      defaults.set(AgentProviderSelection(persistedValue: $0).persistedValue, forKey: PreferencesKeys.annotateAgentProvider)
     }
     collectBool(&reader, "annotate", "ai", "send_image", mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateAgentSendImage)

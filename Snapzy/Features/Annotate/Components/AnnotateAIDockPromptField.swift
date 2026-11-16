@@ -147,6 +147,7 @@ final class PromptTextField: NSTextField {
 
   private func attemptFocus() {
     guard wantsFocus, isEditable, let window else { return }
+    ensureKeyWindow()
     if isEditing {
       wantsFocus = false
       return
@@ -185,9 +186,28 @@ final class PromptTextField: NSTextField {
     }
   }
 
+  /// AppKit only draws the caret in the key window. The inline overlay is a nonactivating
+  /// panel that drops key status between text inputs (a run, Settings, another app), and a
+  /// field that is already first responder there would otherwise take typing with no caret.
+  private func ensureKeyWindow() {
+    guard let window, !window.isKeyWindow, window.canBecomeKey else { return }
+    window.makeKey()
+  }
+
+  /// Lets a click on the field key a `becomesKeyOnlyIfNeeded` panel.
+  override var needsPanelToBecomeKey: Bool { isEditable }
+
+  override func mouseDown(with event: NSEvent) {
+    if isEditable { ensureKeyWindow() }
+    super.mouseDown(with: event)
+    // A click is an explicit ask for the caret; make sure it actually landed.
+    if isEditable, !isEditing { requestFocus() }
+  }
+
   override func becomeFirstResponder() -> Bool {
     let accepted = super.becomeFirstResponder()
     if accepted {
+      ensureKeyWindow()
       styleFieldEditor()
       placeCaretAtEnd()
     }

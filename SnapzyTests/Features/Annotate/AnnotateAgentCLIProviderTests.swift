@@ -200,14 +200,14 @@ final class AnnotateAgentCLIProviderTests: XCTestCase {
       history: [AnnotateAgentTurn(prompt: "Circle Sign in", reply: "Circled it.", providerSessionID: "s")],
       sceneJSON: "{}"
     )
-    let fresh = AnnotateAgentCLIProvider.prompt(for: request, hasImage: true, attachesImage: false)
+    let fresh = AnnotateAgentCLIProvider.prompt(for: request, surface: .annotate, hasImage: true, attachesImage: false)
     XCTAssertTrue(fresh.contains("Earlier in this conversation"))
     XCTAssertTrue(fresh.contains("get_snapshot"))
     XCTAssertTrue(fresh.hasSuffix("Request: make it blue"))
 
     var resumed = request
     resumed.resumeSessionID = "s"
-    let next = AnnotateAgentCLIProvider.prompt(for: resumed, hasImage: false, attachesImage: false)
+    let next = AnnotateAgentCLIProvider.prompt(for: resumed, surface: .annotate, hasImage: false, attachesImage: false)
     XCTAssertFalse(next.contains("Earlier in this conversation"))
     XCTAssertFalse(next.contains("get_snapshot"))
   }

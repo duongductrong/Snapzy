@@ -11,7 +11,7 @@ import SwiftUI
 
 struct AISettingsView: View {
   @AppStorage(PreferencesKeys.annotateAgentProvider)
-  private var providerValue = AnnotateAgentProviderSelection.automatic.persistedValue
+  private var providerValue = AgentProviderSelection.automatic.persistedValue
   @AppStorage(PreferencesKeys.annotateAgentSendImage) private var sendImage = true
   @AppStorage(PreferencesKeys.annotateAgentCLITimeout)
   private var cliTimeout = AnnotateAgentAISettings.defaultCLITimeout
@@ -56,20 +56,20 @@ struct AISettingsView: View {
       ) {
         Picker("", selection: providerBinding) {
           Text(L10n.AnnotateAI.automatic)
-            .tag(AnnotateAgentProviderSelection.automatic.persistedValue)
+            .tag(AgentProviderSelection.automatic.persistedValue)
           Text(verbatim: "Apple Intelligence")
-            .tag(AnnotateAgentProviderSelection.appleIntelligence.persistedValue)
+            .tag(AgentProviderSelection.appleIntelligence.persistedValue)
           if !endpointStore.models.isEmpty {
             Divider()
             ForEach(endpointStore.models) { model in
               Text(verbatim: model.name)
-                .tag(AnnotateAgentProviderSelection.endpoint(model.id).persistedValue)
+                .tag(AgentProviderSelection.endpoint(model.id).persistedValue)
             }
           }
           Divider()
           ForEach(AnnotateAgentCLIKind.allCases) { kind in
             Text(verbatim: kind.displayName)
-              .tag(AnnotateAgentProviderSelection.cli(kind).persistedValue)
+              .tag(AgentProviderSelection.cli(kind).persistedValue)
           }
         }
         .labelsHidden()
@@ -95,9 +95,9 @@ struct AISettingsView: View {
   private var providerBinding: Binding<String> {
     Binding(
       get: {
-        let selection = AnnotateAgentProviderSelection(persistedValue: providerValue)
+        let selection = AgentProviderSelection(persistedValue: providerValue)
         if case .endpoint(let id) = selection, endpointStore.model(for: id) == nil {
-          return AnnotateAgentProviderSelection.automatic.persistedValue
+          return AgentProviderSelection.automatic.persistedValue
         }
         return selection.persistedValue
       },
@@ -107,7 +107,7 @@ struct AISettingsView: View {
 
   /// Why the picked provider won't answer yet.
   private var selectionWarning: String? {
-    switch AnnotateAgentProviderSelection(persistedValue: providerBinding.wrappedValue) {
+    switch AgentProviderSelection(persistedValue: providerBinding.wrappedValue) {
     case .automatic, .appleIntelligence:
       return appleStatus == .available ? nil : appleStatusText
     case .cli(let kind):
@@ -302,13 +302,13 @@ struct AISettingsView: View {
 
 private struct AISettingsEndpointRow: View {
   let model: CustomOCRModel
-  @State private var capabilities: AnnotateAgentEndpointCapabilities
+  @State private var capabilities: AgentEndpointCapabilities
   @State private var isTesting = false
   @State private var errorMessage: String?
 
   init(model: CustomOCRModel) {
     self.model = model
-    _capabilities = State(initialValue: AnnotateAgentEndpointCapabilityStore(defaults: .standard).capabilities(for: model))
+    _capabilities = State(initialValue: AgentEndpointCapabilityStore(defaults: .standard).capabilities(for: model))
   }
 
   var body: some View {
@@ -346,12 +346,12 @@ private struct AISettingsEndpointRow: View {
     }
     .help(model.baseURL)
     .onChange(of: model) { updated in
-      capabilities = AnnotateAgentEndpointCapabilityStore(defaults: .standard).capabilities(for: updated)
+      capabilities = AgentEndpointCapabilityStore(defaults: .standard).capabilities(for: updated)
       errorMessage = nil
     }
     // A prompt in an Annotate window may learn capabilities while this page is open.
     .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
-      let stored = AnnotateAgentEndpointCapabilityStore(defaults: .standard).capabilities(for: model)
+      let stored = AgentEndpointCapabilityStore(defaults: .standard).capabilities(for: model)
       if stored != capabilities { capabilities = stored }
     }
   }

@@ -38,7 +38,7 @@ final class CLIAuthorizationCoordinator {
   static let shared = CLIAuthorizationCoordinator(store: .shared, prompter: CLIAuthorizationPromptController())
 
   /// Answered before authorization so `snapzy doctor` can explain what is missing.
-  /// Agent methods carry their own one-run session token (AnnotateAgentBridge) instead.
+  /// Agent methods carry their own one-run session token (AgentBridge) instead.
   nonisolated static let exemptMethods: Set<String> = [
     CLIMethod.hello.rawValue,
     CLIMethod.systemStatus.rawValue,

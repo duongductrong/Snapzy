@@ -244,7 +244,7 @@ enum SnapzyConfigurationExporter {
     )
 
     writer.section("annotate.ai")
-    writer.value("provider", AnnotateAgentProviderSelection(
+    writer.value("provider", AgentProviderSelection(
       persistedValue: defaults.string(forKey: PreferencesKeys.annotateAgentProvider)
     ).persistedValue)
     writer.value("send_image", defaults.boolValue(PreferencesKeys.annotateAgentSendImage, default: true))
