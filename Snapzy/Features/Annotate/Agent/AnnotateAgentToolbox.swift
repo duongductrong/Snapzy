@@ -648,6 +648,11 @@ final class AnnotateAgentToolbox {
   }
 
   private func setCanvas(_ args: CanvasArguments, state: AnnotateState) throws -> AnnotateAgentToolResult {
+    guard state.allowsAgentCanvasChanges else {
+      throw AnnotateAgentToolError.invalidArguments(
+        "Canvas settings are not available while marking up a capture. Change annotations only."
+      )
+    }
     let background = try args.background.map(Self.parseBackground)
     let alignment: ImageAlignment? = try args.alignment.map {
       guard let parsed = ImageAlignment(rawValue: $0) else {

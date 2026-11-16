@@ -40,6 +40,12 @@ nonisolated enum AnnotateAgentAISettings {
 extension AnnotateAgentAISettings {
   /// Preferences › AI.
   static func open() {
+    // Capture Markup covers the screen above every window; it steps aside for Settings.
+    NotificationCenter.default.post(name: .annotateAgentWillOpenSettings, object: nil)
     AppStatusBarController.shared.openPreferencesWindow(tab: .ai)
   }
+}
+
+extension Notification.Name {
+  static let annotateAgentWillOpenSettings = Notification.Name("annotateAgentWillOpenSettings")
 }

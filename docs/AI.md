@@ -2,7 +2,9 @@
 
 Type what you want in Annotate's AI dock ("circle the Sign in button, number the 3 login steps, blur the email") and an agent adds or edits annotations and canvas settings with **Annotate's own tools**. Every change is a normal annotation: selectable, editable, one undo step per prompt.
 
-Annotate window only (not inline Area Annotate, Combine, Mockup or Preview).
+Available in the Annotate window and in Capture Markup (inline Area Annotate, ⇧⌘7). Not in Combine, Mockup or Preview.
+
+Capture Markup differences: the same dock floats on the free side of the selection (see [ANNOTATE.md](ANNOTATE.md#inline-area-annotate-capture-markup-7)); `set_canvas` is refused (`AnnotateState.allowsAgentCanvasChanges = false`, nothing there previews canvas styling); the selection cannot be moved or resized while a run or a translation works; Return/⌘S are ignored during a run; finishing or cancelling the capture stops the run; **AI Settings…** lowers the overlay to a normal window level so Preferences can come forward (a click on the overlay raises it again).
 
 ## Entry points
 

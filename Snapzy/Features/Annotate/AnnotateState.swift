@@ -243,6 +243,9 @@ final class AnnotateState: ObservableObject {
   let autoTranslateRuntime = AnnotateAutoTranslateRuntime()
   /// AI prompt ("Ask") for this window. Views observe it directly.
   lazy var agent = AnnotateAgentController(state: self)
+  /// Off where the canvas styling (background, padding, shadow, corners) has no preview,
+  /// i.e. Capture Markup: the AI prompt may only change annotations there.
+  var allowsAgentCanvasChanges = true
 
   /// QuickAccess item ID if opened from quick access card (nil for drag-drop workflow)
   let quickAccessItemId: UUID?

@@ -231,7 +231,7 @@ flowchart TD
     A["⇧⌘7 / menu / snapzy://capture/area-annotate"] --> B["FrozenAreaCaptureSession.prepare(all displays)"]
     B --> C["InlineAreaAnnotateCoordinator.start -> InlineAreaAnnotatePanel per display (.screenSaver)"]
     C --> D["Phase selecting: drag rect"]
-    D --> E["Phase annotating: canvas + toolbar + quick properties + action rail"]
+    D --> E["Phase annotating: canvas + toolbar + quick properties + action rail + AI dock"]
     E --> F["Space-drag move / resize handles / curved-arrow control handle (annotations preserved via offset)"]
     E --> G["Pin: save + open pinned window"]
     E --> H{"Finish"}
@@ -251,11 +251,18 @@ flowchart TD
 | `Space` (hold) | Move selection | `W` | Watermark |
 | `V`/`R`/`F`/`O` | Selection / Rect / Filled / Oval | `P` | Pencil |
 | `A`/`L`/`T`/`H` | Arrow / Line / Text / Highlighter | | |
+| `⌘K` | Ask AI (prompt) | `⇧⌘T` / `⌥⌘T` | Auto Translate / Translate Area |
+| `⌥` (hold) | Peek at text under translations | | |
+
+`⌘K`, `⇧⌘T`, `⌥⌘T` are the Annotate action shortcuts (Settings → Shortcuts), so a rebinding applies here too. `Esc` unwinds one layer at a time: AI run → translation → area pick → prompt → dock tools → cancel the capture. `Enter`/`⌘S` do nothing while a run or translation works.
 
 - `InlineAreaAnnotateSession` owns the selecting→annotating state machine; panels at `.screenSaver` level with `canJoinAllSpaces` work across Spaces.
 - Move/resize refreshes the cropped source via `replaceSourceImagePreservingAnnotations(_:annotationOffset:)`; cross-display crops use `FrozenAreaCaptureSession.cropCompositeImage`.
-- Action rail: Pin-to-Screen / Cancel / Done (prominent) / Copy. Pin runs the normal post-capture pipeline once, then opens the saved image in a pin window.
-- No crop, no mockup, no canvas-preset auto-apply.
+- Chrome (`InlineAreaPanelChrome`): capsule panels on an in-window HUD blur with a specular hairline — a backdrop, not Liquid Glass, like the Annotate window's toolbar backdrop. The glass is on the controls: tools, undo/redo and the rail use the shared `ToolbarButton` (bare at rest, neutral glass on hover and on the selected tool; Done is accent-tinted glass), property pickers use `liquidGlassControl(activeGlassTint: nil)`, each row in a `liquidGlassGroup`. Do not put `.glassEffect` on the panels: glass on glass renders as a flat dark slab and drops the tint. Toolbar width is derived from its items (`InlineAreaLayout.toolbarPreferredWidth`).
+- Action rail: Done (accent) / Copy / Pin-to-Screen / hairline / Cancel. Pin runs the normal post-capture pipeline once, then opens the saved image in a pin window.
+- AI dock: the Annotate window's `AnnotateAIDockView` (Ask, Translate, Translate Area, language, options) with its result pills, plus the agent / Auto Translate / Translate Area overlays on the canvas. `InlineAreaControlGeometry` puts it on the side of the selection the toolbar does not use, or inside the selection (12 pt from the edge away from the toolbar) when there is no room outside. See [AI.md](AI.md).
+- Apple's translation task is hosted on one panel only (`InlineAreaTranslationHost`, first display of the session).
+- No crop, no mockup, no canvas-preset auto-apply, no canvas styling from the AI prompt.
 
 ## Related docs
 
