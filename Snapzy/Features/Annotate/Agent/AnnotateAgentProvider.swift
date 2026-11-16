@@ -66,6 +66,8 @@ protocol AnnotateAgentProvider: AnyObject {
   var displayName: String { get }
   /// SF Symbol for the provider chip.
   var symbolName: String { get }
+  /// Brand mark in the asset catalog, shown instead of `symbolName` when set.
+  var logoImageName: String? { get }
 
   /// Set when the screenshot and its text leave the Mac (endpoint, CLI). `nil` = on-device.
   var remoteDestination: AnnotateAgentRemoteDestination? { get }
@@ -76,6 +78,7 @@ protocol AnnotateAgentProvider: AnyObject {
 
 extension AnnotateAgentProvider {
   var remoteDestination: AnnotateAgentRemoteDestination? { nil }
+  var logoImageName: String? { nil }
 }
 
 /// The result pill shows one line: lists and markdown wrappers dropped, kept short.

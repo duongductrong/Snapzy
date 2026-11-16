@@ -8,6 +8,7 @@
 //  PATH; so the PATH comes from the user's login shell, read once and cached.
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -27,6 +28,24 @@ nonisolated enum AnnotateAgentCLIKind: String, CaseIterable, Identifiable, Senda
   }
 
   var executableName: String { rawValue }
+
+  /// The maker's own mark in the asset catalog (Claude for Claude Code, OpenAI for Codex,
+  /// OpenCode's frame). Claude keeps its brand color; the other two are template images.
+  var logoImageName: String {
+    switch self {
+    case .claudeCode: "AgentLogoClaude"
+    case .codex: "AgentLogoOpenAI"
+    case .openCode: "AgentLogoOpenCode"
+    }
+  }
+
+  /// The mark sized for a menu item or list row.
+  @MainActor
+  func logoImage(size: CGFloat = 16) -> NSImage? {
+    guard let image = NSImage(named: logoImageName)?.copy() as? NSImage else { return nil }
+    image.size = NSSize(width: size, height: size)
+    return image
+  }
 
   /// UserDefaults key for a path the user picked by hand (Phase 6 Settings).
   var pathDefaultsKey: String { "annotateAgent.cli.\(rawValue).path" }

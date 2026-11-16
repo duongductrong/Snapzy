@@ -470,8 +470,8 @@ private struct AISettingsCLIRow: View {
       .padding(.top, 6)
     } label: {
       HStack(spacing: 10) {
-        Image(systemName: "terminal")
-          .foregroundColor(.secondary)
+        AnnotateAgentProviderIcon(symbolName: "terminal", logoImageName: kind.logoImageName, size: 16)
+          .foregroundColor(.primary)
           .frame(width: 20)
         VStack(alignment: .leading, spacing: 2) {
           Text(verbatim: kind.displayName)

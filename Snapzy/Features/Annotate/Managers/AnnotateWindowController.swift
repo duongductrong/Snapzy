@@ -798,7 +798,14 @@ final class AnnotateWindowController: NSWindowController, NSWindowDelegate {
       queue: .main
     ) { [weak self] _ in
       MainActor.assumeIsolated {
-        self?.state.agent.togglePrompt()
+        guard let self else { return }
+        let agent = self.state.agent
+        // ⌘K on an open prompt that lost the caret brings the caret back instead of closing it.
+        if agent.isPromptPresented, !agent.isRunning, !PromptTextField.isEditing(in: self.window) {
+          agent.focusPrompt()
+        } else {
+          agent.togglePrompt()
+        }
       }
     }
 

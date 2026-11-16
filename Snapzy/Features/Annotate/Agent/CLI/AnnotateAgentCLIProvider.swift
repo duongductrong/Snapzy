@@ -20,6 +20,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
 
   var displayName: String { kind.displayName }
   let symbolName = "terminal"
+  var logoImageName: String? { kind.logoImageName }
 
   /// The CLI sends the scene (and screenshot) to its own model provider.
   var remoteDestination: AnnotateAgentRemoteDestination? {

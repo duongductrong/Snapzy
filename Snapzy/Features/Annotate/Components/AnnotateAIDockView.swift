@@ -400,7 +400,6 @@ private struct AnnotateAIDockPromptRow: View {
   let maxWidth: CGFloat
   let onBack: () -> Void
 
-  @FocusState private var isFocused: Bool
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   /// The field hugs its text (placeholder, draft or status) between these widths;
@@ -411,7 +410,7 @@ private struct AnnotateAIDockPromptRow: View {
   private static let fieldWidthStep: CGFloat = 16
   /// Orb, back, provider, send and paddings.
   private static let chromeWidth: CGFloat = 170
-  private static let fieldFont = NSFont.systemFont(ofSize: 13, weight: .medium)
+  private static let fieldFont = AnnotateAIDockPromptField.font
 
   private var placeholderText: String {
     agent.hasConversation ? L10n.AnnotateAI.followUpPlaceholder : L10n.AnnotateAI.placeholder
@@ -450,11 +449,14 @@ private struct AnnotateAIDockPromptRow: View {
       }
 
       ZStack(alignment: .leading) {
+        // The field stays mounted through a run (hidden under the status line) so its
+        // caret comes straight back when the run ends.
+        field
+          .opacity(agent.isRunning ? 0 : 1)
+          .allowsHitTesting(!agent.isRunning)
+          .accessibilityHidden(agent.isRunning)
         if agent.isRunning {
           AnnotateAIDockStatusLine(text: agent.status)
-            .transition(.opacity)
-        } else {
-          field
             .transition(.opacity)
         }
       }
@@ -467,40 +469,26 @@ private struct AnnotateAIDockPromptRow: View {
       sendButton
     }
     .animation(.spring(response: 0.3, dampingFraction: 0.86), value: selectionCount > 0)
-    .onAppear {
-      // Let the glass finish growing before the caret appears.
-      DispatchQueue.main.asyncAfter(deadline: .now() + (reduceMotion ? 0 : 0.12)) { isFocused = true }
-    }
-    .onChange(of: agent.isRunning) { running in
-      // Back to the field after a run, unless the user has moved focus elsewhere meanwhile.
-      guard !running else { return }
-      let responder = NSApp.keyWindow?.firstResponder
-      if responder == nil || responder is NSWindow {
-        isFocused = true
-      }
-    }
   }
 
   private var field: some View {
-    TextField(
-      "",
+    // AppKit-backed so the caret lands reliably even while the dock is still animating in;
+    // see AnnotateAIDockPromptField for why @FocusState wasn't enough.
+    AnnotateAIDockPromptField(
       text: $agent.draft,
-      prompt: Text(placeholderText)
-        .foregroundColor(LiquidGlassTokens.inkFaint)
-    )
-    .textFieldStyle(.plain)
-    .font(.system(size: 13, weight: .medium))
-    .foregroundStyle(LiquidGlassTokens.inkPrimary)
-    .lineLimit(1)
-    .focused($isFocused)
-    .onSubmit { agent.submit() }
-    .onExitCommand {
-      if agent.draft.isEmpty {
-        onBack()
-      } else {
-        agent.handleEscape()
+      placeholder: placeholderText,
+      focusRequest: agent.promptFocusRequest,
+      isActive: !agent.isRunning,
+      onSubmit: { agent.submit() },
+      onEscape: {
+        if agent.draft.isEmpty {
+          onBack()
+        } else {
+          agent.handleEscape()
+        }
       }
-    }
+    )
+    .frame(height: AnnotateAIDockView.itemHeight)
     .accessibilityLabel(L10n.AnnotateAI.askHelp)
   }
 
@@ -545,9 +533,11 @@ private struct AnnotateAIDockPromptRow: View {
     return AnnotateAIDockMenuButton(help: provider?.displayName ?? L10n.AnnotateAI.notConfigured, makeMenu: providerMenu) { _ in
       HStack(spacing: 5) {
         // Icon only: the name lives in the tooltip and the menu, keeping the dock compact.
-        Image(systemName: provider?.symbolName ?? "exclamationmark.circle")
-          .font(.system(size: 12, weight: .medium))
-          .accessibilityLabel(provider?.displayName ?? L10n.AnnotateAI.notConfigured)
+        AnnotateAgentProviderIcon(
+          symbolName: provider?.symbolName ?? "exclamationmark.circle",
+          logoImageName: provider?.logoImageName
+        )
+        .accessibilityLabel(provider?.displayName ?? L10n.AnnotateAI.notConfigured)
         if agent.hasConversation {
           Circle()
             .fill(Color.accentColor)
@@ -567,7 +557,7 @@ private struct AnnotateAIDockPromptRow: View {
     menu.autoenablesItems = false
     let provider = agent.provider
     let current = NSMenuItem(title: provider?.displayName ?? L10n.AnnotateAI.notConfigured, action: nil, keyEquivalent: "")
-    current.image = NSImage(systemSymbolName: provider?.symbolName ?? "exclamationmark.circle", accessibilityDescription: nil)
+    current.image = Self.menuImage(symbol: provider?.symbolName ?? "exclamationmark.circle", logo: provider?.logoImageName)
     current.isEnabled = false
     menu.addItem(current)
     menu.addItem(.separator())
@@ -590,29 +580,38 @@ private struct AnnotateAIDockPromptRow: View {
   /// Automatic, Apple Intelligence (when ready), the shared custom endpoints and agent CLIs.
   private func addProviderChoices(to menu: NSMenu) {
     let selection = agent.providerSelection
-    var choices: [(title: String, symbol: String, value: AnnotateAgentProviderSelection)] = [
-      (L10n.AnnotateAI.automatic, "sparkles", .automatic),
+    var choices: [(title: String, symbol: String, logo: String?, value: AnnotateAgentProviderSelection)] = [
+      (L10n.AnnotateAI.automatic, "sparkles", nil, .automatic),
     ]
     if AnnotateAgentAppleIntelligence.isAvailable || selection == .appleIntelligence {
-      choices.append(("Apple Intelligence", "apple.intelligence", .appleIntelligence))
+      choices.append(("Apple Intelligence", "apple.intelligence", nil, .appleIntelligence))
     }
     for model in CustomOCRModelStore.shared.models {
-      choices.append((model.name, "network", .endpoint(model.id)))
+      choices.append((model.name, "network", nil, .endpoint(model.id)))
     }
     // Agent CLIs found on this Mac (the selected one stays listed even if it went missing).
     let installedCLIs = AnnotateAgentCLIDetector.shared.installed
     for kind in AnnotateAgentCLIKind.allCases where installedCLIs[kind] != nil || selection == .cli(kind) {
-      choices.append((kind.displayName, "terminal", .cli(kind)))
+      choices.append((kind.displayName, "terminal", kind.logoImageName, .cli(kind)))
     }
     for choice in choices {
       let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") { [weak agent] in
         agent?.selectProvider(choice.value)
       }
-      item.image = NSImage(systemSymbolName: choice.symbol, accessibilityDescription: nil)
+      item.image = Self.menuImage(symbol: choice.symbol, logo: choice.logo)
       item.state = choice.value == selection ? .on : .off
       item.isEnabled = !agent.isRunning
       menu.addItem(item)
     }
+  }
+
+  /// A provider's brand mark at menu size, else its SF Symbol.
+  private static func menuImage(symbol: String, logo: String?) -> NSImage? {
+    if let logo, let image = NSImage(named: logo)?.copy() as? NSImage {
+      image.size = NSSize(width: 16, height: 16)
+      return image
+    }
+    return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
   }
 
   @ViewBuilder
@@ -852,6 +851,27 @@ private struct AnnotateAIDockTranslateSection: View {
 }
 
 // MARK: - Building blocks
+
+/// A provider's icon: its maker's mark when it has one (agent CLIs), else its SF Symbol.
+/// Template marks take the surrounding ink; Claude's keeps its brand color.
+struct AnnotateAgentProviderIcon: View {
+  let symbolName: String
+  let logoImageName: String?
+  var size: CGFloat = 13
+
+  var body: some View {
+    if let logoImageName {
+      Image(logoImageName)
+        .resizable()
+        .interpolation(.high)
+        .aspectRatio(contentMode: .fit)
+        .frame(width: size, height: size)
+    } else {
+      Image(systemName: symbolName)
+        .font(.system(size: size - 1, weight: .medium))
+    }
+  }
+}
 
 /// Icon + label segment with a hover glass capsule; accent-tinted while its action is active.
 private struct AnnotateAIDockItem: View {

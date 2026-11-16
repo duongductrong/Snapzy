@@ -55,6 +55,8 @@ final class AnnotateAgentController: ObservableObject {
 
   @Published var isPromptPresented = false
   @Published var draft = ""
+  /// Bumped whenever the prompt field should take the caret (the field watches it).
+  @Published private(set) var promptFocusRequest = 0
   @Published private(set) var phase: Phase = .idle
   @Published private(set) var status = ""
   @Published private(set) var notice: Notice?
@@ -138,6 +140,7 @@ final class AnnotateAgentController: ObservableObject {
     }
     state?.cancelAutoTranslateIfIdleSelection()
     isPromptPresented = true
+    promptFocusRequest &+= 1
     prepareAnalysis()
     AnnotateAgentCLIDetector.shared.refresh()
   }
@@ -150,6 +153,12 @@ final class AnnotateAgentController: ObservableObject {
 
   func togglePrompt() {
     isPromptPresented ? dismissPrompt() : presentPrompt()
+  }
+
+  /// Puts the caret back in an open prompt (⌘K while focus is on the canvas).
+  func focusPrompt() {
+    guard isPromptPresented else { return }
+    promptFocusRequest &+= 1
   }
 
   /// Esc inside the field: clear the draft first, then leave the prompt. Stops a run.
