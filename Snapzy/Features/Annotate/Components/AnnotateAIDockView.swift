@@ -14,6 +14,11 @@
 //
 //    [ orb ] [ ‹ ] [ Describe what to annotate…        ] [ ◉ Mock ⌄ ] [ ↑ ]
 //
+//  Translate / Area runs the same way: the tools give way to a live status line and a
+//  stop button in the same glass, then the dock returns to where it was.
+//
+//    [ orb ] [ 文A ] [ Reading text…   esc ] [ ■ ]
+//
 
 import AppKit
 import SwiftUI
@@ -55,6 +60,8 @@ struct AnnotateAIDockView: View {
 
   private var isPrompt: Bool { agent.isPromptPresented }
 
+  private var isTranslating: Bool { state.isAutoTranslateRunning }
+
   /// Rounded rect with the capsule's radius: a capsule at one line, a soft card when the
   /// prompt wraps onto more lines.
   private var dockShape: RoundedRectangle {
@@ -74,10 +81,12 @@ struct AnnotateAIDockView: View {
   private var dock: some View {
     HStack(alignment: .bottom, spacing: 0) {
       AnnotateAIDockOrb(
-        isExpanded: isExpanded || isPrompt,
+        isExpanded: isExpanded || isPrompt || isTranslating,
         isWorking: isWorking
       ) {
         withAnimation(expandAnimation) {
+          // While a translation runs the glass belongs to its status; stop ends it.
+          guard !isTranslating else { return }
           if isPrompt {
             agent.dismissPrompt()
             isExpanded = false
@@ -87,7 +96,11 @@ struct AnnotateAIDockView: View {
         }
       }
 
-      if isPrompt {
+      if isTranslating {
+        // Translate / Area morph into the run's status line in the same glass, like Ask.
+        AnnotateAIDockTranslateStatusRow(state: state, maxWidth: maxWidth)
+          .transition(promptTransition)
+      } else if isPrompt {
         AnnotateAIDockPromptRow(
           state: state,
           agent: agent,
@@ -143,6 +156,7 @@ struct AnnotateAIDockView: View {
     .fixedSize()
     .animation(.easeInOut(duration: 0.25), value: isWorking)
     .animation(expandAnimation, value: isPrompt)
+    .animation(expandAnimation, value: isTranslating)
     .onChange(of: isAvailable) { available in
       if !available {
         isExpanded = false
@@ -626,6 +640,68 @@ private struct AnnotateAIDockPromptRow: View {
       }
       .disabled(!agent.canSend)
     }
+  }
+}
+
+// MARK: - Translate status
+
+/// Auto Translate / Translate Area in progress, shown in place of the tools:
+///
+///    [ orb ] [ 文A ] [ Reading text…        esc ] [ ■ ]
+private struct AnnotateAIDockTranslateStatusRow: View {
+  @ObservedObject var state: AnnotateState
+  let maxWidth: CGFloat
+
+  private static let minimumWidth: CGFloat = 120
+  /// Orb, icon, stop and paddings.
+  private static let chromeWidth: CGFloat = 110
+  private static let font = NSFont.systemFont(ofSize: 13, weight: .medium)
+
+  private var status: String {
+    switch state.autoTranslatePhase {
+    case .reading, .idle: L10n.AnnotateTranslate.reading
+    case .translating, .resolving: L10n.Translate.translating
+    }
+  }
+
+  /// Hug the longest phase text so the glass doesn't resize between phases.
+  private var statusWidth: CGFloat {
+    let longest = [L10n.AnnotateTranslate.reading, L10n.Translate.translating]
+      .map { ceil(($0 as NSString).size(withAttributes: [.font: Self.font]).width) }
+      .max() ?? 0
+    let upper = max(maxWidth - Self.chromeWidth, Self.minimumWidth)
+    return min(max(longest + 8, Self.minimumWidth), upper)
+  }
+
+  var body: some View {
+    HStack(alignment: .bottom, spacing: 2) {
+      Image(systemName: state.autoTranslateRegion == nil ? "translate" : "text.viewfinder")
+        .font(.system(size: 12, weight: .medium))
+        .foregroundStyle(LiquidGlassTokens.inkBody)
+        .frame(width: AnnotateAIDockView.itemHeight, height: AnnotateAIDockView.itemHeight)
+
+      AnnotateAIDockStatusLine(text: status)
+        .frame(width: statusWidth, height: AnnotateAIDockView.itemHeight, alignment: .leading)
+
+      Text("esc")
+        .font(.system(size: 10, weight: .semibold))
+        .foregroundStyle(LiquidGlassTokens.inkFaint)
+        .padding(.horizontal, 5)
+        .frame(height: 16)
+        .background(
+          RoundedRectangle(cornerRadius: 4, style: .continuous)
+            .fill(Color.primary.opacity(0.07))
+        )
+        .frame(height: AnnotateAIDockView.itemHeight)
+        .padding(.horizontal, 4)
+        .help(L10n.AnnotateTranslate.cancelHint)
+        .accessibilityHidden(true)
+
+      AnnotateAIDockRoundButton(symbol: "stop.fill", isProminent: false, help: L10n.Common.cancel) {
+        state.cancelAutoTranslate()
+      }
+    }
+    .accessibilityElement(children: .contain)
   }
 }
 

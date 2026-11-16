@@ -269,10 +269,8 @@ struct AnnotateAutoTranslatePill: View {
 
   var body: some View {
     Group {
-      if state.isAutoTranslateRunning {
-        pill { runningContent }
-          .overlay(TranslationReadingRim(shape: Capsule(style: .continuous)))
-      } else if state.isTranslateAreaSelecting {
+      // A running translation shows its status inside the AI dock.
+      if state.isTranslateAreaSelecting {
         pill { areaSelectionContent }
       } else if let notice = state.autoTranslateNotice {
         pill { noticeContent(notice) }
@@ -280,7 +278,6 @@ struct AnnotateAutoTranslatePill: View {
       }
     }
     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
-    .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isAutoTranslateRunning)
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.isTranslateAreaSelecting)
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: state.autoTranslateNotice)
   }
@@ -297,18 +294,6 @@ struct AnnotateAutoTranslatePill: View {
   }
 
   @ViewBuilder
-  private var runningContent: some View {
-    Image(systemName: "translate")
-      .font(.system(size: 12, weight: .semibold))
-      .foregroundStyle(.secondary)
-    Text(statusText)
-      .foregroundStyle(.primary)
-    Text(L10n.AnnotateTranslate.cancelHint)
-      .foregroundStyle(.tertiary)
-    pillButton(L10n.Common.cancel) { state.cancelAutoTranslate() }
-  }
-
-  @ViewBuilder
   private var areaSelectionContent: some View {
     Image(systemName: "text.viewfinder")
       .font(.system(size: 12, weight: .semibold))
@@ -319,15 +304,6 @@ struct AnnotateAutoTranslatePill: View {
       .foregroundStyle(.tertiary)
     pillButton(L10n.AnnotateTranslate.wholeImage) { state.autoTranslate() }
     pillButton(L10n.Common.cancel) { state.endTranslateAreaSelection() }
-  }
-
-  private var statusText: String {
-    switch state.autoTranslatePhase {
-    case .reading, .idle:
-      return L10n.AnnotateTranslate.reading
-    case .translating, .resolving:
-      return L10n.Translate.translating
-    }
   }
 
   @ViewBuilder
