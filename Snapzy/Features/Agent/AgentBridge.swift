@@ -1,11 +1,11 @@
 //
-//  AnnotateAgentBridge.swift
+//  AgentBridge.swift
 //  Snapzy
 //
 //  Lets `snapzy mcp` (started by an agent CLI Snapzy spawned) reach the one
-//  Annotate run that spawned it. Each run gets a random token; the socket's
-//  `agent.tools` / `agent.call` only work with a live token, and the token dies
-//  when the run ends or is stopped. No token, no annotate tools on the socket.
+//  AI run that spawned it (Annotate, Video Editor). Each run gets a random token;
+//  the socket's `agent.tools` / `agent.call` only work with a live token, and the
+//  token dies when the run ends or is stopped. No token, no tools on the socket.
 //
 
 import CoreGraphics
@@ -14,16 +14,16 @@ import Security
 import SnapzyCLIProtocol
 
 @MainActor
-final class AnnotateAgentBridge {
-  static let shared = AnnotateAgentBridge()
+final class AgentBridge {
+  static let shared = AgentBridge()
 
-  /// MCP-only tool: the screenshot as an image, for agents that look at pixels.
+  /// MCP-only tool: the surface's picture as an image, for agents that look at pixels.
   static let snapshotToolName = "get_snapshot"
   /// Socket frames are capped at 1 MiB; leave room for the JSON around the image.
   static let maximumSnapshotBase64Bytes = 900_000
 
   private struct Entry {
-    weak var session: AnnotateAgentSession?
+    weak var session: AgentSession?
     let image: CGImage?
     let sceneSize: CGSize?
     var snapshot: AgentImage?
@@ -36,7 +36,7 @@ final class AnnotateAgentBridge {
   nonisolated deinit {}
 
   /// Opens a bridge for one run. Close it with `close(_:)` when the run ends.
-  func open(session: AnnotateAgentSession, image: CGImage?, sceneSize: CGSize?) -> String {
+  func open(session: AgentSession, image: CGImage?, sceneSize: CGSize?) -> String {
     let token = Self.makeToken()
     entries[token] = Entry(session: session, image: image, sceneSize: sceneSize)
     return token
@@ -50,13 +50,14 @@ final class AnnotateAgentBridge {
 
   func tools(token: String) throws -> [AgentToolDescriptor] {
     let entry = try liveEntry(token)
-    var tools = AnnotateAgentToolCatalog.all.map {
-      AgentToolDescriptor(name: $0.name.rawValue, description: $0.description, inputSchema: $0.parameters.serialized)
+    guard let session = entry.session else { throw Self.expired }
+    var tools = session.toolSpecs.map {
+      AgentToolDescriptor(name: $0.name, description: $0.description, inputSchema: $0.parametersJSON)
     }
     if entry.image != nil {
       tools.append(AgentToolDescriptor(
         name: Self.snapshotToolName,
-        description: "Look at the screenshot (without annotations). Image units match the scene's coordinates unless the reply says otherwise.",
+        description: session.surface.snapshotToolDescription,
         inputSchema: #"{"properties":{},"type":"object"}"#
       ))
     }
@@ -96,7 +97,7 @@ final class AnnotateAgentBridge {
     return entry
   }
 
-  private static let expired = CLIError(.notAuthorized, "This Annotate AI session has ended")
+  private static let expired = CLIError(.notAuthorized, "This Snapzy AI session has ended")
 
   private static func makeToken() -> String {
     var bytes = [UInt8](repeating: 0, count: 32)
@@ -108,7 +109,7 @@ final class AnnotateAgentBridge {
   }
 
   static func snapshot(of image: CGImage, sceneSize: CGSize?) async -> AgentImage? {
-    guard let encoded = await AnnotateAgentEndpointImage.make(from: image, sceneSize: sceneSize),
+    guard let encoded = await AgentEndpointImage.make(from: image, sceneSize: sceneSize),
           let comma = encoded.dataURL.firstIndex(of: ",") else { return nil }
     let base64 = String(encoded.dataURL[encoded.dataURL.index(after: comma)...])
     guard base64.utf8.count <= maximumSnapshotBase64Bytes else { return nil }

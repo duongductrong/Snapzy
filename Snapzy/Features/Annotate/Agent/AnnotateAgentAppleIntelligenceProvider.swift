@@ -158,7 +158,7 @@ final class AnnotateAgentAppleIntelligenceProvider: AnnotateAgentProvider {
 
   static func prompt(for request: AnnotateAgentRequest, budget: (texts: Int, length: Int)) -> String {
     var parts: [String] = []
-    let sceneJSON = request.scene
+    let sceneJSON = (request.scene as? AnnotateAgentScene)
       .map { AnnotateAgentToolResult.encoded($0.compacted(maximumTexts: budget.texts, maximumTextLength: budget.length)).text }
       ?? request.sceneJSON
     parts.append("Scene: \(sceneJSON)")

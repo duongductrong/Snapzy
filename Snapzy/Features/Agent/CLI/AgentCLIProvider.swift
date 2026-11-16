@@ -1,8 +1,8 @@
 //
-//  AnnotateAgentCLIProvider.swift
+//  AgentCLIProvider.swift
 //  Snapzy
 //
-//  Runs the prompt through an agent CLI on this Mac (Claude Code, Codex,
+//  Runs a Snapzy AI prompt (any surface) through an agent CLI on this Mac (Claude Code, Codex,
 //  OpenCode). Snapzy starts the CLI headless in an empty private directory and
 //  gives it exactly one MCP server, `snapzy mcp`, bound to this run by a token.
 //  Login, model and quota belong to the CLI; Snapzy never reads its credentials.
@@ -13,7 +13,7 @@ import Foundation
 import SnapzyCLIProtocol
 
 @MainActor
-final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
+final class AgentCLIProvider: AgentProvider {
 
   let kind: AnnotateAgentCLIKind
   private let defaults: UserDefaults
@@ -22,9 +22,9 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
   let symbolName = "terminal"
   var logoImageName: String? { kind.logoImageName }
 
-  /// The CLI sends the scene (and screenshot) to its own model provider.
-  var remoteDestination: AnnotateAgentRemoteDestination? {
-    AnnotateAgentRemoteDestination(id: "cli:\(kind.rawValue)", name: kind.displayName, host: kind.displayName, kind: .agentCLI)
+  /// The CLI sends the scene (and picture) to its own model provider.
+  var remoteDestination: AgentRemoteDestination? {
+    AgentRemoteDestination(id: "cli:\(kind.rawValue)", name: kind.displayName, host: kind.displayName, kind: .agentCLI)
   }
 
   init(kind: AnnotateAgentCLIKind, defaults: UserDefaults = .standard) {
@@ -60,7 +60,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
 
   // MARK: - Run
 
-  func run(_ request: AnnotateAgentRequest, session: AnnotateAgentSession) async throws -> String {
+  func run(_ request: AgentRequest, session: AgentSession) async throws -> String {
     session.report(L10n.AnnotateAI.statusStarting(kind.displayName))
 
     let kind = kind
@@ -68,24 +68,25 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     guard let executable = await Task.detached(priority: .userInitiated, operation: {
       AnnotateAgentCLIEnvironment.locate(kind, defaults: defaults)
     }).value else {
-      throw AnnotateAgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
+      throw AgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
     }
     try Task.checkCancellation()
 
     let helper = Self.helperPath
     guard FileManager.default.isExecutableFile(atPath: helper) else {
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliHelperMissing)
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliHelperMissing)
     }
 
     guard CLIServer.shared.beginAgentSession() else {
       CLIServer.shared.endAgentSession()
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliConnectionFailed(kind.displayName))
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliConnectionFailed(kind.displayName))
     }
     defer { CLIServer.shared.endAgentSession() }
 
-    let sceneSize = request.scene.map { CGSize(width: $0.image.width, height: $0.image.height) }
+    let surface = session.surface
+    let sceneSize = request.scene?.imageUnitSize
     let image = sendsImage ? request.image : nil
-    let bridge = AnnotateAgentBridge.shared
+    let bridge = AgentBridge.shared
     let token = bridge.open(session: session, image: image, sceneSize: sceneSize)
     defer { bridge.close(token) }
 
@@ -97,7 +98,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     // Claude Code looks through get_snapshot; the others take the file with the prompt.
     var imagePath: String?
     if kind != .claudeCode, let image,
-       let snapshot = await AnnotateAgentBridge.snapshot(of: image, sceneSize: sceneSize),
+       let snapshot = await AgentBridge.snapshot(of: image, sceneSize: sceneSize),
        let data = Data(base64Encoded: snapshot.base64) {
       let url = directory.appendingPathComponent("screenshot-\(runID).jpg")
       do {
@@ -105,7 +106,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
         runFiles.append(url)
         imagePath = url.path
       } catch {
-        DiagnosticLogger.shared.log(.warning, .annotate, "AI agent CLI: could not write the screenshot", context: ["error": "\(error)"])
+        DiagnosticLogger.shared.log(.warning, surface.logCategory, "AI agent CLI: could not write the screenshot", context: ["error": "\(error)"])
       }
     }
     try Task.checkCancellation()
@@ -125,8 +126,8 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
       var turn = request
       turn.resumeSessionID = resumeID
       let input = AnnotateAgentCLIRunInput(
-        prompt: Self.prompt(for: turn, hasImage: image != nil, attachesImage: imagePath != nil),
-        systemPrompt: Self.instructions,
+        prompt: Self.prompt(for: turn, surface: surface, hasImage: image != nil, attachesImage: imagePath != nil),
+        systemPrompt: Self.instructions(for: surface),
         resumeSessionID: resumeID,
         model: model,
         effort: effort,
@@ -160,10 +161,10 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
           resumed: resumeID != nil,
           session: session
         )
-      } catch AnnotateAgentProviderError.failed(let message) where resumeID != nil && session.changeCount == 0 {
+      } catch AgentProviderError.failed(let message) where resumeID != nil && session.changeCount == 0 {
         // The CLI lost the conversation (pruned, other machine, new version): start over
         // with a summary of the earlier turns instead of failing the prompt.
-        DiagnosticLogger.shared.log(.info, .annotate, "AI agent CLI could not resume; starting fresh", context: ["error": message])
+        DiagnosticLogger.shared.log(.info, surface.logCategory, "AI agent CLI could not resume; starting fresh", context: ["error": message])
         resumeID = nil
         session.providerSessionID = nil
       }
@@ -177,7 +178,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     directory: String,
     stdinPath: String?,
     resumed: Bool,
-    session: AnnotateAgentSession
+    session: AgentSession
   ) async throws -> String {
     let process: AnnotateAgentCLIProcess
     do {
@@ -190,12 +191,12 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
       )
     } catch AnnotateAgentCLIProcess.LaunchError.spawnFailed(let code) {
       if code == ENOENT || code == EACCES || code == ENOEXEC {
-        throw AnnotateAgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
+        throw AgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
       }
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliFailed(kind.displayName, String(cString: strerror(code))))
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliFailed(kind.displayName, String(cString: strerror(code))))
     }
     defer { process.terminate() }
-    DiagnosticLogger.shared.log(.info, .annotate, "AI agent CLI started", context: [
+    DiagnosticLogger.shared.log(.info, session.surface.logCategory, "AI agent CLI started", context: [
       "cli": kind.rawValue,
       "resume": resumed ? "yes" : "no",
     ])
@@ -206,16 +207,16 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
       session.providerSessionID = sessionID
     }
     if let failure = outcome.failure {
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliFailed(kind.displayName, Self.shorten(failure)))
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliFailed(kind.displayName, Self.shorten(failure)))
     }
     if outcome.exit.status != 0, outcome.reply == nil {
       let detail = Self.shorten(outcome.exit.stderrTail)
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliFailed(
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliFailed(
         kind.displayName,
         detail.isEmpty ? "exit \(outcome.exit.status)" : detail
       ))
     }
-    return AnnotateAgentReplyFormatter.oneLine(outcome.reply ?? "")
+    return AgentReplyFormatter.oneLine(outcome.reply ?? "")
   }
 
   // MARK: - Process output
@@ -289,21 +290,22 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     outcome.exit = await exitTask.value
     try Task.checkCancellation()
     if timedOut.isSet {
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliTimedOut(kind.displayName))
+      throw AgentProviderError.failed(L10n.AnnotateAI.cliTimedOut(kind.displayName))
     }
     return outcome
   }
 
   // MARK: - Prompt
 
-  static let instructions = AnnotateAgentEndpointProvider.sharedInstructions + """
+  static func instructions(for surface: AgentSurface) -> String {
+    surface.instructions + """
 
-  You are running inside Snapzy with one MCP server, "snapzy". Use only its tools to change the screenshot; \
-  you have no shell, files or web, and must not try them. The scene is in the message, so don't call get_scene \
-  unless something changed. When done, answer with one short sentence in the user's language saying what you changed.
-  """
+    You are running inside Snapzy with one MCP server, "snapzy". \(surface.cliModeNote) \
+    When done, answer with one short sentence in the user's language saying what you changed.
+    """
+  }
 
-  static func prompt(for request: AnnotateAgentRequest, hasImage: Bool, attachesImage: Bool) -> String {
+  static func prompt(for request: AgentRequest, surface: AgentSurface, hasImage: Bool, attachesImage: Bool) -> String {
     var parts: [String] = []
     // A CLI that cannot resume never saw earlier turns: summarize them.
     if request.resumeSessionID == nil, !request.history.isEmpty {
@@ -313,9 +315,9 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
       parts.append("Earlier in this conversation:\n\(history)")
     }
     if attachesImage {
-      parts.append("The attached image is the screenshot (without annotations).")
+      parts.append(surface.imageAttachedNote)
     } else if hasImage {
-      parts.append("Call get_snapshot if you need to see the screenshot.")
+      parts.append(surface.imageOnRequestNote)
     }
     parts.append("Scene (JSON):\n\(request.sceneJSON)")
     parts.append("Request: \(request.prompt)")

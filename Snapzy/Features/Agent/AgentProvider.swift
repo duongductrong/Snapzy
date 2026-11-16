@@ -1,18 +1,18 @@
 //
-//  AnnotateAgentProvider.swift
+//  AgentProvider.swift
 //  Snapzy
 //
-//  The seam between the Annotate AI prompt and whoever answers it: Apple
-//  Intelligence, a custom endpoint, or an agent CLI (phases 3–5). A provider gets
-//  the prompt plus the conversation so far and drives the canvas only through
-//  `AnnotateAgentSession.callTool`, which paces calls so the user can follow along.
+//  The seam between a Snapzy AI prompt (Annotate, Video Editor) and whoever answers
+//  it: Apple Intelligence, a custom endpoint, or an agent CLI. A provider gets the
+//  prompt plus the conversation so far and drives the surface only through
+//  `AgentSession.callTool`, which paces calls so the user can follow along.
 //
 
 import CoreGraphics
 import Foundation
 
 /// One finished prompt in the current conversation.
-nonisolated struct AnnotateAgentTurn: Equatable {
+nonisolated struct AgentTurn: Equatable {
   let prompt: String
   /// The agent's own summary of what it did.
   let reply: String
@@ -20,22 +20,22 @@ nonisolated struct AnnotateAgentTurn: Equatable {
   var providerSessionID: String? = nil
 }
 
-nonisolated struct AnnotateAgentRequest: Equatable {
+nonisolated struct AgentRequest {
   let prompt: String
   /// Earlier turns of this conversation, oldest first.
-  let history: [AnnotateAgentTurn]
+  let history: [AgentTurn]
   /// `get_scene` output at the start of the run (JSON), so a provider can skip the first round trip.
   let sceneJSON: String
   /// The same scene as a value, for providers that must shrink it (Apple Intelligence's 4K context).
-  var scene: AnnotateAgentScene? = nil
-  /// The screenshot (no annotations), for providers that can look at it.
+  var scene: (any AgentScene)? = nil
+  /// The surface's picture (Annotate: the screenshot without annotations), for providers that can look at it.
   var image: CGImage? = nil
   /// The previous turn's agent CLI conversation, when it can be resumed.
   var resumeSessionID: String? = nil
 }
 
 /// Where a provider sends the screenshot when it runs off the Mac. The user agrees once per `id`.
-nonisolated struct AnnotateAgentRemoteDestination: Equatable {
+nonisolated struct AgentRemoteDestination: Equatable {
   enum Kind: Equatable {
     /// An HTTP endpoint; `host` is where the data goes.
     case endpoint
@@ -50,7 +50,7 @@ nonisolated struct AnnotateAgentRemoteDestination: Equatable {
   var kind: Kind = .endpoint
 }
 
-nonisolated enum AnnotateAgentProviderError: Error, Equatable {
+nonisolated enum AgentProviderError: Error, Equatable {
   /// Nothing is configured (no Apple Intelligence, no endpoint, no CLI).
   case notConfigured
   /// The provider ran but could not finish; the message is shown to the user.
@@ -61,7 +61,7 @@ nonisolated enum AnnotateAgentProviderError: Error, Equatable {
 }
 
 @MainActor
-protocol AnnotateAgentProvider: AnyObject {
+protocol AgentProvider: AnyObject {
   /// Short name for the provider chip ("Apple Intelligence", "OpenCode", …).
   var displayName: String { get }
   /// SF Symbol for the provider chip.
@@ -70,19 +70,19 @@ protocol AnnotateAgentProvider: AnyObject {
   var logoImageName: String? { get }
 
   /// Set when the screenshot and its text leave the Mac (endpoint, CLI). `nil` = on-device.
-  var remoteDestination: AnnotateAgentRemoteDestination? { get }
+  var remoteDestination: AgentRemoteDestination? { get }
 
   /// Runs one prompt. Returns the agent's one-line summary. Must honour task cancellation.
-  func run(_ request: AnnotateAgentRequest, session: AnnotateAgentSession) async throws -> String
+  func run(_ request: AgentRequest, session: AgentSession) async throws -> String
 }
 
-extension AnnotateAgentProvider {
-  var remoteDestination: AnnotateAgentRemoteDestination? { nil }
+extension AgentProvider {
+  var remoteDestination: AgentRemoteDestination? { nil }
   var logoImageName: String? { nil }
 }
 
 /// The result pill shows one line: lists and markdown wrappers dropped, kept short.
-nonisolated enum AnnotateAgentReplyFormatter {
+nonisolated enum AgentReplyFormatter {
   static let maximumLength = 160
 
   static func oneLine(_ text: String) -> String {
@@ -101,13 +101,13 @@ nonisolated enum AnnotateAgentReplyFormatter {
 
 /// What a provider may do while running: call tools and say what it is doing.
 @MainActor
-final class AnnotateAgentSession {
-  /// Shortest gap between two canvas changes, so a fast provider still reads as "working".
+final class AgentSession {
+  /// Shortest gap between two changes, so a fast provider still reads as "working".
   static let minimumChangeInterval: TimeInterval = 0.32
 
-  private let toolbox: AnnotateAgentToolbox
+  private let toolbox: AgentToolbox
   private let pacingEnabled: Bool
-  private let onToolStart: (AnnotateAgentToolName?) -> Void
+  private let onToolCall: (String) -> Void
   private let onStatus: (String) -> Void
   private var lastChange: Date?
   /// Cleared by the controller when the run ends or is stopped. A provider that keeps
@@ -116,31 +116,40 @@ final class AnnotateAgentSession {
   private(set) var isActive = true
   /// Set by providers that keep a conversation of their own (agent CLIs).
   var providerSessionID: String?
-  /// Successful canvas-changing tool calls so far, so a provider knows whether a retry is safe.
+  /// Successful changing tool calls so far, so a provider knows whether a retry is safe.
   private(set) var changeCount = 0
 
   func invalidate() {
     isActive = false
   }
 
+  /// `onToolCall` gets the tool name before the call runs (unknown names included).
   init(
-    toolbox: AnnotateAgentToolbox,
-    pacingEnabled: Bool = true,
-    onToolStart: @escaping (AnnotateAgentToolName?) -> Void = { _ in },
+    toolbox: AgentToolbox,
+    pacingEnabled: Bool,
+    onToolCall: @escaping (String) -> Void,
     onStatus: @escaping (String) -> Void = { _ in }
   ) {
     self.toolbox = toolbox
     self.pacingEnabled = pacingEnabled
-    self.onToolStart = onToolStart
+    self.onToolCall = onToolCall
     self.onStatus = onStatus
   }
 
-  func callTool(_ name: String, arguments: String) async throws -> AnnotateAgentToolResult {
+  var surface: AgentSurface { toolbox.surface }
+  var toolSpecs: [AgentToolSpec] { toolbox.toolSpecs }
+
+  /// Read-only calls are not paced and not counted as changes (the toolbox decides for unknown names).
+  func isReadOnly(_ name: String) -> Bool {
+    toolbox.isReadOnly(name)
+  }
+
+  func callTool(_ name: String, arguments: String) async throws -> AgentToolResult {
     guard isActive else { throw CancellationError() }
     try Task.checkCancellation()
-    let tool = AnnotateAgentToolName(rawValue: name)
-    onToolStart(tool)
-    if pacingEnabled, tool?.isReadOnly == false, let lastChange {
+    let readOnly = toolbox.isReadOnly(name)
+    onToolCall(name)
+    if pacingEnabled, !readOnly, let lastChange {
       let wait = Self.minimumChangeInterval - Date().timeIntervalSince(lastChange)
       if wait > 0 {
         try await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
@@ -148,8 +157,8 @@ final class AnnotateAgentSession {
     }
     try Task.checkCancellation()
     guard isActive else { throw CancellationError() }
-    let result = toolbox.execute(name: name, argumentsJSON: arguments)
-    if tool?.isReadOnly == false {
+    let result = await toolbox.execute(name: name, argumentsJSON: arguments)
+    if !readOnly {
       lastChange = Date()
       if !result.isError { changeCount += 1 }
     }
@@ -164,7 +173,7 @@ final class AnnotateAgentSession {
 }
 
 /// Which provider the user picked. Persisted as a string so CLI kinds (phase 5) fit in.
-nonisolated enum AnnotateAgentProviderSelection: Equatable {
+nonisolated enum AgentProviderSelection: Equatable {
   /// Apple Intelligence when ready; never an off-device provider.
   case automatic
   case appleIntelligence
@@ -202,69 +211,70 @@ nonisolated enum AnnotateAgentProviderSelection: Equatable {
   }
 }
 
-/// Picks the provider for a prompt. `automatic` = Apple Intelligence when the
-/// on-device model is ready. Endpoint and CLI providers are opt-in and never chosen
-/// automatically, since they send the screenshot off the Mac.
+/// Picks the provider for a prompt. The choice is app-wide (Settings › AI), shared by
+/// every surface. `automatic` = the surface's on-device provider (Apple Intelligence) when
+/// it is ready. Endpoint and CLI providers are opt-in and never chosen automatically,
+/// since they send the surface's data off the Mac.
 @MainActor
-enum AnnotateAgentProviderResolver {
+enum AgentProviderResolver {
   /// Debug builds: `YES` forces the mock, `NO` disables it. Unset = mock only when
   /// nothing else is available, so the UI stays testable on any Mac.
   static let mockProviderDefaultsKey = "annotateAgent.useMockProvider"
 
-  static func selection(defaults: UserDefaults = .standard) -> AnnotateAgentProviderSelection {
-    AnnotateAgentProviderSelection(persistedValue: defaults.string(forKey: PreferencesKeys.annotateAgentProvider))
+  static func selection(defaults: UserDefaults = .standard) -> AgentProviderSelection {
+    AgentProviderSelection(persistedValue: defaults.string(forKey: PreferencesKeys.annotateAgentProvider))
   }
 
-  static func setSelection(_ selection: AnnotateAgentProviderSelection, defaults: UserDefaults = .standard) {
+  static func setSelection(_ selection: AgentProviderSelection, defaults: UserDefaults = .standard) {
     defaults.set(selection.persistedValue, forKey: PreferencesKeys.annotateAgentProvider)
   }
 
+  /// - Parameters:
+  ///   - onDevice: the surface's on-device provider, `nil` when it can't run here.
+  ///   - mock: the surface's debug stand-in (ignored in release builds).
   static func resolve(
     defaults: UserDefaults = .standard,
-    endpoints: [CustomOCRModel]? = nil
-  ) -> AnnotateAgentProvider? {
+    endpoints: [CustomOCRModel]? = nil,
+    onDevice: () -> AgentProvider?,
+    mock: () -> AgentProvider?
+  ) -> AgentProvider? {
     #if DEBUG
     let mockSetting = defaults.object(forKey: mockProviderDefaultsKey) == nil
       ? nil
       : defaults.bool(forKey: mockProviderDefaultsKey)
-    if mockSetting == true {
-      return AnnotateAgentMockProvider()
+    if mockSetting == true, let mock = mock() {
+      return mock
     }
     #endif
-    let provider: AnnotateAgentProvider?
+    let provider: AgentProvider?
     switch selection(defaults: defaults) {
     case .endpoint(let id):
       // A removed endpoint falls back to automatic rather than leaving the prompt dead.
       if let model = (endpoints ?? CustomOCRModelStore.shared.models).first(where: { $0.id == id }) {
-        provider = AnnotateAgentEndpointProvider(model: model, defaults: defaults)
+        provider = AgentEndpointProvider(model: model, defaults: defaults)
       } else {
-        provider = AnnotateAgentAppleIntelligence.makeProviderIfAvailable()
+        provider = onDevice()
       }
     case .cli(let kind):
       // Not installed is reported by the run itself, with what to do about it.
-      provider = AnnotateAgentCLIProvider(kind: kind, defaults: defaults)
+      provider = AgentCLIProvider(kind: kind, defaults: defaults)
     case .automatic, .appleIntelligence:
-      provider = AnnotateAgentAppleIntelligence.makeProviderIfAvailable()
+      provider = onDevice()
     }
     if let provider { return provider }
     #if DEBUG
     if mockSetting == nil {
-      return AnnotateAgentMockProvider()
+      return mock()
     }
     #endif
     return nil
   }
 
-  /// The Ask entry point shows only when a provider can run on this Mac.
-  static var isFeatureAvailable: Bool {
-    #if DEBUG
-    return true
-    #else
-    // Any configured endpoint counts: the provider menu in the prompt is where it gets picked.
-    return AnnotateAgentAppleIntelligence.isAvailable
-      || !CustomOCRModelStore.shared.models.isEmpty
+  /// Something besides the on-device model can answer: an endpoint, an installed CLI, or a
+  /// CLI the user picked (its run explains what is missing).
+  static var hasOffDeviceProvider: Bool {
+    !CustomOCRModelStore.shared.models.isEmpty
       || !AnnotateAgentCLIDetector.shared.installed.isEmpty
       || { if case .cli = selection() { return true } else { return false } }()
-    #endif
   }
 }

@@ -208,34 +208,9 @@ nonisolated enum AnnotateAgentColor {
 
 // MARK: - Results & errors
 
-/// What a tool returns to the model. `text` is JSON so every provider can pass it through.
-nonisolated struct AnnotateAgentToolResult: Equatable {
-  let isError: Bool
-  let text: String
-
-  static func success(_ payload: [String: Any]) -> AnnotateAgentToolResult {
-    var body = payload
-    body["ok"] = true
-    return AnnotateAgentToolResult(isError: false, text: Self.json(body))
-  }
-
-  static func encoded<T: Encodable>(_ value: T) -> AnnotateAgentToolResult {
-    let encoder = JSONEncoder()
-    encoder.keyEncodingStrategy = .convertToSnakeCase
-    encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-    let data = (try? encoder.encode(value)) ?? Data("{}".utf8)
-    return AnnotateAgentToolResult(isError: false, text: String(decoding: data, as: UTF8.self))
-  }
-
-  static func failure(_ error: AnnotateAgentToolError) -> AnnotateAgentToolResult {
-    AnnotateAgentToolResult(isError: true, text: Self.json(["ok": false, "error": error.message]))
-  }
-
-  private static func json(_ object: [String: Any]) -> String {
-    guard let data = try? JSONSerialization.data(withJSONObject: object, options: [.sortedKeys, .withoutEscapingSlashes]) else {
-      return "{}"
-    }
-    return String(decoding: data, as: UTF8.self)
+extension AgentToolResult {
+  static func failure(_ error: AnnotateAgentToolError) -> AgentToolResult {
+    .failure(message: error.message)
   }
 }
 

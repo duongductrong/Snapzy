@@ -420,39 +420,23 @@ final class AnnotateAgentController: ObservableObject {
 
   // MARK: - Remote consent
 
+  private var remoteConsent: AgentRemoteConsent { AgentRemoteConsent(defaults: defaults) }
+
   private func hasRemoteConsent(_ destination: AnnotateAgentRemoteDestination) -> Bool {
-    defaults.stringArray(forKey: PreferencesKeys.annotateAgentConsentedProviders)?.contains(destination.id) ?? false
+    remoteConsent.has(destination)
   }
 
   private func recordRemoteConsent(_ destination: AnnotateAgentRemoteDestination) {
-    var ids = defaults.stringArray(forKey: PreferencesKeys.annotateAgentConsentedProviders) ?? []
-    guard !ids.contains(destination.id) else { return }
-    ids.append(destination.id)
-    defaults.set(ids, forKey: PreferencesKeys.annotateAgentConsentedProviders)
+    remoteConsent.record(destination)
   }
 
-  /// Sheet on the Annotate window (app-modal when there is none).
   private static func askRemoteUse(_ destination: AnnotateAgentRemoteDestination) async -> Bool {
-    let alert = NSAlert()
-    alert.alertStyle = .informational
-    alert.messageText = L10n.AnnotateAI.consentTitle(destination.name)
-    // Agent CLIs also run with the user's own MCP servers and hooks: say so up front.
-    switch destination.kind {
-    case .agentCLI:
-      alert.informativeText = L10n.AnnotateAI.consentMessageCLI(destination.name)
-    case .endpoint:
-      alert.informativeText = L10n.AnnotateAI.consentMessage(destination.host)
-    }
-    alert.addButton(withTitle: L10n.AnnotateAI.consentSend)
-    alert.addButton(withTitle: L10n.Common.cancel)
-    guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
-      return alert.runModal() == .alertFirstButtonReturn
-    }
-    return await withCheckedContinuation { continuation in
-      alert.beginSheetModal(for: window) { response in
-        continuation.resume(returning: response == .alertFirstButtonReturn)
-      }
-    }
+    await AgentRemoteConsent.ask(
+      destination,
+      title: L10n.AnnotateAI.consentTitle(destination.name),
+      endpointMessage: L10n.AnnotateAI.consentMessage(destination.host),
+      cliMessage: L10n.AnnotateAI.consentMessageCLI(destination.name)
+    )
   }
 
   // MARK: - Overlay feedback

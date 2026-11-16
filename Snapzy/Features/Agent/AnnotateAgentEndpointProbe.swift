@@ -4,7 +4,7 @@
 //
 //  Settings › AI › Test: asks a custom endpoint two tiny questions to learn whether
 //  it calls tools and accepts images, and remembers the answers the same way a real
-//  prompt would (AnnotateAgentEndpointCapabilityStore).
+//  prompt would (AgentEndpointCapabilityStore).
 //
 
 import AppKit
@@ -13,7 +13,7 @@ import Foundation
 @MainActor
 enum AnnotateAgentEndpointProbe {
   enum Outcome: Equatable {
-    case finished(AnnotateAgentEndpointCapabilities)
+    case finished(AgentEndpointCapabilities)
     case failed(String)
   }
 
@@ -25,7 +25,7 @@ enum AnnotateAgentEndpointProbe {
     timeout: TimeInterval = 45
   ) async -> Outcome {
     let client = OpenAICompatibleChatClient(model: model, keychainStore: keychainStore, session: session, timeout: timeout)
-    let store = AnnotateAgentEndpointCapabilityStore(defaults: defaults)
+    let store = AgentEndpointCapabilityStore(defaults: defaults)
     var capabilities = store.capabilities(for: model)
 
     do {
@@ -36,7 +36,7 @@ enum AnnotateAgentEndpointProbe {
       capabilities.supportsVision = try await probeVision(client: client, model: model)
     } catch {
       if error is CancellationError { return .failed(L10n.AnnotateAI.failed) }
-      if case AnnotateAgentProviderError.failed(let message) = AnnotateAgentEndpointProvider.map(error) {
+      if case AgentProviderError.failed(let message) = AgentEndpointProvider.map(error) {
         return .failed(message)
       }
       return .failed(L10n.AnnotateAI.failed)
@@ -65,12 +65,12 @@ enum AnnotateAgentEndpointProbe {
     ]
     do {
       let data = try await client.send(jsonBody: JSONSerialization.data(withJSONObject: body))
-      guard let message = AnnotateAgentEndpointMessage.parse(data) else {
-        throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.invalidReply)
+      guard let message = AgentEndpointMessage.parse(data) else {
+        throw AgentProviderError.failed(L10n.AnnotateAI.invalidReply)
       }
       return message.toolCalls.isEmpty ? nil : true
     } catch RemoteOCRError.httpStatus(let status, let snippet) {
-      if AnnotateAgentEndpointProvider.rejection(status: status, body: snippet) == .tools { return false }
+      if AgentEndpointProvider.rejection(status: status, body: snippet) == .tools { return false }
       throw RemoteOCRError.httpStatus(status, snippet)
     }
   }
@@ -91,7 +91,7 @@ enum AnnotateAgentEndpointProbe {
       _ = try await client.send(jsonBody: JSONSerialization.data(withJSONObject: body))
       return true
     } catch RemoteOCRError.httpStatus(let status, let snippet) {
-      if AnnotateAgentEndpointProvider.rejection(status: status, body: snippet) == .images { return false }
+      if AgentEndpointProvider.rejection(status: status, body: snippet) == .images { return false }
       throw RemoteOCRError.httpStatus(status, snippet)
     }
   }
