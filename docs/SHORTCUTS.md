@@ -129,6 +129,7 @@ Hover a Quick Access card, press the key, the card runs that action. All seven `
   | `autoRedactSensitiveData` | unbound | `annotate.action.autoRedactSensitiveData` |
   | `autoTranslate` | ⌘⇧T | `annotate.action.autoTranslate` |
   | `translateArea` | ⌥⌘T | `annotate.action.translateArea` |
+  | `aiPrompt` | ⌘K | `annotate.action.aiPrompt` (Ask AI; hidden when no AI provider can run — see [AI.md](AI.md)) |
 
 - Action disable set: `shortcuts.disabledAnnotateActionShortcuts`.
 
@@ -192,7 +193,7 @@ Dispatch: AppleEvent `kAEGetURL` → `AppDelegate` (queued pre-launch) → `AppC
   open 'snapzy://open/combine?file=/tmp/first.png&file=/tmp/second.png'
   ```
 
-- Settings tabs: `general`, `capture`, `annotate`, `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
+- Settings tabs: `general`, `capture`, `annotate`, `ai` (`ask`), `quick-access`, `history`, `shortcuts`, `permissions`, `command-line` (`cli`), `cloud`, `advanced`, `about`. Also accepted as path form (`snapzy://settings/capture`).
 - Aliases exist for most routes — e.g. `capture/focused-window`, `capture/window`, `record/window`, `screenshot/area`, `ocr`, `annotate`, `combine`, `uploads`, `history`, `shortcuts`, `preferences`, plus tab aliases (`screenshots`, `privacy`, `config`, `toml`, …). Full alias list: `SnapzyDeepLinkAction.init?(url:)` in `Snapzy/App/SnapzyDeepLinkHandler.swift`.
 
 ## Related docs

@@ -591,6 +591,26 @@ enum SnapzyConfigurationImporter {
     collectEnumString(&reader, "annotate", "measure_axis", allowed: MeasureAxis.allCases.map(\.rawValue), mutations: &mutations) {
       defaults.set($0, forKey: PreferencesKeys.annotateMeasureAxis)
     }
+    collectString(&reader, "annotate", "ai", "provider", mutations: &mutations) {
+      // Unknown or malformed values read as automatic, like a removed endpoint.
+      defaults.set(AnnotateAgentProviderSelection(persistedValue: $0).persistedValue, forKey: PreferencesKeys.annotateAgentProvider)
+    }
+    collectBool(&reader, "annotate", "ai", "send_image", mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateAgentSendImage)
+    }
+    collectDouble(&reader, "annotate", "ai", "cli_timeout", range: AnnotateAgentAISettings.cliTimeoutRange, mutations: &mutations) {
+      defaults.set($0, forKey: PreferencesKeys.annotateAgentCLITimeout)
+    }
+    for kind in AnnotateAgentCLIKind.allCases {
+      collectString(&reader, "annotate", "ai", "\(kind.rawValue)_model", mutations: &mutations) {
+        let model = $0.trimmingCharacters(in: .whitespacesAndNewlines)
+        if model.isEmpty {
+          defaults.removeObject(forKey: kind.modelDefaultsKey)
+        } else {
+          defaults.set(model, forKey: kind.modelDefaultsKey)
+        }
+      }
+    }
   }
 
   /// Imports the custom OCR endpoint list as a whole (replace semantics, like

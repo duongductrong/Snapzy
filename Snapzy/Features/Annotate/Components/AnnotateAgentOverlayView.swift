@@ -188,12 +188,18 @@ struct AnnotateAgentNoticePill: View {
           .foregroundStyle(.secondary)
         Text(count > 0 ? "\(L10n.AnnotateAI.stopped) · \(L10n.AnnotateAI.changes(count))" : L10n.AnnotateAI.stopped)
         undoButton
-      case .failed(let message, _):
+      case .failed(let message, let offersSettings):
         Image(systemName: "exclamationmark.triangle.fill")
           .foregroundStyle(.orange)
         Text(message)
           .lineLimit(2)
           .frame(maxWidth: 420, alignment: .leading)
+        if offersSettings {
+          pillButton(L10n.AnnotateAI.settings) {
+            agent.dismissNotice()
+            AnnotateAgentAISettings.open()
+          }
+        }
       }
       closeButton
     }
@@ -203,18 +209,20 @@ struct AnnotateAgentNoticePill: View {
   private var undoButton: some View {
     // Re-evaluated with `state` so it disappears once the user edits on their own.
     if agent.canUndoLastRun {
-      Button {
-        agent.undoLastRun()
-      } label: {
-        Text(L10n.Common.undo)
-          .font(.system(size: 11, weight: .medium))
-          .padding(.horizontal, 8)
-          .frame(height: 22)
-          .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.08)))
-          .contentShape(Capsule())
-      }
-      .buttonStyle(.plain)
+      pillButton(L10n.Common.undo) { agent.undoLastRun() }
     }
+  }
+
+  private func pillButton(_ title: String, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+      Text(title)
+        .font(.system(size: 11, weight: .medium))
+        .padding(.horizontal, 8)
+        .frame(height: 22)
+        .background(Capsule(style: .continuous).fill(Color.primary.opacity(0.08)))
+        .contentShape(Capsule())
+    }
+    .buttonStyle(.plain)
   }
 
   private var closeButton: some View {

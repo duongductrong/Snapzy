@@ -9,6 +9,7 @@
 //  shared toolbox instead of the full 17-tool catalog.
 //
 
+import AppKit
 import Foundation
 
 #if canImport(FoundationModels)
@@ -25,6 +26,47 @@ enum AnnotateAgentAppleIntelligence {
     }
     #endif
     return false
+  }
+
+  /// Why the on-device model can or can't answer, for Settings.
+  enum Status: Equatable {
+    case available
+    /// macOS older than 26 (or an SDK without FoundationModels).
+    case unsupportedOS
+    case deviceNotEligible
+    case notEnabled
+    /// Downloading or otherwise not ready yet.
+    case modelNotReady
+  }
+
+  static var status: Status {
+    #if canImport(FoundationModels)
+    if #available(macOS 26.0, *) {
+      switch SystemLanguageModel.default.availability {
+      case .available:
+        return .available
+      case .unavailable(.deviceNotEligible):
+        return .deviceNotEligible
+      case .unavailable(.appleIntelligenceNotEnabled):
+        return .notEnabled
+      case .unavailable:
+        return .modelNotReady
+      }
+    }
+    #endif
+    return .unsupportedOS
+  }
+
+  /// System Settings › Apple Intelligence & Siri.
+  static func openSystemSettings() {
+    let candidates = [
+      "x-apple.systempreferences:com.apple.Siri-Settings.extension",
+      "x-apple.systempreferences:com.apple.preference.speech",
+    ]
+    for candidate in candidates {
+      if let url = URL(string: candidate), NSWorkspace.shared.open(url) { return }
+    }
+    NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/System Settings.app"))
   }
 
   /// Loads model assets ahead of the first prompt. Cheap to call repeatedly.
@@ -155,7 +197,7 @@ final class AnnotateAgentAppleIntelligenceProvider: AnnotateAgentProvider {
     case .unsupportedLanguageOrLocale:
       return AnnotateAgentProviderError.failed(L10n.AnnotateAI.appleUnsupportedLanguage)
     case .assetsUnavailable:
-      return AnnotateAgentProviderError.failed(L10n.AnnotateAI.appleUnavailable)
+      return AnnotateAgentProviderError.needsSetup(L10n.AnnotateAI.appleUnavailable)
     case .rateLimited, .concurrentRequests:
       return AnnotateAgentProviderError.failed(L10n.AnnotateAI.appleBusy)
     case .exceededContextWindowSize:

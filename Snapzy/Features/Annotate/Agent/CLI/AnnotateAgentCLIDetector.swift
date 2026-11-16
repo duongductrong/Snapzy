@@ -132,10 +132,16 @@ nonisolated enum AnnotateAgentCLIEnvironment {
   }
 
   /// Runs a short command and returns stdout, or nil on failure/timeout.
-  static func run(_ executable: String, _ arguments: [String], timeout: TimeInterval) -> String? {
+  static func run(
+    _ executable: String,
+    _ arguments: [String],
+    environment: [String: String]? = nil,
+    timeout: TimeInterval
+  ) -> String? {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: executable)
     process.arguments = arguments
+    if let environment { process.environment = environment }
     let output = Pipe()
     process.standardOutput = output
     process.standardError = FileHandle.nullDevice
@@ -165,14 +171,41 @@ nonisolated enum AnnotateAgentCLIEnvironment {
   }
 }
 
+extension AnnotateAgentCLIEnvironment {
+  /// First line of `<cli> --version` with the version number pulled out when there is one
+  /// ("2.1.325 (Claude Code)" → "2.1.325", "codex-cli 0.169.0" → "0.169.0").
+  static func version(ofExecutable executable: String, loginPath: String) -> String? {
+    guard let output = run(
+      executable,
+      ["--version"],
+      environment: environment(forExecutable: executable, loginPath: loginPath),
+      timeout: 8
+    ) else { return nil }
+    return parseVersion(output)
+  }
+
+  static func parseVersion(_ output: String) -> String? {
+    guard let line = output.split(whereSeparator: \.isNewline)
+      .map({ $0.trimmingCharacters(in: .whitespaces) })
+      .first(where: { !$0.isEmpty }) else { return nil }
+    if let range = line.range(of: #"\d+\.\d+(\.\d+)?([-+.][0-9A-Za-z.]+)?"#, options: .regularExpression) {
+      return String(line[range])
+    }
+    return String(line.prefix(40))
+  }
+}
+
 /// The agent CLIs found on this Mac, refreshed in the background. Drives the
-/// provider menu in the prompt.
+/// provider menu in the prompt and the AI settings page.
 @MainActor
 final class AnnotateAgentCLIDetector: ObservableObject {
   static let shared = AnnotateAgentCLIDetector()
 
   @Published private(set) var installed: [AnnotateAgentCLIKind: String] = [:]
+  /// `--version` of each installed CLI (missing when it didn't answer in time).
+  @Published private(set) var versions: [AnnotateAgentCLIKind: String] = [:]
   @Published private(set) var hasScanned = false
+  @Published private(set) var isScanning = false
   private var scanTask: Task<Void, Never>?
   private var lastScan: Date?
 
@@ -180,25 +213,71 @@ final class AnnotateAgentCLIDetector: ObservableObject {
   /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
   nonisolated deinit {}
 
-  /// Rescans at most once a minute unless forced.
-  func refresh(force: Bool = false) {
-    guard scanTask == nil else { return }
-    if !force, let lastScan, Date().timeIntervalSince(lastScan) < 60 { return }
-    if force { AnnotateAgentCLIEnvironment.resetCache() }
+  /// A forced request that arrived while a scan was running; replayed when it finishes.
+  private var pendingRequest: (includeVersions: Bool, reloadShellPath: Bool)?
+
+  /// Rescans at most once a minute unless forced. `includeVersions` also runs
+  /// `--version` on each CLI (node CLIs take a second or two), for Settings.
+  /// `reloadShellPath` re-reads the login shell's PATH (slow; the Refresh button only).
+  func refresh(force: Bool = false, includeVersions: Bool = false, reloadShellPath: Bool = false) {
+    guard scanTask == nil else {
+      // Don't drop a forced rescan (a path picked in Settings) behind a scan already running.
+      if force {
+        pendingRequest = (
+          (pendingRequest?.includeVersions ?? false) || includeVersions,
+          (pendingRequest?.reloadShellPath ?? false) || reloadShellPath
+        )
+      }
+      return
+    }
+    if !force, let lastScan, Date().timeIntervalSince(lastScan) < 60,
+       !includeVersions || versions.keys.count == installed.keys.count { return }
+    if reloadShellPath { AnnotateAgentCLIEnvironment.resetCache() }
+    let readsVersions = includeVersions || force
+    isScanning = true
     scanTask = Task { [weak self] in
-      let found = await Task.detached(priority: .utility) { () -> [AnnotateAgentCLIKind: String] in
-        let path = AnnotateAgentCLIEnvironment.loginPath()
-        var found: [AnnotateAgentCLIKind: String] = [:]
-        for kind in AnnotateAgentCLIKind.allCases {
-          found[kind] = AnnotateAgentCLIEnvironment.locate(kind, loginPath: path)
-        }
-        return found
-      }.value
+      let (found, versions) = await Self.scan(readsVersions: readsVersions)
       guard let self else { return }
       self.installed = found
+      if readsVersions {
+        self.versions = versions
+      } else {
+        self.versions = self.versions.filter { found[$0.key] != nil }
+      }
       self.hasScanned = true
       self.lastScan = Date()
       self.scanTask = nil
+      self.isScanning = false
+      if let pending = self.pendingRequest {
+        self.pendingRequest = nil
+        self.refresh(force: true, includeVersions: pending.includeVersions, reloadShellPath: pending.reloadShellPath)
+      }
     }
+  }
+
+  /// Locates every CLI, then reads their versions in parallel.
+  private nonisolated static func scan(
+    readsVersions: Bool
+  ) async -> ([AnnotateAgentCLIKind: String], [AnnotateAgentCLIKind: String]) {
+    let path = await Task.detached(priority: .utility) { AnnotateAgentCLIEnvironment.loginPath() }.value
+    var found: [AnnotateAgentCLIKind: String] = [:]
+    for kind in AnnotateAgentCLIKind.allCases {
+      found[kind] = AnnotateAgentCLIEnvironment.locate(kind, loginPath: path)
+    }
+    guard readsVersions else { return (found, [:]) }
+    let located = found
+    let versions = await withTaskGroup(of: (AnnotateAgentCLIKind, String?).self) { group in
+      for (kind, executable) in located {
+        group.addTask(priority: .utility) {
+          (kind, AnnotateAgentCLIEnvironment.version(ofExecutable: executable, loginPath: path))
+        }
+      }
+      var versions: [AnnotateAgentCLIKind: String] = [:]
+      for await (kind, version) in group {
+        versions[kind] = version
+      }
+      return versions
+    }
+    return (found, versions)
   }
 }

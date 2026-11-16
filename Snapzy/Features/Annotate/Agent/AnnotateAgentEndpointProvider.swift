@@ -57,7 +57,7 @@ nonisolated struct AnnotateAgentEndpointCapabilityStore {
 @MainActor
 final class AnnotateAgentEndpointProvider: AnnotateAgentProvider {
   /// Defaults key: send the screenshot image along (scene text is always sent). Default on.
-  static let sendImageDefaultsKey = "annotateAgent.sendImage"
+  static let sendImageDefaultsKey = PreferencesKeys.annotateAgentSendImage
   /// Model rounds per prompt in tools mode.
   static let maximumRounds = 12
   /// Earlier turns resent as chat history.
@@ -102,7 +102,7 @@ final class AnnotateAgentEndpointProvider: AnnotateAgentProvider {
   }
 
   private var sendsImage: Bool {
-    defaults.object(forKey: Self.sendImageDefaultsKey) == nil || defaults.bool(forKey: Self.sendImageDefaultsKey)
+    AnnotateAgentAISettings.sendsImage(defaults: defaults)
   }
 
   // MARK: - Run

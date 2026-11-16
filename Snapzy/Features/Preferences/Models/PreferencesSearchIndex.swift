@@ -12,7 +12,7 @@ import Foundation
 extension PreferencesSearchEntry {
   /// Every searchable setting, in page order. Built on demand so it follows the app language.
   static func catalog() -> [PreferencesSearchEntry] {
-    general + menuBar + capture + annotate + quickAccess + history + shortcuts
+    general + menuBar + capture + annotate + ai + quickAccess + history + shortcuts
       + permissions + commandLine + cloud + advanced + about
   }
 
@@ -523,6 +523,35 @@ extension PreferencesSearchEntry {
             anchored: false),
       .init(.permissions, section: section, title: L10n.Onboarding.refreshStatus,
             keywords: ["permissions", "recheck"], anchored: false),
+    ]
+  }
+
+  // MARK: - AI
+
+  private static var ai: [PreferencesSearchEntry] {
+    let provider = L10n.AnnotateAI.settingsProviderSection
+    let apple = L10n.AnnotateAI.settingsAppleSection
+    let endpoints = L10n.AnnotateAI.settingsEndpointsSection
+    let clis = L10n.AnnotateAI.settingsCLISection
+    let privacy = L10n.AnnotateAI.settingsPrivacySection
+    return [
+      .init(.ai, section: provider, title: L10n.AnnotateAI.settingsProviderTitle,
+            detail: L10n.AnnotateAI.settingsProviderDescription,
+            keywords: ["ask", "prompt", "provider", "llm", "agent"]),
+      .init(.ai, section: apple, title: L10n.AnnotateAI.settingsAppleStatusTitle,
+            keywords: ["apple intelligence", "on-device", "foundation models"]),
+      .init(.ai, section: endpoints, title: endpoints,
+            detail: L10n.AnnotateAI.settingsEndpointsFooter,
+            keywords: ["openai", "api", "llm", "tools", "vision", "ollama", "lm studio"], anchored: false),
+      .init(.ai, section: clis, title: clis,
+            detail: L10n.AnnotateAI.settingsCLIFooter,
+            keywords: ["claude code", "codex", "opencode", "mcp", "terminal"], anchored: false),
+      .init(.ai, section: privacy, title: L10n.AnnotateAI.settingsSendImageTitle,
+            detail: L10n.AnnotateAI.settingsSendImageDescription, keywords: ["screenshot", "privacy", "vision"]),
+      .init(.ai, section: privacy, title: L10n.AnnotateAI.settingsTimeoutTitle,
+            detail: L10n.AnnotateAI.settingsTimeoutDescription, keywords: ["timeout", "cli"]),
+      .init(.ai, section: privacy, title: L10n.AnnotateAI.settingsConsentTitle,
+            detail: L10n.AnnotateAI.settingsConsentDescription, keywords: ["consent", "permission", "privacy"]),
     ]
   }
 

@@ -36,9 +36,18 @@ nonisolated struct AnnotateAgentRequest: Equatable {
 
 /// Where a provider sends the screenshot when it runs off the Mac. The user agrees once per `id`.
 nonisolated struct AnnotateAgentRemoteDestination: Equatable {
+  enum Kind: Equatable {
+    /// An HTTP endpoint; `host` is where the data goes.
+    case endpoint
+    /// An agent CLI on this Mac that forwards to its own model provider and may load the
+    /// user's MCP servers and hooks.
+    case agentCLI
+  }
+
   let id: String
   let name: String
   let host: String
+  var kind: Kind = .endpoint
 }
 
 nonisolated enum AnnotateAgentProviderError: Error, Equatable {
@@ -46,6 +55,9 @@ nonisolated enum AnnotateAgentProviderError: Error, Equatable {
   case notConfigured
   /// The provider ran but could not finish; the message is shown to the user.
   case failed(String)
+  /// The provider can't run until something is set up (CLI missing, Apple Intelligence
+  /// off). Shown like `failed`, with a way to open AI settings.
+  case needsSetup(String)
 }
 
 @MainActor

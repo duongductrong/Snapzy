@@ -194,6 +194,14 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("highlighter_text_snapping", true)
     writer.value("measure_unit", MeasureUnit.points.rawValue)
     writer.value("measure_axis", MeasureAxis.both.rawValue)
+
+    writer.section("annotate.ai")
+    writer.value("provider", AnnotateAgentProviderSelection.automatic.persistedValue)
+    writer.value("send_image", true)
+    writer.value("cli_timeout", AnnotateAgentAISettings.defaultCLITimeout)
+    for kind in AnnotateAgentCLIKind.allCases {
+      writer.value("\(kind.rawValue)_model", "")
+    }
   }
 
   private static func writeShortcuts(_ writer: inout SimpleTOMLWriter) {

@@ -579,6 +579,11 @@ private struct AnnotateAIDockPromptRow: View {
     newConversation.image = NSImage(systemSymbolName: "plus.bubble", accessibilityDescription: nil)
     newConversation.isEnabled = agent.hasConversation && !agent.isRunning
     menu.addItem(newConversation)
+    let settings = ClosureMenuItem(title: L10n.AnnotateAI.settings, keyEquivalent: "") {
+      AnnotateAgentAISettings.open()
+    }
+    settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+    menu.addItem(settings)
     return menu
   }
 

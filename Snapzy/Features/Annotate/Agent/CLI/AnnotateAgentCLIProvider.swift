@@ -14,8 +14,6 @@ import SnapzyCLIProtocol
 
 @MainActor
 final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
-  static let timeoutDefaultsKey = "annotateAgent.cliTimeout"
-  static let defaultTimeout: TimeInterval = 180
 
   let kind: AnnotateAgentCLIKind
   private let defaults: UserDefaults
@@ -25,7 +23,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
 
   /// The CLI sends the scene (and screenshot) to its own model provider.
   var remoteDestination: AnnotateAgentRemoteDestination? {
-    AnnotateAgentRemoteDestination(id: "cli:\(kind.rawValue)", name: kind.displayName, host: kind.displayName)
+    AnnotateAgentRemoteDestination(id: "cli:\(kind.rawValue)", name: kind.displayName, host: kind.displayName, kind: .agentCLI)
   }
 
   init(kind: AnnotateAgentCLIKind, defaults: UserDefaults = .standard) {
@@ -38,8 +36,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
   nonisolated deinit {}
 
   private var timeout: TimeInterval {
-    let value = defaults.double(forKey: Self.timeoutDefaultsKey)
-    return value > 0 ? value : Self.defaultTimeout
+    AnnotateAgentAISettings.cliTimeout(defaults: defaults)
   }
 
   private var model: String? {
@@ -48,8 +45,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
   }
 
   private var sendsImage: Bool {
-    let key = AnnotateAgentEndpointProvider.sendImageDefaultsKey
-    return defaults.object(forKey: key) == nil || defaults.bool(forKey: key)
+    AnnotateAgentAISettings.sendsImage(defaults: defaults)
   }
 
   static var helperPath: String {
@@ -66,7 +62,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     guard let executable = await Task.detached(priority: .userInitiated, operation: {
       AnnotateAgentCLIEnvironment.locate(kind, defaults: defaults)
     }).value else {
-      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
+      throw AnnotateAgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
     }
     try Task.checkCancellation()
 
@@ -186,10 +182,10 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
         stdinPath: stdinPath
       )
     } catch AnnotateAgentCLIProcess.LaunchError.spawnFailed(let code) {
-      let message = code == ENOENT || code == EACCES || code == ENOEXEC
-        ? L10n.AnnotateAI.cliNotInstalled(kind.displayName)
-        : L10n.AnnotateAI.cliFailed(kind.displayName, String(cString: strerror(code)))
-      throw AnnotateAgentProviderError.failed(message)
+      if code == ENOENT || code == EACCES || code == ENOEXEC {
+        throw AnnotateAgentProviderError.needsSetup(L10n.AnnotateAI.cliNotInstalled(kind.displayName))
+      }
+      throw AnnotateAgentProviderError.failed(L10n.AnnotateAI.cliFailed(kind.displayName, String(cString: strerror(code))))
     }
     defer { process.terminate() }
     DiagnosticLogger.shared.log(.info, .annotate, "AI agent CLI started", context: [

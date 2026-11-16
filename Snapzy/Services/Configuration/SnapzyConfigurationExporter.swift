@@ -242,6 +242,16 @@ enum SnapzyConfigurationExporter {
       defaults.string(forKey: PreferencesKeys.annotateMeasureAxis).flatMap(MeasureAxis.init(rawValue:))?.rawValue
         ?? MeasureAxis.both.rawValue
     )
+
+    writer.section("annotate.ai")
+    writer.value("provider", AnnotateAgentProviderSelection(
+      persistedValue: defaults.string(forKey: PreferencesKeys.annotateAgentProvider)
+    ).persistedValue)
+    writer.value("send_image", defaults.boolValue(PreferencesKeys.annotateAgentSendImage, default: true))
+    writer.value("cli_timeout", AnnotateAgentAISettings.cliTimeout(defaults: defaults))
+    for kind in AnnotateAgentCLIKind.allCases {
+      writer.value("\(kind.rawValue)_model", defaults.string(forKey: kind.modelDefaultsKey) ?? "")
+    }
   }
 
   private static func language(defaults: UserDefaults) -> String {

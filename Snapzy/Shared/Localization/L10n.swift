@@ -193,6 +193,11 @@ nonisolated enum L10n {
       defaultValue: "Cloud",
       comment: "Preferences tab title"
     )
+    static let aiTab = string(
+      "preferences.tab.ai",
+      defaultValue: "AI",
+      comment: "Preferences tab title for the Annotate AI prompt (Ask) settings"
+    )
     static let commandLineTab = string(
       "preferences.tab.command-line",
       defaultValue: "Command Line",
@@ -10451,6 +10456,144 @@ extension L10n {
     }
     static var consentSend: String {
       string("annotate.ai.consent-send", defaultValue: "Send", comment: "Alert button that allows sending the screenshot to an AI provider")
+    }
+    static func consentMessageCLI(_ name: String) -> String {
+      format("annotate.ai.consent-message-cli", defaultValue: "%@ gets the screenshot and the text recognized in it, and sends them to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first AI prompt goes to an agent CLI. %@ is the CLI name (Claude Code, Codex, OpenCode)", name)
+    }
+    static var settingsHeroSubtitle: String {
+      string("annotate.ai.settings-hero-subtitle", defaultValue: "Choose who answers Ask in Annotate: Apple Intelligence on this Mac, your own endpoint, or an agent CLI.", comment: "Settings › AI page subtitle")
+    }
+    static var settingsProviderSection: String {
+      string("annotate.ai.settings-provider-section", defaultValue: "Provider", comment: "Settings › AI section title")
+    }
+    static var settingsProviderTitle: String {
+      string("annotate.ai.settings-provider-title", defaultValue: "Ask AI with", comment: "Settings › AI row title: which provider answers the Annotate AI prompt")
+    }
+    static var settingsProviderDescription: String {
+      string("annotate.ai.settings-provider-description", defaultValue: "Automatic uses Apple Intelligence when it’s ready. Endpoints and agent CLIs are never picked for you, since they send the screenshot off this Mac.", comment: "Settings › AI provider row description")
+    }
+    static var settingsAppleSection: String {
+      string("annotate.ai.settings-apple-section", defaultValue: "Apple Intelligence", comment: "Settings › AI section title (product name)")
+    }
+    static var settingsAppleStatusTitle: String {
+      string("annotate.ai.settings-apple-status-title", defaultValue: "On-device model", comment: "Settings › AI row title: status of the Apple Intelligence model")
+    }
+    static var settingsAppleAvailable: String {
+      string("annotate.ai.settings-apple-available", defaultValue: "Ready on this Mac", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleUnsupportedOS: String {
+      string("annotate.ai.settings-apple-unsupported-os", defaultValue: "Requires macOS 26 or later", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotEligible: String {
+      string("annotate.ai.settings-apple-not-eligible", defaultValue: "This Mac doesn’t support Apple Intelligence", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotEnabled: String {
+      string("annotate.ai.settings-apple-not-enabled", defaultValue: "Turned off in System Settings", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsAppleNotReady: String {
+      string("annotate.ai.settings-apple-not-ready", defaultValue: "Still downloading or not ready yet", comment: "Apple Intelligence status in Settings")
+    }
+    static var settingsOpenSystemSettings: String {
+      string("annotate.ai.settings-open-system-settings", defaultValue: "Open System Settings…", comment: "Button that opens System Settings › Apple Intelligence & Siri")
+    }
+    static var settingsEndpointsSection: String {
+      string("annotate.ai.settings-endpoints-section", defaultValue: "Custom Endpoints", comment: "Settings › AI section title: OpenAI-compatible endpoints")
+    }
+    static var settingsEndpointsFooter: String {
+      string("annotate.ai.settings-endpoints-footer", defaultValue: "OpenAI-compatible endpoints, shared with OCR and Translate. Test checks whether the model can call tools and read images; Snapzy also learns this while you use it.", comment: "Settings › AI endpoints section footer")
+    }
+    static var settingsEndpointsEmpty: String {
+      string("annotate.ai.settings-endpoints-empty", defaultValue: "No custom endpoints yet", comment: "Settings › AI: the endpoint list is empty")
+    }
+    static var settingsManageEndpoints: String {
+      string("annotate.ai.settings-manage-endpoints", defaultValue: "Manage Endpoints…", comment: "Button that opens the shared custom endpoint list (Capture › OCR)")
+    }
+    static var settingsTest: String {
+      string("annotate.ai.settings-test", defaultValue: "Test", comment: "Button that checks what a custom AI endpoint supports")
+    }
+    static var settingsTesting: String {
+      string("annotate.ai.settings-testing", defaultValue: "Testing…", comment: "Shown while a custom AI endpoint is being tested")
+    }
+    static var settingsCapabilityTools: String {
+      string("annotate.ai.settings-capability-tools", defaultValue: "Tools", comment: "Badge: the endpoint's model can call tools (function calling)")
+    }
+    static var settingsCapabilityVision: String {
+      string("annotate.ai.settings-capability-vision", defaultValue: "Vision", comment: "Badge: the endpoint's model accepts images")
+    }
+    static var settingsCapabilitySupported: String {
+      string("annotate.ai.settings-capability-supported", defaultValue: "Supported", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCapabilityUnsupported: String {
+      string("annotate.ai.settings-capability-unsupported", defaultValue: "Not supported", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCapabilityUnknown: String {
+      string("annotate.ai.settings-capability-unknown", defaultValue: "Not checked yet", comment: "Tooltip of a capability badge")
+    }
+    static var settingsCLISection: String {
+      string("annotate.ai.settings-cli-section", defaultValue: "Agent CLIs", comment: "Settings › AI section title: Claude Code, Codex, OpenCode on this Mac")
+    }
+    static var settingsCLIFooter: String {
+      string("annotate.ai.settings-cli-footer", defaultValue: "Snapzy runs the CLI in the background and gives it only Snapzy’s annotation tools. Sign-in, model and usage belong to the CLI.", comment: "Settings › AI agent CLI section footer")
+    }
+    static var settingsCLIWarning: String {
+      string("annotate.ai.settings-cli-warning", defaultValue: "Agent CLIs may still load your own MCP servers, hooks and instructions. Text in a screenshot could steer the model toward them, so only use a CLI you trust with your screenshots.", comment: "Settings › AI warning about agent CLIs")
+    }
+    static var settingsRefresh: String {
+      string("annotate.ai.settings-refresh", defaultValue: "Refresh", comment: "Button that looks for agent CLIs again")
+    }
+    static var settingsCLINotFound: String {
+      string("annotate.ai.settings-cli-not-found", defaultValue: "Not found", comment: "Agent CLI status: not installed")
+    }
+    static var settingsCLIModelTitle: String {
+      string("annotate.ai.settings-cli-model-title", defaultValue: "Model", comment: "Settings › AI agent CLI row: model override")
+    }
+    static var settingsCLIModelDescription: String {
+      string("annotate.ai.settings-cli-model-description", defaultValue: "Leave empty to use the CLI’s own default.", comment: "Settings › AI agent CLI model override description")
+    }
+    static var settingsCLIModelPlaceholder: String {
+      string("annotate.ai.settings-cli-model-placeholder", defaultValue: "Default", comment: "Placeholder of the agent CLI model field")
+    }
+    static var settingsCLIPathTitle: String {
+      string("annotate.ai.settings-cli-path-title", defaultValue: "Location", comment: "Settings › AI agent CLI row: path to the executable")
+    }
+    static var settingsCLIPathDescription: String {
+      string("annotate.ai.settings-cli-path-description", defaultValue: "Leave empty to find it in your shell’s PATH.", comment: "Settings › AI agent CLI path description")
+    }
+    static var settingsCLIPathPlaceholder: String {
+      string("annotate.ai.settings-cli-path-placeholder", defaultValue: "Automatic", comment: "Placeholder of the agent CLI path field")
+    }
+    static var settingsCLIPathInvalid: String {
+      string("annotate.ai.settings-cli-path-invalid", defaultValue: "No runnable file at this location", comment: "Agent CLI path points to nothing runnable")
+    }
+    static var settingsChoose: String {
+      string("annotate.ai.settings-choose", defaultValue: "Choose…", comment: "Button that opens a file picker")
+    }
+    static var settingsPrivacySection: String {
+      string("annotate.ai.settings-privacy-section", defaultValue: "Privacy", comment: "Settings › AI section title")
+    }
+    static var settingsSendImageTitle: String {
+      string("annotate.ai.settings-send-image-title", defaultValue: "Send screenshot image", comment: "Settings › AI toggle title")
+    }
+    static var settingsSendImageDescription: String {
+      string("annotate.ai.settings-send-image-description", defaultValue: "Endpoints and agent CLIs get the screenshot along with the recognized text. When off, only the text and its layout are sent.", comment: "Settings › AI send image description")
+    }
+    static var settingsTimeoutTitle: String {
+      string("annotate.ai.settings-timeout-title", defaultValue: "Agent CLI time limit", comment: "Settings › AI row title")
+    }
+    static var settingsTimeoutDescription: String {
+      string("annotate.ai.settings-timeout-description", defaultValue: "Stop an agent CLI that takes longer than this to answer.", comment: "Settings › AI time limit description")
+    }
+    static var settingsConsentTitle: String {
+      string("annotate.ai.settings-consent-title", defaultValue: "Sending permissions", comment: "Settings › AI row title: providers allowed to receive screenshots")
+    }
+    static var settingsConsentDescription: String {
+      string("annotate.ai.settings-consent-description", defaultValue: "Snapzy asks once before the first screenshot goes to each endpoint or agent CLI. Reset to be asked again.", comment: "Settings › AI sending permissions description")
+    }
+    static var settingsConsentReset: String {
+      string("annotate.ai.settings-consent-reset", defaultValue: "Reset", comment: "Button that forgets which AI providers may receive screenshots")
+    }
+    static func settingsConsentCount(_ count: String) -> String {
+      format("annotate.ai.settings-consent-count", defaultValue: "Allowed: %@", comment: "Number of AI providers allowed to receive screenshots. %@ is a number", count)
     }
   }
 }

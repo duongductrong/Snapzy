@@ -110,6 +110,16 @@ Configurations created by older Snapzy versions may still contain a
 `dl:<id>` selection or `catalog_models` field. The removed downloadable
 provider is ignored and the selection is canonicalized to `builtin`.
 
+## Annotate AI configuration
+
+`[annotate.ai]` holds Annotate's AI prompt options ([AI.md](AI.md)):
+`provider` (`automatic`, `apple`, `endpoint:<uuid>`, `cli:claude`,
+`cli:codex`, `cli:opencode`; anything else imports as `automatic`),
+`send_image`, `cli_timeout` (seconds, 30...1800) and a model override per
+agent CLI (`claude_model`, `codex_model`, `opencode_model`; empty = the CLI's
+default). CLI paths, sending permissions and learned endpoint capabilities are
+per-Mac and never exported.
+
 ## Example
 
 ```toml
@@ -220,6 +230,14 @@ highlighter_text_snapping = true
 measure_unit = "points"
 measure_axis = "both"
 
+[annotate.ai]
+provider = "automatic"
+send_image = true
+cli_timeout = 180
+claude_model = ""
+codex_model = ""
+opencode_model = ""
+
 [shortcuts.global.fullscreen]
 key = "3"
 modifiers = ["command", "shift"]
@@ -244,6 +262,11 @@ modifiers = ["command", "shift"]
 enabled = true
 key = "t"
 modifiers = ["command", "option"]
+
+[shortcuts.annotate_actions.ai_prompt]
+enabled = true
+key = "k"
+modifiers = ["command"]
 
 [shortcuts.quick_access.edit_latest_capture]
 enabled = false

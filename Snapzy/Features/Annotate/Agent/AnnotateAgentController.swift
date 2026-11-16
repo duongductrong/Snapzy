@@ -75,6 +75,9 @@ final class AnnotateAgentController: ObservableObject {
   private var analyzedImage: NSImage?
   private var analysisTask: Task<AnnotateAgentImageAnalysis, Never>?
   private var toolbox: AnnotateAgentToolbox?
+  /// Provider the current conversation was held with; a change made elsewhere (Settings › AI)
+  /// starts a new conversation on the next prompt, like picking one in the dock.
+  private var conversationSelection: AnnotateAgentProviderSelection?
   private var runTask: Task<Void, Never>?
   private var operationID: UUID?
   private var noticeTask: Task<Void, Never>?
@@ -186,6 +189,11 @@ final class AnnotateAgentController: ObservableObject {
     }
 
     resetContextIfImageChanged()
+    if let conversationSelection, conversationSelection != providerSelection {
+      turns = []
+      toolbox = nil
+    }
+    conversationSelection = providerSelection
     prepareAnalysis()
     draft = ""
     dismissNotice()
@@ -351,6 +359,9 @@ final class AnnotateAgentController: ObservableObject {
         offersSettings = true
       case AnnotateAgentProviderError.failed(let detail):
         message = detail
+      case AnnotateAgentProviderError.needsSetup(let detail):
+        message = detail
+        offersSettings = true
       default:
         message = L10n.AnnotateAI.failed
       }
@@ -409,7 +420,13 @@ final class AnnotateAgentController: ObservableObject {
     let alert = NSAlert()
     alert.alertStyle = .informational
     alert.messageText = L10n.AnnotateAI.consentTitle(destination.name)
-    alert.informativeText = L10n.AnnotateAI.consentMessage(destination.host)
+    // Agent CLIs also run with the user's own MCP servers and hooks: say so up front.
+    switch destination.kind {
+    case .agentCLI:
+      alert.informativeText = L10n.AnnotateAI.consentMessageCLI(destination.name)
+    case .endpoint:
+      alert.informativeText = L10n.AnnotateAI.consentMessage(destination.host)
+    }
     alert.addButton(withTitle: L10n.AnnotateAI.consentSend)
     alert.addButton(withTitle: L10n.Common.cancel)
     guard let window = NSApp.keyWindow ?? NSApp.mainWindow else {
