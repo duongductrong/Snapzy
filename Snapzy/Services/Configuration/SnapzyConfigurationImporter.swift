@@ -610,6 +610,14 @@ enum SnapzyConfigurationImporter {
           defaults.set(model, forKey: kind.modelDefaultsKey)
         }
       }
+      collectString(&reader, "annotate", "ai", "\(kind.rawValue)_effort", mutations: &mutations) {
+        let effort = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if effort.isEmpty {
+          defaults.removeObject(forKey: kind.effortDefaultsKey)
+        } else {
+          defaults.set(effort, forKey: kind.effortDefaultsKey)
+        }
+      }
     }
   }
 

@@ -214,7 +214,12 @@ struct AISettingsView: View {
         if detector.isScanning {
           ProgressView().controlSize(.small)
         }
-        Button(L10n.AnnotateAI.settingsRefresh) { detector.refresh(force: true, includeVersions: true, reloadShellPath: true) }
+        Button(L10n.AnnotateAI.settingsRefresh) {
+          detector.refresh(force: true, includeVersions: true, reloadShellPath: true)
+          for kind in AnnotateAgentCLIKind.allCases {
+            AnnotateAgentCLIModelCatalogStore.shared.refresh(kind, executable: detector.installed[kind], force: true)
+          }
+        }
           .buttonStyle(.borderless)
           .font(.caption)
           .disabled(detector.isScanning)
@@ -420,9 +425,13 @@ private struct AISettingsCLIRow: View {
   let hasScanned: Bool
   let onChange: () -> Void
 
+  @ObservedObject private var catalog = AnnotateAgentCLIModelCatalogStore.shared
   @State private var isExpanded = false
   @State private var model: String
+  @State private var effort: String
   @State private var customPath: String
+  /// "Custom…" picked, before anything is typed.
+  @State private var isCustomModel = false
 
   init(kind: AnnotateAgentCLIKind, path: String?, version: String?, hasScanned: Bool, onChange: @escaping () -> Void) {
     self.kind = kind
@@ -431,43 +440,96 @@ private struct AISettingsCLIRow: View {
     self.hasScanned = hasScanned
     self.onChange = onChange
     _model = State(initialValue: UserDefaults.standard.string(forKey: kind.modelDefaultsKey) ?? "")
+    _effort = State(initialValue: UserDefaults.standard.string(forKey: kind.effortDefaultsKey) ?? "")
     _customPath = State(initialValue: UserDefaults.standard.string(forKey: kind.pathDefaultsKey) ?? "")
   }
 
+  private static let customTag = "\u{0}custom"
+
   var body: some View {
     DisclosureGroup(isExpanded: $isExpanded) {
-      VStack(alignment: .leading, spacing: 10) {
-        AISettingsCLIFieldRow(
-          title: L10n.AnnotateAI.settingsCLIModelTitle,
-          description: L10n.AnnotateAI.settingsCLIModelDescription
-        ) {
-          TextField(L10n.AnnotateAI.settingsCLIModelPlaceholder, text: $model)
-            .textFieldStyle(.roundedBorder)
-            .frame(width: 220)
-            .onSubmit(saveModel)
-            .onChange(of: model) { _ in saveModel() }
+      Picker(selection: modelSelection) {
+        Text(L10n.AnnotateAI.settingsCLIModelDefault).tag("")
+        if let current = unlistedModel {
+          Text(verbatim: current).tag(current)
         }
-
-        AISettingsCLIFieldRow(
-          title: L10n.AnnotateAI.settingsCLIPathTitle,
-          description: L10n.AnnotateAI.settingsCLIPathDescription
-        ) {
-          HStack(spacing: 6) {
-            TextField(L10n.AnnotateAI.settingsCLIPathPlaceholder, text: $customPath)
-              .textFieldStyle(.roundedBorder)
-              .frame(width: 220)
-              .onSubmit(savePath)
-            Button(L10n.AnnotateAI.settingsChoose, action: choosePath)
+        if catalog.loading.contains(kind) && options.isEmpty {
+          Divider()
+          Text(L10n.AnnotateAI.settingsCLIModelLoading).tag("\u{0}loading").disabled(true)
+        } else if !options.isEmpty {
+          ForEach(groupedOptions, id: \.0) { group, items in
+            if group.isEmpty {
+              Divider()
+              ForEach(items) { Text(verbatim: $0.name).tag($0.id) }
+            } else {
+              Section(group) {
+                ForEach(items) { Text(verbatim: $0.name).tag($0.id) }
+              }
+            }
           }
         }
-
-        if isCustomPathInvalid {
-          Text(L10n.AnnotateAI.settingsCLIPathInvalid)
-            .font(.caption)
-            .foregroundColor(.red)
-        }
+        Divider()
+        Text(L10n.AnnotateAI.settingsCLIModelCustom).tag(Self.customTag)
+      } label: {
+        AISettingsCLIRowLabel(
+          title: L10n.AnnotateAI.settingsCLIModelTitle,
+          description: L10n.AnnotateAI.settingsCLIModelPickerDescription,
+          isLoading: catalog.loading.contains(kind)
+        )
       }
-      .padding(.top, 6)
+      .pickerStyle(.menu)
+      .padding(.top, 8)
+
+      if showsCustomField {
+        TextField(text: $model, prompt: Text(L10n.AnnotateAI.settingsCLIModelCustomPlaceholder)) {
+          Text(L10n.AnnotateAI.settingsCLIModelCustom)
+        }
+        .onSubmit(saveModel)
+        .onChange(of: model) { _ in saveModel() }
+      }
+
+      Picker(selection: effortBinding) {
+        Text(L10n.AnnotateAI.settingsCLIModelDefault).tag("")
+        Divider()
+        ForEach(effortChoices, id: \.self) { level in
+          Text(L10n.AnnotateAI.settingsCLIEffortLevel(level)).tag(level)
+        }
+      } label: {
+        AISettingsCLIRowLabel(
+          title: L10n.AnnotateAI.settingsCLIEffortTitle,
+          description: effortAvailable ? L10n.AnnotateAI.settingsCLIEffortDescription : L10n.AnnotateAI.settingsCLIEffortNeedsModel
+        )
+      }
+      .pickerStyle(.menu)
+      .disabled(!effortAvailable)
+      .padding(.vertical, 6)
+
+      LabeledContent {
+        HStack(spacing: 6) {
+          Text(verbatim: locationText)
+            .foregroundStyle(isCustomPathInvalid ? Color.red : Color.secondary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .help(customPath.isEmpty ? (path ?? "") : customPath)
+          if !customPath.isEmpty {
+            Button {
+              customPath = ""
+              savePath()
+            } label: {
+              Image(systemName: "xmark.circle.fill")
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.borderless)
+            .help(L10n.AnnotateAI.settingsCLIPathPlaceholder)
+          }
+          Button(L10n.AnnotateAI.settingsChoose, action: choosePath)
+        }
+      } label: {
+        AISettingsCLIRowLabel(
+          title: L10n.AnnotateAI.settingsCLIPathTitle,
+          description: isCustomPathInvalid ? L10n.AnnotateAI.settingsCLIPathInvalid : L10n.AnnotateAI.settingsCLILocationDescription
+        )
+      }
     } label: {
       HStack(spacing: 10) {
         AnnotateAgentProviderIcon(symbolName: "terminal", logoImageName: kind.logoImageName, size: 16)
@@ -483,6 +545,16 @@ private struct AISettingsCLIRow: View {
             .truncationMode(.middle)
         }
         Spacer(minLength: 8)
+        if !isExpanded, let summary = selectionSummary {
+          Text(verbatim: summary)
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .lineLimit(1)
+            .truncationMode(.middle)
+            .padding(.horizontal, 7)
+            .frame(height: 18)
+            .background(Capsule(style: .continuous).fill(Color.secondary.opacity(0.12)))
+        }
         if hasScanned {
           AISettingsStatusDot(isOn: path != nil)
         }
@@ -491,16 +563,133 @@ private struct AISettingsCLIRow: View {
       .contentShape(Rectangle())
       .onTapGesture { withAnimation(.easeOut(duration: 0.15)) { isExpanded.toggle() } }
     }
+    .onChange(of: isExpanded) { expanded in
+      if expanded { catalog.refresh(kind, executable: path) }
+    }
+    .onChange(of: path) { newPath in
+      catalog.refresh(kind, executable: newPath, force: true)
+    }
     .onDisappear(perform: savePath)
     // Config import or `defaults write` while the page is open: show what is stored now,
     // unless the user is mid-edit on a value that differs.
     .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
       let storedModel = UserDefaults.standard.string(forKey: kind.modelDefaultsKey) ?? ""
       if storedModel != model.trimmingCharacters(in: .whitespacesAndNewlines) { model = storedModel }
+      let storedEffort = UserDefaults.standard.string(forKey: kind.effortDefaultsKey) ?? ""
+      if storedEffort != effort { effort = storedEffort }
       let storedPath = UserDefaults.standard.string(forKey: kind.pathDefaultsKey) ?? ""
       if storedPath != customPath, !isEditingPath { customPath = storedPath }
     }
   }
+
+  // MARK: Model
+
+  private var options: [AnnotateAgentCLIModelOption] { catalog.models[kind] ?? [] }
+  private var trimmedModel: String { model.trimmingCharacters(in: .whitespacesAndNewlines) }
+  private var selectedOption: AnnotateAgentCLIModelOption? {
+    let base = trimmedModel.split(separator: "#", maxSplits: 1).first.map(String.init) ?? trimmedModel
+    return options.first { $0.id == trimmedModel || $0.id == base }
+  }
+
+  private var showsCustomField: Bool {
+    if isCustomModel { return true }
+    guard !trimmedModel.isEmpty, catalog.models[kind] != nil else { return false }
+    return selectedOption == nil
+  }
+
+  /// A stored model the list doesn't have yet (still loading, or CLI not found).
+  private var unlistedModel: String? {
+    guard !trimmedModel.isEmpty, !showsCustomField, selectedOption == nil else { return nil }
+    return trimmedModel
+  }
+
+  private var modelSelection: Binding<String> {
+    Binding(
+      get: {
+        if showsCustomField { return Self.customTag }
+        if trimmedModel.isEmpty { return "" }
+        return selectedOption?.id ?? trimmedModel
+      },
+      set: { tag in
+        if tag == Self.customTag {
+          isCustomModel = true
+        } else if tag != trimmedModel {
+          selectModel(tag)
+        }
+      }
+    )
+  }
+
+  /// "Automatic (~/.local/bin/claude)" or the picked file.
+  private var locationText: String {
+    let trimmed = customPath.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !trimmed.isEmpty { return (trimmed as NSString).abbreviatingWithTildeInPath }
+    return L10n.AnnotateAI.settingsCLIPathPlaceholder
+  }
+
+  private var groupedOptions: [(String, [AnnotateAgentCLIModelOption])] {
+    var order: [String] = []
+    var groups: [String: [AnnotateAgentCLIModelOption]] = [:]
+    for option in options {
+      let group = option.group ?? ""
+      if groups[group] == nil { order.append(group) }
+      groups[group, default: []].append(option)
+    }
+    return order.map { ($0, groups[$0] ?? []) }
+  }
+
+  private var modelTitle: String {
+    if showsCustomField { return trimmedModel.isEmpty ? L10n.AnnotateAI.settingsCLIModelCustom : trimmedModel }
+    if let selectedOption {
+      return selectedOption.group.map { "\($0) / \(selectedOption.name)" } ?? selectedOption.name
+    }
+    return trimmedModel.isEmpty ? L10n.AnnotateAI.settingsCLIModelDefault : trimmedModel
+  }
+
+  private func selectModel(_ id: String) {
+    isCustomModel = false
+    model = id
+    saveModel()
+    // Keep the effort only where the new model takes it.
+    if !effort.isEmpty, !effortChoices.contains(effort) { effortBinding.wrappedValue = "" }
+  }
+
+  /// Collapsed summary: "Opus · High".
+  private var selectionSummary: String? {
+    var parts: [String] = []
+    if !trimmedModel.isEmpty { parts.append(selectedOption?.name ?? trimmedModel) }
+    if !effort.isEmpty, effortAvailable { parts.append(L10n.AnnotateAI.settingsCLIEffortLevel(effort)) }
+    return parts.isEmpty ? nil : parts.joined(separator: " · ")
+  }
+
+  // MARK: Effort
+
+  private var effortChoices: [String] {
+    let levels = selectedOption?.efforts ?? AnnotateAgentCLIEffort.levels(for: kind)
+    // A value from the config file stays selectable.
+    return AnnotateAgentCLIEffort.sorted(effort.isEmpty ? levels : levels + [effort])
+  }
+
+  /// OpenCode sets effort as the model's variant, so it needs a model.
+  private var effortAvailable: Bool {
+    kind != .openCode || (!trimmedModel.isEmpty && !trimmedModel.contains("#"))
+  }
+
+  private var effortBinding: Binding<String> {
+    Binding(
+      get: { effort },
+      set: { value in
+        effort = value
+        if value.isEmpty {
+          UserDefaults.standard.removeObject(forKey: kind.effortDefaultsKey)
+        } else {
+          UserDefaults.standard.set(value, forKey: kind.effortDefaultsKey)
+        }
+      }
+    )
+  }
+
+  // MARK: Path
 
   private var subtitle: String {
     guard hasScanned else { return "…" }
@@ -522,7 +711,7 @@ private struct AISettingsCLIRow: View {
   }
 
   private func saveModel() {
-    let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+    let trimmed = trimmedModel
     if trimmed.isEmpty {
       UserDefaults.standard.removeObject(forKey: kind.modelDefaultsKey)
     } else {
@@ -560,18 +749,25 @@ private struct AISettingsCLIRow: View {
 
 // MARK: - Shared pieces
 
-/// Like `SettingRow`, without its search anchor id: each CLI repeats these titles.
-private struct AISettingsCLIFieldRow<Content: View>: View {
+/// Title over a secondary line, the way System Settings labels a row.
+/// Not `SettingRow`: that adds a search anchor id, and each CLI repeats these titles.
+private struct AISettingsCLIRowLabel: View {
   let title: String
   let description: String
-  @ViewBuilder let content: () -> Content
+  var isLoading = false
 
   var body: some View {
-    HStack(spacing: 12) {
-      Text(title)
-        .hint(description, variant: .icon(.info))
-      Spacer()
-      content()
+    VStack(alignment: .leading, spacing: 2) {
+      HStack(spacing: 6) {
+        Text(title)
+        if isLoading {
+          ProgressView().controlSize(.mini)
+        }
+      }
+      Text(description)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
     }
   }
 }

@@ -10548,10 +10548,51 @@ extension L10n {
       string("annotate.ai.settings-cli-model-title", defaultValue: "Model", comment: "Settings › AI agent CLI row: model override")
     }
     static var settingsCLIModelDescription: String {
-      string("annotate.ai.settings-cli-model-description", defaultValue: "Leave empty to use the CLI’s own default.", comment: "Settings › AI agent CLI model override description")
+      string("annotate.ai.settings-cli-model-description", defaultValue: "Pick a model the CLI offers, or keep the CLI’s own default.", comment: "Settings › AI agent CLI model override description")
     }
     static var settingsCLIModelPlaceholder: String {
       string("annotate.ai.settings-cli-model-placeholder", defaultValue: "Default", comment: "Placeholder of the agent CLI model field")
+    }
+    static var settingsCLIModelPickerDescription: String {
+      string("annotate.ai.settings-cli-model-picker-description", defaultValue: "Models this CLI can use. CLI default follows its own settings.", comment: "Settings › AI agent CLI model picker description")
+    }
+    static var settingsCLILocationDescription: String {
+      string("annotate.ai.settings-cli-location-description", defaultValue: "Found in your shell’s PATH unless you choose a file.", comment: "Settings › AI agent CLI location row description")
+    }
+    static var settingsCLIModelDefault: String {
+      string("annotate.ai.settings-cli-model-default", defaultValue: "CLI default", comment: "Agent CLI model picker: use the CLI's own model")
+    }
+    static var settingsCLIModelCustom: String {
+      string("annotate.ai.settings-cli-model-custom", defaultValue: "Custom…", comment: "Agent CLI model picker: type a model id")
+    }
+    static var settingsCLIModelLoading: String {
+      string("annotate.ai.settings-cli-model-loading", defaultValue: "Loading models…", comment: "Agent CLI model picker while the list loads")
+    }
+    static var settingsCLIModelNone: String {
+      string("annotate.ai.settings-cli-model-none", defaultValue: "No models found", comment: "Agent CLI model picker: the CLI listed no models")
+    }
+    static var settingsCLIModelCustomPlaceholder: String {
+      string("annotate.ai.settings-cli-model-custom-placeholder", defaultValue: "Model id, e.g. provider/model", comment: "Placeholder of the custom agent CLI model field")
+    }
+    static var settingsCLIEffortTitle: String {
+      string("annotate.ai.settings-cli-effort-title", defaultValue: "Reasoning effort", comment: "Settings › AI agent CLI row: reasoning effort")
+    }
+    static var settingsCLIEffortDescription: String {
+      string("annotate.ai.settings-cli-effort-description", defaultValue: "Higher effort handles complex edits better, but replies slower.", comment: "Settings › AI agent CLI reasoning effort description")
+    }
+    static var settingsCLIEffortNeedsModel: String {
+      string("annotate.ai.settings-cli-effort-needs-model", defaultValue: "Pick a model to set its effort.", comment: "OpenCode effort needs an explicit model")
+    }
+    static func settingsCLIEffortLevel(_ level: String) -> String {
+      switch level {
+      case "minimal": string("annotate.ai.settings-cli-effort-minimal", defaultValue: "Minimal", comment: "Reasoning effort level")
+      case "low": string("annotate.ai.settings-cli-effort-low", defaultValue: "Low", comment: "Reasoning effort level")
+      case "medium": string("annotate.ai.settings-cli-effort-medium", defaultValue: "Medium", comment: "Reasoning effort level")
+      case "high": string("annotate.ai.settings-cli-effort-high", defaultValue: "High", comment: "Reasoning effort level")
+      case "xhigh": string("annotate.ai.settings-cli-effort-xhigh", defaultValue: "Extra high", comment: "Reasoning effort level")
+      case "max": string("annotate.ai.settings-cli-effort-max", defaultValue: "Max", comment: "Reasoning effort level")
+      default: level.prefix(1).uppercased() + level.dropFirst()
+      }
     }
     static var settingsCLIPathTitle: String {
       string("annotate.ai.settings-cli-path-title", defaultValue: "Location", comment: "Settings › AI agent CLI row: path to the executable")

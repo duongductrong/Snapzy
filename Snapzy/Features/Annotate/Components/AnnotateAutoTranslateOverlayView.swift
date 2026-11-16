@@ -21,6 +21,8 @@ struct AnnotateAutoTranslateOverlayView: View {
   @ObservedObject var state: AnnotateState
   let scale: CGFloat
   let canvasBounds: CGRect
+  /// Corner radius the canvas clips the image with (display points).
+  var cornerRadius: CGFloat = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
@@ -57,6 +59,9 @@ struct AnnotateAutoTranslateOverlayView: View {
     let elapsed = now.timeIntervalSince(phaseStart)
     let fullRect = CGRect(origin: .zero, size: size)
     let isDark = colorScheme == .dark
+    // Paint only inside the image's own outline (rounded corners included).
+    let imageShape = AnnotateAIOverlayPainter.imageShape(size: size, cornerRadius: cornerRadius)
+    context.clip(to: imageShape)
 
     // Veil: whole image while reading, eased back once blocks are known.
     let veilTarget: Double = phase == .reading ? (isDark ? 0.22 : 0.12) : (isDark ? 0.12 : 0.06)
@@ -81,6 +86,12 @@ struct AnnotateAutoTranslateOverlayView: View {
       if phase == .reading, !reduceMotion {
         drawSweep(in: &context, rect: fullRect, now: now, phaseOffset: 0, strength: 0.16)
       }
+      // Whole image is being read: light its edge; fades out with the veil on resolve.
+      AnnotateAIOverlayPainter.drawEdgeGlow(
+        in: &context, shape: imageShape, rect: fullRect, now: now,
+        strength: (phase == .reading ? 1 : 0.6) * veilFade,
+        reduceMotion: reduceMotion, isDark: isDark
+      )
     }
 
     let blocks = state.autoTranslateBlocks

@@ -17,6 +17,9 @@ struct AnnotateAgentOverlayView: View {
   @ObservedObject var agent: AnnotateAgentController
   let scale: CGFloat
   let canvasBounds: CGRect
+  /// Corner radius the canvas clips the image with (display points), so the overlay
+  /// follows the same outline.
+  var cornerRadius: CGFloat = 0
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @Environment(\.colorScheme) private var colorScheme
@@ -48,6 +51,9 @@ struct AnnotateAgentOverlayView: View {
     let fullRect = CGRect(origin: .zero, size: size)
     let isDark = colorScheme == .dark
     let elapsed = now.timeIntervalSince(phaseStart)
+    // Paint only inside the image's own outline (rounded corners included).
+    let imageShape = AnnotateAIOverlayPainter.imageShape(size: size, cornerRadius: cornerRadius)
+    context.clip(to: imageShape)
 
     // Veil: strongest while reading, then a whisper while acting, gone afterwards.
     let veilTarget: Double
@@ -62,6 +68,14 @@ struct AnnotateAgentOverlayView: View {
     }
     if agent.phase == .reading, !reduceMotion {
       AnnotateAIOverlayPainter.drawSweep(in: &context, rect: fullRect, now: now, phaseOffset: 0, strength: 0.16 * veilIn)
+    }
+    // Edge glow: full while reading, softer while acting.
+    if agent.isRunning {
+      let edgeTarget: Double = agent.phase == .reading ? 1 : (agent.phase == .acting ? 0.55 : 0)
+      AnnotateAIOverlayPainter.drawEdgeGlow(
+        in: &context, shape: imageShape, rect: fullRect, now: now, strength: edgeTarget * veilIn,
+        reduceMotion: reduceMotion, isDark: isDark
+      )
     }
 
     for mark in agent.marks {

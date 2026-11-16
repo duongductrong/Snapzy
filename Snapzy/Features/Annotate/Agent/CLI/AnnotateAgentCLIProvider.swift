@@ -45,6 +45,11 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
     return value?.isEmpty == false ? value : nil
   }
 
+  private var effort: String? {
+    let value = defaults.string(forKey: kind.effortDefaultsKey)?.trimmingCharacters(in: .whitespacesAndNewlines)
+    return value?.isEmpty == false ? value : nil
+  }
+
   private var sendsImage: Bool {
     AnnotateAgentAISettings.sendsImage(defaults: defaults)
   }
@@ -124,6 +129,7 @@ final class AnnotateAgentCLIProvider: AnnotateAgentProvider {
         systemPrompt: Self.instructions,
         resumeSessionID: resumeID,
         model: model,
+        effort: effort,
         mcp: mcp,
         directory: directory.path,
         runID: runID,

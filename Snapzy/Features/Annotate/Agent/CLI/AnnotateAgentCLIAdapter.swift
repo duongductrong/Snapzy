@@ -45,6 +45,8 @@ nonisolated struct AnnotateAgentCLIRunInput: Equatable {
   let systemPrompt: String
   let resumeSessionID: String?
   let model: String?
+  /// Reasoning effort ("low", "high"…); `nil` = the CLI's default.
+  var effort: String? = nil
   let mcp: AnnotateAgentMCPLaunch
   /// The CLI's private working directory. Stable per CLI, because Claude Code keys
   /// saved conversations by working directory and `--resume` must find them.
@@ -101,6 +103,7 @@ nonisolated enum AnnotateAgentCLIAdapter {
     ]
     if let resume = input.resumeSessionID { arguments += ["--resume", resume] }
     if let model = input.model { arguments += ["--model", model] }
+    if let effort = input.effort { arguments += ["--effort", effort] }
     // `-p` with no prompt argument reads it from stdin.
     return AnnotateAgentCLIInvocation(arguments: arguments, files: [configName: config], stdin: input.prompt)
   }
@@ -126,6 +129,7 @@ nonisolated enum AnnotateAgentCLIAdapter {
     arguments += ["--json", "--skip-git-repo-check"]
     for override in overrides { arguments += ["-c", override] }
     if let model = input.model { arguments += ["--model", model] }
+    if let effort = input.effort { arguments += ["-c", "model_reasoning_effort=\(toml(effort))"] }
     if let image = input.imagePath { arguments += ["--image", image] }
     if let resume = input.resumeSessionID { arguments += [resume] }
     // `-` = prompt from stdin. Instructions lead the first message; a resumed thread has them.
@@ -153,7 +157,11 @@ nonisolated enum AnnotateAgentCLIAdapter {
     // service would ignore it. OpenCode has no system prompt flag, so instructions lead the message.
     var arguments = ["run", "--standalone", "--format", "json"]
     if let resume = input.resumeSessionID { arguments += ["--session", resume] }
-    if let model = input.model { arguments += ["--model", model] }
+    // Effort is the model's variant (`provider/model#high`); it needs an explicit model.
+    if var model = input.model {
+      if let effort = input.effort, !model.contains("#") { model += "#\(effort)" }
+      arguments += ["--model", model]
+    }
     if let image = input.imagePath { arguments += ["--file", image] }
     arguments += ["--", firstMessage(input)]
     return AnnotateAgentCLIInvocation(

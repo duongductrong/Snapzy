@@ -388,7 +388,8 @@ struct AnnotateCanvasView: View {
         AnnotateAgentOverlayView(
           agent: state.agent,
           scale: scale,
-          canvasBounds: foregroundBounds
+          canvasBounds: foregroundBounds,
+          cornerRadius: state.effectiveCornerRadius
         )
         .frame(width: foregroundWidth, height: foregroundHeight)
         .clipped()
@@ -399,7 +400,8 @@ struct AnnotateCanvasView: View {
           AnnotateAutoTranslateOverlayView(
             state: state,
             scale: scale,
-            canvasBounds: foregroundBounds
+            canvasBounds: foregroundBounds,
+            cornerRadius: state.effectiveCornerRadius
           )
           .frame(width: foregroundWidth, height: foregroundHeight)
           .clipped()

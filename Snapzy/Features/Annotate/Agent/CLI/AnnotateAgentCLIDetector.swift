@@ -51,6 +51,8 @@ nonisolated enum AnnotateAgentCLIKind: String, CaseIterable, Identifiable, Senda
   var pathDefaultsKey: String { "annotateAgent.cli.\(rawValue).path" }
   /// UserDefaults key for the model override ("provider/model" for OpenCode). Empty = the CLI's default.
   var modelDefaultsKey: String { "annotateAgent.cli.\(rawValue).model" }
+  /// UserDefaults key for the reasoning effort ("low", "high"…). Empty = the CLI's default.
+  var effortDefaultsKey: String { "annotateAgent.cli.\(rawValue).effort" }
 }
 
 nonisolated enum AnnotateAgentCLIEnvironment {

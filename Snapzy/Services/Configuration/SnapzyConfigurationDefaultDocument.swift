@@ -201,6 +201,7 @@ enum SnapzyConfigurationDefaultDocument {
     writer.value("cli_timeout", AnnotateAgentAISettings.defaultCLITimeout)
     for kind in AnnotateAgentCLIKind.allCases {
       writer.value("\(kind.rawValue)_model", "")
+      writer.value("\(kind.rawValue)_effort", "")
     }
   }
 
