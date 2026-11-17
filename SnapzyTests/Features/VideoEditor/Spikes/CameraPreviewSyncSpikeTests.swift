@@ -50,7 +50,7 @@ final class CameraPreviewSyncSpikeTests: XCTestCase {
     // 1. Continuous play across the speed section and the clip handoff.
     await sync.seekExact(to: .zero)
     await sync.play()
-    print(try await measure(sync, seconds: 7.5).json("play-1x-handoff-speed4x", corrections: sync.corrections))
+    SpikeMetrics.emit(try await measure(sync, seconds: 7.5).json("play-1x-handoff-speed4x", corrections: sync.corrections))
 
     // 2. Pause/play cycles.
     var stats = Stats()
@@ -62,7 +62,7 @@ final class CameraPreviewSyncSpikeTests: XCTestCase {
       let s = try await measure(sync, seconds: 0.8)
       stats.clock += s.clock; stats.frame += s.frame
     }
-    print(stats.json("pause-play-x5", corrections: sync.corrections))
+    SpikeMetrics.emit(stats.json("pause-play-x5", corrections: sync.corrections))
 
     // 3. Exact seeks, then play.
     stats = Stats()
@@ -73,7 +73,7 @@ final class CameraPreviewSyncSpikeTests: XCTestCase {
       let s = try await measure(sync, seconds: 0.6)
       stats.clock += s.clock; stats.frame += s.frame
     }
-    print(stats.json("seek-exact-x8", corrections: sync.corrections))
+    SpikeMetrics.emit(stats.json("seek-exact-x8", corrections: sync.corrections))
 
     // 4. Scrub burst (camera ¼ s tolerance), then release with an exact seek.
     sync.pause()
@@ -84,12 +84,12 @@ final class CameraPreviewSyncSpikeTests: XCTestCase {
     let releasedAt = Date()
     await sync.seekExact(to: CMTime(seconds: 7, preferredTimescale: 600))
     let settleMs = Date().timeIntervalSince(releasedAt) * 1000
-    print("{\"scenario\":\"scrub-release\",\"clockAtRestMs\":\(String(format: "%.2f", abs(sync.clockDrift()) * 1000)),\"releaseSeekMs\":\(String(format: "%.0f", settleMs))}")
+    SpikeMetrics.emit("{\"scenario\":\"scrub-release\",\"clockAtRestMs\":\(String(format: "%.2f", abs(sync.clockDrift()) * 1000)),\"releaseSeekMs\":\(String(format: "%.0f", settleMs))}")
 
     // 5. Player rate 2×.
     await sync.seekExact(to: CMTime(seconds: 0.5, preferredTimescale: 600))
     await sync.play(rate: 2)
-    print(try await measure(sync, seconds: 3).json("play-rate-2x", corrections: sync.corrections))
+    SpikeMetrics.emit(try await measure(sync, seconds: 3).json("play-rate-2x", corrections: sync.corrections))
     sync.pause()
 
     // 6. CPU: primary alone vs primary + camera (both on screen).
@@ -103,7 +103,7 @@ final class CameraPreviewSyncSpikeTests: XCTestCase {
       sync.primary.play()
     }
     sync.primary.pause()
-    print(String(
+    SpikeMetrics.emit(String(
       format: "{\"scenario\":\"cpu\",\"processPrimaryOnly\":%.1f,\"processWithCamera\":%.1f,"
         + "\"machinePrimaryOnly\":%.2f,\"machineWithCamera\":%.2f}",
       solo.process, both.process, solo.machine, both.machine

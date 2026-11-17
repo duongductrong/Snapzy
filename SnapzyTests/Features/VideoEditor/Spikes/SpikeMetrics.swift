@@ -9,6 +9,22 @@ import Darwin
 import Foundation
 
 enum SpikeMetrics {
+  /// Prints a result line and appends it to `SNAPZY_SPIKE_OUT` when set (xcodebuild
+  /// does not surface test stdout).
+  static func emit(_ line: String) {
+    print(line)
+    guard let path = ProcessInfo.processInfo.environment["SNAPZY_SPIKE_OUT"] else { return }
+    let url = URL(fileURLWithPath: path)
+    let data = Data((line + "\n").utf8)
+    if let handle = try? FileHandle(forWritingTo: url) {
+      handle.seekToEndOfFile()
+      handle.write(data)
+      try? handle.close()
+    } else {
+      try? data.write(to: url)
+    }
+  }
+
   /// User + system CPU seconds consumed by this process so far.
   static func processCPUTime() -> Double {
     var usage = rusage()

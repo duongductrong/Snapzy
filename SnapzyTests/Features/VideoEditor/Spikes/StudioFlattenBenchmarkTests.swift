@@ -78,7 +78,7 @@ final class StudioFlattenBenchmarkTests: XCTestCase {
     }
     for (name, recipe) in variants {
       let result = try await flatten(screen: screenURL, camera: recipe?.requiredAuxiliaryTracks.isEmpty == false ? cameraURL : nil, recipe: recipe, preset: preset)
-      print(String(
+      SpikeMetrics.emit(String(
         format: "{\"variant\":\"%@\",\"preset\":\"%@\",\"size\":\"%@\",\"durationS\":%.1f,\"wallS\":%.1f,\"ratio\":%.3f,\"machineCpuPct\":%.1f}",
         name, preset, result.size, result.duration, result.wall, result.wall / result.duration, result.machineCPU
       ))
