@@ -236,11 +236,11 @@ final class VideoEditorAgentVisionTests: XCTestCase {
       .init(start: 10.5, duration: 0.5, text: "Bye."),
     ]
     let calls = Counter()
-    let transcriber = VideoEditorAgentTranscriber { _, _, locale in
+    let transcriber = VideoEditorAgentTranscriber(engine: transcriptEngine { locale in
       calls.increment()
       XCTAssertEqual(locale.identifier.replacingOccurrences(of: "_", with: "-"), "vi-VN")
       return words
-    }
+    })
     let (state, toolbox) = try await makeActivityToolbox(transcriber: transcriber)
 
     // Cut 2–5: speech after it slides 3 s left.
@@ -262,13 +262,13 @@ final class VideoEditorAgentVisionTests: XCTestCase {
   }
 
   func testGetTranscript_errorsAreWrittenForTheModel() async throws {
-    let denied = VideoEditorAgentTranscriber { _, _, _ in throw VideoEditorTranscriptError.denied }
+    let denied = VideoEditorAgentTranscriber(engine: transcriptEngine { _ in throw VideoEditorTranscriptError.denied })
     let (_, toolbox) = try await makeActivityToolbox(transcriber: denied)
     let result = await toolbox.execute(name: "get_transcript", argumentsJSON: "{}")
     XCTAssertTrue(result.isError)
     XCTAssertTrue(result.text.contains("Speech Recognition"), result.text)
 
-    let silent = VideoEditorAgentTranscriber { _, _, _ in [] }
+    let silent = VideoEditorAgentTranscriber(engine: transcriptEngine { _ in [] })
     let (_, quiet) = try await makeActivityToolbox(transcriber: silent)
     let empty = try json(await quiet.execute(name: "get_transcript", argumentsJSON: "{}"))
     XCTAssertEqual((empty["phrases"] as? [Any])?.count, 0)
@@ -455,7 +455,15 @@ final class VideoEditorAgentVisionTests: XCTestCase {
 
 // MARK: - Fixtures
 
-private final class Counter: @unchecked Sendable {
+/// Builds a transcript engine outside the test class's main-actor isolation, like the production
+/// `SpeechTranscriptionEngine.transcribe`, so the closure converts to `Engine` on older toolchains.
+private nonisolated func transcriptEngine(
+  _ body: @escaping @Sendable (Locale) throws -> [VideoEditorTranscriptWord]
+) -> VideoEditorAgentTranscriber.Engine {
+  { _, _, locale in try body(locale) }
+}
+
+private nonisolated final class Counter: @unchecked Sendable {
   private let lock = NSLock()
   private var count = 0
   var value: Int { lock.lock(); defer { lock.unlock() }; return count }
