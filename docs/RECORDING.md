@@ -110,8 +110,8 @@ The camera overlay starts before `startRecording()` so it can be added to the in
 ## Smart Camera Metadata
 
 - `RecordingMouseTracker` (`Snapzy/Services/Capture/RecordingMouseTracker.swift`) samples the cursor on a main-runloop timer at `clamp(fps*2, 60, 120)` samples/s plus a global mouse-move monitor (deduplicated), starting on the first video frame. Samples are normalized 0...1 in **top-left** coordinates relative to the capture rect, with `isInsideCapture` flags and pause-excluded timestamps.
-- `RecordingMetadata` v5 (`Snapzy/Services/Capture/RecordingMetadata.swift`): `version`, `coordinateSpace`, `captureSize`, `samplesPerSecond`, `mouseSamples`, plus optional `audioSourceURL`, `audioSourceTrackRoles`, `audioSourceTracks` (trackID → role). Older versions are canonicalized on load (v1 bottom-left coordinates are flipped).
-- Storage: `Application Support/Snapzy/Captures/RecordingMetadata/` with `Entries/<uuid>.json`, `AudioSources/`, and `index.json` (path + security-scoped bookmark per video). Legacy layouts (root-level store, `*.snapzy-recording.json` sidecars) are migrated on load. `RecordingMetadataCleanupScheduler` prunes orphans every 30 min (24 h grace after the video file disappears).
+- `RecordingMetadata` v6 (`Snapzy/Services/Capture/RecordingMetadata.swift`): `version`, `coordinateSpace`, `captureSize`, `samplesPerSecond`, `mouseSamples`, plus optional `audioSourceURL`, `audioSourceTrackRoles`, `audioSourceTracks` (trackID → role). v6 adds Studio fields (`RecordingStudioSources.swift`): `cursorCapture`, `isCursorBaked` (absent ⇒ `true`, so every ≤v5 recording reads as baked; written only when `false`) and `cameraSource`. All decode with `decodeIfPresent`. Older versions are canonicalized on load (v1 bottom-left coordinates are flipped).
+- Storage: `Application Support/Snapzy/Captures/RecordingMetadata/` with `Entries/<uuid>.json`, sidecar folders per `RecordingSidecarKind` (`AudioSources/`, `CameraSources/`, `CursorImages/`, written via `RecordingMetadataStore.storeSidecar(from:kind:)`), and `index.json` (path + security-scoped bookmark per video). Legacy layouts (root-level store, `*.snapzy-recording.json` sidecars) are migrated on load. `RecordingMetadataCleanupScheduler` prunes orphans every 30 min (24 h grace after the video file disappears); deleting an entry deletes every sidecar it references inside the store (references outside it are never touched).
 - Consumed later by the video editor's Follow Mouse — see [`VIDEO_EDITOR.md`](VIDEO_EDITOR.md).
 
 ## Menu Bar and Status Bar During Recording
@@ -145,7 +145,7 @@ The pre-record toolbar has a camera button (`RecordingToolbarView` → `Recordin
 | `Snapzy/Features/Recording/MicrophoneAudioCapturer.swift` | Independent AVCaptureSession mic capture, 48 kHz LPCM pinning |
 | `Snapzy/Services/Capture/ScreenRecordingManager.swift` | SCStream + writer pipeline, state machine, audio normalization, metadata save |
 | `Snapzy/Services/Capture/RecordingMouseTracker.swift` | Cursor sampling for Smart Camera |
-| `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata v5 model, store layout, index, migration, orphan cleanup |
+| `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata v6 model, store layout, index, migration, orphan cleanup |
 | `Snapzy/Services/Capture/RecordingAudioLevelMeter.swift` | RMS metering for the status bar waveform |
 | `Snapzy/Services/Capture/MouseClickHighlightService.swift` + `KeystrokeMonitorService.swift` | Global mouse monitors and head session keyboard tap behind recording overlays |
 | `Snapzy/Services/Capture/TempCaptureManager.swift` | Recording save plan, processing dir lifecycle, temp recovery |

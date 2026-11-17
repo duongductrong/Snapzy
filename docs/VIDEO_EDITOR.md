@@ -209,7 +209,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 | Condition | Path |
 | --- | --- |
-| Zooms, background, speed segments, or a multi-clip sequence present | `exportWithZooms` — `AVMutableComposition` + custom `ZoomCompositor` (`AVVideoCompositing`, CI/Metal per-frame render) |
+| Zooms, background, speed segments, a multi-clip sequence, or an active Studio layer present | `exportWithZooms` — `AVMutableComposition` + custom `ZoomCompositor` (`AVVideoCompositing`, CI/Metal per-frame render) |
 | `exportSettings.audioMode == .mute` (no effects) | `exportVideoOnly` |
 | Otherwise | `exportStandard` |
 
@@ -291,7 +291,9 @@ Two layouts, picked in Settings → AI → Video Editor: **Sidebar** (default), 
 | `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCalculator.swift` | Per-frame zoom progress/crop math, easing, transition clamps |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorExporter.swift` | Export routing, composition build, replace/copy, audio normalization |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorSessionStore.swift` | Private source snapshots, sidecar validation, package moves, and cleanup |
-| `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer |
+| `Snapzy/Features/VideoEditor/Services/VideoEditorZoomCompositor.swift` | Custom `AVVideoCompositing` per-frame zoom/background renderer; Studio hooks `compositeSourceSpaceLayers` (before zoom) / `compositeCanvasSpaceLayers` (after background); explicit screen track + auxiliary (camera) track IDs |
+| `Snapzy/Features/VideoEditor/Models/VideoEditorStudioRecipe.swift` | Sendable Studio layer recipe (cursor/camera/captions) carried by the compositor instruction; empty ⇒ no behaviour change |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorStudioOverlayHost.swift` | Preview hosts: `.source` inside the zoom transform, `.canvas` over the padded composite |
 | `Snapzy/Features/VideoEditor/Services/GIFResizer.swift` | ImageIO GIF resize preserving loop/delays |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorClipStripView.swift` | The clip sequence strip: select, reorder, trim, split, delete |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorLeftRail.swift` | Collapsed left rail: Background and Zoom configuration entries |

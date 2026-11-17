@@ -49,7 +49,8 @@ nonisolated struct RecordingAudioSourceTrack: Codable, Equatable {
 }
 
 nonisolated struct RecordingMetadata: Codable, Equatable {
-  static let currentVersion = 5
+  /// v6 adds Studio recording fields (`cursorCapture`, `isCursorBaked`, `cameraSource`).
+  static let currentVersion = 6
 
   var version: Int
   var coordinateSpace: RecordingCoordinateSpace
@@ -59,6 +60,13 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
   var audioSourceURL: URL?
   var audioSourceTrackRoles: [RecordingAudioSourceTrackRole]
   var audioSourceTracks: [RecordingAudioSourceTrack]
+  /// Cursor data of a Studio recording; `nil` when the cursor was not captured apart.
+  var cursorCapture: RecordingCursorCapture?
+  /// True when the cursor is drawn into the video pixels (every ≤v5 recording and any
+  /// non-Studio recording). Only Studio recordings set it to false.
+  var isCursorBaked: Bool
+  /// Camera recorded as a sidecar movie; `nil` when the camera is baked or absent.
+  var cameraSource: RecordingCameraSource?
 
   init(
     version: Int = RecordingMetadata.currentVersion,
@@ -68,7 +76,10 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     mouseSamples: [RecordedMouseSample],
     audioSourceURL: URL? = nil,
     audioSourceTrackRoles: [RecordingAudioSourceTrackRole] = [],
-    audioSourceTracks: [RecordingAudioSourceTrack] = []
+    audioSourceTracks: [RecordingAudioSourceTrack] = [],
+    cursorCapture: RecordingCursorCapture? = nil,
+    isCursorBaked: Bool = true,
+    cameraSource: RecordingCameraSource? = nil
   ) {
     self.version = version
     self.coordinateSpace = coordinateSpace
@@ -78,6 +89,9 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     self.audioSourceURL = audioSourceURL
     self.audioSourceTrackRoles = audioSourceTrackRoles
     self.audioSourceTracks = audioSourceTracks
+    self.cursorCapture = cursorCapture
+    self.isCursorBaked = isCursorBaked
+    self.cameraSource = cameraSource
   }
 
   private enum CodingKeys: String, CodingKey {
@@ -89,6 +103,9 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     case audioSourceURL
     case audioSourceTrackRoles
     case audioSourceTracks
+    case cursorCapture
+    case isCursorBaked
+    case cameraSource
   }
 
   init(from decoder: Decoder) throws {
@@ -117,6 +134,10 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
       [RecordingAudioSourceTrack].self,
       forKey: .audioSourceTracks
     ) ?? []
+    cursorCapture = try container.decodeIfPresent(RecordingCursorCapture.self, forKey: .cursorCapture)
+    // Absent for every ≤v5 file and for non-Studio v6 recordings: the cursor is baked.
+    isCursorBaked = try container.decodeIfPresent(Bool.self, forKey: .isCursorBaked) ?? true
+    cameraSource = try container.decodeIfPresent(RecordingCameraSource.self, forKey: .cameraSource)
   }
 
   func encode(to encoder: Encoder) throws {
@@ -133,6 +154,11 @@ nonisolated struct RecordingMetadata: Codable, Equatable {
     if !audioSourceTracks.isEmpty {
       try container.encode(audioSourceTracks, forKey: .audioSourceTracks)
     }
+    try container.encodeIfPresent(cursorCapture, forKey: .cursorCapture)
+    if !isCursorBaked {
+      try container.encode(isCursorBaked, forKey: .isCursorBaked)
+    }
+    try container.encodeIfPresent(cameraSource, forKey: .cameraSource)
   }
 }
 
@@ -141,7 +167,11 @@ enum RecordingMetadataStore {
   private struct StoreLocation {
     let entriesURL: URL
     let indexURL: URL
-    let audioSourcesURL: URL
+    let rootURL: URL
+
+    func sidecarURL(for kind: RecordingSidecarKind) -> URL {
+      rootURL.appendingPathComponent(kind.folderName, isDirectory: true)
+    }
   }
 
   private struct MetadataIndex: Codable {
@@ -164,7 +194,6 @@ enum RecordingMetadataStore {
   private static let capturesFolderName = "Captures"
   private static let storeFolderName = "RecordingMetadata"
   private static let entriesFolderName = "Entries"
-  private static let audioSourcesFolderName = "AudioSources"
   private static let indexFileName = "index.json"
   private static let metadataFileExtension = "json"
   private static let legacySidecarExtension = "snapzy-recording.json"
@@ -249,14 +278,31 @@ enum RecordingMetadataStore {
   }
 
   static func storeAudioSource(from sourceURL: URL) throws -> URL {
+    try storeSidecar(from: sourceURL, kind: .audio)
+  }
+
+  /// Copies a file (or folder, for cursor images) into the store's folder for `kind`
+  /// under a fresh UUID name. Metadata references it via `audioSourceURL` (absolute) or
+  /// by `lastPathComponent` (camera, cursor images); deleting the metadata — directly
+  /// or through orphan cleanup — deletes the sidecar too.
+  static func storeSidecar(from sourceURL: URL, kind: RecordingSidecarKind) throws -> URL {
     let location = try requiredStoreLocation()
-    let fileExtension = sourceURL.pathExtension.isEmpty ? "mov" : sourceURL.pathExtension
-    let destinationURL = location.audioSourcesURL
-      .appendingPathComponent(UUID().uuidString)
-      .appendingPathExtension(fileExtension)
+    let kindURL = location.sidecarURL(for: kind)
+    try FileManager.default.createDirectory(at: kindURL, withIntermediateDirectories: true)
+    var destinationURL = kindURL.appendingPathComponent(UUID().uuidString)
+    if let fileExtension = sourceURL.pathExtension.isEmpty ? kind.defaultPathExtension : sourceURL.pathExtension {
+      destinationURL.appendPathExtension(fileExtension)
+    }
 
     try FileManager.default.copyItem(at: sourceURL, to: destinationURL)
     return destinationURL
+  }
+
+  /// Location of a sidecar item stored under `name` for `kind`, or `nil` when the name
+  /// would escape the kind's folder.
+  static func sidecarURL(named name: String, kind: RecordingSidecarKind) throws -> URL? {
+    let location = try requiredStoreLocation()
+    return RecordingSidecarReference.named(kind, name).resolvedURL(in: location.sidecarURL(for: kind))
   }
 
   static func moveAssociation(from oldURL: URL, to newURL: URL) throws {
@@ -334,7 +380,7 @@ enum RecordingMetadataStore {
       try saveIndex(index, to: location)
 
       for metadataURL in metadataURLsToDelete {
-        deleteMetadataFileAndAudioSource(at: metadataURL, location: location)
+        deleteMetadataFileAndSidecars(at: metadataURL, location: location)
       }
     }
   }
@@ -355,7 +401,7 @@ enum RecordingMetadataStore {
       partial.appendingPathComponent(component, isDirectory: true)
     }
     let entriesURL = rootURL.appendingPathComponent(entriesFolderName, isDirectory: true)
-    let audioSourcesURL = rootURL.appendingPathComponent(audioSourcesFolderName, isDirectory: true)
+    let audioSourcesURL = rootURL.appendingPathComponent(RecordingSidecarKind.audio.folderName, isDirectory: true)
     let indexURL = rootURL.appendingPathComponent(indexFileName)
 
     if createIfNeeded {
@@ -376,7 +422,7 @@ enum RecordingMetadataStore {
     return StoreLocation(
       entriesURL: entriesURL,
       indexURL: indexURL,
-      audioSourcesURL: audioSourcesURL
+      rootURL: rootURL
     )
   }
 
@@ -482,7 +528,7 @@ enum RecordingMetadataStore {
     index.entries.remove(at: resolved.index)
     try saveIndex(index, to: location)
 
-    deleteMetadataFileAndAudioSource(at: metadataURL, location: location)
+    deleteMetadataFileAndSidecars(at: metadataURL, location: location)
   }
 
   private static func resolveEntry(
@@ -613,26 +659,25 @@ enum RecordingMetadataStore {
       .appendingPathExtension(metadataFileExtension)
   }
 
-  private static func deleteMetadataFileAndAudioSource(at metadataURL: URL, location: StoreLocation) {
+  /// Deletes the metadata file and every sidecar it references that lives inside this
+  /// store (audio source, camera movie, cursor image folder). References pointing
+  /// outside the store are never touched.
+  private static func deleteMetadataFileAndSidecars(at metadataURL: URL, location: StoreLocation) {
     if
       let data = try? Data(contentsOf: metadataURL),
-      let metadata = try? JSONDecoder().decode(RecordingMetadata.self, from: data),
-      let audioSourceURL = metadata.audioSourceURL,
-      isStoredAudioSourceURL(audioSourceURL, location: location),
-      FileManager.default.fileExists(atPath: audioSourceURL.path)
+      let metadata = try? JSONDecoder().decode(RecordingMetadata.self, from: data)
     {
-      try? FileManager.default.removeItem(at: audioSourceURL)
+      for reference in metadata.sidecarReferences {
+        guard let sidecarURL = reference.resolvedURL(in: location.sidecarURL(for: reference.kind)),
+              FileManager.default.fileExists(atPath: sidecarURL.path)
+        else { continue }
+        try? FileManager.default.removeItem(at: sidecarURL)
+      }
     }
 
     if FileManager.default.fileExists(atPath: metadataURL.path) {
       try? FileManager.default.removeItem(at: metadataURL)
     }
-  }
-
-  private static func isStoredAudioSourceURL(_ url: URL, location: StoreLocation) -> Bool {
-    let sourcePath = url.standardizedFileURL.resolvingSymlinksInPath().path
-    let rootPath = location.audioSourcesURL.standardizedFileURL.resolvingSymlinksInPath().path
-    return sourcePath.hasPrefix(rootPath + "/")
   }
 
   private static func migrateLegacySidecarIfNeeded(
@@ -709,7 +754,10 @@ private extension RecordingMetadata {
       mouseSamples: normalizedSamples,
       audioSourceURL: audioSourceURL,
       audioSourceTrackRoles: audioSourceTrackRoles,
-      audioSourceTracks: audioSourceTracks
+      audioSourceTracks: audioSourceTracks,
+      cursorCapture: cursorCapture,
+      isCursorBaked: isCursorBaked,
+      cameraSource: cameraSource
     )
   }
 }

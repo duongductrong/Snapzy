@@ -58,6 +58,9 @@ struct ZoomableVideoPlayerSection: View {
         )
         .frame(width: videoCanvasSize.width, height: videoCanvasSize.height)
         .padding(scaledPadding)
+
+        // Studio canvas-space layers (camera, captions): outside the zoom transform.
+        VideoEditorStudioOverlayHost(space: .canvas, size: compositeSize)
       }
       .frame(width: compositeSize.width, height: compositeSize.height)
       .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignmentValue)
@@ -134,6 +137,10 @@ struct ZoomableVideoPlayerSection: View {
   ) -> some View {
     VideoPlayerSection(player: state.player)
       .frame(width: displayedVideoRect.width, height: displayedVideoRect.height)
+      // Studio source-space layers (cursor, clicks): zoomed together with the screen.
+      .overlay(alignment: .topLeading) {
+        VideoEditorStudioOverlayHost(space: .source, size: displayedVideoRect.size)
+      }
       .scaleEffect(currentZoomLevel)
       .offset(zoomOffset(in: displayedVideoRect.size))
       .clipped()

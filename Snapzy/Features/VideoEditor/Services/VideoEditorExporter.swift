@@ -38,6 +38,7 @@ enum VideoEditorExporter {
       "hasBackground": "\(state.backgroundStyle != .none && state.backgroundPadding > 0)",
       "hasCustomAudio": "\(state.exportSettings.audioMode == .custom)",
       "hasSpeed": "\(state.hasSpeedSegments)",
+      "hasStudioLayers": "\(state.studioRecipe.hasActiveLayers)",
       "clips": "\(state.clips.count)",
       "hasInsertedClips": "\(state.hasInsertedClips)",
       "quality": state.exportSettings.quality.exportPreset,
@@ -52,12 +53,14 @@ enum VideoEditorExporter {
     let hasSpeed = state.hasSpeedSegments
     // Anything beyond a single untouched primary clip needs the composition path.
     let hasSequenceEdits = state.hasSequenceEdits
+    // Studio layers (cursor, camera, captions) only render through the compositor.
+    let hasStudioLayers = state.studioRecipe.hasActiveLayers
 
     // If visual effects, custom audio, speed scaling, or a multi-clip sequence are in
     // play, use composition-based export. Speed scaling requires the composition path
     // even with no other effects (and even when muted — audio is simply dropped while
     // the video is still time-scaled).
-    if hasCameraEffects || hasBackground || hasCustomAudio || hasSpeed || hasSequenceEdits {
+    if hasCameraEffects || hasBackground || hasCustomAudio || hasSpeed || hasSequenceEdits || hasStudioLayers {
       try await exportWithZooms(state: state, to: scopedOutputURL, progress: progress)
       try await normalizeExportAudioForCompatibilityIfNeeded(
         at: scopedOutputURL,
@@ -408,7 +411,8 @@ enum VideoEditorExporter {
       transitionDuration: state.zoomTransitionDuration,
       backgroundStyle: state.backgroundStyle,
       backgroundPadding: state.backgroundPadding,
-      cornerRadius: state.backgroundCornerRadius
+      cornerRadius: state.backgroundCornerRadius,
+      studioRecipe: state.studioRecipe
     )
 
     // Use actual composition duration to prevent frame boundary issues
@@ -436,7 +440,8 @@ enum VideoEditorExporter {
     do {
       videoComposition = try await zoomCompositor.createVideoComposition(
         for: composition,
-        timeRange: compositionTimeRange
+        timeRange: compositionTimeRange,
+        screenTrackID: compositionVideoTrack.trackID
       )
       // RenderSize is already set correctly in ZoomCompositor, just use paddedRenderSize for background
       videoComposition.renderSize = zoomCompositor.paddedRenderSize

@@ -28,6 +28,9 @@ struct VideoEditorExportSnapshot {
   let sequenceMap: TimelineSequenceMap
   private let clipAssets: [UUID: AVAsset]
   var autoFocusPaths: [UUID: [AutoFocusCameraSample]] = [:]
+  /// Studio layers resolved for this export. Empty until cursor/camera/caption phases
+  /// populate it; empty keeps the pre-Studio export routing byte-for-byte.
+  var studioRecipe: VideoEditorStudioRecipe = .empty
 
   init(state: VideoEditorState) {
     sourceURL = state.sourceURL
