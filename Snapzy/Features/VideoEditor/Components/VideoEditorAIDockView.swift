@@ -9,7 +9,8 @@
 //    [ orb ] [ Describe how to edit the video…   ] [ ◉ ⌄ ] [ ↑ ]
 //
 //  While the agent works the field becomes a live status line, Stop replaces Send
-//  and the dock carries the reading rim. The result pill sits above the dock.
+//  and the dock carries the reading rim. The result pill sits above the dock; over
+//  an empty prompt, quick-action chips ("Remove silences"…) take its place.
 //
 
 import AppKit
@@ -43,12 +44,17 @@ struct VideoEditorAIDockView: View {
   var body: some View {
     VStack(spacing: 10) {
       VideoEditorAgentNoticePill(agent: agent, state: state)
+      if agent.showsQuickActions {
+        VideoEditorAIQuickActionChips(agent: agent)
+          .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)))
+      }
       if agent.isAvailable || agent.isRunning {
         dock
           .transition(.opacity.combined(with: .scale(scale: 0.9, anchor: .bottom)))
       }
     }
     .animation(.easeOut(duration: 0.18), value: agent.isAvailable)
+    .animation(.easeOut(duration: 0.18), value: agent.showsQuickActions)
   }
 
   private var dock: some View {
@@ -238,6 +244,38 @@ private struct VideoEditorAIDockPromptRow: View {
       }
       .disabled(!agent.canSend)
     }
+  }
+}
+
+// MARK: - Quick actions
+
+/// One-click edits worked out in the app; they need no provider.
+private struct VideoEditorAIQuickActionChips: View {
+  @ObservedObject var agent: VideoEditorAgentController
+
+  var body: some View {
+    HStack(spacing: 6) {
+      ForEach(agent.quickActions) { action in
+        Button {
+          agent.runQuickAction(action)
+        } label: {
+          HStack(spacing: 5) {
+            Image(systemName: action.symbolName)
+              .font(.system(size: 10, weight: .semibold))
+              .foregroundStyle(.secondary)
+            Text(action.title)
+              .font(.system(size: 12, weight: .medium))
+          }
+          .padding(.horizontal, 11)
+          .frame(height: 28)
+          .contentShape(Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .liquidGlassSurface(shape: Capsule(style: .continuous), layer: .control)
+        .help(action.title)
+      }
+    }
+    .fixedSize()
   }
 }
 

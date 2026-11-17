@@ -103,7 +103,13 @@ final class VideoEditorAgentMockProvider: AgentProvider {
       let padding = take(#"padding\s*(\d+(?:\.\d+)?)"#, from: &text)
       let times = Self.times(in: text)
 
-      if has("cut", "cat", "remove", "xoa", "bo "), times.count >= 2 {
+      if has("silence", "im lang", "pause", "khoang lang"), !has("mute", "tat tieng") {
+        calls.append(Call(name: "remove_silences", arguments: "{}"))
+      } else if has("idle", "waiting", "cho doi", "dung yen") {
+        calls.append(Call(name: "speed_up_idle", arguments: rate.map { json(["rate": $0]) } ?? "{}"))
+      } else if has("zoom", "phong"), has("activity", "hoat dong", "auto", "tu dong"), times.isEmpty {
+        calls.append(Call(name: "auto_zoom_activity", arguments: rate.map { json(["level": $0]) } ?? "{}"))
+      } else if has("cut", "cat", "remove", "xoa", "bo "), times.count >= 2 {
         // Latest cut first, so earlier times stay valid.
         cuts.append(Call(name: "cut_range", arguments: json(["start": times[0], "end": times[1]]), time: times[0]))
       } else if has("zoom", "phong"), let start = times.first {
@@ -126,7 +132,7 @@ final class VideoEditorAgentMockProvider: AgentProvider {
         calls.append(Call(name: "set_background", arguments: json(args)))
       } else if has("unmute", "bat tieng") {
         calls.append(Call(name: "set_audio", arguments: json(["muted": false])))
-      } else if has("mute", "tat tieng", "im lang") {
+      } else if has("mute", "tat tieng") {
         calls.append(Call(name: "set_audio", arguments: json(["muted": true])))
       }
     }

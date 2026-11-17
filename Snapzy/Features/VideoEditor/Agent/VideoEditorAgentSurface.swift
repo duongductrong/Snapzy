@@ -22,6 +22,8 @@ extension AgentSurface {
     Cut first, then add zooms and speeds: a cut slides everything after it left, so times you read before a cut change. \
     When cutting several parts, cut the latest part first so earlier times stay valid.
     Zoom centers are [x, y] from 0 to 1 with the origin at the top left. Speed blocks cannot overlap.
+    For pauses, waiting or "zoom where I work", use remove_silences, speed_up_idle and auto_zoom_activity: \
+    they find the parts themselves. get_activity tells when the user talks, waits or moves the cursor.
     Keep Snapzy's defaults unless the user asks for something else. "It"/"that" usually means what you changed last.
     You cannot export, save, share or open files; say so if asked.
     """,

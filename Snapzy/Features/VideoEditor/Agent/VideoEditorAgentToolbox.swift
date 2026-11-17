@@ -50,7 +50,14 @@ nonisolated enum VideoEditorAgentToolError: Error, Equatable {
 final class VideoEditorAgentToolbox {
   static let maximumChangesPerRun = 80
 
+  nonisolated static let silenceDefaults = (minDuration: 1.0, padding: 0.25)
+  nonisolated static let idleDefaults = (rate: 4.0, minDuration: 3.0, padding: 0.3)
+  nonisolated static let autoZoomDefaults = (maxZooms: 8, maxArea: 0.35, minActivity: 1.0)
+  /// Spans `get_activity` lists before it keeps only the longest.
+  static let maximumActivitySpans = 60
+
   private weak var state: VideoEditorState?
+  let analyzer: VideoEditorAgentAnalyzer
 
   private var references: [Kind: (byID: [UUID: String], byRef: [String: UUID], next: Int)] = [
     .clip: ([:], [:], 1), .zoom: ([:], [:], 1), .speed: ([:], [:], 1),
@@ -59,8 +66,9 @@ final class VideoEditorAgentToolbox {
   private var isRunOpen = false
   private var changeCount = 0
 
-  init(state: VideoEditorState) {
+  init(state: VideoEditorState, analyzer: VideoEditorAgentAnalyzer? = nil) {
     self.state = state
+    self.analyzer = analyzer ?? VideoEditorAgentAnalyzer()
   }
 
   // MARK: - Run lifecycle
@@ -191,7 +199,20 @@ final class VideoEditorAgentToolbox {
   // MARK: - Execute
 
   func execute(name: String, argumentsJSON: String) async -> AgentToolResult {
-    execute(name: name, arguments: Data(argumentsJSON.utf8))
+    // Tools that read the recording wait for its analysis (cached after the first).
+    if let tool = VideoEditorAgentToolName(rawValue: name), tool.needsAnalysis,
+       let state, !state.isGIF, !state.clips.isEmpty {
+      do {
+        _ = try await analyzer.activity(for: state)
+      } catch is CancellationError {
+        return .failure(message: "Stopped.")
+      } catch {
+        return .failure(message: VideoEditorAgentToolError.unavailable(
+          "The recording could not be analyzed (\(error.localizedDescription)). Work from the timeline instead."
+        ).message)
+      }
+    }
+    return execute(name: name, arguments: Data(argumentsJSON.utf8))
   }
 
   /// Runs one tool call. Never throws: failures come back as error results the model can read.
@@ -202,7 +223,8 @@ final class VideoEditorAgentToolbox {
     do {
       let body = arguments.isEmpty ? Data("{}".utf8) : arguments
       let result = try perform(tool, arguments: body)
-      if !tool.isReadOnly { changeCount += 1 }
+      // One-step tools count each edit they make themselves.
+      if !tool.isReadOnly, !tool.isOneStep { changeCount += 1 }
       return result
     } catch let error as VideoEditorAgentToolError {
       return .failure(message: error.message)
@@ -251,6 +273,14 @@ final class VideoEditorAgentToolbox {
       return try setBackground(decode(BackgroundArguments.self, arguments), state: state)
     case .setAudio:
       return try setAudio(decode(AudioArguments.self, arguments), state: state)
+    case .getActivity:
+      return try getActivity(decode(RangeArguments.self, arguments), state: state)
+    case .removeSilences:
+      return try removeSilences(decode(SilenceArguments.self, arguments), state: state)
+    case .speedUpIdle:
+      return try speedUpIdle(decode(IdleArguments.self, arguments), state: state)
+    case .autoZoomActivity:
+      return try autoZoomActivity(decode(AutoZoomArguments.self, arguments), state: state)
     }
   }
 
@@ -738,6 +768,254 @@ final class VideoEditorAgentToolbox {
     }
   }
 
+  // MARK: - Activity
+
+  private func activity(_ state: VideoEditorState) throws -> VideoEditorActivity {
+    guard let activity = analyzer.cachedActivity(for: state) else {
+      throw VideoEditorAgentToolError.unavailable("The recording is still being analyzed. Call the tool again.")
+    }
+    return activity
+  }
+
+  /// The part of the timeline a tool looks at: start…end, or all of it.
+  private func window(
+    _ start: VideoEditorAgentTime?,
+    _ end: VideoEditorAgentTime?,
+    _ state: VideoEditorState
+  ) throws -> ClosedRange<TimeInterval> {
+    let lower = try start.map { try time($0, state, name: "start") } ?? 0
+    let upper = try end.map { try time($0, state, name: "end") } ?? duration(state)
+    guard upper > lower else { throw VideoEditorAgentToolError.invalidArguments("end must be after start.") }
+    return lower ... upper
+  }
+
+  private func timeline(_ ranges: [ClosedRange<TimeInterval>], _ state: VideoEditorState) -> [ClosedRange<TimeInterval>] {
+    VideoEditorAgentAnalyzer.timelineSpans(ranges, placements: state.placements)
+  }
+
+  private func clipped(
+    _ ranges: [ClosedRange<TimeInterval>],
+    to window: ClosedRange<TimeInterval>,
+    minDuration: TimeInterval = VideoEditorAgentAnalyzer.minimumSpan
+  ) -> [ClosedRange<TimeInterval>] {
+    VideoEditorAgentAnalyzer.intersect(ranges, [window], minDuration: minDuration)
+  }
+
+  private func getActivity(_ args: RangeArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let activity = try activity(state)
+    let window = try window(args.start, args.end, state)
+
+    var spans: [(kind: String, range: ClosedRange<TimeInterval>, area: CGRect?)] = []
+    if activity.audio != .none {
+      let silences = clipped(timeline(activity.silences, state), to: window)
+      let playing = clipped(VideoEditorAgentAnalyzer.playingSpans(state.placements), to: window)
+      let speech = VideoEditorAgentAnalyzer.subtract(playing, silences)
+        .filter { $0.upperBound - $0.lowerBound >= VideoEditorAgentAnalyzer.minimumSpan }
+      spans += silences.map { ("silence", $0, nil) } + speech.map { ("speech", $0, nil) }
+    }
+    if activity.hasMouseData {
+      spans += clipped(timeline(activity.idle, state), to: window).map { ("idle", $0, nil) }
+      for motion in activity.motion {
+        for range in clipped(timeline([motion.range], state), to: window) {
+          spans.append(("motion", range, motion.bounds))
+        }
+      }
+    }
+    // Long recordings: keep the longest spans so the answer stays short.
+    var omitted = 0
+    if spans.count > Self.maximumActivitySpans {
+      omitted = spans.count - Self.maximumActivitySpans
+      spans = Array(spans.sorted { $0.range.upperBound - $0.range.lowerBound > $1.range.upperBound - $1.range.lowerBound }
+        .prefix(Self.maximumActivitySpans))
+    }
+    spans.sort { $0.range.lowerBound < $1.range.lowerBound }
+
+    var payload: [String: Any] = [
+      "audio": activity.audio.rawValue,
+      "mouse": activity.hasMouseData,
+      "spans": spans.map { span -> [String: Any] in
+        var item: [String: Any] = [
+          "kind": span.kind, "start": Self.round(span.range.lowerBound), "end": Self.round(span.range.upperBound),
+        ]
+        if let area = span.area {
+          item["area"] = [area.minX, area.minY, area.width, area.height].map { Self.round($0) }
+        }
+        return item
+      },
+    ]
+    if omitted > 0 { payload["omitted_short_spans"] = omitted }
+    if state.hasInsertedClips { payload["note"] = "Inserted videos are not analyzed." }
+    if activity.audio == .none, !activity.hasMouseData {
+      payload["note"] = "This video has no audio and no recorded cursor, so there is no activity to report."
+    }
+    return .success(payload)
+  }
+
+  /// How many more edits this run may make.
+  private var remainingChanges: Int { max(0, Self.maximumChangesPerRun - changeCount) }
+
+  private func removeSilences(_ args: SilenceArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let activity = try activity(state)
+    guard activity.audio != .none else {
+      throw VideoEditorAgentToolError.unavailable("This video has no audio, so there are no silences to find.")
+    }
+    let window = try window(args.start, args.end, state)
+    let minDuration = min(max(args.minDuration ?? Self.silenceDefaults.minDuration, VideoEditorAgentAnalyzer.minimumSpan), 600)
+    let padding = min(max(args.padding ?? Self.silenceDefaults.padding, 0), 2)
+    let total = duration(state)
+
+    let silences = clipped(timeline(activity.silences, state), to: window)
+      .filter { $0.upperBound - $0.lowerBound >= minDuration - 1e-9 }
+    // Keep a little pause next to speech; none at the very start or end of the video.
+    var cuts = silences.compactMap { range -> ClosedRange<TimeInterval>? in
+      let start = range.lowerBound <= 0.05 ? 0 : range.lowerBound + padding
+      let end = range.upperBound >= total - 0.05 ? total : range.upperBound - padding
+      return end - start >= TimelineClip.minDuration ? start ... end : nil
+    }
+    let playing = VideoEditorAgentAnalyzer.playingSpans(state.placements).reduce(0) { $0 + $1.upperBound - $1.lowerBound }
+    let cutLength = cuts.reduce(0) { $0 + $1.upperBound - $1.lowerBound }
+    guard cutLength < playing - TimelineClip.minDuration else {
+      throw VideoEditorAgentToolError.unavailable("The audio is silent throughout; cutting the silences would leave nothing.")
+    }
+    var skipped = 0
+    if cuts.count > remainingChanges {
+      guard remainingChanges > 0 else { throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun) }
+      skipped = cuts.count - remainingChanges
+      cuts = Array(cuts.sorted { $0.upperBound - $0.lowerBound > $1.upperBound - $1.lowerBound }.prefix(remainingChanges))
+    }
+
+    // Latest first: the times of the pauses still to cut don't move.
+    var removedSeconds = 0.0
+    var made: [ClosedRange<TimeInterval>] = []
+    for cut in cuts.sorted(by: { $0.lowerBound > $1.lowerBound }) {
+      guard let removed = state.cutTimeline(range: cut) else { continue }
+      _ = shiftEffects(after: removed, state: state)
+      removedSeconds += removed.reduce(0) { $0 + $1.upperBound - $1.lowerBound }
+      made.append(cut)
+      changeCount += 1
+    }
+    var payload: [String: Any] = [
+      "cuts": made.count,
+      "removed_seconds": Self.round(removedSeconds),
+      "new_duration": Self.round(duration(state)),
+      "removed": made.reversed().prefix(30).map { [Self.round($0.lowerBound), Self.round($0.upperBound)] },
+    ]
+    if made.isEmpty { payload["note"] = "No pauses of at least \(Self.round(minDuration))s." }
+    if skipped > 0 { payload["skipped"] = skipped }
+    return .success(payload)
+  }
+
+  private func speedUpIdle(_ args: IdleArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let activity = try activity(state)
+    guard activity.hasMouseData else {
+      throw VideoEditorAgentToolError.unavailable(
+        "This video has no recorded cursor (only Snapzy screen recordings do), so idle parts can't be found. "
+          + "Use get_activity for silences, or ask the user which parts to speed up."
+      )
+    }
+    let window = try window(args.start, args.end, state)
+    let rate = try parseRate(args.rate) ?? Self.idleDefaults.rate
+    let minDuration = max(args.minDuration ?? Self.idleDefaults.minDuration, SpeedSegment.minDuration)
+    let padding = Self.idleDefaults.padding
+
+    let idle = clipped(timeline(activity.idle, state), to: window)
+      .filter { $0.upperBound - $0.lowerBound >= minDuration - 1e-9 }
+      .map { ($0.lowerBound + padding) ... max($0.lowerBound + padding, $0.upperBound - padding) }
+    let taken = state.speedSegments.filter(\.isEnabled).map { $0.startTime ... $0.endTime }
+    var spans = VideoEditorAgentAnalyzer.subtract(idle, taken)
+      .filter { $0.upperBound - $0.lowerBound >= SpeedSegment.minDuration }
+    var skipped = 0
+    if spans.count > remainingChanges {
+      guard remainingChanges > 0 else { throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun) }
+      skipped = spans.count - remainingChanges
+      spans = Array(spans.sorted { $0.upperBound - $0.lowerBound > $1.upperBound - $1.lowerBound }.prefix(remainingChanges))
+        .sorted { $0.lowerBound < $1.lowerBound }
+    }
+
+    var added: [[String: Any]] = []
+    for span in spans {
+      guard let id = state.addSpeed(range: span, rate: rate),
+            let segment = state.speedSegments.first(where: { $0.id == id }) else { continue }
+      changeCount += 1
+      added.append([
+        "id": reference(.speed, for: id),
+        "start": Self.round(segment.startTime),
+        "end": Self.round(segment.endTime),
+      ])
+    }
+    var payload: [String: Any] = [
+      "added": added,
+      "rate": Self.round(rate),
+      "output_duration": Self.round(CMTimeGetSeconds(state.effectiveOutputDuration)),
+    ]
+    if added.isEmpty { payload["note"] = "No idle stretches of at least \(Self.round(minDuration))s outside existing speed blocks." }
+    if skipped > 0 { payload["skipped"] = skipped }
+    return .success(payload)
+  }
+
+  private func autoZoomActivity(_ args: AutoZoomArguments, state: VideoEditorState) throws -> AgentToolResult {
+    let activity = try activity(state)
+    guard activity.hasMouseData else {
+      throw VideoEditorAgentToolError.unavailable(
+        "This video has no recorded cursor (only Snapzy screen recordings do). Add zooms with add_zoom and a center instead."
+      )
+    }
+    let window = try window(args.start, args.end, state)
+    let level = min(max(args.level ?? Double(ZoomSegment.defaultZoomLevel), Double(ZoomSegment.minZoomLevel)), Double(ZoomSegment.maxZoomLevel))
+    let maxZooms = min(max(args.maxZooms ?? Self.autoZoomDefaults.maxZooms, 1), 30)
+    let total = duration(state)
+
+    // Work in a small area for a while → one zoom, with a short lead-in and hold.
+    var candidates: [(range: ClosedRange<TimeInterval>, weight: TimeInterval)] = []
+    for motion in activity.motion
+    where motion.bounds.width <= Self.autoZoomDefaults.maxArea && motion.bounds.height <= Self.autoZoomDefaults.maxArea {
+      for range in clipped(timeline([motion.range], state), to: window)
+      where range.upperBound - range.lowerBound >= Self.autoZoomDefaults.minActivity {
+        let start = max(0, range.lowerBound - 0.3)
+        let end = min(total, range.upperBound + 0.5)
+        candidates.append((start ... end, range.upperBound - range.lowerBound))
+      }
+    }
+    // Close bursts become one zoom rather than a zoom pumping in and out.
+    candidates.sort { $0.range.lowerBound < $1.range.lowerBound }
+    var merged: [(range: ClosedRange<TimeInterval>, weight: TimeInterval)] = []
+    for candidate in candidates {
+      if let last = merged.last, candidate.range.lowerBound - last.range.upperBound < 1.0,
+         candidate.range.upperBound - last.range.lowerBound <= ZoomSegment.maxDuration {
+        merged[merged.count - 1] = (last.range.lowerBound ... max(last.range.upperBound, candidate.range.upperBound), last.weight + candidate.weight)
+      } else {
+        merged.append(candidate)
+      }
+    }
+    let existing = state.zoomSegments.map { $0.startTime ... $0.endTime }
+    var chosen = merged.filter { candidate in
+      !existing.contains { $0.lowerBound < candidate.range.upperBound && $0.upperBound > candidate.range.lowerBound }
+    }
+    let limit = min(maxZooms, remainingChanges)
+    guard limit > 0 || chosen.isEmpty else { throw VideoEditorAgentToolError.limitReached(Self.maximumChangesPerRun) }
+    if chosen.count > limit {
+      chosen = Array(chosen.sorted { $0.weight > $1.weight }.prefix(limit)).sorted { $0.range.lowerBound < $1.range.lowerBound }
+    }
+
+    var added: [[String: Any]] = []
+    for candidate in chosen {
+      let length = min(max(candidate.range.upperBound - candidate.range.lowerBound, ZoomSegment.minDuration), ZoomSegment.maxDuration)
+      let start = min(candidate.range.lowerBound, max(0, total - length))
+      let id = state.addZoom(at: start + length / 2)
+      state.updateZoom(id: id, startTime: start, duration: length, zoomLevel: CGFloat(level), zoomType: .auto)
+      guard let segment = state.zoomSegments.first(where: { $0.id == id }) else { continue }
+      changeCount += 1
+      added.append([
+        "id": reference(.zoom, for: id),
+        "start": Self.round(segment.startTime),
+        "end": Self.round(segment.endTime),
+      ])
+    }
+    var payload: [String: Any] = ["added": added, "level": Self.round(level)]
+    if added.isEmpty { payload["note"] = "No focused cursor work outside existing zooms." }
+    return .success(payload)
+  }
+
   // MARK: - Parsing & description
 
   nonisolated static func parseBackground(_ raw: String) throws -> BackgroundStyle {
@@ -936,6 +1214,32 @@ private struct BackgroundArguments: Decodable {
   let cornerRadius: Double?
   let alignment: String?
   let aspectRatio: String?
+}
+
+private struct RangeArguments: Decodable {
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
+}
+
+private struct SilenceArguments: Decodable {
+  let minDuration: Double?
+  let padding: Double?
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
+}
+
+private struct IdleArguments: Decodable {
+  let rate: Double?
+  let minDuration: Double?
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
+}
+
+private struct AutoZoomArguments: Decodable {
+  let level: Double?
+  let maxZooms: Int?
+  let start: VideoEditorAgentTime?
+  let end: VideoEditorAgentTime?
 }
 
 private struct AudioArguments: Decodable {

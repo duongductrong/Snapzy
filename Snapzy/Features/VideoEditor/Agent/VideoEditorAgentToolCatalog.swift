@@ -25,10 +25,24 @@ nonisolated enum VideoEditorAgentToolName: String, CaseIterable {
   case removeSpeed = "remove_speed"
   case setBackground = "set_background"
   case setAudio = "set_audio"
+  case getActivity = "get_activity"
+  case removeSilences = "remove_silences"
+  case speedUpIdle = "speed_up_idle"
+  case autoZoomActivity = "auto_zoom_activity"
 
   /// Read-only tools are not paced and don't count as changes. `seek` only moves the playhead.
   var isReadOnly: Bool {
-    self == .getTimeline || self == .seek
+    self == .getTimeline || self == .seek || self == .getActivity
+  }
+
+  /// Reads the recording's audio and cursor first (`VideoEditorAgentAnalyzer`).
+  var needsAnalysis: Bool {
+    self == .getActivity || isOneStep
+  }
+
+  /// One call, many edits, worked out in the app; each edit counts toward the run's limit.
+  var isOneStep: Bool {
+    self == .removeSilences || self == .speedUpIdle || self == .autoZoomActivity
   }
 }
 
@@ -223,6 +237,45 @@ nonisolated enum VideoEditorAgentToolCatalog {
         ("muted", bool("true removes all audio; false keeps it.")),
         ("volume", number("Percent, 0–200 (100 = original).")),
         ("track", string("Which audio to change (default all).", enum: ["all", "system", "microphone"])),
+      ])
+    ),
+    spec(
+      .getActivity,
+      "What happens when in the recording: silence and speech in the audio, idle (cursor still, nobody talking) "
+        + "and motion (cursor moving; area = [x, y, w, h] it covered, 0–1 from the top left). Inserted videos are not analyzed.",
+      object([
+        ("start", time("Only report from here (default: the start).")),
+        ("end", time("Only report up to here (default: the end).")),
+      ])
+    ),
+    spec(
+      .removeSilences,
+      "Cut every pause in the audio at once, latest first; zooms and speeds follow. Use this instead of cutting silences one by one.",
+      object([
+        ("min_duration", number("Only pauses at least this long, in seconds (default \(fmt(VideoEditorAgentToolbox.silenceDefaults.minDuration))).")),
+        ("padding", number("Seconds of pause kept on each side so speech isn't clipped (default \(fmt(VideoEditorAgentToolbox.silenceDefaults.padding))).")),
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
+      ])
+    ),
+    spec(
+      .speedUpIdle,
+      "Speed up every stretch where the cursor stays still and nobody talks (waiting for a build, a page to load).",
+      object([
+        ("rate", number("\(fmt(SpeedSegment.minRate))–\(fmt(SpeedSegment.maxRate)) (default \(fmt(VideoEditorAgentToolbox.idleDefaults.rate))).")),
+        ("min_duration", number("Only stretches at least this long, in seconds (default \(fmt(VideoEditorAgentToolbox.idleDefaults.minDuration))).")),
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
+      ])
+    ),
+    spec(
+      .autoZoomActivity,
+      "Add zooms that follow the cursor where it works in a small area (typing, clicking through a form). Skips parts that already zoom.",
+      object([
+        ("level", number("Zoom factor \(fmt(ZoomSegment.minZoomLevel))–\(fmt(ZoomSegment.maxZoomLevel)) (default \(fmt(ZoomSegment.defaultZoomLevel))).")),
+        ("max_zooms", integer("At most this many zooms (default \(VideoEditorAgentToolbox.autoZoomDefaults.maxZooms)).")),
+        ("start", time("Only from here.")),
+        ("end", time("Only up to here.")),
       ])
     ),
   ]

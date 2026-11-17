@@ -17,6 +17,7 @@
 
 import AppKit
 import Combine
+import CoreMedia
 import Foundation
 
 @MainActor
@@ -33,6 +34,39 @@ final class VideoEditorAgentController: ObservableObject {
     case finished(message: String, changeCount: Int)
     case stopped(changeCount: Int)
     case failed(message: String, offersSettings: Bool)
+  }
+
+  /// One-click edits worked out in the app, no model needed (chips above an empty prompt).
+  enum QuickAction: String, CaseIterable, Identifiable {
+    case removeSilences
+    case speedUpIdle
+    case autoZoom
+
+    var id: String { rawValue }
+
+    var tool: VideoEditorAgentToolName {
+      switch self {
+      case .removeSilences: .removeSilences
+      case .speedUpIdle: .speedUpIdle
+      case .autoZoom: .autoZoomActivity
+      }
+    }
+
+    var title: String {
+      switch self {
+      case .removeSilences: L10n.VideoEditorAI.suggestionSilences
+      case .speedUpIdle: L10n.VideoEditorAI.suggestionIdle
+      case .autoZoom: L10n.VideoEditorAI.suggestionAutoZoom
+      }
+    }
+
+    var symbolName: String {
+      switch self {
+      case .removeSilences: "waveform.badge.minus"
+      case .speedUpIdle: "forward.fill"
+      case .autoZoom: "plus.magnifyingglass"
+      }
+    }
   }
 
   static let noticeLifetime: TimeInterval = 6
@@ -57,6 +91,8 @@ final class VideoEditorAgentController: ObservableObject {
   @Published private(set) var isConfirmingRemoteUse = false
 
   private var toolbox: VideoEditorAgentToolbox?
+  /// Lives with the window, so the recording is analyzed once across conversations.
+  let analyzer = VideoEditorAgentAnalyzer()
   /// Provider the current conversation was held with; a change made elsewhere (Settings › AI)
   /// starts a new conversation on the next prompt.
   private var conversationSelection: AgentProviderSelection?
@@ -98,9 +134,27 @@ final class VideoEditorAgentController: ObservableObject {
     !isRunning && !isConfirmingRemoteUse && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
   }
 
-  /// GIFs can only be resized, so the AI has nothing to do there.
+  /// GIFs can only be resized, so the AI has nothing to do there. Without a provider the
+  /// dock still shows when a quick action can run.
   var isAvailable: Bool {
-    VideoEditorAgentProviderResolver.isFeatureAvailable && !(state?.isGIF ?? true)
+    guard let state, !state.isGIF else { return false }
+    return VideoEditorAgentProviderResolver.isFeatureAvailable || !quickActions.isEmpty
+  }
+
+  /// Quick actions the open video has the data for: audio for silences, the recorded cursor
+  /// for idle parts and activity zooms.
+  var quickActions: [QuickAction] {
+    guard let state, !state.isGIF, !state.clips.isEmpty else { return [] }
+    var actions: [QuickAction] = []
+    if !state.audioTrackRoles.isEmpty { actions.append(.removeSilences) }
+    if state.hasMouseTrackingData { actions += [.speedUpIdle, .autoZoom] }
+    return actions
+  }
+
+  /// Chips show over an empty, idle prompt.
+  var showsQuickActions: Bool {
+    isPromptPresented && !isRunning && !isConfirmingRemoteUse && notice == nil
+      && draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !quickActions.isEmpty
   }
 
   var provider: AgentProvider? { resolveProvider() }
@@ -122,6 +176,7 @@ final class VideoEditorAgentController: ObservableObject {
     isPromptPresented = true
     promptFocusRequest &+= 1
     AnnotateAgentCLIDetector.shared.refresh()
+    if let state { analyzer.prewarm(state) }
   }
 
   /// Ignored while a run is in flight: the prompt row is where its status and Stop live.
@@ -274,7 +329,7 @@ final class VideoEditorAgentController: ObservableObject {
       return
     }
 
-    let toolbox = self.toolbox ?? VideoEditorAgentToolbox(state: state)
+    let toolbox = self.toolbox ?? VideoEditorAgentToolbox(state: state, analyzer: analyzer)
     self.toolbox = toolbox
     toolbox.beginRun()
     didBeginRun = true
@@ -356,6 +411,95 @@ final class VideoEditorAgentController: ObservableObject {
     }
   }
 
+  // MARK: - Quick actions
+
+  /// Runs one one-step tool directly: on-device, no provider, no consent. One undo step.
+  func runQuickAction(_ action: QuickAction) {
+    guard !isRunning, !isConfirmingRemoteUse, let state else { return }
+    guard !state.isGIF, !state.isExporting, !state.clips.isEmpty else {
+      showNotice(.failed(message: L10n.VideoEditorAI.busy, offersSettings: false))
+      return
+    }
+    state.pause()
+    dismissNotice()
+    undoEntryAfterRun = nil
+    lastRunAddedTurn = false
+    didBeginRun = false
+    status = L10n.VideoEditorAI.statusAnalyzing
+    phase = .reading
+
+    let operationID = UUID()
+    self.operationID = operationID
+    DiagnosticLogger.shared.log(.info, .editor, "Video AI quick action started", context: ["action": action.rawValue])
+    runTask = Task { [weak self] in
+      await self?.runQuick(action, operationID: operationID)
+    }
+  }
+
+  private func runQuick(_ action: QuickAction, operationID: UUID) async {
+    guard isCurrent(operationID), let state else { return }
+    // Analyze before the undo group opens, so a Stop while listening changes nothing.
+    do {
+      _ = try await analyzer.activity(for: state)
+    } catch {
+      guard isCurrent(operationID) else { return }
+      self.operationID = nil
+      endRun()
+      showNotice(.failed(message: L10n.AnnotateAI.failed, offersSettings: false))
+      return
+    }
+    guard isCurrent(operationID) else { return }
+
+    let toolbox = self.toolbox ?? VideoEditorAgentToolbox(state: state, analyzer: analyzer)
+    self.toolbox = toolbox
+    toolbox.beginRun()
+    didBeginRun = true
+    status = Self.status(for: action.tool) ?? status
+    phase = .acting
+    let result = await toolbox.execute(name: action.tool.rawValue, argumentsJSON: "{}")
+    guard isCurrent(operationID) else { return }
+    self.operationID = nil
+
+    let payload = (try? JSONSerialization.jsonObject(with: Data(result.text.utf8))) as? [String: Any] ?? [:]
+    if let first = Self.firstChange(in: payload) {
+      state.seek(to: CMTime(seconds: first, preferredTimescale: 600))
+    }
+    let summary = toolbox.finishRun()
+    endRun()
+    undoEntryAfterRun = summary.undoEntry
+    if result.isError {
+      showNotice(.failed(message: payload["error"] as? String ?? L10n.AnnotateAI.failed, offersSettings: false))
+    } else {
+      showNotice(.finished(message: Self.quickMessage(action, payload: payload), changeCount: summary.changeCount))
+    }
+    DiagnosticLogger.shared.log(.info, .editor, "Video AI quick action finished", context: [
+      "action": action.rawValue, "changes": "\(summary.changeCount)",
+    ])
+  }
+
+  /// Where the earliest edit of a one-step tool landed (cut points before them don't move).
+  private static func firstChange(in payload: [String: Any]) -> Double? {
+    if let removed = payload["removed"] as? [[Double]], let first = removed.first?.first { return first }
+    if let added = payload["added"] as? [[String: Any]], let first = added.first?["start"] as? Double { return first }
+    return nil
+  }
+
+  static func quickMessage(_ action: QuickAction, payload: [String: Any]) -> String {
+    switch action {
+    case .removeSilences:
+      let count = payload["cuts"] as? Int ?? 0
+      guard count > 0 else { return L10n.VideoEditorAI.noSilences }
+      let seconds = (payload["removed_seconds"] as? Double) ?? 0
+      return L10n.VideoEditorAI.removedSilences(count, String(format: "%.1f", seconds))
+    case .speedUpIdle:
+      let count = (payload["added"] as? [Any])?.count ?? 0
+      return count > 0 ? L10n.VideoEditorAI.spedUpIdle(count) : L10n.VideoEditorAI.noIdle
+    case .autoZoom:
+      let count = (payload["added"] as? [Any])?.count ?? 0
+      return count > 0 ? L10n.VideoEditorAI.addedZooms(count) : L10n.VideoEditorAI.noActivity
+    }
+  }
+
   private func isCurrent(_ operationID: UUID) -> Bool {
     self.operationID == operationID && !Task.isCancelled
   }
@@ -431,6 +575,10 @@ final class VideoEditorAgentController: ObservableObject {
     case .addSpeed, .updateSpeed, .removeSpeed: L10n.VideoEditorAI.statusSpeed
     case .setBackground: L10n.VideoEditorAI.statusBackground
     case .setAudio: L10n.VideoEditorAI.statusAudio
+    case .getActivity: L10n.VideoEditorAI.statusAnalyzing
+    case .removeSilences: L10n.VideoEditorAI.statusSilences
+    case .speedUpIdle: L10n.VideoEditorAI.statusIdle
+    case .autoZoomActivity: L10n.VideoEditorAI.statusAutoZoom
     }
   }
 }

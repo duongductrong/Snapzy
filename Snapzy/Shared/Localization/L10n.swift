@@ -10350,6 +10350,45 @@ extension L10n {
     static var statusAudio: String {
       string("video-editor.ai.status-audio", defaultValue: "Adjusting audio…", comment: "AI working status")
     }
+    static var statusAnalyzing: String {
+      string("video-editor.ai.status-analyzing", defaultValue: "Listening to the recording…", comment: "AI working status while the audio and cursor are analyzed")
+    }
+    static var statusSilences: String {
+      string("video-editor.ai.status-silences", defaultValue: "Cutting silences…", comment: "AI working status")
+    }
+    static var statusIdle: String {
+      string("video-editor.ai.status-idle", defaultValue: "Speeding up idle parts…", comment: "AI working status")
+    }
+    static var statusAutoZoom: String {
+      string("video-editor.ai.status-auto-zoom", defaultValue: "Zooming on activity…", comment: "AI working status")
+    }
+    static var suggestionSilences: String {
+      string("video-editor.ai.suggestion-silences", defaultValue: "Remove silences", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionIdle: String {
+      string("video-editor.ai.suggestion-idle", defaultValue: "Speed up idle parts", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static var suggestionAutoZoom: String {
+      string("video-editor.ai.suggestion-auto-zoom", defaultValue: "Zoom on activity", comment: "Quick action chip above the Video Editor AI prompt")
+    }
+    static func removedSilences(_ count: Int, _ seconds: String) -> String {
+      format("video-editor.ai.removed-silences", defaultValue: "Removed %lld silences (%@ s)", comment: "Result of the Remove silences quick action. %lld = number of cuts, %@ = seconds removed", count, seconds)
+    }
+    static var noSilences: String {
+      string("video-editor.ai.no-silences", defaultValue: "No pauses long enough to cut", comment: "Result of the Remove silences quick action when nothing was cut")
+    }
+    static func spedUpIdle(_ count: Int) -> String {
+      format("video-editor.ai.sped-up-idle", defaultValue: "Sped up %lld idle parts", comment: "Result of the Speed up idle parts quick action. %lld = number of speed blocks added", count)
+    }
+    static var noIdle: String {
+      string("video-editor.ai.no-idle", defaultValue: "No idle parts found", comment: "Result of the Speed up idle parts quick action when nothing changed")
+    }
+    static func addedZooms(_ count: Int) -> String {
+      format("video-editor.ai.added-zooms", defaultValue: "Added %lld zooms on activity", comment: "Result of the Zoom on activity quick action. %lld = number of zooms added", count)
+    }
+    static var noActivity: String {
+      string("video-editor.ai.no-activity", defaultValue: "No focused activity to zoom on", comment: "Result of the Zoom on activity quick action when nothing changed")
+    }
     static func consentTitle(_ name: String) -> String {
       format("video-editor.ai.consent-title", defaultValue: "Send this video’s timeline to %@?", comment: "Alert title before the first Video Editor AI prompt goes to an off-device provider. %@ is the provider name", name)
     }
