@@ -242,7 +242,8 @@ struct VideoEditorToolbarView: View {
     ToolbarButton(
       icon: AnnotateAgentGlyph.symbolName,
       isSelected: aiChrome.isPromptPresented,
-      activeGlassTint: ZoomColors.primary
+      activeGlassTint: ZoomColors.primary,
+      glyphGradient: TranslationCardMotion.rimHues
     ) {
       withAnimation(.spring(response: 0.34, dampingFraction: 0.9)) { agent.togglePrompt() }
     }
