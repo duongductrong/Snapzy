@@ -265,6 +265,22 @@ enum EditorAction: Equatable {
   case updateClip(old: TimelineClip, new: TimelineClip)
   case moveClip(id: UUID, fromIndex: Int, toIndex: Int)
   case splitClip(original: TimelineClip, index: Int, first: TimelineClip, second: TimelineClip)
+  /// Whole-sequence swap, for edits that reshape several clips at once (agent `cut_range`).
+  case replaceClips(old: [TimelineClip], new: [TimelineClip])
+  case updateFrame(old: VideoEditorFrameSettings, new: VideoEditorFrameSettings)
+  case updateExportSettings(old: ExportSettings, new: ExportSettings)
+  /// Several actions that undo and redo as one step (one AI prompt).
+  case group([EditorAction])
+}
+
+/// Everything the background/frame panel changes, as one undoable value.
+struct VideoEditorFrameSettings: Equatable {
+  var style: BackgroundStyle
+  var padding: CGFloat
+  var shadowIntensity: CGFloat
+  var cornerRadius: CGFloat
+  var alignment: ImageAlignment
+  var aspectRatio: AspectRatioOption
 }
 
 /// Playback state changes frequently, so it stays isolated from the broader editor model.
@@ -756,6 +772,9 @@ final class VideoEditorState: ObservableObject {
   private var redoStack: [EditorAction] = []
   private let maxUndoStackSize = 50
   private var isUndoingOrRedoing: Bool = false
+  /// Open `beginUndoGroup` calls; while > 0 recorded actions collect in the buffer.
+  private var undoGroupDepth = 0
+  private var undoGroupBuffer: [EditorAction] = []
 
   // MARK: - Rename State
 
@@ -1400,7 +1419,7 @@ final class VideoEditorState: ObservableObject {
   /// cannot install an old speed map over a newer edit.
   private func scheduleSpeedPreviewRebuild(immediate: Bool = false) {
     guard !isPerformanceWorkClosed else { return }
-    if speedTrackDragInProgress && speedTrackDragDidChange {
+    if defersPreviewRebuild && speedTrackDragDidChange {
       return
     }
     let debounceBuild = !immediate && (speedPreviewIsPreparing || speedPreviewItem != nil)
@@ -1429,7 +1448,7 @@ final class VideoEditorState: ObservableObject {
     internalSeekToken = nil
     handoffSeekToken = nil
     handoffSeekInFlight = false
-    if speedTrackDragInProgress {
+    if defersPreviewRebuild {
       speedTrackDragDidChange = true
       return
     }
@@ -1467,18 +1486,27 @@ final class VideoEditorState: ObservableObject {
 
   func beginSpeedTrackDrag() {
     guard !isPerformanceWorkClosed else { return }
+    // A rebuild an open undo group is already holding must survive the drag.
+    if !defersPreviewRebuild { speedTrackDragDidChange = false }
     speedTrackDragInProgress = true
-    speedTrackDragDidChange = false
   }
 
   func endSpeedTrackDrag() {
     guard !isPerformanceWorkClosed else { return }
     guard speedTrackDragInProgress else { return }
     speedTrackDragInProgress = false
-    if speedTrackDragDidChange {
-      speedTrackDragDidChange = false
-      scheduleSpeedPreviewRebuild(immediate: true)
-    }
+    flushDeferredPreviewRebuild()
+  }
+
+  /// A speed drag or an undo group holds preview rebuilds until it ends.
+  private var defersPreviewRebuild: Bool {
+    speedTrackDragInProgress || undoGroupDepth > 0
+  }
+
+  private func flushDeferredPreviewRebuild() {
+    guard !isPerformanceWorkClosed, !defersPreviewRebuild, speedTrackDragDidChange else { return }
+    speedTrackDragDidChange = false
+    scheduleSpeedPreviewRebuild(immediate: true)
   }
 
   private func makeSpeedPreviewItem(
@@ -1920,6 +1948,16 @@ final class VideoEditorState: ObservableObject {
   /// Record an action for undo support
   private func recordAction(_ action: EditorAction) {
     guard !isUndoingOrRedoing else { return }
+    if undoGroupDepth > 0 {
+      undoGroupBuffer.append(action)
+      redoStack.removeAll()
+      updateUndoRedoState()
+      return
+    }
+    pushUndoEntry(action)
+  }
+
+  private func pushUndoEntry(_ action: EditorAction) {
     undoStack.append(action)
     if undoStack.count > maxUndoStackSize {
       undoStack.removeFirst()
@@ -1937,8 +1975,10 @@ final class VideoEditorState: ObservableObject {
     interruptedSpeedEdits.formUnion(speedIDs)
   }
 
-  /// Undo the last action
+  /// Undo the last action. Ignored while an undo group is open (an AI run is
+  /// mid-flight): its changes are not on the stack yet.
   func undo() {
+    guard undoGroupDepth == 0 else { return }
     finishSegmentEdits()
     guard let action = undoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Undo", context: ["stackDepth": "\(undoStack.count)"])
@@ -1947,102 +1987,12 @@ final class VideoEditorState: ObservableObject {
       isUndoingOrRedoing = false
       updateUndoRedoState()
     }
-
-    switch action {
-    case .trimStart(let old, let new):
-      trimStart = old
-      redoStack.append(.trimStart(old: new, new: old))
-
-    case .trimEnd(let old, let new):
-      trimEnd = old
-      redoStack.append(.trimEnd(old: new, new: old))
-
-    case .addZoom(let segment):
-      zoomSegments.removeAll { $0.id == segment.id }
-      if selectedZoomId == segment.id { selectedZoomId = nil }
-      redoStack.append(.removeZoom(segment: segment))
-
-    case .removeZoom(let segment):
-      zoomSegments.append(segment)
-      redoStack.append(.addZoom(segment: segment))
-
-    case .updateZoom(let old, let new):
-      if let index = zoomSegments.firstIndex(where: { $0.id == new.id }) {
-        zoomSegments[index] = old
-      }
-      redoStack.append(.updateZoom(old: new, new: old))
-
-    case .addSpeed(let segment):
-      speedSegments.removeAll { $0.id == segment.id }
-      if selectedSpeedId == segment.id { selectedSpeedId = nil }
-      redoStack.append(.removeSpeed(segment: segment))
-
-    case .removeSpeed(let segment):
-      speedSegments.append(segment)
-      redoStack.append(.addSpeed(segment: segment))
-
-    case .updateSpeed(let old, let new):
-      if let index = speedSegments.firstIndex(where: { $0.id == new.id }) {
-        speedSegments[index] = old
-      }
-      redoStack.append(.updateSpeed(old: new, new: old))
-
-    case .toggleMute(let old, _):
-      isMuted = old
-      redoStack.append(.toggleMute(old: !old, new: old))
-
-    case .updateBackground(
-      let oldStyle,
-      let newStyle,
-      let oldPadding,
-      let newPadding,
-      let oldShadow,
-      let newShadow,
-      let oldCorner,
-      let newCorner
-    ):
-      backgroundStyle = oldStyle
-      backgroundPadding = oldPadding
-      backgroundShadowIntensity = oldShadow
-      backgroundCornerRadius = oldCorner
-      redoStack.append(.updateBackground(
-        oldStyle: newStyle,
-        newStyle: oldStyle,
-        oldPadding: newPadding,
-        newPadding: oldPadding,
-        oldShadow: newShadow,
-        newShadow: oldShadow,
-        oldCorner: newCorner,
-        newCorner: oldCorner
-      ))
-
-    case .addClip(let clip, let index):
-      removeClipSilently(id: clip.id)
-      redoStack.append(.removeClip(clip: clip, index: index))
-
-    case .removeClip(let clip, let index):
-      insertClipSilently(clip, at: index)
-      redoStack.append(.addClip(clip: clip, index: index))
-
-    case .updateClip(let old, let new):
-      replaceClipSilently(id: new.id, with: old)
-      redoStack.append(.updateClip(old: new, new: old))
-
-    case .moveClip(let id, let fromIndex, let toIndex):
-      moveClipSilently(id: id, to: fromIndex)
-      redoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
-
-    case .splitClip(let original, let index, let first, let second):
-      // Rejoin: drop both halves and restore the clip they came from.
-      removeClipSilently(id: first.id)
-      removeClipSilently(id: second.id)
-      insertClipSilently(original, at: index)
-      redoStack.append(.splitClip(original: original, index: index, first: first, second: second))
-    }
+    redoStack.append(revert(action, isRedo: false))
   }
 
   /// Redo the last undone action
   func redo() {
+    guard undoGroupDepth == 0 else { return }
     finishSegmentEdits()
     guard let action = redoStack.popLast() else { return }
     DiagnosticLogger.shared.log(.debug, .editor, "Redo", context: ["stackDepth": "\(redoStack.count)"])
@@ -2051,49 +2001,55 @@ final class VideoEditorState: ObservableObject {
       isUndoingOrRedoing = false
       updateUndoRedoState()
     }
+    undoStack.append(revert(action, isRedo: true))
+  }
 
+  /// Apply the inverse of `action` and return the entry for the opposite stack.
+  /// The stacks hold inverses, so the same code serves undo and redo; only a
+  /// split differs (undo rejoins the halves, redo divides again).
+  private func revert(_ action: EditorAction, isRedo: Bool) -> EditorAction {
     switch action {
     case .trimStart(let old, let new):
       trimStart = old
-      undoStack.append(.trimStart(old: new, new: old))
+      return .trimStart(old: new, new: old)
 
     case .trimEnd(let old, let new):
       trimEnd = old
-      undoStack.append(.trimEnd(old: new, new: old))
+      return .trimEnd(old: new, new: old)
 
     case .addZoom(let segment):
       zoomSegments.removeAll { $0.id == segment.id }
       if selectedZoomId == segment.id { selectedZoomId = nil }
-      undoStack.append(.removeZoom(segment: segment))
+      return .removeZoom(segment: segment)
 
     case .removeZoom(let segment):
       zoomSegments.append(segment)
-      undoStack.append(.addZoom(segment: segment))
+      return .addZoom(segment: segment)
 
     case .updateZoom(let old, let new):
       if let index = zoomSegments.firstIndex(where: { $0.id == new.id }) {
         zoomSegments[index] = old
       }
-      undoStack.append(.updateZoom(old: new, new: old))
+      return .updateZoom(old: new, new: old)
 
     case .addSpeed(let segment):
       speedSegments.removeAll { $0.id == segment.id }
       if selectedSpeedId == segment.id { selectedSpeedId = nil }
-      undoStack.append(.removeSpeed(segment: segment))
+      return .removeSpeed(segment: segment)
 
     case .removeSpeed(let segment):
       speedSegments.append(segment)
-      undoStack.append(.addSpeed(segment: segment))
+      return .addSpeed(segment: segment)
 
     case .updateSpeed(let old, let new):
       if let index = speedSegments.firstIndex(where: { $0.id == new.id }) {
         speedSegments[index] = old
       }
-      undoStack.append(.updateSpeed(old: new, new: old))
+      return .updateSpeed(old: new, new: old)
 
     case .toggleMute(let old, _):
       isMuted = old
-      undoStack.append(.toggleMute(old: !old, new: old))
+      return .toggleMute(old: !old, new: old)
 
     case .updateBackground(
       let oldStyle,
@@ -2109,7 +2065,7 @@ final class VideoEditorState: ObservableObject {
       backgroundPadding = oldPadding
       backgroundShadowIntensity = oldShadow
       backgroundCornerRadius = oldCorner
-      undoStack.append(.updateBackground(
+      return .updateBackground(
         oldStyle: newStyle,
         newStyle: oldStyle,
         oldPadding: newPadding,
@@ -2118,30 +2074,57 @@ final class VideoEditorState: ObservableObject {
         newShadow: oldShadow,
         oldCorner: newCorner,
         newCorner: oldCorner
-      ))
+      )
 
     case .addClip(let clip, let index):
       removeClipSilently(id: clip.id)
-      undoStack.append(.removeClip(clip: clip, index: index))
+      return .removeClip(clip: clip, index: index)
 
     case .removeClip(let clip, let index):
       insertClipSilently(clip, at: index)
-      undoStack.append(.addClip(clip: clip, index: index))
+      return .addClip(clip: clip, index: index)
 
     case .updateClip(let old, let new):
       replaceClipSilently(id: new.id, with: old)
-      undoStack.append(.updateClip(old: new, new: old))
+      return .updateClip(old: new, new: old)
 
     case .moveClip(let id, let fromIndex, let toIndex):
       moveClipSilently(id: id, to: fromIndex)
-      undoStack.append(.moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex))
+      return .moveClip(id: id, fromIndex: toIndex, toIndex: fromIndex)
 
     case .splitClip(let original, let index, let first, let second):
-      // Re-split: the undo handler rejoined the halves, so redo has to divide again.
-      removeClipSilently(id: original.id)
-      insertClipSilently(first, at: index)
-      insertClipSilently(second, at: index + 1)
-      undoStack.append(.splitClip(original: original, index: index, first: first, second: second))
+      if isRedo {
+        // The undo handler rejoined the halves, so redo has to divide again.
+        removeClipSilently(id: original.id)
+        insertClipSilently(first, at: index)
+        insertClipSilently(second, at: index + 1)
+      } else {
+        // Rejoin: drop both halves and restore the clip they came from.
+        removeClipSilently(id: first.id)
+        removeClipSilently(id: second.id)
+        insertClipSilently(original, at: index)
+      }
+      return .splitClip(original: original, index: index, first: first, second: second)
+
+    case .replaceClips(let old, let new):
+      clips = old
+      if let selectedClipId, !old.contains(where: { $0.id == selectedClipId }) {
+        self.selectedClipId = nil
+      }
+      updateClipActionAvailability()
+      return .replaceClips(old: new, new: old)
+
+    case .updateFrame(let old, let new):
+      applyFrameSettings(old)
+      return .updateFrame(old: new, new: old)
+
+    case .updateExportSettings(let old, let new):
+      updateExportSettings(old)
+      return .updateExportSettings(old: new, new: old)
+
+    case .group(let actions):
+      // Undo the members newest first; the returned group replays them oldest first.
+      return .group(actions.reversed().map { revert($0, isRedo: isRedo) })
     }
   }
 
@@ -2156,6 +2139,47 @@ final class VideoEditorState: ObservableObject {
     undoStack.removeAll()
     redoStack.removeAll()
     updateUndoRedoState()
+  }
+
+  // MARK: - Undo Groups
+
+  /// Collect every action recorded until the matching `endUndoGroup` into one undo
+  /// step. Calls nest; only the outermost end pushes. Preview media rebuilds are
+  /// held until then too, so a burst of edits rebuilds the composition once.
+  func beginUndoGroup() {
+    if undoGroupDepth == 0 {
+      finishSegmentEdits()
+      undoGroupBuffer = []
+    }
+    undoGroupDepth += 1
+  }
+
+  /// Close a group. An empty group leaves no entry; a single action is pushed as is.
+  /// Returns the entry the outermost end pushed, if any.
+  @discardableResult
+  func endUndoGroup() -> EditorAction? {
+    guard undoGroupDepth > 0 else { return nil }
+    undoGroupDepth -= 1
+    guard undoGroupDepth == 0 else { return nil }
+    let actions = undoGroupBuffer
+    undoGroupBuffer = []
+    let entry: EditorAction? = switch actions.count {
+    case 0: nil
+    case 1: actions[0]
+    default: .group(actions)
+    }
+    if let entry { pushUndoEntry(entry) }
+    flushDeferredPreviewRebuild()
+    return entry
+  }
+
+  var isUndoGroupOpen: Bool {
+    undoGroupDepth > 0
+  }
+
+  /// The top undo entry, for callers that check whether their step is still the latest.
+  var lastUndoEntry: EditorAction? {
+    undoStack.last
   }
 
   // MARK: - File Operations
@@ -2611,15 +2635,25 @@ final class VideoEditorState: ObservableObject {
   /// Both halves must clear `TimelineClip.minDuration`, so splitting right at a clip
   /// edge is a no-op rather than creating a sliver.
   func splitAtPlayhead() {
-    guard !isGIF else { return }
-    let t = CMTimeGetSeconds(currentTime)
-    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return }
+    guard let (_, second) = splitClip(atTimeline: CMTimeGetSeconds(currentTime)) else { return }
+    // The playhead sits on the new boundary, which belongs to the second half.
+    selectedClipId = second
+    updateClipActionAvailability()
+  }
+
+  /// Split the clip playing at a structural timeline time. Returns the ids of the
+  /// two halves, or nil when the time is not over active material or a half would
+  /// be shorter than `TimelineClip.minDuration`.
+  @discardableResult
+  func splitClip(atTimeline t: TimeInterval) -> (first: UUID, second: UUID)? {
+    guard !isGIF else { return nil }
+    guard let placement = TimelineSequence.activePlacement(at: t, in: placements) else { return nil }
 
     let original = placement.clip
     let cutPoint = placement.sourceTime(at: t)
     guard cutPoint - original.sourceStart >= TimelineClip.minDuration,
           original.sourceEnd - cutPoint >= TimelineClip.minDuration
-    else { return }
+    else { return nil }
 
     let first = TimelineClip(
       source: original.source,
@@ -2645,9 +2679,31 @@ final class VideoEditorState: ObservableObject {
 
     clips.replaceSubrange(placement.index ... placement.index, with: [first, second])
     recordAction(.splitClip(original: original, index: placement.index, first: first, second: second))
-    // The playhead sits on the new boundary, which belongs to the second half.
-    selectedClipId = second.id
+    if selectedClipId == original.id { selectedClipId = second.id }
     updateClipActionAvailability()
+    return (first.id, second.id)
+  }
+
+  // MARK: Cut range (ripple)
+
+  /// Remove a structural timeline range from the sequence in one step; everything
+  /// after it slides left. Returns the structural spans that were removed (the
+  /// range, plus slivers too short to keep), or nil when nothing would be left.
+  /// Zoom and speed blocks are not moved here: callers decide whether to shift them.
+  @discardableResult
+  func cutTimeline(range: ClosedRange<TimeInterval>) -> [ClosedRange<TimeInterval>]? {
+    guard !isGIF, let result = VideoEditorTimelineCut.cut(clips, range: range),
+          !result.removed.isEmpty else { return nil }
+    let old = clips
+    clips = result.clips
+    recordAction(.replaceClips(old: old, new: result.clips))
+    if let selectedClipId, !clips.contains(where: { $0.id == selectedClipId }) {
+      self.selectedClipId = nil
+    }
+    let landing = min(range.lowerBound, CMTimeGetSeconds(timelineDuration))
+    seek(to: CMTime(seconds: max(0, landing), preferredTimescale: 600))
+    updateClipActionAvailability()
+    return result.removed
   }
 
   // MARK: Delete (ripple)
@@ -2884,6 +2940,44 @@ final class VideoEditorState: ObservableObject {
     exportSettings = settings
     syncPlayerAudioWithExportSettings()
     recalculateEstimatedFileSize()
+  }
+
+  /// `updateExportSettings` with an undo entry (agent edits; the panels stay as they were).
+  func updateExportSettingsRecordingUndo(_ settings: ExportSettings) {
+    let old = exportSettings
+    guard settings != old else { return }
+    updateExportSettings(settings)
+    recordAction(.updateExportSettings(old: old, new: settings))
+  }
+
+  // MARK: - Frame (background) settings
+
+  var frameSettings: VideoEditorFrameSettings {
+    VideoEditorFrameSettings(
+      style: backgroundStyle,
+      padding: backgroundPadding,
+      shadowIntensity: backgroundShadowIntensity,
+      cornerRadius: backgroundCornerRadius,
+      alignment: backgroundAlignment,
+      aspectRatio: backgroundAspectRatio
+    )
+  }
+
+  /// Apply background/frame settings as one undoable step.
+  func setFrameSettings(_ settings: VideoEditorFrameSettings) {
+    let old = frameSettings
+    guard settings != old else { return }
+    applyFrameSettings(settings)
+    recordAction(.updateFrame(old: old, new: settings))
+  }
+
+  private func applyFrameSettings(_ settings: VideoEditorFrameSettings) {
+    if backgroundStyle != settings.style { backgroundStyle = settings.style }
+    if backgroundPadding != settings.padding { backgroundPadding = settings.padding }
+    if backgroundShadowIntensity != settings.shadowIntensity { backgroundShadowIntensity = settings.shadowIntensity }
+    if backgroundCornerRadius != settings.cornerRadius { backgroundCornerRadius = settings.cornerRadius }
+    if backgroundAlignment != settings.alignment { backgroundAlignment = settings.alignment }
+    if backgroundAspectRatio != settings.aspectRatio { backgroundAspectRatio = settings.aspectRatio }
   }
 
   /// Recalculate estimated file size based on current settings
