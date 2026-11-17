@@ -61,7 +61,7 @@ struct SnapzyMockAnnotateWindow: View {
       // Left Capture Tools: Crop & Sidebar
       HStack(spacing: 2.5) {
         toolbarTool("crop", tooltip: "Crop")
-        toolbarTool("rectangle.on.rectangle", tooltip: "Sidebar")
+        toolbarTool("sidebar.left", tooltip: "Sidebar")
       }
 
       divider
