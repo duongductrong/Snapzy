@@ -177,6 +177,8 @@ final class VideoEditorAgentController: ObservableObject {
     promptFocusRequest &+= 1
     AnnotateAgentCLIDetector.shared.refresh()
     if let state { analyzer.prewarm(state) }
+    // Load the on-device model while the user types (no-op without Apple Intelligence).
+    VideoEditorAgentAppleIntelligence.prewarm()
   }
 
   /// Ignored while a run is in flight: the prompt row is where its status and Stop live.

@@ -10312,7 +10312,7 @@ extension L10n {
       string("video-editor.ai.placeholder", defaultValue: "Describe how to edit the video…", comment: "Placeholder of the Video Editor AI prompt field")
     }
     static var notConfigured: String {
-      string("video-editor.ai.not-configured", defaultValue: "Pick an endpoint or agent CLI to edit videos with AI", comment: "Shown when no AI provider can edit videos (Apple Intelligence can't yet)")
+      string("video-editor.ai.not-configured", defaultValue: "Turn on Apple Intelligence, or pick an endpoint or agent CLI, to edit videos with AI", comment: "Shown when no AI provider can edit videos")
     }
     static var busy: String {
       string("video-editor.ai.busy", defaultValue: "Wait until the video finishes loading or exporting", comment: "Shown when the Video Editor AI prompt is sent while the editor is busy")

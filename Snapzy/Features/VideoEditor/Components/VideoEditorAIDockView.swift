@@ -225,8 +225,6 @@ private struct VideoEditorAIDockPromptRow: View {
       selection: agent.providerSelection,
       isRunning: agent.isRunning,
       hasConversation: agent.hasConversation,
-      // Apple Intelligence can't edit videos yet.
-      showsAppleIntelligence: false,
       onSelect: { [weak agent] in agent?.selectProvider($0) },
       onNewConversation: { [weak agent] in agent?.startNewConversation() }
     )

@@ -12,9 +12,8 @@ import Foundation
 
 // MARK: - Provider choice
 
-/// The shared provider choice (Settings › AI). Video has no on-device provider yet
-/// (Apple Intelligence tools for video are phase 5), so `automatic` resolves to nothing
-/// outside debug builds and the dock asks the user to pick an endpoint or agent CLI.
+/// The shared provider choice (Settings › AI), with Apple Intelligence's coarse video
+/// tools (`VideoEditorAgentAppleTools.swift`) as the on-device provider.
 @MainActor
 enum VideoEditorAgentProviderResolver {
   static func resolve(
@@ -24,7 +23,7 @@ enum VideoEditorAgentProviderResolver {
     AgentProviderResolver.resolve(
       defaults: defaults,
       endpoints: endpoints,
-      onDevice: { nil },
+      onDevice: { VideoEditorAgentAppleIntelligence.makeProviderIfAvailable() },
       mock: {
         #if DEBUG
         VideoEditorAgentMockProvider()
@@ -35,12 +34,12 @@ enum VideoEditorAgentProviderResolver {
     )
   }
 
-  /// The AI orb shows only when something off-device could answer.
+  /// The AI orb shows only when a provider could answer on this Mac.
   static var isFeatureAvailable: Bool {
     #if DEBUG
     return true
     #else
-    return AgentProviderResolver.hasOffDeviceProvider
+    return VideoEditorAgentAppleIntelligence.isAvailable || AgentProviderResolver.hasOffDeviceProvider
     #endif
   }
 }
