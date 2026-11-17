@@ -21,7 +21,13 @@ struct VideoEditorMainView: View {
   /// The editor narrows for the sidebar in one step (no per-frame relayout of the player and
   /// timeline); the panel itself slides in on top as a cheap transform animation.
   @State private var reservesAIPanelSpace = false
+  /// Slid in (animated offset). The panel stays mounted after its first showing, so reopening
+  /// moves a ready view instead of rebuilding the transcript, the text field and the glass.
   @State private var showsAIPanel = false
+  @State private var mountsAIPanel = false
+  /// Fully slid out: rendered at zero opacity so the off-window glass costs nothing.
+  @State private var parksAIPanel = true
+  @State private var aiPanelGeneration = 0
   var primaryActionTitle: String = "Convert"
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
@@ -49,6 +55,10 @@ struct VideoEditorMainView: View {
   }
 
   private var aiPanelAnimation: Animation { .spring(response: 0.32, dampingFraction: 0.9) }
+  /// How long the slide takes to settle, after which a closed panel is parked.
+  private static let aiPanelSettleDelay: TimeInterval = 0.4
+  /// Keeps the panel's shadow from peeking in at the window edge while slid out.
+  private static let aiPanelShadowOverhang: CGFloat = 32
 
   /// Computed property for current frame preview
   private var currentFrameImage: NSImage? {
@@ -106,10 +116,14 @@ struct VideoEditorMainView: View {
       }
     }
     .overlay(alignment: .trailing) {
-      if showsAIPanel {
+      if mountsAIPanel, aiLayout == .sidebar {
+        // Offset only: an opacity fade on glass re-samples the backdrop every frame.
         VideoEditorAIPanelView(state: state)
           .padding(VideoEditorAIPanelView.inset)
-          .transition(.move(edge: .trailing).combined(with: .opacity))
+          .offset(x: showsAIPanel ? 0 : Self.aiPanelSlotWidth + Self.aiPanelShadowOverhang)
+          .opacity(parksAIPanel ? 0 : 1)
+          .allowsHitTesting(showsAIPanel)
+          .accessibilityHidden(!showsAIPanel)
       }
     }
     .onReceive(agent.chromePublisher) { aiChrome = $0 }
@@ -156,14 +170,43 @@ struct VideoEditorMainView: View {
   /// slides the panel over it. On close the editor takes the space back under the leaving panel.
   private func syncAIPanel(animated: Bool) {
     let visible = isAIPanelVisible
+    aiPanelGeneration &+= 1
+    let generation = aiPanelGeneration
     var instant = Transaction()
     instant.disablesAnimations = true
     instant.animation = nil
     withTransaction(instant) { reservesAIPanelSpace = visible }
-    if animated {
-      withAnimation(aiPanelAnimation) { showsAIPanel = visible }
+
+    guard animated else {
+      withTransaction(instant) {
+        if visible { mountsAIPanel = true }
+        showsAIPanel = visible
+        parksAIPanel = !visible
+      }
+      return
+    }
+
+    if visible {
+      let firstMount = !mountsAIPanel
+      withTransaction(instant) {
+        mountsAIPanel = true
+        parksAIPanel = false
+      }
+      // A panel mounted just now must lay out off-window first, or it would appear in place.
+      if firstMount {
+        DispatchQueue.main.async {
+          guard generation == aiPanelGeneration else { return }
+          withAnimation(aiPanelAnimation) { showsAIPanel = true }
+        }
+      } else {
+        withAnimation(aiPanelAnimation) { showsAIPanel = true }
+      }
     } else {
-      withTransaction(instant) { showsAIPanel = visible }
+      withAnimation(aiPanelAnimation) { showsAIPanel = false }
+      DispatchQueue.main.asyncAfter(deadline: .now() + Self.aiPanelSettleDelay) {
+        guard generation == aiPanelGeneration, !showsAIPanel else { return }
+        withTransaction(instant) { parksAIPanel = true }
+      }
     }
   }
 

@@ -140,72 +140,9 @@ private struct VideoEditorAIDockPromptRow: View {
   @ObservedObject var agent: VideoEditorAgentController
   let maxWidth: CGFloat
 
-  @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-  private static let minimumFieldWidth: CGFloat = 180
-  private static let maximumFieldWidth: CGFloat = 340
-  /// Width changes snap to this step so typing doesn't resize the glass on every key.
-  private static let fieldWidthStep: CGFloat = 16
-  /// Orb, provider, send and paddings.
-  private static let chromeWidth: CGFloat = 140
-
-  private var placeholderText: String {
-    agent.hasConversation ? L10n.AnnotateAI.followUpPlaceholder : L10n.VideoEditorAI.placeholder
-  }
-
-  private var fieldWidth: CGFloat {
-    let available = maxWidth - Self.chromeWidth
-    var content = Self.textWidth(placeholderText)
-    content = max(content, Self.textWidth(agent.isRunning ? agent.status : agent.draft))
-    let stepped = ((content + 8) / Self.fieldWidthStep).rounded(.up) * Self.fieldWidthStep
-    let upper = max(min(Self.maximumFieldWidth, available), Self.minimumFieldWidth)
-    return min(max(stepped, Self.minimumFieldWidth), upper)
-  }
-
-  /// Placeholders and status lines repeat; measure each once.
-  private static var widthCache: [String: CGFloat] = [:]
-
-  private static func textWidth(_ text: String) -> CGFloat {
-    guard !text.isEmpty else { return 0 }
-    if let cached = widthCache[text] { return cached }
-    let width = ceil((text as NSString).size(withAttributes: [.font: AnnotateAIDockPromptField.font]).width)
-    if widthCache.count > 64 { widthCache.removeAll(keepingCapacity: true) }
-    widthCache[text] = width
-    return width
-  }
-
   var body: some View {
     HStack(alignment: .bottom, spacing: 2) {
-      ZStack(alignment: .leading) {
-        // Mounted through a run (hidden under the status line) so the caret comes back after.
-        AnnotateAIDockPromptField(
-          text: $agent.draft,
-          placeholder: placeholderText,
-          focusRequest: agent.promptFocusRequest,
-          isActive: !agent.isRunning,
-          onSubmit: { agent.submit() },
-          onEscape: { agent.handleEscape() },
-          onFocusChange: { [weak agent] focused in
-            // Called from AppKit responder changes, possibly mid view update.
-            DispatchQueue.main.async { agent?.isPromptFieldFocused = focused }
-          }
-        )
-        .frame(height: AnnotateAIDockView.itemHeight)
-        .accessibilityLabel(L10n.VideoEditorAI.askHelp)
-        .opacity(agent.isRunning ? 0 : 1)
-        .allowsHitTesting(!agent.isRunning)
-        .accessibilityHidden(agent.isRunning)
-
-        if agent.isRunning {
-          AnnotateAIDockStatusLine(text: agent.status)
-            .transition(.opacity)
-        }
-      }
-      .frame(width: fieldWidth, height: AnnotateAIDockView.itemHeight, alignment: .leading)
-      .padding(.horizontal, 6)
-      .animation(.easeInOut(duration: 0.2), value: agent.isRunning)
-      .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.9), value: fieldWidth)
-
+      VideoEditorAIDockFieldSlot(agent: agent, draft: agent.draftStore, maxWidth: maxWidth)
       providerChip
       sendButton
     }
@@ -257,6 +194,74 @@ private struct VideoEditorAIDockPromptRow: View {
       }
       .disabled(!agent.canSend)
     }
+  }
+}
+
+/// The field and the status line that covers it during a run. Observes the draft (its width
+/// follows the text), so typing re-renders this slot only, not the provider chip or the glass.
+private struct VideoEditorAIDockFieldSlot: View {
+  @ObservedObject var agent: VideoEditorAgentController
+  @ObservedObject var draft: VideoEditorAgentController.Draft
+  let maxWidth: CGFloat
+
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+  private static let minimumFieldWidth: CGFloat = 180
+  private static let maximumFieldWidth: CGFloat = 340
+  /// Width changes snap to this step so typing doesn't resize the glass on every key.
+  private static let fieldWidthStep: CGFloat = 16
+  /// Orb, provider, send and paddings.
+  private static let chromeWidth: CGFloat = 140
+
+  private var placeholderText: String {
+    agent.hasConversation ? L10n.AnnotateAI.followUpPlaceholder : L10n.VideoEditorAI.placeholder
+  }
+
+  private var fieldWidth: CGFloat {
+    let available = maxWidth - Self.chromeWidth
+    var content = Self.textWidth(placeholderText)
+    content = max(content, Self.textWidth(agent.isRunning ? agent.status : draft.text))
+    let stepped = ((content + 8) / Self.fieldWidthStep).rounded(.up) * Self.fieldWidthStep
+    let upper = max(min(Self.maximumFieldWidth, available), Self.minimumFieldWidth)
+    return min(max(stepped, Self.minimumFieldWidth), upper)
+  }
+
+  /// Placeholders and status lines repeat; measure each once.
+  private static var widthCache: [String: CGFloat] = [:]
+
+  private static func textWidth(_ text: String) -> CGFloat {
+    guard !text.isEmpty else { return 0 }
+    if let cached = widthCache[text] { return cached }
+    let width = ceil((text as NSString).size(withAttributes: [.font: AnnotateAIDockPromptField.font]).width)
+    if widthCache.count > 64 { widthCache.removeAll(keepingCapacity: true) }
+    widthCache[text] = width
+    return width
+  }
+
+  var body: some View {
+    ZStack(alignment: .leading) {
+      // Mounted through a run (hidden under the status line) so the caret comes back after.
+      VideoEditorAIPromptField(
+        agent: agent,
+        draft: draft,
+        placeholder: placeholderText,
+        isActive: !agent.isRunning
+      )
+      .frame(height: AnnotateAIDockView.itemHeight)
+      .accessibilityLabel(L10n.VideoEditorAI.askHelp)
+      .opacity(agent.isRunning ? 0 : 1)
+      .allowsHitTesting(!agent.isRunning)
+      .accessibilityHidden(agent.isRunning)
+
+      if agent.isRunning {
+        AnnotateAIDockStatusLine(text: agent.status)
+          .transition(.opacity)
+      }
+    }
+    .frame(width: fieldWidth, height: AnnotateAIDockView.itemHeight, alignment: .leading)
+    .padding(.horizontal, 6)
+    .animation(.easeInOut(duration: 0.2), value: agent.isRunning)
+    .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.9), value: fieldWidth)
   }
 }
 

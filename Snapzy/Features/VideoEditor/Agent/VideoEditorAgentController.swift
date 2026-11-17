@@ -20,6 +20,7 @@ import AppKit
 import Combine
 import CoreMedia
 import Foundation
+import SwiftUI
 
 @MainActor
 final class VideoEditorAgentController: ObservableObject {
@@ -76,8 +77,32 @@ final class VideoEditorAgentController: ObservableObject {
   /// yes for the timeline alone is asked again.
   static let consentScope = "video-media"
 
+  /// The prompt text, in its own store: only the prompt field observes it, so a keystroke
+  /// re-renders the field alone instead of every view observing the controller.
+  final class Draft: ObservableObject {
+    @Published var text = ""
+  }
+
   @Published var isPromptPresented = false
-  @Published var draft = ""
+  let draftStore = Draft()
+  /// Whether the draft holds more than whitespace. Published only when that flips, for the
+  /// send button and the dock's quick-action chips.
+  @Published private(set) var hasDraftText = false
+
+  var draft: String {
+    get { draftStore.text }
+    set {
+      guard draftStore.text != newValue else { return }
+      draftStore.text = newValue
+      let hasText = !newValue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      if hasDraftText != hasText { hasDraftText = hasText }
+    }
+  }
+
+  /// Two-way binding for the prompt field that keeps `hasDraftText` in step.
+  var draftBinding: Binding<String> {
+    Binding(get: { [draftStore] in draftStore.text }, set: { [weak self] in self?.draft = $0 })
+  }
   /// Bumped whenever the prompt field should take the caret (the field watches it).
   @Published private(set) var promptFocusRequest = 0
   @Published private(set) var phase: Phase = .idle
@@ -148,7 +173,7 @@ final class VideoEditorAgentController: ObservableObject {
   var hasMessages: Bool { !messages.isEmpty }
 
   var canSend: Bool {
-    !isRunning && !isConfirmingRemoteUse && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    !isRunning && !isConfirmingRemoteUse && hasDraftText
   }
 
   /// GIFs can only be resized, so the AI has nothing to do there. Without a provider the
@@ -178,7 +203,7 @@ final class VideoEditorAgentController: ObservableObject {
     case .sidebar:
       return messages.isEmpty
     case .dock:
-      return notice == nil && draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+      return notice == nil && !hasDraftText
     }
   }
 
@@ -276,11 +301,36 @@ final class VideoEditorAgentController: ObservableObject {
     isPromptPresented = true
     isPromptFieldFocused = true
     promptFocusRequest &+= 1
-    AnnotateAgentCLIDetector.shared.refresh()
-    if let state { analyzer.prewarm(state) }
-    // Load the on-device model while the user types (no-op without Apple Intelligence).
-    VideoEditorAgentAppleIntelligence.prewarm()
+    schedulePrewarm()
   }
+
+  /// Records where the keyboard is, publishing only real changes (AppKit reports focus
+  /// repeatedly, and every publish re-renders the views observing the controller).
+  func setPromptFieldFocused(_ focused: Bool) {
+    guard isPromptFieldFocused != focused else { return }
+    isPromptFieldFocused = focused
+  }
+
+  private var prewarmWork: DispatchWorkItem?
+
+  /// Starts the background work the first prompt needs (CLI scan, the recording's analysis,
+  /// the on-device model) once the panel has finished sliding in, so it doesn't compete with
+  /// the animation for the main thread and the CPU.
+  private func schedulePrewarm() {
+    prewarmWork?.cancel()
+    let work = DispatchWorkItem { [weak self] in
+      guard let self, self.isPromptPresented else { return }
+      AnnotateAgentCLIDetector.shared.refresh()
+      if let state = self.state { self.analyzer.prewarm(state) }
+      // Load the on-device model while the user types (no-op without Apple Intelligence).
+      VideoEditorAgentAppleIntelligence.prewarm()
+    }
+    prewarmWork = work
+    DispatchQueue.main.asyncAfter(deadline: .now() + Self.prewarmDelay, execute: work)
+  }
+
+  /// A little longer than the panel's slide-in.
+  static let prewarmDelay: TimeInterval = 0.45
 
   /// Hides the panel; a run in flight keeps going (the toolbar button shows it working).
   /// The dock stays up through a run: its prompt row is where the status and Stop live.

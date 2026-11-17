@@ -549,17 +549,12 @@ private struct VideoEditorAIComposer: View {
       }
 
       VStack(alignment: .leading, spacing: 6) {
-        AnnotateAIDockPromptField(
-          text: $agent.draft,
+        // While the panel is slid away (it stays mounted) the field gives up the keyboard.
+        VideoEditorAIPromptField(
+          agent: agent,
+          draft: agent.draftStore,
           placeholder: placeholderText,
-          focusRequest: agent.promptFocusRequest,
-          isActive: !agent.isRunning,
-          onSubmit: { agent.submit() },
-          onEscape: { agent.handleEscape() },
-          onFocusChange: { [weak agent] focused in
-            // Called from AppKit responder changes, possibly mid view update.
-            DispatchQueue.main.async { agent?.isPromptFieldFocused = focused }
-          }
+          isActive: !agent.isRunning && agent.isPromptPresented
         )
         .frame(height: 22)
         .accessibilityLabel(L10n.VideoEditorAI.askHelp)
@@ -639,6 +634,32 @@ private struct VideoEditorAIComposer: View {
       }
       .disabled(!agent.canSend)
     }
+  }
+}
+
+// MARK: - Prompt field
+
+/// The prompt field alone observes the draft, so a keystroke re-renders only this view
+/// (the composer, header and transcript follow the controller, which typing leaves alone).
+struct VideoEditorAIPromptField: View {
+  let agent: VideoEditorAgentController
+  @ObservedObject var draft: VideoEditorAgentController.Draft
+  let placeholder: String
+  let isActive: Bool
+
+  var body: some View {
+    AnnotateAIDockPromptField(
+      text: agent.draftBinding,
+      placeholder: placeholder,
+      focusRequest: agent.promptFocusRequest,
+      isActive: isActive,
+      onSubmit: { [weak agent] in agent?.submit() },
+      onEscape: { [weak agent] in agent?.handleEscape() },
+      onFocusChange: { [weak agent] focused in
+        // Called from AppKit responder changes, possibly mid view update.
+        DispatchQueue.main.async { agent?.setPromptFieldFocused(focused) }
+      }
+    )
   }
 }
 
