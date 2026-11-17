@@ -216,7 +216,7 @@ final class AgentCLIProvider: AgentProvider {
         detail.isEmpty ? "exit \(outcome.exit.status)" : detail
       ))
     }
-    return AgentReplyFormatter.oneLine(outcome.reply ?? "")
+    return AgentReplyFormatter.full(outcome.reply ?? "")
   }
 
   // MARK: - Process output

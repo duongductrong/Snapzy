@@ -185,6 +185,8 @@ enum PreferencesKeys {
   static let recordingShowTimeOnMenuBar = "recording.showTimeOnMenuBar"
   static let recordingHoverBarFrameOrigin = "recording.hoverBarFrameOrigin"
   static let videoEditorZoomTransitionDuration = "videoEditor.zoom.transitionDuration"
+  /// Video Editor AI assistant layout: "sidebar" (right panel, default) or "dock" (floating over the player).
+  static let videoEditorAILayout = "videoEditor.ai.layout"
 
   // Mouse Highlight Customization
   static let mouseHighlightSize = "recording.mouseHighlight.size"

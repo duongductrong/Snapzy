@@ -4,10 +4,11 @@
 //
 //  UI state and run loop of the Video Editor AI prompt, one per editor window.
 //
-//  - The dock shows the prompt while `isPromptPresented`; while a run is in flight the
-//    field becomes a status line and the editor locks authoring (play stays live).
-//  - A run is one undo group (`VideoEditorAgentToolbox.beginRun/finishRun`): the result
-//    pill's Undo, or ⌘Z, takes the whole prompt back.
+//  - The AI panel (right sidebar) shows while `isPromptPresented`; while a run is in flight
+//    the editor locks authoring (play stays live).
+//  - `messages` is what the panel lists: prompts, replies and each reply's edits as steps.
+//  - A run is one undo group (`VideoEditorAgentToolbox.beginRun/finishRun`): the reply's
+//    Undo, or ⌘Z, takes the whole prompt back.
 //  - A conversation (toolbox ids, earlier turns) lives until the user starts a new one
 //    or picks another provider.
 //
@@ -83,6 +84,17 @@ final class VideoEditorAgentController: ObservableObject {
   @Published private(set) var status = ""
   @Published private(set) var notice: Notice?
   @Published private(set) var turns: [AgentTurn] = []
+  /// The conversation as the panel shows it (quick actions included).
+  @Published private(set) var messages: [VideoEditorAgentMessage] = []
+  /// The prompt field holds the keyboard; single-key editing shortcuts stand down.
+  @Published var isPromptFieldFocused = false
+  /// Why the last send or quick action could not start (no provider, busy). Shown over the composer.
+  @Published private(set) var composerError: ComposerError?
+
+  struct ComposerError: Equatable {
+    let message: String
+    let offersSettings: Bool
+  }
 
   private weak var state: VideoEditorState?
   private let resolveProvider: @MainActor () -> AgentProvider?
@@ -109,6 +121,8 @@ final class VideoEditorAgentController: ObservableObject {
   private var undoEntryAfterRun: EditorAction?
   /// Only a finished run adds a turn; undoing a stopped or failed one keeps the history.
   private var lastRunAddedTurn = false
+  /// The assistant message the run in flight writes into.
+  private var replyMessageID: UUID?
 
   init(
     state: VideoEditorState,
@@ -128,9 +142,10 @@ final class VideoEditorAgentController: ObservableObject {
 
   var isRunning: Bool { phase != .idle }
   var hasConversation: Bool { !turns.isEmpty }
-  /// Single-key editing shortcuts (S, Z, I, O, Delete) stand down while the prompt is open,
-  /// so typing in it never splits or deletes, and while a run holds the timeline.
-  var allowsPlainKeyShortcuts: Bool { !isPromptPresented && !isRunning }
+  /// Single-key editing shortcuts (S, Z, I, O, Delete) stand down while the prompt field has
+  /// the keyboard, so typing in it never splits or deletes, and while a run holds the timeline.
+  var allowsPlainKeyShortcuts: Bool { !(isPromptPresented && isPromptFieldFocused) && !isRunning }
+  var hasMessages: Bool { !messages.isEmpty }
 
   var canSend: Bool {
     !isRunning && !isConfirmingRemoteUse && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -153,10 +168,93 @@ final class VideoEditorAgentController: ObservableObject {
     return actions
   }
 
-  /// Chips show over an empty, idle prompt.
+  /// Where the assistant shows (Settings › AI). Read live so a change applies to open editors.
+  var layout: VideoEditorAILayout { VideoEditorAILayout.current(defaults) }
+
+  /// Quick actions show in the panel's empty state, or as chips over the dock's empty, idle prompt.
   var showsQuickActions: Bool {
-    isPromptPresented && !isRunning && !isConfirmingRemoteUse && notice == nil
-      && draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !quickActions.isEmpty
+    guard isPromptPresented, !isRunning, !isConfirmingRemoteUse, !quickActions.isEmpty else { return false }
+    switch layout {
+    case .sidebar:
+      return messages.isEmpty
+    case .dock:
+      return notice == nil && draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+  }
+
+  // MARK: - Snapshots
+  //
+  // The editor chrome and the panel's transcript each subscribe to a small Equatable snapshot
+  // instead of observing the whole controller, so typing in the prompt (`draft` changes on every
+  // key) never re-renders the editor, toolbar or conversation.
+
+  /// What the editor around the assistant needs: presentation, the run lock, shortcut gating.
+  struct Chrome: Equatable {
+    var isPromptPresented = false
+    var isRunning = false
+    var allowsPlainKeyShortcuts = true
+  }
+
+  var chrome: Chrome {
+    Chrome(
+      isPromptPresented: isPromptPresented,
+      isRunning: isRunning,
+      allowsPlainKeyShortcuts: allowsPlainKeyShortcuts
+    )
+  }
+
+  /// What the panel's conversation shows. `status` only while a run is in flight.
+  struct Transcript: Equatable {
+    var messages: [VideoEditorAgentMessage] = []
+    var status = ""
+    var undoableMessageID: UUID?
+    var isRunning = false
+    var quickActions: [QuickAction] = []
+    var showsQuickActions = false
+  }
+
+  var transcript: Transcript {
+    Transcript(
+      messages: messages,
+      status: isRunning ? status : "",
+      undoableMessageID: undoableMessageID,
+      isRunning: isRunning,
+      quickActions: quickActions,
+      showsQuickActions: showsQuickActions
+    )
+  }
+
+  /// `objectWillChange` fires before the new value lands, so snapshots are read on the next
+  /// main-queue turn, when every property is settled. Undo-stack changes also matter
+  /// (Undo disappears once the user edits on their own).
+  private lazy var settledChanges: AnyPublisher<Void, Never> = {
+    var sources: [AnyPublisher<Void, Never>] = [objectWillChange.map { _ in () }.eraseToAnyPublisher()]
+    if let state { sources.append(state.$canUndo.map { _ in () }.eraseToAnyPublisher()) }
+    return Publishers.MergeMany(sources)
+      .receive(on: DispatchQueue.main)
+      .share()
+      .eraseToAnyPublisher()
+  }()
+
+  lazy var chromePublisher: AnyPublisher<Chrome, Never> = settledChanges
+    .compactMap { [weak self] in self?.chrome }
+    .removeDuplicates()
+    .eraseToAnyPublisher()
+
+  lazy var transcriptPublisher: AnyPublisher<Transcript, Never> = settledChanges
+    .compactMap { [weak self] in self?.transcript }
+    .removeDuplicates()
+    .eraseToAnyPublisher()
+
+  /// Whether the run's Undo is still offered, for the dock's result pill.
+  lazy var canUndoLastRunPublisher: AnyPublisher<Bool, Never> = settledChanges
+    .compactMap { [weak self] in self?.canUndoLastRun }
+    .removeDuplicates()
+    .eraseToAnyPublisher()
+
+  /// The id of the reply whose changes Undo would take back.
+  var undoableMessageID: UUID? {
+    canUndoLastRun ? messages.last(where: { $0.role == .assistant })?.id : nil
   }
 
   var provider: AgentProvider? { resolveProvider() }
@@ -176,6 +274,7 @@ final class VideoEditorAgentController: ObservableObject {
   func presentPrompt() {
     guard isAvailable || isRunning else { return }
     isPromptPresented = true
+    isPromptFieldFocused = true
     promptFocusRequest &+= 1
     AnnotateAgentCLIDetector.shared.refresh()
     if let state { analyzer.prewarm(state) }
@@ -183,10 +282,19 @@ final class VideoEditorAgentController: ObservableObject {
     VideoEditorAgentAppleIntelligence.prewarm()
   }
 
-  /// Ignored while a run is in flight: the prompt row is where its status and Stop live.
+  /// Hides the panel; a run in flight keeps going (the toolbar button shows it working).
+  /// The dock stays up through a run: its prompt row is where the status and Stop live.
   func dismissPrompt() {
-    guard !isRunning else { return }
+    if isRunning, layout == .dock { return }
     isPromptPresented = false
+    isPromptFieldFocused = false
+  }
+
+  /// Puts the caret in the prompt field (a click on the composer, an example prompt).
+  func focusPrompt() {
+    guard isPromptPresented else { return presentPrompt() }
+    isPromptFieldFocused = true
+    promptFocusRequest &+= 1
   }
 
   func togglePrompt() {
@@ -221,13 +329,16 @@ final class VideoEditorAgentController: ObservableObject {
     let prompt = draft.trimmingCharacters(in: .whitespacesAndNewlines)
     guard !prompt.isEmpty, !isRunning, !isConfirmingRemoteUse, let state else { return }
     guard !state.isGIF, !state.isExporting, !state.clips.isEmpty else {
+      composerError = ComposerError(message: L10n.VideoEditorAI.busy, offersSettings: false)
       showNotice(.failed(message: L10n.VideoEditorAI.busy, offersSettings: false))
       return
     }
     guard let provider = resolveProvider() else {
+      composerError = ComposerError(message: L10n.VideoEditorAI.notConfigured, offersSettings: true)
       showNotice(.failed(message: L10n.VideoEditorAI.notConfigured, offersSettings: true))
       return
     }
+    composerError = nil
     // The timeline leaves the Mac: ask once per provider, then send what was typed.
     if let destination = provider.remoteDestination, !remoteConsent.has(destination) {
       isConfirmingRemoteUse = true
@@ -255,6 +366,8 @@ final class VideoEditorAgentController: ObservableObject {
     didBeginRun = false
     status = L10n.VideoEditorAI.statusReading
     phase = .reading
+    messages.append(.user(prompt))
+    beginReply()
 
     let operationID = UUID()
     self.operationID = operationID
@@ -278,6 +391,7 @@ final class VideoEditorAgentController: ObservableObject {
     endRun()
     let changes = summary?.changeCount ?? 0
     undoEntryAfterRun = summary?.undoEntry
+    finishReply(outcome: .stopped, text: "", changeCount: changes)
     showNotice(.stopped(changeCount: changes))
     DiagnosticLogger.shared.log(.info, .editor, "Video AI prompt stopped", context: ["changes": "\(changes)"])
   }
@@ -287,6 +401,9 @@ final class VideoEditorAgentController: ObservableObject {
     guard let state, canUndoLastRun else { return }
     state.undo()
     undoEntryAfterRun = nil
+    if let index = messages.lastIndex(where: { $0.role == .assistant }) {
+      messages[index].isUndone = true
+    }
     // The agent should not build on changes that were just taken back.
     if lastRunAddedTurn, !turns.isEmpty { turns.removeLast() }
     lastRunAddedTurn = false
@@ -308,6 +425,10 @@ final class VideoEditorAgentController: ObservableObject {
     dismissNotice()
   }
 
+  func dismissComposerError() {
+    composerError = nil
+  }
+
   func dismissNotice() {
     noticeTask?.cancel()
     notice = nil
@@ -322,7 +443,42 @@ final class VideoEditorAgentController: ObservableObject {
 
   private func resetConversation() {
     turns = []
+    messages = []
     toolbox = nil
+    undoEntryAfterRun = nil
+  }
+
+  // MARK: - Transcript
+
+  private func beginReply(quickActionTitle: String? = nil) {
+    let reply = VideoEditorAgentMessage.pendingReply(quickActionTitle: quickActionTitle)
+    replyMessageID = reply.id
+    messages.append(reply)
+  }
+
+  private func updateReply(_ change: (inout VideoEditorAgentMessage) -> Void) {
+    guard let replyMessageID, let index = messages.firstIndex(where: { $0.id == replyMessageID }) else { return }
+    change(&messages[index])
+  }
+
+  private func finishReply(outcome: VideoEditorAgentMessage.Outcome, text: String, changeCount: Int) {
+    updateReply {
+      $0.outcome = outcome
+      $0.text = text
+      $0.changeCount = changeCount
+    }
+    replyMessageID = nil
+  }
+
+  private func makeToolbox(_ state: VideoEditorState) -> VideoEditorAgentToolbox {
+    if let toolbox { return toolbox }
+    let toolbox = VideoEditorAgentToolbox(state: state, analyzer: analyzer)
+    toolbox.onExecuted = { [weak self] tool, arguments, result in
+      guard let self, let step = VideoEditorAgentStepDescriber.step(for: tool, argumentsJSON: arguments, result: result) else { return }
+      self.updateReply { $0.steps.append(step) }
+    }
+    self.toolbox = toolbox
+    return toolbox
   }
 
   private func run(prompt: String, provider: AgentProvider, operationID: UUID) async {
@@ -330,11 +486,11 @@ final class VideoEditorAgentController: ObservableObject {
     guard let state else {
       self.operationID = nil
       endRun()
+      finishReply(outcome: .failed(offersSettings: false), text: L10n.AnnotateAI.failed, changeCount: 0)
       return
     }
 
-    let toolbox = self.toolbox ?? VideoEditorAgentToolbox(state: state, analyzer: analyzer)
-    self.toolbox = toolbox
+    let toolbox = makeToolbox(state)
     toolbox.beginRun()
     didBeginRun = true
 
@@ -379,6 +535,14 @@ final class VideoEditorAgentController: ObservableObject {
       turns.append(AgentTurn(prompt: prompt, reply: reply, providerSessionID: session.providerSessionID))
       lastRunAddedTurn = true
       let message = AgentReplyFormatter.oneLine(reply)
+      let fullReply = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+      finishReply(
+        outcome: .finished,
+        text: fullReply.isEmpty
+          ? (summary.changeCount == 0 ? L10n.AnnotateAI.noChanges : L10n.AnnotateAI.changes(summary.changeCount))
+          : fullReply,
+        changeCount: summary.changeCount
+      )
       showNotice(.finished(
         message: message.isEmpty
           ? (summary.changeCount == 0 ? L10n.AnnotateAI.noChanges : L10n.AnnotateAI.changes(summary.changeCount))
@@ -393,6 +557,7 @@ final class VideoEditorAgentController: ObservableObject {
       endRun()
       undoEntryAfterRun = summary.undoEntry
       if error is CancellationError {
+        finishReply(outcome: .stopped, text: "", changeCount: summary.changeCount)
         showNotice(.stopped(changeCount: summary.changeCount))
         return
       }
@@ -410,6 +575,7 @@ final class VideoEditorAgentController: ObservableObject {
       default:
         message = L10n.AnnotateAI.failed
       }
+      finishReply(outcome: .failed(offersSettings: offersSettings), text: message, changeCount: summary.changeCount)
       showNotice(.failed(message: message, offersSettings: offersSettings))
       DiagnosticLogger.shared.log(.warning, .editor, "Video AI prompt failed", context: ["error": "\(error)"])
     }
@@ -421,9 +587,11 @@ final class VideoEditorAgentController: ObservableObject {
   func runQuickAction(_ action: QuickAction) {
     guard !isRunning, !isConfirmingRemoteUse, let state else { return }
     guard !state.isGIF, !state.isExporting, !state.clips.isEmpty else {
+      composerError = ComposerError(message: L10n.VideoEditorAI.busy, offersSettings: false)
       showNotice(.failed(message: L10n.VideoEditorAI.busy, offersSettings: false))
       return
     }
+    composerError = nil
     state.pause()
     dismissNotice()
     undoEntryAfterRun = nil
@@ -431,6 +599,7 @@ final class VideoEditorAgentController: ObservableObject {
     didBeginRun = false
     status = L10n.VideoEditorAI.statusAnalyzing
     phase = .reading
+    beginReply(quickActionTitle: action.title)
 
     let operationID = UUID()
     self.operationID = operationID
@@ -449,13 +618,13 @@ final class VideoEditorAgentController: ObservableObject {
       guard isCurrent(operationID) else { return }
       self.operationID = nil
       endRun()
+      finishReply(outcome: .failed(offersSettings: false), text: L10n.AnnotateAI.failed, changeCount: 0)
       showNotice(.failed(message: L10n.AnnotateAI.failed, offersSettings: false))
       return
     }
     guard isCurrent(operationID) else { return }
 
-    let toolbox = self.toolbox ?? VideoEditorAgentToolbox(state: state, analyzer: analyzer)
-    self.toolbox = toolbox
+    let toolbox = makeToolbox(state)
     toolbox.beginRun()
     didBeginRun = true
     status = Self.status(for: action.tool) ?? status
@@ -472,9 +641,14 @@ final class VideoEditorAgentController: ObservableObject {
     endRun()
     undoEntryAfterRun = summary.undoEntry
     if result.isError {
-      showNotice(.failed(message: payload["error"] as? String ?? L10n.AnnotateAI.failed, offersSettings: false))
+      let message = payload["error"] as? String ?? L10n.AnnotateAI.failed
+      finishReply(outcome: .failed(offersSettings: false), text: message, changeCount: summary.changeCount)
+      showNotice(.failed(message: message, offersSettings: false))
     } else {
-      showNotice(.finished(message: Self.quickMessage(action, payload: payload), changeCount: summary.changeCount))
+      let message = Self.quickMessage(action, payload: payload)
+      // The one step already says what happened; the reply text would repeat it.
+      finishReply(outcome: .finished, text: summary.changeCount > 0 ? "" : message, changeCount: summary.changeCount)
+      showNotice(.finished(message: message, changeCount: summary.changeCount))
     }
     DiagnosticLogger.shared.log(.info, .editor, "Video AI quick action finished", context: [
       "action": action.rawValue, "changes": "\(summary.changeCount)",

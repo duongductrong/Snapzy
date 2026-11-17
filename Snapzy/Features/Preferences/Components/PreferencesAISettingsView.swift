@@ -15,6 +15,8 @@ struct AISettingsView: View {
   @AppStorage(PreferencesKeys.annotateAgentSendImage) private var sendImage = true
   @AppStorage(PreferencesKeys.annotateAgentCLITimeout)
   private var cliTimeout = AnnotateAgentAISettings.defaultCLITimeout
+  @AppStorage(PreferencesKeys.videoEditorAILayout)
+  private var videoEditorLayout = VideoEditorAILayout.defaultValue
 
   @ObservedObject private var endpointStore = CustomOCRModelStore.shared
   @ObservedObject private var detector = AnnotateAgentCLIDetector.shared
@@ -32,6 +34,7 @@ struct AISettingsView: View {
       appleSection
       endpointSection
       cliSection
+      videoEditorSection
       privacySection
     }
     .formStyle(.grouped)
@@ -226,6 +229,26 @@ struct AISettingsView: View {
       }
     } footer: {
       AISettingsFooter(text: L10n.AnnotateAI.settingsCLIFooter)
+    }
+  }
+
+  // MARK: - Video Editor
+
+  private var videoEditorSection: some View {
+    Section(L10n.VideoEditorAI.settingsSection) {
+      SettingRow(
+        title: L10n.VideoEditorAI.layoutTitle,
+        description: L10n.VideoEditorAI.layoutDescription
+      ) {
+        Picker("", selection: $videoEditorLayout) {
+          ForEach(VideoEditorAILayout.allCases) { layout in
+            Text(layout.title).tag(layout)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.menu)
+        .fixedSize()
+      }
     }
   }
 

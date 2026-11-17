@@ -354,7 +354,7 @@ final class AgentEndpointProvider: AgentProvider {
   }
 
   static func cleanReply(_ text: String) -> String {
-    AgentReplyFormatter.oneLine(text)
+    AgentReplyFormatter.full(text)
   }
 
   // MARK: - Conversation

@@ -68,6 +68,9 @@ final class VideoEditorAgentToolbox {
   private var isRunOpen = false
   private var changeCount = 0
 
+  /// Every finished call (name, raw arguments, result), so the AI panel can list the edits.
+  var onExecuted: ((VideoEditorAgentToolName, String, AgentToolResult) -> Void)?
+
   init(state: VideoEditorState, analyzer: VideoEditorAgentAnalyzer? = nil) {
     self.state = state
     self.analyzer = analyzer ?? VideoEditorAgentAnalyzer()
@@ -201,6 +204,14 @@ final class VideoEditorAgentToolbox {
   // MARK: - Execute
 
   func execute(name: String, argumentsJSON: String) async -> AgentToolResult {
+    let result = await performExecute(name: name, argumentsJSON: argumentsJSON)
+    if let tool = VideoEditorAgentToolName(rawValue: name) {
+      onExecuted?(tool, argumentsJSON, result)
+    }
+    return result
+  }
+
+  private func performExecute(name: String, argumentsJSON: String) async -> AgentToolResult {
     // Tools that read the recording wait for its analysis (cached after the first).
     if let tool = VideoEditorAgentToolName(rawValue: name), tool.needsAnalysis,
        let state, !state.isGIF, !state.clips.isEmpty {

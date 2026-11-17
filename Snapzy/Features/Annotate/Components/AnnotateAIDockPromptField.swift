@@ -24,6 +24,8 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
   let isActive: Bool
   let onSubmit: () -> Void
   let onEscape: () -> Void
+  /// Whether the field holds the keyboard (the Video Editor panel gates plain-key shortcuts on it).
+  var onFocusChange: ((Bool) -> Void)? = nil
 
   static let font = NSFont.systemFont(ofSize: 13, weight: .medium)
 
@@ -47,6 +49,7 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
     field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
     field.stringValue = text
     field.onEscape = onEscape
+    field.onFocus = onFocusChange.map { callback in { callback(true) } }
     field.isEditable = isActive
     applyPlaceholder(to: field)
     context.coordinator.lastFocusRequest = focusRequest
@@ -57,6 +60,7 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
   func updateNSView(_ field: PromptTextField, context: Context) {
     context.coordinator.parent = self
     field.onEscape = onEscape
+    field.onFocus = onFocusChange.map { callback in { callback(true) } }
     // Don't stomp on marked text (IME composition) with a stale binding value.
     if field.stringValue != text, (field.currentEditor() as? NSTextView)?.hasMarkedText() != true {
       field.stringValue = text
@@ -91,6 +95,10 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
       self.parent = parent
     }
 
+    func controlTextDidEndEditing(_: Notification) {
+      parent.onFocusChange?(false)
+    }
+
     func controlTextDidChange(_ notification: Notification) {
       guard let field = notification.object as? NSTextField else { return }
       parent.text = field.stringValue
@@ -117,6 +125,7 @@ struct AnnotateAIDockPromptField: NSViewRepresentable {
 
 final class PromptTextField: NSTextField {
   var onEscape: (() -> Void)?
+  var onFocus: (() -> Void)?
   private var wantsFocus = false
   private var focusAttempts = 0
 
@@ -207,6 +216,7 @@ final class PromptTextField: NSTextField {
   override func becomeFirstResponder() -> Bool {
     let accepted = super.becomeFirstResponder()
     if accepted {
+      onFocus?()
       ensureKeyWindow()
       styleFieldEditor()
       placeCaretAtEnd()

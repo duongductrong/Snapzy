@@ -8,6 +8,7 @@
 //
 
 import AVFoundation
+import Combine
 import CoreMedia
 import CoreVideo
 import Foundation
@@ -142,6 +143,57 @@ final class VideoEditorAgentControllerTests: XCTestCase {
     XCTAssertFalse(controller.canUndoLastRun)
   }
 
+  func testTranscriptListsPromptReplyAndEditSteps() async throws {
+    let state = try await makeState()
+    let provider = ScriptedProvider(calls: [("get_timeline", "{}"), speedCall, zoomCall])
+    provider.reply = "Sped up 0:02–0:06 and zoomed at 0:01."
+    let controller = makeController(state, provider: provider)
+
+    controller.draft = "speed it up"
+    controller.submit()
+    XCTAssertEqual(controller.messages.map(\.role), [.user, .assistant])
+    XCTAssertEqual(controller.messages.last?.outcome, .running)
+    await waitUntil { !controller.isRunning }
+
+    XCTAssertEqual(controller.messages.count, 2)
+    XCTAssertEqual(controller.messages.first?.text, "speed it up")
+    let reply = try XCTUnwrap(controller.messages.last)
+    XCTAssertEqual(reply.outcome, .finished)
+    XCTAssertEqual(reply.text, "Sped up 0:02–0:06 and zoomed at 0:01.")
+    XCTAssertEqual(reply.changeCount, 2)
+    // Reads are not steps; each change is, with the time it is about.
+    XCTAssertEqual(reply.steps.map(\.symbolName), ["gauge.with.dots.needle.67percent", "plus.magnifyingglass"])
+    XCTAssertEqual(reply.steps.first?.title, L10n.VideoEditorAI.stepSpeed("4"))
+    XCTAssertEqual(reply.steps.first?.time ?? -1, 2, accuracy: 0.01)
+    XCTAssertEqual(reply.steps.last?.time ?? -1, 1, accuracy: 0.01)
+    XCTAssertEqual(controller.undoableMessageID, reply.id)
+
+    controller.undoLastRun()
+    XCTAssertEqual(controller.messages.last?.isUndone, true)
+    XCTAssertNil(controller.undoableMessageID)
+
+    controller.startNewConversation()
+    XCTAssertTrue(controller.messages.isEmpty)
+  }
+
+  func testMissingProviderShowsComposerErrorWithoutMessages() async throws {
+    let state = try await makeState()
+    let controller = makeController(state, provider: nil)
+    controller.draft = "cut"
+    controller.submit()
+    XCTAssertEqual(controller.composerError?.offersSettings, true)
+    XCTAssertTrue(controller.messages.isEmpty)
+  }
+
+  func testPlainKeyShortcutsFollowFieldFocusNotPanel() async throws {
+    let state = try await makeState()
+    let controller = makeController(state, provider: nil)
+    controller.presentPrompt()
+    XCTAssertFalse(controller.allowsPlainKeyShortcuts)
+    controller.isPromptFieldFocused = false
+    XCTAssertTrue(controller.allowsPlainKeyShortcuts, "an open panel without the caret keeps S/Z/Delete")
+  }
+
   func testUndoIsWithdrawnOnceTheUserEdits() async throws {
     let state = try await makeState()
     let controller = makeController(state, provider: ScriptedProvider(calls: [speedCall]))
@@ -180,6 +232,51 @@ final class VideoEditorAgentControllerTests: XCTestCase {
 
     controller.undoLastRun()
     XCTAssertTrue(state.speedSegments.isEmpty)
+  }
+
+  func testLayoutDecidesWhetherARunCanBeHidden() async throws {
+    let state = try await makeState()
+    let provider = ScriptedProvider(calls: [speedCall, zoomCall])
+    provider.waitsAfterFirstCall = true
+    let controller = makeController(state, provider: provider)
+    XCTAssertEqual(controller.layout, .sidebar)
+
+    controller.isPromptPresented = true
+    controller.draft = "go"
+    controller.submit()
+    await waitUntil { provider.gate != nil }
+
+    // The dock's prompt row holds the status and Stop: it stays up through the run.
+    defaults.set(VideoEditorAILayout.dock.rawValue, forKey: PreferencesKeys.videoEditorAILayout)
+    controller.dismissPrompt()
+    XCTAssertTrue(controller.isPromptPresented)
+
+    // The sidebar can hide while the run keeps going (the toolbar button shows it).
+    defaults.set(VideoEditorAILayout.sidebar.rawValue, forKey: PreferencesKeys.videoEditorAILayout)
+    controller.dismissPrompt()
+    XCTAssertFalse(controller.isPromptPresented)
+    XCTAssertTrue(controller.isRunning)
+    XCTAssertTrue(controller.chrome.isRunning)
+
+    controller.stop()
+    provider.gate?.resume()
+  }
+
+  func testChromeSnapshotIgnoresTyping() async throws {
+    let state = try await makeState()
+    let controller = makeController(state, provider: nil)
+    var received: [VideoEditorAgentController.Chrome] = []
+    let subscription = controller.chromePublisher.sink { received.append($0) }
+    defer { subscription.cancel() }
+
+    controller.isPromptPresented = true
+    await waitUntil { !received.isEmpty }
+    let afterPresent = received.count
+    controller.draft = "a"
+    controller.draft = "ab"
+    try? await Task.sleep(nanoseconds: 50_000_000)
+    XCTAssertEqual(received.count, afterPresent)
+    XCTAssertEqual(received.last?.isPromptPresented, true)
   }
 
   func testUndoingAStoppedRunKeepsTheEarlierTurn() async throws {

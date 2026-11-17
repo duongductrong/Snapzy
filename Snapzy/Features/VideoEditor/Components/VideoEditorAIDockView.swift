@@ -12,19 +12,21 @@
 //  and the dock carries the reading rim. The result pill sits above the dock; over
 //  an empty prompt, quick-action chips ("Remove silences"…) take its place.
 //
+//  One of two layouts (Settings › AI › Video Editor); the other is the sidebar,
+//  VideoEditorAIPanelView. The dock observes only the agent, never the editor state,
+//  so playback and timeline edits don't re-render it.
+//
 
 import AppKit
 import SwiftUI
 
 struct VideoEditorAIDockView: View {
-  @ObservedObject var state: VideoEditorState
   @ObservedObject private var agent: VideoEditorAgentController
   @ObservedObject private var shortcuts = VideoEditorShortcutManager.shared
   /// Widest the dock may grow (the player width minus margins).
   let maxWidth: CGFloat
 
   init(state: VideoEditorState, maxWidth: CGFloat) {
-    self.state = state
     _agent = ObservedObject(wrappedValue: state.agent)
     self.maxWidth = maxWidth
   }
@@ -44,7 +46,7 @@ struct VideoEditorAIDockView: View {
 
   var body: some View {
     VStack(spacing: 10) {
-      VideoEditorAgentNoticePill(agent: agent, state: state)
+      VideoEditorAgentNoticePill(agent: agent)
       if agent.showsQuickActions {
         VideoEditorAIQuickActionChips(agent: agent)
           .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)))
@@ -160,9 +162,16 @@ private struct VideoEditorAIDockPromptRow: View {
     return min(max(stepped, Self.minimumFieldWidth), upper)
   }
 
+  /// Placeholders and status lines repeat; measure each once.
+  private static var widthCache: [String: CGFloat] = [:]
+
   private static func textWidth(_ text: String) -> CGFloat {
     guard !text.isEmpty else { return 0 }
-    return ceil((text as NSString).size(withAttributes: [.font: AnnotateAIDockPromptField.font]).width)
+    if let cached = widthCache[text] { return cached }
+    let width = ceil((text as NSString).size(withAttributes: [.font: AnnotateAIDockPromptField.font]).width)
+    if widthCache.count > 64 { widthCache.removeAll(keepingCapacity: true) }
+    widthCache[text] = width
+    return width
   }
 
   var body: some View {
@@ -175,7 +184,11 @@ private struct VideoEditorAIDockPromptRow: View {
           focusRequest: agent.promptFocusRequest,
           isActive: !agent.isRunning,
           onSubmit: { agent.submit() },
-          onEscape: { agent.handleEscape() }
+          onEscape: { agent.handleEscape() },
+          onFocusChange: { [weak agent] focused in
+            // Called from AppKit responder changes, possibly mid view update.
+            DispatchQueue.main.async { agent?.isPromptFieldFocused = focused }
+          }
         )
         .frame(height: AnnotateAIDockView.itemHeight)
         .accessibilityLabel(L10n.VideoEditorAI.askHelp)
@@ -284,8 +297,9 @@ private struct VideoEditorAIQuickActionChips: View {
 /// Result of the last prompt, above the dock: summary, Undo, close. Hidden while running.
 struct VideoEditorAgentNoticePill: View {
   @ObservedObject var agent: VideoEditorAgentController
-  /// Observed so Undo disappears once the user edits on their own.
-  @ObservedObject var state: VideoEditorState
+  /// Follows the undo stack (Undo disappears once the user edits on their own) without
+  /// observing the whole editor state.
+  @State private var canUndo = false
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
   var body: some View {
@@ -302,6 +316,8 @@ struct VideoEditorAgentNoticePill: View {
     }
     .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 8)))
     .animation(.timingCurve(0.2, 0.9, 0.25, 1, duration: 0.32), value: agent.notice)
+    .onAppear { canUndo = agent.canUndoLastRun }
+    .onReceive(agent.canUndoLastRunPublisher) { canUndo = $0 }
   }
 
   @ViewBuilder
@@ -339,7 +355,7 @@ struct VideoEditorAgentNoticePill: View {
   /// Gone once the user edits on their own (the run's step is no longer the latest).
   @ViewBuilder
   private var undoButton: some View {
-    if agent.canUndoLastRun {
+    if canUndo {
       pillButton(L10n.Common.undo) { agent.undoLastRun() }
     }
   }

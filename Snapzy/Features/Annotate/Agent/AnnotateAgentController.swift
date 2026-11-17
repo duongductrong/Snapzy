@@ -348,7 +348,7 @@ final class AnnotateAgentController: ObservableObject {
       endRun()
       rememberRunResult(summary)
       turns.append(AnnotateAgentTurn(prompt: prompt, reply: reply, providerSessionID: session.providerSessionID))
-      let message = reply.trimmingCharacters(in: .whitespacesAndNewlines)
+      let message = AgentReplyFormatter.oneLine(reply)
       showNotice(.finished(
         message: message.isEmpty
           ? (summary.changeCount == 0 ? L10n.AnnotateAI.noChanges : L10n.AnnotateAI.changes(summary.changeCount))

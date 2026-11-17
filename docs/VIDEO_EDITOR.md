@@ -250,7 +250,7 @@ playhead's claimed position before starting, so replay cannot loop end → rewin
 
 ## AI Prompt
 
-Dock over the bottom of the player (orb → prompt, provider chip, quick-action chips, result pill with Undo). The agent edits clips, zooms, speeds, frame and audio through the state's mutators, one undo step per prompt, and can read activity (silence/idle/motion), frames, on-screen text and an on-device transcript. Authoring is locked while it runs; playback stays live. Not for GIFs. Full reference: [AI.md](AI.md#video-editor).
+Two layouts, picked in Settings → AI → Video Editor: **Sidebar** (default), a full-height right panel (the editor and toolbar narrow beside it; its close button replaces the AI toggle) toggled by the toolbar's AI button or ⌘K (conversation transcript, clickable edit steps, quick actions, provider chip, Undo per reply); or **Floating dock** over the bottom of the player (orb → prompt, quick-action chips, result pill with Undo). The agent edits clips, zooms, speeds, frame and audio through the state's mutators, one undo step per prompt, and can read activity (silence/idle/motion), frames, on-screen text and an on-device transcript. Authoring is locked while it runs; playback stays live. Not for GIFs. Full reference: [AI.md](AI.md#video-editor).
 
 ## Editor Shortcuts (video only)
 
@@ -299,7 +299,8 @@ Dock over the bottom of the player (orb → prompt, provider chip, quick-action 
 | `Snapzy/Features/VideoEditor/Services/VideoEditorClipThumbnailCache.swift` | Frame strips for inserted clips, cached per URL |
 | `Snapzy/Features/VideoEditor/Components/VideoEditorBottomBar.swift` | Cancel / cloud-upload / Convert-Save bar |
 | `Snapzy/Features/VideoEditor/Agent/` | AI prompt: toolbox, tool catalog, controller, analyzer, vision/OCR, transcriber, Apple Intelligence tools (see [AI.md](AI.md#source-map)) |
-| `Snapzy/Features/VideoEditor/Components/VideoEditorAIDockView.swift` | AI dock, quick-action chips, result pill |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorAIPanelView.swift` | AI assistant right sidebar: transcript, edit steps, quick actions, composer |
+| `Snapzy/Features/VideoEditor/Components/VideoEditorAIDockView.swift` | AI floating dock layout: orb, prompt row, quick-action chips, result pill |
 | `Snapzy/Features/VideoEditor/Services/VideoEditorShortcutManager.swift` | Configurable editor action shortcuts (AI prompt) and reserved editor combos |
 | `Snapzy/Services/Capture/RecordingMetadata.swift` | Metadata consumed by Follow Mouse and multitrack audio |
 

@@ -1006,6 +1006,7 @@ private struct AnnotateAIDockItem: View {
 /// A dock segment that pops a native menu just above itself (the dock sits at the bottom).
 struct AnnotateAIDockMenuButton<Label: View>: View {
   let help: String
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
   let makeMenu: () -> NSMenu
   @ViewBuilder let label: (Bool) -> Label
 
@@ -1018,7 +1019,7 @@ struct AnnotateAIDockMenuButton<Label: View>: View {
     } label: {
       label(isOpen)
     }
-    .buttonStyle(AnnotateAIDockItemStyle(isActive: isOpen))
+    .buttonStyle(AnnotateAIDockItemStyle(isActive: isOpen, itemHeight: itemHeight))
     .background(MenuAnchorView(anchor: anchor))
     .help(help)
   }
@@ -1037,15 +1038,17 @@ struct AnnotateAIDockMenuButton<Label: View>: View {
 
 struct AnnotateAIDockItemStyle: ButtonStyle {
   var isActive: Bool = false
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
 
   func makeBody(configuration: Configuration) -> some View {
-    AnnotateAIDockItemBody(configuration: configuration, isActive: isActive)
+    AnnotateAIDockItemBody(configuration: configuration, isActive: isActive, itemHeight: itemHeight)
   }
 }
 
 struct AnnotateAIDockItemBody: View {
   let configuration: ButtonStyleConfiguration
   let isActive: Bool
+  var itemHeight: CGFloat = AnnotateAIDockView.itemHeight
 
   @Environment(\.isEnabled) private var isEnabled
   @State private var isHovered = false
@@ -1054,8 +1057,8 @@ struct AnnotateAIDockItemBody: View {
     configuration.label
       .font(.system(size: 12, weight: .medium))
       .foregroundStyle(foreground)
-      .frame(minWidth: AnnotateAIDockView.itemHeight)
-      .frame(height: AnnotateAIDockView.itemHeight)
+      .frame(minWidth: itemHeight)
+      .frame(height: itemHeight)
       .background {
         Capsule(style: .continuous)
           .fill(fill)

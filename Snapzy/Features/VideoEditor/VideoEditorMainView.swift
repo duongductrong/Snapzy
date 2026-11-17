@@ -12,7 +12,16 @@ import SwiftUI
 struct VideoEditorMainView: View {
   @ObservedObject var state: VideoEditorState
   /// The AI prompt: while it runs, authoring is locked (play and the transport stay live).
-  @ObservedObject private var agent: VideoEditorAgentController
+  /// Not observed: the editor follows `aiChrome` only, so typing in the prompt never
+  /// re-renders the player, timeline or toolbar.
+  private let agent: VideoEditorAgentController
+  @State private var aiChrome = VideoEditorAgentController.Chrome()
+  @AppStorage(PreferencesKeys.videoEditorAILayout)
+  private var aiLayout = VideoEditorAILayout.defaultValue
+  /// The editor narrows for the sidebar in one step (no per-frame relayout of the player and
+  /// timeline); the panel itself slides in on top as a cheap transform animation.
+  @State private var reservesAIPanelSpace = false
+  @State private var showsAIPanel = false
   var primaryActionTitle: String = "Convert"
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
@@ -24,13 +33,22 @@ struct VideoEditorMainView: View {
     onCancel: (() -> Void)? = nil
   ) {
     self.state = state
-    _agent = ObservedObject(wrappedValue: state.agent)
+    agent = state.agent
     self.primaryActionTitle = primaryActionTitle
     self.onSave = onSave
     self.onCancel = onCancel
   }
 
-  private var isAuthoringLocked: Bool { agent.isRunning }
+  private var isAuthoringLocked: Bool { aiChrome.isRunning }
+  private var isAIPanelVisible: Bool {
+    aiLayout == .sidebar && aiChrome.isPromptPresented && (agent.isAvailable || aiChrome.isRunning)
+  }
+
+  private static var aiPanelSlotWidth: CGFloat {
+    VideoEditorAIPanelView.width + 2 * VideoEditorAIPanelView.inset
+  }
+
+  private var aiPanelAnimation: Animation { .spring(response: 0.32, dampingFraction: 0.9) }
 
   /// Computed property for current frame preview
   private var currentFrameImage: NSImage? {
@@ -47,27 +65,59 @@ struct VideoEditorMainView: View {
   }
 
   var body: some View {
-    VStack(spacing: 0) {
-      VideoEditorToolbarView(state: state)
-        .disabled(isAuthoringLocked)
+    // The AI panel sits beside the whole editor, toolbar included: it runs the full window
+    // height and the editor narrows to make room. Its header sits on the toolbar line.
+    HStack(spacing: 0) {
+      VStack(spacing: 0) {
+        // Locks its own authoring controls during a run; the AI toggle stays live.
+        VideoEditorToolbarView(
+          state: state,
+          isAuthoringLocked: isAuthoringLocked,
+          aiChrome: aiChrome,
+          aiLayout: aiLayout
+        )
 
-      Divider()
+        Divider()
 
-      if state.isGIF {
-        gifContent
-      } else {
-        videoEditorContent
+        VStack(spacing: 0) {
+          if state.isGIF {
+            gifContent
+          } else {
+            videoEditorContent
+          }
+
+          // Bottom bar with Cancel/Save
+          VideoEditorBottomBar(
+            state: state,
+            primaryActionTitle: primaryActionTitle,
+            onCancel: { onCancel?() },
+            onConvert: { onSave?() }
+          )
+          .disabled(isAuthoringLocked)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
+      .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-      // Bottom bar with Cancel/Save
-      VideoEditorBottomBar(
-        state: state,
-        primaryActionTitle: primaryActionTitle,
-        onCancel: { onCancel?() },
-        onConvert: { onSave?() }
-      )
-      .disabled(isAuthoringLocked)
+      if reservesAIPanelSpace {
+        Color.clear
+          .frame(width: Self.aiPanelSlotWidth)
+          .transition(.identity)
+      }
     }
+    .overlay(alignment: .trailing) {
+      if showsAIPanel {
+        VideoEditorAIPanelView(state: state)
+          .padding(VideoEditorAIPanelView.inset)
+          .transition(.move(edge: .trailing).combined(with: .opacity))
+      }
+    }
+    .onReceive(agent.chromePublisher) { aiChrome = $0 }
+    .onAppear {
+      aiChrome = agent.chrome
+      syncAIPanel(animated: false)
+    }
+    .onChange(of: isAIPanelVisible) { _ in syncAIPanel(animated: true) }
     // Keyboard shortcuts
     .background {
       // Cloud upload shortcut (⌘U)
@@ -83,7 +133,7 @@ struct VideoEditorMainView: View {
       if !state.isGIF {
         editingShortcuts
           .disabled(isAuthoringLocked)
-          .disabled(!agent.allowsPlainKeyShortcuts)
+          .disabled(!aiChrome.allowsPlainKeyShortcuts)
       }
     }
     .disabled(state.isExporting)
@@ -99,6 +149,21 @@ struct VideoEditorMainView: View {
     .task {
       await state.loadMetadata()
       await state.extractFrames()
+    }
+  }
+
+  /// Reserves the sidebar's space without animation (one layout pass for the editor), then
+  /// slides the panel over it. On close the editor takes the space back under the leaving panel.
+  private func syncAIPanel(animated: Bool) {
+    let visible = isAIPanelVisible
+    var instant = Transaction()
+    instant.disablesAnimations = true
+    instant.animation = nil
+    withTransaction(instant) { reservesAIPanelSpace = visible }
+    if animated {
+      withAnimation(aiPanelAnimation) { showsAIPanel = visible }
+    } else {
+      withTransaction(instant) { showsAIPanel = visible }
     }
   }
 
@@ -242,11 +307,13 @@ struct VideoEditorMainView: View {
         .frame(minHeight: 200)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .bottom) {
-          // Outside the player's zoom transform, like the Annotate dock over its canvas.
-          GeometryReader { proxy in
-            VideoEditorAIDockView(state: state, maxWidth: proxy.size.width - 32)
-              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-              .padding(.bottom, 14)
+          if aiLayout == .dock {
+            // Outside the player's zoom transform, like the Annotate dock over its canvas.
+            GeometryReader { proxy in
+              VideoEditorAIDockView(state: state, maxWidth: proxy.size.width - 32)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 14)
+            }
           }
         }
 

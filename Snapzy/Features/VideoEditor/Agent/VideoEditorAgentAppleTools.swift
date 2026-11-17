@@ -205,7 +205,7 @@ final class VideoEditorAgentAppleIntelligenceProvider: AgentProvider {
           options: GenerationOptions(temperature: 0.2, maximumResponseTokens: 300)
         )
         try Task.checkCancellation()
-        return AgentReplyFormatter.oneLine(response.content)
+        return AgentReplyFormatter.full(response.content)
       } catch {
         try Task.checkCancellation()
         let mapped = AnnotateAgentAppleIntelligenceProvider.map(error)

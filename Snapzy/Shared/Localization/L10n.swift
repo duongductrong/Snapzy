@@ -10440,6 +10440,108 @@ extension L10n {
     static var noActivity: String {
       string("video-editor.ai.no-activity", defaultValue: "No focused activity to zoom on", comment: "Result of the Zoom on activity quick action when nothing changed")
     }
+    static var panelTitle: String {
+      string("video-editor.ai.panel-title", defaultValue: "AI Assistant", comment: "Title of the Video Editor AI side panel")
+    }
+    static var settingsSection: String {
+      string("video-editor.ai.settings-section", defaultValue: "Video Editor", comment: "Settings › AI section title for Video Editor options")
+    }
+    static var layoutTitle: String {
+      string("video-editor.ai.layout-title", defaultValue: "Assistant layout", comment: "Settings › AI row title: where the Video Editor AI assistant shows")
+    }
+    static var layoutDescription: String {
+      string("video-editor.ai.layout-description", defaultValue: "Sidebar keeps the whole conversation and each edit beside the editor. Dock is a compact prompt floating over the player.", comment: "Settings › AI row description for the Video Editor AI layout")
+    }
+    static var layoutSidebar: String {
+      string("video-editor.ai.layout-sidebar", defaultValue: "Sidebar", comment: "Video Editor AI layout option: right side panel")
+    }
+    static var layoutDock: String {
+      string("video-editor.ai.layout-dock", defaultValue: "Floating dock", comment: "Video Editor AI layout option: floating prompt over the player")
+    }
+    static var togglePanelHelp: String {
+      string("video-editor.ai.toggle-panel-help", defaultValue: "AI Assistant", comment: "Tooltip of the toolbar button that shows or hides the Video Editor AI panel")
+    }
+    static var emptyTitle: String {
+      string("video-editor.ai.empty-title", defaultValue: "Edit by describing it", comment: "Empty state title of the Video Editor AI panel")
+    }
+    static var emptySubtitle: String {
+      string("video-editor.ai.empty-subtitle", defaultValue: "Cut, zoom, speed up or restyle the video. Every change is listed here and can be undone in one step.", comment: "Empty state subtitle of the Video Editor AI panel")
+    }
+    static var quickActionsHeader: String {
+      string("video-editor.ai.quick-actions-header", defaultValue: "One-click edits", comment: "Header above quick actions in the Video Editor AI panel")
+    }
+    static var examplesHeader: String {
+      string("video-editor.ai.examples-header", defaultValue: "Try asking", comment: "Header above example prompts in the Video Editor AI panel")
+    }
+    static var exampleCut: String {
+      string("video-editor.ai.example-cut", defaultValue: "Cut the first 5 seconds", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleZoom: String {
+      string("video-editor.ai.example-zoom", defaultValue: "Zoom in on the cursor at 0:12", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleSpeed: String {
+      string("video-editor.ai.example-speed", defaultValue: "Speed up 0:30 to 1:00 to 4×", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var exampleBackground: String {
+      string("video-editor.ai.example-background", defaultValue: "Add a gradient background with rounded corners", comment: "Example prompt in the Video Editor AI panel")
+    }
+    static var newConversation: String {
+      string("video-editor.ai.new-conversation", defaultValue: "New conversation", comment: "Video Editor AI panel button that clears the conversation")
+    }
+    static var you: String {
+      string("video-editor.ai.you", defaultValue: "You", comment: "Accessibility label of the user's message in the Video Editor AI panel")
+    }
+    static var undone: String {
+      string("video-editor.ai.undone", defaultValue: "Undone", comment: "Label on an AI reply whose changes were undone")
+    }
+    static var jumpHelp: String {
+      string("video-editor.ai.jump-help", defaultValue: "Move the playhead here", comment: "Tooltip of an edit step in the Video Editor AI panel")
+    }
+    static var stepAll: String {
+      string("video-editor.ai.step-all", defaultValue: "all", comment: "Used in AI edit steps for every zoom or speed block, e.g. 'Removed zooms all'")
+    }
+    static func stepCut(_ start: String, _ end: String) -> String {
+      format("video-editor.ai.step-cut", defaultValue: "Cut %@ – %@", comment: "AI edit step. %@ = start and end time", start, end)
+    }
+    static func stepTrim(_ clip: String) -> String {
+      format("video-editor.ai.step-trim", defaultValue: "Trimmed clip %@", comment: "AI edit step. %@ = clip id like C1", clip)
+    }
+    static func stepSplit(_ time: String) -> String {
+      format("video-editor.ai.step-split", defaultValue: "Split at %@", comment: "AI edit step. %@ = time", time)
+    }
+    static func stepMove(_ clip: String, _ position: Int) -> String {
+      format("video-editor.ai.step-move", defaultValue: "Moved clip %@ to position %lld", comment: "AI edit step. %@ = clip id, %lld = new position", clip, position)
+    }
+    static func stepDeleteClip(_ clip: String) -> String {
+      format("video-editor.ai.step-delete-clip", defaultValue: "Removed clip %@", comment: "AI edit step. %@ = clip id", clip)
+    }
+    static func stepZoom(_ level: String, _ time: String) -> String {
+      format("video-editor.ai.step-zoom", defaultValue: "Zoom %@× at %@", comment: "AI edit step. First %@ = zoom factor, second = time", level, time)
+    }
+    static func stepEditZoom(_ id: String) -> String {
+      format("video-editor.ai.step-edit-zoom", defaultValue: "Adjusted zoom %@", comment: "AI edit step. %@ = zoom id like Z1", id)
+    }
+    static func stepRemoveZoom(_ ids: String) -> String {
+      format("video-editor.ai.step-remove-zoom", defaultValue: "Removed zoom %@", comment: "AI edit step. %@ = zoom ids", ids)
+    }
+    static func stepSpeed(_ rate: String) -> String {
+      format("video-editor.ai.step-speed", defaultValue: "Speed %@×", comment: "AI edit step. %@ = playback rate", rate)
+    }
+    static func stepEditSpeed(_ id: String) -> String {
+      format("video-editor.ai.step-edit-speed", defaultValue: "Adjusted speed %@", comment: "AI edit step. %@ = speed block id like S1", id)
+    }
+    static func stepRemoveSpeed(_ ids: String) -> String {
+      format("video-editor.ai.step-remove-speed", defaultValue: "Removed speed %@", comment: "AI edit step. %@ = speed block ids", ids)
+    }
+    static var stepBackground: String {
+      string("video-editor.ai.step-background", defaultValue: "Changed the background", comment: "AI edit step")
+    }
+    static var stepMuted: String {
+      string("video-editor.ai.step-muted", defaultValue: "Muted the audio", comment: "AI edit step")
+    }
+    static var stepAudio: String {
+      string("video-editor.ai.step-audio", defaultValue: "Changed the volume", comment: "AI edit step")
+    }
     static func consentTitle(_ name: String) -> String {
       format("video-editor.ai.consent-title", defaultValue: "Send this video’s timeline to %@?", comment: "Alert title before the first Video Editor AI prompt goes to an off-device provider. %@ is the provider name", name)
     }

@@ -81,9 +81,22 @@ extension AgentProvider {
   var logoImageName: String? { nil }
 }
 
-/// The result pill shows one line: lists and markdown wrappers dropped, kept short.
+/// Providers return the full reply (`full`); one-line surfaces (Annotate's result pill)
+/// shorten it with `oneLine`.
 nonisolated enum AgentReplyFormatter {
   static let maximumLength = 160
+  /// The Video Editor panel shows the whole reply; this only guards against runaway output.
+  static let maximumFullLength = 2000
+
+  /// Trimmed, wrapping quotes dropped, line breaks kept (the panel renders inline markdown).
+  static func full(_ text: String) -> String {
+    let trimmed = text
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”"))
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    guard trimmed.count > maximumFullLength else { return trimmed }
+    return String(trimmed.prefix(maximumFullLength - 1)) + "…"
+  }
 
   static func oneLine(_ text: String) -> String {
     let oneLine = text
