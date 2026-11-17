@@ -69,6 +69,10 @@ final class AgentEndpointProvider: AgentProvider {
   var displayName: String { model.name }
   let symbolName = "network"
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// Consent is tied to where the data goes: pointing the endpoint at another server asks again.
   var remoteDestination: AgentRemoteDestination? {
     let url = OpenAICompatibleChatClient.endpointURL(forBaseURL: model.baseURL)

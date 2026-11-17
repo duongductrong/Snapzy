@@ -50,6 +50,10 @@ final class AnnotateAgentToolbox {
     self.analysis = analysis
   }
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   /// New image analysis (e.g. after the image changed). Annotation ids are kept.
   func updateAnalysis(_ analysis: AnnotateAgentImageAnalysis) {
     self.analysis = analysis

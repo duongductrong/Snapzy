@@ -14,7 +14,6 @@ import FoundationModels
 import XCTest
 @testable import Snapzy
 
-@available(macOS 26.0, *)
 @MainActor
 final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   private static var retainedStates: [AnnotateState] = []
@@ -65,6 +64,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   // MARK: - Prompt
 
   func testPromptCompactsSceneAndKeepsRecentHistory() throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let (_, toolbox, _) = try makeSession()
     let scene = try XCTUnwrap(toolbox.scene())
     let history = (1 ... 5).map { AnnotateAgentTurn(prompt: "prompt \($0)", reply: "reply \($0)") }
@@ -80,13 +81,16 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
     XCTAssertTrue(prompt.hasSuffix("Request: Circle Sign in"))
   }
 
-  func testCleanReplyStripsQuotesAndMarkdown() {
+  func testCleanReplyStripsQuotesAndMarkdown() throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     XCTAssertEqual(AnnotateAgentAppleIntelligenceProvider.cleanReply("  \"Circled **Sign in**.\"\n"), "Circled **Sign in**.")
     XCTAssertEqual(AnnotateAgentAppleIntelligenceProvider.cleanReply("**Done**"), "Done")
     XCTAssertEqual(AnnotateAgentAppleIntelligenceProvider.cleanReply("Numbered:\n\n1. Email\n2. Sign in"), "Numbered: 1. Email 2. Sign in")
   }
 
   func testSensitiveTextDetection() {
+
     XCTAssertEqual(AnnotateAgentSensitiveText.kinds(in: "anna.nguyen@example.com"), [.email])
     XCTAssertEqual(AnnotateAgentSensitiveText.kinds(in: "Support: +1 555 0100"), [.phone])
     XCTAssertEqual(AnnotateAgentSensitiveText.kinds(in: "Gọi 0912 345 678"), [.phone])
@@ -98,6 +102,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   }
 
   func testBlurSensitiveBlursEmailAndPhone() async throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let (state, _, session) = try makeSession()
     let tool = AppleBlurSensitiveTool(bridge: AppleToolBridge(session: session, counter: AnnotateAgentChangeCounter()))
     _ = try await tool.call(arguments: AppleBlurSensitiveTool.Arguments(GeneratedContent(properties: ["kinds": [String]()])))
@@ -106,7 +112,9 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
 
   // MARK: - Errors
 
-  func testErrorsMapToProviderMessages() {
+  func testErrorsMapToProviderMessages() throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let context = LanguageModelSession.GenerationError.Context(debugDescription: "test")
     func message(_ error: Error) -> String? {
       if case AnnotateAgentProviderError.failed(let text) = AnnotateAgentAppleIntelligenceProvider.map(error) { return text }
@@ -123,6 +131,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   // MARK: - Tools
 
   func testDrawToolMapsKindsToAnnotations() async throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let (state, _, session) = try makeSession()
     let bridge = AppleToolBridge(session: session, counter: AnnotateAgentChangeCounter())
     let draw = AppleDrawTool(bridge: bridge)
@@ -148,6 +158,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   }
 
   func testEditToolRecolorsAndDeletesAll() async throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let (state, toolbox, session) = try makeSession()
     _ = toolbox.execute(name: "add_arrow", argumentsJSON: #"{"to":"t6","color":"red"}"#)
     _ = toolbox.execute(name: "add_arrow", argumentsJSON: #"{"to":"t2","color":"red"}"#)
@@ -165,6 +177,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   }
 
   func testCanvasToolSetsOnlyGivenValues() async throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     let (state, _, session) = try makeSession()
     let canvas = AppleCanvasTool(bridge: AppleToolBridge(session: session, counter: AnnotateAgentChangeCounter()))
     let shadowBefore = state.shadowIntensity
@@ -186,6 +200,8 @@ final class AnnotateAgentAppleIntelligenceTests: XCTestCase {
   /// The plan's 10 standard prompts against the real on-device model. Prints one line
   /// per prompt; fails only if the model errors out on most of them.
   func testLiveStandardPrompts() async throws {
+    guard #available(macOS 26.0, *) else { throw XCTSkip("FoundationModels needs macOS 26") }
+
     guard ProcessInfo.processInfo.environment["SNAPZY_LIVE_AI"] == "1" else {
       throw XCTSkip("Set SNAPZY_LIVE_AI=1 to call Apple Intelligence")
     }

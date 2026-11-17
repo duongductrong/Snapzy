@@ -132,6 +132,10 @@ final class AgentSession {
   /// Successful changing tool calls so far, so a provider knows whether a retry is safe.
   private(set) var changeCount = 0
 
+  /// Explicit and nonisolated: the synthesized main-actor deinit hops through the
+  /// back-deployed swift_task_deinitOnExecutor, which aborts on macOS 13-15 (#668).
+  nonisolated deinit {}
+
   func invalidate() {
     isActive = false
   }
