@@ -10303,6 +10303,64 @@ extension L10n {
     }
   }
 
+  /// Video Editor AI prompt. Shares button words (Send, Stop, Back…) with `AnnotateAI`.
+  nonisolated enum VideoEditorAI {
+    static var askHelp: String {
+      string("video-editor.ai.ask-help", defaultValue: "Ask AI", comment: "Tooltip and shortcut name for the Video Editor AI prompt")
+    }
+    static var placeholder: String {
+      string("video-editor.ai.placeholder", defaultValue: "Describe how to edit the video…", comment: "Placeholder of the Video Editor AI prompt field")
+    }
+    static var notConfigured: String {
+      string("video-editor.ai.not-configured", defaultValue: "Pick an endpoint or agent CLI to edit videos with AI", comment: "Shown when no AI provider can edit videos (Apple Intelligence can't yet)")
+    }
+    static var busy: String {
+      string("video-editor.ai.busy", defaultValue: "Wait until the video finishes loading or exporting", comment: "Shown when the Video Editor AI prompt is sent while the editor is busy")
+    }
+    static var statusReading: String {
+      string("video-editor.ai.status-reading", defaultValue: "Reading the timeline…", comment: "AI working status")
+    }
+    static var statusCut: String {
+      string("video-editor.ai.status-cut", defaultValue: "Cutting…", comment: "AI working status")
+    }
+    static var statusTrim: String {
+      string("video-editor.ai.status-trim", defaultValue: "Trimming a clip…", comment: "AI working status")
+    }
+    static var statusSplit: String {
+      string("video-editor.ai.status-split", defaultValue: "Splitting…", comment: "AI working status")
+    }
+    static var statusMove: String {
+      string("video-editor.ai.status-move", defaultValue: "Moving a clip…", comment: "AI working status")
+    }
+    static var statusDelete: String {
+      string("video-editor.ai.status-delete", defaultValue: "Removing a clip…", comment: "AI working status")
+    }
+    static var statusZoom: String {
+      string("video-editor.ai.status-zoom", defaultValue: "Adding a zoom…", comment: "AI working status")
+    }
+    static var statusEditZoom: String {
+      string("video-editor.ai.status-edit-zoom", defaultValue: "Adjusting zooms…", comment: "AI working status")
+    }
+    static var statusSpeed: String {
+      string("video-editor.ai.status-speed", defaultValue: "Changing speed…", comment: "AI working status")
+    }
+    static var statusBackground: String {
+      string("video-editor.ai.status-background", defaultValue: "Styling the frame…", comment: "AI working status")
+    }
+    static var statusAudio: String {
+      string("video-editor.ai.status-audio", defaultValue: "Adjusting audio…", comment: "AI working status")
+    }
+    static func consentTitle(_ name: String) -> String {
+      format("video-editor.ai.consent-title", defaultValue: "Send this video’s timeline to %@?", comment: "Alert title before the first Video Editor AI prompt goes to an off-device provider. %@ is the provider name", name)
+    }
+    static func consentMessage(_ host: String) -> String {
+      format("video-editor.ai.consent-message", defaultValue: "To answer, the video’s timeline (clips, zooms, speeds, frame and audio settings) is sent to %@. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an off-device provider. %@ is the server host", host)
+    }
+    static func consentMessageCLI(_ name: String) -> String {
+      format("video-editor.ai.consent-message-cli", defaultValue: "%@ gets the video’s timeline (clips, zooms, speeds, frame and audio settings) and sends it to its model provider. It may also load your own MCP servers, hooks and instructions. Snapzy asks once for each provider.", comment: "Alert message before the first Video Editor AI prompt goes to an agent CLI. %@ is the CLI name", name)
+    }
+  }
+
   nonisolated enum AnnotateAI {
     static var ask: String {
       string("annotate.ai.ask", defaultValue: "Ask", comment: "Annotate AI dock: button that opens the natural-language prompt")

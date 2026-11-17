@@ -11,9 +11,26 @@ import SwiftUI
 /// Main view for video editor containing player, timeline, controls, and info
 struct VideoEditorMainView: View {
   @ObservedObject var state: VideoEditorState
+  /// The AI prompt: while it runs, authoring is locked (play and the transport stay live).
+  @ObservedObject private var agent: VideoEditorAgentController
   var primaryActionTitle: String = "Convert"
   var onSave: (() -> Void)?
   var onCancel: (() -> Void)?
+
+  init(
+    state: VideoEditorState,
+    primaryActionTitle: String = "Convert",
+    onSave: (() -> Void)? = nil,
+    onCancel: (() -> Void)? = nil
+  ) {
+    self.state = state
+    _agent = ObservedObject(wrappedValue: state.agent)
+    self.primaryActionTitle = primaryActionTitle
+    self.onSave = onSave
+    self.onCancel = onCancel
+  }
+
+  private var isAuthoringLocked: Bool { agent.isRunning }
 
   /// Computed property for current frame preview
   private var currentFrameImage: NSImage? {
@@ -32,6 +49,7 @@ struct VideoEditorMainView: View {
   var body: some View {
     VStack(spacing: 0) {
       VideoEditorToolbarView(state: state)
+        .disabled(isAuthoringLocked)
 
       Divider()
 
@@ -48,6 +66,7 @@ struct VideoEditorMainView: View {
         onCancel: { onCancel?() },
         onConvert: { onSave?() }
       )
+      .disabled(isAuthoringLocked)
     }
     // Keyboard shortcuts
     .background {
@@ -58,85 +77,21 @@ struct VideoEditorMainView: View {
       .keyboardShortcut("u", modifiers: [.command])
       .opacity(0)
       .frame(width: 0, height: 0)
+      .disabled(isAuthoringLocked)
 
       if !state.isGIF {
-        // Add zoom at playhead (Z key)
+        // AI prompt (⌘K): open, refocus, or close when the field has the caret.
         Button("") {
-          let currentTime = CMTimeGetSeconds(state.currentTime)
-          state.addZoom(at: currentTime)
+          agent.handleShortcut(isFieldEditing: PromptTextField.isEditing(in: NSApp.keyWindow))
         }
-        .keyboardShortcut("z", modifiers: [])
+        .keyboardShortcut("k", modifiers: [.command])
         .opacity(0)
         .frame(width: 0, height: 0)
+        .disabled(!agent.isAvailable)
 
-        // Split at playhead (S key)
-        Button("") {
-          state.splitAtPlayhead()
-        }
-        .keyboardShortcut("s", modifiers: [])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .disabled(!state.canSplitAtPlayhead)
-
-        // Delete selected zoom / speed / clip (Delete key) — priority:
-        // zoom selection → speed selection → clip.
-        Button("") {
-          if let id = state.selectedZoomId {
-            state.removeZoom(id: id)
-          } else if let id = state.selectedSpeedId {
-            state.removeSpeed(id: id)
-          } else {
-            state.deleteSelectedClip()
-          }
-        }
-        .keyboardShortcut(.delete, modifiers: [])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-        .disabled(
-          state.selectedZoomId == nil &&
-            state.selectedSpeedId == nil &&
-            !state.canDeleteSelectedClip
-        )
-
-        // Set trim start at playhead (I key)
-        Button("") {
-          state.setTrimStart(state.currentTime)
-        }
-        .keyboardShortcut("i", modifiers: [])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-
-        // Set trim end at playhead (O key)
-        Button("") {
-          state.setTrimEnd(state.currentTime)
-        }
-        .keyboardShortcut("o", modifiers: [])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-
-        // Timeline zoom in (⌘= / ⌘+)
-        Button("") {
-          state.timelineViewport.zoomIn(anchorTime: CMTimeGetSeconds(state.currentTime))
-        }
-        .keyboardShortcut("=", modifiers: [.command])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-
-        // Timeline zoom out (⌘-)
-        Button("") {
-          state.timelineViewport.zoomOut(anchorTime: CMTimeGetSeconds(state.currentTime))
-        }
-        .keyboardShortcut("-", modifiers: [.command])
-        .opacity(0)
-        .frame(width: 0, height: 0)
-
-        // Timeline fit (⌘0)
-        Button("") {
-          state.timelineViewport.fit()
-        }
-        .keyboardShortcut("0", modifiers: [.command])
-        .opacity(0)
-        .frame(width: 0, height: 0)
+        editingShortcuts
+          .disabled(isAuthoringLocked)
+          .disabled(!agent.allowsPlainKeyShortcuts)
       }
     }
     .disabled(state.isExporting)
@@ -153,6 +108,88 @@ struct VideoEditorMainView: View {
       await state.loadMetadata()
       await state.extractFrames()
     }
+  }
+
+  /// Plain-key editing shortcuts (Z, S, Delete, I, O, ⌘=, ⌘-, ⌘0).
+  @ViewBuilder
+  private var editingShortcuts: some View {
+    // Add zoom at playhead (Z key)
+    Button("") {
+      let currentTime = CMTimeGetSeconds(state.currentTime)
+      state.addZoom(at: currentTime)
+    }
+    .keyboardShortcut("z", modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+
+    // Split at playhead (S key)
+    Button("") {
+      state.splitAtPlayhead()
+    }
+    .keyboardShortcut("s", modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+    .disabled(!state.canSplitAtPlayhead)
+
+    // Delete selected zoom / speed / clip (Delete key) — priority:
+    // zoom selection → speed selection → clip.
+    Button("") {
+      if let id = state.selectedZoomId {
+        state.removeZoom(id: id)
+      } else if let id = state.selectedSpeedId {
+        state.removeSpeed(id: id)
+      } else {
+        state.deleteSelectedClip()
+      }
+    }
+    .keyboardShortcut(.delete, modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+    .disabled(
+      state.selectedZoomId == nil &&
+        state.selectedSpeedId == nil &&
+        !state.canDeleteSelectedClip
+    )
+
+    // Set trim start at playhead (I key)
+    Button("") {
+      state.setTrimStart(state.currentTime)
+    }
+    .keyboardShortcut("i", modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+
+    // Set trim end at playhead (O key)
+    Button("") {
+      state.setTrimEnd(state.currentTime)
+    }
+    .keyboardShortcut("o", modifiers: [])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+
+    // Timeline zoom in (⌘= / ⌘+)
+    Button("") {
+      state.timelineViewport.zoomIn(anchorTime: CMTimeGetSeconds(state.currentTime))
+    }
+    .keyboardShortcut("=", modifiers: [.command])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+
+    // Timeline zoom out (⌘-)
+    Button("") {
+      state.timelineViewport.zoomOut(anchorTime: CMTimeGetSeconds(state.currentTime))
+    }
+    .keyboardShortcut("-", modifiers: [.command])
+    .opacity(0)
+    .frame(width: 0, height: 0)
+
+    // Timeline fit (⌘0)
+    Button("") {
+      state.timelineViewport.fit()
+    }
+    .keyboardShortcut("0", modifiers: [.command])
+    .opacity(0)
+    .frame(width: 0, height: 0)
   }
 
   private var gifContent: some View {
@@ -177,6 +214,7 @@ struct VideoEditorMainView: View {
       // Keep this GeometryReader responsive to parent/window width changes;
       // equatable-wrapping the container can freeze its initial viewport size.
       VideoTimelineView(state: state)
+        .disabled(isAuthoringLocked)
         .windowContentHPadding()
         .padding(.top, WindowSpacingConfiguration.default.contentTopPadding)
         .padding(.bottom, WindowSpacingConfiguration.default.contentBottomPadding)
@@ -186,16 +224,19 @@ struct VideoEditorMainView: View {
 
   private var videoWorkspaceRow: some View {
     HStack(spacing: 0) {
-      VideoEditorLeftRail(state: state)
-
-      Divider()
-
-      if state.isLeftSidebarVisible {
-        VideoEditorLeftSidebar(state: state, previewImage: currentFrameImage)
-          .frame(maxHeight: .infinity, alignment: .top)
+      Group {
+        VideoEditorLeftRail(state: state)
 
         Divider()
+
+        if state.isLeftSidebarVisible {
+          VideoEditorLeftSidebar(state: state, previewImage: currentFrameImage)
+            .frame(maxHeight: .infinity, alignment: .top)
+
+          Divider()
+        }
       }
+      .disabled(isAuthoringLocked)
 
       videoPlayerColumn
     }
@@ -208,6 +249,14 @@ struct VideoEditorMainView: View {
       ZoomableVideoPlayerSection(state: state)
         .frame(minHeight: 200)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .overlay(alignment: .bottom) {
+          // Outside the player's zoom transform, like the Annotate dock over its canvas.
+          GeometryReader { proxy in
+            VideoEditorAIDockView(state: state, maxWidth: proxy.size.width - 32)
+              .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+              .padding(.bottom, 14)
+          }
+        }
 
       VideoControlsView(state: state)
         .padding(.horizontal, WindowSpacingConfiguration.default.contentHPadding)

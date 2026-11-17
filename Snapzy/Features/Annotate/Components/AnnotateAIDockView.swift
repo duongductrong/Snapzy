@@ -34,9 +34,9 @@ struct AnnotateAIDockView: View {
 
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  fileprivate static let height: CGFloat = 40
-  fileprivate static let inset: CGFloat = 4
-  fileprivate static let itemHeight: CGFloat = height - inset * 2
+  static let height: CGFloat = 40
+  static let inset: CGFloat = 4
+  static let itemHeight: CGFloat = height - inset * 2
 
   init(state: AnnotateState, maxWidth: CGFloat = .infinity) {
     self.state = state
@@ -219,7 +219,7 @@ struct AnnotateAIDockView: View {
   }
 }
 
-private struct AnnotateAIDockBlurFade: ViewModifier {
+struct AnnotateAIDockBlurFade: ViewModifier {
   let radius: CGFloat
   let opacity: Double
   let scale: CGFloat
@@ -235,9 +235,11 @@ private struct AnnotateAIDockBlurFade: ViewModifier {
 // MARK: - Orb
 
 /// The AI glyph in a circle. Static multi-hue at rest; the hues turn slowly and glow while working.
-private struct AnnotateAIDockOrb: View {
+struct AnnotateAIDockOrb: View {
   let isExpanded: Bool
   let isWorking: Bool
+  /// Tooltip and VoiceOver name at rest.
+  var label: String = L10n.AnnotateTranslate.aiTools
   let action: () -> Void
 
   @State private var isHovered = false
@@ -277,8 +279,8 @@ private struct AnnotateAIDockOrb: View {
     .onHover { hovering in
       withAnimation(LiquidGlassTokens.hoverSpring) { isHovered = hovering }
     }
-    .help(isExpanded ? L10n.Common.close : L10n.AnnotateTranslate.aiTools)
-    .accessibilityLabel(L10n.AnnotateTranslate.aiTools)
+    .help(isExpanded ? L10n.Common.close : label)
+    .accessibilityLabel(label)
     .accessibilityAddTraits(isExpanded ? .isSelected : [])
   }
 
@@ -571,65 +573,14 @@ private struct AnnotateAIDockPromptRow: View {
   }
 
   private func providerMenu() -> NSMenu {
-    let menu = NSMenu()
-    menu.autoenablesItems = false
-    let provider = agent.provider
-    let current = NSMenuItem(title: provider?.displayName ?? L10n.AnnotateAI.notConfigured, action: nil, keyEquivalent: "")
-    current.image = Self.menuImage(symbol: provider?.symbolName ?? "exclamationmark.circle", logo: provider?.logoImageName)
-    current.isEnabled = false
-    menu.addItem(current)
-    menu.addItem(.separator())
-    addProviderChoices(to: menu)
-    menu.addItem(.separator())
-    let newConversation = ClosureMenuItem(title: L10n.AnnotateAI.newConversation, keyEquivalent: "") { [weak agent] in
-      agent?.startNewConversation()
-    }
-    newConversation.image = NSImage(systemSymbolName: "plus.bubble", accessibilityDescription: nil)
-    newConversation.isEnabled = agent.hasConversation && !agent.isRunning
-    menu.addItem(newConversation)
-    let settings = ClosureMenuItem(title: L10n.AnnotateAI.settings, keyEquivalent: "") {
-      AnnotateAgentAISettings.open()
-    }
-    settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
-    menu.addItem(settings)
-    return menu
-  }
-
-  /// Automatic, Apple Intelligence (when ready), the shared custom endpoints and agent CLIs.
-  private func addProviderChoices(to menu: NSMenu) {
-    let selection = agent.providerSelection
-    var choices: [(title: String, symbol: String, logo: String?, value: AnnotateAgentProviderSelection)] = [
-      (L10n.AnnotateAI.automatic, "sparkles", nil, .automatic),
-    ]
-    if AnnotateAgentAppleIntelligence.isAvailable || selection == .appleIntelligence {
-      choices.append(("Apple Intelligence", "apple.intelligence", nil, .appleIntelligence))
-    }
-    for model in CustomOCRModelStore.shared.models {
-      choices.append((model.name, "network", nil, .endpoint(model.id)))
-    }
-    // Agent CLIs found on this Mac (the selected one stays listed even if it went missing).
-    let installedCLIs = AnnotateAgentCLIDetector.shared.installed
-    for kind in AnnotateAgentCLIKind.allCases where installedCLIs[kind] != nil || selection == .cli(kind) {
-      choices.append((kind.displayName, "terminal", kind.logoImageName, .cli(kind)))
-    }
-    for choice in choices {
-      let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") { [weak agent] in
-        agent?.selectProvider(choice.value)
-      }
-      item.image = Self.menuImage(symbol: choice.symbol, logo: choice.logo)
-      item.state = choice.value == selection ? .on : .off
-      item.isEnabled = !agent.isRunning
-      menu.addItem(item)
-    }
-  }
-
-  /// A provider's brand mark at menu size, else its SF Symbol.
-  private static func menuImage(symbol: String, logo: String?) -> NSImage? {
-    if let logo, let image = NSImage(named: logo)?.copy() as? NSImage {
-      image.size = NSSize(width: 16, height: 16)
-      return image
-    }
-    return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+    AnnotateAIDockProviderMenu.make(
+      provider: agent.provider,
+      selection: agent.providerSelection,
+      isRunning: agent.isRunning,
+      hasConversation: agent.hasConversation,
+      onSelect: { [weak agent] in agent?.selectProvider($0) },
+      onNewConversation: { [weak agent] in agent?.startNewConversation() }
+    )
   }
 
   @ViewBuilder
@@ -711,7 +662,7 @@ private struct AnnotateAIDockTranslateStatusRow: View {
 
 /// Live status while the agent works: the text in body ink with a band of the AI hues
 /// passing through it, like the dock's reading rim.
-private struct AnnotateAIDockStatusLine: View {
+struct AnnotateAIDockStatusLine: View {
   let text: String
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -756,7 +707,7 @@ private struct AnnotateAIDockStatusLine: View {
 }
 
 /// Circular send / stop button at the trailing end of the prompt.
-private struct AnnotateAIDockRoundButton: View {
+struct AnnotateAIDockRoundButton: View {
   let symbol: String
   let isProminent: Bool
   let help: String
@@ -930,6 +881,80 @@ private struct AnnotateAIDockTranslateSection: View {
   }
 }
 
+// MARK: - Provider menu
+
+/// The provider chip's menu, shared by every AI dock: current provider, the choices
+/// (Automatic, Apple Intelligence when ready, custom endpoints, agent CLIs), New
+/// Conversation and AI Settings.
+@MainActor
+enum AnnotateAIDockProviderMenu {
+  static func make(
+    provider: AgentProvider?,
+    selection: AgentProviderSelection,
+    isRunning: Bool,
+    hasConversation: Bool,
+    /// `nil` = when Apple Intelligence is ready on this Mac.
+    showsAppleIntelligence: Bool? = nil,
+    onSelect: @escaping (AgentProviderSelection) -> Void,
+    onNewConversation: @escaping () -> Void
+  ) -> NSMenu {
+    let menu = NSMenu()
+    menu.autoenablesItems = false
+    let current = NSMenuItem(title: provider?.displayName ?? L10n.AnnotateAI.notConfigured, action: nil, keyEquivalent: "")
+    current.image = menuImage(symbol: provider?.symbolName ?? "exclamationmark.circle", logo: provider?.logoImageName)
+    current.isEnabled = false
+    menu.addItem(current)
+    menu.addItem(.separator())
+
+    var choices: [(title: String, symbol: String, logo: String?, value: AgentProviderSelection)] = [
+      (L10n.AnnotateAI.automatic, "sparkles", nil, .automatic),
+    ]
+    if showsAppleIntelligence ?? AnnotateAgentAppleIntelligence.isAvailable || selection == .appleIntelligence {
+      choices.append(("Apple Intelligence", "apple.intelligence", nil, .appleIntelligence))
+    }
+    for model in CustomOCRModelStore.shared.models {
+      choices.append((model.name, "network", nil, .endpoint(model.id)))
+    }
+    // Agent CLIs found on this Mac (the selected one stays listed even if it went missing).
+    let installedCLIs = AnnotateAgentCLIDetector.shared.installed
+    for kind in AnnotateAgentCLIKind.allCases where installedCLIs[kind] != nil || selection == .cli(kind) {
+      choices.append((kind.displayName, "terminal", kind.logoImageName, .cli(kind)))
+    }
+    for choice in choices {
+      let item = ClosureMenuItem(title: choice.title, keyEquivalent: "") {
+        onSelect(choice.value)
+      }
+      item.image = menuImage(symbol: choice.symbol, logo: choice.logo)
+      item.state = choice.value == selection ? .on : .off
+      item.isEnabled = !isRunning
+      menu.addItem(item)
+    }
+
+    menu.addItem(.separator())
+    let newConversation = ClosureMenuItem(title: L10n.AnnotateAI.newConversation, keyEquivalent: "") {
+      onNewConversation()
+    }
+    newConversation.image = NSImage(systemSymbolName: "plus.bubble", accessibilityDescription: nil)
+    newConversation.isEnabled = hasConversation && !isRunning
+    menu.addItem(newConversation)
+    let settings = ClosureMenuItem(title: L10n.AnnotateAI.settings, keyEquivalent: "") {
+      AnnotateAgentAISettings.open()
+    }
+    settings.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
+    menu.addItem(settings)
+    return menu
+  }
+
+  /// A provider's brand mark at menu size, else its SF Symbol.
+  static func menuImage(symbol: String, logo: String?) -> NSImage? {
+    if let logo, let image = NSImage(named: logo)?.copy() as? NSImage {
+      image.size = NSSize(width: 16, height: 16)
+      return image
+    }
+    return NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+  }
+}
+
 // MARK: - Building blocks
 
 /// A provider's icon: its maker's mark when it has one (agent CLIs), else its SF Symbol.
@@ -977,7 +1002,7 @@ private struct AnnotateAIDockItem: View {
 }
 
 /// A dock segment that pops a native menu just above itself (the dock sits at the bottom).
-private struct AnnotateAIDockMenuButton<Label: View>: View {
+struct AnnotateAIDockMenuButton<Label: View>: View {
   let help: String
   let makeMenu: () -> NSMenu
   @ViewBuilder let label: (Bool) -> Label
@@ -1008,7 +1033,7 @@ private struct AnnotateAIDockMenuButton<Label: View>: View {
   }
 }
 
-private struct AnnotateAIDockItemStyle: ButtonStyle {
+struct AnnotateAIDockItemStyle: ButtonStyle {
   var isActive: Bool = false
 
   func makeBody(configuration: Configuration) -> some View {
@@ -1016,7 +1041,7 @@ private struct AnnotateAIDockItemStyle: ButtonStyle {
   }
 }
 
-private struct AnnotateAIDockItemBody: View {
+struct AnnotateAIDockItemBody: View {
   let configuration: ButtonStyleConfiguration
   let isActive: Bool
 
@@ -1058,7 +1083,7 @@ private struct AnnotateAIDockItemBody: View {
   }
 }
 
-private struct AnnotateAIDockPressStyle: ButtonStyle {
+struct AnnotateAIDockPressStyle: ButtonStyle {
   var pressedScale: CGFloat = 0.92
 
   func makeBody(configuration: Configuration) -> some View {
@@ -1068,7 +1093,7 @@ private struct AnnotateAIDockPressStyle: ButtonStyle {
   }
 }
 
-private struct AnnotateAIDockHairline: View {
+struct AnnotateAIDockHairline: View {
   var body: some View {
     Rectangle()
       .fill(Color.primary.opacity(0.12))

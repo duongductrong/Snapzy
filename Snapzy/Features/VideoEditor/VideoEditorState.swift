@@ -749,6 +749,15 @@ final class VideoEditorState: ObservableObject {
   // MARK: - Unsaved Changes
 
   @Published var hasUnsavedChanges: Bool = false
+
+  /// The AI prompt of this editor window, created on first use.
+  private(set) var agentIfLoaded: VideoEditorAgentController?
+  var agent: VideoEditorAgentController {
+    if let agentIfLoaded { return agentIfLoaded }
+    let agent = VideoEditorAgentController(state: self)
+    agentIfLoaded = agent
+    return agent
+  }
   private var initialZoomSegments: [ZoomSegment] = []
   private var initialSpeedSegments: [SpeedSegment] = []
   private var initialClips: [TimelineClip] = []
@@ -756,6 +765,8 @@ final class VideoEditorState: ObservableObject {
   private var initialBackgroundPadding: CGFloat = 0
   private var initialBackgroundShadowIntensity: CGFloat = 0
   private var initialBackgroundCornerRadius: CGFloat = 0
+  private var initialBackgroundAlignment: ImageAlignment = .center
+  private var initialBackgroundAspectRatio: AspectRatioOption = .auto
   private var initialExportSettings: ExportSettings = .init()
 
   // MARK: - Cloud State
@@ -1939,6 +1950,8 @@ final class VideoEditorState: ObservableObject {
     initialBackgroundPadding = backgroundPadding
     initialBackgroundShadowIntensity = backgroundShadowIntensity
     initialBackgroundCornerRadius = backgroundCornerRadius
+    initialBackgroundAlignment = backgroundAlignment
+    initialBackgroundAspectRatio = backgroundAspectRatio
     initialExportSettings = exportSettings
     clearUndoHistory()
   }
@@ -3341,6 +3354,15 @@ final class VideoEditorState: ObservableObject {
       }
       .store(in: &cancellables)
 
+    // Alignment and aspect ratio change the exported frame too.
+    Publishers.CombineLatest($backgroundAlignment, $backgroundAspectRatio)
+      .dropFirst()
+      .receive(on: DispatchQueue.main)
+      .sink { [weak self] _, _ in
+        self?.updateHasUnsavedChanges()
+      }
+      .store(in: &cancellables)
+
     // Track export settings changes for file size estimation
     $exportSettings
       .dropFirst()
@@ -3374,7 +3396,10 @@ final class VideoEditorState: ObservableObject {
     let bgPaddingChanged = backgroundPadding != initialBackgroundPadding
     let bgShadowChanged = backgroundShadowIntensity != initialBackgroundShadowIntensity
     let bgCornerChanged = backgroundCornerRadius != initialBackgroundCornerRadius
+    let bgLayoutChanged = backgroundAlignment != initialBackgroundAlignment
+      || backgroundAspectRatio != initialBackgroundAspectRatio
     let backgroundChanged = bgStyleChanged || bgPaddingChanged || bgShadowChanged || bgCornerChanged
+      || bgLayoutChanged
     let exportSettingsChanged = exportSettings != initialExportSettings
     let changed = clipsChanged || muteChanged || zoomsChanged || speedsChanged
       || backgroundChanged || exportSettingsChanged

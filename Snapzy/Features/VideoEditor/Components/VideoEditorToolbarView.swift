@@ -39,6 +39,13 @@ private extension View {
 /// Top toolbar for video editor window
 struct VideoEditorToolbarView: View {
   @ObservedObject var state: VideoEditorState
+  /// Plain-key shortcuts stand down while the AI prompt takes typing.
+  @ObservedObject private var agent: VideoEditorAgentController
+
+  init(state: VideoEditorState) {
+    self.state = state
+    _agent = ObservedObject(wrappedValue: state.agent)
+  }
 
   @State private var editingFilename: String = ""
   @State private var renameError: String?
@@ -120,7 +127,7 @@ struct VideoEditorToolbarView: View {
       ) {
         state.toggleVideoInfoSidebar()
       }
-      .keyboardShortcut("i", modifiers: [])
+      .keyboardShortcut(agent.allowsPlainKeyShortcuts ? KeyboardShortcut("i", modifiers: []) : nil)
       .help(state.isVideoInfoSidebarVisible ? L10n.VideoEditor.hideVideoInfoHint : L10n.VideoEditor.showVideoInfoHint)
       .popover(isPresented: $state.isVideoInfoSidebarVisible, arrowEdge: .bottom) {
         VideoDetailsSidebarView(state: state)
