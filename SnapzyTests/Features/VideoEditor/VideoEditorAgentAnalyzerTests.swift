@@ -246,8 +246,12 @@ final class VideoEditorAgentAnalyzerTests: XCTestCase {
 
   // MARK: - Quick actions
 
-  private func makeController(_ state: VideoEditorState) -> VideoEditorAgentController {
+  private func makeController(
+    _ state: VideoEditorState,
+    layout: VideoEditorAILayout = .sidebar
+  ) -> VideoEditorAgentController {
     let defaults = UserDefaults(suiteName: "SnapzyTests.VideoAnalyzer.\(UUID().uuidString)")!
+    defaults.set(layout.rawValue, forKey: PreferencesKeys.videoEditorAILayout)
     let controller = VideoEditorAgentController(
       state: state,
       pacingEnabled: false,
@@ -267,13 +271,20 @@ final class VideoEditorAgentAnalyzerTests: XCTestCase {
   }
 
   func testQuickActions_matchTheVideosData() async throws {
-    let full = makeController(try await makeState())
+    // Dock layout: chips sit over an empty, idle prompt and hide once the user types.
+    let full = makeController(try await makeState(), layout: .dock)
     XCTAssertEqual(full.quickActions, [.removeSilences, .speedUpIdle, .autoZoom])
     XCTAssertFalse(full.showsQuickActions, "only over an open prompt")
     full.presentPrompt()
     XCTAssertTrue(full.showsQuickActions)
     full.draft = "cut"
     XCTAssertFalse(full.showsQuickActions)
+
+    // Sidebar layout (default): chips live in the empty transcript, so typing doesn't hide them.
+    let panel = makeController(try await makeState())
+    panel.presentPrompt()
+    panel.draft = "cut"
+    XCTAssertTrue(panel.showsQuickActions)
 
     let silent = makeController(try await makeState(audio: false, cursor: false))
     XCTAssertEqual(silent.quickActions, [])
