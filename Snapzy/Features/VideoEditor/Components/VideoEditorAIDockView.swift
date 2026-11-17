@@ -219,7 +219,9 @@ private struct VideoEditorAIDockFieldSlot: View {
 
   private var fieldWidth: CGFloat {
     let available = maxWidth - Self.chromeWidth
-    var content = Self.textWidth(placeholderText)
+    // Both placeholders, whichever shows: switching provider resets the conversation and
+    // would otherwise resize the dock under a draft that hides the placeholder anyway.
+    var content = max(Self.textWidth(L10n.VideoEditorAI.placeholder), Self.textWidth(L10n.AnnotateAI.followUpPlaceholder))
     content = max(content, Self.textWidth(agent.isRunning ? agent.status : draft.text))
     let stepped = ((content + 8) / Self.fieldWidthStep).rounded(.up) * Self.fieldWidthStep
     let upper = max(min(Self.maximumFieldWidth, available), Self.minimumFieldWidth)

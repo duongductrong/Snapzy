@@ -198,8 +198,16 @@ final class PromptTextField: NSTextField {
   /// AppKit only draws the caret in the key window. The inline overlay is a nonactivating
   /// panel that drops key status between text inputs (a run, Settings, another app), and a
   /// field that is already first responder there would otherwise take typing with no caret.
+  ///
+  /// Only while the app is active, though (or for a panel that keys without activating it):
+  /// keying a regular window from the background (a run that ends while the user is in
+  /// another app) leaves it key in an inactive app. Clicking it then no longer activates
+  /// the app, so the field takes no caret and the keys go to the other app. Left alone,
+  /// AppKit re-keys the window with the field still first responder when the user returns.
   private func ensureKeyWindow() {
     guard let window, !window.isKeyWindow, window.canBecomeKey else { return }
+    let keysWithoutActivating = (window as? NSPanel)?.styleMask.contains(.nonactivatingPanel) == true
+    guard NSApp.isActive || keysWithoutActivating else { return }
     window.makeKey()
   }
 

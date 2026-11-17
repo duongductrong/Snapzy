@@ -440,7 +440,9 @@ private struct AnnotateAIDockPromptRow: View {
 
   private var fieldWidth: CGFloat {
     let available = maxWidth - Self.chromeWidth - (selectionCount > 0 ? 110 : 0)
-    var content = Self.textWidth(placeholderText)
+    // Both placeholders, whichever shows: switching provider resets the conversation and
+    // would otherwise resize the dock under a draft that hides the placeholder anyway.
+    var content = max(Self.textWidth(L10n.AnnotateAI.placeholder), Self.textWidth(L10n.AnnotateAI.followUpPlaceholder))
     if agent.isRunning {
       content = max(content, Self.textWidth(agent.status))
     } else {
@@ -967,16 +969,21 @@ struct AnnotateAgentProviderIcon: View {
   var size: CGFloat = 13
 
   var body: some View {
-    if let logoImageName {
-      Image(logoImageName)
-        .resizable()
-        .interpolation(.high)
-        .aspectRatio(contentMode: .fit)
-        .frame(width: size, height: size)
-    } else {
-      Image(systemName: symbolName)
-        .font(.system(size: size - 1, weight: .medium))
+    // One fixed slot for every provider: marks are `size` wide but symbols run 15–17pt
+    // (terminal, apple.intelligence…), so switching provider would resize the dock.
+    Group {
+      if let logoImageName {
+        Image(logoImageName)
+          .resizable()
+          .interpolation(.high)
+          .aspectRatio(contentMode: .fit)
+          .frame(width: size, height: size)
+      } else {
+        Image(systemName: symbolName)
+          .font(.system(size: size - 1, weight: .medium))
+      }
     }
+    .frame(width: size + 4, height: size + 4)
   }
 }
 
