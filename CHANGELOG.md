@@ -4,6 +4,15 @@ All notable changes to Snapzy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.2.0-beta.16] - 2026-11-17
+
+### Bug Fixes
+- use sidebar.left icon for the sidebar toggle (#754) (507a31eb)
+
+### Contributors
+- @github-actions[bot]
+- @heyztb
+
 ## [2.2.0-beta.15] - 2026-11-15
 
 ### Features
